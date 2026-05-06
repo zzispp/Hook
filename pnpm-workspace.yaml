@@ -1,0 +1,3 @@
+packages:
+  - apps/hook_frontend
+  - apps/hook_mock_api

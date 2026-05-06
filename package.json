@@ -1,0 +1,16 @@
+{
+  "name": "hook-monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.33.4",
+  "scripts": {
+    "dev:frontend": "pnpm --filter hook_frontend dev",
+    "dev:mock-api": "pnpm --filter hook_mock_api dev",
+    "build:frontend": "pnpm --filter hook_frontend build",
+    "build:mock-api": "pnpm --filter hook_mock_api build",
+    "lint:frontend": "pnpm --filter hook_frontend lint",
+    "lint:mock-api": "pnpm --filter hook_mock_api lint",
+    "dev:backend": "cargo run -p hook_backend",
+    "check:backend": "cargo check -p hook_backend",
+    "build:backend": "cargo build -p hook_backend"
+  }
+}
