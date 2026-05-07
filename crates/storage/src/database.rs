@@ -27,6 +27,14 @@ impl Database {
         self.db.push_schema().await?;
         Ok(())
     }
+
+    pub fn table_names(&self) -> Vec<String> {
+        self.db.schema().db.tables.iter().map(|table| table.name.clone()).collect()
+    }
+
+    pub fn into_inner(self) -> toasty::Db {
+        self.db
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

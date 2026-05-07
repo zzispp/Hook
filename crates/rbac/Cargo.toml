@@ -14,7 +14,6 @@ serde_json.workspace = true
 storage.workspace = true
 thiserror.workspace = true
 types.workspace = true
-user.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true

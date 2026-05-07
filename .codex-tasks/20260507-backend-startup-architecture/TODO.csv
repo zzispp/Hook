@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Review backend entrypoint and module boundaries,DONE,Architecture findings are identified and scoped,test -f .codex-tasks/20260507-backend-startup-architecture/PROGRESS.md,2026-05-07T00:00:00+08:00,0,
+2,Extract CLI command dispatch,DONE,Command parsing and command execution live outside main.rs,cargo test -p backend command,2026-05-07T00:00:00+08:00,0,
+3,Extract startup runtime wiring,DONE,Serve wiring lives in startup and main.rs stays minimal,cargo check -p backend,2026-05-07T00:00:00+08:00,0,
+4,Validate backend behavior,DONE,Formatting checks tests and short startup validation are executed,just test,2026-05-07T00:00:00+08:00,0,
+5,Summarize architecture findings,DONE,Final response explains remaining unclear or cross-layer positions,test -f .codex-tasks/20260507-backend-startup-architecture/PROGRESS.md,2026-05-07T00:00:00+08:00,0,

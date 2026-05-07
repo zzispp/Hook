@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Implement schema bootstrap,DONE,Backend supports schema bootstrap with empty/all/partial table semantics,cargo check -p backend,2026-05-07T19:10:56+08:00,0,
+2,Document database schema commands,DONE,README explains push/bootstrap/migration semantics and commands,rg "schema bootstrap|migration apply|push_schema_on_startup" README.md,2026-05-07T19:10:56+08:00,0,
+3,Validate commands and tests,DONE,Formatting tests and command behavior pass,cargo fmt --all --check && cargo test -p backend && cargo run -p backend -- schema bootstrap,2026-05-07T19:10:56+08:00,0,

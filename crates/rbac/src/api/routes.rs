@@ -4,7 +4,7 @@ use axum::{
 };
 
 use super::{
-    auth::CurrentUser,
+    CurrentUser,
     handlers::{
         create_api, create_menu_item, create_menu_section, create_role, delete_api, delete_menu_item, delete_menu_section, delete_role, list_apis,
         list_menu_items, list_menu_sections, list_roles, navbar, replace_api, replace_menu_item, replace_menu_section, replace_role, replace_role_apis,
