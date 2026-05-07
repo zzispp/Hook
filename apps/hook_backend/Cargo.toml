@@ -1,6 +1,13 @@
 [package]
-name = "hook_backend"
-version = "0.1.0"
-edition = "2024"
+name = "backend"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
+axum.workspace = true
+configuration.workspace = true
+storage.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+user.workspace = true

@@ -1,0 +1,13 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect project and dependency docs,DONE,Existing structure and Toasty API are understood,cargo search toasty --limit 5,,0,
+2,Create module-based multi-crate workspace skeleton,DONE,Workspace has constants/config crates and user module crate without hook_ package names,cargo metadata --no-deps --format-version 1,2026-05-07T00:00:00+08:00,1,Adjusted after user clarified crate layout
+3,Implement user domain application and Toasty persistence,DONE,User CRUD and auth flows compile,cargo check -p backend,2026-05-07T00:00:00+08:00,1,Toasty update returns unit so replace reloads by id
+4,Expose Axum routes,DONE,Routes cover sign in sign up user CRUD and list,cargo check -p backend,2026-05-07T00:00:00+08:00,0,
+5,Run verification,DONE,Formatting and compile checks pass,cargo fmt --all --check && cargo check,2026-05-07T00:00:00+08:00,0,
+6,Extract shared user types into types crate,DONE,User domain and API transport types live in crates/types and user crate depends on types,rg -n "crate::domain|pub mod domain|mod dto|crate::api::dto" crates/user crates/types -g '*.rs',2026-05-07T00:00:00+08:00,0,
+7,Extract Toasty persistence into storage crate,DONE,Toasty database connection models and user store live in crates/storage,cargo check,2026-05-07T00:00:00+08:00,0,
+8,Add unified API response envelope,DONE,Success and error JSON use shared response structs,cargo test -p types,2026-05-07T00:00:00+08:00,0,
+9,Add backend tooling entry points,DONE,justfile and rustfmt.toml exist and validate,just --list,2026-05-07T00:00:00+08:00,0,
+10,Run final verification,DONE,Formatting compile and timed tests pass,cargo fmt --all --check && cargo check && just test,2026-05-07T00:00:00+08:00,0,
+11,Align response envelope with new-api,DONE,API response structs use success message data shape from new-api,cargo test -p types,2026-05-07T00:00:00+08:00,0,
+12,Run response verification,DONE,Formatting compile and timed tests pass,cargo fmt --all --check && cargo check && just test,2026-05-07T00:00:00+08:00,0,

@@ -1,0 +1,11 @@
+[package]
+name = "configuration"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+config_rs.workspace = true
+constants.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+

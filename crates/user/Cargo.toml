@@ -1,0 +1,18 @@
+[package]
+name = "user"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+argon2.workspace = true
+async-trait.workspace = true
+axum.workspace = true
+constants.workspace = true
+rand_core.workspace = true
+serde.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+types.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

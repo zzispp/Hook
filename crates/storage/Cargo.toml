@@ -1,0 +1,10 @@
+[package]
+name = "storage"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+constants.workspace = true
+thiserror.workspace = true
+toasty.workspace = true
+types.workspace = true
