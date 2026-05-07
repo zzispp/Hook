@@ -7,20 +7,23 @@ import { useMemo, useEffect, useCallback } from 'react';
 
 import axios, { endpoints } from 'src/lib/axios';
 
-import { JWT_STORAGE_KEY } from './constant';
 import { AuthContext } from '../auth-context';
-import { setSession, isValidToken } from './utils';
+import { setSession, isValidToken, requireApiData } from './utils';
+import { JWT_STORAGE_KEY, JWT_REFRESH_STORAGE_KEY } from './constant';
 
 // ----------------------------------------------------------------------
 
-/**
- * NOTE:
- * We only build demo at basic level.
- * Customer will need to do some extra handling yourself if you want to extend the logic and other features...
- */
-
 type Props = {
   children: React.ReactNode;
+};
+
+type TokenPairResponse = {
+  accessToken: string;
+  refreshToken: string;
+};
+
+type MeResponse = {
+  user: Record<string, unknown>;
 };
 
 export function AuthProvider({ children }: Props) {
@@ -28,21 +31,21 @@ export function AuthProvider({ children }: Props) {
 
   const checkUserSession = useCallback(async () => {
     try {
-      const accessToken = sessionStorage.getItem(JWT_STORAGE_KEY);
+      const session = await resolveSession();
 
-      if (accessToken && isValidToken(accessToken)) {
-        setSession(accessToken);
-
-        const res = await axios.get(endpoints.auth.me);
-
-        const { user } = res.data;
-
-        setState({ user: { ...user, accessToken }, loading: false });
-      } else {
+      if (!session) {
+        await setSession(null);
         setState({ user: null, loading: false });
+        return;
       }
+
+      const res = await axios.get(endpoints.auth.me);
+      const { user } = requireApiData<MeResponse>(res.data);
+
+      setState({ user: { ...user, accessToken: session.accessToken }, loading: false });
     } catch (error) {
       console.error(error);
+      await setSession(null);
       setState({ user: null, loading: false });
     }
   }, [setState]);
@@ -70,4 +73,25 @@ export function AuthProvider({ children }: Props) {
   );
 
   return <AuthContext value={memoizedValue}>{children}</AuthContext>;
+}
+
+async function resolveSession() {
+  const accessToken = sessionStorage.getItem(JWT_STORAGE_KEY);
+  const refreshToken = sessionStorage.getItem(JWT_REFRESH_STORAGE_KEY);
+
+  if (accessToken && refreshToken && isValidToken(accessToken)) {
+    await setSession({ accessToken, refreshToken });
+    return { accessToken, refreshToken };
+  }
+
+  if (!refreshToken || !isValidToken(refreshToken)) {
+    return null;
+  }
+
+  const res = await axios.post(endpoints.auth.refresh, { refreshToken });
+  const session = requireApiData<TokenPairResponse>(res.data);
+
+  await setSession(session);
+
+  return session;
 }

@@ -1,40 +1,39 @@
 'use client';
 
+import type { ApiEnvelope } from './utils';
+
 import axios, { endpoints } from 'src/lib/axios';
 
-import { setSession } from './utils';
-import { JWT_STORAGE_KEY } from './constant';
+import { setSession, requireApiData } from './utils';
 
 // ----------------------------------------------------------------------
 
 export type SignInParams = {
-  email: string;
+  identifier: string;
   password: string;
 };
 
 export type SignUpParams = {
+  username: string;
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+};
+
+type AuthSessionResponse = {
+  accessToken: string;
+  refreshToken: string;
 };
 
 /** **************************************
  * Sign in
  *************************************** */
-export const signInWithPassword = async ({ email, password }: SignInParams): Promise<void> => {
+export const signInWithPassword = async ({ identifier, password }: SignInParams): Promise<void> => {
   try {
-    const params = { email, password };
+    const params = { identifier, password };
 
     const res = await axios.post(endpoints.auth.signIn, params);
 
-    const { accessToken } = res.data;
-
-    if (!accessToken) {
-      throw new Error('Access token not found in response');
-    }
-
-    setSession(accessToken);
+    await setSession(requireAuthSession(res.data));
   } catch (error) {
     console.error('Error during sign in:', error);
     throw error;
@@ -45,28 +44,22 @@ export const signInWithPassword = async ({ email, password }: SignInParams): Pro
  * Sign up
  *************************************** */
 export const signUp = async ({
+  username,
   email,
   password,
-  firstName,
-  lastName,
 }: SignUpParams): Promise<void> => {
   const params = {
+    username,
     email,
     password,
-    firstName,
-    lastName,
+    role: 'user',
+    status: 'enabled',
   };
 
   try {
     const res = await axios.post(endpoints.auth.signUp, params);
 
-    const { accessToken } = res.data;
-
-    if (!accessToken) {
-      throw new Error('Access token not found in response');
-    }
-
-    sessionStorage.setItem(JWT_STORAGE_KEY, accessToken);
+    await setSession(requireAuthSession(res.data));
   } catch (error) {
     console.error('Error during sign up:', error);
     throw error;
@@ -84,3 +77,13 @@ export const signOut = async (): Promise<void> => {
     throw error;
   }
 };
+
+function requireAuthSession(payload: ApiEnvelope<AuthSessionResponse>): AuthSessionResponse {
+  const session = requireApiData<AuthSessionResponse>(payload);
+
+  if (!session.accessToken || !session.refreshToken) {
+    throw new Error('Auth tokens not found in response');
+  }
+
+  return session;
+}

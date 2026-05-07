@@ -13,8 +13,14 @@ pub struct UserPayload {
 
 #[derive(Debug, Deserialize)]
 pub struct SignInPayload {
-    pub username: String,
+    pub identifier: String,
     pub password: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshTokenPayload {
+    pub refresh_token: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -67,7 +73,7 @@ impl From<UserPayload> for ReplaceUser {
 impl From<SignInPayload> for Credentials {
     fn from(value: SignInPayload) -> Self {
         Self {
-            username: value.username,
+            identifier: value.identifier,
             password: value.password,
         }
     }

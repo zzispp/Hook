@@ -31,8 +31,7 @@ import { SignUpTerms } from '../../components/sign-up-terms';
 export type SignUpSchemaType = z.infer<typeof SignUpSchema>;
 
 export const SignUpSchema = z.object({
-  firstName: z.string().min(1, { error: 'First name is required!' }),
-  lastName: z.string().min(1, { error: 'Last name is required!' }),
+  username: z.string().min(1, { error: 'Username is required!' }),
   email: schemaUtils.email(),
   password: z
     .string()
@@ -52,10 +51,9 @@ export function JwtSignUpView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const defaultValues: SignUpSchemaType = {
-    firstName: 'Hello',
-    lastName: 'Friend',
-    email: 'hello@gmail.com',
-    password: '@2Minimal',
+    username: '',
+    email: '',
+    password: '',
   };
 
   const methods = useForm({
@@ -71,10 +69,9 @@ export function JwtSignUpView() {
   const onSubmit = handleSubmit(async (data) => {
     try {
       await signUp({
+        username: data.username,
         email: data.email,
         password: data.password,
-        firstName: data.firstName,
-        lastName: data.lastName,
       });
       await checkUserSession?.();
 
@@ -88,22 +85,19 @@ export function JwtSignUpView() {
 
   const renderForm = () => (
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
-      <Box
-        sx={{ display: 'flex', gap: { xs: 3, sm: 2 }, flexDirection: { xs: 'column', sm: 'row' } }}
-      >
-        <Field.Text
-          name="firstName"
-          label="First name"
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-        <Field.Text
-          name="lastName"
-          label="Last name"
-          slotProps={{ inputLabel: { shrink: true } }}
-        />
-      </Box>
+      <Field.Text
+        name="username"
+        label="Username"
+        placeholder="username"
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
 
-      <Field.Text name="email" label="Email address" slotProps={{ inputLabel: { shrink: true } }} />
+      <Field.Text
+        name="email"
+        label="Email address"
+        placeholder="name@example.com"
+        slotProps={{ inputLabel: { shrink: true } }}
+      />
 
       <Field.Text
         name="password"

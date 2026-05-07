@@ -32,7 +32,7 @@ pub struct ReplaceUser {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Credentials {
-    pub username: String,
+    pub identifier: String,
     pub password: String,
 }
 

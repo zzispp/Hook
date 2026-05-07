@@ -1,10 +1,19 @@
-import { paths } from 'src/routes/paths';
-
 import axios from 'src/lib/axios';
 
-import { JWT_STORAGE_KEY } from './constant';
+import { JWT_STORAGE_KEY, JWT_REFRESH_STORAGE_KEY } from './constant';
 
 // ----------------------------------------------------------------------
+
+export type JwtSession = {
+  accessToken: string;
+  refreshToken: string;
+};
+
+export type ApiEnvelope<T> = {
+  success: boolean;
+  message: string;
+  data?: T;
+};
 
 export function jwtDecode(token: string) {
   try {
@@ -51,44 +60,47 @@ export function isValidToken(accessToken: string) {
 
 // ----------------------------------------------------------------------
 
-export function tokenExpired(exp: number) {
-  const currentTime = Date.now();
-  const timeLeft = exp * 1000 - currentTime;
+export function requireApiData<T>(payload: ApiEnvelope<T>): T {
+  if (!payload.success) {
+    throw new Error(payload.message || 'Request failed');
+  }
 
-  setTimeout(() => {
-    try {
-      alert('Token expired!');
-      sessionStorage.removeItem(JWT_STORAGE_KEY);
-      window.location.href = paths.auth.jwt.signIn;
-    } catch (error) {
-      console.error('Error during token expiration:', error);
-      throw error;
-    }
-  }, timeLeft);
+  if (payload.data === undefined || payload.data === null) {
+    throw new Error('Response data not found');
+  }
+
+  return payload.data;
 }
 
 // ----------------------------------------------------------------------
 
-export async function setSession(accessToken: string | null) {
+export async function setSession(session: JwtSession | null) {
   try {
-    if (accessToken) {
-      sessionStorage.setItem(JWT_STORAGE_KEY, accessToken);
+    if (session) {
+      assertSession(session);
+      sessionStorage.setItem(JWT_STORAGE_KEY, session.accessToken);
+      sessionStorage.setItem(JWT_REFRESH_STORAGE_KEY, session.refreshToken);
 
-      axios.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+      axios.defaults.headers.common.Authorization = `Bearer ${session.accessToken}`;
 
-      const decodedToken = jwtDecode(accessToken); // ~3 days by minimals server
+      const decodedToken = jwtDecode(session.accessToken);
 
-      if (decodedToken && 'exp' in decodedToken) {
-        tokenExpired(decodedToken.exp);
-      } else {
+      if (!decodedToken || !('exp' in decodedToken)) {
         throw new Error('Invalid access token!');
       }
     } else {
       sessionStorage.removeItem(JWT_STORAGE_KEY);
+      sessionStorage.removeItem(JWT_REFRESH_STORAGE_KEY);
       delete axios.defaults.headers.common.Authorization;
     }
   } catch (error) {
     console.error('Error during set session:', error);
     throw error;
+  }
+}
+
+function assertSession(session: JwtSession) {
+  if (!session.accessToken || !session.refreshToken) {
+    throw new Error('Auth tokens not found in response');
   }
 }

@@ -14,6 +14,7 @@ const ROOT_CONFIG_PATH: &str = "config.yaml";
 pub struct Settings {
     pub server: ServerSettings,
     pub database: DatabaseSettings,
+    pub jwt: JwtSettings,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -33,6 +34,13 @@ pub struct DatabaseSettings {
     pub name: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct JwtSettings {
+    pub secret_env: String,
+    pub access_token_ttl_seconds: u64,
+    pub refresh_token_ttl_seconds: u64,
+}
+
 #[derive(Debug, Error)]
 pub enum SettingsError {
     #[error("configuration error: {0}")]
@@ -43,6 +51,8 @@ pub enum SettingsError {
     MissingConfigFile,
     #[error("--config requires a file path")]
     MissingConfigArgument,
+    #[error("jwt secret environment variable {0} is not set")]
+    MissingJwtSecret(String),
 }
 
 impl Settings {
@@ -77,6 +87,10 @@ impl Settings {
             "{}://{}:{}@{}:{}/{}",
             self.database.scheme, self.database.username, password, self.database.host, self.database.port, self.database.name
         ))
+    }
+
+    pub fn jwt_secret(&self) -> Result<String, SettingsError> {
+        env::var(&self.jwt.secret_env).map_err(|_| SettingsError::MissingJwtSecret(self.jwt.secret_env.clone()))
     }
 }
 
@@ -118,7 +132,7 @@ fn non_empty_database_url(url: Option<&str>) -> Option<&str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{DatabaseSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, ServerSettings, Settings, SettingsError, explicit_config_path};
+    use super::{DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, ServerSettings, Settings, SettingsError, explicit_config_path};
     use std::{ffi::OsString, path::PathBuf};
 
     #[test]
@@ -198,6 +212,7 @@ mod tests {
                 port: 3000,
             },
             database,
+            jwt: jwt_settings(),
         }
     }
 
@@ -210,6 +225,14 @@ mod tests {
             username: "postgres".into(),
             password: Some("123456".into()),
             name: "postgres".into(),
+        }
+    }
+
+    fn jwt_settings() -> JwtSettings {
+        JwtSettings {
+            secret_env: "HOOK_JWT_SECRET".into(),
+            access_token_ttl_seconds: 900,
+            refresh_token_ttl_seconds: 604800,
         }
     }
 }

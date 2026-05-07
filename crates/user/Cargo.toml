@@ -8,6 +8,7 @@ argon2.workspace = true
 async-trait.workspace = true
 axum.workspace = true
 constants.workspace = true
+jsonwebtoken.workspace = true
 rand_core.workspace = true
 serde.workspace = true
 storage.workspace = true
@@ -15,4 +16,6 @@ thiserror.workspace = true
 types.workspace = true
 
 [dev-dependencies]
+serde_json.workspace = true
 tokio.workspace = true
+tower.workspace = true

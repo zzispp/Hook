@@ -26,6 +26,7 @@ pub trait UserRepository: Send + Sync + 'static {
     async fn find_by_id(&self, id: UserId) -> AppResult<Option<User>>;
     async fn find_by_email(&self, email: &str) -> AppResult<Option<User>>;
     async fn find_auth_by_username(&self, username: &str) -> AppResult<Option<UserAuthRecord>>;
+    async fn find_auth_by_email(&self, email: &str) -> AppResult<Option<UserAuthRecord>>;
     async fn list(&self, page: PageRequest) -> AppResult<Page<User>>;
 }
 
@@ -38,6 +39,7 @@ pub trait PasswordHasher: Send + Sync + 'static {
 pub trait UserUseCase: Send + Sync + 'static {
     async fn sign_up(&self, input: NewUser) -> AppResult<User>;
     async fn sign_in(&self, input: Credentials) -> AppResult<User>;
+    async fn authenticated_user(&self, id: UserId) -> AppResult<User>;
     async fn create_user(&self, input: NewUser) -> AppResult<User>;
     async fn replace_user(&self, id: UserId, input: ReplaceUser) -> AppResult<User>;
     async fn delete_user(&self, id: UserId) -> AppResult<()>;

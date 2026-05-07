@@ -75,9 +75,15 @@ where
 
     async fn sign_in(&self, input: Credentials) -> AppResult<User> {
         validate_credentials(&input)?;
-        let found = self.repository.find_auth_by_username(&input.username).await?.ok_or(AppError::Unauthorized)?;
+        let found = find_auth_by_identifier(&self.repository, &input.identifier)
+            .await?
+            .ok_or(AppError::Unauthorized)?;
         verify_password(&self.password_hasher, &input.password, &found)?;
         Ok(found.user)
+    }
+
+    async fn authenticated_user(&self, id: UserId) -> AppResult<User> {
+        self.repository.find_by_id(id).await?.ok_or(AppError::Unauthorized)
     }
 
     async fn create_user(&self, input: NewUser) -> AppResult<User> {
@@ -149,8 +155,16 @@ fn verify_password<H: PasswordHasher>(hasher: &H, password: &str, found: &UserAu
 }
 
 fn validate_credentials(input: &Credentials) -> AppResult<()> {
-    reject_blank("username", &input.username)?;
+    reject_blank("identifier", &input.identifier)?;
     reject_blank("password", &input.password)
+}
+
+async fn find_auth_by_identifier<R: UserRepository>(repository: &R, identifier: &str) -> AppResult<Option<UserAuthRecord>> {
+    if let Some(found) = repository.find_auth_by_username(identifier).await? {
+        return Ok(Some(found));
+    }
+
+    repository.find_auth_by_email(identifier).await
 }
 
 fn validate_new_user(input: &NewUser) -> AppResult<()> {

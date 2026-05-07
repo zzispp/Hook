@@ -4,7 +4,7 @@ use configuration::Settings;
 use storage::connect_database;
 use tokio::net::TcpListener;
 use user::{
-    api::{ApiState, create_router},
+    api::{ApiState, TokenService, TokenSettings, create_router},
     application::UserService,
     infra::{Argon2PasswordHasher, StorageUserRepository},
 };
@@ -18,7 +18,12 @@ async fn main() {
     let database = connect_database(&database_url).await.expect("failed to connect database or push schema");
     let repository = StorageUserRepository::new(database);
     let users = UserService::new(repository, Argon2PasswordHasher);
-    let state = ApiState::new(Arc::new(users));
+    let tokens = TokenService::new(TokenSettings {
+        secret: settings.jwt_secret().expect("failed to resolve jwt secret"),
+        access_token_ttl_seconds: settings.jwt.access_token_ttl_seconds,
+        refresh_token_ttl_seconds: settings.jwt.refresh_token_ttl_seconds,
+    });
+    let state = ApiState::new(Arc::new(users), tokens);
     let app = create_router(state);
 
     let bind_addr = settings.bind_addr();

@@ -50,6 +50,14 @@ impl UserRepository for StorageUserRepository {
             .map_err(storage_error)
     }
 
+    async fn find_auth_by_email(&self, email: &str) -> AppResult<Option<UserAuthRecord>> {
+        self.store
+            .find_auth_by_email(email)
+            .await
+            .map(|record| record.map(user_auth_record))
+            .map_err(storage_error)
+    }
+
     async fn list(&self, page: PageRequest) -> AppResult<Page<User>> {
         self.store.list(page).await.map_err(storage_error)
     }

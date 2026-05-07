@@ -76,6 +76,16 @@ impl UserStore {
             .map_err(StorageError::from)
     }
 
+    pub async fn find_auth_by_email(&self, email: &str) -> StorageResult<Option<UserAuthRecord>> {
+        let mut db = self.database.connection();
+        UserRecord::filter(UserRecord::fields().email().eq(email))
+            .first()
+            .exec(&mut db)
+            .await
+            .map(|record| record.map(UserRecord::into_auth))
+            .map_err(StorageError::from)
+    }
+
     pub async fn list(&self, page: PageRequest) -> StorageResult<Page<User>> {
         let mut db = self.database.connection();
         let total = UserRecord::all().count().exec(&mut db).await?;
