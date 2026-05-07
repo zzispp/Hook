@@ -8,7 +8,7 @@ import type {
   MenuItem as RbacMenuItem,
 } from 'src/types/rbac';
 
-import { useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
@@ -23,17 +23,18 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 
-import { DashboardContent } from 'src/layouts/dashboard';
 import {
-  useMenuItems,
-  deleteMenuItem,
   createMenuItem,
-  updateMenuItem,
-  useMenuSections,
-  deleteMenuSection,
   createMenuSection,
+  deleteMenuItem,
+  deleteMenuSection,
+  updateMenuItem,
   updateMenuSection,
+  useMenuItems,
+  useMenuSections,
 } from 'src/actions/rbac';
+import { useTranslate } from 'src/locales/use-locales';
+import { DashboardContent } from 'src/layouts/dashboard';
 
 import { Label } from 'src/components/label';
 import { toast } from 'src/components/snackbar';
@@ -52,27 +53,11 @@ import {
   ManagementDialog,
   TableLoadingRows,
   ManagementTableHead,
+  translatedMenuItem,
+  translatedMenuSection,
 } from './shared';
 
 // ----------------------------------------------------------------------
-
-const SECTION_HEAD: TableHeadCellProps[] = [
-  { id: 'subheader', label: 'Subheader', width: 240 },
-  { id: 'code', label: 'Code', width: 240 },
-  { id: 'sort_order', label: 'Sort', width: 100 },
-  { id: 'enabled', label: 'Status', width: 120 },
-  { id: '', width: 96 },
-];
-
-const ITEM_HEAD: TableHeadCellProps[] = [
-  { id: 'title', label: 'Title', width: 220 },
-  { id: 'code', label: 'Code', width: 220 },
-  { id: 'path', label: 'Path' },
-  { id: 'section', label: 'Section', width: 180 },
-  { id: 'sort_order', label: 'Sort', width: 100 },
-  { id: 'enabled', label: 'Status', width: 120 },
-  { id: '', width: 96 },
-];
 
 const DEFAULT_SECTION: MenuSectionInput = {
   code: '',
@@ -97,6 +82,7 @@ const DEFAULT_ITEM: MenuItemInput = {
 // ----------------------------------------------------------------------
 
 export function MenuManagementView() {
+  const { t } = useTranslate('admin');
   const [tab, setTab] = useState('items');
 
   const sectionTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'sort_order' });
@@ -106,6 +92,28 @@ export function MenuManagementView() {
   const allSections = useMenuSections(0, 100);
   const items = useMenuItems(itemTable.page, itemTable.rowsPerPage);
   const allItems = useMenuItems(0, 100);
+  const sectionHead = useMemo<TableHeadCellProps[]>(
+    () => [
+      { id: 'subheader', label: t('fields.subheader'), width: 240 },
+      { id: 'code', label: t('common.code'), width: 240 },
+      { id: 'sort_order', label: t('common.sort'), width: 100 },
+      { id: 'enabled', label: t('common.status'), width: 120 },
+      { id: '', width: 96 },
+    ],
+    [t]
+  );
+  const itemHead = useMemo<TableHeadCellProps[]>(
+    () => [
+      { id: 'title', label: t('common.title'), width: 220 },
+      { id: 'code', label: t('common.code'), width: 220 },
+      { id: 'path', label: t('common.path') },
+      { id: 'section', label: t('common.section'), width: 180 },
+      { id: 'sort_order', label: t('common.sort'), width: 100 },
+      { id: 'enabled', label: t('common.status'), width: 120 },
+      { id: '', width: 96 },
+    ],
+    [t]
+  );
 
   const [sectionForm, setSectionForm] = useState<MenuSectionInput>(DEFAULT_SECTION);
   const [itemForm, setItemForm] = useState<MenuItemInput>(DEFAULT_ITEM);
@@ -117,7 +125,10 @@ export function MenuManagementView() {
   const [deleteSectionTarget, setDeleteSectionTarget] = useState<MenuSection | null>(null);
   const [deleteItemTarget, setDeleteItemTarget] = useState<RbacMenuItem | null>(null);
 
-  const sectionNameById = new Map(allSections.items.map((section) => [section.id, section.subheader]));
+  const sectionNameById = useMemo(
+    () => new Map(allSections.items.map((section) => [section.id, translatedMenuSection(section, t)])),
+    [allSections.items, t]
+  );
 
   const openCreateSection = useCallback(() => {
     setEditingSection(null);
@@ -177,90 +188,90 @@ export function MenuManagementView() {
     try {
       if (editingSection) {
         await updateMenuSection(editingSection.id, sectionForm);
-        toast.success('Menu section updated');
+        toast.success(t('messages.menuSectionUpdated'));
       } else {
         await createMenuSection(sectionForm);
-        toast.success('Menu section created');
+        toast.success(t('messages.menuSectionCreated'));
       }
       closeSectionDialog();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Save failed');
+      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
     } finally {
       setSubmitting(false);
     }
-  }, [closeSectionDialog, editingSection, sectionForm]);
+  }, [closeSectionDialog, editingSection, sectionForm, t]);
 
   const submitItem = useCallback(async () => {
     setSubmitting(true);
     try {
       if (editingItem) {
         await updateMenuItem(editingItem.id, itemForm);
-        toast.success('Menu item updated');
+        toast.success(t('messages.menuItemUpdated'));
       } else {
         await createMenuItem(itemForm);
-        toast.success('Menu item created');
+        toast.success(t('messages.menuItemCreated'));
       }
       closeItemDialog();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Save failed');
+      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
     } finally {
       setSubmitting(false);
     }
-  }, [closeItemDialog, editingItem, itemForm]);
+  }, [closeItemDialog, editingItem, itemForm, t]);
 
   const confirmDeleteSection = useCallback(async () => {
     if (!deleteSectionTarget) return;
 
     try {
       await deleteMenuSection(deleteSectionTarget.id);
-      toast.success('Menu section deleted');
+      toast.success(t('messages.menuSectionDeleted'));
       setDeleteSectionTarget(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Delete failed');
+      toast.error(error instanceof Error ? error.message : t('messages.deleteFailed'));
     }
-  }, [deleteSectionTarget]);
+  }, [deleteSectionTarget, t]);
 
   const confirmDeleteItem = useCallback(async () => {
     if (!deleteItemTarget) return;
 
     try {
       await deleteMenuItem(deleteItemTarget.id);
-      toast.success('Menu item deleted');
+      toast.success(t('messages.menuItemDeleted'));
       setDeleteItemTarget(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Delete failed');
+      toast.error(error instanceof Error ? error.message : t('messages.deleteFailed'));
     }
-  }, [deleteItemTarget]);
+  }, [deleteItemTarget, t]);
 
   return (
     <DashboardContent>
       <AdminBreadcrumbs
-        heading="Menu Management"
+        heading={t('pages.menuManagement')}
         action={
           <AddButton onClick={tab === 'items' ? openCreateItem : openCreateSection}>
-            {tab === 'items' ? 'Add menu item' : 'Add section'}
+            {tab === 'items' ? t('actions.addMenuItem') : t('actions.addSection')}
           </AddButton>
         }
       />
 
       <Card>
         <Tabs value={tab} onChange={(event, value) => setTab(value)} sx={{ px: 2.5 }}>
-          <Tab value="items" label="Menu items" />
-          <Tab value="sections" label="Sections" />
+          <Tab value="items" label={t('common.menus')} />
+          <Tab value="sections" label={t('common.section')} />
         </Tabs>
 
         {tab === 'items' ? (
           <>
             <Scrollbar>
               <Table sx={{ minWidth: 1100 }}>
-                <ManagementTableHead head={ITEM_HEAD} />
+                <ManagementTableHead head={itemHead} />
                 <TableBody>
                   {items.isLoading ? (
-                    <TableLoadingRows head={ITEM_HEAD} rows={itemTable.rowsPerPage} />
+                    <TableLoadingRows head={itemHead} rows={itemTable.rowsPerPage} />
                   ) : (
                     items.items.map((row) => (
                       <TableRow key={row.id} hover>
-                        <TableCell>{row.title}</TableCell>
+                        <TableCell>{translatedMenuItem(row, t)}</TableCell>
                         <TableCell sx={{ fontFamily: 'monospace' }}>{row.code}</TableCell>
                         <TableCell sx={{ fontFamily: 'monospace' }}>{row.path}</TableCell>
                         <TableCell>{sectionNameById.get(row.section_id) ?? row.section_id}</TableCell>
@@ -270,12 +281,12 @@ export function MenuManagementView() {
                         </TableCell>
                         <TableCell align="right">
                           <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <Tooltip title="Edit">
+                            <Tooltip title={t('common.edit')}>
                               <IconButton onClick={() => openEditItem(row)}>
                                 <Iconify icon="solar:pen-bold" />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Delete">
+                            <Tooltip title={t('common.delete')}>
                               <IconButton color="error" onClick={() => setDeleteItemTarget(row)}>
                                 <Iconify icon="solar:trash-bin-trash-bold" />
                               </IconButton>
@@ -285,7 +296,10 @@ export function MenuManagementView() {
                       </TableRow>
                     ))
                   )}
-                  <TableNoData notFound={!items.isLoading && items.items.length === 0} />
+                  <TableNoData
+                    title={t('common.noData')}
+                    notFound={!items.isLoading && items.items.length === 0}
+                  />
                 </TableBody>
               </Table>
             </Scrollbar>
@@ -301,14 +315,14 @@ export function MenuManagementView() {
           <>
             <Scrollbar>
               <Table sx={{ minWidth: 820 }}>
-                <ManagementTableHead head={SECTION_HEAD} />
+                <ManagementTableHead head={sectionHead} />
                 <TableBody>
                   {sections.isLoading ? (
-                    <TableLoadingRows head={SECTION_HEAD} rows={sectionTable.rowsPerPage} />
+                    <TableLoadingRows head={sectionHead} rows={sectionTable.rowsPerPage} />
                   ) : (
                     sections.items.map((row) => (
                       <TableRow key={row.id} hover>
-                        <TableCell>{row.subheader}</TableCell>
+                        <TableCell>{translatedMenuSection(row, t)}</TableCell>
                         <TableCell sx={{ fontFamily: 'monospace' }}>{row.code}</TableCell>
                         <TableCell>{row.sort_order}</TableCell>
                         <TableCell>
@@ -316,12 +330,12 @@ export function MenuManagementView() {
                         </TableCell>
                         <TableCell align="right">
                           <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            <Tooltip title="Edit">
+                            <Tooltip title={t('common.edit')}>
                               <IconButton onClick={() => openEditSection(row)}>
                                 <Iconify icon="solar:pen-bold" />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Delete">
+                            <Tooltip title={t('common.delete')}>
                               <IconButton color="error" onClick={() => setDeleteSectionTarget(row)}>
                                 <Iconify icon="solar:trash-bin-trash-bold" />
                               </IconButton>
@@ -331,7 +345,10 @@ export function MenuManagementView() {
                       </TableRow>
                     ))
                   )}
-                  <TableNoData notFound={!sections.isLoading && sections.items.length === 0} />
+                  <TableNoData
+                    title={t('common.noData')}
+                    notFound={!sections.isLoading && sections.items.length === 0}
+                  />
                 </TableBody>
               </Table>
             </Scrollbar>
@@ -348,31 +365,31 @@ export function MenuManagementView() {
 
       <ManagementDialog
         open={creatingSection || !!editingSection}
-        title={editingSection ? 'Edit menu section' : 'Create menu section'}
+        title={editingSection ? t('dialogs.editMenuSection') : t('dialogs.createMenuSection')}
         submitting={submitting}
         onClose={closeSectionDialog}
         onSubmit={submitSection}
       >
         <TextFieldRow
           required
-          label="Subheader"
+          label={t('fields.subheader')}
           value={sectionForm.subheader}
           onChange={(value) => setSectionForm((current) => ({ ...current, subheader: value }))}
         />
         <TextFieldRow
           required
-          label="Code"
+          label={t('common.code')}
           value={sectionForm.code}
           onChange={(value) => setSectionForm((current) => ({ ...current, code: value }))}
         />
         <TextFieldRow
           type="number"
-          label="Sort order"
+          label={t('common.sortOrder')}
           value={sectionForm.sort_order}
           onChange={(value) => setSectionForm((current) => ({ ...current, sort_order: Number(value) }))}
         />
         <SwitchRow
-          label="Enabled"
+          label={t('common.enabled')}
           checked={sectionForm.enabled}
           onChange={(enabled) => setSectionForm((current) => ({ ...current, enabled }))}
         />
@@ -380,7 +397,7 @@ export function MenuManagementView() {
 
       <ManagementDialog
         open={creatingItem || !!editingItem}
-        title={editingItem ? 'Edit menu item' : 'Create menu item'}
+        title={editingItem ? t('dialogs.editMenuItem') : t('dialogs.createMenuItem')}
         submitting={submitting}
         onClose={closeItemDialog}
         onSubmit={submitItem}
@@ -388,56 +405,56 @@ export function MenuManagementView() {
         <TextFieldRow
           required
           select
-          label="Section"
+          label={t('common.section')}
           value={itemForm.section_id}
           onChange={(value) => setItemForm((current) => ({ ...current, section_id: value }))}
         >
           {allSections.items.map((section) => (
             <MenuItem key={section.id} value={section.id}>
-              {section.subheader}
+              {translatedMenuSection(section, t)}
             </MenuItem>
           ))}
         </TextFieldRow>
         <TextFieldRow
           select
-          label="Parent item"
+          label={t('fields.parentItem')}
           value={itemForm.parent_id ?? ''}
           onChange={(value) => setItemForm((current) => ({ ...current, parent_id: value || null }))}
         >
-          <MenuItem value="">None</MenuItem>
+          <MenuItem value="">{t('common.none')}</MenuItem>
           {allItems.items
             .filter((item) => item.id !== editingItem?.id)
             .map((item) => (
               <MenuItem key={item.id} value={item.id}>
-                {item.title}
+                {translatedMenuItem(item, t)}
               </MenuItem>
             ))}
         </TextFieldRow>
         <TextFieldRow
           required
-          label="Title"
+          label={t('common.title')}
           value={itemForm.title}
           onChange={(value) => setItemForm((current) => ({ ...current, title: value }))}
         />
         <TextFieldRow
           required
-          label="Code"
+          label={t('common.code')}
           value={itemForm.code}
           onChange={(value) => setItemForm((current) => ({ ...current, code: value }))}
         />
         <TextFieldRow
           required
-          label="Path"
+          label={t('common.path')}
           value={itemForm.path}
           onChange={(value) => setItemForm((current) => ({ ...current, path: value }))}
         />
         <TextFieldRow
           select
-          label="Icon"
+          label={t('common.icon')}
           value={itemForm.icon ?? ''}
           onChange={(value) => setItemForm((current) => ({ ...current, icon: value || null }))}
         >
-          <MenuItem value="">None</MenuItem>
+          <MenuItem value="">{t('common.none')}</MenuItem>
           {NAV_ICON_OPTIONS.map((option) => (
             <MenuItem key={option} value={option}>
               {option}
@@ -445,28 +462,28 @@ export function MenuManagementView() {
           ))}
         </TextFieldRow>
         <TextFieldRow
-          label="Caption"
+          label={t('common.caption')}
           value={itemForm.caption ?? ''}
           onChange={(value) => setItemForm((current) => ({ ...current, caption: value || null }))}
         />
         <TextFieldRow
           type="number"
-          label="Sort order"
+          label={t('common.sortOrder')}
           value={itemForm.sort_order}
           onChange={(value) => setItemForm((current) => ({ ...current, sort_order: Number(value) }))}
         />
         <Box>
           <Label color="info" variant="soft" sx={{ mr: 1 }}>
-            Deep match controls subpath highlighting.
+            {t('helper.deepMatch')}
           </Label>
         </Box>
         <SwitchRow
-          label="Deep match"
+          label={t('fields.deepMatch')}
           checked={itemForm.deep_match}
           onChange={(deepMatch) => setItemForm((current) => ({ ...current, deep_match: deepMatch }))}
         />
         <SwitchRow
-          label="Enabled"
+          label={t('common.enabled')}
           checked={itemForm.enabled}
           onChange={(enabled) => setItemForm((current) => ({ ...current, enabled }))}
         />
@@ -475,11 +492,12 @@ export function MenuManagementView() {
       <ConfirmDialog
         open={!!deleteSectionTarget}
         onClose={() => setDeleteSectionTarget(null)}
-        title="Delete menu section"
-        content={`Delete ${deleteSectionTarget?.subheader ?? ''}?`}
+        title={t('dialogs.deleteMenuSection')}
+        content={t('dialogs.deleteContent', { name: deleteSectionTarget?.subheader ?? '' })}
+        cancelText={t('common.cancel')}
         action={
           <Button variant="contained" color="error" onClick={confirmDeleteSection}>
-            Delete
+            {t('common.delete')}
           </Button>
         }
       />
@@ -487,11 +505,12 @@ export function MenuManagementView() {
       <ConfirmDialog
         open={!!deleteItemTarget}
         onClose={() => setDeleteItemTarget(null)}
-        title="Delete menu item"
-        content={`Delete ${deleteItemTarget?.title ?? ''}?`}
+        title={t('dialogs.deleteMenuItem')}
+        content={t('dialogs.deleteContent', { name: deleteItemTarget?.title ?? '' })}
+        cancelText={t('common.cancel')}
         action={
           <Button variant="contained" color="error" onClick={confirmDeleteItem}>
-            Delete
+            {t('common.delete')}
           </Button>
         }
       />

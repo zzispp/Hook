@@ -20,6 +20,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 type Props = CardProps & {
   title?: string;
   subheader?: string;
+  viewAllText?: string;
   list: {
     id: string;
     title: string;
@@ -29,7 +30,7 @@ type Props = CardProps & {
   }[];
 };
 
-export function AnalyticsNews({ title, subheader, list, sx, ...other }: Props) {
+export function AnalyticsNews({ title, subheader, viewAllText = 'View all', list, sx, ...other }: Props) {
   return (
     <Card sx={sx} {...other}>
       <CardHeader title={title} subheader={subheader} sx={{ mb: 1 }} />
@@ -48,7 +49,7 @@ export function AnalyticsNews({ title, subheader, list, sx, ...other }: Props) {
           color="inherit"
           endIcon={<Iconify icon="eva:arrow-ios-forward-fill" width={18} sx={{ ml: -0.5 }} />}
         >
-          View all
+          {viewAllText}
         </Button>
       </Box>
     </Card>

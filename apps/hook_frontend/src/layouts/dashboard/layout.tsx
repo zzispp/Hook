@@ -12,9 +12,10 @@ import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
-import { allLangs } from 'src/locales';
-import { useNavbar } from 'src/actions/rbac';
 import { _contacts, _notifications } from 'src/_mock';
+import { useNavbar } from 'src/actions/rbac';
+import { allLangs } from 'src/locales';
+import { useTranslate } from 'src/locales/use-locales';
 
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
@@ -62,6 +63,7 @@ export function DashboardLayout({
   const theme = useTheme();
 
   const settings = useSettingsContext();
+  const { t } = useTranslate('admin');
 
   const navbar = useNavbar();
 
@@ -69,7 +71,8 @@ export function DashboardLayout({
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
-  const navData = slotProps?.nav?.data ?? (navbar.isLoading ? dashboardNavData : navbar.data);
+  const sourceNavData = slotProps?.nav?.data ?? (navbar.isLoading ? dashboardNavData : navbar.data);
+  const navData = translateNavData(sourceNavData, t);
 
   const isNavMini = settings.state.navLayout === 'mini';
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
@@ -226,4 +229,89 @@ export function DashboardLayout({
       {renderMain()}
     </LayoutSection>
   );
+}
+
+function translateNavData(
+  data: NavSectionProps['data'],
+  t: ReturnType<typeof useTranslate>['t']
+): NavSectionProps['data'] {
+  return data.map((section) => ({
+    ...section,
+    subheader: translateNavSection(section, t),
+    items: section.items.map((item) => translateNavItem(item, t)),
+  }));
+}
+
+function translateNavSection(
+  section: NavSectionProps['data'][number],
+  t: ReturnType<typeof useTranslate>['t']
+) {
+  if (section.code === 'overview') {
+    return t('nav.overview');
+  }
+
+  if (section.code === 'system_management') {
+    return t('nav.systemManagement');
+  }
+
+  if (section.subheader === '概览' || section.subheader === 'Overview') {
+    return t('nav.overview');
+  }
+
+  if (
+    section.subheader === 'Management' ||
+    section.subheader === 'System Management' ||
+    section.subheader === '系统管理'
+  ) {
+    return t('nav.systemManagement');
+  }
+
+  return section.subheader;
+}
+
+function translateNavItem(
+  item: NavSectionProps['data'][number]['items'][number],
+  t: ReturnType<typeof useTranslate>['t']
+): NavSectionProps['data'][number]['items'][number] {
+  return {
+    ...item,
+    title: translateNavItemTitle(item, t),
+    caption: item.caption ? translateNavCaption(item.caption, t) : item.caption,
+    children: item.children?.map((child) => translateNavItem(child, t)),
+  };
+}
+
+function translateNavItemTitle(
+  item: NavSectionProps['data'][number]['items'][number],
+  t: ReturnType<typeof useTranslate>['t']
+) {
+  const keyByCode: Record<string, string> = {
+    dashboard_home: 'nav.dashboard',
+    system_management: 'nav.systemManagement',
+    admin_users: 'nav.users',
+    admin_roles: 'nav.roles',
+    admin_apis: 'nav.apis',
+    admin_menus: 'nav.menus',
+  };
+
+  const keyByPath: Record<string, string> = {
+    '/dashboard': 'nav.dashboard',
+    '/dashboard/admin': 'nav.systemManagement',
+    '/dashboard/admin/users': 'nav.users',
+    '/dashboard/admin/roles': 'nav.roles',
+    '/dashboard/admin/apis': 'nav.apis',
+    '/dashboard/admin/menus': 'nav.menus',
+  };
+
+  const key = (item.code && keyByCode[item.code]) || keyByPath[item.path];
+
+  return key ? t(key) : item.title;
+}
+
+function translateNavCaption(caption: string, t: ReturnType<typeof useTranslate>['t']) {
+  if (caption === 'Custom keyboard shortcuts.') {
+    return t('nav.customKeyboardShortcuts');
+  }
+
+  return caption;
 }

@@ -8,7 +8,7 @@ import type {
   MenuItem as RbacMenuItem,
 } from 'src/types/rbac';
 
-import { useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -29,19 +29,20 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import ListItemButton from '@mui/material/ListItemButton';
 
-import { DashboardContent } from 'src/layouts/dashboard';
 import {
-  useApis,
-  useRoles,
   createRole,
-  updateRole,
   deleteRole,
   getRoleApis,
-  useMenuItems,
   getRoleMenus,
+  updateRole,
+  useApis,
+  useRoles,
+  useMenuItems,
   updateRoleApis,
   updateRoleMenus,
 } from 'src/actions/rbac';
+import { useTranslate } from 'src/locales/use-locales';
+import { DashboardContent } from 'src/layouts/dashboard';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -60,19 +61,13 @@ import {
   ManagementDialog,
   TableLoadingRows,
   ManagementTableHead,
+  translatedApiGroup,
+  translatedApiName,
+  translatedMenuItem,
+  translatedRoleName,
 } from './shared';
 
 // ----------------------------------------------------------------------
-
-const TABLE_HEAD: TableHeadCellProps[] = [
-  { id: 'name', label: 'Role', width: 220 },
-  { id: 'code', label: 'Code', width: 200 },
-  { id: 'description', label: 'Description' },
-  { id: 'sort_order', label: 'Sort', width: 100 },
-  { id: 'enabled', label: 'Status', width: 120 },
-  { id: 'system', label: 'Type', width: 120 },
-  { id: '', width: 144 },
-];
 
 const DEFAULT_FORM: RoleInput = {
   code: '',
@@ -85,10 +80,23 @@ const DEFAULT_FORM: RoleInput = {
 // ----------------------------------------------------------------------
 
 export function RoleManagementView() {
+  const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'sort_order' });
   const { items, total, isLoading } = useRoles(table.page, table.rowsPerPage);
   const apis = useApis(0, 100);
   const menuItems = useMenuItems(0, 100);
+  const tableHead = useMemo<TableHeadCellProps[]>(
+    () => [
+      { id: 'name', label: t('common.role'), width: 220 },
+      { id: 'code', label: t('common.code'), width: 200 },
+      { id: 'description', label: t('common.description') },
+      { id: 'sort_order', label: t('common.sort'), width: 100 },
+      { id: 'enabled', label: t('common.status'), width: 120 },
+      { id: 'system', label: t('common.type'), width: 120 },
+      { id: '', width: 144 },
+    ],
+    [t]
+  );
 
   const [form, setForm] = useState<RoleInput>(DEFAULT_FORM);
   const [editing, setEditing] = useState<Role | null>(null);
@@ -129,30 +137,30 @@ export function RoleManagementView() {
     try {
       if (editing) {
         await updateRole(editing.code, form);
-        toast.success('Role updated');
+        toast.success(t('messages.roleUpdated'));
       } else {
         await createRole(form);
-        toast.success('Role created');
+        toast.success(t('messages.roleCreated'));
       }
       closeDialog();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Save failed');
+      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
     } finally {
       setSubmitting(false);
     }
-  }, [closeDialog, editing, form]);
+  }, [closeDialog, editing, form, t]);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
 
     try {
       await deleteRole(deleteTarget.code);
-      toast.success('Role deleted');
+      toast.success(t('messages.roleDeleted'));
       setDeleteTarget(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Delete failed');
+      toast.error(error instanceof Error ? error.message : t('messages.deleteFailed'));
     }
-  }, [deleteTarget]);
+  }, [deleteTarget, t]);
 
   const openBindings = useCallback(async (role: Role) => {
     setBindingTarget(role);
@@ -166,11 +174,11 @@ export function RoleManagementView() {
       setSelectedApis(apiBinding.api_permission_ids);
       setSelectedMenus(menuBinding.menu_item_ids);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Load bindings failed');
+      toast.error(error instanceof Error ? error.message : t('messages.loadBindingsFailed'));
     } finally {
       setBindingLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const saveBindings = useCallback(async () => {
     if (!bindingTarget) return;
@@ -181,30 +189,33 @@ export function RoleManagementView() {
         updateRoleApis(bindingTarget.code, selectedApis),
         updateRoleMenus(bindingTarget.code, selectedMenus),
       ]);
-      toast.success('Role permissions updated');
+      toast.success(t('messages.rolePermissionsUpdated'));
       setBindingTarget(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Save bindings failed');
+      toast.error(error instanceof Error ? error.message : t('messages.saveBindingsFailed'));
     } finally {
       setSubmitting(false);
     }
-  }, [bindingTarget, selectedApis, selectedMenus]);
+  }, [bindingTarget, selectedApis, selectedMenus, t]);
 
   return (
     <DashboardContent>
-      <AdminBreadcrumbs heading="Role Management" action={<AddButton onClick={openCreate}>Add role</AddButton>} />
+      <AdminBreadcrumbs
+        heading={t('pages.roleManagement')}
+        action={<AddButton onClick={openCreate}>{t('actions.addRole')}</AddButton>}
+      />
 
       <Card>
         <Scrollbar>
           <Table sx={{ minWidth: 1050 }}>
-            <ManagementTableHead head={TABLE_HEAD} />
+            <ManagementTableHead head={tableHead} />
             <TableBody>
               {isLoading ? (
-                <TableLoadingRows head={TABLE_HEAD} rows={table.rowsPerPage} />
+                <TableLoadingRows head={tableHead} rows={table.rowsPerPage} />
               ) : (
                 items.map((row) => (
                   <TableRow key={row.code} hover>
-                    <TableCell>{row.name}</TableCell>
+                    <TableCell>{translatedRoleName(row, t)}</TableCell>
                     <TableCell sx={{ fontFamily: 'monospace' }}>{row.code}</TableCell>
                     <TableCell>{row.description || '-'}</TableCell>
                     <TableCell>{row.sort_order}</TableCell>
@@ -212,23 +223,27 @@ export function RoleManagementView() {
                       <EnabledLabel enabled={row.enabled} />
                     </TableCell>
                     <TableCell>
-                      <BooleanLabel enabled={row.system} trueText="System" falseText="Custom" />
+                      <BooleanLabel
+                        enabled={row.system}
+                        trueText={t('common.system')}
+                        falseText={t('common.custom')}
+                      />
                     </TableCell>
                     <TableCell align="right">
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Tooltip title="Permissions">
+                        <Tooltip title={t('common.permissions')}>
                           <IconButton onClick={() => openBindings(row)}>
                             <Iconify icon="solar:shield-keyhole-bold-duotone" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Edit">
+                        <Tooltip title={t('common.edit')}>
                           <span>
                             <IconButton disabled={row.system} onClick={() => openEdit(row)}>
                               <Iconify icon="solar:pen-bold" />
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title="Delete">
+                        <Tooltip title={t('common.delete')}>
                           <span>
                             <IconButton color="error" disabled={row.system} onClick={() => setDeleteTarget(row)}>
                               <Iconify icon="solar:trash-bin-trash-bold" />
@@ -241,7 +256,7 @@ export function RoleManagementView() {
                 ))
               )}
 
-              <TableNoData notFound={!isLoading && items.length === 0} />
+              <TableNoData title={t('common.noData')} notFound={!isLoading && items.length === 0} />
             </TableBody>
           </Table>
         </Scrollbar>
@@ -257,7 +272,7 @@ export function RoleManagementView() {
 
       <ManagementDialog
         open={creating || !!editing}
-        title={editing ? 'Edit role' : 'Create role'}
+        title={editing ? t('dialogs.editRole') : t('dialogs.createRole')}
         submitting={submitting}
         onClose={closeDialog}
         onSubmit={submitRole}
@@ -265,29 +280,29 @@ export function RoleManagementView() {
         <TextFieldRow
           required
           disabled={!!editing}
-          label="Code"
+          label={t('common.code')}
           value={form.code}
           onChange={(value) => setForm((current) => ({ ...current, code: value }))}
         />
         <TextFieldRow
           required
-          label="Name"
+          label={t('common.name')}
           value={form.name}
           onChange={(value) => setForm((current) => ({ ...current, name: value }))}
         />
         <TextFieldRow
-          label="Description"
+          label={t('common.description')}
           value={form.description}
           onChange={(value) => setForm((current) => ({ ...current, description: value }))}
         />
         <TextFieldRow
           type="number"
-          label="Sort order"
+          label={t('common.sortOrder')}
           value={form.sort_order}
           onChange={(value) => setForm((current) => ({ ...current, sort_order: Number(value) }))}
         />
         <SwitchRow
-          label="Enabled"
+          label={t('common.enabled')}
           checked={form.enabled}
           onChange={(enabled) => setForm((current) => ({ ...current, enabled }))}
         />
@@ -312,11 +327,12 @@ export function RoleManagementView() {
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete role"
-        content={`Delete ${deleteTarget?.name ?? ''}?`}
+        title={t('dialogs.deleteRole')}
+        content={t('dialogs.deleteContent', { name: deleteTarget?.name ?? '' })}
+        cancelText={t('common.cancel')}
         action={
           <Button variant="contained" color="error" onClick={confirmDelete}>
-            Delete
+            {t('common.delete')}
           </Button>
         }
       />
@@ -353,6 +369,8 @@ function BindingDialog({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslate('admin');
+
   const toggleApi = (id: string) => {
     onSelectedApisChange(toggleValue(selectedApis, id));
   };
@@ -363,25 +381,29 @@ function BindingDialog({
 
   return (
     <Dialog fullWidth maxWidth="md" open={!!role} onClose={onClose}>
-      <DialogTitle>Role permissions: {role?.name}</DialogTitle>
+      <DialogTitle>
+        {t('dialogs.rolePermissions', {
+          name: role ? translatedRoleName(role, t) : '',
+        })}
+      </DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           <Button
             variant={tab === 'apis' ? 'contained' : 'outlined'}
             onClick={() => onTabChange('apis')}
           >
-            API permissions
+            {t('actions.apiPermissions')}
           </Button>
           <Button
             variant={tab === 'menus' ? 'contained' : 'outlined'}
             onClick={() => onTabChange('menus')}
           >
-            Menu permissions
+            {t('actions.menuPermissions')}
           </Button>
         </Box>
 
         {loading ? (
-          <Box sx={{ py: 4, color: 'text.secondary' }}>Loading permissions...</Box>
+          <Box sx={{ py: 4, color: 'text.secondary' }}>{t('messages.loadingPermissions')}</Box>
         ) : (
           <Scrollbar sx={{ maxHeight: 520 }}>
             {tab === 'apis' ? (
@@ -394,10 +416,10 @@ function BindingDialog({
                         primary={
                           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                             <MethodLabel method={api.method} />
-                            <span>{api.name}</span>
+                            <span>{translatedApiName(api, t)}</span>
                           </Box>
                         }
-                        secondary={`${api.group || 'Ungrouped'} · ${api.path_pattern}`}
+                        secondary={`${translatedApiGroup(api.group, t)} · ${api.path_pattern}`}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -409,7 +431,10 @@ function BindingDialog({
                   <ListItem key={menu.id} disablePadding>
                     <ListItemButton onClick={() => toggleMenu(menu.id)}>
                       <Checkbox edge="start" checked={selectedMenus.includes(menu.id)} tabIndex={-1} />
-                      <ListItemText primary={menu.title} secondary={`${menu.code} · ${menu.path}`} />
+                      <ListItemText
+                        primary={translatedMenuItem(menu, t)}
+                        secondary={`${menu.code} · ${menu.path}`}
+                      />
                     </ListItemButton>
                   </ListItem>
                 ))}
@@ -420,10 +445,10 @@ function BindingDialog({
       </DialogContent>
       <DialogActions>
         <Button variant="outlined" onClick={onClose}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button variant="contained" loading={submitting} onClick={onSubmit}>
-          Save permissions
+          {t('actions.savePermissions')}
         </Button>
       </DialogActions>
     </Dialog>

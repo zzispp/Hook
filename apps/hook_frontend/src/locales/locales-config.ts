@@ -4,32 +4,16 @@ import type { Theme, Components } from '@mui/material/styles';
 import resourcesToBackend from 'i18next-resources-to-backend';
 
 // MUI Core Locales
-import {
-  frFR as frFRCore,
-  viVN as viVNCore,
-  zhCN as zhCNCore,
-  arSA as arSACore,
-} from '@mui/material/locale';
+import { zhCN as zhCNCore } from '@mui/material/locale';
 // MUI Date Pickers Locales
-import {
-  enUS as enUSDate,
-  frFR as frFRDate,
-  viVN as viVNDate,
-  zhCN as zhCNDate,
-} from '@mui/x-date-pickers/locales';
+import { enUS as enUSDate, zhCN as zhCNDate } from '@mui/x-date-pickers/locales';
 // MUI Data Grid Locales
-import {
-  enUS as enUSDataGrid,
-  frFR as frFRDataGrid,
-  viVN as viVNDataGrid,
-  zhCN as zhCNDataGrid,
-  arSD as arSDDataGrid,
-} from '@mui/x-data-grid/locales';
+import { enUS as enUSDataGrid, zhCN as zhCNDataGrid } from '@mui/x-data-grid/locales';
 
 // ----------------------------------------------------------------------
 
 // Supported languages
-export const supportedLngs = ['en', 'fr', 'vi', 'cn', 'ar'] as const;
+export const supportedLngs = ['en', 'cn'] as const;
 export type LangCode = (typeof supportedLngs)[number];
 
 // Fallback and default namespace
@@ -38,7 +22,7 @@ export const defaultNS = 'common';
 
 // Storage config
 export const storageConfig = {
-  cookie: { key: 'i18next', autoDetection: false },
+  cookie: { key: 'i18next', autoDetection: true },
   localStorage: { key: 'i18nextLng', autoDetection: false },
 } as const;
 
@@ -71,43 +55,13 @@ export const allLangs: LangOption[] = [
     },
   },
   {
-    value: 'fr',
-    label: 'French',
-    countryCode: 'FR',
-    adapterLocale: 'fr',
-    numberFormat: { code: 'fr-Fr', currency: 'EUR' },
-    systemValue: {
-      components: { ...frFRCore.components, ...frFRDate.components, ...frFRDataGrid.components },
-    },
-  },
-  {
-    value: 'vi',
-    label: 'Vietnamese',
-    countryCode: 'VN',
-    adapterLocale: 'vi',
-    numberFormat: { code: 'vi-VN', currency: 'VND' },
-    systemValue: {
-      components: { ...viVNCore.components, ...viVNDate.components, ...viVNDataGrid.components },
-    },
-  },
-  {
     value: 'cn',
-    label: 'Chinese',
+    label: '中文',
     countryCode: 'CN',
     adapterLocale: 'zh-cn',
     numberFormat: { code: 'zh-CN', currency: 'CNY' },
     systemValue: {
       components: { ...zhCNCore.components, ...zhCNDate.components, ...zhCNDataGrid.components },
-    },
-  },
-  {
-    value: 'ar',
-    label: 'Arabic',
-    countryCode: 'SA',
-    adapterLocale: 'ar-sa',
-    numberFormat: { code: 'ar-SA', currency: 'SAR' },
-    systemValue: {
-      components: { ...arSACore.components, ...arSDDataGrid.components },
     },
   },
 ];

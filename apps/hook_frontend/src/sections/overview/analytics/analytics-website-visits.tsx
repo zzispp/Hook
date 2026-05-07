@@ -12,6 +12,7 @@ import { Chart, useChart } from 'src/components/chart';
 type Props = CardProps & {
   title?: string;
   subheader?: string;
+  tooltipSuffix?: string;
   chart: {
     colors?: string[];
     categories?: string[];
@@ -23,7 +24,14 @@ type Props = CardProps & {
   };
 };
 
-export function AnalyticsWebsiteVisits({ title, subheader, chart, sx, ...other }: Props) {
+export function AnalyticsWebsiteVisits({
+  title,
+  subheader,
+  tooltipSuffix = 'visits',
+  chart,
+  sx,
+  ...other
+}: Props) {
   const theme = useTheme();
 
   const chartColors = chart.colors ?? [
@@ -36,7 +44,7 @@ export function AnalyticsWebsiteVisits({ title, subheader, chart, sx, ...other }
     stroke: { width: 2, colors: ['transparent'] },
     xaxis: { categories: chart.categories },
     legend: { show: true },
-    tooltip: { y: { formatter: (value: number) => `${value} visits` } },
+    tooltip: { y: { formatter: (value: number) => `${value} ${tooltipSuffix}` } },
     ...chart.options,
   });
 

@@ -3,7 +3,7 @@
 import type { TableHeadCellProps } from 'src/components/table';
 import type { Role, UserInput, SystemUser } from 'src/types/rbac';
 
-import { useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -16,8 +16,9 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 
+import { createUser, deleteUser, updateUser, useRoles, useUsers } from 'src/actions/rbac';
+import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useRoles, useUsers, createUser, updateUser, deleteUser } from 'src/actions/rbac';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -35,19 +36,10 @@ import {
   ManagementDialog,
   TableLoadingRows,
   ManagementTableHead,
+  translatedRoleName,
 } from './shared';
 
 // ----------------------------------------------------------------------
-
-const TABLE_HEAD: TableHeadCellProps[] = [
-  { id: 'username', label: 'Username', width: 220 },
-  { id: 'email', label: 'Email' },
-  { id: 'role', label: 'Role', width: 160 },
-  { id: 'auth_source', label: 'Source', width: 130 },
-  { id: 'is_active', label: 'Status', width: 120 },
-  { id: 'system', label: 'Type', width: 120 },
-  { id: '', width: 96 },
-];
 
 const DEFAULT_FORM: UserInput = {
   username: '',
@@ -60,9 +52,22 @@ const DEFAULT_FORM: UserInput = {
 // ----------------------------------------------------------------------
 
 export function UserManagementView() {
+  const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'username' });
   const { items, total, isLoading } = useUsers(table.page, table.rowsPerPage);
   const roles = useRoles(0, 100);
+  const tableHead = useMemo<TableHeadCellProps[]>(
+    () => [
+      { id: 'username', label: t('common.username'), width: 220 },
+      { id: 'email', label: t('common.email') },
+      { id: 'role', label: t('common.role'), width: 160 },
+      { id: 'auth_source', label: t('common.source'), width: 130 },
+      { id: 'is_active', label: t('common.status'), width: 120 },
+      { id: 'system', label: t('common.type'), width: 120 },
+      { id: '', width: 96 },
+    ],
+    [t]
+  );
 
   const [form, setForm] = useState<UserInput>(DEFAULT_FORM);
   const [editing, setEditing] = useState<SystemUser | null>(null);
@@ -103,65 +108,72 @@ export function UserManagementView() {
     try {
       if (editing) {
         await updateUser(editing.id, form);
-        toast.success('User updated');
+        toast.success(t('messages.userUpdated'));
       } else {
         await createUser(form);
-        toast.success('User created');
+        toast.success(t('messages.userCreated'));
       }
       closeDialog();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Save failed');
+      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
     } finally {
       setSubmitting(false);
     }
-  }, [closeDialog, editing, form]);
+  }, [closeDialog, editing, form, t]);
 
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
 
     try {
       await deleteUser(deleteTarget.id);
-      toast.success('User deleted');
+      toast.success(t('messages.userDeleted'));
       setDeleteTarget(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Delete failed');
+      toast.error(error instanceof Error ? error.message : t('messages.deleteFailed'));
     }
-  }, [deleteTarget]);
+  }, [deleteTarget, t]);
 
   return (
     <DashboardContent>
-      <AdminBreadcrumbs heading="User Management" action={<AddButton onClick={openCreate}>Add user</AddButton>} />
+      <AdminBreadcrumbs
+        heading={t('pages.userManagement')}
+        action={<AddButton onClick={openCreate}>{t('actions.addUser')}</AddButton>}
+      />
 
       <Card>
         <Scrollbar>
           <Table sx={{ minWidth: 980 }}>
-            <ManagementTableHead head={TABLE_HEAD} />
+            <ManagementTableHead head={tableHead} />
             <TableBody>
               {isLoading ? (
-                <TableLoadingRows head={TABLE_HEAD} rows={table.rowsPerPage} />
+                <TableLoadingRows head={tableHead} rows={table.rowsPerPage} />
               ) : (
                 items.map((row) => (
                   <TableRow key={row.id} hover>
                     <TableCell>{row.username}</TableCell>
                     <TableCell>{row.email}</TableCell>
-                    <TableCell>{displayRole(row.role, roles.items)}</TableCell>
+                    <TableCell>{displayRole(row.role, roles.items, t)}</TableCell>
                     <TableCell>{row.auth_source}</TableCell>
                     <TableCell>
                       <EnabledLabel enabled={row.is_active} />
                     </TableCell>
                     <TableCell>
-                      <BooleanLabel enabled={row.system} trueText="System" falseText="Local" />
+                      <BooleanLabel
+                        enabled={row.system}
+                        trueText={t('common.system')}
+                        falseText={t('common.local')}
+                      />
                     </TableCell>
                     <TableCell align="right">
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Tooltip title="Edit">
+                        <Tooltip title={t('common.edit')}>
                           <span>
                             <IconButton disabled={row.system} onClick={() => openEdit(row)}>
                               <Iconify icon="solar:pen-bold" />
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title="Delete">
+                        <Tooltip title={t('common.delete')}>
                           <span>
                             <IconButton color="error" disabled={row.system} onClick={() => setDeleteTarget(row)}>
                               <Iconify icon="solar:trash-bin-trash-bold" />
@@ -174,7 +186,7 @@ export function UserManagementView() {
                 ))
               )}
 
-              <TableNoData notFound={!isLoading && items.length === 0} />
+              <TableNoData title={t('common.noData')} notFound={!isLoading && items.length === 0} />
             </TableBody>
           </Table>
         </Scrollbar>
@@ -190,46 +202,46 @@ export function UserManagementView() {
 
       <ManagementDialog
         open={creating || !!editing}
-        title={editing ? 'Edit user' : 'Create user'}
+        title={editing ? t('dialogs.editUser') : t('dialogs.createUser')}
         submitting={submitting}
         onClose={closeDialog}
         onSubmit={submitUser}
       >
         <TextFieldRow
           required
-          label="Username"
+          label={t('common.username')}
           value={form.username}
           onChange={(value) => setForm((current) => ({ ...current, username: value }))}
         />
         <TextFieldRow
           required
-          label="Email"
+          label={t('common.email')}
           value={form.email}
           onChange={(value) => setForm((current) => ({ ...current, email: value }))}
         />
         <TextFieldRow
           required
           select
-          label="Role"
+          label={t('common.role')}
           value={form.role}
           onChange={(value) => setForm((current) => ({ ...current, role: value }))}
         >
           {roleOptions.map((role) => (
             <MenuItem key={role.code} value={role.code}>
-              {role.name} ({role.code})
+              {translatedRoleName(role, t)} ({role.code})
             </MenuItem>
           ))}
         </TextFieldRow>
         <TextFieldRow
           required
           type="password"
-          label={editing ? 'New password' : 'Password'}
+          label={editing ? t('fields.newPassword') : t('common.password')}
           value={form.password}
-          helperText={editing ? 'Backend currently requires a password on update.' : undefined}
+          helperText={editing ? t('helper.updatePasswordRequired') : undefined}
           onChange={(value) => setForm((current) => ({ ...current, password: value }))}
         />
         <SwitchRow
-          label="Active"
+          label={t('common.active')}
           checked={form.is_active}
           onChange={(isActive) => setForm((current) => ({ ...current, is_active: isActive }))}
         />
@@ -238,11 +250,12 @@ export function UserManagementView() {
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete user"
-        content={`Delete ${deleteTarget?.username ?? ''}?`}
+        title={t('dialogs.deleteUser')}
+        content={t('dialogs.deleteContent', { name: deleteTarget?.username ?? '' })}
+        cancelText={t('common.cancel')}
         action={
           <Button variant="contained" color="error" onClick={confirmDelete}>
-            Delete
+            {t('common.delete')}
           </Button>
         }
       />
@@ -250,6 +263,8 @@ export function UserManagementView() {
   );
 }
 
-function displayRole(code: string, roles: Role[]) {
-  return roles.find((role) => role.code === code)?.name ?? code;
+function displayRole(code: string, roles: Role[], t: ReturnType<typeof useTranslate>['t']) {
+  const role = roles.find((item) => item.code === code);
+
+  return role ? translatedRoleName(role, t) : code;
 }

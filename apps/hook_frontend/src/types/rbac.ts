@@ -105,11 +105,13 @@ export type NavResponse = {
 };
 
 export type BackendNavSection = {
+  code: string;
   subheader: string;
   items: BackendNavItem[];
 };
 
 export type BackendNavItem = {
+  code: string;
   title: string;
   path: string;
   icon: string | null;

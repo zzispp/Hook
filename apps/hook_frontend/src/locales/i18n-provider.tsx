@@ -11,7 +11,13 @@ import { initReactI18next, I18nextProvider as Provider } from 'react-i18next';
 
 import { CONFIG } from 'src/global-config';
 
-import { i18nOptions, fallbackLng, storageConfig, i18nResourceLoader } from './locales-config';
+import {
+  i18nOptions,
+  fallbackLng,
+  storageConfig,
+  supportedLngs,
+  i18nResourceLoader,
+} from './locales-config';
 
 // ----------------------------------------------------------------------
 
@@ -29,7 +35,15 @@ if (CONFIG.isStaticExport) {
  */
 const initOptions: InitOptions = CONFIG.isStaticExport
   ? { ...i18nOptions(i18nextLng), detection: { caches: ['localStorage'] } }
-  : { ...i18nOptions(), detection: { caches: ['cookie'] } };
+  : {
+      ...i18nOptions(),
+      detection: {
+        caches: ['cookie'],
+        lookupCookie: storageConfig.cookie.key,
+        supportedLngs,
+        convertDetectedLanguage: normalizeDetectedLanguage,
+      },
+    };
 
 i18next.use(LanguageDetector).use(initReactI18next).use(i18nResourceLoader).init(initOptions);
 
@@ -53,4 +67,18 @@ export function I18nProvider({ lang, children }: I18nProviderProps) {
   }, [lang]);
 
   return <Provider i18n={i18next}>{children}</Provider>;
+}
+
+function normalizeDetectedLanguage(lang: string) {
+  const lower = lang.toLowerCase();
+
+  if (lower === 'cn' || lower.startsWith('zh')) {
+    return 'cn';
+  }
+
+  if (lower === 'en' || lower.startsWith('en')) {
+    return 'en';
+  }
+
+  return fallbackLng;
 }

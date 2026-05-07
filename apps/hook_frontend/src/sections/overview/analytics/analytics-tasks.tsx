@@ -24,13 +24,19 @@ import { CustomPopover } from 'src/components/custom-popover';
 type Props = CardProps & {
   title?: string;
   subheader?: string;
+  actionLabels?: {
+    delete?: string;
+    edit?: string;
+    markComplete?: string;
+    share?: string;
+  };
   list: {
     id: string;
     name: string;
   }[];
 };
 
-export function AnalyticsTasks({ title, subheader, list, sx, ...other }: Props) {
+export function AnalyticsTasks({ title, subheader, actionLabels, list, sx, ...other }: Props) {
   const [selected, setSelected] = useState(['2']);
 
   const handleClickComplete = (taskId: string) => {
@@ -52,6 +58,7 @@ export function AnalyticsTasks({ title, subheader, list, sx, ...other }: Props) 
               key={item.id}
               item={item}
               selected={selected.includes(item.id)}
+              actionLabels={actionLabels}
               onChange={() => handleClickComplete(item.id)}
             />
           ))}
@@ -66,10 +73,11 @@ export function AnalyticsTasks({ title, subheader, list, sx, ...other }: Props) 
 type TaskItemProps = BoxProps & {
   selected: boolean;
   item: Props['list'][number];
+  actionLabels?: Props['actionLabels'];
   onChange: (id: string) => void;
 };
 
-function TaskItem({ item, selected, onChange, sx, ...other }: TaskItemProps) {
+function TaskItem({ item, selected, actionLabels, onChange, sx, ...other }: TaskItemProps) {
   const menuActions = usePopover();
 
   const handleMarkComplete = () => {
@@ -137,24 +145,24 @@ function TaskItem({ item, selected, onChange, sx, ...other }: TaskItemProps) {
         <MenuList>
           <MenuItem onClick={handleMarkComplete}>
             <Iconify icon="solar:check-circle-bold" />
-            Mark complete
+            {actionLabels?.markComplete ?? 'Mark complete'}
           </MenuItem>
 
           <MenuItem onClick={handleEdit}>
             <Iconify icon="solar:pen-bold" />
-            Edit
+            {actionLabels?.edit ?? 'Edit'}
           </MenuItem>
 
           <MenuItem onClick={handleShare}>
             <Iconify icon="solar:share-bold" />
-            Share
+            {actionLabels?.share ?? 'Share'}
           </MenuItem>
 
           <Divider sx={{ borderStyle: 'dashed' }} />
 
           <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
             <Iconify icon="solar:trash-bin-trash-bold" />
-            Delete
+            {actionLabels?.delete ?? 'Delete'}
           </MenuItem>
         </MenuList>
       </CustomPopover>

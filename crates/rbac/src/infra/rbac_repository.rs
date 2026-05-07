@@ -238,6 +238,7 @@ fn nav_section_for_role(role_code: &str, section: &MenuSection, items: &[MenuIte
         return None;
     }
     Some(NavSectionResponse {
+        code: section.code.clone(),
         subheader: section.subheader.clone(),
         items: nav_items,
     })
@@ -260,6 +261,7 @@ fn child_items(
 
 fn nav_item(role_code: &str, item: &MenuItem, items: &[MenuItem], bindings: &[RoleMenuBindingRecordInput]) -> NavItemResponse {
     NavItemResponse {
+        code: item.code.clone(),
         title: item.title.clone(),
         path: item.path.clone(),
         icon: item.icon.clone(),

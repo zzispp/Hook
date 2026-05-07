@@ -16,8 +16,10 @@ pub(super) fn permission_snapshot() -> PermissionSnapshot {
         menus: vec![RoleMenuSnapshot {
             role_code: "admin".into(),
             sections: vec![NavSectionResponse {
+                code: "management".into(),
                 subheader: "Management".into(),
                 items: vec![NavItemResponse {
+                    code: "users".into(),
                     title: "Users".into(),
                     path: "/dashboard/user/list".into(),
                     icon: Some("icon.user".into()),

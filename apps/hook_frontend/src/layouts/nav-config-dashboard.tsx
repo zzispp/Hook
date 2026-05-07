@@ -63,12 +63,13 @@ const ICONS = {
  */
 export const navData: NavSectionProps['data'] = [
   /**
-   * 概览
+   * Overview
    */
   {
-    subheader: '概览',
+    code: 'overview',
+    subheader: 'Overview',
     items: [
-      { title: '仪表盘', path: paths.dashboard.root, icon: ICONS.dashboard },
+      { code: 'dashboard_home', title: 'Dashboard', path: paths.dashboard.root, icon: ICONS.dashboard },
       { title: 'Ecommerce', path: paths.dashboard.general.ecommerce, icon: ICONS.ecommerce },
       { title: 'Analytics', path: paths.dashboard.general.analytics, icon: ICONS.analytics },
       { title: 'Banking', path: paths.dashboard.general.banking, icon: ICONS.banking },
@@ -81,17 +82,18 @@ export const navData: NavSectionProps['data'] = [
    * Management
    */
   {
-    subheader: 'Management',
+    code: 'system_management',
+    subheader: 'System Management',
     items: [
       {
-        title: 'System',
+        title: 'System Management',
         path: paths.dashboard.admin.root,
         icon: ICONS.lock,
         children: [
-          { title: 'Users', path: paths.dashboard.admin.users },
-          { title: 'Roles', path: paths.dashboard.admin.roles },
-          { title: 'APIs', path: paths.dashboard.admin.apis },
-          { title: 'Menus', path: paths.dashboard.admin.menus },
+          { code: 'admin_users', title: 'Users', path: paths.dashboard.admin.users },
+          { code: 'admin_roles', title: 'Roles', path: paths.dashboard.admin.roles },
+          { code: 'admin_apis', title: 'APIs', path: paths.dashboard.admin.apis },
+          { code: 'admin_menus', title: 'Menus', path: paths.dashboard.admin.menus },
         ],
       },
       {

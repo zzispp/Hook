@@ -239,6 +239,7 @@ function isEndpointKey(key: unknown, endpoint: string) {
 
 function toNavSections(sections: BackendNavSection[]): NavSectionProps['data'] {
   return sections.map((section) => ({
+    code: section.code,
     subheader: section.subheader,
     items: section.items.map(toNavItem),
   }));
@@ -246,6 +247,7 @@ function toNavSections(sections: BackendNavSection[]): NavSectionProps['data'] {
 
 function toNavItem(item: BackendNavItem): NavSectionProps['data'][number]['items'][number] {
   return {
+    code: item.code,
     title: item.title,
     path: item.path,
     icon: item.icon ?? undefined,

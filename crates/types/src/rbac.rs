@@ -104,12 +104,14 @@ pub struct NavResponse {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct NavSectionResponse {
+    pub code: String,
     pub subheader: String,
     pub items: Vec<NavItemResponse>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct NavItemResponse {
+    pub code: String,
     pub title: String,
     pub path: String,
     pub icon: Option<String>,

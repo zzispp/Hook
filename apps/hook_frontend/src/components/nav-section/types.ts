@@ -46,6 +46,7 @@ export type NavItemOptionsProps = {
 };
 
 export type NavItemDataProps = Pick<NavItemStateProps, 'disabled'> & {
+  code?: string;
   path: string;
   title: string;
   icon?: string | React.ReactNode;
@@ -87,6 +88,7 @@ export type NavSectionProps = React.ComponentProps<'nav'> &
   Omit<NavListProps, 'data' | 'depth'> & {
     sx?: SxProps<Theme>;
     data: {
+      code?: string;
       subheader?: string;
       items: NavItemDataProps[];
     }[];

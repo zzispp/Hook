@@ -2,6 +2,7 @@
 
 import type { TableHeadCellProps } from 'src/components/table';
 import type { NavSectionProps } from 'src/components/nav-section';
+import type { ApiPermission, Role, MenuSection, MenuItem as RbacMenuItem } from 'src/types/rbac';
 
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -19,6 +20,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import { paths } from 'src/routes/paths';
 
 import { CONFIG } from 'src/global-config';
+import { useTranslate } from 'src/locales/use-locales';
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
@@ -60,6 +62,8 @@ export const NAV_ICONS: NonNullable<NavSectionProps['render']>['navIcon'] = {
 
 export const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
+export type AdminT = ReturnType<typeof useTranslate>['t'];
+
 export function AdminBreadcrumbs({
   heading,
   action,
@@ -67,12 +71,14 @@ export function AdminBreadcrumbs({
   heading: string;
   action?: React.ReactNode;
 }) {
+  const { t } = useTranslate('admin');
+
   return (
     <CustomBreadcrumbs
       heading={heading}
       links={[
-        { name: 'Dashboard', href: paths.dashboard.root },
-        { name: 'System Management' },
+        { name: t('nav.dashboard'), href: paths.dashboard.root },
+        { name: t('nav.systemManagement') },
         { name: heading },
       ]}
       action={action}
@@ -90,9 +96,11 @@ export function AddButton({ onClick, children }: { onClick: () => void; children
 }
 
 export function EnabledLabel({ enabled }: { enabled: boolean }) {
+  const { t } = useTranslate('admin');
+
   return (
     <Label color={enabled ? 'success' : 'default'} variant="soft">
-      {enabled ? 'Enabled' : 'Disabled'}
+      {enabled ? t('common.enabled') : t('common.disabled')}
     </Label>
   );
 }
@@ -128,13 +136,15 @@ export function TableLoadingRows({
   head: TableHeadCellProps[];
   rows?: number;
 }) {
+  const { t } = useTranslate('admin');
+
   return (
     <>
       {Array.from({ length: rows }).map((_, rowIndex) => (
         <TableRow key={rowIndex}>
           {head.map((cell) => (
             <TableCell key={cell.id || cell.label?.toString() || 'action'} sx={{ color: 'text.disabled' }}>
-              Loading...
+              {t('common.loading')}
             </TableCell>
           ))}
         </TableRow>
@@ -217,6 +227,8 @@ export function ManagementDialog({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useTranslate('admin');
+
   return (
     <Dialog fullWidth maxWidth="md" open={open} onClose={onClose}>
       <DialogTitle>{title}</DialogTitle>
@@ -225,10 +237,10 @@ export function ManagementDialog({
       </DialogContent>
       <DialogActions>
         <Button variant="outlined" onClick={onClose}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button variant="contained" loading={submitting} onClick={onSubmit}>
-          Save
+          {t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -237,6 +249,58 @@ export function ManagementDialog({
 
 export function SelectOption({ value, label }: { value: string; label: string }) {
   return <MenuItem value={value}>{label}</MenuItem>;
+}
+
+export function translatedRoleName(role: Role, t: AdminT) {
+  const keyByCode: Record<string, string> = {
+    admin: 'roles.admin.name',
+    user: 'roles.user.name',
+  };
+
+  const key = keyByCode[role.code];
+
+  return key ? t(key) : role.name;
+}
+
+export function translatedApiName(api: ApiPermission, t: AdminT) {
+  const translated = t(`apiPermissionNames.${api.code}`);
+
+  return translated === `apiPermissionNames.${api.code}` ? api.name : translated;
+}
+
+export function translatedApiGroup(group: string, t: AdminT) {
+  if (!group) {
+    return '-';
+  }
+
+  const translated = t(`apiGroups.${group.toLowerCase()}`);
+
+  return translated === `apiGroups.${group.toLowerCase()}` ? group : translated;
+}
+
+export function translatedMenuSection(section: MenuSection, t: AdminT) {
+  const keyByCode: Record<string, string> = {
+    overview: 'nav.overview',
+    system_management: 'nav.systemManagement',
+  };
+
+  const key = keyByCode[section.code];
+
+  return key ? t(key) : section.subheader;
+}
+
+export function translatedMenuItem(item: RbacMenuItem, t: AdminT) {
+  const keyByCode: Record<string, string> = {
+    dashboard_home: 'nav.dashboard',
+    admin_users: 'nav.users',
+    admin_roles: 'nav.roles',
+    admin_apis: 'nav.apis',
+    admin_menus: 'nav.menus',
+  };
+
+  const key = keyByCode[item.code];
+
+  return key ? t(key) : item.title;
 }
 
 function icon(name: string) {

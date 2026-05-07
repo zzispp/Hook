@@ -37,18 +37,50 @@ import {
 
 acceptLanguage.languages([...supportedLngs]);
 
+function normalizeLanguage(value?: string | null): LangCode | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const lower = value.toLowerCase();
+
+  if (lower === 'cn' || lower.startsWith('zh') || lower.includes('zh-')) {
+    return 'cn';
+  }
+
+  if (lower === 'en' || lower.startsWith('en-')) {
+    return 'en';
+  }
+
+  return undefined;
+}
+
+function detectHeaderLanguage(header?: string | null): LangCode | undefined {
+  if (!header) {
+    return undefined;
+  }
+
+  return header
+    .split(',')
+    .map((part) => part.split(';')[0]?.trim())
+    .map(normalizeLanguage)
+    .find(Boolean);
+}
+
 export async function detectLanguage() {
   const cookieStore = await cookies();
   const headerStore = await headers();
 
   // 1. Try cookie
   const cookieLang = cookieStore.get(storageConfig.cookie.key)?.value;
-  const fromCookie = cookieLang && acceptLanguage.get(cookieLang);
+  const fromCookie = normalizeLanguage(cookieLang) ?? (cookieLang && acceptLanguage.get(cookieLang));
 
   // 2. Try Accept-Language header
   const headerLang = headerStore.get('accept-language') ?? undefined;
   const fromHeader =
-    headerLang && storageConfig.cookie.autoDetection && acceptLanguage.get(headerLang);
+    headerLang &&
+    storageConfig.cookie.autoDetection &&
+    (detectHeaderLanguage(headerLang) ?? acceptLanguage.get(headerLang));
 
   // 3. Fallback
   const lang = fromCookie || fromHeader || fallbackLng;

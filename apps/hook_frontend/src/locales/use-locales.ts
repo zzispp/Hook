@@ -12,7 +12,7 @@ import { useRouter } from 'src/routes/hooks';
 import { toast } from 'src/components/snackbar';
 import { useSettingsContext } from 'src/components/settings';
 
-import { fallbackLng, getCurrentLang } from './locales-config';
+import { fallbackLng, getCurrentLang, storageConfig } from './locales-config';
 
 // ----------------------------------------------------------------------
 
@@ -37,6 +37,11 @@ export function useTranslate(namespace?: Namespace) {
     dayjs.locale(updatedLang.adapterLocale);
   }, []);
 
+  const persistLanguage = useCallback((lang: LangCode) => {
+    localStorage.setItem(storageConfig.localStorage.key, lang);
+    document.cookie = `${storageConfig.cookie.key}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  }, []);
+
   const handleChangeLang = useCallback(
     async (lang: LangCode) => {
       try {
@@ -50,6 +55,7 @@ export function useTranslate(namespace?: Namespace) {
 
         await changeLangPromise;
 
+        persistLanguage(lang);
         updateDirection(lang);
         updateDayjsLocale(lang);
 
@@ -58,7 +64,7 @@ export function useTranslate(namespace?: Namespace) {
         console.error(error);
       }
     },
-    [i18n, router, tMessages, updateDayjsLocale, updateDirection]
+    [i18n, persistLanguage, router, tMessages, updateDayjsLocale, updateDirection]
   );
 
   const handleResetLang = useCallback(() => {

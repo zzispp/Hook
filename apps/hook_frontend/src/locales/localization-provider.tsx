@@ -1,10 +1,7 @@
 'use client';
 
 import 'dayjs/locale/en';
-import 'dayjs/locale/vi';
-import 'dayjs/locale/fr';
 import 'dayjs/locale/zh-cn';
-import 'dayjs/locale/ar-sa';
 
 import dayjs from 'dayjs';
 

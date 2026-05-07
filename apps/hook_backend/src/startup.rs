@@ -161,7 +161,7 @@ where
             match rbac
                 .create_menu_section(MenuSectionInput {
                     code: "overview".into(),
-                    subheader: "概览".into(),
+                    subheader: "Overview".into(),
                     sort_order: -10,
                     enabled: true,
                 })
@@ -269,7 +269,7 @@ fn api_permission(code: &str, method: &str, path_pattern: &str, name: &str, grou
 
 fn default_menu_items(overview_section_id: &str, section_id: &str) -> Vec<MenuItemInput> {
     vec![
-        menu_item_exact(overview_section_id, "dashboard_home", "仪表盘", "/dashboard", "icon.dashboard", 0),
+        menu_item_exact(overview_section_id, "dashboard_home", "Dashboard", "/dashboard", "icon.dashboard", 0),
         menu_item(section_id, "admin_users", "User Management", "/dashboard/admin/users", "icon.user", 0),
         menu_item(section_id, "admin_roles", "Role Management", "/dashboard/admin/roles", "icon.lock", 10),
         menu_item(section_id, "admin_apis", "API Management", "/dashboard/admin/apis", "icon.menu", 20),
