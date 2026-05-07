@@ -1,0 +1,244 @@
+'use client';
+
+import type { TableHeadCellProps } from 'src/components/table';
+import type { NavSectionProps } from 'src/components/nav-section';
+
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import Checkbox from '@mui/material/Checkbox';
+import TableRow from '@mui/material/TableRow';
+import MenuItem from '@mui/material/MenuItem';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import FormControlLabel from '@mui/material/FormControlLabel';
+
+import { paths } from 'src/routes/paths';
+
+import { CONFIG } from 'src/global-config';
+
+import { Label } from 'src/components/label';
+import { Iconify } from 'src/components/iconify';
+import { SvgColor } from 'src/components/svg-color';
+import { TableHeadCustom } from 'src/components/table';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
+
+// ----------------------------------------------------------------------
+
+export const NAV_ICON_OPTIONS = [
+  'icon.dashboard',
+  'icon.user',
+  'icon.lock',
+  'icon.menu',
+  'icon.analytics',
+  'icon.file',
+  'icon.folder',
+  'icon.calendar',
+  'icon.kanban',
+  'icon.mail',
+  'icon.chat',
+  'icon.blank',
+];
+
+export const NAV_ICONS: NonNullable<NavSectionProps['render']>['navIcon'] = {
+  'icon.analytics': icon('ic-analytics'),
+  'icon.blank': icon('ic-blank'),
+  'icon.calendar': icon('ic-calendar'),
+  'icon.chat': icon('ic-chat'),
+  'icon.dashboard': icon('ic-dashboard'),
+  'icon.file': icon('ic-file'),
+  'icon.folder': icon('ic-folder'),
+  'icon.kanban': icon('ic-kanban'),
+  'icon.lock': icon('ic-lock'),
+  'icon.mail': icon('ic-mail'),
+  'icon.menu': icon('ic-menu-item'),
+  'icon.user': icon('ic-user'),
+};
+
+export const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+
+export function AdminBreadcrumbs({
+  heading,
+  action,
+}: {
+  heading: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <CustomBreadcrumbs
+      heading={heading}
+      links={[
+        { name: 'Dashboard', href: paths.dashboard.root },
+        { name: 'System Management' },
+        { name: heading },
+      ]}
+      action={action}
+      sx={{ mb: { xs: 3, md: 5 } }}
+    />
+  );
+}
+
+export function AddButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <Button variant="contained" startIcon={<Iconify icon="mingcute:add-line" />} onClick={onClick}>
+      {children}
+    </Button>
+  );
+}
+
+export function EnabledLabel({ enabled }: { enabled: boolean }) {
+  return (
+    <Label color={enabled ? 'success' : 'default'} variant="soft">
+      {enabled ? 'Enabled' : 'Disabled'}
+    </Label>
+  );
+}
+
+export function BooleanLabel({ enabled, trueText, falseText }: { enabled: boolean; trueText: string; falseText: string }) {
+  return (
+    <Label color={enabled ? 'info' : 'default'} variant="soft">
+      {enabled ? trueText : falseText}
+    </Label>
+  );
+}
+
+export function MethodLabel({ method }: { method: string }) {
+  const color =
+    (method === 'GET' && 'success') ||
+    (method === 'POST' && 'info') ||
+    (method === 'PUT' && 'warning') ||
+    (method === 'PATCH' && 'warning') ||
+    (method === 'DELETE' && 'error') ||
+    'default';
+
+  return (
+    <Label color={color} variant="soft">
+      {method}
+    </Label>
+  );
+}
+
+export function TableLoadingRows({
+  head,
+  rows = 5,
+}: {
+  head: TableHeadCellProps[];
+  rows?: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <TableRow key={rowIndex}>
+          {head.map((cell) => (
+            <TableCell key={cell.id || cell.label?.toString() || 'action'} sx={{ color: 'text.disabled' }}>
+              Loading...
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
+  );
+}
+
+export function ManagementTableHead({ head }: { head: TableHeadCellProps[] }) {
+  return <TableHeadCustom headCells={head} />;
+}
+
+export function TextFieldRow({
+  label,
+  value,
+  onChange,
+  required,
+  type,
+  select,
+  children,
+  helperText,
+  disabled,
+}: {
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  required?: boolean;
+  type?: React.InputHTMLAttributes<unknown>['type'];
+  select?: boolean;
+  children?: React.ReactNode;
+  helperText?: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <TextField
+      fullWidth
+      select={select}
+      required={required}
+      type={type}
+      label={label}
+      value={value}
+      disabled={disabled}
+      helperText={helperText}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {children}
+    </TextField>
+  );
+}
+
+export function SwitchRow({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <FormControlLabel
+      control={<Checkbox checked={checked} onChange={(event) => onChange(event.target.checked)} />}
+      label={label}
+    />
+  );
+}
+
+export function ManagementDialog({
+  open,
+  title,
+  children,
+  submitting,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  title: string;
+  children: React.ReactNode;
+  submitting: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <Dialog fullWidth maxWidth="md" open={open} onClose={onClose}>
+      <DialogTitle>{title}</DialogTitle>
+      <DialogContent>
+        <Stack sx={{ pt: 1, gap: 2.5 }}>{children}</Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button variant="outlined" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="contained" loading={submitting} onClick={onSubmit}>
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+export function SelectOption({ value, label }: { value: string; label: string }) {
+  return <MenuItem value={value}>{label}</MenuItem>;
+}
+
+function icon(name: string) {
+  return <SvgColor src={`${CONFIG.assetsDir}/assets/icons/navbar/${name}.svg`} />;
+}

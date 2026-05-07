@@ -19,11 +19,11 @@ jwt:
 
 admin:
   id: "00000000-0000-7000-8000-000000000000"
-  username: "admin"
-  email: "admin@example.com"
+  username: "0xbytes"
+  email: "0xbytes.rs@gmail.com"
   role: "admin"
   is_active: true
-  password_hash: "$argon2id$v=19$m=19456,t=2,p=1$dGVzdC1zYWx0LXNob3VsZC1iZS1sb25n$1eLTt1omRS23b0yvbzlZrtmdgz9uTlBzD1mZ45gfvrM"
+  password_hash: "$argon2id$v=19$m=19456,t=2,p=1$zH97TNm7yBL2hJ/oIApGhw$E65Nmg2GZ6sh4XcZRhMBKqIBjcijQgEEmNi3epAYmA4"
 
 auth:
   whitelist:

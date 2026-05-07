@@ -1,7 +1,7 @@
 'use client';
 
 import type { Breakpoint } from '@mui/material/styles';
-import type { NavItemProps, NavSectionProps } from 'src/components/nav-section';
+import type { NavSectionProps } from 'src/components/nav-section';
 import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '../core';
 
 import { merge } from 'es-toolkit';
@@ -13,12 +13,13 @@ import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
 import { allLangs } from 'src/locales';
+import { useNavbar } from 'src/actions/rbac';
 import { _contacts, _notifications } from 'src/_mock';
 
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
 
-import { useMockedUser } from 'src/auth/hooks';
+import { NAV_ICONS } from 'src/sections/admin/shared';
 
 import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
@@ -26,13 +27,11 @@ import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
 import { _account } from '../nav-config-account';
 import { Searchbar } from '../components/searchbar';
-import { _workspaces } from '../nav-config-workspace';
 import { MenuButton } from '../components/menu-button';
 import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
 import { LanguagePopover } from '../components/language-popover';
 import { ContactsPopover } from '../components/contacts-popover';
-import { WorkspacesPopover } from '../components/workspaces-popover';
 import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import { NotificationsDrawer } from '../components/notifications-drawer';
@@ -62,22 +61,19 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   const theme = useTheme();
 
-  const { user } = useMockedUser();
-
   const settings = useSettingsContext();
+
+  const navbar = useNavbar();
 
   const navVars = dashboardNavColorVars(theme, settings.state.navColor, settings.state.navLayout);
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
-  const navData = slotProps?.nav?.data ?? dashboardNavData;
+  const navData = slotProps?.nav?.data ?? (navbar.isLoading ? dashboardNavData : navbar.data);
 
   const isNavMini = settings.state.navLayout === 'mini';
   const isNavHorizontal = settings.state.navLayout === 'horizontal';
   const isNavVertical = isNavMini || settings.state.navLayout === 'vertical';
-
-  const canDisplayItemByRole = (allowedRoles: NavItemProps['allowedRoles']): boolean =>
-    !allowedRoles?.includes(user?.role);
 
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
@@ -103,9 +99,9 @@ export function DashboardLayout({
       bottomArea: isNavHorizontal ? (
         <NavHorizontal
           data={navData}
+          render={{ navIcon: NAV_ICONS }}
           layoutQuery={layoutQuery}
           cssVars={navVars.section}
-          checkPermissions={canDisplayItemByRole}
         />
       ) : null,
       leftArea: (
@@ -119,8 +115,8 @@ export function DashboardLayout({
             data={navData}
             open={open}
             onClose={onClose}
+            render={{ navIcon: NAV_ICONS }}
             cssVars={navVars.section}
-            checkPermissions={canDisplayItemByRole}
           />
 
           {/** @slot Logo */}
@@ -137,12 +133,6 @@ export function DashboardLayout({
           {isNavHorizontal && (
             <VerticalDivider sx={{ [theme.breakpoints.up(layoutQuery)]: { display: 'flex' } }} />
           )}
-
-          {/** @slot Workspace popover */}
-          <WorkspacesPopover
-            data={_workspaces}
-            sx={{ ...(isNavHorizontal && { color: 'var(--layout-nav-text-primary-color)' }) }}
-          />
         </>
       ),
       rightArea: (
@@ -183,10 +173,10 @@ export function DashboardLayout({
   const renderSidebar = () => (
     <NavVertical
       data={navData}
+      render={{ navIcon: NAV_ICONS }}
       isNavMini={isNavMini}
       layoutQuery={layoutQuery}
       cssVars={navVars.section}
-      checkPermissions={canDisplayItemByRole}
       onToggleNav={() =>
         settings.setField(
           'navLayout',

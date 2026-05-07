@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
 import { paths } from 'src/routes/paths';
 import { useRouter, usePathname } from 'src/routes/hooks';
@@ -8,6 +8,7 @@ import { useRouter, usePathname } from 'src/routes/hooks';
 import { SplashScreen } from 'src/components/loading-screen';
 
 import { useAuthContext } from '../hooks';
+import { useMinimumChecking } from './use-minimum-checking';
 
 // ----------------------------------------------------------------------
 
@@ -21,7 +22,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   const { authenticated, loading } = useAuthContext();
 
-  const [isChecking, setIsChecking] = useState(true);
+  const { isChecking, finishChecking } = useMinimumChecking();
 
   const createRedirectPath = (currentPath: string) => {
     const queryString = new URLSearchParams({ returnTo: pathname }).toString();
@@ -41,7 +42,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
-    setIsChecking(false);
+    finishChecking();
   };
 
   useEffect(() => {

@@ -1,6 +1,9 @@
 use types::{
     pagination::{Page, PageRequest},
-    rbac::{ApiPermission, ApiPermissionInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse, Role, RoleInput, RoleMenuBindingInput},
+    rbac::{
+        ApiPermission, ApiPermissionInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse, Role, RoleApiBindingInput, RoleInput,
+        RoleMenuBindingInput,
+    },
 };
 
 use crate::application::{ApiCheckRequest, AuthorizationConfig, RbacCache, RbacError, RbacRepository, RbacResult};
@@ -136,6 +139,20 @@ where
         ensure_role_exists(&self.repository, role_code).await?;
         self.repository.replace_role_menus(role_code, input).await?;
         self.rebuild_cache().await
+    }
+
+    pub async fn role_api_bindings(&self, role_code: &str) -> RbacResult<RoleApiBindingInput> {
+        ensure_role_exists(&self.repository, role_code).await?;
+        Ok(RoleApiBindingInput {
+            api_permission_ids: self.repository.role_api_ids(role_code).await?,
+        })
+    }
+
+    pub async fn role_menu_bindings(&self, role_code: &str) -> RbacResult<RoleMenuBindingInput> {
+        ensure_role_exists(&self.repository, role_code).await?;
+        Ok(RoleMenuBindingInput {
+            menu_item_ids: self.repository.role_menu_item_ids(role_code).await?,
+        })
     }
 
     pub async fn navbar(&self, role_code: &str) -> RbacResult<NavResponse> {

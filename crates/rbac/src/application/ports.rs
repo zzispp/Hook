@@ -33,6 +33,8 @@ pub trait RbacRepository: Send + Sync + 'static {
     async fn page_menu_items(&self, page: PageRequest) -> RbacResult<Page<MenuItem>>;
     async fn replace_role_apis(&self, role_code: &str, api_permission_ids: Vec<String>) -> RbacResult<()>;
     async fn replace_role_menus(&self, role_code: &str, input: RoleMenuBindingInput) -> RbacResult<()>;
+    async fn role_api_ids(&self, role_code: &str) -> RbacResult<Vec<String>>;
+    async fn role_menu_item_ids(&self, role_code: &str) -> RbacResult<Vec<String>>;
     async fn permission_snapshot(&self) -> RbacResult<PermissionSnapshot>;
 }
 
@@ -71,6 +73,8 @@ pub trait RbacAdminUseCase: Send + Sync + 'static {
     async fn page_menu_items(&self, page: PageRequest) -> RbacResult<Page<MenuItem>>;
     async fn replace_role_apis(&self, role_code: &str, input: RoleApiBindingInput) -> RbacResult<()>;
     async fn replace_role_menus(&self, role_code: &str, input: RoleMenuBindingInput) -> RbacResult<()>;
+    async fn role_api_ids(&self, role_code: &str) -> RbacResult<Vec<String>>;
+    async fn role_menu_item_ids(&self, role_code: &str) -> RbacResult<Vec<String>>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

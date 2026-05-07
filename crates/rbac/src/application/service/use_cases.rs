@@ -102,4 +102,12 @@ where
     async fn replace_role_menus(&self, role_code: &str, input: RoleMenuBindingInput) -> RbacResult<()> {
         self.replace_role_menus(role_code, input).await
     }
+
+    async fn role_api_ids(&self, role_code: &str) -> RbacResult<Vec<String>> {
+        Ok(self.role_api_bindings(role_code).await?.api_permission_ids)
+    }
+
+    async fn role_menu_item_ids(&self, role_code: &str) -> RbacResult<Vec<String>> {
+        Ok(self.role_menu_bindings(role_code).await?.menu_item_ids)
+    }
 }

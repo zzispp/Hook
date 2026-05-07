@@ -23,7 +23,16 @@ type TokenPairResponse = {
 };
 
 type MeResponse = {
-  user: Record<string, unknown>;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    role: string;
+    is_active: boolean;
+    auth_source: string;
+    email_verified: boolean;
+    system: boolean;
+  };
 };
 
 export function AuthProvider({ children }: Props) {
@@ -42,7 +51,14 @@ export function AuthProvider({ children }: Props) {
       const res = await axios.get(endpoints.auth.me);
       const { user } = requireApiData<MeResponse>(res.data);
 
-      setState({ user: { ...user, access_token: session.access_token }, loading: false });
+      setState({
+        user: {
+          ...user,
+          access_token: session.access_token,
+          displayName: user.username,
+        },
+        loading: false,
+      });
     } catch (error) {
       console.error(error);
       await setSession(null);

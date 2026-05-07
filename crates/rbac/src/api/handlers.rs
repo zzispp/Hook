@@ -75,6 +75,11 @@ pub async fn replace_role_apis(
     Ok(ok(()))
 }
 
+pub async fn role_api_bindings(State(state): State<RbacApiState>, Path(code): Path<String>) -> ApiResult<ApiJson<RoleApiBindingInput>> {
+    let api_permission_ids = state.rbac_admin.role_api_ids(&code).await?;
+    Ok(ok(RoleApiBindingInput { api_permission_ids }))
+}
+
 pub async fn list_menu_sections(State(state): State<RbacApiState>, Query(query): Query<RbacListQuery>) -> ApiResult<ApiJson<Page<MenuSection>>> {
     Ok(ok(state.rbac_admin.page_menu_sections(query.into()).await?))
 }
@@ -120,6 +125,11 @@ pub async fn replace_role_menus(
 ) -> ApiResult<ApiJson<()>> {
     state.rbac_admin.replace_role_menus(&code, payload).await?;
     Ok(ok(()))
+}
+
+pub async fn role_menu_bindings(State(state): State<RbacApiState>, Path(code): Path<String>) -> ApiResult<ApiJson<RoleMenuBindingInput>> {
+    let menu_item_ids = state.rbac_admin.role_menu_item_ids(&code).await?;
+    Ok(ok(RoleMenuBindingInput { menu_item_ids }))
 }
 
 impl From<RbacListQuery> for PageRequest {

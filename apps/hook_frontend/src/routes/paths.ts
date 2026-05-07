@@ -60,6 +60,13 @@ export const paths = {
     calendar: `${ROOTS.DASHBOARD}/calendar`,
     fileManager: `${ROOTS.DASHBOARD}/file-manager`,
     permission: `${ROOTS.DASHBOARD}/permission`,
+    admin: {
+      root: `${ROOTS.DASHBOARD}/admin`,
+      users: `${ROOTS.DASHBOARD}/admin/users`,
+      roles: `${ROOTS.DASHBOARD}/admin/roles`,
+      apis: `${ROOTS.DASHBOARD}/admin/apis`,
+      menus: `${ROOTS.DASHBOARD}/admin/menus`,
+    },
     general: {
       app: `${ROOTS.DASHBOARD}/app`,
       ecommerce: `${ROOTS.DASHBOARD}/ecommerce`,

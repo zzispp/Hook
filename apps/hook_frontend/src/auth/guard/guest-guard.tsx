@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { safeReturnUrl } from 'minimal-shared/utils';
 
 import { useRouter, useSearchParams } from 'src/routes/hooks';
@@ -10,6 +10,7 @@ import { CONFIG } from 'src/global-config';
 import { SplashScreen } from 'src/components/loading-screen';
 
 import { useAuthContext } from '../hooks';
+import { useMinimumChecking } from './use-minimum-checking';
 
 // ----------------------------------------------------------------------
 
@@ -22,7 +23,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
 
   const { loading, authenticated } = useAuthContext();
 
-  const [isChecking, setIsChecking] = useState(true);
+  const { isChecking, finishChecking } = useMinimumChecking();
 
   const searchParams = useSearchParams();
   const redirectUrl = safeReturnUrl(searchParams.get('returnTo'), CONFIG.auth.redirectPath);
@@ -37,7 +38,7 @@ export function GuestGuard({ children }: GuestGuardProps) {
       return;
     }
 
-    setIsChecking(false);
+    finishChecking();
   };
 
   useEffect(() => {

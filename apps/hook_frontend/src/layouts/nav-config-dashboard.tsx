@@ -63,12 +63,12 @@ const ICONS = {
  */
 export const navData: NavSectionProps['data'] = [
   /**
-   * Overview
+   * 概览
    */
   {
-    subheader: 'Overview',
+    subheader: '概览',
     items: [
-      { title: 'App', path: paths.dashboard.root, icon: ICONS.dashboard },
+      { title: '仪表盘', path: paths.dashboard.root, icon: ICONS.dashboard },
       { title: 'Ecommerce', path: paths.dashboard.general.ecommerce, icon: ICONS.ecommerce },
       { title: 'Analytics', path: paths.dashboard.general.analytics, icon: ICONS.analytics },
       { title: 'Banking', path: paths.dashboard.general.banking, icon: ICONS.banking },
@@ -83,6 +83,17 @@ export const navData: NavSectionProps['data'] = [
   {
     subheader: 'Management',
     items: [
+      {
+        title: 'System',
+        path: paths.dashboard.admin.root,
+        icon: ICONS.lock,
+        children: [
+          { title: 'Users', path: paths.dashboard.admin.users },
+          { title: 'Roles', path: paths.dashboard.admin.roles },
+          { title: 'APIs', path: paths.dashboard.admin.apis },
+          { title: 'Menus', path: paths.dashboard.admin.menus },
+        ],
+      },
       {
         title: 'User',
         path: paths.dashboard.user.root,

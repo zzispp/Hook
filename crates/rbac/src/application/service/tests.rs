@@ -95,6 +95,18 @@ async fn page_apis_returns_repository_page() {
 }
 
 #[tokio::test]
+async fn role_binding_reads_return_current_ids() {
+    let repository = MemoryRbacRepository::with_role_bindings("admin", vec!["api-1".into(), "api-2".into()], vec!["menu-1".into()]);
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let api_bindings = service.role_api_bindings("admin").await.unwrap();
+    let menu_bindings = service.role_menu_bindings("admin").await.unwrap();
+
+    assert_eq!(api_bindings.api_permission_ids, vec!["api-1", "api-2"]);
+    assert_eq!(menu_bindings.menu_item_ids, vec!["menu-1"]);
+}
+
+#[tokio::test]
 async fn system_role_cannot_be_deleted() {
     let repository = MemoryRbacRepository::with_role(Role {
         code: "admin".into(),

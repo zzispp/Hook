@@ -35,6 +35,7 @@ export function NavVertical({
   className,
   isNavMini,
   onToggleNav,
+  render,
   checkPermissions,
   layoutQuery = 'md',
   ...other
@@ -50,6 +51,7 @@ export function NavVertical({
       <Scrollbar fillContent>
         <NavSectionVertical
           data={data}
+          render={render}
           cssVars={cssVars}
           checkPermissions={checkPermissions}
           sx={{ px: 2, flex: '1 1 auto' }}
@@ -70,6 +72,7 @@ export function NavVertical({
 
       <NavSectionMini
         data={data}
+        render={render}
         cssVars={cssVars}
         checkPermissions={checkPermissions}
         sx={[

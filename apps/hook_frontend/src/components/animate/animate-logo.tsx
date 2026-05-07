@@ -6,7 +6,7 @@ import type { LogoProps } from '../logo';
 import { m } from 'framer-motion';
 import { varAlpha } from 'minimal-shared/utils';
 
-import { styled } from '@mui/material/styles';
+import { styled, keyframes } from '@mui/material/styles';
 
 import { Logo } from '../logo';
 
@@ -23,15 +23,7 @@ export type AnimateLogoProps = React.ComponentProps<'div'> & {
 export function AnimateLogoZoom({ logo, slotProps, sx, ...other }: AnimateLogoProps) {
   return (
     <LogoZoomRoot sx={sx} {...other}>
-      <m.span
-        animate={{ scale: [1, 0.9, 0.9, 1, 1], opacity: [1, 0.48, 0.48, 1, 1] }}
-        transition={{
-          duration: 2,
-          repeatDelay: 1,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      >
+      <LogoZoomCenter>
         {logo ?? (
           <Logo
             disabled
@@ -42,30 +34,56 @@ export function AnimateLogoZoom({ logo, slotProps, sx, ...other }: AnimateLogoPr
             ]}
           />
         )}
-      </m.span>
+      </LogoZoomCenter>
 
-      <LogoZoomPrimaryOutline
-        animate={{
-          scale: [1.6, 1, 1, 1.6, 1.6],
-          rotate: [270, 0, 0, 270, 270],
-          opacity: [0.25, 1, 1, 1, 0.25],
-          borderRadius: ['25%', '25%', '50%', '50%', '25%'],
-        }}
-        transition={{ ease: 'linear', duration: 3.2, repeat: Infinity }}
-      />
+      <LogoZoomPrimaryOutline />
 
-      <LogoZoomSecondaryOutline
-        animate={{
-          scale: [1, 1.2, 1.2, 1, 1],
-          rotate: [0, 270, 270, 0, 0],
-          opacity: [1, 0.25, 0.25, 0.25, 1],
-          borderRadius: ['25%', '25%', '50%', '50%', '25%'],
-        }}
-        transition={{ ease: 'linear', duration: 3.2, repeat: Infinity }}
-      />
+      <LogoZoomSecondaryOutline />
     </LogoZoomRoot>
   );
 }
+
+const logoZoomCenter = keyframes`
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  33%, 66% {
+    opacity: 0.48;
+    transform: scale(0.9);
+  }
+`;
+
+const logoZoomPrimaryOutline = keyframes`
+  0%, 100% {
+    opacity: 0.25;
+    border-radius: 25%;
+    transform: scale(1.6) rotate(270deg);
+  }
+  25%, 50% {
+    opacity: 1;
+    border-radius: 25%;
+    transform: scale(1) rotate(0deg);
+  }
+  75% {
+    opacity: 1;
+    border-radius: 50%;
+    transform: scale(1.6) rotate(270deg);
+  }
+`;
+
+const logoZoomSecondaryOutline = keyframes`
+  0%, 100% {
+    opacity: 1;
+    border-radius: 25%;
+    transform: scale(1) rotate(0deg);
+  }
+  25%, 50%, 75% {
+    opacity: 0.25;
+    border-radius: 50%;
+    transform: scale(1.2) rotate(270deg);
+  }
+`;
 
 const LogoZoomRoot = styled('div')(() => ({
   width: 120,
@@ -76,18 +94,24 @@ const LogoZoomRoot = styled('div')(() => ({
   justifyContent: 'center',
 }));
 
-const LogoZoomPrimaryOutline = styled(m.span)(({ theme }) => ({
+const LogoZoomCenter = styled('span')({
+  animation: `${logoZoomCenter} 3s ease-in-out infinite`,
+});
+
+const LogoZoomPrimaryOutline = styled('span')(({ theme }) => ({
   position: 'absolute',
   width: 'calc(100% - 20px)',
   height: 'calc(100% - 20px)',
   border: `solid 3px ${varAlpha(theme.vars.palette.primary.darkChannel, 0.24)}`,
+  animation: `${logoZoomPrimaryOutline} 3.2s linear infinite`,
 }));
 
-const LogoZoomSecondaryOutline = styled(m.span)(({ theme }) => ({
+const LogoZoomSecondaryOutline = styled('span')(({ theme }) => ({
   width: '100%',
   height: '100%',
   position: 'absolute',
   border: `solid 8px ${varAlpha(theme.vars.palette.primary.darkChannel, 0.24)}`,
+  animation: `${logoZoomSecondaryOutline} 3.2s linear infinite`,
 }));
 
 // ----------------------------------------------------------------------

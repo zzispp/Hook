@@ -36,6 +36,15 @@ impl RbacStore {
             .map_err(StorageError::from)
     }
 
+    pub async fn role_api_ids(&self, role_code: &str) -> StorageResult<Vec<String>> {
+        let bindings = self.list_role_api_bindings().await?;
+        Ok(bindings
+            .into_iter()
+            .filter(|binding| binding.role_code == role_code)
+            .map(|binding| binding.api_permission_id)
+            .collect())
+    }
+
     pub async fn list_role_menu_bindings(&self) -> StorageResult<Vec<RoleMenuBindingRecordInput>> {
         let mut db = self.database.connection();
         RoleMenuPermissionRecord::all()
@@ -43,6 +52,15 @@ impl RbacStore {
             .await
             .map(role_menu_binding_records)
             .map_err(StorageError::from)
+    }
+
+    pub async fn role_menu_item_ids(&self, role_code: &str) -> StorageResult<Vec<String>> {
+        let bindings = self.list_role_menu_bindings().await?;
+        Ok(bindings
+            .into_iter()
+            .filter(|binding| binding.role_code == role_code)
+            .map(|binding| binding.menu_item_id)
+            .collect())
     }
 }
 

@@ -133,6 +133,14 @@ impl RbacRepository for StorageRbacRepository {
         self.store.replace_role_menus(role_code, inputs).await.map_err(storage_error)
     }
 
+    async fn role_api_ids(&self, role_code: &str) -> RbacResult<Vec<String>> {
+        self.store.role_api_ids(role_code).await.map_err(storage_error)
+    }
+
+    async fn role_menu_item_ids(&self, role_code: &str) -> RbacResult<Vec<String>> {
+        self.store.role_menu_item_ids(role_code).await.map_err(storage_error)
+    }
+
     async fn permission_snapshot(&self) -> RbacResult<PermissionSnapshot> {
         let roles = self.store.list_roles().await.map_err(storage_error)?;
         let apis = self.store.list_apis().await.map_err(storage_error)?;
