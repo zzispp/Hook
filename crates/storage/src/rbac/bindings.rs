@@ -45,6 +45,26 @@ impl RbacStore {
             .collect())
     }
 
+    pub async fn role_has_api_bindings(&self, role_code: &str) -> StorageResult<bool> {
+        let mut db = self.database.connection();
+        RoleApiPermissionRecord::filter(RoleApiPermissionRecord::fields().role_code().eq(role_code))
+            .first()
+            .exec(&mut db)
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
+    }
+
+    pub async fn api_has_role_bindings(&self, api_permission_id: &str) -> StorageResult<bool> {
+        let mut db = self.database.connection();
+        RoleApiPermissionRecord::filter(RoleApiPermissionRecord::fields().api_permission_id().eq(api_permission_id))
+            .first()
+            .exec(&mut db)
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
+    }
+
     pub async fn list_role_menu_bindings(&self) -> StorageResult<Vec<RoleMenuBindingRecordInput>> {
         let mut db = self.database.connection();
         RoleMenuPermissionRecord::all()
@@ -61,6 +81,26 @@ impl RbacStore {
             .filter(|binding| binding.role_code == role_code)
             .map(|binding| binding.menu_item_id)
             .collect())
+    }
+
+    pub async fn role_has_menu_bindings(&self, role_code: &str) -> StorageResult<bool> {
+        let mut db = self.database.connection();
+        RoleMenuPermissionRecord::filter(RoleMenuPermissionRecord::fields().role_code().eq(role_code))
+            .first()
+            .exec(&mut db)
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
+    }
+
+    pub async fn menu_item_has_role_bindings(&self, menu_item_id: &str) -> StorageResult<bool> {
+        let mut db = self.database.connection();
+        RoleMenuPermissionRecord::filter(RoleMenuPermissionRecord::fields().menu_item_id().eq(menu_item_id))
+            .first()
+            .exec(&mut db)
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
     }
 }
 

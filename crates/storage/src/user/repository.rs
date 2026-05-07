@@ -4,7 +4,7 @@ use types::{
     user::{User, UserId},
 };
 
-use crate::{Database, StorageError, StorageResult};
+use crate::{Database, StorageError, StorageResult, rbac::RoleRecord};
 
 use super::{UserAuthRecord, UserRecord, UserRecordInput};
 
@@ -20,6 +20,7 @@ impl UserStore {
 
     pub async fn create(&self, user: UserRecordInput) -> StorageResult<User> {
         let mut db = self.database.connection();
+        ensure_role_exists(&mut db, &user.role).await?;
         toasty::create!(UserRecord {
             id: self.database.next_id(),
             username: user.username,
@@ -40,6 +41,7 @@ impl UserStore {
 
     pub async fn replace(&self, id: UserId, user: UserRecordInput) -> StorageResult<User> {
         let mut db = self.database.connection();
+        ensure_role_exists(&mut db, &user.role).await?;
         let mut record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
         record
             .update()
@@ -140,4 +142,13 @@ impl UserStore {
 
 fn active_user_filter() -> toasty::stmt::Expr<bool> {
     UserRecord::fields().is_deleted().eq(false)
+}
+
+async fn ensure_role_exists(db: &mut toasty::Db, role: &str) -> StorageResult<()> {
+    let exists = RoleRecord::filter(RoleRecord::fields().code().eq(role)).first().exec(db).await?.is_some();
+    if exists {
+        return Ok(());
+    }
+
+    Err(StorageError::Conflict(format!("role does not exist: {role}")))
 }

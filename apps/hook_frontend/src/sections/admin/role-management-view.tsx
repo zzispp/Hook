@@ -29,20 +29,20 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import ListItemButton from '@mui/material/ListItemButton';
 
+import { useTranslate } from 'src/locales/use-locales';
+import { DashboardContent } from 'src/layouts/dashboard';
 import {
-  createRole,
-  deleteRole,
-  getRoleApis,
-  getRoleMenus,
-  updateRole,
   useApis,
   useRoles,
+  createRole,
+  deleteRole,
+  updateRole,
+  getRoleApis,
+  getRoleMenus,
   useMenuItems,
   updateRoleApis,
   updateRoleMenus,
 } from 'src/actions/rbac';
-import { useTranslate } from 'src/locales/use-locales';
-import { DashboardContent } from 'src/layouts/dashboard';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -60,11 +60,12 @@ import {
   AdminBreadcrumbs,
   ManagementDialog,
   TableLoadingRows,
-  ManagementTableHead,
-  translatedApiGroup,
   translatedApiName,
+  translatedApiGroup,
   translatedMenuItem,
   translatedRoleName,
+  ManagementTableHead,
+  translatedRoleDescription,
 } from './shared';
 
 // ----------------------------------------------------------------------
@@ -217,7 +218,7 @@ export function RoleManagementView() {
                   <TableRow key={row.code} hover>
                     <TableCell>{translatedRoleName(row, t)}</TableCell>
                     <TableCell sx={{ fontFamily: 'monospace' }}>{row.code}</TableCell>
-                    <TableCell>{row.description || '-'}</TableCell>
+                    <TableCell>{translatedRoleDescription(row, t) || '-'}</TableCell>
                     <TableCell>{row.sort_order}</TableCell>
                     <TableCell>
                       <EnabledLabel enabled={row.enabled} />

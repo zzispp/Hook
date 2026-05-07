@@ -35,8 +35,16 @@ impl RbacRepository for StorageRbacRepository {
         self.store.create_role(role_record_input(input, false)).await.map_err(storage_error)
     }
 
+    async fn create_system_role(&self, input: RoleInput) -> RbacResult<Role> {
+        self.store.create_role(role_record_input(input, true)).await.map_err(storage_error)
+    }
+
     async fn replace_role(&self, code: &str, input: RoleInput) -> RbacResult<Role> {
         self.store.replace_role(code, role_record_input(input, false)).await.map_err(storage_error)
+    }
+
+    async fn replace_system_role(&self, code: &str, input: RoleInput) -> RbacResult<Role> {
+        self.store.replace_role(code, role_record_input(input, true)).await.map_err(storage_error)
     }
 
     async fn delete_role(&self, code: &str) -> RbacResult<()> {
@@ -45,6 +53,18 @@ impl RbacRepository for StorageRbacRepository {
 
     async fn find_role(&self, code: &str) -> RbacResult<Option<Role>> {
         self.store.find_role(code).await.map_err(storage_error)
+    }
+
+    async fn role_has_api_bindings(&self, code: &str) -> RbacResult<bool> {
+        self.store.role_has_api_bindings(code).await.map_err(storage_error)
+    }
+
+    async fn role_has_menu_bindings(&self, code: &str) -> RbacResult<bool> {
+        self.store.role_has_menu_bindings(code).await.map_err(storage_error)
+    }
+
+    async fn role_has_users(&self, code: &str) -> RbacResult<bool> {
+        self.store.role_has_users(code).await.map_err(storage_error)
     }
 
     async fn list_roles(&self) -> RbacResult<Vec<Role>> {
@@ -65,6 +85,14 @@ impl RbacRepository for StorageRbacRepository {
 
     async fn delete_api(&self, id: &str) -> RbacResult<()> {
         self.store.delete_api(id).await.map_err(storage_error)
+    }
+
+    async fn find_api(&self, id: &str) -> RbacResult<Option<ApiPermission>> {
+        self.store.find_api(id).await.map_err(storage_error)
+    }
+
+    async fn api_has_role_bindings(&self, id: &str) -> RbacResult<bool> {
+        self.store.api_has_role_bindings(id).await.map_err(storage_error)
     }
 
     async fn list_apis(&self) -> RbacResult<Vec<ApiPermission>> {
@@ -90,6 +118,14 @@ impl RbacRepository for StorageRbacRepository {
         self.store.delete_menu_section(id).await.map_err(storage_error)
     }
 
+    async fn find_menu_section(&self, id: &str) -> RbacResult<Option<MenuSection>> {
+        self.store.find_menu_section(id).await.map_err(storage_error)
+    }
+
+    async fn menu_section_has_items(&self, id: &str) -> RbacResult<bool> {
+        self.store.menu_section_has_items(id).await.map_err(storage_error)
+    }
+
     async fn page_menu_sections(&self, page: PageRequest) -> RbacResult<Page<MenuSection>> {
         self.store.page_menu_sections(page_request(page)).await.map_err(storage_error)
     }
@@ -104,6 +140,22 @@ impl RbacRepository for StorageRbacRepository {
 
     async fn delete_menu_item(&self, id: &str) -> RbacResult<()> {
         self.store.delete_menu_item(id).await.map_err(storage_error)
+    }
+
+    async fn find_menu_item(&self, id: &str) -> RbacResult<Option<MenuItem>> {
+        self.store.find_menu_item(id).await.map_err(storage_error)
+    }
+
+    async fn menu_item_has_children(&self, id: &str) -> RbacResult<bool> {
+        self.store.menu_item_has_children(id).await.map_err(storage_error)
+    }
+
+    async fn menu_item_has_role_bindings(&self, id: &str) -> RbacResult<bool> {
+        self.store.menu_item_has_role_bindings(id).await.map_err(storage_error)
+    }
+
+    async fn list_menu_items(&self) -> RbacResult<Vec<MenuItem>> {
+        self.store.list_menu_items().await.map_err(storage_error)
     }
 
     async fn page_menu_items(&self, page: PageRequest) -> RbacResult<Page<MenuItem>> {
@@ -282,6 +334,7 @@ fn menu_bound(role_code: &str, item_id: &str, bindings: &[RoleMenuBindingRecordI
 fn storage_error(error: StorageError) -> RbacError {
     match error {
         StorageError::NotFound => RbacError::NotFound,
+        StorageError::Conflict(message) => RbacError::Conflict(message),
         StorageError::Database(message) => RbacError::Infrastructure(message),
     }
 }

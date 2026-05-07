@@ -12,7 +12,7 @@ import { useRouter } from 'src/routes/hooks';
 import { toast } from 'src/components/snackbar';
 import { useSettingsContext } from 'src/components/settings';
 
-import { fallbackLng, getCurrentLang, storageConfig } from './locales-config';
+import { fallbackLng, storageConfig, getCurrentLang } from './locales-config';
 
 // ----------------------------------------------------------------------
 

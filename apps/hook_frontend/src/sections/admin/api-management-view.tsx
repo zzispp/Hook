@@ -16,9 +16,9 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 
-import { createApi, deleteApi, updateApi, useApis } from 'src/actions/rbac';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useApis, createApi, deleteApi, updateApi } from 'src/actions/rbac';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -36,9 +36,9 @@ import {
   AdminBreadcrumbs,
   ManagementDialog,
   TableLoadingRows,
-  ManagementTableHead,
-  translatedApiGroup,
   translatedApiName,
+  translatedApiGroup,
+  ManagementTableHead,
 } from './shared';
 
 // ----------------------------------------------------------------------

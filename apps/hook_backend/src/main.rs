@@ -1,5 +1,6 @@
 mod auth;
 mod commands;
+mod init;
 mod schema;
 mod startup;
 mod system;

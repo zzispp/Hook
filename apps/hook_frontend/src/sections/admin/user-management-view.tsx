@@ -16,9 +16,9 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 
-import { createUser, deleteUser, updateUser, useRoles, useUsers } from 'src/actions/rbac';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useRoles, useUsers, createUser, deleteUser, updateUser } from 'src/actions/rbac';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -35,8 +35,9 @@ import {
   AdminBreadcrumbs,
   ManagementDialog,
   TableLoadingRows,
-  ManagementTableHead,
   translatedRoleName,
+  ManagementTableHead,
+  translatedAuthSource,
 } from './shared';
 
 // ----------------------------------------------------------------------
@@ -153,7 +154,7 @@ export function UserManagementView() {
                     <TableCell>{row.username}</TableCell>
                     <TableCell>{row.email}</TableCell>
                     <TableCell>{displayRole(row.role, roles.items, t)}</TableCell>
-                    <TableCell>{row.auth_source}</TableCell>
+                    <TableCell>{translatedAuthSource(row.auth_source, t)}</TableCell>
                     <TableCell>
                       <EnabledLabel enabled={row.is_active} />
                     </TableCell>

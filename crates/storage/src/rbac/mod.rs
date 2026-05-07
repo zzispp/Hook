@@ -11,4 +11,4 @@ pub use types::{
     ApiPermissionRecordInput, MenuItemRecordInput, MenuSectionRecordInput, RoleApiBindingRecordInput, RoleMenuBindingRecordInput, RoleRecordInput,
 };
 
-pub(crate) use record::{ApiPermissionRecord, MenuItemRecord, MenuSectionRecord, RoleApiPermissionRecord, RoleMenuPermissionRecord, RoleRecord};
+pub(super) use record::{ApiPermissionRecord, MenuItemRecord, MenuSectionRecord, RoleApiPermissionRecord, RoleMenuPermissionRecord, RoleRecord};

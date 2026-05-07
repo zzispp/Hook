@@ -94,6 +94,7 @@ fn user_auth_record(record: storage::user::UserAuthRecord) -> UserAuthRecord {
 fn storage_error(error: StorageError) -> AppError {
     match error {
         StorageError::NotFound => AppError::NotFound,
+        StorageError::Conflict(message) => AppError::Conflict(message),
         StorageError::Database(message) => AppError::Infrastructure(message),
     }
 }

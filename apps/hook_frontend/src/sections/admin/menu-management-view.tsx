@@ -23,18 +23,18 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 
-import {
-  createMenuItem,
-  createMenuSection,
-  deleteMenuItem,
-  deleteMenuSection,
-  updateMenuItem,
-  updateMenuSection,
-  useMenuItems,
-  useMenuSections,
-} from 'src/actions/rbac';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import {
+  useMenuItems,
+  createMenuItem,
+  deleteMenuItem,
+  updateMenuItem,
+  useMenuSections,
+  createMenuSection,
+  deleteMenuSection,
+  updateMenuSection,
+} from 'src/actions/rbac';
 
 import { Label } from 'src/components/label';
 import { toast } from 'src/components/snackbar';
@@ -52,8 +52,8 @@ import {
   AdminBreadcrumbs,
   ManagementDialog,
   TableLoadingRows,
-  ManagementTableHead,
   translatedMenuItem,
+  ManagementTableHead,
   translatedMenuSection,
 } from './shared';
 

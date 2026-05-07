@@ -3,7 +3,7 @@ use types::{
     rbac::Role,
 };
 
-use crate::{StorageError, StorageResult};
+use crate::{StorageError, StorageResult, user::UserRecord};
 
 use super::{RbacStore, RoleRecord, RoleRecordInput, repository::rbac_page};
 
@@ -70,6 +70,16 @@ impl RbacStore {
             .exec(&mut db)
             .await?;
         Ok(rbac_page(items.into_iter().map(Role::from).collect(), total, request))
+    }
+
+    pub async fn role_has_users(&self, code: &str) -> StorageResult<bool> {
+        let mut db = self.database.connection();
+        UserRecord::filter(UserRecord::fields().role().eq(code).and(UserRecord::fields().is_deleted().eq(false)))
+            .first()
+            .exec(&mut db)
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
     }
 
     pub(super) async fn find_role_record(&self, code: &str) -> StorageResult<Option<RoleRecord>> {

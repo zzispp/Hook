@@ -1,7 +1,7 @@
 use types::{pagination::PageRequest, rbac::Role};
 
 use super::{
-    test_fixtures::{api_input, api_permission, menu_item_input, permission_snapshot, role_input},
+    test_fixtures::{api_input, api_permission, menu_item, menu_item_input, menu_section, permission_snapshot, rbac_id, role_input},
     test_support::{MemoryRbacCache, MemoryRbacRepository},
 };
 use crate::application::{ApiCheckRequest, AuthWhitelistRule, AuthorizationConfig, RbacError, RbacService};
@@ -74,7 +74,18 @@ async fn mutating_role_rebuilds_cache() {
 
 #[tokio::test]
 async fn mutating_menu_item_rebuilds_cache() {
-    let repository = MemoryRbacRepository::default();
+    let repository = MemoryRbacRepository::with_menu_state(
+        vec![menu_section(
+            1,
+            types::rbac::MenuSectionInput {
+                code: "system".into(),
+                subheader: "System".into(),
+                sort_order: 0,
+                enabled: true,
+            },
+        )],
+        vec![],
+    );
     let cache = MemoryRbacCache::default();
     let service = RbacService::new(repository, cache.clone());
 
@@ -121,6 +132,116 @@ async fn system_role_cannot_be_deleted() {
     let result = service.delete_role("admin").await;
 
     assert!(matches!(result, Err(RbacError::Conflict(_))));
+}
+
+#[tokio::test]
+async fn ensure_system_role_marks_existing_role_as_system() {
+    let repository = MemoryRbacRepository::with_role(Role {
+        code: "admin".into(),
+        name: "Old Admin".into(),
+        description: String::new(),
+        enabled: true,
+        system: false,
+        sort_order: 99,
+    });
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let role = service.ensure_system_role(role_input("admin")).await.unwrap();
+
+    assert!(role.system);
+    assert_eq!(role.sort_order, 0);
+}
+
+#[tokio::test]
+async fn delete_api_rejects_bound_permission() {
+    let api_id = rbac_id(1);
+    let repository = MemoryRbacRepository::with_role_bindings("admin", vec![api_id.clone()], vec![]);
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let result = service.delete_api(&api_id).await;
+
+    assert!(matches!(result, Err(RbacError::Conflict(_))));
+}
+
+#[tokio::test]
+async fn delete_menu_item_rejects_role_bound_item() {
+    let item_id = rbac_id(1);
+    let repository = MemoryRbacRepository::with_role_bindings("admin", vec![], vec![item_id.clone()]);
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let result = service.delete_menu_item(&item_id).await;
+
+    assert!(matches!(result, Err(RbacError::Conflict(_))));
+}
+
+#[tokio::test]
+async fn delete_menu_section_rejects_non_empty_section() {
+    let section = menu_section(
+        1,
+        types::rbac::MenuSectionInput {
+            code: "system".into(),
+            subheader: "System".into(),
+            sort_order: 0,
+            enabled: true,
+        },
+    );
+    let item = menu_item(1, menu_item_input("users"));
+    let repository = MemoryRbacRepository::with_menu_state(vec![section.clone()], vec![item]);
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let result = service.delete_menu_section(&section.id).await;
+
+    assert!(matches!(result, Err(RbacError::Conflict(_))));
+}
+
+#[tokio::test]
+async fn replace_role_apis_rejects_unknown_api_id() {
+    let repository = MemoryRbacRepository::with_role(Role {
+        code: "admin".into(),
+        name: "Admin".into(),
+        description: String::new(),
+        enabled: true,
+        system: false,
+        sort_order: 0,
+    });
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let result = service.replace_role_apis("admin", vec![rbac_id(404)]).await;
+
+    assert!(matches!(result, Err(RbacError::InvalidInput(_))));
+}
+
+#[tokio::test]
+async fn create_menu_item_rejects_unknown_section() {
+    let service = test_service();
+
+    let result = service.create_menu_item(menu_item_input("users")).await;
+
+    assert!(matches!(result, Err(RbacError::InvalidInput(_))));
+}
+
+#[tokio::test]
+async fn replace_menu_item_rejects_self_parent() {
+    let mut input = menu_item_input("users");
+    input.parent_id = Some(rbac_id(1));
+    let existing = menu_item(1, menu_item_input("users"));
+    let repository = MemoryRbacRepository::with_menu_state(
+        vec![menu_section(
+            1,
+            types::rbac::MenuSectionInput {
+                code: "system".into(),
+                subheader: "System".into(),
+                sort_order: 0,
+                enabled: true,
+            },
+        )],
+        vec![existing.clone()],
+    );
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let result = service.replace_menu_item(&existing.id, input).await;
+
+    assert!(matches!(result, Err(RbacError::InvalidInput(_))));
 }
 
 fn test_service() -> RbacService<MemoryRbacRepository, MemoryRbacCache> {

@@ -12,9 +12,9 @@ import Alert from '@mui/material/Alert';
 import { useTheme } from '@mui/material/styles';
 import { iconButtonClasses } from '@mui/material/IconButton';
 
-import { _contacts, _notifications } from 'src/_mock';
-import { useNavbar } from 'src/actions/rbac';
 import { allLangs } from 'src/locales';
+import { useNavbar } from 'src/actions/rbac';
+import { _contacts, _notifications } from 'src/_mock';
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Logo } from 'src/components/logo';

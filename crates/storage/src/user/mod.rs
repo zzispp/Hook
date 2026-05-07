@@ -5,4 +5,4 @@ mod types;
 pub use repository::UserStore;
 pub use types::{UserAuthRecord, UserRecordInput};
 
-pub(crate) use record::UserRecord;
+pub(super) use record::UserRecord;

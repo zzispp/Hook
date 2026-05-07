@@ -6,6 +6,8 @@ pub type StorageResult<T> = Result<T, StorageError>;
 pub enum StorageError {
     #[error("resource not found")]
     NotFound,
+    #[error("resource conflict: {0}")]
+    Conflict(String),
     #[error("database error: {0}")]
     Database(String),
 }

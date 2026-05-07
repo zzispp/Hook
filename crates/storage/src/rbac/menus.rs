@@ -70,6 +70,16 @@ impl RbacStore {
         Ok(rbac_page(items.into_iter().map(MenuSection::from).collect(), total, request))
     }
 
+    pub async fn menu_section_has_items(&self, id: &str) -> StorageResult<bool> {
+        let mut db = self.database.connection();
+        MenuItemRecord::filter(MenuItemRecord::fields().section_id().eq(id))
+            .first()
+            .exec(&mut db)
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
+    }
+
     async fn find_menu_section_record(&self, id: &str) -> StorageResult<Option<MenuSectionRecord>> {
         let mut db = self.database.connection();
         MenuSectionRecord::filter(MenuSectionRecord::fields().id().eq(id))
@@ -151,6 +161,16 @@ impl RbacStore {
             .exec(&mut db)
             .await?;
         Ok(rbac_page(items.into_iter().map(MenuItem::from).collect(), total, request))
+    }
+
+    pub async fn menu_item_has_children(&self, id: &str) -> StorageResult<bool> {
+        let mut db = self.database.connection();
+        MenuItemRecord::filter(MenuItemRecord::fields().parent_id().eq(Some(id.to_owned())))
+            .first()
+            .exec(&mut db)
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
     }
 
     async fn find_menu_item_record(&self, id: &str) -> StorageResult<Option<MenuItemRecord>> {

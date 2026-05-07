@@ -4,14 +4,14 @@ use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest},
     rbac::{
-        ApiPermission, ApiPermissionInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse, PermissionSnapshot, Role, RoleApiBindingInput,
-        RoleInput, RoleMenuBindingInput,
+        ApiPermission, ApiPermissionInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse, PermissionSnapshot, Role, RoleInput,
+        RoleMenuBindingInput,
     },
 };
 
 use crate::application::{RbacCache, RbacError, RbacRepository, RbacResult};
 
-use super::test_fixtures::{api_permission, menu_item, menu_section, page_items, permission_snapshot, role_from_input};
+use super::test_fixtures::{api_permission, menu_item, menu_section, page_items, permission_snapshot, rbac_id, role_from_input};
 
 #[derive(Clone, Default)]
 pub(super) struct MemoryRbacRepository {
@@ -24,8 +24,20 @@ struct RepositoryState {
     apis: Vec<ApiPermission>,
     menu_sections: Vec<MenuSection>,
     menu_items: Vec<MenuItem>,
-    role_apis: Vec<RoleApiBindingInput>,
-    role_menus: Vec<RoleMenuBindingInput>,
+    role_apis: Vec<MemoryRoleApiBinding>,
+    role_menus: Vec<MemoryRoleMenuBinding>,
+}
+
+#[derive(Clone, Default)]
+struct MemoryRoleApiBinding {
+    role_code: String,
+    api_permission_ids: Vec<String>,
+}
+
+#[derive(Clone, Default)]
+struct MemoryRoleMenuBinding {
+    role_code: String,
+    menu_item_ids: Vec<String>,
 }
 
 #[derive(Clone, Default)]
@@ -58,6 +70,16 @@ impl MemoryRbacRepository {
         }
     }
 
+    pub(super) fn with_menu_state(sections: Vec<MenuSection>, items: Vec<MenuItem>) -> Self {
+        Self {
+            state: Arc::new(Mutex::new(RepositoryState {
+                menu_sections: sections,
+                menu_items: items,
+                ..RepositoryState::default()
+            })),
+        }
+    }
+
     pub(super) fn with_role_bindings(role_code: &str, api_permission_ids: Vec<String>, menu_item_ids: Vec<String>) -> Self {
         Self {
             state: Arc::new(Mutex::new(RepositoryState {
@@ -69,8 +91,16 @@ impl MemoryRbacRepository {
                     system: false,
                     sort_order: 0,
                 }],
-                role_apis: vec![RoleApiBindingInput { api_permission_ids }],
-                role_menus: vec![RoleMenuBindingInput { menu_item_ids }],
+                apis: api_permission_ids.iter().enumerate().map(|(index, id)| api_with_id(id, index)).collect(),
+                menu_items: menu_item_ids.iter().enumerate().map(|(index, id)| menu_item_with_id(id, index)).collect(),
+                role_apis: vec![MemoryRoleApiBinding {
+                    role_code: role_code.into(),
+                    api_permission_ids,
+                }],
+                role_menus: vec![MemoryRoleMenuBinding {
+                    role_code: role_code.into(),
+                    menu_item_ids,
+                }],
                 ..RepositoryState::default()
             })),
         }
@@ -100,10 +130,29 @@ impl RbacRepository for MemoryRbacRepository {
         Ok(role)
     }
 
+    async fn create_system_role(&self, input: RoleInput) -> RbacResult<Role> {
+        let role = Role {
+            system: true,
+            ..role_from_input(input)
+        };
+        self.state.lock().unwrap().roles.push(role.clone());
+        Ok(role)
+    }
+
     async fn replace_role(&self, code: &str, input: RoleInput) -> RbacResult<Role> {
         let mut state = self.state.lock().unwrap();
         let role = state.roles.iter_mut().find(|role| role.code == code).ok_or(RbacError::NotFound)?;
         *role = role_from_input(input);
+        Ok(role.clone())
+    }
+
+    async fn replace_system_role(&self, code: &str, input: RoleInput) -> RbacResult<Role> {
+        let mut state = self.state.lock().unwrap();
+        let role = state.roles.iter_mut().find(|role| role.code == code).ok_or(RbacError::NotFound)?;
+        *role = Role {
+            system: true,
+            ..role_from_input(input)
+        };
         Ok(role.clone())
     }
 
@@ -114,6 +163,30 @@ impl RbacRepository for MemoryRbacRepository {
 
     async fn find_role(&self, code: &str) -> RbacResult<Option<Role>> {
         Ok(self.state.lock().unwrap().roles.iter().find(|role| role.code == code).cloned())
+    }
+
+    async fn role_has_api_bindings(&self, code: &str) -> RbacResult<bool> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .role_apis
+            .iter()
+            .any(|binding| binding.role_code == code && !binding.api_permission_ids.is_empty()))
+    }
+
+    async fn role_has_menu_bindings(&self, code: &str) -> RbacResult<bool> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .role_menus
+            .iter()
+            .any(|binding| binding.role_code == code && !binding.menu_item_ids.is_empty()))
+    }
+
+    async fn role_has_users(&self, _code: &str) -> RbacResult<bool> {
+        Ok(false)
     }
 
     async fn list_roles(&self) -> RbacResult<Vec<Role>> {
@@ -143,6 +216,20 @@ impl RbacRepository for MemoryRbacRepository {
         Ok(())
     }
 
+    async fn find_api(&self, id: &str) -> RbacResult<Option<ApiPermission>> {
+        Ok(self.state.lock().unwrap().apis.iter().find(|api| api.id == id).cloned())
+    }
+
+    async fn api_has_role_bindings(&self, id: &str) -> RbacResult<bool> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .role_apis
+            .iter()
+            .any(|binding| binding.api_permission_ids.iter().any(|api_id| api_id == id)))
+    }
+
     async fn list_apis(&self) -> RbacResult<Vec<ApiPermission>> {
         Ok(self.state.lock().unwrap().apis.clone())
     }
@@ -170,6 +257,14 @@ impl RbacRepository for MemoryRbacRepository {
         Ok(())
     }
 
+    async fn find_menu_section(&self, id: &str) -> RbacResult<Option<MenuSection>> {
+        Ok(self.state.lock().unwrap().menu_sections.iter().find(|section| section.id == id).cloned())
+    }
+
+    async fn menu_section_has_items(&self, id: &str) -> RbacResult<bool> {
+        Ok(self.state.lock().unwrap().menu_items.iter().any(|item| item.section_id == id))
+    }
+
     async fn page_menu_sections(&self, page: PageRequest) -> RbacResult<Page<MenuSection>> {
         Ok(page_items(self.state.lock().unwrap().menu_sections.clone(), page))
     }
@@ -193,38 +288,68 @@ impl RbacRepository for MemoryRbacRepository {
         Ok(())
     }
 
-    async fn page_menu_items(&self, page: PageRequest) -> RbacResult<Page<MenuItem>> {
-        Ok(page_items(self.state.lock().unwrap().menu_items.clone(), page))
+    async fn find_menu_item(&self, id: &str) -> RbacResult<Option<MenuItem>> {
+        Ok(self.state.lock().unwrap().menu_items.iter().find(|item| item.id == id).cloned())
     }
 
-    async fn replace_role_apis(&self, _role_code: &str, api_permission_ids: Vec<String>) -> RbacResult<()> {
-        self.state.lock().unwrap().role_apis = vec![RoleApiBindingInput { api_permission_ids }];
-        Ok(())
+    async fn menu_item_has_children(&self, id: &str) -> RbacResult<bool> {
+        Ok(self.state.lock().unwrap().menu_items.iter().any(|item| item.parent_id.as_deref() == Some(id)))
     }
 
-    async fn replace_role_menus(&self, _role_code: &str, input: RoleMenuBindingInput) -> RbacResult<()> {
-        self.state.lock().unwrap().role_menus = vec![input];
-        Ok(())
-    }
-
-    async fn role_api_ids(&self, _role_code: &str) -> RbacResult<Vec<String>> {
-        Ok(self
-            .state
-            .lock()
-            .unwrap()
-            .role_apis
-            .first()
-            .map(|binding| binding.api_permission_ids.clone())
-            .unwrap_or_default())
-    }
-
-    async fn role_menu_item_ids(&self, _role_code: &str) -> RbacResult<Vec<String>> {
+    async fn menu_item_has_role_bindings(&self, id: &str) -> RbacResult<bool> {
         Ok(self
             .state
             .lock()
             .unwrap()
             .role_menus
-            .first()
+            .iter()
+            .any(|binding| binding.menu_item_ids.iter().any(|menu_item_id| menu_item_id == id)))
+    }
+
+    async fn list_menu_items(&self) -> RbacResult<Vec<MenuItem>> {
+        Ok(self.state.lock().unwrap().menu_items.clone())
+    }
+
+    async fn page_menu_items(&self, page: PageRequest) -> RbacResult<Page<MenuItem>> {
+        Ok(page_items(self.state.lock().unwrap().menu_items.clone(), page))
+    }
+
+    async fn replace_role_apis(&self, role_code: &str, api_permission_ids: Vec<String>) -> RbacResult<()> {
+        self.state.lock().unwrap().role_apis = vec![MemoryRoleApiBinding {
+            role_code: role_code.into(),
+            api_permission_ids,
+        }];
+        Ok(())
+    }
+
+    async fn replace_role_menus(&self, role_code: &str, input: RoleMenuBindingInput) -> RbacResult<()> {
+        self.state.lock().unwrap().role_menus = vec![MemoryRoleMenuBinding {
+            role_code: role_code.into(),
+            menu_item_ids: input.menu_item_ids,
+        }];
+        Ok(())
+    }
+
+    async fn role_api_ids(&self, role_code: &str) -> RbacResult<Vec<String>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .role_apis
+            .iter()
+            .find(|binding| binding.role_code == role_code)
+            .map(|binding| binding.api_permission_ids.clone())
+            .unwrap_or_default())
+    }
+
+    async fn role_menu_item_ids(&self, role_code: &str) -> RbacResult<Vec<String>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .role_menus
+            .iter()
+            .find(|binding| binding.role_code == role_code)
             .map(|binding| binding.menu_item_ids.clone())
             .unwrap_or_default())
     }
@@ -236,6 +361,35 @@ impl RbacRepository for MemoryRbacRepository {
 
 fn id_number(id: &str) -> u64 {
     id.strip_prefix("018f0000-0000-7000-9000-").and_then(|suffix| suffix.parse().ok()).unwrap_or(0)
+}
+
+fn api_with_id(id: &str, index: usize) -> ApiPermission {
+    ApiPermission {
+        id: id.into(),
+        code: format!("api_{index}"),
+        method: "GET".into(),
+        path_pattern: format!("/api/{index}"),
+        name: format!("API {index}"),
+        group: "Tests".into(),
+        enabled: true,
+        system: false,
+    }
+}
+
+fn menu_item_with_id(id: &str, index: usize) -> MenuItem {
+    MenuItem {
+        id: id.into(),
+        section_id: rbac_id(1),
+        parent_id: None,
+        code: format!("menu_{index}"),
+        title: format!("Menu {index}"),
+        path: format!("/dashboard/{index}"),
+        icon: None,
+        caption: None,
+        deep_match: false,
+        sort_order: index as i64,
+        enabled: true,
+    }
 }
 
 #[async_trait]

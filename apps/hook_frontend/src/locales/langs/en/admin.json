@@ -123,11 +123,17 @@
   },
   "roles": {
     "admin": {
-      "name": "Administrator"
+      "name": "Administrator",
+      "description": "Built-in administrator role"
     },
     "user": {
-      "name": "User"
+      "name": "User",
+      "description": "Default signed-up user role"
     }
+  },
+  "authSources": {
+    "local": "Local",
+    "system": "System"
   },
   "apiGroups": {
     "auth": "Auth",

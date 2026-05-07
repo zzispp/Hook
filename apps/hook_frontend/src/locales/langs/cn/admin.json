@@ -123,11 +123,17 @@
   },
   "roles": {
     "admin": {
-      "name": "管理员"
+      "name": "管理员",
+      "description": "内置管理员角色"
     },
     "user": {
-      "name": "用户"
+      "name": "用户",
+      "description": "默认注册用户角色"
     }
+  },
+  "authSources": {
+    "local": "本地",
+    "system": "系统"
   },
   "apiGroups": {
     "auth": "认证",

@@ -15,7 +15,6 @@ import {
   i18nOptions,
   fallbackLng,
   storageConfig,
-  supportedLngs,
   i18nResourceLoader,
 } from './locales-config';
 
@@ -40,7 +39,6 @@ const initOptions: InitOptions = CONFIG.isStaticExport
       detection: {
         caches: ['cookie'],
         lookupCookie: storageConfig.cookie.key,
-        supportedLngs,
         convertDetectedLanguage: normalizeDetectedLanguage,
       },
     };

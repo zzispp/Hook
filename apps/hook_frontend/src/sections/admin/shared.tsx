@@ -2,7 +2,7 @@
 
 import type { TableHeadCellProps } from 'src/components/table';
 import type { NavSectionProps } from 'src/components/nav-section';
-import type { ApiPermission, Role, MenuSection, MenuItem as RbacMenuItem } from 'src/types/rbac';
+import type { Role, MenuSection, ApiPermission, MenuItem as RbacMenuItem } from 'src/types/rbac';
 
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -260,6 +260,24 @@ export function translatedRoleName(role: Role, t: AdminT) {
   const key = keyByCode[role.code];
 
   return key ? t(key) : role.name;
+}
+
+export function translatedRoleDescription(role: Role, t: AdminT) {
+  const keyByCode: Record<string, string> = {
+    admin: 'roles.admin.description',
+    user: 'roles.user.description',
+  };
+
+  const key = keyByCode[role.code];
+
+  return key ? t(key) : role.description;
+}
+
+export function translatedAuthSource(source: string, t: AdminT) {
+  const key = `authSources.${source.toLowerCase()}`;
+  const translated = t(key);
+
+  return translated === key ? source : translated;
 }
 
 export function translatedApiName(api: ApiPermission, t: AdminT) {
