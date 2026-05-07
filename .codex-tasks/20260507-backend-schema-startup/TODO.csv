@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm Toasty schema behavior,DONE,Docs and local source confirm push_schema is not startup-idempotent,test -f .codex-tasks/20260507-backend-schema-startup/SPEC.md,2026-05-07,0,"Checked Context7, Brave, and local Toasty source."
+2,Add explicit schema push configuration,IN_PROGRESS,Backend connects without unconditional push_schema,cargo check -p backend,,0,
+3,Run backend validation,TODO,Rust tests checks and backend startup validation pass,"just test; cargo fmt --all --check; cargo check -p backend",,0,

@@ -4,6 +4,7 @@ import type { ApiEnvelope } from './utils';
 
 import axios, { endpoints } from 'src/lib/axios';
 
+import { trimCredential } from './validation';
 import { setSession, requireApiData } from './utils';
 
 // ----------------------------------------------------------------------
@@ -20,8 +21,8 @@ export type SignUpParams = {
 };
 
 type AuthSessionResponse = {
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
 };
 
 /** **************************************
@@ -29,7 +30,10 @@ type AuthSessionResponse = {
  *************************************** */
 export const signInWithPassword = async ({ identifier, password }: SignInParams): Promise<void> => {
   try {
-    const params = { identifier, password };
+    const params = {
+      identifier: trimCredential(identifier),
+      password: trimCredential(password),
+    };
 
     const res = await axios.post(endpoints.auth.signIn, params);
 
@@ -49,11 +53,9 @@ export const signUp = async ({
   password,
 }: SignUpParams): Promise<void> => {
   const params = {
-    username,
-    email,
-    password,
-    role: 'user',
-    status: 'enabled',
+    username: trimCredential(username),
+    email: trimCredential(email),
+    password: trimCredential(password),
   };
 
   try {
@@ -81,7 +83,7 @@ export const signOut = async (): Promise<void> => {
 function requireAuthSession(payload: ApiEnvelope<AuthSessionResponse>): AuthSessionResponse {
   const session = requireApiData<AuthSessionResponse>(payload);
 
-  if (!session.accessToken || !session.refreshToken) {
+  if (!session.access_token || !session.refresh_token) {
     throw new Error('Auth tokens not found in response');
   }
 

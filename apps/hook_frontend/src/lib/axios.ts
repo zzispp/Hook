@@ -17,7 +17,7 @@ const axiosInstance = axios.create({
  * Optional: Add token (if using auth)
  *
  axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('jwt_access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

@@ -1,0 +1,8 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map current backend dependencies and choose implementation boundary,DONE,Current crate APIs and constraints are documented in PROGRESS.md,test -f .codex-tasks/20260507-backend-rbac/PROGRESS.md,2026-05-07T00:00:00+08:00,0,
+2,Add configuration and types for admin auth redis and RBAC,DONE,Config/tests and DTO/domain types compile,cargo check -p configuration -p types,2026-05-07T00:00:00+08:00,0,
+3,Implement storage models and stores for RBAC,DONE,Database builder includes RBAC models and storage APIs compile,cargo check -p storage,2026-05-07T00:00:00+08:00,0,
+4,Implement RBAC service and Redis cache abstraction,DONE,RBAC service tests cover cache rebuild and filtering,cargo test -p rbac --lib,2026-05-07T00:00:00+08:00,0,
+5,Wire auth middleware and RBAC routes,DONE,Route tests cover whitelist auth denial and menu access,cargo check -p backend,2026-05-07T00:00:00+08:00,0,
+6,Integrate config-backed admin into user service,DONE,User tests cover listing and immutable admin protections,cargo test -p user --lib,2026-05-07T16:23:40+08:00,0,
+7,Run backend validation and summarize,DONE,Relevant cargo/just validation has been run or blocker recorded,just test,2026-05-07T17:04:27+08:00,0,

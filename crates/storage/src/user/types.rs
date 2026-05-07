@@ -6,7 +6,7 @@ pub struct UserRecordInput {
     pub password_hash: String,
     pub email: String,
     pub role: String,
-    pub status: String,
+    pub is_active: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -18,8 +18,8 @@ type Props = {
 };
 
 type TokenPairResponse = {
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
 };
 
 type MeResponse = {
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: Props) {
       const res = await axios.get(endpoints.auth.me);
       const { user } = requireApiData<MeResponse>(res.data);
 
-      setState({ user: { ...user, accessToken: session.accessToken }, loading: false });
+      setState({ user: { ...user, access_token: session.access_token }, loading: false });
     } catch (error) {
       console.error(error);
       await setSession(null);
@@ -76,19 +76,20 @@ export function AuthProvider({ children }: Props) {
 }
 
 async function resolveSession() {
-  const accessToken = sessionStorage.getItem(JWT_STORAGE_KEY);
-  const refreshToken = sessionStorage.getItem(JWT_REFRESH_STORAGE_KEY);
+  const access_token = sessionStorage.getItem(JWT_STORAGE_KEY);
+  const refresh_token = sessionStorage.getItem(JWT_REFRESH_STORAGE_KEY);
 
-  if (accessToken && refreshToken && isValidToken(accessToken)) {
-    await setSession({ accessToken, refreshToken });
-    return { accessToken, refreshToken };
+  if (access_token && refresh_token && isValidToken(access_token)) {
+    const session = { access_token, refresh_token };
+    await setSession(session);
+    return session;
   }
 
-  if (!refreshToken || !isValidToken(refreshToken)) {
+  if (!refresh_token || !isValidToken(refresh_token)) {
     return null;
   }
 
-  const res = await axios.post(endpoints.auth.refresh, { refreshToken });
+  const res = await axios.post(endpoints.auth.refresh, { refresh_token });
   const session = requireApiData<TokenPairResponse>(res.data);
 
   await setSession(session);

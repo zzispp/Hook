@@ -15,6 +15,9 @@ pub struct Settings {
     pub server: ServerSettings,
     pub database: DatabaseSettings,
     pub jwt: JwtSettings,
+    pub admin: AdminSettings,
+    pub auth: AuthSettings,
+    pub redis: RedisSettings,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -32,13 +35,48 @@ pub struct DatabaseSettings {
     pub username: String,
     pub password: Option<String>,
     pub name: String,
+    pub push_schema_on_startup: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct JwtSettings {
-    pub secret_env: String,
+    pub secret: String,
     pub access_token_ttl_seconds: u64,
     pub refresh_token_ttl_seconds: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct AdminSettings {
+    pub id: String,
+    pub username: String,
+    pub email: String,
+    pub role: String,
+    pub is_active: bool,
+    pub password_hash: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct AuthSettings {
+    pub whitelist: Vec<AuthWhitelistRule>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct AuthWhitelistRule {
+    pub methods: Vec<String>,
+    pub path_pattern: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct RedisSettings {
+    pub url: Option<String>,
+    pub scheme: String,
+    pub host: String,
+    pub port: u16,
+    pub username: Option<String>,
+    pub password: Option<String>,
+    pub database: Option<u16>,
+    pub protocol: Option<String>,
+    pub key_prefix: String,
 }
 
 #[derive(Debug, Error)]
@@ -51,8 +89,8 @@ pub enum SettingsError {
     MissingConfigFile,
     #[error("--config requires a file path")]
     MissingConfigArgument,
-    #[error("jwt secret environment variable {0} is not set")]
-    MissingJwtSecret(String),
+    #[error("{0} cannot be blank")]
+    BlankConfigValue(&'static str),
 }
 
 impl Settings {
@@ -90,7 +128,26 @@ impl Settings {
     }
 
     pub fn jwt_secret(&self) -> Result<String, SettingsError> {
-        env::var(&self.jwt.secret_env).map_err(|_| SettingsError::MissingJwtSecret(self.jwt.secret_env.clone()))
+        required_config_value("jwt.secret", &self.jwt.secret)
+    }
+
+    pub fn admin_password_hash(&self) -> Result<String, SettingsError> {
+        required_config_value("admin.password_hash", &self.admin.password_hash)
+    }
+
+    pub fn redis_url(&self) -> Result<String, SettingsError> {
+        if let Some(url) = non_empty_config_url(self.redis.url.as_deref()) {
+            return Ok(url.to_owned());
+        }
+
+        Ok(format!(
+            "{}://{}{}{}{}",
+            self.redis.scheme,
+            redis_auth(&self.redis),
+            self.redis.host,
+            redis_port(self.redis.port),
+            redis_query(&self.redis)
+        ))
     }
 }
 
@@ -130,109 +187,48 @@ fn non_empty_database_url(url: Option<&str>) -> Option<&str> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, ServerSettings, Settings, SettingsError, explicit_config_path};
-    use std::{ffi::OsString, path::PathBuf};
-
-    #[test]
-    fn database_url_prefers_explicit_url() {
-        let settings = settings_with_database(DatabaseSettings {
-            url: Some("postgres://user:pass@remote:5432/app".into()),
-            password: Some("ignored".into()),
-            ..database_parts()
-        });
-
-        let url = settings.database_url().unwrap();
-
-        assert_eq!(url, "postgres://user:pass@remote:5432/app");
-    }
-
-    #[test]
-    fn database_url_uses_parts_when_url_is_missing() {
-        let settings = settings_with_database(database_parts());
-
-        let url = settings.database_url().unwrap();
-
-        assert_eq!(url, "postgres://postgres:123456@localhost:5433/postgres");
-    }
-
-    #[test]
-    fn database_url_uses_parts_when_url_is_blank() {
-        let settings = settings_with_database(DatabaseSettings {
-            url: Some("  ".into()),
-            ..database_parts()
-        });
-
-        let url = settings.database_url().unwrap();
-
-        assert_eq!(url, "postgres://postgres:123456@localhost:5433/postgres");
-    }
-
-    #[test]
-    fn database_url_errors_without_password_when_url_is_missing() {
-        let settings = settings_with_database(DatabaseSettings {
-            password: None,
-            ..database_parts()
-        });
-
-        let result = settings.database_url();
-
-        assert!(matches!(result, Err(SettingsError::MissingDatabasePassword)));
-    }
-
-    #[test]
-    fn explicit_config_path_reads_path_after_config_arg() {
-        let args = vec![OsString::from("backend"), OsString::from("--config"), OsString::from("custom.yaml")];
-
-        let path = explicit_config_path(&args).unwrap();
-
-        assert_eq!(path, Some(PathBuf::from("custom.yaml")));
-    }
-
-    #[test]
-    fn explicit_config_path_errors_without_value() {
-        let args = vec![OsString::from("backend"), OsString::from("--config")];
-
-        let result = explicit_config_path(&args);
-
-        assert!(matches!(result, Err(SettingsError::MissingConfigArgument)));
-    }
-
-    #[test]
-    fn default_config_paths_are_ordered() {
-        assert_eq!(MODULE_CONFIG_PATH, "config/config.yaml");
-        assert_eq!(ROOT_CONFIG_PATH, "config.yaml");
-    }
-
-    fn settings_with_database(database: DatabaseSettings) -> Settings {
-        Settings {
-            server: ServerSettings {
-                host: "127.0.0.1".into(),
-                port: 3000,
-            },
-            database,
-            jwt: jwt_settings(),
-        }
-    }
-
-    fn database_parts() -> DatabaseSettings {
-        DatabaseSettings {
-            url: None,
-            scheme: "postgres".into(),
-            host: "localhost".into(),
-            port: 5433,
-            username: "postgres".into(),
-            password: Some("123456".into()),
-            name: "postgres".into(),
-        }
-    }
-
-    fn jwt_settings() -> JwtSettings {
-        JwtSettings {
-            secret_env: "HOOK_JWT_SECRET".into(),
-            access_token_ttl_seconds: 900,
-            refresh_token_ttl_seconds: 604800,
-        }
+fn non_empty_config_url(url: Option<&str>) -> Option<&str> {
+    match url {
+        Some(value) if !value.trim().is_empty() => Some(value.trim()),
+        _ => None,
     }
 }
+
+fn redis_auth(settings: &RedisSettings) -> String {
+    let Some(username) = settings.username.as_deref().map(str::trim).filter(|value| !value.is_empty()) else {
+        return String::new();
+    };
+
+    match settings.password.as_deref() {
+        Some(password) => format!("{username}:{password}@"),
+        None => format!("{username}@"),
+    }
+}
+
+fn redis_port(port: u16) -> String {
+    format!(":{port}")
+}
+
+fn redis_query(settings: &RedisSettings) -> String {
+    let path = settings.database.map(|database| format!("/{database}")).unwrap_or_default();
+    let query = settings
+        .protocol
+        .as_deref()
+        .map(str::trim)
+        .filter(|protocol| !protocol.is_empty())
+        .map(|protocol| format!("?protocol={protocol}"))
+        .unwrap_or_default();
+    format!("{path}{query}")
+}
+
+fn required_config_value(key: &'static str, value: &str) -> Result<String, SettingsError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(SettingsError::BlankConfigValue(key));
+    }
+
+    Ok(trimmed.to_owned())
+}
+
+#[cfg(test)]
+mod tests;

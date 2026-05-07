@@ -5,6 +5,8 @@ edition.workspace = true
 
 [dependencies]
 constants.workspace = true
+jiff.workspace = true
 thiserror.workspace = true
 toasty.workspace = true
 types.workspace = true
+uuid.workspace = true

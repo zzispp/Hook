@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use types::user::{Credentials, NewUser, Page, PageRequest, ReplaceUser, User, UserId};
+use types::{
+    pagination::{Page, PageRequest, PageSliceRequest},
+    user::{Credentials, NewUser, ReplaceUser, User, UserId},
+};
 
 use super::AppResult;
 
@@ -9,13 +12,23 @@ pub struct ReplaceUserRecord {
     pub password_hash: String,
     pub email: String,
     pub role: String,
-    pub status: String,
+    pub is_active: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserAuthRecord {
     pub user: User,
     pub password_hash: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SystemUserRecord {
+    pub user: User,
+    pub password_hash: String,
+}
+
+pub trait SystemUserProvider: Send + Sync + 'static {
+    fn system_user(&self) -> Option<SystemUserRecord>;
 }
 
 #[async_trait]
@@ -27,7 +40,9 @@ pub trait UserRepository: Send + Sync + 'static {
     async fn find_by_email(&self, email: &str) -> AppResult<Option<User>>;
     async fn find_auth_by_username(&self, username: &str) -> AppResult<Option<UserAuthRecord>>;
     async fn find_auth_by_email(&self, email: &str) -> AppResult<Option<UserAuthRecord>>;
+    async fn record_login(&self, id: UserId) -> AppResult<()>;
     async fn list(&self, page: PageRequest) -> AppResult<Page<User>>;
+    async fn list_slice(&self, request: PageSliceRequest) -> AppResult<Page<User>>;
 }
 
 pub trait PasswordHasher: Send + Sync + 'static {

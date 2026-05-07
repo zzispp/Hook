@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Research and define credential rules,DONE,Rules are documented in SPEC and PROGRESS,test -f .codex-tasks/20260507-auth-credential-constraints/SPEC.md,2026-05-07,0,"Used Brave MCP; selected username 3-30 and password 8-128 with trim."
+2,Add backend tests first,DONE,Tests cover trim username/password and invalid constraints,cargo test -p user,2026-05-07,0,"Added failing tests for trim, invalid constraints, and public sign-up payload."
+3,Implement backend validation and trim,DONE,Backend enforces rules before persistence hash and login,cargo test -p user,2026-05-07,0,"Credential length constants moved to constants crate; backend sign-up sets role/status."
+4,Update frontend schemas and payload trim,DONE,Frontend login/sign-up use identical rules and submit trimmed values,pnpm --dir apps/hook_frontend lint,2026-05-07,0,"Frontend schemas share the same values and sign-up no longer sends role/status."
+5,Run final validation,DONE,Backend and frontend validation commands pass,"just test; cargo fmt --all --check; cargo check; cargo clippy -p user --all-targets -- -D warnings; cargo clippy -p backend --all-targets -- -D warnings; pnpm --dir apps/hook_frontend lint; pnpm --dir apps/hook_frontend build",2026-05-07,0,"All listed commands passed."

@@ -3,24 +3,19 @@ use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, header::AUTHORIZATION},
 };
+use constants::auth::{DEFAULT_USER_IS_ACTIVE, DEFAULT_USER_ROLE};
 use serde::Serialize;
 
 use crate::api::{ApiState, TokenPair, error::ApiError};
 use types::{
     response::ApiResponse,
-    user::{ListUsersQuery, RefreshTokenPayload, SignInPayload, UserId, UserPayload, UserResponse, UsersPageResponse},
+    user::{ListUsersQuery, NewUser, RefreshTokenPayload, SignInPayload, SignUpPayload, UserId, UserPayload, UserResponse, UsersPageResponse},
 };
 
 type ApiResult<T> = Result<T, ApiError>;
 type ApiJson<T> = Json<ApiResponse<T>>;
 
 #[derive(Debug, Serialize)]
-pub struct HealthResponse {
-    status: &'static str,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct AuthSessionResponse {
     user: UserResponse,
     access_token: String,
@@ -28,7 +23,6 @@ pub struct AuthSessionResponse {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct TokenPairResponse {
     access_token: String,
     refresh_token: String,
@@ -39,19 +33,15 @@ pub struct MeResponse {
     user: UserResponse,
 }
 
-pub async fn health() -> ApiJson<HealthResponse> {
-    ok(HealthResponse { status: "ok" })
-}
-
-pub async fn sign_up(State(state): State<ApiState>, Json(payload): Json<UserPayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
-    let user = state.users.sign_up(payload.into()).await?;
-    let tokens = state.tokens.issue_pair(user.id)?;
+pub async fn sign_up(State(state): State<ApiState>, Json(payload): Json<SignUpPayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
+    let user = state.users.sign_up(new_sign_up_user(payload)).await?;
+    let tokens = state.tokens.issue_pair(user.id.clone())?;
     Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
 }
 
 pub async fn sign_in(State(state): State<ApiState>, Json(payload): Json<SignInPayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
     let user = state.users.sign_in(payload.into()).await?;
-    let tokens = state.tokens.issue_pair(user.id)?;
+    let tokens = state.tokens.issue_pair(user.id.clone())?;
     Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
 }
 
@@ -73,12 +63,12 @@ pub async fn create_user(State(state): State<ApiState>, Json(payload): Json<User
     Ok(ok(user.into()))
 }
 
-pub async fn replace_user(State(state): State<ApiState>, Path(id): Path<u64>, Json(payload): Json<UserPayload>) -> ApiResult<ApiJson<UserResponse>> {
+pub async fn replace_user(State(state): State<ApiState>, Path(id): Path<String>, Json(payload): Json<UserPayload>) -> ApiResult<ApiJson<UserResponse>> {
     let user = state.users.replace_user(UserId(id), payload.into()).await?;
     Ok(ok(user.into()))
 }
 
-pub async fn delete_user(State(state): State<ApiState>, Path(id): Path<u64>) -> ApiResult<ApiJson<()>> {
+pub async fn delete_user(State(state): State<ApiState>, Path(id): Path<String>) -> ApiResult<ApiJson<()>> {
     state.users.delete_user(UserId(id)).await?;
     Ok(ok(()))
 }
@@ -90,6 +80,16 @@ pub async fn list_users(State(state): State<ApiState>, Query(query): Query<ListU
 
 fn ok<T>(data: T) -> ApiJson<T> {
     Json(ApiResponse::new(data))
+}
+
+fn new_sign_up_user(payload: SignUpPayload) -> NewUser {
+    NewUser {
+        username: payload.username,
+        password: payload.password,
+        email: payload.email,
+        role: DEFAULT_USER_ROLE.into(),
+        is_active: DEFAULT_USER_IS_ACTIVE,
+    }
 }
 
 impl AuthSessionResponse {

@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect config env indirection,DONE,All env-backed config fields identified,rg -n "secret_env|password_hash_env|url_env" config crates/config,,0,
+2,Update config schema and YAML,IN_PROGRESS,Config values are read directly from YAML,cargo test -p configuration,,0,
+3,Run backend validation,TODO,Backend compiles/tests and startup no longer requires HOOK_JWT_SECRET,just test,,0,

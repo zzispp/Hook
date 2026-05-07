@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use super::{Credentials, NewUser, Page, PageRequest, ReplaceUser, User};
+use crate::pagination::{Page, PageRequest};
+
+use super::{Credentials, NewUser, ReplaceUser, User};
 
 #[derive(Debug, Deserialize)]
 pub struct UserPayload {
@@ -8,7 +10,14 @@ pub struct UserPayload {
     pub password: String,
     pub email: String,
     pub role: String,
-    pub status: String,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SignUpPayload {
+    pub username: String,
+    pub password: String,
+    pub email: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -18,7 +27,6 @@ pub struct SignInPayload {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct RefreshTokenPayload {
     pub refresh_token: String,
 }
@@ -31,11 +39,14 @@ pub struct ListUsersQuery {
 
 #[derive(Debug, Serialize)]
 pub struct UserResponse {
-    pub id: u64,
+    pub id: String,
     pub username: String,
     pub email: String,
     pub role: String,
-    pub status: String,
+    pub is_active: bool,
+    pub auth_source: String,
+    pub email_verified: bool,
+    pub system: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -53,7 +64,7 @@ impl From<UserPayload> for NewUser {
             password: value.password,
             email: value.email,
             role: value.role,
-            status: value.status,
+            is_active: value.is_active,
         }
     }
 }
@@ -65,7 +76,7 @@ impl From<UserPayload> for ReplaceUser {
             password: value.password,
             email: value.email,
             role: value.role,
-            status: value.status,
+            is_active: value.is_active,
         }
     }
 }
@@ -95,7 +106,10 @@ impl From<User> for UserResponse {
             username: value.username,
             email: value.email,
             role: value.role,
-            status: value.status,
+            is_active: value.is_active,
+            auth_source: value.auth_source,
+            email_verified: value.email_verified,
+            system: value.system,
         }
     }
 }

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate duplicated pagination DTOs,DONE,All Page/PageRequest definitions and usages are identified,rg "PageRequest|PageSliceRequest|RbacPage|struct Page" crates apps,2026-05-07T17:14:00+08:00,0,
+2,Introduce shared pagination types,DONE,types crate exposes one generic Page model and request DTOs,cargo check -p types,2026-05-07T17:20:00+08:00,0,
+3,Switch user/rbac/storage/backend usages to shared types,DONE,user/rbac/storage/backend compile with shared pagination,cargo check -p backend,2026-05-07T17:21:00+08:00,0,
+4,Run validation,DONE,Relevant Rust tests pass,just test,2026-05-07T17:23:00+08:00,0,

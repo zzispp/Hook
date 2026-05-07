@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Reproduce startup failure,DONE,Backend startup failure is observed with push_schema_on_startup false,perl timeout cargo run -p backend,2026-05-07T18:12:41+08:00,0,
+2,Add explicit schema push command,IN_PROGRESS,Backend can create Toasty tables without enabling startup schema push,cargo check -p backend,,0,
+3,Validate command and startup,TODO,Schema push succeeds and backend startup no longer panics on missing RBAC tables,perl timeout cargo run -p backend -- schema push && perl timeout cargo run -p backend,,0,

@@ -24,17 +24,15 @@ import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
 import { FormHead } from '../../components/form-head';
 import { signInWithPassword } from '../../context/jwt';
+import { passwordSchema, identifierSchema } from '../../context/jwt/validation';
 
 // ----------------------------------------------------------------------
 
 export type SignInSchemaType = z.infer<typeof SignInSchema>;
 
 export const SignInSchema = z.object({
-  identifier: z.string().min(1, { error: 'Username or email is required!' }),
-  password: z
-    .string()
-    .min(1, { error: 'Password is required!' })
-    .min(6, { error: 'Password must be at least 6 characters!' }),
+  identifier: identifierSchema,
+  password: passwordSchema,
 });
 
 // ----------------------------------------------------------------------
@@ -99,7 +97,7 @@ export function JwtSignInView() {
         <Field.Text
           name="password"
           label="Password"
-          placeholder="6+ characters"
+          placeholder="8+ characters"
           type={showPassword.value ? 'text' : 'password'}
           slotProps={{
             inputLabel: { shrink: true },

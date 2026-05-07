@@ -12,7 +12,7 @@ use super::create_router;
 use crate::{
     api::{ApiState, TokenService, TokenSettings},
     application::UserService,
-    test_support::{MemoryUserRepository, TestPasswordHasher, stored_user},
+    test_support::{MemoryUserRepository, TestPasswordHasher, VALID_PASSWORD, stored_user},
 };
 
 const TEST_SECRET: &str = "test-secret-with-enough-entropy";
@@ -29,7 +29,7 @@ async fn sign_in_accepts_email_identifier_and_returns_token_pair() {
             "/api/auth/sign-in",
             json!({
                 "identifier": "alice@example.com",
-                "password": "secret"
+                "password": VALID_PASSWORD
             }),
         ))
         .await
@@ -38,8 +38,34 @@ async fn sign_in_accepts_email_identifier_and_returns_token_pair() {
 
     assert_success(&body);
     assert_eq!(body["data"]["user"]["username"], "alice");
-    assert_non_empty_string(&body["data"]["accessToken"]);
-    assert_non_empty_string(&body["data"]["refreshToken"]);
+    assert_non_empty_string(&body["data"]["access_token"]);
+    assert_non_empty_string(&body["data"]["refresh_token"]);
+}
+
+#[tokio::test]
+async fn sign_up_accepts_public_payload_and_sets_backend_fields() {
+    let app = test_router();
+
+    let response = app
+        .oneshot(json_request(
+            Method::POST,
+            "/api/auth/sign-up",
+            json!({
+                "username": "bob",
+                "email": "bob@example.com",
+                "password": VALID_PASSWORD
+            }),
+        ))
+        .await
+        .unwrap();
+    let body = response_json(response).await;
+
+    assert_success(&body);
+    assert_eq!(body["data"]["user"]["role"], "user");
+    assert_eq!(body["data"]["user"]["is_active"], true);
+    assert_eq!(body["data"]["user"]["auth_source"], "local");
+    assert_eq!(body["data"]["user"]["email_verified"], false);
+    assert_non_empty_string(&body["data"]["access_token"]);
 }
 
 #[tokio::test]
@@ -64,14 +90,18 @@ async fn refresh_returns_new_token_pair_and_me_accepts_new_access_token() {
 
     let response = app
         .clone()
-        .oneshot(json_request(Method::POST, "/api/auth/refresh", json!({ "refreshToken": tokens.refresh_token })))
+        .oneshot(json_request(
+            Method::POST,
+            "/api/auth/refresh",
+            json!({ "refresh_token": tokens.refresh_token }),
+        ))
         .await
         .unwrap();
     let body = response_json(response).await;
 
     assert_success(&body);
-    let access_token = body["data"]["accessToken"].as_str().unwrap();
-    assert_non_empty_string(&body["data"]["refreshToken"]);
+    let access_token = body["data"]["access_token"].as_str().unwrap();
+    assert_non_empty_string(&body["data"]["refresh_token"]);
 
     let response = app.oneshot(authenticated_request(Method::GET, "/api/auth/me", access_token)).await.unwrap();
     let body = response_json(response).await;
@@ -85,7 +115,7 @@ async fn refresh_rejects_access_token() {
     let tokens = sign_in(app.clone()).await;
 
     let response = app
-        .oneshot(json_request(Method::POST, "/api/auth/refresh", json!({ "refreshToken": tokens.access_token })))
+        .oneshot(json_request(Method::POST, "/api/auth/refresh", json!({ "refresh_token": tokens.access_token })))
         .await
         .unwrap();
     let body = response_json(response).await;
@@ -99,9 +129,9 @@ struct SessionTokens {
 }
 
 fn test_router() -> Router {
-    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret"));
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
     let users = UserService::new(repository, TestPasswordHasher);
-    create_router(ApiState::new(Arc::new(users), token_service()))
+    Router::new().nest("/api", create_router(ApiState::new(Arc::new(users), token_service())))
 }
 
 fn token_service() -> TokenService {
@@ -119,7 +149,7 @@ async fn sign_in(app: Router) -> SessionTokens {
             "/api/auth/sign-in",
             json!({
                 "identifier": "alice",
-                "password": "secret"
+                "password": VALID_PASSWORD
             }),
         ))
         .await
@@ -127,8 +157,8 @@ async fn sign_in(app: Router) -> SessionTokens {
     let body = response_json(response).await;
 
     SessionTokens {
-        access_token: body["data"]["accessToken"].as_str().unwrap().into(),
-        refresh_token: body["data"]["refreshToken"].as_str().unwrap().into(),
+        access_token: body["data"]["access_token"].as_str().unwrap().into(),
+        refresh_token: body["data"]["refresh_token"].as_str().unwrap().into(),
     }
 }
 

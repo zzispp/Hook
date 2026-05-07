@@ -3,9 +3,12 @@ use storage::{
     Database, StorageError,
     user::{UserRecordInput as StorageUserRecordInput, UserStore},
 };
+use types::{
+    pagination::{Page, PageRequest, PageSliceRequest},
+    user::{User, UserId},
+};
 
 use crate::application::{AppError, AppResult, ReplaceUserRecord, UserAuthRecord, UserRepository};
-use types::user::{Page, PageRequest, User, UserId};
 
 #[derive(Clone)]
 pub struct StorageUserRepository {
@@ -58,8 +61,16 @@ impl UserRepository for StorageUserRepository {
             .map_err(storage_error)
     }
 
+    async fn record_login(&self, id: UserId) -> AppResult<()> {
+        self.store.record_login(id).await.map_err(storage_error)
+    }
+
     async fn list(&self, page: PageRequest) -> AppResult<Page<User>> {
         self.store.list(page).await.map_err(storage_error)
+    }
+
+    async fn list_slice(&self, request: PageSliceRequest) -> AppResult<Page<User>> {
+        self.store.list_slice(request).await.map_err(storage_error)
     }
 }
 
@@ -69,7 +80,7 @@ fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
         password_hash: record.password_hash,
         email: record.email,
         role: record.role,
-        status: record.status,
+        is_active: record.is_active,
     }
 }
 

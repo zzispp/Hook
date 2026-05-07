@@ -5,8 +5,8 @@ import { JWT_STORAGE_KEY, JWT_REFRESH_STORAGE_KEY } from './constant';
 // ----------------------------------------------------------------------
 
 export type JwtSession = {
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
 };
 
 export type ApiEnvelope<T> = {
@@ -37,13 +37,13 @@ export function jwtDecode(token: string) {
 
 // ----------------------------------------------------------------------
 
-export function isValidToken(accessToken: string) {
-  if (!accessToken) {
+export function isValidToken(access_token: string) {
+  if (!access_token) {
     return false;
   }
 
   try {
-    const decoded = jwtDecode(accessToken);
+    const decoded = jwtDecode(access_token);
 
     if (!decoded || !('exp' in decoded)) {
       return false;
@@ -78,12 +78,12 @@ export async function setSession(session: JwtSession | null) {
   try {
     if (session) {
       assertSession(session);
-      sessionStorage.setItem(JWT_STORAGE_KEY, session.accessToken);
-      sessionStorage.setItem(JWT_REFRESH_STORAGE_KEY, session.refreshToken);
+      sessionStorage.setItem(JWT_STORAGE_KEY, session.access_token);
+      sessionStorage.setItem(JWT_REFRESH_STORAGE_KEY, session.refresh_token);
 
-      axios.defaults.headers.common.Authorization = `Bearer ${session.accessToken}`;
+      axios.defaults.headers.common.Authorization = `Bearer ${session.access_token}`;
 
-      const decodedToken = jwtDecode(session.accessToken);
+      const decodedToken = jwtDecode(session.access_token);
 
       if (!decodedToken || !('exp' in decodedToken)) {
         throw new Error('Invalid access token!');
@@ -100,7 +100,7 @@ export async function setSession(session: JwtSession | null) {
 }
 
 function assertSession(session: JwtSession) {
-  if (!session.accessToken || !session.refreshToken) {
+  if (!session.access_token || !session.refresh_token) {
     throw new Error('Auth tokens not found in response');
   }
 }

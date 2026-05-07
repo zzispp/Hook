@@ -10,8 +10,39 @@ database:
   username: "postgres"
   password: "123456"
   name: "postgres"
+  push_schema_on_startup: false #配置是否建表
 
 jwt:
-  secret_env: "HOOK_JWT_SECRET"
-  access_token_ttl_seconds: 900
+  secret: "hook-local-development-jwt-secret-change-before-deploy"
+  access_token_ttl_seconds: 1440
   refresh_token_ttl_seconds: 604800
+
+admin:
+  id: "00000000-0000-7000-8000-000000000000"
+  username: "admin"
+  email: "admin@example.com"
+  role: "admin"
+  is_active: true
+  password_hash: "$argon2id$v=19$m=19456,t=2,p=1$dGVzdC1zYWx0LXNob3VsZC1iZS1sb25n$1eLTt1omRS23b0yvbzlZrtmdgz9uTlBzD1mZ45gfvrM"
+
+auth:
+  whitelist:
+    - methods: ["GET"]
+      path_pattern: "/health"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/sign-in"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/sign-up"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/refresh"
+
+redis:
+  url: "redis://default:@localhost:6380?protocol=resp3"
+  scheme: "redis"
+  host: "localhost"
+  port: 6380
+  username: "default"
+  password: ""
+  database:
+  protocol: "resp3"
+  key_prefix: "hook"

@@ -47,14 +47,14 @@ impl TokenService {
 
     pub fn issue_pair(&self, user_id: UserId) -> AppResult<TokenPair> {
         Ok(TokenPair {
-            access_token: self.issue_token(user_id, TokenKind::Access, self.settings.access_token_ttl_seconds)?,
+            access_token: self.issue_token(user_id.clone(), TokenKind::Access, self.settings.access_token_ttl_seconds)?,
             refresh_token: self.issue_token(user_id, TokenKind::Refresh, self.settings.refresh_token_ttl_seconds)?,
         })
     }
 
     pub fn refresh(&self, refresh_token: &str) -> AppResult<(UserId, TokenPair)> {
         let user_id = self.validate_token(refresh_token, TokenKind::Refresh)?;
-        Ok((user_id, self.issue_pair(user_id)?))
+        Ok((user_id.clone(), self.issue_pair(user_id)?))
     }
 
     pub fn validate_access(&self, access_token: &str) -> AppResult<UserId> {
@@ -68,7 +68,7 @@ impl TokenService {
             .checked_add(ttl_seconds)
             .ok_or_else(|| AppError::Infrastructure("jwt expiration overflow".into()))?;
         let claims = Claims {
-            sub: user_id.0.to_string(),
+            sub: user_id.0,
             exp,
             iat,
             jti: now.as_nanos().to_string(),
@@ -101,7 +101,10 @@ impl TokenService {
 }
 
 fn parse_user_id(subject: &str) -> AppResult<UserId> {
-    subject.parse::<u64>().map(UserId).map_err(|_| AppError::Unauthorized)
+    if subject.trim().is_empty() {
+        return Err(AppError::Unauthorized);
+    }
+    Ok(UserId(subject.into()))
 }
 
 fn system_time() -> AppResult<Duration> {
@@ -127,7 +130,7 @@ mod tests {
     #[test]
     fn refresh_rejects_access_token() {
         let service = token_service();
-        let tokens = service.issue_pair(UserId(7)).unwrap();
+        let tokens = service.issue_pair(user_id()).unwrap();
 
         let result = service.refresh(&tokens.access_token);
 
@@ -137,18 +140,18 @@ mod tests {
     #[test]
     fn refresh_accepts_refresh_token_and_issues_access_token() {
         let service = token_service();
-        let tokens = service.issue_pair(UserId(7)).unwrap();
+        let tokens = service.issue_pair(user_id()).unwrap();
 
         let (user_id, refreshed) = service.refresh(&tokens.refresh_token).unwrap();
 
-        assert_eq!(user_id, UserId(7));
-        assert_eq!(service.validate_access(&refreshed.access_token).unwrap(), UserId(7));
+        assert_eq!(user_id, self::user_id());
+        assert_eq!(service.validate_access(&refreshed.access_token).unwrap(), self::user_id());
     }
 
     #[test]
     fn validate_access_rejects_refresh_token() {
         let service = token_service();
-        let tokens = service.issue_pair(UserId(7)).unwrap();
+        let tokens = service.issue_pair(user_id()).unwrap();
 
         let result = service.validate_access(&tokens.refresh_token);
 
@@ -161,5 +164,9 @@ mod tests {
             access_token_ttl_seconds: 900,
             refresh_token_ttl_seconds: 604800,
         })
+    }
+
+    fn user_id() -> UserId {
+        UserId("018f0000-0000-7000-8000-000000000007".into())
     }
 }

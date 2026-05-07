@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map current id/schema usage,DONE,All numeric id fields and schema records are identified,rg "UserId|pub id: u64|_id: u64|\.id\(\)|PRIMARY KEY|auto|bigint" crates apps,2026-05-07T17:46:00+08:00,0,
+2,Introduce UUIDv7 id generation,DONE,Storage can generate varchar(36)-compatible UUIDv7 ids without fallback,cargo check -p storage,2026-05-07T17:35:15+08:00,0,
+3,Change user model and schema fields,DONE,User table fields match requested shape and user flows compile,cargo test -p user --lib,2026-05-07T18:08:56+08:00,0,
+4,Change RBAC ids and bindings,DONE,RBAC ids and foreign keys use UUIDv7 string ids consistently,cargo test -p rbac --lib,2026-05-07T18:08:56+08:00,0,
+5,Run full validation,DONE,Workspace tests formatting and frontend lint pass,just test && cargo fmt --all --check && pnpm lint:frontend,2026-05-07T18:08:56+08:00,0,
