@@ -25,6 +25,7 @@ import { defaultItem, InvoiceCreateEditDetails } from './invoice-create-edit-det
 // ----------------------------------------------------------------------
 
 export type InvoiceCreateSchemaType = z.infer<typeof InvoiceCreateSchema>;
+export type InvoiceCreateFormValues = z.input<typeof InvoiceCreateSchema>;
 
 export const InvoiceCreateSchema = z
   .object({
@@ -71,7 +72,7 @@ export function InvoiceCreateEditForm({ currentInvoice }: Props) {
   const loadingSave = useBoolean();
   const loadingSend = useBoolean();
 
-  const defaultValues: InvoiceCreateSchemaType = {
+  const defaultValues: InvoiceCreateFormValues = {
     invoiceNumber: 'INV-1990',
     createDate: today(),
     dueDate: null,

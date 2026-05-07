@@ -42,11 +42,11 @@ const WizardSchema = z.object({
   stepThree: StepThreeSchema,
 });
 
-type WizardSchemaType = z.infer<typeof WizardSchema>;
+type WizardDefaultValues = z.input<typeof WizardSchema>;
 
 // ----------------------------------------------------------------------
 
-const defaultValues: WizardSchemaType = {
+const defaultValues: WizardDefaultValues = {
   stepOne: { firstName: '', lastName: '' },
   stepTwo: { age: null },
   stepThree: { email: '' },

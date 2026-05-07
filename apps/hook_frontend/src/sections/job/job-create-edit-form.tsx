@@ -39,6 +39,7 @@ import { Form, Field, schemaUtils } from 'src/components/hook-form';
 // ----------------------------------------------------------------------
 
 export type JobCreateSchemaType = z.infer<typeof JobCreateSchema>;
+type JobCreateDefaultValues = z.input<typeof JobCreateSchema>;
 
 export const JobCreateSchema = z.object({
   title: z.string().min(1, { error: 'Title is required!' }),
@@ -76,7 +77,7 @@ export function JobCreateEditForm({ currentJob }: Props) {
   const openDetails = useBoolean(true);
   const openProperties = useBoolean(true);
 
-  const defaultValues: JobCreateSchemaType = {
+  const defaultValues: JobCreateDefaultValues = {
     title: '',
     content: '',
     employmentTypes: [],

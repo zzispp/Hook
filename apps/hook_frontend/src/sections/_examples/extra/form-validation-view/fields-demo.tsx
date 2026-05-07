@@ -1,4 +1,4 @@
-import type { FieldsSchemaType } from './schema';
+import type { FieldsDefaultValues } from './schema';
 
 import { useForm } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -35,7 +35,7 @@ const OPTIONS = [
   { value: 'option 8', label: 'Option 8' },
 ];
 
-const defaultValues: FieldsSchemaType = {
+const defaultValues: FieldsDefaultValues = {
   email: '',
   fullName: '',
   // number with 0, null, undefined

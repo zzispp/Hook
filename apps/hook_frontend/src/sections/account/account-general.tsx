@@ -20,6 +20,7 @@ import { useMockedUser } from 'src/auth/hooks';
 // ----------------------------------------------------------------------
 
 export type UpdateUserSchemaType = z.infer<typeof UpdateUserSchema>;
+type UpdateUserDefaultValues = z.input<typeof UpdateUserSchema>;
 
 export const UpdateUserSchema = z.object({
   displayName: z.string().min(1, { error: 'Name is required!' }),
@@ -57,7 +58,7 @@ export function AccountGeneral() {
     isPublic: user?.isPublic,
   };
 
-  const defaultValues: UpdateUserSchemaType = {
+  const defaultValues: UpdateUserDefaultValues = {
     displayName: '',
     email: '',
     photoURL: null,

@@ -1,4 +1,4 @@
-import type { InvoiceCreateSchemaType } from './invoice-create-edit-form';
+import type { InvoiceCreateFormValues } from './invoice-create-edit-form';
 
 import { useFormContext } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
@@ -24,7 +24,7 @@ export function InvoiceCreateEditAddress() {
     watch,
     setValue,
     formState: { errors },
-  } = useFormContext<InvoiceCreateSchemaType>();
+  } = useFormContext<InvoiceCreateFormValues>();
 
   const mdUp = useMediaQuery((theme) => theme.breakpoints.up('md'));
 

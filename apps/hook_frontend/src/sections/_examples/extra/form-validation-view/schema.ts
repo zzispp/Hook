@@ -8,6 +8,7 @@ import { schemaUtils } from 'src/components/hook-form';
 // ----------------------------------------------------------------------
 
 export type FieldsSchemaType = z.infer<typeof FieldsSchema>;
+export type FieldsDefaultValues = z.input<typeof FieldsSchema>;
 
 export const FieldsSchema = z
   .object({

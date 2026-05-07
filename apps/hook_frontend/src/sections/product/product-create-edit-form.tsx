@@ -37,6 +37,7 @@ import { Form, Field, schemaUtils } from 'src/components/hook-form';
 // ----------------------------------------------------------------------
 
 export type ProductCreateSchemaType = z.infer<typeof ProductCreateSchema>;
+type ProductCreateDefaultValues = z.input<typeof ProductCreateSchema>;
 
 export const ProductCreateSchema = z.object({
   name: z.string().min(1, { error: 'Name is required!' }),
@@ -83,7 +84,7 @@ export function ProductCreateEditForm({ currentProduct }: Props) {
 
   const [includeTaxes, setIncludeTaxes] = useState(false);
 
-  const defaultValues: ProductCreateSchemaType = {
+  const defaultValues: ProductCreateDefaultValues = {
     name: '',
     description: '',
     subDescription: '',
