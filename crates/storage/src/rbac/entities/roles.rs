@@ -10,6 +10,8 @@ pub struct Model {
     pub enabled: bool,
     pub system: bool,
     pub sort_order: i64,
+    pub created_at: TimeDateTimeWithTimeZone,
+    pub updated_at: TimeDateTimeWithTimeZone,
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]

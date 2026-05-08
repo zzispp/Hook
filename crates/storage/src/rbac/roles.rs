@@ -14,6 +14,7 @@ use super::{RbacStore, RoleRecord, RoleRecordInput, repository::rbac_page};
 
 impl RbacStore {
     pub async fn create_role(&self, input: RoleRecordInput) -> StorageResult<Role> {
+        let now = time::OffsetDateTime::now_utc();
         RoleActiveModel {
             code: Set(input.code),
             name: Set(input.name),
@@ -21,6 +22,8 @@ impl RbacStore {
             enabled: Set(input.enabled),
             system: Set(input.system),
             sort_order: Set(input.sort_order),
+            created_at: Set(now),
+            updated_at: Set(now),
         }
         .insert(self.database.connection())
         .await
@@ -36,6 +39,7 @@ impl RbacStore {
         active.enabled = Set(input.enabled);
         active.system = Set(input.system);
         active.sort_order = Set(input.sort_order);
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
         active.update(self.database.connection()).await?;
         self.find_role(code).await?.ok_or(StorageError::NotFound)
     }

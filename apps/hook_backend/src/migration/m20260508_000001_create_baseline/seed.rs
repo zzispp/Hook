@@ -14,8 +14,18 @@ async fn seed_roles(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     let insert = Query::insert()
         .into_table(Roles::Table)
         .columns([Roles::Code, Roles::Name, Roles::Description, Roles::Enabled, Roles::System, Roles::SortOrder])
-        .values_panic(role_values(defaults::ADMIN_ROLE, "Administrator", "Built-in administrator role", 0))
-        .values_panic(role_values(defaults::USER_ROLE, "User", "Default signed-up user role", 10))
+        .values_panic(role_values(RoleSeed {
+            code: defaults::ADMIN_ROLE,
+            name: "Administrator",
+            description: "Built-in administrator role",
+            sort_order: 0,
+        }))
+        .values_panic(role_values(RoleSeed {
+            code: defaults::USER_ROLE,
+            name: "User",
+            description: "Default signed-up user role",
+            sort_order: 10,
+        }))
         .to_owned();
     manager.execute(insert).await
 }
@@ -107,8 +117,22 @@ async fn seed_role_menu_bindings(manager: &SchemaManager<'_>) -> Result<(), DbEr
     manager.execute(insert.to_owned()).await
 }
 
-fn role_values(code: &str, name: &str, description: &str, sort_order: i64) -> [Expr; 6] {
-    [code.into(), name.into(), description.into(), true.into(), true.into(), sort_order.into()]
+fn role_values(role: RoleSeed) -> [Expr; 6] {
+    [
+        role.code.into(),
+        role.name.into(),
+        role.description.into(),
+        true.into(),
+        true.into(),
+        role.sort_order.into(),
+    ]
+}
+
+struct RoleSeed {
+    code: &'static str,
+    name: &'static str,
+    description: &'static str,
+    sort_order: i64,
 }
 
 fn api_values(index: usize, definition: &defaults::api::ApiDefinition) -> [Expr; 8] {

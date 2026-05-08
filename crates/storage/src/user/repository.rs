@@ -26,6 +26,7 @@ impl UserStore {
 
     pub async fn create(&self, user: UserRecordInput) -> StorageResult<User> {
         ensure_role_exists(self.database.connection(), &user.role).await?;
+        let now = time::OffsetDateTime::now_utc();
         UserActiveModel {
             id: Set(self.database.next_id()),
             username: Set(user.username),
@@ -37,6 +38,8 @@ impl UserStore {
             last_login_at: Set(None),
             auth_source: Set(UserRecord::local_auth_source()),
             email_verified: Set(false),
+            created_at: Set(now),
+            updated_at: Set(now),
             ..Default::default()
         }
         .insert(self.database.connection())

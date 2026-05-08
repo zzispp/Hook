@@ -20,6 +20,7 @@ impl ModelStore {
     }
 
     pub async fn create_global_model(&self, input: GlobalModelRecordInput) -> StorageResult<GlobalModelResponse> {
+        let now = time::OffsetDateTime::now_utc();
         let record = GlobalModelActiveModel {
             id: Set(self.database.next_id()),
             name: Set(input.name),
@@ -30,6 +31,8 @@ impl ModelStore {
             config: Set(json::encode_optional(&input.config)?),
             is_active: Set(input.is_active),
             usage_count: Set(0),
+            created_at: Set(now),
+            updated_at: Set(now),
             ..Default::default()
         }
         .insert(self.database.connection())

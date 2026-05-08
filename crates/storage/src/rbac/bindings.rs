@@ -100,7 +100,8 @@ async fn insert_role_api_bindings(inputs: Vec<RoleApiBindingRecordInput>, tx: &s
     if inputs.is_empty() {
         return Ok(());
     }
-    let records = inputs.into_iter().map(role_api_active_model);
+    let now = time::OffsetDateTime::now_utc();
+    let records = inputs.into_iter().map(|input| role_api_active_model(input, now));
     role_api_permission_records::Entity::insert_many(records).exec(tx).await?;
     Ok(())
 }
@@ -109,7 +110,8 @@ async fn insert_role_menu_bindings(inputs: Vec<RoleMenuBindingRecordInput>, tx: 
     if inputs.is_empty() {
         return Ok(());
     }
-    let records = inputs.into_iter().map(role_menu_active_model);
+    let now = time::OffsetDateTime::now_utc();
+    let records = inputs.into_iter().map(|input| role_menu_active_model(input, now));
     role_menu_permission_records::Entity::insert_many(records).exec(tx).await?;
     Ok(())
 }
@@ -121,17 +123,21 @@ where
     select.one(db).await.map(|record| record.is_some()).map_err(StorageError::from)
 }
 
-fn role_api_active_model(input: RoleApiBindingRecordInput) -> RoleApiActiveModel {
+fn role_api_active_model(input: RoleApiBindingRecordInput, now: time::OffsetDateTime) -> RoleApiActiveModel {
     RoleApiActiveModel {
         role_code: Set(input.role_code),
         api_permission_id: Set(input.api_permission_id),
+        created_at: Set(now),
+        updated_at: Set(now),
     }
 }
 
-fn role_menu_active_model(input: RoleMenuBindingRecordInput) -> RoleMenuActiveModel {
+fn role_menu_active_model(input: RoleMenuBindingRecordInput, now: time::OffsetDateTime) -> RoleMenuActiveModel {
     RoleMenuActiveModel {
         role_code: Set(input.role_code),
         menu_item_id: Set(input.menu_item_id),
+        created_at: Set(now),
+        updated_at: Set(now),
     }
 }
 

@@ -13,6 +13,7 @@ use super::{ApiPermissionRecord, ApiPermissionRecordInput, RbacStore, repository
 
 impl RbacStore {
     pub async fn create_api(&self, input: ApiPermissionRecordInput) -> StorageResult<ApiPermission> {
+        let now = time::OffsetDateTime::now_utc();
         ApiActiveModel {
             id: Set(self.database.next_id()),
             code: Set(input.code),
@@ -22,6 +23,8 @@ impl RbacStore {
             group: Set(input.group),
             enabled: Set(input.enabled),
             system: Set(input.system),
+            created_at: Set(now),
+            updated_at: Set(now),
         }
         .insert(self.database.connection())
         .await
@@ -39,6 +42,7 @@ impl RbacStore {
         active.group = Set(input.group);
         active.enabled = Set(input.enabled);
         active.system = Set(input.system);
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
         active.update(self.database.connection()).await?;
         self.find_api(id).await?.ok_or(StorageError::NotFound)
     }

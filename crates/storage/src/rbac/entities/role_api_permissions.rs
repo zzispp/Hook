@@ -7,6 +7,8 @@ pub struct Model {
     pub role_code: String,
     #[sea_orm(primary_key, auto_increment = false)]
     pub api_permission_id: String,
+    pub created_at: TimeDateTimeWithTimeZone,
+    pub updated_at: TimeDateTimeWithTimeZone,
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]

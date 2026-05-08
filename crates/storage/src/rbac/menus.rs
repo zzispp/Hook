@@ -16,12 +16,15 @@ use super::{MenuItemRecord, MenuItemRecordInput, MenuSectionRecord, MenuSectionR
 
 impl RbacStore {
     pub async fn create_menu_section(&self, input: MenuSectionRecordInput) -> StorageResult<MenuSection> {
+        let now = time::OffsetDateTime::now_utc();
         MenuSectionActiveModel {
             id: Set(self.database.next_id()),
             code: Set(input.code),
             subheader: Set(input.subheader),
             sort_order: Set(input.sort_order),
             enabled: Set(input.enabled),
+            created_at: Set(now),
+            updated_at: Set(now),
         }
         .insert(self.database.connection())
         .await
@@ -36,6 +39,7 @@ impl RbacStore {
         active.subheader = Set(input.subheader);
         active.sort_order = Set(input.sort_order);
         active.enabled = Set(input.enabled);
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
         active.update(self.database.connection()).await?;
         self.find_menu_section(id).await?.ok_or(StorageError::NotFound)
     }
@@ -88,6 +92,7 @@ impl RbacStore {
     }
 
     pub async fn create_menu_item(&self, input: MenuItemRecordInput) -> StorageResult<MenuItem> {
+        let now = time::OffsetDateTime::now_utc();
         MenuItemActiveModel {
             id: Set(self.database.next_id()),
             section_id: Set(input.section_id),
@@ -100,6 +105,8 @@ impl RbacStore {
             deep_match: Set(input.deep_match),
             sort_order: Set(input.sort_order),
             enabled: Set(input.enabled),
+            created_at: Set(now),
+            updated_at: Set(now),
         }
         .insert(self.database.connection())
         .await
@@ -120,6 +127,7 @@ impl RbacStore {
         active.deep_match = Set(input.deep_match);
         active.sort_order = Set(input.sort_order);
         active.enabled = Set(input.enabled);
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
         active.update(self.database.connection()).await?;
         self.find_menu_item(id).await?.ok_or(StorageError::NotFound)
     }
