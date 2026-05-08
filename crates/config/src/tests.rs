@@ -175,7 +175,6 @@ fn database_parts() -> DatabaseSettings {
         username: "postgres".into(),
         password: Some("123456".into()),
         name: "postgres".into(),
-        push_schema_on_startup: false,
     }
 }
 

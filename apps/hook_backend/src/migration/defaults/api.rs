@@ -1,263 +1,258 @@
-use types::rbac::ApiPermissionInput;
-
-pub(in crate::init) const USER_API_CODES: &[&str] = &["auth_me", "navbar_read", "models_public_catalog_read"];
-
-#[derive(Clone, Copy)]
-struct ApiPermissionDefinition {
-    code: &'static str,
-    method: &'static str,
-    path_pattern: &'static str,
-    name: &'static str,
-    group: &'static str,
+pub struct ApiDefinition {
+    pub code: &'static str,
+    pub method: &'static str,
+    pub path_pattern: &'static str,
+    pub name: &'static str,
+    pub group: &'static str,
 }
 
-const API_DEFINITIONS: &[ApiPermissionDefinition] = &[
-    ApiPermissionDefinition {
+pub const API_DEFINITIONS: &[ApiDefinition] = &[
+    ApiDefinition {
         code: "auth_me",
         method: "GET",
         path_pattern: "/api/auth/me",
         name: "Current user",
         group: "Auth",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "navbar_read",
         method: "GET",
         path_pattern: "/api/navbar",
         name: "Navbar",
         group: "System",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "users_read",
         method: "GET",
         path_pattern: "/api/users",
         name: "List users",
         group: "Users",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "users_create",
         method: "POST",
         path_pattern: "/api/users",
         name: "Create user",
         group: "Users",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "users_update",
         method: "PUT",
         path_pattern: "/api/users/{id}",
         name: "Update user",
         group: "Users",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "users_delete",
         method: "DELETE",
         path_pattern: "/api/users/{id}",
         name: "Delete user",
         group: "Users",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "roles_read",
         method: "GET",
         path_pattern: "/api/rbac/roles",
         name: "List roles",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "roles_create",
         method: "POST",
         path_pattern: "/api/rbac/roles",
         name: "Create role",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "roles_update",
         method: "PUT",
         path_pattern: "/api/rbac/roles/{code}",
         name: "Update role",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "roles_delete",
         method: "DELETE",
         path_pattern: "/api/rbac/roles/{code}",
         name: "Delete role",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "role_apis_read",
         method: "GET",
         path_pattern: "/api/rbac/roles/{code}/apis",
         name: "Read role API bindings",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "role_apis_update",
         method: "PUT",
         path_pattern: "/api/rbac/roles/{code}/apis",
         name: "Update role API bindings",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "role_menus_read",
         method: "GET",
         path_pattern: "/api/rbac/roles/{code}/menus",
         name: "Read role menu bindings",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "role_menus_update",
         method: "PUT",
         path_pattern: "/api/rbac/roles/{code}/menus",
         name: "Update role menu bindings",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "apis_read",
         method: "GET",
         path_pattern: "/api/rbac/apis",
         name: "List API permissions",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "apis_create",
         method: "POST",
         path_pattern: "/api/rbac/apis",
         name: "Create API permission",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "apis_update",
         method: "PUT",
         path_pattern: "/api/rbac/apis/{id}",
         name: "Update API permission",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "apis_delete",
         method: "DELETE",
         path_pattern: "/api/rbac/apis/{id}",
         name: "Delete API permission",
         group: "RBAC",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "menu_sections_read",
         method: "GET",
         path_pattern: "/api/rbac/menu-sections",
         name: "List menu sections",
         group: "Menus",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "menu_sections_create",
         method: "POST",
         path_pattern: "/api/rbac/menu-sections",
         name: "Create menu section",
         group: "Menus",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "menu_sections_update",
         method: "PUT",
         path_pattern: "/api/rbac/menu-sections/{id}",
         name: "Update menu section",
         group: "Menus",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "menu_sections_delete",
         method: "DELETE",
         path_pattern: "/api/rbac/menu-sections/{id}",
         name: "Delete menu section",
         group: "Menus",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "menu_items_read",
         method: "GET",
         path_pattern: "/api/rbac/menu-items",
         name: "List menu items",
         group: "Menus",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "menu_items_create",
         method: "POST",
         path_pattern: "/api/rbac/menu-items",
         name: "Create menu item",
         group: "Menus",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "menu_items_update",
         method: "PUT",
         path_pattern: "/api/rbac/menu-items/{id}",
         name: "Update menu item",
         group: "Menus",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "menu_items_delete",
         method: "DELETE",
         path_pattern: "/api/rbac/menu-items/{id}",
         name: "Delete menu item",
         group: "Menus",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_global_read",
         method: "GET",
         path_pattern: "/api/admin/models/global",
         name: "List global models",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_global_create",
         method: "POST",
         path_pattern: "/api/admin/models/global",
         name: "Create global model",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_global_detail",
         method: "GET",
         path_pattern: "/api/admin/models/global/{id}",
         name: "Get global model",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_global_update",
         method: "PATCH",
         path_pattern: "/api/admin/models/global/{id}",
         name: "Update global model",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_global_delete",
         method: "DELETE",
         path_pattern: "/api/admin/models/global/{id}",
         name: "Delete global model",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_global_batch_delete",
         method: "POST",
         path_pattern: "/api/admin/models/global/batch-delete",
         name: "Batch delete global models",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_global_providers",
         method: "GET",
         path_pattern: "/api/admin/models/global/{id}/providers",
         name: "Global model providers",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_catalog_read",
         method: "GET",
         path_pattern: "/api/admin/models/catalog",
         name: "Model catalog",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_public_catalog_read",
         method: "GET",
         path_pattern: "/api/models/catalog",
         name: "Public model catalog",
         group: "Models",
     },
-    ApiPermissionDefinition {
+    ApiDefinition {
         code: "models_external_read",
         method: "GET",
         path_pattern: "/api/admin/models/external",
@@ -265,18 +260,3 @@ const API_DEFINITIONS: &[ApiPermissionDefinition] = &[
         group: "Models",
     },
 ];
-
-pub(in crate::init) fn default_api_permissions() -> Vec<ApiPermissionInput> {
-    API_DEFINITIONS.iter().copied().map(api_permission).collect()
-}
-
-fn api_permission(definition: ApiPermissionDefinition) -> ApiPermissionInput {
-    ApiPermissionInput {
-        code: definition.code.into(),
-        method: definition.method.into(),
-        path_pattern: definition.path_pattern.into(),
-        name: definition.name.into(),
-        group: definition.group.into(),
-        enabled: true,
-    }
-}

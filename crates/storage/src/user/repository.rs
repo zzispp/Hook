@@ -1,10 +1,16 @@
 use constants::pagination::PAGE_INDEX_OFFSET;
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select, Set};
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     user::{User, UserId},
 };
 
-use crate::{Database, StorageError, StorageResult, rbac::RoleRecord};
+use crate::{
+    Database, StorageError, StorageResult,
+    rbac::role_records,
+    user::record::ActiveModel as UserActiveModel,
+    user::{UserColumn, UserEntity as Users},
+};
 
 use super::{UserAuthRecord, UserRecord, UserRecordInput};
 
@@ -19,46 +25,46 @@ impl UserStore {
     }
 
     pub async fn create(&self, user: UserRecordInput) -> StorageResult<User> {
-        let mut db = self.database.connection();
-        ensure_role_exists(&mut db, &user.role).await?;
-        toasty::create!(UserRecord {
-            id: self.database.next_id(),
-            username: user.username,
-            password_hash: user.password_hash,
-            email: user.email,
-            role: user.role,
-            is_active: user.is_active,
-            is_deleted: false,
-            last_login_at: None,
-            auth_source: UserRecord::local_auth_source(),
-            email_verified: false,
-        })
-        .exec(&mut db)
+        ensure_role_exists(self.database.connection(), &user.role).await?;
+        UserActiveModel {
+            id: Set(self.database.next_id()),
+            username: Set(user.username),
+            password_hash: Set(user.password_hash),
+            email: Set(user.email),
+            role: Set(user.role),
+            is_active: Set(user.is_active),
+            is_deleted: Set(false),
+            last_login_at: Set(None),
+            auth_source: Set(UserRecord::local_auth_source()),
+            email_verified: Set(false),
+            ..Default::default()
+        }
+        .insert(self.database.connection())
         .await
         .map(User::from)
         .map_err(StorageError::from)
     }
 
     pub async fn replace(&self, id: UserId, user: UserRecordInput) -> StorageResult<User> {
-        let mut db = self.database.connection();
-        ensure_role_exists(&mut db, &user.role).await?;
-        let mut record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
-        record
-            .update()
-            .username(user.username)
-            .password_hash(user.password_hash)
-            .email(user.email)
-            .role(user.role)
-            .is_active(user.is_active)
-            .exec(&mut db)
-            .await?;
+        ensure_role_exists(self.database.connection(), &user.role).await?;
+        let record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
+        let mut active: UserActiveModel = record.into();
+        active.username = Set(user.username);
+        active.password_hash = Set(user.password_hash);
+        active.email = Set(user.email);
+        active.role = Set(user.role);
+        active.is_active = Set(user.is_active);
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
+        active.update(self.database.connection()).await?;
         self.find_by_id(id).await?.ok_or(StorageError::NotFound)
     }
 
     pub async fn delete(&self, id: UserId) -> StorageResult<()> {
-        let mut db = self.database.connection();
-        let mut record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
-        record.update().is_deleted(true).exec(&mut db).await?;
+        let record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
+        let mut active: UserActiveModel = record.into();
+        active.is_deleted = Set(true);
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
+        active.update(self.database.connection()).await?;
         Ok(())
     }
 
@@ -67,60 +73,47 @@ impl UserStore {
     }
 
     pub async fn find_by_email(&self, email: &str) -> StorageResult<Option<User>> {
-        let mut db = self.database.connection();
-        UserRecord::filter(active_user_filter().and(UserRecord::fields().email().eq(email)))
-            .first()
-            .exec(&mut db)
-            .await
-            .map(|record| record.map(User::from))
-            .map_err(StorageError::from)
+        self.find_record(UserColumn::Email.eq(email).into()).await.map(|record| record.map(User::from))
     }
 
     pub async fn find_auth_by_username(&self, username: &str) -> StorageResult<Option<UserAuthRecord>> {
-        let mut db = self.database.connection();
-        UserRecord::filter(active_user_filter().and(UserRecord::fields().username().eq(username)))
-            .first()
-            .exec(&mut db)
+        self.find_record(UserColumn::Username.eq(username).into())
             .await
             .map(|record| record.map(UserRecord::into_auth))
-            .map_err(StorageError::from)
     }
 
     pub async fn find_auth_by_email(&self, email: &str) -> StorageResult<Option<UserAuthRecord>> {
-        let mut db = self.database.connection();
-        UserRecord::filter(active_user_filter().and(UserRecord::fields().email().eq(email)))
-            .first()
-            .exec(&mut db)
+        self.find_record(UserColumn::Email.eq(email).into())
             .await
             .map(|record| record.map(UserRecord::into_auth))
-            .map_err(StorageError::from)
     }
 
     pub async fn record_login(&self, id: UserId) -> StorageResult<()> {
-        let mut db = self.database.connection();
-        let mut record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
-        record.update().last_login_at(jiff::Timestamp::now()).exec(&mut db).await?;
+        let record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
+        let mut active: UserActiveModel = record.into();
+        active.last_login_at = Set(Some(time::OffsetDateTime::now_utc()));
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
+        active.update(self.database.connection()).await?;
         Ok(())
     }
 
     pub async fn list(&self, page: PageRequest) -> StorageResult<Page<User>> {
-        let request = PageSliceRequest {
+        self.list_slice(PageSliceRequest {
             offset: (page.page - PAGE_INDEX_OFFSET) * page.page_size,
             limit: page.page_size,
             page: page.page,
             page_size: page.page_size,
-        };
-        self.list_slice(request).await
+        })
+        .await
     }
 
     pub async fn list_slice(&self, request: PageSliceRequest) -> StorageResult<Page<User>> {
-        let mut db = self.database.connection();
-        let total = UserRecord::filter(active_user_filter()).count().exec(&mut db).await?;
-        let items = UserRecord::filter(active_user_filter())
-            .order_by(UserRecord::fields().created_at().asc())
-            .limit(request.limit as usize)
-            .offset(request.offset as usize)
-            .exec(&mut db)
+        let total = active_users().count(self.database.connection()).await?;
+        let items = active_users()
+            .order_by_asc(UserColumn::CreatedAt)
+            .limit(request.limit)
+            .offset(request.offset)
+            .all(self.database.connection())
             .await?;
         Ok(Page {
             items: items.into_iter().map(User::from).collect(),
@@ -131,24 +124,22 @@ impl UserStore {
     }
 
     async fn find_record_by_id(&self, id: &UserId) -> StorageResult<Option<UserRecord>> {
-        let mut db = self.database.connection();
-        UserRecord::filter(active_user_filter().and(UserRecord::fields().id().eq(id.0.as_str())))
-            .first()
-            .exec(&mut db)
-            .await
-            .map_err(StorageError::from)
+        self.find_record(UserColumn::Id.eq(id.0.as_str()).into()).await
+    }
+
+    async fn find_record(&self, filter: Condition) -> StorageResult<Option<UserRecord>> {
+        active_users().filter(filter).one(self.database.connection()).await.map_err(StorageError::from)
     }
 }
 
-fn active_user_filter() -> toasty::stmt::Expr<bool> {
-    UserRecord::fields().is_deleted().eq(false)
+fn active_users() -> Select<Users> {
+    Users::find().filter(UserColumn::IsDeleted.eq(false))
 }
 
-async fn ensure_role_exists(db: &mut toasty::Db, role: &str) -> StorageResult<()> {
-    let exists = RoleRecord::filter(RoleRecord::fields().code().eq(role)).first().exec(db).await?.is_some();
+async fn ensure_role_exists(db: &DatabaseConnection, role: &str) -> StorageResult<()> {
+    let exists = role_records::Entity::find_by_id(role.to_owned()).one(db).await?.is_some();
     if exists {
         return Ok(());
     }
-
     Err(StorageError::Conflict(format!("role does not exist: {role}")))
 }

@@ -2,77 +2,69 @@
 
 Rust and pnpm monorepo for the Hook backend, frontend, mock API, and shared crates.
 
-## Backend Database Schema
+## Backend Database
 
-The backend uses Toasty for ORM schema metadata. There are three schema-related paths, and they are intentionally different.
+The backend uses SeaORM for runtime database access and SeaORM Migrator for schema
+creation, schema evolution, and default seed data.
 
-### Normal Startup
+Startup does not create or mutate tables. Run migrations explicitly before serving
+against a fresh or upgraded database.
 
-`config/config.yaml` contains:
+### Run Migrations
 
-```yaml
-database:
-  push_schema_on_startup: false
-```
-
-Keep this `false` for normal development and deployment. Backend startup should not silently create or mutate database tables.
-
-### Bootstrap An Empty Database
-
-Use bootstrap when preparing a local or fresh database:
+Apply all pending migrations:
 
 ```bash
-cargo run -p backend -- schema bootstrap
+cargo run -p backend -- migration up
 ```
 
 or:
 
 ```bash
-just bootstrap-backend-schema
+just backend-migration "up"
 ```
 
-`schema bootstrap` is intentionally three-state:
-
-- If none of the backend-managed tables exist, it creates the full Toasty schema.
-- If all backend-managed tables already exist, it exits successfully.
-- If only some backend-managed tables exist, it fails and lists present and missing tables.
-
-This avoids fake idempotency. A partial database is not treated as healthy because existing tables may still have the wrong columns, indexes, or constraints.
-
-### Raw Schema Push
-
-The lower-level command is:
+Check migration state:
 
 ```bash
-cargo run -p backend -- schema push
+cargo run -p backend -- migration status
 ```
 
-This calls Toasty's `Db::push_schema()` directly. It is not idempotent and is not a migration system. If a managed table already exists, PostgreSQL can return an error such as `relation "users" already exists`.
-
-Prefer `schema bootstrap` for empty database setup.
-
-### Toasty Migrations
-
-For schema evolution after the initial baseline, use Toasty's migration runner:
+Roll back migrations:
 
 ```bash
-cargo run -p backend -- migration generate
-cargo run -p backend -- migration apply
+cargo run -p backend -- migration down
+cargo run -p backend -- migration down 2
 ```
 
-or:
+`down` without a step count rolls back one migration.
+
+### Reset Commands
+
+SeaORM Migrator also exposes database reset helpers:
 
 ```bash
-just backend-migration "generate"
-just backend-migration "apply"
+cargo run -p backend -- migration fresh
+cargo run -p backend -- migration refresh
+cargo run -p backend -- migration reset
 ```
 
-`migration apply` is migration-level idempotent: it records applied migrations in `__toasty_migrations` and only applies pending migrations from Toasty's history files.
+- `fresh`: drop all migration-managed tables, then run every migration again.
+- `refresh`: roll back all applied migrations, then run every migration again.
+- `reset`: roll back all applied migrations.
 
-`migration snapshot` can print the current Toasty schema:
+### Custom Config
+
+Pass a config file before the migration command:
 
 ```bash
-cargo run -p backend -- migration snapshot
+cargo run -p backend -- --config config/config.yaml migration up
+just backend-migration-config config/config.yaml "up"
 ```
 
-Do not mix direct `schema push` with migration history for long-lived databases. For an existing database that was created before Toasty migration files existed, create a baseline first, then use `migration generate/apply` for later changes.
+### Baseline Defaults
+
+The first migration creates the baseline tables and seeds built-in RBAC data,
+navigation menus, API permissions, and model tables. SeaORM tracks applied
+migrations in `seaql_migrations`, so `migration up` only applies pending
+migrations.

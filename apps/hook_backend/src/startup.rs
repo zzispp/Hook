@@ -16,7 +16,7 @@ use rbac::{
     application::{AuthWhitelistRule, AuthorizationConfig, RbacService},
     infra::{RedisRbacCache, StorageRbacRepository},
 };
-use storage::{DatabaseConnectOptions, connect_database};
+use storage::connect_database;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 use user::{
@@ -43,13 +43,7 @@ pub async fn serve(settings: Settings) -> BackendResult<()> {
 }
 
 async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
-    let database = connect_database(
-        &settings.database_url()?,
-        DatabaseConnectOptions {
-            push_schema: settings.database.push_schema_on_startup,
-        },
-    )
-    .await?;
+    let database = connect_database(&settings.database_url()?).await?;
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let models = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
     let users = Arc::new(UserService::with_system_user(
@@ -74,7 +68,6 @@ async fn build_rbac_service(settings: &Settings, database: storage::Database) ->
     let cache = RedisRbacCache::connect(&settings.redis_url()?, settings.redis.key_prefix.clone()).await?;
     let rbac = Arc::new(RbacService::new(repository, cache));
 
-    crate::init::ensure_default_rbac(&rbac, settings).await?;
     rbac.rebuild_cache().await?;
     Ok(rbac)
 }

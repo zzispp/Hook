@@ -10,7 +10,6 @@ database:
   username: "postgres"
   password: "123456"
   name: "postgres"
-  push_schema_on_startup: false #配置是否建表
 
 jwt:
   secret: "hook-local-development-jwt-secret-change-before-deploy"

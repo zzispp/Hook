@@ -12,8 +12,14 @@ pub enum StorageError {
     Database(String),
 }
 
-impl From<toasty::Error> for StorageError {
-    fn from(value: toasty::Error) -> Self {
+impl From<sea_orm::DbErr> for StorageError {
+    fn from(value: sea_orm::DbErr) -> Self {
+        Self::Database(value.to_string())
+    }
+}
+
+impl From<serde_json::Error> for StorageError {
+    fn from(value: serde_json::Error) -> Self {
         Self::Database(value.to_string())
     }
 }

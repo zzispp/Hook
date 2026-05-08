@@ -1,81 +1,16 @@
 use types::rbac::{ApiPermission, MenuItem, MenuSection, Role};
 
-#[derive(Clone, Debug, toasty::Model)]
-pub struct RoleRecord {
-    #[key]
-    pub code: String,
-    pub name: String,
-    pub description: String,
-    pub enabled: bool,
-    pub system: bool,
-    pub sort_order: i64,
-}
+#[path = "entities/mod.rs"]
+pub mod entities;
 
-#[derive(Clone, Debug, toasty::Model)]
-pub struct ApiPermissionRecord {
-    #[key]
-    #[column(type = varchar(36))]
-    pub id: String,
-    #[unique]
-    pub code: String,
-    pub method: String,
-    pub path_pattern: String,
-    pub name: String,
-    pub group: String,
-    pub enabled: bool,
-    pub system: bool,
-}
+pub use entities::{api_permissions, menu_items, menu_sections, role_api_permissions, role_menu_permissions, roles};
 
-#[derive(Clone, Debug, toasty::Model)]
-pub struct MenuSectionRecord {
-    #[key]
-    #[column(type = varchar(36))]
-    pub id: String,
-    #[unique]
-    pub code: String,
-    pub subheader: String,
-    pub sort_order: i64,
-    pub enabled: bool,
-}
-
-#[derive(Clone, Debug, toasty::Model)]
-pub struct MenuItemRecord {
-    #[key]
-    #[column(type = varchar(36))]
-    pub id: String,
-    #[index]
-    #[column(type = varchar(36))]
-    pub section_id: String,
-    #[column(type = varchar(36))]
-    pub parent_id: Option<String>,
-    #[unique]
-    pub code: String,
-    pub title: String,
-    pub route_path: String,
-    pub icon: Option<String>,
-    pub caption: Option<String>,
-    pub deep_match: bool,
-    pub sort_order: i64,
-    pub enabled: bool,
-}
-
-#[derive(Clone, Debug, toasty::Model)]
-pub struct RoleApiPermissionRecord {
-    #[key]
-    pub role_code: String,
-    #[key]
-    #[column(type = varchar(36))]
-    pub api_permission_id: String,
-}
-
-#[derive(Clone, Debug, toasty::Model)]
-pub struct RoleMenuPermissionRecord {
-    #[key]
-    pub role_code: String,
-    #[key]
-    #[column(type = varchar(36))]
-    pub menu_item_id: String,
-}
+pub type RoleRecord = roles::Model;
+pub type ApiPermissionRecord = api_permissions::Model;
+pub type MenuSectionRecord = menu_sections::Model;
+pub type MenuItemRecord = menu_items::Model;
+pub type RoleApiPermissionRecord = role_api_permissions::Model;
+pub type RoleMenuPermissionRecord = role_menu_permissions::Model;
 
 impl From<RoleRecord> for Role {
     fn from(value: RoleRecord) -> Self {

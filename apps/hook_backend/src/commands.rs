@@ -1,57 +1,75 @@
 use configuration::Settings;
-use storage::{DatabaseConnectOptions, connect_database};
-use toasty_cli::{Config as ToastyCliConfig, MigrationConfig, ToastyCli};
+use sea_orm_migration::MigratorTrait;
+use storage::connect_database;
 
-use crate::{BackendResult, schema, startup};
+use crate::{BackendResult, migration::Migrator, startup};
 
 pub async fn run() -> BackendResult<()> {
     let settings = Settings::load()?;
     match command_from_args(std::env::args().skip(1).collect())? {
         BackendCommand::Serve => startup::serve(settings).await,
-        BackendCommand::SchemaBootstrap => schema::bootstrap(settings).await,
-        BackendCommand::SchemaPush => push_schema(settings).await,
-        BackendCommand::Migration(args) => run_migration(settings, args).await,
+        BackendCommand::Migration(command) => run_migration(settings, command).await,
     }
 }
 
-async fn push_schema(settings: Settings) -> BackendResult<()> {
-    let database_url = settings.database_url()?;
-    let database = connect_database(&database_url, DatabaseConnectOptions { push_schema: false }).await?;
-
-    database.push_schema().await?;
-    tracing::info!("database schema pushed");
-    Ok(())
-}
-
-async fn run_migration(settings: Settings, args: Vec<String>) -> BackendResult<()> {
-    let database_url = settings.database_url()?;
-    let database = connect_database(&database_url, DatabaseConnectOptions { push_schema: false }).await?;
-    let config = ToastyCliConfig::new().migration(MigrationConfig::new().path("toasty"));
-    let cli = ToastyCli::with_config(database.into_inner(), config);
-
-    let mut toasty_args = vec!["toasty".to_owned(), "migration".to_owned()];
-    toasty_args.extend(args);
-    cli.parse_from(toasty_args).await?;
+async fn run_migration(settings: Settings, command: MigrationCommand) -> BackendResult<()> {
+    let database = connect_database(&settings.database_url()?).await?;
+    let connection = database.connection();
+    match command {
+        MigrationCommand::Up(steps) => Migrator::up(connection, steps).await?,
+        MigrationCommand::Down(steps) => Migrator::down(connection, steps).await?,
+        MigrationCommand::Status => Migrator::status(connection).await?,
+        MigrationCommand::Fresh => Migrator::fresh(connection).await?,
+        MigrationCommand::Refresh => Migrator::refresh(connection).await?,
+        MigrationCommand::Reset => Migrator::reset(connection).await?,
+    }
     Ok(())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum BackendCommand {
     Serve,
-    SchemaBootstrap,
-    SchemaPush,
-    Migration(Vec<String>),
+    Migration(MigrationCommand),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum MigrationCommand {
+    Up(Option<u32>),
+    Down(Option<u32>),
+    Status,
+    Fresh,
+    Refresh,
+    Reset,
 }
 
 fn command_from_args(args: Vec<String>) -> BackendResult<BackendCommand> {
     let positionals = positional_args(args)?;
     match positionals.as_slice() {
         [] => Ok(BackendCommand::Serve),
-        [schema, bootstrap] if schema == "schema" && bootstrap == "bootstrap" => Ok(BackendCommand::SchemaBootstrap),
-        [schema, push] if schema == "schema" && push == "push" => Ok(BackendCommand::SchemaPush),
-        [migration, args @ ..] if migration == "migration" => Ok(BackendCommand::Migration(args.to_vec())),
+        [migration, args @ ..] if migration == "migration" => Ok(BackendCommand::Migration(migration_command(args)?)),
         _ => Err(format!("unsupported backend command: {}", positionals.join(" ")).into()),
     }
+}
+
+fn migration_command(args: &[String]) -> BackendResult<MigrationCommand> {
+    match args {
+        [] => Ok(MigrationCommand::Up(None)),
+        [command] if command == "up" => Ok(MigrationCommand::Up(None)),
+        [command, steps] if command == "up" => Ok(MigrationCommand::Up(Some(parse_steps(steps)?))),
+        [command] if command == "down" => Ok(MigrationCommand::Down(Some(1))),
+        [command, steps] if command == "down" => Ok(MigrationCommand::Down(Some(parse_steps(steps)?))),
+        [command] if command == "status" => Ok(MigrationCommand::Status),
+        [command] if command == "fresh" => Ok(MigrationCommand::Fresh),
+        [command] if command == "refresh" => Ok(MigrationCommand::Refresh),
+        [command] if command == "reset" => Ok(MigrationCommand::Reset),
+        _ => Err(format!("unsupported migration command: {}", args.join(" ")).into()),
+    }
+}
+
+fn parse_steps(value: &str) -> BackendResult<u32> {
+    value
+        .parse::<u32>()
+        .map_err(|error| format!("invalid migration step count '{value}': {error}").into())
 }
 
 fn positional_args(args: Vec<String>) -> BackendResult<Vec<String>> {
@@ -71,7 +89,7 @@ fn positional_args(args: Vec<String>) -> BackendResult<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{BackendCommand, command_from_args, positional_args};
+    use super::{BackendCommand, MigrationCommand, command_from_args, positional_args};
 
     #[test]
     fn defaults_to_serve_command() {
@@ -79,36 +97,36 @@ mod tests {
     }
 
     #[test]
-    fn detects_schema_push_command() {
-        let args = vec!["schema".into(), "push".into()];
-
-        assert_eq!(command_from_args(args).unwrap(), BackendCommand::SchemaPush);
-    }
-
-    #[test]
-    fn detects_schema_bootstrap_command() {
-        let args = vec!["schema".into(), "bootstrap".into()];
-
-        assert_eq!(command_from_args(args).unwrap(), BackendCommand::SchemaBootstrap);
-    }
-
-    #[test]
     fn ignores_config_path_when_detecting_command() {
-        let args = vec!["--config".into(), "config/config.yaml".into(), "schema".into(), "push".into()];
+        let args = vec!["--config".into(), "config/config.yaml".into(), "migration".into(), "up".into()];
 
-        assert_eq!(command_from_args(args).unwrap(), BackendCommand::SchemaPush);
+        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Up(None)));
     }
 
     #[test]
-    fn detects_migration_command() {
-        let args = vec!["migration".into(), "apply".into()];
+    fn detects_migration_up_command() {
+        let args = vec!["migration".into(), "up".into()];
 
-        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(vec!["apply".into()]));
+        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Up(None)));
     }
 
     #[test]
-    fn rejects_unknown_command() {
-        let args = vec!["schem".into(), "push".into()];
+    fn detects_migration_down_command() {
+        let args = vec!["migration".into(), "down".into(), "2".into()];
+
+        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Down(Some(2))));
+    }
+
+    #[test]
+    fn detects_migration_status_command() {
+        let args = vec!["migration".into(), "status".into()];
+
+        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Status));
+    }
+
+    #[test]
+    fn rejects_schema_commands() {
+        let args = vec!["schema".into(), "push".into()];
 
         assert!(command_from_args(args).is_err());
     }

@@ -35,7 +35,6 @@ pub struct DatabaseSettings {
     pub username: String,
     pub password: Option<String>,
     pub name: String,
-    pub push_schema_on_startup: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]

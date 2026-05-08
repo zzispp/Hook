@@ -1,119 +1,138 @@
-use toasty::stmt::CreateMany;
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set, TransactionTrait};
 
 use crate::{StorageError, StorageResult};
 
-use super::{RbacStore, RoleApiBindingRecordInput, RoleApiPermissionRecord, RoleMenuBindingRecordInput, RoleMenuPermissionRecord};
+use super::{
+    RbacStore, RoleApiBindingRecordInput, RoleApiPermissionRecord, RoleMenuBindingRecordInput, RoleMenuPermissionRecord, role_api_permission_records,
+    role_api_permission_records::ActiveModel as RoleApiActiveModel, role_menu_permission_records,
+    role_menu_permission_records::ActiveModel as RoleMenuActiveModel,
+};
 
 impl RbacStore {
     pub async fn replace_role_apis(&self, role_code: &str, inputs: Vec<RoleApiBindingRecordInput>) -> StorageResult<()> {
-        let mut db = self.database.connection();
-        let mut tx = db.transaction().await?;
-        RoleApiPermissionRecord::filter(RoleApiPermissionRecord::fields().role_code().eq(role_code))
-            .delete()
-            .exec(&mut tx)
+        let tx = self.database.connection().begin().await?;
+        role_api_permission_records::Entity::delete_many()
+            .filter(role_api_permission_records::Column::RoleCode.eq(role_code))
+            .exec(&tx)
             .await?;
-        create_role_api_bindings(inputs).exec(&mut tx).await?;
+        insert_role_api_bindings(inputs, &tx).await?;
         tx.commit().await.map_err(StorageError::from)
     }
 
     pub async fn replace_role_menus(&self, role_code: &str, inputs: Vec<RoleMenuBindingRecordInput>) -> StorageResult<()> {
-        let mut db = self.database.connection();
-        let mut tx = db.transaction().await?;
-        RoleMenuPermissionRecord::filter(RoleMenuPermissionRecord::fields().role_code().eq(role_code))
-            .delete()
-            .exec(&mut tx)
+        let tx = self.database.connection().begin().await?;
+        role_menu_permission_records::Entity::delete_many()
+            .filter(role_menu_permission_records::Column::RoleCode.eq(role_code))
+            .exec(&tx)
             .await?;
-        create_role_menu_bindings(inputs).exec(&mut tx).await?;
+        insert_role_menu_bindings(inputs, &tx).await?;
         tx.commit().await.map_err(StorageError::from)
     }
 
     pub async fn list_role_api_bindings(&self) -> StorageResult<Vec<RoleApiBindingRecordInput>> {
-        let mut db = self.database.connection();
-        RoleApiPermissionRecord::all()
-            .exec(&mut db)
+        role_api_permission_records::Entity::find()
+            .all(self.database.connection())
             .await
             .map(role_api_binding_records)
             .map_err(StorageError::from)
     }
 
     pub async fn role_api_ids(&self, role_code: &str) -> StorageResult<Vec<String>> {
-        let bindings = self.list_role_api_bindings().await?;
-        Ok(bindings
-            .into_iter()
-            .filter(|binding| binding.role_code == role_code)
-            .map(|binding| binding.api_permission_id)
-            .collect())
+        role_api_permission_records::Entity::find()
+            .filter(role_api_permission_records::Column::RoleCode.eq(role_code))
+            .all(self.database.connection())
+            .await
+            .map(|records| records.into_iter().map(|record| record.api_permission_id).collect())
+            .map_err(StorageError::from)
     }
 
     pub async fn role_has_api_bindings(&self, role_code: &str) -> StorageResult<bool> {
-        let mut db = self.database.connection();
-        RoleApiPermissionRecord::filter(RoleApiPermissionRecord::fields().role_code().eq(role_code))
-            .first()
-            .exec(&mut db)
-            .await
-            .map(|record| record.is_some())
-            .map_err(StorageError::from)
+        binding_exists(
+            role_api_permission_records::Entity::find().filter(role_api_permission_records::Column::RoleCode.eq(role_code)),
+            self.database.connection(),
+        )
+        .await
     }
 
     pub async fn api_has_role_bindings(&self, api_permission_id: &str) -> StorageResult<bool> {
-        let mut db = self.database.connection();
-        RoleApiPermissionRecord::filter(RoleApiPermissionRecord::fields().api_permission_id().eq(api_permission_id))
-            .first()
-            .exec(&mut db)
-            .await
-            .map(|record| record.is_some())
-            .map_err(StorageError::from)
+        binding_exists(
+            role_api_permission_records::Entity::find().filter(role_api_permission_records::Column::ApiPermissionId.eq(api_permission_id)),
+            self.database.connection(),
+        )
+        .await
     }
 
     pub async fn list_role_menu_bindings(&self) -> StorageResult<Vec<RoleMenuBindingRecordInput>> {
-        let mut db = self.database.connection();
-        RoleMenuPermissionRecord::all()
-            .exec(&mut db)
+        role_menu_permission_records::Entity::find()
+            .all(self.database.connection())
             .await
             .map(role_menu_binding_records)
             .map_err(StorageError::from)
     }
 
     pub async fn role_menu_item_ids(&self, role_code: &str) -> StorageResult<Vec<String>> {
-        let bindings = self.list_role_menu_bindings().await?;
-        Ok(bindings
-            .into_iter()
-            .filter(|binding| binding.role_code == role_code)
-            .map(|binding| binding.menu_item_id)
-            .collect())
+        role_menu_permission_records::Entity::find()
+            .filter(role_menu_permission_records::Column::RoleCode.eq(role_code))
+            .all(self.database.connection())
+            .await
+            .map(|records| records.into_iter().map(|record| record.menu_item_id).collect())
+            .map_err(StorageError::from)
     }
 
     pub async fn role_has_menu_bindings(&self, role_code: &str) -> StorageResult<bool> {
-        let mut db = self.database.connection();
-        RoleMenuPermissionRecord::filter(RoleMenuPermissionRecord::fields().role_code().eq(role_code))
-            .first()
-            .exec(&mut db)
-            .await
-            .map(|record| record.is_some())
-            .map_err(StorageError::from)
+        binding_exists(
+            role_menu_permission_records::Entity::find().filter(role_menu_permission_records::Column::RoleCode.eq(role_code)),
+            self.database.connection(),
+        )
+        .await
     }
 
     pub async fn menu_item_has_role_bindings(&self, menu_item_id: &str) -> StorageResult<bool> {
-        let mut db = self.database.connection();
-        RoleMenuPermissionRecord::filter(RoleMenuPermissionRecord::fields().menu_item_id().eq(menu_item_id))
-            .first()
-            .exec(&mut db)
-            .await
-            .map(|record| record.is_some())
-            .map_err(StorageError::from)
+        binding_exists(
+            role_menu_permission_records::Entity::find().filter(role_menu_permission_records::Column::MenuItemId.eq(menu_item_id)),
+            self.database.connection(),
+        )
+        .await
     }
 }
 
-fn create_role_api_bindings(inputs: Vec<RoleApiBindingRecordInput>) -> CreateMany<RoleApiPermissionRecord> {
-    inputs.into_iter().fold(CreateMany::new(), |records, input| {
-        records.with_item(|record| record.role_code(input.role_code).api_permission_id(input.api_permission_id))
-    })
+async fn insert_role_api_bindings(inputs: Vec<RoleApiBindingRecordInput>, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {
+    if inputs.is_empty() {
+        return Ok(());
+    }
+    let records = inputs.into_iter().map(role_api_active_model);
+    role_api_permission_records::Entity::insert_many(records).exec(tx).await?;
+    Ok(())
 }
 
-fn create_role_menu_bindings(inputs: Vec<RoleMenuBindingRecordInput>) -> CreateMany<RoleMenuPermissionRecord> {
-    inputs.into_iter().fold(CreateMany::new(), |records, input| {
-        records.with_item(|record| record.role_code(input.role_code).menu_item_id(input.menu_item_id))
-    })
+async fn insert_role_menu_bindings(inputs: Vec<RoleMenuBindingRecordInput>, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {
+    if inputs.is_empty() {
+        return Ok(());
+    }
+    let records = inputs.into_iter().map(role_menu_active_model);
+    role_menu_permission_records::Entity::insert_many(records).exec(tx).await?;
+    Ok(())
+}
+
+async fn binding_exists<E>(select: sea_orm::Select<E>, db: &sea_orm::DatabaseConnection) -> StorageResult<bool>
+where
+    E: EntityTrait,
+{
+    select.one(db).await.map(|record| record.is_some()).map_err(StorageError::from)
+}
+
+fn role_api_active_model(input: RoleApiBindingRecordInput) -> RoleApiActiveModel {
+    RoleApiActiveModel {
+        role_code: Set(input.role_code),
+        api_permission_id: Set(input.api_permission_id),
+    }
+}
+
+fn role_menu_active_model(input: RoleMenuBindingRecordInput) -> RoleMenuActiveModel {
+    RoleMenuActiveModel {
+        role_code: Set(input.role_code),
+        menu_item_id: Set(input.menu_item_id),
+    }
 }
 
 fn role_api_binding_records(records: Vec<RoleApiPermissionRecord>) -> Vec<RoleApiBindingRecordInput> {

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm SeaORM migration API and inspect current Toasty storage,DONE,"Current ORM surfaces and SeaORM migration approach are recorded in PROGRESS.md","rg -n \"Root causes|Migration target\" .codex-tasks/20260508-seaorm-migration/PROGRESS.md",2026-05-08T00:00:00+08:00,0,
+2,Design SeaORM schema and seed migration,DONE,"Migration scope and table/default seed mapping are recorded before code replacement","rg -n \"Migration design\" .codex-tasks/20260508-seaorm-migration/PROGRESS.md",2026-05-08T00:00:00+08:00,0,
+3,Replace storage repositories with SeaORM,DONE,"crates/storage no longer depends on Toasty and repository APIs preserve behavior","cargo check",2026-05-08T00:00:00+08:00,0,
+4,Replace backend schema/init commands with SeaORM migrator,DONE,"backend migration command runs SeaORM migrator and init defaults module is removed","cargo check",2026-05-08T00:00:00+08:00,0,
+5,Update README and validate,DONE,"README documents SeaORM migration workflow and checks pass","cargo fmt --all -- --check && cargo check && just test",2026-05-08T00:00:00+08:00,0,"just is not installed; used the same 60-second wrapper from justfile with cargo test"

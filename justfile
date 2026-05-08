@@ -24,18 +24,6 @@ run-backend:
 run-backend-config CONFIG:
     cargo run -p backend -- --config {{CONFIG}}
 
-push-backend-schema:
-    cargo run -p backend -- schema push
-
-push-backend-schema-config CONFIG:
-    cargo run -p backend -- --config {{CONFIG}} schema push
-
-bootstrap-backend-schema:
-    cargo run -p backend -- schema bootstrap
-
-bootstrap-backend-schema-config CONFIG:
-    cargo run -p backend -- --config {{CONFIG}} schema bootstrap
-
 backend-migration ARGS:
     cargo run -p backend -- migration {{ARGS}}
 

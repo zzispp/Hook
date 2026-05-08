@@ -1,38 +1,35 @@
 use constants::auth::DEFAULT_AUTH_SOURCE;
+use sea_orm::entity::prelude::*;
 use types::user::{User, UserId};
 
 use super::UserAuthRecord;
 
-#[derive(Clone, Debug, toasty::Model)]
-#[table = "users"]
-pub struct UserRecord {
-    #[key]
-    #[column(type = varchar(36))]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+#[sea_orm(table_name = "users")]
+pub struct Model {
+    #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    #[unique]
-    #[column(type = varchar(100))]
+    #[sea_orm(unique)]
     pub username: String,
-    #[column(type = varchar(255))]
     pub password_hash: String,
-    #[unique]
-    #[column(type = varchar(255))]
+    #[sea_orm(unique)]
     pub email: String,
-    #[column(type = varchar(100))]
     pub role: String,
     pub is_active: bool,
     pub is_deleted: bool,
-    #[auto]
-    #[column(type = timestamp(6))]
-    pub created_at: jiff::Timestamp,
-    #[auto]
-    #[column(type = timestamp(6))]
-    pub updated_at: jiff::Timestamp,
-    #[column(type = timestamp(6))]
-    pub last_login_at: Option<jiff::Timestamp>,
-    #[column(type = varchar(50))]
+    pub created_at: TimeDateTimeWithTimeZone,
+    pub updated_at: TimeDateTimeWithTimeZone,
+    pub last_login_at: Option<TimeDateTimeWithTimeZone>,
     pub auth_source: String,
     pub email_verified: bool,
 }
+
+#[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {}
+
+impl ActiveModelBehavior for ActiveModel {}
+
+pub type UserRecord = Model;
 
 impl From<UserRecord> for User {
     fn from(value: UserRecord) -> Self {
@@ -57,9 +54,7 @@ impl UserRecord {
             password_hash,
         }
     }
-}
 
-impl UserRecord {
     pub fn local_auth_source() -> String {
         DEFAULT_AUTH_SOURCE.into()
     }

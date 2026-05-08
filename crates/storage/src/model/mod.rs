@@ -1,5 +1,6 @@
 mod record;
 mod repository;
+mod repository_helpers;
 mod types;
 
 pub use repository::ModelStore;
