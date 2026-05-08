@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map Hook architecture,DONE,"Backend/frontend/storage/routing patterns are understood and recorded","test -f .codex-tasks/20260507-hook-models-aether-alignment/PROGRESS.md",2026-05-07T23:17:00+08:00,0,
+2,Map Aether model feature,DONE,"Aether model schema/API/service/frontend behavior and model.dev fetch path are recorded","rg -n \"Aether model feature map\" .codex-tasks/20260507-hook-models-aether-alignment/PROGRESS.md",2026-05-07T23:24:03+08:00,0,
+3,Design Hook 1:1 alignment,DONE,"Concrete Hook backend/frontend implementation plan is recorded","rg -n \"Hook alignment plan\" .codex-tasks/20260507-hook-models-aether-alignment/PROGRESS.md",2026-05-07T23:24:03+08:00,0,
+4,Implement backend model module,DONE,"Schema/storage/types/service/routes compile and tests cover core behavior","cargo check",2026-05-08T01:03:29+08:00,0,"just unavailable; cargo check passed"
+5,Implement frontend admin model page,DONE,"Frontend API/types/page/nav build and lint pass","pnpm lint:frontend && pnpm build:frontend",2026-05-08T01:16:49+08:00,0,
+6,Run final validation,DONE,"Requested feature is verified or failures are explicit with root cause","cargo check && pnpm lint:frontend && pnpm build:frontend",2026-05-08T01:16:49+08:00,0,"just unavailable; used cargo check"

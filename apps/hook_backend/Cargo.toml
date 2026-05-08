@@ -7,6 +7,7 @@ edition.workspace = true
 axum.workspace = true
 configuration.workspace = true
 constants.workspace = true
+model.workspace = true
 rbac.workspace = true
 serde.workspace = true
 storage.workspace = true

@@ -7,8 +7,6 @@ import dayjs from 'dayjs';
 import { useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useRouter } from 'src/routes/hooks';
-
 import { toast } from 'src/components/snackbar';
 import { useSettingsContext } from 'src/components/settings';
 
@@ -17,7 +15,6 @@ import { fallbackLng, storageConfig, getCurrentLang } from './locales-config';
 // ----------------------------------------------------------------------
 
 export function useTranslate(namespace?: Namespace) {
-  const router = useRouter();
   const settings = useSettingsContext();
 
   const { t, i18n } = useTranslation(namespace);
@@ -39,7 +36,6 @@ export function useTranslate(namespace?: Namespace) {
 
   const persistLanguage = useCallback((lang: LangCode) => {
     localStorage.setItem(storageConfig.localStorage.key, lang);
-    document.cookie = `${storageConfig.cookie.key}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax`;
   }, []);
 
   const handleChangeLang = useCallback(
@@ -58,13 +54,11 @@ export function useTranslate(namespace?: Namespace) {
         persistLanguage(lang);
         updateDirection(lang);
         updateDayjsLocale(lang);
-
-        router.refresh(); // only nextjs
       } catch (error) {
         console.error(error);
       }
     },
-    [i18n, persistLanguage, router, tMessages, updateDayjsLocale, updateDirection]
+    [i18n, persistLanguage, tMessages, updateDayjsLocale, updateDirection]
   );
 
   const handleResetLang = useCallback(() => {

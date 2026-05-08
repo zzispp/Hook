@@ -18,32 +18,6 @@ const sections = [
     ),
   },
   {
-    title: 'Product',
-    content: (
-      <>
-        <Block method="GET" description="Get all products" path="/api/product/list" />
-        <Block
-          method="GET"
-          description="Get product details by ID"
-          path={
-            <>
-              /api/product/details?productId=<strong>{`{productId}`}</strong>
-            </>
-          }
-        />
-        <Block
-          method="GET"
-          description="Search product"
-          path={
-            <>
-              /api/product/search?query=<strong>{`{query}`}</strong>
-            </>
-          }
-        />
-      </>
-    ),
-  },
-  {
     title: 'Blog',
     content: (
       <>
@@ -255,21 +229,6 @@ const sections = [
   {
     title: 'Navigation',
     content: <Block method="GET" description="Get items" path="/api/navbar" />,
-  },
-  {
-    title: 'Pagination',
-    content: (
-      <Block
-        method="GET"
-        description="Get items"
-        path={
-          <>
-            /api/pagination?page=<strong>{`{page}`}</strong>&perPage=
-            <strong>{`{perPage}`}</strong>
-          </>
-        }
-      />
-    ),
   },
 ];
 

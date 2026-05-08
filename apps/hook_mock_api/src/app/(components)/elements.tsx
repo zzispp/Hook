@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { BoxProps } from '@mui/material/Box';
 
 import Box from '@mui/material/Box';
@@ -10,7 +11,7 @@ import colors from 'src/colors.json';
 
 // ----------------------------------------------------------------------
 
-type SectionProps = BoxProps & { title: React.ReactNode };
+type SectionProps = BoxProps & { title: ReactNode };
 
 export function Section({ title, children, sx, ...other }: SectionProps) {
   return (
@@ -40,8 +41,8 @@ export function Section({ title, children, sx, ...other }: SectionProps) {
 // ----------------------------------------------------------------------
 
 type HeadProps = {
-  title: React.ReactNode;
-  description: React.ReactNode;
+  title: ReactNode;
+  description: ReactNode;
 };
 
 export function TitleBlock({ title, description }: HeadProps) {
@@ -91,7 +92,7 @@ export function TitleBlock({ title, description }: HeadProps) {
 type BlockProps = BoxProps & {
   method: string;
   description?: string;
-  path: React.ReactNode;
+  path: ReactNode;
 };
 
 export function Block({ method, path, description, sx, ...other }: BlockProps) {

@@ -78,8 +78,8 @@ export async function setSession(session: JwtSession | null) {
   try {
     if (session) {
       assertSession(session);
-      sessionStorage.setItem(JWT_STORAGE_KEY, session.access_token);
-      sessionStorage.setItem(JWT_REFRESH_STORAGE_KEY, session.refresh_token);
+      localStorage.setItem(JWT_STORAGE_KEY, session.access_token);
+      localStorage.setItem(JWT_REFRESH_STORAGE_KEY, session.refresh_token);
 
       axios.defaults.headers.common.Authorization = `Bearer ${session.access_token}`;
 
@@ -89,8 +89,8 @@ export async function setSession(session: JwtSession | null) {
         throw new Error('Invalid access token!');
       }
     } else {
-      sessionStorage.removeItem(JWT_STORAGE_KEY);
-      sessionStorage.removeItem(JWT_REFRESH_STORAGE_KEY);
+      localStorage.removeItem(JWT_STORAGE_KEY);
+      localStorage.removeItem(JWT_REFRESH_STORAGE_KEY);
       delete axios.defaults.headers.common.Authorization;
     }
   } catch (error) {

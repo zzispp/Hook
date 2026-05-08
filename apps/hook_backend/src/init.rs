@@ -1,11 +1,17 @@
+use std::collections::BTreeMap;
+
 use configuration::Settings;
 use rbac::application::{RbacCache, RbacError, RbacRepository, RbacService};
 use types::{
     pagination::PageRequest,
-    rbac::{ApiPermissionInput, MenuItemInput, MenuSectionInput, RoleInput, RoleMenuBindingInput},
+    rbac::{ApiPermission, MenuItem, MenuItemInput, MenuSectionInput, RoleInput, RoleMenuBindingInput},
 };
 
 use crate::BackendResult;
+
+mod defaults;
+
+type IdByCode = BTreeMap<String, String>;
 
 pub async fn ensure_default_rbac<R, C>(rbac: &RbacService<R, C>, settings: &Settings) -> BackendResult<()>
 where
@@ -32,179 +38,162 @@ where
     })
     .await?;
 
-    let api_ids = ensure_default_apis(rbac).await?;
-    let menu_item_ids = ensure_default_menus(rbac).await?;
-    rbac.replace_role_apis(admin_role, api_ids).await?;
-    rbac.replace_role_menus(admin_role, RoleMenuBindingInput { menu_item_ids }).await?;
+    let api_ids_by_code = ensure_default_apis(rbac).await?;
+    let menu_item_ids_by_code = ensure_default_menus(rbac).await?;
+
+    rbac.replace_role_apis(admin_role, all_ids(&api_ids_by_code)).await?;
+    rbac.replace_role_menus(
+        admin_role,
+        RoleMenuBindingInput {
+            menu_item_ids: all_ids(&menu_item_ids_by_code),
+        },
+    )
+    .await?;
+    rbac.replace_role_apis(user_role, ids_for_codes(&api_ids_by_code, defaults::USER_API_CODES, "API permission")?)
+        .await?;
+    rbac.replace_role_menus(
+        user_role,
+        RoleMenuBindingInput {
+            menu_item_ids: ids_for_codes(&menu_item_ids_by_code, defaults::USER_MENU_CODES, "menu item")?,
+        },
+    )
+    .await?;
     Ok(())
 }
 
-async fn ensure_default_apis<R, C>(rbac: &RbacService<R, C>) -> BackendResult<Vec<String>>
+async fn ensure_default_apis<R, C>(rbac: &RbacService<R, C>) -> BackendResult<IdByCode>
 where
     R: RbacRepository,
     C: RbacCache,
 {
     let existing = rbac.list_apis().await?;
-    let mut api_ids = existing.iter().map(|api| api.id.clone()).collect::<Vec<_>>();
-
-    for input in default_api_permissions() {
+    for input in defaults::default_api_permissions() {
         if existing.iter().any(|api| api.code == input.code) {
             continue;
         }
 
         match rbac.create_api(input).await {
-            Ok(api) => api_ids.push(api.id),
+            Ok(_) => {}
             Err(RbacError::Infrastructure(message)) if message.contains("duplicate key") => {}
             Err(error) => return Err(error.into()),
         }
     }
 
-    Ok(api_ids)
+    Ok(api_ids_by_code(rbac.list_apis().await?))
 }
 
-async fn ensure_default_menus<R, C>(rbac: &RbacService<R, C>) -> BackendResult<Vec<String>>
+async fn ensure_default_menus<R, C>(rbac: &RbacService<R, C>) -> BackendResult<IdByCode>
 where
     R: RbacRepository,
     C: RbacCache,
 {
-    let sections = rbac.page_menu_sections(PageRequest { page: 1, page_size: 100 }).await?.items;
-    let overview_section_id = match sections.iter().find(|section| section.code == "overview") {
-        Some(section) => section.id.clone(),
-        None => match rbac
-            .create_menu_section(MenuSectionInput {
-                code: "overview".into(),
-                subheader: "Overview".into(),
-                sort_order: -10,
-                enabled: true,
-            })
-            .await
-        {
-            Ok(section) => section.id,
-            Err(RbacError::Infrastructure(message)) if message.contains("duplicate key") => rbac
-                .page_menu_sections(PageRequest { page: 1, page_size: 100 })
-                .await?
-                .items
-                .into_iter()
-                .find(|section| section.code == "overview")
-                .map(|section| section.id)
-                .ok_or("default overview menu section was not found after duplicate insert")?,
-            Err(error) => return Err(error.into()),
-        },
-    };
-
-    let section_id = match sections.into_iter().find(|section| section.code == "system_management") {
-        Some(section) => section.id,
-        None => match rbac
-            .create_menu_section(MenuSectionInput {
-                code: "system_management".into(),
-                subheader: "System Management".into(),
-                sort_order: 0,
-                enabled: true,
-            })
-            .await
-        {
-            Ok(section) => section.id,
-            Err(RbacError::Infrastructure(message)) if message.contains("duplicate key") => rbac
-                .page_menu_sections(PageRequest { page: 1, page_size: 100 })
-                .await?
-                .items
-                .into_iter()
-                .find(|section| section.code == "system_management")
-                .map(|section| section.id)
-                .ok_or("default menu section was not found after duplicate insert")?,
-            Err(error) => return Err(error.into()),
-        },
-    };
+    let overview_section_id = ensure_default_menu_section(rbac, defaults::overview_section()).await?;
+    let resources_section_id = ensure_default_menu_section(rbac, defaults::resources_section()).await?;
+    let system_section_id = ensure_default_menu_section(rbac, defaults::system_section()).await?;
 
     let existing = rbac.page_menu_items(PageRequest { page: 1, page_size: 100 }).await?.items;
-    let mut menu_item_ids = existing.iter().map(|item| item.id.clone()).collect::<Vec<_>>();
-
-    for input in default_menu_items(&overview_section_id, &section_id) {
-        if existing.iter().any(|item| item.code == input.code) {
+    for input in defaults::default_menu_items(&overview_section_id, &resources_section_id, &system_section_id) {
+        if let Some(item) = existing.iter().find(|item| item.code == input.code) {
+            sync_existing_default_menu_item(rbac, item, input).await?;
             continue;
         }
 
         match rbac.create_menu_item(input).await {
-            Ok(item) => menu_item_ids.push(item.id),
+            Ok(_) => {}
             Err(RbacError::Infrastructure(message)) if message.contains("duplicate key") => {}
             Err(error) => return Err(error.into()),
         }
     }
 
-    Ok(menu_item_ids)
+    Ok(menu_item_ids_by_code(
+        rbac.page_menu_items(PageRequest { page: 1, page_size: 100 }).await?.items,
+    ))
 }
 
-fn default_api_permissions() -> Vec<ApiPermissionInput> {
-    vec![
-        api_permission("auth_me", "GET", "/api/auth/me", "Current user", "Auth"),
-        api_permission("navbar_read", "GET", "/api/navbar", "Navbar", "System"),
-        api_permission("users_read", "GET", "/api/users", "List users", "Users"),
-        api_permission("users_create", "POST", "/api/users", "Create user", "Users"),
-        api_permission("users_update", "PUT", "/api/users/{id}", "Update user", "Users"),
-        api_permission("users_delete", "DELETE", "/api/users/{id}", "Delete user", "Users"),
-        api_permission("roles_read", "GET", "/api/rbac/roles", "List roles", "RBAC"),
-        api_permission("roles_create", "POST", "/api/rbac/roles", "Create role", "RBAC"),
-        api_permission("roles_update", "PUT", "/api/rbac/roles/{code}", "Update role", "RBAC"),
-        api_permission("roles_delete", "DELETE", "/api/rbac/roles/{code}", "Delete role", "RBAC"),
-        api_permission("role_apis_read", "GET", "/api/rbac/roles/{code}/apis", "Read role API bindings", "RBAC"),
-        api_permission("role_apis_update", "PUT", "/api/rbac/roles/{code}/apis", "Update role API bindings", "RBAC"),
-        api_permission("role_menus_read", "GET", "/api/rbac/roles/{code}/menus", "Read role menu bindings", "RBAC"),
-        api_permission("role_menus_update", "PUT", "/api/rbac/roles/{code}/menus", "Update role menu bindings", "RBAC"),
-        api_permission("apis_read", "GET", "/api/rbac/apis", "List API permissions", "RBAC"),
-        api_permission("apis_create", "POST", "/api/rbac/apis", "Create API permission", "RBAC"),
-        api_permission("apis_update", "PUT", "/api/rbac/apis/{id}", "Update API permission", "RBAC"),
-        api_permission("apis_delete", "DELETE", "/api/rbac/apis/{id}", "Delete API permission", "RBAC"),
-        api_permission("menu_sections_read", "GET", "/api/rbac/menu-sections", "List menu sections", "Menus"),
-        api_permission("menu_sections_create", "POST", "/api/rbac/menu-sections", "Create menu section", "Menus"),
-        api_permission("menu_sections_update", "PUT", "/api/rbac/menu-sections/{id}", "Update menu section", "Menus"),
-        api_permission("menu_sections_delete", "DELETE", "/api/rbac/menu-sections/{id}", "Delete menu section", "Menus"),
-        api_permission("menu_items_read", "GET", "/api/rbac/menu-items", "List menu items", "Menus"),
-        api_permission("menu_items_create", "POST", "/api/rbac/menu-items", "Create menu item", "Menus"),
-        api_permission("menu_items_update", "PUT", "/api/rbac/menu-items/{id}", "Update menu item", "Menus"),
-        api_permission("menu_items_delete", "DELETE", "/api/rbac/menu-items/{id}", "Delete menu item", "Menus"),
-    ]
-}
+async fn ensure_default_menu_section<R, C>(rbac: &RbacService<R, C>, input: MenuSectionInput) -> BackendResult<String>
+where
+    R: RbacRepository,
+    C: RbacCache,
+{
+    if let Some(id) = find_menu_section_id(rbac, &input.code).await? {
+        return Ok(id);
+    }
 
-fn api_permission(code: &str, method: &str, path_pattern: &str, name: &str, group: &str) -> ApiPermissionInput {
-    ApiPermissionInput {
-        code: code.into(),
-        method: method.into(),
-        path_pattern: path_pattern.into(),
-        name: name.into(),
-        group: group.into(),
-        enabled: true,
+    match rbac.create_menu_section(input.clone()).await {
+        Ok(section) => Ok(section.id),
+        Err(RbacError::Infrastructure(message)) if message.contains("duplicate key") => find_menu_section_id(rbac, &input.code)
+            .await?
+            .ok_or_else(|| format!("default menu section '{}' was not found after duplicate insert", input.code).into()),
+        Err(error) => Err(error.into()),
     }
 }
 
-fn default_menu_items(overview_section_id: &str, section_id: &str) -> Vec<MenuItemInput> {
-    vec![
-        menu_item_exact(overview_section_id, "dashboard_home", "Dashboard", "/dashboard", "icon.dashboard", 0),
-        menu_item(section_id, "admin_users", "User Management", "/dashboard/admin/users", "icon.user", 0),
-        menu_item(section_id, "admin_roles", "Role Management", "/dashboard/admin/roles", "icon.lock", 10),
-        menu_item(section_id, "admin_apis", "API Management", "/dashboard/admin/apis", "icon.menu", 20),
-        menu_item(section_id, "admin_menus", "Menu Management", "/dashboard/admin/menus", "icon.menu", 30),
-    ]
+async fn find_menu_section_id<R, C>(rbac: &RbacService<R, C>, code: &str) -> BackendResult<Option<String>>
+where
+    R: RbacRepository,
+    C: RbacCache,
+{
+    Ok(rbac
+        .page_menu_sections(PageRequest { page: 1, page_size: 100 })
+        .await?
+        .items
+        .into_iter()
+        .find(|section| section.code == code)
+        .map(|section| section.id))
 }
 
-fn menu_item(section_id: &str, code: &str, title: &str, path: &str, icon: &str, sort_order: i64) -> MenuItemInput {
-    menu_item_with_match(section_id, code, title, path, icon, sort_order, true)
+async fn sync_existing_default_menu_item<R, C>(rbac: &RbacService<R, C>, item: &MenuItem, input: MenuItemInput) -> BackendResult<()>
+where
+    R: RbacRepository,
+    C: RbacCache,
+{
+    if item.code != "admin_models" || item.icon == input.icon {
+        return Ok(());
+    }
+
+    rbac.replace_menu_item(
+        &item.id,
+        MenuItemInput {
+            icon: input.icon,
+            ..menu_item_input_from(item)
+        },
+    )
+    .await?;
+    Ok(())
 }
 
-fn menu_item_exact(section_id: &str, code: &str, title: &str, path: &str, icon: &str, sort_order: i64) -> MenuItemInput {
-    menu_item_with_match(section_id, code, title, path, icon, sort_order, false)
-}
-
-fn menu_item_with_match(section_id: &str, code: &str, title: &str, path: &str, icon: &str, sort_order: i64, deep_match: bool) -> MenuItemInput {
+fn menu_item_input_from(item: &MenuItem) -> MenuItemInput {
     MenuItemInput {
-        section_id: section_id.into(),
-        parent_id: None,
-        code: code.into(),
-        title: title.into(),
-        path: path.into(),
-        icon: Some(icon.into()),
-        caption: None,
-        deep_match,
-        sort_order,
-        enabled: true,
+        section_id: item.section_id.clone(),
+        parent_id: item.parent_id.clone(),
+        code: item.code.clone(),
+        title: item.title.clone(),
+        path: item.path.clone(),
+        icon: item.icon.clone(),
+        caption: item.caption.clone(),
+        deep_match: item.deep_match,
+        sort_order: item.sort_order,
+        enabled: item.enabled,
     }
+}
+
+fn api_ids_by_code(apis: Vec<ApiPermission>) -> IdByCode {
+    apis.into_iter().map(|api| (api.code, api.id)).collect()
+}
+
+fn menu_item_ids_by_code(items: Vec<MenuItem>) -> IdByCode {
+    items.into_iter().map(|item| (item.code, item.id)).collect()
+}
+
+fn all_ids(ids_by_code: &IdByCode) -> Vec<String> {
+    ids_by_code.values().cloned().collect()
+}
+
+fn ids_for_codes(ids_by_code: &IdByCode, codes: &[&str], kind: &str) -> BackendResult<Vec<String>> {
+    let mut ids = Vec::with_capacity(codes.len());
+    for code in codes {
+        let id = ids_by_code.get(*code).ok_or_else(|| format!("default {kind} '{code}' was not created"))?;
+        ids.push(id.clone());
+    }
+    Ok(ids)
 }

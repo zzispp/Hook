@@ -28,6 +28,7 @@ import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
 import { _account } from '../nav-config-account';
 import { Searchbar } from '../components/searchbar';
+import { translateNavData } from './nav-translation';
 import { MenuButton } from '../components/menu-button';
 import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
@@ -229,89 +230,4 @@ export function DashboardLayout({
       {renderMain()}
     </LayoutSection>
   );
-}
-
-function translateNavData(
-  data: NavSectionProps['data'],
-  t: ReturnType<typeof useTranslate>['t']
-): NavSectionProps['data'] {
-  return data.map((section) => ({
-    ...section,
-    subheader: translateNavSection(section, t),
-    items: section.items.map((item) => translateNavItem(item, t)),
-  }));
-}
-
-function translateNavSection(
-  section: NavSectionProps['data'][number],
-  t: ReturnType<typeof useTranslate>['t']
-) {
-  if (section.code === 'overview') {
-    return t('nav.overview');
-  }
-
-  if (section.code === 'system_management') {
-    return t('nav.systemManagement');
-  }
-
-  if (section.subheader === '概览' || section.subheader === 'Overview') {
-    return t('nav.overview');
-  }
-
-  if (
-    section.subheader === 'Management' ||
-    section.subheader === 'System Management' ||
-    section.subheader === '系统管理'
-  ) {
-    return t('nav.systemManagement');
-  }
-
-  return section.subheader;
-}
-
-function translateNavItem(
-  item: NavSectionProps['data'][number]['items'][number],
-  t: ReturnType<typeof useTranslate>['t']
-): NavSectionProps['data'][number]['items'][number] {
-  return {
-    ...item,
-    title: translateNavItemTitle(item, t),
-    caption: item.caption ? translateNavCaption(item.caption, t) : item.caption,
-    children: item.children?.map((child) => translateNavItem(child, t)),
-  };
-}
-
-function translateNavItemTitle(
-  item: NavSectionProps['data'][number]['items'][number],
-  t: ReturnType<typeof useTranslate>['t']
-) {
-  const keyByCode: Record<string, string> = {
-    dashboard_home: 'nav.dashboard',
-    system_management: 'nav.systemManagement',
-    admin_users: 'nav.users',
-    admin_roles: 'nav.roles',
-    admin_apis: 'nav.apis',
-    admin_menus: 'nav.menus',
-  };
-
-  const keyByPath: Record<string, string> = {
-    '/dashboard': 'nav.dashboard',
-    '/dashboard/admin': 'nav.systemManagement',
-    '/dashboard/admin/users': 'nav.users',
-    '/dashboard/admin/roles': 'nav.roles',
-    '/dashboard/admin/apis': 'nav.apis',
-    '/dashboard/admin/menus': 'nav.menus',
-  };
-
-  const key = (item.code && keyByCode[item.code]) || keyByPath[item.path];
-
-  return key ? t(key) : item.title;
-}
-
-function translateNavCaption(caption: string, t: ReturnType<typeof useTranslate>['t']) {
-  if (caption === 'Custom keyboard shortcuts.') {
-    return t('nav.customKeyboardShortcuts');
-  }
-
-  return caption;
 }

@@ -358,35 +358,6 @@ export const _postTitles = [
 
 // ----------------------------------------------------------------------
 
-export const _productNames = [
-  `Urban Explorer Sneakers`,
-  `Classic Leather Loafers`,
-  `Mountain Trekking Boots`,
-  `Elegance Stiletto Heels`,
-  `Comfy Running Shoes`,
-  `Chic Ballet Flats`,
-  `Vintage Oxford Shoes`,
-  `Waterproof Hiking Boots`,
-  `Casual Slip-On Sneakers`,
-  `Premium Dress Shoes`,
-  `Sporty Trail Runners`,
-  `Sophisticated Brogues`,
-  `Beach Sandals`,
-  `Stylish Wedge Heels`,
-  `Lightweight Training Shoes`,
-  `Luxurious Moccasins`,
-  `Durable Work Boots`,
-  `Trendy Platform Sneakers`,
-  `Cozy Winter Boots`,
-  `Fashion Ankle Boots`,
-  `Breathable Tennis Shoes`,
-  `Elegant Evening Pumps`,
-  `Modern Skate Shoes`,
-  `Comfortable Walking Shoes`,
-];
-
-// ----------------------------------------------------------------------
-
 export const _tourNames = [
   `Majestic Mountain Adventures`,
   `Island Hopping Extravaganza`,

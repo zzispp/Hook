@@ -1,5 +1,6 @@
 use crate::{
     StorageResult,
+    model::{GlobalModelRecord, ModelRecord},
     rbac::{ApiPermissionRecord, MenuItemRecord, MenuSectionRecord, RoleApiPermissionRecord, RoleMenuPermissionRecord, RoleRecord},
     user::UserRecord,
 };
@@ -51,7 +52,9 @@ pub async fn connect_database(database_url: &str, options: DatabaseConnectOption
             MenuSectionRecord,
             MenuItemRecord,
             RoleApiPermissionRecord,
-            RoleMenuPermissionRecord
+            RoleMenuPermissionRecord,
+            GlobalModelRecord,
+            ModelRecord
         ))
         .connect(database_url)
         .await?;

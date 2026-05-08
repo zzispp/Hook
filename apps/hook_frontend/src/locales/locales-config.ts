@@ -22,7 +22,6 @@ export const defaultNS = 'common';
 
 // Storage config
 export const storageConfig = {
-  cookie: { key: 'i18next', autoDetection: true },
   localStorage: { key: 'i18nextLng', autoDetection: false },
 } as const;
 

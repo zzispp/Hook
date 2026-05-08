@@ -6,6 +6,11 @@ use axum::{
     middleware,
 };
 use configuration::Settings;
+use model::{
+    api::{ModelApiState, create_router as create_model_router},
+    application::ModelService,
+    infra::{ModelsDevClient, StorageModelRepository},
+};
 use rbac::{
     api::{RbacApiState, create_router as create_rbac_router},
     application::{AuthWhitelistRule, AuthorizationConfig, RbacService},
@@ -46,6 +51,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     )
     .await?;
     let rbac = build_rbac_service(settings, database.clone()).await?;
+    let models = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
     let users = Arc::new(UserService::with_system_user(
         StorageUserRepository::new(database),
         Argon2PasswordHasher,
@@ -58,6 +64,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         users,
         tokens,
         rbac,
+        models,
         authorization,
     })
 }
@@ -75,13 +82,17 @@ async fn build_rbac_service(settings: &Settings, database: storage::Database) ->
 fn create_app(state: AppState) -> Router {
     let user_state = ApiState::new(state.users.clone(), state.tokens.clone());
     let rbac_state = RbacApiState::new(state.rbac.clone(), state.rbac.clone());
+    let model_state = ModelApiState::new(state.models);
     let auth_state = AuthState::new(AuthStateParts {
         users: state.users,
         tokens: state.tokens,
         rbac: state.rbac,
         authorization: state.authorization,
     });
-    let api_router = Router::new().merge(create_user_router(user_state)).merge(create_rbac_router(rbac_state));
+    let api_router = Router::new()
+        .merge(create_user_router(user_state))
+        .merge(create_rbac_router(rbac_state))
+        .merge(create_model_router(model_state));
 
     system::create_router()
         .nest("/api", api_router)
@@ -92,7 +103,7 @@ fn create_app(state: AppState) -> Router {
 fn cors_layer() -> CorsLayer {
     CorsLayer::new()
         .allow_origin(HeaderValue::from_static("http://localhost:8082"))
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS])
         .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
 }
 
@@ -122,5 +133,6 @@ struct AppState {
     users: Arc<dyn user::application::UserUseCase>,
     tokens: TokenService,
     rbac: Arc<RbacService<StorageRbacRepository, RedisRbacCache>>,
+    models: Arc<dyn model::application::ModelUseCase>,
     authorization: AuthorizationConfig,
 }

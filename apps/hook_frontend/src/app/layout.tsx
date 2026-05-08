@@ -14,10 +14,7 @@ import { themeConfig, ThemeProvider, primary as primaryColor } from 'src/theme';
 import { Snackbar } from 'src/components/snackbar';
 import { ProgressBar } from 'src/components/progress-bar';
 import { MotionLazy } from 'src/components/animate/motion-lazy';
-import { detectSettings } from 'src/components/settings/server';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from 'src/components/settings';
-
-import { CheckoutProvider } from 'src/sections/checkout/context';
 
 import { AuthProvider } from 'src/auth/context/jwt';
 
@@ -47,17 +44,15 @@ async function getAppConfig() {
     return {
       lang: 'en',
       i18nLang: undefined,
-      cookieSettings: undefined,
       dir: defaultSettings.direction,
     };
   } else {
-    const [lang, settings] = await Promise.all([detectLanguage(), detectSettings()]);
+    const lang = await detectLanguage();
 
     return {
       lang,
       i18nLang: lang,
-      cookieSettings: settings,
-      dir: settings.direction,
+      dir: defaultSettings.direction,
     };
   }
 }
@@ -76,10 +71,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
         <I18nProvider lang={appConfig.i18nLang}>
           <AuthProvider>
-            <SettingsProvider
-              defaultSettings={defaultSettings}
-              cookieSettings={appConfig.cookieSettings}
-            >
+            <SettingsProvider defaultSettings={defaultSettings}>
               <LocalizationProvider>
                 <AppRouterCacheProvider options={{ key: 'css' }}>
                   <ThemeProvider
@@ -87,12 +79,10 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                     defaultMode={themeConfig.defaultMode}
                   >
                     <MotionLazy>
-                      <CheckoutProvider>
-                        <Snackbar />
-                        <ProgressBar />
-                        <SettingsDrawer defaultSettings={defaultSettings} />
-                        {children}
-                      </CheckoutProvider>
+                      <Snackbar />
+                      <ProgressBar />
+                      <SettingsDrawer defaultSettings={defaultSettings} />
+                      {children}
                     </MotionLazy>
                   </ThemeProvider>
                 </AppRouterCacheProvider>

@@ -4,11 +4,9 @@ import type { Theme, SxProps } from '@mui/material/styles';
 
 import { BasicTable } from './basic';
 import { CollapsibleTable } from './collapsible';
-import { PaginationWithApi } from './pagination-with-api';
 import { SortingSelectingTable } from './sorting-selecting';
 import { ComponentBox, ComponentLayout } from '../../layout';
 import { GroupingFixedHeaderTable } from './grouping-fixed-header';
-import { TablePaginationWithApi } from './table-pagination-with-api';
 
 // ----------------------------------------------------------------------
 
@@ -53,22 +51,6 @@ const DEMO_COMPONENTS = [
     component: (
       <ComponentBox sx={componentBoxStyles}>
         <CollapsibleTable />
-      </ComponentBox>
-    ),
-  },
-  {
-    name: 'Pagination with API',
-    component: (
-      <ComponentBox sx={componentBoxStyles}>
-        <PaginationWithApi />
-      </ComponentBox>
-    ),
-  },
-  {
-    name: 'Table pagination with API',
-    component: (
-      <ComponentBox sx={componentBoxStyles}>
-        <TablePaginationWithApi />
       </ComponentBox>
     ),
   },

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current menu and picker behavior,DONE,"Root causes are recorded in PROGRESS.md","rg -n \"Root causes\" .codex-tasks/20260508-model-admin-aether-polish/PROGRESS.md",2026-05-08T00:00:00+08:00,0,
+2,Implement backend menu sync fix,DONE,"Existing admin_models menu icon is synced without overwriting unrelated default menu customizations","cargo check",2026-05-08T00:00:00+08:00,0,
+3,Implement provider-grouped model.dev picker,DONE,"Picker renders provider groups with collapsed expandable child model rows","pnpm lint:frontend",2026-05-08T00:00:00+08:00,0,
+4,Run final validation,TODO,"README migration command and build checks have been run or diagnosed","cargo run -p backend -- migration apply && cargo check && pnpm lint:frontend && pnpm build:frontend",,0,"Frontend build currently fails in existing /dashboard/post/[title]/edit page data collection"

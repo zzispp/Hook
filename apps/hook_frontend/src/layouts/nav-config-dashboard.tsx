@@ -33,7 +33,6 @@ const ICONS = {
   banking: icon('ic-banking'),
   booking: icon('ic-booking'),
   invoice: icon('ic-invoice'),
-  product: icon('ic-product'),
   calendar: icon('ic-calendar'),
   disabled: icon('ic-disabled'),
   external: icon('ic-external'),
@@ -94,6 +93,7 @@ export const navData: NavSectionProps['data'] = [
           { code: 'admin_roles', title: 'Roles', path: paths.dashboard.admin.roles },
           { code: 'admin_apis', title: 'APIs', path: paths.dashboard.admin.apis },
           { code: 'admin_menus', title: 'Menus', path: paths.dashboard.admin.menus },
+          { code: 'admin_models', title: 'Models', path: paths.dashboard.admin.models },
         ],
       },
       {
@@ -107,17 +107,6 @@ export const navData: NavSectionProps['data'] = [
           { title: 'Create', path: paths.dashboard.user.new },
           { title: 'Edit', path: paths.dashboard.user.demo.edit },
           { title: 'Account', path: paths.dashboard.user.account, deepMatch: true },
-        ],
-      },
-      {
-        title: 'Product',
-        path: paths.dashboard.product.root,
-        icon: ICONS.product,
-        children: [
-          { title: 'List', path: paths.dashboard.product.root },
-          { title: 'Details', path: paths.dashboard.product.demo.details },
-          { title: 'Create', path: paths.dashboard.product.new },
-          { title: 'Edit', path: paths.dashboard.product.demo.edit },
         ],
       },
       {

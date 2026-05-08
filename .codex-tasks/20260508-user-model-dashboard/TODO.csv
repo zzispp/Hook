@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map auth RBAC and Aether user model catalog,DONE,"Root cause and target user catalog shape are recorded","rg -n \"Root cause\" .codex-tasks/20260508-user-model-dashboard/PROGRESS.md",2026-05-08T00:00:00+08:00,0,
+2,Implement backend user catalog and RBAC defaults,DONE,"User role can access auth me/navbar/model catalog without admin permissions","cargo check",2026-05-08T00:00:00+08:00,0,
+3,Implement frontend user model dashboard,DONE,"Dashboard exposes a user-visible model catalog page","pnpm --filter hook_frontend exec eslint src/sections/models src/app/dashboard/models src/layouts/dashboard src/routes src/lib src/actions src/types",2026-05-08T00:00:00+08:00,0,
+4,Run migration and validation,IN_PROGRESS,"Migration apply and relevant checks have been run or failures diagnosed","cargo run -p backend -- migration apply && cargo check && pnpm lint:frontend",,0,

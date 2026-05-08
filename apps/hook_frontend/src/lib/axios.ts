@@ -81,6 +81,17 @@ export const endpoints = {
     menuItems: '/api/rbac/menu-items',
     menuItem: (id: string) => `/api/rbac/menu-items/${id}`,
   },
+  adminModels: {
+    global: '/api/admin/models/global',
+    globalById: (id: string) => `/api/admin/models/global/${id}`,
+    globalBatchDelete: '/api/admin/models/global/batch-delete',
+    globalProviders: (id: string) => `/api/admin/models/global/${id}/providers`,
+    catalog: '/api/admin/models/catalog',
+    external: '/api/admin/models/external',
+  },
+  models: {
+    catalog: '/api/models/catalog',
+  },
   mail: {
     list: '/api/mail/list',
     details: '/api/mail/details',
@@ -91,10 +102,5 @@ export const endpoints = {
     details: '/api/post/details',
     latest: '/api/post/latest',
     search: '/api/post/search',
-  },
-  product: {
-    list: '/api/product/list',
-    details: '/api/product/details',
-    search: '/api/product/search',
   },
 } as const;

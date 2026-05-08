@@ -30,7 +30,6 @@ export type SettingsContextValue = {
 };
 
 export type SettingsProviderProps = {
-  cookieSettings?: SettingsState;
   defaultSettings: SettingsState;
   children: React.ReactNode;
   storageKey?: string;

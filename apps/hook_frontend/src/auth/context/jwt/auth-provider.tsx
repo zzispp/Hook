@@ -36,38 +36,40 @@ type MeResponse = {
 };
 
 export function AuthProvider({ children }: Props) {
-  const { state, setState } = useSetState<AuthState>({ user: null, loading: true });
+  const { state, setState } = useSetState<AuthState>({
+    user: null,
+    error: null,
+    loading: true,
+  });
 
   const checkUserSession = useCallback(async () => {
-    try {
-      const session = await resolveSession();
+    const session = await resolveSession();
 
-      if (!session) {
-        await setSession(null);
-        setState({ user: null, loading: false });
-        return;
-      }
-
-      const res = await axios.get(endpoints.auth.me);
-      const { user } = requireApiData<MeResponse>(res.data);
-
-      setState({
-        user: {
-          ...user,
-          access_token: session.access_token,
-          displayName: user.username,
-        },
-        loading: false,
-      });
-    } catch (error) {
-      console.error(error);
+    if (!session) {
       await setSession(null);
-      setState({ user: null, loading: false });
+      setState({ user: null, error: null, loading: false });
+      return;
     }
+
+    const res = await axios.get(endpoints.auth.me);
+    const { user } = requireApiData<MeResponse>(res.data);
+
+    setState({
+      user: {
+        ...user,
+        access_token: session.access_token,
+        displayName: user.username,
+      },
+      error: null,
+      loading: false,
+    });
   }, [setState]);
 
   useEffect(() => {
-    checkUserSession();
+    checkUserSession().catch((error: Error) => {
+      console.error(error);
+      setState({ error, loading: false });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -81,19 +83,24 @@ export function AuthProvider({ children }: Props) {
     () => ({
       user: state.user ? { ...state.user, role: state.user?.role ?? 'admin' } : null,
       checkUserSession,
+      error: state.error,
       loading: status === 'loading',
       authenticated: status === 'authenticated',
       unauthenticated: status === 'unauthenticated',
     }),
-    [checkUserSession, state.user, status]
+    [checkUserSession, state.error, state.user, status]
   );
+
+  if (state.error) {
+    throw state.error;
+  }
 
   return <AuthContext value={memoizedValue}>{children}</AuthContext>;
 }
 
 async function resolveSession() {
-  const access_token = sessionStorage.getItem(JWT_STORAGE_KEY);
-  const refresh_token = sessionStorage.getItem(JWT_REFRESH_STORAGE_KEY);
+  const access_token = localStorage.getItem(JWT_STORAGE_KEY);
+  const refresh_token = localStorage.getItem(JWT_REFRESH_STORAGE_KEY);
 
   if (access_token && refresh_token && isValidToken(access_token)) {
     const session = { access_token, refresh_token };
