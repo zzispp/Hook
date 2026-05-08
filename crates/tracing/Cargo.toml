@@ -1,0 +1,9 @@
+[package]
+name = "hook_tracing"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+

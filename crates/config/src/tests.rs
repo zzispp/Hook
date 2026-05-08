@@ -1,6 +1,6 @@
 use super::{
     AdminSettings, AuthSettings, DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, RedisSettings, ServerSettings, Settings, SettingsError,
-    explicit_config_path,
+    TracingSettings, explicit_config_path,
 };
 use std::{ffi::OsString, path::PathBuf};
 
@@ -108,6 +108,24 @@ fn redis_url_uses_parts_when_url_is_missing() {
 }
 
 #[test]
+fn tracing_log_level_trims_config_value() {
+    let settings = settings_with_tracing(TracingSettings { log_level: "  debug  ".into() });
+
+    let log_level = settings.tracing_log_level().unwrap();
+
+    assert_eq!(log_level, "debug");
+}
+
+#[test]
+fn tracing_log_level_errors_when_blank() {
+    let settings = settings_with_tracing(TracingSettings { log_level: "  ".into() });
+
+    let result = settings.tracing_log_level();
+
+    assert!(matches!(result, Err(SettingsError::BlankConfigValue("tracing.log_level"))));
+}
+
+#[test]
 fn explicit_config_path_reads_path_after_config_arg() {
     let args = vec![OsString::from("backend"), OsString::from("--config"), OsString::from("custom.yaml")];
 
@@ -142,6 +160,7 @@ fn settings_with_database(database: DatabaseSettings) -> Settings {
         admin: admin_settings(),
         auth: AuthSettings { whitelist: vec![] },
         redis: redis_settings(),
+        tracing: tracing_settings(),
     }
 }
 
@@ -162,6 +181,13 @@ fn settings_with_admin(admin: AdminSettings) -> Settings {
 fn settings_with_redis(redis: RedisSettings) -> Settings {
     Settings {
         redis,
+        ..settings_with_database(database_parts())
+    }
+}
+
+fn settings_with_tracing(tracing: TracingSettings) -> Settings {
+    Settings {
+        tracing,
         ..settings_with_database(database_parts())
     }
 }
@@ -209,4 +235,8 @@ fn redis_settings() -> RedisSettings {
         protocol: Some("resp3".into()),
         key_prefix: "hook".into(),
     }
+}
+
+fn tracing_settings() -> TracingSettings {
+    TracingSettings { log_level: "info".into() }
 }

@@ -6,10 +6,19 @@ use crate::{BackendResult, migration::Migrator, startup};
 
 pub async fn run() -> BackendResult<()> {
     let settings = Settings::load()?;
+    init_tracing(&settings)?;
+
     match command_from_args(std::env::args().skip(1).collect())? {
         BackendCommand::Serve => startup::serve(settings).await,
         BackendCommand::Migration(command) => run_migration(settings, command).await,
     }
+}
+
+fn init_tracing(settings: &Settings) -> BackendResult<()> {
+    hook_tracing::init_global_subscriber(hook_tracing::TracingConfig {
+        log_level: settings.tracing_log_level()?,
+    })?;
+    Ok(())
 }
 
 async fn run_migration(settings: Settings, command: MigrationCommand) -> BackendResult<()> {

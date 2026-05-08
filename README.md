@@ -2,6 +2,19 @@
 
 Rust and pnpm monorepo for the Hook backend, frontend, mock API, and shared crates.
 
+## Backend Logging
+
+Backend logging uses the internal `hook_tracing` crate. Runtime log verbosity is
+configured in `config/config.yaml`:
+
+```yaml
+tracing:
+  log_level: "info"
+```
+
+Valid levels are `off`, `error`, `warn`, `info`, `debug`, and `trace`. Invalid
+values fail startup explicitly.
+
 ## Backend Database
 
 The backend uses SeaORM for runtime database access and SeaORM Migrator for schema

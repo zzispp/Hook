@@ -18,7 +18,7 @@ use rbac::{
 };
 use storage::connect_database;
 use tokio::net::TcpListener;
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use user::{
     api::{ApiState, TokenService, TokenSettings, create_router as create_user_router},
     application::UserService,
@@ -32,12 +32,14 @@ use crate::{
 };
 
 pub async fn serve(settings: Settings) -> BackendResult<()> {
+    let bind_addr = settings.bind_addr();
+    hook_tracing::info_with_fields!("backend starting", addr = bind_addr);
+
     let state = build_app_state(&settings).await?;
     let app = create_app(state);
-    let bind_addr = settings.bind_addr();
     let listener = TcpListener::bind(&bind_addr).await?;
 
-    tracing::info!(addr = %bind_addr, "backend listening");
+    hook_tracing::info_with_fields!("backend listening", addr = bind_addr);
     axum::serve(listener, app).await?;
     Ok(())
 }
@@ -91,6 +93,7 @@ fn create_app(state: AppState) -> Router {
         .nest("/api", api_router)
         .layer(middleware::from_fn_with_state(auth_state, auth_middleware))
         .layer(cors_layer())
+        .layer(TraceLayer::new_for_http())
 }
 
 fn cors_layer() -> CorsLayer {

@@ -45,3 +45,6 @@ redis:
   database:
   protocol: "resp3"
   key_prefix: "hook"
+
+tracing:
+  log_level: "info"

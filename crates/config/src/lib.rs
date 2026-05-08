@@ -18,6 +18,7 @@ pub struct Settings {
     pub admin: AdminSettings,
     pub auth: AuthSettings,
     pub redis: RedisSettings,
+    pub tracing: TracingSettings,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -76,6 +77,11 @@ pub struct RedisSettings {
     pub database: Option<u16>,
     pub protocol: Option<String>,
     pub key_prefix: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct TracingSettings {
+    pub log_level: String,
 }
 
 #[derive(Debug, Error)]
@@ -147,6 +153,10 @@ impl Settings {
             redis_port(self.redis.port),
             redis_query(&self.redis)
         ))
+    }
+
+    pub fn tracing_log_level(&self) -> Result<String, SettingsError> {
+        required_config_value("tracing.log_level", &self.tracing.log_level)
     }
 }
 

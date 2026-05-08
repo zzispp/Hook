@@ -8,7 +8,5 @@ type BackendResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[tokio::main]
 async fn main() -> BackendResult<()> {
-    tracing_subscriber::fmt::init();
-
     commands::run().await
 }

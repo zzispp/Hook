@@ -84,7 +84,7 @@ async fn seed_role_api_bindings(manager: &SchemaManager<'_>) -> Result<(), DbErr
     insert
         .into_table(RoleApiPermissions::Table)
         .columns([RoleApiPermissions::RoleCode, RoleApiPermissions::ApiPermissionId]);
-    for code in defaults::api::API_DEFINITIONS.iter().map(|item| item.code) {
+    for code in defaults::admin_api_codes() {
         insert.values_panic(role_api_values(defaults::ADMIN_ROLE, code));
     }
     for code in defaults::USER_API_CODES {
@@ -98,8 +98,8 @@ async fn seed_role_menu_bindings(manager: &SchemaManager<'_>) -> Result<(), DbEr
     insert
         .into_table(RoleMenuPermissions::Table)
         .columns([RoleMenuPermissions::RoleCode, RoleMenuPermissions::MenuItemId]);
-    for item in defaults::menu::MENU_ITEMS {
-        insert.values_panic(role_menu_values(defaults::ADMIN_ROLE, item.id));
+    for item_id in menu_ids_for_codes(defaults::admin_menu_codes()) {
+        insert.values_panic(role_menu_values(defaults::ADMIN_ROLE, item_id));
     }
     for item_id in menu_ids_for_codes(defaults::USER_MENU_CODES) {
         insert.values_panic(role_menu_values(defaults::USER_ROLE, item_id));
@@ -158,8 +158,8 @@ fn role_menu_values(role_code: &str, item_id: &str) -> [Expr; 2] {
     [role_code.into(), item_id.into()]
 }
 
-fn menu_ids_for_codes<'a>(codes: &'a [&'static str]) -> impl Iterator<Item = &'static str> + 'a {
-    codes.iter().map(|code| menu_id_for_code(code))
+fn menu_ids_for_codes(codes: impl IntoIterator<Item = impl AsRef<str>>) -> impl Iterator<Item = &'static str> {
+    codes.into_iter().map(|code| menu_id_for_code(code.as_ref()))
 }
 
 fn menu_id_for_code(code: &str) -> &'static str {
