@@ -5,6 +5,7 @@ import { useMemo, useState, useCallback } from 'react';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
+import Stack from '@mui/material/Stack';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -15,8 +16,8 @@ import { useTable } from 'src/components/table';
 import { MenuManagementTables } from './menu-management-tables';
 import { MenuManagementDialogs } from './menu-management-dialogs';
 import { useMenuManagementActions } from './menu-management-actions';
-import { AddButton, AdminBreadcrumbs, translatedMenuSection } from './shared';
 import { useMenuDeleteState, useMenuManagementForms } from './menu-management-state';
+import { AddButton, RefreshButton, AdminBreadcrumbs, translatedMenuSection } from './shared';
 import { toEnabledFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 
 export type MenuTab = 'items' | 'sections';
@@ -32,6 +33,7 @@ export function MenuManagementView() {
   const deleteState = useMenuDeleteState();
   const actionState = useMenuManagementActions({ formState, deleteState });
   const filters = tab === 'items' ? itemFilters : sectionFilters;
+  const activeResource = tab === 'items' ? data.items : data.sections;
   const handleFiltersChange = useCallback(
     (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
       if (tab === 'items') {
@@ -50,11 +52,14 @@ export function MenuManagementView() {
       <AdminBreadcrumbs
         heading={t('pages.menuManagement')}
         action={
-          <AddButton
-            onClick={tab === 'items' ? formState.item.openCreate : formState.section.openCreate}
-          >
-            {t(tab === 'items' ? 'actions.addMenuItem' : 'actions.addSection')}
-          </AddButton>
+          <Stack direction="row" spacing={1}>
+            <RefreshButton loading={activeResource.isLoading} onClick={() => void activeResource.refresh()} />
+            <AddButton
+              onClick={tab === 'items' ? formState.item.openCreate : formState.section.openCreate}
+            >
+              {t(tab === 'items' ? 'actions.addMenuItem' : 'actions.addSection')}
+            </AddButton>
+          </Stack>
         }
       />
 

@@ -73,7 +73,7 @@ function usePagedResource<T>(
   pageSize: number,
   filters: RbacListFilters = {}
 ) {
-  const { data, isLoading, error, isValidating } = useSWR<ApiEnvelope<PageResponse<T>>>(
+  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<ApiEnvelope<PageResponse<T>>>(
     pageKey(endpoint, page, pageSize, filters),
     fetcher,
     swrOptions
@@ -89,8 +89,9 @@ function usePagedResource<T>(
       isLoading,
       error,
       isValidating,
+      refresh: revalidate,
     };
-  }, [data, error, isLoading, isValidating]);
+  }, [data, error, isLoading, isValidating, revalidate]);
 }
 
 export function useRoles(page: number, pageSize: number, filters?: RbacListFilters) {
@@ -118,7 +119,7 @@ export function useUsers(page: number, pageSize: number, filters?: RbacListFilte
 }
 
 export function useNavbar() {
-  const { data, isLoading, error, isValidating } = useSWR<ApiEnvelope<NavResponse>>(
+  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<ApiEnvelope<NavResponse>>(
     endpoints.navbar,
     fetcher,
     swrOptions
@@ -132,8 +133,9 @@ export function useNavbar() {
       isLoading,
       error,
       isValidating,
+      refresh: revalidate,
     };
-  }, [data, error, isLoading, isValidating]);
+  }, [data, error, isLoading, isValidating, revalidate]);
 }
 
 export async function createRole(payload: RoleInput) {

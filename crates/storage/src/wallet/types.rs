@@ -2,6 +2,13 @@ use rust_decimal::Decimal;
 use types::wallet::Wallet;
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct AdminWalletRecord {
+    pub wallet: Wallet,
+    pub owner_name: String,
+    pub owner_email: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct WalletLedgerRecordInput {
     pub wallet: Wallet,
     pub transaction: WalletTransactionRecordInput,

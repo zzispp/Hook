@@ -37,7 +37,6 @@ pub(super) fn wallets_table() -> TableCreateStatement {
 pub(super) fn wallet_transactions_table() -> TableCreateStatement {
     let mut table = Table::create();
     let mut wallet_fk = wallet_fk();
-    let mut operator_fk = user_fk(WalletTransactions::Table, WalletTransactions::OperatorId, ForeignKeyAction::SetNull);
     table
         .table(WalletTransactions::Table)
         .if_not_exists()
@@ -57,8 +56,7 @@ pub(super) fn wallet_transactions_table() -> TableCreateStatement {
         .col(string_len_null(WalletTransactions::OperatorId, 36))
         .col(text_null(WalletTransactions::Description))
         .col(timestamp_tz(WalletTransactions::CreatedAt))
-        .foreign_key(&mut wallet_fk)
-        .foreign_key(&mut operator_fk);
+        .foreign_key(&mut wallet_fk);
     for check in wallet_transaction_checks() {
         table.check(Expr::cust(check));
     }

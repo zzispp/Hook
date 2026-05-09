@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest},
-    wallet::{Wallet, WalletAdjustment, WalletBalanceType, WalletId, WalletTransaction},
+    wallet::{AdminWalletListFilters, AdminWalletResponse, Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceType, WalletId, WalletTransaction},
 };
 
 use crate::application::{WalletError, WalletRepository, WalletResult, WalletService, WalletUseCase};
@@ -46,6 +46,7 @@ async fn adjust_recharge_balance_records_snapshots() {
             wallet_id: "wallet-1".into(),
             amount: Decimal::new(3, 0),
             balance_type: WalletBalanceType::Recharge,
+            adjustment_type: WalletAdjustmentType::Increase,
             operator_id: Some("admin-1".into()),
             description: Some("manual".into()),
         })
@@ -60,6 +61,30 @@ async fn adjust_recharge_balance_records_snapshots() {
 }
 
 #[tokio::test]
+async fn deduct_gift_balance_records_negative_amount() {
+    let repository = MemoryWalletRepository::default();
+    repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::ZERO, Decimal::new(5, 0)));
+    let service = WalletService::new(repository.clone());
+
+    let tx = service
+        .adjust_wallet(WalletAdjustment {
+            wallet_id: "wallet-1".into(),
+            amount: Decimal::new(3, 0),
+            balance_type: WalletBalanceType::Gift,
+            adjustment_type: WalletAdjustmentType::Deduct,
+            operator_id: None,
+            description: None,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(repository.wallets()[0].gift_balance, Decimal::new(2, 0));
+    assert_eq!(tx.amount, Decimal::new(-3, 0));
+    assert_eq!(tx.balance_before, Decimal::new(5, 0));
+    assert_eq!(tx.balance_after, Decimal::new(2, 0));
+}
+
+#[tokio::test]
 async fn adjust_rejects_negative_gift_balance() {
     let repository = MemoryWalletRepository::default();
     repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::ZERO, Decimal::new(2, 0)));
@@ -68,8 +93,29 @@ async fn adjust_rejects_negative_gift_balance() {
     let result = service
         .adjust_wallet(WalletAdjustment {
             wallet_id: "wallet-1".into(),
-            amount: Decimal::new(-3, 0),
+            amount: Decimal::new(3, 0),
             balance_type: WalletBalanceType::Gift,
+            adjustment_type: WalletAdjustmentType::Deduct,
+            operator_id: None,
+            description: None,
+        })
+        .await;
+
+    assert!(matches!(result, Err(WalletError::InvalidInput(_))));
+}
+
+#[tokio::test]
+async fn adjust_rejects_non_positive_input_amount() {
+    let repository = MemoryWalletRepository::default();
+    repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::ZERO, Decimal::new(2, 0)));
+    let service = WalletService::new(repository);
+
+    let result = service
+        .adjust_wallet(WalletAdjustment {
+            wallet_id: "wallet-1".into(),
+            amount: Decimal::ZERO,
+            balance_type: WalletBalanceType::Gift,
+            adjustment_type: WalletAdjustmentType::Increase,
             operator_id: None,
             description: None,
         })
@@ -152,6 +198,52 @@ impl WalletRepository for MemoryWalletRepository {
             page: page.page,
             page_size: page.page_size,
         })
+    }
+
+    async fn find_admin_wallet_by_id(&self, wallet_id: &str) -> WalletResult<Option<AdminWalletResponse>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .wallets
+            .iter()
+            .find(|wallet| wallet.id.0 == wallet_id)
+            .cloned()
+            .map(admin_wallet))
+    }
+
+    async fn page_admin_wallets(&self, page: PageRequest, _filters: AdminWalletListFilters) -> WalletResult<Page<AdminWalletResponse>> {
+        let items: Vec<_> = self.state.lock().unwrap().wallets.iter().cloned().map(admin_wallet).collect();
+        Ok(Page {
+            total: items.len() as u64,
+            items,
+            page: page.page,
+            page_size: page.page_size,
+        })
+    }
+}
+
+fn admin_wallet(wallet: Wallet) -> AdminWalletResponse {
+    let balance = wallet.recharge_balance + wallet.gift_balance;
+    AdminWalletResponse {
+        id: wallet.id.0,
+        user_id: wallet.user_id,
+        owner_name: "test-user".into(),
+        owner_email: "test@example.com".into(),
+        owner_type: "user".into(),
+        balance,
+        recharge_balance: wallet.recharge_balance,
+        gift_balance: wallet.gift_balance,
+        currency: wallet.currency,
+        status: wallet.status,
+        limit_mode: wallet.limit_mode.clone(),
+        unlimited: wallet.limit_mode == "unlimited",
+        total_recharged: wallet.total_recharged,
+        total_consumed: wallet.total_consumed,
+        total_refunded: wallet.total_refunded,
+        total_adjusted: wallet.total_adjusted,
+        created_at: wallet.created_at,
+        updated_at: wallet.updated_at,
     }
 }
 

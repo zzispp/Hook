@@ -53,7 +53,7 @@ async fn seed_api_permissions(manager: &SchemaManager<'_>) -> Result<(), DbErr> 
         ApiPermissions::CreatedAt,
         ApiPermissions::UpdatedAt,
     ]);
-    for (index, definition) in defaults::api::API_DEFINITIONS.iter().enumerate() {
+    for (index, definition) in defaults::api::iter_definitions().enumerate() {
         insert.values_panic(api_values(index, definition));
     }
     manager.execute(insert.to_owned()).await
@@ -257,10 +257,7 @@ fn menu_id_for_code(code: &str) -> &'static str {
 }
 
 fn api_id_for_code(code: &str) -> String {
-    let index = defaults::api::API_DEFINITIONS
-        .iter()
-        .position(|item| item.code == code)
-        .expect("default API code must exist");
+    let index = defaults::api::position_by_code(code).expect("default API code must exist");
     default_api_id(index)
 }
 

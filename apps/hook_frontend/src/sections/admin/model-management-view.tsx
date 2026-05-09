@@ -6,6 +6,7 @@ import type { ModelsDevModelItem, GlobalModelResponse } from 'src/types/model';
 import { useState, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 
 import { useTranslate } from 'src/locales/use-locales';
@@ -23,9 +24,9 @@ import { useTable } from 'src/components/table';
 import { ConfirmDialog } from 'src/components/custom-dialog';
 
 import { ModelDevPicker } from './model-dev-picker';
-import { AddButton, AdminBreadcrumbs } from './shared';
 import { GlobalModelTable } from './global-model-table';
 import { GlobalModelFormDialog } from './global-model-form-dialog';
+import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
 import { toModelFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 import {
   DEFAULT_FORM,
@@ -55,7 +56,12 @@ export function ModelManagementView() {
     <DashboardContent>
       <AdminBreadcrumbs
         heading={t('pages.modelManagement')}
-        action={<AddButton onClick={dialog.openCreate}>{t('actions.addModel')}</AddButton>}
+        action={
+          <Stack direction="row" spacing={1}>
+            <RefreshButton loading={models.isLoading} onClick={() => void models.refresh()} />
+            <AddButton onClick={dialog.openCreate}>{t('actions.addModel')}</AddButton>
+          </Stack>
+        }
       />
 
       <Card>

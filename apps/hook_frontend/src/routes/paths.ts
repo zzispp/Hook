@@ -63,6 +63,7 @@ export const paths = {
       apis: `${ROOTS.DASHBOARD}/admin/apis`,
       menus: `${ROOTS.DASHBOARD}/admin/menus`,
       models: `${ROOTS.DASHBOARD}/admin/models`,
+      wallets: `${ROOTS.DASHBOARD}/admin/wallets`,
     },
     general: {
       app: `${ROOTS.DASHBOARD}/app`,

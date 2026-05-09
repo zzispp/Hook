@@ -28,13 +28,13 @@ import { useTable, TableNoData, TablePaginationCustom } from 'src/components/tab
 
 import { apiTableHead } from './api-table-head';
 import { ApiMenuSelect } from './api-menu-select';
+import { RefreshAddActions } from './admin-page-actions';
 import {
   toEnabledFilters,
   AdminFiltersToolbar,
   DEFAULT_ADMIN_FILTERS,
 } from './admin-filters-toolbar';
 import {
-  AddButton,
   SwitchRow,
   MethodLabel,
   TextFieldRow,
@@ -48,8 +48,6 @@ import {
   ManagementTableHead,
 } from './shared';
 
-// ----------------------------------------------------------------------
-
 const DEFAULT_FORM: ApiPermissionInput = {
   code: '',
   method: 'GET',
@@ -60,17 +58,12 @@ const DEFAULT_FORM: ApiPermissionInput = {
   menu_item_ids: [],
 };
 
-// ----------------------------------------------------------------------
-
 export function ApiManagementView() {
   const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'name' });
   const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
-  const { items, total, isLoading } = useApis(
-    table.page,
-    table.rowsPerPage,
-    toEnabledFilters(filters)
-  );
+  const apis = useApis(table.page, table.rowsPerPage, toEnabledFilters(filters));
+  const { items, total, isLoading } = apis;
   const menuItems = useMenuItems(0, 100);
   const tableHead = useMemo(() => apiTableHead(t), [t]);
 
@@ -158,7 +151,14 @@ export function ApiManagementView() {
     <DashboardContent>
       <AdminBreadcrumbs
         heading={t('pages.apiManagement')}
-        action={<AddButton onClick={handleOpenCreate}>{t('actions.addApi')}</AddButton>}
+        action={
+          <RefreshAddActions
+            loading={isLoading}
+            addLabel={t('actions.addApi')}
+            onAdd={handleOpenCreate}
+            onRefresh={() => void apis.refresh()}
+          />
+        }
       />
 
       <Card>

@@ -36,6 +36,7 @@ const ITEM_KEY_BY_CODE: Record<string, string> = {
   admin_apis: 'nav.apis',
   admin_menus: 'nav.menus',
   admin_models: 'nav.models',
+  admin_wallets: 'nav.walletManagement',
 };
 
 const ITEM_KEY_BY_PATH: Record<string, string> = {
@@ -48,6 +49,7 @@ const ITEM_KEY_BY_PATH: Record<string, string> = {
   '/dashboard/admin/apis': 'nav.apis',
   '/dashboard/admin/menus': 'nav.menus',
   '/dashboard/admin/models': 'nav.models',
+  '/dashboard/admin/wallets': 'nav.walletManagement',
 };
 
 export function translateNavData(data: NavData, t: TranslateFn): NavData {

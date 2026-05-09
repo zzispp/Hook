@@ -44,7 +44,7 @@ export function useGlobalModels(page: number, pageSize: number, filters: GlobalM
     { params: { skip: page * pageSize, limit: pageSize, ...filters } },
   ] as const;
 
-  const { data, isLoading, error, isValidating } = useSWR<ApiEnvelope<GlobalModelListResponse>>(
+  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<ApiEnvelope<GlobalModelListResponse>>(
     key,
     fetcher,
     swrOptions
@@ -59,8 +59,9 @@ export function useGlobalModels(page: number, pageSize: number, filters: GlobalM
       isLoading,
       error,
       isValidating,
+      refresh: revalidate,
     };
-  }, [data, error, isLoading, isValidating]);
+  }, [data, error, isLoading, isValidating, revalidate]);
 }
 
 export async function createGlobalModel(payload: GlobalModelCreate) {

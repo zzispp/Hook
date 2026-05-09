@@ -1,6 +1,9 @@
 use rust_decimal::Decimal;
 use sea_orm::entity::prelude::*;
+use time::format_description::well_known::Rfc3339;
 use types::wallet::{Wallet, WalletId};
+
+use crate::user::UserEntity as Users;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "wallets")]
@@ -23,9 +26,18 @@ pub struct Model {
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(belongs_to = "Users", from = "Column::UserId", to = "crate::user::UserColumn::Id")]
+    User,
+}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl Related<Users> for Entity {
+    fn to() -> RelationDef {
+        Relation::User.def()
+    }
+}
 
 impl From<Model> for Wallet {
     fn from(value: Model) -> Self {
@@ -41,8 +53,12 @@ impl From<Model> for Wallet {
             total_consumed: value.total_consumed,
             total_refunded: value.total_refunded,
             total_adjusted: value.total_adjusted,
-            created_at: value.created_at.to_string(),
-            updated_at: value.updated_at.to_string(),
+            created_at: format_timestamp(value.created_at),
+            updated_at: format_timestamp(value.updated_at),
         }
     }
+}
+
+fn format_timestamp(value: TimeDateTimeWithTimeZone) -> String {
+    value.format(&Rfc3339).expect("wallet timestamp must format as RFC3339")
 }

@@ -1,5 +1,6 @@
 use rust_decimal::Decimal;
 use sea_orm::entity::prelude::*;
+use time::format_description::well_known::Rfc3339;
 use types::wallet::WalletTransaction;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -47,7 +48,11 @@ impl From<Model> for WalletTransaction {
             link_id: value.link_id,
             operator_id: value.operator_id,
             description: value.description,
-            created_at: value.created_at.to_string(),
+            created_at: format_timestamp(value.created_at),
         }
     }
+}
+
+fn format_timestamp(value: TimeDateTimeWithTimeZone) -> String {
+    value.format(&Rfc3339).expect("wallet timestamp must format as RFC3339")
 }

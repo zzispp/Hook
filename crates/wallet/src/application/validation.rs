@@ -20,8 +20,8 @@ pub fn validate_wallet_id(wallet_id: &str) -> WalletResult<()> {
 }
 
 pub fn validate_adjust_amount(amount: Decimal) -> WalletResult<()> {
-    if amount.is_zero() {
-        return Err(WalletError::InvalidInput("adjust amount must not be zero".into()));
+    if amount <= Decimal::ZERO {
+        return Err(WalletError::InvalidInput("adjust amount must be greater than 0".into()));
     }
     Ok(())
 }

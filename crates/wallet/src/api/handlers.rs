@@ -1,13 +1,16 @@
 use axum::{
     Extension, Json,
-    extract::{Query, State},
+    extract::{Path, Query, State},
 };
 use rbac::api::CurrentUser;
 use serde::Deserialize;
 use types::{
     pagination::PageRequest,
     response::ApiResponse,
-    wallet::{WalletBalanceResponse, WalletTransactionsResponse},
+    wallet::{
+        AdminWalletAdjustmentPayload, AdminWalletAdjustmentResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletTransactionsResponse,
+        WalletAdjustment, WalletBalanceResponse, WalletTransactionsResponse,
+    },
 };
 
 use crate::api::{WalletApiError, WalletApiState};
@@ -24,6 +27,14 @@ pub struct WalletListQuery {
     pub page_size: u64,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct AdminWalletListQuery {
+    pub page: u64,
+    pub page_size: u64,
+    pub search: Option<String>,
+    pub status: Option<String>,
+}
+
 pub async fn balance(State(state): State<WalletApiState>, Extension(current_user): Extension<CurrentUser>) -> ApiResult<ApiJson<WalletBalanceResponse>> {
     ensure_user_wallet_access(&current_user)?;
     Ok(ok(state.wallets.balance(&current_user.id).await?))
@@ -38,12 +49,67 @@ pub async fn transactions(
     Ok(ok(state.wallets.transactions(&current_user.id, query.into()).await?))
 }
 
+pub async fn admin_wallets(
+    State(state): State<WalletApiState>,
+    Query(query): Query<AdminWalletListQuery>,
+) -> ApiResult<ApiJson<AdminWalletListResponse>> {
+    let page = PageRequest::from(&query);
+    Ok(ok(state.wallets.admin_wallets(page, query.into()).await?))
+}
+
+pub async fn admin_transactions(
+    State(state): State<WalletApiState>,
+    Path(wallet_id): Path<String>,
+    Query(query): Query<WalletListQuery>,
+) -> ApiResult<ApiJson<AdminWalletTransactionsResponse>> {
+    Ok(ok(state.wallets.admin_transactions(&wallet_id, query.into()).await?))
+}
+
+pub async fn admin_adjust_wallet(
+    State(state): State<WalletApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Path(wallet_id): Path<String>,
+    Json(payload): Json<AdminWalletAdjustmentPayload>,
+) -> ApiResult<ApiJson<AdminWalletAdjustmentResponse>> {
+    let transaction = state.wallets.adjust_wallet(adjustment(wallet_id, current_user.id, payload)).await?;
+    Ok(ok(AdminWalletAdjustmentResponse { transaction: transaction.into() }))
+}
+
 impl From<WalletListQuery> for PageRequest {
     fn from(value: WalletListQuery) -> Self {
         Self {
             page: value.page,
             page_size: value.page_size,
         }
+    }
+}
+
+impl From<&AdminWalletListQuery> for PageRequest {
+    fn from(value: &AdminWalletListQuery) -> Self {
+        Self {
+            page: value.page,
+            page_size: value.page_size,
+        }
+    }
+}
+
+impl From<AdminWalletListQuery> for AdminWalletListFilters {
+    fn from(value: AdminWalletListQuery) -> Self {
+        Self {
+            search: value.search,
+            status: value.status,
+        }
+    }
+}
+
+fn adjustment(wallet_id: String, operator_id: String, payload: AdminWalletAdjustmentPayload) -> WalletAdjustment {
+    WalletAdjustment {
+        wallet_id,
+        amount: payload.amount,
+        balance_type: payload.balance_type.into(),
+        adjustment_type: payload.adjustment_type.into(),
+        operator_id: Some(operator_id),
+        description: payload.description,
     }
 }
 

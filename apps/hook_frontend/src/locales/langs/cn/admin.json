@@ -7,6 +7,7 @@
     "account": "账户",
     "walletCenter": "钱包中心",
     "systemManagement": "系统管理",
+    "walletManagement": "钱包管理",
     "users": "用户管理",
     "roles": "角色管理",
     "apis": "API 管理",
@@ -14,16 +15,16 @@
     "models": "模型管理",
     "customKeyboardShortcuts": "自定义键盘快捷键。"
   },
-    "common": {
-      "active": "启用",
-      "add": "新增",
-      "api": "API",
-      "apis": "API",
-      "auth": "认证",
-      "cancel": "取消",
-      "caption": "说明",
-      "close": "关闭",
-      "code": "编码",
+  "common": {
+    "active": "启用",
+    "add": "新增",
+    "api": "API",
+    "apis": "API",
+    "auth": "认证",
+    "cancel": "取消",
+    "caption": "说明",
+    "close": "关闭",
+    "code": "编码",
     "create": "创建",
     "custom": "自定义",
     "delete": "删除",
@@ -66,14 +67,16 @@
     "searchModels": "搜索模型名称...",
     "searchRoles": "搜索角色名称、编码或描述...",
     "searchSections": "搜索分组标题或编码...",
-    "searchUsers": "搜索用户名、邮箱或角色..."
+    "searchUsers": "搜索用户名、邮箱或角色...",
+    "searchWallets": "搜索钱包 ID、用户 ID、用户名或邮箱..."
   },
   "pages": {
     "apiManagement": "API 管理",
     "menuManagement": "菜单管理",
     "modelManagement": "模型管理",
     "roleManagement": "角色管理",
-    "userManagement": "用户管理"
+    "userManagement": "用户管理",
+    "walletManagement": "钱包管理"
   },
   "actions": {
     "addApi": "新增 API",
@@ -85,6 +88,7 @@
     "addUser": "新增用户",
     "apiPermissions": "API 权限",
     "bindApis": "绑定 API",
+    "adjustWallet": "调账",
     "menuPermissions": "菜单权限",
     "savePermissions": "保存权限"
   },
@@ -187,6 +191,8 @@
     "menus": "菜单",
     "models": "模型",
     "wallet": "钱包",
+    "admin wallet": "管理员钱包",
+    "admin_wallet": "管理员钱包",
     "rbac": "权限",
     "system": "系统",
     "users": "用户"
@@ -231,7 +237,10 @@
     "models_public_catalog_read": "查看普通模型目录",
     "wallet_balance_read": "查看钱包余额",
     "wallet_transactions_read": "查看钱包流水",
-    "models_external_read": "获取外部模型"
+    "models_external_read": "获取外部模型",
+    "admin_wallets_read": "查看管理员钱包列表",
+    "admin_wallet_transactions_read": "查看管理员钱包流水",
+    "admin_wallet_adjust": "管理员钱包调账"
   },
   "models": {
     "availableModels": "可用模型",
@@ -306,7 +315,17 @@
     "viewAll": "查看全部",
     "markComplete": "标记完成",
     "share": "分享",
-    "months": ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月"],
+    "months": [
+      "1月",
+      "2月",
+      "3月",
+      "4月",
+      "5月",
+      "6月",
+      "7月",
+      "8月",
+      "9月"
+    ],
     "regions": {
       "america": "美洲",
       "asia": "亚洲",
@@ -367,5 +386,147 @@
       "更新网站内容",
       "开展市场调研"
     ]
+  },
+  "wallet": {
+    "title": "钱包管理",
+    "tabs": {
+      "ledger": "资金流水"
+    },
+    "metrics": {
+      "availableBalance": "可用余额",
+      "rechargeBalance": "充值余额",
+      "giftBalance": "赠款余额",
+      "totalConsumed": "累计消费"
+    },
+    "filters": {
+      "searchLabel": "搜索",
+      "searchPlaceholder": "说明 / ID / 关联记录",
+      "category": "一级分类",
+      "reason": "二级分类",
+      "direction": "金额方向",
+      "balanceType": "余额类型",
+      "linkType": "关联类型",
+      "allCategories": "全部分类",
+      "allReasons": "全部二级",
+      "allDirections": "全部方向",
+      "allBalances": "全部余额",
+      "allLinkTypes": "全部关联"
+    },
+    "actions": {
+      "details": "详情",
+      "reset": "重置"
+    },
+    "table": {
+      "time": "时间",
+      "owner": "归属",
+      "type": "类型",
+      "amount": "到账金额",
+      "balanceChange": "余额变化",
+      "description": "说明",
+      "action": "操作"
+    },
+    "dialog": {
+      "title": "流水详情",
+      "subtitle": "资金动作审计信息"
+    },
+    "fields": {
+      "owner": "归属",
+      "balanceChange": "余额变化",
+      "linkType": "关联类型",
+      "transactionId": "交易ID",
+      "linkId": "关联ID",
+      "operator": "操作用户",
+      "description": "说明"
+    },
+    "statusLabels": {
+      "active": "正常",
+      "disabled": "已禁用",
+      "suspended": "已冻结",
+      "closed": "已关闭"
+    },
+    "categoryLabels": {
+      "recharge": "充值",
+      "gift": "赠款",
+      "adjust": "调账",
+      "refund": "退款",
+      "consume": "消费"
+    },
+    "reasonLabels": {
+      "topup_admin_manual": "人工充值",
+      "topup_gateway": "支付充值",
+      "topup_card_code": "卡密充值",
+      "topup_redeem_code": "兑换码充值",
+      "gift_initial": "初始赠款",
+      "gift_campaign": "活动赠款",
+      "gift_recharge_bonus": "充值赠送",
+      "gift_referral_commission": "邀请返佣",
+      "gift_referral_commission_revert": "返佣回退",
+      "gift_redeem_code": "兑换码赠款",
+      "gift_expire_reclaim": "赠款回收",
+      "adjust_admin": "人工调账",
+      "adjust_system": "系统调账",
+      "refund_out": "退款扣减",
+      "refund_revert": "退款回补",
+      "wallet_created": "钱包初始化"
+    },
+    "linkTypeLabels": {
+      "payment_order": "充值订单",
+      "refund_request": "退款申请",
+      "admin_action": "后台操作",
+      "system_task": "系统任务",
+      "campaign": "活动批次",
+      "usage": "用量记录",
+      "redeem_code": "兑换码",
+      "referral_commission": "返佣记录",
+      "referral_commission_reversal": "返佣回退"
+    },
+    "directionLabels": {
+      "income": "收入",
+      "expense": "支出"
+    },
+    "balanceTypeLabels": {
+      "recharge": "充值余额",
+      "gift": "赠款余额"
+    },
+    "balanceBreakdown": "充 {{rechargeBefore}}→{{rechargeAfter}} · 赠 {{giftBefore}}→{{giftAfter}}",
+    "ledgerSummary": "显示 {{shown}} / 已加载 {{loaded}} 条，共 {{total}} 条",
+    "ownerSummary": "用户钱包 · {{status}}",
+    "currentUser": "当前用户",
+    "emptyLedger": "暂无资金流水",
+    "emptyValue": "-",
+    "unknown": "未知",
+    "systemAuto": "系统自动",
+    "operatorRecorded": "已记录操作用户",
+    "operatorId": "ID: {{id}}"
+  },
+  "adminWallets": {
+    "filters": {
+      "searchPlaceholder": "搜索钱包 ID、用户 ID、用户名或邮箱..."
+    },
+    "fields": {
+      "owner": "归属",
+      "updatedAt": "更新时间"
+    },
+    "actions": {
+      "ledger": "流水",
+      "adjust": "调账"
+    },
+    "ledger": {
+      "title": "钱包流水"
+    },
+    "adjust": {
+      "title": "管理员调账",
+      "amount": "调账金额",
+      "balanceType": "余额类型",
+      "adjustmentType": "调账类型",
+      "types": {
+        "increase": "增加",
+        "deduct": "扣除"
+      }
+    },
+    "messages": {
+      "adjusted": "钱包调账已完成"
+    },
+    "walletSummary": "显示 {{shown}} 条，共 {{total}} 个钱包"
   }
 }

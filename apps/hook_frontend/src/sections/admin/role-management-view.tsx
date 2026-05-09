@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -12,10 +13,10 @@ import { useTable } from 'src/components/table';
 
 import { RoleTable } from './role-table';
 import { RoleFormDialog } from './role-form-dialog';
-import { AddButton, AdminBreadcrumbs } from './shared';
 import { RoleDeleteDialog } from './role-delete-dialog';
 import { RolePermissionDialog } from './role-permission-dialog';
 import { useRoleManagementActions } from './role-management-actions';
+import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
 import { toEnabledFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 import {
   useRoleFormState,
@@ -46,7 +47,12 @@ export function RoleManagementView() {
     <DashboardContent>
       <AdminBreadcrumbs
         heading={t('pages.roleManagement')}
-        action={<AddButton onClick={formState.openCreate}>{t('actions.addRole')}</AddButton>}
+        action={
+          <Stack direction="row" spacing={1}>
+            <RefreshButton loading={roles.isLoading} onClick={() => void roles.refresh()} />
+            <AddButton onClick={formState.openCreate}>{t('actions.addRole')}</AddButton>
+          </Stack>
+        }
       />
 
       <Card>

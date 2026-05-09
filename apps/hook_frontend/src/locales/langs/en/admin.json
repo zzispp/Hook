@@ -7,6 +7,7 @@
     "account": "Account",
     "walletCenter": "Wallet Center",
     "systemManagement": "System Management",
+    "walletManagement": "Wallet Management",
     "users": "Users",
     "roles": "Roles",
     "apis": "APIs",
@@ -14,16 +15,16 @@
     "models": "Models",
     "customKeyboardShortcuts": "Custom keyboard shortcuts."
   },
-    "common": {
-      "active": "Active",
-      "add": "Add",
-      "api": "API",
-      "apis": "APIs",
-      "auth": "Auth",
-      "cancel": "Cancel",
-      "caption": "Caption",
-      "close": "Close",
-      "code": "Code",
+  "common": {
+    "active": "Active",
+    "add": "Add",
+    "api": "API",
+    "apis": "APIs",
+    "auth": "Auth",
+    "cancel": "Cancel",
+    "caption": "Caption",
+    "close": "Close",
+    "code": "Code",
     "create": "Create",
     "custom": "Custom",
     "delete": "Delete",
@@ -66,14 +67,16 @@
     "searchModels": "Search model name...",
     "searchRoles": "Search role name, code, or description...",
     "searchSections": "Search section title or code...",
-    "searchUsers": "Search username, email, or role..."
+    "searchUsers": "Search username, email, or role...",
+    "searchWallets": "Search wallet ID, user ID, username, or email..."
   },
   "pages": {
     "apiManagement": "API Management",
     "menuManagement": "Menu Management",
     "modelManagement": "Model Management",
     "roleManagement": "Role Management",
-    "userManagement": "User Management"
+    "userManagement": "User Management",
+    "walletManagement": "Wallet Management"
   },
   "actions": {
     "addApi": "Add API",
@@ -85,6 +88,7 @@
     "addUser": "Add user",
     "apiPermissions": "API permissions",
     "bindApis": "Bind APIs",
+    "adjustWallet": "Adjust wallet",
     "menuPermissions": "Menu permissions",
     "savePermissions": "Save permissions"
   },
@@ -187,6 +191,8 @@
     "menus": "Menus",
     "models": "Models",
     "wallet": "Wallet",
+    "admin wallet": "Admin Wallet",
+    "admin_wallet": "Admin Wallet",
     "rbac": "RBAC",
     "system": "System",
     "users": "Users"
@@ -231,7 +237,10 @@
     "models_public_catalog_read": "Public model catalog",
     "wallet_balance_read": "Wallet balance",
     "wallet_transactions_read": "Wallet transactions",
-    "models_external_read": "External models"
+    "models_external_read": "External models",
+    "admin_wallets_read": "List admin wallets",
+    "admin_wallet_transactions_read": "Admin wallet transactions",
+    "admin_wallet_adjust": "Admin wallet adjustment"
   },
   "models": {
     "availableModels": "Available Models",
@@ -306,7 +315,17 @@
     "viewAll": "View all",
     "markComplete": "Mark complete",
     "share": "Share",
-    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"],
+    "months": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep"
+    ],
     "regions": {
       "america": "America",
       "asia": "Asia",
@@ -367,5 +386,147 @@
       "Update Website Content",
       "Conduct Market Research"
     ]
+  },
+  "wallet": {
+    "title": "Wallet Management",
+    "tabs": {
+      "ledger": "Ledger"
+    },
+    "metrics": {
+      "availableBalance": "Available balance",
+      "rechargeBalance": "Recharge balance",
+      "giftBalance": "Gift balance",
+      "totalConsumed": "Total consumed"
+    },
+    "filters": {
+      "searchLabel": "Search",
+      "searchPlaceholder": "Description / ID / linked record",
+      "category": "Category",
+      "reason": "Reason",
+      "direction": "Direction",
+      "balanceType": "Balance type",
+      "linkType": "Link type",
+      "allCategories": "All categories",
+      "allReasons": "All reasons",
+      "allDirections": "All directions",
+      "allBalances": "All balances",
+      "allLinkTypes": "All links"
+    },
+    "actions": {
+      "details": "Details",
+      "reset": "Reset"
+    },
+    "table": {
+      "time": "Time",
+      "owner": "Owner",
+      "type": "Type",
+      "amount": "Amount",
+      "balanceChange": "Balance change",
+      "description": "Description",
+      "action": "Action"
+    },
+    "dialog": {
+      "title": "Ledger details",
+      "subtitle": "Wallet action audit information"
+    },
+    "fields": {
+      "owner": "Owner",
+      "balanceChange": "Balance change",
+      "linkType": "Link type",
+      "transactionId": "Transaction ID",
+      "linkId": "Link ID",
+      "operator": "Operator",
+      "description": "Description"
+    },
+    "statusLabels": {
+      "active": "Active",
+      "disabled": "Disabled",
+      "suspended": "Suspended",
+      "closed": "Closed"
+    },
+    "categoryLabels": {
+      "recharge": "Recharge",
+      "gift": "Gift",
+      "adjust": "Adjustment",
+      "refund": "Refund",
+      "consume": "Consumption"
+    },
+    "reasonLabels": {
+      "topup_admin_manual": "Manual recharge",
+      "topup_gateway": "Payment recharge",
+      "topup_card_code": "Card recharge",
+      "topup_redeem_code": "Redeem-code recharge",
+      "gift_initial": "Initial gift",
+      "gift_campaign": "Campaign gift",
+      "gift_recharge_bonus": "Recharge bonus",
+      "gift_referral_commission": "Referral commission",
+      "gift_referral_commission_revert": "Referral reversal",
+      "gift_redeem_code": "Redeem-code gift",
+      "gift_expire_reclaim": "Gift reclaim",
+      "adjust_admin": "Admin adjustment",
+      "adjust_system": "System adjustment",
+      "refund_out": "Refund debit",
+      "refund_revert": "Refund revert",
+      "wallet_created": "Wallet initialized"
+    },
+    "linkTypeLabels": {
+      "payment_order": "Payment order",
+      "refund_request": "Refund request",
+      "admin_action": "Admin action",
+      "system_task": "System task",
+      "campaign": "Campaign batch",
+      "usage": "Usage record",
+      "redeem_code": "Redeem code",
+      "referral_commission": "Commission record",
+      "referral_commission_reversal": "Commission reversal"
+    },
+    "directionLabels": {
+      "income": "Income",
+      "expense": "Expense"
+    },
+    "balanceTypeLabels": {
+      "recharge": "Recharge balance",
+      "gift": "Gift balance"
+    },
+    "balanceBreakdown": "Recharge {{rechargeBefore}}→{{rechargeAfter}} · Gift {{giftBefore}}→{{giftAfter}}",
+    "ledgerSummary": "Showing {{shown}} / loaded {{loaded}}, total {{total}}",
+    "ownerSummary": "User wallet · {{status}}",
+    "currentUser": "Current user",
+    "emptyLedger": "No ledger entries",
+    "emptyValue": "-",
+    "unknown": "Unknown",
+    "systemAuto": "System automatic",
+    "operatorRecorded": "Recorded operator",
+    "operatorId": "ID: {{id}}"
+  },
+  "adminWallets": {
+    "filters": {
+      "searchPlaceholder": "Search wallet ID, user ID, username, or email..."
+    },
+    "fields": {
+      "owner": "Owner",
+      "updatedAt": "Updated at"
+    },
+    "actions": {
+      "ledger": "Ledger",
+      "adjust": "Adjust"
+    },
+    "ledger": {
+      "title": "Wallet ledger"
+    },
+    "adjust": {
+      "title": "Admin adjustment",
+      "amount": "Adjustment amount",
+      "balanceType": "Balance type",
+      "adjustmentType": "Adjustment type",
+      "types": {
+        "increase": "Increase",
+        "deduct": "Deduct"
+      }
+    },
+    "messages": {
+      "adjusted": "Wallet adjusted"
+    },
+    "walletSummary": "Showing {{shown}}, total {{total}} wallets"
   }
 }

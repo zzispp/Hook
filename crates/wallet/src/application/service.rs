@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
-    pagination::PageRequest,
+    pagination::{Page, PageRequest},
     wallet::{
-        Wallet, WalletAdjustment, WalletBalanceResponse, WalletBalanceType, WalletSummaryResponse, WalletTransaction, WalletTransactionResponse,
-        WalletTransactionsResponse,
+        AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse, AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletAdjustmentType,
+        WalletBalanceResponse, WalletBalanceType, WalletSummaryResponse, WalletTransaction, WalletTransactionResponse, WalletTransactionsResponse,
     },
 };
 
@@ -56,14 +56,27 @@ where
         validate_page(page)?;
         let wallet = self.user_wallet(user_id).await?;
         let wallet_summary = WalletSummaryResponse::from(wallet.clone());
-        let page = self.repository.page_transactions(&wallet.id.0, page).await?;
-        Ok(WalletTransactionsResponse {
-            wallet: wallet_summary,
-            items: page.items.into_iter().map(WalletTransactionResponse::from).collect(),
-            total: page.total,
-            page: page.page,
-            page_size: page.page_size,
+        let transactions = self.repository.page_transactions(&wallet.id.0, page).await?;
+        Ok(user_transactions_response(wallet_summary, transactions))
+    }
+
+    async fn admin_wallets(&self, page: PageRequest, filters: AdminWalletListFilters) -> WalletResult<AdminWalletListResponse> {
+        validate_page(page)?;
+        let wallets = self.repository.page_admin_wallets(page, filters).await?;
+        Ok(AdminWalletListResponse {
+            items: wallets.items,
+            total: wallets.total,
+            page: wallets.page,
+            page_size: wallets.page_size,
         })
+    }
+
+    async fn admin_transactions(&self, wallet_id: &str, page: PageRequest) -> WalletResult<AdminWalletTransactionsResponse> {
+        validate_page(page)?;
+        validate_wallet_id(wallet_id)?;
+        let wallet = self.repository.find_admin_wallet_by_id(wallet_id).await?.ok_or(WalletError::NotFound)?;
+        let transactions = self.repository.page_transactions(wallet_id, page).await?;
+        Ok(admin_transactions_response(wallet, transactions))
     }
 
     async fn adjust_wallet(&self, input: WalletAdjustment) -> WalletResult<WalletTransaction> {
@@ -74,17 +87,43 @@ where
     }
 }
 
+fn user_transactions_response(wallet: WalletSummaryResponse, page: Page<WalletTransaction>) -> WalletTransactionsResponse {
+    WalletTransactionsResponse {
+        wallet,
+        items: transaction_responses(page.items),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+    }
+}
+
+fn admin_transactions_response(wallet: AdminWalletResponse, page: Page<WalletTransaction>) -> AdminWalletTransactionsResponse {
+    AdminWalletTransactionsResponse {
+        wallet,
+        items: transaction_responses(page.items),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+    }
+}
+
+fn transaction_responses(items: Vec<WalletTransaction>) -> Vec<WalletTransactionResponse> {
+    items.into_iter().map(WalletTransactionResponse::from).collect()
+}
+
 fn apply_adjustment(wallet: Wallet, input: WalletAdjustment) -> WalletResult<(Wallet, WalletTransaction)> {
     let before_recharge = wallet.recharge_balance;
     let before_gift = wallet.gift_balance;
     let before_total = before_recharge + before_gift;
-    let after_recharge = adjusted_recharge_balance(&input, before_recharge);
-    let after_gift = adjusted_gift_balance(&input, before_gift)?;
+    let signed_amount = signed_adjust_amount(&input);
+    let after_recharge = adjusted_recharge_balance(&input, before_recharge, signed_amount)?;
+    let after_gift = adjusted_gift_balance(&input, before_gift, signed_amount)?;
     let after_total = after_recharge + after_gift;
-    let updated_wallet = adjusted_wallet(wallet, &input, after_recharge, after_gift);
+    let updated_wallet = adjusted_wallet(wallet, after_recharge, after_gift, signed_amount);
     let transaction = adjustment_transaction(
         &updated_wallet,
         input,
+        signed_amount,
         BalanceSnapshot {
             before_recharge,
             after_recharge,
@@ -97,42 +136,50 @@ fn apply_adjustment(wallet: Wallet, input: WalletAdjustment) -> WalletResult<(Wa
     Ok((updated_wallet, transaction))
 }
 
-fn adjusted_recharge_balance(input: &WalletAdjustment, before: Decimal) -> Decimal {
-    match input.balance_type {
-        WalletBalanceType::Recharge => before + input.amount,
-        WalletBalanceType::Gift => before,
+fn signed_adjust_amount(input: &WalletAdjustment) -> Decimal {
+    match input.adjustment_type {
+        WalletAdjustmentType::Increase => input.amount,
+        WalletAdjustmentType::Deduct => -input.amount,
     }
 }
 
-fn adjusted_gift_balance(input: &WalletAdjustment, before: Decimal) -> WalletResult<Decimal> {
+fn adjusted_recharge_balance(input: &WalletAdjustment, before: Decimal, amount: Decimal) -> WalletResult<Decimal> {
+    match input.balance_type {
+        WalletBalanceType::Recharge => non_negative_balance(before + amount, "recharge balance"),
+        WalletBalanceType::Gift => Ok(before),
+    }
+}
+
+fn adjusted_gift_balance(input: &WalletAdjustment, before: Decimal, amount: Decimal) -> WalletResult<Decimal> {
     match input.balance_type {
         WalletBalanceType::Recharge => Ok(before),
-        WalletBalanceType::Gift => {
-            let after = before + input.amount;
-            if after < Decimal::ZERO {
-                return Err(WalletError::InvalidInput("gift balance cannot be negative".into()));
-            }
-            Ok(after)
-        }
+        WalletBalanceType::Gift => non_negative_balance(before + amount, "gift balance"),
     }
 }
 
-fn adjusted_wallet(wallet: Wallet, input: &WalletAdjustment, recharge_balance: Decimal, gift_balance: Decimal) -> Wallet {
+fn non_negative_balance(value: Decimal, field: &str) -> WalletResult<Decimal> {
+    if value < Decimal::ZERO {
+        return Err(WalletError::InvalidInput(format!("{field} cannot be negative")));
+    }
+    Ok(value)
+}
+
+fn adjusted_wallet(wallet: Wallet, recharge_balance: Decimal, gift_balance: Decimal, amount: Decimal) -> Wallet {
     Wallet {
         recharge_balance,
         gift_balance,
-        total_adjusted: wallet.total_adjusted + input.amount,
+        total_adjusted: wallet.total_adjusted + amount,
         ..wallet
     }
 }
 
-fn adjustment_transaction(wallet: &Wallet, input: WalletAdjustment, snapshot: BalanceSnapshot) -> WalletTransaction {
+fn adjustment_transaction(wallet: &Wallet, input: WalletAdjustment, amount: Decimal, snapshot: BalanceSnapshot) -> WalletTransaction {
     WalletTransaction {
         id: String::new(),
         wallet_id: wallet.id.0.clone(),
         category: CATEGORY_ADJUST.into(),
         reason_code: REASON_ADJUST_ADMIN.into(),
-        amount: input.amount,
+        amount,
         balance_before: snapshot.before_total,
         balance_after: snapshot.after_total,
         recharge_balance_before: snapshot.before_recharge,

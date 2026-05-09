@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WalletId(pub String);
@@ -46,14 +46,27 @@ pub struct WalletAdjustment {
     pub wallet_id: String,
     pub amount: Decimal,
     pub balance_type: WalletBalanceType,
+    pub adjustment_type: WalletAdjustmentType,
     pub operator_id: Option<String>,
     pub description: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WalletAdjustmentType {
+    Increase,
+    Deduct,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WalletBalanceType {
     Recharge,
     Gift,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AdminWalletListFilters {
+    pub search: Option<String>,
+    pub status: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -72,6 +85,7 @@ pub struct WalletSummaryResponse {
     pub status: String,
     pub limit_mode: String,
     pub unlimited: bool,
+    pub created_at: String,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_recharged: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
@@ -134,6 +148,80 @@ pub struct WalletTransactionsResponse {
     pub page_size: u64,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AdminWalletResponse {
+    pub id: String,
+    pub user_id: String,
+    pub owner_name: String,
+    pub owner_email: String,
+    pub owner_type: String,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub balance: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub recharge_balance: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub gift_balance: Decimal,
+    pub currency: String,
+    pub status: String,
+    pub limit_mode: String,
+    pub unlimited: bool,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_recharged: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_consumed: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_refunded: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_adjusted: Decimal,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AdminWalletListResponse {
+    pub items: Vec<AdminWalletResponse>,
+    pub total: u64,
+    pub page: u64,
+    pub page_size: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AdminWalletTransactionsResponse {
+    pub wallet: AdminWalletResponse,
+    pub items: Vec<WalletTransactionResponse>,
+    pub total: u64,
+    pub page: u64,
+    pub page_size: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct AdminWalletAdjustmentPayload {
+    #[serde(with = "rust_decimal::serde::float")]
+    pub amount: Decimal,
+    pub balance_type: WalletBalanceTypePayload,
+    pub adjustment_type: WalletAdjustmentTypePayload,
+    pub description: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WalletBalanceTypePayload {
+    Recharge,
+    Gift,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WalletAdjustmentTypePayload {
+    Increase,
+    Deduct,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AdminWalletAdjustmentResponse {
+    pub transaction: WalletTransactionResponse,
+}
+
 impl From<Wallet> for WalletSummaryResponse {
     fn from(value: Wallet) -> Self {
         let recharge_balance = value.recharge_balance;
@@ -151,6 +239,7 @@ impl From<Wallet> for WalletSummaryResponse {
             status: value.status,
             limit_mode: value.limit_mode,
             unlimited,
+            created_at: value.created_at,
             total_recharged: value.total_recharged,
             total_consumed: value.total_consumed,
             total_refunded: value.total_refunded,
@@ -193,6 +282,24 @@ impl From<WalletTransaction> for WalletTransactionResponse {
             operator_id: value.operator_id,
             description: value.description,
             created_at: value.created_at,
+        }
+    }
+}
+
+impl From<WalletBalanceTypePayload> for WalletBalanceType {
+    fn from(value: WalletBalanceTypePayload) -> Self {
+        match value {
+            WalletBalanceTypePayload::Recharge => Self::Recharge,
+            WalletBalanceTypePayload::Gift => Self::Gift,
+        }
+    }
+}
+
+impl From<WalletAdjustmentTypePayload> for WalletAdjustmentType {
+    fn from(value: WalletAdjustmentTypePayload) -> Self {
+        match value {
+            WalletAdjustmentTypePayload::Increase => Self::Increase,
+            WalletAdjustmentTypePayload::Deduct => Self::Deduct,
         }
     }
 }

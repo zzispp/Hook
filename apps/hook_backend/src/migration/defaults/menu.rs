@@ -129,4 +129,14 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         sort_order: 40,
         deep_match: true,
     },
+    MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000209",
+        section_id: SYSTEM_SECTION_ID,
+        code: "admin_wallets",
+        title: "Wallet Management",
+        path: "/dashboard/admin/wallets",
+        icon: "icon.wallet",
+        sort_order: 50,
+        deep_match: true,
+    },
 ];

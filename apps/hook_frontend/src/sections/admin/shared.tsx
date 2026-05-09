@@ -65,6 +65,22 @@ export function AddButton({ onClick, children }: { onClick: () => void; children
   );
 }
 
+export function RefreshButton({ loading, onClick }: { loading?: boolean; onClick: () => void }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Button
+      color="inherit"
+      variant="outlined"
+      loading={loading}
+      startIcon={<Iconify icon="solar:restart-bold" />}
+      onClick={onClick}
+    >
+      {t('models.refresh')}
+    </Button>
+  );
+}
+
 export function EnabledLabel({ enabled }: { enabled: boolean }) {
   const { t } = useTranslate('admin');
 

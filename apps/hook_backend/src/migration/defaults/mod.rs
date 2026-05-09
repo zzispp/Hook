@@ -91,6 +91,10 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "models_external_read",
         ],
     },
+    MenuApiBindingDefinition {
+        menu_code: "admin_wallets",
+        api_codes: &["admin_wallets_read", "admin_wallet_transactions_read", "admin_wallet_adjust"],
+    },
 ];
 
 pub fn admin_menu_codes() -> impl Iterator<Item = &'static str> {
@@ -111,6 +115,7 @@ mod tests {
         assert!(!admin_menu_codes.contains(&"dashboard_models"));
         assert!(!admin_menu_codes.contains(&"wallet_center"));
         assert!(admin_menu_codes.contains(&"admin_models"));
+        assert!(admin_menu_codes.contains(&"admin_wallets"));
     }
 
     #[test]

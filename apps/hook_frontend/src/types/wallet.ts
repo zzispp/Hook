@@ -9,11 +9,18 @@ export type WalletSummary = {
   status: string;
   limit_mode: string;
   unlimited: boolean;
+  created_at: string;
   total_recharged: number;
   total_consumed: number;
   total_refunded: number;
   total_adjusted: number;
   updated_at: string;
+};
+
+export type AdminWallet = WalletSummary & {
+  owner_name: string;
+  owner_email: string;
+  owner_type: string;
 };
 
 export type WalletBalanceResponse = {
@@ -51,4 +58,30 @@ export type WalletTransactionsResponse = {
   total: number;
   page: number;
   page_size: number;
+};
+
+export type AdminWalletListResponse = {
+  items: AdminWallet[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type AdminWalletTransactionsResponse = {
+  wallet: AdminWallet;
+  items: WalletTransaction[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type AdminWalletAdjustmentInput = {
+  amount: number;
+  balance_type: 'recharge' | 'gift';
+  adjustment_type: 'increase' | 'deduct';
+  description?: string;
+};
+
+export type AdminWalletAdjustmentResponse = {
+  transaction: WalletTransaction;
 };

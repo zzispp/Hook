@@ -26,13 +26,13 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { ConfirmDialog } from 'src/components/custom-dialog';
 import { useTable, TableNoData, TablePaginationCustom } from 'src/components/table';
 
+import { RefreshAddActions } from './admin-page-actions';
 import {
   toUserFilters,
   AdminFiltersToolbar,
   DEFAULT_ADMIN_FILTERS,
 } from './admin-filters-toolbar';
 import {
-  AddButton,
   SwitchRow,
   TextFieldRow,
   EnabledLabel,
@@ -45,8 +45,6 @@ import {
   translatedAuthSource,
 } from './shared';
 
-// ----------------------------------------------------------------------
-
 const DEFAULT_FORM: UserInput = {
   username: '',
   password: '',
@@ -55,17 +53,12 @@ const DEFAULT_FORM: UserInput = {
   is_active: true,
 };
 
-// ----------------------------------------------------------------------
-
 export function UserManagementView() {
   const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'username' });
   const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
-  const { items, total, isLoading } = useUsers(
-    table.page,
-    table.rowsPerPage,
-    toUserFilters(filters)
-  );
+  const users = useUsers(table.page, table.rowsPerPage, toUserFilters(filters));
+  const { items, total, isLoading } = users;
   const roles = useRoles(0, 100);
   const tableHead = useMemo<TableHeadCellProps[]>(
     () => [
@@ -160,7 +153,14 @@ export function UserManagementView() {
     <DashboardContent>
       <AdminBreadcrumbs
         heading={t('pages.userManagement')}
-        action={<AddButton onClick={openCreate}>{t('actions.addUser')}</AddButton>}
+        action={
+          <RefreshAddActions
+            loading={isLoading}
+            addLabel={t('actions.addUser')}
+            onAdd={openCreate}
+            onRefresh={() => void users.refresh()}
+          />
+        }
       />
 
       <Card>
