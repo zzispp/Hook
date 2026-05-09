@@ -5,11 +5,11 @@ use types::{
     wallet::{Wallet, WalletTransaction},
 };
 
-use crate::{Database, StorageError, StorageResult};
 use super::{
-    WalletLedgerRecordInput, WalletRecord, WalletTransactionRecordInput, wallet_records,
-    wallet_records::ActiveModel as WalletActiveModel, wallet_transaction_records, wallet_transaction_records::ActiveModel as WalletTransactionActiveModel,
+    WalletLedgerRecordInput, WalletRecord, WalletTransactionRecordInput, wallet_records, wallet_records::ActiveModel as WalletActiveModel,
+    wallet_transaction_records, wallet_transaction_records::ActiveModel as WalletTransactionActiveModel,
 };
+use crate::{Database, StorageError, StorageResult};
 
 const DEFAULT_CURRENCY: &str = "CNY";
 const DEFAULT_STATUS: &str = "active";

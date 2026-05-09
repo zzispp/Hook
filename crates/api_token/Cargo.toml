@@ -1,0 +1,19 @@
+[package]
+name = "api_token"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+constants.workspace = true
+hex.workspace = true
+rand_core.workspace = true
+rbac.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+sha2.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+time.workspace = true
+types.workspace = true

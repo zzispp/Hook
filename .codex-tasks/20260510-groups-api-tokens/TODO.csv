@@ -1,0 +1,12 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Review existing backend and frontend patterns,DONE,Relevant route/service/storage patterns are identified,test -f .codex-tasks/20260510-groups-api-tokens/PROGRESS.md,2026-05-10T00:00:00+08:00,0,
+2,Implement backend groups and API tokens,DONE,Database migration services routes and permissions are present,cargo check --workspace,2026-05-10T00:00:00+08:00,0,
+3,Implement frontend group and token screens,DONE,Pages compile with typed actions,pnpm lint:frontend,2026-05-10T00:00:00+08:00,0,
+4,Run final validation,DONE,Formatting and checks complete,cargo fmt --all && pnpm lint:frontend && cargo check --workspace && cargo test --workspace,2026-05-10T00:00:00+08:00,0,just unavailable in environment
+5,Add system group defaults for token creation,DONE,Token creation can omit group_code and uses the immutable system group,cargo check --workspace,2026-05-10T02:50:00+08:00,0,
+6,Show group-adjusted prices in model details,DONE,User model detail drawer lists billing groups multipliers and computed prices,pnpm lint:frontend,2026-05-10T02:50:00+08:00,0,
+7,Run incremental validation,DONE,Rust and frontend checks pass,cargo fmt --all && pnpm lint:frontend && cargo check --workspace && cargo test --workspace,2026-05-10T02:51:00+08:00,0,
+8,Localize group and token frontend text,DONE,Group and token tables dialogs and states use locale keys instead of hard-coded English,pnpm lint:frontend,2026-05-10T03:10:00+08:00,0,
+9,Add billing group model bindings,DONE,Groups can bind allowed global models and token model policy cannot exceed its group,cargo check --workspace,2026-05-10T03:20:00+08:00,0,
+10,Expose group model bindings in admin UI,DONE,Billing group modal can select allowed models and table shows binding summary,pnpm lint:frontend,2026-05-10T03:24:00+08:00,0,
+11,Run model binding validation,DONE,Rust and frontend checks pass,cargo fmt --all && cargo check --workspace && pnpm lint:frontend,2026-05-10T03:31:00+08:00,0,

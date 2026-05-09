@@ -3,9 +3,9 @@ use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest},
     wallet::{
-        AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse, AdminWalletTransactionsResponse,
-        Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType, WalletSummaryResponse, WalletTransaction, WalletTransactionResponse,
-        WalletTransactionsResponse,
+        AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse,
+        AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType, WalletSummaryResponse,
+        WalletTransaction, WalletTransactionResponse, WalletTransactionsResponse,
     },
 };
 

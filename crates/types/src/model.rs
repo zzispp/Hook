@@ -8,5 +8,5 @@ pub use api::{
     GlobalModelResponse, GlobalModelUpdate, GlobalModelWithStats,
 };
 pub use catalog::{GlobalModelProvidersResponse, ModelCapabilities, ModelCatalogItem, ModelCatalogProviderDetail, ModelCatalogResponse, ModelPriceRange};
-pub use patch::PatchField;
+pub use patch::{PatchField, deserialize_patch_value};
 pub use pricing::{CacheTTLPricing, PricingTier, TieredPricingConfig};

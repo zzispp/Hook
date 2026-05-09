@@ -58,18 +58,12 @@ pub async fn transactions(
     Ok(ok(state.wallets.transactions(&current_user.id, query.into()).await?))
 }
 
-pub async fn admin_wallets(
-    State(state): State<WalletApiState>,
-    Query(query): Query<AdminWalletListQuery>,
-) -> ApiResult<ApiJson<AdminWalletListResponse>> {
+pub async fn admin_wallets(State(state): State<WalletApiState>, Query(query): Query<AdminWalletListQuery>) -> ApiResult<ApiJson<AdminWalletListResponse>> {
     let page = PageRequest::from(&query);
     Ok(ok(state.wallets.admin_wallets(page, query.into()).await?))
 }
 
-pub async fn admin_ledger(
-    State(state): State<WalletApiState>,
-    Query(query): Query<AdminWalletLedgerQuery>,
-) -> ApiResult<ApiJson<AdminWalletLedgerResponse>> {
+pub async fn admin_ledger(State(state): State<WalletApiState>, Query(query): Query<AdminWalletLedgerQuery>) -> ApiResult<ApiJson<AdminWalletLedgerResponse>> {
     let page = PageRequest::from(&query);
     Ok(ok(state.wallets.admin_ledger(page, query.into()).await?))
 }
@@ -89,7 +83,9 @@ pub async fn admin_adjust_wallet(
     Json(payload): Json<AdminWalletAdjustmentPayload>,
 ) -> ApiResult<ApiJson<AdminWalletAdjustmentResponse>> {
     let transaction = state.wallets.adjust_wallet(adjustment(wallet_id, current_user.id, payload)).await?;
-    Ok(ok(AdminWalletAdjustmentResponse { transaction: transaction.into() }))
+    Ok(ok(AdminWalletAdjustmentResponse {
+        transaction: transaction.into(),
+    }))
 }
 
 impl From<WalletListQuery> for PageRequest {

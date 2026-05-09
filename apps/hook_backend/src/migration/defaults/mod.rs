@@ -93,7 +93,12 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     },
     MenuApiBindingDefinition {
         menu_code: "admin_wallets",
-        api_codes: &["admin_wallets_read", "admin_wallet_ledger_read", "admin_wallet_transactions_read", "admin_wallet_adjust"],
+        api_codes: &[
+            "admin_wallets_read",
+            "admin_wallet_ledger_read",
+            "admin_wallet_transactions_read",
+            "admin_wallet_adjust",
+        ],
     },
 ];
 

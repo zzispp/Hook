@@ -4,17 +4,16 @@ use sea_orm::{ColumnTrait, Condition, DatabaseConnection, EntityTrait, Paginator
 use types::{
     pagination::{Page, PageSliceRequest},
     wallet::{
-        AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, WalletSummaryResponse, WalletTransactionResponse,
+        AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, WalletSummaryResponse,
+        WalletTransactionResponse,
     },
 };
 
-use crate::user::{UserColumn, UserEntity as Users, UserRecord};
 use crate::StorageResult;
+use crate::user::{UserColumn, UserEntity as Users, UserRecord};
 
-use super::{
-    AdminWalletLedgerRecord, AdminWalletRecord, WalletRecord, WalletTransactionRecord, wallet_records, wallet_transaction_records,
-};
 use super::WalletStore;
+use super::{AdminWalletLedgerRecord, AdminWalletRecord, WalletRecord, WalletTransactionRecord, wallet_records, wallet_transaction_records};
 
 impl WalletStore {
     pub async fn find_admin_wallet_by_id(&self, id: &str) -> StorageResult<Option<AdminWalletResponse>> {
@@ -31,11 +30,7 @@ impl WalletStore {
         })))
     }
 
-    pub async fn page_admin_wallets(
-        &self,
-        request: PageSliceRequest,
-        filters: AdminWalletListFilters,
-    ) -> StorageResult<Page<AdminWalletResponse>> {
+    pub async fn page_admin_wallets(&self, request: PageSliceRequest, filters: AdminWalletListFilters) -> StorageResult<Page<AdminWalletResponse>> {
         let query = filtered_admin_wallets(filters);
         let total = query.clone().count(self.database.connection()).await?;
         let records = query
@@ -67,7 +62,11 @@ impl WalletStore {
             .await?;
         let users = admin_ledger_user_map(&records, self.database.connection()).await?;
         Ok(Page {
-            items: records.into_iter().map(|record| admin_ledger_record(record, &users)).map(admin_ledger_response).collect(),
+            items: records
+                .into_iter()
+                .map(|record| admin_ledger_record(record, &users))
+                .map(admin_ledger_response)
+                .collect(),
             total,
             page: request.page,
             page_size: request.page_size,
@@ -158,10 +157,7 @@ fn admin_wallet_record(wallet: WalletRecord, user: Option<UserRecord>) -> AdminW
     }
 }
 
-fn admin_ledger_record(
-    value: (WalletTransactionRecord, Option<WalletRecord>),
-    users: &HashMap<String, UserRecord>,
-) -> AdminWalletLedgerRecord {
+fn admin_ledger_record(value: (WalletTransactionRecord, Option<WalletRecord>), users: &HashMap<String, UserRecord>) -> AdminWalletLedgerRecord {
     let wallet = value.1.expect("wallet transaction must have wallet");
     let user = users.get(&wallet.user_id).cloned();
     AdminWalletLedgerRecord {
@@ -174,7 +170,10 @@ async fn admin_ledger_user_map(
     records: &[(WalletTransactionRecord, Option<WalletRecord>)],
     connection: &DatabaseConnection,
 ) -> StorageResult<HashMap<String, UserRecord>> {
-    let user_ids: Vec<_> = records.iter().filter_map(|(_, wallet)| wallet.as_ref().map(|item| item.user_id.clone())).collect();
+    let user_ids: Vec<_> = records
+        .iter()
+        .filter_map(|(_, wallet)| wallet.as_ref().map(|item| item.user_id.clone()))
+        .collect();
     if user_ids.is_empty() {
         return Ok(HashMap::new());
     }

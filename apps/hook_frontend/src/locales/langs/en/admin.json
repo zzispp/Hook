@@ -13,7 +13,10 @@
     "apis": "APIs",
     "menus": "Menus",
     "models": "Models",
-    "customKeyboardShortcuts": "Custom keyboard shortcuts."
+    "customKeyboardShortcuts": "Custom keyboard shortcuts.",
+    "apiTokens": "API Tokens",
+    "adminApiTokens": "Token Management",
+    "billingGroups": "Billing Groups"
   },
   "common": {
     "active": "Active",
@@ -57,7 +60,8 @@
     "system": "System",
     "title": "Title",
     "type": "Type",
-    "username": "Username"
+    "username": "Username",
+    "user": "User"
   },
   "filters": {
     "allRoles": "All roles",
@@ -68,7 +72,9 @@
     "searchRoles": "Search role name, code, or description...",
     "searchSections": "Search section title or code...",
     "searchUsers": "Search username, email, or role...",
-    "searchWallets": "Search wallet ID, user ID, username, or email..."
+    "searchWallets": "Search wallet ID, user ID, username, or email...",
+    "searchGroups": "Search group code, name, or description...",
+    "searchTokens": "Search key name, prefix, or group..."
   },
   "pages": {
     "apiManagement": "API Management",
@@ -76,7 +82,10 @@
     "modelManagement": "Model Management",
     "roleManagement": "Role Management",
     "userManagement": "User Management",
-    "walletManagement": "Wallet Management"
+    "walletManagement": "Wallet Management",
+    "apiTokens": "API Tokens",
+    "adminApiTokens": "Token Management",
+    "billingGroups": "Billing Groups"
   },
   "actions": {
     "addApi": "Add API",
@@ -90,7 +99,12 @@
     "bindApis": "Bind APIs",
     "adjustWallet": "Adjust wallet",
     "menuPermissions": "Menu permissions",
-    "savePermissions": "Save permissions"
+    "savePermissions": "Save permissions",
+    "addApiToken": "Create token",
+    "addBillingGroup": "Create group",
+    "copyApiKey": "Copy key",
+    "enable": "Enable",
+    "disable": "Disable"
   },
   "fields": {
     "deepMatch": "Deep match",
@@ -114,7 +128,20 @@
     "releaseDate": "Release date",
     "searchModelDev": "Search model.dev",
     "subheader": "Subheader",
-    "tierLimit": "Tier limit"
+    "tierLimit": "Tier limit",
+    "allowedModels": "Allowed models",
+    "apiKey": "Key",
+    "billingMultiplier": "Billing multiplier",
+    "costCny": "Cost (CNY)",
+    "expiresAt": "Expires at",
+    "keyName": "Key name",
+    "lastUsedAt": "Last used",
+    "modelAccessMode": "Allowed models",
+    "owner": "Owner",
+    "quotaLimit": "Quota limit",
+    "rateLimitRpm": "Rate limit",
+    "requestCount": "Requests",
+    "tokenType": "Token type"
   },
   "dialogs": {
     "createApi": "Create API permission",
@@ -137,12 +164,23 @@
     "editRole": "Edit role",
     "editUser": "Edit user",
     "menuApiPermissions": "Menu API permissions: {{name}}",
-    "rolePermissions": "Role permissions: {{name}}"
+    "rolePermissions": "Role permissions: {{name}}",
+    "apiTokenCreated": "Token created",
+    "createApiToken": "Create token",
+    "editApiToken": "Edit token",
+    "deleteApiToken": "Delete token",
+    "createBillingGroup": "Create billing group",
+    "editBillingGroup": "Edit billing group",
+    "deleteBillingGroup": "Delete billing group"
   },
   "helper": {
     "deepMatch": "Deep match controls subpath highlighting.",
     "pathPatternExample": "Example: /api/users/{id}",
-    "updatePasswordRequired": "Backend currently requires a password on update."
+    "updatePasswordRequired": "Backend currently requires a password on update.",
+    "groupModelAccess": "Leave models unselected to allow all models in this group.",
+    "systemRateLimit": "0 follows the system rate; non-zero will use min(system rate, this value).",
+    "unlimitedExpiresAt": "Leave empty for no time limit.",
+    "unlimitedQuota": "Leave empty for unlimited quota."
   },
   "messages": {
     "apiCreated": "API permission created",
@@ -170,7 +208,15 @@
     "saveFailed": "Save failed",
     "userCreated": "User created",
     "userDeleted": "User deleted",
-    "userUpdated": "User updated"
+    "userUpdated": "User updated",
+    "apiKeyCopied": "Key copied",
+    "apiTokenCreated": "Copy and save the key. It can also be copied later from the list.",
+    "apiTokenDeleted": "Token deleted",
+    "apiTokenUpdated": "Token updated",
+    "billingGroupCreated": "Billing group created",
+    "billingGroupDeleted": "Billing group deleted",
+    "billingGroupUpdated": "Billing group updated",
+    "copyFailed": "Copy failed"
   },
   "roles": {
     "admin": {
@@ -195,7 +241,11 @@
     "admin_wallet": "Admin Wallet",
     "rbac": "RBAC",
     "system": "System",
-    "users": "Users"
+    "users": "Users",
+    "api tokens": "API Tokens",
+    "api_tokens": "API Tokens",
+    "billing groups": "Billing Groups",
+    "billing_groups": "Billing Groups"
   },
   "apiPermissionNames": {
     "auth_me": "Current user",
@@ -240,7 +290,25 @@
     "models_external_read": "External models",
     "admin_wallets_read": "List admin wallets",
     "admin_wallet_transactions_read": "Admin wallet transactions",
-    "admin_wallet_adjust": "Admin wallet adjustment"
+    "admin_wallet_adjust": "Admin wallet adjustment",
+    "groups_read": "List billing groups",
+    "groups_create": "Create billing group",
+    "groups_detail": "Get billing group",
+    "groups_update": "Update billing group",
+    "groups_delete": "Delete billing group",
+    "groups_available_read": "Available billing groups",
+    "api_tokens_read": "List API tokens",
+    "api_tokens_create": "Create API token",
+    "api_tokens_detail": "Get API token",
+    "api_tokens_update": "Update API token",
+    "api_tokens_delete": "Delete API token",
+    "api_tokens_secret_read": "Read API token secret",
+    "admin_api_tokens_read": "List admin API tokens",
+    "admin_api_tokens_create": "Create admin API token",
+    "admin_api_tokens_detail": "Get admin API token",
+    "admin_api_tokens_update": "Update admin API token",
+    "admin_api_tokens_delete": "Delete admin API token",
+    "admin_api_tokens_secret_read": "Read admin API token secret"
   },
   "models": {
     "availableModels": "Available Models",
@@ -252,6 +320,8 @@
     "emptyCatalog": "No available models",
     "inputPriceShort": "Input",
     "inputOutputPrice": "Input / output per 1M tokens",
+    "groupPricing": "Group pricing",
+    "groupPricingEmpty": "No available billing groups",
     "metadata": "Specs and metadata",
     "modelIdCopied": "Model ID copied",
     "modelDevCount": "{{count}} models",
@@ -538,5 +608,25 @@
       "adjusted": "Wallet adjusted"
     },
     "walletSummary": "Showing {{shown}}, total {{total}} wallets"
+  },
+  "billingGroups": {
+    "allModels": "All models",
+    "deleteConfirm": "Delete billing group {{name}}?",
+    "selectedModelCount": "{{count}} models",
+    "systemDescription": "Built-in billing group used when no group is selected",
+    "systemName": "System group"
+  },
+  "tokens": {
+    "allModels": "All models",
+    "deleteConfirm": "Delete token {{name}}?",
+    "followSystem": "Follow system",
+    "independentToken": "Independent token",
+    "limitedModels": "Selected models",
+    "noGroups": "No available groups",
+    "noModels": "No available models",
+    "noUsers": "No available users",
+    "rpm": "requests/min",
+    "unlimitedQuota": "Unlimited quota",
+    "userToken": "User token"
   }
 }

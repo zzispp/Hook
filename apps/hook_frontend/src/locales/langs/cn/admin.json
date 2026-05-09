@@ -13,7 +13,10 @@
     "apis": "API 管理",
     "menus": "菜单管理",
     "models": "模型管理",
-    "customKeyboardShortcuts": "自定义键盘快捷键。"
+    "customKeyboardShortcuts": "自定义键盘快捷键。",
+    "apiTokens": "令牌管理",
+    "adminApiTokens": "令牌管理",
+    "billingGroups": "计费分组"
   },
   "common": {
     "active": "启用",
@@ -57,7 +60,8 @@
     "system": "系统",
     "title": "标题",
     "type": "类型",
-    "username": "用户名"
+    "username": "用户名",
+    "user": "用户"
   },
   "filters": {
     "allRoles": "全部角色",
@@ -68,7 +72,9 @@
     "searchRoles": "搜索角色名称、编码或描述...",
     "searchSections": "搜索分组标题或编码...",
     "searchUsers": "搜索用户名、邮箱或角色...",
-    "searchWallets": "搜索钱包 ID、用户 ID、用户名或邮箱..."
+    "searchWallets": "搜索钱包 ID、用户 ID、用户名或邮箱...",
+    "searchGroups": "搜索分组编码、名称或描述...",
+    "searchTokens": "搜索密钥名称、前缀或分组..."
   },
   "pages": {
     "apiManagement": "API 管理",
@@ -76,7 +82,10 @@
     "modelManagement": "模型管理",
     "roleManagement": "角色管理",
     "userManagement": "用户管理",
-    "walletManagement": "钱包管理"
+    "walletManagement": "钱包管理",
+    "apiTokens": "令牌管理",
+    "adminApiTokens": "令牌管理",
+    "billingGroups": "计费分组"
   },
   "actions": {
     "addApi": "新增 API",
@@ -90,7 +99,12 @@
     "bindApis": "绑定 API",
     "adjustWallet": "调账",
     "menuPermissions": "菜单权限",
-    "savePermissions": "保存权限"
+    "savePermissions": "保存权限",
+    "addApiToken": "创建令牌",
+    "addBillingGroup": "创建分组",
+    "copyApiKey": "复制密钥",
+    "enable": "启用",
+    "disable": "停用"
   },
   "fields": {
     "deepMatch": "深度匹配",
@@ -114,7 +128,20 @@
     "releaseDate": "发布日期",
     "searchModelDev": "搜索 model.dev",
     "subheader": "分组标题",
-    "tierLimit": "阶梯上限"
+    "tierLimit": "阶梯上限",
+    "allowedModels": "允许模型",
+    "apiKey": "密钥",
+    "billingMultiplier": "计费倍率",
+    "costCny": "费用(CNY)",
+    "expiresAt": "有效期",
+    "keyName": "密钥名称",
+    "lastUsedAt": "最后使用",
+    "modelAccessMode": "允许模型",
+    "owner": "归属",
+    "quotaLimit": "允许额度",
+    "rateLimitRpm": "速率限制",
+    "requestCount": "请求次数",
+    "tokenType": "令牌类型"
   },
   "dialogs": {
     "createApi": "创建 API 权限",
@@ -137,12 +164,23 @@
     "editRole": "编辑角色",
     "editUser": "编辑用户",
     "menuApiPermissions": "菜单 API 权限：{{name}}",
-    "rolePermissions": "角色权限：{{name}}"
+    "rolePermissions": "角色权限：{{name}}",
+    "apiTokenCreated": "令牌已创建",
+    "createApiToken": "创建令牌",
+    "editApiToken": "编辑令牌",
+    "deleteApiToken": "删除令牌",
+    "createBillingGroup": "创建计费分组",
+    "editBillingGroup": "编辑计费分组",
+    "deleteBillingGroup": "删除计费分组"
   },
   "helper": {
     "deepMatch": "深度匹配用于控制子路径高亮。",
     "pathPatternExample": "示例：/api/users/{id}",
-    "updatePasswordRequired": "后端当前要求更新用户时填写密码。"
+    "updatePasswordRequired": "后端当前要求更新用户时填写密码。",
+    "groupModelAccess": "不选择模型表示该分组允许所有模型。",
+    "systemRateLimit": "0 表示跟随系统；非 0 后续运行时取 min(系统速率, 此处速率)。",
+    "unlimitedExpiresAt": "不输入有效期表示无时间限制。",
+    "unlimitedQuota": "留空表示不限额度。"
   },
   "messages": {
     "apiCreated": "API 权限已创建",
@@ -170,7 +208,15 @@
     "saveFailed": "保存失败",
     "userCreated": "用户已创建",
     "userDeleted": "用户已删除",
-    "userUpdated": "用户已更新"
+    "userUpdated": "用户已更新",
+    "apiKeyCopied": "密钥已复制",
+    "apiTokenCreated": "请复制并保存密钥，后续也可以在列表中再次复制。",
+    "apiTokenDeleted": "令牌已删除",
+    "apiTokenUpdated": "令牌已更新",
+    "billingGroupCreated": "计费分组已创建",
+    "billingGroupDeleted": "计费分组已删除",
+    "billingGroupUpdated": "计费分组已更新",
+    "copyFailed": "复制失败"
   },
   "roles": {
     "admin": {
@@ -195,7 +241,11 @@
     "admin_wallet": "管理员钱包",
     "rbac": "权限",
     "system": "系统",
-    "users": "用户"
+    "users": "用户",
+    "api tokens": "API 令牌",
+    "api_tokens": "API 令牌",
+    "billing groups": "计费分组",
+    "billing_groups": "计费分组"
   },
   "apiPermissionNames": {
     "auth_me": "当前用户",
@@ -240,7 +290,25 @@
     "models_external_read": "获取外部模型",
     "admin_wallets_read": "查看管理员钱包列表",
     "admin_wallet_transactions_read": "查看管理员钱包流水",
-    "admin_wallet_adjust": "管理员钱包调账"
+    "admin_wallet_adjust": "管理员钱包调账",
+    "groups_read": "查看计费分组列表",
+    "groups_create": "创建计费分组",
+    "groups_detail": "查看计费分组详情",
+    "groups_update": "更新计费分组",
+    "groups_delete": "删除计费分组",
+    "groups_available_read": "查看可用计费分组",
+    "api_tokens_read": "查看令牌列表",
+    "api_tokens_create": "创建令牌",
+    "api_tokens_detail": "查看令牌详情",
+    "api_tokens_update": "更新令牌",
+    "api_tokens_delete": "删除令牌",
+    "api_tokens_secret_read": "读取令牌密钥",
+    "admin_api_tokens_read": "查看管理员令牌列表",
+    "admin_api_tokens_create": "创建管理员令牌",
+    "admin_api_tokens_detail": "查看管理员令牌详情",
+    "admin_api_tokens_update": "更新管理员令牌",
+    "admin_api_tokens_delete": "删除管理员令牌",
+    "admin_api_tokens_secret_read": "读取管理员令牌密钥"
   },
   "models": {
     "availableModels": "可用模型",
@@ -252,6 +320,8 @@
     "inputPriceShort": "输入",
     "deprecated": "已弃用",
     "inputOutputPrice": "输入 / 输出，每 1M token",
+    "groupPricing": "分组价格",
+    "groupPricingEmpty": "暂无可用计费分组",
     "metadata": "规格与元信息",
     "modelIdCopied": "模型 ID 已复制",
     "modelDevCount": "{{count}} 个模型",
@@ -538,5 +608,25 @@
       "adjusted": "钱包调账已完成"
     },
     "walletSummary": "显示 {{shown}} 条，共 {{total}} 个钱包"
+  },
+  "billingGroups": {
+    "allModels": "所有模型",
+    "deleteConfirm": "确认删除计费分组 {{name}}？",
+    "selectedModelCount": "{{count}} 个模型",
+    "systemDescription": "未选择分组时使用的内置计费分组",
+    "systemName": "系统分组"
+  },
+  "tokens": {
+    "allModels": "所有模型",
+    "deleteConfirm": "确认删除令牌 {{name}}？",
+    "followSystem": "跟随系统",
+    "independentToken": "独立令牌",
+    "limitedModels": "指定模型",
+    "noGroups": "暂无可用分组",
+    "noModels": "暂无可用模型",
+    "noUsers": "暂无可选用户",
+    "rpm": "请求/分钟",
+    "unlimitedQuota": "不限额度",
+    "userToken": "用户令牌"
   }
 }

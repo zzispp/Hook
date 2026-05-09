@@ -1,5 +1,7 @@
+pub mod api_token;
 pub mod database;
 pub mod error;
+pub mod group;
 mod json;
 pub mod model;
 pub mod rbac;

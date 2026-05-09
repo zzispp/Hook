@@ -1,0 +1,168 @@
+'use client';
+
+import type { ApiToken } from 'src/types/api-token';
+import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
+
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import Tooltip from '@mui/material/Tooltip';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+
+import { useTranslate } from 'src/locales/use-locales';
+
+import { Iconify } from 'src/components/iconify';
+import { Scrollbar } from 'src/components/scrollbar';
+import { TableNoData, TablePaginationCustom } from 'src/components/table';
+
+import { EnabledLabel, TableLoadingRows, ManagementTableHead } from '../admin/shared';
+import { formatTime, formatInteger, formatCurrency } from './api-token-management-utils';
+
+type Props = {
+  rows: ApiToken[];
+  total: number;
+  loading: boolean;
+  table: UseTableReturn;
+  showOwner?: boolean;
+  onCopy: (token: ApiToken) => void;
+  onEdit: (token: ApiToken) => void;
+  onToggle: (token: ApiToken) => void;
+  onDelete: (token: ApiToken) => void;
+};
+
+export function ApiTokenTable(props: Props) {
+  const { t } = useTranslate('admin');
+  const tableHead = tokenTableHead(t, props.showOwner);
+
+  return (
+    <>
+      <Scrollbar>
+        <Table sx={{ minWidth: props.showOwner ? 1200 : 980 }}>
+          <ManagementTableHead head={tableHead} />
+          <TableBody>
+            {props.loading ? (
+              <TableLoadingRows head={tableHead} rows={props.table.rowsPerPage} />
+            ) : (
+              props.rows.map((row) => <ApiTokenTableRow key={row.id} row={row} props={props} />)
+            )}
+            <TableNoData title={t('common.noData')} notFound={!props.loading && props.rows.length === 0} />
+          </TableBody>
+        </Table>
+      </Scrollbar>
+      <TablePaginationCustom
+        page={props.table.page}
+        count={props.total}
+        rowsPerPage={props.table.rowsPerPage}
+        onPageChange={props.table.onChangePage}
+        onRowsPerPageChange={props.table.onChangeRowsPerPage}
+      />
+    </>
+  );
+}
+
+function ApiTokenTableRow({
+  row,
+  props,
+}: {
+  row: ApiToken;
+  props: Props;
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <TableRow hover>
+      <TableCell>
+        <Typography variant="subtitle2">{row.name}</Typography>
+      </TableCell>
+      <TableCell>
+        <KeyCell token={row} onCopy={props.onCopy} />
+      </TableCell>
+      {props.showOwner ? <TableCell sx={{ fontFamily: 'monospace' }}>{row.user_id}</TableCell> : null}
+      {props.showOwner ? <TableCell>{t(tokenTypeKey(row.token_type))}</TableCell> : null}
+      <TableCell>{formatCurrency(row.used_quota)}</TableCell>
+      <TableCell>{formatInteger(row.request_count)}</TableCell>
+      <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
+      <TableCell>{formatTime(row.last_used_at)}</TableCell>
+      <TableCell align="right">
+        <RowActions row={row} onEdit={props.onEdit} onToggle={props.onToggle} onDelete={props.onDelete} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function KeyCell({ token, onCopy }: { token: ApiToken; onCopy: (token: ApiToken) => void }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{token.token_prefix}...</Typography>
+      <Tooltip title={t('actions.copyApiKey')}>
+        <IconButton size="small" onClick={() => onCopy(token)}>
+          <Iconify icon="solar:copy-bold" width={16} />
+        </IconButton>
+      </Tooltip>
+    </Stack>
+  );
+}
+
+function RowActions({
+  row,
+  onEdit,
+  onToggle,
+  onDelete,
+}: {
+  row: ApiToken;
+  onEdit: (token: ApiToken) => void;
+  onToggle: (token: ApiToken) => void;
+  onDelete: (token: ApiToken) => void;
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <Tooltip title={t('common.edit')}>
+        <IconButton onClick={() => onEdit(row)}>
+          <Iconify icon="solar:pen-bold" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={row.is_active ? t('actions.disable') : t('actions.enable')}>
+        <IconButton onClick={() => onToggle(row)}>
+          <Iconify icon={row.is_active ? 'solar:pause-bold' : 'solar:play-bold'} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={t('common.delete')}>
+        <IconButton color="error" onClick={() => onDelete(row)}>
+          <Iconify icon="solar:trash-bin-trash-bold" />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+}
+
+function tokenTableHead(t: (key: string) => string, showOwner?: boolean): TableHeadCellProps[] {
+  const ownerColumns = showOwner
+    ? [
+        { id: 'user_id', label: t('fields.owner'), width: 220 },
+        { id: 'token_type', label: t('fields.tokenType'), width: 130 },
+      ]
+    : [];
+
+  return [
+    { id: 'name', label: t('fields.keyName'), width: 180 },
+    { id: 'key', label: t('fields.apiKey'), width: 180 },
+    ...ownerColumns,
+    { id: 'used_quota', label: t('fields.costCny'), width: 140 },
+    { id: 'request_count', label: t('fields.requestCount'), width: 130 },
+    { id: 'status', label: t('common.status'), width: 110 },
+    { id: 'last_used_at', label: t('fields.lastUsedAt'), width: 180 },
+    { id: '', width: 136 },
+  ];
+}
+
+function tokenTypeKey(type: ApiToken['token_type']) {
+  return type === 'independent' ? 'tokens.independentToken' : 'tokens.userToken';
+}

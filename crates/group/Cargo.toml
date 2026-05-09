@@ -1,0 +1,13 @@
+[package]
+name = "group"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+types.workspace = true

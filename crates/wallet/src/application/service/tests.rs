@@ -47,7 +47,10 @@ async fn admin_ledger_returns_all_wallet_transactions() {
     repository.insert_transaction(transaction("tx-2", "wallet-2", Decimal::new(-1, 0)));
     let service = WalletService::new(repository);
 
-    let response = service.admin_ledger(PageRequest { page: 1, page_size: 20 }, AdminWalletLedgerFilters::default()).await.unwrap();
+    let response = service
+        .admin_ledger(PageRequest { page: 1, page_size: 20 }, AdminWalletLedgerFilters::default())
+        .await
+        .unwrap();
 
     assert_eq!(response.total, 2);
     assert_eq!(response.items[0].transaction.wallet_id, "wallet-1");
@@ -241,11 +244,7 @@ impl WalletRepository for MemoryWalletRepository {
         })
     }
 
-    async fn page_admin_ledger(
-        &self,
-        page: PageRequest,
-        _filters: AdminWalletLedgerFilters,
-    ) -> WalletResult<Page<AdminWalletLedgerTransactionResponse>> {
+    async fn page_admin_ledger(&self, page: PageRequest, _filters: AdminWalletLedgerFilters) -> WalletResult<Page<AdminWalletLedgerTransactionResponse>> {
         let items: Vec<_> = self.state.lock().unwrap().transactions.iter().cloned().map(admin_ledger_transaction).collect();
         Ok(Page {
             total: items.len() as u64,

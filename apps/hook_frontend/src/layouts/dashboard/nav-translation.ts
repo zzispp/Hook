@@ -29,6 +29,7 @@ const SECTION_KEY_BY_TITLE: Record<string, string> = {
 const ITEM_KEY_BY_CODE: Record<string, string> = {
   dashboard_home: 'nav.dashboard',
   dashboard_models: 'nav.modelCatalog',
+  api_tokens: 'nav.apiTokens',
   wallet_center: 'nav.walletCenter',
   system_management: 'nav.systemManagement',
   admin_users: 'nav.users',
@@ -36,12 +37,15 @@ const ITEM_KEY_BY_CODE: Record<string, string> = {
   admin_apis: 'nav.apis',
   admin_menus: 'nav.menus',
   admin_models: 'nav.models',
+  admin_groups: 'nav.billingGroups',
+  admin_tokens: 'nav.adminApiTokens',
   admin_wallets: 'nav.walletManagement',
 };
 
 const ITEM_KEY_BY_PATH: Record<string, string> = {
   '/dashboard': 'nav.dashboard',
   '/dashboard/models': 'nav.modelCatalog',
+  '/dashboard/tokens': 'nav.apiTokens',
   '/dashboard/wallet': 'nav.walletCenter',
   '/dashboard/admin': 'nav.systemManagement',
   '/dashboard/admin/users': 'nav.users',
@@ -49,6 +53,8 @@ const ITEM_KEY_BY_PATH: Record<string, string> = {
   '/dashboard/admin/apis': 'nav.apis',
   '/dashboard/admin/menus': 'nav.menus',
   '/dashboard/admin/models': 'nav.models',
+  '/dashboard/admin/groups': 'nav.billingGroups',
+  '/dashboard/admin/tokens': 'nav.adminApiTokens',
   '/dashboard/admin/wallets': 'nav.walletManagement',
 };
 

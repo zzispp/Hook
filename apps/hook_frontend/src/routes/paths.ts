@@ -51,6 +51,7 @@ export const paths = {
     chat: `${ROOTS.DASHBOARD}/chat`,
     blank: `${ROOTS.DASHBOARD}/blank`,
     models: `${ROOTS.DASHBOARD}/models`,
+    tokens: `${ROOTS.DASHBOARD}/tokens`,
     wallet: `${ROOTS.DASHBOARD}/wallet`,
     kanban: `${ROOTS.DASHBOARD}/kanban`,
     calendar: `${ROOTS.DASHBOARD}/calendar`,
@@ -63,6 +64,8 @@ export const paths = {
       apis: `${ROOTS.DASHBOARD}/admin/apis`,
       menus: `${ROOTS.DASHBOARD}/admin/menus`,
       models: `${ROOTS.DASHBOARD}/admin/models`,
+      tokens: `${ROOTS.DASHBOARD}/admin/tokens`,
+      groups: `${ROOTS.DASHBOARD}/admin/groups`,
       wallets: `${ROOTS.DASHBOARD}/admin/wallets`,
     },
     general: {

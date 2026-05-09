@@ -154,6 +154,7 @@ export function TextFieldRow({
   helperText,
   disabled,
   SelectProps,
+  slotProps,
 }: {
   label: string;
   value: string | number | string[];
@@ -165,6 +166,7 @@ export function TextFieldRow({
   helperText?: React.ReactNode;
   disabled?: boolean;
   SelectProps?: TextFieldProps['SelectProps'];
+  slotProps?: TextFieldProps['slotProps'];
 }) {
   return (
     <TextField
@@ -177,6 +179,7 @@ export function TextFieldRow({
       disabled={disabled}
       helperText={helperText}
       SelectProps={SelectProps}
+      slotProps={slotProps}
       onChange={(event) => onChange(Array.isArray(event.target.value) ? event.target.value.join(',') : event.target.value)}
     >
       {children}

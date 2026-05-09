@@ -73,8 +73,9 @@ function usePagedResource<T>(
   pageSize: number,
   filters: RbacListFilters = {}
 ) {
+  const disabled = page < 0 || pageSize <= 0;
   const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<ApiEnvelope<PageResponse<T>>>(
-    pageKey(endpoint, page, pageSize, filters),
+    disabled ? null : pageKey(endpoint, page, pageSize, filters),
     fetcher,
     swrOptions
   );
@@ -86,12 +87,12 @@ function usePagedResource<T>(
       data: pageData,
       items: pageData?.items ?? [],
       total: pageData?.total ?? 0,
-      isLoading,
+      isLoading: disabled ? false : isLoading,
       error,
-      isValidating,
+      isValidating: disabled ? false : isValidating,
       refresh: revalidate,
     };
-  }, [data, error, isLoading, isValidating, revalidate]);
+  }, [data, disabled, error, isLoading, isValidating, revalidate]);
 }
 
 export function useRoles(page: number, pageSize: number, filters?: RbacListFilters) {

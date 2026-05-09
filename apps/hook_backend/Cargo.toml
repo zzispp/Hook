@@ -5,8 +5,10 @@ edition.workspace = true
 
 [dependencies]
 axum.workspace = true
+api_token.workspace = true
 configuration.workspace = true
 constants.workspace = true
+group.workspace = true
 model.workspace = true
 rbac.workspace = true
 serde.workspace = true

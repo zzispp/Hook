@@ -114,6 +114,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
+name = "api_token"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "constants",
+ "hex",
+ "rand_core 0.6.4",
+ "rbac",
+ "rust_decimal",
+ "serde",
+ "sha2 0.10.9",
+ "storage",
+ "thiserror",
+ "time",
+ "types",
+]
+
+[[package]]
 name = "arc-swap"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -432,9 +451,11 @@ dependencies = [
 name = "backend"
 version = "0.1.0"
 dependencies = [
+ "api_token",
  "axum",
  "configuration",
  "constants",
+ "group",
  "hook_tracing",
  "model",
  "rbac",
@@ -1219,6 +1240,19 @@ name = "glob"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
+
+[[package]]
+name = "group"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "rust_decimal",
+ "serde",
+ "storage",
+ "thiserror",
+ "types",
+]
 
 [[package]]
 name = "half"

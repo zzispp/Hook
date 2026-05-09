@@ -56,11 +56,7 @@ impl WalletRepository for StorageWalletRepository {
         self.store.page_admin_wallets(page_slice_request(page), filters).await.map_err(storage_error)
     }
 
-    async fn page_admin_ledger(
-        &self,
-        page: PageRequest,
-        filters: AdminWalletLedgerFilters,
-    ) -> WalletResult<Page<AdminWalletLedgerTransactionResponse>> {
+    async fn page_admin_ledger(&self, page: PageRequest, filters: AdminWalletLedgerFilters) -> WalletResult<Page<AdminWalletLedgerTransactionResponse>> {
         self.store.page_admin_ledger(page_slice_request(page), filters).await.map_err(storage_error)
     }
 }

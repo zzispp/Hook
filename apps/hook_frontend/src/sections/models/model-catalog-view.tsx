@@ -17,6 +17,7 @@ import { paths } from 'src/routes/paths';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useUserModelCatalog } from 'src/actions/models';
+import { useAvailableBillingGroups } from 'src/actions/groups';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -31,6 +32,7 @@ import { filterCatalogItems } from './model-catalog-utils';
 export function ModelCatalogView() {
   const { t } = useTranslate('admin');
   const catalog = useUserModelCatalog();
+  const groups = useAvailableBillingGroups();
   const [query, setQuery] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<GlobalModelResponse | null>(null);
@@ -79,6 +81,9 @@ export function ModelCatalogView() {
       </Card>
       <ModelDetailDrawer
         model={selectedModel}
+        groups={groups.items}
+        groupsLoading={groups.isLoading}
+        groupsErrorMessage={groups.error?.message}
         open={drawerOpen}
         onClose={handleCloseDrawer}
         onExited={() => setSelectedModel(null)}

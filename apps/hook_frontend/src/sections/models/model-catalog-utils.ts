@@ -86,7 +86,7 @@ export function formatUsageCount(value?: number | null) {
   return value?.toLocaleString() ?? '0';
 }
 
-function formatPrice(value?: number | null) {
+export function formatPrice(value?: number | null) {
   return value === null || value === undefined ? '-' : `$${formatNumber(value)}`;
 }
 

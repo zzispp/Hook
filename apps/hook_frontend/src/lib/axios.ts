@@ -139,6 +139,23 @@ export const endpoints = {
   models: {
     catalog: '/api/models/catalog',
   },
+  adminGroups: {
+    list: '/api/admin/groups',
+    byId: (id: string) => `/api/admin/groups/${id}`,
+  },
+  groups: {
+    available: '/api/groups/available',
+  },
+  apiTokens: {
+    list: '/api/tokens',
+    byId: (id: string) => `/api/tokens/${id}`,
+    secret: (id: string) => `/api/tokens/${id}/secret`,
+  },
+  adminApiTokens: {
+    list: '/api/admin/tokens',
+    byId: (id: string) => `/api/admin/tokens/${id}`,
+    secret: (id: string) => `/api/admin/tokens/${id}/secret`,
+  },
   wallet: {
     balance: '/api/wallet/balance',
     transactions: '/api/wallet/transactions',
