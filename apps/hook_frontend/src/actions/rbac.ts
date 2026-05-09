@@ -13,12 +13,13 @@ import type {
   PageResponse,
   MenuItemInput,
   ApiPermission,
+  MenuApiBinding,
   BackendNavItem,
-  RoleApiBinding,
-  RoleMenuBinding,
+  ApiMenuBinding,
   MenuSectionInput,
   BackendNavSection,
   ApiPermissionInput,
+  RolePermissionBinding,
 } from 'src/types/rbac';
 
 import { useMemo } from 'react';
@@ -38,6 +39,13 @@ export const pageQuery = (page: number, pageSize: number) => ({
   page_size: pageSize,
 });
 
+export type RbacListFilters = {
+  enabled?: boolean;
+  is_active?: boolean;
+  role?: string;
+  search?: string;
+};
+
 export function requireApiData<T>(payload: ApiEnvelope<T>): T {
   if (!payload.success) {
     throw new Error(payload.message || 'Request failed');
@@ -55,13 +63,18 @@ async function requestData<T>(request: Promise<{ data: ApiEnvelope<T> }>) {
   return requireApiData(response.data);
 }
 
-function pageKey(endpoint: string, page: number, pageSize: number) {
-  return [endpoint, { params: pageQuery(page, pageSize) }] as const;
+function pageKey(endpoint: string, page: number, pageSize: number, filters: RbacListFilters = {}) {
+  return [endpoint, { params: { ...pageQuery(page, pageSize), ...filters } }] as const;
 }
 
-function usePagedResource<T>(endpoint: string, page: number, pageSize: number) {
+function usePagedResource<T>(
+  endpoint: string,
+  page: number,
+  pageSize: number,
+  filters: RbacListFilters = {}
+) {
   const { data, isLoading, error, isValidating } = useSWR<ApiEnvelope<PageResponse<T>>>(
-    pageKey(endpoint, page, pageSize),
+    pageKey(endpoint, page, pageSize, filters),
     fetcher,
     swrOptions
   );
@@ -80,24 +93,28 @@ function usePagedResource<T>(endpoint: string, page: number, pageSize: number) {
   }, [data, error, isLoading, isValidating]);
 }
 
-export function useRoles(page: number, pageSize: number) {
-  return usePagedResource<Role>(endpoints.rbac.roles, page, pageSize);
+export function useRoles(page: number, pageSize: number, filters?: RbacListFilters) {
+  return usePagedResource<Role>(endpoints.rbac.roles, page, pageSize, filters);
 }
 
-export function useApis(page: number, pageSize: number) {
-  return usePagedResource<ApiPermission>(endpoints.rbac.apis, page, pageSize);
+export function useApis(page: number, pageSize: number, filters?: RbacListFilters) {
+  return usePagedResource<ApiPermission>(endpoints.rbac.apis, page, pageSize, filters);
 }
 
-export function useMenuSections(page: number, pageSize: number) {
-  return usePagedResource<MenuSection>(endpoints.rbac.menuSections, page, pageSize);
+export function useUnboundApis(page: number, pageSize: number, filters?: RbacListFilters) {
+  return usePagedResource<ApiPermission>(endpoints.rbac.unboundApis, page, pageSize, filters);
 }
 
-export function useMenuItems(page: number, pageSize: number) {
-  return usePagedResource<MenuItem>(endpoints.rbac.menuItems, page, pageSize);
+export function useMenuSections(page: number, pageSize: number, filters?: RbacListFilters) {
+  return usePagedResource<MenuSection>(endpoints.rbac.menuSections, page, pageSize, filters);
 }
 
-export function useUsers(page: number, pageSize: number) {
-  return usePagedResource<SystemUser>(endpoints.users, page, pageSize);
+export function useMenuItems(page: number, pageSize: number, filters?: RbacListFilters) {
+  return usePagedResource<MenuItem>(endpoints.rbac.menuItems, page, pageSize, filters);
+}
+
+export function useUsers(page: number, pageSize: number, filters?: RbacListFilters) {
+  return usePagedResource<SystemUser>(endpoints.users, page, pageSize, filters);
 }
 
 export function useNavbar() {
@@ -139,35 +156,55 @@ export async function deleteRole(code: string) {
   await mutate(endpoints.navbar);
 }
 
-export async function getRoleApis(code: string) {
-  return requestData<RoleApiBinding>(axios.get(endpoints.rbac.roleApis(code)));
+export async function getRolePermissions(code: string) {
+  return requestData<RolePermissionBinding>(axios.get(endpoints.rbac.rolePermissions(code)));
 }
 
-export async function updateRoleApis(code: string, apiPermissionIds: string[]) {
+export async function updateRolePermissions(
+  code: string,
+  menuItemIds: string[],
+  apiPermissionIds: string[]
+) {
   await requestData<void>(
-    axios.put(endpoints.rbac.roleApis(code), { api_permission_ids: apiPermissionIds })
+    axios.put(endpoints.rbac.rolePermissions(code), {
+      menu_item_ids: menuItemIds,
+      api_permission_ids: apiPermissionIds,
+    })
   );
   await mutate(endpoints.navbar);
 }
 
-export async function getRoleMenus(code: string) {
-  return requestData<RoleMenuBinding>(axios.get(endpoints.rbac.roleMenus(code)));
+export async function getMenuApis(id: string) {
+  return requestData<MenuApiBinding>(axios.get(endpoints.rbac.menuItemApis(id)));
 }
 
-export async function updateRoleMenus(code: string, menuItemIds: string[]) {
-  await requestData<void>(axios.put(endpoints.rbac.roleMenus(code), { menu_item_ids: menuItemIds }));
+export async function updateMenuApis(id: string, apiPermissionIds: string[]) {
+  await requestData<void>(
+    axios.put(endpoints.rbac.menuItemApis(id), { api_permission_ids: apiPermissionIds })
+  );
+  await mutate(endpoints.navbar);
+}
+
+export async function getApiMenus(id: string) {
+  return requestData<ApiMenuBinding>(axios.get(endpoints.rbac.apiMenus(id)));
+}
+
+export async function updateApiMenus(id: string, menuItemIds: string[]) {
+  await requestData<void>(axios.put(endpoints.rbac.apiMenus(id), { menu_item_ids: menuItemIds }));
   await mutate(endpoints.navbar);
 }
 
 export async function createApi(payload: ApiPermissionInput) {
   const api = await requestData<ApiPermission>(axios.post(endpoints.rbac.apis, payload));
   await mutate((key) => isEndpointKey(key, endpoints.rbac.apis));
+  await mutate(endpoints.navbar);
   return api;
 }
 
 export async function updateApi(id: string, payload: ApiPermissionInput) {
   const api = await requestData<ApiPermission>(axios.put(endpoints.rbac.api(id), payload));
   await mutate((key) => isEndpointKey(key, endpoints.rbac.apis));
+  await mutate(endpoints.navbar);
   return api;
 }
 

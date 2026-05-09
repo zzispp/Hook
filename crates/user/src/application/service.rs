@@ -5,7 +5,7 @@ use crate::application::{
 };
 use types::{
     pagination::{Page, PageRequest},
-    user::{Credentials, NewUser, ReplaceUser, User, UserId},
+    user::{Credentials, NewUser, ReplaceUser, User, UserId, UserListFilters},
 };
 
 use self::{
@@ -162,11 +162,11 @@ where
         self.repository.delete(id).await
     }
 
-    async fn list_users(&self, page: PageRequest) -> AppResult<Page<User>> {
+    async fn list_users(&self, page: PageRequest, filters: UserListFilters) -> AppResult<Page<User>> {
         validate_page(page)?;
         match self.system_users.system_user() {
-            Some(system_user) => list_with_system_user(&self.repository, page, system_user.user).await,
-            None => self.repository.list(page).await,
+            Some(system_user) => list_with_system_user(&self.repository, page, filters, system_user.user).await,
+            None => self.repository.list(page, filters).await,
         }
     }
 }

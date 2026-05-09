@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::iden::*;
+use super::{iden::*, wallet_tables};
 
 pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
     vec![
@@ -9,8 +9,11 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
         api_permissions_table(),
         menu_sections_table(),
         menu_items_table(),
-        role_api_permissions_table(),
+        menu_api_permissions_table(),
         role_menu_permissions_table(),
+        role_api_permissions_table(),
+        wallet_tables::wallets_table(),
+        wallet_tables::wallet_transactions_table(),
         global_models_table(),
         models_table(),
     ]
@@ -45,6 +48,8 @@ fn roles_table() -> TableCreateStatement {
         .col(boolean(Roles::Enabled))
         .col(boolean(Roles::System))
         .col(big_integer(Roles::SortOrder))
+        .col(timestamp_tz(Roles::CreatedAt))
+        .col(timestamp_tz(Roles::UpdatedAt))
         .to_owned()
 }
 
@@ -60,6 +65,8 @@ fn api_permissions_table() -> TableCreateStatement {
         .col(text(ApiPermissions::Group))
         .col(boolean(ApiPermissions::Enabled))
         .col(boolean(ApiPermissions::System))
+        .col(timestamp_tz(ApiPermissions::CreatedAt))
+        .col(timestamp_tz(ApiPermissions::UpdatedAt))
         .to_owned()
 }
 
@@ -72,6 +79,8 @@ fn menu_sections_table() -> TableCreateStatement {
         .col(text(MenuSections::Subheader))
         .col(big_integer(MenuSections::SortOrder))
         .col(boolean(MenuSections::Enabled))
+        .col(timestamp_tz(MenuSections::CreatedAt))
+        .col(timestamp_tz(MenuSections::UpdatedAt))
         .to_owned()
 }
 
@@ -90,20 +99,24 @@ fn menu_items_table() -> TableCreateStatement {
         .col(boolean(MenuItems::DeepMatch))
         .col(big_integer(MenuItems::SortOrder))
         .col(boolean(MenuItems::Enabled))
+        .col(timestamp_tz(MenuItems::CreatedAt))
+        .col(timestamp_tz(MenuItems::UpdatedAt))
         .to_owned()
 }
 
-fn role_api_permissions_table() -> TableCreateStatement {
+fn menu_api_permissions_table() -> TableCreateStatement {
     Table::create()
-        .table(RoleApiPermissions::Table)
+        .table(MenuApiPermissions::Table)
         .if_not_exists()
-        .col(text(RoleApiPermissions::RoleCode))
-        .col(string_len(RoleApiPermissions::ApiPermissionId, 36))
+        .col(string_len(MenuApiPermissions::MenuItemId, 36))
+        .col(string_len(MenuApiPermissions::ApiPermissionId, 36))
+        .col(timestamp_tz(MenuApiPermissions::CreatedAt))
+        .col(timestamp_tz(MenuApiPermissions::UpdatedAt))
         .primary_key(
             Index::create()
-                .name("pk_role_api_permissions")
-                .col(RoleApiPermissions::RoleCode)
-                .col(RoleApiPermissions::ApiPermissionId),
+                .name("pk_menu_api_permissions")
+                .col(MenuApiPermissions::MenuItemId)
+                .col(MenuApiPermissions::ApiPermissionId),
         )
         .to_owned()
 }
@@ -114,11 +127,30 @@ fn role_menu_permissions_table() -> TableCreateStatement {
         .if_not_exists()
         .col(text(RoleMenuPermissions::RoleCode))
         .col(string_len(RoleMenuPermissions::MenuItemId, 36))
+        .col(timestamp_tz(RoleMenuPermissions::CreatedAt))
+        .col(timestamp_tz(RoleMenuPermissions::UpdatedAt))
         .primary_key(
             Index::create()
                 .name("pk_role_menu_permissions")
                 .col(RoleMenuPermissions::RoleCode)
                 .col(RoleMenuPermissions::MenuItemId),
+        )
+        .to_owned()
+}
+
+fn role_api_permissions_table() -> TableCreateStatement {
+    Table::create()
+        .table(RoleApiPermissions::Table)
+        .if_not_exists()
+        .col(text(RoleApiPermissions::RoleCode))
+        .col(string_len(RoleApiPermissions::ApiPermissionId, 36))
+        .col(timestamp_tz(RoleApiPermissions::CreatedAt))
+        .col(timestamp_tz(RoleApiPermissions::UpdatedAt))
+        .primary_key(
+            Index::create()
+                .name("pk_role_api_permissions")
+                .col(RoleApiPermissions::RoleCode)
+                .col(RoleApiPermissions::ApiPermissionId),
         )
         .to_owned()
 }

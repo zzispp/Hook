@@ -8,6 +8,12 @@ pub struct RoleRecordInput {
     pub sort_order: i64,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct RbacRecordFilters {
+    pub search: Option<String>,
+    pub enabled: Option<bool>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ApiPermissionRecordInput {
     pub code: String,
@@ -42,8 +48,8 @@ pub struct MenuItemRecordInput {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RoleApiBindingRecordInput {
-    pub role_code: String,
+pub struct MenuApiBindingRecordInput {
+    pub menu_item_id: String,
     pub api_permission_id: String,
 }
 
@@ -51,4 +57,10 @@ pub struct RoleApiBindingRecordInput {
 pub struct RoleMenuBindingRecordInput {
     pub role_code: String,
     pub menu_item_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RoleApiBindingRecordInput {
+    pub role_code: String,
+    pub api_permission_id: String,
 }

@@ -1,12 +1,18 @@
-use sea_orm_migration::prelude::*;
+use sea_orm_migration::{MigrationName, prelude::*};
 
 mod iden;
 mod indices;
 mod seed;
 mod tables;
+mod wallet_tables;
 
-#[derive(DeriveMigrationName)]
 pub struct Migration;
+
+impl MigrationName for Migration {
+    fn name(&self) -> &str {
+        "m20260508_000001_create_baseline"
+    }
+}
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {

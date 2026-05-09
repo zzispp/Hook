@@ -1,4 +1,4 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select, Set};
 use types::{
     pagination::{Page, PageSliceRequest},
     rbac::{MenuItem, MenuSection},
@@ -12,7 +12,7 @@ use crate::{
     },
 };
 
-use super::{MenuItemRecord, MenuItemRecordInput, MenuSectionRecord, MenuSectionRecordInput, RbacStore, repository::rbac_page};
+use super::{MenuItemRecord, MenuItemRecordInput, MenuSectionRecord, MenuSectionRecordInput, RbacRecordFilters, RbacStore, repository::rbac_page};
 
 impl RbacStore {
     pub async fn create_menu_section(&self, input: MenuSectionRecordInput) -> StorageResult<MenuSection> {
@@ -64,9 +64,10 @@ impl RbacStore {
             .map_err(StorageError::from)
     }
 
-    pub async fn page_menu_sections(&self, request: PageSliceRequest) -> StorageResult<Page<MenuSection>> {
-        let total = menu_section_records::Entity::find().count(self.database.connection()).await?;
-        let items = menu_section_records::Entity::find()
+    pub async fn page_menu_sections(&self, request: PageSliceRequest, filters: RbacRecordFilters) -> StorageResult<Page<MenuSection>> {
+        let query = filtered_menu_sections(filters);
+        let total = query.clone().count(self.database.connection()).await?;
+        let items = query
             .order_by_asc(menu_section_records::Column::SortOrder)
             .limit(request.limit)
             .offset(request.offset)
@@ -152,9 +153,10 @@ impl RbacStore {
             .map_err(StorageError::from)
     }
 
-    pub async fn page_menu_items(&self, request: PageSliceRequest) -> StorageResult<Page<MenuItem>> {
-        let total = menu_item_records::Entity::find().count(self.database.connection()).await?;
-        let items = menu_item_records::Entity::find()
+    pub async fn page_menu_items(&self, request: PageSliceRequest, filters: RbacRecordFilters) -> StorageResult<Page<MenuItem>> {
+        let query = filtered_menu_items(filters);
+        let total = query.clone().count(self.database.connection()).await?;
+        let items = query
             .order_by_asc(menu_item_records::Column::SortOrder)
             .limit(request.limit)
             .offset(request.offset)
@@ -178,4 +180,40 @@ impl RbacStore {
             .await
             .map_err(StorageError::from)
     }
+}
+
+fn filtered_menu_sections(filters: RbacRecordFilters) -> Select<menu_section_records::Entity> {
+    let mut query = menu_section_records::Entity::find();
+    if let Some(enabled) = filters.enabled {
+        query = query.filter(menu_section_records::Column::Enabled.eq(enabled));
+    }
+    match filters.search {
+        Some(search) if !search.is_empty() => query.filter(menu_section_search_condition(&search)),
+        _ => query,
+    }
+}
+
+fn menu_section_search_condition(search: &str) -> Condition {
+    Condition::any()
+        .add(menu_section_records::Column::Code.contains(search))
+        .add(menu_section_records::Column::Subheader.contains(search))
+}
+
+fn filtered_menu_items(filters: RbacRecordFilters) -> Select<menu_item_records::Entity> {
+    let mut query = menu_item_records::Entity::find();
+    if let Some(enabled) = filters.enabled {
+        query = query.filter(menu_item_records::Column::Enabled.eq(enabled));
+    }
+    match filters.search {
+        Some(search) if !search.is_empty() => query.filter(menu_item_search_condition(&search)),
+        _ => query,
+    }
+}
+
+fn menu_item_search_condition(search: &str) -> Condition {
+    Condition::any()
+        .add(menu_item_records::Column::Code.contains(search))
+        .add(menu_item_records::Column::Title.contains(search))
+        .add(menu_item_records::Column::RoutePath.contains(search))
+        .add(menu_item_records::Column::Caption.contains(search))
 }

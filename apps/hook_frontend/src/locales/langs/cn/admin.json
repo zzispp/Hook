@@ -58,6 +58,16 @@
     "type": "类型",
     "username": "用户名"
   },
+  "filters": {
+    "allRoles": "全部角色",
+    "allStatuses": "全部状态",
+    "searchApis": "搜索名称、编码、方法或路径...",
+    "searchMenus": "搜索标题、编码或路径...",
+    "searchModels": "搜索模型名称...",
+    "searchRoles": "搜索角色名称、编码或描述...",
+    "searchSections": "搜索分组标题或编码...",
+    "searchUsers": "搜索用户名、邮箱或角色..."
+  },
   "pages": {
     "apiManagement": "API 管理",
     "menuManagement": "菜单管理",
@@ -74,6 +84,7 @@
     "addSection": "新增分组",
     "addUser": "新增用户",
     "apiPermissions": "API 权限",
+    "bindApis": "绑定 API",
     "menuPermissions": "菜单权限",
     "savePermissions": "保存权限"
   },
@@ -121,6 +132,7 @@
     "editModel": "编辑统一模型",
     "editRole": "编辑角色",
     "editUser": "编辑用户",
+    "menuApiPermissions": "菜单 API 权限：{{name}}",
     "rolePermissions": "角色权限：{{name}}"
   },
   "helper": {
@@ -137,6 +149,7 @@
     "loadingPermissions": "权限加载中...",
     "loadModelsFailed": "加载 model.dev 失败",
     "menuItemCreated": "菜单项已创建",
+    "menuApiPermissionsUpdated": "菜单 API 权限已更新",
     "menuItemDeleted": "菜单项已删除",
     "menuItemUpdated": "菜单项已更新",
     "menuSectionCreated": "菜单分组已创建",
@@ -189,10 +202,12 @@
     "roles_create": "创建角色",
     "roles_update": "更新角色",
     "roles_delete": "删除角色",
-    "role_apis_read": "读取角色 API 绑定",
-    "role_apis_update": "更新角色 API 绑定",
-    "role_menus_read": "读取角色菜单绑定",
-    "role_menus_update": "更新角色菜单绑定",
+    "menu_item_apis_read": "读取菜单 API 绑定",
+    "menu_item_apis_update": "更新菜单 API 绑定",
+    "role_permissions_read": "读取角色权限绑定",
+    "role_permissions_update": "更新角色权限绑定",
+    "api_menus_read": "读取 API 菜单绑定",
+    "api_menus_update": "更新 API 菜单绑定",
     "apis_read": "查看 API 权限列表",
     "apis_create": "创建 API 权限",
     "apis_update": "更新 API 权限",

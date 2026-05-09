@@ -2,7 +2,7 @@ use constants::pagination::PAGE_INDEX_OFFSET;
 use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select, Set};
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{User, UserId},
+    user::{User, UserId, UserListFilters},
 };
 
 use crate::{
@@ -100,19 +100,23 @@ impl UserStore {
         Ok(())
     }
 
-    pub async fn list(&self, page: PageRequest) -> StorageResult<Page<User>> {
-        self.list_slice(PageSliceRequest {
-            offset: (page.page - PAGE_INDEX_OFFSET) * page.page_size,
-            limit: page.page_size,
-            page: page.page,
-            page_size: page.page_size,
-        })
+    pub async fn list(&self, page: PageRequest, filters: UserListFilters) -> StorageResult<Page<User>> {
+        self.list_slice(
+            PageSliceRequest {
+                offset: (page.page - PAGE_INDEX_OFFSET) * page.page_size,
+                limit: page.page_size,
+                page: page.page,
+                page_size: page.page_size,
+            },
+            filters,
+        )
         .await
     }
 
-    pub async fn list_slice(&self, request: PageSliceRequest) -> StorageResult<Page<User>> {
-        let total = active_users().count(self.database.connection()).await?;
-        let items = active_users()
+    pub async fn list_slice(&self, request: PageSliceRequest, filters: UserListFilters) -> StorageResult<Page<User>> {
+        let query = filtered_users(filters);
+        let total = query.clone().count(self.database.connection()).await?;
+        let items = query
             .order_by_asc(UserColumn::CreatedAt)
             .limit(request.limit)
             .offset(request.offset)
@@ -137,6 +141,27 @@ impl UserStore {
 
 fn active_users() -> Select<Users> {
     Users::find().filter(UserColumn::IsDeleted.eq(false))
+}
+
+fn filtered_users(filters: UserListFilters) -> Select<Users> {
+    let mut query = active_users();
+    if let Some(is_active) = filters.is_active {
+        query = query.filter(UserColumn::IsActive.eq(is_active));
+    }
+    if let Some(role) = filters.role {
+        query = query.filter(UserColumn::Role.eq(role));
+    }
+    match filters.search {
+        Some(search) if !search.is_empty() => query.filter(user_search_condition(&search)),
+        _ => query,
+    }
+}
+
+fn user_search_condition(search: &str) -> Condition {
+    Condition::any()
+        .add(UserColumn::Username.contains(search))
+        .add(UserColumn::Email.contains(search))
+        .add(UserColumn::Role.contains(search))
 }
 
 async fn ensure_role_exists(db: &DatabaseConnection, role: &str) -> StorageResult<()> {

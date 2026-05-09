@@ -8,8 +8,9 @@ use serde::Serialize;
 
 use crate::api::{ApiState, TokenPair, error::ApiError};
 use types::{
+    pagination::PageRequest,
     response::ApiResponse,
-    user::{ListUsersQuery, NewUser, RefreshTokenPayload, SignInPayload, SignUpPayload, UserId, UserPayload, UserResponse, UsersPageResponse},
+    user::{ListUsersQuery, NewUser, RefreshTokenPayload, SignInPayload, SignUpPayload, UserId, UserListFilters, UserPayload, UserResponse, UsersPageResponse},
 };
 
 type ApiResult<T> = Result<T, ApiError>;
@@ -74,7 +75,16 @@ pub async fn delete_user(State(state): State<ApiState>, Path(id): Path<String>) 
 }
 
 pub async fn list_users(State(state): State<ApiState>, Query(query): Query<ListUsersQuery>) -> ApiResult<ApiJson<UsersPageResponse>> {
-    let page = state.users.list_users(query.into()).await?;
+    let page = PageRequest {
+        page: query.page,
+        page_size: query.page_size,
+    };
+    let filters = UserListFilters {
+        search: query.search,
+        role: query.role,
+        is_active: query.is_active,
+    };
+    let page = state.users.list_users(page, filters).await?;
     Ok(ok(page.into()))
 }
 

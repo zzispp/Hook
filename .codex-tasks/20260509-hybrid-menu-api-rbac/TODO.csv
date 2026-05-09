@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理现有 RBAC 链路,DONE,"确认 storage/service/API/frontend/baseline 的改动边界","cargo check -p backend",2026-05-09T07:32:24Z,0,"confirmed existing menu-only role binding state and partial type changes"
+2,实现角色 API 直授权后端链路,DONE,"role_api_permissions 回到 baseline；授权快照合并菜单 API 与角色 API","cargo check -p rbac && cargo check -p storage",2026-05-09T07:42:17Z,0,"cargo check -p rbac and cargo check -p backend pass"
+3,调整前端授权交互,DONE,"API 可选菜单绑定；角色授权可选菜单和 API","pnpm lint:frontend",2026-05-09T07:47:09Z,0,"pnpm --dir apps/hook_frontend lint passes"
+4,重建本地数据库并验证 seed,IN_PROGRESS,"本地 PostgreSQL fresh 后角色/菜单/API 绑定符合混合模型","cargo run -p backend -- --config config/config.yaml migration fresh",,0,
+5,运行全量验证,TODO,"Rust 测试和前端 lint/build 通过","just test && pnpm lint:frontend && pnpm build:frontend",,0,

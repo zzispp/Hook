@@ -32,7 +32,7 @@ where
         validate_user_id(user_id)?;
         match self.repository.find_by_user_id(user_id).await? {
             Some(wallet) => Ok(wallet),
-            None => self.repository.create_user_wallet(user_id).await,
+            None => self.repository.ensure_user_wallet(user_id).await,
         }
     }
 

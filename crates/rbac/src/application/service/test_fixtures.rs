@@ -61,6 +61,7 @@ pub(super) fn api_input(code: &str) -> ApiPermissionInput {
         name: code.into(),
         group: "Users".into(),
         enabled: true,
+        menu_item_ids: vec![],
     }
 }
 

@@ -10,6 +10,38 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         index("index_menu_sections_by_code", MenuSections::Table, MenuSections::Code, true),
         index("index_menu_items_by_section_id", MenuItems::Table, MenuItems::SectionId, false),
         index("index_menu_items_by_code", MenuItems::Table, MenuItems::Code, true),
+        index(
+            "index_menu_api_permissions_by_api_id",
+            MenuApiPermissions::Table,
+            MenuApiPermissions::ApiPermissionId,
+            false,
+        ),
+        index(
+            "index_role_api_permissions_by_api_id",
+            RoleApiPermissions::Table,
+            RoleApiPermissions::ApiPermissionId,
+            false,
+        ),
+        index("index_wallets_by_user_id", Wallets::Table, Wallets::UserId, true),
+        index("index_wallets_by_status", Wallets::Table, Wallets::Status, false),
+        compound_index(
+            "index_wallet_transactions_by_wallet_created",
+            WalletTransactions::Table,
+            WalletTransactions::WalletId,
+            WalletTransactions::CreatedAt,
+        ),
+        compound_index(
+            "index_wallet_transactions_by_link",
+            WalletTransactions::Table,
+            WalletTransactions::LinkType,
+            WalletTransactions::LinkId,
+        ),
+        compound_index(
+            "index_wallet_transactions_by_category_created",
+            WalletTransactions::Table,
+            WalletTransactions::Category,
+            WalletTransactions::CreatedAt,
+        ),
         index("index_global_models_by_name", GlobalModels::Table, GlobalModels::Name, true),
         index("index_global_models_by_usage_count", GlobalModels::Table, GlobalModels::UsageCount, false),
         index("index_models_by_provider_id", Models::Table, Models::ProviderId, false),
@@ -28,4 +60,13 @@ where
         index.unique();
     }
     index.to_owned()
+}
+
+fn compound_index<T, C1, C2>(name: &str, table: T, first: C1, second: C2) -> IndexCreateStatement
+where
+    T: Iden + 'static,
+    C1: Iden + 'static,
+    C2: Iden + 'static,
+{
+    Index::create().name(name).table(table).col(first).col(second).if_not_exists().to_owned()
 }

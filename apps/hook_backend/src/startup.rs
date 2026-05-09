@@ -36,6 +36,8 @@ use crate::{
     system,
 };
 
+const AUTHENTICATED_BASE_APIS: &[(&str, &str)] = &[("GET", "/api/auth/me"), ("GET", "/api/navbar")];
+
 pub async fn serve(settings: Settings) -> BackendResult<()> {
     let bind_addr = settings.bind_addr();
     hook_tracing::info_with_fields!("backend starting", addr = bind_addr);
@@ -121,6 +123,13 @@ fn authorization_config(settings: &Settings) -> AuthorizationConfig {
             .map(|rule| AuthWhitelistRule {
                 methods: rule.methods.clone(),
                 path_pattern: rule.path_pattern.clone(),
+            })
+            .collect(),
+        authenticated: AUTHENTICATED_BASE_APIS
+            .iter()
+            .map(|(method, path_pattern)| AuthWhitelistRule {
+                methods: vec![(*method).into()],
+                path_pattern: (*path_pattern).into(),
             })
             .collect(),
     }

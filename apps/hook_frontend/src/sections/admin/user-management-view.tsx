@@ -27,6 +27,11 @@ import { ConfirmDialog } from 'src/components/custom-dialog';
 import { useTable, TableNoData, TablePaginationCustom } from 'src/components/table';
 
 import {
+  toUserFilters,
+  AdminFiltersToolbar,
+  DEFAULT_ADMIN_FILTERS,
+} from './admin-filters-toolbar';
+import {
   AddButton,
   SwitchRow,
   TextFieldRow,
@@ -55,7 +60,12 @@ const DEFAULT_FORM: UserInput = {
 export function UserManagementView() {
   const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'username' });
-  const { items, total, isLoading } = useUsers(table.page, table.rowsPerPage);
+  const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
+  const { items, total, isLoading } = useUsers(
+    table.page,
+    table.rowsPerPage,
+    toUserFilters(filters)
+  );
   const roles = useRoles(0, 100);
   const tableHead = useMemo<TableHeadCellProps[]>(
     () => [
@@ -77,6 +87,18 @@ export function UserManagementView() {
   const [deleteTarget, setDeleteTarget] = useState<SystemUser | null>(null);
 
   const roleOptions = roles.items.filter((role) => role.enabled);
+  const filterRoleOptions = roleOptions.map((role) => ({
+    value: role.code,
+    label: `${translatedRoleName(role, t)} (${role.code})`,
+  }));
+
+  const handleFiltersChange = useCallback(
+    (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
+      table.onResetPage();
+      setFilters(nextFilters);
+    },
+    [table]
+  );
 
   const openCreate = useCallback(() => {
     setEditing(null);
@@ -142,6 +164,12 @@ export function UserManagementView() {
       />
 
       <Card>
+        <AdminFiltersToolbar
+          filters={filters}
+          roleOptions={filterRoleOptions}
+          searchPlaceholder={t('filters.searchUsers')}
+          onChange={handleFiltersChange}
+        />
         <Scrollbar>
           <Table sx={{ minWidth: 980 }}>
             <ManagementTableHead head={tableHead} />

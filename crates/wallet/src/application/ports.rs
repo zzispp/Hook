@@ -14,7 +14,7 @@ use super::WalletResult;
 pub trait WalletRepository: Send + Sync + 'static {
     async fn find_by_user_id(&self, user_id: &str) -> WalletResult<Option<Wallet>>;
     async fn find_by_id(&self, wallet_id: &str) -> WalletResult<Option<Wallet>>;
-    async fn create_user_wallet(&self, user_id: &str) -> WalletResult<Wallet>;
+    async fn ensure_user_wallet(&self, user_id: &str) -> WalletResult<Wallet>;
     async fn save_ledger_entry(&self, wallet: Wallet, transaction: WalletTransaction) -> WalletResult<WalletTransaction>;
     async fn page_transactions(&self, wallet_id: &str, page: PageRequest) -> WalletResult<Page<WalletTransaction>>;
 }

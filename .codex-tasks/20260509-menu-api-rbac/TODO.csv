@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inventory current RBAC schema services routes and frontend permission UI,DONE,Relevant files and coupling points are identified,test -f .codex-tasks/20260509-menu-api-rbac/PROGRESS.md,2026-05-09T13:55:39+0800,0,
+2,Implement backend menu-api schema migration storage and derived auth snapshot,DONE,API auth roles are derived from menu bindings and role API direct grant paths are removed,cargo check -p rbac && cargo check -p storage,2026-05-09T14:12:13+0800,0,
+3,Update default seeds and migration validation for menu API bindings,DONE,Fresh baseline and upgrade migrations create coherent menu API bindings,cargo check -p backend,2026-05-09T14:19:18+0800,0,Attempted cargo check -p hook_backend first; package name is backend.
+4,Refactor frontend actions types role UI and menu API binding UI,DONE,Role UI manages menus only and menu UI manages API bindings,pnpm lint:frontend,2026-05-09T14:50:08+0800,0,
+5,Run full validation and fix issues,DONE,Rust and frontend validation commands complete or failures are documented,just test && pnpm build:frontend,2026-05-09T14:50:08+0800,0,
+6,Summarize final behavior and changed files,DONE,Final answer explains route and API authorization model,test -f .codex-tasks/20260509-menu-api-rbac/TODO.csv,2026-05-09T14:56:10+0800,0,

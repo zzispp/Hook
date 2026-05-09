@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理目标 schema 和 seed,DONE,"确认 baseline 需要直接包含 RBAC 时间字段、菜单 API 绑定、钱包表和钱包 seed","cargo check -p backend",2026-05-09T15:06:12+08:00,0,"现有 storage entity 要求 RBAC audit columns；默认配置已经是 menu-api 绑定；wallet entity 已存在。"
+2,重写 baseline 并删除兼容迁移,DONE,"Migrator 只注册 baseline；无 role_api_permissions；baseline 一次创建目标表、索引、种子","cargo check -p backend",2026-05-09T15:17:16+08:00,0,"新增 wallet_tables.rs；移除旧增量迁移文件；migration name 显式为 m20260508_000001_create_baseline。"
+3,重建本地 PostgreSQL 并跑迁移,DONE,"localhost:5433/postgres public schema 由新 baseline 创建成功","cargo run -p backend -- --config config/config.yaml migration fresh",2026-05-09T15:17:16+08:00,0,"已 DROP/CREATE public schema；seaql_migrations 仅有 m20260508_000001_create_baseline。"
+4,运行验证,DONE,"格式化、cargo check/test 通过","cargo fmt --all && cargo check -p backend && cargo check -p storage && cargo check -p rbac && cargo test -p wallet && just test",2026-05-09T15:17:16+08:00,0,"DB 断言确认 user 有 wallet_center、admin 无 wallet_center、wallet APIs 绑定到钱包中心、无 role_api_permissions。"

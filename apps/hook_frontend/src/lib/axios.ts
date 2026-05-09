@@ -72,14 +72,16 @@ export const endpoints = {
   rbac: {
     roles: '/api/rbac/roles',
     role: (code: string) => `/api/rbac/roles/${code}`,
-    roleApis: (code: string) => `/api/rbac/roles/${code}/apis`,
-    roleMenus: (code: string) => `/api/rbac/roles/${code}/menus`,
+    rolePermissions: (code: string) => `/api/rbac/roles/${code}/permissions`,
     apis: '/api/rbac/apis',
+    unboundApis: '/api/rbac/apis/unbound',
     api: (id: string) => `/api/rbac/apis/${id}`,
+    apiMenus: (id: string) => `/api/rbac/apis/${id}/menus`,
     menuSections: '/api/rbac/menu-sections',
     menuSection: (id: string) => `/api/rbac/menu-sections/${id}`,
     menuItems: '/api/rbac/menu-items',
     menuItem: (id: string) => `/api/rbac/menu-items/${id}`,
+    menuItemApis: (id: string) => `/api/rbac/menu-items/${id}/apis`,
   },
   adminModels: {
     global: '/api/admin/models/global',

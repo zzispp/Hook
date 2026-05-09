@@ -1,4 +1,4 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select, Set};
 use types::{
     pagination::{Page, PageSliceRequest},
     rbac::Role,
@@ -10,7 +10,7 @@ use crate::{
     user::{UserColumn, UserEntity as Users},
 };
 
-use super::{RbacStore, RoleRecord, RoleRecordInput, repository::rbac_page};
+use super::{RbacRecordFilters, RbacStore, RoleRecord, RoleRecordInput, repository::rbac_page};
 
 impl RbacStore {
     pub async fn create_role(&self, input: RoleRecordInput) -> StorageResult<Role> {
@@ -64,9 +64,10 @@ impl RbacStore {
             .map_err(StorageError::from)
     }
 
-    pub async fn page_roles(&self, request: PageSliceRequest) -> StorageResult<Page<Role>> {
-        let total = role_records::Entity::find().count(self.database.connection()).await?;
-        let items = role_records::Entity::find()
+    pub async fn page_roles(&self, request: PageSliceRequest, filters: RbacRecordFilters) -> StorageResult<Page<Role>> {
+        let query = filtered_roles(filters);
+        let total = query.clone().count(self.database.connection()).await?;
+        let items = query
             .order_by_asc(role_records::Column::SortOrder)
             .limit(request.limit)
             .offset(request.offset)
@@ -91,4 +92,22 @@ impl RbacStore {
             .await
             .map_err(StorageError::from)
     }
+}
+
+fn filtered_roles(filters: RbacRecordFilters) -> Select<role_records::Entity> {
+    let mut query = role_records::Entity::find();
+    if let Some(enabled) = filters.enabled {
+        query = query.filter(role_records::Column::Enabled.eq(enabled));
+    }
+    match filters.search {
+        Some(search) if !search.is_empty() => query.filter(role_search_condition(&search)),
+        _ => query,
+    }
+}
+
+fn role_search_condition(search: &str) -> Condition {
+    Condition::any()
+        .add(role_records::Column::Code.contains(search))
+        .add(role_records::Column::Name.contains(search))
+        .add(role_records::Column::Description.contains(search))
 }

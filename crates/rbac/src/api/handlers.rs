@@ -6,8 +6,8 @@ use serde::Deserialize;
 use types::{
     pagination::{Page, PageRequest},
     rbac::{
-        ApiPermission, ApiPermissionInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse, Role, RoleApiBindingInput, RoleInput,
-        RoleMenuBindingInput,
+        ApiMenuBindingInput, ApiPermission, ApiPermissionInput, MenuApiBindingInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse,
+        RbacListFilters, RbacListRequest, Role, RoleInput, RolePermissionBindingInput,
     },
     response::ApiResponse,
 };
@@ -21,6 +21,10 @@ type ApiResult<T> = Result<T, RbacApiError>;
 pub struct RbacListQuery {
     pub page: u64,
     pub page_size: u64,
+    #[serde(default)]
+    pub search: Option<String>,
+    #[serde(default)]
+    pub enabled: Option<bool>,
 }
 
 pub async fn navbar(State(state): State<RbacApiState>, role: String) -> ApiResult<ApiJson<NavResponse>> {
@@ -49,6 +53,10 @@ pub async fn list_apis(State(state): State<RbacApiState>, Query(query): Query<Rb
     Ok(ok(state.rbac_admin.page_apis(query.into()).await?))
 }
 
+pub async fn list_unbound_apis(State(state): State<RbacApiState>, Query(query): Query<RbacListQuery>) -> ApiResult<ApiJson<Page<ApiPermission>>> {
+    Ok(ok(state.rbac_admin.page_unbound_apis(query.into()).await?))
+}
+
 pub async fn create_api(State(state): State<RbacApiState>, Json(payload): Json<ApiPermissionInput>) -> ApiResult<ApiJson<ApiPermission>> {
     Ok(ok(state.rbac_admin.create_api(payload).await?))
 }
@@ -64,20 +72,6 @@ pub async fn replace_api(
 pub async fn delete_api(State(state): State<RbacApiState>, Path(id): Path<String>) -> ApiResult<ApiJson<()>> {
     state.rbac_admin.delete_api(&id).await?;
     Ok(ok(()))
-}
-
-pub async fn replace_role_apis(
-    State(state): State<RbacApiState>,
-    Path(code): Path<String>,
-    Json(payload): Json<RoleApiBindingInput>,
-) -> ApiResult<ApiJson<()>> {
-    state.rbac_admin.replace_role_apis(&code, payload).await?;
-    Ok(ok(()))
-}
-
-pub async fn role_api_bindings(State(state): State<RbacApiState>, Path(code): Path<String>) -> ApiResult<ApiJson<RoleApiBindingInput>> {
-    let api_permission_ids = state.rbac_admin.role_api_ids(&code).await?;
-    Ok(ok(RoleApiBindingInput { api_permission_ids }))
 }
 
 pub async fn list_menu_sections(State(state): State<RbacApiState>, Query(query): Query<RbacListQuery>) -> ApiResult<ApiJson<Page<MenuSection>>> {
@@ -118,25 +112,50 @@ pub async fn delete_menu_item(State(state): State<RbacApiState>, Path(id): Path<
     Ok(ok(()))
 }
 
-pub async fn replace_role_menus(
-    State(state): State<RbacApiState>,
-    Path(code): Path<String>,
-    Json(payload): Json<RoleMenuBindingInput>,
-) -> ApiResult<ApiJson<()>> {
-    state.rbac_admin.replace_role_menus(&code, payload).await?;
+pub async fn replace_menu_apis(State(state): State<RbacApiState>, Path(id): Path<String>, Json(payload): Json<MenuApiBindingInput>) -> ApiResult<ApiJson<()>> {
+    state.rbac_admin.replace_menu_apis(&id, payload).await?;
     Ok(ok(()))
 }
 
-pub async fn role_menu_bindings(State(state): State<RbacApiState>, Path(code): Path<String>) -> ApiResult<ApiJson<RoleMenuBindingInput>> {
-    let menu_item_ids = state.rbac_admin.role_menu_item_ids(&code).await?;
-    Ok(ok(RoleMenuBindingInput { menu_item_ids }))
+pub async fn menu_api_bindings(State(state): State<RbacApiState>, Path(id): Path<String>) -> ApiResult<ApiJson<MenuApiBindingInput>> {
+    let api_permission_ids = state.rbac_admin.menu_api_ids(&id).await?;
+    Ok(ok(MenuApiBindingInput { api_permission_ids }))
 }
 
-impl From<RbacListQuery> for PageRequest {
+pub async fn replace_api_menus(State(state): State<RbacApiState>, Path(id): Path<String>, Json(payload): Json<ApiMenuBindingInput>) -> ApiResult<ApiJson<()>> {
+    state.rbac_admin.replace_api_menus(&id, payload).await?;
+    Ok(ok(()))
+}
+
+pub async fn api_menu_bindings(State(state): State<RbacApiState>, Path(id): Path<String>) -> ApiResult<ApiJson<ApiMenuBindingInput>> {
+    let menu_item_ids = state.rbac_admin.api_menu_ids(&id).await?;
+    Ok(ok(ApiMenuBindingInput { menu_item_ids }))
+}
+
+pub async fn replace_role_permissions(
+    State(state): State<RbacApiState>,
+    Path(code): Path<String>,
+    Json(payload): Json<RolePermissionBindingInput>,
+) -> ApiResult<ApiJson<()>> {
+    state.rbac_admin.replace_role_permissions(&code, payload).await?;
+    Ok(ok(()))
+}
+
+pub async fn role_permission_bindings(State(state): State<RbacApiState>, Path(code): Path<String>) -> ApiResult<ApiJson<RolePermissionBindingInput>> {
+    Ok(ok(state.rbac_admin.role_permission_bindings(&code).await?))
+}
+
+impl From<RbacListQuery> for RbacListRequest {
     fn from(value: RbacListQuery) -> Self {
         Self {
-            page: value.page,
-            page_size: value.page_size,
+            page: PageRequest {
+                page: value.page,
+                page_size: value.page_size,
+            },
+            filters: RbacListFilters {
+                search: value.search,
+                enabled: value.enabled,
+            },
         }
     }
 }

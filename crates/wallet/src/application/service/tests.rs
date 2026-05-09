@@ -113,7 +113,10 @@ impl WalletRepository for MemoryWalletRepository {
         Ok(self.state.lock().unwrap().wallets.iter().find(|wallet| wallet.id.0 == wallet_id).cloned())
     }
 
-    async fn create_user_wallet(&self, user_id: &str) -> WalletResult<Wallet> {
+    async fn ensure_user_wallet(&self, user_id: &str) -> WalletResult<Wallet> {
+        if let Some(wallet) = self.find_by_user_id(user_id).await? {
+            return Ok(wallet);
+        }
         let wallet = wallet(
             &format!("wallet-{}", self.state.lock().unwrap().wallets.len() + 1),
             user_id,

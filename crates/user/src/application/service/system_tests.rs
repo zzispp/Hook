@@ -103,7 +103,7 @@ async fn delete_user_rejects_system_user_id() {
 async fn list_users_prepends_system_user_to_first_page() {
     let service = service_with_system_user(users_repository());
 
-    let page = service.list_users(PageRequest { page: 1, page_size: 2 }).await.unwrap();
+    let page = service.list_users(PageRequest { page: 1, page_size: 2 }, Default::default()).await.unwrap();
 
     let usernames = page.items.iter().map(|user| user.username.as_str()).collect::<Vec<_>>();
     assert_eq!(usernames, vec!["admin", "alice"]);
@@ -115,7 +115,7 @@ async fn list_users_prepends_system_user_to_first_page() {
 async fn list_users_offsets_database_page_after_system_user() {
     let service = service_with_system_user(users_repository());
 
-    let page = service.list_users(PageRequest { page: 2, page_size: 2 }).await.unwrap();
+    let page = service.list_users(PageRequest { page: 2, page_size: 2 }, Default::default()).await.unwrap();
 
     let usernames = page.items.iter().map(|user| user.username.as_str()).collect::<Vec<_>>();
     assert_eq!(usernames, vec!["bob", "carol"]);

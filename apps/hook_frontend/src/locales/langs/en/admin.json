@@ -58,6 +58,16 @@
     "type": "Type",
     "username": "Username"
   },
+  "filters": {
+    "allRoles": "All roles",
+    "allStatuses": "All statuses",
+    "searchApis": "Search name, code, method, or path...",
+    "searchMenus": "Search title, code, or path...",
+    "searchModels": "Search model name...",
+    "searchRoles": "Search role name, code, or description...",
+    "searchSections": "Search section title or code...",
+    "searchUsers": "Search username, email, or role..."
+  },
   "pages": {
     "apiManagement": "API Management",
     "menuManagement": "Menu Management",
@@ -74,6 +84,7 @@
     "addSection": "Add section",
     "addUser": "Add user",
     "apiPermissions": "API permissions",
+    "bindApis": "Bind APIs",
     "menuPermissions": "Menu permissions",
     "savePermissions": "Save permissions"
   },
@@ -121,6 +132,7 @@
     "editModel": "Edit global model",
     "editRole": "Edit role",
     "editUser": "Edit user",
+    "menuApiPermissions": "Menu API permissions: {{name}}",
     "rolePermissions": "Role permissions: {{name}}"
   },
   "helper": {
@@ -137,6 +149,7 @@
     "loadingPermissions": "Loading permissions...",
     "loadModelsFailed": "Failed to load model.dev",
     "menuItemCreated": "Menu item created",
+    "menuApiPermissionsUpdated": "Menu API permissions updated",
     "menuItemDeleted": "Menu item deleted",
     "menuItemUpdated": "Menu item updated",
     "menuSectionCreated": "Menu section created",
@@ -189,10 +202,12 @@
     "roles_create": "Create role",
     "roles_update": "Update role",
     "roles_delete": "Delete role",
-    "role_apis_read": "Read role API bindings",
-    "role_apis_update": "Update role API bindings",
-    "role_menus_read": "Read role menu bindings",
-    "role_menus_update": "Update role menu bindings",
+    "menu_item_apis_read": "Read menu API bindings",
+    "menu_item_apis_update": "Update menu API bindings",
+    "role_permissions_read": "Read role permission bindings",
+    "role_permissions_update": "Update role permission bindings",
+    "api_menus_read": "Read API menu bindings",
+    "api_menus_update": "Update API menu bindings",
     "apis_read": "List API permissions",
     "apis_create": "Create API permission",
     "apis_update": "Update API permission",

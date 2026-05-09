@@ -1,7 +1,7 @@
 use constants::pagination::MIN_PAGE_NUMBER;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{User, UserId},
+    user::{User, UserId, UserListFilters},
 };
 
 use crate::application::{AppError, AppResult, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository};
@@ -39,12 +39,20 @@ where
     repository.find_auth_by_email(identifier).await
 }
 
-pub(super) async fn list_with_system_user<R: UserRepository>(repository: &R, page: PageRequest, system_user: User) -> AppResult<Page<User>> {
-    let mut users = repository.list_slice(system_user_slice(page)).await?;
-    if page.page == MIN_PAGE_NUMBER {
+pub(super) async fn list_with_system_user<R: UserRepository>(
+    repository: &R,
+    page: PageRequest,
+    filters: UserListFilters,
+    system_user: User,
+) -> AppResult<Page<User>> {
+    let include_system = user_matches_filters(&system_user, &filters);
+    let mut users = repository.list_slice(system_user_slice(page, include_system), filters).await?;
+    if include_system && page.page == MIN_PAGE_NUMBER {
         users.items.insert(0, system_user);
     }
-    users.total += 1;
+    if include_system {
+        users.total += 1;
+    }
     Ok(users)
 }
 
@@ -60,8 +68,8 @@ fn system_auth_by_identifier<S: SystemUserProvider>(system_users: &S, identifier
     })
 }
 
-fn system_user_slice(page: PageRequest) -> PageSliceRequest {
-    if page.page == MIN_PAGE_NUMBER {
+fn system_user_slice(page: PageRequest, include_system: bool) -> PageSliceRequest {
+    if include_system && page.page == MIN_PAGE_NUMBER {
         return PageSliceRequest {
             offset: 0,
             limit: page.page_size.saturating_sub(1),
@@ -69,12 +77,27 @@ fn system_user_slice(page: PageRequest) -> PageSliceRequest {
             page_size: page.page_size,
         };
     }
+    let system_offset = if include_system { MIN_PAGE_NUMBER } else { 0 };
     PageSliceRequest {
-        offset: (page.page - MIN_PAGE_NUMBER) * page.page_size - MIN_PAGE_NUMBER,
+        offset: (page.page - MIN_PAGE_NUMBER) * page.page_size - system_offset,
         limit: page.page_size,
         page: page.page,
         page_size: page.page_size,
     }
+}
+
+fn user_matches_filters(user: &User, filters: &UserListFilters) -> bool {
+    if filters.is_active.is_some_and(|active| user.is_active != active) {
+        return false;
+    }
+    if filters.role.as_ref().is_some_and(|role| user.role != *role) {
+        return false;
+    }
+    filters.search.as_ref().is_none_or(|search| system_user_matches_search(user, search))
+}
+
+fn system_user_matches_search(user: &User, search: &str) -> bool {
+    user.username.contains(search) || user.email.contains(search) || user.role.contains(search)
 }
 
 fn reject_conflicting_field(conflicting: bool, field: &str) -> AppResult<()> {

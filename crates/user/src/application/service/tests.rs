@@ -154,7 +154,7 @@ async fn list_users_rejects_zero_page() {
     let repository = MemoryUserRepository::default();
     let service = UserService::new(repository, TestPasswordHasher);
 
-    let result = service.list_users(PageRequest { page: 0, page_size: 10 }).await;
+    let result = service.list_users(PageRequest { page: 0, page_size: 10 }, Default::default()).await;
 
     assert!(matches!(result, Err(AppError::InvalidInput(_))));
 }
@@ -165,10 +165,13 @@ async fn list_users_rejects_page_size_above_maximum() {
     let service = UserService::new(repository, TestPasswordHasher);
 
     let result = service
-        .list_users(PageRequest {
-            page: 1,
-            page_size: MAX_PAGE_SIZE + 1,
-        })
+        .list_users(
+            PageRequest {
+                page: 1,
+                page_size: MAX_PAGE_SIZE + 1,
+            },
+            Default::default(),
+        )
         .await;
 
     assert!(matches!(result, Err(AppError::InvalidInput(_))));

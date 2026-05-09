@@ -1,11 +1,19 @@
 use matchit::Router;
 use types::rbac::ApiPermissionSnapshot;
 
-use crate::application::{ApiCheckRequest, AuthorizationConfig, RbacError, RbacResult};
+use crate::application::{ApiCheckRequest, AuthWhitelistRule, AuthorizationConfig, RbacError, RbacResult};
 
 pub(super) fn is_whitelisted(config: &AuthorizationConfig, method: &str, path: &str) -> RbacResult<bool> {
+    rules_match(&config.whitelist, method, path)
+}
+
+pub(super) fn is_authenticated_base(config: &AuthorizationConfig, method: &str, path: &str) -> RbacResult<bool> {
+    rules_match(&config.authenticated, method, path)
+}
+
+fn rules_match(rules: &[AuthWhitelistRule], method: &str, path: &str) -> RbacResult<bool> {
     let method = method.to_ascii_uppercase();
-    config.whitelist.iter().try_fold(false, |matched, rule| {
+    rules.iter().try_fold(false, |matched, rule| {
         if matched || !rule.methods.iter().any(|item| item.eq_ignore_ascii_case(&method)) {
             return Ok(matched);
         }

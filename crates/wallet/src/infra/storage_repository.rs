@@ -33,8 +33,8 @@ impl WalletRepository for StorageWalletRepository {
         self.store.find_by_id(wallet_id).await.map_err(storage_error)
     }
 
-    async fn create_user_wallet(&self, user_id: &str) -> WalletResult<Wallet> {
-        self.store.create_user_wallet(user_id).await.map_err(storage_error)
+    async fn ensure_user_wallet(&self, user_id: &str) -> WalletResult<Wallet> {
+        self.store.ensure_user_wallet(user_id).await.map_err(storage_error)
     }
 
     async fn save_ledger_entry(&self, wallet: Wallet, transaction: WalletTransaction) -> WalletResult<WalletTransaction> {

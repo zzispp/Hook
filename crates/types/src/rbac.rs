@@ -1,5 +1,19 @@
 use serde::{Deserialize, Serialize};
 
+use crate::pagination::PageRequest;
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
+pub struct RbacListFilters {
+    pub search: Option<String>,
+    pub enabled: Option<bool>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+pub struct RbacListRequest {
+    pub page: PageRequest,
+    pub filters: RbacListFilters,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct Role {
     pub code: String,
@@ -63,6 +77,7 @@ pub struct ApiPermissionInput {
     pub name: String,
     pub group: String,
     pub enabled: bool,
+    pub menu_item_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -88,13 +103,19 @@ pub struct MenuItemInput {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
-pub struct RoleApiBindingInput {
+pub struct MenuApiBindingInput {
     pub api_permission_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
-pub struct RoleMenuBindingInput {
+pub struct ApiMenuBindingInput {
     pub menu_item_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+pub struct RolePermissionBindingInput {
+    pub menu_item_ids: Vec<String>,
+    pub api_permission_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -137,4 +158,13 @@ pub struct ApiPermissionSnapshot {
 pub struct RoleMenuSnapshot {
     pub role_code: String,
     pub sections: Vec<NavSectionResponse>,
+}
+
+impl From<PageRequest> for RbacListRequest {
+    fn from(page: PageRequest) -> Self {
+        Self {
+            page,
+            filters: RbacListFilters::default(),
+        }
+    }
 }

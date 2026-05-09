@@ -13,7 +13,16 @@ pub(super) async fn seed_defaults(manager: &SchemaManager<'_>) -> Result<(), DbE
 async fn seed_roles(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     let insert = Query::insert()
         .into_table(Roles::Table)
-        .columns([Roles::Code, Roles::Name, Roles::Description, Roles::Enabled, Roles::System, Roles::SortOrder])
+        .columns([
+            Roles::Code,
+            Roles::Name,
+            Roles::Description,
+            Roles::Enabled,
+            Roles::System,
+            Roles::SortOrder,
+            Roles::CreatedAt,
+            Roles::UpdatedAt,
+        ])
         .values_panic(role_values(RoleSeed {
             code: defaults::ADMIN_ROLE,
             name: "Administrator",
@@ -41,6 +50,8 @@ async fn seed_api_permissions(manager: &SchemaManager<'_>) -> Result<(), DbErr> 
         ApiPermissions::Group,
         ApiPermissions::Enabled,
         ApiPermissions::System,
+        ApiPermissions::CreatedAt,
+        ApiPermissions::UpdatedAt,
     ]);
     for (index, definition) in defaults::api::API_DEFINITIONS.iter().enumerate() {
         insert.values_panic(api_values(index, definition));
@@ -56,6 +67,8 @@ async fn seed_menu_sections(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
         MenuSections::Subheader,
         MenuSections::SortOrder,
         MenuSections::Enabled,
+        MenuSections::CreatedAt,
+        MenuSections::UpdatedAt,
     ]);
     for definition in defaults::menu::MENU_SECTIONS {
         insert.values_panic(menu_section_values(definition));
@@ -77,6 +90,8 @@ async fn seed_menu_items(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
         MenuItems::DeepMatch,
         MenuItems::SortOrder,
         MenuItems::Enabled,
+        MenuItems::CreatedAt,
+        MenuItems::UpdatedAt,
     ]);
     for definition in defaults::menu::MENU_ITEMS {
         insert.values_panic(menu_item_values(definition));
@@ -85,29 +100,35 @@ async fn seed_menu_items(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
 }
 
 async fn seed_bindings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    seed_role_api_bindings(manager).await?;
-    seed_role_menu_bindings(manager).await
+    seed_menu_api_bindings(manager).await?;
+    seed_role_menu_bindings(manager).await?;
+    seed_role_api_bindings(manager).await
 }
 
-async fn seed_role_api_bindings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+async fn seed_menu_api_bindings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     let mut insert = Query::insert();
-    insert
-        .into_table(RoleApiPermissions::Table)
-        .columns([RoleApiPermissions::RoleCode, RoleApiPermissions::ApiPermissionId]);
-    for code in defaults::admin_api_codes() {
-        insert.values_panic(role_api_values(defaults::ADMIN_ROLE, code));
-    }
-    for code in defaults::USER_API_CODES {
-        insert.values_panic(role_api_values(defaults::USER_ROLE, code));
+    insert.into_table(MenuApiPermissions::Table).columns([
+        MenuApiPermissions::MenuItemId,
+        MenuApiPermissions::ApiPermissionId,
+        MenuApiPermissions::CreatedAt,
+        MenuApiPermissions::UpdatedAt,
+    ]);
+    for binding in defaults::MENU_API_BINDINGS {
+        for api_code in binding.api_codes {
+            insert.values_panic(menu_api_values(binding.menu_code, api_code));
+        }
     }
     manager.execute(insert.to_owned()).await
 }
 
 async fn seed_role_menu_bindings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     let mut insert = Query::insert();
-    insert
-        .into_table(RoleMenuPermissions::Table)
-        .columns([RoleMenuPermissions::RoleCode, RoleMenuPermissions::MenuItemId]);
+    insert.into_table(RoleMenuPermissions::Table).columns([
+        RoleMenuPermissions::RoleCode,
+        RoleMenuPermissions::MenuItemId,
+        RoleMenuPermissions::CreatedAt,
+        RoleMenuPermissions::UpdatedAt,
+    ]);
     for item_id in menu_ids_for_codes(defaults::admin_menu_codes()) {
         insert.values_panic(role_menu_values(defaults::ADMIN_ROLE, item_id));
     }
@@ -117,7 +138,26 @@ async fn seed_role_menu_bindings(manager: &SchemaManager<'_>) -> Result<(), DbEr
     manager.execute(insert.to_owned()).await
 }
 
-fn role_values(role: RoleSeed) -> [Expr; 6] {
+async fn seed_role_api_bindings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    if defaults::ROLE_API_BINDINGS.is_empty() {
+        return Ok(());
+    }
+    let mut insert = Query::insert();
+    insert.into_table(RoleApiPermissions::Table).columns([
+        RoleApiPermissions::RoleCode,
+        RoleApiPermissions::ApiPermissionId,
+        RoleApiPermissions::CreatedAt,
+        RoleApiPermissions::UpdatedAt,
+    ]);
+    for binding in defaults::ROLE_API_BINDINGS {
+        for api_code in binding.api_codes {
+            insert.values_panic(role_api_values(binding.role_code, api_code));
+        }
+    }
+    manager.execute(insert.to_owned()).await
+}
+
+fn role_values(role: RoleSeed) -> [Expr; 8] {
     [
         role.code.into(),
         role.name.into(),
@@ -125,6 +165,8 @@ fn role_values(role: RoleSeed) -> [Expr; 6] {
         true.into(),
         true.into(),
         role.sort_order.into(),
+        Expr::current_timestamp(),
+        Expr::current_timestamp(),
     ]
 }
 
@@ -135,7 +177,7 @@ struct RoleSeed {
     sort_order: i64,
 }
 
-fn api_values(index: usize, definition: &defaults::api::ApiDefinition) -> [Expr; 8] {
+fn api_values(index: usize, definition: &defaults::api::ApiDefinition) -> [Expr; 10] {
     [
         default_api_id(index).into(),
         definition.code.into(),
@@ -145,20 +187,24 @@ fn api_values(index: usize, definition: &defaults::api::ApiDefinition) -> [Expr;
         definition.group.into(),
         true.into(),
         true.into(),
+        Expr::current_timestamp(),
+        Expr::current_timestamp(),
     ]
 }
 
-fn menu_section_values(definition: &defaults::menu::MenuSectionDefinition) -> [Expr; 5] {
+fn menu_section_values(definition: &defaults::menu::MenuSectionDefinition) -> [Expr; 7] {
     [
         definition.id.into(),
         definition.code.into(),
         definition.subheader.into(),
         definition.sort_order.into(),
         true.into(),
+        Expr::current_timestamp(),
+        Expr::current_timestamp(),
     ]
 }
 
-fn menu_item_values(definition: &defaults::menu::MenuItemDefinition) -> [Expr; 11] {
+fn menu_item_values(definition: &defaults::menu::MenuItemDefinition) -> [Expr; 13] {
     [
         definition.id.into(),
         definition.section_id.into(),
@@ -171,15 +217,31 @@ fn menu_item_values(definition: &defaults::menu::MenuItemDefinition) -> [Expr; 1
         definition.deep_match.into(),
         definition.sort_order.into(),
         true.into(),
+        Expr::current_timestamp(),
+        Expr::current_timestamp(),
     ]
 }
 
-fn role_api_values(role_code: &str, code: &str) -> [Expr; 2] {
-    [role_code.into(), api_id_for_code(code).into()]
+fn menu_api_values(menu_code: &str, api_code: &str) -> [Expr; 4] {
+    [
+        menu_id_for_code(menu_code).into(),
+        api_id_for_code(api_code).into(),
+        Expr::current_timestamp(),
+        Expr::current_timestamp(),
+    ]
 }
 
-fn role_menu_values(role_code: &str, item_id: &str) -> [Expr; 2] {
-    [role_code.into(), item_id.into()]
+fn role_menu_values(role_code: &str, item_id: &str) -> [Expr; 4] {
+    [role_code.into(), item_id.into(), Expr::current_timestamp(), Expr::current_timestamp()]
+}
+
+fn role_api_values(role_code: &str, api_code: &str) -> [Expr; 4] {
+    [
+        role_code.into(),
+        api_id_for_code(api_code).into(),
+        Expr::current_timestamp(),
+        Expr::current_timestamp(),
+    ]
 }
 
 fn menu_ids_for_codes(codes: impl IntoIterator<Item = impl AsRef<str>>) -> impl Iterator<Item = &'static str> {

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::pagination::{Page, PageRequest};
 
-use super::{Credentials, NewUser, ReplaceUser, User};
+use super::{Credentials, NewUser, ReplaceUser, User, UserListFilters};
 
 #[derive(Debug, Deserialize)]
 pub struct UserPayload {
@@ -35,6 +35,12 @@ pub struct RefreshTokenPayload {
 pub struct ListUsersQuery {
     pub page: u64,
     pub page_size: u64,
+    #[serde(default)]
+    pub search: Option<String>,
+    #[serde(default)]
+    pub role: Option<String>,
+    #[serde(default)]
+    pub is_active: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -95,6 +101,16 @@ impl From<ListUsersQuery> for PageRequest {
         Self {
             page: value.page,
             page_size: value.page_size,
+        }
+    }
+}
+
+impl From<ListUsersQuery> for UserListFilters {
+    fn from(value: ListUsersQuery) -> Self {
+        Self {
+            search: value.search,
+            role: value.role,
+            is_active: value.is_active,
         }
     }
 }

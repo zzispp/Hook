@@ -28,7 +28,7 @@ import { requireApiData } from './rbac';
 
 // ----------------------------------------------------------------------
 
-type GlobalModelFilters = {
+export type GlobalModelFilters = {
   is_active?: boolean;
   search?: string;
 };

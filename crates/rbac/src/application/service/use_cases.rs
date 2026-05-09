@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use types::{
-    pagination::{Page, PageRequest},
-    rbac::{ApiPermission, ApiPermissionInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse, Role, RoleInput, RoleMenuBindingInput},
+    pagination::Page,
+    rbac::{
+        ApiMenuBindingInput, ApiPermission, ApiPermissionInput, MenuApiBindingInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse,
+        RbacListRequest, Role, RoleInput, RolePermissionBindingInput,
+    },
 };
 
 use crate::application::{ApiCheckRequest, AuthorizationConfig, RbacAdminUseCase, RbacCache, RbacRepository, RbacResult, RbacService, RbacUseCase};
@@ -43,8 +46,8 @@ where
         self.delete_role(code).await
     }
 
-    async fn page_roles(&self, page: PageRequest) -> RbacResult<Page<Role>> {
-        self.page_roles(page).await
+    async fn page_roles(&self, request: RbacListRequest) -> RbacResult<Page<Role>> {
+        self.page_roles(request).await
     }
 
     async fn create_api(&self, input: ApiPermissionInput) -> RbacResult<ApiPermission> {
@@ -59,8 +62,12 @@ where
         self.delete_api(id).await
     }
 
-    async fn page_apis(&self, page: PageRequest) -> RbacResult<Page<ApiPermission>> {
-        self.page_apis(page).await
+    async fn page_apis(&self, request: RbacListRequest) -> RbacResult<Page<ApiPermission>> {
+        self.page_apis(request).await
+    }
+
+    async fn page_unbound_apis(&self, request: RbacListRequest) -> RbacResult<Page<ApiPermission>> {
+        self.page_unbound_apis(request).await
     }
 
     async fn create_menu_section(&self, input: MenuSectionInput) -> RbacResult<MenuSection> {
@@ -75,8 +82,8 @@ where
         self.delete_menu_section(id).await
     }
 
-    async fn page_menu_sections(&self, page: PageRequest) -> RbacResult<Page<MenuSection>> {
-        self.page_menu_sections(page).await
+    async fn page_menu_sections(&self, request: RbacListRequest) -> RbacResult<Page<MenuSection>> {
+        self.page_menu_sections(request).await
     }
 
     async fn create_menu_item(&self, input: MenuItemInput) -> RbacResult<MenuItem> {
@@ -91,23 +98,31 @@ where
         self.delete_menu_item(id).await
     }
 
-    async fn page_menu_items(&self, page: PageRequest) -> RbacResult<Page<MenuItem>> {
-        self.page_menu_items(page).await
+    async fn page_menu_items(&self, request: RbacListRequest) -> RbacResult<Page<MenuItem>> {
+        self.page_menu_items(request).await
     }
 
-    async fn replace_role_apis(&self, role_code: &str, input: types::rbac::RoleApiBindingInput) -> RbacResult<()> {
-        self.replace_role_apis(role_code, input.api_permission_ids).await
+    async fn replace_menu_apis(&self, menu_item_id: &str, input: MenuApiBindingInput) -> RbacResult<()> {
+        self.replace_menu_apis(menu_item_id, input).await
     }
 
-    async fn replace_role_menus(&self, role_code: &str, input: RoleMenuBindingInput) -> RbacResult<()> {
-        self.replace_role_menus(role_code, input).await
+    async fn replace_api_menus(&self, api_permission_id: &str, input: ApiMenuBindingInput) -> RbacResult<()> {
+        self.replace_api_menus(api_permission_id, input).await
     }
 
-    async fn role_api_ids(&self, role_code: &str) -> RbacResult<Vec<String>> {
-        Ok(self.role_api_bindings(role_code).await?.api_permission_ids)
+    async fn replace_role_permissions(&self, role_code: &str, input: RolePermissionBindingInput) -> RbacResult<()> {
+        self.replace_role_permissions(role_code, input).await
     }
 
-    async fn role_menu_item_ids(&self, role_code: &str) -> RbacResult<Vec<String>> {
-        Ok(self.role_menu_bindings(role_code).await?.menu_item_ids)
+    async fn menu_api_ids(&self, menu_item_id: &str) -> RbacResult<Vec<String>> {
+        Ok(self.menu_api_bindings(menu_item_id).await?.api_permission_ids)
+    }
+
+    async fn api_menu_ids(&self, api_permission_id: &str) -> RbacResult<Vec<String>> {
+        Ok(self.api_menu_bindings(api_permission_id).await?.menu_item_ids)
+    }
+
+    async fn role_permission_bindings(&self, role_code: &str) -> RbacResult<RolePermissionBindingInput> {
+        self.role_permission_bindings(role_code).await
     }
 }

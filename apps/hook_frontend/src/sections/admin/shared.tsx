@@ -1,5 +1,6 @@
 'use client';
 
+import type { TextFieldProps } from '@mui/material/TextField';
 import type { Role, ApiPermission } from 'src/types/rbac';
 import type { TableHeadCellProps } from 'src/components/table';
 
@@ -136,9 +137,10 @@ export function TextFieldRow({
   children,
   helperText,
   disabled,
+  SelectProps,
 }: {
   label: string;
-  value: string | number;
+  value: string | number | string[];
   onChange: (value: string) => void;
   required?: boolean;
   type?: React.InputHTMLAttributes<unknown>['type'];
@@ -146,6 +148,7 @@ export function TextFieldRow({
   children?: React.ReactNode;
   helperText?: React.ReactNode;
   disabled?: boolean;
+  SelectProps?: TextFieldProps['SelectProps'];
 }) {
   return (
     <TextField
@@ -157,7 +160,8 @@ export function TextFieldRow({
       value={value}
       disabled={disabled}
       helperText={helperText}
-      onChange={(event) => onChange(event.target.value)}
+      SelectProps={SelectProps}
+      onChange={(event) => onChange(Array.isArray(event.target.value) ? event.target.value.join(',') : event.target.value)}
     >
       {children}
     </TextField>

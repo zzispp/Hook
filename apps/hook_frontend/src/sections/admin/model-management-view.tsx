@@ -26,6 +26,7 @@ import { ModelDevPicker } from './model-dev-picker';
 import { AddButton, AdminBreadcrumbs } from './shared';
 import { GlobalModelTable } from './global-model-table';
 import { GlobalModelFormDialog } from './global-model-form-dialog';
+import { toModelFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 import {
   DEFAULT_FORM,
   formFromModel,
@@ -38,9 +39,17 @@ import {
 export function ModelManagementView() {
   const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'name' });
-  const models = useGlobalModels(table.page, table.rowsPerPage);
+  const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
+  const models = useGlobalModels(table.page, table.rowsPerPage, toModelFilters(filters));
   const dialog = useModelDialog(t);
   const deleteDialog = useDeleteDialog(t);
+  const handleFiltersChange = useCallback(
+    (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
+      table.onResetPage();
+      setFilters(nextFilters);
+    },
+    [table]
+  );
 
   return (
     <DashboardContent>
@@ -50,6 +59,11 @@ export function ModelManagementView() {
       />
 
       <Card>
+        <AdminFiltersToolbar
+          filters={filters}
+          searchPlaceholder={t('filters.searchModels')}
+          onChange={handleFiltersChange}
+        />
         <GlobalModelTable
           rows={models.items}
           total={models.total}

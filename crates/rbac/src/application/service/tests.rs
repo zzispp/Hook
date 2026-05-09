@@ -1,4 +1,7 @@
-use types::{pagination::PageRequest, rbac::Role};
+use types::{
+    pagination::PageRequest,
+    rbac::{RbacListFilters, RbacListRequest, Role},
+};
 
 use super::{
     test_fixtures::{api_input, api_permission, menu_item, menu_item_input, menu_section, permission_snapshot, rbac_id, role_input},
@@ -14,9 +17,24 @@ async fn authorize_api_allows_whitelisted_path_without_cache() {
             methods: vec!["GET".into()],
             path_pattern: "/health".into(),
         }],
+        authenticated: vec![],
     };
 
     service.authorize_api(&config, api_request("GET", "/health", "user")).await.unwrap();
+}
+
+#[tokio::test]
+async fn authorize_api_allows_authenticated_base_path_without_cache() {
+    let service = test_service();
+    let config = AuthorizationConfig {
+        whitelist: vec![],
+        authenticated: vec![AuthWhitelistRule {
+            methods: vec!["GET".into()],
+            path_pattern: "/api/navbar".into(),
+        }],
+    };
+
+    service.authorize_api(&config, api_request("GET", "/api/navbar", "user")).await.unwrap();
 }
 
 #[tokio::test]
@@ -99,22 +117,38 @@ async fn page_apis_returns_repository_page() {
     let repository = MemoryRbacRepository::with_apis(vec![api_permission(1, api_input("users_read")), api_permission(2, api_input("users_write"))]);
     let service = RbacService::new(repository, MemoryRbacCache::default());
 
-    let page = service.page_apis(PageRequest { page: 1, page_size: 1 }).await.unwrap();
+    let page = service.page_apis(test_list_request(1)).await.unwrap();
 
     assert_eq!(page.items[0].code, "users_read");
     assert_eq!(page.total, 2);
 }
 
 #[tokio::test]
-async fn role_binding_reads_return_current_ids() {
-    let repository = MemoryRbacRepository::with_role_bindings("admin", vec!["api-1".into(), "api-2".into()], vec!["menu-1".into()]);
+async fn page_unbound_apis_excludes_menu_bound_permissions() {
+    let bound_api = rbac_id(1);
+    let unbound_api = rbac_id(2);
+    let repository = MemoryRbacRepository::with_apis_and_menu_api_bindings(
+        vec![api_permission(1, api_input("bound")), api_permission(2, api_input("unbound"))],
+        rbac_id(3),
+        vec![bound_api],
+    );
     let service = RbacService::new(repository, MemoryRbacCache::default());
 
-    let api_bindings = service.role_api_bindings("admin").await.unwrap();
-    let menu_bindings = service.role_menu_bindings("admin").await.unwrap();
+    let page = service.page_unbound_apis(test_list_request(10)).await.unwrap();
 
-    assert_eq!(api_bindings.api_permission_ids, vec!["api-1", "api-2"]);
-    assert_eq!(menu_bindings.menu_item_ids, vec!["menu-1"]);
+    assert_eq!(page.items.iter().map(|api| api.id.as_str()).collect::<Vec<_>>(), vec![unbound_api]);
+    assert_eq!(page.total, 1);
+}
+
+#[tokio::test]
+async fn role_permission_reads_return_current_ids() {
+    let repository = MemoryRbacRepository::with_role_bindings("admin", vec!["menu-1".into()]);
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let permissions = service.role_permission_bindings("admin").await.unwrap();
+
+    assert_eq!(permissions.menu_item_ids, vec!["menu-1"]);
+    assert!(permissions.api_permission_ids.is_empty());
 }
 
 #[tokio::test]
@@ -155,7 +189,18 @@ async fn ensure_system_role_marks_existing_role_as_system() {
 #[tokio::test]
 async fn delete_api_rejects_bound_permission() {
     let api_id = rbac_id(1);
-    let repository = MemoryRbacRepository::with_role_bindings("admin", vec![api_id.clone()], vec![]);
+    let repository = MemoryRbacRepository::with_menu_api_bindings(rbac_id(2), vec![api_id.clone()]);
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let result = service.delete_api(&api_id).await;
+
+    assert!(matches!(result, Err(RbacError::Conflict(_))));
+}
+
+#[tokio::test]
+async fn delete_api_rejects_role_bound_permission() {
+    let api_id = rbac_id(1);
+    let repository = MemoryRbacRepository::with_role_api_bindings("admin", vec![api_id.clone()]);
     let service = RbacService::new(repository, MemoryRbacCache::default());
 
     let result = service.delete_api(&api_id).await;
@@ -166,7 +211,7 @@ async fn delete_api_rejects_bound_permission() {
 #[tokio::test]
 async fn delete_menu_item_rejects_role_bound_item() {
     let item_id = rbac_id(1);
-    let repository = MemoryRbacRepository::with_role_bindings("admin", vec![], vec![item_id.clone()]);
+    let repository = MemoryRbacRepository::with_role_bindings("admin", vec![item_id.clone()]);
     let service = RbacService::new(repository, MemoryRbacCache::default());
 
     let result = service.delete_menu_item(&item_id).await;
@@ -195,18 +240,19 @@ async fn delete_menu_section_rejects_non_empty_section() {
 }
 
 #[tokio::test]
-async fn replace_role_apis_rejects_unknown_api_id() {
-    let repository = MemoryRbacRepository::with_role(Role {
-        code: "admin".into(),
-        name: "Admin".into(),
-        description: String::new(),
-        enabled: true,
-        system: false,
-        sort_order: 0,
-    });
+async fn replace_menu_apis_rejects_unknown_api_id() {
+    let menu_id = rbac_id(1);
+    let repository = MemoryRbacRepository::with_menu_state(vec![], vec![menu_item(1, menu_item_input("users"))]);
     let service = RbacService::new(repository, MemoryRbacCache::default());
 
-    let result = service.replace_role_apis("admin", vec![rbac_id(404)]).await;
+    let result = service
+        .replace_menu_apis(
+            &menu_id,
+            types::rbac::MenuApiBindingInput {
+                api_permission_ids: vec![rbac_id(404)],
+            },
+        )
+        .await;
 
     assert!(matches!(result, Err(RbacError::InvalidInput(_))));
 }
@@ -249,7 +295,10 @@ fn test_service() -> RbacService<MemoryRbacRepository, MemoryRbacCache> {
 }
 
 fn empty_config() -> AuthorizationConfig {
-    AuthorizationConfig { whitelist: vec![] }
+    AuthorizationConfig {
+        whitelist: vec![],
+        authenticated: vec![],
+    }
 }
 
 fn api_request(method: &str, path: &str, role_code: &str) -> ApiCheckRequest {
@@ -267,5 +316,12 @@ fn system_api_request(method: &str, path: &str) -> ApiCheckRequest {
         path: path.into(),
         role_code: "admin".into(),
         system: true,
+    }
+}
+
+fn test_list_request(page_size: u64) -> RbacListRequest {
+    RbacListRequest {
+        page: PageRequest { page: 1, page_size },
+        filters: RbacListFilters::default(),
     }
 }

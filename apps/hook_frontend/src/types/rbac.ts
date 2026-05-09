@@ -48,6 +48,7 @@ export type ApiPermissionInput = {
   name: string;
   group: string;
   enabled: boolean;
+  menu_item_ids: string[];
 };
 
 export type MenuSection = {
@@ -92,12 +93,17 @@ export type MenuItemInput = {
   enabled: boolean;
 };
 
-export type RoleApiBinding = {
+export type MenuApiBinding = {
   api_permission_ids: string[];
 };
 
-export type RoleMenuBinding = {
+export type ApiMenuBinding = {
   menu_item_ids: string[];
+};
+
+export type RolePermissionBinding = {
+  menu_item_ids: string[];
+  api_permission_ids: string[];
 };
 
 export type NavResponse = {

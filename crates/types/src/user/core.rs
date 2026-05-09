@@ -38,3 +38,10 @@ pub struct Credentials {
     pub identifier: String,
     pub password: String,
 }
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UserListFilters {
+    pub search: Option<String>,
+    pub role: Option<String>,
+    pub is_active: Option<bool>,
+}

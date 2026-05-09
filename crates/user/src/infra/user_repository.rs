@@ -5,7 +5,7 @@ use storage::{
 };
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{User, UserId},
+    user::{User, UserId, UserListFilters},
 };
 
 use crate::application::{AppError, AppResult, ReplaceUserRecord, UserAuthRecord, UserRepository};
@@ -65,12 +65,12 @@ impl UserRepository for StorageUserRepository {
         self.store.record_login(id).await.map_err(storage_error)
     }
 
-    async fn list(&self, page: PageRequest) -> AppResult<Page<User>> {
-        self.store.list(page).await.map_err(storage_error)
+    async fn list(&self, page: PageRequest, filters: UserListFilters) -> AppResult<Page<User>> {
+        self.store.list(page, filters).await.map_err(storage_error)
     }
 
-    async fn list_slice(&self, request: PageSliceRequest) -> AppResult<Page<User>> {
-        self.store.list_slice(request).await.map_err(storage_error)
+    async fn list_slice(&self, request: PageSliceRequest, filters: UserListFilters) -> AppResult<Page<User>> {
+        self.store.list_slice(request, filters).await.map_err(storage_error)
     }
 }
 

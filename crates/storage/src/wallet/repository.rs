@@ -43,7 +43,7 @@ impl WalletStore {
             .map_err(StorageError::from)
     }
 
-    pub async fn create_user_wallet(&self, user_id: &str) -> StorageResult<Wallet> {
+    pub async fn ensure_user_wallet(&self, user_id: &str) -> StorageResult<Wallet> {
         let now = time::OffsetDateTime::now_utc();
         let record = WalletActiveModel {
             id: Set(self.database.next_id()),
@@ -59,10 +59,12 @@ impl WalletStore {
             total_adjusted: Set(Decimal::ZERO),
             created_at: Set(now),
             updated_at: Set(now),
-        }
-        .insert(self.database.connection())
-        .await?;
-        Ok(record.into())
+        };
+        let _ = wallet_records::Entity::insert(record)
+            .on_conflict_do_nothing_on([wallet_records::Column::UserId])
+            .exec_without_returning(self.database.connection())
+            .await?;
+        self.find_by_user_id(user_id).await?.ok_or(StorageError::NotFound)
     }
 
     pub async fn update_balances(&self, wallet: Wallet) -> StorageResult<Wallet> {

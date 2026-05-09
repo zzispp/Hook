@@ -3,12 +3,13 @@ use types::rbac::{ApiPermission, MenuItem, MenuSection, Role};
 #[path = "entities/mod.rs"]
 pub mod entities;
 
-pub use entities::{api_permissions, menu_items, menu_sections, role_api_permissions, role_menu_permissions, roles};
+pub use entities::{api_permissions, menu_api_permissions, menu_items, menu_sections, role_api_permissions, role_menu_permissions, roles};
 
 pub type RoleRecord = roles::Model;
 pub type ApiPermissionRecord = api_permissions::Model;
 pub type MenuSectionRecord = menu_sections::Model;
 pub type MenuItemRecord = menu_items::Model;
+pub type MenuApiPermissionRecord = menu_api_permissions::Model;
 pub type RoleApiPermissionRecord = role_api_permissions::Model;
 pub type RoleMenuPermissionRecord = role_menu_permissions::Model;
 

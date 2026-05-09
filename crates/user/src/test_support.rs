@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{NewUser, ReplaceUser, User, UserId},
+    user::{NewUser, ReplaceUser, User, UserId, UserListFilters},
 };
 
 use crate::application::{AppError, AppResult, PasswordHasher, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository};
@@ -144,28 +144,30 @@ impl UserRepository for MemoryUserRepository {
         Ok(())
     }
 
-    async fn list(&self, page: PageRequest) -> AppResult<Page<User>> {
+    async fn list(&self, page: PageRequest, filters: UserListFilters) -> AppResult<Page<User>> {
         let request = PageSliceRequest {
             offset: (page.page - 1) * page.page_size,
             limit: page.page_size,
             page: page.page,
             page_size: page.page_size,
         };
-        self.list_slice(request).await
+        self.list_slice(request, filters).await
     }
 
-    async fn list_slice(&self, request: PageSliceRequest) -> AppResult<Page<User>> {
+    async fn list_slice(&self, request: PageSliceRequest, filters: UserListFilters) -> AppResult<Page<User>> {
         let state = self.state.lock().unwrap();
+        let users: Vec<User> = state
+            .users
+            .iter()
+            .map(|stored| stored.user.clone())
+            .filter(|user| user_matches_filters(user, &filters))
+            .collect();
         let start = request.offset as usize;
-        let end = start.saturating_add(request.limit as usize).min(state.users.len());
-        let items = if start >= state.users.len() {
-            vec![]
-        } else {
-            state.users[start..end].iter().map(|stored| stored.user.clone()).collect()
-        };
+        let end = start.saturating_add(request.limit as usize).min(users.len());
+        let items = if start >= users.len() { vec![] } else { users[start..end].to_vec() };
         Ok(Page {
             items,
-            total: state.users.len() as u64,
+            total: users.len() as u64,
             page: request.page,
             page_size: request.page_size,
         })
@@ -282,4 +284,17 @@ fn user_from_record(id: UserId, record: &ReplaceUserRecord) -> User {
 
 pub(crate) fn user_id(id: u64) -> UserId {
     UserId(format!("018f0000-0000-7000-8000-{id:012}"))
+}
+
+fn user_matches_filters(user: &User, filters: &UserListFilters) -> bool {
+    if filters.is_active.is_some_and(|active| user.is_active != active) {
+        return false;
+    }
+    if filters.role.as_ref().is_some_and(|role| user.role != *role) {
+        return false;
+    }
+    filters
+        .search
+        .as_ref()
+        .is_none_or(|search| user.username.contains(search) || user.email.contains(search) || user.role.contains(search))
 }

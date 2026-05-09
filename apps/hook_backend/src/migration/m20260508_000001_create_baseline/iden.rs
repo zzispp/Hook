@@ -26,6 +26,8 @@ pub(super) enum Roles {
     Enabled,
     System,
     SortOrder,
+    CreatedAt,
+    UpdatedAt,
 }
 
 #[derive(DeriveIden)]
@@ -39,6 +41,8 @@ pub(super) enum ApiPermissions {
     Group,
     Enabled,
     System,
+    CreatedAt,
+    UpdatedAt,
 }
 
 #[derive(DeriveIden)]
@@ -49,6 +53,8 @@ pub(super) enum MenuSections {
     Subheader,
     SortOrder,
     Enabled,
+    CreatedAt,
+    UpdatedAt,
 }
 
 #[derive(DeriveIden)]
@@ -65,13 +71,17 @@ pub(super) enum MenuItems {
     DeepMatch,
     SortOrder,
     Enabled,
+    CreatedAt,
+    UpdatedAt,
 }
 
 #[derive(DeriveIden)]
-pub(super) enum RoleApiPermissions {
+pub(super) enum MenuApiPermissions {
     Table,
-    RoleCode,
+    MenuItemId,
     ApiPermissionId,
+    CreatedAt,
+    UpdatedAt,
 }
 
 #[derive(DeriveIden)]
@@ -79,6 +89,56 @@ pub(super) enum RoleMenuPermissions {
     Table,
     RoleCode,
     MenuItemId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum RoleApiPermissions {
+    Table,
+    RoleCode,
+    ApiPermissionId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum Wallets {
+    Table,
+    Id,
+    UserId,
+    RechargeBalance,
+    GiftBalance,
+    Currency,
+    Status,
+    LimitMode,
+    TotalRecharged,
+    TotalConsumed,
+    TotalRefunded,
+    TotalAdjusted,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum WalletTransactions {
+    Table,
+    Id,
+    WalletId,
+    Category,
+    ReasonCode,
+    Amount,
+    BalanceBefore,
+    BalanceAfter,
+    RechargeBalanceBefore,
+    RechargeBalanceAfter,
+    GiftBalanceBefore,
+    GiftBalanceAfter,
+    LinkType,
+    LinkId,
+    OperatorId,
+    Description,
+    CreatedAt,
 }
 
 #[derive(DeriveIden)]
@@ -123,8 +183,11 @@ pub(super) fn reversed_tables() -> Vec<DynIden> {
     vec![
         Models::Table.into_iden(),
         GlobalModels::Table.into_iden(),
-        RoleMenuPermissions::Table.into_iden(),
+        WalletTransactions::Table.into_iden(),
+        Wallets::Table.into_iden(),
         RoleApiPermissions::Table.into_iden(),
+        RoleMenuPermissions::Table.into_iden(),
+        MenuApiPermissions::Table.into_iden(),
         MenuItems::Table.into_iden(),
         MenuSections::Table.into_iden(),
         ApiPermissions::Table.into_iden(),

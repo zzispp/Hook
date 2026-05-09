@@ -25,6 +25,7 @@ pub(super) fn sanitize_api(input: ApiPermissionInput) -> RbacResult<ApiPermissio
         name: trim_required("name", input.name)?,
         group: input.group.trim().into(),
         enabled: input.enabled,
+        menu_item_ids: input.menu_item_ids,
     })
 }
 

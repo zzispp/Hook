@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理管理页数据流和现有过滤组件,DONE,"确认五个目标页面的数据来源与现有过滤组件模式","rg -n \"Filter|filters|useRoles|useApis|useUsers|useGlobalModels\" apps/hook_frontend/src/sections/admin apps/hook_frontend/src/actions crates/rbac crates/user crates/storage",2026-05-09T08:21:08Z,0,"RBAC 列表当前只分页；模型列表已有 search/is_active"
+2,实现列表过滤参数和后端查询,DONE,"用户/角色/API/菜单列表支持搜索和状态过滤并返回正确 total","cargo check -p rbac -p user -p storage -p types",2026-05-09T08:40:48Z,0,
+3,接入五个管理页过滤组件,DONE,"目标页面显示过滤 UI，搜索和过滤会重置分页并请求正确数据","pnpm lint:frontend && pnpm build:frontend",2026-05-09T08:51:34Z,0,
+4,运行验证并修复问题,DONE,"lint/build/Rust 测试通过或失败原因明确可见","pnpm lint:frontend && pnpm build:frontend && just test",2026-05-09T08:51:34Z,0,"环境没有 timeout 命令；just test 自带 60 秒 perl 超时包装"

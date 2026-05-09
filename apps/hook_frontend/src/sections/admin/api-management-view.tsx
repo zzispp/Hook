@@ -1,6 +1,5 @@
 'use client';
 
-import type { TableHeadCellProps } from 'src/components/table';
 import type { ApiPermission, ApiPermissionInput } from 'src/types/rbac';
 
 import { useMemo, useState, useCallback } from 'react';
@@ -15,10 +14,11 @@ import MenuItem from '@mui/material/MenuItem';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useApis, createApi, deleteApi, updateApi } from 'src/actions/rbac';
+import { useApis, createApi, deleteApi, updateApi, getApiMenus, useMenuItems } from 'src/actions/rbac';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -26,6 +26,13 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { ConfirmDialog } from 'src/components/custom-dialog';
 import { useTable, TableNoData, TablePaginationCustom } from 'src/components/table';
 
+import { apiTableHead } from './api-table-head';
+import { ApiMenuSelect } from './api-menu-select';
+import {
+  toEnabledFilters,
+  AdminFiltersToolbar,
+  DEFAULT_ADMIN_FILTERS,
+} from './admin-filters-toolbar';
 import {
   AddButton,
   SwitchRow,
@@ -50,6 +57,7 @@ const DEFAULT_FORM: ApiPermissionInput = {
   name: '',
   group: '',
   enabled: true,
+  menu_item_ids: [],
 };
 
 // ----------------------------------------------------------------------
@@ -57,27 +65,30 @@ const DEFAULT_FORM: ApiPermissionInput = {
 export function ApiManagementView() {
   const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'name' });
-  const { items, total, isLoading } = useApis(table.page, table.rowsPerPage);
-  const tableHead = useMemo<TableHeadCellProps[]>(
-    () => [
-      { id: 'method', label: t('common.method'), width: 110 },
-      { id: 'name', label: t('common.name'), width: 220 },
-      { id: 'code', label: t('common.code'), width: 220 },
-      { id: 'path_pattern', label: t('fields.pathPattern') },
-      { id: 'group', label: t('common.group'), width: 160 },
-      { id: 'enabled', label: t('common.status'), width: 120 },
-      { id: '', width: 96 },
-    ],
-    [t]
+  const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
+  const { items, total, isLoading } = useApis(
+    table.page,
+    table.rowsPerPage,
+    toEnabledFilters(filters)
   );
+  const menuItems = useMenuItems(0, 100);
+  const tableHead = useMemo(() => apiTableHead(t), [t]);
 
   const [form, setForm] = useState<ApiPermissionInput>(DEFAULT_FORM);
   const [editing, setEditing] = useState<ApiPermission | null>(null);
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingBindings, setLoadingBindings] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ApiPermission | null>(null);
 
   const dialogOpen = creating || !!editing;
+  const handleFiltersChange = useCallback(
+    (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
+      table.onResetPage();
+      setFilters(nextFilters);
+    },
+    [table]
+  );
 
   const handleOpenCreate = useCallback(() => {
     setEditing(null);
@@ -85,7 +96,7 @@ export function ApiManagementView() {
     setForm({ ...DEFAULT_FORM });
   }, []);
 
-  const handleOpenEdit = useCallback((api: ApiPermission) => {
+  const handleOpenEdit = useCallback(async (api: ApiPermission) => {
     setEditing(api);
     setForm({
       code: api.code,
@@ -94,8 +105,18 @@ export function ApiManagementView() {
       name: api.name,
       group: api.group,
       enabled: api.enabled,
+      menu_item_ids: [],
     });
-  }, []);
+    setLoadingBindings(true);
+    try {
+      const binding = await getApiMenus(api.id);
+      setForm((current) => ({ ...current, menu_item_ids: binding.menu_item_ids }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.loadBindingsFailed'));
+    } finally {
+      setLoadingBindings(false);
+    }
+  }, [t]);
 
   const handleCloseDialog = useCallback(() => {
     setEditing(null);
@@ -141,6 +162,11 @@ export function ApiManagementView() {
       />
 
       <Card>
+        <AdminFiltersToolbar
+          filters={filters}
+          searchPlaceholder={t('filters.searchApis')}
+          onChange={handleFiltersChange}
+        />
         <Scrollbar>
           <Table sx={{ minWidth: 980 }}>
             <ManagementTableHead head={tableHead} />
@@ -241,6 +267,18 @@ export function ApiManagementView() {
           checked={form.enabled}
           onChange={(enabled) => setForm((current) => ({ ...current, enabled }))}
         />
+        {loadingBindings ? (
+          <Box sx={{ py: 1, color: 'text.secondary', display: 'flex', gap: 1, alignItems: 'center' }}>
+            <CircularProgress size={18} />
+            {t('messages.loadingPermissions')}
+          </Box>
+        ) : (
+          <ApiMenuSelect
+            menus={menuItems.items}
+            value={form.menu_item_ids}
+            onChange={(menu_item_ids) => setForm((current) => ({ ...current, menu_item_ids }))}
+          />
+        )}
       </ManagementDialog>
 
       <ConfirmDialog
