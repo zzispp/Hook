@@ -4,6 +4,7 @@ use storage::{
     api_token::{ApiTokenRecordInput, ApiTokenRecordPatch, ApiTokenStore},
     group::GroupStore,
     model::ModelStore,
+    setting::SettingStore,
     user::UserStore,
 };
 use types::{
@@ -13,7 +14,8 @@ use types::{
 };
 
 use crate::application::{
-    ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog, UserCatalog,
+    ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog, SystemTokenPolicy,
+    UserCatalog,
 };
 
 #[derive(Clone)]
@@ -34,6 +36,11 @@ pub struct StorageModelAccessCatalog {
 #[derive(Clone)]
 pub struct StorageUserCatalog {
     store: UserStore,
+}
+
+#[derive(Clone)]
+pub struct StorageSystemTokenPolicy {
+    store: SettingStore,
 }
 
 impl StorageApiTokenRepository {
@@ -64,6 +71,14 @@ impl StorageUserCatalog {
     pub fn new(database: Database) -> Self {
         Self {
             store: UserStore::new(database),
+        }
+    }
+}
+
+impl StorageSystemTokenPolicy {
+    pub fn new(database: Database) -> Self {
+        Self {
+            store: SettingStore::new(database),
         }
     }
 }
@@ -109,6 +124,10 @@ impl ApiTokenRepository for StorageApiTokenRepository {
     async fn list_admin_tokens(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
         self.store.list_admin_tokens(request).await.map_err(storage_error)
     }
+
+    async fn delete_expired_tokens(&self) -> ApiTokenResult<u64> {
+        self.store.delete_expired_tokens().await.map_err(storage_error)
+    }
 }
 
 #[async_trait]
@@ -133,6 +152,25 @@ impl UserCatalog for StorageUserCatalog {
             .find_by_id(UserId(id.to_owned()))
             .await
             .map(|user| user.is_some())
+            .map_err(storage_error)
+    }
+}
+
+#[async_trait]
+impl SystemTokenPolicy for StorageSystemTokenPolicy {
+    async fn default_rate_limit_rpm(&self) -> ApiTokenResult<i64> {
+        self.store
+            .get_system_settings()
+            .await
+            .map(|settings| settings.default_rate_limit_rpm)
+            .map_err(storage_error)
+    }
+
+    async fn auto_delete_expired_tokens(&self) -> ApiTokenResult<bool> {
+        self.store
+            .get_system_settings()
+            .await
+            .map(|settings| settings.auto_delete_expired_tokens)
             .map_err(storage_error)
     }
 }

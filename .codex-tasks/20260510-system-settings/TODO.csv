@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Review current settings integration points,DONE,User signup wallet token and RBAC paths are identified,test -f .codex-tasks/20260510-system-settings/PROGRESS.md,2026-05-10T03:40:00+08:00,0,
+2,Implement backend system settings and migration,DONE,Settings API storage migration and RBAC menu/api are wired,cargo check --workspace,2026-05-10T03:52:00+08:00,0,
+3,Integrate settings with users wallets and tokens,DONE,Registration gate initial grant ledger token rate and cleanup setting are connected,cargo check --workspace,2026-05-10T04:00:00+08:00,0,
+4,Implement admin settings frontend and token rate column,DONE,Admin settings page is sectioned and token table includes rate,pnpm lint:frontend,2026-05-10T04:09:00+08:00,0,
+5,Run validation,DONE,Formatting migration status Rust tests and frontend lint pass,cargo fmt --all && cargo check --workspace && pnpm lint:frontend && cargo test --workspace,2026-05-10T03:52:00+08:00,0,

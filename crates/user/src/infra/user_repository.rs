@@ -1,24 +1,55 @@
 use async_trait::async_trait;
+use rust_decimal::Decimal;
 use storage::{
     Database, StorageError,
+    setting::SettingStore,
     user::{UserRecordInput as StorageUserRecordInput, UserStore},
+    wallet::WalletStore,
 };
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     user::{User, UserId, UserListFilters},
 };
 
-use crate::application::{AppError, AppResult, ReplaceUserRecord, UserAuthRecord, UserRepository};
+use crate::application::{
+    AppError, AppResult, InitialGrantLedger, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, UserAuthRecord, UserRepository,
+};
 
 #[derive(Clone)]
 pub struct StorageUserRepository {
     store: UserStore,
 }
 
+#[derive(Clone)]
+pub struct StorageRegistrationPolicy {
+    store: SettingStore,
+}
+
+#[derive(Clone)]
+pub struct StorageInitialGrantLedger {
+    store: WalletStore,
+}
+
 impl StorageUserRepository {
     pub fn new(database: Database) -> Self {
         Self {
             store: UserStore::new(database),
+        }
+    }
+}
+
+impl StorageRegistrationPolicy {
+    pub fn new(database: Database) -> Self {
+        Self {
+            store: SettingStore::new(database),
+        }
+    }
+}
+
+impl StorageInitialGrantLedger {
+    pub fn new(database: Database) -> Self {
+        Self {
+            store: WalletStore::new(database),
         }
     }
 }
@@ -71,6 +102,24 @@ impl UserRepository for StorageUserRepository {
 
     async fn list_slice(&self, request: PageSliceRequest, filters: UserListFilters) -> AppResult<Page<User>> {
         self.store.list_slice(request, filters).await.map_err(storage_error)
+    }
+}
+
+#[async_trait]
+impl RegistrationPolicy for StorageRegistrationPolicy {
+    async fn registration_settings(&self) -> AppResult<RegistrationSettings> {
+        let settings = self.store.get_system_settings().await.map_err(storage_error)?;
+        Ok(RegistrationSettings {
+            allow_registration: settings.allow_registration,
+            default_user_grant: settings.default_user_grant,
+        })
+    }
+}
+
+#[async_trait]
+impl InitialGrantLedger for StorageInitialGrantLedger {
+    async fn grant_initial_balance(&self, user_id: &str, amount: Decimal) -> AppResult<()> {
+        self.store.grant_initial_balance(user_id, amount).await.map(|_| ()).map_err(storage_error)
     }
 }
 

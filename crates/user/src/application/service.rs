@@ -1,7 +1,9 @@
 use async_trait::async_trait;
+use rust_decimal::Decimal;
 
 use crate::application::{
-    AppError, AppResult, PasswordHasher, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository, UserUseCase,
+    AppError, AppResult, InitialGrantLedger, PasswordHasher, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, SystemUserProvider, SystemUserRecord,
+    UserAuthRecord, UserRepository, UserUseCase,
 };
 use types::{
     pagination::{Page, PageRequest},
@@ -18,10 +20,12 @@ use self::{
 mod system_user;
 mod validation;
 
-pub struct UserService<R, H, S = NoSystemUserProvider> {
+pub struct UserService<R, H, S = NoSystemUserProvider, P = AllowRegistrationPolicy, G = NoInitialGrantLedger> {
     repository: R,
     password_hasher: H,
     system_users: S,
+    registration_policy: P,
+    initial_grants: G,
 }
 
 struct UserRecordInput {
@@ -34,6 +38,10 @@ struct UserRecordInput {
 
 #[derive(Clone, Copy)]
 pub struct NoSystemUserProvider;
+#[derive(Clone, Copy)]
+pub struct AllowRegistrationPolicy;
+#[derive(Clone, Copy)]
+pub struct NoInitialGrantLedger;
 
 impl SystemUserProvider for NoSystemUserProvider {
     fn system_user(&self) -> Option<SystemUserRecord> {
@@ -41,7 +49,24 @@ impl SystemUserProvider for NoSystemUserProvider {
     }
 }
 
-impl<R, H> UserService<R, H, NoSystemUserProvider>
+#[async_trait]
+impl RegistrationPolicy for AllowRegistrationPolicy {
+    async fn registration_settings(&self) -> AppResult<RegistrationSettings> {
+        Ok(RegistrationSettings {
+            allow_registration: true,
+            default_user_grant: Decimal::ZERO,
+        })
+    }
+}
+
+#[async_trait]
+impl InitialGrantLedger for NoInitialGrantLedger {
+    async fn grant_initial_balance(&self, _user_id: &str, _amount: Decimal) -> AppResult<()> {
+        Ok(())
+    }
+}
+
+impl<R, H> UserService<R, H, NoSystemUserProvider, AllowRegistrationPolicy, NoInitialGrantLedger>
 where
     R: UserRepository,
     H: PasswordHasher,
@@ -51,11 +76,13 @@ where
             repository,
             password_hasher,
             system_users: NoSystemUserProvider,
+            registration_policy: AllowRegistrationPolicy,
+            initial_grants: NoInitialGrantLedger,
         }
     }
 }
 
-impl<R, H, S> UserService<R, H, S>
+impl<R, H, S> UserService<R, H, S, AllowRegistrationPolicy, NoInitialGrantLedger>
 where
     R: UserRepository,
     H: PasswordHasher,
@@ -66,6 +93,27 @@ where
             repository,
             password_hasher,
             system_users,
+            registration_policy: AllowRegistrationPolicy,
+            initial_grants: NoInitialGrantLedger,
+        }
+    }
+}
+
+impl<R, H, S, P, G> UserService<R, H, S, P, G>
+where
+    R: UserRepository,
+    H: PasswordHasher,
+    S: SystemUserProvider,
+    P: RegistrationPolicy,
+    G: InitialGrantLedger,
+{
+    pub const fn with_system_user_and_registration(repository: R, password_hasher: H, system_users: S, registration_policy: P, initial_grants: G) -> Self {
+        Self {
+            repository,
+            password_hasher,
+            system_users,
+            registration_policy,
+            initial_grants,
         }
     }
 
@@ -113,14 +161,20 @@ where
 }
 
 #[async_trait]
-impl<R, H, S> UserUseCase for UserService<R, H, S>
+impl<R, H, S, P, G> UserUseCase for UserService<R, H, S, P, G>
 where
     R: UserRepository,
     H: PasswordHasher,
     S: SystemUserProvider,
+    P: RegistrationPolicy,
+    G: InitialGrantLedger,
 {
     async fn sign_up(&self, input: NewUser) -> AppResult<User> {
-        self.create_unique_user(input).await
+        let settings = self.registration_policy.registration_settings().await?;
+        reject_closed_registration(&settings)?;
+        let user = self.create_unique_user(input).await?;
+        grant_initial_balance(&self.initial_grants, &user, settings.default_user_grant).await?;
+        Ok(user)
     }
 
     async fn sign_in(&self, input: Credentials) -> AppResult<User> {
@@ -169,6 +223,23 @@ where
             None => self.repository.list(page, filters).await,
         }
     }
+}
+
+fn reject_closed_registration(settings: &RegistrationSettings) -> AppResult<()> {
+    if settings.allow_registration {
+        return Ok(());
+    }
+    Err(AppError::InvalidInput("registration is closed".into()))
+}
+
+async fn grant_initial_balance<G>(ledger: &G, user: &User, amount: Decimal) -> AppResult<()>
+where
+    G: InitialGrantLedger,
+{
+    if amount <= Decimal::ZERO {
+        return Ok(());
+    }
+    ledger.grant_initial_balance(&user.id.0, amount).await
 }
 
 impl From<NewUser> for UserRecordInput {

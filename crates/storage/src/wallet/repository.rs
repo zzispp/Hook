@@ -66,6 +66,18 @@ impl WalletStore {
         self.find_by_user_id(user_id).await?.ok_or(StorageError::NotFound)
     }
 
+    pub async fn grant_initial_balance(&self, user_id: &str, amount: Decimal) -> StorageResult<WalletTransaction> {
+        let wallet = self.ensure_user_wallet(user_id).await?;
+        let updated = Wallet {
+            gift_balance: wallet.gift_balance + amount,
+            total_adjusted: wallet.total_adjusted + amount,
+            ..wallet.clone()
+        };
+        let transaction = initial_grant_transaction(&wallet, &updated, amount);
+        self.update_balances_with_transaction(WalletLedgerRecordInput { wallet: updated, transaction })
+            .await
+    }
+
     pub async fn update_balances(&self, wallet: Wallet) -> StorageResult<Wallet> {
         let record = self.find_record_by_id(&wallet.id.0).await?.ok_or(StorageError::NotFound)?;
         let mut active: WalletActiveModel = record.into();
@@ -153,5 +165,24 @@ fn transaction_active_model(input: WalletTransactionRecordInput, id: String) -> 
         operator_id: Set(input.operator_id),
         description: Set(input.description),
         created_at: Set(time::OffsetDateTime::now_utc()),
+    }
+}
+
+fn initial_grant_transaction(before: &Wallet, after: &Wallet, amount: Decimal) -> WalletTransactionRecordInput {
+    WalletTransactionRecordInput {
+        wallet_id: before.id.0.clone(),
+        category: "grant".into(),
+        reason_code: "initial_user_grant".into(),
+        amount,
+        balance_before: before.recharge_balance + before.gift_balance,
+        balance_after: after.recharge_balance + after.gift_balance,
+        recharge_balance_before: before.recharge_balance,
+        recharge_balance_after: after.recharge_balance,
+        gift_balance_before: before.gift_balance,
+        gift_balance_after: after.gift_balance,
+        link_type: Some("system_setting".into()),
+        link_id: Some("default_user_grant".into()),
+        operator_id: None,
+        description: Some("Default initial user grant".into()),
     }
 }

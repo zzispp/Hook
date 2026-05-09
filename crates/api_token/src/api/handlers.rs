@@ -21,6 +21,7 @@ pub async fn list_tokens(
     Extension(current_user): Extension<CurrentUser>,
     Query(query): Query<ApiTokenListRequest>,
 ) -> ApiResult<ApiJson<ApiTokenListResponse>> {
+    state.tokens.cleanup_expired_tokens().await?;
     Ok(ok(state.tokens.list_tokens(&current_user.id, query).await?))
 }
 
@@ -67,6 +68,7 @@ pub async fn delete_token(
 }
 
 pub async fn list_admin_tokens(State(state): State<ApiTokenApiState>, Query(query): Query<ApiTokenListRequest>) -> ApiResult<ApiJson<ApiTokenListResponse>> {
+    state.tokens.cleanup_expired_tokens().await?;
     Ok(ok(state.tokens.list_admin_tokens(query).await?))
 }
 

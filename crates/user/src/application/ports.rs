@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     user::{Credentials, NewUser, ReplaceUser, User, UserId, UserListFilters},
@@ -48,6 +49,22 @@ pub trait UserRepository: Send + Sync + 'static {
 pub trait PasswordHasher: Send + Sync + 'static {
     fn hash(&self, password: &str) -> AppResult<String>;
     fn verify(&self, password: &str, password_hash: &str) -> AppResult<bool>;
+}
+
+#[async_trait]
+pub trait RegistrationPolicy: Send + Sync + 'static {
+    async fn registration_settings(&self) -> AppResult<RegistrationSettings>;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RegistrationSettings {
+    pub allow_registration: bool,
+    pub default_user_grant: Decimal,
+}
+
+#[async_trait]
+pub trait InitialGrantLedger: Send + Sync + 'static {
+    async fn grant_initial_balance(&self, user_id: &str, amount: Decimal) -> AppResult<()>;
 }
 
 #[async_trait]

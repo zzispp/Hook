@@ -7,5 +7,5 @@ mod validation;
 mod validation_tests;
 
 pub use error::{ApiTokenError, ApiTokenResult};
-pub use ports::{ApiTokenCreateRecord, ApiTokenRepository, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog, UserCatalog};
+pub use ports::{ApiTokenCreateRecord, ApiTokenRepository, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog, SystemTokenPolicy, UserCatalog};
 pub use service::{ApiTokenService, ApiTokenUseCase};

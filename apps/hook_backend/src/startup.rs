@@ -3,7 +3,7 @@ use std::sync::Arc;
 use api_token::{
     api::{ApiTokenApiState, create_router as create_api_token_router},
     application::ApiTokenService,
-    infra::{StorageApiTokenRepository, StorageBillingGroupCatalog, StorageModelAccessCatalog, StorageUserCatalog},
+    infra::{StorageApiTokenRepository, StorageBillingGroupCatalog, StorageModelAccessCatalog, StorageSystemTokenPolicy, StorageUserCatalog},
 };
 use axum::{
     Router,
@@ -26,13 +26,18 @@ use rbac::{
     application::{AuthWhitelistRule, AuthorizationConfig, RbacService},
     infra::{RedisRbacCache, StorageRbacRepository},
 };
+use setting::{
+    api::{SettingApiState, create_router as create_setting_router},
+    application::SettingService,
+    infra::StorageSettingRepository,
+};
 use storage::connect_database;
 use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use user::{
     api::{ApiState, TokenService, TokenSettings, create_router as create_user_router},
     application::UserService,
-    infra::{Argon2PasswordHasher, ConfigSystemUserProvider, StorageUserRepository},
+    infra::{Argon2PasswordHasher, ConfigSystemUserProvider, StorageInitialGrantLedger, StorageRegistrationPolicy, StorageUserRepository},
 };
 use wallet::{
     api::{WalletApiState, create_router as create_wallet_router},
@@ -66,6 +71,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let models = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
     let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));
+    let system_settings = Arc::new(SettingService::new(StorageSettingRepository::new(database.clone())));
     let groups = Arc::new(GroupService::new(
         StorageGroupRepository::new(database.clone()),
         StorageGroupModelCatalog::new(database.clone()),
@@ -75,11 +81,14 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageBillingGroupCatalog::new(database.clone()),
         StorageModelAccessCatalog::new(database.clone()),
         StorageUserCatalog::new(database.clone()),
+        StorageSystemTokenPolicy::new(database.clone()),
     ));
-    let users = Arc::new(UserService::with_system_user(
-        StorageUserRepository::new(database),
+    let users = Arc::new(UserService::with_system_user_and_registration(
+        StorageUserRepository::new(database.clone()),
         Argon2PasswordHasher,
         ConfigSystemUserProvider::from_settings(settings)?,
+        StorageRegistrationPolicy::new(database.clone()),
+        StorageInitialGrantLedger::new(database),
     ));
     let tokens = TokenService::new(token_settings(settings)?);
     let authorization = authorization_config(settings);
@@ -90,6 +99,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         rbac,
         models,
         wallets,
+        system_settings,
         groups,
         api_tokens,
         authorization,
@@ -110,6 +120,7 @@ fn create_app(state: AppState) -> Router {
     let rbac_state = RbacApiState::new(state.rbac.clone(), state.rbac.clone());
     let model_state = ModelApiState::new(state.models);
     let wallet_state = WalletApiState::new(state.wallets);
+    let setting_state = SettingApiState::new(state.system_settings);
     let group_state = GroupApiState::new(state.groups);
     let api_token_state = ApiTokenApiState::new(state.api_tokens);
     let auth_state = AuthState::new(AuthStateParts {
@@ -123,6 +134,7 @@ fn create_app(state: AppState) -> Router {
         .merge(create_rbac_router(rbac_state))
         .merge(create_model_router(model_state))
         .merge(create_wallet_router(wallet_state))
+        .merge(create_setting_router(setting_state))
         .merge(create_group_router(group_state))
         .merge(create_api_token_router(api_token_state));
 
@@ -175,6 +187,7 @@ struct AppState {
     rbac: Arc<RbacService<StorageRbacRepository, RedisRbacCache>>,
     models: Arc<dyn model::application::ModelUseCase>,
     wallets: Arc<dyn wallet::application::WalletUseCase>,
+    system_settings: Arc<dyn setting::application::SettingUseCase>,
     groups: Arc<dyn group::application::GroupUseCase>,
     api_tokens: Arc<dyn api_token::application::ApiTokenUseCase>,
     authorization: AuthorizationConfig,

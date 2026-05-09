@@ -16,7 +16,8 @@
     "customKeyboardShortcuts": "Custom keyboard shortcuts.",
     "apiTokens": "API Tokens",
     "adminApiTokens": "Token Management",
-    "billingGroups": "Billing Groups"
+    "billingGroups": "Billing Groups",
+    "systemSettings": "System Settings"
   },
   "common": {
     "active": "Active",
@@ -85,7 +86,8 @@
     "walletManagement": "Wallet Management",
     "apiTokens": "API Tokens",
     "adminApiTokens": "Token Management",
-    "billingGroups": "Billing Groups"
+    "billingGroups": "Billing Groups",
+    "systemSettings": "System Settings"
   },
   "actions": {
     "addApi": "Add API",
@@ -216,7 +218,8 @@
     "billingGroupCreated": "Billing group created",
     "billingGroupDeleted": "Billing group deleted",
     "billingGroupUpdated": "Billing group updated",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "systemSettingsUpdated": "System settings updated"
   },
   "roles": {
     "admin": {
@@ -628,5 +631,24 @@
     "rpm": "requests/min",
     "unlimitedQuota": "Unlimited quota",
     "userToken": "User token"
+  },
+  "systemSettings": {
+    "sections": {
+      "site": "Site information",
+      "base": "Base configuration",
+      "tokens": "Token configuration"
+    },
+    "fields": {
+      "siteName": "Site name",
+      "siteSubtitle": "Site subtitle",
+      "allowRegistration": "Allow registration",
+      "autoDeleteExpiredTokens": "Auto-delete expired tokens",
+      "defaultUserGrant": "Default user initial grant",
+      "defaultRateLimitRpm": "Default rate limit"
+    },
+    "helper": {
+      "defaultUserGrant": "Added to the gift balance after sign-up and recorded in the wallet ledger.",
+      "defaultRateLimitRpm": "Requests per minute; 0 means unlimited by system default."
+    }
   }
 }

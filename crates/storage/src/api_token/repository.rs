@@ -95,6 +95,15 @@ impl ApiTokenStore {
         list_tokens(self.database.connection(), filtered_admin_tokens(request.clone()), request).await
     }
 
+    pub async fn delete_expired_tokens(&self) -> StorageResult<u64> {
+        let result = api_tokens::Entity::delete_many()
+            .filter(api_tokens::Column::ExpiresAt.is_not_null())
+            .filter(api_tokens::Column::ExpiresAt.lt(time::OffsetDateTime::now_utc()))
+            .exec(self.database.connection())
+            .await?;
+        Ok(result.rows_affected)
+    }
+
     async fn find_user_token_record(&self, user_id: &str, id: &str) -> StorageResult<Option<ApiTokenRecord>> {
         api_tokens::Entity::find_by_id(id.to_owned())
             .filter(api_tokens::Column::UserId.eq(user_id))

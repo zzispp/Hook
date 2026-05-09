@@ -41,7 +41,7 @@ export function ApiTokenTable(props: Props) {
   return (
     <>
       <Scrollbar>
-        <Table sx={{ minWidth: props.showOwner ? 1200 : 980 }}>
+        <Table sx={{ minWidth: props.showOwner ? 1320 : 1100 }}>
           <ManagementTableHead head={tableHead} />
           <TableBody>
             {props.loading ? (
@@ -85,6 +85,7 @@ function ApiTokenTableRow({
       {props.showOwner ? <TableCell>{t(tokenTypeKey(row.token_type))}</TableCell> : null}
       <TableCell>{formatCurrency(row.used_quota)}</TableCell>
       <TableCell>{formatInteger(row.request_count)}</TableCell>
+      <TableCell>{rateLimitText(row, t)}</TableCell>
       <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
       <TableCell>{formatTime(row.last_used_at)}</TableCell>
       <TableCell align="right">
@@ -157,6 +158,7 @@ function tokenTableHead(t: (key: string) => string, showOwner?: boolean): TableH
     ...ownerColumns,
     { id: 'used_quota', label: t('fields.costCny'), width: 140 },
     { id: 'request_count', label: t('fields.requestCount'), width: 130 },
+    { id: 'rate_limit_rpm', label: t('fields.rateLimitRpm'), width: 140 },
     { id: 'status', label: t('common.status'), width: 110 },
     { id: 'last_used_at', label: t('fields.lastUsedAt'), width: 180 },
     { id: '', width: 136 },
@@ -165,4 +167,9 @@ function tokenTableHead(t: (key: string) => string, showOwner?: boolean): TableH
 
 function tokenTypeKey(type: ApiToken['token_type']) {
   return type === 'independent' ? 'tokens.independentToken' : 'tokens.userToken';
+}
+
+function rateLimitText(token: ApiToken, t: (key: string) => string) {
+  const value = token.rate_limit_rpm ?? 0;
+  return value === 0 ? t('tokens.followSystem') : `${formatInteger(value)} ${t('tokens.rpm')}`;
 }

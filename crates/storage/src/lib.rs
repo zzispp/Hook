@@ -5,6 +5,7 @@ pub mod group;
 mod json;
 pub mod model;
 pub mod rbac;
+pub mod setting;
 pub mod user;
 pub mod wallet;
 

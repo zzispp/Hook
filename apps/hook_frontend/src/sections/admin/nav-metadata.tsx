@@ -16,6 +16,7 @@ export const NAV_ICON_OPTIONS = [
   'icon.lock',
   'icon.menu',
   'icon.model',
+  'icon.settings',
   'icon.wallet',
   'icon.analytics',
   'icon.file',
@@ -44,6 +45,7 @@ export const NAV_ICONS: NonNullable<NavSectionProps['render']>['navIcon'] = {
   'icon.mail': icon('ic-mail'),
   'icon.menu': icon('ic-menu-item'),
   'icon.model': icon('ic-model'),
+  'icon.settings': icon('ic-menu-item'),
   'icon.user': icon('ic-user'),
   'icon.wallet': icon('ic-banking'),
 };
@@ -74,6 +76,7 @@ export function translatedMenuItem(item: RbacMenuItem, t: AdminT) {
     admin_apis: 'nav.apis',
     admin_menus: 'nav.menus',
     admin_models: 'nav.models',
+    admin_settings: 'nav.systemSettings',
     admin_wallets: 'nav.walletManagement',
   };
 

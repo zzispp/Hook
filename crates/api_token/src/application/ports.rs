@@ -48,6 +48,7 @@ pub trait ApiTokenRepository: Send + Sync + 'static {
     async fn find_by_hash(&self, token_hash: &str) -> ApiTokenResult<Option<ApiToken>>;
     async fn list_user_tokens(&self, user_id: &str, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse>;
     async fn list_admin_tokens(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse>;
+    async fn delete_expired_tokens(&self) -> ApiTokenResult<u64>;
 }
 
 #[async_trait]
@@ -63,4 +64,10 @@ pub trait BillingGroupCatalog: Send + Sync + 'static {
 #[async_trait]
 pub trait ModelAccessCatalog: Send + Sync + 'static {
     async fn model_exists(&self, id: &str) -> ApiTokenResult<bool>;
+}
+
+#[async_trait]
+pub trait SystemTokenPolicy: Send + Sync + 'static {
+    async fn default_rate_limit_rpm(&self) -> ApiTokenResult<i64>;
+    async fn auto_delete_expired_tokens(&self) -> ApiTokenResult<bool>;
 }

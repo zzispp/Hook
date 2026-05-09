@@ -5,7 +5,8 @@ use types::api_token::{
 };
 
 use crate::application::{
-    ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog, UserCatalog,
+    ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog, SystemTokenPolicy,
+    UserCatalog,
     token::{GeneratedToken, generate_token},
     validation::{
         ValidatedCreate, ValidatedUpdate, model_ids_for_update, sanitize_admin_create, sanitize_create, sanitize_update, validate_admin_create,
@@ -13,26 +14,29 @@ use crate::application::{
     },
 };
 
-pub struct ApiTokenService<R, G, M, U> {
+pub struct ApiTokenService<R, G, M, U, P> {
     repository: R,
     groups: G,
     models: M,
     users: U,
+    system_policy: P,
 }
 
-impl<R, G, M, U> ApiTokenService<R, G, M, U>
+impl<R, G, M, U, P> ApiTokenService<R, G, M, U, P>
 where
     R: ApiTokenRepository,
     G: BillingGroupCatalog,
     M: ModelAccessCatalog,
     U: UserCatalog,
+    P: SystemTokenPolicy,
 {
-    pub const fn new(repository: R, groups: G, models: M, users: U) -> Self {
+    pub const fn new(repository: R, groups: G, models: M, users: U, system_policy: P) -> Self {
         Self {
             repository,
             groups,
             models,
             users,
+            system_policy,
         }
     }
 }
@@ -51,15 +55,17 @@ pub trait ApiTokenUseCase: Send + Sync + 'static {
     async fn get_admin_token(&self, id: &str) -> ApiTokenResult<ApiTokenResponse>;
     async fn admin_token_secret(&self, id: &str) -> ApiTokenResult<ApiTokenSecretResponse>;
     async fn list_admin_tokens(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse>;
+    async fn cleanup_expired_tokens(&self) -> ApiTokenResult<u64>;
 }
 
 #[async_trait]
-impl<R, G, M, U> ApiTokenUseCase for ApiTokenService<R, G, M, U>
+impl<R, G, M, U, P> ApiTokenUseCase for ApiTokenService<R, G, M, U, P>
 where
     R: ApiTokenRepository,
     G: BillingGroupCatalog,
     M: ModelAccessCatalog,
     U: UserCatalog,
+    P: SystemTokenPolicy,
 {
     async fn create_token(&self, user_id: &str, input: ApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
         let input = sanitize_create(input);
@@ -98,7 +104,7 @@ where
 
     async fn list_tokens(&self, user_id: &str, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
         validate_list_request(&request)?;
-        self.repository.list_user_tokens(user_id, request).await
+        self.user_token_list_response(user_id, request).await
     }
 
     async fn create_admin_token(&self, actor_id: &str, input: AdminApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
@@ -136,17 +142,37 @@ where
 
     async fn list_admin_tokens(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
         validate_list_request(&request)?;
-        self.repository.list_admin_tokens(request).await
+        self.admin_token_list_response(request).await
+    }
+
+    async fn cleanup_expired_tokens(&self) -> ApiTokenResult<u64> {
+        if !self.system_policy.auto_delete_expired_tokens().await? {
+            return Ok(0);
+        }
+        self.repository.delete_expired_tokens().await
     }
 }
 
-impl<R, G, M, U> ApiTokenService<R, G, M, U>
+impl<R, G, M, U, P> ApiTokenService<R, G, M, U, P>
 where
     R: ApiTokenRepository,
     G: BillingGroupCatalog,
     M: ModelAccessCatalog,
     U: UserCatalog,
+    P: SystemTokenPolicy,
 {
+    async fn user_token_list_response(&self, user_id: &str, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
+        let mut response = self.repository.list_user_tokens(user_id, request).await?;
+        apply_default_rate_limit(&mut response, self.system_policy.default_rate_limit_rpm().await?);
+        Ok(response)
+    }
+
+    async fn admin_token_list_response(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
+        let mut response = self.repository.list_admin_tokens(request).await?;
+        apply_default_rate_limit(&mut response, self.system_policy.default_rate_limit_rpm().await?);
+        Ok(response)
+    }
+
     async fn create_response(&self, record: ApiTokenCreateRecord, generated: GeneratedToken) -> ApiTokenResult<ApiTokenCreateResponse> {
         let token = self.repository.create_token(record).await?;
         Ok(ApiTokenCreateResponse {
@@ -189,6 +215,14 @@ where
             return Ok(());
         }
         Err(ApiTokenError::InvalidInput(format!("user does not exist: {id}")))
+    }
+}
+
+fn apply_default_rate_limit(response: &mut ApiTokenListResponse, default_rate: i64) {
+    for token in &mut response.tokens {
+        if token.rate_limit_rpm == Some(0) {
+            token.rate_limit_rpm = Some(default_rate);
+        }
     }
 }
 

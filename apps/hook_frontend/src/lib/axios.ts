@@ -156,6 +156,9 @@ export const endpoints = {
     byId: (id: string) => `/api/admin/tokens/${id}`,
     secret: (id: string) => `/api/admin/tokens/${id}/secret`,
   },
+  adminSettings: {
+    system: '/api/admin/settings/system',
+  },
   wallet: {
     balance: '/api/wallet/balance',
     transactions: '/api/wallet/transactions',

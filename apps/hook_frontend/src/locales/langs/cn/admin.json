@@ -16,7 +16,8 @@
     "customKeyboardShortcuts": "自定义键盘快捷键。",
     "apiTokens": "令牌管理",
     "adminApiTokens": "令牌管理",
-    "billingGroups": "计费分组"
+    "billingGroups": "计费分组",
+    "systemSettings": "系统设置"
   },
   "common": {
     "active": "启用",
@@ -85,7 +86,8 @@
     "walletManagement": "钱包管理",
     "apiTokens": "令牌管理",
     "adminApiTokens": "令牌管理",
-    "billingGroups": "计费分组"
+    "billingGroups": "计费分组",
+    "systemSettings": "系统设置"
   },
   "actions": {
     "addApi": "新增 API",
@@ -216,7 +218,8 @@
     "billingGroupCreated": "计费分组已创建",
     "billingGroupDeleted": "计费分组已删除",
     "billingGroupUpdated": "计费分组已更新",
-    "copyFailed": "复制失败"
+    "copyFailed": "复制失败",
+    "systemSettingsUpdated": "系统设置已更新"
   },
   "roles": {
     "admin": {
@@ -628,5 +631,24 @@
     "rpm": "请求/分钟",
     "unlimitedQuota": "不限额度",
     "userToken": "用户令牌"
+  },
+  "systemSettings": {
+    "sections": {
+      "site": "站点信息",
+      "base": "基础配置",
+      "tokens": "令牌配置"
+    },
+    "fields": {
+      "siteName": "站点名称",
+      "siteSubtitle": "站点副标题",
+      "allowRegistration": "开放允许注册",
+      "autoDeleteExpiredTokens": "自动删除过期令牌",
+      "defaultUserGrant": "默认用户初始赠款",
+      "defaultRateLimitRpm": "默认速率限制"
+    },
+    "helper": {
+      "defaultUserGrant": "新用户注册成功后写入赠款余额，并生成钱包流水。",
+      "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。"
+    }
   }
 }

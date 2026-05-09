@@ -4,4 +4,4 @@ mod user_repository;
 
 pub use password::Argon2PasswordHasher;
 pub use system_user::ConfigSystemUserProvider;
-pub use user_repository::StorageUserRepository;
+pub use user_repository::{StorageInitialGrantLedger, StorageRegistrationPolicy, StorageUserRepository};

@@ -40,6 +40,7 @@ const ITEM_KEY_BY_CODE: Record<string, string> = {
   admin_groups: 'nav.billingGroups',
   admin_tokens: 'nav.adminApiTokens',
   admin_wallets: 'nav.walletManagement',
+  admin_settings: 'nav.systemSettings',
 };
 
 const ITEM_KEY_BY_PATH: Record<string, string> = {
@@ -56,6 +57,7 @@ const ITEM_KEY_BY_PATH: Record<string, string> = {
   '/dashboard/admin/groups': 'nav.billingGroups',
   '/dashboard/admin/tokens': 'nav.adminApiTokens',
   '/dashboard/admin/wallets': 'nav.walletManagement',
+  '/dashboard/admin/settings': 'nav.systemSettings',
 };
 
 export function translateNavData(data: NavData, t: TranslateFn): NavData {

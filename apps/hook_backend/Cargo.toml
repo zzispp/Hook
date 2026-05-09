@@ -12,6 +12,7 @@ group.workspace = true
 model.workspace = true
 rbac.workspace = true
 serde.workspace = true
+setting.workspace = true
 storage.workspace = true
 tokio.workspace = true
 tokio-postgres.workspace = true
