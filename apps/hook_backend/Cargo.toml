@@ -18,3 +18,4 @@ tower-http.workspace = true
 hook_tracing.workspace = true
 types.workspace = true
 user.workspace = true
+wallet.workspace = true

@@ -92,6 +92,10 @@ export const endpoints = {
   models: {
     catalog: '/api/models/catalog',
   },
+  wallet: {
+    balance: '/api/wallet/balance',
+    transactions: '/api/wallet/transactions',
+  },
   mail: {
     list: '/api/mail/list',
     details: '/api/mail/details',

@@ -19,6 +19,7 @@ pub struct MenuItemDefinition {
 pub const OVERVIEW_SECTION_ID: &str = "00000000-0000-7000-8000-000000000101";
 pub const RESOURCES_SECTION_ID: &str = "00000000-0000-7000-8000-000000000102";
 pub const SYSTEM_SECTION_ID: &str = "00000000-0000-7000-8000-000000000103";
+pub const ACCOUNT_SECTION_ID: &str = "00000000-0000-7000-8000-000000000104";
 
 pub const MENU_SECTIONS: &[MenuSectionDefinition] = &[
     MenuSectionDefinition {
@@ -32,6 +33,12 @@ pub const MENU_SECTIONS: &[MenuSectionDefinition] = &[
         code: "resources",
         subheader: "Resources",
         sort_order: -5,
+    },
+    MenuSectionDefinition {
+        id: ACCOUNT_SECTION_ID,
+        code: "account",
+        subheader: "Account",
+        sort_order: -3,
     },
     MenuSectionDefinition {
         id: SYSTEM_SECTION_ID,
@@ -59,6 +66,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         title: "Model Catalog",
         path: "/dashboard/models",
         icon: "icon.model",
+        sort_order: 0,
+        deep_match: true,
+    },
+    MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000208",
+        section_id: ACCOUNT_SECTION_ID,
+        code: "wallet_center",
+        title: "Wallet Center",
+        path: "/dashboard/wallet",
+        icon: "icon.wallet",
         sort_order: 0,
         deep_match: true,
     },

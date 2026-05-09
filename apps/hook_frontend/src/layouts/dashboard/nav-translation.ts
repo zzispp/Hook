@@ -11,6 +11,7 @@ type TranslateFn = ReturnType<typeof useTranslate>['t'];
 
 const SECTION_KEY_BY_CODE: Record<string, string> = {
   overview: 'nav.overview',
+  account: 'nav.account',
   resources: 'nav.resources',
   system_management: 'nav.systemManagement',
 };
@@ -28,6 +29,7 @@ const SECTION_KEY_BY_TITLE: Record<string, string> = {
 const ITEM_KEY_BY_CODE: Record<string, string> = {
   dashboard_home: 'nav.dashboard',
   dashboard_models: 'nav.modelCatalog',
+  wallet_center: 'nav.walletCenter',
   system_management: 'nav.systemManagement',
   admin_users: 'nav.users',
   admin_roles: 'nav.roles',
@@ -39,6 +41,7 @@ const ITEM_KEY_BY_CODE: Record<string, string> = {
 const ITEM_KEY_BY_PATH: Record<string, string> = {
   '/dashboard': 'nav.dashboard',
   '/dashboard/models': 'nav.modelCatalog',
+  '/dashboard/wallet': 'nav.walletCenter',
   '/dashboard/admin': 'nav.systemManagement',
   '/dashboard/admin/users': 'nav.users',
   '/dashboard/admin/roles': 'nav.roles',

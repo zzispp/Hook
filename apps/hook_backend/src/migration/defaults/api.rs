@@ -246,6 +246,20 @@ pub const API_DEFINITIONS: &[ApiDefinition] = &[
         group: "Models",
     },
     ApiDefinition {
+        code: "wallet_balance_read",
+        method: "GET",
+        path_pattern: "/api/wallet/balance",
+        name: "Wallet balance",
+        group: "Wallet",
+    },
+    ApiDefinition {
+        code: "wallet_transactions_read",
+        method: "GET",
+        path_pattern: "/api/wallet/transactions",
+        name: "Wallet transactions",
+        group: "Wallet",
+    },
+    ApiDefinition {
         code: "models_public_catalog_read",
         method: "GET",
         path_pattern: "/api/models/catalog",

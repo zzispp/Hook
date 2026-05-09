@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map existing RBAC menu and API wiring,DONE,Relevant defaults/routes/startup patterns are understood,rg -n "USER_MENU_CODES|USER_API_CODES|create_router|ApiState" apps/hook_backend/src/migration crates apps/hook_frontend/src,2026-05-08T06:06:59Z,0,
+2,Add wallet domain types storage and service,DONE,Wallet crate compiles with typed repository and service boundaries,cargo check -p wallet,2026-05-08T06:34:00Z,0,
+3,Add CNY wallet migration and default permissions,DONE,Migration creates wallets and wallet_transactions and grants user wallet center access,cargo check -p backend,2026-05-08T06:48:00Z,0,
+4,Wire wallet API and frontend wallet center,DONE,Backend route and frontend page/actions are connected,pnpm lint:frontend,2026-05-08T07:32:03Z,0,
+5,Run final validation,DONE,Rust and frontend checks complete,just test && pnpm lint:frontend,2026-05-08T07:32:03Z,0,

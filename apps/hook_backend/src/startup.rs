@@ -24,6 +24,11 @@ use user::{
     application::UserService,
     infra::{Argon2PasswordHasher, ConfigSystemUserProvider, StorageUserRepository},
 };
+use wallet::{
+    api::{WalletApiState, create_router as create_wallet_router},
+    application::WalletService,
+    infra::StorageWalletRepository,
+};
 
 use crate::{
     BackendResult,
@@ -48,6 +53,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let database = connect_database(&settings.database_url()?).await?;
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let models = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
+    let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));
     let users = Arc::new(UserService::with_system_user(
         StorageUserRepository::new(database),
         Argon2PasswordHasher,
@@ -61,6 +67,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         tokens,
         rbac,
         models,
+        wallets,
         authorization,
     })
 }
@@ -78,6 +85,7 @@ fn create_app(state: AppState) -> Router {
     let user_state = ApiState::new(state.users.clone(), state.tokens.clone());
     let rbac_state = RbacApiState::new(state.rbac.clone(), state.rbac.clone());
     let model_state = ModelApiState::new(state.models);
+    let wallet_state = WalletApiState::new(state.wallets);
     let auth_state = AuthState::new(AuthStateParts {
         users: state.users,
         tokens: state.tokens,
@@ -87,7 +95,8 @@ fn create_app(state: AppState) -> Router {
     let api_router = Router::new()
         .merge(create_user_router(user_state))
         .merge(create_rbac_router(rbac_state))
-        .merge(create_model_router(model_state));
+        .merge(create_model_router(model_state))
+        .merge(create_wallet_router(wallet_state));
 
     system::create_router()
         .nest("/api", api_router)
@@ -130,5 +139,6 @@ struct AppState {
     tokens: TokenService,
     rbac: Arc<RbacService<StorageRbacRepository, RedisRbacCache>>,
     models: Arc<dyn model::application::ModelUseCase>,
+    wallets: Arc<dyn wallet::application::WalletUseCase>,
     authorization: AuthorizationConfig,
 }

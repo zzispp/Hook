@@ -4,6 +4,8 @@
     "dashboard": "仪表盘",
     "resources": "资源",
     "modelCatalog": "模型目录",
+    "account": "账户",
+    "walletCenter": "钱包中心",
     "systemManagement": "系统管理",
     "users": "用户管理",
     "roles": "角色管理",
@@ -171,6 +173,7 @@
     "auth": "认证",
     "menus": "菜单",
     "models": "模型",
+    "wallet": "钱包",
     "rbac": "权限",
     "system": "系统",
     "users": "用户"
@@ -211,6 +214,8 @@
     "models_global_providers": "查看模型提供商",
     "models_catalog_read": "查看模型目录",
     "models_public_catalog_read": "查看普通模型目录",
+    "wallet_balance_read": "查看钱包余额",
+    "wallet_transactions_read": "查看钱包流水",
     "models_external_read": "获取外部模型"
   },
   "models": {

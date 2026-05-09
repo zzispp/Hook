@@ -16,6 +16,7 @@ export const NAV_ICON_OPTIONS = [
   'icon.lock',
   'icon.menu',
   'icon.model',
+  'icon.wallet',
   'icon.analytics',
   'icon.file',
   'icon.folder',
@@ -40,11 +41,13 @@ export const NAV_ICONS: NonNullable<NavSectionProps['render']>['navIcon'] = {
   'icon.menu': icon('ic-menu-item'),
   'icon.model': icon('ic-model'),
   'icon.user': icon('ic-user'),
+  'icon.wallet': icon('ic-banking'),
 };
 
 export function translatedMenuSection(section: MenuSection, t: AdminT) {
   const keyByCode: Record<string, string> = {
     overview: 'nav.overview',
+    account: 'nav.account',
     resources: 'nav.resources',
     system_management: 'nav.systemManagement',
   };
@@ -58,6 +61,7 @@ export function translatedMenuItem(item: RbacMenuItem, t: AdminT) {
   const keyByCode: Record<string, string> = {
     dashboard_home: 'nav.dashboard',
     dashboard_models: 'nav.modelCatalog',
+    wallet_center: 'nav.walletCenter',
     admin_users: 'nav.users',
     admin_roles: 'nav.roles',
     admin_apis: 'nav.apis',

@@ -4,6 +4,8 @@
     "dashboard": "Dashboard",
     "resources": "Resources",
     "modelCatalog": "Model Catalog",
+    "account": "Account",
+    "walletCenter": "Wallet Center",
     "systemManagement": "System Management",
     "users": "Users",
     "roles": "Roles",
@@ -171,6 +173,7 @@
     "auth": "Auth",
     "menus": "Menus",
     "models": "Models",
+    "wallet": "Wallet",
     "rbac": "RBAC",
     "system": "System",
     "users": "Users"
@@ -211,6 +214,8 @@
     "models_global_providers": "Global model providers",
     "models_catalog_read": "Model catalog",
     "models_public_catalog_read": "Public model catalog",
+    "wallet_balance_read": "Wallet balance",
+    "wallet_transactions_read": "Wallet transactions",
     "models_external_read": "External models"
   },
   "models": {

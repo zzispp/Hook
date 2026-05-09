@@ -1,4 +1,8 @@
 use configuration::Settings;
+use rbac::{
+    application::RbacService,
+    infra::{RedisRbacCache, StorageRbacRepository},
+};
 use sea_orm_migration::MigratorTrait;
 use storage::connect_database;
 
@@ -23,6 +27,7 @@ fn init_tracing(settings: &Settings) -> BackendResult<()> {
 
 async fn run_migration(settings: Settings, command: MigrationCommand) -> BackendResult<()> {
     let database = connect_database(&settings.database_url()?).await?;
+    let rebuild_rbac_cache = command.rebuilds_rbac_cache();
     let connection = database.connection();
     match command {
         MigrationCommand::Up(steps) => Migrator::up(connection, steps).await?,
@@ -32,6 +37,17 @@ async fn run_migration(settings: Settings, command: MigrationCommand) -> Backend
         MigrationCommand::Refresh => Migrator::refresh(connection).await?,
         MigrationCommand::Reset => Migrator::reset(connection).await?,
     }
+    if rebuild_rbac_cache {
+        rebuild_rbac_cache_after_migration(&settings, database).await?;
+    }
+    Ok(())
+}
+
+async fn rebuild_rbac_cache_after_migration(settings: &Settings, database: storage::Database) -> BackendResult<()> {
+    let repository = StorageRbacRepository::new(database);
+    let cache = RedisRbacCache::connect(&settings.redis_url()?, settings.redis.key_prefix.clone()).await?;
+    let rbac = RbacService::new(repository, cache);
+    rbac.rebuild_cache().await?;
     Ok(())
 }
 
@@ -49,6 +65,12 @@ enum MigrationCommand {
     Fresh,
     Refresh,
     Reset,
+}
+
+impl MigrationCommand {
+    fn rebuilds_rbac_cache(&self) -> bool {
+        matches!(self, Self::Up(_) | Self::Fresh | Self::Refresh)
+    }
 }
 
 fn command_from_args(args: Vec<String>) -> BackendResult<BackendCommand> {

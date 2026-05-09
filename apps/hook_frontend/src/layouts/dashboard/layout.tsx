@@ -28,13 +28,13 @@ import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
 import { _account } from '../nav-config-account';
 import { Searchbar } from '../components/searchbar';
+import { DashboardRouteGuard } from './route-guard';
 import { translateNavData } from './nav-translation';
 import { MenuButton } from '../components/menu-button';
 import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
 import { LanguagePopover } from '../components/language-popover';
 import { ContactsPopover } from '../components/contacts-popover';
-import { navData as dashboardNavData } from '../nav-config-dashboard';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import { NotificationsDrawer } from '../components/notifications-drawer';
 import { MainSection, layoutClasses, HeaderSection, LayoutSection } from '../core';
@@ -72,7 +72,8 @@ export function DashboardLayout({
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
-  const sourceNavData = slotProps?.nav?.data ?? (navbar.isLoading ? dashboardNavData : navbar.data);
+  const sourceNavData = slotProps?.nav?.data ?? navbar.data;
+  const routeGuardNavData = slotProps?.nav?.data ?? navbar.data;
   const navData = translateNavData(sourceNavData, t);
 
   const isNavMini = settings.state.navLayout === 'mini';
@@ -192,7 +193,17 @@ export function DashboardLayout({
 
   const renderFooter = () => null;
 
-  const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
+  const renderMain = () => (
+    <MainSection {...slotProps?.main}>
+      <DashboardRouteGuard
+        data={routeGuardNavData}
+        error={navbar.error}
+        isLoading={!slotProps?.nav?.data && navbar.isLoading}
+      >
+        {children}
+      </DashboardRouteGuard>
+    </MainSection>
+  );
 
   return (
     <LayoutSection
