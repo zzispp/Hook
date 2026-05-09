@@ -48,7 +48,7 @@ async fn sign_in_rejects_invalid_password() {
         })
         .await;
 
-    assert!(matches!(result, Err(AppError::Unauthorized)));
+    assert!(matches!(result, Err(AppError::InvalidCredentials)));
 }
 
 #[tokio::test]

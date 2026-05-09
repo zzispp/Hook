@@ -18,6 +18,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TableHeadCustom, TablePaginationCustom } from 'src/components/table';
 
 import { WALLET_TABLE_MIN_WIDTH } from './wallet-constants';
+import { walletOwner, walletFromTransaction } from './wallet-owner';
 import {
   walletStatusLabel,
   formatSignedAmount,
@@ -135,13 +136,15 @@ function WalletLedgerRow({
   transaction: WalletTransaction;
   onOpen: (transaction: WalletTransaction) => void;
 }) {
+  const rowWallet = wallet ?? walletFromTransaction(transaction);
+
   return (
     <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => onOpen(transaction)}>
       <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
         {formatWalletDateTime(transaction.created_at, locale)}
       </TableCell>
       <TableCell>
-        <OwnerCell t={t} wallet={wallet} />
+        <OwnerCell t={t} wallet={rowWallet} />
       </TableCell>
       <TableCell>
         <TransactionTypeCell t={t} transaction={transaction} />
@@ -174,8 +177,8 @@ function DescriptionCell({
   description: string | null;
 }) {
   return (
-    <TableCell sx={{ color: 'text.secondary', maxWidth: 320 }}>
-      <Typography variant="body2" noWrap>
+    <TableCell sx={{ color: 'text.secondary', width: 240, maxWidth: 240 }}>
+      <Typography variant="body2" noWrap sx={{ maxWidth: 240 }}>
         {description || t('wallet.emptyValue')}
       </Typography>
     </TableCell>
@@ -210,24 +213,21 @@ function DetailActionCell({
 }
 
 function OwnerCell({ t, wallet }: { t: TFunction<'admin'>; wallet?: WalletSummary | AdminWallet }) {
+  const owner = walletOwner(wallet);
+
   return (
     <Stack spacing={0.5}>
       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-        {walletOwnerName(t, wallet)}
+        {owner.name || t('wallet.emptyValue')}
       </Typography>
       <Typography variant="caption" color="text.secondary">
-        {t('wallet.ownerSummary', { status: walletStatusLabel(t, wallet?.status) })}
+        {t('wallet.ownerSummary', {
+          type: t(`wallet.ownerTypes.${owner.type}`),
+          status: walletStatusLabel(t, owner.status),
+        })}
       </Typography>
     </Stack>
   );
-}
-
-function walletOwnerName(t: TFunction<'admin'>, wallet?: WalletSummary | AdminWallet) {
-  if (wallet && 'owner_name' in wallet) {
-    return wallet.owner_name || wallet.owner_email || t('wallet.emptyValue');
-  }
-
-  return t('wallet.currentUser');
 }
 
 function TransactionTypeCell({
@@ -293,7 +293,7 @@ function tableHead(t: TFunction<'admin'>): TableHeadCellProps[] {
     { id: 'category', label: t('wallet.table.type'), width: 160 },
     { id: 'amount', label: t('wallet.table.amount'), width: 130 },
     { id: 'balance', label: t('wallet.table.balanceChange'), width: 260 },
-    { id: 'description', label: t('wallet.table.description') },
+    { id: 'description', label: t('wallet.table.description'), width: 240 },
     { id: 'action', label: t('wallet.table.action'), width: 120, align: 'right' },
   ];
 }

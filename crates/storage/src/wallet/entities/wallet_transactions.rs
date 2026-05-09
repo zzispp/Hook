@@ -3,6 +3,8 @@ use sea_orm::entity::prelude::*;
 use time::format_description::well_known::Rfc3339;
 use types::wallet::WalletTransaction;
 
+use super::wallets;
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "wallet_transactions")]
 pub struct Model {
@@ -26,9 +28,18 @@ pub struct Model {
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(belongs_to = "wallets::Entity", from = "Column::WalletId", to = "wallets::Column::Id")]
+    Wallet,
+}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl Related<wallets::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Wallet.def()
+    }
+}
 
 impl From<Model> for WalletTransaction {
     fn from(value: Model) -> Self {

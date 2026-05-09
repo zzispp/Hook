@@ -13,7 +13,7 @@ database:
 
 jwt:
   secret: "hook-local-development-jwt-secret-change-before-deploy"
-  access_token_ttl_seconds: 1440
+  access_token_ttl_seconds: 86400
   refresh_token_ttl_seconds: 604800
 
 admin:

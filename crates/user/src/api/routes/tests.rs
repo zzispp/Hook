@@ -118,9 +118,31 @@ async fn refresh_rejects_access_token() {
         .oneshot(json_request(Method::POST, "/api/auth/refresh", json!({ "refresh_token": tokens.access_token })))
         .await
         .unwrap();
-    let body = response_json(response).await;
+    let body = error_response_json(response, StatusCode::UNAUTHORIZED).await;
 
     assert_eq!(body["success"], false);
+    assert_eq!(body["message"], "unauthorized");
+}
+
+#[tokio::test]
+async fn sign_in_rejects_invalid_password_with_credentials_message() {
+    let app = test_router();
+
+    let response = app
+        .oneshot(json_request(
+            Method::POST,
+            "/api/auth/sign-in",
+            json!({
+                "identifier": "alice",
+                "password": "bad-password"
+            }),
+        ))
+        .await
+        .unwrap();
+    let body = error_response_json(response, StatusCode::UNAUTHORIZED).await;
+
+    assert_eq!(body["success"], false);
+    assert_eq!(body["message"], "username or password is incorrect");
 }
 
 struct SessionTokens {
@@ -182,6 +204,12 @@ fn authenticated_request(method: Method, uri: &str, token: &str) -> Request<Body
 
 async fn response_json(response: Response<Body>) -> Value {
     assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    serde_json::from_slice(&body).unwrap()
+}
+
+async fn error_response_json(response: Response<Body>, status: StatusCode) -> Value {
+    assert_eq!(response.status(), status);
     let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
     serde_json::from_slice(&body).unwrap()
 }

@@ -5,6 +5,7 @@ import type { ApiEnvelope } from 'src/types/rbac';
 import type {
   WalletBalanceResponse,
   AdminWalletListResponse,
+  AdminWalletLedgerResponse,
   AdminWalletAdjustmentInput,
   WalletTransactionsResponse,
   AdminWalletAdjustmentResponse,
@@ -73,9 +74,20 @@ export type AdminWalletFilters = {
   status?: string;
 };
 
+export type AdminWalletLedgerFilters = {
+  category?: string;
+  reason_code?: string;
+  owner_type?: string;
+};
+
 export function useAdminWallets(page: number, pageSize: number, filters: AdminWalletFilters = {}) {
   const key = [endpoints.adminWallets.list, { params: { ...pageQuery(page, pageSize), ...filters } }] as const;
   return useWalletResource<AdminWalletListResponse>(key);
+}
+
+export function useAdminWalletLedger(page: number, pageSize: number, filters: AdminWalletLedgerFilters = {}) {
+  const key = [endpoints.adminWallets.ledger, { params: { ...pageQuery(page, pageSize), ...filters } }] as const;
+  return useWalletResource<AdminWalletLedgerResponse>(key);
 }
 
 export function useAdminWalletTransactions(walletId: string | null, page: number, pageSize: number) {

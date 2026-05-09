@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest},
     wallet::{
-        AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse, AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletBalanceResponse,
-        WalletTransaction, WalletTransactionsResponse,
+        AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletListResponse,
+        AdminWalletResponse, AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletBalanceResponse, WalletTransaction, WalletTransactionsResponse,
     },
 };
 
@@ -22,6 +22,7 @@ pub trait WalletRepository: Send + Sync + 'static {
     async fn page_transactions(&self, wallet_id: &str, page: PageRequest) -> WalletResult<Page<WalletTransaction>>;
     async fn find_admin_wallet_by_id(&self, wallet_id: &str) -> WalletResult<Option<AdminWalletResponse>>;
     async fn page_admin_wallets(&self, page: PageRequest, filters: AdminWalletListFilters) -> WalletResult<Page<AdminWalletResponse>>;
+    async fn page_admin_ledger(&self, page: PageRequest, filters: AdminWalletLedgerFilters) -> WalletResult<Page<AdminWalletLedgerTransactionResponse>>;
 }
 
 #[async_trait]
@@ -29,6 +30,7 @@ pub trait WalletUseCase: Send + Sync + 'static {
     async fn balance(&self, user_id: &str) -> WalletResult<WalletBalanceResponse>;
     async fn transactions(&self, user_id: &str, page: PageRequest) -> WalletResult<WalletTransactionsResponse>;
     async fn admin_wallets(&self, page: PageRequest, filters: AdminWalletListFilters) -> WalletResult<AdminWalletListResponse>;
+    async fn admin_ledger(&self, page: PageRequest, filters: AdminWalletLedgerFilters) -> WalletResult<AdminWalletLedgerResponse>;
     async fn admin_transactions(&self, wallet_id: &str, page: PageRequest) -> WalletResult<AdminWalletTransactionsResponse>;
     async fn adjust_wallet(&self, input: WalletAdjustment) -> WalletResult<WalletTransaction>;
 }

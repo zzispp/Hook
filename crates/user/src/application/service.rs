@@ -128,7 +128,7 @@ where
         validate_credentials(&input)?;
         let found = find_auth_by_identifier(&self.repository, &self.system_users, &input.identifier)
             .await?
-            .ok_or(AppError::Unauthorized)?;
+            .ok_or(AppError::InvalidCredentials)?;
         verify_password(&self.password_hasher, &input.password, &found)?;
         if !found.user.system {
             self.repository.record_login(found.user.id.clone()).await?;
@@ -215,7 +215,7 @@ fn verify_password<H: PasswordHasher>(hasher: &H, password: &str, found: &UserAu
         return Ok(());
     }
 
-    Err(AppError::Unauthorized)
+    Err(AppError::InvalidCredentials)
 }
 
 #[cfg(test)]

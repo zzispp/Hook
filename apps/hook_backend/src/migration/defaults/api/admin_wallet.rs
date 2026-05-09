@@ -22,4 +22,11 @@ pub const ADMIN_WALLET_APIS: &[ApiDefinition] = &[
         name: "Admin wallet adjustment",
         group: "Admin Wallet",
     },
+    ApiDefinition {
+        code: "admin_wallet_ledger_read",
+        method: "GET",
+        path_pattern: "/api/admin/wallets/ledger",
+        name: "Admin wallet global ledger",
+        group: "Admin Wallet",
+    },
 ];

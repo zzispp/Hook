@@ -1,16 +1,14 @@
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, SelectTwo, Set, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, TransactionTrait};
 use types::{
     pagination::{Page, PageSliceRequest},
-    wallet::{AdminWalletListFilters, AdminWalletResponse, Wallet, WalletSummaryResponse, WalletTransaction},
+    wallet::{Wallet, WalletTransaction},
 };
 
 use crate::{Database, StorageError, StorageResult};
-use crate::user::{UserColumn, UserEntity as Users, UserRecord};
-
 use super::{
-    AdminWalletRecord, WalletLedgerRecordInput, WalletRecord, WalletTransactionRecordInput, wallet_records, wallet_records::ActiveModel as WalletActiveModel,
-    wallet_transaction_records, wallet_transaction_records::ActiveModel as WalletTransactionActiveModel,
+    WalletLedgerRecordInput, WalletRecord, WalletTransactionRecordInput, wallet_records,
+    wallet_records::ActiveModel as WalletActiveModel, wallet_transaction_records, wallet_transaction_records::ActiveModel as WalletTransactionActiveModel,
 };
 
 const DEFAULT_CURRENCY: &str = "CNY";
@@ -19,7 +17,7 @@ const DEFAULT_LIMIT_MODE: &str = "finite";
 
 #[derive(Clone)]
 pub struct WalletStore {
-    database: Database,
+    pub(super) database: Database,
 }
 
 impl WalletStore {
@@ -115,41 +113,6 @@ impl WalletStore {
         })
     }
 
-    pub async fn find_admin_wallet_by_id(&self, id: &str) -> StorageResult<Option<AdminWalletResponse>> {
-        let Some(wallet) = self.find_by_id(id).await? else {
-            return Ok(None);
-        };
-        let Some(user) = Users::find_by_id(wallet.user_id.clone()).one(self.database.connection()).await? else {
-            return Ok(None);
-        };
-        Ok(Some(admin_wallet_response(AdminWalletRecord {
-            wallet,
-            owner_name: user.username,
-            owner_email: user.email,
-        })))
-    }
-
-    pub async fn page_admin_wallets(
-        &self,
-        request: PageSliceRequest,
-        filters: AdminWalletListFilters,
-    ) -> StorageResult<Page<AdminWalletResponse>> {
-        let query = filtered_admin_wallets(filters);
-        let total = query.clone().count(self.database.connection()).await?;
-        let records = query
-            .order_by_desc(wallet_records::Column::CreatedAt)
-            .limit(request.limit)
-            .offset(request.offset)
-            .all(self.database.connection())
-            .await?;
-        Ok(Page {
-            items: records.into_iter().map(AdminWalletRecord::from).map(admin_wallet_response).collect(),
-            total,
-            page: request.page,
-            page_size: request.page_size,
-        })
-    }
-
     async fn find_record_by_id(&self, id: &str) -> StorageResult<Option<WalletRecord>> {
         wallet_records::Entity::find_by_id(id.to_owned())
             .one(self.database.connection())
@@ -159,61 +122,6 @@ impl WalletStore {
 
     async fn find_record_by_id_in_tx(&self, id: &str, tx: &sea_orm::DatabaseTransaction) -> StorageResult<Option<WalletRecord>> {
         wallet_records::Entity::find_by_id(id.to_owned()).one(tx).await.map_err(StorageError::from)
-    }
-}
-
-fn filtered_admin_wallets(filters: AdminWalletListFilters) -> SelectTwo<wallet_records::Entity, Users> {
-    let mut query = wallet_records::Entity::find().find_also_related(Users);
-    if let Some(status) = filters.status.filter(|value| !value.is_empty()) {
-        query = query.filter(wallet_records::Column::Status.eq(status));
-    }
-    match filters.search {
-        Some(search) if !search.is_empty() => query.filter(admin_wallet_search_condition(&search)),
-        _ => query,
-    }
-}
-
-fn admin_wallet_search_condition(search: &str) -> Condition {
-    Condition::any()
-        .add(wallet_records::Column::Id.contains(search))
-        .add(wallet_records::Column::UserId.contains(search))
-        .add(UserColumn::Username.contains(search))
-        .add(UserColumn::Email.contains(search))
-}
-
-fn admin_wallet_response(record: AdminWalletRecord) -> AdminWalletResponse {
-    let wallet = record.wallet.clone();
-    let summary = WalletSummaryResponse::from(wallet);
-    AdminWalletResponse {
-        id: summary.id,
-        user_id: summary.user_id,
-        owner_name: record.owner_name,
-        owner_email: record.owner_email,
-        owner_type: "user".into(),
-        balance: summary.balance,
-        recharge_balance: summary.recharge_balance,
-        gift_balance: summary.gift_balance,
-        currency: summary.currency,
-        status: summary.status,
-        limit_mode: summary.limit_mode,
-        unlimited: summary.unlimited,
-        total_recharged: summary.total_recharged,
-        total_consumed: summary.total_consumed,
-        total_refunded: summary.total_refunded,
-        total_adjusted: summary.total_adjusted,
-        created_at: record.wallet.created_at,
-        updated_at: summary.updated_at,
-    }
-}
-
-impl From<(WalletRecord, Option<UserRecord>)> for AdminWalletRecord {
-    fn from(value: (WalletRecord, Option<UserRecord>)) -> Self {
-        let user = value.1.expect("wallet owner user must exist");
-        Self {
-            wallet: value.0.into(),
-            owner_name: user.username,
-            owner_email: user.email,
-        }
     }
 }
 

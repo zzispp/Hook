@@ -4,7 +4,9 @@ import type { AdminWallet } from 'src/types/wallet';
 
 import { useMemo, useState, useCallback } from 'react';
 
+import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
+import Tabs from '@mui/material/Tabs';
 import Alert from '@mui/material/Alert';
 
 import { useTranslate } from 'src/locales/use-locales';
@@ -17,6 +19,7 @@ import { useTable } from 'src/components/table';
 import { RefreshButton, AdminBreadcrumbs } from 'src/sections/admin/shared';
 
 import { AdminWalletTable } from './admin-wallet-table';
+import { AdminWalletGlobalLedger } from './admin-wallet-global-ledger';
 import { AdminWalletLedgerDialog } from './admin-wallet-ledger-dialog';
 import { AdminWalletAdjustDialog } from './admin-wallet-adjust-dialog';
 import {
@@ -25,27 +28,113 @@ import {
   DEFAULT_ADMIN_WALLET_FILTERS,
 } from './admin-wallet-filters';
 
-type WalletManagementBodyProps = {
-  t: ReturnType<typeof useTranslate>['t'];
-  table: ReturnType<typeof useTable>;
-  wallets: ReturnType<typeof useAdminWallets>;
-  filters: typeof DEFAULT_ADMIN_WALLET_FILTERS;
-  locale: string;
-  adjustDialog: ReturnType<typeof useAdjustDialog>;
-  ledgerWallet: AdminWallet | null;
-  setLedgerWallet: React.Dispatch<React.SetStateAction<AdminWallet | null>>;
-  handleFiltersChange: (filters: typeof DEFAULT_ADMIN_WALLET_FILTERS) => void;
-};
+type AdminWalletTab = 'ledger' | 'wallets';
 
 export function AdminWalletManagementView() {
   const { t, currentLang } = useTranslate('admin');
+  const [tab, setTab] = useState<AdminWalletTab>('ledger');
+  const walletState = useAdminWalletListState(t);
+  const locale = currentLang.numberFormat.code;
+
+  return (
+    <DashboardContent>
+      <AdminBreadcrumbs
+        heading={t('pages.walletManagement')}
+        action={tab === 'wallets' ? <RefreshButton loading={walletState.wallets.isLoading} onClick={() => void walletState.wallets.refresh()} /> : null}
+      />
+      {walletState.wallets.error ? <WalletErrorAlert message={walletState.wallets.error.message} /> : null}
+      <AdminWalletTabs t={t} value={tab} onChange={setTab} />
+      {tab === 'ledger' ? <AdminWalletGlobalLedger t={t} locale={locale} /> : null}
+      {tab === 'wallets' ? <AdminWalletListPanel t={t} locale={locale} state={walletState} /> : null}
+    </DashboardContent>
+  );
+}
+
+function AdminWalletTabs({
+  t,
+  value,
+  onChange,
+}: {
+  t: ReturnType<typeof useTranslate>['t'];
+  value: AdminWalletTab;
+  onChange: (tab: AdminWalletTab) => void;
+}) {
+  return (
+    <Tabs value={value} onChange={(_event, next: AdminWalletTab) => onChange(next)} sx={{ mb: 3 }}>
+      <Tab value="ledger" label={t('adminWallets.tabs.ledger')} />
+      <Tab value="wallets" label={t('adminWallets.tabs.wallets')} />
+    </Tabs>
+  );
+}
+
+function AdminWalletListPanel({
+  t,
+  locale,
+  state,
+}: {
+  t: ReturnType<typeof useTranslate>['t'];
+  locale: string;
+  state: ReturnType<typeof useAdminWalletListState>;
+}) {
+  return (
+    <>
+      <Card>
+        <AdminWalletFiltersToolbar t={t} filters={state.filters} onChange={state.handleFiltersChange} />
+        <AdminWalletTable
+          t={t}
+          locale={locale}
+          rows={state.wallets.data?.items ?? []}
+          total={state.wallets.data?.total ?? 0}
+          loading={state.wallets.isLoading}
+          page={state.table.page}
+          rowsPerPage={state.table.rowsPerPage}
+          onOpenLedger={state.setLedgerWallet}
+          onOpenAdjust={state.adjustDialog.open}
+          onPageChange={state.table.onChangePage}
+          onRowsPerPageChange={state.table.onChangeRowsPerPage}
+        />
+      </Card>
+      <AdminWalletListDialogs t={t} locale={locale} state={state} />
+    </>
+  );
+}
+
+function AdminWalletListDialogs({
+  t,
+  locale,
+  state,
+}: {
+  t: ReturnType<typeof useTranslate>['t'];
+  locale: string;
+  state: ReturnType<typeof useAdminWalletListState>;
+}) {
+  return (
+    <>
+      <AdminWalletLedgerDialog
+        t={t}
+        locale={locale}
+        wallet={state.ledgerWallet}
+        onClose={() => state.setLedgerWallet(null)}
+      />
+      <AdminWalletAdjustDialog
+        t={t}
+        open={Boolean(state.adjustDialog.wallet)}
+        wallet={state.adjustDialog.wallet}
+        submitting={state.adjustDialog.submitting}
+        onClose={state.adjustDialog.close}
+        onSubmit={state.adjustDialog.submit}
+      />
+    </>
+  );
+}
+
+function useAdminWalletListState(t: ReturnType<typeof useTranslate>['t']) {
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'updated_at' });
   const [filters, setFilters] = useState(DEFAULT_ADMIN_WALLET_FILTERS);
   const walletFilters = useMemo(() => toAdminWalletFilters(filters), [filters]);
   const wallets = useAdminWallets(table.page, table.rowsPerPage, walletFilters);
   const [ledgerWallet, setLedgerWallet] = useState<AdminWallet | null>(null);
   const adjustDialog = useAdjustDialog(t, wallets.refresh);
-
   const handleFiltersChange = useCallback(
     (nextFilters: typeof DEFAULT_ADMIN_WALLET_FILTERS) => {
       table.onResetPage();
@@ -54,138 +143,12 @@ export function AdminWalletManagementView() {
     [table]
   );
 
-  return (
-    <DashboardContent>
-      <AdminBreadcrumbs
-        heading={t('pages.walletManagement')}
-        action={<RefreshButton loading={wallets.isLoading} onClick={() => void wallets.refresh()} />}
-      />
-      {wallets.error ? <WalletErrorAlert message={wallets.error.message} /> : null}
-      <WalletManagementBody
-        t={t}
-        table={table}
-        wallets={wallets}
-        filters={filters}
-        locale={currentLang.numberFormat.code}
-        adjustDialog={adjustDialog}
-        ledgerWallet={ledgerWallet}
-        setLedgerWallet={setLedgerWallet}
-        handleFiltersChange={handleFiltersChange}
-      />
-    </DashboardContent>
-  );
-}
-
-function WalletManagementBody({
-  t,
-  table,
-  wallets,
-  filters,
-  locale,
-  adjustDialog,
-  ledgerWallet,
-  setLedgerWallet,
-  handleFiltersChange,
-}: WalletManagementBodyProps) {
-  return (
-    <>
-      <AdminWalletCard
-        t={t}
-        table={table}
-        wallets={wallets}
-        filters={filters}
-        locale={locale}
-        onOpenLedger={setLedgerWallet}
-        onOpenAdjust={adjustDialog.open}
-        onFiltersChange={handleFiltersChange}
-      />
-      <AdminWalletDialogs
-        t={t}
-        locale={locale}
-        adjustDialog={adjustDialog}
-        ledgerWallet={ledgerWallet}
-        onCloseLedger={() => setLedgerWallet(null)}
-      />
-    </>
-  );
-}
-
-function AdminWalletCard({
-  t,
-  table,
-  wallets,
-  filters,
-  locale,
-  onOpenLedger,
-  onOpenAdjust,
-  onFiltersChange,
-}: {
-  t: ReturnType<typeof useTranslate>['t'];
-  table: ReturnType<typeof useTable>;
-  wallets: ReturnType<typeof useAdminWallets>;
-  filters: typeof DEFAULT_ADMIN_WALLET_FILTERS;
-  locale: string;
-  onOpenLedger: React.Dispatch<React.SetStateAction<AdminWallet | null>>;
-  onOpenAdjust: (wallet: AdminWallet) => void;
-  onFiltersChange: (filters: typeof DEFAULT_ADMIN_WALLET_FILTERS) => void;
-}) {
-  return (
-    <Card>
-      <AdminWalletFiltersToolbar t={t} filters={filters} onChange={onFiltersChange} />
-      <AdminWalletTable
-        t={t}
-        locale={locale}
-        rows={wallets.data?.items ?? []}
-        total={wallets.data?.total ?? 0}
-        loading={wallets.isLoading}
-        page={table.page}
-        rowsPerPage={table.rowsPerPage}
-        onOpenLedger={onOpenLedger}
-        onOpenAdjust={onOpenAdjust}
-        onPageChange={table.onChangePage}
-        onRowsPerPageChange={table.onChangeRowsPerPage}
-      />
-    </Card>
-  );
-}
-
-function AdminWalletDialogs({
-  t,
-  locale,
-  adjustDialog,
-  ledgerWallet,
-  onCloseLedger,
-}: {
-  t: ReturnType<typeof useTranslate>['t'];
-  locale: string;
-  adjustDialog: ReturnType<typeof useAdjustDialog>;
-  ledgerWallet: AdminWallet | null;
-  onCloseLedger: VoidFunction;
-}) {
-  return (
-    <>
-      <AdminWalletLedgerDialog
-        t={t}
-        locale={locale}
-        wallet={ledgerWallet}
-        onClose={onCloseLedger}
-      />
-      <AdminWalletAdjustDialog
-        t={t}
-        open={Boolean(adjustDialog.wallet)}
-        wallet={adjustDialog.wallet}
-        submitting={adjustDialog.submitting}
-        onClose={adjustDialog.close}
-        onSubmit={adjustDialog.submit}
-      />
-    </>
-  );
+  return { adjustDialog, filters, handleFiltersChange, ledgerWallet, setLedgerWallet, table, wallets };
 }
 
 function useAdjustDialog(t: ReturnType<typeof useTranslate>['t'], refresh: VoidFunction) {
   const [wallet, setWallet] = useState<AdminWallet | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
   const close = useCallback(() => setWallet(null), []);
   const open = useCallback((target: AdminWallet) => setWallet(target), []);
   const submit = useCallback(

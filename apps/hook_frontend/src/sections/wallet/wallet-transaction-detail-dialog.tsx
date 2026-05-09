@@ -16,6 +16,7 @@ import DialogContent from '@mui/material/DialogContent';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 
+import { walletFromTransaction } from './wallet-owner';
 import { DETAIL_DIALOG_MAX_WIDTH } from './wallet-constants';
 import {
   walletStatusLabel,
@@ -129,12 +130,17 @@ function TransactionAuditGrid({
   wallet?: WalletSummary | AdminWallet;
   transaction: WalletTransaction;
 }) {
+  const owner = wallet ?? walletFromTransaction(transaction);
+
   return (
     <DetailGrid>
       <DetailField
         label={t('wallet.fields.owner')}
-        value={walletOwnerName(t, wallet)}
-        helper={t('wallet.ownerSummary', { status: walletStatusLabel(t, wallet?.status) })}
+        value={walletOwnerName(t, owner)}
+        helper={t('wallet.ownerSummary', {
+          type: t(`wallet.ownerTypes.${walletOwnerType(owner)}`),
+          status: walletStatusLabel(t, owner?.status),
+        })}
       />
       <DetailField
         label={t('wallet.fields.balanceChange')}
@@ -156,6 +162,10 @@ function walletOwnerName(t: TFunction<'admin'>, wallet?: WalletSummary | AdminWa
   }
 
   return t('wallet.currentUser');
+}
+
+function walletOwnerType(wallet?: WalletSummary | AdminWallet) {
+  return wallet && 'owner_type' in wallet ? wallet.owner_type : 'user';
 }
 
 function DetailGrid({ children }: { children: React.ReactNode }) {

@@ -3,8 +3,9 @@ use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest},
     wallet::{
-        AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse, AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletAdjustmentType,
-        WalletBalanceResponse, WalletBalanceType, WalletSummaryResponse, WalletTransaction, WalletTransactionResponse, WalletTransactionsResponse,
+        AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse, AdminWalletTransactionsResponse,
+        Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType, WalletSummaryResponse, WalletTransaction, WalletTransactionResponse,
+        WalletTransactionsResponse,
     },
 };
 
@@ -68,6 +69,17 @@ where
             total: wallets.total,
             page: wallets.page,
             page_size: wallets.page_size,
+        })
+    }
+
+    async fn admin_ledger(&self, page: PageRequest, filters: AdminWalletLedgerFilters) -> WalletResult<AdminWalletLedgerResponse> {
+        validate_page(page)?;
+        let ledger = self.repository.page_admin_ledger(page, filters).await?;
+        Ok(AdminWalletLedgerResponse {
+            items: ledger.items,
+            total: ledger.total,
+            page: ledger.page,
+            page_size: ledger.page_size,
         })
     }
 

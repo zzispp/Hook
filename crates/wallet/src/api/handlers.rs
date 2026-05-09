@@ -8,8 +8,8 @@ use types::{
     pagination::PageRequest,
     response::ApiResponse,
     wallet::{
-        AdminWalletAdjustmentPayload, AdminWalletAdjustmentResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletTransactionsResponse,
-        WalletAdjustment, WalletBalanceResponse, WalletTransactionsResponse,
+        AdminWalletAdjustmentPayload, AdminWalletAdjustmentResponse, AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters,
+        AdminWalletListResponse, AdminWalletTransactionsResponse, WalletAdjustment, WalletBalanceResponse, WalletTransactionsResponse,
     },
 };
 
@@ -35,6 +35,15 @@ pub struct AdminWalletListQuery {
     pub status: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct AdminWalletLedgerQuery {
+    pub page: u64,
+    pub page_size: u64,
+    pub category: Option<String>,
+    pub reason_code: Option<String>,
+    pub owner_type: Option<String>,
+}
+
 pub async fn balance(State(state): State<WalletApiState>, Extension(current_user): Extension<CurrentUser>) -> ApiResult<ApiJson<WalletBalanceResponse>> {
     ensure_user_wallet_access(&current_user)?;
     Ok(ok(state.wallets.balance(&current_user.id).await?))
@@ -55,6 +64,14 @@ pub async fn admin_wallets(
 ) -> ApiResult<ApiJson<AdminWalletListResponse>> {
     let page = PageRequest::from(&query);
     Ok(ok(state.wallets.admin_wallets(page, query.into()).await?))
+}
+
+pub async fn admin_ledger(
+    State(state): State<WalletApiState>,
+    Query(query): Query<AdminWalletLedgerQuery>,
+) -> ApiResult<ApiJson<AdminWalletLedgerResponse>> {
+    let page = PageRequest::from(&query);
+    Ok(ok(state.wallets.admin_ledger(page, query.into()).await?))
 }
 
 pub async fn admin_transactions(
@@ -93,11 +110,30 @@ impl From<&AdminWalletListQuery> for PageRequest {
     }
 }
 
+impl From<&AdminWalletLedgerQuery> for PageRequest {
+    fn from(value: &AdminWalletLedgerQuery) -> Self {
+        Self {
+            page: value.page,
+            page_size: value.page_size,
+        }
+    }
+}
+
 impl From<AdminWalletListQuery> for AdminWalletListFilters {
     fn from(value: AdminWalletListQuery) -> Self {
         Self {
             search: value.search,
             status: value.status,
+        }
+    }
+}
+
+impl From<AdminWalletLedgerQuery> for AdminWalletLedgerFilters {
+    fn from(value: AdminWalletLedgerQuery) -> Self {
+        Self {
+            category: value.category,
+            reason_code: value.reason_code,
+            owner_type: value.owner_type,
         }
     }
 }

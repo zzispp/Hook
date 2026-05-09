@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect wallet API and reference UI,DONE,"Hook wallet API and aether UI behavior are understood","test -f crates/types/src/wallet.rs && test -f /Users/bubu/ZwjProjects/aether/frontend/src/views/admin/WalletsManagement.vue",2026-05-09T00:00:00+08:00,0,
+2,Implement wallet frontend baseline,DONE,"Wallet page files compile and expose balance, transactions, filters, tabs, and detail dialog","test -f apps/hook_frontend/src/sections/wallet/wallet-center-view.tsx",2026-05-09T18:20:57+08:00,0,"Added refresh actions for wallet/admin list pages and fixed user/API refresh references"
+3,Run frontend validation,DONE,"Frontend lint and build pass","pnpm --filter hook_frontend lint && pnpm --filter hook_frontend build",2026-05-09T18:20:57+08:00,0,"Both commands passed"

@@ -406,11 +406,13 @@
       "direction": "金额方向",
       "balanceType": "余额类型",
       "linkType": "关联类型",
+      "ownerType": "归属类型",
       "allCategories": "全部分类",
       "allReasons": "全部二级",
       "allDirections": "全部方向",
       "allBalances": "全部余额",
-      "allLinkTypes": "全部关联"
+      "allLinkTypes": "全部关联",
+      "allOwnerTypes": "全部归属"
     },
     "actions": {
       "details": "详情",
@@ -490,7 +492,11 @@
     },
     "balanceBreakdown": "充 {{rechargeBefore}}→{{rechargeAfter}} · 赠 {{giftBefore}}→{{giftAfter}}",
     "ledgerSummary": "显示 {{shown}} / 已加载 {{loaded}} 条，共 {{total}} 条",
-    "ownerSummary": "用户钱包 · {{status}}",
+    "ownerSummary": "{{type}} · {{status}}",
+    "ownerTypes": {
+      "user": "用户钱包",
+      "api_key": "独立密钥钱包"
+    },
     "currentUser": "当前用户",
     "emptyLedger": "暂无资金流水",
     "emptyValue": "-",
@@ -500,6 +506,10 @@
     "operatorId": "ID: {{id}}"
   },
   "adminWallets": {
+    "tabs": {
+      "wallets": "钱包列表",
+      "ledger": "资金流水"
+    },
     "filters": {
       "searchPlaceholder": "搜索钱包 ID、用户 ID、用户名或邮箱..."
     },

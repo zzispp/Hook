@@ -5,7 +5,7 @@ import type { AuthState } from '../../types';
 import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useEffect, useCallback } from 'react';
 
-import axios, { endpoints } from 'src/lib/axios';
+import axios, { endpoints, HTTP_UNAUTHORIZED, isApiRequestError } from 'src/lib/axios';
 
 import { AuthContext } from '../auth-context';
 import { setSession, isValidToken, requireApiData } from './utils';
@@ -51,8 +51,15 @@ export function AuthProvider({ children }: Props) {
       return;
     }
 
-    const res = await axios.get(endpoints.auth.me);
-    const { user } = requireApiData<MeResponse>(res.data);
+    const me = await resolveCurrentUser();
+
+    if (!me) {
+      await setSession(null);
+      setState({ user: null, error: null, loading: false });
+      return;
+    }
+
+    const { user } = me;
 
     setState({
       user: {
@@ -112,10 +119,43 @@ async function resolveSession() {
     return null;
   }
 
-  const res = await axios.post(endpoints.auth.refresh, { refresh_token });
-  const session = requireApiData<TokenPairResponse>(res.data);
+  const session = await refreshSession(refresh_token);
+
+  if (!session) {
+    return null;
+  }
 
   await setSession(session);
 
   return session;
+}
+
+async function refreshSession(refresh_token: string) {
+  try {
+    const res = await axios.post(endpoints.auth.refresh, { refresh_token });
+    return requireApiData<TokenPairResponse>(res.data);
+  } catch (error) {
+    if (isUnauthorizedRequest(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function resolveCurrentUser() {
+  try {
+    const res = await axios.get(endpoints.auth.me);
+    return requireApiData<MeResponse>(res.data);
+  } catch (error) {
+    if (isUnauthorizedRequest(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+function isUnauthorizedRequest(error: unknown) {
+  return isApiRequestError(error) && error.status === HTTP_UNAUTHORIZED;
 }

@@ -5,7 +5,7 @@ use storage::{
 };
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    wallet::{AdminWalletListFilters, AdminWalletResponse, Wallet, WalletTransaction},
+    wallet::{AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, Wallet, WalletTransaction},
 };
 
 use crate::application::{WalletError, WalletRepository, WalletResult};
@@ -54,6 +54,14 @@ impl WalletRepository for StorageWalletRepository {
 
     async fn page_admin_wallets(&self, page: PageRequest, filters: AdminWalletListFilters) -> WalletResult<Page<AdminWalletResponse>> {
         self.store.page_admin_wallets(page_slice_request(page), filters).await.map_err(storage_error)
+    }
+
+    async fn page_admin_ledger(
+        &self,
+        page: PageRequest,
+        filters: AdminWalletLedgerFilters,
+    ) -> WalletResult<Page<AdminWalletLedgerTransactionResponse>> {
+        self.store.page_admin_ledger(page_slice_request(page), filters).await.map_err(storage_error)
     }
 }
 

@@ -406,11 +406,13 @@
       "direction": "Direction",
       "balanceType": "Balance type",
       "linkType": "Link type",
+      "ownerType": "Owner type",
       "allCategories": "All categories",
       "allReasons": "All reasons",
       "allDirections": "All directions",
       "allBalances": "All balances",
-      "allLinkTypes": "All links"
+      "allLinkTypes": "All links",
+      "allOwnerTypes": "All owners"
     },
     "actions": {
       "details": "Details",
@@ -490,7 +492,11 @@
     },
     "balanceBreakdown": "Recharge {{rechargeBefore}}→{{rechargeAfter}} · Gift {{giftBefore}}→{{giftAfter}}",
     "ledgerSummary": "Showing {{shown}} / loaded {{loaded}}, total {{total}}",
-    "ownerSummary": "User wallet · {{status}}",
+    "ownerSummary": "{{type}} · {{status}}",
+    "ownerTypes": {
+      "user": "User wallet",
+      "api_key": "API key wallet"
+    },
     "currentUser": "Current user",
     "emptyLedger": "No ledger entries",
     "emptyValue": "-",
@@ -500,6 +506,10 @@
     "operatorId": "ID: {{id}}"
   },
   "adminWallets": {
+    "tabs": {
+      "wallets": "Wallets",
+      "ledger": "Ledger"
+    },
     "filters": {
       "searchPlaceholder": "Search wallet ID, user ID, username, or email..."
     },

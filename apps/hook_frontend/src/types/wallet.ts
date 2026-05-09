@@ -36,6 +36,7 @@ export type WalletBalanceResponse = {
 
 export type WalletTransaction = {
   id: string;
+  wallet_id: string;
   category: string;
   reason_code: string;
   amount: number;
@@ -52,9 +53,23 @@ export type WalletTransaction = {
   created_at: string;
 };
 
+export type AdminWalletLedgerTransaction = WalletTransaction & {
+  owner_name: string;
+  owner_email: string;
+  owner_type: string;
+  wallet_status: string;
+};
+
 export type WalletTransactionsResponse = {
   wallet: WalletSummary;
   items: WalletTransaction[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type AdminWalletLedgerResponse = {
+  items: AdminWalletLedgerTransaction[];
   total: number;
   page: number;
   page_size: number;

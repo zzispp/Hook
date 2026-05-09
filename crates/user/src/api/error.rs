@@ -19,7 +19,14 @@ impl From<AppError> for ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let body = ApiErrorResponse::new(self.0.to_string());
-        (StatusCode::OK, Json(body)).into_response()
+        (status_code(&self.0), Json(body)).into_response()
+    }
+}
+
+fn status_code(error: &AppError) -> StatusCode {
+    match error {
+        AppError::InvalidCredentials | AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+        AppError::InvalidInput(_) | AppError::Conflict(_) | AppError::NotFound | AppError::Infrastructure(_) => StatusCode::OK,
     }
 }
 
@@ -31,9 +38,9 @@ mod tests {
     use crate::application::AppError;
 
     #[test]
-    fn api_error_uses_new_api_http_status() {
+    fn api_error_uses_unauthorized_status() {
         let response = ApiError(AppError::Unauthorized).into_response();
 
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 }

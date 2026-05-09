@@ -4,7 +4,34 @@ import axios from 'axios';
 
 import { CONFIG } from 'src/global-config';
 
+import { JWT_REFRESH_ENDPOINT } from 'src/auth/context/jwt/constant';
+import { installJwtInterceptors, retryAfterUnauthorized } from 'src/auth/context/jwt/axios-interceptors';
+
 // ----------------------------------------------------------------------
+
+export const HTTP_UNAUTHORIZED = 401;
+
+type ApiRequestErrorOptions = {
+  status?: number;
+  data?: unknown;
+};
+
+export class ApiRequestError extends Error {
+  readonly status?: number;
+
+  readonly data?: unknown;
+
+  constructor(message: string, options: ApiRequestErrorOptions = {}) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = options.status;
+    this.data = options.data;
+  }
+}
+
+export function isApiRequestError(error: unknown): error is ApiRequestError {
+  return error instanceof ApiRequestError;
+}
 
 const axiosInstance = axios.create({
   baseURL: CONFIG.serverUrl,
@@ -13,25 +40,20 @@ const axiosInstance = axios.create({
   },
 });
 
-/**
- * Optional: Add token (if using auth)
- *
- axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('jwt_access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-*
-*/
+installJwtInterceptors(axiosInstance);
 
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const message = error?.response?.data?.message || error?.message || 'Something went wrong!';
+  async (error) => {
+    const retried = await retryAfterUnauthorized(error);
+
+    if (retried) {
+      return retried;
+    }
+
+    const message = requestErrorMessage(error);
     console.error('Axios error:', message);
-    return Promise.reject(new Error(message));
+    return Promise.reject(toApiRequestError(error, message));
   }
 );
 
@@ -54,6 +76,29 @@ export const fetcher = async <T = unknown>(
   }
 };
 
+function requestErrorMessage(error: unknown) {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.message || error.message || 'Something went wrong!';
+  }
+
+  if (error instanceof Error) {
+    return error.message || error.name || 'Something went wrong!';
+  }
+
+  return 'Something went wrong!';
+}
+
+function toApiRequestError(error: unknown, message: string) {
+  if (axios.isAxiosError(error)) {
+    return new ApiRequestError(message, {
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+  }
+
+  return new ApiRequestError(message);
+}
+
 // ----------------------------------------------------------------------
 
 export const endpoints = {
@@ -62,7 +107,7 @@ export const endpoints = {
   calendar: '/api/calendar',
   auth: {
     me: '/api/auth/me',
-    refresh: '/api/auth/refresh',
+    refresh: JWT_REFRESH_ENDPOINT,
     signIn: '/api/auth/sign-in',
     signUp: '/api/auth/sign-up',
   },
@@ -100,6 +145,7 @@ export const endpoints = {
   },
   adminWallets: {
     list: '/api/admin/wallets',
+    ledger: '/api/admin/wallets/ledger',
     transactions: (id: string) => `/api/admin/wallets/${id}/transactions`,
     adjust: (id: string) => `/api/admin/wallets/${id}/adjust`,
   },
