@@ -97,6 +97,15 @@ export type AdminWalletAdjustmentInput = {
   description?: string;
 };
 
+export type AdminWalletRechargeInput = {
+  amount: number;
+  description?: string;
+};
+
 export type AdminWalletAdjustmentResponse = {
+  transaction: WalletTransaction;
+};
+
+export type AdminWalletRechargeResponse = {
   transaction: WalletTransaction;
 };

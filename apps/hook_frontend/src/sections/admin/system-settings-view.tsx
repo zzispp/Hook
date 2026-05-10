@@ -10,6 +10,7 @@ import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useSystemSettings } from 'src/actions/system-settings';
 
 import { Iconify } from 'src/components/iconify';
@@ -23,16 +24,16 @@ export function SystemSettingsView() {
   const form = useSystemSettingsForm(settings.data, t);
 
   return (
-    <DashboardContent>
+    <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
-        heading={t('pages.systemSettings')}
+        heading={DASHBOARD_MENU_TITLES.systemSettings}
         action={
           <Stack direction="row" spacing={1}>
             <RefreshButton loading={settings.isLoading} onClick={() => void settings.refresh()} />
             <Button
               variant="contained"
               loading={form.submitting}
-              startIcon={<Iconify icon="solar:diskette-bold" />}
+              startIcon={<Iconify icon="solar:check-circle-bold" />}
               onClick={form.submit}
             >
               {t('common.save')}

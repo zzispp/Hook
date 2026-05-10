@@ -4,17 +4,19 @@ use types::{
     pagination::{Page, PageRequest},
     wallet::{
         AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse,
-        AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType, WalletSummaryResponse,
-        WalletTransaction, WalletTransactionResponse, WalletTransactionsResponse,
+        AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType, WalletRecharge,
+        WalletSummaryResponse, WalletTransaction, WalletTransactionResponse, WalletTransactionsResponse,
     },
 };
 
 use crate::application::{WalletError, WalletRepository, WalletResult, WalletUseCase};
 
-use super::validation::{validate_adjust_amount, validate_page, validate_user_id, validate_wallet_id};
+use super::validation::{validate_page, validate_positive_amount, validate_user_id, validate_wallet_id};
 
 const CATEGORY_ADJUST: &str = "adjust";
+const CATEGORY_RECHARGE: &str = "recharge";
 const REASON_ADJUST_ADMIN: &str = "adjust_admin";
+const REASON_TOPUP_ADMIN_MANUAL: &str = "topup_admin_manual";
 const LINK_ADMIN_ACTION: &str = "admin_action";
 
 pub struct WalletService<R> {
@@ -49,6 +51,11 @@ where
     R: WalletRepository,
 {
     async fn balance(&self, user_id: &str) -> WalletResult<WalletBalanceResponse> {
+        let wallet = self.user_wallet(user_id).await?;
+        Ok(WalletBalanceResponse::from(WalletSummaryResponse::from(wallet)))
+    }
+
+    async fn admin_balance(&self, user_id: &str) -> WalletResult<WalletBalanceResponse> {
         let wallet = self.user_wallet(user_id).await?;
         Ok(WalletBalanceResponse::from(WalletSummaryResponse::from(wallet)))
     }
@@ -92,9 +99,16 @@ where
     }
 
     async fn adjust_wallet(&self, input: WalletAdjustment) -> WalletResult<WalletTransaction> {
-        validate_adjust_amount(input.amount)?;
+        validate_positive_amount("adjust amount", input.amount)?;
         let wallet = self.wallet_by_id(&input.wallet_id).await?;
         let (updated_wallet, transaction) = apply_adjustment(wallet, input)?;
+        self.repository.save_ledger_entry(updated_wallet, transaction).await
+    }
+
+    async fn recharge_wallet(&self, input: WalletRecharge) -> WalletResult<WalletTransaction> {
+        validate_positive_amount("recharge amount", input.amount)?;
+        let wallet = self.wallet_by_id(&input.wallet_id).await?;
+        let (updated_wallet, transaction) = apply_recharge(wallet, input);
         self.repository.save_ledger_entry(updated_wallet, transaction).await
     }
 }
@@ -185,6 +199,36 @@ fn adjusted_wallet(wallet: Wallet, recharge_balance: Decimal, gift_balance: Deci
     }
 }
 
+fn apply_recharge(wallet: Wallet, input: WalletRecharge) -> (Wallet, WalletTransaction) {
+    let before_recharge = wallet.recharge_balance;
+    let before_gift = wallet.gift_balance;
+    let before_total = before_recharge + before_gift;
+    let after_recharge = before_recharge + input.amount;
+    let after_total = after_recharge + before_gift;
+    let updated_wallet = recharged_wallet(wallet, after_recharge, input.amount);
+    let transaction = recharge_transaction(
+        &updated_wallet,
+        input,
+        BalanceSnapshot {
+            before_recharge,
+            after_recharge,
+            before_gift,
+            after_gift: before_gift,
+            before_total,
+            after_total,
+        },
+    );
+    (updated_wallet, transaction)
+}
+
+fn recharged_wallet(wallet: Wallet, recharge_balance: Decimal, amount: Decimal) -> Wallet {
+    Wallet {
+        recharge_balance,
+        total_recharged: wallet.total_recharged + amount,
+        ..wallet
+    }
+}
+
 fn adjustment_transaction(wallet: &Wallet, input: WalletAdjustment, amount: Decimal, snapshot: BalanceSnapshot) -> WalletTransaction {
     WalletTransaction {
         id: String::new(),
@@ -192,6 +236,27 @@ fn adjustment_transaction(wallet: &Wallet, input: WalletAdjustment, amount: Deci
         category: CATEGORY_ADJUST.into(),
         reason_code: REASON_ADJUST_ADMIN.into(),
         amount,
+        balance_before: snapshot.before_total,
+        balance_after: snapshot.after_total,
+        recharge_balance_before: snapshot.before_recharge,
+        recharge_balance_after: snapshot.after_recharge,
+        gift_balance_before: snapshot.before_gift,
+        gift_balance_after: snapshot.after_gift,
+        link_type: Some(LINK_ADMIN_ACTION.into()),
+        link_id: Some(wallet.id.0.clone()),
+        operator_id: input.operator_id,
+        description: input.description,
+        created_at: String::new(),
+    }
+}
+
+fn recharge_transaction(wallet: &Wallet, input: WalletRecharge, snapshot: BalanceSnapshot) -> WalletTransaction {
+    WalletTransaction {
+        id: String::new(),
+        wallet_id: wallet.id.0.clone(),
+        category: CATEGORY_RECHARGE.into(),
+        reason_code: REASON_TOPUP_ADMIN_MANUAL.into(),
+        amount: input.amount,
         balance_before: snapshot.before_total,
         balance_after: snapshot.after_total,
         recharge_balance_before: snapshot.before_recharge,

@@ -9,6 +9,7 @@ import Stack from '@mui/material/Stack';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useApis, useMenuItems, useMenuSections } from 'src/actions/rbac';
 
 import { useTable } from 'src/components/table';
@@ -16,8 +17,8 @@ import { useTable } from 'src/components/table';
 import { MenuManagementTables } from './menu-management-tables';
 import { MenuManagementDialogs } from './menu-management-dialogs';
 import { useMenuManagementActions } from './menu-management-actions';
+import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
 import { useMenuDeleteState, useMenuManagementForms } from './menu-management-state';
-import { AddButton, RefreshButton, AdminBreadcrumbs, translatedMenuSection } from './shared';
 import { toEnabledFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 
 export type MenuTab = 'items' | 'sections';
@@ -48,9 +49,9 @@ export function MenuManagementView() {
   );
 
   return (
-    <DashboardContent>
+    <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
-        heading={t('pages.menuManagement')}
+        heading={DASHBOARD_MENU_TITLES.menuManagement}
         action={
           <Stack direction="row" spacing={1}>
             <RefreshButton loading={activeResource.isLoading} onClick={() => void activeResource.refresh()} />
@@ -98,7 +99,6 @@ export function useMenuManagementData({
   itemFilters: typeof DEFAULT_ADMIN_FILTERS;
   sectionFilters: typeof DEFAULT_ADMIN_FILTERS;
 }) {
-  const { t } = useTranslate('admin');
   const sectionTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'sort_order' });
   const itemTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'sort_order' });
   const sections = useMenuSections(
@@ -112,8 +112,8 @@ export function useMenuManagementData({
   const apis = useApis(0, 100);
 
   const sectionNameById = useMemo(
-    () => new Map(allSections.items.map((section) => [section.id, translatedMenuSection(section, t)])),
-    [allSections.items, t]
+    () => new Map(allSections.items.map((section) => [section.id, section.subheader])),
+    [allSections.items]
   );
 
   return { allItems, allSections, apis, itemTable, items, sectionNameById, sectionTable, sections };

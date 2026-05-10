@@ -5,6 +5,6 @@ mod service;
 pub use error::{AppError, AppResult};
 pub use ports::{
     InitialGrantLedger, PasswordHasher, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord,
-    UserRepository, UserUseCase,
+    UserRepository, UserUseCase, UserWalletCatalog,
 };
 pub use service::UserService;

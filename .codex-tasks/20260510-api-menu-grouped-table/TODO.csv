@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect API list and binding data flow,DONE,Confirmed API list does not include menu bindings,rg -n "page_apis|api_menu_ids|ApiPermission" crates apps/hook_frontend/src,,0,
+2,Add menu bindings to API responses,DONE,API list rows include menu_item_ids,perl -e 'alarm shift; exec @ARGV' 60 cargo test -p rbac page_apis,2026-05-10,0,"ApiPermission includes menu_item_ids and page APIs hydrate bindings."
+3,Render API management grouped by bound menu,DONE,API table shows menu header rows and unbound group,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-10,0,"API table renders menu header rows and indented API rows in api-management-table.tsx."
+4,Run focused validation,DONE,Rust and frontend checks pass,cargo fmt --all --check && perl -e 'alarm shift; exec @ARGV' 60 cargo test -p rbac page_apis && pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-10,0,"All focused validation commands passed."

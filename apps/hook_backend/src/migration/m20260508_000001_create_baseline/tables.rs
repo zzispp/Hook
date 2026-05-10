@@ -1,9 +1,9 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::{iden::*, wallet_tables};
+use super::{domain_tables, iden::*, wallet_tables};
 
 pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
-    vec![
+    let mut tables = vec![
         users_table(),
         roles_table(),
         api_permissions_table(),
@@ -16,7 +16,9 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
         wallet_tables::wallet_transactions_table(),
         global_models_table(),
         models_table(),
-    ]
+    ];
+    tables.extend(domain_tables::domain_tables());
+    tables
 }
 
 fn users_table() -> TableCreateStatement {
@@ -35,6 +37,8 @@ fn users_table() -> TableCreateStatement {
         .col(timestamp_tz_null(Users::LastLoginAt))
         .col(string_len(Users::AuthSource, 50))
         .col(boolean(Users::EmailVerified))
+        .col(big_integer_null(Users::RateLimitRpm))
+        .col(string_len(Users::QuotaMode, 20).default("wallet"))
         .to_owned()
 }
 
@@ -62,7 +66,6 @@ fn api_permissions_table() -> TableCreateStatement {
         .col(text(ApiPermissions::Method))
         .col(text(ApiPermissions::PathPattern))
         .col(text(ApiPermissions::Name))
-        .col(text(ApiPermissions::Group))
         .col(boolean(ApiPermissions::Enabled))
         .col(boolean(ApiPermissions::System))
         .col(timestamp_tz(ApiPermissions::CreatedAt))

@@ -93,7 +93,7 @@ function GroupHeading({ group }: { group: BillingGroup }) {
     <Stack spacing={0.75}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
         <Typography variant="subtitle2" sx={{ flexGrow: 1, minWidth: 0 }} noWrap>
-          {translatedGroupName(group, t)}
+          {group.name}
         </Typography>
         {group.is_system ? <Label variant="soft">{t('common.system')}</Label> : null}
         <Label color="info" variant="soft">
@@ -101,7 +101,7 @@ function GroupHeading({ group }: { group: BillingGroup }) {
         </Label>
       </Stack>
       <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
-        {translatedGroupDescription(group, t)}
+        {group.description || group.code}
       </Typography>
     </Stack>
   );
@@ -172,17 +172,6 @@ function multipliedPrice(value: number | null | undefined, multiplier: number) {
 
 function formatMultiplier(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
-}
-
-function translatedGroupName(group: BillingGroup, t: (key: string) => string) {
-  return group.is_system && group.code === 'default' ? t('billingGroups.systemName') : group.name;
-}
-
-function translatedGroupDescription(group: BillingGroup, t: (key: string) => string) {
-  if (group.is_system && group.code === 'default') {
-    return t('billingGroups.systemDescription');
-  }
-  return group.description || group.code;
 }
 
 const panelSx = {

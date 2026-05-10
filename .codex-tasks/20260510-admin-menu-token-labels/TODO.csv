@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current RBAC menu seed and token labels,DONE,Root cause identified from current source,rg -n "admin_menu_codes|apiTokens|adminApiTokens" apps/hook_backend apps/hook_frontend,,0,
+2,Fix admin default menu bindings and tests,DONE,Admin menu codes exclude user-only menu codes,cargo test -p backend migration::defaults,,0,
+3,Make user/admin token labels distinct,DONE,Chinese and English nav/page labels are not duplicated,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,,0,
+4,Run focused validation,DONE,Rust and frontend checks pass,perl -e 'alarm shift; exec @ARGV' 60 cargo test -p backend migration::defaults && pnpm --filter hook_frontend exec tsc --noEmit --pretty false,,0,macOS lacks GNU timeout so validation used perl alarm for the 60s cap

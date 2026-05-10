@@ -46,7 +46,30 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         index("index_global_models_by_usage_count", GlobalModels::Table, GlobalModels::UsageCount, false),
         index("index_models_by_provider_id", Models::Table, Models::ProviderId, false),
         index("index_models_by_global_model_id", Models::Table, Models::GlobalModelId, false),
+        index("index_billing_groups_by_active", BillingGroups::Table, BillingGroups::IsActive, false),
+        index("index_api_tokens_by_hash", ApiTokens::Table, ApiTokens::TokenHash, true),
+        index("index_api_tokens_by_user_id", ApiTokens::Table, ApiTokens::UserId, false),
+        index("index_api_tokens_by_token_type", ApiTokens::Table, ApiTokens::TokenType, false),
+        index("index_api_tokens_by_group_code", ApiTokens::Table, ApiTokens::GroupCode, false),
+        billing_group_models_unique_index(),
+        index(
+            "index_billing_group_models_by_group",
+            BillingGroupModels::Table,
+            BillingGroupModels::GroupCode,
+            false,
+        ),
     ]
+}
+
+fn billing_group_models_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_billing_group_models_unique")
+        .table(BillingGroupModels::Table)
+        .col(BillingGroupModels::GroupCode)
+        .col(BillingGroupModels::GlobalModelId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
 }
 
 fn index<T, C>(name: &str, table: T, column: C, unique: bool) -> IndexCreateStatement

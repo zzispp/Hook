@@ -1,13 +1,15 @@
+use std::collections::BTreeMap;
+
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 
 use crate::application::{
-    AppError, AppResult, InitialGrantLedger, PasswordHasher, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, SystemUserProvider, SystemUserRecord,
-    UserAuthRecord, UserRepository, UserUseCase,
+    AppError, AppResult, InitialGrantLedger, PasswordHasher, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, SystemUserProvider, UserAuthRecord,
+    UserRepository, UserUseCase, UserWalletCatalog,
 };
 use types::{
     pagination::{Page, PageRequest},
-    user::{Credentials, NewUser, ReplaceUser, User, UserId, UserListFilters},
+    user::{Credentials, NewUser, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse},
 };
 
 use self::{
@@ -17,15 +19,19 @@ use self::{
     },
 };
 
+mod defaults;
 mod system_user;
 mod validation;
 
-pub struct UserService<R, H, S = NoSystemUserProvider, P = AllowRegistrationPolicy, G = NoInitialGrantLedger> {
+pub use defaults::{AllowRegistrationPolicy, NoInitialGrantLedger, NoSystemUserProvider, NoUserWalletCatalog};
+
+pub struct UserService<R, H, S = NoSystemUserProvider, P = AllowRegistrationPolicy, G = NoInitialGrantLedger, W = NoUserWalletCatalog> {
     repository: R,
     password_hasher: H,
     system_users: S,
     registration_policy: P,
     initial_grants: G,
+    wallets: W,
 }
 
 struct UserRecordInput {
@@ -34,36 +40,8 @@ struct UserRecordInput {
     email: String,
     role: String,
     is_active: bool,
-}
-
-#[derive(Clone, Copy)]
-pub struct NoSystemUserProvider;
-#[derive(Clone, Copy)]
-pub struct AllowRegistrationPolicy;
-#[derive(Clone, Copy)]
-pub struct NoInitialGrantLedger;
-
-impl SystemUserProvider for NoSystemUserProvider {
-    fn system_user(&self) -> Option<SystemUserRecord> {
-        None
-    }
-}
-
-#[async_trait]
-impl RegistrationPolicy for AllowRegistrationPolicy {
-    async fn registration_settings(&self) -> AppResult<RegistrationSettings> {
-        Ok(RegistrationSettings {
-            allow_registration: true,
-            default_user_grant: Decimal::ZERO,
-        })
-    }
-}
-
-#[async_trait]
-impl InitialGrantLedger for NoInitialGrantLedger {
-    async fn grant_initial_balance(&self, _user_id: &str, _amount: Decimal) -> AppResult<()> {
-        Ok(())
-    }
+    rate_limit_rpm: Option<i64>,
+    quota_mode: String,
 }
 
 impl<R, H> UserService<R, H, NoSystemUserProvider, AllowRegistrationPolicy, NoInitialGrantLedger>
@@ -78,11 +56,12 @@ where
             system_users: NoSystemUserProvider,
             registration_policy: AllowRegistrationPolicy,
             initial_grants: NoInitialGrantLedger,
+            wallets: NoUserWalletCatalog,
         }
     }
 }
 
-impl<R, H, S> UserService<R, H, S, AllowRegistrationPolicy, NoInitialGrantLedger>
+impl<R, H, S> UserService<R, H, S, AllowRegistrationPolicy, NoInitialGrantLedger, NoUserWalletCatalog>
 where
     R: UserRepository,
     H: PasswordHasher,
@@ -95,25 +74,35 @@ where
             system_users,
             registration_policy: AllowRegistrationPolicy,
             initial_grants: NoInitialGrantLedger,
+            wallets: NoUserWalletCatalog,
         }
     }
 }
 
-impl<R, H, S, P, G> UserService<R, H, S, P, G>
+impl<R, H, S, P, G, W> UserService<R, H, S, P, G, W>
 where
     R: UserRepository,
     H: PasswordHasher,
     S: SystemUserProvider,
     P: RegistrationPolicy,
     G: InitialGrantLedger,
+    W: UserWalletCatalog,
 {
-    pub const fn with_system_user_and_registration(repository: R, password_hasher: H, system_users: S, registration_policy: P, initial_grants: G) -> Self {
+    pub const fn with_system_user_and_registration(
+        repository: R,
+        password_hasher: H,
+        system_users: S,
+        registration_policy: P,
+        initial_grants: G,
+        wallets: W,
+    ) -> Self {
         Self {
             repository,
             password_hasher,
             system_users,
             registration_policy,
             initial_grants,
+            wallets,
         }
     }
 
@@ -146,28 +135,47 @@ where
     }
 
     fn replace_user_record(&self, input: ReplaceUser) -> AppResult<ReplaceUserRecord> {
-        self.to_record(UserRecordInput::from(input))
+        self.to_replace_record(input)
     }
 
     fn to_record(&self, input: UserRecordInput) -> AppResult<ReplaceUserRecord> {
         Ok(ReplaceUserRecord {
             username: input.username,
-            password_hash: self.password_hasher.hash(&input.password)?,
+            password_hash: Some(self.password_hasher.hash(&input.password)?),
             email: input.email,
             role: input.role,
             is_active: input.is_active,
+            rate_limit_rpm: input.rate_limit_rpm,
+            quota_mode: input.quota_mode,
         })
+    }
+
+    fn to_replace_record(&self, input: ReplaceUser) -> AppResult<ReplaceUserRecord> {
+        Ok(ReplaceUserRecord {
+            username: input.username,
+            password_hash: self.optional_password_hash(input.password)?,
+            email: input.email,
+            role: input.role,
+            is_active: input.is_active,
+            rate_limit_rpm: input.rate_limit_rpm,
+            quota_mode: input.quota_mode,
+        })
+    }
+
+    fn optional_password_hash(&self, password: Option<String>) -> AppResult<Option<String>> {
+        password.map(|value| self.password_hasher.hash(&value)).transpose()
     }
 }
 
 #[async_trait]
-impl<R, H, S, P, G> UserUseCase for UserService<R, H, S, P, G>
+impl<R, H, S, P, G, W> UserUseCase for UserService<R, H, S, P, G, W>
 where
     R: UserRepository,
     H: PasswordHasher,
     S: SystemUserProvider,
     P: RegistrationPolicy,
     G: InitialGrantLedger,
+    W: UserWalletCatalog,
 {
     async fn sign_up(&self, input: NewUser) -> AppResult<User> {
         let settings = self.registration_policy.registration_settings().await?;
@@ -205,10 +213,12 @@ where
         reject_system_user_id(&self.system_users, &id)?;
         let input = sanitize_replace_user(input);
         validate_replace_user(&input)?;
-        ensure_user_exists(self.repository.find_by_id(id.clone()).await?)?;
+        let current = self.repository.find_auth_by_id(id.clone()).await?.ok_or(AppError::NotFound)?;
         self.ensure_unique_user(&input.username, &input.email, Some(id.clone())).await?;
         self.ensure_unique_system_user(&input.username, &input.email)?;
-        self.repository.replace(id, self.replace_user_record(input)?).await
+        self.repository
+            .replace(id, self.replace_user_record(input)?.with_current_password_hash(current.password_hash))
+            .await
     }
 
     async fn delete_user(&self, id: UserId) -> AppResult<()> {
@@ -222,6 +232,10 @@ where
             Some(system_user) => list_with_system_user(&self.repository, page, filters, system_user.user).await,
             None => self.repository.list(page, filters).await,
         }
+    }
+
+    async fn wallet_summaries(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, UserWalletSummaryResponse>> {
+        self.wallets.wallet_summaries(user_ids).await
     }
 }
 
@@ -250,26 +264,9 @@ impl From<NewUser> for UserRecordInput {
             email: value.email,
             role: value.role,
             is_active: value.is_active,
+            rate_limit_rpm: value.rate_limit_rpm,
+            quota_mode: value.quota_mode,
         }
-    }
-}
-
-impl From<ReplaceUser> for UserRecordInput {
-    fn from(value: ReplaceUser) -> Self {
-        Self {
-            username: value.username,
-            password: value.password,
-            email: value.email,
-            role: value.role,
-            is_active: value.is_active,
-        }
-    }
-}
-
-fn ensure_user_exists(user: Option<User>) -> AppResult<()> {
-    match user {
-        Some(_) => Ok(()),
-        None => Err(AppError::NotFound),
     }
 }
 

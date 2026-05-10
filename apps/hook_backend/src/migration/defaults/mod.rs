@@ -7,8 +7,20 @@ pub const USER_ROLE: &str = constants::auth::DEFAULT_USER_ROLE;
 #[cfg(test)]
 pub const AUTHENTICATED_API_CODES: &[&str] = &["auth_me", "navbar_read"];
 
-pub const USER_MENU_CODES: &[&str] = &["dashboard_home", "dashboard_models", "wallet_center"];
-pub const ADMIN_MENU_EXCLUDED_CODES: &[&str] = &["dashboard_models", "wallet_center"];
+pub const ADMIN_MENU_CODES: &[&str] = &[
+    "dashboard_home",
+    "admin_wallets",
+    "admin_tokens",
+    "admin_groups",
+    "admin_users",
+    "admin_roles",
+    "admin_apis",
+    "admin_menus",
+    "admin_settings",
+    "admin_models",
+];
+
+pub const USER_MENU_CODES: &[&str] = &["dashboard_home", "dashboard_models", "wallet_center", "api_tokens"];
 
 pub struct MenuApiBindingDefinition {
     pub menu_code: &'static str,
@@ -25,15 +37,46 @@ pub const ROLE_API_BINDINGS: &[RoleApiBindingDefinition] = &[];
 pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     MenuApiBindingDefinition {
         menu_code: "dashboard_models",
-        api_codes: &["models_public_catalog_read"],
+        api_codes: &["models_public_catalog_read", "groups_available_read"],
     },
     MenuApiBindingDefinition {
         menu_code: "wallet_center",
         api_codes: &["wallet_balance_read", "wallet_transactions_read"],
     },
     MenuApiBindingDefinition {
+        menu_code: "api_tokens",
+        api_codes: &[
+            "groups_available_read",
+            "models_public_catalog_read",
+            "api_tokens_read",
+            "api_tokens_create",
+            "api_tokens_detail",
+            "api_tokens_update",
+            "api_tokens_delete",
+            "api_tokens_secret_read",
+        ],
+    },
+    MenuApiBindingDefinition {
         menu_code: "admin_users",
-        api_codes: &["users_read", "users_create", "users_update", "users_delete", "roles_read"],
+        api_codes: &[
+            "users_read",
+            "users_create",
+            "users_update",
+            "users_delete",
+            "roles_read",
+            "admin_wallet_user_balance_read",
+            "admin_wallet_transactions_read",
+            "admin_wallet_adjust",
+            "admin_wallet_recharge",
+            "admin_api_tokens_read",
+            "admin_api_tokens_create",
+            "admin_api_tokens_detail",
+            "admin_api_tokens_update",
+            "admin_api_tokens_delete",
+            "admin_api_tokens_secret_read",
+            "groups_available_read",
+            "models_public_catalog_read",
+        ],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_roles",
@@ -92,35 +135,70 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         ],
     },
     MenuApiBindingDefinition {
+        menu_code: "admin_settings",
+        api_codes: &["system_settings_read", "system_settings_update"],
+    },
+    MenuApiBindingDefinition {
         menu_code: "admin_wallets",
         api_codes: &[
             "admin_wallets_read",
             "admin_wallet_ledger_read",
+            "admin_wallet_user_balance_read",
             "admin_wallet_transactions_read",
             "admin_wallet_adjust",
+            "admin_wallet_recharge",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_tokens",
+        api_codes: &[
+            "groups_available_read",
+            "models_public_catalog_read",
+            "users_read",
+            "admin_api_tokens_read",
+            "admin_api_tokens_create",
+            "admin_api_tokens_detail",
+            "admin_api_tokens_update",
+            "admin_api_tokens_delete",
+            "admin_api_tokens_secret_read",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_groups",
+        api_codes: &[
+            "groups_read",
+            "groups_create",
+            "groups_detail",
+            "groups_update",
+            "groups_delete",
+            "models_global_read",
         ],
     },
 ];
-
-pub fn admin_menu_codes() -> impl Iterator<Item = &'static str> {
-    menu::MENU_ITEMS
-        .iter()
-        .map(|item| item.code)
-        .filter(|code| !ADMIN_MENU_EXCLUDED_CODES.contains(code))
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn admin_defaults_exclude_user_surfaces() {
-        let admin_menu_codes: Vec<_> = admin_menu_codes().collect();
+    fn admin_defaults_exclude_user_only_menus() {
+        for user_only_code in ["dashboard_models", "wallet_center", "api_tokens"] {
+            assert!(!ADMIN_MENU_CODES.contains(&user_only_code));
+        }
 
-        assert!(!admin_menu_codes.contains(&"dashboard_models"));
-        assert!(!admin_menu_codes.contains(&"wallet_center"));
-        assert!(admin_menu_codes.contains(&"admin_models"));
-        assert!(admin_menu_codes.contains(&"admin_wallets"));
+        assert!(ADMIN_MENU_CODES.contains(&"dashboard_home"));
+        assert!(ADMIN_MENU_CODES.contains(&"admin_models"));
+        assert!(ADMIN_MENU_CODES.contains(&"admin_wallets"));
+        assert!(ADMIN_MENU_CODES.contains(&"admin_tokens"));
+    }
+
+    #[test]
+    fn default_role_menu_codes_exist() {
+        let menu_codes: Vec<_> = menu::MENU_ITEMS.iter().map(|item| item.code).collect();
+
+        for code in ADMIN_MENU_CODES.iter().chain(USER_MENU_CODES) {
+            assert!(menu_codes.contains(code), "default menu code does not exist: {code}");
+        }
     }
 
     #[test]
@@ -129,6 +207,13 @@ mod tests {
 
         for code in AUTHENTICATED_API_CODES {
             assert!(!menu_api_codes.contains(code));
+        }
+    }
+
+    #[test]
+    fn menu_api_codes_exist_in_default_api_definitions() {
+        for code in MENU_API_BINDINGS.iter().flat_map(|binding| binding.api_codes.iter().copied()) {
+            assert!(api::position_by_code(code).is_some(), "default API code does not exist: {code}");
         }
     }
 

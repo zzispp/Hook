@@ -1,6 +1,7 @@
 use constants::auth::DEFAULT_AUTH_SOURCE;
 use sea_orm::entity::prelude::*;
-use types::user::{User, UserId};
+use time::format_description::well_known::Rfc3339;
+use types::user::{USER_QUOTA_MODE_WALLET, User, UserId};
 
 use super::UserAuthRecord;
 
@@ -22,6 +23,8 @@ pub struct Model {
     pub last_login_at: Option<TimeDateTimeWithTimeZone>,
     pub auth_source: String,
     pub email_verified: bool,
+    pub rate_limit_rpm: Option<i64>,
+    pub quota_mode: String,
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]
@@ -42,6 +45,10 @@ impl From<UserRecord> for User {
             auth_source: value.auth_source,
             email_verified: value.email_verified,
             system: false,
+            rate_limit_rpm: value.rate_limit_rpm,
+            quota_mode: value.quota_mode,
+            created_at: format_timestamp(value.created_at),
+            last_login_at: value.last_login_at.map(format_timestamp),
         }
     }
 }
@@ -58,4 +65,12 @@ impl UserRecord {
     pub fn local_auth_source() -> String {
         DEFAULT_AUTH_SOURCE.into()
     }
+
+    pub fn default_quota_mode() -> String {
+        USER_QUOTA_MODE_WALLET.into()
+    }
+}
+
+fn format_timestamp(value: TimeDateTimeWithTimeZone) -> String {
+    value.format(&Rfc3339).expect("user timestamp must format as RFC3339")
 }

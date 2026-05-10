@@ -3,6 +3,7 @@
     "overview": "Overview",
     "dashboard": "Dashboard",
     "resources": "Resources",
+    "operations": "Operations",
     "modelCatalog": "Model Catalog",
     "account": "Account",
     "walletCenter": "Wallet Center",
@@ -14,7 +15,7 @@
     "menus": "Menus",
     "models": "Models",
     "customKeyboardShortcuts": "Custom keyboard shortcuts.",
-    "apiTokens": "API Tokens",
+    "apiTokens": "My API Tokens",
     "adminApiTokens": "Token Management",
     "billingGroups": "Billing Groups",
     "systemSettings": "System Settings"
@@ -84,7 +85,7 @@
     "roleManagement": "Role Management",
     "userManagement": "User Management",
     "walletManagement": "Wallet Management",
-    "apiTokens": "API Tokens",
+    "apiTokens": "My API Tokens",
     "adminApiTokens": "Token Management",
     "billingGroups": "Billing Groups",
     "systemSettings": "System Settings"
@@ -143,7 +144,12 @@
     "quotaLimit": "Quota limit",
     "rateLimitRpm": "Rate limit",
     "requestCount": "Requests",
-    "tokenType": "Token type"
+    "tokenType": "Token type",
+    "createdAt": "Created at",
+    "lastLoginAt": "Last login",
+    "quotaMode": "Quota mode",
+    "statistics": "Stats / rate limit",
+    "wallet": "Wallet"
   },
   "dialogs": {
     "createApi": "Create API permission",
@@ -178,11 +184,13 @@
   "helper": {
     "deepMatch": "Deep match controls subpath highlighting.",
     "pathPatternExample": "Example: /api/users/{id}",
-    "updatePasswordRequired": "Backend currently requires a password on update.",
+    "updatePasswordRequired": "Leave blank to keep the current password.",
     "groupModelAccess": "Leave models unselected to allow all models in this group.",
     "systemRateLimit": "0 follows the system rate; non-zero will use min(system rate, this value).",
     "unlimitedExpiresAt": "Leave empty for no time limit.",
-    "unlimitedQuota": "Leave empty for unlimited quota."
+    "unlimitedQuota": "Leave empty for unlimited quota.",
+    "userQuotaMode": "Unlimited ignores wallet balance; wallet-limited charges against the wallet balance.",
+    "userRateLimit": "Empty or 0 means no user-level limit; the final API rate is the minimum of the user and token limits."
   },
   "messages": {
     "apiCreated": "API permission created",
@@ -221,97 +229,17 @@
     "copyFailed": "Copy failed",
     "systemSettingsUpdated": "System settings updated"
   },
-  "roles": {
-    "admin": {
-      "name": "Administrator",
-      "description": "Built-in administrator role"
-    },
-    "user": {
-      "name": "User",
-      "description": "Default signed-up user role"
-    }
+  "apiTransfer": {
+    "available": "Available APIs",
+    "bound": "Bound APIs",
+    "selectedCount": "{{selected}}/{{total}} selected"
   },
-  "authSources": {
-    "local": "Local",
-    "system": "System"
+  "api": {
+    "itemsCount": "{{count}} APIs",
+    "unboundMenu": "Unbound menu"
   },
-  "apiGroups": {
-    "auth": "Auth",
-    "menus": "Menus",
-    "models": "Models",
-    "wallet": "Wallet",
-    "admin wallet": "Admin Wallet",
-    "admin_wallet": "Admin Wallet",
-    "rbac": "RBAC",
-    "system": "System",
-    "users": "Users",
-    "api tokens": "API Tokens",
-    "api_tokens": "API Tokens",
-    "billing groups": "Billing Groups",
-    "billing_groups": "Billing Groups"
-  },
-  "apiPermissionNames": {
-    "auth_me": "Current user",
-    "navbar_read": "Navbar",
-    "users_read": "List users",
-    "users_create": "Create user",
-    "users_update": "Update user",
-    "users_delete": "Delete user",
-    "roles_read": "List roles",
-    "roles_create": "Create role",
-    "roles_update": "Update role",
-    "roles_delete": "Delete role",
-    "menu_item_apis_read": "Read menu API bindings",
-    "menu_item_apis_update": "Update menu API bindings",
-    "role_permissions_read": "Read role permission bindings",
-    "role_permissions_update": "Update role permission bindings",
-    "api_menus_read": "Read API menu bindings",
-    "api_menus_update": "Update API menu bindings",
-    "apis_read": "List API permissions",
-    "apis_create": "Create API permission",
-    "apis_update": "Update API permission",
-    "apis_delete": "Delete API permission",
-    "menu_sections_read": "List menu sections",
-    "menu_sections_create": "Create menu section",
-    "menu_sections_update": "Update menu section",
-    "menu_sections_delete": "Delete menu section",
-    "menu_items_read": "List menu items",
-    "menu_items_create": "Create menu item",
-    "menu_items_update": "Update menu item",
-    "menu_items_delete": "Delete menu item",
-    "models_global_read": "List global models",
-    "models_global_create": "Create global model",
-    "models_global_detail": "Get global model",
-    "models_global_update": "Update global model",
-    "models_global_delete": "Delete global model",
-    "models_global_batch_delete": "Batch delete global models",
-    "models_global_providers": "Global model providers",
-    "models_catalog_read": "Model catalog",
-    "models_public_catalog_read": "Public model catalog",
-    "wallet_balance_read": "Wallet balance",
-    "wallet_transactions_read": "Wallet transactions",
-    "models_external_read": "External models",
-    "admin_wallets_read": "List admin wallets",
-    "admin_wallet_transactions_read": "Admin wallet transactions",
-    "admin_wallet_adjust": "Admin wallet adjustment",
-    "groups_read": "List billing groups",
-    "groups_create": "Create billing group",
-    "groups_detail": "Get billing group",
-    "groups_update": "Update billing group",
-    "groups_delete": "Delete billing group",
-    "groups_available_read": "Available billing groups",
-    "api_tokens_read": "List API tokens",
-    "api_tokens_create": "Create API token",
-    "api_tokens_detail": "Get API token",
-    "api_tokens_update": "Update API token",
-    "api_tokens_delete": "Delete API token",
-    "api_tokens_secret_read": "Read API token secret",
-    "admin_api_tokens_read": "List admin API tokens",
-    "admin_api_tokens_create": "Create admin API token",
-    "admin_api_tokens_detail": "Get admin API token",
-    "admin_api_tokens_update": "Update admin API token",
-    "admin_api_tokens_delete": "Delete admin API token",
-    "admin_api_tokens_secret_read": "Read admin API token secret"
+  "menu": {
+    "itemsCount": "{{count}} menus"
   },
   "models": {
     "availableModels": "Available Models",
@@ -327,6 +255,7 @@
     "groupPricingEmpty": "No available billing groups",
     "metadata": "Specs and metadata",
     "modelIdCopied": "Model ID copied",
+    "copyModelId": "Copy model ID",
     "modelDevCount": "{{count}} models",
     "modelsTotal": "{{count}} models",
     "official": "Official",
@@ -612,12 +541,39 @@
     },
     "walletSummary": "Showing {{shown}}, total {{total}} wallets"
   },
+  "users": {
+    "balance": "Balance: {{amount}}",
+    "consumed": "Consumed: {{amount}}",
+    "followSystem": "Follow system",
+    "manageTokens": "Tokens",
+    "manageWallet": "Wallet",
+    "unlimited": "Unlimited",
+    "walletLimited": "Wallet limited"
+  },
+  "userWallet": {
+    "title": "User wallet",
+    "tabs": {
+      "operation": "Funds operation",
+      "ledger": "Ledger",
+      "refund": "Refund approval"
+    },
+    "operationType": "Operation type",
+    "manualRecharge": "Manual recharge",
+    "amount": "Amount (CNY)",
+    "description": "Description",
+    "positiveAmount": "Manual recharge only accepts positive amounts.",
+    "rechargeDescription": "Manual recharge adds to the user's recharge balance and records ledger entries; gift balance is not refundable.",
+    "emptyRefunds": "No refund approvals",
+    "invalidAmount": "Enter a positive amount",
+    "rechargeSaved": "Manual recharge completed"
+  },
+  "userTokens": {
+    "title": "User tokens"
+  },
   "billingGroups": {
     "allModels": "All models",
     "deleteConfirm": "Delete billing group {{name}}?",
-    "selectedModelCount": "{{count}} models",
-    "systemDescription": "Built-in billing group used when no group is selected",
-    "systemName": "System group"
+    "selectedModelCount": "{{count}} models"
   },
   "tokens": {
     "allModels": "All models",

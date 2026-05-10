@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect Aether and Hook auth/token rules,DONE,Aether token and password rules are grounded in source,rg "bcrypt|token_urlsafe|sk-" /Users/bubu/ZwjProjects/Aether/src,2026-05-10,0,Aether ApiKey uses sk- plus 32 alphanumeric chars and bcrypt password hashes
+2,Implement compatible token and password behavior,DONE,Hook generation and verification match Aether rules,cargo test -p api_token -p user,2026-05-10,0,Implemented sk token generation and bcrypt hasher
+3,Update admin defaults and seed values,DONE,Default admin identity/hash match requested values,cargo check --workspace,2026-05-10,0,config.yaml admin is admin/admin@example.com with bcrypt hash for 123456
+4,Run validation,DONE,Rust formatting/check/tests pass,cargo fmt --all && cargo check --workspace && cargo test -p api_token -p user,2026-05-10,0,cargo fmt --all passed; cargo check --workspace passed; cargo test -p api_token -p user passed

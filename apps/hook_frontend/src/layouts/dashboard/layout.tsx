@@ -15,7 +15,6 @@ import { iconButtonClasses } from '@mui/material/IconButton';
 import { allLangs } from 'src/locales';
 import { useNavbar } from 'src/actions/rbac';
 import { _contacts, _notifications } from 'src/_mock';
-import { useTranslate } from 'src/locales/use-locales';
 
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
@@ -29,7 +28,6 @@ import { NavHorizontal } from './nav-horizontal';
 import { _account } from '../nav-config-account';
 import { Searchbar } from '../components/searchbar';
 import { DashboardRouteGuard } from './route-guard';
-import { translateNavData } from './nav-translation';
 import { MenuButton } from '../components/menu-button';
 import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
@@ -64,7 +62,6 @@ export function DashboardLayout({
   const theme = useTheme();
 
   const settings = useSettingsContext();
-  const { t } = useTranslate('admin');
 
   const navbar = useNavbar();
 
@@ -74,7 +71,7 @@ export function DashboardLayout({
 
   const sourceNavData = slotProps?.nav?.data ?? navbar.data;
   const routeGuardNavData = slotProps?.nav?.data ?? navbar.data;
-  const navData = translateNavData(sourceNavData, t);
+  const navData = sourceNavData;
 
   const isNavMini = settings.state.navLayout === 'mini';
   const isNavHorizontal = settings.state.navLayout === 'horizontal';

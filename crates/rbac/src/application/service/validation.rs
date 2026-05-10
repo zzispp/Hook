@@ -23,7 +23,6 @@ pub(super) fn sanitize_api(input: ApiPermissionInput) -> RbacResult<ApiPermissio
         method: trim_required("method", input.method)?.to_ascii_uppercase(),
         path_pattern: trim_required("path_pattern", input.path_pattern)?,
         name: trim_required("name", input.name)?,
-        group: input.group.trim().into(),
         enabled: input.enabled,
         menu_item_ids: input.menu_item_ids,
     })

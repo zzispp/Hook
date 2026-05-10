@@ -1,8 +1,10 @@
 use sea_orm_migration::{MigrationName, prelude::*};
 
+mod domain_tables;
 mod iden;
 mod indices;
 mod seed;
+mod seed_domain;
 mod tables;
 mod wallet_tables;
 

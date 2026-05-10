@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{NewUser, ReplaceUser, User, UserId, UserListFilters},
+    user::{NewUser, ReplaceUser, USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, default_user_created_at},
 };
 
 use crate::application::{AppError, AppResult, PasswordHasher, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository};
@@ -77,7 +77,7 @@ impl UserRepository for MemoryUserRepository {
         let user = user_from_record(id, &record);
         state.users.push(StoredUser {
             user: user.clone(),
-            password_hash: record.password_hash.clone(),
+            password_hash: required_password_hash(&record)?,
         });
         state.created.push(record);
         Ok(user)
@@ -104,6 +104,17 @@ impl UserRepository for MemoryUserRepository {
             .iter()
             .find(|stored| stored.user.id == id)
             .map(|stored| stored.user.clone()))
+    }
+
+    async fn find_auth_by_id(&self, id: UserId) -> AppResult<Option<UserAuthRecord>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .users
+            .iter()
+            .find(|stored| stored.user.id == id)
+            .map(StoredUser::auth_record))
     }
 
     async fn find_by_email(&self, email: &str) -> AppResult<Option<User>> {
@@ -206,16 +217,20 @@ pub(crate) fn new_user(username: &str) -> NewUser {
         email: format!("{}@example.com", username.trim()),
         role: "admin".into(),
         is_active: true,
+        rate_limit_rpm: None,
+        quota_mode: USER_QUOTA_MODE_WALLET.into(),
     }
 }
 
 pub(crate) fn replace_user(username: &str, is_active: bool) -> ReplaceUser {
     ReplaceUser {
         username: username.into(),
-        password: VALID_PASSWORD.into(),
+        password: Some(VALID_PASSWORD.into()),
         email: format!("{}@example.com", username.trim()),
         role: "admin".into(),
         is_active,
+        rate_limit_rpm: None,
+        quota_mode: USER_QUOTA_MODE_WALLET.into(),
     }
 }
 
@@ -230,6 +245,10 @@ pub(crate) fn stored_user(id: u64, username: &str, password_hash: &str) -> Store
             auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
             email_verified: false,
             system: false,
+            rate_limit_rpm: None,
+            quota_mode: USER_QUOTA_MODE_WALLET.into(),
+            created_at: default_user_created_at(),
+            last_login_at: None,
         },
         password_hash: password_hash.into(),
     }
@@ -247,6 +266,10 @@ pub(crate) fn system_user() -> TestSystemUserProvider {
                 auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
                 email_verified: true,
                 system: true,
+                rate_limit_rpm: None,
+                quota_mode: USER_QUOTA_MODE_WALLET.into(),
+                created_at: default_user_created_at(),
+                last_login_at: None,
             },
             password_hash: format!("hashed:{VALID_PASSWORD}"),
         },
@@ -265,7 +288,7 @@ fn find_stored_user_mut<'a>(state: &'a mut RepositoryState, id: &UserId) -> AppR
 fn replace_stored_user(state: &mut RepositoryState, id: &UserId, record: &ReplaceUserRecord) -> AppResult<User> {
     let stored = find_stored_user_mut(state, id)?;
     stored.user = user_from_record(id.clone(), record);
-    stored.password_hash = record.password_hash.clone();
+    stored.password_hash = required_password_hash(record)?;
     Ok(stored.user.clone())
 }
 
@@ -279,7 +302,18 @@ fn user_from_record(id: UserId, record: &ReplaceUserRecord) -> User {
         auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
         email_verified: false,
         system: false,
+        rate_limit_rpm: record.rate_limit_rpm,
+        quota_mode: record.quota_mode.clone(),
+        created_at: default_user_created_at(),
+        last_login_at: None,
     }
+}
+
+fn required_password_hash(record: &ReplaceUserRecord) -> AppResult<String> {
+    record
+        .password_hash
+        .clone()
+        .ok_or_else(|| AppError::InvalidInput("password_hash is required".into()))
 }
 
 pub(crate) fn user_id(id: u64) -> UserId {

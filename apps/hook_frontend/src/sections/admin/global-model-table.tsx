@@ -20,6 +20,7 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
+import { ModelCopyButton } from '../models/model-copy-button';
 import {
   EnabledLabel,
   TableLoadingRows,
@@ -105,9 +106,12 @@ function GlobalModelTableRow({
     <TableRow hover>
       <TableCell>
         <Typography variant="subtitle2">{row.display_name}</Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-          {row.name}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+            {row.name}
+          </Typography>
+          <ModelCopyButton value={row.name} />
+        </Stack>
       </TableCell>
       <TableCell>
         <Stack spacing={0.25}>

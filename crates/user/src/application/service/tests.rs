@@ -18,7 +18,7 @@ async fn sign_up_hashes_password_and_persists_user() {
     let created = repository.created_records();
 
     assert_eq!(user.username, "alice");
-    assert_eq!(created[0].password_hash, format!("hashed:{VALID_PASSWORD}"));
+    assert_eq!(created[0].password_hash.as_deref(), Some(format!("hashed:{VALID_PASSWORD}").as_str()));
 }
 
 #[tokio::test]
@@ -33,7 +33,7 @@ async fn sign_up_trims_username_email_and_password_before_persisting() {
     assert_eq!(user.username, "alice");
     assert_eq!(created[0].username, "alice");
     assert_eq!(created[0].email, "alice@example.com");
-    assert_eq!(created[0].password_hash, "hashed:secret123");
+    assert_eq!(created[0].password_hash.as_deref(), Some("hashed:secret123"));
 }
 
 #[tokio::test]
@@ -146,7 +146,32 @@ async fn replace_user_allows_same_user_identity() {
     let user = service.replace_user(user_id(1), replace_user("alice", false)).await.unwrap();
 
     assert!(!user.is_active);
-    assert_eq!(repository.replaced_records()[0].1.password_hash, "hashed:secret123");
+    assert_eq!(repository.replaced_records()[0].1.password_hash.as_deref(), Some("hashed:secret123"));
+}
+
+#[tokio::test]
+async fn replace_user_keeps_existing_password_when_password_is_blank() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:existing"));
+    let service = UserService::new(repository.clone(), TestPasswordHasher);
+    let mut input = replace_user("alice", false);
+    input.password = Some(String::new());
+
+    let user = service.replace_user(user_id(1), input).await.unwrap();
+
+    assert!(!user.is_active);
+    assert_eq!(repository.replaced_records()[0].1.password_hash.as_deref(), Some("hashed:existing"));
+}
+
+#[tokio::test]
+async fn replace_user_hashes_new_password_when_password_is_present() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:existing"));
+    let service = UserService::new(repository.clone(), TestPasswordHasher);
+    let mut input = replace_user("alice", false);
+    input.password = Some("new-secret".into());
+
+    service.replace_user(user_id(1), input).await.unwrap();
+
+    assert_eq!(repository.replaced_records()[0].1.password_hash.as_deref(), Some("hashed:new-secret"));
 }
 
 #[tokio::test]

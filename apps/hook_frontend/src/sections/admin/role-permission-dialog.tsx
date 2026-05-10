@@ -22,13 +22,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Scrollbar } from 'src/components/scrollbar';
 
-import {
-  MethodLabel,
-  translatedApiName,
-  translatedApiGroup,
-  translatedMenuItem,
-  translatedRoleName,
-} from './shared';
+import { MethodLabel } from './shared';
 
 type PermissionTab = 'menus' | 'apis';
 
@@ -66,7 +60,7 @@ export function RolePermissionDialog({
     <Dialog fullWidth maxWidth="md" open={!!role} onClose={onClose}>
       <DialogTitle>
         {t('dialogs.rolePermissions', {
-          name: role ? translatedRoleName(role, t) : '',
+          name: role?.name ?? '',
         })}
       </DialogTitle>
       <DialogContent>
@@ -115,8 +109,6 @@ function MenuPermissionList({
   selectedMenus: string[];
   onSelectedMenusChange: (value: string[]) => void;
 }) {
-  const { t } = useTranslate('admin');
-
   return (
     <Scrollbar sx={{ maxHeight: 520 }}>
       <List disablePadding>
@@ -124,7 +116,7 @@ function MenuPermissionList({
           <ListItem key={menu.id} disablePadding>
             <ListItemButton onClick={() => onSelectedMenusChange(toggleValue(selectedMenus, menu.id))}>
               <Checkbox edge="start" checked={selectedMenus.includes(menu.id)} tabIndex={-1} />
-              <ListItemText primary={translatedMenuItem(menu, t)} secondary={`${menu.code} · ${menu.path}`} />
+              <ListItemText primary={menu.title} secondary={`${menu.code} · ${menu.path}`} />
             </ListItemButton>
           </ListItem>
         ))}
@@ -142,8 +134,6 @@ function ApiPermissionList({
   selectedApis: string[];
   onSelectedApisChange: (value: string[]) => void;
 }) {
-  const { t } = useTranslate('admin');
-
   return (
     <Scrollbar sx={{ maxHeight: 520 }}>
       <List disablePadding>
@@ -155,10 +145,10 @@ function ApiPermissionList({
                 primary={
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                     <MethodLabel method={api.method} />
-                    <span>{translatedApiName(api, t)}</span>
+                    <span>{api.name}</span>
                   </Box>
                 }
-                secondary={`${translatedApiGroup(api.group, t)} · ${api.path_pattern}`}
+                secondary={api.path_pattern}
               />
             </ListItemButton>
           </ListItem>

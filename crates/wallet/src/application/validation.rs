@@ -19,9 +19,9 @@ pub fn validate_wallet_id(wallet_id: &str) -> WalletResult<()> {
     Ok(())
 }
 
-pub fn validate_adjust_amount(amount: Decimal) -> WalletResult<()> {
+pub fn validate_positive_amount(field: &str, amount: Decimal) -> WalletResult<()> {
     if amount <= Decimal::ZERO {
-        return Err(WalletError::InvalidInput("adjust amount must be greater than 0".into()));
+        return Err(WalletError::InvalidInput(format!("{field} must be greater than 0")));
     }
     Ok(())
 }

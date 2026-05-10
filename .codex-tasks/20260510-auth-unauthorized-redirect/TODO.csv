@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect auth provider middleware and guards,DONE,Root cause identified from current source,rg -n "requireApiData|RbacApiError|AuthGuard" apps crates,,0,
+2,Fix unauthorized response handling,DONE,Invalid session clears tokens and auth guard can redirect,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,,0,
+3,Validate RBAC status mapping,DONE,Unauthorized and forbidden use real HTTP status,perl -e 'alarm shift; exec @ARGV' 60 cargo test -p rbac api::error,,0,
+4,Run focused frontend validation,DONE,Frontend type check passes,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,,0,

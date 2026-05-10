@@ -1,5 +1,8 @@
 use constants::pagination::PAGE_INDEX_OFFSET;
-use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select, Set,
+    TransactionTrait, sea_query::Expr,
+};
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     user::{User, UserId, UserListFilters},
@@ -30,7 +33,7 @@ impl UserStore {
         UserActiveModel {
             id: Set(self.database.next_id()),
             username: Set(user.username),
-            password_hash: Set(user.password_hash),
+            password_hash: Set(required_password_hash(user.password_hash)?),
             email: Set(user.email),
             role: Set(user.role),
             is_active: Set(user.is_active),
@@ -38,6 +41,8 @@ impl UserStore {
             last_login_at: Set(None),
             auth_source: Set(UserRecord::local_auth_source()),
             email_verified: Set(false),
+            rate_limit_rpm: Set(user.rate_limit_rpm),
+            quota_mode: Set(user.quota_mode),
             created_at: Set(now),
             updated_at: Set(now),
             ..Default::default()
@@ -50,15 +55,23 @@ impl UserStore {
 
     pub async fn replace(&self, id: UserId, user: UserRecordInput) -> StorageResult<User> {
         ensure_role_exists(self.database.connection(), &user.role).await?;
-        let record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
+        let tx = self.database.connection().begin().await?;
+        let record = self.find_record_by_id_in_tx(&id, &tx).await?.ok_or(StorageError::NotFound)?;
         let mut active: UserActiveModel = record.into();
+        let quota_mode = user.quota_mode.clone();
         active.username = Set(user.username);
-        active.password_hash = Set(user.password_hash);
+        if let Some(password_hash) = user.password_hash {
+            active.password_hash = Set(password_hash);
+        }
         active.email = Set(user.email);
         active.role = Set(user.role);
         active.is_active = Set(user.is_active);
+        active.rate_limit_rpm = Set(user.rate_limit_rpm);
+        active.quota_mode = Set(user.quota_mode);
         active.updated_at = Set(time::OffsetDateTime::now_utc());
-        active.update(self.database.connection()).await?;
+        active.update(&tx).await?;
+        set_wallet_limit_mode(&tx, &id.0, &quota_mode).await?;
+        tx.commit().await?;
         self.find_by_id(id).await?.ok_or(StorageError::NotFound)
     }
 
@@ -73,6 +86,10 @@ impl UserStore {
 
     pub async fn find_by_id(&self, id: UserId) -> StorageResult<Option<User>> {
         self.find_record_by_id(&id).await.map(|record| record.map(User::from))
+    }
+
+    pub async fn find_auth_by_id(&self, id: UserId) -> StorageResult<Option<UserAuthRecord>> {
+        self.find_record_by_id(&id).await.map(|record| record.map(UserRecord::into_auth))
     }
 
     pub async fn find_by_email(&self, email: &str) -> StorageResult<Option<User>> {
@@ -134,6 +151,14 @@ impl UserStore {
         self.find_record(UserColumn::Id.eq(id.0.as_str()).into()).await
     }
 
+    async fn find_record_by_id_in_tx(&self, id: &UserId, tx: &sea_orm::DatabaseTransaction) -> StorageResult<Option<UserRecord>> {
+        active_users()
+            .filter(UserColumn::Id.eq(id.0.as_str()))
+            .one(tx)
+            .await
+            .map_err(StorageError::from)
+    }
+
     async fn find_record(&self, filter: Condition) -> StorageResult<Option<UserRecord>> {
         active_users().filter(filter).one(self.database.connection()).await.map_err(StorageError::from)
     }
@@ -170,4 +195,24 @@ async fn ensure_role_exists(db: &DatabaseConnection, role: &str) -> StorageResul
         return Ok(());
     }
     Err(StorageError::Conflict(format!("role does not exist: {role}")))
+}
+
+async fn set_wallet_limit_mode(db: &sea_orm::DatabaseTransaction, user_id: &str, quota_mode: &str) -> StorageResult<()> {
+    crate::wallet::wallet_records::Entity::update_many()
+        .col_expr(crate::wallet::wallet_records::Column::LimitMode, Expr::value(wallet_limit_mode(quota_mode)))
+        .filter(crate::wallet::wallet_records::Column::UserId.eq(user_id))
+        .exec(db)
+        .await?;
+    Ok(())
+}
+
+fn wallet_limit_mode(quota_mode: &str) -> &'static str {
+    match quota_mode {
+        types::user::USER_QUOTA_MODE_UNLIMITED => "unlimited",
+        _ => "finite",
+    }
+}
+
+fn required_password_hash(password_hash: Option<String>) -> StorageResult<String> {
+    password_hash.ok_or_else(|| StorageError::Conflict("password_hash is required".into()))
 }

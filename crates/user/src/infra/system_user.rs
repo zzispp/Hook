@@ -1,5 +1,5 @@
 use configuration::Settings;
-use types::user::{User, UserId};
+use types::user::{USER_QUOTA_MODE_WALLET, User, UserId, default_user_created_at};
 
 use crate::application::{SystemUserProvider, SystemUserRecord};
 
@@ -21,6 +21,10 @@ impl ConfigSystemUserProvider {
                     auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
                     email_verified: true,
                     system: true,
+                    rate_limit_rpm: None,
+                    quota_mode: USER_QUOTA_MODE_WALLET.into(),
+                    created_at: default_user_created_at(),
+                    last_login_at: None,
                 },
                 password_hash: settings.admin_password_hash()?,
             },

@@ -1,6 +1,6 @@
 use types::{pagination::PageRequest, user::Credentials};
 
-use super::tests::WithPassword;
+use super::{AllowRegistrationPolicy, NoInitialGrantLedger, NoUserWalletCatalog, tests::WithPassword};
 use crate::{
     application::{AppError, UserService, UserUseCase},
     test_support::{MemoryUserRepository, TestPasswordHasher, VALID_PASSWORD, new_user, replace_user, stored_user, system_user, user_id},
@@ -124,7 +124,14 @@ async fn list_users_offsets_database_page_after_system_user() {
 
 fn service_with_system_user(
     repository: MemoryUserRepository,
-) -> UserService<MemoryUserRepository, TestPasswordHasher, crate::test_support::TestSystemUserProvider> {
+) -> UserService<
+    MemoryUserRepository,
+    TestPasswordHasher,
+    crate::test_support::TestSystemUserProvider,
+    AllowRegistrationPolicy,
+    NoInitialGrantLedger,
+    NoUserWalletCatalog,
+> {
     UserService::with_system_user(repository, TestPasswordHasher, system_user())
 }
 

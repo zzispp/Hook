@@ -10,7 +10,10 @@ use crate::api::{ApiState, TokenPair, error::ApiError};
 use types::{
     pagination::PageRequest,
     response::ApiResponse,
-    user::{ListUsersQuery, NewUser, RefreshTokenPayload, SignInPayload, SignUpPayload, UserId, UserListFilters, UserPayload, UserResponse, UsersPageResponse},
+    user::{
+        ListUsersQuery, NewUser, RefreshTokenPayload, SignInPayload, SignUpPayload, USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, UserPayload,
+        UserResponse, UsersPageResponse,
+    },
 };
 
 type ApiResult<T> = Result<T, ApiError>;
@@ -85,7 +88,21 @@ pub async fn list_users(State(state): State<ApiState>, Query(query): Query<ListU
         is_active: query.is_active,
     };
     let page = state.users.list_users(page, filters).await?;
-    Ok(ok(page.into()))
+    let wallets = state.users.wallet_summaries(&user_ids(&page.items)).await?;
+    let response = UsersPageResponse {
+        items: page
+            .items
+            .into_iter()
+            .map(|user| {
+                let wallet = wallets.get(&user.id.0).cloned();
+                UserResponse::from(user).with_wallet(wallet)
+            })
+            .collect(),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+    };
+    Ok(ok(response))
 }
 
 fn ok<T>(data: T) -> ApiJson<T> {
@@ -99,7 +116,13 @@ fn new_sign_up_user(payload: SignUpPayload) -> NewUser {
         email: payload.email,
         role: DEFAULT_USER_ROLE.into(),
         is_active: DEFAULT_USER_IS_ACTIVE,
+        rate_limit_rpm: None,
+        quota_mode: USER_QUOTA_MODE_WALLET.into(),
     }
+}
+
+fn user_ids(users: &[User]) -> Vec<String> {
+    users.iter().filter(|user| !user.system).map(|user| user.id.0.clone()).collect()
 }
 
 impl AuthSessionResponse {

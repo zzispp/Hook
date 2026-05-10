@@ -15,6 +15,8 @@ pub(super) enum Users {
     LastLoginAt,
     AuthSource,
     EmailVerified,
+    RateLimitRpm,
+    QuotaMode,
 }
 
 #[derive(DeriveIden)]
@@ -38,7 +40,6 @@ pub(super) enum ApiPermissions {
     Method,
     PathPattern,
     Name,
-    Group,
     Enabled,
     System,
     CreatedAt,
@@ -179,10 +180,77 @@ pub(super) enum Models {
     UpdatedAt,
 }
 
+#[derive(DeriveIden)]
+pub(super) enum BillingGroups {
+    Table,
+    Id,
+    Code,
+    Name,
+    Description,
+    BillingMultiplier,
+    IsActive,
+    IsSystem,
+    SortOrder,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum ApiTokens {
+    Table,
+    Id,
+    UserId,
+    TokenType,
+    Name,
+    TokenValue,
+    TokenHash,
+    TokenPrefix,
+    GroupCode,
+    ExpiresAt,
+    ModelAccessMode,
+    AllowedModelIds,
+    RateLimitRpm,
+    QuotaLimit,
+    UsedQuota,
+    RequestCount,
+    IsActive,
+    LastUsedAt,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum BillingGroupModels {
+    Table,
+    Id,
+    GroupCode,
+    GlobalModelId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum SystemSettings {
+    Table,
+    Id,
+    SiteName,
+    SiteSubtitle,
+    AllowRegistration,
+    AutoDeleteExpiredTokens,
+    DefaultUserGrant,
+    DefaultRateLimitRpm,
+    CreatedAt,
+    UpdatedAt,
+}
+
 pub(super) fn reversed_tables() -> Vec<DynIden> {
     vec![
+        ApiTokens::Table.into_iden(),
+        BillingGroupModels::Table.into_iden(),
+        SystemSettings::Table.into_iden(),
         Models::Table.into_iden(),
         GlobalModels::Table.into_iden(),
+        BillingGroups::Table.into_iden(),
         WalletTransactions::Table.into_iden(),
         Wallets::Table.into_iden(),
         RoleApiPermissions::Table.into_iden(),

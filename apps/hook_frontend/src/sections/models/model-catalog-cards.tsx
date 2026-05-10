@@ -12,6 +12,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Label } from 'src/components/label';
 
+import { ModelCopyButton } from './model-copy-button';
 import { priceSummary, formatUsageCount } from './model-catalog-utils';
 
 // ----------------------------------------------------------------------
@@ -52,9 +53,12 @@ function CatalogCard({
             <Typography variant="subtitle2" noWrap>
               {row.display_name}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-              {row.name}
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                {row.name}
+              </Typography>
+              <ModelCopyButton value={row.name} />
+            </Stack>
           </Box>
           <Label color={row.is_active ? 'success' : 'default'} variant="soft">
             {row.is_active ? t('models.available') : t('models.unavailable')}

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Extend backend user admin model,DONE,Users include wallet summary rate quota mode timestamps and migration/RBAC updates,cargo check -p backend,2026-05-10,0,backend user fields wallet summary admin balance API and migration added
+2,Expose user wallet and token operations,DONE,Admin can open user wallet modal and user-scoped token modal with existing APIs,pnpm lint:frontend,2026-05-10,0,user wallet and user token dialogs wired with admin APIs
+3,Refactor user management frontend,DONE,User table columns edit dialog wallet dialog token dialog are split and wired,pnpm lint:frontend,2026-05-10,0,user management split into focused table form wallet token modules
+4,Add model ID copy controls and admin token width,DONE,Model admin/user model ID copy icons exist and admin token page uses xl,pnpm lint:frontend,2026-05-10,0,model copy buttons added and relevant dashboard pages use xl
+5,Run final validation,DONE,Formatting migration and Rust/frontend checks pass,cargo fmt --all && cargo check --workspace && pnpm lint:frontend && cargo test --workspace,2026-05-10,0,cargo fmt cargo check workspace pnpm lint frontend migration up and 60s workspace tests passed

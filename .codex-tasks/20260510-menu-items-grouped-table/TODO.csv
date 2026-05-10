@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current menu table structure,DONE,Current flat table and available section data are understood,sed -n '1,280p' apps/hook_frontend/src/sections/admin/menu-items-table.tsx,,0,
+2,Render menu rows grouped by section,DONE,Menu table shows section header rows with indented menu items,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-10,0,"Menu item table renders section header rows from raw database subheader values."
+3,Run frontend validation,DONE,Frontend type check passes,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-10,0,"Type check passed as part of final focused validation."

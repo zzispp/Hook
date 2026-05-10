@@ -1,26 +1,42 @@
-use argon2::{Argon2, PasswordHash, PasswordHasher as ArgonPasswordHasher, PasswordVerifier, password_hash::SaltString};
-use rand_core::OsRng;
+use bcrypt::{DEFAULT_COST, hash, verify};
 
 use crate::application::{AppError, AppResult, PasswordHasher};
 
 #[derive(Clone, Default)]
-pub struct Argon2PasswordHasher;
+pub struct BcryptPasswordHasher;
 
-impl PasswordHasher for Argon2PasswordHasher {
+impl PasswordHasher for BcryptPasswordHasher {
     fn hash(&self, password: &str) -> AppResult<String> {
-        let salt = SaltString::generate(&mut OsRng);
-        Argon2::default()
-            .hash_password(password.as_bytes(), &salt)
-            .map(|hash| hash.to_string())
-            .map_err(password_error)
+        hash(password, DEFAULT_COST).map_err(password_error)
     }
 
     fn verify(&self, password: &str, password_hash: &str) -> AppResult<bool> {
-        let parsed_hash = PasswordHash::new(password_hash).map_err(password_error)?;
-        Ok(Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok())
+        verify(password, password_hash).map_err(password_error)
     }
 }
 
-fn password_error(error: argon2::password_hash::Error) -> AppError {
+fn password_error(error: bcrypt::BcryptError) -> AppError {
     AppError::Infrastructure(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{application::PasswordHasher, infra::BcryptPasswordHasher};
+
+    #[test]
+    fn hash_uses_bcrypt_format() {
+        let password_hash = BcryptPasswordHasher.hash("123456").unwrap();
+
+        assert!(password_hash.starts_with("$2"));
+        assert_eq!(password_hash.len(), 60);
+        assert!(BcryptPasswordHasher.verify("123456", &password_hash).unwrap());
+        assert!(!BcryptPasswordHasher.verify("bad-password", &password_hash).unwrap());
+    }
+
+    #[test]
+    fn verifies_configured_admin_password_hash() {
+        let password_hash = "$2b$12$xQS0SfLk9OmaG69aSxN7L.hBqkBJ7i/Vty7ZVLG/nKd8nb0HV0Kaa";
+
+        assert!(BcryptPasswordHasher.verify("12345678", password_hash).unwrap());
+    }
 }

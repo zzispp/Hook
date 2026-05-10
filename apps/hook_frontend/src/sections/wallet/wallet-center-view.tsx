@@ -10,10 +10,13 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { paths } from 'src/routes/paths';
-
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import {
+  DASHBOARD_MENU_TITLES,
+  DASHBOARD_MENU_SECTIONS,
+} from 'src/layouts/dashboard/dashboard-menu-values';
+import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -87,13 +90,15 @@ function WalletBreadcrumbs({
   loading: boolean;
   onRefresh: VoidFunction;
 }) {
+  const breadcrumbs = useDashboardBreadcrumbs({
+    heading: DASHBOARD_MENU_TITLES.walletCenter,
+    section: DASHBOARD_MENU_SECTIONS.operations,
+  });
+
   return (
     <CustomBreadcrumbs
-      heading={t('wallet.title')}
-      links={[
-        { name: t('nav.dashboard'), href: paths.dashboard.root },
-        { name: t('wallet.title') },
-      ]}
+      heading={breadcrumbs.heading}
+      links={breadcrumbs.links}
       action={
         <Button
           variant="outlined"

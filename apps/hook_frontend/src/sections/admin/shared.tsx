@@ -1,7 +1,6 @@
 'use client';
 
 import type { TextFieldProps } from '@mui/material/TextField';
-import type { Role, ApiPermission } from 'src/types/rbac';
 import type { TableHeadCellProps } from 'src/components/table';
 
 import Stack from '@mui/material/Stack';
@@ -17,9 +16,8 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
-import { paths } from 'src/routes/paths';
-
 import { useTranslate } from 'src/locales/use-locales';
+import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
@@ -28,7 +26,7 @@ import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 // ----------------------------------------------------------------------
 
-export { NAV_ICONS, NAV_ICON_OPTIONS, translatedMenuItem, translatedMenuSection } from './nav-metadata';
+export { NAV_ICONS, NAV_ICON_OPTIONS } from './nav-metadata';
 
 export const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -41,16 +39,12 @@ export function AdminBreadcrumbs({
   heading: string;
   action?: React.ReactNode;
 }) {
-  const { t } = useTranslate('admin');
+  const breadcrumbs = useDashboardBreadcrumbs({ heading });
 
   return (
     <CustomBreadcrumbs
-      heading={heading}
-      links={[
-        { name: t('nav.dashboard'), href: paths.dashboard.root },
-        { name: t('nav.systemManagement') },
-        { name: heading },
-      ]}
+      heading={breadcrumbs.heading}
+      links={breadcrumbs.links}
       action={action}
       sx={{ mb: { xs: 3, md: 5 } }}
     />
@@ -241,49 +235,4 @@ export function ManagementDialog({
 
 export function SelectOption({ value, label }: { value: string; label: string }) {
   return <MenuItem value={value}>{label}</MenuItem>;
-}
-
-export function translatedRoleName(role: Role, t: AdminT) {
-  const keyByCode: Record<string, string> = {
-    admin: 'roles.admin.name',
-    user: 'roles.user.name',
-  };
-
-  const key = keyByCode[role.code];
-
-  return key ? t(key) : role.name;
-}
-
-export function translatedRoleDescription(role: Role, t: AdminT) {
-  const keyByCode: Record<string, string> = {
-    admin: 'roles.admin.description',
-    user: 'roles.user.description',
-  };
-
-  const key = keyByCode[role.code];
-
-  return key ? t(key) : role.description;
-}
-
-export function translatedAuthSource(source: string, t: AdminT) {
-  const key = `authSources.${source.toLowerCase()}`;
-  const translated = t(key);
-
-  return translated === key ? source : translated;
-}
-
-export function translatedApiName(api: ApiPermission, t: AdminT) {
-  const translated = t(`apiPermissionNames.${api.code}`);
-
-  return translated === `apiPermissionNames.${api.code}` ? api.name : translated;
-}
-
-export function translatedApiGroup(group: string, t: AdminT) {
-  if (!group) {
-    return '-';
-  }
-
-  const translated = t(`apiGroups.${group.toLowerCase()}`);
-
-  return translated === `apiGroups.${group.toLowerCase()}` ? group : translated;
 }

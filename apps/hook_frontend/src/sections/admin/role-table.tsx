@@ -23,9 +23,7 @@ import {
   EnabledLabel,
   BooleanLabel,
   TableLoadingRows,
-  translatedRoleName,
   ManagementTableHead,
-  translatedRoleDescription,
 } from './shared';
 
 type Props = {
@@ -91,9 +89,9 @@ function RoleTableRow({
 
   return (
     <TableRow hover>
-      <TableCell>{translatedRoleName(row, t)}</TableCell>
+      <TableCell>{row.name}</TableCell>
       <TableCell sx={{ fontFamily: 'monospace' }}>{row.code}</TableCell>
-      <TableCell>{translatedRoleDescription(row, t) || '-'}</TableCell>
+      <TableCell>{row.description || '-'}</TableCell>
       <TableCell>{row.sort_order}</TableCell>
       <TableCell>
         <EnabledLabel enabled={row.enabled} />

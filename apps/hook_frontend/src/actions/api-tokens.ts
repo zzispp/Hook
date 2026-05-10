@@ -44,10 +44,11 @@ export function useScopedApiTokens(scope: 'user' | 'admin', page: number, pageSi
 }
 
 function useTokenList(endpoint: string, page: number, pageSize: number, filters: ApiTokenFilters) {
+  const disabled = page < 0 || pageSize <= 0;
   const key = [endpoint, { params: { skip: page * pageSize, limit: pageSize, ...filters } }] as const;
   const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
     ApiEnvelope<ApiTokenListResponse>
-  >(key, fetcher, swrOptions);
+  >(disabled ? null : key, fetcher, swrOptions);
 
   return useMemo(() => {
     const pageData = data ? requireApiData(data) : undefined;
@@ -55,12 +56,12 @@ function useTokenList(endpoint: string, page: number, pageSize: number, filters:
       data: pageData,
       items: pageData?.tokens ?? [],
       total: pageData?.total ?? 0,
-      isLoading,
+      isLoading: disabled ? false : isLoading,
       error,
-      isValidating,
+      isValidating: disabled ? false : isValidating,
       refresh: revalidate,
     };
-  }, [data, error, isLoading, isValidating, revalidate]);
+  }, [data, disabled, error, isLoading, isValidating, revalidate]);
 }
 
 export async function createApiToken(payload: ApiTokenCreate) {

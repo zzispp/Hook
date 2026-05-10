@@ -37,7 +37,9 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use user::{
     api::{ApiState, TokenService, TokenSettings, create_router as create_user_router},
     application::UserService,
-    infra::{Argon2PasswordHasher, ConfigSystemUserProvider, StorageInitialGrantLedger, StorageRegistrationPolicy, StorageUserRepository},
+    infra::{
+        BcryptPasswordHasher, ConfigSystemUserProvider, StorageInitialGrantLedger, StorageRegistrationPolicy, StorageUserRepository, StorageUserWalletCatalog,
+    },
 };
 use wallet::{
     api::{WalletApiState, create_router as create_wallet_router},
@@ -85,10 +87,11 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     ));
     let users = Arc::new(UserService::with_system_user_and_registration(
         StorageUserRepository::new(database.clone()),
-        Argon2PasswordHasher,
+        BcryptPasswordHasher,
         ConfigSystemUserProvider::from_settings(settings)?,
         StorageRegistrationPolicy::new(database.clone()),
-        StorageInitialGrantLedger::new(database),
+        StorageInitialGrantLedger::new(database.clone()),
+        StorageUserWalletCatalog::new(database),
     ));
     let tokens = TokenService::new(token_settings(settings)?);
     let authorization = authorization_config(settings);

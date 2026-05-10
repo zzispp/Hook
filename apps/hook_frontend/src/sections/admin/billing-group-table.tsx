@@ -87,10 +87,10 @@ function BillingGroupTableRow({
       <TableCell>
         <Typography variant="subtitle2">{row.code}</Typography>
         <Typography variant="caption" color="text.secondary">
-          {translatedGroupDescription(row, t)}
+          {row.description || t('common.none')}
         </Typography>
       </TableCell>
-      <TableCell>{translatedGroupName(row, t)}</TableCell>
+      <TableCell>{row.name}</TableCell>
       <TableCell>{row.billing_multiplier}</TableCell>
       <TableCell>{modelAccessText(row, t)}</TableCell>
       <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
@@ -169,15 +169,4 @@ function modelAccessText(group: BillingGroup, t: (key: string, options?: Record<
   return group.allowed_model_ids.length === 0
     ? t('billingGroups.allModels')
     : t('billingGroups.selectedModelCount', { count: group.allowed_model_ids.length });
-}
-
-function translatedGroupName(group: BillingGroup, t: (key: string) => string) {
-  return group.is_system && group.code === 'default' ? t('billingGroups.systemName') : group.name;
-}
-
-function translatedGroupDescription(group: BillingGroup, t: (key: string) => string) {
-  if (group.is_system && group.code === 'default') {
-    return t('billingGroups.systemDescription');
-  }
-  return group.description || t('common.none');
 }

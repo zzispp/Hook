@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use storage::{
@@ -8,11 +10,11 @@ use storage::{
 };
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{User, UserId, UserListFilters},
+    user::{User, UserId, UserListFilters, UserWalletSummaryResponse},
 };
 
 use crate::application::{
-    AppError, AppResult, InitialGrantLedger, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, UserAuthRecord, UserRepository,
+    AppError, AppResult, InitialGrantLedger, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, UserAuthRecord, UserRepository, UserWalletCatalog,
 };
 
 #[derive(Clone)]
@@ -27,6 +29,11 @@ pub struct StorageRegistrationPolicy {
 
 #[derive(Clone)]
 pub struct StorageInitialGrantLedger {
+    store: WalletStore,
+}
+
+#[derive(Clone)]
+pub struct StorageUserWalletCatalog {
     store: WalletStore,
 }
 
@@ -54,6 +61,14 @@ impl StorageInitialGrantLedger {
     }
 }
 
+impl StorageUserWalletCatalog {
+    pub fn new(database: Database) -> Self {
+        Self {
+            store: WalletStore::new(database),
+        }
+    }
+}
+
 #[async_trait]
 impl UserRepository for StorageUserRepository {
     async fn create(&self, user: ReplaceUserRecord) -> AppResult<User> {
@@ -70,6 +85,14 @@ impl UserRepository for StorageUserRepository {
 
     async fn find_by_id(&self, id: UserId) -> AppResult<Option<User>> {
         self.store.find_by_id(id).await.map_err(storage_error)
+    }
+
+    async fn find_auth_by_id(&self, id: UserId) -> AppResult<Option<UserAuthRecord>> {
+        self.store
+            .find_auth_by_id(id)
+            .await
+            .map(|record| record.map(user_auth_record))
+            .map_err(storage_error)
     }
 
     async fn find_by_email(&self, email: &str) -> AppResult<Option<User>> {
@@ -123,6 +146,17 @@ impl InitialGrantLedger for StorageInitialGrantLedger {
     }
 }
 
+#[async_trait]
+impl UserWalletCatalog for StorageUserWalletCatalog {
+    async fn wallet_summaries(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, UserWalletSummaryResponse>> {
+        self.store
+            .find_by_user_ids(user_ids)
+            .await
+            .map(|wallets| wallets.into_iter().map(|(user_id, wallet)| (user_id, wallet_summary(wallet))).collect())
+            .map_err(storage_error)
+    }
+}
+
 fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
     StorageUserRecordInput {
         username: record.username,
@@ -130,6 +164,19 @@ fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
         email: record.email,
         role: record.role,
         is_active: record.is_active,
+        rate_limit_rpm: record.rate_limit_rpm,
+        quota_mode: record.quota_mode,
+    }
+}
+
+fn wallet_summary(wallet: types::wallet::Wallet) -> UserWalletSummaryResponse {
+    UserWalletSummaryResponse {
+        id: wallet.id.0,
+        available_balance: wallet.recharge_balance + wallet.gift_balance,
+        recharge_balance: wallet.recharge_balance,
+        gift_balance: wallet.gift_balance,
+        total_consumed: wallet.total_consumed,
+        status: wallet.status,
     }
 }
 

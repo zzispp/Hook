@@ -20,7 +20,6 @@ pub struct ApiPermissionRecordInput {
     pub method: String,
     pub path_pattern: String,
     pub name: String,
-    pub group: String,
     pub enabled: bool,
     pub system: bool,
 }

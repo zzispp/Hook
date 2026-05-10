@@ -5,14 +5,12 @@ pub const AUTH_APIS: &[ApiDefinition] = &[
         code: "auth_me",
         method: "GET",
         path_pattern: "/api/auth/me",
-        name: "Current user",
-        group: "Auth",
+        name: "当前用户",
     },
     ApiDefinition {
         code: "navbar_read",
         method: "GET",
         path_pattern: "/api/navbar",
-        name: "Navbar",
-        group: "System",
+        name: "导航菜单",
     },
 ];

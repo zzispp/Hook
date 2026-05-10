@@ -23,12 +23,14 @@ export function ApiTokenDialog({
   groups,
   models,
   users = [],
+  fixedUserId,
 }: {
   scope: TokenScope;
   dialog: TokenDialogState;
   groups: BillingGroupOption[];
   models: TokenModelOption[];
   users?: UserOption[];
+  fixedUserId?: string;
 }) {
   const { t } = useTranslate('admin');
   const creating = !dialog.editing;
@@ -47,7 +49,7 @@ export function ApiTokenDialog({
         value={dialog.form.name}
         onChange={(value) => dialog.setForm((form) => ({ ...form, name: value }))}
       />
-      {creating && scope === 'admin' ? <AdminOwnerFields dialog={dialog} users={users} /> : null}
+      {creating && scope === 'admin' && !fixedUserId ? <AdminOwnerFields dialog={dialog} users={users} /> : null}
       {creating ? <CreateOnlyFields dialog={dialog} groups={groups} /> : null}
       <LimitFields dialog={dialog} />
       <ModelFields dialog={dialog} models={models} />
@@ -118,7 +120,7 @@ function CreateOnlyFields({ dialog, groups }: { dialog: TokenDialogState; groups
         ) : null}
         {groups.map((group) => (
           <MenuItem key={group.code} value={group.code}>
-            {translatedGroupName(group, t)}
+            {group.name}
           </MenuItem>
         ))}
       </TextFieldRow>
@@ -149,10 +151,6 @@ function groupForm(
 
 function filterModelIds(selectedIds: string[], allowedIds: string[]) {
   return allowedIds.length === 0 ? selectedIds : selectedIds.filter((id) => allowedIds.includes(id));
-}
-
-function translatedGroupName(group: BillingGroupOption, t: (key: string) => string) {
-  return group.is_system && group.code === 'default' ? t('billingGroups.systemName') : group.name;
 }
 
 function LimitFields({ dialog }: { dialog: TokenDialogState }) {
@@ -213,7 +211,7 @@ function ModelSelect({ dialog, models }: { dialog: TokenDialogState; models: Tok
       label={t('fields.allowedModels')}
       value={dialog.form.allowed_model_ids}
       SelectProps={{ multiple: true }}
-      onChange={(event) => dialog.setForm((form) => ({ ...form, allowed_model_ids: event.target.value as string[] }))}
+      onChange={(event) => dialog.setForm((form) => ({ ...form, allowed_model_ids: selectedModelIds(event.target.value) }))}
     >
       {models.length === 0 ? (
         <MenuItem disabled value="">
@@ -221,8 +219,14 @@ function ModelSelect({ dialog, models }: { dialog: TokenDialogState; models: Tok
         </MenuItem>
       ) : null}
       {models.map((model) => (
-        <MenuItem key={model.id} value={model.id}>{model.display_name || model.name}</MenuItem>
+        <MenuItem key={model.id} value={model.id}>
+          {model.display_name || model.name}
+        </MenuItem>
       ))}
     </TextField>
   );
+}
+
+function selectedModelIds(value: string | string[]) {
+  return Array.isArray(value) ? value : value.split(',').filter(Boolean);
 }

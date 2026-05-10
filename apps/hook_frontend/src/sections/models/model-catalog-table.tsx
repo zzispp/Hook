@@ -3,6 +3,7 @@
 import type { GlobalModelResponse } from 'src/types/model';
 import type { TableHeadCellProps } from 'src/components/table';
 
+import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
@@ -15,6 +16,7 @@ import { Label } from 'src/components/label';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TableHeadCustom } from 'src/components/table';
 
+import { ModelCopyButton } from './model-copy-button';
 import { priceSummary, formatUsageCount } from './model-catalog-utils';
 
 // ----------------------------------------------------------------------
@@ -64,9 +66,12 @@ function CatalogRow({
     <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => onSelectRow(row)}>
       <TableCell>
         <Typography variant="subtitle2">{row.display_name}</Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-          {row.name}
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+            {row.name}
+          </Typography>
+          <ModelCopyButton value={row.name} />
+        </Stack>
       </TableCell>
       <TableCell>
         <Typography variant="body2">{priceSummary(row)}</Typography>

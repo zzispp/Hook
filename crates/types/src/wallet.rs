@@ -53,6 +53,14 @@ pub struct WalletAdjustment {
     pub description: Option<String>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct WalletRecharge {
+    pub wallet_id: String,
+    pub amount: Decimal,
+    pub operator_id: Option<String>,
+    pub description: Option<String>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum WalletAdjustmentType {
     Increase,

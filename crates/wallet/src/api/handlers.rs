@@ -9,7 +9,8 @@ use types::{
     response::ApiResponse,
     wallet::{
         AdminWalletAdjustmentPayload, AdminWalletAdjustmentResponse, AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters,
-        AdminWalletListResponse, AdminWalletTransactionsResponse, WalletAdjustment, WalletBalanceResponse, WalletTransactionsResponse,
+        AdminWalletListResponse, AdminWalletRechargePayload, AdminWalletRechargeResponse, AdminWalletTransactionsResponse, WalletAdjustment,
+        WalletBalanceResponse, WalletRecharge, WalletTransactionsResponse,
     },
 };
 
@@ -63,6 +64,10 @@ pub async fn admin_wallets(State(state): State<WalletApiState>, Query(query): Qu
     Ok(ok(state.wallets.admin_wallets(page, query.into()).await?))
 }
 
+pub async fn admin_balance(State(state): State<WalletApiState>, Path(user_id): Path<String>) -> ApiResult<ApiJson<WalletBalanceResponse>> {
+    Ok(ok(state.wallets.admin_balance(&user_id).await?))
+}
+
 pub async fn admin_ledger(State(state): State<WalletApiState>, Query(query): Query<AdminWalletLedgerQuery>) -> ApiResult<ApiJson<AdminWalletLedgerResponse>> {
     let page = PageRequest::from(&query);
     Ok(ok(state.wallets.admin_ledger(page, query.into()).await?))
@@ -84,6 +89,18 @@ pub async fn admin_adjust_wallet(
 ) -> ApiResult<ApiJson<AdminWalletAdjustmentResponse>> {
     let transaction = state.wallets.adjust_wallet(adjustment(wallet_id, current_user.id, payload)).await?;
     Ok(ok(AdminWalletAdjustmentResponse {
+        transaction: transaction.into(),
+    }))
+}
+
+pub async fn admin_recharge_wallet(
+    State(state): State<WalletApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Path(wallet_id): Path<String>,
+    Json(payload): Json<AdminWalletRechargePayload>,
+) -> ApiResult<ApiJson<AdminWalletRechargeResponse>> {
+    let transaction = state.wallets.recharge_wallet(recharge(wallet_id, current_user.id, payload)).await?;
+    Ok(ok(AdminWalletRechargeResponse {
         transaction: transaction.into(),
     }))
 }
@@ -140,6 +157,15 @@ fn adjustment(wallet_id: String, operator_id: String, payload: AdminWalletAdjust
         amount: payload.amount,
         balance_type: payload.balance_type.into(),
         adjustment_type: payload.adjustment_type.into(),
+        operator_id: Some(operator_id),
+        description: payload.description,
+    }
+}
+
+fn recharge(wallet_id: String, operator_id: String, payload: AdminWalletRechargePayload) -> WalletRecharge {
+    WalletRecharge {
+        wallet_id,
+        amount: payload.amount,
         operator_id: Some(operator_id),
         description: payload.description,
     }

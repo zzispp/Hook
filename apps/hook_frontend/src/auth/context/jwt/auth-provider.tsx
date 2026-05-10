@@ -1,6 +1,7 @@
 'use client';
 
 import type { AuthState } from '../../types';
+import type { ApiEnvelope } from './utils';
 
 import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useEffect, useCallback } from 'react';
@@ -132,7 +133,10 @@ async function resolveSession() {
 
 async function refreshSession(refresh_token: string) {
   try {
-    const res = await axios.post(endpoints.auth.refresh, { refresh_token });
+    const res = await axios.post<ApiEnvelope<TokenPairResponse>>(endpoints.auth.refresh, { refresh_token });
+    if (isUnauthorizedPayload(res.data)) {
+      return null;
+    }
     return requireApiData<TokenPairResponse>(res.data);
   } catch (error) {
     if (isUnauthorizedRequest(error)) {
@@ -145,7 +149,10 @@ async function refreshSession(refresh_token: string) {
 
 async function resolveCurrentUser() {
   try {
-    const res = await axios.get(endpoints.auth.me);
+    const res = await axios.get<ApiEnvelope<MeResponse>>(endpoints.auth.me);
+    if (isUnauthorizedPayload(res.data)) {
+      return null;
+    }
     return requireApiData<MeResponse>(res.data);
   } catch (error) {
     if (isUnauthorizedRequest(error)) {
@@ -158,4 +165,23 @@ async function resolveCurrentUser() {
 
 function isUnauthorizedRequest(error: unknown) {
   return isApiRequestError(error) && error.status === HTTP_UNAUTHORIZED;
+}
+
+function isUnauthorizedPayload(payload: unknown) {
+  if (!isApiEnvelope(payload) || payload.success) {
+    return false;
+  }
+
+  return payload.message.toLowerCase() === 'unauthorized';
+}
+
+function isApiEnvelope(payload: unknown): payload is ApiEnvelope<unknown> {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    'success' in payload &&
+    typeof payload.success === 'boolean' &&
+    'message' in payload &&
+    typeof payload.message === 'string'
+  );
 }

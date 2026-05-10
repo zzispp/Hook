@@ -21,9 +21,9 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-argon2 = "0.5.3"
 async-trait = "0.1.89"
 axum = "0.8.9"
+bcrypt = "0.17.1"
 api_token = { path = "crates/api_token" }
 config_rs = { package = "config", version = "0.15.22", default-features = false, features = ["yaml"] }
 configuration = { path = "crates/config" }
@@ -33,6 +33,7 @@ hex = "0.4.3"
 hook_tracing = { path = "crates/tracing" }
 jsonwebtoken = "9.3.1"
 matchit = "0.8.4"
+rand = "0.8.5"
 rand_core = { version = "0.6.4", features = ["getrandom"] }
 rbac = { path = "crates/rbac" }
 setting = { path = "crates/setting" }

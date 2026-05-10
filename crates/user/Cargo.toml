@@ -4,9 +4,9 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-argon2.workspace = true
 async-trait.workspace = true
 axum.workspace = true
+bcrypt.workspace = true
 configuration.workspace = true
 constants.workspace = true
 jsonwebtoken.workspace = true

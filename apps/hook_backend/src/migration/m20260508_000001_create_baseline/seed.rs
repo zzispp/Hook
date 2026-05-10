@@ -1,12 +1,13 @@
 use sea_orm_migration::prelude::*;
 
-use super::{super::defaults, iden::*};
+use super::{super::defaults, iden::*, seed_domain};
 
 pub(super) async fn seed_defaults(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     seed_roles(manager).await?;
     seed_api_permissions(manager).await?;
     seed_menu_sections(manager).await?;
     seed_menu_items(manager).await?;
+    seed_domain::seed_domain_defaults(manager).await?;
     seed_bindings(manager).await
 }
 
@@ -25,14 +26,14 @@ async fn seed_roles(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
         ])
         .values_panic(role_values(RoleSeed {
             code: defaults::ADMIN_ROLE,
-            name: "Administrator",
-            description: "Built-in administrator role",
+            name: "管理员",
+            description: "内置管理员角色",
             sort_order: 0,
         }))
         .values_panic(role_values(RoleSeed {
             code: defaults::USER_ROLE,
-            name: "User",
-            description: "Default signed-up user role",
+            name: "用户",
+            description: "默认注册用户角色",
             sort_order: 10,
         }))
         .to_owned();
@@ -47,7 +48,6 @@ async fn seed_api_permissions(manager: &SchemaManager<'_>) -> Result<(), DbErr> 
         ApiPermissions::Method,
         ApiPermissions::PathPattern,
         ApiPermissions::Name,
-        ApiPermissions::Group,
         ApiPermissions::Enabled,
         ApiPermissions::System,
         ApiPermissions::CreatedAt,
@@ -129,7 +129,7 @@ async fn seed_role_menu_bindings(manager: &SchemaManager<'_>) -> Result<(), DbEr
         RoleMenuPermissions::CreatedAt,
         RoleMenuPermissions::UpdatedAt,
     ]);
-    for item_id in menu_ids_for_codes(defaults::admin_menu_codes()) {
+    for item_id in menu_ids_for_codes(defaults::ADMIN_MENU_CODES) {
         insert.values_panic(role_menu_values(defaults::ADMIN_ROLE, item_id));
     }
     for item_id in menu_ids_for_codes(defaults::USER_MENU_CODES) {
@@ -177,14 +177,13 @@ struct RoleSeed {
     sort_order: i64,
 }
 
-fn api_values(index: usize, definition: &defaults::api::ApiDefinition) -> [Expr; 10] {
+fn api_values(index: usize, definition: &defaults::api::ApiDefinition) -> [Expr; 9] {
     [
         default_api_id(index).into(),
         definition.code.into(),
         definition.method.into(),
         definition.path_pattern.into(),
         definition.name.into(),
-        definition.group.into(),
         true.into(),
         true.into(),
         Expr::current_timestamp(),

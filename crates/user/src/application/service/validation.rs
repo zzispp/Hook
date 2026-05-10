@@ -2,7 +2,7 @@ use constants::auth::{PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, USERNAME_MAX_LEN
 use constants::pagination::{MAX_PAGE_SIZE, MIN_PAGE_NUMBER, MIN_PAGE_SIZE};
 use types::{
     pagination::PageRequest,
-    user::{Credentials, NewUser, ReplaceUser},
+    user::{Credentials, NewUser, ReplaceUser, USER_QUOTA_MODE_UNLIMITED, USER_QUOTA_MODE_WALLET},
 };
 
 use crate::application::{AppError, AppResult};
@@ -16,14 +16,20 @@ pub(super) fn validate_new_user(input: &NewUser) -> AppResult<()> {
     validate_username(&input.username)?;
     validate_password(&input.password)?;
     reject_blank("email", &input.email)?;
-    reject_blank("role", &input.role)
+    reject_blank("role", &input.role)?;
+    validate_rate_limit(input.rate_limit_rpm)?;
+    validate_quota_mode(&input.quota_mode)
 }
 
 pub(super) fn validate_replace_user(input: &ReplaceUser) -> AppResult<()> {
     validate_username(&input.username)?;
-    validate_password(&input.password)?;
+    if let Some(password) = &input.password {
+        validate_password(password)?;
+    }
     reject_blank("email", &input.email)?;
-    reject_blank("role", &input.role)
+    reject_blank("role", &input.role)?;
+    validate_rate_limit(input.rate_limit_rpm)?;
+    validate_quota_mode(&input.quota_mode)
 }
 
 pub(super) fn validate_page(page: PageRequest) -> AppResult<()> {
@@ -53,16 +59,20 @@ pub(super) fn sanitize_new_user(input: NewUser) -> NewUser {
         email: input.email.trim().into(),
         role: input.role,
         is_active: input.is_active,
+        rate_limit_rpm: input.rate_limit_rpm,
+        quota_mode: input.quota_mode,
     }
 }
 
 pub(super) fn sanitize_replace_user(input: ReplaceUser) -> ReplaceUser {
     ReplaceUser {
         username: input.username.trim().into(),
-        password: input.password.trim().into(),
+        password: nonblank_password(input.password),
         email: input.email.trim().into(),
         role: input.role,
         is_active: input.is_active,
+        rate_limit_rpm: input.rate_limit_rpm,
+        quota_mode: input.quota_mode,
     }
 }
 
@@ -77,6 +87,14 @@ fn validate_username(username: &str) -> AppResult<()> {
         return Err(AppError::InvalidInput("username must start and end with a letter or number".into()));
     }
     Ok(())
+}
+
+fn nonblank_password(password: Option<String>) -> Option<String> {
+    let password = password?.trim().to_owned();
+    if password.is_empty() {
+        return None;
+    }
+    Some(password)
 }
 
 pub(super) fn validate_password(password: &str) -> AppResult<()> {
@@ -108,4 +126,18 @@ fn reject_blank(field: &str, value: &str) -> AppResult<()> {
         return Err(AppError::InvalidInput(format!("{field} cannot be blank")));
     }
     Ok(())
+}
+
+fn validate_rate_limit(value: Option<i64>) -> AppResult<()> {
+    if value.is_some_and(|rate| rate < 0) {
+        return Err(AppError::InvalidInput("rate_limit_rpm must be greater than or equal to 0".into()));
+    }
+    Ok(())
+}
+
+fn validate_quota_mode(value: &str) -> AppResult<()> {
+    if matches!(value, USER_QUOTA_MODE_WALLET | USER_QUOTA_MODE_UNLIMITED) {
+        return Ok(());
+    }
+    Err(AppError::InvalidInput("quota_mode must be wallet or unlimited".into()))
 }

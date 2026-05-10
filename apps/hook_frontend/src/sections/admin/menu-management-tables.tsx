@@ -29,9 +29,9 @@ export function MenuManagementTables({ tab, data, formState, deleteState }: Prop
 
   return (
     <MenuItemsTable
+      sections={data.allSections.items}
       loading={data.items.isLoading}
       rows={data.items.items}
-      sectionNameById={data.sectionNameById}
       table={data.itemTable}
       total={data.items.total}
       onBindApis={formState.apiBinding.open}

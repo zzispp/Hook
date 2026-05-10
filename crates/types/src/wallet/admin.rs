@@ -169,6 +169,13 @@ pub struct AdminWalletAdjustmentPayload {
     pub description: Option<String>,
 }
 
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct AdminWalletRechargePayload {
+    #[serde(with = "rust_decimal::serde::float")]
+    pub amount: Decimal,
+    pub description: Option<String>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WalletBalanceTypePayload {
@@ -185,6 +192,11 @@ pub enum WalletAdjustmentTypePayload {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct AdminWalletAdjustmentResponse {
+    pub transaction: WalletTransactionResponse,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AdminWalletRechargeResponse {
     pub transaction: WalletTransactionResponse,
 }
 

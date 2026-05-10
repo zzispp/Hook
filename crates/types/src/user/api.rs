@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::pagination::{Page, PageRequest};
@@ -11,6 +12,10 @@ pub struct UserPayload {
     pub email: String,
     pub role: String,
     pub is_active: bool,
+    #[serde(default)]
+    pub rate_limit_rpm: Option<i64>,
+    #[serde(default)]
+    pub quota_mode: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,6 +58,25 @@ pub struct UserResponse {
     pub auth_source: String,
     pub email_verified: bool,
     pub system: bool,
+    pub rate_limit_rpm: Option<i64>,
+    pub quota_mode: String,
+    pub created_at: String,
+    pub last_login_at: Option<String>,
+    pub wallet: Option<UserWalletSummaryResponse>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct UserWalletSummaryResponse {
+    pub id: String,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub available_balance: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub recharge_balance: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub gift_balance: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_consumed: Decimal,
+    pub status: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -71,6 +95,8 @@ impl From<UserPayload> for NewUser {
             email: value.email,
             role: value.role,
             is_active: value.is_active,
+            rate_limit_rpm: value.rate_limit_rpm,
+            quota_mode: value.quota_mode.unwrap_or_else(|| super::USER_QUOTA_MODE_WALLET.into()),
         }
     }
 }
@@ -79,10 +105,12 @@ impl From<UserPayload> for ReplaceUser {
     fn from(value: UserPayload) -> Self {
         Self {
             username: value.username,
-            password: value.password,
+            password: Some(value.password),
             email: value.email,
             role: value.role,
             is_active: value.is_active,
+            rate_limit_rpm: value.rate_limit_rpm,
+            quota_mode: value.quota_mode.unwrap_or_else(|| super::USER_QUOTA_MODE_WALLET.into()),
         }
     }
 }
@@ -126,7 +154,19 @@ impl From<User> for UserResponse {
             auth_source: value.auth_source,
             email_verified: value.email_verified,
             system: value.system,
+            rate_limit_rpm: value.rate_limit_rpm,
+            quota_mode: value.quota_mode,
+            created_at: value.created_at,
+            last_login_at: value.last_login_at,
+            wallet: None,
         }
+    }
+}
+
+impl UserResponse {
+    pub fn with_wallet(mut self, wallet: Option<UserWalletSummaryResponse>) -> Self {
+        self.wallet = wallet;
+        self
     }
 }
 

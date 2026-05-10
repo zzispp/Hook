@@ -36,9 +36,9 @@ export type ApiPermission = {
   method: string;
   path_pattern: string;
   name: string;
-  group: string;
   enabled: boolean;
   system: boolean;
+  menu_item_ids: string[];
 };
 
 export type ApiPermissionInput = {
@@ -46,7 +46,6 @@ export type ApiPermissionInput = {
   method: string;
   path_pattern: string;
   name: string;
-  group: string;
   enabled: boolean;
   menu_item_ids: string[];
 };
@@ -135,6 +134,11 @@ export type SystemUser = {
   auth_source: string;
   email_verified: boolean;
   system: boolean;
+  rate_limit_rpm?: number | null;
+  quota_mode: UserQuotaMode;
+  created_at: string;
+  last_login_at?: string | null;
+  wallet?: UserWalletSummary | null;
 };
 
 export type UserInput = {
@@ -143,4 +147,17 @@ export type UserInput = {
   email: string;
   role: string;
   is_active: boolean;
+  rate_limit_rpm?: number | null;
+  quota_mode: UserQuotaMode;
+};
+
+export type UserQuotaMode = 'wallet' | 'unlimited';
+
+export type UserWalletSummary = {
+  id: string;
+  available_balance: number;
+  recharge_balance: number;
+  gift_balance: number;
+  total_consumed: number;
+  status: string;
 };

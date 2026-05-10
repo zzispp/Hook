@@ -479,9 +479,9 @@ fn api_with_id(id: &str, index: usize) -> ApiPermission {
         method: "GET".into(),
         path_pattern: format!("/api/{index}"),
         name: format!("API {index}"),
-        group: "Tests".into(),
         enabled: true,
         system: false,
+        menu_item_ids: Vec::new(),
     }
 }
 

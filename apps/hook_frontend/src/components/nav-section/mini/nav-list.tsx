@@ -11,6 +11,7 @@ import { useTheme } from '@mui/material/styles';
 import { usePathname } from 'src/routes/hooks';
 
 import { NavItem } from './nav-item';
+import { navItemKey } from '../utils';
 import { navSectionClasses } from '../styles';
 import { NavUl, NavLi, NavDropdown, NavDropdownPaper } from '../components';
 
@@ -40,7 +41,7 @@ export function NavList({
   } = usePopoverHover<HTMLButtonElement>();
 
   const isRtl = theme.direction === 'rtl';
-  const id = open ? `${data.title}-popover` : undefined;
+  const id = open ? `${navItemKey(data)}-popover` : undefined;
 
   useEffect(() => {
     // If the pathname changes, close the menu
@@ -148,7 +149,7 @@ function NavSubList({
     <NavUl sx={{ gap: 0.5 }}>
       {data.map((list) => (
         <NavList
-          key={list.title}
+          key={navItemKey(list)}
           data={list}
           render={render}
           depth={depth + 1}

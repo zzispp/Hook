@@ -59,7 +59,6 @@ pub(super) fn api_input(code: &str) -> ApiPermissionInput {
         method: "GET".into(),
         path_pattern: "/api/users".into(),
         name: code.into(),
-        group: "Users".into(),
         enabled: true,
         menu_item_ids: vec![],
     }
@@ -72,9 +71,9 @@ pub(super) fn api_permission(id: u64, input: ApiPermissionInput) -> ApiPermissio
         method: input.method,
         path_pattern: input.path_pattern,
         name: input.name,
-        group: input.group,
         enabled: input.enabled,
         system: false,
+        menu_item_ids: input.menu_item_ids,
     }
 }
 

@@ -128,6 +128,19 @@ export async function toggleToken(scope: TokenScope, token: ApiToken) {
   return scope === 'admin' ? updateAdminApiToken(token.id, payload) : updateApiToken(token.id, payload);
 }
 
+export async function toggleTokenAndNotify(
+  scope: TokenScope,
+  token: ApiToken,
+  t: (key: string) => string
+) {
+  try {
+    await toggleToken(scope, token);
+    toast.success(t('messages.apiTokenUpdated'));
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
+  }
+}
+
 async function saveCreate(scope: TokenScope, form: TokenForm) {
   return scope === 'admin'
     ? createAdminApiToken(adminTokenCreatePayload(form))

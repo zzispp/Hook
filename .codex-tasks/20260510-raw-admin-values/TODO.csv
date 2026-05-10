@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect translated API and menu usages,DONE,All relevant admin helper usages are classified,rg "translatedApiName|translatedMenuItem|translatedMenuSection" apps/hook_frontend/src,2026-05-10,0,Classified API/menu/role helper usages in admin configuration pages
+2,Replace admin value displays with raw values,DONE,Admin configuration UIs show raw API names and menu titles,pnpm lint:frontend,2026-05-10,0,Admin API/menu/role/group displays now use raw backend values
+3,Run validation,DONE,Frontend lint passes,pnpm lint:frontend,2026-05-10,0,pnpm lint:frontend passed

@@ -8,6 +8,7 @@ async-trait.workspace = true
 axum.workspace = true
 constants.workspace = true
 hex.workspace = true
+rand.workspace = true
 rand_core.workspace = true
 rbac.workspace = true
 rust_decimal.workspace = true

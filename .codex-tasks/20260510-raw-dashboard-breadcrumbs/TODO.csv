@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect breadcrumb usage,DONE,Translated dashboard breadcrumb/title call sites identified,rg -n "CustomBreadcrumbs|AdminBreadcrumbs|pages\\.|nav\\." apps/hook_frontend/src/sections apps/hook_frontend/src/layouts,,0,
+2,Add raw navbar breadcrumb resolver,DONE,Current dashboard route can resolve heading and links from navbar data,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-10,0,"useDashboardBreadcrumbs resolves current item and section from navbar data."
+3,Update dashboard breadcrumb consumers,DONE,Admin and user dashboard pages use raw navbar labels,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-10,0,"Fallback headings now use baseline raw menu constants instead of t('pages.*') or t('nav.*')."
+4,Run focused validation,DONE,Frontend type check passes,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-10,0,"Type check passed; rg found no translated heading/section fallbacks in dashboard consumers."

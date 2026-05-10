@@ -23,7 +23,6 @@ import {
   EnabledLabel,
   TableLoadingRows,
   ManagementTableHead,
-  translatedMenuSection,
 } from './shared';
 
 type Props = {
@@ -80,7 +79,7 @@ function MenuSectionsTableRow({
 
   return (
     <TableRow hover>
-      <TableCell>{translatedMenuSection(row, t)}</TableCell>
+      <TableCell>{row.subheader}</TableCell>
       <TableCell sx={{ fontFamily: 'monospace' }}>{row.code}</TableCell>
       <TableCell>{row.sort_order}</TableCell>
       <TableCell>

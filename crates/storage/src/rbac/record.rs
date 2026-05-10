@@ -34,9 +34,9 @@ impl From<ApiPermissionRecord> for ApiPermission {
             method: value.method,
             path_pattern: value.path_pattern,
             name: value.name,
-            group: value.group,
             enabled: value.enabled,
             system: value.system,
+            menu_item_ids: Vec::new(),
         }
     }
 }

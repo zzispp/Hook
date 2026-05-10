@@ -25,7 +25,6 @@ impl RbacStore {
             method: Set(input.method),
             path_pattern: Set(input.path_pattern),
             name: Set(input.name),
-            group: Set(input.group),
             enabled: Set(input.enabled),
             system: Set(input.system),
             created_at: Set(now),
@@ -52,7 +51,6 @@ impl RbacStore {
         active.method = Set(input.method);
         active.path_pattern = Set(input.path_pattern);
         active.name = Set(input.name);
-        active.group = Set(input.group);
         active.enabled = Set(input.enabled);
         active.system = Set(input.system);
         active.updated_at = Set(time::OffsetDateTime::now_utc());
@@ -109,7 +107,11 @@ impl RbacStore {
             .offset(request.offset)
             .all(self.database.connection())
             .await?;
-        Ok(rbac_page(items.into_iter().map(ApiPermission::from).collect(), total, request))
+        Ok(rbac_page(
+            api_permissions_with_menu_ids(items.into_iter().map(ApiPermission::from).collect(), self.list_menu_api_bindings().await?),
+            total,
+            request,
+        ))
     }
 
     pub async fn page_unbound_apis(&self, request: PageSliceRequest, filters: RbacRecordFilters) -> StorageResult<Page<ApiPermission>> {
@@ -121,7 +123,11 @@ impl RbacStore {
             .offset(request.offset)
             .all(self.database.connection())
             .await?;
-        Ok(rbac_page(items.into_iter().map(ApiPermission::from).collect(), total, request))
+        Ok(rbac_page(
+            api_permissions_with_menu_ids(items.into_iter().map(ApiPermission::from).collect(), self.list_menu_api_bindings().await?),
+            total,
+            request,
+        ))
     }
 
     async fn find_api_record(&self, id: &str) -> StorageResult<Option<ApiPermissionRecord>> {
@@ -130,6 +136,17 @@ impl RbacStore {
             .await
             .map_err(StorageError::from)
     }
+}
+
+fn api_permissions_with_menu_ids(mut apis: Vec<ApiPermission>, bindings: Vec<MenuApiBindingRecordInput>) -> Vec<ApiPermission> {
+    for api in &mut apis {
+        api.menu_item_ids = bindings
+            .iter()
+            .filter(|binding| binding.api_permission_id == api.id)
+            .map(|binding| binding.menu_item_id.clone())
+            .collect();
+    }
+    apis
 }
 
 fn unbound_api_query(filters: RbacRecordFilters) -> Select<api_permission_records::Entity> {
@@ -158,7 +175,6 @@ fn api_search_condition(search: &str) -> Condition {
         .add(api_permission_records::Column::Method.contains(search))
         .add(api_permission_records::Column::PathPattern.contains(search))
         .add(api_permission_records::Column::Name.contains(search))
-        .add(api_permission_records::Column::Group.contains(search))
 }
 
 fn api_active_model(id: String, input: ApiPermissionRecordInput) -> ApiActiveModel {
@@ -169,7 +185,6 @@ fn api_active_model(id: String, input: ApiPermissionRecordInput) -> ApiActiveMod
         method: Set(input.method),
         path_pattern: Set(input.path_pattern),
         name: Set(input.name),
-        group: Set(input.group),
         enabled: Set(input.enabled),
         system: Set(input.system),
         created_at: Set(now),
@@ -192,7 +207,6 @@ fn set_api_fields(active: &mut ApiActiveModel, input: ApiPermissionRecordInput) 
     active.method = Set(input.method);
     active.path_pattern = Set(input.path_pattern);
     active.name = Set(input.name);
-    active.group = Set(input.group);
     active.enabled = Set(input.enabled);
     active.system = Set(input.system);
     active.updated_at = Set(time::OffsetDateTime::now_utc());

@@ -1,5 +1,6 @@
 use rust_decimal::Decimal;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, TransactionTrait};
+use std::collections::BTreeMap;
 use types::{
     pagination::{Page, PageSliceRequest},
     wallet::{Wallet, WalletTransaction},
@@ -32,6 +33,17 @@ impl WalletStore {
             .await
             .map(|record| record.map(Wallet::from))
             .map_err(StorageError::from)
+    }
+
+    pub async fn find_by_user_ids(&self, user_ids: &[String]) -> StorageResult<BTreeMap<String, Wallet>> {
+        if user_ids.is_empty() {
+            return Ok(BTreeMap::new());
+        }
+        let records = wallet_records::Entity::find()
+            .filter(wallet_records::Column::UserId.is_in(user_ids.iter().cloned()))
+            .all(self.database.connection())
+            .await?;
+        Ok(records.into_iter().map(Wallet::from).map(|wallet| (wallet.user_id.clone(), wallet)).collect())
     }
 
     pub async fn find_by_id(&self, id: &str) -> StorageResult<Option<Wallet>> {
@@ -171,8 +183,8 @@ fn transaction_active_model(input: WalletTransactionRecordInput, id: String) -> 
 fn initial_grant_transaction(before: &Wallet, after: &Wallet, amount: Decimal) -> WalletTransactionRecordInput {
     WalletTransactionRecordInput {
         wallet_id: before.id.0.clone(),
-        category: "grant".into(),
-        reason_code: "initial_user_grant".into(),
+        category: "gift".into(),
+        reason_code: "gift_initial".into(),
         amount,
         balance_before: before.recharge_balance + before.gift_balance,
         balance_after: after.recharge_balance + after.gift_balance,

@@ -5,9 +5,11 @@ import type { ApiEnvelope } from 'src/types/rbac';
 import type {
   WalletBalanceResponse,
   AdminWalletListResponse,
+  AdminWalletRechargeInput,
   AdminWalletLedgerResponse,
   AdminWalletAdjustmentInput,
   WalletTransactionsResponse,
+  AdminWalletRechargeResponse,
   AdminWalletAdjustmentResponse,
   AdminWalletTransactionsResponse,
 } from 'src/types/wallet';
@@ -97,9 +99,22 @@ export function useAdminWalletTransactions(walletId: string | null, page: number
   return useWalletResource<AdminWalletTransactionsResponse>(key);
 }
 
+export function useAdminUserWalletBalance(userId: string | null) {
+  const key = userId ? endpoints.adminWallets.userBalance(userId) : null;
+  return useWalletResource<WalletBalanceResponse>(key);
+}
+
 export async function adjustAdminWallet(walletId: string, payload: AdminWalletAdjustmentInput) {
   const response = await axios.post<ApiEnvelope<AdminWalletAdjustmentResponse>>(
     endpoints.adminWallets.adjust(walletId),
+    payload
+  );
+  return requireApiData(response.data);
+}
+
+export async function rechargeAdminWallet(walletId: string, payload: AdminWalletRechargeInput) {
+  const response = await axios.post<ApiEnvelope<AdminWalletRechargeResponse>>(
+    endpoints.adminWallets.recharge(walletId),
     payload
   );
   return requireApiData(response.data);

@@ -12,10 +12,13 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 
-import { paths } from 'src/routes/paths';
-
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import {
+  DASHBOARD_MENU_TITLES,
+  DASHBOARD_MENU_SECTIONS,
+} from 'src/layouts/dashboard/dashboard-menu-values';
+import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import { useUserModelCatalog } from 'src/actions/models';
 import { useAvailableBillingGroups } from 'src/actions/groups';
 
@@ -33,6 +36,10 @@ export function ModelCatalogView() {
   const { t } = useTranslate('admin');
   const catalog = useUserModelCatalog();
   const groups = useAvailableBillingGroups();
+  const breadcrumbs = useDashboardBreadcrumbs({
+    heading: DASHBOARD_MENU_TITLES.modelCatalog,
+    section: DASHBOARD_MENU_SECTIONS.operations,
+  });
   const [query, setQuery] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<GlobalModelResponse | null>(null);
@@ -49,12 +56,8 @@ export function ModelCatalogView() {
   return (
     <DashboardContent maxWidth="xl">
       <CustomBreadcrumbs
-        heading={t('models.availableModels')}
-        links={[
-          { name: t('nav.dashboard'), href: paths.dashboard.root },
-          { name: t('nav.resources') },
-          { name: t('nav.modelCatalog') },
-        ]}
+        heading={breadcrumbs.heading}
+        links={breadcrumbs.links}
         sx={{ mb: { xs: 3, md: 5 } }}
       />
 

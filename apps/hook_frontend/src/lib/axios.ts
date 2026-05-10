@@ -166,8 +166,10 @@ export const endpoints = {
   adminWallets: {
     list: '/api/admin/wallets',
     ledger: '/api/admin/wallets/ledger',
+    userBalance: (userId: string) => `/api/admin/wallets/users/${userId}/balance`,
     transactions: (id: string) => `/api/admin/wallets/${id}/transactions`,
     adjust: (id: string) => `/api/admin/wallets/${id}/adjust`,
+    recharge: (id: string) => `/api/admin/wallets/${id}/recharge`,
   },
   mail: {
     list: '/api/mail/list',

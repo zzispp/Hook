@@ -14,8 +14,6 @@ import {
   TextFieldRow,
   NAV_ICON_OPTIONS,
   ManagementDialog,
-  translatedMenuItem,
-  translatedMenuSection,
 } from './shared';
 
 type Props = {
@@ -56,6 +54,9 @@ export function MenuItemFormDialog({
 }: Props) {
   const { t } = useTranslate('admin');
   const title = editing ? t('dialogs.editMenuItem') : t('dialogs.createMenuItem');
+  const parentItems = allItems.filter(
+    (item) => item.id !== editing?.id && item.section_id === form.section_id
+  );
 
   return (
     <ManagementDialog open={open} title={title} submitting={submitting} onClose={onClose} onSubmit={onSubmit}>
@@ -64,11 +65,11 @@ export function MenuItemFormDialog({
         select
         label={t('common.section')}
         value={form.section_id}
-        onChange={(value) => onFormChange({ ...form, section_id: value })}
+        onChange={(value) => onFormChange({ ...form, section_id: value, parent_id: null })}
       >
         {allSections.map((section) => (
           <MenuItem key={section.id} value={section.id}>
-            {translatedMenuSection(section, t)}
+            {section.subheader}
           </MenuItem>
         ))}
       </TextFieldRow>
@@ -79,13 +80,11 @@ export function MenuItemFormDialog({
         onChange={(value) => onFormChange({ ...form, parent_id: value || null })}
       >
         <MenuItem value="">{t('common.none')}</MenuItem>
-        {allItems
-          .filter((item) => item.id !== editing?.id)
-          .map((item) => (
-            <MenuItem key={item.id} value={item.id}>
-              {translatedMenuItem(item, t)}
-            </MenuItem>
-          ))}
+        {parentItems.map((item) => (
+          <MenuItem key={item.id} value={item.id}>
+            {item.title}
+          </MenuItem>
+        ))}
       </TextFieldRow>
       <MenuItemTextFields form={form} onFormChange={onFormChange} />
       <Box>

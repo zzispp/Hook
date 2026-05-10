@@ -1,8 +1,6 @@
 'use client';
 
-import type { AdminT } from './shared';
 import type { NavSectionProps } from 'src/components/nav-section';
-import type { MenuSection, MenuItem as RbacMenuItem } from 'src/types/rbac';
 
 import { CONFIG } from 'src/global-config';
 
@@ -49,41 +47,6 @@ export const NAV_ICONS: NonNullable<NavSectionProps['render']>['navIcon'] = {
   'icon.user': icon('ic-user'),
   'icon.wallet': icon('ic-banking'),
 };
-
-export function translatedMenuSection(section: MenuSection, t: AdminT) {
-  const keyByCode: Record<string, string> = {
-    overview: 'nav.overview',
-    account: 'nav.account',
-    resources: 'nav.resources',
-    system_management: 'nav.systemManagement',
-  };
-
-  const key = keyByCode[section.code];
-
-  return key ? t(key) : section.subheader;
-}
-
-export function translatedMenuItem(item: RbacMenuItem, t: AdminT) {
-  const keyByCode: Record<string, string> = {
-    dashboard_home: 'nav.dashboard',
-    dashboard_models: 'nav.modelCatalog',
-    api_tokens: 'nav.apiTokens',
-    wallet_center: 'nav.walletCenter',
-    admin_groups: 'nav.billingGroups',
-    admin_tokens: 'nav.adminApiTokens',
-    admin_users: 'nav.users',
-    admin_roles: 'nav.roles',
-    admin_apis: 'nav.apis',
-    admin_menus: 'nav.menus',
-    admin_models: 'nav.models',
-    admin_settings: 'nav.systemSettings',
-    admin_wallets: 'nav.walletManagement',
-  };
-
-  const key = keyByCode[item.code];
-
-  return key ? t(key) : item.title;
-}
 
 function icon(name: string) {
   return <SvgColor src={`${CONFIG.assetsDir}/assets/icons/navbar/${name}.svg`} />;

@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing binding dialog,DONE,Current data flow and UI dependencies are understood,sed -n '1,180p' apps/hook_frontend/src/sections/admin/menu-api-binding-dialog.tsx,2026-05-10T00:00:00+08:00,0,Dialog receives all APIs and selected API ids; save state can remain owned by parent.
+2,Implement transfer list,DONE,Dialog shows available and bound API columns with arrow controls,pnpm lint:frontend,2026-05-10T00:00:00+08:00,0,Menu API binding dialog now uses a two-column transfer list with method labels and paths.
+3,Run validation,DONE,Frontend lint passes,pnpm lint:frontend,2026-05-10T00:00:00+08:00,0,Frontend lint passed.

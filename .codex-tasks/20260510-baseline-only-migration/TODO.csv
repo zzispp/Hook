@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect final migration state,DONE,Current tables indexes seeds from all dev migrations are accounted for,rg "impl MigrationTrait|Table::create|Query::insert" apps/hook_backend/src/migration,2026-05-09T21:40:32Z,0,Final schema includes groups tokens group-model bindings settings user rate/quota and removed api permission group.
+2,Consolidate schema into baseline,DONE,Baseline creates final tables columns indexes only,cargo check -p backend,2026-05-09T21:46:40Z,0,Added final domain tables columns and indexes to baseline.
+3,Consolidate default seeds into baseline,DONE,Baseline seeds final menus APIs roles settings groups bindings,cargo check -p backend,2026-05-09T21:46:40Z,0,Unified default API menu bindings plus system group and system settings seed.
+4,Remove incremental migrations from registry and files,DONE,Only baseline migration remains registered,find apps/hook_backend/src/migration -maxdepth 1 -type d,2026-05-09T21:47:42Z,0,Removed m20260510 migration modules and registry entries.
+5,Run validation,DONE,Formatting check and focused tests pass,cargo fmt --all && cargo check --workspace,2026-05-09T21:50:34Z,0,Also ran cargo test -p backend and non-destructive migration status; status exposes old applied dev migrations in the current database.

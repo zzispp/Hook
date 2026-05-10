@@ -5,7 +5,6 @@ import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
 
 import { varAlpha } from 'minimal-shared/utils';
-import { useCopyToClipboard } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
@@ -18,10 +17,10 @@ import Typography from '@mui/material/Typography';
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Label } from 'src/components/label';
-import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
+import { ModelCopyButton } from './model-copy-button';
 import { ModelPricingSection } from './model-pricing-section';
 import { ModelGroupPricingSection } from './model-group-pricing-section';
 import {
@@ -98,7 +97,6 @@ function DrawerHeader({ onClose }: { onClose: () => void }) {
 
 function ModelSummary({ model }: { model: GlobalModelResponse }) {
   const { t } = useTranslate('admin');
-  const { copy } = useCopyToClipboard();
 
   return (
     <Stack spacing={1.25}>
@@ -112,9 +110,7 @@ function ModelSummary({ model }: { model: GlobalModelResponse }) {
         <Typography variant="body2" color="text.secondary" sx={modelNameSx}>
           {model.name}
         </Typography>
-        <IconButton size="small" onClick={() => copyModelName(copy, model.name, t('models.modelIdCopied'))}>
-          <Iconify width={16} icon="solar:copy-bold" />
-        </IconButton>
+        <ModelCopyButton value={model.name} />
       </Stack>
       <Description model={model} />
     </Stack>
@@ -180,11 +176,6 @@ function CapabilityItem({
       </Label>
     </Stack>
   );
-}
-
-function copyModelName(copy: (value: string) => void, name: string, message: string) {
-  copy(name);
-  toast.success(message);
 }
 
 function drawerSlotProps(onExited: () => void) {

@@ -1,31 +1,26 @@
 'use client';
 
-import type { TableHeadCellProps } from 'src/components/table';
-import type { Role, UserInput, SystemUser } from 'src/types/rbac';
+import type { SystemUser } from 'src/types/rbac';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
-import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Table from '@mui/material/Table';
 import Button from '@mui/material/Button';
-import Tooltip from '@mui/material/Tooltip';
-import MenuItem from '@mui/material/MenuItem';
-import TableRow from '@mui/material/TableRow';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import IconButton from '@mui/material/IconButton';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useRoles, useUsers, createUser, deleteUser, updateUser } from 'src/actions/rbac';
 
 import { toast } from 'src/components/snackbar';
-import { Iconify } from 'src/components/iconify';
-import { Scrollbar } from 'src/components/scrollbar';
+import { useTable } from 'src/components/table';
 import { ConfirmDialog } from 'src/components/custom-dialog';
-import { useTable, TableNoData, TablePaginationCustom } from 'src/components/table';
 
+import { UserTable } from './user-table';
+import { AdminBreadcrumbs } from './shared';
+import { UserFormDialog } from './user-form-dialog';
+import { UserTokenDialog } from './user-token-dialog';
+import { UserWalletDialog } from './user-wallet-dialog';
 import { RefreshAddActions } from './admin-page-actions';
 import {
   toUserFilters,
@@ -33,57 +28,36 @@ import {
   DEFAULT_ADMIN_FILTERS,
 } from './admin-filters-toolbar';
 import {
-  SwitchRow,
-  TextFieldRow,
-  EnabledLabel,
-  BooleanLabel,
-  AdminBreadcrumbs,
-  ManagementDialog,
-  TableLoadingRows,
-  translatedRoleName,
-  ManagementTableHead,
-  translatedAuthSource,
-} from './shared';
-
-const DEFAULT_FORM: UserInput = {
-  username: '',
-  password: '',
-  email: '',
-  role: '',
-  is_active: true,
-};
+  formFromUser,
+  formToPayload,
+  roleFilterOptions,
+  DEFAULT_USER_FORM,
+  enabledRoleOptions,
+} from './user-management-utils';
 
 export function UserManagementView() {
+  const state = useUserManagementState();
+
+  return (
+    <DashboardContent maxWidth="xl">
+      <UserManagementHeader state={state} />
+      <UserManagementTableCard state={state} />
+      <UserManagementDialogs state={state} />
+    </DashboardContent>
+  );
+}
+
+function useUserManagementState() {
   const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'username' });
   const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
   const users = useUsers(table.page, table.rowsPerPage, toUserFilters(filters));
-  const { items, total, isLoading } = users;
   const roles = useRoles(0, 100);
-  const tableHead = useMemo<TableHeadCellProps[]>(
-    () => [
-      { id: 'username', label: t('common.username'), width: 220 },
-      { id: 'email', label: t('common.email') },
-      { id: 'role', label: t('common.role'), width: 160 },
-      { id: 'auth_source', label: t('common.source'), width: 130 },
-      { id: 'is_active', label: t('common.status'), width: 120 },
-      { id: 'system', label: t('common.type'), width: 120 },
-      { id: '', width: 96 },
-    ],
-    [t]
-  );
-
-  const [form, setForm] = useState<UserInput>(DEFAULT_FORM);
-  const [editing, setEditing] = useState<SystemUser | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const dialog = useUserDialog(t, () => void users.refresh());
   const [deleteTarget, setDeleteTarget] = useState<SystemUser | null>(null);
-
-  const roleOptions = roles.items.filter((role) => role.enabled);
-  const filterRoleOptions = roleOptions.map((role) => ({
-    value: role.code,
-    label: `${translatedRoleName(role, t)} (${role.code})`,
-  }));
+  const [walletUser, setWalletUser] = useState<SystemUser | null>(null);
+  const [tokenUser, setTokenUser] = useState<SystemUser | null>(null);
+  const roleOptions = enabledRoleOptions(roles.items);
 
   const handleFiltersChange = useCallback(
     (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
@@ -93,53 +67,8 @@ export function UserManagementView() {
     [table]
   );
 
-  const openCreate = useCallback(() => {
-    setEditing(null);
-    setCreating(true);
-    setForm({
-      ...DEFAULT_FORM,
-      role: roleOptions[0]?.code ?? '',
-    });
-  }, [roleOptions]);
-
-  const openEdit = useCallback((user: SystemUser) => {
-    setEditing(user);
-    setForm({
-      username: user.username,
-      password: '',
-      email: user.email,
-      role: user.role,
-      is_active: user.is_active,
-    });
-  }, []);
-
-  const closeDialog = useCallback(() => {
-    setEditing(null);
-    setCreating(false);
-    setForm(DEFAULT_FORM);
-  }, []);
-
-  const submitUser = useCallback(async () => {
-    setSubmitting(true);
-    try {
-      if (editing) {
-        await updateUser(editing.id, form);
-        toast.success(t('messages.userUpdated'));
-      } else {
-        await createUser(form);
-        toast.success(t('messages.userCreated'));
-      }
-      closeDialog();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
-    } finally {
-      setSubmitting(false);
-    }
-  }, [closeDialog, editing, form, t]);
-
   const confirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
-
     try {
       await deleteUser(deleteTarget.id);
       toast.success(t('messages.userDeleted'));
@@ -149,151 +78,137 @@ export function UserManagementView() {
     }
   }, [deleteTarget, t]);
 
+  return {
+    t,
+    table,
+    users,
+    roles,
+    dialog,
+    filters,
+    tokenUser,
+    walletUser,
+    roleOptions,
+    deleteTarget,
+    confirmDelete,
+    setTokenUser,
+    setWalletUser,
+    setDeleteTarget,
+    handleFiltersChange,
+  };
+}
+
+function UserManagementHeader({ state }: { state: ReturnType<typeof useUserManagementState> }) {
   return (
-    <DashboardContent>
-      <AdminBreadcrumbs
-        heading={t('pages.userManagement')}
-        action={
-          <RefreshAddActions
-            loading={isLoading}
-            addLabel={t('actions.addUser')}
-            onAdd={openCreate}
-            onRefresh={() => void users.refresh()}
-          />
-        }
+    <AdminBreadcrumbs
+      heading={DASHBOARD_MENU_TITLES.userManagement}
+      action={
+        <RefreshAddActions
+          loading={state.users.isLoading}
+          addLabel={state.t('actions.addUser')}
+          onAdd={() => state.dialog.openCreate(state.roleOptions[0]?.code)}
+          onRefresh={() => void state.users.refresh()}
+        />
+      }
+    />
+  );
+}
+
+function UserManagementTableCard({ state }: { state: ReturnType<typeof useUserManagementState> }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Card>
+      <AdminFiltersToolbar
+        filters={state.filters}
+        roleOptions={roleFilterOptions(state.roleOptions)}
+        searchPlaceholder={t('filters.searchUsers')}
+        onChange={state.handleFiltersChange}
       />
+      <UserTable
+        rows={state.users.items}
+        roles={state.roles.items}
+        total={state.users.total}
+        loading={state.users.isLoading}
+        table={state.table}
+        onEdit={state.dialog.openEdit}
+        onWallet={state.setWalletUser}
+        onTokens={state.setTokenUser}
+        onDelete={state.setDeleteTarget}
+      />
+    </Card>
+  );
+}
 
-      <Card>
-        <AdminFiltersToolbar
-          filters={filters}
-          roleOptions={filterRoleOptions}
-          searchPlaceholder={t('filters.searchUsers')}
-          onChange={handleFiltersChange}
-        />
-        <Scrollbar>
-          <Table sx={{ minWidth: 980 }}>
-            <ManagementTableHead head={tableHead} />
-            <TableBody>
-              {isLoading ? (
-                <TableLoadingRows head={tableHead} rows={table.rowsPerPage} />
-              ) : (
-                items.map((row) => (
-                  <TableRow key={row.id} hover>
-                    <TableCell>{row.username}</TableCell>
-                    <TableCell>{row.email}</TableCell>
-                    <TableCell>{displayRole(row.role, roles.items, t)}</TableCell>
-                    <TableCell>{translatedAuthSource(row.auth_source, t)}</TableCell>
-                    <TableCell>
-                      <EnabledLabel enabled={row.is_active} />
-                    </TableCell>
-                    <TableCell>
-                      <BooleanLabel
-                        enabled={row.system}
-                        trueText={t('common.system')}
-                        falseText={t('common.local')}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Tooltip title={t('common.edit')}>
-                          <span>
-                            <IconButton disabled={row.system} onClick={() => openEdit(row)}>
-                              <Iconify icon="solar:pen-bold" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title={t('common.delete')}>
-                          <span>
-                            <IconButton color="error" disabled={row.system} onClick={() => setDeleteTarget(row)}>
-                              <Iconify icon="solar:trash-bin-trash-bold" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+function UserManagementDialogs({ state }: { state: ReturnType<typeof useUserManagementState> }) {
+  const { t } = useTranslate('admin');
 
-              <TableNoData title={t('common.noData')} notFound={!isLoading && items.length === 0} />
-            </TableBody>
-          </Table>
-        </Scrollbar>
-
-        <TablePaginationCustom
-          page={table.page}
-          count={total}
-          rowsPerPage={table.rowsPerPage}
-          onPageChange={table.onChangePage}
-          onRowsPerPageChange={table.onChangeRowsPerPage}
-        />
-      </Card>
-
-      <ManagementDialog
-        open={creating || !!editing}
-        title={editing ? t('dialogs.editUser') : t('dialogs.createUser')}
-        submitting={submitting}
-        onClose={closeDialog}
-        onSubmit={submitUser}
-      >
-        <TextFieldRow
-          required
-          label={t('common.username')}
-          value={form.username}
-          onChange={(value) => setForm((current) => ({ ...current, username: value }))}
-        />
-        <TextFieldRow
-          required
-          label={t('common.email')}
-          value={form.email}
-          onChange={(value) => setForm((current) => ({ ...current, email: value }))}
-        />
-        <TextFieldRow
-          required
-          select
-          label={t('common.role')}
-          value={form.role}
-          onChange={(value) => setForm((current) => ({ ...current, role: value }))}
-        >
-          {roleOptions.map((role) => (
-            <MenuItem key={role.code} value={role.code}>
-              {translatedRoleName(role, t)} ({role.code})
-            </MenuItem>
-          ))}
-        </TextFieldRow>
-        <TextFieldRow
-          required
-          type="password"
-          label={editing ? t('fields.newPassword') : t('common.password')}
-          value={form.password}
-          helperText={editing ? t('helper.updatePasswordRequired') : undefined}
-          onChange={(value) => setForm((current) => ({ ...current, password: value }))}
-        />
-        <SwitchRow
-          label={t('common.active')}
-          checked={form.is_active}
-          onChange={(isActive) => setForm((current) => ({ ...current, is_active: isActive }))}
-        />
-      </ManagementDialog>
-
+  return (
+    <>
+      <UserFormDialog dialog={state.dialog} roles={state.roleOptions} />
+      <UserWalletDialog
+        user={state.walletUser}
+        onClose={() => state.setWalletUser(null)}
+        onChanged={() => state.users.refresh()}
+      />
+      <UserTokenDialog user={state.tokenUser} onClose={() => state.setTokenUser(null)} />
       <ConfirmDialog
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        open={!!state.deleteTarget}
+        onClose={() => state.setDeleteTarget(null)}
         title={t('dialogs.deleteUser')}
-        content={t('dialogs.deleteContent', { name: deleteTarget?.username ?? '' })}
+        content={t('dialogs.deleteContent', { name: state.deleteTarget?.username ?? '' })}
         cancelText={t('common.cancel')}
         action={
-          <Button variant="contained" color="error" onClick={confirmDelete}>
+          <Button variant="contained" color="error" onClick={state.confirmDelete}>
             {t('common.delete')}
           </Button>
         }
       />
-    </DashboardContent>
+    </>
   );
 }
 
-function displayRole(code: string, roles: Role[], t: ReturnType<typeof useTranslate>['t']) {
-  const role = roles.find((item) => item.code === code);
+function useUserDialog(t: ReturnType<typeof useTranslate>['t'], refresh: VoidFunction) {
+  const [form, setForm] = useState(DEFAULT_USER_FORM);
+  const [editing, setEditing] = useState<SystemUser | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  return role ? translatedRoleName(role, t) : code;
+  const close = useCallback(() => {
+    setEditing(null);
+    setCreating(false);
+    setForm(DEFAULT_USER_FORM);
+  }, []);
+
+  const openCreate = useCallback((defaultRole = '') => {
+    setEditing(null);
+    setCreating(true);
+    setForm({ ...DEFAULT_USER_FORM, role: defaultRole });
+  }, []);
+
+  const openEdit = useCallback((user: SystemUser) => {
+    setEditing(user);
+    setCreating(false);
+    setForm(formFromUser(user));
+  }, []);
+
+  const submit = useCallback(async () => {
+    setSubmitting(true);
+    try {
+      if (editing) {
+        await updateUser(editing.id, formToPayload(form));
+        toast.success(t('messages.userUpdated'));
+      } else {
+        await createUser(formToPayload(form));
+        toast.success(t('messages.userCreated'));
+      }
+      refresh();
+      close();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [close, editing, form, refresh, t]);
+
+  return { close, creating, editing, form, open: creating || !!editing, openCreate, openEdit, setForm, submit, submitting };
 }

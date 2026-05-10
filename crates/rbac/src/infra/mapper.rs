@@ -50,7 +50,6 @@ pub(super) fn api_record_with_menu_inputs(input: ApiPermissionInput, system: boo
         method: input.method,
         path_pattern: input.path_pattern,
         name: input.name,
-        group: input.group,
         enabled: input.enabled,
         system,
     };

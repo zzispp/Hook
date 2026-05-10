@@ -132,7 +132,7 @@ function RowActions({
       </Tooltip>
       <Tooltip title={row.is_active ? t('actions.disable') : t('actions.enable')}>
         <IconButton onClick={() => onToggle(row)}>
-          <Iconify icon={row.is_active ? 'solar:pause-bold' : 'solar:play-bold'} />
+          <Iconify icon={row.is_active ? 'solar:stop-circle-bold' : 'solar:play-circle-bold'} />
         </IconButton>
       </Tooltip>
       <Tooltip title={t('common.delete')}>

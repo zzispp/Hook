@@ -3,6 +3,7 @@
     "overview": "概览",
     "dashboard": "仪表盘",
     "resources": "资源",
+    "operations": "运营管理",
     "modelCatalog": "模型目录",
     "account": "账户",
     "walletCenter": "钱包中心",
@@ -14,7 +15,7 @@
     "menus": "菜单管理",
     "models": "模型管理",
     "customKeyboardShortcuts": "自定义键盘快捷键。",
-    "apiTokens": "令牌管理",
+    "apiTokens": "我的 API 令牌",
     "adminApiTokens": "令牌管理",
     "billingGroups": "计费分组",
     "systemSettings": "系统设置"
@@ -84,7 +85,7 @@
     "roleManagement": "角色管理",
     "userManagement": "用户管理",
     "walletManagement": "钱包管理",
-    "apiTokens": "令牌管理",
+    "apiTokens": "我的 API 令牌",
     "adminApiTokens": "令牌管理",
     "billingGroups": "计费分组",
     "systemSettings": "系统设置"
@@ -143,7 +144,12 @@
     "quotaLimit": "允许额度",
     "rateLimitRpm": "速率限制",
     "requestCount": "请求次数",
-    "tokenType": "令牌类型"
+    "tokenType": "令牌类型",
+    "createdAt": "创建时间",
+    "lastLoginAt": "最后登录时间",
+    "quotaMode": "额度模式",
+    "statistics": "统计/限速",
+    "wallet": "钱包"
   },
   "dialogs": {
     "createApi": "创建 API 权限",
@@ -178,11 +184,13 @@
   "helper": {
     "deepMatch": "深度匹配用于控制子路径高亮。",
     "pathPatternExample": "示例：/api/users/{id}",
-    "updatePasswordRequired": "后端当前要求更新用户时填写密码。",
+    "updatePasswordRequired": "不填写则保留当前密码。",
     "groupModelAccess": "不选择模型表示该分组允许所有模型。",
     "systemRateLimit": "0 表示跟随系统；非 0 后续运行时取 min(系统速率, 此处速率)。",
     "unlimitedExpiresAt": "不输入有效期表示无时间限制。",
-    "unlimitedQuota": "留空表示不限额度。"
+    "unlimitedQuota": "留空表示不限额度。",
+    "userQuotaMode": "无限制不受钱包余额约束；按余额限制会使用钱包余额计费。",
+    "userRateLimit": "留空或 0 表示不在用户层限制；最终 API 速率取用户限制和令牌限制的最小值。"
   },
   "messages": {
     "apiCreated": "API 权限已创建",
@@ -221,97 +229,17 @@
     "copyFailed": "复制失败",
     "systemSettingsUpdated": "系统设置已更新"
   },
-  "roles": {
-    "admin": {
-      "name": "管理员",
-      "description": "内置管理员角色"
-    },
-    "user": {
-      "name": "用户",
-      "description": "默认注册用户角色"
-    }
+  "apiTransfer": {
+    "available": "可绑定 API",
+    "bound": "已绑定 API",
+    "selectedCount": "{{selected}}/{{total}} 已选择"
   },
-  "authSources": {
-    "local": "本地",
-    "system": "系统"
+  "api": {
+    "itemsCount": "{{count}} 个 API",
+    "unboundMenu": "未绑定菜单"
   },
-  "apiGroups": {
-    "auth": "认证",
-    "menus": "菜单",
-    "models": "模型",
-    "wallet": "钱包",
-    "admin wallet": "管理员钱包",
-    "admin_wallet": "管理员钱包",
-    "rbac": "权限",
-    "system": "系统",
-    "users": "用户",
-    "api tokens": "API 令牌",
-    "api_tokens": "API 令牌",
-    "billing groups": "计费分组",
-    "billing_groups": "计费分组"
-  },
-  "apiPermissionNames": {
-    "auth_me": "当前用户",
-    "navbar_read": "导航菜单",
-    "users_read": "查看用户列表",
-    "users_create": "创建用户",
-    "users_update": "更新用户",
-    "users_delete": "删除用户",
-    "roles_read": "查看角色列表",
-    "roles_create": "创建角色",
-    "roles_update": "更新角色",
-    "roles_delete": "删除角色",
-    "menu_item_apis_read": "读取菜单 API 绑定",
-    "menu_item_apis_update": "更新菜单 API 绑定",
-    "role_permissions_read": "读取角色权限绑定",
-    "role_permissions_update": "更新角色权限绑定",
-    "api_menus_read": "读取 API 菜单绑定",
-    "api_menus_update": "更新 API 菜单绑定",
-    "apis_read": "查看 API 权限列表",
-    "apis_create": "创建 API 权限",
-    "apis_update": "更新 API 权限",
-    "apis_delete": "删除 API 权限",
-    "menu_sections_read": "查看菜单分组列表",
-    "menu_sections_create": "创建菜单分组",
-    "menu_sections_update": "更新菜单分组",
-    "menu_sections_delete": "删除菜单分组",
-    "menu_items_read": "查看菜单项列表",
-    "menu_items_create": "创建菜单项",
-    "menu_items_update": "更新菜单项",
-    "menu_items_delete": "删除菜单项",
-    "models_global_read": "查看统一模型列表",
-    "models_global_create": "创建统一模型",
-    "models_global_detail": "查看统一模型详情",
-    "models_global_update": "更新统一模型",
-    "models_global_delete": "删除统一模型",
-    "models_global_batch_delete": "批量删除统一模型",
-    "models_global_providers": "查看模型提供商",
-    "models_catalog_read": "查看模型目录",
-    "models_public_catalog_read": "查看普通模型目录",
-    "wallet_balance_read": "查看钱包余额",
-    "wallet_transactions_read": "查看钱包流水",
-    "models_external_read": "获取外部模型",
-    "admin_wallets_read": "查看管理员钱包列表",
-    "admin_wallet_transactions_read": "查看管理员钱包流水",
-    "admin_wallet_adjust": "管理员钱包调账",
-    "groups_read": "查看计费分组列表",
-    "groups_create": "创建计费分组",
-    "groups_detail": "查看计费分组详情",
-    "groups_update": "更新计费分组",
-    "groups_delete": "删除计费分组",
-    "groups_available_read": "查看可用计费分组",
-    "api_tokens_read": "查看令牌列表",
-    "api_tokens_create": "创建令牌",
-    "api_tokens_detail": "查看令牌详情",
-    "api_tokens_update": "更新令牌",
-    "api_tokens_delete": "删除令牌",
-    "api_tokens_secret_read": "读取令牌密钥",
-    "admin_api_tokens_read": "查看管理员令牌列表",
-    "admin_api_tokens_create": "创建管理员令牌",
-    "admin_api_tokens_detail": "查看管理员令牌详情",
-    "admin_api_tokens_update": "更新管理员令牌",
-    "admin_api_tokens_delete": "删除管理员令牌",
-    "admin_api_tokens_secret_read": "读取管理员令牌密钥"
+  "menu": {
+    "itemsCount": "{{count}} 个菜单"
   },
   "models": {
     "availableModels": "可用模型",
@@ -327,6 +255,7 @@
     "groupPricingEmpty": "暂无可用计费分组",
     "metadata": "规格与元信息",
     "modelIdCopied": "模型 ID 已复制",
+    "copyModelId": "复制模型 ID",
     "modelDevCount": "{{count}} 个模型",
     "modelsTotal": "{{count}} 个模型",
     "official": "官方",
@@ -612,12 +541,39 @@
     },
     "walletSummary": "显示 {{shown}} 条，共 {{total}} 个钱包"
   },
+  "users": {
+    "balance": "余额：{{amount}}",
+    "consumed": "已消费：{{amount}}",
+    "followSystem": "跟随系统",
+    "manageTokens": "令牌",
+    "manageWallet": "钱包",
+    "unlimited": "无限制",
+    "walletLimited": "按余额限制"
+  },
+  "userWallet": {
+    "title": "用户钱包",
+    "tabs": {
+      "operation": "资金操作",
+      "ledger": "资金流水",
+      "refund": "退款审批"
+    },
+    "operationType": "操作类型",
+    "manualRecharge": "人工充值",
+    "amount": "金额 (CNY)",
+    "description": "说明",
+    "positiveAmount": "人工充值仅接受正数。",
+    "rechargeDescription": "人工充值等同于用户充值余额，会产生充值流水；赠款余额不可退款。",
+    "emptyRefunds": "暂无退款审批",
+    "invalidAmount": "请输入正数金额",
+    "rechargeSaved": "人工充值已完成"
+  },
+  "userTokens": {
+    "title": "用户令牌"
+  },
   "billingGroups": {
     "allModels": "所有模型",
     "deleteConfirm": "确认删除计费分组 {{name}}？",
-    "selectedModelCount": "{{count}} 个模型",
-    "systemDescription": "未选择分组时使用的内置计费分组",
-    "systemName": "系统分组"
+    "selectedModelCount": "{{count}} 个模型"
   },
   "tokens": {
     "allModels": "所有模型",

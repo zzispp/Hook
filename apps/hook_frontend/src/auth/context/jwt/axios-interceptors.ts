@@ -128,6 +128,10 @@ async function requestTokenPair(refreshToken: string) {
       { refresh_token: refreshToken },
       { baseURL: CONFIG.serverUrl, headers: { 'Content-Type': 'application/json' } }
     );
+    if (isUnauthorizedPayload(response.data)) {
+      clearBrowserSession();
+      return null;
+    }
     const session = requireApiData(response.data);
     storeSession(session);
     setAccessTokenHeader(session.access_token);
@@ -148,6 +152,10 @@ function requireApiData<T>(payload: ApiEnvelope<T>) {
   }
 
   return payload.data;
+}
+
+function isUnauthorizedPayload(payload: ApiEnvelope<unknown>) {
+  return !payload.success && payload.message?.toLowerCase() === 'unauthorized';
 }
 
 function clearBrowserSession() {
