@@ -7,8 +7,6 @@ import { useRef, useEffect } from 'react';
 import { getStorage } from 'minimal-shared/utils';
 import { initReactI18next, I18nextProvider as Provider } from 'react-i18next';
 
-import enAdmin from './langs/en/admin.json';
-import cnAdmin from './langs/cn/admin.json';
 import enCommon from './langs/en/common.json';
 import cnCommon from './langs/cn/common.json';
 import enNavbar from './langs/en/navbar.json';
@@ -26,8 +24,8 @@ i18next.use(initReactI18next).init({
   ...i18nOptions(fallbackLng),
   ns: ['common', 'messages', 'admin', 'navbar'],
   resources: {
-    cn: { admin: cnAdmin, common: cnCommon, messages: cnMessages, navbar: cnNavbar },
-    en: { admin: enAdmin, common: enCommon, messages: enMessages, navbar: enNavbar },
+    cn: { common: cnCommon, messages: cnMessages, navbar: cnNavbar },
+    en: { common: enCommon, messages: enMessages, navbar: enNavbar },
   },
 });
 

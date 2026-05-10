@@ -112,6 +112,9 @@ export const endpoints = {
     signUp: '/api/auth/sign-up',
   },
   navbar: '/api/navbar',
+  i18n: {
+    resources: '/api/i18n/resources',
+  },
   users: '/api/users',
   user: (id: string) => `/api/users/${id}`,
   rbac: {
@@ -158,6 +161,14 @@ export const endpoints = {
   },
   adminSettings: {
     system: '/api/admin/settings/system',
+  },
+  adminI18n: {
+    languages: '/api/admin/i18n/languages',
+    language: (code: string) => `/api/admin/i18n/languages/${code}`,
+    translations: '/api/admin/i18n/translations',
+    translation: (id: string) => `/api/admin/i18n/translations/${id}`,
+    translationBundle: (namespace: string, groupKey: string, itemKey: string) =>
+      `/api/admin/i18n/translations/${namespace}/${groupKey}/${itemKey}`,
   },
   wallet: {
     balance: '/api/wallet/balance',

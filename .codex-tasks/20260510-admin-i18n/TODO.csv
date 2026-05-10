@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing module patterns,DONE,Relevant frontend/backend patterns are identified,rg -n "useTranslate\\('admin'\\)|create_router|baseline_tables" apps crates,,0,
+2,Implement backend i18n domain and storage,DONE,New i18n crate compiles and exposes resource/admin APIs,cargo check -p i18n,2026-05-10T00:00:00+08:00,0,
+3,Wire baseline migration and RBAC,DONE,Baseline includes translation tables seed menu API bindings,cargo test -p backend migration::defaults,2026-05-10T00:00:00+08:00,0,
+4,Implement frontend dynamic admin resource loading,DONE,Frontend uses backend admin resource bundle while preserving t(),pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-11T00:00:00+08:00,0,
+5,Implement admin translation management UI,DONE,Admin page has translation values/languages tabs and CRUD wiring,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,2026-05-11T00:00:00+08:00,0,
+6,Run final validation,DONE,Rust and frontend checks complete,cargo fmt --all --check && cargo test -p backend migration::defaults && cargo check -p backend && pnpm --filter hook_frontend exec tsc --noEmit --pretty false && pnpm lint:frontend,2026-05-11T00:00:00+08:00,0,

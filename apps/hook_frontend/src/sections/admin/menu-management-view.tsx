@@ -9,8 +9,8 @@ import Stack from '@mui/material/Stack';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useApis, useMenuItems, useMenuSections } from 'src/actions/rbac';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { useTable } from 'src/components/table';
 
@@ -51,7 +51,7 @@ export function MenuManagementView() {
   return (
     <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
-        heading={DASHBOARD_MENU_TITLES.menuManagement}
+        headingCode={DASHBOARD_MENU_CODES.menuManagement}
         action={
           <Stack direction="row" spacing={1}>
             <RefreshButton loading={activeResource.isLoading} onClick={() => void activeResource.refresh()} />

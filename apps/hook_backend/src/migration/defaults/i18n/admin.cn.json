@@ -1,24 +1,22 @@
 {
   "nav": {
     "overview": "概览",
-    "dashboard": "仪表盘",
-    "resources": "资源",
     "operations": "运营管理",
-    "modelCatalog": "模型目录",
-    "account": "账户",
-    "walletCenter": "钱包中心",
-    "systemManagement": "系统管理",
-    "walletManagement": "钱包管理",
-    "users": "用户管理",
-    "roles": "角色管理",
-    "apis": "API 管理",
-    "menus": "菜单管理",
-    "models": "模型管理",
-    "customKeyboardShortcuts": "自定义键盘快捷键。",
-    "apiTokens": "我的 API 令牌",
-    "adminApiTokens": "令牌管理",
-    "billingGroups": "计费分组",
-    "systemSettings": "系统设置"
+    "system_management": "系统管理",
+    "dashboard_home": "仪表盘",
+    "dashboard_models": "模型目录",
+    "wallet_center": "钱包中心",
+    "api_tokens": "我的令牌",
+    "admin_tokens": "令牌管理",
+    "admin_users": "用户管理",
+    "admin_roles": "角色管理",
+    "admin_apis": "API管理",
+    "admin_menus": "菜单管理",
+    "admin_settings": "系统设置",
+    "admin_translations": "翻译管理",
+    "admin_models": "模型管理",
+    "admin_wallets": "钱包管理",
+    "admin_groups": "计费分组"
   },
   "common": {
     "active": "启用",
@@ -77,18 +75,6 @@
     "searchWallets": "搜索钱包 ID、用户 ID、用户名或邮箱...",
     "searchGroups": "搜索分组编码、名称或描述...",
     "searchTokens": "搜索密钥名称、前缀或分组..."
-  },
-  "pages": {
-    "apiManagement": "API 管理",
-    "menuManagement": "菜单管理",
-    "modelManagement": "模型管理",
-    "roleManagement": "角色管理",
-    "userManagement": "用户管理",
-    "walletManagement": "钱包管理",
-    "apiTokens": "我的 API 令牌",
-    "adminApiTokens": "令牌管理",
-    "billingGroups": "计费分组",
-    "systemSettings": "系统设置"
   },
   "actions": {
     "addApi": "新增 API",
@@ -192,6 +178,9 @@
     "userQuotaMode": "无限制不受钱包余额约束；按余额限制会使用钱包余额计费。",
     "userRateLimit": "留空或 0 表示不在用户层限制；最终 API 速率取用户限制和令牌限制的最小值。"
   },
+  "validation": {
+    "userRequired": "用户令牌必须选择用户。"
+  },
   "messages": {
     "apiCreated": "API 权限已创建",
     "apiDeleted": "API 权限已删除",
@@ -236,7 +225,7 @@
   },
   "api": {
     "itemsCount": "{{count}} 个 API",
-    "unboundMenu": "未绑定菜单"
+    "unbound_menu": "未绑定菜单"
   },
   "menu": {
     "itemsCount": "{{count}} 个菜单"
@@ -605,6 +594,44 @@
     "helper": {
       "defaultUserGrant": "新用户注册成功后写入赠款余额，并生成钱包流水。",
       "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。"
+    }
+  },
+  "translations": {
+    "tabs": {
+      "values": "翻译值",
+      "languages": "语言"
+    },
+    "fields": {
+      "namespace": "命名空间",
+      "groupKey": "分组",
+      "itemKey": "Key",
+      "langCode": "语言",
+      "value": "翻译值",
+      "nativeName": "本地名称"
+    },
+    "filters": {
+      "searchValues": "搜索命名空间、分组、Key、语言或翻译值...",
+      "searchLanguages": "搜索语言代码、名称或本地名称..."
+    },
+    "actions": {
+      "addValue": "新增翻译",
+      "addLanguage": "新增语言"
+    },
+    "dialogs": {
+      "createValue": "创建翻译",
+      "editValue": "编辑翻译",
+      "deleteValue": "删除翻译",
+      "createLanguage": "创建语言",
+      "editLanguage": "编辑语言",
+      "deleteLanguage": "删除语言"
+    },
+    "messages": {
+      "valueCreated": "翻译已创建",
+      "valueUpdated": "翻译已更新",
+      "valueDeleted": "翻译已删除",
+      "languageCreated": "语言已创建",
+      "languageUpdated": "语言已更新",
+      "languageDeleted": "语言已删除"
     }
   }
 }

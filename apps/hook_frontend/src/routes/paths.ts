@@ -68,6 +68,7 @@ export const paths = {
       groups: `${ROOTS.DASHBOARD}/admin/groups`,
       wallets: `${ROOTS.DASHBOARD}/admin/wallets`,
       settings: `${ROOTS.DASHBOARD}/admin/settings`,
+      translations: `${ROOTS.DASHBOARD}/admin/translations`,
     },
     general: {
       app: `${ROOTS.DASHBOARD}/app`,

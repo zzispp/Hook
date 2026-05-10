@@ -6,9 +6,45 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
     vec![
         billing_groups_table(),
         system_settings_table(),
+        translation_languages_table(),
+        translation_entries_table(),
         api_tokens_table(),
         billing_group_models_table(),
     ]
+}
+
+fn translation_languages_table() -> TableCreateStatement {
+    Table::create()
+        .table(TranslationLanguages::Table)
+        .if_not_exists()
+        .col(string_len(TranslationLanguages::Code, 32).primary_key())
+        .col(string_len(TranslationLanguages::Name, 120))
+        .col(string_len(TranslationLanguages::NativeName, 120))
+        .col(boolean(TranslationLanguages::Enabled))
+        .col(boolean(TranslationLanguages::System))
+        .col(big_integer(TranslationLanguages::SortOrder))
+        .col(timestamp_tz(TranslationLanguages::CreatedAt))
+        .col(timestamp_tz(TranslationLanguages::UpdatedAt))
+        .to_owned()
+}
+
+fn translation_entries_table() -> TableCreateStatement {
+    let mut language_fk = translation_language_fk();
+    Table::create()
+        .table(TranslationEntries::Table)
+        .if_not_exists()
+        .col(string_len(TranslationEntries::Id, 36).primary_key())
+        .col(string_len(TranslationEntries::Namespace, 64))
+        .col(string_len(TranslationEntries::GroupKey, 120))
+        .col(string_len(TranslationEntries::ItemKey, 120))
+        .col(string_len(TranslationEntries::LangCode, 32))
+        .col(text(TranslationEntries::Value))
+        .col(text_null(TranslationEntries::Description))
+        .col(boolean(TranslationEntries::Enabled))
+        .col(timestamp_tz(TranslationEntries::CreatedAt))
+        .col(timestamp_tz(TranslationEntries::UpdatedAt))
+        .foreign_key(&mut language_fk)
+        .to_owned()
 }
 
 fn billing_groups_table() -> TableCreateStatement {
@@ -115,6 +151,16 @@ fn global_model_fk() -> ForeignKeyCreateStatement {
         .name("fk_billing_group_models_global_model")
         .from(BillingGroupModels::Table, BillingGroupModels::GlobalModelId)
         .to(GlobalModels::Table, GlobalModels::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn translation_language_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_translation_entries_language")
+        .from(TranslationEntries::Table, TranslationEntries::LangCode)
+        .to(TranslationLanguages::Table, TranslationLanguages::Code)
         .on_delete(ForeignKeyAction::Cascade);
     foreign_key
 }

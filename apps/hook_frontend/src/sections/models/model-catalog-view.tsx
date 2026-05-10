@@ -14,13 +14,13 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import {
-  DASHBOARD_MENU_TITLES,
-  DASHBOARD_MENU_SECTIONS,
-} from 'src/layouts/dashboard/dashboard-menu-values';
-import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import { useUserModelCatalog } from 'src/actions/models';
 import { useAvailableBillingGroups } from 'src/actions/groups';
+import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
+import {
+  DASHBOARD_MENU_CODES,
+  DASHBOARD_SECTION_CODES,
+} from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -37,8 +37,8 @@ export function ModelCatalogView() {
   const catalog = useUserModelCatalog();
   const groups = useAvailableBillingGroups();
   const breadcrumbs = useDashboardBreadcrumbs({
-    heading: DASHBOARD_MENU_TITLES.modelCatalog,
-    section: DASHBOARD_MENU_SECTIONS.operations,
+    headingCode: DASHBOARD_MENU_CODES.modelCatalog,
+    sectionCode: DASHBOARD_SECTION_CODES.operations,
   });
   const [query, setQuery] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);

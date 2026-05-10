@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate token form and submit path,DONE,Submit path and field rendering are identified,rg -n "useTokenDialog|UserSelect|adminTokenCreatePayload" apps/hook_frontend/src/sections/api-tokens,,0,
+2,Implement frontend validation,DONE,Admin user token creation blocks empty user_id before request,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,,0,
+3,Add i18n baseline labels,DONE,Validation message exists in cn and en admin resources,node -e "JSON.parse(require('fs').readFileSync('apps/hook_backend/src/migration/defaults/i18n/admin.cn.json','utf8')); JSON.parse(require('fs').readFileSync('apps/hook_backend/src/migration/defaults/i18n/admin.en.json','utf8'))",,0,
+4,Run frontend checks,DONE,TypeScript and lint pass,pnpm lint:frontend,,0,

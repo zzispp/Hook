@@ -12,11 +12,11 @@ import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import {
-  DASHBOARD_MENU_TITLES,
-  DASHBOARD_MENU_SECTIONS,
-} from 'src/layouts/dashboard/dashboard-menu-values';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
+import {
+  DASHBOARD_MENU_CODES,
+  DASHBOARD_SECTION_CODES,
+} from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
@@ -91,8 +91,8 @@ function WalletBreadcrumbs({
   onRefresh: VoidFunction;
 }) {
   const breadcrumbs = useDashboardBreadcrumbs({
-    heading: DASHBOARD_MENU_TITLES.walletCenter,
-    section: DASHBOARD_MENU_SECTIONS.operations,
+    headingCode: DASHBOARD_MENU_CODES.walletCenter,
+    sectionCode: DASHBOARD_SECTION_CODES.operations,
   });
 
   return (

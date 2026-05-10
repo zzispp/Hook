@@ -243,10 +243,40 @@ pub(super) enum SystemSettings {
     UpdatedAt,
 }
 
-pub(super) fn reversed_tables() -> Vec<DynIden> {
+#[derive(DeriveIden)]
+pub(in crate::migration) enum TranslationLanguages {
+    Table,
+    Code,
+    Name,
+    NativeName,
+    Enabled,
+    System,
+    SortOrder,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration) enum TranslationEntries {
+    Table,
+    Id,
+    Namespace,
+    GroupKey,
+    ItemKey,
+    LangCode,
+    Value,
+    Description,
+    Enabled,
+    CreatedAt,
+    UpdatedAt,
+}
+
+pub fn reversed_tables() -> Vec<DynIden> {
     vec![
         ApiTokens::Table.into_iden(),
         BillingGroupModels::Table.into_iden(),
+        TranslationEntries::Table.into_iden(),
+        TranslationLanguages::Table.into_iden(),
         SystemSettings::Table.into_iden(),
         Models::Table.into_iden(),
         GlobalModels::Table.into_iden(),

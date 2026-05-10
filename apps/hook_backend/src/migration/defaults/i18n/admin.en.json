@@ -1,24 +1,22 @@
 {
   "nav": {
     "overview": "Overview",
-    "dashboard": "Dashboard",
-    "resources": "Resources",
     "operations": "Operations",
-    "modelCatalog": "Model Catalog",
-    "account": "Account",
-    "walletCenter": "Wallet Center",
-    "systemManagement": "System Management",
-    "walletManagement": "Wallet Management",
-    "users": "Users",
-    "roles": "Roles",
-    "apis": "APIs",
-    "menus": "Menus",
-    "models": "Models",
-    "customKeyboardShortcuts": "Custom keyboard shortcuts.",
-    "apiTokens": "My API Tokens",
-    "adminApiTokens": "Token Management",
-    "billingGroups": "Billing Groups",
-    "systemSettings": "System Settings"
+    "system_management": "System Management",
+    "dashboard_home": "Dashboard",
+    "dashboard_models": "Model Catalog",
+    "wallet_center": "Wallet Center",
+    "api_tokens": "My Tokens",
+    "admin_tokens": "Token Management",
+    "admin_users": "User Management",
+    "admin_roles": "Role Management",
+    "admin_apis": "API Management",
+    "admin_menus": "Menu Management",
+    "admin_settings": "System Settings",
+    "admin_translations": "Translation Management",
+    "admin_models": "Model Management",
+    "admin_wallets": "Wallet Management",
+    "admin_groups": "Billing Groups"
   },
   "common": {
     "active": "Active",
@@ -77,18 +75,6 @@
     "searchWallets": "Search wallet ID, user ID, username, or email...",
     "searchGroups": "Search group code, name, or description...",
     "searchTokens": "Search key name, prefix, or group..."
-  },
-  "pages": {
-    "apiManagement": "API Management",
-    "menuManagement": "Menu Management",
-    "modelManagement": "Model Management",
-    "roleManagement": "Role Management",
-    "userManagement": "User Management",
-    "walletManagement": "Wallet Management",
-    "apiTokens": "My API Tokens",
-    "adminApiTokens": "Token Management",
-    "billingGroups": "Billing Groups",
-    "systemSettings": "System Settings"
   },
   "actions": {
     "addApi": "Add API",
@@ -192,6 +178,9 @@
     "userQuotaMode": "Unlimited ignores wallet balance; wallet-limited charges against the wallet balance.",
     "userRateLimit": "Empty or 0 means no user-level limit; the final API rate is the minimum of the user and token limits."
   },
+  "validation": {
+    "userRequired": "User tokens must select a user."
+  },
   "messages": {
     "apiCreated": "API permission created",
     "apiDeleted": "API permission deleted",
@@ -236,7 +225,7 @@
   },
   "api": {
     "itemsCount": "{{count}} APIs",
-    "unboundMenu": "Unbound menu"
+    "unbound_menu": "Unbound menu"
   },
   "menu": {
     "itemsCount": "{{count}} menus"
@@ -605,6 +594,44 @@
     "helper": {
       "defaultUserGrant": "Added to the gift balance after sign-up and recorded in the wallet ledger.",
       "defaultRateLimitRpm": "Requests per minute; 0 means unlimited by system default."
+    }
+  },
+  "translations": {
+    "tabs": {
+      "values": "Translation values",
+      "languages": "Languages"
+    },
+    "fields": {
+      "namespace": "Namespace",
+      "groupKey": "Group",
+      "itemKey": "Key",
+      "langCode": "Language",
+      "value": "Value",
+      "nativeName": "Native name"
+    },
+    "filters": {
+      "searchValues": "Search namespace, group, key, language, or value...",
+      "searchLanguages": "Search language code, name, or native name..."
+    },
+    "actions": {
+      "addValue": "Add translation",
+      "addLanguage": "Add language"
+    },
+    "dialogs": {
+      "createValue": "Create translation",
+      "editValue": "Edit translation",
+      "deleteValue": "Delete translation",
+      "createLanguage": "Create language",
+      "editLanguage": "Edit language",
+      "deleteLanguage": "Delete language"
+    },
+    "messages": {
+      "valueCreated": "Translation created",
+      "valueUpdated": "Translation updated",
+      "valueDeleted": "Translation deleted",
+      "languageCreated": "Language created",
+      "languageUpdated": "Language updated",
+      "languageDeleted": "Language deleted"
     }
   }
 }

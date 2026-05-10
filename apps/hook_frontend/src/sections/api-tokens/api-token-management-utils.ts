@@ -32,7 +32,7 @@ export function adminTokenCreatePayload(form: TokenForm): AdminApiTokenCreate {
   return {
     ...userTokenCreatePayload(form),
     token_type: form.token_type,
-    user_id: form.token_type === 'user' ? form.user_id : null,
+    user_id: form.token_type === 'user' ? form.user_id.trim() : null,
   };
 }
 

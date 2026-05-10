@@ -1,8 +1,11 @@
+import type { IconifyName } from 'src/components/iconify';
 import type { NavItemDataProps, NavItemOptionsProps } from '../types';
 
-import { cloneElement } from 'react';
+import { cloneElement, createElement } from 'react';
 
 import { RouterLink } from 'src/routes/components';
+
+import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
 
@@ -43,8 +46,10 @@ export function createNavItem({
   let renderIcon = null;
 
   if (icon && render?.navIcon && typeof icon === 'string') {
-    renderIcon = render?.navIcon[icon];
-  } else {
+    renderIcon = render.navIcon[icon];
+  } else if (typeof icon === 'string') {
+    renderIcon = createElement(Iconify, { icon: icon as IconifyName, width: 24 });
+  } else if (icon) {
     renderIcon = icon;
   }
 

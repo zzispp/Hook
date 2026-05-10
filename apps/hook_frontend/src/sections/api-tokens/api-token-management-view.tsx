@@ -6,12 +6,12 @@ import Card from '@mui/material/Card';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import {
-  DASHBOARD_MENU_TITLES,
-  DASHBOARD_MENU_SECTIONS,
-} from 'src/layouts/dashboard/dashboard-menu-values';
-import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import { useAvailableBillingGroups } from 'src/actions/groups';
+import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
+import {
+  DASHBOARD_MENU_CODES,
+  DASHBOARD_SECTION_CODES,
+} from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -60,8 +60,8 @@ function TokenBreadcrumbs({
   const { t } = useTranslate('admin');
   const isAdmin = scope === 'admin';
   const breadcrumbs = useDashboardBreadcrumbs({
-    heading: isAdmin ? DASHBOARD_MENU_TITLES.tokenManagement : DASHBOARD_MENU_TITLES.apiTokens,
-    section: DASHBOARD_MENU_SECTIONS.operations,
+    headingCode: isAdmin ? DASHBOARD_MENU_CODES.tokenManagement : DASHBOARD_MENU_CODES.apiTokens,
+    sectionCode: DASHBOARD_SECTION_CODES.operations,
   });
 
   return (

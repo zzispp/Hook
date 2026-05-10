@@ -1,5 +1,6 @@
 pub mod api_token;
 pub mod group;
+pub mod i18n;
 pub mod model;
 pub mod pagination;
 pub mod rbac;

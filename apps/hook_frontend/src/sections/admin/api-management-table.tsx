@@ -1,6 +1,6 @@
 'use client';
 
-import type { MenuItem as RbacMenuItem, ApiPermission } from 'src/types/rbac';
+import type { ApiPermission, MenuItem as RbacMenuItem } from 'src/types/rbac';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import { useMemo } from 'react';
@@ -24,6 +24,7 @@ import { MethodLabel, EnabledLabel, TableLoadingRows, ManagementTableHead } from
 
 type ApiMenuGroup = {
   menuId: string;
+  menuCode: string;
   menuPath?: string;
   menuTitle: string;
   apis: ApiPermission[];
@@ -41,6 +42,7 @@ type Props = {
 };
 
 const UNBOUND_MENU_ID = '__unbound__';
+const UNBOUND_MENU_CODE = 'unbound_menu';
 
 export function ApiManagementTable({
   apis,
@@ -95,7 +97,7 @@ export function ApiManagementTable({
 
 function ApiMenuHeaderRow({ group }: { group: ApiMenuGroup }) {
   const { t } = useTranslate('admin');
-  const title = group.menuId === UNBOUND_MENU_ID ? t('api.unboundMenu') : group.menuTitle;
+  const title = group.menuId === UNBOUND_MENU_ID ? t(`api.${group.menuCode}`) : group.menuTitle;
 
   return (
     <TableRow>
@@ -186,6 +188,7 @@ function apiMenuGroup(
 
   return {
     menuId,
+    menuCode: menuId === UNBOUND_MENU_ID ? UNBOUND_MENU_CODE : (menu?.code ?? menuId),
     menuPath: menu?.path,
     menuTitle: menu?.title ?? menuId,
     apis: [...apis].sort(

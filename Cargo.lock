@@ -446,10 +446,12 @@ dependencies = [
  "constants",
  "group",
  "hook_tracing",
+ "i18n",
  "model",
  "rbac",
  "sea-orm-migration",
  "serde",
+ "serde_json",
  "setting",
  "storage",
  "tokio",
@@ -457,6 +459,7 @@ dependencies = [
  "tower-http",
  "types",
  "user",
+ "uuid",
  "wallet",
 ]
 
@@ -1495,6 +1498,18 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "i18n"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "serde",
+ "storage",
+ "thiserror",
+ "types",
 ]
 
 [[package]]

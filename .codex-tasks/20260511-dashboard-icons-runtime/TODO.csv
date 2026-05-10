@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate runtime error source,DONE,Exact call path and bad value type are identified,rg -n "reduce\(" apps/hook_frontend/src apps/hook_frontend/node_modules -S,,0,
+2,Implement scoped icon/runtime fix,DONE,Requested dashboard menu icons render with supported icon keys,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,,0,
+3,Validate frontend checks,DONE,TypeScript/lint pass or failures are reported,pnpm lint:frontend,,0,

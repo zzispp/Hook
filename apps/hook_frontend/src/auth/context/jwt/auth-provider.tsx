@@ -1,7 +1,7 @@
 'use client';
 
-import type { AuthState } from '../../types';
 import type { ApiEnvelope } from './utils';
+import type { AuthState } from '../../types';
 
 import { useSetState } from 'minimal-shared/hooks';
 import { useMemo, useEffect, useCallback } from 'react';

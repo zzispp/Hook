@@ -11,7 +11,7 @@ import Button from '@mui/material/Button';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 import {
   useGlobalModels,
   getModelsDevList,
@@ -56,7 +56,7 @@ export function ModelManagementView() {
   return (
     <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
-        heading={DASHBOARD_MENU_TITLES.modelManagement}
+        headingCode={DASHBOARD_MENU_CODES.modelManagement}
         action={
           <Stack direction="row" spacing={1}>
             <RefreshButton loading={models.isLoading} onClick={() => void models.refresh()} />

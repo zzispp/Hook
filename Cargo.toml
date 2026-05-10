@@ -5,6 +5,7 @@ members = [
     "crates/config",
     "crates/constants",
     "crates/group",
+    "crates/i18n",
     "crates/model",
     "crates/rbac",
     "crates/setting",
@@ -29,6 +30,7 @@ config_rs = { package = "config", version = "0.15.22", default-features = false,
 configuration = { path = "crates/config" }
 constants = { path = "crates/constants" }
 group = { path = "crates/group" }
+i18n = { path = "crates/i18n" }
 hex = "0.4.3"
 hook_tracing = { path = "crates/tracing" }
 jsonwebtoken = "9.3.1"

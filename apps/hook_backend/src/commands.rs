@@ -3,10 +3,9 @@ use rbac::{
     application::RbacService,
     infra::{RedisRbacCache, StorageRbacRepository},
 };
-use sea_orm_migration::MigratorTrait;
 use storage::connect_database;
 
-use crate::{BackendResult, migration::Migrator, startup};
+use crate::{BackendResult, migration::development, startup};
 
 pub async fn run() -> BackendResult<()> {
     let settings = Settings::load()?;
@@ -30,17 +29,21 @@ async fn run_migration(settings: Settings, command: MigrationCommand) -> Backend
     let rebuild_rbac_cache = command.rebuilds_rbac_cache();
     let connection = database.connection();
     match command {
-        MigrationCommand::Up(steps) => Migrator::up(connection, steps).await?,
-        MigrationCommand::Down(steps) => Migrator::down(connection, steps).await?,
-        MigrationCommand::Status => Migrator::status(connection).await?,
-        MigrationCommand::Fresh => Migrator::fresh(connection).await?,
-        MigrationCommand::Refresh => Migrator::refresh(connection).await?,
-        MigrationCommand::Reset => Migrator::reset(connection).await?,
+        MigrationCommand::Up | MigrationCommand::Fresh | MigrationCommand::Refresh => development::apply(connection).await?,
+        MigrationCommand::Down | MigrationCommand::Reset => development::drop(connection).await?,
+        MigrationCommand::Status => print_baseline_status(development::status(connection).await?),
     }
     if rebuild_rbac_cache {
         rebuild_rbac_cache_after_migration(&settings, database).await?;
     }
     Ok(())
+}
+
+fn print_baseline_status(status: development::BaselineStatus) {
+    println!("baseline tables: {}/{} present", status.existing_tables.len(), status.total_tables);
+    for table_name in status.existing_tables {
+        println!("  {table_name}");
+    }
 }
 
 async fn rebuild_rbac_cache_after_migration(settings: &Settings, database: storage::Database) -> BackendResult<()> {
@@ -59,8 +62,8 @@ enum BackendCommand {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum MigrationCommand {
-    Up(Option<u32>),
-    Down(Option<u32>),
+    Up,
+    Down,
     Status,
     Fresh,
     Refresh,
@@ -69,7 +72,7 @@ enum MigrationCommand {
 
 impl MigrationCommand {
     fn rebuilds_rbac_cache(&self) -> bool {
-        matches!(self, Self::Up(_) | Self::Fresh | Self::Refresh)
+        matches!(self, Self::Up | Self::Fresh | Self::Refresh)
     }
 }
 
@@ -84,23 +87,15 @@ fn command_from_args(args: Vec<String>) -> BackendResult<BackendCommand> {
 
 fn migration_command(args: &[String]) -> BackendResult<MigrationCommand> {
     match args {
-        [] => Ok(MigrationCommand::Up(None)),
-        [command] if command == "up" => Ok(MigrationCommand::Up(None)),
-        [command, steps] if command == "up" => Ok(MigrationCommand::Up(Some(parse_steps(steps)?))),
-        [command] if command == "down" => Ok(MigrationCommand::Down(Some(1))),
-        [command, steps] if command == "down" => Ok(MigrationCommand::Down(Some(parse_steps(steps)?))),
+        [] => Ok(MigrationCommand::Up),
+        [command] if command == "up" => Ok(MigrationCommand::Up),
+        [command] if command == "down" => Ok(MigrationCommand::Down),
         [command] if command == "status" => Ok(MigrationCommand::Status),
         [command] if command == "fresh" => Ok(MigrationCommand::Fresh),
         [command] if command == "refresh" => Ok(MigrationCommand::Refresh),
         [command] if command == "reset" => Ok(MigrationCommand::Reset),
         _ => Err(format!("unsupported migration command: {}", args.join(" ")).into()),
     }
-}
-
-fn parse_steps(value: &str) -> BackendResult<u32> {
-    value
-        .parse::<u32>()
-        .map_err(|error| format!("invalid migration step count '{value}': {error}").into())
 }
 
 fn positional_args(args: Vec<String>) -> BackendResult<Vec<String>> {
@@ -131,21 +126,28 @@ mod tests {
     fn ignores_config_path_when_detecting_command() {
         let args = vec!["--config".into(), "config/config.yaml".into(), "migration".into(), "up".into()];
 
-        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Up(None)));
+        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Up));
     }
 
     #[test]
     fn detects_migration_up_command() {
         let args = vec!["migration".into(), "up".into()];
 
-        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Up(None)));
+        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Up));
     }
 
     #[test]
     fn detects_migration_down_command() {
-        let args = vec!["migration".into(), "down".into(), "2".into()];
+        let args = vec!["migration".into(), "down".into()];
 
-        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Down(Some(2))));
+        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Migration(MigrationCommand::Down));
+    }
+
+    #[test]
+    fn rejects_migration_steps() {
+        let args = vec!["migration".into(), "up".into(), "2".into()];
+
+        assert!(command_from_args(args).is_err());
     }
 
     #[test]

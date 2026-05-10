@@ -10,8 +10,8 @@ import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useSystemSettings } from 'src/actions/system-settings';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -26,7 +26,7 @@ export function SystemSettingsView() {
   return (
     <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
-        heading={DASHBOARD_MENU_TITLES.systemSettings}
+        headingCode={DASHBOARD_MENU_CODES.systemSettings}
         action={
           <Stack direction="row" spacing={1}>
             <RefreshButton loading={settings.isLoading} onClick={() => void settings.refresh()} />

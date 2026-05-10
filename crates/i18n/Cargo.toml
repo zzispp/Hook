@@ -1,0 +1,13 @@
+[package]
+name = "i18n"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+serde.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+types.workspace = true
+

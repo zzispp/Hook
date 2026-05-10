@@ -16,6 +16,11 @@ use group::{
     application::GroupService,
     infra::{StorageGroupModelCatalog, StorageGroupRepository},
 };
+use i18n::{
+    api::{I18nApiState, create_router as create_i18n_router},
+    application::I18nService,
+    infra::StorageI18nRepository,
+};
 use model::{
     api::{ModelApiState, create_router as create_model_router},
     application::ModelService,
@@ -53,7 +58,7 @@ use crate::{
     system,
 };
 
-const AUTHENTICATED_BASE_APIS: &[(&str, &str)] = &[("GET", "/api/auth/me"), ("GET", "/api/navbar")];
+const AUTHENTICATED_BASE_APIS: &[(&str, &str)] = &[("GET", "/api/auth/me"), ("GET", "/api/navbar"), ("GET", "/api/i18n/resources")];
 
 pub async fn serve(settings: Settings) -> BackendResult<()> {
     let bind_addr = settings.bind_addr();
@@ -78,6 +83,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageGroupRepository::new(database.clone()),
         StorageGroupModelCatalog::new(database.clone()),
     ));
+    let i18n = Arc::new(I18nService::new(StorageI18nRepository::new(database.clone())));
     let api_tokens = Arc::new(ApiTokenService::new(
         StorageApiTokenRepository::new(database.clone()),
         StorageBillingGroupCatalog::new(database.clone()),
@@ -104,6 +110,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         wallets,
         system_settings,
         groups,
+        i18n,
         api_tokens,
         authorization,
     })
@@ -125,6 +132,7 @@ fn create_app(state: AppState) -> Router {
     let wallet_state = WalletApiState::new(state.wallets);
     let setting_state = SettingApiState::new(state.system_settings);
     let group_state = GroupApiState::new(state.groups);
+    let i18n_state = I18nApiState::new(state.i18n);
     let api_token_state = ApiTokenApiState::new(state.api_tokens);
     let auth_state = AuthState::new(AuthStateParts {
         users: state.users,
@@ -139,6 +147,7 @@ fn create_app(state: AppState) -> Router {
         .merge(create_wallet_router(wallet_state))
         .merge(create_setting_router(setting_state))
         .merge(create_group_router(group_state))
+        .merge(create_i18n_router(i18n_state))
         .merge(create_api_token_router(api_token_state));
 
     system::create_router()
@@ -192,6 +201,7 @@ struct AppState {
     wallets: Arc<dyn wallet::application::WalletUseCase>,
     system_settings: Arc<dyn setting::application::SettingUseCase>,
     groups: Arc<dyn group::application::GroupUseCase>,
+    i18n: Arc<dyn i18n::application::I18nUseCase>,
     api_tokens: Arc<dyn api_token::application::ApiTokenUseCase>,
     authorization: AuthorizationConfig,
 }

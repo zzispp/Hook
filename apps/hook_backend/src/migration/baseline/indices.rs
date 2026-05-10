@@ -58,6 +58,13 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             BillingGroupModels::GroupCode,
             false,
         ),
+        index(
+            "index_translation_entries_by_lang",
+            TranslationEntries::Table,
+            TranslationEntries::LangCode,
+            false,
+        ),
+        translation_entry_unique_index(),
     ]
 }
 
@@ -67,6 +74,19 @@ fn billing_group_models_unique_index() -> IndexCreateStatement {
         .table(BillingGroupModels::Table)
         .col(BillingGroupModels::GroupCode)
         .col(BillingGroupModels::GlobalModelId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn translation_entry_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_translation_entries_unique_key")
+        .table(TranslationEntries::Table)
+        .col(TranslationEntries::Namespace)
+        .col(TranslationEntries::GroupKey)
+        .col(TranslationEntries::ItemKey)
+        .col(TranslationEntries::LangCode)
         .unique()
         .if_not_exists()
         .to_owned()

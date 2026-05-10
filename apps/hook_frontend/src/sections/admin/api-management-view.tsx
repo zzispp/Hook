@@ -12,17 +12,17 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useApis, createApi, deleteApi, updateApi, getApiMenus, useMenuItems } from 'src/actions/rbac';
 
 import { toast } from 'src/components/snackbar';
-import { ConfirmDialog } from 'src/components/custom-dialog';
 import { useTable } from 'src/components/table';
+import { ConfirmDialog } from 'src/components/custom-dialog';
 
 import { apiTableHead } from './api-table-head';
 import { ApiMenuSelect } from './api-menu-select';
-import { ApiManagementTable } from './api-management-table';
 import { RefreshAddActions } from './admin-page-actions';
+import { ApiManagementTable } from './api-management-table';
 import {
   toEnabledFilters,
   AdminFiltersToolbar,
@@ -135,8 +135,8 @@ export function ApiManagementView() {
 
   return (
     <DashboardContent maxWidth="xl">
-      <AdminBreadcrumbs
-        heading={DASHBOARD_MENU_TITLES.apiManagement}
+    <AdminBreadcrumbs
+        headingCode={DASHBOARD_MENU_CODES.apiManagement}
         action={
           <RefreshAddActions
             loading={isLoading}

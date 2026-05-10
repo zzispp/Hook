@@ -16,12 +16,16 @@ export type TokenForm = {
   quota_limit: string;
 };
 
+export type TokenFormErrors = Partial<Record<keyof TokenForm, string>>;
+
 export type TokenDialogState = {
+  clearError: (field: keyof TokenForm) => void;
   closeCreatedToken: () => void;
   closeDialog: () => void;
   createdToken: string | null;
   creating: boolean;
   editing: ApiToken | null;
+  errors: TokenFormErrors;
   form: TokenForm;
   open: boolean;
   openCreate: (defaultGroup: string) => void;

@@ -25,6 +25,7 @@ import type {
 import { useMemo } from 'react';
 import useSWR, { mutate } from 'swr';
 
+import { useTranslate } from 'src/locales/use-locales';
 import axios, { fetcher, endpoints } from 'src/lib/axios';
 
 // ----------------------------------------------------------------------
@@ -120,6 +121,7 @@ export function useUsers(page: number, pageSize: number, filters?: RbacListFilte
 }
 
 export function useNavbar() {
+  const { t } = useTranslate('admin');
   const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<ApiEnvelope<NavResponse>>(
     endpoints.navbar,
     fetcher,
@@ -130,13 +132,13 @@ export function useNavbar() {
     const nav = data ? requireApiData(data) : undefined;
 
     return {
-      data: toNavSections(nav?.nav_items ?? []),
+      data: toNavSections(nav?.nav_items ?? [], (code) => String(t(`nav.${code}`))),
       isLoading,
       error,
       isValidating,
       refresh: revalidate,
     };
-  }, [data, error, isLoading, isValidating, revalidate]);
+  }, [data, error, isLoading, isValidating, revalidate, t]);
 }
 
 export async function createRole(payload: RoleInput) {
@@ -277,22 +279,28 @@ function isEndpointKey(key: unknown, endpoint: string) {
   return key === endpoint || (Array.isArray(key) && key[0] === endpoint);
 }
 
-function toNavSections(sections: BackendNavSection[]): NavSectionProps['data'] {
+function toNavSections(
+  sections: BackendNavSection[],
+  titleForCode: (code: string) => string
+): NavSectionProps['data'] {
   return sections.map((section) => ({
     code: section.code,
-    subheader: section.subheader,
-    items: section.items.map(toNavItem),
+    subheader: titleForCode(section.code),
+    items: section.items.map((item) => toNavItem(item, titleForCode)),
   }));
 }
 
-function toNavItem(item: BackendNavItem): NavSectionProps['data'][number]['items'][number] {
+function toNavItem(
+  item: BackendNavItem,
+  titleForCode: (code: string) => string
+): NavSectionProps['data'][number]['items'][number] {
   return {
     code: item.code,
-    title: item.title,
+    title: titleForCode(item.code),
     path: item.path,
     icon: item.icon ?? undefined,
     caption: item.caption ?? undefined,
     deepMatch: item.deep_match,
-    children: item.children.length ? item.children.map(toNavItem) : undefined,
+    children: item.children.length ? item.children.map((child) => toNavItem(child, titleForCode)) : undefined,
   };
 }

@@ -7,8 +7,8 @@ import Stack from '@mui/material/Stack';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useRoles, useMenuItems, useUnboundApis } from 'src/actions/rbac';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { useTable } from 'src/components/table';
 
@@ -47,7 +47,7 @@ export function RoleManagementView() {
   return (
     <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
-        heading={DASHBOARD_MENU_TITLES.roleManagement}
+        headingCode={DASHBOARD_MENU_CODES.roleManagement}
         action={
           <Stack direction="row" spacing={1}>
             <RefreshButton loading={roles.isLoading} onClick={() => void roles.refresh()} />

@@ -9,7 +9,7 @@ import Button from '@mui/material/Button';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useRoles, useUsers, createUser, deleteUser, updateUser } from 'src/actions/rbac';
 
 import { toast } from 'src/components/snackbar';
@@ -100,7 +100,7 @@ function useUserManagementState() {
 function UserManagementHeader({ state }: { state: ReturnType<typeof useUserManagementState> }) {
   return (
     <AdminBreadcrumbs
-      heading={DASHBOARD_MENU_TITLES.userManagement}
+      headingCode={DASHBOARD_MENU_CODES.userManagement}
       action={
         <RefreshAddActions
           loading={state.users.isLoading}

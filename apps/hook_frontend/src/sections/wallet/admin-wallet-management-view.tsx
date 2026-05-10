@@ -11,8 +11,8 @@ import Alert from '@mui/material/Alert';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useAdminWallets, adjustAdminWallet } from 'src/actions/wallet';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { toast } from 'src/components/snackbar';
 import { useTable } from 'src/components/table';
@@ -40,7 +40,7 @@ export function AdminWalletManagementView() {
   return (
     <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
-        heading={DASHBOARD_MENU_TITLES.walletManagement}
+        headingCode={DASHBOARD_MENU_CODES.walletManagement}
         action={tab === 'wallets' ? <RefreshButton loading={walletState.wallets.isLoading} onClick={() => void walletState.wallets.refresh()} /> : null}
       />
       {walletState.wallets.error ? <WalletErrorAlert message={walletState.wallets.error.message} /> : null}

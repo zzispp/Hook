@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,确认当前导航 icon 渲染链路,DONE,明确后端 icon 字段如何进入 dashboard nav,rg -n "NAV_ICONS|navIcon|item.icon" apps/hook_frontend/src,,0,
+2,实现前端动态 Iconify 渲染,DONE,后端返回 Iconify 名称可直接显示,pnpm --filter hook_frontend exec tsc --noEmit --pretty false,,0,
+3,调整菜单表单 icon 选择,DONE,菜单管理可从前端 Iconify 库选择图标,pnpm lint:frontend,,0,
+4,验证前端类型和 lint,DONE,tsc 和 lint 均通过,pnpm --filter hook_frontend exec tsc --noEmit --pretty false && pnpm lint:frontend,,0,

@@ -2,6 +2,7 @@
 
 import type { TextFieldProps } from '@mui/material/TextField';
 import type { TableHeadCellProps } from 'src/components/table';
+import type { DashboardMenuCode } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -26,20 +27,20 @@ import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 // ----------------------------------------------------------------------
 
-export { NAV_ICONS, NAV_ICON_OPTIONS } from './nav-metadata';
+export { NAV_ICON_OPTIONS } from './nav-metadata';
 
 export const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
 export type AdminT = ReturnType<typeof useTranslate>['t'];
 
 export function AdminBreadcrumbs({
-  heading,
+  headingCode,
   action,
 }: {
-  heading: string;
+  headingCode: DashboardMenuCode;
   action?: React.ReactNode;
 }) {
-  const breadcrumbs = useDashboardBreadcrumbs({ heading });
+  const breadcrumbs = useDashboardBreadcrumbs({ headingCode });
 
   return (
     <CustomBreadcrumbs
@@ -146,6 +147,7 @@ export function TextFieldRow({
   select,
   children,
   helperText,
+  error,
   disabled,
   SelectProps,
   slotProps,
@@ -158,6 +160,7 @@ export function TextFieldRow({
   select?: boolean;
   children?: React.ReactNode;
   helperText?: React.ReactNode;
+  error?: boolean;
   disabled?: boolean;
   SelectProps?: TextFieldProps['SelectProps'];
   slotProps?: TextFieldProps['slotProps'];
@@ -170,6 +173,7 @@ export function TextFieldRow({
       type={type}
       label={label}
       value={value}
+      error={error}
       disabled={disabled}
       helperText={helperText}
       SelectProps={SelectProps}

@@ -66,7 +66,10 @@ function AdminOwnerFields({ dialog, users }: { dialog: TokenDialogState; users: 
         select
         label={t('fields.tokenType')}
         value={dialog.form.token_type}
-        onChange={(value) => dialog.setForm((form) => ({ ...form, token_type: value as 'user' | 'independent' }))}
+        onChange={(value) => {
+          dialog.clearError('user_id');
+          dialog.setForm((form) => ({ ...form, token_type: value as 'user' | 'independent' }));
+        }}
       >
         <MenuItem value="independent">{t('tokens.independentToken')}</MenuItem>
         <MenuItem value="user">{t('tokens.userToken')}</MenuItem>
@@ -85,7 +88,12 @@ function UserSelect({ dialog, users }: { dialog: TokenDialogState; users: UserOp
       required
       label={t('common.user')}
       value={dialog.form.user_id}
-      onChange={(value) => dialog.setForm((form) => ({ ...form, user_id: value }))}
+      error={Boolean(dialog.errors.user_id)}
+      helperText={dialog.errors.user_id ? t(dialog.errors.user_id) : undefined}
+      onChange={(value) => {
+        dialog.clearError('user_id');
+        dialog.setForm((form) => ({ ...form, user_id: value }));
+      }}
     >
       {users.length === 0 ? (
         <MenuItem disabled value="">

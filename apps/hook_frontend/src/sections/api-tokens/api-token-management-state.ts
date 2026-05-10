@@ -1,7 +1,12 @@
 'use client';
 
 import type { ApiToken } from 'src/types/api-token';
-import type { TokenForm, TokenScope, BillingGroupOption } from './api-token-management-types';
+import type {
+  TokenForm,
+  TokenScope,
+  TokenFormErrors,
+  BillingGroupOption,
+} from './api-token-management-types';
 
 import { useState, useCallback } from 'react';
 import { useCopyToClipboard } from 'minimal-shared/hooks';
@@ -28,6 +33,8 @@ import {
   adminTokenCreatePayload,
 } from './api-token-management-utils';
 
+const USER_REQUIRED_ERROR = 'validation.userRequired';
+
 export function useTokenDialog(
   scope: TokenScope,
   t: (key: string, options?: Record<string, unknown>) => string,
@@ -35,6 +42,7 @@ export function useTokenDialog(
   defaultUserId = ''
 ) {
   const [form, setForm] = useState(defaultCreateForm('', defaultUserId));
+  const [errors, setErrors] = useState<TokenFormErrors>({});
   const [editing, setEditing] = useState<ApiToken | null>(null);
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -43,22 +51,36 @@ export function useTokenDialog(
   const closeDialog = useCallback(() => {
     setCreating(false);
     setEditing(null);
+    setErrors({});
     setForm(defaultCreateForm('', defaultUserId));
   }, [defaultUserId]);
 
   const openCreate = useCallback((defaultGroup: string) => {
     setEditing(null);
     setCreating(true);
+    setErrors({});
     setForm(defaultCreateForm(defaultGroup || defaultGroupCode(groups), defaultUserId));
   }, [defaultUserId, groups]);
 
   const openEdit = useCallback((token: ApiToken) => {
     setCreating(false);
     setEditing(token);
+    setErrors({});
     setForm(formFromToken(token));
   }, []);
 
+  const clearError = useCallback((field: keyof TokenForm) => {
+    setErrors((current) => withoutError(current, field));
+  }, []);
+
   const submit = useCallback(async () => {
+    const nextErrors = validateTokenForm(scope, form, editing);
+    if (hasFormErrors(nextErrors)) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
     setSubmitting(true);
     try {
       if (editing) {
@@ -77,11 +99,13 @@ export function useTokenDialog(
   }, [closeDialog, editing, form, scope, t]);
 
   return {
+    clearError,
     closeCreatedToken: () => setCreatedToken(null),
     closeDialog,
     createdToken,
     creating,
     editing,
+    errors,
     form,
     open: creating || !!editing,
     openCreate,
@@ -90,6 +114,26 @@ export function useTokenDialog(
     submit,
     submitting,
   };
+}
+
+function validateTokenForm(
+  scope: TokenScope,
+  form: TokenForm,
+  editing: ApiToken | null
+): TokenFormErrors {
+  if (editing || scope !== 'admin' || form.token_type !== 'user') {
+    return {};
+  }
+
+  return form.user_id.trim() ? {} : { user_id: USER_REQUIRED_ERROR };
+}
+
+function hasFormErrors(errors: TokenFormErrors) {
+  return Object.keys(errors).length > 0;
+}
+
+function withoutError(errors: TokenFormErrors, field: keyof TokenForm) {
+  return Object.fromEntries(Object.entries(errors).filter(([key]) => key !== field)) as TokenFormErrors;
 }
 
 export function useDeleteDialog(scope: TokenScope, t: (key: string) => string) {

@@ -5,7 +5,7 @@ pub const ADMIN_ROLE: &str = "admin";
 pub const USER_ROLE: &str = constants::auth::DEFAULT_USER_ROLE;
 
 #[cfg(test)]
-pub const AUTHENTICATED_API_CODES: &[&str] = &["auth_me", "navbar_read"];
+pub const AUTHENTICATED_API_CODES: &[&str] = &["auth_me", "navbar_read", "i18n_resources_read"];
 
 pub const ADMIN_MENU_CODES: &[&str] = &[
     "dashboard_home",
@@ -17,6 +17,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_apis",
     "admin_menus",
     "admin_settings",
+    "admin_translations",
     "admin_models",
 ];
 
@@ -137,6 +138,20 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     MenuApiBindingDefinition {
         menu_code: "admin_settings",
         api_codes: &["system_settings_read", "system_settings_update"],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_translations",
+        api_codes: &[
+            "admin_i18n_languages_read",
+            "admin_i18n_languages_create",
+            "admin_i18n_languages_update",
+            "admin_i18n_languages_delete",
+            "admin_i18n_translations_read",
+            "admin_i18n_translations_create",
+            "admin_i18n_translations_update",
+            "admin_i18n_translations_delete",
+            "admin_i18n_bundle_update",
+        ],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_wallets",

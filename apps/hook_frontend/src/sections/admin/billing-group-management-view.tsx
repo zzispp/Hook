@@ -10,7 +10,7 @@ import { useGlobalModels } from 'src/actions/models';
 import { useBillingGroups } from 'src/actions/groups';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { DASHBOARD_MENU_TITLES } from 'src/layouts/dashboard/dashboard-menu-values';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { useTable } from 'src/components/table';
 import { ConfirmDialog } from 'src/components/custom-dialog';
@@ -41,7 +41,7 @@ export function BillingGroupManagementView() {
   return (
     <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
-        heading={DASHBOARD_MENU_TITLES.billingGroups}
+        headingCode={DASHBOARD_MENU_CODES.billingGroups}
         action={
           <Stack direction="row" spacing={1}>
             <RefreshButton loading={groups.isLoading} onClick={() => void groups.refresh()} />

@@ -19,8 +19,6 @@ import { _contacts, _notifications } from 'src/_mock';
 import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
 
-import { NAV_ICONS } from 'src/sections/admin/shared';
-
 import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
 import { NavVertical } from './nav-vertical';
@@ -101,7 +99,6 @@ export function DashboardLayout({
       bottomArea: isNavHorizontal ? (
         <NavHorizontal
           data={navData}
-          render={{ navIcon: NAV_ICONS }}
           layoutQuery={layoutQuery}
           cssVars={navVars.section}
         />
@@ -117,7 +114,6 @@ export function DashboardLayout({
             data={navData}
             open={open}
             onClose={onClose}
-            render={{ navIcon: NAV_ICONS }}
             cssVars={navVars.section}
           />
 
@@ -175,7 +171,6 @@ export function DashboardLayout({
   const renderSidebar = () => (
     <NavVertical
       data={navData}
-      render={{ navIcon: NAV_ICONS }}
       isNavMini={isNavMini}
       layoutQuery={layoutQuery}
       cssVars={navVars.section}

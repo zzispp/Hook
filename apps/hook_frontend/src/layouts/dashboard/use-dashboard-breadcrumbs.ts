@@ -8,14 +8,21 @@ import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 
 import { useNavbar } from 'src/actions/rbac';
-import { DASHBOARD_MENU_TITLES } from './dashboard-menu-values';
+import { useTranslate } from 'src/locales/use-locales';
+
+import {
+  navTranslationKey,
+  DASHBOARD_MENU_CODES,
+  type DashboardMenuCode,
+  type DashboardSectionCode,
+} from './dashboard-menu-values';
 
 type NavData = NavSectionProps['data'];
 type NavItem = NavData[number]['items'][number];
 
 type DashboardBreadcrumbFallback = {
-  heading: string;
-  section?: string;
+  headingCode: DashboardMenuCode;
+  sectionCode?: DashboardSectionCode;
 };
 
 type DashboardBreadcrumbLink = {
@@ -29,15 +36,15 @@ const TRAILING_SLASH_PATTERN = /\/+$/;
 export function useDashboardBreadcrumbs(fallback: DashboardBreadcrumbFallback) {
   const pathname = usePathname();
   const navbar = useNavbar();
+  const { t } = useTranslate('admin');
 
   return useMemo(() => {
     const current = currentNavItem(navbar.data, pathname);
-    const heading = current?.item.title ?? fallback.heading;
+    const heading = current?.item.title ?? String(t(navTranslationKey(fallback.headingCode)));
+    const section = fallback.sectionCode ? String(t(navTranslationKey(fallback.sectionCode))) : undefined;
     const links: DashboardBreadcrumbLink[] = [
-      { name: rootTitle(navbar.data), href: paths.dashboard.root },
-      ...(current?.section.subheader || fallback.section
-        ? [{ name: current?.section.subheader ?? fallback.section ?? '' }]
-        : []),
+      { name: rootTitle(navbar.data, t), href: paths.dashboard.root },
+      ...(current?.section.subheader || section ? [{ name: current?.section.subheader ?? section ?? '' }] : []),
       { name: heading },
     ];
 
@@ -47,12 +54,20 @@ export function useDashboardBreadcrumbs(fallback: DashboardBreadcrumbFallback) {
       isLoading: navbar.isLoading,
       error: navbar.error,
     };
-  }, [fallback.heading, fallback.section, navbar.data, navbar.error, navbar.isLoading, pathname]);
+  }, [
+    fallback.headingCode,
+    fallback.sectionCode,
+    navbar.data,
+    navbar.error,
+    navbar.isLoading,
+    pathname,
+    t,
+  ]);
 }
 
-function rootTitle(data: NavData) {
+function rootTitle(data: NavData, t: ReturnType<typeof useTranslate>['t']) {
   const rootItem = data.flatMap((section) => section.items).find((item) => samePath(item.path, paths.dashboard.root));
-  return rootItem?.title ?? DASHBOARD_MENU_TITLES.dashboard;
+  return rootItem?.title ?? String(t(navTranslationKey(DASHBOARD_MENU_CODES.dashboard)));
 }
 
 function currentNavItem(data: NavData, pathname: string) {

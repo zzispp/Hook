@@ -1,13 +1,19 @@
 'use client';
 
+import type { IconifyName } from 'src/components/iconify';
 import type { MenuSection, MenuItemInput, MenuItem as RbacMenuItem } from 'src/types/rbac';
 
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import Autocomplete from '@mui/material/Autocomplete';
 
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Label } from 'src/components/label';
+import { Iconify } from 'src/components/iconify';
 
 import {
   SwitchRow,
@@ -34,7 +40,7 @@ export const DEFAULT_MENU_ITEM_FORM: MenuItemInput = {
   code: '',
   title: '',
   path: '',
-  icon: 'icon.menu',
+  icon: 'solar:list-bold',
   caption: null,
   deep_match: true,
   sort_order: 0,
@@ -161,18 +167,35 @@ function IconField({
   const { t } = useTranslate('admin');
 
   return (
-    <TextFieldRow
-      select
-      label={t('common.icon')}
-      value={form.icon ?? ''}
-      onChange={(value) => onFormChange({ ...form, icon: value || null })}
-    >
-      <MenuItem value="">{t('common.none')}</MenuItem>
-      {NAV_ICON_OPTIONS.map((option) => (
-        <MenuItem key={option} value={option}>
-          {option}
+    <Autocomplete
+      fullWidth
+      options={NAV_ICON_OPTIONS}
+      value={form.icon ?? null}
+      onChange={(_event, value) => onFormChange({ ...form, icon: value || null })}
+      renderOption={(props, option) => (
+        <MenuItem {...props} key={option} value={option}>
+          <Stack direction="row" spacing={1.25} alignItems="center">
+            <Iconify icon={option as IconifyName} />
+            <Typography variant="body2">{option}</Typography>
+          </Stack>
         </MenuItem>
-      ))}
-    </TextFieldRow>
+      )}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          label={t('common.icon')}
+          slotProps={{
+            input: {
+              ...params.InputProps,
+              startAdornment: form.icon ? (
+                <Iconify icon={form.icon as IconifyName} sx={{ mr: 1, color: 'text.secondary' }} />
+              ) : (
+                params.InputProps.startAdornment
+              ),
+            },
+          }}
+        />
+      )}
+    />
   );
 }
