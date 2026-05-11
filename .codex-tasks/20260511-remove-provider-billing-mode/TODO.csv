@@ -1,0 +1,4 @@
+id,task,status,completed_at,notes
+1,Remove billing_mode from backend types/storage/migration,DONE,2026-05-11,
+2,Remove billing_mode from frontend UI/types/i18n,DONE,2026-05-11,
+3,Run validation,DONE,2026-05-11,

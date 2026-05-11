@@ -45,7 +45,6 @@ pub struct ModelCatalogProviderDetail {
     pub supports_vision: Option<bool>,
     pub supports_function_calling: Option<bool>,
     pub supports_streaming: Option<bool>,
-    pub is_active: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

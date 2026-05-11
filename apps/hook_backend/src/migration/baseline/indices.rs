@@ -44,8 +44,34 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         ),
         index("index_global_models_by_name", GlobalModels::Table, GlobalModels::Name, true),
         index("index_global_models_by_usage_count", GlobalModels::Table, GlobalModels::UsageCount, false),
-        index("index_models_by_provider_id", Models::Table, Models::ProviderId, false),
-        index("index_models_by_global_model_id", Models::Table, Models::GlobalModelId, false),
+        index("index_providers_by_name", Providers::Table, Providers::Name, true),
+        index("index_providers_by_active", Providers::Table, Providers::IsActive, false),
+        index(
+            "index_provider_endpoints_by_provider",
+            ProviderEndpoints::Table,
+            ProviderEndpoints::ProviderId,
+            false,
+        ),
+        index(
+            "index_provider_endpoints_by_format",
+            ProviderEndpoints::Table,
+            ProviderEndpoints::ApiFormat,
+            false,
+        ),
+        index(
+            "index_provider_api_keys_by_provider",
+            ProviderApiKeys::Table,
+            ProviderApiKeys::ProviderId,
+            false,
+        ),
+        index("index_provider_models_by_provider", ProviderModels::Table, ProviderModels::ProviderId, false),
+        index(
+            "index_provider_models_by_global_model",
+            ProviderModels::Table,
+            ProviderModels::GlobalModelId,
+            false,
+        ),
+        provider_models_unique_index(),
         index("index_billing_groups_by_active", BillingGroups::Table, BillingGroups::IsActive, false),
         index("index_api_tokens_by_hash", ApiTokens::Table, ApiTokens::TokenHash, true),
         index("index_api_tokens_by_user_id", ApiTokens::Table, ApiTokens::UserId, false),
@@ -58,6 +84,19 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             BillingGroupModels::GroupCode,
             false,
         ),
+        billing_group_providers_unique_index(),
+        index(
+            "index_billing_group_providers_by_group",
+            BillingGroupProviders::Table,
+            BillingGroupProviders::GroupCode,
+            false,
+        ),
+        index(
+            "index_request_candidates_by_request",
+            RequestCandidates::Table,
+            RequestCandidates::RequestId,
+            false,
+        ),
         index(
             "index_translation_entries_by_lang",
             TranslationEntries::Table,
@@ -68,12 +107,34 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
     ]
 }
 
+fn provider_models_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_provider_models_unique")
+        .table(ProviderModels::Table)
+        .col(ProviderModels::ProviderId)
+        .col(ProviderModels::GlobalModelId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
 fn billing_group_models_unique_index() -> IndexCreateStatement {
     Index::create()
         .name("index_billing_group_models_unique")
         .table(BillingGroupModels::Table)
         .col(BillingGroupModels::GroupCode)
         .col(BillingGroupModels::GlobalModelId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn billing_group_providers_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_billing_group_providers_unique")
+        .table(BillingGroupProviders::Table)
+        .col(BillingGroupProviders::GroupCode)
+        .col(BillingGroupProviders::ProviderId)
         .unique()
         .if_not_exists()
         .to_owned()

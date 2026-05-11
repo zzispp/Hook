@@ -10,7 +10,7 @@ use crate::user::UserEntity as Users;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
-    pub user_id: String,
+    pub user_id: Option<String>,
     pub token_type: String,
     pub name: String,
     pub token_value: String,

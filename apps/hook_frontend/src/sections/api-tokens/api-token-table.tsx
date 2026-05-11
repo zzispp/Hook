@@ -81,7 +81,7 @@ function ApiTokenTableRow({
       <TableCell>
         <KeyCell token={row} onCopy={props.onCopy} />
       </TableCell>
-      {props.showOwner ? <TableCell sx={{ fontFamily: 'monospace' }}>{row.user_id}</TableCell> : null}
+      {props.showOwner ? <TableCell sx={{ fontFamily: 'monospace' }}>{row.user_id ?? '-'}</TableCell> : null}
       {props.showOwner ? <TableCell>{t(tokenTypeKey(row.token_type))}</TableCell> : null}
       <TableCell>{formatCurrency(row.used_quota)}</TableCell>
       <TableCell>{formatInteger(row.request_count)}</TableCell>

@@ -3,6 +3,7 @@ pub mod group;
 pub mod i18n;
 pub mod model;
 pub mod pagination;
+pub mod provider;
 pub mod rbac;
 pub mod response;
 pub mod system_setting;

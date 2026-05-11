@@ -146,6 +146,20 @@ export const endpoints = {
     list: '/api/admin/groups',
     byId: (id: string) => `/api/admin/groups/${id}`,
   },
+  adminProviders: {
+    list: '/api/admin/providers',
+    byId: (id: string) => `/api/admin/providers/${id}`,
+    endpoints: (id: string) => `/api/admin/providers/${id}/endpoints`,
+    endpointById: (providerId: string, endpointId: string) =>
+      `/api/admin/providers/${providerId}/endpoints/${endpointId}`,
+    keys: (id: string) => `/api/admin/providers/${id}/keys`,
+    models: (id: string) => `/api/admin/providers/${id}/models`,
+  },
+  adminRequestRecords: {
+    list: '/api/admin/request-records',
+    active: '/api/admin/request-records/active',
+    byId: (requestId: string) => `/api/admin/request-records/${requestId}`,
+  },
   groups: {
     available: '/api/groups/available',
   },

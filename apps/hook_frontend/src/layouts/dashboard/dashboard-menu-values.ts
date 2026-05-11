@@ -6,6 +6,8 @@ export const DASHBOARD_MENU_CODES = {
   menuManagement: 'admin_menus',
   modelCatalog: 'dashboard_models',
   modelManagement: 'admin_models',
+  providerManagement: 'admin_providers',
+  requestRecords: 'admin_request_records',
   roleManagement: 'admin_roles',
   systemSettings: 'admin_settings',
   translationManagement: 'admin_translations',

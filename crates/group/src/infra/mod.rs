@@ -1,3 +1,3 @@
 mod storage_repository;
 
-pub use storage_repository::{StorageGroupModelCatalog, StorageGroupRepository};
+pub use storage_repository::{StorageGroupModelCatalog, StorageGroupProviderCatalog, StorageGroupRepository};

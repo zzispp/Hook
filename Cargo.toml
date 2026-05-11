@@ -7,6 +7,8 @@ members = [
     "crates/group",
     "crates/i18n",
     "crates/model",
+    "crates/proxy",
+    "crates/provider",
     "crates/rbac",
     "crates/setting",
     "crates/storage",
@@ -40,6 +42,7 @@ rand_core = { version = "0.6.4", features = ["getrandom"] }
 rbac = { path = "crates/rbac" }
 setting = { path = "crates/setting" }
 redis = { version = "1.2.1", default-features = false, features = ["tokio-comp", "connection-manager"] }
+ring = "0.17.14"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 sha2 = "0.10.9"
@@ -57,8 +60,10 @@ wallet = { path = "crates/wallet" }
 uuid = { version = "1.23.1", features = ["v7", "fast-rng"] }
 jiff = "0.2.23"
 model = { path = "crates/model" }
+provider = { path = "crates/provider" }
+proxy = { path = "crates/proxy" }
 reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls"] }
 rust_decimal = { version = "1.41.0", features = ["serde-with-float"] }
-sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-rust_decimal", "with-time", "with-json"] }
+sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "with-rust_decimal", "with-time", "with-json"] }
 sea-orm-migration = { version = "2.0.0-rc.38", features = ["runtime-tokio-rustls", "sqlx-postgres"] }
 time = { version = "0.3.44", features = ["formatting", "parsing"] }

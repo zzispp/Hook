@@ -64,6 +64,8 @@ export const paths = {
       apis: `${ROOTS.DASHBOARD}/admin/apis`,
       menus: `${ROOTS.DASHBOARD}/admin/menus`,
       models: `${ROOTS.DASHBOARD}/admin/models`,
+      providers: `${ROOTS.DASHBOARD}/admin/providers`,
+      requestRecords: `${ROOTS.DASHBOARD}/admin/request-records`,
       tokens: `${ROOTS.DASHBOARD}/admin/tokens`,
       groups: `${ROOTS.DASHBOARD}/admin/groups`,
       wallets: `${ROOTS.DASHBOARD}/admin/wallets`,

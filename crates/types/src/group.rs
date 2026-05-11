@@ -13,6 +13,7 @@ pub struct BillingGroup {
     pub description: Option<String>,
     pub billing_multiplier: Decimal,
     pub allowed_model_ids: Vec<String>,
+    pub allowed_provider_ids: Vec<String>,
     pub is_active: bool,
     pub is_system: bool,
     pub sort_order: i64,
@@ -43,6 +44,8 @@ pub struct BillingGroupCreate {
     #[serde(default)]
     pub allowed_model_ids: Vec<String>,
     #[serde(default)]
+    pub allowed_provider_ids: Vec<String>,
+    #[serde(default)]
     pub is_active: Option<bool>,
     #[serde(default)]
     pub sort_order: Option<i64>,
@@ -58,6 +61,8 @@ pub struct BillingGroupUpdate {
     pub billing_multiplier: Option<Decimal>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub allowed_model_ids: PatchField<Vec<String>>,
+    #[serde(default, deserialize_with = "deserialize_patch_value")]
+    pub allowed_provider_ids: PatchField<Vec<String>>,
     #[serde(default)]
     pub is_active: Option<bool>,
     #[serde(default)]
@@ -73,6 +78,7 @@ pub struct BillingGroupResponse {
     #[serde(with = "rust_decimal::serde::float")]
     pub billing_multiplier: Decimal,
     pub allowed_model_ids: Vec<String>,
+    pub allowed_provider_ids: Vec<String>,
     pub is_active: bool,
     pub is_system: bool,
     pub sort_order: i64,
@@ -92,6 +98,7 @@ impl BillingGroupUpdate {
             && self.description.is_missing()
             && self.billing_multiplier.is_none()
             && self.allowed_model_ids.is_missing()
+            && self.allowed_provider_ids.is_missing()
             && self.is_active.is_none()
             && self.sort_order.is_none()
     }
@@ -106,6 +113,7 @@ impl From<BillingGroup> for BillingGroupResponse {
             description: value.description,
             billing_multiplier: value.billing_multiplier,
             allowed_model_ids: value.allowed_model_ids,
+            allowed_provider_ids: value.allowed_provider_ids,
             is_active: value.is_active,
             is_system: value.is_system,
             sort_order: value.sort_order,

@@ -1,16 +1,16 @@
 use async_trait::async_trait;
 use types::api_token::{
     AdminApiTokenCreate, ApiTokenCreate, ApiTokenCreateResponse, ApiTokenListRequest, ApiTokenListResponse, ApiTokenResponse, ApiTokenSecretResponse,
-    ApiTokenType, ApiTokenUpdate,
+    ApiTokenUpdate,
 };
 
 use crate::application::{
-    ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog, SystemTokenPolicy,
+    ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, BillingGroupCatalog, ModelAccessCatalog, SystemTokenPolicy,
     UserCatalog,
+    records::{admin_create_record, admin_owner_id, update_record, user_create_record},
     token::{GeneratedToken, generate_token},
     validation::{
-        ValidatedCreate, ValidatedUpdate, model_ids_for_update, sanitize_admin_create, sanitize_create, sanitize_update, validate_admin_create,
-        validate_create, validate_list_request, validate_update,
+        sanitize_admin_create, sanitize_create, sanitize_update, validate_admin_create, validate_create, validate_list_request, validate_update,
     },
 };
 
@@ -107,12 +107,14 @@ where
         self.user_token_list_response(user_id, request).await
     }
 
-    async fn create_admin_token(&self, actor_id: &str, input: AdminApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
+    async fn create_admin_token(&self, _actor_id: &str, input: AdminApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
         let input = sanitize_admin_create(input);
         let validated = validate_admin_create(&input)?;
-        let owner_id = admin_owner_id(actor_id, &input)?;
+        let owner_id = admin_owner_id(&input)?;
         self.ensure_create_policy(&validated.group_code, &validated.allowed_model_ids).await?;
-        self.ensure_user_exists(&owner_id).await?;
+        if let Some(user_id) = owner_id.as_deref() {
+            self.ensure_user_exists(user_id).await?;
+        }
         let generated = generate_token();
         let record = admin_create_record(owner_id, input, validated, &generated);
         self.create_response(record, generated).await
@@ -239,62 +241,4 @@ fn ensure_group_allows_models(group: &types::group::BillingGroupResponse, model_
         }
     }
     Ok(())
-}
-
-fn user_create_record(user_id: &str, input: ApiTokenCreate, validated: ValidatedCreate, generated: &GeneratedToken) -> ApiTokenCreateRecord {
-    ApiTokenCreateRecord {
-        user_id: user_id.into(),
-        token_type: ApiTokenType::User,
-        name: input.name,
-        token_value: generated.value.clone(),
-        token_hash: generated.hash.clone(),
-        token_prefix: generated.prefix.clone(),
-        group_code: validated.group_code,
-        expires_at: validated.expires_at,
-        model_access_mode: validated.model_access_mode,
-        allowed_model_ids: validated.allowed_model_ids,
-        rate_limit_rpm: Some(input.rate_limit_rpm.unwrap_or(0)),
-        quota_limit: input.quota_limit,
-    }
-}
-
-fn admin_create_record(owner_id: String, input: AdminApiTokenCreate, validated: ValidatedCreate, generated: &GeneratedToken) -> ApiTokenCreateRecord {
-    ApiTokenCreateRecord {
-        user_id: owner_id,
-        token_type: input.token_type,
-        name: input.name,
-        token_value: generated.value.clone(),
-        token_hash: generated.hash.clone(),
-        token_prefix: generated.prefix.clone(),
-        group_code: validated.group_code,
-        expires_at: validated.expires_at,
-        model_access_mode: validated.model_access_mode,
-        allowed_model_ids: validated.allowed_model_ids,
-        rate_limit_rpm: Some(input.rate_limit_rpm.unwrap_or(0)),
-        quota_limit: input.quota_limit,
-    }
-}
-
-fn update_record(current: types::api_token::ApiToken, input: ApiTokenUpdate, validated: ValidatedUpdate) -> ApiTokenUpdateRecord {
-    let allowed_model_ids = model_ids_for_update(&current, &validated, &input);
-    ApiTokenUpdateRecord {
-        name: input.name,
-        group_code: input.group_code,
-        expires_at: validated.expires_at,
-        model_access_mode: input.model_access_mode,
-        allowed_model_ids,
-        rate_limit_rpm: input.rate_limit_rpm,
-        quota_limit: input.quota_limit,
-        is_active: input.is_active,
-    }
-}
-
-fn admin_owner_id(actor_id: &str, input: &AdminApiTokenCreate) -> ApiTokenResult<String> {
-    match input.token_type {
-        ApiTokenType::Independent => Ok(actor_id.to_owned()),
-        ApiTokenType::User => input
-            .user_id
-            .clone()
-            .ok_or_else(|| ApiTokenError::InvalidInput("user_id is required for user token".into())),
-    }
 }

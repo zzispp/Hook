@@ -1,5 +1,5 @@
 use sea_orm::Set;
-use types::model::{ModelCapabilities, ModelCatalogProviderDetail, PatchField};
+use types::model::{ModelCapabilities, PatchField};
 
 use crate::{StorageResult, json};
 
@@ -21,14 +21,12 @@ pub(super) fn apply_global_model_patch(active: &mut GlobalModelActiveModel, inpu
     )
 }
 
-pub(super) fn capabilities(record: &GlobalModelRecord, providers: &[ModelCatalogProviderDetail]) -> StorageResult<ModelCapabilities> {
+pub(super) fn capabilities(record: &GlobalModelRecord) -> StorageResult<ModelCapabilities> {
     let config = record.config()?;
     Ok(ModelCapabilities {
-        supports_vision: config_bool(config.as_ref(), "vision") || providers.iter().any(|provider| provider.supports_vision == Some(true)),
-        supports_function_calling: config_bool(config.as_ref(), "function_calling")
-            || providers.iter().any(|provider| provider.supports_function_calling == Some(true)),
-        supports_streaming: config_bool_default(config.as_ref(), "streaming", true)
-            || providers.iter().any(|provider| provider.supports_streaming == Some(true)),
+        supports_vision: config_bool(config.as_ref(), "vision"),
+        supports_function_calling: config_bool(config.as_ref(), "function_calling"),
+        supports_streaming: config_bool_default(config.as_ref(), "streaming", true),
     })
 }
 

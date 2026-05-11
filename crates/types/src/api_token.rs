@@ -22,7 +22,7 @@ pub enum ApiTokenType {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ApiToken {
     pub id: String,
-    pub user_id: String,
+    pub user_id: Option<String>,
     pub token_type: ApiTokenType,
     pub name: String,
     pub token_value: String,
@@ -118,7 +118,7 @@ pub struct ApiTokenUpdate {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ApiTokenResponse {
     pub id: String,
-    pub user_id: String,
+    pub user_id: Option<String>,
     pub token_type: ApiTokenType,
     pub name: String,
     pub token_prefix: String,

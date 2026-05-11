@@ -6,7 +6,7 @@ use types::{
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ApiTokenRecordInput {
-    pub user_id: String,
+    pub user_id: Option<String>,
     pub token_type: ApiTokenType,
     pub name: String,
     pub token_value: String,

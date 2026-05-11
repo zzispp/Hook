@@ -1,0 +1,16 @@
+[package]
+name = "provider"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+hex.workspace = true
+ring.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+types.workspace = true

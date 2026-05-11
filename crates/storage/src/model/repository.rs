@@ -5,7 +5,7 @@ use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
     GlobalModelRecord, GlobalModelRecordInput, GlobalModelRecordPatch, ModelRecord,
-    record::{global_models, global_models::ActiveModel as GlobalModelActiveModel, models},
+    record::{global_models, global_models::ActiveModel as GlobalModelActiveModel, provider_models},
     repository_helpers::{apply_global_model_patch, capabilities, description, record_matches, unique_provider_count},
 };
 
@@ -51,8 +51,8 @@ impl ModelStore {
 
     pub async fn delete_global_model(&self, id: &str) -> StorageResult<()> {
         let record = self.find_global_model_record(id).await?.ok_or(StorageError::NotFound)?;
-        models::Entity::delete_many()
-            .filter(models::Column::GlobalModelId.eq(record.id.as_str()))
+        provider_models::Entity::delete_many()
+            .filter(provider_models::Column::GlobalModelId.eq(record.id.as_str()))
             .exec(self.database.connection())
             .await?;
         let active: GlobalModelActiveModel = record.into();
@@ -127,7 +127,7 @@ impl ModelStore {
     async fn catalog_item(&self, record: GlobalModelRecord) -> StorageResult<ModelCatalogItem> {
         let providers = self.active_provider_details(&record).await?;
         let price_range = record.price_range()?;
-        let capabilities = capabilities(&record, &providers)?;
+        let capabilities = capabilities(&record)?;
         let description = description(record.config()?.as_ref());
         Ok(ModelCatalogItem {
             global_model_name: record.name,
@@ -143,9 +143,7 @@ impl ModelStore {
     async fn active_provider_details(&self, record: &GlobalModelRecord) -> StorageResult<Vec<types::model::ModelCatalogProviderDetail>> {
         let mut providers = Vec::new();
         for model in self.models_for_global_model(&record.id).await? {
-            if model.is_active {
-                providers.push(model.provider_detail(record)?);
-            }
+            providers.push(model.provider_detail(record)?);
         }
         Ok(providers)
     }
@@ -169,18 +167,12 @@ impl ModelStore {
     }
 
     async fn active_provider_count(&self, id: &str) -> StorageResult<u64> {
-        let records = self
-            .models_for_global_model(id)
-            .await?
-            .into_iter()
-            .filter(|model| model.is_active && model.is_available)
-            .collect();
-        Ok(unique_provider_count(records))
+        Ok(unique_provider_count(self.models_for_global_model(id).await?))
     }
 
     async fn model_count(&self, id: &str) -> StorageResult<u64> {
-        models::Entity::find()
-            .filter(models::Column::GlobalModelId.eq(id))
+        provider_models::Entity::find()
+            .filter(provider_models::Column::GlobalModelId.eq(id))
             .count(self.database.connection())
             .await
             .map_err(StorageError::from)
@@ -204,8 +196,8 @@ impl ModelStore {
     }
 
     async fn models_for_global_model(&self, id: &str) -> StorageResult<Vec<ModelRecord>> {
-        models::Entity::find()
-            .filter(models::Column::GlobalModelId.eq(id))
+        provider_models::Entity::find()
+            .filter(provider_models::Column::GlobalModelId.eq(id))
             .all(self.database.connection())
             .await
             .map_err(StorageError::from)

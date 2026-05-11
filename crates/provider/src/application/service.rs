@@ -1,0 +1,185 @@
+use async_trait::async_trait;
+use types::provider::{
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderCreate, ProviderEndpoint,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate,
+    ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+};
+
+use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher};
+
+use super::validation::{
+    sanitize_api_key, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request, sanitize_model_binding, sanitize_update,
+    validate_api_key, validate_create, validate_endpoint, validate_endpoint_update, validate_list_request, validate_model_binding, validate_update,
+};
+
+const MAX_REQUEST_RECORD_LIMIT: u64 = 100;
+
+pub struct ProviderService<R, M, C> {
+    repository: R,
+    models: M,
+    cipher: C,
+}
+
+impl<R, M, C> ProviderService<R, M, C>
+where
+    R: ProviderRepository,
+    M: GlobalModelCatalog,
+    C: SecretCipher,
+{
+    pub const fn new(repository: R, models: M, cipher: C) -> Self {
+        Self { repository, models, cipher }
+    }
+}
+
+#[async_trait]
+impl<R, M, C> ProviderUseCase for ProviderService<R, M, C>
+where
+    R: ProviderRepository,
+    M: GlobalModelCatalog,
+    C: SecretCipher,
+{
+    async fn create_provider(&self, input: ProviderCreate) -> ProviderResult<Provider> {
+        let input = sanitize_create(input);
+        validate_create(&input)?;
+        reject_duplicate_provider(&self.repository, &input.name).await?;
+        self.repository.create_provider(input).await
+    }
+
+    async fn update_provider(&self, id: &str, input: ProviderUpdate) -> ProviderResult<Provider> {
+        let input = sanitize_update(input);
+        validate_update(&input)?;
+        self.repository.update_provider(id, input).await
+    }
+
+    async fn delete_provider(&self, id: &str) -> ProviderResult<()> {
+        self.repository.delete_provider(id).await
+    }
+
+    async fn get_provider(&self, id: &str) -> ProviderResult<Provider> {
+        self.repository.find_provider(id).await?.ok_or(ProviderError::NotFound)
+    }
+
+    async fn list_providers(&self, request: ProviderListRequest) -> ProviderResult<ProviderListResponse> {
+        let request = sanitize_list_request(request);
+        validate_list_request(&request)?;
+        self.repository.list_providers(request).await
+    }
+
+    async fn create_endpoint(&self, provider_id: &str, input: ProviderEndpointCreate) -> ProviderResult<ProviderEndpoint> {
+        self.ensure_provider(provider_id).await?;
+        let input = sanitize_endpoint(input);
+        validate_endpoint(&input)?;
+        self.repository.create_endpoint(provider_id, input).await
+    }
+
+    async fn update_endpoint(&self, provider_id: &str, endpoint_id: &str, input: ProviderEndpointUpdate) -> ProviderResult<ProviderEndpoint> {
+        self.ensure_provider(provider_id).await?;
+        let input = sanitize_endpoint_update(input);
+        validate_endpoint_update(&input)?;
+        self.repository.update_endpoint(provider_id, endpoint_id, input).await
+    }
+
+    async fn delete_endpoint(&self, provider_id: &str, endpoint_id: &str) -> ProviderResult<()> {
+        self.ensure_provider(provider_id).await?;
+        self.repository.delete_endpoint(provider_id, endpoint_id).await
+    }
+
+    async fn list_endpoints(&self, provider_id: &str) -> ProviderResult<Vec<ProviderEndpoint>> {
+        self.ensure_provider(provider_id).await?;
+        self.repository.list_endpoints(provider_id).await
+    }
+
+    async fn create_api_key(&self, provider_id: &str, input: ProviderApiKeyCreate) -> ProviderResult<ProviderApiKey> {
+        self.ensure_provider(provider_id).await?;
+        let input = sanitize_api_key(input);
+        validate_api_key(&input)?;
+        let encrypted = self.cipher.encrypt_provider_key(&input.api_key)?;
+        self.repository.create_api_key(provider_id, input, encrypted).await
+    }
+
+    async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>> {
+        self.ensure_provider(provider_id).await?;
+        self.repository.list_api_keys(provider_id).await
+    }
+
+    async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding> {
+        self.ensure_provider(provider_id).await?;
+        let input = sanitize_model_binding(input);
+        validate_model_binding(&input)?;
+        ensure_global_model(&self.models, &input.global_model_id).await?;
+        self.repository.create_model_binding(provider_id, input).await
+    }
+
+    async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>> {
+        self.ensure_provider(provider_id).await?;
+        self.repository.list_model_bindings(provider_id).await
+    }
+
+    async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse> {
+        validate_request_record_list_request(&request)?;
+        self.repository.list_request_records(request).await
+    }
+
+    async fn list_active_request_records(&self, request: ActiveRequestRecordRequest) -> ProviderResult<ActiveRequestRecordResponse> {
+        let request = sanitize_active_request_record_request(request);
+        self.repository.list_active_request_records(request).await
+    }
+
+    async fn get_request_record(&self, request_id: &str) -> ProviderResult<RequestRecordDetail> {
+        if request_id.trim().is_empty() {
+            return Err(ProviderError::InvalidInput("request_id cannot be blank".into()));
+        }
+        self.repository.get_request_record(request_id).await
+    }
+}
+
+impl<R, M, C> ProviderService<R, M, C>
+where
+    R: ProviderRepository,
+    M: GlobalModelCatalog,
+    C: SecretCipher,
+{
+    async fn ensure_provider(&self, provider_id: &str) -> ProviderResult<()> {
+        self.repository.find_provider(provider_id).await?.ok_or(ProviderError::NotFound)?;
+        Ok(())
+    }
+}
+
+async fn reject_duplicate_provider<R>(repository: &R, name: &str) -> ProviderResult<()>
+where
+    R: ProviderRepository,
+{
+    if repository.find_provider(name).await?.is_some() {
+        return Err(ProviderError::Conflict(format!("provider already exists: {name}")));
+    }
+    Ok(())
+}
+
+async fn ensure_global_model<M>(models: &M, id: &str) -> ProviderResult<()>
+where
+    M: GlobalModelCatalog,
+{
+    if !models.global_model_exists(id).await? {
+        return Err(ProviderError::InvalidInput(format!("global model does not exist: {id}")));
+    }
+    Ok(())
+}
+
+fn validate_request_record_list_request(request: &RequestRecordListRequest) -> ProviderResult<()> {
+    if request.limit == 0 || request.limit > MAX_REQUEST_RECORD_LIMIT {
+        return Err(ProviderError::InvalidInput(format!("limit must be between 1 and {MAX_REQUEST_RECORD_LIMIT}")));
+    }
+    Ok(())
+}
+
+fn sanitize_active_request_record_request(request: ActiveRequestRecordRequest) -> ActiveRequestRecordRequest {
+    let mut ids = request
+        .ids
+        .into_iter()
+        .map(|id| id.trim().to_owned())
+        .filter(|id| !id.is_empty())
+        .collect::<Vec<_>>();
+    ids.sort();
+    ids.dedup();
+    ActiveRequestRecordRequest { ids }
+}

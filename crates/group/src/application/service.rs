@@ -1,35 +1,39 @@
 use async_trait::async_trait;
 use types::group::{BillingGroupCreate, BillingGroupListRequest, BillingGroupListResponse, BillingGroupResponse, BillingGroupUpdate};
 
-use crate::application::{GroupError, GroupModelCatalog, GroupRepository, GroupResult, GroupUseCase};
+use crate::application::{GroupError, GroupModelCatalog, GroupProviderCatalog, GroupRepository, GroupResult, GroupUseCase};
 
 use super::validation::{sanitize_create, sanitize_update, validate_create, validate_list_request, validate_update};
 
-pub struct GroupService<R, M> {
+pub struct GroupService<R, M, P> {
     repository: R,
     models: M,
+    providers: P,
 }
 
-impl<R, M> GroupService<R, M>
+impl<R, M, P> GroupService<R, M, P>
 where
     R: GroupRepository,
     M: GroupModelCatalog,
+    P: GroupProviderCatalog,
 {
-    pub const fn new(repository: R, models: M) -> Self {
-        Self { repository, models }
+    pub const fn new(repository: R, models: M, providers: P) -> Self {
+        Self { repository, models, providers }
     }
 }
 
 #[async_trait]
-impl<R, M> GroupUseCase for GroupService<R, M>
+impl<R, M, P> GroupUseCase for GroupService<R, M, P>
 where
     R: GroupRepository,
     M: GroupModelCatalog,
+    P: GroupProviderCatalog,
 {
     async fn create_group(&self, input: BillingGroupCreate) -> GroupResult<BillingGroupResponse> {
         let input = sanitize_create(input);
         validate_create(&input)?;
         ensure_models_exist(&self.models, &input.allowed_model_ids).await?;
+        ensure_providers_exist(&self.providers, &input.allowed_provider_ids).await?;
         reject_duplicate_code(&self.repository, &input.code).await?;
         self.repository.create_group(input).await
     }
@@ -38,6 +42,7 @@ where
         let input = sanitize_update(input);
         validate_update(&input)?;
         ensure_patch_models_exist(&self.models, &input.allowed_model_ids).await?;
+        ensure_patch_providers_exist(&self.providers, &input.allowed_provider_ids).await?;
         self.repository.update_group(id, input).await
     }
 
@@ -89,6 +94,28 @@ where
     for id in ids {
         if !models.model_exists(id).await? {
             return Err(GroupError::InvalidInput(format!("global model does not exist: {id}")));
+        }
+    }
+    Ok(())
+}
+
+async fn ensure_patch_providers_exist<P>(providers: &P, patch: &types::model::PatchField<Vec<String>>) -> GroupResult<()>
+where
+    P: GroupProviderCatalog,
+{
+    match patch {
+        types::model::PatchField::Value(value) => ensure_providers_exist(providers, value).await,
+        types::model::PatchField::Null | types::model::PatchField::Missing => Ok(()),
+    }
+}
+
+async fn ensure_providers_exist<P>(providers: &P, ids: &[String]) -> GroupResult<()>
+where
+    P: GroupProviderCatalog,
+{
+    for id in ids {
+        if !providers.provider_exists(id).await? {
+            return Err(GroupError::InvalidInput(format!("provider does not exist: {id}")));
         }
     }
     Ok(())

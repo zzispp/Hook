@@ -3,7 +3,7 @@ export type ApiTokenType = 'user' | 'independent';
 
 export type ApiToken = {
   id: string;
-  user_id: string;
+  user_id?: string | null;
   token_type: ApiTokenType;
   name: string;
   token_prefix: string;

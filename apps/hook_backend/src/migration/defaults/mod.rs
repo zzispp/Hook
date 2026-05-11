@@ -19,6 +19,8 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_settings",
     "admin_translations",
     "admin_models",
+    "admin_providers",
+    "admin_request_records",
 ];
 
 pub const USER_MENU_CODES: &[&str] = &["dashboard_home", "dashboard_models", "wallet_center", "api_tokens"];
@@ -136,6 +138,27 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         ],
     },
     MenuApiBindingDefinition {
+        menu_code: "admin_providers",
+        api_codes: &[
+            "providers_read",
+            "providers_create",
+            "providers_detail",
+            "providers_update",
+            "providers_delete",
+            "provider_endpoints_read",
+            "provider_endpoints_create",
+            "provider_keys_read",
+            "provider_keys_create",
+            "provider_models_read",
+            "provider_models_create",
+            "models_global_read",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_request_records",
+        api_codes: &["request_records_read", "request_records_active_read", "request_records_detail"],
+    },
+    MenuApiBindingDefinition {
         menu_code: "admin_settings",
         api_codes: &["system_settings_read", "system_settings_update"],
     },
@@ -187,6 +210,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "groups_update",
             "groups_delete",
             "models_global_read",
+            "providers_read",
         ],
     },
 ];
@@ -203,6 +227,8 @@ mod tests {
 
         assert!(ADMIN_MENU_CODES.contains(&"dashboard_home"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_models"));
+        assert!(ADMIN_MENU_CODES.contains(&"admin_providers"));
+        assert!(ADMIN_MENU_CODES.contains(&"admin_request_records"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_wallets"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_tokens"));
     }

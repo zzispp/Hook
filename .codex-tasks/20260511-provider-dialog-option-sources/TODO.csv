@@ -1,0 +1,5 @@
+id,task,status,completed_at,notes
+1,Inspect provider child dialog option sources,DONE,2026-05-11,
+2,Wire API key format options from configured endpoints,DONE,2026-05-11,
+3,Wire provider model empty option state,DONE,2026-05-11,
+4,Validate frontend checks,DONE,2026-05-11,

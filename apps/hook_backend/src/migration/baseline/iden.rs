@@ -159,23 +159,18 @@ pub(super) enum GlobalModels {
 }
 
 #[derive(DeriveIden)]
-pub(super) enum Models {
+pub(super) enum Providers {
     Table,
     Id,
-    ProviderId,
-    GlobalModelId,
-    ProviderModelName,
-    ProviderModelMappings,
-    PricePerRequest,
-    TieredPricing,
-    SupportsVision,
-    SupportsFunctionCalling,
-    SupportsStreaming,
-    SupportsExtendedThinking,
-    SupportsImageGeneration,
+    Name,
+    ProviderType,
+    MaxRetries,
+    RequestTimeoutSeconds,
+    StreamFirstByteTimeoutSeconds,
+    Priority,
+    KeepPriorityOnConversion,
+    EnableFormatConversion,
     IsActive,
-    IsAvailable,
-    Config,
     CreatedAt,
     UpdatedAt,
 }
@@ -230,6 +225,100 @@ pub(super) enum BillingGroupModels {
 }
 
 #[derive(DeriveIden)]
+pub(super) enum ProviderEndpoints {
+    Table,
+    Id,
+    ProviderId,
+    ApiFormat,
+    BaseUrl,
+    CustomPath,
+    MaxRetries,
+    IsActive,
+    FormatAcceptanceConfig,
+    HeaderRules,
+    BodyRules,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum ProviderApiKeys {
+    Table,
+    Id,
+    ProviderId,
+    Name,
+    EncryptedApiKey,
+    Note,
+    ApiFormats,
+    InternalPriority,
+    RpmLimit,
+    LearnedRpmLimit,
+    CacheTtlMinutes,
+    MaxProbeIntervalMinutes,
+    TimeRangeEnabled,
+    TimeRangeStart,
+    TimeRangeEnd,
+    HealthByFormat,
+    CircuitBreakerByFormat,
+    IsActive,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum ProviderModels {
+    Table,
+    Id,
+    ProviderId,
+    GlobalModelId,
+    ProviderModelName,
+    ProviderModelMappings,
+    PricePerRequest,
+    TieredPricing,
+    Config,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum BillingGroupProviders {
+    Table,
+    Id,
+    GroupCode,
+    ProviderId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(super) enum RequestCandidates {
+    Table,
+    Id,
+    RequestId,
+    TokenId,
+    GroupCode,
+    GlobalModelId,
+    ProviderId,
+    EndpointId,
+    KeyId,
+    ClientApiFormat,
+    ProviderApiFormat,
+    NeedsConversion,
+    IsStream,
+    CandidateIndex,
+    RetryIndex,
+    Status,
+    StatusCode,
+    LatencyMs,
+    FirstByteTimeMs,
+    ErrorType,
+    ErrorMessage,
+    CreatedAt,
+    StartedAt,
+    FinishedAt,
+}
+
+#[derive(DeriveIden)]
 pub(super) enum SystemSettings {
     Table,
     Id,
@@ -239,6 +328,7 @@ pub(super) enum SystemSettings {
     AutoDeleteExpiredTokens,
     DefaultUserGrant,
     DefaultRateLimitRpm,
+    SchedulingMode,
     CreatedAt,
     UpdatedAt,
 }
@@ -273,12 +363,17 @@ pub(in crate::migration) enum TranslationEntries {
 
 pub fn reversed_tables() -> Vec<DynIden> {
     vec![
+        RequestCandidates::Table.into_iden(),
         ApiTokens::Table.into_iden(),
+        BillingGroupProviders::Table.into_iden(),
         BillingGroupModels::Table.into_iden(),
+        ProviderModels::Table.into_iden(),
+        ProviderApiKeys::Table.into_iden(),
+        ProviderEndpoints::Table.into_iden(),
         TranslationEntries::Table.into_iden(),
         TranslationLanguages::Table.into_iden(),
         SystemSettings::Table.into_iden(),
-        Models::Table.into_iden(),
+        Providers::Table.into_iden(),
         GlobalModels::Table.into_iden(),
         BillingGroups::Table.into_iden(),
         WalletTransactions::Table.into_iden(),

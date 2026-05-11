@@ -93,6 +93,7 @@ function BillingGroupTableRow({
       <TableCell>{row.name}</TableCell>
       <TableCell>{row.billing_multiplier}</TableCell>
       <TableCell>{modelAccessText(row, t)}</TableCell>
+      <TableCell>{providerAccessText(row, t)}</TableCell>
       <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
       <TableCell>{row.is_system ? t('common.system') : t('common.custom')}</TableCell>
       <TableCell>{row.sort_order}</TableCell>
@@ -158,6 +159,7 @@ function groupTableHead(t: (key: string, options?: Record<string, unknown>) => s
     { id: 'name', label: t('common.name') },
     { id: 'billing_multiplier', label: t('fields.billingMultiplier') },
     { id: 'allowed_model_ids', label: t('fields.allowedModels') },
+    { id: 'allowed_provider_ids', label: t('fields.allowedProviders') },
     { id: 'status', label: t('common.status') },
     { id: 'system', label: t('common.system') },
     { id: 'sort_order', label: t('common.sortOrder') },
@@ -169,4 +171,10 @@ function modelAccessText(group: BillingGroup, t: (key: string, options?: Record<
   return group.allowed_model_ids.length === 0
     ? t('billingGroups.allModels')
     : t('billingGroups.selectedModelCount', { count: group.allowed_model_ids.length });
+}
+
+function providerAccessText(group: BillingGroup, t: (key: string, options?: Record<string, unknown>) => string) {
+  return group.allowed_provider_ids.length === 0
+    ? t('billingGroups.allProviders')
+    : t('billingGroups.selectedProviderCount', { count: group.allowed_provider_ids.length });
 }

@@ -3,10 +3,11 @@ use storage::{
     Database, StorageError,
     group::{BillingGroupRecordInput, BillingGroupRecordPatch, GroupStore},
     model::ModelStore,
+    provider::ProviderStore,
 };
 use types::group::{BillingGroupCreate, BillingGroupListRequest, BillingGroupListResponse, BillingGroupResponse, BillingGroupUpdate};
 
-use crate::application::{GroupError, GroupModelCatalog, GroupRepository, GroupResult};
+use crate::application::{GroupError, GroupModelCatalog, GroupProviderCatalog, GroupRepository, GroupResult};
 
 #[derive(Clone)]
 pub struct StorageGroupRepository {
@@ -16,6 +17,11 @@ pub struct StorageGroupRepository {
 #[derive(Clone)]
 pub struct StorageGroupModelCatalog {
     store: ModelStore,
+}
+
+#[derive(Clone)]
+pub struct StorageGroupProviderCatalog {
+    store: ProviderStore,
 }
 
 impl StorageGroupRepository {
@@ -30,6 +36,14 @@ impl StorageGroupModelCatalog {
     pub fn new(database: Database) -> Self {
         Self {
             store: ModelStore::new(database),
+        }
+    }
+}
+
+impl StorageGroupProviderCatalog {
+    pub fn new(database: Database) -> Self {
+        Self {
+            store: ProviderStore::new(database),
         }
     }
 }
@@ -80,6 +94,13 @@ impl GroupModelCatalog for StorageGroupModelCatalog {
     }
 }
 
+#[async_trait]
+impl GroupProviderCatalog for StorageGroupProviderCatalog {
+    async fn provider_exists(&self, id: &str) -> GroupResult<bool> {
+        self.store.find_provider(id).await.map(|provider| provider.is_some()).map_err(storage_error)
+    }
+}
+
 fn record_input(input: BillingGroupCreate, is_system: bool) -> BillingGroupRecordInput {
     BillingGroupRecordInput {
         code: input.code,
@@ -87,6 +108,7 @@ fn record_input(input: BillingGroupCreate, is_system: bool) -> BillingGroupRecor
         description: input.description,
         billing_multiplier: input.billing_multiplier,
         allowed_model_ids: input.allowed_model_ids,
+        allowed_provider_ids: input.allowed_provider_ids,
         is_active: input.is_active.unwrap_or(true),
         is_system,
         sort_order: input.sort_order.unwrap_or(0),
@@ -99,6 +121,7 @@ fn record_patch(input: BillingGroupUpdate) -> BillingGroupRecordPatch {
         description: input.description,
         billing_multiplier: input.billing_multiplier,
         allowed_model_ids: input.allowed_model_ids,
+        allowed_provider_ids: input.allowed_provider_ids,
         is_active: input.is_active,
         sort_order: input.sort_order,
     }

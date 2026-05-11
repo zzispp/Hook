@@ -41,3 +41,7 @@ export async function updateSystemSettings(payload: SystemSettingsUpdate) {
   await mutate(endpoints.adminSettings.system);
   return settings;
 }
+
+export async function updateSchedulingMode(schedulingMode: SystemSettings['scheduling_mode']) {
+  return updateSystemSettings({ scheduling_mode: schedulingMode });
+}

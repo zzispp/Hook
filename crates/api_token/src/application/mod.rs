@@ -1,8 +1,11 @@
 mod error;
 mod ports;
+mod records;
 mod service;
 mod token;
 mod validation;
+#[cfg(test)]
+mod service_tests;
 #[cfg(test)]
 mod validation_tests;
 

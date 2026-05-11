@@ -20,6 +20,11 @@ pub trait GroupModelCatalog: Send + Sync + 'static {
 }
 
 #[async_trait]
+pub trait GroupProviderCatalog: Send + Sync + 'static {
+    async fn provider_exists(&self, id: &str) -> GroupResult<bool>;
+}
+
+#[async_trait]
 pub trait GroupUseCase: Send + Sync + 'static {
     async fn create_group(&self, input: BillingGroupCreate) -> GroupResult<BillingGroupResponse>;
     async fn update_group(&self, id: &str, input: BillingGroupUpdate) -> GroupResult<BillingGroupResponse>;

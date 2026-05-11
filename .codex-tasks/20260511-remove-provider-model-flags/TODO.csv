@@ -1,0 +1,5 @@
+id,task,status,completed_at,notes
+1,Trace provider model flag fields,DONE,2026-05-11,
+2,Remove frontend controls and upstream model input,DONE,2026-05-11,Provider model name remains internal and is auto-filled from selected global model name.
+3,Remove backend/storage/db fields,DONE,2026-05-11,Provider model binding capability/status fields removed; test fixtures updated to the new shape.
+4,Validate checks,DONE,2026-05-11,"just check; storage provider_list_filters; proxy scheduler; frontend tsc/lint; i18n JSON parse"

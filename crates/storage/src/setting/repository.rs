@@ -60,4 +60,7 @@ fn apply_patch(active: &mut SystemSettingsActiveModel, input: SystemSettingsReco
     if let Some(value) = input.default_rate_limit_rpm {
         active.default_rate_limit_rpm = Set(value);
     }
+    if let Some(value) = input.scheduling_mode {
+        active.scheduling_mode = Set(value.as_str().to_owned());
+    }
 }

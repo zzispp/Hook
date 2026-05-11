@@ -6,6 +6,7 @@ export type GroupForm = {
   description: string;
   billing_multiplier: string;
   allowed_model_ids: string[];
+  allowed_provider_ids: string[];
   is_active: boolean;
   sort_order: string;
 };
@@ -16,6 +17,7 @@ export const DEFAULT_GROUP_FORM: GroupForm = {
   description: '',
   billing_multiplier: '1',
   allowed_model_ids: [],
+  allowed_provider_ids: [],
   is_active: true,
   sort_order: '0',
 };
@@ -27,6 +29,7 @@ export function formFromGroup(group: BillingGroup): GroupForm {
     description: group.description ?? '',
     billing_multiplier: String(group.billing_multiplier),
     allowed_model_ids: group.allowed_model_ids,
+    allowed_provider_ids: group.allowed_provider_ids,
     is_active: group.is_active,
     sort_order: String(group.sort_order),
   };
@@ -38,6 +41,7 @@ export function groupPayload(form: GroupForm) {
     description: form.description.trim() || null,
     billing_multiplier: Number(form.billing_multiplier),
     allowed_model_ids: form.allowed_model_ids,
+    allowed_provider_ids: form.allowed_provider_ids,
     is_active: form.is_active,
     sort_order: Number(form.sort_order || 0),
   };

@@ -3,6 +3,7 @@ mod auth;
 mod group;
 mod i18n;
 mod model;
+mod provider;
 mod rbac;
 mod setting;
 mod token;
@@ -21,6 +22,7 @@ const API_GROUPS: &[&[ApiDefinition]] = &[
     user::USER_APIS,
     rbac::RBAC_APIS,
     model::MODEL_APIS,
+    provider::PROVIDER_APIS,
     group::GROUP_APIS,
     i18n::I18N_APIS,
     token::TOKEN_APIS,

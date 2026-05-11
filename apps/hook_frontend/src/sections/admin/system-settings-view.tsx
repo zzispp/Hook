@@ -6,6 +6,7 @@ import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
@@ -78,6 +79,16 @@ function SiteSection({
           value={form.site_subtitle}
           onChange={(value) => setForm((current) => ({ ...current, site_subtitle: value }))}
         />
+        <TextFieldRow
+          select
+          label={t('systemSettings.fields.schedulingMode')}
+          value={form.scheduling_mode}
+          onChange={(value) => setForm((current) => ({ ...current, scheduling_mode: value as typeof current.scheduling_mode }))}
+        >
+          <MenuItem value="cache_affinity">{t('providers.schedulingCacheAffinity')}</MenuItem>
+          <MenuItem value="load_balance">{t('providers.schedulingLoadBalance')}</MenuItem>
+          <MenuItem value="fixed_order">{t('providers.schedulingFixedOrder')}</MenuItem>
+        </TextFieldRow>
       </Stack>
     </SettingsSection>
   );

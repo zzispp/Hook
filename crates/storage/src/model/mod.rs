@@ -7,3 +7,4 @@ pub use repository::ModelStore;
 pub use types::{GlobalModelRecordInput, GlobalModelRecordPatch};
 
 pub(super) use record::{GlobalModelRecord, ModelRecord};
+pub use record::{global_models, provider_models};

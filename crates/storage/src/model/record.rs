@@ -6,10 +6,10 @@ use crate::{StorageResult, json};
 #[path = "entities/mod.rs"]
 pub mod entities;
 
-pub use entities::{global_models, models};
+pub use entities::{global_models, provider_models};
 
 pub type GlobalModelRecord = global_models::Model;
-pub type ModelRecord = models::Model;
+pub type ModelRecord = provider_models::Model;
 
 impl GlobalModelRecord {
     pub fn with_counts(self, provider_count: u64, active_provider_count: u64) -> StorageResult<GlobalModelResponse> {
@@ -67,10 +67,9 @@ impl ModelRecord {
             price_per_request: self.price_per_request.or(global_model.default_price_per_request),
             effective_tiered_pricing: Some(tiered.clone()),
             tier_count: tiered.tiers.len() as u64,
-            supports_vision: Some(self.supports_vision.unwrap_or(global_model.config_bool("vision")?)),
-            supports_function_calling: Some(self.supports_function_calling.unwrap_or(global_model.config_bool("function_calling")?)),
-            supports_streaming: Some(self.supports_streaming.unwrap_or(global_model.config_bool_with_default("streaming", true)?)),
-            is_active: self.is_active,
+            supports_vision: Some(global_model.config_bool("vision")?),
+            supports_function_calling: Some(global_model.config_bool("function_calling")?),
+            supports_streaming: Some(global_model.config_bool_with_default("streaming", true)?),
         })
     }
 

@@ -1,0 +1,4 @@
+id,task,status,completed_at,notes
+1,Trace provider key encryption wiring,DONE,2026-05-11,
+2,Implement configured provider key cipher,DONE,2026-05-11,
+3,Validate provider endpoint/key changes,DONE,2026-05-11,

@@ -1,5 +1,6 @@
 use sea_orm::entity::prelude::*;
 use time::format_description::well_known::Rfc3339;
+use types::provider::ProviderSchedulingMode;
 use types::system_setting::SystemSettings;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -13,6 +14,7 @@ pub struct Model {
     pub auto_delete_expired_tokens: bool,
     pub default_user_grant: rust_decimal::Decimal,
     pub default_rate_limit_rpm: i64,
+    pub scheduling_mode: String,
     pub created_at: TimeDateTimeWithTimeZone,
     pub updated_at: TimeDateTimeWithTimeZone,
 }
@@ -31,6 +33,7 @@ impl From<Model> for SystemSettings {
             auto_delete_expired_tokens: value.auto_delete_expired_tokens,
             default_user_grant: value.default_user_grant,
             default_rate_limit_rpm: value.default_rate_limit_rpm,
+            scheduling_mode: ProviderSchedulingMode::from(value.scheduling_mode.as_str()),
             created_at: format_timestamp(value.created_at),
             updated_at: format_timestamp(value.updated_at),
         }

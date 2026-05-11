@@ -35,6 +35,9 @@ auth:
     - methods: ["POST"]
       path_pattern: "/api/auth/refresh"
 
+security:
+  provider_key_secret: "hook-local-development-provider-key-secret-change-before-deploy"
+
 redis:
   url: "redis://default:@localhost:6380?protocol=resp3"
   scheme: "redis"

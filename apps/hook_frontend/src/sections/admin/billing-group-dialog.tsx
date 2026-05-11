@@ -1,5 +1,6 @@
 'use client';
 
+import type { Provider } from 'src/types/provider';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { useGroupDialog } from './billing-group-management-state';
 
@@ -11,14 +12,17 @@ import ListItemText from '@mui/material/ListItemText';
 
 import { useTranslate } from 'src/locales/use-locales';
 
+import { providerTypeLabel } from './provider-management-utils';
 import { SwitchRow, TextFieldRow, ManagementDialog } from './shared';
 
 export function BillingGroupDialog({
   dialog,
   models,
+  providers,
 }: {
   dialog: ReturnType<typeof useGroupDialog>;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
+  providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
 }) {
   const { t } = useTranslate('admin');
 
@@ -69,12 +73,50 @@ export function BillingGroupDialog({
         />
       </Stack>
       <ModelSelect dialog={dialog} models={models} />
+      <ProviderSelect dialog={dialog} providers={providers} />
       <SwitchRow
         checked={dialog.form.is_active}
         label={t('common.enabled')}
         onChange={(checked) => dialog.setForm((form) => ({ ...form, is_active: checked }))}
       />
     </ManagementDialog>
+  );
+}
+
+function ProviderSelect({
+  dialog,
+  providers,
+}: {
+  dialog: ReturnType<typeof useGroupDialog>;
+  providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <TextField
+      select
+      fullWidth
+      label={t('fields.allowedProviders')}
+      value={dialog.form.allowed_provider_ids}
+      helperText={t('helper.groupProviderAccess')}
+      SelectProps={{
+        multiple: true,
+        renderValue: (selected) => providerSelectionLabel(selected as string[], providers, t),
+      }}
+      onChange={(event) => dialog.setForm((form) => ({ ...form, allowed_provider_ids: selectedValues(event.target.value) }))}
+    >
+      {providers.length === 0 ? (
+        <MenuItem disabled value="">
+          {t('providers.noProviders')}
+        </MenuItem>
+      ) : null}
+      {providers.map((provider) => (
+        <MenuItem key={provider.id} value={provider.id}>
+          <Checkbox checked={dialog.form.allowed_provider_ids.includes(provider.id)} />
+          <ListItemText primary={provider.name} secondary={providerTypeLabel(provider.provider_type, t)} />
+        </MenuItem>
+      ))}
+    </TextField>
   );
 }
 
@@ -136,4 +178,22 @@ function modelSelectionLabel(
 function modelLabel(id: string, models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[]) {
   const model = models.find((item) => item.id === id);
   return model?.display_name || model?.name || id;
+}
+
+function providerSelectionLabel(
+  ids: string[],
+  providers: Pick<Provider, 'id' | 'name'>[],
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
+  if (ids.length === 0) {
+    return t('billingGroups.allProviders');
+  }
+  if (ids.length > 2) {
+    return t('billingGroups.selectedProviderCount', { count: ids.length });
+  }
+  return ids.map((id) => providerLabel(id, providers)).join(', ');
+}
+
+function providerLabel(id: string, providers: Pick<Provider, 'id' | 'name'>[]) {
+  return providers.find((item) => item.id === id)?.name || id;
 }

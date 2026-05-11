@@ -12,6 +12,7 @@ import TableRow from '@mui/material/TableRow';
 import MenuItem from '@mui/material/MenuItem';
 import TableCell from '@mui/material/TableCell';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -147,6 +148,7 @@ export function TextFieldRow({
   select,
   children,
   helperText,
+  placeholder,
   error,
   disabled,
   SelectProps,
@@ -160,6 +162,7 @@ export function TextFieldRow({
   select?: boolean;
   children?: React.ReactNode;
   helperText?: React.ReactNode;
+  placeholder?: string;
   error?: boolean;
   disabled?: boolean;
   SelectProps?: TextFieldProps['SelectProps'];
@@ -176,6 +179,7 @@ export function TextFieldRow({
       error={error}
       disabled={disabled}
       helperText={helperText}
+      placeholder={placeholder}
       SelectProps={SelectProps}
       slotProps={slotProps}
       onChange={(event) => onChange(Array.isArray(event.target.value) ? event.target.value.join(',') : event.target.value)}
@@ -207,6 +211,10 @@ export function ManagementDialog({
   title,
   children,
   submitting,
+  description,
+  submitText,
+  cancelText,
+  submitDisabled,
   onClose,
   onSubmit,
 }: {
@@ -214,6 +222,10 @@ export function ManagementDialog({
   title: string;
   children: React.ReactNode;
   submitting: boolean;
+  description?: React.ReactNode;
+  submitText?: string;
+  cancelText?: string;
+  submitDisabled?: boolean;
   onClose: () => void;
   onSubmit: () => void;
 }) {
@@ -221,16 +233,23 @@ export function ManagementDialog({
 
   return (
     <Dialog fullWidth maxWidth="md" open={open} onClose={onClose}>
-      <DialogTitle>{title}</DialogTitle>
+      <DialogTitle>
+        {title}
+        {description ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {description}
+          </Typography>
+        ) : null}
+      </DialogTitle>
       <DialogContent>
         <Stack sx={{ pt: 1, gap: 2.5 }}>{children}</Stack>
       </DialogContent>
       <DialogActions>
         <Button variant="outlined" onClick={onClose}>
-          {t('common.cancel')}
+          {cancelText ?? t('common.cancel')}
         </Button>
-        <Button variant="contained" loading={submitting} onClick={onSubmit}>
-          {t('common.save')}
+        <Button variant="contained" loading={submitting} disabled={submitDisabled} onClick={onSubmit}>
+          {submitText ?? t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>

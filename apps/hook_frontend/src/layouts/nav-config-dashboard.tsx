@@ -94,6 +94,8 @@ export const navData: NavSectionProps['data'] = [
           { code: 'admin_apis', title: 'APIs', path: paths.dashboard.admin.apis },
           { code: 'admin_menus', title: 'Menus', path: paths.dashboard.admin.menus },
           { code: 'admin_models', title: 'Models', path: paths.dashboard.admin.models },
+          { code: 'admin_providers', title: 'Providers', path: paths.dashboard.admin.providers },
+          { code: 'admin_request_records', title: 'Request Records', path: paths.dashboard.admin.requestRecords },
         ],
       },
       {

@@ -5,6 +5,7 @@ pub mod group;
 pub mod i18n;
 mod json;
 pub mod model;
+pub mod provider;
 pub mod rbac;
 pub mod setting;
 pub mod user;

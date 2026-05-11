@@ -1,6 +1,8 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+use crate::provider::ProviderSchedulingMode;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SystemSettings {
     pub site_name: String,
@@ -9,6 +11,7 @@ pub struct SystemSettings {
     pub auto_delete_expired_tokens: bool,
     pub default_user_grant: Decimal,
     pub default_rate_limit_rpm: i64,
+    pub scheduling_mode: ProviderSchedulingMode,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -27,6 +30,8 @@ pub struct SystemSettingsUpdate {
     pub default_user_grant: Option<Decimal>,
     #[serde(default)]
     pub default_rate_limit_rpm: Option<i64>,
+    #[serde(default)]
+    pub scheduling_mode: Option<ProviderSchedulingMode>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -38,6 +43,7 @@ pub struct SystemSettingsResponse {
     #[serde(with = "rust_decimal::serde::float")]
     pub default_user_grant: Decimal,
     pub default_rate_limit_rpm: i64,
+    pub scheduling_mode: ProviderSchedulingMode,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -50,6 +56,7 @@ impl SystemSettingsUpdate {
             && self.auto_delete_expired_tokens.is_none()
             && self.default_user_grant.is_none()
             && self.default_rate_limit_rpm.is_none()
+            && self.scheduling_mode.is_none()
     }
 }
 
@@ -62,6 +69,7 @@ impl From<SystemSettings> for SystemSettingsResponse {
             auto_delete_expired_tokens: value.auto_delete_expired_tokens,
             default_user_grant: value.default_user_grant,
             default_rate_limit_rpm: value.default_rate_limit_rpm,
+            scheduling_mode: value.scheduling_mode,
             created_at: value.created_at,
             updated_at: value.updated_at,
         }

@@ -50,7 +50,7 @@ export function formFromToken(token: ApiToken): TokenForm {
   return {
     name: token.name,
     token_type: token.token_type,
-    user_id: token.user_id,
+    user_id: token.user_id ?? '',
     group_code: token.group_code,
     expires_at: rfc3339ToLocalDatetime(token.expires_at),
     model_access_mode: token.model_access_mode,

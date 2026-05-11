@@ -206,6 +206,7 @@ async fn seed_system_settings(manager: &SchemaManager<'_>) -> Result<(), DbErr> 
                     SystemSettings::AutoDeleteExpiredTokens,
                     SystemSettings::DefaultUserGrant,
                     SystemSettings::DefaultRateLimitRpm,
+                    SystemSettings::SchedulingMode,
                     SystemSettings::CreatedAt,
                     SystemSettings::UpdatedAt,
                 ])
@@ -217,6 +218,7 @@ async fn seed_system_settings(manager: &SchemaManager<'_>) -> Result<(), DbErr> 
                     false.into(),
                     0.into(),
                     0.into(),
+                    "cache_affinity".into(),
                     Expr::current_timestamp(),
                     Expr::current_timestamp(),
                 ])

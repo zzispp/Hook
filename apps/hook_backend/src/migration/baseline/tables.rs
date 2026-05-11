@@ -15,7 +15,6 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
         wallet_tables::wallets_table(),
         wallet_tables::wallet_transactions_table(),
         global_models_table(),
-        models_table(),
     ];
     tables.extend(domain_tables::domain_tables());
     tables
@@ -173,30 +172,6 @@ fn global_models_table() -> TableCreateStatement {
         .col(big_integer(GlobalModels::UsageCount))
         .col(timestamp_tz(GlobalModels::CreatedAt))
         .col(timestamp_tz(GlobalModels::UpdatedAt))
-        .to_owned()
-}
-
-fn models_table() -> TableCreateStatement {
-    Table::create()
-        .table(Models::Table)
-        .if_not_exists()
-        .col(string_len(Models::Id, 36).primary_key())
-        .col(string_len(Models::ProviderId, 36))
-        .col(string_len(Models::GlobalModelId, 36))
-        .col(string_len(Models::ProviderModelName, 200))
-        .col(text_null(Models::ProviderModelMappings))
-        .col(decimal_len_null(Models::PricePerRequest, 20, 8))
-        .col(text_null(Models::TieredPricing))
-        .col(boolean_null(Models::SupportsVision))
-        .col(boolean_null(Models::SupportsFunctionCalling))
-        .col(boolean_null(Models::SupportsStreaming))
-        .col(boolean_null(Models::SupportsExtendedThinking))
-        .col(boolean_null(Models::SupportsImageGeneration))
-        .col(boolean(Models::IsActive))
-        .col(boolean(Models::IsAvailable))
-        .col(text_null(Models::Config))
-        .col(timestamp_tz(Models::CreatedAt))
-        .col(timestamp_tz(Models::UpdatedAt))
         .to_owned()
 }
 

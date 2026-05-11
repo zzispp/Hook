@@ -1,6 +1,6 @@
 use super::{
-    AdminSettings, AuthSettings, DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, RedisSettings, ServerSettings, Settings, SettingsError,
-    TracingSettings, explicit_config_path,
+    AdminSettings, AuthSettings, DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, RedisSettings, SecuritySettings, ServerSettings,
+    Settings, SettingsError, TracingSettings, explicit_config_path,
 };
 use std::{ffi::OsString, path::PathBuf};
 
@@ -87,6 +87,28 @@ fn admin_password_hash_trims_config_value() {
 }
 
 #[test]
+fn provider_key_secret_trims_config_value() {
+    let settings = settings_with_security(SecuritySettings {
+        provider_key_secret: "  provider-secret-from-config  ".into(),
+    });
+
+    let secret = settings.provider_key_secret().unwrap();
+
+    assert_eq!(secret, "provider-secret-from-config");
+}
+
+#[test]
+fn provider_key_secret_errors_when_blank() {
+    let settings = settings_with_security(SecuritySettings {
+        provider_key_secret: "  ".into(),
+    });
+
+    let result = settings.provider_key_secret();
+
+    assert!(matches!(result, Err(SettingsError::BlankConfigValue("security.provider_key_secret"))));
+}
+
+#[test]
 fn redis_url_trims_config_value() {
     let settings = settings_with_redis(RedisSettings {
         url: Some("  redis://localhost:6379/0  ".into()),
@@ -159,6 +181,7 @@ fn settings_with_database(database: DatabaseSettings) -> Settings {
         jwt: jwt_settings(),
         admin: admin_settings(),
         auth: AuthSettings { whitelist: vec![] },
+        security: security_settings(),
         redis: redis_settings(),
         tracing: tracing_settings(),
     }
@@ -181,6 +204,13 @@ fn settings_with_admin(admin: AdminSettings) -> Settings {
 fn settings_with_redis(redis: RedisSettings) -> Settings {
     Settings {
         redis,
+        ..settings_with_database(database_parts())
+    }
+}
+
+fn settings_with_security(security: SecuritySettings) -> Settings {
+    Settings {
+        security,
         ..settings_with_database(database_parts())
     }
 }
@@ -220,6 +250,12 @@ fn admin_settings() -> AdminSettings {
         role: "admin".into(),
         is_active: true,
         password_hash: "admin-password-hash-from-config".into(),
+    }
+}
+
+fn security_settings() -> SecuritySettings {
+    SecuritySettings {
+        provider_key_secret: "provider-key-secret-from-config".into(),
     }
 }
 

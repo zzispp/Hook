@@ -40,6 +40,7 @@ fn record_patch(input: SystemSettingsUpdate) -> storage::setting::SystemSettings
         auto_delete_expired_tokens: input.auto_delete_expired_tokens,
         default_user_grant: input.default_user_grant,
         default_rate_limit_rpm: input.default_rate_limit_rpm,
+        scheduling_mode: input.scheduling_mode,
     }
 }
 

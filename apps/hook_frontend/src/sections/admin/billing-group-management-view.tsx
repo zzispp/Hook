@@ -7,6 +7,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 
 import { useGlobalModels } from 'src/actions/models';
+import { useProviders } from 'src/actions/providers';
 import { useBillingGroups } from 'src/actions/groups';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -27,6 +28,7 @@ export function BillingGroupManagementView() {
   const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
   const groups = useBillingGroups(table.page, table.rowsPerPage, toModelFilters(filters));
   const models = useGlobalModels(0, 1000);
+  const providers = useProviders(0, 1000);
   const dialog = useGroupDialog(t);
   const deleteDialog = useDeleteGroupDialog(t);
 
@@ -64,7 +66,7 @@ export function BillingGroupManagementView() {
           onDelete={deleteDialog.setDeleteTarget}
         />
       </Card>
-      <BillingGroupDialog dialog={dialog} models={models.items} />
+      <BillingGroupDialog dialog={dialog} models={models.items} providers={providers.items} />
       <ConfirmDialog
         open={!!deleteDialog.deleteTarget}
         onClose={() => deleteDialog.setDeleteTarget(null)}

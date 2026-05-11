@@ -17,6 +17,7 @@ pub struct Settings {
     pub jwt: JwtSettings,
     pub admin: AdminSettings,
     pub auth: AuthSettings,
+    pub security: SecuritySettings,
     pub redis: RedisSettings,
     pub tracing: TracingSettings,
 }
@@ -64,6 +65,11 @@ pub struct AuthSettings {
 pub struct AuthWhitelistRule {
     pub methods: Vec<String>,
     pub path_pattern: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct SecuritySettings {
+    pub provider_key_secret: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -138,6 +144,10 @@ impl Settings {
 
     pub fn admin_password_hash(&self) -> Result<String, SettingsError> {
         required_config_value("admin.password_hash", &self.admin.password_hash)
+    }
+
+    pub fn provider_key_secret(&self) -> Result<String, SettingsError> {
+        required_config_value("security.provider_key_secret", &self.security.provider_key_secret)
     }
 
     pub fn redis_url(&self) -> Result<String, SettingsError> {

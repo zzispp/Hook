@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate request path and reproduce failure,IN_PROGRESS,Failure mode is captured from current local runtime,test -n "$(rg -n \"chat/completions|ws\" apps crates | head -1)",,0,
+2,Compare aether implementation,TODO,Relevant design differences are identified,test -d /Users/bubu/ZwjProjects/aether,,0,
+3,Implement root fix,TODO,Code change addresses observed failure without mock fallback,cargo check -p proxy,,0,
+4,Verify non-stream stream and ws,TODO,All three requested OpenAI-compatible modes are tested,echo "manual curl/ws validation recorded in PROGRESS.md",,0,

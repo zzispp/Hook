@@ -55,13 +55,18 @@ pub fn table_names() -> Vec<&'static str> {
         "wallets",
         "wallet_transactions",
         "global_models",
-        "models",
+        "providers",
+        "provider_endpoints",
+        "provider_api_keys",
+        "provider_models",
+        "billing_group_providers",
         "billing_groups",
         "system_settings",
         "translation_languages",
         "translation_entries",
         "api_tokens",
         "billing_group_models",
+        "request_candidates",
     ]
 }
 
