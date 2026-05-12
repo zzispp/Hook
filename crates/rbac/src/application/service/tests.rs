@@ -24,6 +24,29 @@ async fn authorize_api_allows_whitelisted_path_without_cache() {
 }
 
 #[tokio::test]
+async fn authorize_api_allows_whitelisted_prefix_without_matching_sibling_prefixes() {
+    let service = test_service();
+    let config = AuthorizationConfig {
+        whitelist: vec![AuthWhitelistRule {
+            methods: vec!["POST".into()],
+            path_pattern: "/v1/*".into(),
+        }],
+        authenticated: vec![],
+    };
+
+    service
+        .authorize_api(&config, api_request("POST", "/v1/chat/completions", "user"))
+        .await
+        .unwrap();
+    service
+        .authorize_api(&config, api_request("POST", "/v1/chat/completions/", "user"))
+        .await
+        .unwrap();
+
+    assert!(!service.is_whitelisted(&config, "POST", "/v10/chat/completions").unwrap());
+}
+
+#[tokio::test]
 async fn authorize_api_allows_authenticated_base_path_without_cache() {
     let service = test_service();
     let config = AuthorizationConfig {

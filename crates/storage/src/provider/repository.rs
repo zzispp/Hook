@@ -1,19 +1,20 @@
 use std::collections::HashSet;
 
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
 use types::provider::{ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderListRequest, ProviderListResponse, RequestRecordListRequest};
 
 use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
-    ProviderApiKeyRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderRecordInput, ProviderRecordPatch,
+    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput,
+    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
     record::{
         provider_api_keys, provider_endpoints, provider_models,
         providers::{self, ActiveModel as ProviderActiveModel},
     },
     repository_helpers::{
-        ProviderFilterIds, apply_endpoint_patch, apply_provider_patch, endpoint_belongs_to_provider, filter_provider_records, provider_active_model,
-        provider_model_response, remove_api_format_from_keys,
+        ProviderFilterIds, apply_endpoint_patch, apply_provider_api_key_patch, apply_provider_patch, endpoint_belongs_to_provider, filter_provider_records,
+        provider_active_model,
     },
 };
 
@@ -64,6 +65,16 @@ impl ProviderStore {
             .map(Into::into)
             .collect();
         Ok(ProviderListResponse { providers, total })
+    }
+
+    pub async fn active_providers_for_scheduling(&self) -> StorageResult<Vec<Provider>> {
+        Ok(self
+            .provider_records()
+            .await?
+            .into_iter()
+            .filter(|record| record.is_active)
+            .map(Into::into)
+            .collect())
     }
 
     pub async fn create_endpoint(&self, input: ProviderEndpointRecordInput) -> StorageResult<types::provider::ProviderEndpoint> {
@@ -127,12 +138,9 @@ impl ProviderStore {
             return Err(StorageError::NotFound);
         }
 
-        let api_format = record.api_format.clone();
-        let tx = self.database.connection().begin().await?;
-        remove_api_format_from_keys(provider_id, &api_format, &tx).await?;
         let active: provider_endpoints::ActiveModel = record.into();
-        active.delete(&tx).await?;
-        tx.commit().await.map_err(StorageError::from)
+        active.delete(self.database.connection()).await?;
+        Ok(())
     }
 
     pub async fn create_api_key(&self, input: ProviderApiKeyRecordInput) -> StorageResult<types::provider::ProviderApiKey> {
@@ -143,7 +151,6 @@ impl ProviderStore {
             name: Set(input.name),
             encrypted_api_key: Set(input.encrypted_api_key),
             note: Set(input.note),
-            api_formats: Set(json::encode_optional(&input.api_formats)?),
             internal_priority: Set(input.internal_priority),
             rpm_limit: Set(input.rpm_limit),
             learned_rpm_limit: Set(None),
@@ -173,37 +180,49 @@ impl ProviderStore {
         records.into_iter().map(|record| record.response()).collect()
     }
 
+    pub async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyRecordPatch) -> StorageResult<types::provider::ProviderApiKey> {
+        let record = self.find_api_key_record(provider_id, key_id).await?.ok_or(StorageError::NotFound)?;
+        let mut active: provider_api_keys::ActiveModel = record.into();
+        apply_provider_api_key_patch(&mut active, input)?;
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
+        let record = active.update(self.database.connection()).await?;
+        record.response()
+    }
+
+    pub async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> StorageResult<()> {
+        let record = self.find_api_key_record(provider_id, key_id).await?.ok_or(StorageError::NotFound)?;
+        let active: provider_api_keys::ActiveModel = record.into();
+        active.delete(self.database.connection()).await?;
+        Ok(())
+    }
+
     pub async fn create_model_binding(&self, input: ProviderModelRecordInput) -> StorageResult<types::provider::ProviderModelBinding> {
-        let now = time::OffsetDateTime::now_utc();
-        let record = provider_models::ActiveModel {
-            id: Set(self.database.next_id()),
-            provider_id: Set(input.provider_id),
-            global_model_id: Set(input.global_model_id),
-            provider_model_name: Set(input.provider_model_name),
-            provider_model_mappings: Set(None),
-            price_per_request: Set(input.price_per_request),
-            tiered_pricing: Set(json::encode_optional(&input.tiered_pricing)?),
-            config: Set(json::encode_optional(&input.config)?),
-            created_at: Set(now),
-            updated_at: Set(now),
-            ..Default::default()
-        }
-        .insert(self.database.connection())
-        .await?;
-        provider_model_response(record)
+        super::provider_model_query::create_model_binding(self, input).await
     }
 
     pub async fn model_bindings_for_provider(&self, provider_id: &str) -> StorageResult<Vec<types::provider::ProviderModelBinding>> {
-        let records = provider_models::Entity::find()
-            .filter(provider_models::Column::ProviderId.eq(provider_id))
-            .order_by_asc(provider_models::Column::ProviderModelName)
-            .all(self.database.connection())
-            .await?;
-        records.into_iter().map(provider_model_response).collect()
+        super::provider_model_query::model_bindings_for_provider(self, provider_id).await
+    }
+
+    pub async fn update_model_binding(
+        &self,
+        provider_id: &str,
+        model_id: &str,
+        input: ProviderModelRecordPatch,
+    ) -> StorageResult<types::provider::ProviderModelBinding> {
+        super::provider_model_query::update_model_binding(self, provider_id, model_id, input).await
+    }
+
+    pub async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> StorageResult<()> {
+        super::provider_model_query::delete_model_binding(self, provider_id, model_id).await
     }
 
     pub async fn create_request_candidate(&self, input: super::RequestCandidateRecordInput) -> StorageResult<types::provider::RequestCandidate> {
         super::request_candidate_query::create_request_candidate(self, input).await
+    }
+
+    pub async fn update_request_candidate(&self, input: super::RequestCandidateRecordPatch) -> StorageResult<types::provider::RequestCandidate> {
+        super::request_candidate_query::update_request_candidate(self, input).await
     }
 
     pub async fn list_request_candidates(
@@ -223,6 +242,14 @@ impl ProviderStore {
 
     pub async fn get_request_record(&self, request_id: &str) -> StorageResult<types::provider::RequestRecordDetail> {
         super::request_record_query::get_request_record(self, request_id).await
+    }
+
+    pub async fn delete_request_records_before(&self, cutoff: time::OffsetDateTime) -> StorageResult<u64> {
+        super::request_record_cleanup::delete_request_records_before(self, cutoff).await
+    }
+
+    pub async fn clear_request_record_payloads_before(&self, cutoff: time::OffsetDateTime) -> StorageResult<u64> {
+        super::request_record_cleanup::clear_request_record_payloads_before(self, cutoff).await
     }
 
     pub(crate) fn connection(&self) -> &DatabaseConnection {
@@ -277,5 +304,13 @@ impl ProviderStore {
                 .await
                 .map_err(StorageError::from),
         }
+    }
+
+    async fn find_api_key_record(&self, provider_id: &str, key_id: &str) -> StorageResult<Option<super::record::ProviderApiKeyRecord>> {
+        provider_api_keys::Entity::find_by_id(key_id.to_owned())
+            .filter(provider_api_keys::Column::ProviderId.eq(provider_id))
+            .one(self.database.connection())
+            .await
+            .map_err(StorageError::from)
     }
 }

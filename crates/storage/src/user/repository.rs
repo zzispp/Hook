@@ -88,6 +88,18 @@ impl UserStore {
         self.find_record_by_id(&id).await.map(|record| record.map(User::from))
     }
 
+    pub async fn find_by_ids(&self, ids: &[String]) -> StorageResult<Vec<User>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        active_users()
+            .filter(UserColumn::Id.is_in(ids.iter().cloned()))
+            .all(self.database.connection())
+            .await
+            .map(|users| users.into_iter().map(User::from).collect())
+            .map_err(StorageError::from)
+    }
+
     pub async fn find_auth_by_id(&self, id: UserId) -> StorageResult<Option<UserAuthRecord>> {
         self.find_record_by_id(&id).await.map(|record| record.map(UserRecord::into_auth))
     }

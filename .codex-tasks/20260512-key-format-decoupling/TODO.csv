@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Remove backend key format field and filters,DONE,Key types/storage/scheduler no longer depend on api_formats,cargo check -p backend,2026-05-12T09:19:55+08:00,0,
+2,Remove frontend key format UI and payload,DONE,Key dialog and summaries no longer expose api_formats,pnpm lint:frontend,2026-05-12T09:20:05+08:00,0,
+3,Drop baseline column and local DB column,DONE,Baseline schema and local table no longer define provider_api_keys.api_formats,psql -c "alter table provider_api_keys drop column if exists api_formats",2026-05-12T09:19:55+08:00,0,
+4,Run validation and real proxy tests,DONE,Backend/frontend checks pass and local OpenAI proxy endpoints are exercised,just check && pnpm lint:frontend,2026-05-12T09:34:40+08:00,0,HTTP OpenAI chat non-stream stream responses and compact returned 200; forced conversion openai_chat to openai_cli returned 200; websocket reached upstream and failed with upstream 404

@@ -1,6 +1,8 @@
 'use client';
 
 import type { ApiToken } from 'src/types/api-token';
+import type { DisplayCurrency } from 'src/types/system-setting';
+import type { CurrencyDisplay } from 'src/sections/admin/currency-format';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import Box from '@mui/material/Box';
@@ -19,6 +21,7 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
+import { formatMoney } from '../admin/currency-format';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from '../admin/shared';
 import { formatTime, formatInteger, formatCurrency } from './api-token-management-utils';
 
@@ -28,6 +31,7 @@ type Props = {
   loading: boolean;
   table: UseTableReturn;
   showOwner?: boolean;
+  currencyDisplay?: CurrencyDisplay;
   onCopy: (token: ApiToken) => void;
   onEdit: (token: ApiToken) => void;
   onToggle: (token: ApiToken) => void;
@@ -36,7 +40,7 @@ type Props = {
 
 export function ApiTokenTable(props: Props) {
   const { t } = useTranslate('admin');
-  const tableHead = tokenTableHead(t, props.showOwner);
+  const tableHead = tokenTableHead(t, props.showOwner, props.currencyDisplay?.currency);
 
   return (
     <>
@@ -49,7 +53,10 @@ export function ApiTokenTable(props: Props) {
             ) : (
               props.rows.map((row) => <ApiTokenTableRow key={row.id} row={row} props={props} />)
             )}
-            <TableNoData title={t('common.noData')} notFound={!props.loading && props.rows.length === 0} />
+            <TableNoData
+              title={t('common.noData')}
+              notFound={!props.loading && props.rows.length === 0}
+            />
           </TableBody>
         </Table>
       </Scrollbar>
@@ -64,13 +71,7 @@ export function ApiTokenTable(props: Props) {
   );
 }
 
-function ApiTokenTableRow({
-  row,
-  props,
-}: {
-  row: ApiToken;
-  props: Props;
-}) {
+function ApiTokenTableRow({ row, props }: { row: ApiToken; props: Props }) {
   const { t } = useTranslate('admin');
 
   return (
@@ -81,15 +82,26 @@ function ApiTokenTableRow({
       <TableCell>
         <KeyCell token={row} onCopy={props.onCopy} />
       </TableCell>
-      {props.showOwner ? <TableCell sx={{ fontFamily: 'monospace' }}>{row.user_id ?? '-'}</TableCell> : null}
+      {props.showOwner ? (
+        <TableCell>
+          <OwnerCell token={row} />
+        </TableCell>
+      ) : null}
       {props.showOwner ? <TableCell>{t(tokenTypeKey(row.token_type))}</TableCell> : null}
-      <TableCell>{formatCurrency(row.used_quota)}</TableCell>
+      <TableCell>{formatTokenCost(row.used_quota, props.currencyDisplay)}</TableCell>
       <TableCell>{formatInteger(row.request_count)}</TableCell>
       <TableCell>{rateLimitText(row, t)}</TableCell>
-      <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
+      <TableCell>
+        <EnabledLabel enabled={row.is_active} />
+      </TableCell>
       <TableCell>{formatTime(row.last_used_at)}</TableCell>
       <TableCell align="right">
-        <RowActions row={row} onEdit={props.onEdit} onToggle={props.onToggle} onDelete={props.onDelete} />
+        <RowActions
+          row={row}
+          onEdit={props.onEdit}
+          onToggle={props.onToggle}
+          onDelete={props.onDelete}
+        />
       </TableCell>
     </TableRow>
   );
@@ -100,12 +112,41 @@ function KeyCell({ token, onCopy }: { token: ApiToken; onCopy: (token: ApiToken)
 
   return (
     <Stack direction="row" spacing={1} alignItems="center">
-      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{token.token_prefix}...</Typography>
+      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+        {token.token_prefix}...
+      </Typography>
       <Tooltip title={t('actions.copyApiKey')}>
         <IconButton size="small" onClick={() => onCopy(token)}>
           <Iconify icon="solar:copy-bold" width={16} />
         </IconButton>
       </Tooltip>
+    </Stack>
+  );
+}
+
+function OwnerCell({ token }: { token: ApiToken }) {
+  const { t } = useTranslate('admin');
+  const primary = token.owner?.username || token.owner?.email;
+  const email = token.owner?.email;
+
+  if (!primary) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        {t('common.none')}
+      </Typography>
+    );
+  }
+
+  return (
+    <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+      <Typography variant="subtitle2" noWrap>
+        {primary}
+      </Typography>
+      {email && email !== primary ? (
+        <Typography variant="caption" color="text.secondary" noWrap>
+          {email}
+        </Typography>
+      ) : null}
     </Stack>
   );
 }
@@ -144,10 +185,14 @@ function RowActions({
   );
 }
 
-function tokenTableHead(t: (key: string) => string, showOwner?: boolean): TableHeadCellProps[] {
+function tokenTableHead(
+  t: (key: string, options?: Record<string, string>) => string,
+  showOwner?: boolean,
+  currency?: DisplayCurrency
+): TableHeadCellProps[] {
   const ownerColumns = showOwner
     ? [
-        { id: 'user_id', label: t('fields.owner'), width: 220 },
+        { id: 'owner', label: t('fields.owner'), width: 220 },
         { id: 'token_type', label: t('fields.tokenType'), width: 130 },
       ]
     : [];
@@ -156,13 +201,24 @@ function tokenTableHead(t: (key: string) => string, showOwner?: boolean): TableH
     { id: 'name', label: t('fields.keyName'), width: 180 },
     { id: 'key', label: t('fields.apiKey'), width: 180 },
     ...ownerColumns,
-    { id: 'used_quota', label: t('fields.costCny'), width: 140 },
+    { id: 'used_quota', label: costColumnLabel(t, currency), width: 140 },
     { id: 'request_count', label: t('fields.requestCount'), width: 130 },
     { id: 'rate_limit_rpm', label: t('fields.rateLimitRpm'), width: 140 },
     { id: 'status', label: t('common.status'), width: 110 },
     { id: 'last_used_at', label: t('fields.lastUsedAt'), width: 180 },
     { id: '', width: 136 },
   ];
+}
+
+function costColumnLabel(
+  t: (key: string, options?: Record<string, string>) => string,
+  currency?: DisplayCurrency
+) {
+  return currency ? t('fields.costWithCurrency', { currency }) : t('fields.costCny');
+}
+
+function formatTokenCost(value: number, currencyDisplay?: CurrencyDisplay) {
+  return currencyDisplay ? formatMoney(value, currencyDisplay) : formatCurrency(value);
 }
 
 function tokenTypeKey(type: ApiToken['token_type']) {

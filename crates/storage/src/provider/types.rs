@@ -1,3 +1,5 @@
+use rust_decimal::Decimal;
+use serde_json::Value;
 use types::model::{PatchField, TieredPricingConfig};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -57,7 +59,6 @@ pub struct ProviderApiKeyRecordInput {
     pub name: String,
     pub encrypted_api_key: String,
     pub note: Option<String>,
-    pub api_formats: Option<Vec<String>>,
     pub internal_priority: i32,
     pub rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,
@@ -68,14 +69,37 @@ pub struct ProviderApiKeyRecordInput {
     pub is_active: bool,
 }
 
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ProviderApiKeyRecordPatch {
+    pub name: Option<String>,
+    pub encrypted_api_key: Option<String>,
+    pub note: PatchField<String>,
+    pub internal_priority: Option<i32>,
+    pub rpm_limit: PatchField<i32>,
+    pub cache_ttl_minutes: Option<i32>,
+    pub max_probe_interval_minutes: Option<i32>,
+    pub time_range_enabled: Option<bool>,
+    pub time_range_start: PatchField<String>,
+    pub time_range_end: PatchField<String>,
+    pub is_active: Option<bool>,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderModelRecordInput {
     pub provider_id: String,
     pub global_model_id: String,
     pub provider_model_name: String,
+    pub is_active: bool,
     pub price_per_request: Option<rust_decimal::Decimal>,
     pub tiered_pricing: Option<TieredPricingConfig>,
     pub config: Option<serde_json::Value>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ProviderModelRecordPatch {
+    pub provider_model_name: Option<String>,
+    pub is_active: Option<bool>,
+    pub config: types::model::PatchField<serde_json::Value>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -91,14 +115,52 @@ pub struct RequestCandidateRecordInput {
     pub provider_api_format: Option<String>,
     pub needs_conversion: bool,
     pub is_stream: bool,
+    pub request_headers: Option<Value>,
+    pub request_body: Option<Value>,
+    pub response_body: Option<Value>,
     pub candidate_index: i32,
     pub retry_index: i32,
     pub status: String,
     pub status_code: Option<i32>,
+    pub prompt_tokens: Option<i64>,
+    pub completion_tokens: Option<i64>,
+    pub total_tokens: Option<i64>,
+    pub cache_creation_input_tokens: Option<i64>,
+    pub cache_read_input_tokens: Option<i64>,
+    pub cost_currency: Option<String>,
+    pub token_cost: Option<Decimal>,
+    pub base_cost: Option<Decimal>,
+    pub total_cost: Option<Decimal>,
+    pub billing_multiplier: Option<Decimal>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,
     pub error_message: Option<String>,
     pub started: bool,
+    pub finished: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RequestCandidateRecordPatch {
+    pub request_id: String,
+    pub candidate_index: i32,
+    pub retry_index: i32,
+    pub status: String,
+    pub status_code: Option<i32>,
+    pub prompt_tokens: Option<i64>,
+    pub completion_tokens: Option<i64>,
+    pub total_tokens: Option<i64>,
+    pub cache_creation_input_tokens: Option<i64>,
+    pub cache_read_input_tokens: Option<i64>,
+    pub cost_currency: Option<String>,
+    pub token_cost: Option<Decimal>,
+    pub base_cost: Option<Decimal>,
+    pub total_cost: Option<Decimal>,
+    pub billing_multiplier: Option<Decimal>,
+    pub latency_ms: Option<i64>,
+    pub first_byte_time_ms: Option<i64>,
+    pub error_type: Option<String>,
+    pub error_message: Option<String>,
+    pub response_body: Option<Value>,
     pub finished: bool,
 }

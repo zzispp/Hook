@@ -40,9 +40,18 @@ fn api_permission_matches(permission: &ApiPermissionSnapshot, request: &ApiCheck
 }
 
 fn path_matches(pattern: &str, path: &str) -> RbacResult<bool> {
+    if let Some(matched) = prefix_path_matches(pattern, path) {
+        return Ok(matched);
+    }
+
     let mut router = Router::new();
     router
         .insert(pattern, ())
         .map_err(|error| RbacError::InvalidInput(format!("invalid path pattern {pattern}: {error}")))?;
     Ok(router.at(path).is_ok())
+}
+
+fn prefix_path_matches(pattern: &str, path: &str) -> Option<bool> {
+    let prefix = pattern.strip_suffix("/*")?;
+    Some(path == prefix || path.starts_with(&format!("{prefix}/")))
 }

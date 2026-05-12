@@ -5,7 +5,9 @@ mod stream;
 
 use serde_json::Value;
 
-use crate::format_conversion::{FormatConversionError, InternalRequest, InternalResponse, InternalStreamEvent, normalizer::FormatNormalizer};
+use crate::format_conversion::{
+    FormatConversionError, InternalRequest, InternalResponse, InternalStreamEvent, StreamConversionState, normalizer::FormatNormalizer,
+};
 
 #[derive(Default)]
 pub struct GeminiNormalizer;
@@ -33,5 +35,13 @@ impl FormatNormalizer for GeminiNormalizer {
 
     fn stream_from_internal(&self, events: &[InternalStreamEvent]) -> Result<Vec<Value>, FormatConversionError> {
         stream::from_internal(events)
+    }
+
+    fn stream_chunk_to_internal(&self, chunk: &Value, state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
+        stream::chunk_to_internal(chunk, state)
+    }
+
+    fn stream_event_from_internal(&self, event: &InternalStreamEvent, state: &mut StreamConversionState) -> Result<Vec<Value>, FormatConversionError> {
+        stream::event_from_internal(event, state)
     }
 }

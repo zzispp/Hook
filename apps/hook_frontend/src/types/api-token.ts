@@ -4,6 +4,7 @@ export type ApiTokenType = 'user' | 'independent';
 export type ApiToken = {
   id: string;
   user_id?: string | null;
+  owner?: ApiTokenOwner | null;
   token_type: ApiTokenType;
   name: string;
   token_prefix: string;
@@ -19,6 +20,11 @@ export type ApiToken = {
   last_used_at?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ApiTokenOwner = {
+  username: string;
+  email: string;
 };
 
 export type ApiTokenCreate = {

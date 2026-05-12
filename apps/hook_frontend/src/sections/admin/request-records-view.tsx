@@ -1,10 +1,12 @@
 'use client';
 
 import type { RequestRecord } from 'src/types/provider';
+import type { CurrencyDisplay } from './currency-format';
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
+import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
@@ -17,6 +19,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
+import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-settings';
 import { useRequestRecords, fetchActiveRequestRecords } from 'src/actions/request-records';
 
 import { useTable } from 'src/components/table';
@@ -25,10 +28,16 @@ import { Iconify } from 'src/components/iconify';
 import { RefreshButton, AdminBreadcrumbs } from './shared';
 import { RequestRecordsTable } from './request-records-table';
 import { RequestRecordDetailDrawer } from './request-record-detail-drawer';
-import { requestStatusLabel, REQUEST_RECORD_STATUS_OPTIONS } from './request-records-utils';
+import {
+  requestStatusLabel,
+  REQUEST_RECORD_STATUS_OPTIONS,
+  DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE,
+} from './request-records-utils';
 
 const AUTO_REFRESH_INTERVAL_MS = 3000;
 const ACTIVE_REQUEST_REFRESH_INTERVAL_MS = 1000;
+const ALL_STATUS_FILTER_VALUE = 'all';
+const EMPTY_REQUEST_IDS: string[] = [];
 const REQUEST_STATUS_RANK: Record<string, number> = {
   pending: 0,
   streaming: 1,
@@ -47,18 +56,54 @@ const DEFAULT_FILTERS: Filters = {
 };
 
 export function RequestRecordsView() {
-  const { currentLang } = useTranslate('admin');
-  const table = useTable({ defaultRowsPerPage: 20, defaultOrderBy: 'created_at' });
+  const { t, currentLang } = useTranslate('admin');
+  const table = useTable({
+    defaultRowsPerPage: DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE,
+    defaultOrderBy: 'created_at',
+  });
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<RequestRecord | null>(null);
+  const settings = useSystemSettings();
+  const exchangeRate = useUsdCnyExchangeRate(settings.data?.currency === 'CNY');
   const records = useRequestRecords(table.page, table.rowsPerPage, toQueryFilters(filters));
   const locale = currentLang.numberFormat.code;
+  const currencyDisplay: CurrencyDisplay = {
+    currency: settings.data?.currency ?? 'USD',
+    usdCnyRate: exchangeRate.data,
+    unavailableLabel: t('requestRecords.exchangeRateUnavailable'),
+  };
   const refreshRecords = records.refresh;
+  const refreshInFlightRef = useRef<Promise<unknown> | null>(null);
+  const pageVisible = usePageVisible();
   const activeRequestIds = useMemo(() => activeRecordIds(records.items), [records.items]);
+  const pollingRequestIds = pageVisible ? activeRequestIds : EMPTY_REQUEST_IDS;
+  const displaySelectedRecord = useMemo(
+    () => latestSelectedRecord(selectedRecord, records.items),
+    [records.items, selectedRecord]
+  );
 
-  useAutoRefresh(autoRefresh, refreshRecords);
-  useActiveRequestPolling(activeRequestIds, records.updateItems, refreshRecords);
+  const backgroundRefresh = useCallback(() => {
+    if (refreshInFlightRef.current) return refreshInFlightRef.current;
+    const next = Promise.resolve(refreshRecords()).finally(() => {
+      if (refreshInFlightRef.current === next) refreshInFlightRef.current = null;
+    });
+    refreshInFlightRef.current = next;
+    return next;
+  }, [refreshRecords]);
+
+  const handleManualRefresh = useCallback(async () => {
+    setManualRefreshing(true);
+    try {
+      await backgroundRefresh();
+    } finally {
+      setManualRefreshing(false);
+    }
+  }, [backgroundRefresh]);
+
+  useAutoRefresh(autoRefresh && pageVisible, backgroundRefresh);
+  useActiveRequestPolling(pollingRequestIds, records.updateItems, backgroundRefresh);
 
   const handleFiltersChange = useCallback(
     (nextFilters: Filters) => {
@@ -72,15 +117,22 @@ export function RequestRecordsView() {
     <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
         headingCode={DASHBOARD_MENU_CODES.requestRecords}
-        action={<RefreshButton loading={records.isValidating} onClick={refreshRecords} />}
+        action={
+          <RefreshButton loading={manualRefreshing} onClick={() => void handleManualRefresh()} />
+        }
       />
       <Card>
+        {settings.data?.currency === 'CNY' && exchangeRate.error ? (
+          <Alert severity="error" sx={{ m: 2.5, mb: 0 }}>
+            {t('requestRecords.exchangeRateLoadFailed')}
+          </Alert>
+        ) : null}
         <RequestRecordsToolbar
           filters={filters}
           autoRefresh={autoRefresh}
-          loading={records.isValidating}
+          loading={manualRefreshing}
           onChange={handleFiltersChange}
-          onRefresh={refreshRecords}
+          onRefresh={() => void handleManualRefresh()}
           onAutoRefreshChange={setAutoRefresh}
         />
         <RequestRecordsTable
@@ -88,14 +140,16 @@ export function RequestRecordsView() {
           total={records.total}
           table={table}
           locale={locale}
+          currencyDisplay={currencyDisplay}
           loading={records.isLoading}
           onOpen={setSelectedRecord}
         />
       </Card>
       <RequestRecordDetailDrawer
-        open={Boolean(selectedRecord)}
-        record={selectedRecord}
+        open={Boolean(displaySelectedRecord)}
+        record={displaySelectedRecord}
         locale={locale}
+        currencyDisplay={currencyDisplay}
         onClose={() => setSelectedRecord(null)}
       />
     </DashboardContent>
@@ -139,11 +193,13 @@ function RequestRecordsToolbar({
       <TextField
         select
         label={t('common.status')}
-        value={filters.status}
+        value={filters.status || ALL_STATUS_FILTER_VALUE}
         sx={{ minWidth: 180 }}
-        onChange={(event) => onChange({ ...filters, status: event.target.value })}
+        onChange={(event) =>
+          onChange({ ...filters, status: statusFilterValue(event.target.value) })
+        }
       >
-        <MenuItem value="">{t('filters.allStatuses')}</MenuItem>
+        <MenuItem value={ALL_STATUS_FILTER_VALUE}>{t('filters.allStatuses')}</MenuItem>
         {REQUEST_RECORD_STATUS_OPTIONS.map((status) => (
           <MenuItem key={status} value={status}>
             {requestStatusLabel(status, t)}
@@ -156,12 +212,18 @@ function RequestRecordsToolbar({
           variant="outlined"
           loading={loading}
           startIcon={<Iconify icon="solar:restart-bold" />}
+          sx={refreshButtonSx}
           onClick={onRefresh}
         >
           {t('common.refresh')}
         </Button>
         <FormControlLabel
-          control={<Switch checked={autoRefresh} onChange={(event) => onAutoRefreshChange(event.target.checked)} />}
+          control={
+            <Switch
+              checked={autoRefresh}
+              onChange={(event) => onAutoRefreshChange(event.target.checked)}
+            />
+          }
           label={<Typography variant="body2">{t('requestRecords.autoRefresh')}</Typography>}
           sx={{ whiteSpace: 'nowrap' }}
         />
@@ -170,7 +232,13 @@ function RequestRecordsToolbar({
   );
 }
 
-function useAutoRefresh(enabled: boolean, refresh: VoidFunction) {
+const refreshButtonSx = { whiteSpace: 'nowrap', flexShrink: 0 };
+
+function statusFilterValue(value: string) {
+  return value === ALL_STATUS_FILTER_VALUE ? '' : value;
+}
+
+function useAutoRefresh(enabled: boolean, refresh: () => void) {
   useEffect(() => {
     if (!enabled) return undefined;
     refresh();
@@ -179,10 +247,23 @@ function useAutoRefresh(enabled: boolean, refresh: VoidFunction) {
   }, [enabled, refresh]);
 }
 
+function usePageVisible() {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const update = () => setVisible(!document.hidden);
+    update();
+    document.addEventListener('visibilitychange', update);
+    return () => document.removeEventListener('visibilitychange', update);
+  }, []);
+
+  return visible;
+}
+
 function useActiveRequestPolling(
   ids: string[],
   updateItems: (updater: (items: RequestRecord[]) => RequestRecord[]) => void,
-  refresh: VoidFunction
+  refresh: () => void
 ) {
   const idsKey = ids.join('\n');
 
@@ -211,7 +292,11 @@ function activeRecordIds(items: RequestRecord[]) {
 }
 
 function isActiveRecord(record: RequestRecord) {
-  return record.status === 'pending' || record.status === 'streaming';
+  return (
+    record.status === 'pending' ||
+    record.status === 'streaming' ||
+    record.billing_status === 'pending'
+  );
 }
 
 function mergeRequestRecords(items: RequestRecord[], updates: RequestRecord[]) {
@@ -223,7 +308,26 @@ function mergeRequestRecords(items: RequestRecord[], updates: RequestRecord[]) {
 function mergeRequestRecord(item: RequestRecord, update?: RequestRecord) {
   if (!update) return item;
   if (statusRank(update.status) < statusRank(item.status)) return item;
-  return update;
+  return {
+    ...item,
+    ...update,
+    provider_id: update.provider_id ?? item.provider_id,
+    provider_name: update.provider_name ?? item.provider_name,
+    provider_key_name: update.provider_key_name ?? item.provider_key_name,
+    provider_key_preview: update.provider_key_preview ?? item.provider_key_preview,
+    provider_api_format: update.provider_api_format ?? item.provider_api_format,
+    first_byte_time_ms: update.first_byte_time_ms ?? item.first_byte_time_ms,
+    total_latency_ms: update.total_latency_ms ?? item.total_latency_ms,
+    prompt_tokens: update.prompt_tokens ?? item.prompt_tokens,
+    completion_tokens: update.completion_tokens ?? item.completion_tokens,
+    total_tokens: update.total_tokens ?? item.total_tokens,
+    cache_creation_input_tokens:
+      update.cache_creation_input_tokens ?? item.cache_creation_input_tokens,
+    cache_read_input_tokens: update.cache_read_input_tokens ?? item.cache_read_input_tokens,
+    has_failover: item.has_failover || update.has_failover,
+    has_retry: item.has_retry || update.has_retry,
+    candidate_count: Math.max(item.candidate_count, update.candidate_count),
+  };
 }
 
 function shouldRefreshRecords(ids: string[], updates: RequestRecord[]) {
@@ -233,6 +337,11 @@ function shouldRefreshRecords(ids: string[], updates: RequestRecord[]) {
 
 function statusRank(status: string) {
   return REQUEST_STATUS_RANK[status] ?? 0;
+}
+
+function latestSelectedRecord(selectedRecord: RequestRecord | null, items: RequestRecord[]) {
+  if (!selectedRecord) return null;
+  return items.find((record) => record.request_id === selectedRecord.request_id) ?? selectedRecord;
 }
 
 function toQueryFilters(filters: Filters) {

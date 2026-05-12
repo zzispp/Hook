@@ -1,5 +1,8 @@
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set,
+    sea_query::{Expr, ExprTrait},
+};
 use types::{
     api_token::{ApiToken, ApiTokenListRequest, ApiTokenType},
     model::PatchField,
@@ -8,7 +11,7 @@ use types::{
 use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
-    ApiTokenRecordInput, ApiTokenRecordPatch,
+    ApiTokenRecordInput, ApiTokenRecordPatch, ApiTokenUsageRecord,
     record::api_tokens::{ActiveModel as ApiTokenActiveModel, model_access_mode_value, token_type_value},
     record::{ApiTokenRecord, api_tokens},
 };
@@ -95,6 +98,18 @@ impl ApiTokenStore {
         list_tokens(self.database.connection(), filtered_admin_tokens(request.clone()), request).await
     }
 
+    pub async fn record_usage(&self, input: ApiTokenUsageRecord) -> StorageResult<()> {
+        let result = api_tokens::Entity::update_many()
+            .col_expr(api_tokens::Column::UsedQuota, used_quota_expr(input.cost))
+            .col_expr(api_tokens::Column::RequestCount, request_count_expr())
+            .col_expr(api_tokens::Column::LastUsedAt, Expr::val(input.used_at))
+            .col_expr(api_tokens::Column::UpdatedAt, Expr::val(input.used_at))
+            .filter(api_tokens::Column::Id.eq(input.token_id))
+            .exec(self.database.connection())
+            .await?;
+        ensure_usage_recorded(result.rows_affected)
+    }
+
     pub async fn delete_expired_tokens(&self) -> StorageResult<u64> {
         let result = api_tokens::Entity::delete_many()
             .filter(api_tokens::Column::ExpiresAt.is_not_null())
@@ -153,6 +168,21 @@ fn token_search_condition(search: &str) -> Condition {
         .add(api_tokens::Column::Name.contains(search))
         .add(api_tokens::Column::TokenPrefix.contains(search))
         .add(api_tokens::Column::GroupCode.contains(search))
+}
+
+fn used_quota_expr(cost: Decimal) -> Expr {
+    Expr::col(api_tokens::Column::UsedQuota).add(Expr::val(cost))
+}
+
+fn request_count_expr() -> Expr {
+    Expr::col(api_tokens::Column::RequestCount).add(1)
+}
+
+fn ensure_usage_recorded(rows_affected: u64) -> StorageResult<()> {
+    if rows_affected == 0 {
+        return Err(StorageError::NotFound);
+    }
+    Ok(())
 }
 
 async fn list_tokens(

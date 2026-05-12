@@ -25,7 +25,11 @@ const swrOptions = {
   revalidateOnFocus: false,
 };
 
-export function useRequestRecords(page: number, pageSize: number, filters: RequestRecordFilters = {}) {
+export function useRequestRecords(
+  page: number,
+  pageSize: number,
+  filters: RequestRecordFilters = {}
+) {
   const key = [
     endpoints.adminRequestRecords.list,
     { params: { skip: page * pageSize, limit: pageSize, ...filters } },
@@ -33,9 +37,7 @@ export function useRequestRecords(page: number, pageSize: number, filters: Reque
   const { data, isLoading, error, isValidating, mutate } = useSWR<
     ApiEnvelope<RequestRecordListResponse>
   >(key, fetcher, swrOptions);
-  const refresh = useCallback(() => {
-    void mutate();
-  }, [mutate]);
+  const refresh = useCallback(() => mutate(), [mutate]);
   const updateItems = useCallback(
     (updater: (items: RequestRecord[]) => RequestRecord[]) => {
       void mutate(
@@ -85,9 +87,7 @@ export function useRequestRecordDetail(requestId?: string | null) {
     fetcher,
     swrOptions
   );
-  const refresh = useCallback(() => {
-    void mutate();
-  }, [mutate]);
+  const refresh = useCallback(() => mutate(), [mutate]);
 
   return useMemo(() => {
     const detail = data ? requireApiData(data) : undefined;

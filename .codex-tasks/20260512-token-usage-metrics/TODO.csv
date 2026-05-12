@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect token usage data flow,DONE,Source of request success and cost values is identified,rg -n "request_count|used_quota|last_used_at|token_id|cost|usage" apps crates,2026-05-12T08:52:29Z,0,"request_candidates stores successful usage/cost; api_tokens has no usage update path"
+2,Implement token metric persistence,DONE,Successful proxy requests update token request_count last_used_at and used_quota using real cost data,cargo test -p storage api_token,2026-05-12T08:52:29Z,0,"storage record_usage added; proxy success attempts call it"
+3,Run validation,DONE,Relevant Rust and frontend checks are run or blocked by explicit existing errors,cargo test -p storage api_token && cargo check -p backend && pnpm lint:frontend,2026-05-12T08:52:29Z,0,"storage tests, api_token tests, backend check, frontend lint passed"

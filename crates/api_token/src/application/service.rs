@@ -1,17 +1,16 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use async_trait::async_trait;
 use types::api_token::{
-    AdminApiTokenCreate, ApiTokenCreate, ApiTokenCreateResponse, ApiTokenListRequest, ApiTokenListResponse, ApiTokenResponse, ApiTokenSecretResponse,
-    ApiTokenUpdate,
+    AdminApiTokenCreate, ApiTokenCreate, ApiTokenCreateResponse, ApiTokenListRequest, ApiTokenListResponse, ApiTokenOwnerResponse, ApiTokenResponse,
+    ApiTokenSecretResponse, ApiTokenUpdate,
 };
 
 use crate::application::{
-    ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, BillingGroupCatalog, ModelAccessCatalog, SystemTokenPolicy,
-    UserCatalog,
+    ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, BillingGroupCatalog, ModelAccessCatalog, SystemTokenPolicy, UserCatalog,
     records::{admin_create_record, admin_owner_id, update_record, user_create_record},
     token::{GeneratedToken, generate_token},
-    validation::{
-        sanitize_admin_create, sanitize_create, sanitize_update, validate_admin_create, validate_create, validate_list_request, validate_update,
-    },
+    validation::{sanitize_admin_create, sanitize_create, sanitize_update, validate_admin_create, validate_create, validate_list_request, validate_update},
 };
 
 pub struct ApiTokenService<R, G, M, U, P> {
@@ -107,12 +106,15 @@ where
         self.user_token_list_response(user_id, request).await
     }
 
-    async fn create_admin_token(&self, _actor_id: &str, input: AdminApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
+    async fn create_admin_token(&self, actor_id: &str, input: AdminApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
         let input = sanitize_admin_create(input);
+        let input = assign_independent_owner(actor_id, input);
         let validated = validate_admin_create(&input)?;
         let owner_id = admin_owner_id(&input)?;
         self.ensure_create_policy(&validated.group_code, &validated.allowed_model_ids).await?;
-        if let Some(user_id) = owner_id.as_deref() {
+        if input.token_type == types::api_token::ApiTokenType::User
+            && let Some(user_id) = owner_id.as_deref()
+        {
             self.ensure_user_exists(user_id).await?;
         }
         let generated = generate_token();
@@ -155,6 +157,13 @@ where
     }
 }
 
+fn assign_independent_owner(actor_id: &str, mut input: AdminApiTokenCreate) -> AdminApiTokenCreate {
+    if input.token_type == types::api_token::ApiTokenType::Independent {
+        input.user_id = Some(actor_id.to_owned());
+    }
+    input
+}
+
 impl<R, G, M, U, P> ApiTokenService<R, G, M, U, P>
 where
     R: ApiTokenRepository,
@@ -164,15 +173,26 @@ where
     P: SystemTokenPolicy,
 {
     async fn user_token_list_response(&self, user_id: &str, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
-        let mut response = self.repository.list_user_tokens(user_id, request).await?;
-        apply_default_rate_limit(&mut response, self.system_policy.default_rate_limit_rpm().await?);
-        Ok(response)
+        let response = self.repository.list_user_tokens(user_id, request).await?;
+        Ok(with_default_rate_limit(response, self.system_policy.default_rate_limit_rpm().await?))
     }
 
     async fn admin_token_list_response(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
-        let mut response = self.repository.list_admin_tokens(request).await?;
-        apply_default_rate_limit(&mut response, self.system_policy.default_rate_limit_rpm().await?);
-        Ok(response)
+        let response = self.repository.list_admin_tokens(request).await?;
+        let response = with_default_rate_limit(response, self.system_policy.default_rate_limit_rpm().await?);
+        self.with_owner_profiles(response).await
+    }
+
+    async fn with_owner_profiles(&self, response: ApiTokenListResponse) -> ApiTokenResult<ApiTokenListResponse> {
+        let owner_ids = owner_ids(&response.tokens);
+        if owner_ids.is_empty() {
+            return Ok(response);
+        }
+        let owners = self.users.owners_by_id(&owner_ids).await?;
+        Ok(ApiTokenListResponse {
+            tokens: response.tokens.into_iter().map(|token| token_with_owner(token, &owners)).collect(),
+            total: response.total,
+        })
     }
 
     async fn create_response(&self, record: ApiTokenCreateRecord, generated: GeneratedToken) -> ApiTokenResult<ApiTokenCreateResponse> {
@@ -220,12 +240,27 @@ where
     }
 }
 
-fn apply_default_rate_limit(response: &mut ApiTokenListResponse, default_rate: i64) {
+fn with_default_rate_limit(mut response: ApiTokenListResponse, default_rate: i64) -> ApiTokenListResponse {
     for token in &mut response.tokens {
         if token.rate_limit_rpm == Some(0) {
             token.rate_limit_rpm = Some(default_rate);
         }
     }
+    response
+}
+
+fn owner_ids(tokens: &[ApiTokenResponse]) -> Vec<String> {
+    tokens
+        .iter()
+        .filter_map(|token| token.user_id.clone())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+fn token_with_owner(token: ApiTokenResponse, owners: &BTreeMap<String, ApiTokenOwnerResponse>) -> ApiTokenResponse {
+    let owner = token.user_id.as_ref().and_then(|id| owners.get(id).cloned());
+    token.with_owner(owner)
 }
 
 fn ensure_group_allows_models(group: &types::group::BillingGroupResponse, model_ids: &[String]) -> ApiTokenResult<()> {

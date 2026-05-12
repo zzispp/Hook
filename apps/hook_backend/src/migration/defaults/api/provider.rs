@@ -56,6 +56,18 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "创建提供商密钥",
     },
     ApiDefinition {
+        code: "provider_keys_update",
+        method: "PATCH",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}",
+        name: "更新提供商密钥",
+    },
+    ApiDefinition {
+        code: "provider_keys_delete",
+        method: "DELETE",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}",
+        name: "删除提供商密钥",
+    },
+    ApiDefinition {
         code: "provider_models_read",
         method: "GET",
         path_pattern: "/api/admin/providers/{provider_id}/models",
@@ -66,6 +78,18 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         method: "POST",
         path_pattern: "/api/admin/providers/{provider_id}/models",
         name: "创建提供商模型绑定",
+    },
+    ApiDefinition {
+        code: "provider_models_update",
+        method: "PATCH",
+        path_pattern: "/api/admin/providers/{provider_id}/models/{model_id}",
+        name: "更新提供商模型绑定",
+    },
+    ApiDefinition {
+        code: "provider_models_delete",
+        method: "DELETE",
+        path_pattern: "/api/admin/providers/{provider_id}/models/{model_id}",
+        name: "删除提供商模型绑定",
     },
     ApiDefinition {
         code: "request_records_read",

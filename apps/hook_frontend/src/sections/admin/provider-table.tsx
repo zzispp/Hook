@@ -106,8 +106,6 @@ function ProviderTableRow({
       <TableCell>
         <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75 }}>
           <Chip size="small" label={`${t('providers.maxRetries')}: ${optionalValue(row.max_retries)}`} />
-          <Chip size="small" label={`${t('providers.requestTimeout')}: ${optionalValue(row.request_timeout_seconds)}`} />
-          <Chip size="small" label={`${t('providers.streamFirstByteTimeout')}: ${optionalValue(row.stream_first_byte_timeout_seconds)}`} />
         </Stack>
       </TableCell>
       <TableCell>{row.priority}</TableCell>

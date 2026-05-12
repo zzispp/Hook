@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect DB schema and local runtime,DONE,DB schema and config verified,psql local schema queries,2026-05-12T15:25:01+08:00,0,local Postgres and tables verified
+2,Seed local DB providers and system token,DONE,Real providers endpoints keys models and group bindings exist,local DB verification query,2026-05-12T15:25:01+08:00,0,provider keys encrypted; independent token user_id set to admin
+3,Add secret-free real proxy validation harness,DONE,Harness reads secrets from env and records request candidates,cargo check -p backend,2026-05-12T15:25:01+08:00,0,node runner syntax and backend check pass
+4,Run fixed order cache affinity load balance failover conversion flows,DONE,Real proxy calls and request candidate traces verify each strategy,manual real-flow runner,2026-05-12T15:25:01+08:00,0,non-stream and stream OpenAI passed; AIPAI Claude timed out as configured; Gemini/OpenAI conversions passed
+5,Rerun Claude conversion with Hook Claude provider,DONE,OpenAI to Claude non-stream and stream conversion succeeds through the new Claude provider,node .codex-tasks/20260512-real-proxy-flow/real_proxy_flow.mjs,2026-05-12T15:55:08+08:00,0,new Claude provider returned 200 for non-stream and stream OpenAI->Claude conversion; full runner passed

@@ -19,16 +19,15 @@ import Typography from '@mui/material/Typography';
 import ListItemText from '@mui/material/ListItemText';
 
 import { useTranslate } from 'src/locales/use-locales';
-import {
-  useProviderModels,
-  useProviderApiKeys,
-  useProviderEndpoints,
-} from 'src/actions/providers';
+import { useProviderModels, useProviderApiKeys, useProviderEndpoints } from 'src/actions/providers';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
 import { EnabledLabel } from './shared';
+import { EmptyList } from './provider-bindings-shared';
+import { ProviderApiKeysSection } from './provider-api-keys-section';
+import { ProviderModelBindingsSection } from './provider-model-bindings-section';
 import { formatApiFormat, defaultEndpointPath } from './provider-management-utils';
 
 export function ProviderBindingsPanel({
@@ -40,7 +39,7 @@ export function ProviderBindingsPanel({
 }: {
   open: boolean;
   provider?: Provider;
-  models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
+  models: GlobalModelResponse[];
   onClose: () => void;
   dialogs: ReturnType<typeof useProviderChildDialogs>;
 }) {
@@ -55,6 +54,7 @@ export function ProviderBindingsPanel({
       <Scrollbar>
         {provider ? (
           <ProviderBindingsContent
+            providerId={provider.id}
             endpointItems={endpoints.items}
             endpointLoading={endpoints.isLoading}
             apiKeyItems={apiKeys.items}
@@ -84,22 +84,32 @@ function DrawerHeader({ title, onClose }: { title: string; onClose: () => void }
 }
 
 type ProviderBindingsContentProps = {
+  providerId: string;
   endpointItems: ReturnType<typeof useProviderEndpoints>['items'];
   endpointLoading: boolean;
   apiKeyItems: ReturnType<typeof useProviderApiKeys>['items'];
   apiKeyLoading: boolean;
   providerModelItems: ReturnType<typeof useProviderModels>['items'];
   providerModelLoading: boolean;
-  models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
+  models: GlobalModelResponse[];
   dialogs: ReturnType<typeof useProviderChildDialogs>;
 };
 
 function ProviderBindingsContent(props: ProviderBindingsContentProps) {
   return (
     <Stack spacing={2} sx={contentSx}>
-      <EndpointSection items={props.endpointItems} loading={props.endpointLoading} onAdd={() => props.dialogs.setEndpointOpen(true)} />
-      <ApiKeySection items={props.apiKeyItems} loading={props.apiKeyLoading} onAdd={() => props.dialogs.setApiKeyOpen(true)} />
+      <EndpointSection
+        items={props.endpointItems}
+        loading={props.endpointLoading}
+        onAdd={() => props.dialogs.setEndpointOpen(true)}
+      />
+      <ApiKeySection
+        items={props.apiKeyItems}
+        loading={props.apiKeyLoading}
+        dialogs={props.dialogs}
+      />
       <ProviderModelSection
+        providerId={props.providerId}
         items={props.providerModelItems}
         loading={props.providerModelLoading}
         models={props.models}
@@ -121,10 +131,18 @@ function EndpointSection({
   const { t } = useTranslate('admin');
 
   return (
-    <PanelSection title={t('providers.endpoints')} actionLabel={t('actions.manageProviderEndpoints')} onAdd={onAdd}>
+    <PanelSection
+      title={t('providers.endpoints')}
+      actionLabel={t('actions.manageProviderEndpoints')}
+      onAdd={onAdd}
+    >
       <List dense disablePadding>
         {items.map((endpoint) => (
-          <ListItem key={endpoint.id} disableGutters secondaryAction={<EnabledLabel enabled={endpoint.is_active} />}>
+          <ListItem
+            key={endpoint.id}
+            disableGutters
+            secondaryAction={<EnabledLabel enabled={endpoint.is_active} />}
+          >
             <ListItemText
               primary={`${formatApiFormat(endpoint.api_format)} · ${endpoint.base_url}`}
               secondary={endpointPathSummary(endpoint.api_format, endpoint.custom_path, t)}
@@ -137,7 +155,11 @@ function EndpointSection({
   );
 }
 
-function endpointPathSummary(apiFormat: string, customPath: string | null | undefined, t: (key: string) => string) {
+function endpointPathSummary(
+  apiFormat: string,
+  customPath: string | null | undefined,
+  t: (key: string) => string
+) {
   const custom = customPath?.trim();
   if (custom) return `${t('providers.customPath')}: ${custom}`;
 
@@ -148,56 +170,29 @@ function endpointPathSummary(apiFormat: string, customPath: string | null | unde
 function ApiKeySection({
   items,
   loading,
-  onAdd,
+  dialogs,
 }: {
   items: ReturnType<typeof useProviderApiKeys>['items'];
   loading: boolean;
-  onAdd: () => void;
+  dialogs: ReturnType<typeof useProviderChildDialogs>;
 }) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <PanelSection title={t('providers.keys')} actionLabel={t('actions.addProviderKey')} onAdd={onAdd}>
-      <List dense disablePadding>
-        {items.map((apiKey) => (
-          <ListItem key={apiKey.id} disableGutters secondaryAction={<EnabledLabel enabled={apiKey.is_active} />}>
-            <ListItemText
-              primary={`${apiKey.name} · ${t('providers.priority')} ${apiKey.internal_priority}`}
-              secondary={keySummary(apiKey.api_formats, apiKey.rpm_limit, t)}
-            />
-          </ListItem>
-        ))}
-        <EmptyList loading={loading} length={items.length} />
-      </List>
-    </PanelSection>
-  );
+  return <ProviderApiKeysSection items={items} loading={loading} dialogs={dialogs} />;
 }
 
 function ProviderModelSection({
+  providerId,
   items,
   loading,
   models,
   onAdd,
 }: {
+  providerId: string;
   items: ReturnType<typeof useProviderModels>['items'];
   loading: boolean;
-  models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
+  models: GlobalModelResponse[];
   onAdd: () => void;
 }) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <PanelSection title={t('providers.modelBindings')} actionLabel={t('actions.addProviderModel')} onAdd={onAdd}>
-      <List dense disablePadding>
-        {items.map((binding) => (
-          <ListItem key={binding.id} disableGutters>
-            <ListItemText primary={modelLabel(binding.global_model_id, models)} />
-          </ListItem>
-        ))}
-        <EmptyList loading={loading} length={items.length} />
-      </List>
-    </PanelSection>
-  );
+  return <ProviderModelBindingsSection providerId={providerId} items={items} loading={loading} models={models} onAssociate={onAdd} />;
 }
 
 function PanelSection({
@@ -213,9 +208,19 @@ function PanelSection({
 }) {
   return (
     <Box sx={{ border: (theme) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 1 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, py: 1.5 }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ px: 2, py: 1.5 }}
+      >
         <Typography variant="subtitle2">{title}</Typography>
-        <Button color="inherit" variant="contained" startIcon={<Iconify icon="mingcute:add-line" />} onClick={onAdd}>
+        <Button
+          color="inherit"
+          variant="contained"
+          startIcon={<Iconify icon="mingcute:add-line" />}
+          onClick={onAdd}
+        >
           {actionLabel}
         </Button>
       </Stack>
@@ -223,38 +228,6 @@ function PanelSection({
       <Box sx={{ px: 2, py: 1 }}>{children}</Box>
     </Box>
   );
-}
-
-function EmptyList({ loading, length }: { loading: boolean; length: number }) {
-  const { t } = useTranslate('admin');
-  if (loading) {
-    return (
-      <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-        {t('common.loading')}
-      </Typography>
-    );
-  }
-  if (length > 0) return null;
-  return (
-    <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-      {t('common.noData')}
-    </Typography>
-  );
-}
-
-function keySummary(
-  formats: string[] | null | undefined,
-  rpmLimit: number | null | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string
-) {
-  const formatText = formats?.length ? formats.map(formatApiFormat).join(', ') : t('providers.allFormats');
-  const rpmText = rpmLimit === null || rpmLimit === undefined ? t('providers.adaptive') : `${rpmLimit} RPM`;
-  return `${formatText} · ${rpmText}`;
-}
-
-function modelLabel(id: string, models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[]) {
-  const model = models.find((item) => item.id === id);
-  return model?.display_name || model?.name || id;
 }
 
 const drawerSlotProps = {

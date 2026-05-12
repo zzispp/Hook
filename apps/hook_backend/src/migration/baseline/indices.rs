@@ -98,6 +98,12 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         index(
+            "index_request_candidates_by_created_at",
+            RequestCandidates::Table,
+            RequestCandidates::CreatedAt,
+            false,
+        ),
+        index(
             "index_translation_entries_by_lang",
             TranslationEntries::Table,
             TranslationEntries::LangCode,

@@ -1,21 +1,30 @@
 use serde_json::Value;
 
 use super::{
-    ApiFormat, FormatConversionError,
+    ApiFormat, FormatConversionError, StreamConversionState,
     normalizer::FormatNormalizer,
-    normalizers::{ClaudeNormalizer, GeminiNormalizer, OpenAiNormalizer},
+    normalizers::{ClaudeNormalizer, GeminiNormalizer, OpenAiNormalizer, OpenAiResponsesNormalizer},
 };
 
 pub struct FormatConversionRegistry {
     openai: OpenAiNormalizer,
+    openai_responses: OpenAiResponsesNormalizer,
     gemini: GeminiNormalizer,
     claude: ClaudeNormalizer,
+}
+
+pub struct StreamChunkConversion<'a> {
+    pub chunk: &'a Value,
+    pub source: ApiFormat,
+    pub target: ApiFormat,
+    pub state: &'a mut StreamConversionState,
 }
 
 impl Default for FormatConversionRegistry {
     fn default() -> Self {
         Self {
             openai: OpenAiNormalizer,
+            openai_responses: OpenAiResponsesNormalizer,
             gemini: GeminiNormalizer,
             claude: ClaudeNormalizer,
         }
@@ -47,6 +56,18 @@ impl FormatConversionRegistry {
         self.normalizer(target).stream_from_internal(&internal)
     }
 
+    pub fn convert_stream_chunk(&self, input: StreamChunkConversion<'_>) -> Result<Vec<Value>, FormatConversionError> {
+        if input.source == input.target {
+            return Ok(vec![input.chunk.clone()]);
+        }
+        let events = self.normalizer(input.source).stream_chunk_to_internal(input.chunk, input.state)?;
+        let mut converted = Vec::new();
+        for event in events {
+            converted.extend(self.normalizer(input.target).stream_event_from_internal(&event, input.state)?);
+        }
+        Ok(converted)
+    }
+
     pub fn can_convert(&self, source: ApiFormat, target: ApiFormat, require_stream: bool) -> bool {
         let request = source != target;
         let response = source != target;
@@ -56,6 +77,7 @@ impl FormatConversionRegistry {
     fn normalizer(&self, format: ApiFormat) -> &dyn FormatNormalizer {
         match format {
             ApiFormat::OpenAiChat => &self.openai,
+            ApiFormat::OpenAiResponses => &self.openai_responses,
             ApiFormat::GeminiChat => &self.gemini,
             ApiFormat::ClaudeChat => &self.claude,
         }

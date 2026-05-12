@@ -1,4 +1,4 @@
-use proxy::format_conversion::{ApiFormat, FormatConversionError, FormatConversionRegistry};
+use proxy::format_conversion::{ApiFormat, FormatConversionError, FormatConversionRegistry, StreamChunkConversion, StreamConversionState};
 use serde_json::json;
 
 #[test]
@@ -29,13 +29,45 @@ fn format_conversion_request_openai_to_gemini_and_claude() {
 }
 
 #[test]
+fn format_conversion_request_openai_to_responses_and_back() {
+    let registry = FormatConversionRegistry::default();
+    let input = json!({
+        "model": "gpt-5.5",
+        "messages": [
+            { "role": "user", "content": "hello" }
+        ],
+        "max_tokens": 16,
+        "stream": true
+    });
+
+    let responses = registry.convert_request(&input, ApiFormat::OpenAiChat, ApiFormat::OpenAiResponses).unwrap();
+    assert_eq!(responses["input"][0]["role"], "user");
+    assert_eq!(responses["input"][0]["content"], "hello");
+    assert_eq!(responses["max_output_tokens"], 16);
+    assert_eq!(responses["stream"], true);
+
+    let response_payload = json!({
+        "id": "resp_1",
+        "model": "gpt-5.5",
+        "output_text": "hello",
+        "usage": { "input_tokens": 2, "output_tokens": 1, "total_tokens": 3 }
+    });
+    let openai = registry
+        .convert_response(&response_payload, ApiFormat::OpenAiResponses, ApiFormat::OpenAiChat)
+        .unwrap();
+    assert_eq!(openai["choices"][0]["message"]["content"], "hello");
+    assert_eq!(openai["usage"]["total_tokens"], 3);
+}
+
+#[test]
 fn format_conversion_request_gemini_and_claude_to_openai() {
     let registry = FormatConversionRegistry::default();
     let gemini = json!({
         "model": "gemini-1.5-flash",
         "systemInstruction": { "parts": [{ "text": "sys" }] },
         "contents": [{ "role": "user", "parts": [{ "text": "hi" }] }],
-        "generationConfig": { "temperature": 0.2, "maxOutputTokens": 12 }
+        "generationConfig": { "temperature": 0.2, "maxOutputTokens": 12 },
+        "stream": true
     });
 
     let openai = registry.convert_request(&gemini, ApiFormat::GeminiChat, ApiFormat::OpenAiChat).unwrap();
@@ -43,6 +75,7 @@ fn format_conversion_request_gemini_and_claude_to_openai() {
     assert_eq!(openai["messages"][0]["content"], "sys");
     assert_eq!(openai["messages"][1]["content"], "hi");
     assert_eq!(openai["max_tokens"], 12);
+    assert_eq!(openai["stream"], true);
 
     let claude = json!({
         "model": "claude-3-5-sonnet-latest",
@@ -113,6 +146,46 @@ fn format_conversion_stream_maps_delta_and_done() {
     assert_eq!(gemini[0]["candidates"][0]["content"]["parts"][0]["text"], "He");
     assert_eq!(gemini[1]["candidates"][0]["content"]["parts"][0]["text"], "llo");
     assert_eq!(gemini[2]["candidates"][0]["finishReason"], "STOP");
+}
+
+#[test]
+fn format_conversion_stream_chunk_matches_batch_for_cumulative_gemini_text() {
+    let registry = FormatConversionRegistry::default();
+    let gemini = vec![
+        json!({
+            "modelVersion": "gemini-1.5-flash",
+            "candidates": [{ "content": { "parts": [{ "text": "He" }] } }]
+        }),
+        json!({
+            "modelVersion": "gemini-1.5-flash",
+            "candidates": [{ "content": { "parts": [{ "text": "Hello" }] } }]
+        }),
+        json!({
+            "modelVersion": "gemini-1.5-flash",
+            "candidates": [{ "content": { "parts": [{ "text": "Hello" }] }, "finishReason": "STOP" }],
+            "usageMetadata": { "promptTokenCount": 2, "candidatesTokenCount": 1, "totalTokenCount": 3 }
+        }),
+    ];
+
+    let batch = registry.convert_stream(&gemini, ApiFormat::GeminiChat, ApiFormat::OpenAiChat).unwrap();
+    let mut state = StreamConversionState::default();
+    let mut incremental = Vec::new();
+    for chunk in &gemini {
+        incremental.extend(
+            registry
+                .convert_stream_chunk(StreamChunkConversion {
+                    chunk,
+                    source: ApiFormat::GeminiChat,
+                    target: ApiFormat::OpenAiChat,
+                    state: &mut state,
+                })
+                .unwrap(),
+        );
+    }
+
+    assert_eq!(incremental, batch);
+    assert_eq!(incremental[1]["choices"][0]["delta"]["content"], "He");
+    assert_eq!(incremental[2]["choices"][0]["delta"]["content"], "llo");
 }
 
 #[test]

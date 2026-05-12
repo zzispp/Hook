@@ -1,7 +1,9 @@
+use std::collections::BTreeMap;
+
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
-    api_token::{ApiToken, ApiTokenListRequest, ApiTokenListResponse, ApiTokenType, ModelAccessMode},
+    api_token::{ApiToken, ApiTokenListRequest, ApiTokenListResponse, ApiTokenOwnerResponse, ApiTokenType, ModelAccessMode},
     group::BillingGroupResponse,
     model::PatchField,
 };
@@ -54,6 +56,7 @@ pub trait ApiTokenRepository: Send + Sync + 'static {
 #[async_trait]
 pub trait UserCatalog: Send + Sync + 'static {
     async fn user_exists(&self, id: &str) -> ApiTokenResult<bool>;
+    async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>>;
 }
 
 #[async_trait]

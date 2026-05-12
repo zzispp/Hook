@@ -20,6 +20,8 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     }
     validate_site_name(input.site_name.as_deref())?;
     validate_site_subtitle(input.site_subtitle.as_deref())?;
+    validate_positive_i64("request_record_retention_days", input.request_record_retention_days)?;
+    validate_positive_i64("request_record_payload_retention_days", input.request_record_payload_retention_days)?;
     validate_non_negative_decimal("default_user_grant", input.default_user_grant)?;
     validate_non_negative_i64("default_rate_limit_rpm", input.default_rate_limit_rpm)
 }
@@ -55,6 +57,13 @@ fn validate_non_negative_decimal(field: &str, value: Option<Decimal>) -> Setting
 fn validate_non_negative_i64(field: &str, value: Option<i64>) -> SettingResult<()> {
     if value.is_some_and(|item| item < 0) {
         return Err(SettingError::InvalidInput(format!("{field} must be greater than or equal to 0")));
+    }
+    Ok(())
+}
+
+fn validate_positive_i64(field: &str, value: Option<i64>) -> SettingResult<()> {
+    if value.is_some_and(|item| item <= 0) {
+        return Err(SettingError::InvalidInput(format!("{field} must be greater than 0")));
     }
     Ok(())
 }

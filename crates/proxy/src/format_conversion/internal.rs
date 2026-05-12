@@ -53,6 +53,21 @@ pub enum InternalStreamEvent {
     Done { reason: Option<StopReason>, usage: Option<InternalUsage> },
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct StreamConversionState {
+    pub openai_started: bool,
+    pub openai_responses_started: bool,
+    pub gemini_started: bool,
+    pub gemini_previous_text: String,
+    pub target_openai_id: String,
+    pub target_openai_model: String,
+    pub target_openai_responses_id: String,
+    pub target_openai_responses_model: String,
+    pub target_claude_id: String,
+    pub target_claude_model: String,
+    pub target_gemini_model: String,
+}
+
 impl InternalUsage {
     pub fn with_total(mut self) -> Self {
         if self.total_tokens.is_none() {

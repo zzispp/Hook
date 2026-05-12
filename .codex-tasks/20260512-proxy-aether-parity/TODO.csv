@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Audit current Hook and aether scheduling gaps,DONE,Relevant files and data model read,test -f .codex-tasks/20260512-proxy-aether-parity/PROGRESS.md,2026-05-12T14:15:19+08:00,0,
+2,Rename backend app proxy module to llm_proxy,DONE,All backend routes compile with neutral module naming,cargo check -p backend,2026-05-12T14:55:25+08:00,0,src/openai removed; backend compiles
+3,Implement scheduler-backed candidate ordering,DONE,All LLM proxy candidates use FixedOrder CacheAffinity or LoadBalance from system settings,cargo test -p proxy scheduler -- --nocapture,2026-05-12T14:55:25+08:00,0,scheduler tests pass
+4,Implement failover and retry in proxy execution,DONE,Upstream failures attempt next eligible candidate and trace all attempts,cargo check -p backend,2026-05-12T14:55:25+08:00,0,JSON and realtime candidate retry/failover compile
+5,Remove health-probe and timeout config UI from provider screens,DONE,Provider UI no longer shows probing RPM TTL Probe or request timeout fields,pnpm lint:frontend,2026-05-12T14:55:25+08:00,0,frontend lint passes
+6,Validate full proxy path,DONE,Backend checks and focused tests pass,cargo check -p backend; cargo test -p proxy; cargo test -p storage --test provider_request_records,2026-05-12T14:55:25+08:00,0,all validation commands pass

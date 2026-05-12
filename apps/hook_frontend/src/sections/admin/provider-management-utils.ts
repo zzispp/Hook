@@ -2,15 +2,15 @@ import type { AdminT } from './shared';
 import type {
   Provider,
   ProviderType,
+  ProviderApiKey,
   ProviderCreate,
+  ProviderApiKeyUpdate,
   ProviderApiKeyCreate,
   ProviderModelBindingCreate,
 } from 'src/types/provider';
 
 export const PROVIDER_TYPE_OPTIONS: ProviderType[] = ['custom'];
 export const DEFAULT_PROVIDER_MAX_RETRIES = 2;
-export const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS = 300;
-export const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS = 60;
 
 export const API_FORMAT_OPTIONS = [
   'openai_chat',
@@ -36,8 +36,6 @@ export type ProviderForm = {
   name: string;
   provider_type: ProviderType;
   max_retries: string;
-  request_timeout_seconds: string;
-  stream_first_byte_timeout_seconds: string;
   priority: string;
   keep_priority_on_conversion: boolean;
   enable_format_conversion: boolean;
@@ -48,11 +46,8 @@ export type ApiKeyForm = {
   name: string;
   api_key: string;
   note: string;
-  api_formats: string[];
   internal_priority: string;
   rpm_limit: string;
-  cache_ttl_minutes: string;
-  max_probe_interval_minutes: string;
   time_range_enabled: boolean;
   time_range_start: string;
   time_range_end: string;
@@ -68,8 +63,6 @@ export const DEFAULT_PROVIDER_FORM: ProviderForm = {
   name: '',
   provider_type: 'custom',
   max_retries: '',
-  request_timeout_seconds: '',
-  stream_first_byte_timeout_seconds: '',
   priority: '100',
   keep_priority_on_conversion: false,
   enable_format_conversion: true,
@@ -80,11 +73,8 @@ export const DEFAULT_API_KEY_FORM: ApiKeyForm = {
   name: '',
   api_key: '',
   note: '',
-  api_formats: ['openai_chat'],
   internal_priority: '10',
   rpm_limit: '',
-  cache_ttl_minutes: '5',
-  max_probe_interval_minutes: '32',
   time_range_enabled: false,
   time_range_start: '',
   time_range_end: '',
@@ -101,8 +91,6 @@ export function providerFormFromProvider(provider: Provider): ProviderForm {
     name: provider.name,
     provider_type: provider.provider_type,
     max_retries: optionalNumberText(provider.max_retries),
-    request_timeout_seconds: optionalNumberText(provider.request_timeout_seconds),
-    stream_first_byte_timeout_seconds: optionalNumberText(provider.stream_first_byte_timeout_seconds),
     priority: String(provider.priority),
     keep_priority_on_conversion: provider.keep_priority_on_conversion,
     enable_format_conversion: provider.enable_format_conversion,
@@ -115,10 +103,6 @@ export function providerPayload(form: ProviderForm): ProviderCreate {
     name: form.name,
     provider_type: form.provider_type,
     max_retries: optionalNumber(form.max_retries) ?? DEFAULT_PROVIDER_MAX_RETRIES,
-    request_timeout_seconds:
-      optionalNumber(form.request_timeout_seconds) ?? DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
-    stream_first_byte_timeout_seconds:
-      optionalNumber(form.stream_first_byte_timeout_seconds) ?? DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS,
     priority: requiredNumber(form.priority),
     keep_priority_on_conversion: form.keep_priority_on_conversion,
     enable_format_conversion: form.enable_format_conversion,
@@ -131,11 +115,36 @@ export function apiKeyPayload(form: ApiKeyForm): ProviderApiKeyCreate {
     name: form.name,
     api_key: form.api_key,
     note: trimmedOrNull(form.note),
-    api_formats: form.api_formats,
     internal_priority: requiredNumber(form.internal_priority),
     rpm_limit: optionalNumber(form.rpm_limit),
-    cache_ttl_minutes: requiredNumber(form.cache_ttl_minutes),
-    max_probe_interval_minutes: requiredNumber(form.max_probe_interval_minutes),
+    time_range_enabled: form.time_range_enabled,
+    time_range_start: form.time_range_enabled ? trimmedOrNull(form.time_range_start) : null,
+    time_range_end: form.time_range_enabled ? trimmedOrNull(form.time_range_end) : null,
+    is_active: form.is_active,
+  };
+}
+
+export function apiKeyFormFromKey(apiKey: ProviderApiKey): ApiKeyForm {
+  return {
+    name: apiKey.name,
+    api_key: '',
+    note: apiKey.note ?? '',
+    internal_priority: String(apiKey.internal_priority),
+    rpm_limit: optionalNumberText(apiKey.rpm_limit),
+    time_range_enabled: apiKey.time_range_enabled,
+    time_range_start: apiKey.time_range_start ?? '',
+    time_range_end: apiKey.time_range_end ?? '',
+    is_active: apiKey.is_active,
+  };
+}
+
+export function apiKeyUpdatePayload(form: ApiKeyForm): ProviderApiKeyUpdate {
+  return {
+    name: form.name,
+    ...(form.api_key.trim() ? { api_key: form.api_key } : {}),
+    note: trimmedOrNull(form.note),
+    internal_priority: requiredNumber(form.internal_priority),
+    rpm_limit: optionalNumber(form.rpm_limit),
     time_range_enabled: form.time_range_enabled,
     time_range_start: form.time_range_enabled ? trimmedOrNull(form.time_range_start) : null,
     time_range_end: form.time_range_enabled ? trimmedOrNull(form.time_range_end) : null,

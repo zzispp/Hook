@@ -169,7 +169,12 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
       />
       <ProviderEndpointDialog dialogs={state.childDialogs} provider={state.selectedProvider} />
       <ProviderApiKeyDialog dialogs={state.childDialogs} providerId={state.selectedProvider?.id} />
-      <ProviderModelDialog dialogs={state.childDialogs} models={state.models.items} />
+      <ProviderModelDialog
+        dialogs={state.childDialogs}
+        models={state.models.items}
+        providerId={state.selectedProvider?.id}
+        providerName={state.selectedProvider?.name}
+      />
       <ProviderPriorityDialog
         open={state.priorityOpen}
         providers={state.priorityProviders.items}
@@ -190,6 +195,18 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
         cancelText={t('common.cancel')}
         action={
           <Button variant="contained" color="error" onClick={state.deleteDialog.confirmDelete}>
+            {t('common.delete')}
+          </Button>
+        }
+      />
+      <ConfirmDialog
+        open={!!state.childDialogs.deletingApiKey}
+        onClose={() => state.childDialogs.setDeletingApiKey(null)}
+        title={t('dialogs.deleteProviderKey')}
+        content={t('dialogs.deleteContent', { name: state.childDialogs.deletingApiKey?.name ?? '' })}
+        cancelText={t('common.cancel')}
+        action={
+          <Button variant="contained" color="error" onClick={state.childDialogs.confirmDeleteApiKey}>
             {t('common.delete')}
           </Button>
         }

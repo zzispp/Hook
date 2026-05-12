@@ -9,7 +9,6 @@ pub struct Model {
     pub name: String,
     pub encrypted_api_key: String,
     pub note: Option<String>,
-    pub api_formats: Option<String>,
     pub internal_priority: i32,
     pub rpm_limit: Option<i32>,
     pub learned_rpm_limit: Option<i32>,

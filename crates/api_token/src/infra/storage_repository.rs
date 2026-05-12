@@ -1,14 +1,16 @@
+use std::collections::BTreeMap;
+
 use async_trait::async_trait;
 use storage::{
     Database, StorageError,
-    api_token::{ApiTokenRecordInput, ApiTokenRecordPatch, ApiTokenStore},
+    api_token::{ApiTokenRecordInput, ApiTokenRecordPatch, ApiTokenStore, ApiTokenUsageRecord},
     group::GroupStore,
     model::ModelStore,
     setting::SettingStore,
     user::UserStore,
 };
 use types::{
-    api_token::{ApiToken, ApiTokenListRequest, ApiTokenListResponse},
+    api_token::{ApiToken, ApiTokenListRequest, ApiTokenListResponse, ApiTokenOwnerResponse},
     group::BillingGroupResponse,
     user::UserId,
 };
@@ -36,6 +38,7 @@ pub struct StorageModelAccessCatalog {
 #[derive(Clone)]
 pub struct StorageUserCatalog {
     store: UserStore,
+    system_owner: Option<(String, ApiTokenOwnerResponse)>,
 }
 
 #[derive(Clone)]
@@ -48,6 +51,10 @@ impl StorageApiTokenRepository {
         Self {
             store: ApiTokenStore::new(database),
         }
+    }
+
+    pub async fn record_usage(&self, input: ApiTokenUsageRecord) -> ApiTokenResult<()> {
+        self.store.record_usage(input).await.map_err(storage_error)
     }
 }
 
@@ -71,6 +78,14 @@ impl StorageUserCatalog {
     pub fn new(database: Database) -> Self {
         Self {
             store: UserStore::new(database),
+            system_owner: None,
+        }
+    }
+
+    pub fn with_system_owner(database: Database, system_owner: Option<(String, ApiTokenOwnerResponse)>) -> Self {
+        Self {
+            store: UserStore::new(database),
+            system_owner,
         }
     }
 }
@@ -148,12 +163,54 @@ impl ModelAccessCatalog for StorageModelAccessCatalog {
 #[async_trait]
 impl UserCatalog for StorageUserCatalog {
     async fn user_exists(&self, id: &str) -> ApiTokenResult<bool> {
+        if system_owner_id_matches(&self.system_owner, id) {
+            return Ok(true);
+        }
         self.store
             .find_by_id(UserId(id.to_owned()))
             .await
             .map(|user| user.is_some())
             .map_err(storage_error)
     }
+
+    async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {
+        let (mut owners, database_ids) = split_owner_ids(ids, &self.system_owner);
+        if database_ids.is_empty() {
+            return Ok(owners);
+        }
+        owners.extend(self.store.find_by_ids(&database_ids).await.map_err(storage_error)?.into_iter().map(|user| {
+            (
+                user.id.0,
+                ApiTokenOwnerResponse {
+                    username: user.username,
+                    email: user.email,
+                },
+            )
+        }));
+        Ok(owners)
+    }
+}
+
+fn split_owner_ids(ids: &[String], system_owner: &Option<(String, ApiTokenOwnerResponse)>) -> (BTreeMap<String, ApiTokenOwnerResponse>, Vec<String>) {
+    let mut owners = BTreeMap::new();
+    let database_ids = ids
+        .iter()
+        .filter(|id| {
+            if let Some((owner_id, owner)) = system_owner
+                && *id == owner_id
+            {
+                owners.insert(owner_id.clone(), owner.clone());
+                return false;
+            }
+            true
+        })
+        .cloned()
+        .collect();
+    (owners, database_ids)
+}
+
+fn system_owner_id_matches(system_owner: &Option<(String, ApiTokenOwnerResponse)>, id: &str) -> bool {
+    system_owner.as_ref().is_some_and(|(owner_id, _)| owner_id == id)
 }
 
 #[async_trait]
@@ -210,5 +267,32 @@ fn storage_error(error: StorageError) -> ApiTokenError {
         StorageError::NotFound => ApiTokenError::NotFound,
         StorageError::Conflict(message) => ApiTokenError::Conflict(message),
         StorageError::Database(message) => ApiTokenError::Infrastructure(message),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_owner_ids_resolves_system_owner_without_database_lookup() {
+        let system_owner = Some((
+            "system-user".into(),
+            ApiTokenOwnerResponse {
+                username: "admin".into(),
+                email: "admin@example.test".into(),
+            },
+        ));
+
+        let (owners, database_ids) = split_owner_ids(&["system-user".into(), "db-user".into()], &system_owner);
+
+        assert_eq!(database_ids, vec!["db-user".to_owned()]);
+        assert_eq!(
+            owners.get("system-user"),
+            Some(&ApiTokenOwnerResponse {
+                username: "admin".into(),
+                email: "admin@example.test".into(),
+            })
+        );
     }
 }

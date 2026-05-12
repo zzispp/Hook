@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 const DEFAULT_REQUEST_CANDIDATE_LIMIT: u64 = 100;
@@ -20,6 +21,20 @@ pub struct RequestCandidate {
     pub retry_index: i32,
     pub status: String,
     pub status_code: Option<i32>,
+    pub prompt_tokens: Option<i64>,
+    pub completion_tokens: Option<i64>,
+    pub total_tokens: Option<i64>,
+    pub cache_creation_input_tokens: Option<i64>,
+    pub cache_read_input_tokens: Option<i64>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub token_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub base_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub total_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub billing_multiplier: Option<Decimal>,
+    pub cost_currency: Option<String>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,

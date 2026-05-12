@@ -70,12 +70,15 @@ export function RefreshButton({ loading, onClick }: { loading?: boolean; onClick
       variant="outlined"
       loading={loading}
       startIcon={<Iconify icon="solar:restart-bold" />}
+      sx={refreshButtonSx}
       onClick={onClick}
     >
       {t('models.refresh')}
     </Button>
   );
 }
+
+const refreshButtonSx = { whiteSpace: 'nowrap', flexShrink: 0 };
 
 export function EnabledLabel({ enabled }: { enabled: boolean }) {
   const { t } = useTranslate('admin');

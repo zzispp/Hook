@@ -46,7 +46,7 @@ use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use user::{
     api::{ApiState, TokenService, TokenSettings, create_router as create_user_router},
-    application::UserService,
+    application::{SystemUserProvider, UserService},
     infra::{
         BcryptPasswordHasher, ConfigSystemUserProvider, StorageInitialGrantLedger, StorageRegistrationPolicy, StorageUserRepository, StorageUserWalletCatalog,
     },
@@ -60,8 +60,11 @@ use wallet::{
 use crate::{
     BackendResult,
     auth::{AuthState, AuthStateParts, auth_middleware},
+    exchange_rates::ExchangeRateCache,
+    llm_proxy::{LlmProxyState, create_router as create_llm_proxy_router, create_v1beta_router},
     system,
 };
+use types::api_token::ApiTokenOwnerResponse;
 
 const AUTHENTICATED_BASE_APIS: &[(&str, &str)] = &[("GET", "/api/auth/me"), ("GET", "/api/navbar"), ("GET", "/api/i18n/resources")];
 
@@ -80,12 +83,16 @@ pub async fn serve(settings: Settings) -> BackendResult<()> {
 
 async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let database = connect_database(&settings.database_url()?).await?;
+    let exchange_rates = ExchangeRateCache::connect(&settings.redis_url()?, settings.redis.key_prefix.clone()).await?;
+    exchange_rates.clone().spawn_refresh_task();
+    crate::request_record_cleanup::spawn_request_record_cleanup(database.clone());
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let models = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
+    let provider_key_cipher = ProviderKeyCipher::new(settings.provider_key_secret()?)?;
     let providers = Arc::new(ProviderService::new(
         StorageProviderRepository::new(database.clone()),
         StorageGlobalModelCatalog::new(database.clone()),
-        ProviderKeyCipher::new(settings.provider_key_secret()?)?,
+        provider_key_cipher.clone(),
     ));
     let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));
     let system_settings = Arc::new(SettingService::new(StorageSettingRepository::new(database.clone())));
@@ -95,21 +102,30 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageGroupProviderCatalog::new(database.clone()),
     ));
     let i18n = Arc::new(I18nService::new(StorageI18nRepository::new(database.clone())));
+    let system_user_provider = ConfigSystemUserProvider::from_settings(settings)?;
     let api_tokens = Arc::new(ApiTokenService::new(
         StorageApiTokenRepository::new(database.clone()),
         StorageBillingGroupCatalog::new(database.clone()),
         StorageModelAccessCatalog::new(database.clone()),
-        StorageUserCatalog::new(database.clone()),
+        StorageUserCatalog::with_system_owner(database.clone(), api_token_system_owner(&system_user_provider)),
         StorageSystemTokenPolicy::new(database.clone()),
     ));
     let users = Arc::new(UserService::with_system_user_and_registration(
         StorageUserRepository::new(database.clone()),
         BcryptPasswordHasher,
-        ConfigSystemUserProvider::from_settings(settings)?,
+        system_user_provider,
         StorageRegistrationPolicy::new(database.clone()),
         StorageInitialGrantLedger::new(database.clone()),
-        StorageUserWalletCatalog::new(database),
+        StorageUserWalletCatalog::new(database.clone()),
     ));
+    let proxy_redis = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
+    let llm_proxy = LlmProxyState::new(
+        database.clone(),
+        StorageApiTokenRepository::new(database),
+        provider_key_cipher,
+        proxy_redis,
+        settings.redis.key_prefix.clone(),
+    );
     let tokens = TokenService::new(token_settings(settings)?);
     let authorization = authorization_config(settings);
 
@@ -124,8 +140,21 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         groups,
         i18n,
         api_tokens,
+        llm_proxy,
+        exchange_rates,
         authorization,
     })
+}
+
+fn api_token_system_owner(provider: &impl SystemUserProvider) -> Option<(String, ApiTokenOwnerResponse)> {
+    let user = provider.system_user()?.user;
+    Some((
+        user.id.0,
+        ApiTokenOwnerResponse {
+            username: user.username,
+            email: user.email,
+        },
+    ))
 }
 
 async fn build_rbac_service(settings: &Settings, database: storage::Database) -> BackendResult<Arc<RbacService<StorageRbacRepository, RedisRbacCache>>> {
@@ -143,10 +172,12 @@ fn create_app(state: AppState) -> Router {
     let model_state = ModelApiState::new(state.models);
     let provider_state = ProviderApiState::new(state.providers);
     let wallet_state = WalletApiState::new(state.wallets);
-    let setting_state = SettingApiState::new(state.system_settings);
+    let setting_state = SettingApiState::new(state.system_settings, state.exchange_rates.clone());
     let group_state = GroupApiState::new(state.groups);
     let i18n_state = I18nApiState::new(state.i18n);
     let api_token_state = ApiTokenApiState::new(state.api_tokens);
+    let llm_v1_router = create_llm_proxy_router(state.llm_proxy.clone());
+    let gemini_router = create_v1beta_router(state.llm_proxy);
     let auth_state = AuthState::new(AuthStateParts {
         users: state.users,
         tokens: state.tokens,
@@ -165,6 +196,8 @@ fn create_app(state: AppState) -> Router {
         .merge(create_api_token_router(api_token_state));
 
     system::create_router()
+        .nest("/v1", llm_v1_router)
+        .nest("/v1beta", gemini_router)
         .nest("/api", api_router)
         .layer(middleware::from_fn_with_state(auth_state, auth_middleware))
         .layer(cors_layer())
@@ -218,5 +251,7 @@ struct AppState {
     groups: Arc<dyn group::application::GroupUseCase>,
     i18n: Arc<dyn i18n::application::I18nUseCase>,
     api_tokens: Arc<dyn api_token::application::ApiTokenUseCase>,
+    llm_proxy: LlmProxyState,
+    exchange_rates: ExchangeRateCache,
     authorization: AuthorizationConfig,
 }

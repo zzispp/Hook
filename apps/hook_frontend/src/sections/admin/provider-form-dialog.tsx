@@ -12,8 +12,6 @@ import {
   providerTypeLabel,
   PROVIDER_TYPE_OPTIONS,
   DEFAULT_PROVIDER_MAX_RETRIES,
-  DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
-  DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS,
 } from './provider-management-utils';
 
 type ProviderDialogState = ReturnType<typeof useProviderDialog>;
@@ -77,22 +75,6 @@ function ProviderRequestConfigFields({ dialog }: { dialog: ProviderDialogState }
         placeholder={String(DEFAULT_PROVIDER_MAX_RETRIES)}
         helperText={t('providers.defaultWhenBlank')}
         onChange={(value) => dialog.setForm((form) => ({ ...form, max_retries: value }))}
-      />
-      <TextFieldRow
-        type="number"
-        label={t('providers.requestTimeout')}
-        value={dialog.form.request_timeout_seconds}
-        placeholder={String(DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS)}
-        helperText={t('providers.defaultWhenBlank')}
-        onChange={(value) => dialog.setForm((form) => ({ ...form, request_timeout_seconds: value }))}
-      />
-      <TextFieldRow
-        type="number"
-        label={t('providers.streamFirstByteTimeout')}
-        value={dialog.form.stream_first_byte_timeout_seconds}
-        placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS)}
-        helperText={t('providers.defaultWhenBlank')}
-        onChange={(value) => dialog.setForm((form) => ({ ...form, stream_first_byte_timeout_seconds: value }))}
       />
     </Stack>
   );

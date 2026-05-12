@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderCreate, ProviderEndpoint,
-    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate,
-    ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
+    ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -20,8 +20,18 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn list_endpoints(&self, provider_id: &str) -> ProviderResult<Vec<ProviderEndpoint>>;
     async fn create_api_key(&self, provider_id: &str, input: ProviderApiKeyCreate, encrypted_api_key: String) -> ProviderResult<ProviderApiKey>;
     async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>>;
+    async fn update_api_key(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderApiKeyUpdate,
+        encrypted_api_key: Option<String>,
+    ) -> ProviderResult<ProviderApiKey>;
+    async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()>;
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding>;
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>>;
+    async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding>;
+    async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_active_request_records(&self, request: ActiveRequestRecordRequest) -> ProviderResult<ActiveRequestRecordResponse>;
     async fn get_request_record(&self, request_id: &str) -> ProviderResult<RequestRecordDetail>;
@@ -34,6 +44,7 @@ pub trait GlobalModelCatalog: Send + Sync + 'static {
 
 pub trait SecretCipher: Send + Sync + 'static {
     fn encrypt_provider_key(&self, plaintext: &str) -> ProviderResult<String>;
+    fn decrypt_provider_key(&self, ciphertext: &str) -> ProviderResult<String>;
 }
 
 #[async_trait]
@@ -49,8 +60,12 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn list_endpoints(&self, provider_id: &str) -> ProviderResult<Vec<ProviderEndpoint>>;
     async fn create_api_key(&self, provider_id: &str, input: ProviderApiKeyCreate) -> ProviderResult<ProviderApiKey>;
     async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>>;
+    async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyUpdate) -> ProviderResult<ProviderApiKey>;
+    async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()>;
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding>;
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>>;
+    async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding>;
+    async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_active_request_records(&self, request: ActiveRequestRecordRequest) -> ProviderResult<ActiveRequestRecordResponse>;
     async fn get_request_record(&self, request_id: &str) -> ProviderResult<RequestRecordDetail>;

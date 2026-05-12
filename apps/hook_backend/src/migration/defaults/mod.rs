@@ -149,8 +149,12 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "provider_endpoints_create",
             "provider_keys_read",
             "provider_keys_create",
+            "provider_keys_update",
+            "provider_keys_delete",
             "provider_models_read",
             "provider_models_create",
+            "provider_models_update",
+            "provider_models_delete",
             "models_global_read",
         ],
     },
@@ -160,7 +164,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     },
     MenuApiBindingDefinition {
         menu_code: "admin_settings",
-        api_codes: &["system_settings_read", "system_settings_update"],
+        api_codes: &["system_settings_read", "system_settings_update", "system_exchange_rate_read"],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_translations",

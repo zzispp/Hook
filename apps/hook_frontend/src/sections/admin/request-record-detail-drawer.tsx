@@ -1,8 +1,10 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
-import type { RequestRecord, RequestCandidateDetail } from 'src/types/provider';
+import type { RequestRecord } from 'src/types/provider';
+import type { CurrencyDisplay } from './currency-format';
 
+import { useMemo } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
@@ -20,35 +22,44 @@ import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
-import { formatApiFormat } from './provider-management-utils';
+import { RequestRecordTraceTimeline } from './request-record-trace-timeline';
+import { RequestRecordPayloadPanels } from './request-record-payload-panels';
 import {
   compactId,
   formatCost,
+  userDisplay,
   tokenDisplay,
   formatDuration,
   formatRequestDate,
   billingStatusLabel,
   requestStatusColor,
   requestStatusLabel,
+  formatRequestApiFormat,
 } from './request-records-utils';
 
 export function RequestRecordDetailDrawer({
   open,
   record,
   locale,
+  currencyDisplay,
   onClose,
 }: {
   open: boolean;
   record: RequestRecord | null;
   locale: string;
+  currencyDisplay: CurrencyDisplay;
   onClose: VoidFunction;
 }) {
   const detail = useRequestRecordDetail(open ? record?.request_id : null);
+  const displayRecord = useMemo(
+    () => freshestRecord(record, detail.data?.record),
+    [detail.data?.record, record]
+  );
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose} slotProps={drawerSlotProps}>
       <DrawerHeader
-        record={detail.data?.record ?? record}
+        record={displayRecord}
         locale={locale}
         loading={detail.isLoading}
         onRefresh={detail.refresh}
@@ -56,13 +67,40 @@ export function RequestRecordDetailDrawer({
       />
       <Scrollbar>
         <Stack spacing={2.5} sx={{ px: 2.5, pb: 5 }}>
-          <CostSummary record={detail.data?.record ?? record} />
-          <TraceSection candidates={detail.data?.candidates ?? []} loading={detail.isLoading} locale={locale} />
-          <RequestBody body={detail.data?.request_body} />
+          <CostSummary record={displayRecord} currencyDisplay={currencyDisplay} />
+          <RequestRecordTraceTimeline
+            record={displayRecord}
+            candidates={detail.data?.candidates ?? []}
+            loading={detail.isLoading}
+            locale={locale}
+          />
+          <RequestRecordPayloadPanels
+            requestHeaders={detail.data?.request_headers}
+            requestBody={detail.data?.request_body}
+            responseBody={detail.data?.response_body}
+          />
         </Stack>
       </Scrollbar>
     </Drawer>
   );
+}
+
+const RECORD_STATUS_RANK: Record<string, number> = {
+  pending: 0,
+  streaming: 1,
+  success: 2,
+  failed: 2,
+};
+
+function freshestRecord(base: RequestRecord | null, detail?: RequestRecord) {
+  if (!base) return detail ?? null;
+  if (!detail) return base;
+  if (recordStatusRank(detail.status) > recordStatusRank(base.status)) return detail;
+  return base;
+}
+
+function recordStatusRank(status: string) {
+  return RECORD_STATUS_RANK[status] ?? 0;
 }
 
 function DrawerHeader({
@@ -111,8 +149,8 @@ function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string 
   const items = [
     `ID: ${compactId(record.request_id)}`,
     formatRequestDate(record.created_at, locale),
-    formatApiFormat(record.client_api_format),
-    `${t('requestRecords.user')}: ${record.username || '-'}`,
+    formatRequestApiFormat(record),
+    `${t('requestRecords.user')}: ${userDisplay(record)}`,
     tokenDisplay(record),
   ];
 
@@ -123,13 +161,19 @@ function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string 
   );
 }
 
-function CostSummary({ record }: { record: RequestRecord | null }) {
+function CostSummary({
+  record,
+  currencyDisplay,
+}: {
+  record: RequestRecord | null;
+  currencyDisplay: CurrencyDisplay;
+}) {
   const { t } = useTranslate('admin');
   const metrics = [
-    [t('requestRecords.totalCost'), formatCost(record?.total_cost)],
-    [t('requestRecords.actualCost'), formatCost(0)],
-    [t('requestRecords.profit'), formatCost(0)],
-    [t('requestRecords.profitRate'), '0.00%'],
+    [t('requestRecords.totalCost'), formatCost(record?.total_cost, currencyDisplay)],
+    [t('requestRecords.actualCost'), formatCost(record?.base_cost, currencyDisplay)],
+    [t('requestRecords.profit'), formatCost(profit(record), currencyDisplay)],
+    [t('requestRecords.profitRate'), profitRate(record)],
     [t('requestRecords.responseTime'), formatDuration(record?.total_latency_ms)],
   ];
 
@@ -153,56 +197,14 @@ function CostSummary({ record }: { record: RequestRecord | null }) {
   );
 }
 
-function TraceSection({
-  candidates,
-  loading,
-  locale,
-}: {
-  candidates: RequestCandidateDetail[];
-  loading: boolean;
-  locale: string;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <Stack spacing={1.5} sx={panelSx}>
-      <Typography variant="subtitle2">{t('requestRecords.traceTitle')}</Typography>
-      {loading ? <Typography variant="body2">{t('common.loading')}</Typography> : null}
-      {!loading && candidates.length === 0 ? <Typography variant="body2">{t('common.noData')}</Typography> : null}
-      {candidates.map((candidate, index) => (
-        <Stack key={candidate.id} spacing={1} sx={traceItemSx}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              {candidate.provider_name || t('requestRecords.unknownProvider')}
-            </Typography>
-            <Label color={requestStatusColor(candidate.status)} variant="soft">
-              {candidate.status_code ?? candidate.status}
-            </Label>
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            {index + 1} / {candidates.length} | {formatApiFormat(candidate.provider_api_format || candidate.client_api_format)} | {candidate.key_name || '-'} {candidate.key_preview || ''}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {candidate.started_at ? formatRequestDate(candidate.started_at, locale) : '-'} {'->'} {candidate.finished_at ? formatRequestDate(candidate.finished_at, locale) : t('requestRecords.inProgress')}
-          </Typography>
-          {candidate.error_message ? <Typography variant="caption" color="error">{candidate.error_message}</Typography> : null}
-        </Stack>
-      ))}
-    </Stack>
-  );
+function profit(record: RequestRecord | null) {
+  return Number(record?.total_cost ?? 0) - Number(record?.base_cost ?? 0);
 }
 
-function RequestBody({ body }: { body?: Record<string, unknown> | null }) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <Stack spacing={1.5} sx={panelSx}>
-      <Typography variant="subtitle2">{t('requestRecords.requestBody')}</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', fontFamily: body ? 'monospace' : undefined }}>
-        {body ? JSON.stringify(body, null, 2) : t('requestRecords.noRequestBody')}
-      </Typography>
-    </Stack>
-  );
+function profitRate(record: RequestRecord | null) {
+  const total = Number(record?.total_cost ?? 0);
+  if (total <= 0) return '0.00%';
+  return `${((profit(record) / total) * 100).toFixed(2)}%`;
 }
 
 function RequestStatusLabel({ record }: { record: RequestRecord }) {
@@ -250,10 +252,4 @@ const panelSx = {
   p: 2,
   borderRadius: 1,
   border: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`,
-};
-
-const traceItemSx = {
-  p: 1.5,
-  borderRadius: 1,
-  bgcolor: 'background.neutral',
 };

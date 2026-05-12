@@ -75,6 +75,7 @@ fn scheduler_cache_affinity_promotes_matching_key() {
 fn scheduler_load_balance_keeps_priority_group_and_uses_stable_hash() {
     let input = SchedulerInput {
         scheduling_mode: SchedulingMode::LoadBalance,
+        load_balance_seed: Some("request-1".into()),
         providers: vec![provider_with_two_keys()],
         ..base_input()
     };
@@ -86,6 +87,21 @@ fn scheduler_load_balance_keeps_priority_group_and_uses_stable_hash() {
     assert_eq!(first.len(), 2);
     assert_eq!(first[0].provider_priority, first[1].provider_priority);
     assert_eq!(first[0].key_priority, first[1].key_priority);
+}
+
+#[test]
+fn scheduler_load_balance_keeps_conversion_demoted() {
+    let input = SchedulerInput {
+        scheduling_mode: SchedulingMode::LoadBalance,
+        load_balance_seed: Some("request-1".into()),
+        providers: vec![provider_with_gemini_low_priority(), provider_a()],
+        ..base_input()
+    };
+
+    let candidates = CandidateBuilder::build(&input).unwrap();
+
+    assert!(!candidates[0].needs_conversion);
+    assert!(candidates.iter().skip(1).any(|candidate| candidate.needs_conversion));
 }
 
 #[test]

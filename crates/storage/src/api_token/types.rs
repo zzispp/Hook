@@ -31,3 +31,10 @@ pub struct ApiTokenRecordPatch {
     pub quota_limit: PatchField<Decimal>,
     pub is_active: Option<bool>,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ApiTokenUsageRecord {
+    pub token_id: String,
+    pub cost: Decimal,
+    pub used_at: time::OffsetDateTime,
+}

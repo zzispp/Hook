@@ -14,6 +14,7 @@ import type { NextConfig } from 'next';
  * NOTE: Remove all "generateStaticParams()" functions if not using static exports.
  */
 const isStaticExport = false;
+const backendUrl = process.env.HOOK_BACKEND_URL ?? 'http://127.0.0.1:3000';
 
 // ----------------------------------------------------------------------
 
@@ -22,6 +23,18 @@ const nextConfig: NextConfig = {
   output: isStaticExport ? 'export' : undefined,
   env: {
     BUILD_STATIC_EXPORT: JSON.stringify(isStaticExport),
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/v1/:path*',
+        destination: `${backendUrl}/v1/:path*`,
+      },
+      {
+        source: '/v1beta/:path*',
+        destination: `${backendUrl}/v1beta/:path*`,
+      },
+    ];
   },
   // Without --turbopack (next dev)
   webpack(config) {

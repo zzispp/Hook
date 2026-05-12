@@ -25,12 +25,13 @@ edition = "2024"
 
 [workspace.dependencies]
 async-trait = "0.1.89"
-axum = "0.8.9"
+axum = { version = "0.8.9", features = ["ws"] }
 bcrypt = "0.17.1"
 api_token = { path = "crates/api_token" }
 config_rs = { package = "config", version = "0.15.22", default-features = false, features = ["yaml"] }
 configuration = { path = "crates/config" }
 constants = { path = "crates/constants" }
+futures-util = "0.3.31"
 group = { path = "crates/group" }
 i18n = { path = "crates/i18n" }
 hex = "0.4.3"
@@ -62,8 +63,9 @@ jiff = "0.2.23"
 model = { path = "crates/model" }
 provider = { path = "crates/provider" }
 proxy = { path = "crates/proxy" }
-reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls", "stream"] }
 rust_decimal = { version = "1.41.0", features = ["serde-with-float"] }
 sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "with-rust_decimal", "with-time", "with-json"] }
 sea-orm-migration = { version = "2.0.0-rc.38", features = ["runtime-tokio-rustls", "sqlx-postgres"] }
 time = { version = "0.3.44", features = ["formatting", "parsing"] }
+tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }

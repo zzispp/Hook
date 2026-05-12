@@ -3,14 +3,14 @@ use storage::{
     Database, StorageError,
     model::ModelStore,
     provider::{
-        ProviderApiKeyRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderRecordInput,
-        ProviderRecordPatch, ProviderStore,
+        ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput,
+        ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, ProviderStore,
     },
 };
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderCreate, ProviderEndpoint,
-    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate,
-    ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
+    ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult};
@@ -97,6 +97,23 @@ impl ProviderRepository for StorageProviderRepository {
         self.store.api_keys_for_provider(provider_id).await.map_err(storage_error)
     }
 
+    async fn update_api_key(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderApiKeyUpdate,
+        encrypted_api_key: Option<String>,
+    ) -> ProviderResult<ProviderApiKey> {
+        self.store
+            .update_api_key(provider_id, key_id, api_key_patch(input, encrypted_api_key))
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()> {
+        self.store.delete_api_key(provider_id, key_id).await.map_err(storage_error)
+    }
+
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding> {
         self.store
             .create_model_binding(model_binding_input(provider_id, input))
@@ -106,6 +123,17 @@ impl ProviderRepository for StorageProviderRepository {
 
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>> {
         self.store.model_bindings_for_provider(provider_id).await.map_err(storage_error)
+    }
+
+    async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding> {
+        self.store
+            .update_model_binding(provider_id, model_id, model_binding_patch(input))
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()> {
+        self.store.delete_model_binding(provider_id, model_id).await.map_err(storage_error)
     }
 
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse> {
@@ -193,7 +221,6 @@ fn api_key_input(provider_id: &str, input: ProviderApiKeyCreate, encrypted_api_k
         name: input.name,
         encrypted_api_key,
         note: input.note,
-        api_formats: input.api_formats,
         internal_priority: input.internal_priority.unwrap_or(10),
         rpm_limit: input.rpm_limit,
         cache_ttl_minutes: input.cache_ttl_minutes.unwrap_or(5),
@@ -205,13 +232,38 @@ fn api_key_input(provider_id: &str, input: ProviderApiKeyCreate, encrypted_api_k
     }
 }
 
+fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Option<String>) -> ProviderApiKeyRecordPatch {
+    ProviderApiKeyRecordPatch {
+        name: input.name,
+        encrypted_api_key,
+        note: input.note,
+        internal_priority: input.internal_priority,
+        rpm_limit: input.rpm_limit,
+        cache_ttl_minutes: input.cache_ttl_minutes,
+        max_probe_interval_minutes: input.max_probe_interval_minutes,
+        time_range_enabled: input.time_range_enabled,
+        time_range_start: input.time_range_start,
+        time_range_end: input.time_range_end,
+        is_active: input.is_active,
+    }
+}
+
 fn model_binding_input(provider_id: &str, input: ProviderModelBindingCreate) -> ProviderModelRecordInput {
     ProviderModelRecordInput {
         provider_id: provider_id.to_owned(),
         global_model_id: input.global_model_id,
         provider_model_name: input.provider_model_name,
+        is_active: true,
         price_per_request: None,
         tiered_pricing: None,
+        config: input.config,
+    }
+}
+
+fn model_binding_patch(input: ProviderModelBindingUpdate) -> ProviderModelRecordPatch {
+    ProviderModelRecordPatch {
+        provider_model_name: input.provider_model_name,
+        is_active: input.is_active,
         config: input.config,
     }
 }

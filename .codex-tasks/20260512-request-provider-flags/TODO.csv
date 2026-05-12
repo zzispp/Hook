@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm Aether execution flag semantics,DONE,Failover and retry rules are verified from Aether source,rg/sed aether source,2026-05-12T16:08:00+08:00,0,failover=multiple executed candidate_index; retry=executed retry_index>0
+2,Add request record provider key and execution flags,DONE,List and detail records expose provider_key_name provider_key_preview has_failover has_retry,cargo test -p storage --test provider_request_records -- --nocapture,2026-05-12T16:20:00+08:00,0,storage tests cover key label failover and retry flags
+3,Render provider column icons,DONE,Provider column matches Aether behavior with failover priority over retry,pnpm --filter hook_frontend exec eslint src/sections/admin/request-records-table.tsx src/types/provider.ts,2026-05-12T16:20:00+08:00,0,provider column renders key sublabel and Aether path icons
+4,Run validation,DONE,Relevant backend and frontend checks pass,cargo check -p backend && pnpm lint:frontend && pnpm build:frontend,2026-05-12T16:20:00+08:00,0,build exited 0; Next printed one unauthorized Axios message during static generation

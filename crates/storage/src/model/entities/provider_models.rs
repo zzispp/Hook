@@ -10,6 +10,7 @@ pub struct Model {
     pub global_model_id: String,
     pub provider_model_name: String,
     pub provider_model_mappings: Option<String>,
+    pub is_active: bool,
     pub price_per_request: Option<Decimal>,
     pub tiered_pricing: Option<String>,
     pub config: Option<String>,

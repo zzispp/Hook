@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm timing difference,DONE,Evidence recorded in SPEC.md,test -f .codex-tasks/20260512-stream-conversion-timing/SPEC.md,2026-05-12T00:00:00+08:00,0,
+2,Design incremental stream path,DONE,Implementation points and risks are logged,test -f .codex-tasks/20260512-stream-conversion-timing/PROGRESS.md,2026-05-12T00:00:00+08:00,0,
+3,Implement stream conversion alignment,DONE,Hook stream path no longer calls response_bytes for successful streaming attempts,rg -n "response_bytes\\(" apps/hook_backend/src/llm_proxy/proxy/stream_transport.rs apps/hook_backend/src/llm_proxy/proxy/stream_transport,2026-05-12T00:00:00+08:00,0,
+4,Add focused tests,DONE,Stream conversion behavior is covered by Rust tests,cargo test -p proxy --test format_conversion -- --nocapture,2026-05-12T00:00:00+08:00,0,
+5,Run validation,DONE,Rust checks/tests pass,cargo check -p proxy -p backend,2026-05-12T00:00:00+08:00,0,

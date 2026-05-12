@@ -1,15 +1,16 @@
 use async_trait::async_trait;
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderCreate, ProviderEndpoint,
-    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate,
-    ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
+    ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher};
 
 use super::validation::{
-    sanitize_api_key, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request, sanitize_model_binding, sanitize_update,
-    validate_api_key, validate_create, validate_endpoint, validate_endpoint_update, validate_list_request, validate_model_binding, validate_update,
+    sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request, sanitize_model_binding,
+    sanitize_model_binding_update, sanitize_update, validate_api_key, validate_api_key_update, validate_create, validate_endpoint, validate_endpoint_update,
+    validate_list_request, validate_model_binding, validate_model_binding_update, validate_update,
 };
 
 const MAX_REQUEST_RECORD_LIMIT: u64 = 100;
@@ -102,6 +103,19 @@ where
         self.repository.list_api_keys(provider_id).await
     }
 
+    async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyUpdate) -> ProviderResult<ProviderApiKey> {
+        self.ensure_provider(provider_id).await?;
+        let input = sanitize_api_key_update(input);
+        validate_api_key_update(&input)?;
+        let encrypted = input.api_key.as_deref().map(|api_key| self.cipher.encrypt_provider_key(api_key)).transpose()?;
+        self.repository.update_api_key(provider_id, key_id, input, encrypted).await
+    }
+
+    async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()> {
+        self.ensure_provider(provider_id).await?;
+        self.repository.delete_api_key(provider_id, key_id).await
+    }
+
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding> {
         self.ensure_provider(provider_id).await?;
         let input = sanitize_model_binding(input);
@@ -113,6 +127,18 @@ where
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>> {
         self.ensure_provider(provider_id).await?;
         self.repository.list_model_bindings(provider_id).await
+    }
+
+    async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding> {
+        self.ensure_provider(provider_id).await?;
+        let input = sanitize_model_binding_update(input);
+        validate_model_binding_update(&input)?;
+        self.repository.update_model_binding(provider_id, model_id, input).await
+    }
+
+    async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()> {
+        self.ensure_provider(provider_id).await?;
+        self.repository.delete_model_binding(provider_id, model_id).await
     }
 
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse> {

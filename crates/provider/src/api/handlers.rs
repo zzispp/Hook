@@ -1,12 +1,13 @@
 use axum::{
-    Json,
+    Extension, Json,
     extract::{Path, Query, State},
 };
+use rbac::api::CurrentUser;
 use types::{
     provider::{
-        ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderCreate, ProviderEndpoint,
-        ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate,
-        ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+        ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
+        ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
+        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -78,6 +79,19 @@ pub async fn create_api_key(
     Ok(ok(state.providers.create_api_key(&provider_id, payload).await?))
 }
 
+pub async fn update_api_key(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, key_id)): Path<(String, String)>,
+    Json(payload): Json<ProviderApiKeyUpdate>,
+) -> ApiResult<ApiJson<ProviderApiKey>> {
+    Ok(ok(state.providers.update_api_key(&provider_id, &key_id, payload).await?))
+}
+
+pub async fn delete_api_key(State(state): State<ProviderApiState>, Path((provider_id, key_id)): Path<(String, String)>) -> ApiResult<ApiJson<()>> {
+    state.providers.delete_api_key(&provider_id, &key_id).await?;
+    Ok(ok(()))
+}
+
 pub async fn list_model_bindings(State(state): State<ProviderApiState>, Path(provider_id): Path<String>) -> ApiResult<ApiJson<Vec<ProviderModelBinding>>> {
     Ok(ok(state.providers.list_model_bindings(&provider_id).await?))
 }
@@ -90,24 +104,81 @@ pub async fn create_model_binding(
     Ok(ok(state.providers.create_model_binding(&provider_id, payload).await?))
 }
 
+pub async fn update_model_binding(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, model_id)): Path<(String, String)>,
+    Json(payload): Json<ProviderModelBindingUpdate>,
+) -> ApiResult<ApiJson<ProviderModelBinding>> {
+    Ok(ok(state.providers.update_model_binding(&provider_id, &model_id, payload).await?))
+}
+
+pub async fn delete_model_binding(State(state): State<ProviderApiState>, Path((provider_id, model_id)): Path<(String, String)>) -> ApiResult<ApiJson<()>> {
+    state.providers.delete_model_binding(&provider_id, &model_id).await?;
+    Ok(ok(()))
+}
+
 pub async fn list_request_records(
     State(state): State<ProviderApiState>,
+    Extension(current_user): Extension<CurrentUser>,
     Query(query): Query<RequestRecordListRequest>,
 ) -> ApiResult<ApiJson<RequestRecordListResponse>> {
-    Ok(ok(state.providers.list_request_records(query).await?))
+    let response = state.providers.list_request_records(query).await?;
+    Ok(ok(response.with_current_user(&current_user.id, &current_user.username)))
 }
 
 pub async fn list_active_request_records(
     State(state): State<ProviderApiState>,
+    Extension(current_user): Extension<CurrentUser>,
     Json(payload): Json<ActiveRequestRecordRequest>,
 ) -> ApiResult<ApiJson<ActiveRequestRecordResponse>> {
-    Ok(ok(state.providers.list_active_request_records(payload).await?))
+    let response = state.providers.list_active_request_records(payload).await?;
+    Ok(ok(response.with_current_user(&current_user.id, &current_user.username)))
 }
 
-pub async fn get_request_record(State(state): State<ProviderApiState>, Path(request_id): Path<String>) -> ApiResult<ApiJson<RequestRecordDetail>> {
-    Ok(ok(state.providers.get_request_record(&request_id).await?))
+pub async fn get_request_record(
+    State(state): State<ProviderApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Path(request_id): Path<String>,
+) -> ApiResult<ApiJson<RequestRecordDetail>> {
+    let response = state.providers.get_request_record(&request_id).await?;
+    Ok(ok(response.with_current_user(&current_user.id, &current_user.username)))
 }
 
 fn ok<T>(data: T) -> ApiJson<T> {
     Json(ApiResponse::new(data))
+}
+
+trait RequestRecordCurrentUser {
+    fn with_current_user(self, current_user_id: &str, current_username: &str) -> Self;
+}
+
+impl RequestRecordCurrentUser for RequestRecordListResponse {
+    fn with_current_user(mut self, current_user_id: &str, current_username: &str) -> Self {
+        for record in &mut self.records {
+            apply_current_user(record, current_user_id, current_username);
+        }
+        self
+    }
+}
+
+impl RequestRecordCurrentUser for ActiveRequestRecordResponse {
+    fn with_current_user(mut self, current_user_id: &str, current_username: &str) -> Self {
+        for record in &mut self.records {
+            apply_current_user(record, current_user_id, current_username);
+        }
+        self
+    }
+}
+
+impl RequestRecordCurrentUser for RequestRecordDetail {
+    fn with_current_user(mut self, current_user_id: &str, current_username: &str) -> Self {
+        apply_current_user(&mut self.record, current_user_id, current_username);
+        self
+    }
+}
+
+fn apply_current_user(record: &mut types::provider::RequestRecord, current_user_id: &str, current_username: &str) {
+    if record.username.is_none() && record.user_id.as_deref() == Some(current_user_id) {
+        record.username = Some(current_username.to_owned());
+    }
 }

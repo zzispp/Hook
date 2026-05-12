@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Study aether endpoint semantics,DONE,Claude and Gemini default paths and format detection are identified,test -d /Users/bubu/ZwjProjects/aether,2026-05-12T00:00:00+08:00,0,
+2,Add backend routes and request mapping,DONE,/v1/messages and /v1beta/models/{model}:{action} reach provider selection,cargo check -p backend,2026-05-12T00:00:00+08:00,0,
+3,Add upstream auth and stream details,DONE,Gemini/Claude upstream headers and stream flags are explicit,cargo test -p proxy format_conversion,2026-05-12T00:00:00+08:00,0,
+4,Validate and real-test routes,DONE,OpenAI Claude Gemini route calls return concrete evidence,just check && pnpm lint:frontend,2026-05-12T01:54:00+08:00,0,

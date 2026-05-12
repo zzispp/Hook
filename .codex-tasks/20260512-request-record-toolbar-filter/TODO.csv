@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,定位请求记录 toolbar 状态筛选实现,DONE,确认全部状态选项的 value 与过滤参数处理链路,rg/sed evidence,2026-05-12T00:00:00+08:00,0,全部状态使用空字符串导致 MUI Select 显示零宽占位；toQueryFilters 会把空状态转 undefined
+2,修复全部状态选项行为,DONE,选择全部状态会清空 status 参数且下拉框显示明确文本,pnpm lint:frontend,2026-05-12T00:00:00+08:00,0,使用 all 哨兵值展示 UI；写回 filters.status 时转换为空字符串
+3,运行验证并记录结果,DONE,lint 通过或失败原因明确,pnpm lint:frontend,2026-05-12T00:00:00+08:00,0,pnpm lint:frontend 通过

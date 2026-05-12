@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current billing request records settings and Redis patterns,DONE,Relevant call sites and schema are identified,test -f crates/storage/src/provider/request_candidate_query.rs,,0,
+2,Implement backend billing calculation and currency exchange cache,DONE,Successful request candidates store nonzero costs and exchange rates refresh to Redis,cargo check -p backend,,0,
+3,Expose currency setting and update frontend money display,DONE,System settings can switch USD/CNY and request records/pricing show matching symbols,pnpm --filter hook_frontend build,,0,
+4,Sync DB seed/local schema and validate,DONE,Local DB contains new setting fields and validation passes,git diff --check,,0,

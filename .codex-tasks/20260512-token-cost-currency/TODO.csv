@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Trace token cost and request record currency display,DONE,Relevant files and data flow identified,rg currency-format apps/hook_frontend/src/sections/admin apps/hook_frontend/src/sections/api-tokens,2026-05-12T00:00:00+08:00,0,Request records already provide the target display pattern.
+2,Implement token table currency switching,DONE,Token cost column uses system currency and exchange-rate conversion,pnpm --filter hook_frontend exec eslint src/actions/system-settings.ts src/sections/api-tokens/api-token-table.tsx src/sections/api-tokens/token-management-panel.tsx,2026-05-12T00:00:00+08:00,0,
+3,Update backend i18n seed label,DONE,Column label no longer hardcodes CNY,python3 -m json.tool apps/hook_backend/src/migration/defaults/i18n/admin.cn.json >/dev/null,2026-05-12T00:00:00+08:00,0,
+4,Run verification,DONE,Frontend checks pass or failures are recorded,pnpm lint:frontend && pnpm --filter hook_frontend exec tsc --noEmit && pnpm build:frontend,2026-05-12T00:00:00+08:00,0,

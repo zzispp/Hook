@@ -119,6 +119,7 @@ pub struct ApiTokenUpdate {
 pub struct ApiTokenResponse {
     pub id: String,
     pub user_id: Option<String>,
+    pub owner: Option<ApiTokenOwnerResponse>,
     pub token_type: ApiTokenType,
     pub name: String,
     pub token_prefix: String,
@@ -136,6 +137,12 @@ pub struct ApiTokenResponse {
     pub last_used_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ApiTokenOwnerResponse {
+    pub username: String,
+    pub email: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -173,6 +180,7 @@ impl From<ApiToken> for ApiTokenResponse {
         Self {
             id: value.id,
             user_id: value.user_id,
+            owner: None,
             token_type: value.token_type,
             name: value.name,
             token_prefix: value.token_prefix,
@@ -189,6 +197,13 @@ impl From<ApiToken> for ApiTokenResponse {
             created_at: value.created_at,
             updated_at: value.updated_at,
         }
+    }
+}
+
+impl ApiTokenResponse {
+    pub fn with_owner(mut self, owner: Option<ApiTokenOwnerResponse>) -> Self {
+        self.owner = owner;
+        self
     }
 }
 

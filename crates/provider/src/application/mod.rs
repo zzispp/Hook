@@ -1,3 +1,5 @@
+pub mod billing;
+
 mod error;
 mod ports;
 mod service;

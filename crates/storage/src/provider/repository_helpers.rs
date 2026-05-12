@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::Set;
 use types::provider::{ProviderListRequest, ProviderModelBinding};
 
 use crate::{StorageResult, json};
 
 use super::{
-    ProviderEndpointRecord, ProviderEndpointRecordPatch, ProviderModelRecord, ProviderRecord, ProviderRecordInput, ProviderRecordPatch,
-    record::providers::ActiveModel as ProviderActiveModel,
-    record::{provider_api_keys, provider_endpoints::ActiveModel as ProviderEndpointActiveModel},
+    ProviderApiKeyRecordPatch, ProviderEndpointRecord, ProviderEndpointRecordPatch, ProviderModelRecord, ProviderModelRecordPatch, ProviderRecord,
+    ProviderRecordInput, ProviderRecordPatch, record::provider_api_keys::ActiveModel as ProviderApiKeyActiveModel,
+    record::provider_endpoints::ActiveModel as ProviderEndpointActiveModel, record::providers::ActiveModel as ProviderActiveModel,
 };
 
 pub fn provider_active_model(id: String, input: ProviderRecordInput) -> ProviderActiveModel {
@@ -90,6 +90,7 @@ pub fn provider_model_response(record: ProviderModelRecord) -> StorageResult<Pro
         provider_id: record.provider_id,
         global_model_id: record.global_model_id,
         provider_model_name: record.provider_model_name,
+        is_active: record.is_active,
         price_per_request: record.price_per_request,
         tiered_pricing: json::decode_optional(record.tiered_pricing)?,
         config: json::decode_optional(record.config)?,
@@ -98,38 +99,52 @@ pub fn provider_model_response(record: ProviderModelRecord) -> StorageResult<Pro
     })
 }
 
-pub fn endpoint_belongs_to_provider(record: &ProviderEndpointRecord, provider_id: &str) -> bool {
-    record.provider_id == provider_id
+pub fn apply_provider_model_patch(active: &mut super::record::provider_models::ActiveModel, input: ProviderModelRecordPatch) -> StorageResult<()> {
+    if let Some(name) = input.provider_model_name {
+        active.provider_model_name = Set(name);
+    }
+    if let Some(value) = input.is_active {
+        active.is_active = Set(value);
+    }
+    apply_json_patch(&mut active.config, input.config)?;
+    Ok(())
 }
 
-pub async fn remove_api_format_from_keys(provider_id: &str, api_format: &str, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {
-    let records = provider_api_keys::Entity::find()
-        .filter(provider_api_keys::Column::ProviderId.eq(provider_id))
-        .all(tx)
-        .await?;
-    for record in records {
-        let Some(api_formats) = api_formats_without(record.api_formats.clone(), api_format)? else {
-            continue;
-        };
-        let mut active: provider_api_keys::ActiveModel = record.into();
-        active.api_formats = Set(json::encode_optional(&Some(api_formats))?);
-        active.updated_at = Set(time::OffsetDateTime::now_utc());
-        active.update(tx).await?;
+pub fn apply_provider_api_key_patch(active: &mut ProviderApiKeyActiveModel, input: ProviderApiKeyRecordPatch) -> StorageResult<()> {
+    if let Some(name) = input.name {
+        active.name = Set(name);
+    }
+    if let Some(encrypted_api_key) = input.encrypted_api_key {
+        active.encrypted_api_key = Set(encrypted_api_key);
+    }
+    apply_string_patch(&mut active.note, input.note);
+    if let Some(value) = input.internal_priority {
+        active.internal_priority = Set(value);
+    }
+    apply_i32_patch(&mut active.rpm_limit, input.rpm_limit);
+    if let Some(value) = input.cache_ttl_minutes {
+        active.cache_ttl_minutes = Set(value);
+    }
+    if let Some(value) = input.max_probe_interval_minutes {
+        active.max_probe_interval_minutes = Set(value);
+    }
+    if let Some(value) = input.time_range_enabled {
+        active.time_range_enabled = Set(value);
+    }
+    apply_string_patch(&mut active.time_range_start, input.time_range_start);
+    apply_string_patch(&mut active.time_range_end, input.time_range_end);
+    if let Some(value) = input.is_active {
+        active.is_active = Set(value);
     }
     Ok(())
 }
 
-fn provider_matches(record: &ProviderRecord, query: &str) -> bool {
-    record.name.to_ascii_lowercase().contains(query) || record.provider_type.to_ascii_lowercase().contains(query)
+pub fn endpoint_belongs_to_provider(record: &ProviderEndpointRecord, provider_id: &str) -> bool {
+    record.provider_id == provider_id
 }
 
-fn api_formats_without(value: Option<String>, api_format: &str) -> StorageResult<Option<Vec<String>>> {
-    let Some(original) = json::decode_optional::<Vec<String>>(value)? else {
-        return Ok(None);
-    };
-    let original_len = original.len();
-    let filtered: Vec<String> = original.into_iter().filter(|value| value != api_format).collect();
-    Ok((filtered.len() != original_len).then_some(filtered))
+fn provider_matches(record: &ProviderRecord, query: &str) -> bool {
+    record.name.to_ascii_lowercase().contains(query) || record.provider_type.to_ascii_lowercase().contains(query)
 }
 
 fn provider_is_allowed(record: &ProviderRecord, request: &ProviderListRequest, search: Option<&str>, ids: &ProviderFilterIds) -> bool {
@@ -173,44 +188,5 @@ fn apply_f64_patch(active: &mut sea_orm::ActiveValue<Option<f64>>, patch: types:
         types::model::PatchField::Value(value) => *active = Set(Some(value)),
         types::model::PatchField::Null => *active = Set(None),
         types::model::PatchField::Missing => {}
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::api_formats_without;
-
-    #[test]
-    fn api_formats_without_keeps_unrestricted_keys() {
-        let result = api_formats_without(None, "openai_chat").unwrap();
-
-        assert_eq!(result, None);
-    }
-
-    #[test]
-    fn api_formats_without_removes_existing_format() {
-        let input = Some(r#"["openai_chat","openai_cli"]"#.to_owned());
-
-        let result = api_formats_without(input, "openai_chat").unwrap();
-
-        assert_eq!(result, Some(vec!["openai_cli".to_owned()]));
-    }
-
-    #[test]
-    fn api_formats_without_returns_none_when_format_is_absent() {
-        let input = Some(r#"["openai_chat"]"#.to_owned());
-
-        let result = api_formats_without(input, "openai_cli").unwrap();
-
-        assert_eq!(result, None);
-    }
-
-    #[test]
-    fn api_formats_without_returns_empty_list_when_last_format_is_removed() {
-        let input = Some(r#"["openai_chat"]"#.to_owned());
-
-        let result = api_formats_without(input, "openai_chat").unwrap();
-
-        assert_eq!(result, Some(Vec::<String>::new()));
     }
 }

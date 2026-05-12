@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect Hook and Aether provider model binding behavior,DONE,Current Hook gaps and Aether target interactions identified,test -f apps/hook_frontend/src/sections/admin/provider-bindings-panel.tsx,2026-05-12T11:10:00+08:00,0,
+2,Add provider model update delete active state API,DONE,Provider model binding supports edit active toggle removal and inactive bindings are excluded from scheduling,cargo check -p backend,2026-05-12T11:52:49+08:00,0,
+3,Implement Aether-style model list and association dialog,DONE,Drawer shows table rows with test edit power actions and modal preselects existing bindings,pnpm --filter hook_frontend exec eslint src/sections/admin/provider-model-bindings-section.tsx src/sections/admin/provider-model-dialog.tsx src/sections/admin/provider-model-price-dialog.tsx,2026-05-12T11:52:49+08:00,0,
+4,Validate frontend backend and local UI behavior,DONE,Lint build backend checks and frontend build pass,pnpm --filter hook_frontend build && cargo check -p backend,2026-05-12T11:52:49+08:00,0,

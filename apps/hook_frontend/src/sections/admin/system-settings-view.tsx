@@ -50,6 +50,8 @@ export function SystemSettingsView() {
           <BaseSection form={form.form} setForm={form.setForm} />
           <Divider />
           <TokenSection form={form.form} setForm={form.setForm} />
+          <Divider />
+          <CleanupSection form={form.form} setForm={form.setForm} />
         </Stack>
       </Card>
     </DashboardContent>
@@ -81,13 +83,14 @@ function SiteSection({
         />
         <TextFieldRow
           select
-          label={t('systemSettings.fields.schedulingMode')}
-          value={form.scheduling_mode}
-          onChange={(value) => setForm((current) => ({ ...current, scheduling_mode: value as typeof current.scheduling_mode }))}
+          label={t('systemSettings.fields.currency')}
+          value={form.currency}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, currency: value as typeof current.currency }))
+          }
         >
-          <MenuItem value="cache_affinity">{t('providers.schedulingCacheAffinity')}</MenuItem>
-          <MenuItem value="load_balance">{t('providers.schedulingLoadBalance')}</MenuItem>
-          <MenuItem value="fixed_order">{t('providers.schedulingFixedOrder')}</MenuItem>
+          <MenuItem value="USD">{t('systemSettings.currencyUsd')}</MenuItem>
+          <MenuItem value="CNY">{t('systemSettings.currencyCny')}</MenuItem>
         </TextFieldRow>
       </Stack>
     </SettingsSection>
@@ -109,7 +112,9 @@ function BaseSection({
         <SwitchRow
           checked={form.allow_registration}
           label={t('systemSettings.fields.allowRegistration')}
-          onChange={(checked) => setForm((current) => ({ ...current, allow_registration: checked }))}
+          onChange={(checked) =>
+            setForm((current) => ({ ...current, allow_registration: checked }))
+          }
         />
         <TextFieldRow
           type="number"
@@ -138,27 +143,60 @@ function TokenSection({
         <SwitchRow
           checked={form.auto_delete_expired_tokens}
           label={t('systemSettings.fields.autoDeleteExpiredTokens')}
-          onChange={(checked) => setForm((current) => ({ ...current, auto_delete_expired_tokens: checked }))}
+          onChange={(checked) =>
+            setForm((current) => ({ ...current, auto_delete_expired_tokens: checked }))
+          }
         />
         <TextFieldRow
           type="number"
           label={t('systemSettings.fields.defaultRateLimitRpm')}
           value={form.default_rate_limit_rpm}
           helperText={t('systemSettings.helper.defaultRateLimitRpm')}
-          onChange={(value) => setForm((current) => ({ ...current, default_rate_limit_rpm: value }))}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, default_rate_limit_rpm: value }))
+          }
         />
       </Stack>
     </SettingsSection>
   );
 }
 
-function SettingsSection({
-  title,
-  children,
+function CleanupSection({
+  form,
+  setForm,
 }: {
-  title: string;
-  children: React.ReactNode;
+  form: SystemSettingsForm;
+  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
 }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <SettingsSection title={t('systemSettings.sections.cleanup')}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+        <TextFieldRow
+          type="number"
+          label={t('systemSettings.fields.requestRecordRetentionDays')}
+          value={form.request_record_retention_days}
+          helperText={t('systemSettings.helper.requestRecordRetentionDays')}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, request_record_retention_days: value }))
+          }
+        />
+        <TextFieldRow
+          type="number"
+          label={t('systemSettings.fields.requestRecordPayloadRetentionDays')}
+          value={form.request_record_payload_retention_days}
+          helperText={t('systemSettings.helper.requestRecordPayloadRetentionDays')}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, request_record_payload_retention_days: value }))
+          }
+        />
+      </Stack>
+    </SettingsSection>
+  );
+}
+
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Stack spacing={2}>
       <Typography variant="subtitle1">{title}</Typography>

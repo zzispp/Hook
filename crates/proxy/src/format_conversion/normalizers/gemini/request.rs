@@ -3,7 +3,7 @@ use serde_json::{Map, Value, json};
 use crate::format_conversion::{FormatConversionError, InternalMessage, InternalRequest, InternalRole};
 
 use super::common::{
-    ensure_tools_disabled, generation_config, insert_optional_integer, insert_optional_number, optional_f64_from_config, optional_string,
+    ensure_tools_disabled, generation_config, insert_optional_integer, insert_optional_number, optional_bool, optional_f64_from_config, optional_string,
     optional_u32_from_config, parts_text, required_array, required_object, system_instruction_text,
 };
 
@@ -15,7 +15,7 @@ pub fn to_internal(request: &Value) -> Result<InternalRequest, FormatConversionE
         messages: parse_messages(request)?,
         temperature: optional_f64_from_config(config, "temperature", "temperature"),
         max_tokens: optional_u32_from_config(config, "maxOutputTokens", "max_output_tokens"),
-        stream: false,
+        stream: optional_bool(request, "stream").unwrap_or(false),
     })
 }
 

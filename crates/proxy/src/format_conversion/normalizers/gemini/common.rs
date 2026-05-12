@@ -113,6 +113,10 @@ pub fn optional_string(value: &Value, key: &str) -> Option<String> {
     value.get(key).and_then(Value::as_str).map(str::to_owned)
 }
 
+pub fn optional_bool(value: &Value, key: &str) -> Option<bool> {
+    value.get(key).and_then(Value::as_bool)
+}
+
 pub fn optional_f64_from_config(config: Option<&Map<String, Value>>, camel: &str, snake: &str) -> Option<f64> {
     generation_config_value(config?, camel, snake).and_then(Value::as_f64)
 }

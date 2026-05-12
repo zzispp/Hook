@@ -19,6 +19,10 @@ impl CandidateBuilder {
         sort_candidates(&mut candidates, input);
         Ok(candidates)
     }
+
+    pub fn order(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
+        sort_candidates(candidates, input);
+    }
 }
 
 fn validate_scope(input: &SchedulerInput) -> Result<(), SchedulerError> {
@@ -87,7 +91,7 @@ fn append_endpoint_candidates(context: EndpointBuildContext<'_>, output: &mut Ve
     let provider = context.provider;
     let endpoint = context.endpoint;
     let model = context.model;
-    for key in provider.keys.iter().filter(|key| key_allowed_for_endpoint(key, endpoint)) {
+    for key in provider.keys.iter().filter(|key| key_allowed(key)) {
         output.push(Candidate {
             provider_id: provider.id.clone(),
             provider_name: provider.name.clone(),
@@ -111,7 +115,7 @@ fn sort_candidates(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
     match input.scheduling_mode {
         SchedulingMode::FixedOrder => {}
         SchedulingMode::CacheAffinity => apply_cache_affinity(candidates, input.affinity_key.as_deref()),
-        SchedulingMode::LoadBalance => apply_load_balance(candidates),
+        SchedulingMode::LoadBalance => apply_load_balance(candidates, input),
     }
 }
 
@@ -133,8 +137,8 @@ fn input_compatible(endpoint: &EndpointSnapshot, input: &SchedulerInput, provide
     input.global_format_conversion_enabled || provider.enable_format_conversion || endpoint.accepts_format_conversion
 }
 
-fn key_allowed_for_endpoint(key: &KeySnapshot, endpoint: &EndpointSnapshot) -> bool {
-    key.is_active && key.api_formats.as_ref().is_none_or(|formats| formats.contains(&endpoint.api_format))
+fn key_allowed(key: &KeySnapshot) -> bool {
+    key.is_active
 }
 
 fn policy_allows(policy: &ModelAccessPolicy, model_id: &str) -> bool {
@@ -191,8 +195,8 @@ fn apply_cache_affinity(candidates: &mut Vec<Candidate>, affinity_key: Option<&s
     candidates.insert(0, candidate);
 }
 
-fn apply_load_balance(candidates: &mut [Candidate]) {
-    candidates.sort_by(|left, right| load_balance_key(left).cmp(&load_balance_key(right)));
+fn apply_load_balance(candidates: &mut [Candidate], input: &SchedulerInput) {
+    candidates.sort_by(|left, right| load_balance_key(left, input).cmp(&load_balance_key(right, input)));
 }
 
 fn stable_priority(left: &Candidate, right: &Candidate) -> std::cmp::Ordering {
@@ -205,13 +209,21 @@ fn stable_priority(left: &Candidate, right: &Candidate) -> std::cmp::Ordering {
     ))
 }
 
-fn load_balance_key(candidate: &Candidate) -> (i32, i32, u64, &str) {
+fn load_balance_key<'a>(candidate: &'a Candidate, input: &SchedulerInput) -> (i32, i32, i32, u64, &'a str) {
     (
+        conversion_rank(candidate, input),
         candidate.provider_priority,
         candidate.key_priority,
-        stable_hash(&candidate.key_id),
+        stable_hash(&format!("{}:{}", input.load_balance_seed.as_deref().unwrap_or_default(), candidate.key_id)),
         candidate.key_id.as_str(),
     )
+}
+
+fn conversion_rank(candidate: &Candidate, input: &SchedulerInput) -> i32 {
+    if candidate.needs_conversion && should_demote(candidate, input) {
+        return 1;
+    }
+    0
 }
 
 fn stable_hash(value: &str) -> u64 {

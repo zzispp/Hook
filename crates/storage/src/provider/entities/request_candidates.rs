@@ -1,3 +1,4 @@
+use rust_decimal::Decimal;
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -16,10 +17,23 @@ pub struct Model {
     pub provider_api_format: Option<String>,
     pub needs_conversion: bool,
     pub is_stream: bool,
+    pub request_headers: Option<String>,
+    pub request_body: Option<String>,
+    pub response_body: Option<String>,
     pub candidate_index: i32,
     pub retry_index: i32,
     pub status: String,
     pub status_code: Option<i32>,
+    pub prompt_tokens: Option<i64>,
+    pub completion_tokens: Option<i64>,
+    pub total_tokens: Option<i64>,
+    pub cache_creation_input_tokens: Option<i64>,
+    pub cache_read_input_tokens: Option<i64>,
+    pub cost_currency: Option<String>,
+    pub token_cost: Option<Decimal>,
+    pub base_cost: Option<Decimal>,
+    pub total_cost: Option<Decimal>,
+    pub billing_multiplier: Option<Decimal>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,

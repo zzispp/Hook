@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect Aether and Hook trace semantics,DONE,State model and candidate scope identified,test -f apps/hook_frontend/src/sections/admin/request-record-detail-drawer.tsx,2026-05-12T00:00:00+08:00,0,
+2,Record executable attempt state without losing billing-group candidate scope,DONE,Selected candidate transitions through pending/streaming and finishes by update,cargo check -p backend,2026-05-12T10:56:00+08:00,0,
+3,Implement provider/key dot timeline UI,DONE,Detail drawer groups candidates by provider with large provider dots and small key dots,pnpm lint:frontend,2026-05-12T10:59:00+08:00,0,
+4,Validate tests and builds,DONE,Backend tests and frontend lint/build pass,pnpm build:frontend && cargo test -p storage --test provider_request_records,2026-05-12T10:59:00+08:00,0,

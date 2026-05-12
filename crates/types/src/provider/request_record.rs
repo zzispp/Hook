@@ -57,16 +57,30 @@ pub struct RequestRecord {
     pub model_name: Option<String>,
     pub provider_id: Option<String>,
     pub provider_name: Option<String>,
+    pub provider_key_name: Option<String>,
+    pub provider_key_preview: Option<String>,
     pub client_api_format: String,
     pub provider_api_format: Option<String>,
     pub request_type: String,
     pub is_stream: bool,
+    pub has_failover: bool,
+    pub has_retry: bool,
     pub status: String,
     pub billing_status: String,
     pub prompt_tokens: Option<i64>,
     pub completion_tokens: Option<i64>,
     pub total_tokens: Option<i64>,
+    pub cache_creation_input_tokens: Option<i64>,
+    pub cache_read_input_tokens: Option<i64>,
+    #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub token_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub base_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub billing_multiplier: Decimal,
+    pub cost_currency: String,
     pub first_byte_time_ms: Option<i64>,
     pub total_latency_ms: Option<i64>,
     pub candidate_count: u64,
@@ -76,7 +90,9 @@ pub struct RequestRecord {
 pub struct RequestRecordDetail {
     pub record: RequestRecord,
     pub candidates: Vec<RequestCandidateDetail>,
+    pub request_headers: Option<serde_json::Value>,
     pub request_body: Option<serde_json::Value>,
+    pub response_body: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -93,10 +109,25 @@ pub struct RequestCandidateDetail {
     pub client_api_format: String,
     pub provider_api_format: Option<String>,
     pub needs_conversion: bool,
+    pub is_stream: bool,
     pub candidate_index: i32,
     pub retry_index: i32,
     pub status: String,
     pub status_code: Option<i32>,
+    pub prompt_tokens: Option<i64>,
+    pub completion_tokens: Option<i64>,
+    pub total_tokens: Option<i64>,
+    pub cache_creation_input_tokens: Option<i64>,
+    pub cache_read_input_tokens: Option<i64>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub token_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub base_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub total_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub billing_multiplier: Option<Decimal>,
+    pub cost_currency: Option<String>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,

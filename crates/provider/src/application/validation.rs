@@ -1,7 +1,8 @@
 use types::{
     model::PatchField,
     provider::{
-        ProviderApiKeyCreate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderModelBindingCreate, ProviderUpdate,
+        ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest,
+        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
     },
 };
 
@@ -63,7 +64,17 @@ pub fn sanitize_api_key(input: ProviderApiKeyCreate) -> ProviderApiKeyCreate {
         name: input.name.trim().to_owned(),
         api_key: input.api_key.trim().to_owned(),
         note: input.note.and_then(trim_optional),
-        api_formats: input.api_formats.map(normalize_api_formats),
+        ..input
+    }
+}
+
+pub fn sanitize_api_key_update(input: ProviderApiKeyUpdate) -> ProviderApiKeyUpdate {
+    ProviderApiKeyUpdate {
+        name: input.name.map(|value| value.trim().to_owned()),
+        api_key: input.api_key.map(|value| value.trim().to_owned()),
+        note: trim_patch(input.note),
+        time_range_start: trim_patch(input.time_range_start),
+        time_range_end: trim_patch(input.time_range_end),
         ..input
     }
 }
@@ -72,6 +83,13 @@ pub fn sanitize_model_binding(input: ProviderModelBindingCreate) -> ProviderMode
     ProviderModelBindingCreate {
         global_model_id: input.global_model_id.trim().to_owned(),
         provider_model_name: input.provider_model_name.trim().to_owned(),
+        ..input
+    }
+}
+
+pub fn sanitize_model_binding_update(input: ProviderModelBindingUpdate) -> ProviderModelBindingUpdate {
+    ProviderModelBindingUpdate {
+        provider_model_name: input.provider_model_name.map(|value| value.trim().to_owned()),
         ..input
     }
 }
@@ -127,9 +145,32 @@ pub fn validate_api_key(input: &ProviderApiKeyCreate) -> ProviderResult<()> {
     Ok(())
 }
 
+pub fn validate_api_key_update(input: &ProviderApiKeyUpdate) -> ProviderResult<()> {
+    if api_key_update_is_empty(input) {
+        return Err(ProviderError::InvalidInput("api key update payload is empty".into()));
+    }
+    if let Some(name) = input.name.as_deref() {
+        validate_text("name", name, MAX_NAME_LENGTH)?;
+    }
+    if input.api_key.as_deref().is_some_and(str::is_empty) {
+        return Err(ProviderError::InvalidInput("api_key cannot be blank".into()));
+    }
+    Ok(())
+}
+
 pub fn validate_model_binding(input: &ProviderModelBindingCreate) -> ProviderResult<()> {
     validate_text("global_model_id", &input.global_model_id, MAX_NAME_LENGTH)?;
     validate_text("provider_model_name", &input.provider_model_name, MAX_MODEL_NAME_LENGTH)
+}
+
+pub fn validate_model_binding_update(input: &ProviderModelBindingUpdate) -> ProviderResult<()> {
+    if model_binding_update_is_empty(input) {
+        return Err(ProviderError::InvalidInput("model binding update payload is empty".into()));
+    }
+    if let Some(name) = input.provider_model_name.as_deref() {
+        validate_text("provider_model_name", name, MAX_MODEL_NAME_LENGTH)?;
+    }
+    Ok(())
 }
 
 fn validate_text(field: &str, value: &str, max_length: usize) -> ProviderResult<()> {
@@ -173,10 +214,20 @@ fn endpoint_update_is_empty(input: &ProviderEndpointUpdate) -> bool {
         && input.body_rules.is_missing()
 }
 
-fn normalize_api_formats(values: Vec<String>) -> Vec<String> {
-    values
-        .into_iter()
-        .map(|value| value.trim().to_ascii_lowercase())
-        .filter(|value| !value.is_empty())
-        .collect()
+fn model_binding_update_is_empty(input: &ProviderModelBindingUpdate) -> bool {
+    input.provider_model_name.is_none() && input.is_active.is_none() && input.config.is_missing()
+}
+
+fn api_key_update_is_empty(input: &ProviderApiKeyUpdate) -> bool {
+    input.name.is_none()
+        && input.api_key.is_none()
+        && input.note.is_missing()
+        && input.internal_priority.is_none()
+        && input.rpm_limit.is_missing()
+        && input.cache_ttl_minutes.is_none()
+        && input.max_probe_interval_minutes.is_none()
+        && input.time_range_enabled.is_none()
+        && input.time_range_start.is_missing()
+        && input.time_range_end.is_missing()
+        && input.is_active.is_none()
 }

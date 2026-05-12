@@ -38,9 +38,12 @@ fn record_patch(input: SystemSettingsUpdate) -> storage::setting::SystemSettings
         site_subtitle: input.site_subtitle,
         allow_registration: input.allow_registration,
         auto_delete_expired_tokens: input.auto_delete_expired_tokens,
+        request_record_retention_days: input.request_record_retention_days,
+        request_record_payload_retention_days: input.request_record_payload_retention_days,
         default_user_grant: input.default_user_grant,
         default_rate_limit_rpm: input.default_rate_limit_rpm,
         scheduling_mode: input.scheduling_mode,
+        currency: input.currency,
     }
 }
 

@@ -8,11 +8,13 @@ import type {
   ProviderUpdate,
   ProviderEndpoint,
   ProviderApiKeyCreate,
+  ProviderApiKeyUpdate,
   ProviderListResponse,
   ProviderModelBinding,
   ProviderEndpointCreate,
   ProviderEndpointUpdate,
   ProviderModelBindingCreate,
+  ProviderModelBindingUpdate,
 } from 'src/types/provider';
 
 import { useMemo } from 'react';
@@ -122,12 +124,46 @@ export async function createProviderApiKey(providerId: string, payload: Provider
   return apiKey;
 }
 
+export async function updateProviderApiKey(
+  providerId: string,
+  keyId: string,
+  payload: ProviderApiKeyUpdate
+) {
+  const apiKey = await requestData<ProviderApiKey>(
+    axios.patch(endpoints.adminProviders.keyById(providerId, keyId), payload)
+  );
+  await mutateProviderChildren(providerId);
+  return apiKey;
+}
+
+export async function deleteProviderApiKey(providerId: string, keyId: string) {
+  await requestSuccess(axios.delete(endpoints.adminProviders.keyById(providerId, keyId)));
+  await mutateProviderChildren(providerId);
+}
+
 export async function createProviderModel(providerId: string, payload: ProviderModelBindingCreate) {
   const model = await requestData<ProviderModelBinding>(
     axios.post(endpoints.adminProviders.models(providerId), payload)
   );
   await mutateProviderChildren(providerId);
   return model;
+}
+
+export async function updateProviderModel(
+  providerId: string,
+  modelId: string,
+  payload: ProviderModelBindingUpdate
+) {
+  const model = await requestData<ProviderModelBinding>(
+    axios.patch(endpoints.adminProviders.modelById(providerId, modelId), payload)
+  );
+  await mutateProviderChildren(providerId);
+  return model;
+}
+
+export async function deleteProviderModel(providerId: string, modelId: string) {
+  await requestSuccess(axios.delete(endpoints.adminProviders.modelById(providerId, modelId)));
+  await mutateProviderChildren(providerId);
 }
 
 function useProviderChildResource<T>(

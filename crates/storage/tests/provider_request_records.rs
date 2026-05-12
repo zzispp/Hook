@@ -33,12 +33,26 @@ async fn request_record_storage_lists_aggregated_records() {
     assert_eq!(success.billing_status, "settled");
     assert_eq!(success.username.as_deref(), Some("hwnet"));
     assert_eq!(success.provider_name.as_deref(), Some("paid-channel-86"));
+    assert_eq!(success.provider_key_name.as_deref(), Some("primary-key"));
+    assert_eq!(success.provider_key_preview.as_deref(), Some("***abcd"));
+    assert!(success.has_failover);
+    assert!(success.has_retry);
     assert_eq!(success.model_name.as_deref(), Some("gpt-5.5"));
+    assert_eq!(success.prompt_tokens, Some(12));
+    assert_eq!(success.completion_tokens, Some(8));
+    assert_eq!(success.total_tokens, Some(20));
+    assert_eq!(success.cache_creation_input_tokens, Some(3));
+    assert_eq!(success.cache_read_input_tokens, Some(4));
+    assert_eq!(success.created_at, "2026-05-11T11:02:17Z");
     assert_eq!(success.first_byte_time_ms, Some(110));
     assert_eq!(success.total_latency_ms, Some(570));
     assert_eq!(streaming.status, "streaming");
     assert_eq!(streaming.billing_status, "pending");
     assert!(streaming.is_stream);
+    assert_eq!(streaming.first_byte_time_ms, Some(120));
+    assert_eq!(streaming.total_latency_ms, None);
+    assert!(!streaming.has_failover);
+    assert!(!streaming.has_retry);
 }
 
 #[tokio::test]
@@ -62,11 +76,37 @@ async fn request_record_storage_returns_trace_detail() {
 
     assert_eq!(detail.record.request_id, "req-success");
     assert_eq!(detail.record.candidate_count, 2);
-    assert_eq!(detail.record.total_cost, Decimal::ZERO);
-    assert!(detail.request_body.is_none());
+    assert_eq!(detail.record.total_cost, Decimal::new(2, 4));
+    assert_eq!(
+        detail
+            .request_headers
+            .as_ref()
+            .and_then(|value| value.get("authorization"))
+            .and_then(|value| value.as_str()),
+        Some("****")
+    );
+    assert_eq!(
+        detail
+            .request_body
+            .as_ref()
+            .and_then(|value| value.get("model"))
+            .and_then(|value| value.as_str()),
+        Some("gpt-5.5")
+    );
+    assert_eq!(
+        detail.response_body.as_ref().and_then(|value| value.get("id")).and_then(|value| value.as_str()),
+        Some("msg-1")
+    );
     assert_eq!(failed.status, "failed");
     assert_eq!(failed.error_message.as_deref(), Some("rate limit"));
+    assert_eq!(failed.created_at, "2026-05-11T11:01:17Z");
+    assert_eq!(failed.started_at.as_deref(), Some("2026-05-11T11:01:17Z"));
+    assert_eq!(failed.finished_at.as_deref(), Some("2026-05-11T11:02:17Z"));
+    assert!(!failed.is_stream);
     assert_eq!(success.status_code, Some(200));
+    assert_eq!(success.total_tokens, Some(20));
+    assert_eq!(success.cache_creation_input_tokens, Some(3));
+    assert_eq!(success.cache_read_input_tokens, Some(4));
     assert_eq!(success.key_name.as_deref(), Some("primary-key"));
     assert_eq!(success.key_preview.as_deref(), Some("***abcd"));
 }
@@ -93,9 +133,12 @@ async fn request_record_storage_lists_active_records_by_ids() {
         .await
         .unwrap();
 
-    assert_eq!(response.records.len(), 1);
-    assert_eq!(response.records[0].request_id, "req-stream");
-    assert_eq!(response.records[0].status, "streaming");
+    let success = response.records.iter().find(|record| record.request_id == "req-success").unwrap();
+    let streaming = response.records.iter().find(|record| record.request_id == "req-stream").unwrap();
+
+    assert_eq!(response.records.len(), 2);
+    assert_eq!(success.status, "success");
+    assert_eq!(streaming.status, "streaming");
 }
 
 fn list_candidates() -> Vec<request_candidates::Model> {
@@ -104,7 +147,7 @@ fn list_candidates() -> Vec<request_candidates::Model> {
 
 fn success_candidates() -> Vec<request_candidates::Model> {
     vec![
-        candidate("req-success", "success-1", "failed", 0, 0, 1),
+        candidate("req-success", "success-1", "failed", 0, 1, 1),
         candidate("req-success", "success-2", "success", 1, 0, 2),
     ]
 }
@@ -123,12 +166,25 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         provider_api_format: Some("claude_chat".into()),
         needs_conversion: true,
         is_stream: status == "streaming",
+        request_headers: request_headers(status),
+        request_body: request_body(status),
+        response_body: response_body(status),
         candidate_index,
         retry_index,
         status: status.into(),
         status_code: (status == "success").then_some(200),
+        prompt_tokens: (status == "success").then_some(12),
+        completion_tokens: (status == "success").then_some(8),
+        total_tokens: (status == "success").then_some(20),
+        cache_creation_input_tokens: (status == "success").then_some(3),
+        cache_read_input_tokens: (status == "success").then_some(4),
+        cost_currency: (status == "success").then(|| "USD".into()),
+        token_cost: (status == "success").then_some(Decimal::new(1, 4)),
+        base_cost: (status == "success").then_some(Decimal::new(1, 5)),
+        total_cost: (status == "success").then_some(Decimal::new(2, 4)),
+        billing_multiplier: (status == "success").then_some(Decimal::new(2, 0)),
         latency_ms: latency_ms(status),
-        first_byte_time_ms: (status == "success").then_some(110),
+        first_byte_time_ms: first_byte_time_ms(status),
         error_type: (status == "failed").then(|| "upstream_error".into()),
         error_message: (status == "failed").then(|| "rate limit".into()),
         created_at: at_minute(minute),
@@ -178,7 +234,6 @@ fn key_records() -> Vec<provider_api_keys::Model> {
         name: "primary-key".into(),
         encrypted_api_key: "sk-provider-abcd".into(),
         note: None,
-        api_formats: None,
         internal_priority: 10,
         rpm_limit: None,
         learned_rpm_limit: None,
@@ -260,6 +315,26 @@ fn latency_ms(status: &str) -> Option<i64> {
         "success" => Some(320),
         _ => None,
     }
+}
+
+fn first_byte_time_ms(status: &str) -> Option<i64> {
+    match status {
+        "success" => Some(110),
+        "streaming" => Some(120),
+        _ => None,
+    }
+}
+
+fn request_headers(status: &str) -> Option<String> {
+    (status == "success").then(|| r#"{"authorization":"****"}"#.into())
+}
+
+fn request_body(status: &str) -> Option<String> {
+    (status == "success").then(|| r#"{"model":"gpt-5.5"}"#.into())
+}
+
+fn response_body(status: &str) -> Option<String> {
+    (status == "success").then(|| r#"{"id":"msg-1"}"#.into())
 }
 
 fn at_minute(minute: u8) -> time::OffsetDateTime {

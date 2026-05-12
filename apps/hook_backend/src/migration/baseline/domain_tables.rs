@@ -121,7 +121,6 @@ fn provider_api_keys_table() -> TableCreateStatement {
         .col(string_len(ProviderApiKeys::Name, 100))
         .col(text(ProviderApiKeys::EncryptedApiKey))
         .col(text_null(ProviderApiKeys::Note))
-        .col(text_null(ProviderApiKeys::ApiFormats))
         .col(integer(ProviderApiKeys::InternalPriority))
         .col(integer_null(ProviderApiKeys::RpmLimit))
         .col(integer_null(ProviderApiKeys::LearnedRpmLimit))
@@ -150,6 +149,7 @@ fn provider_models_table() -> TableCreateStatement {
         .col(string_len(ProviderModels::GlobalModelId, 36))
         .col(string_len(ProviderModels::ProviderModelName, 200))
         .col(text_null(ProviderModels::ProviderModelMappings))
+        .col(boolean(ProviderModels::IsActive))
         .col(decimal_len_null(ProviderModels::PricePerRequest, 20, 8))
         .col(text_null(ProviderModels::TieredPricing))
         .col(text_null(ProviderModels::Config))
@@ -189,16 +189,18 @@ fn system_settings_table() -> TableCreateStatement {
         .col(string_len(SystemSettings::SiteSubtitle, 200))
         .col(boolean(SystemSettings::AllowRegistration))
         .col(boolean(SystemSettings::AutoDeleteExpiredTokens))
+        .col(big_integer(SystemSettings::RequestRecordRetentionDays))
+        .col(big_integer(SystemSettings::RequestRecordPayloadRetentionDays))
         .col(decimal_len(SystemSettings::DefaultUserGrant, 20, 8))
         .col(big_integer(SystemSettings::DefaultRateLimitRpm))
         .col(string_len(SystemSettings::SchedulingMode, 30))
+        .col(string_len(SystemSettings::Currency, 3).default("USD"))
         .col(timestamp_tz(SystemSettings::CreatedAt))
         .col(timestamp_tz(SystemSettings::UpdatedAt))
         .to_owned()
 }
 
 fn api_tokens_table() -> TableCreateStatement {
-    let mut user_fk = user_fk();
     Table::create()
         .table(ApiTokens::Table)
         .if_not_exists()
@@ -221,7 +223,6 @@ fn api_tokens_table() -> TableCreateStatement {
         .col(timestamp_tz_null(ApiTokens::LastUsedAt))
         .col(timestamp_tz(ApiTokens::CreatedAt))
         .col(timestamp_tz(ApiTokens::UpdatedAt))
-        .foreign_key(&mut user_fk)
         .to_owned()
 }
 
@@ -257,10 +258,23 @@ fn request_candidates_table() -> TableCreateStatement {
         .col(string_len_null(RequestCandidates::ProviderApiFormat, 50))
         .col(boolean(RequestCandidates::NeedsConversion))
         .col(boolean(RequestCandidates::IsStream))
+        .col(text_null(RequestCandidates::RequestHeaders))
+        .col(text_null(RequestCandidates::RequestBody))
+        .col(text_null(RequestCandidates::ResponseBody))
         .col(integer(RequestCandidates::CandidateIndex))
         .col(integer(RequestCandidates::RetryIndex))
         .col(string_len(RequestCandidates::Status, 40))
         .col(integer_null(RequestCandidates::StatusCode))
+        .col(big_integer_null(RequestCandidates::PromptTokens))
+        .col(big_integer_null(RequestCandidates::CompletionTokens))
+        .col(big_integer_null(RequestCandidates::TotalTokens))
+        .col(big_integer_null(RequestCandidates::CacheCreationInputTokens))
+        .col(big_integer_null(RequestCandidates::CacheReadInputTokens))
+        .col(string_len_null(RequestCandidates::CostCurrency, 3))
+        .col(decimal_len_null(RequestCandidates::TokenCost, 20, 8))
+        .col(decimal_len_null(RequestCandidates::BaseCost, 20, 8))
+        .col(decimal_len_null(RequestCandidates::TotalCost, 20, 8))
+        .col(decimal_len_null(RequestCandidates::BillingMultiplier, 20, 8))
         .col(big_integer_null(RequestCandidates::LatencyMs))
         .col(big_integer_null(RequestCandidates::FirstByteTimeMs))
         .col(string_len_null(RequestCandidates::ErrorType, 100))
@@ -269,16 +283,6 @@ fn request_candidates_table() -> TableCreateStatement {
         .col(timestamp_tz_null(RequestCandidates::StartedAt))
         .col(timestamp_tz_null(RequestCandidates::FinishedAt))
         .to_owned()
-}
-
-fn user_fk() -> ForeignKeyCreateStatement {
-    let mut foreign_key = ForeignKey::create();
-    foreign_key
-        .name("fk_api_tokens_user")
-        .from(ApiTokens::Table, ApiTokens::UserId)
-        .to(Users::Table, Users::Id)
-        .on_delete(ForeignKeyAction::Cascade);
-    foreign_key
 }
 
 fn group_fk() -> ForeignKeyCreateStatement {

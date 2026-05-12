@@ -29,6 +29,7 @@ type FilterRoleOption = {
 };
 
 type Props = {
+  children?: React.ReactNode;
   filters: AdminFilterState;
   roleOptions?: FilterRoleOption[];
   searchPlaceholder: string;
@@ -41,9 +42,16 @@ export const DEFAULT_ADMIN_FILTERS: AdminFilterState = {
   status: 'all',
 };
 
-export function AdminFiltersToolbar({ filters, roleOptions = [], searchPlaceholder, onChange }: Props) {
+export function AdminFiltersToolbar({
+  children,
+  filters,
+  roleOptions = [],
+  searchPlaceholder,
+  onChange,
+}: Props) {
   const { t } = useTranslate('admin');
   const statusOptions = useStatusOptions();
+  const gridTemplateColumns = toolbarGridTemplate(Boolean(roleOptions.length), Boolean(children));
 
   const updateFilters = useCallback(
     (patch: Partial<AdminFilterState>) => {
@@ -59,10 +67,7 @@ export function AdminFiltersToolbar({ filters, roleOptions = [], searchPlacehold
         gap: 2,
         display: 'grid',
         alignItems: 'center',
-        gridTemplateColumns: {
-          xs: '1fr',
-          md: roleOptions.length ? 'minmax(260px, 1fr) 180px 180px' : 'minmax(260px, 1fr) 180px',
-        },
+        gridTemplateColumns,
       }}
     >
       <TextField
@@ -107,11 +112,14 @@ export function AdminFiltersToolbar({ filters, roleOptions = [], searchPlacehold
           ))}
         </TextField>
       )}
+      {children}
     </Box>
   );
 }
 
-export function toEnabledFilters(filters: AdminFilterState): Pick<RbacListFilters, 'enabled' | 'search'> {
+export function toEnabledFilters(
+  filters: AdminFilterState
+): Pick<RbacListFilters, 'enabled' | 'search'> {
   return {
     search: normalizedSearch(filters.search),
     enabled: statusValue(filters.status),
@@ -161,4 +169,11 @@ function normalizedSearch(search: string) {
 function statusValue(status: StatusFilter) {
   if (status === 'all') return undefined;
   return status === 'enabled';
+}
+
+function toolbarGridTemplate(hasRole: boolean, hasExtraControls: boolean) {
+  const columns = ['minmax(260px, 1fr)', '180px'];
+  if (hasRole) columns.push('180px');
+  if (hasExtraControls) columns.push('180px');
+  return { xs: '1fr', md: columns.join(' ') };
 }

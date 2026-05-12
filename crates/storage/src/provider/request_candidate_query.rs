@@ -1,9 +1,9 @@
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set};
 use types::provider::RequestCandidateListRequest;
 
-use crate::StorageResult;
+use crate::{StorageError, StorageResult, json};
 
-use super::{RequestCandidateRecordInput, record::request_candidates, repository::ProviderStore};
+use super::{RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_candidates, repository::ProviderStore};
 
 pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandidateRecordInput) -> StorageResult<types::provider::RequestCandidate> {
     let now = time::OffsetDateTime::now_utc();
@@ -20,10 +20,23 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         provider_api_format: Set(input.provider_api_format),
         needs_conversion: Set(input.needs_conversion),
         is_stream: Set(input.is_stream),
+        request_headers: Set(json::encode_optional(&input.request_headers)?),
+        request_body: Set(json::encode_optional(&input.request_body)?),
+        response_body: Set(json::encode_optional(&input.response_body)?),
         candidate_index: Set(input.candidate_index),
         retry_index: Set(input.retry_index),
         status: Set(input.status),
         status_code: Set(input.status_code),
+        prompt_tokens: Set(input.prompt_tokens),
+        completion_tokens: Set(input.completion_tokens),
+        total_tokens: Set(input.total_tokens),
+        cache_creation_input_tokens: Set(input.cache_creation_input_tokens),
+        cache_read_input_tokens: Set(input.cache_read_input_tokens),
+        cost_currency: Set(input.cost_currency),
+        token_cost: Set(input.token_cost),
+        base_cost: Set(input.base_cost),
+        total_cost: Set(input.total_cost),
+        billing_multiplier: Set(input.billing_multiplier),
         latency_ms: Set(input.latency_ms),
         first_byte_time_ms: Set(input.first_byte_time_ms),
         error_type: Set(input.error_type),
@@ -35,6 +48,45 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
     .insert(store.connection())
     .await?;
     Ok(record.response())
+}
+
+pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandidateRecordPatch) -> StorageResult<types::provider::RequestCandidate> {
+    let Some(record) = request_candidates::Entity::find()
+        .filter(request_candidates::Column::RequestId.eq(&input.request_id))
+        .filter(request_candidates::Column::CandidateIndex.eq(input.candidate_index))
+        .filter(request_candidates::Column::RetryIndex.eq(input.retry_index))
+        .one(store.connection())
+        .await?
+    else {
+        return Err(StorageError::NotFound);
+    };
+    let was_started = record.started_at.is_some();
+    let now = time::OffsetDateTime::now_utc();
+    let mut record: request_candidates::ActiveModel = record.into();
+    record.status = Set(input.status);
+    record.status_code = Set(input.status_code);
+    record.prompt_tokens = Set(input.prompt_tokens);
+    record.completion_tokens = Set(input.completion_tokens);
+    record.total_tokens = Set(input.total_tokens);
+    record.cache_creation_input_tokens = Set(input.cache_creation_input_tokens);
+    record.cache_read_input_tokens = Set(input.cache_read_input_tokens);
+    record.cost_currency = Set(input.cost_currency);
+    record.token_cost = Set(input.token_cost);
+    record.base_cost = Set(input.base_cost);
+    record.total_cost = Set(input.total_cost);
+    record.billing_multiplier = Set(input.billing_multiplier);
+    record.latency_ms = Set(input.latency_ms);
+    record.first_byte_time_ms = Set(input.first_byte_time_ms);
+    record.error_type = Set(input.error_type);
+    record.error_message = Set(input.error_message);
+    record.response_body = Set(json::encode_optional(&input.response_body)?);
+    if !was_started {
+        record.started_at = Set(Some(now));
+    }
+    if input.finished {
+        record.finished_at = Set(Some(now));
+    }
+    Ok(record.update(store.connection()).await?.response())
 }
 
 pub async fn list_request_candidates(store: &ProviderStore, request: RequestCandidateListRequest) -> StorageResult<Vec<types::provider::RequestCandidate>> {

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理 Hook 请求记录与设置现状,DONE,定位存储模型 API 设置页和清理任务入口,rg evidence recorded,2026-05-12T00:00:00+08:00,0,详情当前只返回 request_body None；设置在 system_settings 表
+2,对照 aether 的请求记录内容和清理策略实现,DONE,提取可复用的数据结构/接口/调度语义,rg evidence recorded,2026-05-12T00:00:00+08:00,0,aether 使用 request_headers/request_body/response_body 及 log/detail/header retention days
+3,实现 Hook 后端请求记录内容持久化与双层清理策略,DONE,后端模型/API/清理逻辑完整且无静默 fallback,just check,2026-05-12T00:00:00+08:00,0,新增 request_candidates 详情字段和每日清理任务
+4,实现 Hook 设置页清理策略 section,DONE,前端可配置两个清理时间并使用后端资源/接口,pnpm lint:frontend,2026-05-12T00:00:00+08:00,0,设置页新增清理策略 section；详情抽屉展示请求头/请求体/响应体
+5,运行验证并记录结果,DONE,关键检查命令完成或失败原因明确,just check && pnpm lint:frontend,2026-05-12T00:00:00+08:00,0,just check/lint/build/storage tests/jq 均通过；build 期间出现非阻断 unauthorized 日志

@@ -67,19 +67,24 @@ export type BodyRuleCondition =
   | { any: BodyRuleCondition[] };
 
 export type HeaderRule =
-  | ({ action: 'set'; key: string; value: string; condition?: BodyRuleCondition })
-  | ({ action: 'drop'; key: string; condition?: BodyRuleCondition })
-  | ({ action: 'rename'; from: string; to: string; condition?: BodyRuleCondition });
+  | { action: 'set'; key: string; value: string; condition?: BodyRuleCondition }
+  | { action: 'drop'; key: string; condition?: BodyRuleCondition }
+  | { action: 'rename'; from: string; to: string; condition?: BodyRuleCondition };
 
-export type BodyRuleNameStyle = 'snake_case' | 'camelCase' | 'PascalCase' | 'kebab-case' | 'capitalize';
+export type BodyRuleNameStyle =
+  | 'snake_case'
+  | 'camelCase'
+  | 'PascalCase'
+  | 'kebab-case'
+  | 'capitalize';
 
 export type BodyRule =
-  | ({ action: 'set'; path: string; value: unknown; condition?: BodyRuleCondition })
-  | ({ action: 'drop'; path: string; condition?: BodyRuleCondition })
-  | ({ action: 'rename'; from: string; to: string; condition?: BodyRuleCondition })
-  | ({ action: 'append'; path: string; value: unknown; condition?: BodyRuleCondition })
-  | ({ action: 'insert'; path: string; index: number; value: unknown; condition?: BodyRuleCondition })
-  | ({
+  | { action: 'set'; path: string; value: unknown; condition?: BodyRuleCondition }
+  | { action: 'drop'; path: string; condition?: BodyRuleCondition }
+  | { action: 'rename'; from: string; to: string; condition?: BodyRuleCondition }
+  | { action: 'append'; path: string; value: unknown; condition?: BodyRuleCondition }
+  | { action: 'insert'; path: string; index: number; value: unknown; condition?: BodyRuleCondition }
+  | {
       action: 'regex_replace';
       path: string;
       pattern: string;
@@ -87,8 +92,8 @@ export type BodyRule =
       flags?: string;
       count?: number;
       condition?: BodyRuleCondition;
-    })
-  | ({ action: 'name_style'; path: string; style: BodyRuleNameStyle; condition?: BodyRuleCondition });
+    }
+  | { action: 'name_style'; path: string; style: BodyRuleNameStyle; condition?: BodyRuleCondition };
 
 export type ProviderEndpoint = {
   id: string;
@@ -125,7 +130,6 @@ export type ProviderApiKey = {
   provider_id: string;
   name: string;
   note?: string | null;
-  api_formats?: string[] | null;
   internal_priority: number;
   rpm_limit?: number | null;
   learned_rpm_limit?: number | null;
@@ -146,7 +150,6 @@ export type ProviderApiKeyCreate = {
   name: string;
   api_key: string;
   note?: string | null;
-  api_formats?: string[] | null;
   internal_priority?: number;
   rpm_limit?: number | null;
   cache_ttl_minutes?: number;
@@ -157,11 +160,16 @@ export type ProviderApiKeyCreate = {
   is_active?: boolean;
 };
 
+export type ProviderApiKeyUpdate = Partial<Omit<ProviderApiKeyCreate, 'api_key'>> & {
+  api_key?: string;
+};
+
 export type ProviderModelBinding = {
   id: string;
   provider_id: string;
   global_model_id: string;
   provider_model_name: string;
+  is_active: boolean;
   price_per_request?: number | null;
   tiered_pricing?: TieredPricingConfig | null;
   config?: Record<string, unknown> | null;
@@ -172,6 +180,12 @@ export type ProviderModelBinding = {
 export type ProviderModelBindingCreate = {
   global_model_id: string;
   provider_model_name: string;
+  config?: Record<string, unknown> | null;
+};
+
+export type ProviderModelBindingUpdate = {
+  provider_model_name?: string;
+  is_active?: boolean;
   config?: Record<string, unknown> | null;
 };
 
@@ -190,16 +204,26 @@ export type RequestRecord = {
   model_name?: string | null;
   provider_id?: string | null;
   provider_name?: string | null;
+  provider_key_name?: string | null;
+  provider_key_preview?: string | null;
   client_api_format: string;
   provider_api_format?: string | null;
   request_type: string;
   is_stream: boolean;
+  has_failover: boolean;
+  has_retry: boolean;
   status: RequestRecordStatus;
   billing_status: string;
   prompt_tokens?: number | null;
   completion_tokens?: number | null;
   total_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
   total_cost: number;
+  token_cost: number;
+  base_cost: number;
+  billing_multiplier: number;
+  cost_currency: string;
   first_byte_time_ms?: number | null;
   total_latency_ms?: number | null;
   candidate_count: number;
@@ -227,10 +251,21 @@ export type RequestCandidateDetail = {
   client_api_format: string;
   provider_api_format?: string | null;
   needs_conversion: boolean;
+  is_stream: boolean;
   candidate_index: number;
   retry_index: number;
   status: string;
   status_code?: number | null;
+  prompt_tokens?: number | null;
+  completion_tokens?: number | null;
+  total_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  token_cost?: number | null;
+  base_cost?: number | null;
+  total_cost?: number | null;
+  billing_multiplier?: number | null;
+  cost_currency?: string | null;
   latency_ms?: number | null;
   first_byte_time_ms?: number | null;
   error_type?: string | null;
@@ -243,5 +278,7 @@ export type RequestCandidateDetail = {
 export type RequestRecordDetail = {
   record: RequestRecord;
   candidates: RequestCandidateDetail[];
-  request_body?: Record<string, unknown> | null;
+  request_headers?: unknown | null;
+  request_body?: unknown | null;
+  response_body?: unknown | null;
 };

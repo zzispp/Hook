@@ -1,24 +1,42 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalStreamEvent};
+use crate::format_conversion::{FormatConversionError, InternalStreamEvent, StreamConversionState};
 
 use super::common::{claude_stop_reason, claude_usage, map_claude_stop_reason, required_object, usage_from_claude};
 
 pub fn to_internal(chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
+    let mut state = StreamConversionState::default();
     let mut events = Vec::new();
     for chunk in chunks {
-        parse_event(chunk, &mut events)?;
+        events.extend(chunk_to_internal(chunk, &mut state)?);
     }
     Ok(events)
 }
 
 pub fn from_internal(events: &[InternalStreamEvent]) -> Result<Vec<Value>, FormatConversionError> {
+    let mut state = StreamConversionState::default();
     let mut output = Vec::new();
-    let mut id = "msg_unknown".to_owned();
-    let mut model = "claude-unknown".to_owned();
     for event in events {
-        push_event(event, &mut id, &mut model, &mut output);
+        output.extend(event_from_internal(event, &mut state)?);
     }
+    Ok(output)
+}
+
+pub fn chunk_to_internal(chunk: &Value, _state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
+    let mut events = Vec::new();
+    parse_event(chunk, &mut events)?;
+    Ok(events)
+}
+
+pub fn event_from_internal(event: &InternalStreamEvent, state: &mut StreamConversionState) -> Result<Vec<Value>, FormatConversionError> {
+    if state.target_claude_id.is_empty() {
+        state.target_claude_id = "msg_unknown".to_owned();
+    }
+    if state.target_claude_model.is_empty() {
+        state.target_claude_model = "claude-unknown".to_owned();
+    }
+    let mut output = Vec::new();
+    push_event(event, state, &mut output);
     Ok(output)
 }
 
@@ -61,12 +79,12 @@ fn parse_message_delta(chunk: &Value, events: &mut Vec<InternalStreamEvent>) -> 
     Ok(())
 }
 
-fn push_event(event: &InternalStreamEvent, id: &mut String, model: &mut String, output: &mut Vec<Value>) {
+fn push_event(event: &InternalStreamEvent, state: &mut StreamConversionState, output: &mut Vec<Value>) {
     match event {
         InternalStreamEvent::Start {
             id: event_id,
             model: event_model,
-        } => push_start(event_id, event_model, id, model, output),
+        } => push_start(event_id, event_model, state, output),
         InternalStreamEvent::TextDelta(text) => output.push(json!({
             "type": "content_block_delta",
             "index": 0,
@@ -76,16 +94,16 @@ fn push_event(event: &InternalStreamEvent, id: &mut String, model: &mut String, 
     }
 }
 
-fn push_start(event_id: &Option<String>, event_model: &Option<String>, id: &mut String, model: &mut String, output: &mut Vec<Value>) {
-    *id = event_id.clone().unwrap_or_else(|| id.clone());
-    *model = event_model.clone().unwrap_or_else(|| model.clone());
+fn push_start(event_id: &Option<String>, event_model: &Option<String>, state: &mut StreamConversionState, output: &mut Vec<Value>) {
+    state.target_claude_id = event_id.clone().unwrap_or_else(|| state.target_claude_id.clone());
+    state.target_claude_model = event_model.clone().unwrap_or_else(|| state.target_claude_model.clone());
     output.push(json!({
         "type": "message_start",
         "message": {
-            "id": id,
+            "id": state.target_claude_id,
             "type": "message",
             "role": "assistant",
-            "model": model,
+            "model": state.target_claude_model,
             "content": [],
             "stop_reason": null,
             "stop_sequence": null,

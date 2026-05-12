@@ -7,5 +7,5 @@ mod registry;
 
 pub use api_format::ApiFormat;
 pub use error::FormatConversionError;
-pub use internal::{InternalMessage, InternalRequest, InternalResponse, InternalRole, InternalStreamEvent, InternalUsage, StopReason};
-pub use registry::FormatConversionRegistry;
+pub use internal::{InternalMessage, InternalRequest, InternalResponse, InternalRole, InternalStreamEvent, InternalUsage, StopReason, StreamConversionState};
+pub use registry::{FormatConversionRegistry, StreamChunkConversion};

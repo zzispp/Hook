@@ -1,10 +1,13 @@
 'use client';
 
 import type { RequestRecord } from 'src/types/provider';
+import type { CurrencyDisplay } from './currency-format';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
+import SvgIcon from '@mui/material/SvgIcon';
+import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -16,15 +19,18 @@ import { Label } from 'src/components/label';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
-import { formatApiFormat } from './provider-management-utils';
 import { TableLoadingRows, ManagementTableHead } from './shared';
 import {
   formatCost,
-  formatTokens,
+  userDisplay,
+  hasTokenValue,
   formatDuration,
+  formatTokenCount,
   formatRequestDate,
   requestStatusColor,
   requestStatusLabel,
+  formatRequestApiFormat,
+  REQUEST_RECORD_ROWS_PER_PAGE_OPTIONS,
 } from './request-records-utils';
 
 export function RequestRecordsTable({
@@ -32,6 +38,7 @@ export function RequestRecordsTable({
   total,
   table,
   locale,
+  currencyDisplay,
   loading,
   onOpen,
 }: {
@@ -39,6 +46,7 @@ export function RequestRecordsTable({
   total: number;
   table: UseTableReturn;
   locale: string;
+  currencyDisplay: CurrencyDisplay;
   loading: boolean;
   onOpen: (record: RequestRecord) => void;
 }) {
@@ -52,7 +60,17 @@ export function RequestRecordsTable({
           <ManagementTableHead head={head} />
           <TableBody>
             {loading ? <TableLoadingRows head={head} rows={table.rowsPerPage} /> : null}
-            {!loading ? rows.map((row) => <RequestRecordRow key={row.request_id} row={row} locale={locale} onOpen={onOpen} />) : null}
+            {!loading
+              ? rows.map((row) => (
+                  <RequestRecordRow
+                    key={row.request_id}
+                    row={row}
+                    locale={locale}
+                    currencyDisplay={currencyDisplay}
+                    onOpen={onOpen}
+                  />
+                ))
+              : null}
             <TableNoData title={t('common.noData')} notFound={!loading && rows.length === 0} />
           </TableBody>
         </Table>
@@ -61,6 +79,7 @@ export function RequestRecordsTable({
         page={table.page}
         count={total}
         rowsPerPage={table.rowsPerPage}
+        rowsPerPageOptions={REQUEST_RECORD_ROWS_PER_PAGE_OPTIONS}
         onPageChange={table.onChangePage}
         onRowsPerPageChange={table.onChangeRowsPerPage}
       />
@@ -71,25 +90,35 @@ export function RequestRecordsTable({
 function RequestRecordRow({
   row,
   locale,
+  currencyDisplay,
   onOpen,
 }: {
   row: RequestRecord;
   locale: string;
+  currencyDisplay: CurrencyDisplay;
   onOpen: (record: RequestRecord) => void;
 }) {
   const { t } = useTranslate('admin');
 
   return (
     <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => onOpen(row)}>
-      <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatRequestDate(row.created_at, locale)}</TableCell>
-      <TableCell>{row.username || '-'}</TableCell>
+      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+        {formatRequestDate(row.created_at, locale)}
+      </TableCell>
+      <TableCell>{userDisplay(row)}</TableCell>
       <TableCell>
         <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>
           {row.model_name || row.global_model_id || '-'}
         </Typography>
       </TableCell>
-      <TableCell>{row.provider_name || '-'}</TableCell>
-      <TableCell>{formatApiFormat(row.client_api_format)}</TableCell>
+      <TableCell>
+        <ProviderCell record={row} />
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" noWrap sx={{ maxWidth: 240 }}>
+          {formatRequestApiFormat(row)}
+        </Typography>
+      </TableCell>
       <TableCell>
         <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
           <Label color={requestStatusColor(row.status)} variant="soft">
@@ -100,11 +129,113 @@ function RequestRecordRow({
           </Label>
         </Stack>
       </TableCell>
-      <TableCell>{formatTokens(row)}</TableCell>
-      <TableCell>{formatCost(row.total_cost)}</TableCell>
+      <TableCell align="right">
+        <RequestTokensCell record={row} />
+      </TableCell>
+      <TableCell>{formatCost(row.total_cost, currencyDisplay)}</TableCell>
       <TableCell>{formatDuration(row.first_byte_time_ms)}</TableCell>
       <TableCell>{formatDuration(row.total_latency_ms)}</TableCell>
     </TableRow>
+  );
+}
+
+function ProviderCell({ record }: { record: RequestRecord }) {
+  const { t } = useTranslate('admin');
+  const keyLabel = providerKeyLabel(record);
+
+  return (
+    <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 0 }}>
+      <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+        <Typography variant="caption" noWrap sx={{ maxWidth: 160 }}>
+          {record.provider_name || '-'}
+        </Typography>
+        {keyLabel ? (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            noWrap
+            title={keyLabel}
+            sx={{ maxWidth: 160 }}
+          >
+            {keyLabel}
+          </Typography>
+        ) : null}
+      </Stack>
+      <ProviderExecutionIcon record={record} t={t} />
+    </Stack>
+  );
+}
+
+function ProviderExecutionIcon({
+  record,
+  t,
+}: {
+  record: RequestRecord;
+  t: (key: string) => string;
+}) {
+  if (record.has_failover) {
+    return (
+      <Tooltip title={t('requestRecords.providerFailoverTooltip')}>
+        <SvgIcon sx={failoverIconSx}>
+          <path d="m16 3 4 4-4 4" />
+          <path d="M20 7H4" />
+          <path d="m8 21-4-4 4-4" />
+          <path d="M4 17h16" />
+        </SvgIcon>
+      </Tooltip>
+    );
+  }
+  if (!record.has_retry) return null;
+
+  return (
+    <Tooltip title={t('requestRecords.providerRetryTooltip')}>
+      <SvgIcon sx={retryIconSx}>
+        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+        <path d="M21 21v-5h-5" />
+        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+      </SvgIcon>
+    </Tooltip>
+  );
+}
+
+function providerKeyLabel(record: RequestRecord) {
+  return record.provider_key_name || record.provider_key_preview || '';
+}
+
+function RequestTokensCell({ record }: { record: RequestRecord }) {
+  const cacheCreation = hasTokenValue(record.cache_creation_input_tokens);
+  const cacheRead = hasTokenValue(record.cache_read_input_tokens);
+
+  return (
+    <Stack alignItems="flex-end" spacing={0.5} sx={{ minWidth: 88 }}>
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Typography variant="caption">{formatTokenCount(record.prompt_tokens)}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          /
+        </Typography>
+        <Typography variant="caption">{formatTokenCount(record.completion_tokens)}</Typography>
+      </Stack>
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <Typography
+          variant="caption"
+          color={cacheCreation ? 'text.primary' : 'text.secondary'}
+          sx={cacheCreation ? activeCacheTokenSx : undefined}
+        >
+          {cacheCreation ? formatTokenCount(record.cache_creation_input_tokens) : '-'}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          /
+        </Typography>
+        <Typography
+          variant="caption"
+          color={cacheRead ? 'text.primary' : 'text.secondary'}
+          sx={cacheRead ? activeCacheTokenSx : undefined}
+        >
+          {cacheRead ? formatTokenCount(record.cache_read_input_tokens) : '-'}
+        </Typography>
+      </Stack>
+    </Stack>
   );
 }
 
@@ -113,12 +244,35 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
     { id: 'time', label: t('requestRecords.time'), width: 190 },
     { id: 'user', label: t('requestRecords.user'), width: 140 },
     { id: 'model', label: t('requestRecords.model'), width: 180 },
-    { id: 'provider', label: t('requestRecords.provider'), width: 160 },
-    { id: 'api_format', label: t('requestRecords.apiFormat'), width: 150 },
+    { id: 'provider', label: t('requestRecords.provider'), width: 190 },
+    { id: 'api_format', label: t('requestRecords.apiFormat'), width: 240 },
     { id: 'type', label: t('requestRecords.type'), width: 180 },
-    { id: 'tokens', label: t('requestRecords.tokens'), width: 110 },
+    { id: 'tokens', label: t('requestRecords.tokens'), width: 140, align: 'right' },
     { id: 'cost', label: t('requestRecords.cost'), width: 120 },
     { id: 'first_byte', label: t('requestRecords.firstByte'), width: 110 },
     { id: 'latency', label: t('requestRecords.totalLatency'), width: 120 },
   ];
 }
+
+const activeCacheTokenSx = { opacity: 0.7 };
+
+const providerIconBaseSx = {
+  width: 14,
+  height: 14,
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  flexShrink: 0,
+};
+
+const failoverIconSx = {
+  ...providerIconBaseSx,
+  color: 'warning.dark',
+};
+
+const retryIconSx = {
+  ...providerIconBaseSx,
+  color: 'info.dark',
+};

@@ -1,7 +1,7 @@
 'use client';
 
-import type { Provider } from 'src/types/provider';
 import type { useTranslate } from 'src/locales/use-locales';
+import type { Provider, ProviderApiKey } from 'src/types/provider';
 
 import { useState, useCallback } from 'react';
 
@@ -11,6 +11,8 @@ import {
   updateProvider,
   createProviderModel,
   createProviderApiKey,
+  deleteProviderApiKey,
+  updateProviderApiKey,
 } from 'src/actions/providers';
 
 import { toast } from 'src/components/snackbar';
@@ -18,6 +20,8 @@ import { toast } from 'src/components/snackbar';
 import {
   apiKeyPayload,
   providerPayload,
+  apiKeyFormFromKey,
+  apiKeyUpdatePayload,
   providerModelPayload,
   DEFAULT_API_KEY_FORM,
   DEFAULT_PROVIDER_FORM,
@@ -90,6 +94,8 @@ export function useDeleteProviderDialog(t: ReturnType<typeof useTranslate>['t'])
 export function useProviderChildDialogs(t: ReturnType<typeof useTranslate>['t'], providerId?: string) {
   const [endpointOpen, setEndpointOpen] = useState(false);
   const [apiKeyOpen, setApiKeyOpen] = useState(false);
+  const [editingApiKey, setEditingApiKey] = useState<ProviderApiKey | null>(null);
+  const [deletingApiKey, setDeletingApiKey] = useState<ProviderApiKey | null>(null);
   const [modelOpen, setModelOpen] = useState(false);
   const [apiKeyForm, setApiKeyForm] = useState({ ...DEFAULT_API_KEY_FORM });
   const [modelForm, setModelForm] = useState({ ...DEFAULT_PROVIDER_MODEL_FORM });
@@ -101,7 +107,20 @@ export function useProviderChildDialogs(t: ReturnType<typeof useTranslate>['t'],
 
   const closeApiKey = useCallback(() => {
     setApiKeyOpen(false);
+    setEditingApiKey(null);
     setApiKeyForm({ ...DEFAULT_API_KEY_FORM });
+  }, []);
+
+  const openCreateApiKey = useCallback(() => {
+    setEditingApiKey(null);
+    setApiKeyForm({ ...DEFAULT_API_KEY_FORM });
+    setApiKeyOpen(true);
+  }, []);
+
+  const openEditApiKey = useCallback((apiKey: ProviderApiKey) => {
+    setEditingApiKey(apiKey);
+    setApiKeyForm(apiKeyFormFromKey(apiKey));
+    setApiKeyOpen(true);
   }, []);
 
   const closeModel = useCallback(() => {
@@ -113,15 +132,40 @@ export function useProviderChildDialogs(t: ReturnType<typeof useTranslate>['t'],
     if (!providerId) return;
     setSubmitting(true);
     try {
-      await createProviderApiKey(providerId, apiKeyPayload(apiKeyForm));
-      toast.success(t('messages.providerKeyCreated'));
+      if (editingApiKey) {
+        await updateProviderApiKey(providerId, editingApiKey.id, apiKeyUpdatePayload(apiKeyForm));
+      } else {
+        await createProviderApiKey(providerId, apiKeyPayload(apiKeyForm));
+      }
+      toast.success(editingApiKey ? t('messages.providerKeyUpdated') : t('messages.providerKeyCreated'));
       closeApiKey();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
     } finally {
       setSubmitting(false);
     }
-  }, [apiKeyForm, closeApiKey, providerId, t]);
+  }, [apiKeyForm, closeApiKey, editingApiKey, providerId, t]);
+
+  const toggleApiKey = useCallback(async (apiKey: ProviderApiKey) => {
+    if (!providerId) return;
+    try {
+      await updateProviderApiKey(providerId, apiKey.id, { is_active: !apiKey.is_active });
+      toast.success(apiKey.is_active ? t('messages.providerKeyDisabled') : t('messages.providerKeyEnabled'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
+    }
+  }, [providerId, t]);
+
+  const confirmDeleteApiKey = useCallback(async () => {
+    if (!providerId || !deletingApiKey) return;
+    try {
+      await deleteProviderApiKey(providerId, deletingApiKey.id);
+      toast.success(t('messages.providerKeyDeleted'));
+      setDeletingApiKey(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.deleteFailed'));
+    }
+  }, [deletingApiKey, providerId, t]);
 
   const submitModel = useCallback(async () => {
     if (!providerId) return;
@@ -143,16 +187,23 @@ export function useProviderChildDialogs(t: ReturnType<typeof useTranslate>['t'],
     closeApiKey,
     closeEndpoint,
     closeModel,
+    confirmDeleteApiKey,
+    deletingApiKey,
     endpointOpen,
+    editingApiKey,
     modelForm,
     modelOpen,
+    openCreateApiKey,
+    openEditApiKey,
     setApiKeyForm,
     setApiKeyOpen,
+    setDeletingApiKey,
     setEndpointOpen,
     setModelForm,
     setModelOpen,
     submitApiKey,
     submitModel,
     submitting,
+    toggleApiKey,
   };
 }

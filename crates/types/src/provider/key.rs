@@ -8,7 +8,6 @@ pub struct ProviderApiKey {
     pub provider_id: String,
     pub name: String,
     pub note: Option<String>,
-    pub api_formats: Option<Vec<String>>,
     pub internal_priority: i32,
     pub rpm_limit: Option<i32>,
     pub learned_rpm_limit: Option<i32>,
@@ -31,8 +30,6 @@ pub struct ProviderApiKeyCreate {
     pub api_key: String,
     #[serde(default)]
     pub note: Option<String>,
-    #[serde(default)]
-    pub api_formats: Option<Vec<String>>,
     #[serde(default)]
     pub internal_priority: Option<i32>,
     #[serde(default)]
@@ -59,8 +56,6 @@ pub struct ProviderApiKeyUpdate {
     pub api_key: Option<String>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub note: PatchField<String>,
-    #[serde(default, deserialize_with = "deserialize_patch_value")]
-    pub api_formats: PatchField<Vec<String>>,
     #[serde(default)]
     pub internal_priority: Option<i32>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]

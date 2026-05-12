@@ -16,6 +16,7 @@ pub fn base_input() -> SchedulerInput {
         client_format: ApiFormat::OpenAiChat,
         is_stream: false,
         affinity_key: None,
+        load_balance_seed: None,
         scheduling_mode: SchedulingMode::FixedOrder,
         global_keep_priority_on_conversion: false,
         global_format_conversion_enabled: true,
@@ -60,7 +61,7 @@ pub fn provider_with_gemini_low_priority() -> ProviderSnapshot {
         enable_format_conversion: true,
         is_active: true,
         endpoints: vec![endpoint("endpoint-gemini", ApiFormat::GeminiChat)],
-        keys: vec![key_for_formats("key-gemini", 10, vec![ApiFormat::GeminiChat])],
+        keys: vec![key("key-gemini", 10)],
         models: vec![model("gpt-4o-mini", "gemini-upstream")],
     }
 }
@@ -86,16 +87,8 @@ fn key(id: &str, internal_priority: i32) -> KeySnapshot {
     KeySnapshot {
         id: id.into(),
         internal_priority,
-        api_formats: None,
         cache_ttl_minutes: 5,
         is_active: true,
-    }
-}
-
-fn key_for_formats(id: &str, internal_priority: i32, formats: Vec<ApiFormat>) -> KeySnapshot {
-    KeySnapshot {
-        api_formats: Some(formats),
-        ..key(id, internal_priority)
     }
 }
 

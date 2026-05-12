@@ -39,6 +39,15 @@ impl SecretCipher for ProviderKeyCipher {
             .map_err(|_| ProviderError::Secret("provider key encryption failed".into()))?;
         Ok(format!("{CIPHER_VERSION}:{}:{}", hex::encode(nonce), hex::encode(ciphertext)))
     }
+
+    fn decrypt_provider_key(&self, ciphertext: &str) -> ProviderResult<String> {
+        let (nonce, mut encrypted) = parse_ciphertext(ciphertext)?;
+        let plaintext = self
+            .encryption_key()?
+            .open_in_place(Nonce::assume_unique_for_key(nonce), Aad::empty(), &mut encrypted)
+            .map_err(|_| ProviderError::Secret("provider key decryption failed".into()))?;
+        String::from_utf8(plaintext.to_vec()).map_err(|_| ProviderError::Secret("provider key plaintext is not valid utf-8".into()))
+    }
 }
 
 fn derived_key(secret: &str) -> [u8; KEY_LEN] {
@@ -54,6 +63,23 @@ fn random_nonce() -> ProviderResult<[u8; NONCE_LEN]> {
         .fill(&mut nonce)
         .map_err(|_| ProviderError::Secret("provider key nonce generation failed".into()))?;
     Ok(nonce)
+}
+
+fn parse_ciphertext(value: &str) -> ProviderResult<([u8; NONCE_LEN], Vec<u8>)> {
+    let parts = value.split(':').collect::<Vec<_>>();
+    if parts.len() != 3 || parts[0] != CIPHER_VERSION {
+        return Err(ProviderError::Secret("provider key ciphertext format is invalid".into()));
+    }
+    let nonce = parse_nonce(parts[1])?;
+    let ciphertext = hex::decode(parts[2]).map_err(|_| ProviderError::Secret("provider key ciphertext is not hex".into()))?;
+    Ok((nonce, ciphertext))
+}
+
+fn parse_nonce(value: &str) -> ProviderResult<[u8; NONCE_LEN]> {
+    let bytes = hex::decode(value).map_err(|_| ProviderError::Secret("provider key nonce is not hex".into()))?;
+    bytes
+        .try_into()
+        .map_err(|_| ProviderError::Secret("provider key nonce length is invalid".into()))
 }
 
 #[cfg(test)]
@@ -85,6 +111,25 @@ mod tests {
         let second = cipher.encrypt_provider_key("sk-provider-key").unwrap();
 
         assert_ne!(first, second);
+    }
+
+    #[test]
+    fn decrypt_provider_key_returns_original_plaintext() {
+        let cipher = ProviderKeyCipher::new("provider-secret".into()).unwrap();
+        let encrypted = cipher.encrypt_provider_key("sk-provider-key").unwrap();
+
+        let decrypted = cipher.decrypt_provider_key(&encrypted).unwrap();
+
+        assert_eq!(decrypted, "sk-provider-key");
+    }
+
+    #[test]
+    fn decrypt_provider_key_rejects_invalid_ciphertext() {
+        let cipher = ProviderKeyCipher::new("provider-secret".into()).unwrap();
+
+        let result = cipher.decrypt_provider_key("sk-provider-key");
+
+        assert!(result.is_err());
     }
 
     #[test]

@@ -1,21 +1,22 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use rust_decimal::Decimal;
-use types::api_token::{
-    AdminApiTokenCreate, ApiToken, ApiTokenListRequest, ApiTokenListResponse, ApiTokenType, ModelAccessMode,
-};
+use types::api_token::{AdminApiTokenCreate, ApiToken, ApiTokenListRequest, ApiTokenListResponse, ApiTokenOwnerResponse, ApiTokenType, ModelAccessMode};
 
 use super::{
-    ApiTokenCreateRecord, ApiTokenRepository, ApiTokenResult, ApiTokenService, ApiTokenUpdateRecord, ApiTokenUseCase, BillingGroupCatalog,
-    ModelAccessCatalog, SystemTokenPolicy, UserCatalog,
+    ApiTokenCreateRecord, ApiTokenRepository, ApiTokenResult, ApiTokenService, ApiTokenUpdateRecord, ApiTokenUseCase, BillingGroupCatalog, ModelAccessCatalog,
+    SystemTokenPolicy, UserCatalog,
 };
 
 const SYSTEM_ACTOR_ID: &str = "00000000-0000-7000-8000-000000000000";
 const USER_ID: &str = "user-1";
 
 #[tokio::test]
-async fn admin_independent_token_keeps_user_id_empty() {
+async fn admin_independent_token_uses_actor_as_owner() {
     let repository = MemoryTokenRepository::default();
     let service = service(repository.clone(), ExistingUsers::empty());
 
@@ -24,9 +25,29 @@ async fn admin_independent_token_keeps_user_id_empty() {
         .await
         .unwrap();
 
-    assert_eq!(created.token.user_id, None);
+    assert_eq!(created.token.user_id, Some(SYSTEM_ACTOR_ID.into()));
     assert_eq!(created.token.token_type, ApiTokenType::Independent);
-    assert_eq!(repository.created_records(), vec![record_owner(None, ApiTokenType::Independent)]);
+    assert_eq!(
+        repository.created_records(),
+        vec![record_owner(Some(SYSTEM_ACTOR_ID), ApiTokenType::Independent)]
+    );
+}
+
+#[tokio::test]
+async fn admin_independent_token_ignores_payload_user_id() {
+    let repository = MemoryTokenRepository::default();
+    let service = service(repository.clone(), ExistingUsers::with([USER_ID]));
+
+    let created = service
+        .create_admin_token(SYSTEM_ACTOR_ID, admin_create(ApiTokenType::Independent, Some(USER_ID)))
+        .await
+        .unwrap();
+
+    assert_eq!(created.token.user_id, Some(SYSTEM_ACTOR_ID.into()));
+    assert_eq!(
+        repository.created_records(),
+        vec![record_owner(Some(SYSTEM_ACTOR_ID), ApiTokenType::Independent)]
+    );
 }
 
 #[tokio::test]
@@ -48,9 +69,7 @@ async fn admin_user_token_requires_existing_user() {
 async fn admin_user_token_rejects_missing_user_id() {
     let service = service(MemoryTokenRepository::default(), ExistingUsers::with([USER_ID]));
 
-    let result = service
-        .create_admin_token(SYSTEM_ACTOR_ID, admin_create(ApiTokenType::User, None))
-        .await;
+    let result = service.create_admin_token(SYSTEM_ACTOR_ID, admin_create(ApiTokenType::User, None)).await;
 
     assert!(result.is_err_and(|error| error.to_string().contains("user_id is required")));
 }
@@ -231,6 +250,22 @@ impl ExistingUsers {
 impl UserCatalog for ExistingUsers {
     async fn user_exists(&self, id: &str) -> ApiTokenResult<bool> {
         Ok(self.ids.iter().any(|existing| existing == id))
+    }
+
+    async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {
+        Ok(ids
+            .iter()
+            .filter(|id| self.ids.iter().any(|existing| existing == *id))
+            .map(|id| {
+                (
+                    id.clone(),
+                    ApiTokenOwnerResponse {
+                        username: id.clone(),
+                        email: format!("{id}@example.test"),
+                    },
+                )
+            })
+            .collect())
     }
 }
 

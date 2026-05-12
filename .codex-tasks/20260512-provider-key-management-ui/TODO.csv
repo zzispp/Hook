@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current Hook and Aether key management,DONE,Current gaps and target behavior identified,test -f apps/hook_frontend/src/sections/admin/provider-bindings-panel.tsx,2026-05-12T11:55:29+08:00,0,
+2,Add provider key update delete backend API,DONE,PATCH and DELETE provider key endpoints update real records,cargo check -p backend,2026-05-12T12:13:00+08:00,0,
+3,Implement Aether-style provider key UI,DONE,Drawer key section shows compact rows with edit power delete actions,pnpm --filter hook_frontend exec eslint src/sections/admin/provider-bindings-panel.tsx src/sections/admin/provider-api-key-dialog.tsx,2026-05-12T12:24:00+08:00,0,
+4,Sync local DB i18n permissions and validate,DONE,Local DB has permissions translations and checks pass,pnpm --filter hook_frontend build && cargo check -p backend,2026-05-12T12:33:00+08:00,0,
+

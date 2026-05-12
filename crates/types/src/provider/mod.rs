@@ -9,7 +9,7 @@ mod request_record;
 pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate};
 pub use enums::ProviderSchedulingMode;
 pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate};
-pub use model_binding::{ProviderModelBinding, ProviderModelBindingCreate};
+pub use model_binding::{ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate};
 pub use provider::{Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderUpdate};
 pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{

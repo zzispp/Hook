@@ -13,4 +13,10 @@ pub const SETTING_APIS: &[ApiDefinition] = &[
         path_pattern: "/api/admin/settings/system",
         name: "更新系统设置",
     },
+    ApiDefinition {
+        code: "system_exchange_rate_read",
+        method: "GET",
+        path_pattern: "/api/admin/settings/exchange-rate",
+        name: "读取系统汇率缓存",
+    },
 ];

@@ -153,7 +153,11 @@ export const endpoints = {
     endpointById: (providerId: string, endpointId: string) =>
       `/api/admin/providers/${providerId}/endpoints/${endpointId}`,
     keys: (id: string) => `/api/admin/providers/${id}/keys`,
+    keyById: (providerId: string, keyId: string) =>
+      `/api/admin/providers/${providerId}/keys/${keyId}`,
     models: (id: string) => `/api/admin/providers/${id}/models`,
+    modelById: (providerId: string, modelId: string) =>
+      `/api/admin/providers/${providerId}/models/${modelId}`,
   },
   adminRequestRecords: {
     list: '/api/admin/request-records',
@@ -175,6 +179,7 @@ export const endpoints = {
   },
   adminSettings: {
     system: '/api/admin/settings/system',
+    exchangeRate: '/api/admin/settings/exchange-rate',
   },
   adminI18n: {
     languages: '/api/admin/i18n/languages',

@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use super::{FormatConversionError, InternalRequest, InternalResponse, InternalStreamEvent};
+use super::{FormatConversionError, InternalRequest, InternalResponse, InternalStreamEvent, StreamConversionState};
 
 pub trait FormatNormalizer {
     fn request_to_internal(&self, request: &Value) -> Result<InternalRequest, FormatConversionError>;
@@ -11,4 +11,6 @@ pub trait FormatNormalizer {
 
     fn stream_to_internal(&self, chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatConversionError>;
     fn stream_from_internal(&self, events: &[InternalStreamEvent]) -> Result<Vec<Value>, FormatConversionError>;
+    fn stream_chunk_to_internal(&self, chunk: &Value, state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError>;
+    fn stream_event_from_internal(&self, event: &InternalStreamEvent, state: &mut StreamConversionState) -> Result<Vec<Value>, FormatConversionError>;
 }

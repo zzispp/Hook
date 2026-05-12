@@ -24,6 +24,7 @@ pub struct SchedulerInput {
     pub client_format: ApiFormat,
     pub is_stream: bool,
     pub affinity_key: Option<String>,
+    pub load_balance_seed: Option<String>,
     pub scheduling_mode: SchedulingMode,
     pub global_keep_priority_on_conversion: bool,
     pub global_format_conversion_enabled: bool,
@@ -56,7 +57,6 @@ pub struct EndpointSnapshot {
 pub struct KeySnapshot {
     pub id: String,
     pub internal_priority: i32,
-    pub api_formats: Option<Vec<ApiFormat>>,
     pub cache_ttl_minutes: i32,
     pub is_active: bool,
 }

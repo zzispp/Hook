@@ -34,6 +34,10 @@ auth:
       path_pattern: "/api/auth/sign-up"
     - methods: ["POST"]
       path_pattern: "/api/auth/refresh"
+    - methods: ["GET", "POST"]
+      path_pattern: "/v1/*"
+    - methods: ["POST"]
+      path_pattern: "/v1beta/*"
 
 security:
   provider_key_secret: "hook-local-development-provider-key-secret-change-before-deploy"

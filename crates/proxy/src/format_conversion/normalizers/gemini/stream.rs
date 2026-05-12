@@ -1,44 +1,58 @@
 use serde_json::Value;
 
-use crate::format_conversion::{FormatConversionError, InternalStreamEvent};
+use crate::format_conversion::{FormatConversionError, InternalStreamEvent, StreamConversionState};
 
 use super::common::{content_chunk, map_gemini_stop_reason, optional_string, parts_text, required_array, required_object, usage_from_gemini};
 
 pub fn to_internal(chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
+    let mut state = StreamConversionState::default();
     let mut events = Vec::new();
-    let mut started = false;
-    let mut previous_text = String::new();
     for chunk in chunks {
-        parse_chunk(chunk, &mut started, &mut previous_text, &mut events)?;
+        events.extend(chunk_to_internal(chunk, &mut state)?);
     }
     Ok(events)
 }
 
 pub fn from_internal(events: &[InternalStreamEvent]) -> Result<Vec<Value>, FormatConversionError> {
+    let mut state = StreamConversionState::default();
     let mut output = Vec::new();
-    let mut model = "gemini-unknown".to_owned();
     for event in events {
-        push_stream_event(event, &mut model, &mut output);
+        output.extend(event_from_internal(event, &mut state)?);
     }
     Ok(output)
 }
 
-fn parse_chunk(chunk: &Value, started: &mut bool, previous_text: &mut String, events: &mut Vec<InternalStreamEvent>) -> Result<(), FormatConversionError> {
+pub fn chunk_to_internal(chunk: &Value, state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
+    let mut events = Vec::new();
+    parse_chunk(chunk, state, &mut events)?;
+    Ok(events)
+}
+
+pub fn event_from_internal(event: &InternalStreamEvent, state: &mut StreamConversionState) -> Result<Vec<Value>, FormatConversionError> {
+    if state.target_gemini_model.is_empty() {
+        state.target_gemini_model = "gemini-unknown".to_owned();
+    }
+    let mut output = Vec::new();
+    push_stream_event(event, state, &mut output);
+    Ok(output)
+}
+
+fn parse_chunk(chunk: &Value, state: &mut StreamConversionState, events: &mut Vec<InternalStreamEvent>) -> Result<(), FormatConversionError> {
     let model = optional_string(chunk, "modelVersion");
-    if !*started {
+    if !state.gemini_started {
         events.push(InternalStreamEvent::Start {
             id: Some("gemini_1".to_owned()),
             model: model.clone(),
         });
-        *started = true;
+        state.gemini_started = true;
     }
     let candidate = first_candidate(chunk)?;
     let text = candidate_text(candidate)?;
-    let delta = text.strip_prefix(previous_text.as_str()).unwrap_or(&text);
+    let delta = text.strip_prefix(state.gemini_previous_text.as_str()).unwrap_or(&text);
     if !delta.is_empty() {
         events.push(InternalStreamEvent::TextDelta(delta.to_owned()));
     }
-    *previous_text = text;
+    state.gemini_previous_text = text;
     if let Some(reason) = candidate.get("finishReason").and_then(Value::as_str) {
         events.push(InternalStreamEvent::Done {
             reason: Some(map_gemini_stop_reason(reason)),
@@ -48,13 +62,13 @@ fn parse_chunk(chunk: &Value, started: &mut bool, previous_text: &mut String, ev
     Ok(())
 }
 
-fn push_stream_event(event: &InternalStreamEvent, model: &mut String, output: &mut Vec<Value>) {
+fn push_stream_event(event: &InternalStreamEvent, state: &mut StreamConversionState, output: &mut Vec<Value>) {
     match event {
         InternalStreamEvent::Start { model: event_model, .. } => {
-            *model = event_model.clone().unwrap_or_else(|| model.clone());
+            state.target_gemini_model = event_model.clone().unwrap_or_else(|| state.target_gemini_model.clone());
         }
-        InternalStreamEvent::TextDelta(text) => output.push(content_chunk(text, model, None, None)),
-        InternalStreamEvent::Done { reason, usage } => output.push(content_chunk("", model, reason.as_ref(), usage.as_ref())),
+        InternalStreamEvent::TextDelta(text) => output.push(content_chunk(text, &state.target_gemini_model, None, None)),
+        InternalStreamEvent::Done { reason, usage } => output.push(content_chunk("", &state.target_gemini_model, reason.as_ref(), usage.as_ref())),
     }
 }
 

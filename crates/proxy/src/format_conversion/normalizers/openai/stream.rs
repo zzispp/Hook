@@ -1,25 +1,42 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalStreamEvent, InternalUsage};
+use crate::format_conversion::{FormatConversionError, InternalStreamEvent, InternalUsage, StreamConversionState};
 
 use super::common::{first_choice, map_openai_stop_reason, openai_finish_reason, optional_string, optional_string_value, required_object, usage_from_openai};
 
 pub fn to_internal(chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
-    let mut started = false;
+    let mut state = StreamConversionState::default();
     let mut events = Vec::new();
     for chunk in chunks {
-        parse_stream_chunk(chunk, &mut started, &mut events)?;
+        events.extend(chunk_to_internal(chunk, &mut state)?);
     }
     Ok(events)
 }
 
 pub fn from_internal(events: &[InternalStreamEvent]) -> Result<Vec<Value>, FormatConversionError> {
+    let mut state = StreamConversionState::default();
     let mut output = Vec::new();
-    let mut id = "chatcmpl_unknown".to_owned();
-    let mut model = "openai-unknown".to_owned();
     for event in events {
-        push_stream_event(event, &mut id, &mut model, &mut output);
+        output.extend(event_from_internal(event, &mut state)?);
     }
+    Ok(output)
+}
+
+pub fn chunk_to_internal(chunk: &Value, state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
+    let mut events = Vec::new();
+    parse_stream_chunk(chunk, &mut state.openai_started, &mut events)?;
+    Ok(events)
+}
+
+pub fn event_from_internal(event: &InternalStreamEvent, state: &mut StreamConversionState) -> Result<Vec<Value>, FormatConversionError> {
+    if state.target_openai_id.is_empty() {
+        state.target_openai_id = "chatcmpl_unknown".to_owned();
+    }
+    if state.target_openai_model.is_empty() {
+        state.target_openai_model = "openai-unknown".to_owned();
+    }
+    let mut output = Vec::new();
+    push_stream_event(event, state, &mut output);
     Ok(output)
 }
 
@@ -54,22 +71,40 @@ fn emit_start_if_needed(started: &mut bool, events: &mut Vec<InternalStreamEvent
     }
 }
 
-fn push_stream_event(event: &InternalStreamEvent, id: &mut String, model: &mut String, output: &mut Vec<Value>) {
+fn push_stream_event(event: &InternalStreamEvent, state: &mut StreamConversionState, output: &mut Vec<Value>) {
     match event {
         InternalStreamEvent::Start {
             id: event_id,
             model: event_model,
         } => {
-            *id = event_id.clone().unwrap_or_else(|| id.clone());
-            *model = event_model.clone().unwrap_or_else(|| model.clone());
-            output.push(openai_stream_chunk(id, model, json!({"role": "assistant"}), None, None));
+            state.target_openai_id = event_id.clone().unwrap_or_else(|| state.target_openai_id.clone());
+            state.target_openai_model = event_model.clone().unwrap_or_else(|| state.target_openai_model.clone());
+            output.push(openai_stream_chunk(
+                &state.target_openai_id,
+                &state.target_openai_model,
+                json!({"role": "assistant"}),
+                None,
+                None,
+            ));
         }
         InternalStreamEvent::TextDelta(text) => {
-            output.push(openai_stream_chunk(id, model, json!({"content": text}), None, None));
+            output.push(openai_stream_chunk(
+                &state.target_openai_id,
+                &state.target_openai_model,
+                json!({"content": text}),
+                None,
+                None,
+            ));
         }
         InternalStreamEvent::Done { reason, usage } => {
             let finish_reason = reason.as_ref().map(openai_finish_reason);
-            output.push(openai_stream_chunk(id, model, json!({}), finish_reason, usage_json(usage.as_ref())));
+            output.push(openai_stream_chunk(
+                &state.target_openai_id,
+                &state.target_openai_model,
+                json!({}),
+                finish_reason,
+                usage_json(usage.as_ref()),
+            ));
         }
     }
 }

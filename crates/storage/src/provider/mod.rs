@@ -1,15 +1,17 @@
+mod provider_model_query;
 pub mod record;
 mod repository;
 mod repository_helpers;
 mod request_candidate_query;
+mod request_record_cleanup;
 mod request_record_query;
 mod request_record_refs;
 mod types;
 
 pub use repository::ProviderStore;
 pub use types::{
-    ProviderApiKeyRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderRecordInput, ProviderRecordPatch,
-    RequestCandidateRecordInput,
+    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput,
+    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestCandidateRecordInput, RequestCandidateRecordPatch,
 };
 
 pub(super) use record::{ProviderEndpointRecord, ProviderModelRecord, ProviderRecord};

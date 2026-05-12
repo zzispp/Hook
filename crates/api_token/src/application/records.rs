@@ -6,12 +6,7 @@ use crate::application::{
     validation::{ValidatedCreate, ValidatedUpdate, model_ids_for_update},
 };
 
-pub(super) fn user_create_record(
-    user_id: &str,
-    input: ApiTokenCreate,
-    validated: ValidatedCreate,
-    generated: &GeneratedToken,
-) -> ApiTokenCreateRecord {
+pub(super) fn user_create_record(user_id: &str, input: ApiTokenCreate, validated: ValidatedCreate, generated: &GeneratedToken) -> ApiTokenCreateRecord {
     let options = CreateRecordOptions::from_parts(input.rate_limit_rpm, input.quota_limit, validated, generated);
     create_record(Some(user_id.into()), ApiTokenType::User, input.name, options)
 }
@@ -27,11 +22,7 @@ pub(super) fn admin_create_record(
     create_record(owner_id, token_type, input.name, options)
 }
 
-pub(super) fn update_record(
-    current: types::api_token::ApiToken,
-    input: ApiTokenUpdate,
-    validated: ValidatedUpdate,
-) -> ApiTokenUpdateRecord {
+pub(super) fn update_record(current: types::api_token::ApiToken, input: ApiTokenUpdate, validated: ValidatedUpdate) -> ApiTokenUpdateRecord {
     let allowed_model_ids = model_ids_for_update(&current, &validated, &input);
     ApiTokenUpdateRecord {
         name: input.name,
@@ -47,7 +38,7 @@ pub(super) fn update_record(
 
 pub(super) fn admin_owner_id(input: &AdminApiTokenCreate) -> ApiTokenResult<Option<String>> {
     match input.token_type {
-        ApiTokenType::Independent => Ok(None),
+        ApiTokenType::Independent => Ok(input.user_id.clone()),
         ApiTokenType::User => input
             .user_id
             .clone()
@@ -56,12 +47,7 @@ pub(super) fn admin_owner_id(input: &AdminApiTokenCreate) -> ApiTokenResult<Opti
     }
 }
 
-fn create_record(
-    user_id: Option<String>,
-    token_type: ApiTokenType,
-    name: String,
-    options: CreateRecordOptions,
-) -> ApiTokenCreateRecord {
+fn create_record(user_id: Option<String>, token_type: ApiTokenType, name: String, options: CreateRecordOptions) -> ApiTokenCreateRecord {
     ApiTokenCreateRecord {
         user_id,
         token_type,
@@ -91,12 +77,7 @@ struct CreateRecordOptions {
 }
 
 impl CreateRecordOptions {
-    fn from_parts(
-        rate_limit_rpm: Option<i64>,
-        quota_limit: Option<rust_decimal::Decimal>,
-        validated: ValidatedCreate,
-        generated: &GeneratedToken,
-    ) -> Self {
+    fn from_parts(rate_limit_rpm: Option<i64>, quota_limit: Option<rust_decimal::Decimal>, validated: ValidatedCreate, generated: &GeneratedToken) -> Self {
         Self {
             token_value: generated.value.clone(),
             token_hash: generated.hash.clone(),
