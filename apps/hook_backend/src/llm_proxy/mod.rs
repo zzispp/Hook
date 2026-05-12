@@ -1,5 +1,6 @@
 mod audit;
 mod auth;
+mod cache;
 mod candidate;
 mod error;
 mod formats;
@@ -17,6 +18,7 @@ use provider::infra::ProviderKeyCipher;
 use redis::AsyncCommands;
 use storage::Database;
 
+pub use cache::LlmProxyCache;
 pub use error::LlmProxyError;
 
 pub const OPENAI_CHAT_FORMAT: &str = "openai_chat";
@@ -34,6 +36,7 @@ pub struct LlmProxyState {
     cipher: ProviderKeyCipher,
     http: reqwest::Client,
     affinity: redis::aio::ConnectionManager,
+    cache: LlmProxyCache,
     key_prefix: String,
 }
 
@@ -43,6 +46,7 @@ impl LlmProxyState {
         tokens: StorageApiTokenRepository,
         cipher: ProviderKeyCipher,
         affinity: redis::aio::ConnectionManager,
+        cache: LlmProxyCache,
         key_prefix: String,
     ) -> Self {
         Self {
@@ -51,8 +55,17 @@ impl LlmProxyState {
             cipher,
             http: reqwest::Client::new(),
             affinity,
+            cache,
             key_prefix,
         }
+    }
+
+    pub async fn cached_api_token_by_hash(&self, token_hash: &str) -> Result<Option<types::api_token::ApiToken>, LlmProxyError> {
+        self.cache.api_token_by_hash(token_hash).await
+    }
+
+    pub async fn scheduling_snapshot(&self) -> Result<cache::snapshot::SchedulingSnapshot, LlmProxyError> {
+        self.cache.scheduling_snapshot().await
     }
 
     pub async fn cached_affinity_key(&self, token_id: &str, model_id: &str, api_format: &str) -> Result<Option<String>, LlmProxyError> {

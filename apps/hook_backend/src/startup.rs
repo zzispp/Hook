@@ -66,7 +66,8 @@ use crate::{
     BackendResult,
     auth::{AuthState, AuthStateParts, auth_middleware},
     exchange_rates::ExchangeRateCache,
-    llm_proxy::{LlmProxyState, create_router as create_llm_proxy_router, create_v1beta_router},
+    llm_proxy::{LlmProxyCache, LlmProxyState, create_router as create_llm_proxy_router, create_v1beta_router},
+    proxy_cache_hooks::{ProxyCachedApiTokenUseCase, ProxyCachedGroupUseCase, ProxyCachedModelUseCase, ProxyCachedProviderUseCase, ProxyCachedSettingUseCase},
     system,
 };
 use types::api_token::ApiTokenOwnerResponse;
@@ -90,34 +91,42 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     exchange_rates.clone().spawn_refresh_task();
     crate::request_record_cleanup::spawn_request_record_cleanup(database.clone());
     let rbac = build_rbac_service(settings, database.clone()).await?;
-    let models = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
     let provider_key_cipher = ProviderKeyCipher::new(settings.provider_key_secret()?)?;
-    let providers = Arc::new(ProviderService::new(
+    let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
+    let proxy_cache = LlmProxyCache::new(database.clone(), redis_connection.clone(), settings.redis.key_prefix.clone());
+    proxy_cache.refresh_scheduling_snapshot().await?;
+    let models_inner = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
+    let models = Arc::new(ProxyCachedModelUseCase::new(models_inner, proxy_cache.clone()));
+    let providers_inner = Arc::new(ProviderService::new(
         StorageProviderRepository::new(database.clone()),
         StorageGlobalModelCatalog::new(database.clone()),
         provider_key_cipher.clone(),
     ));
+    let providers = Arc::new(ProxyCachedProviderUseCase::new(providers_inner, proxy_cache.clone()));
     let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));
     let setting_secret_cipher = SettingAesSecretCipher::new(settings.provider_key_secret()?)?;
-    let system_settings = Arc::new(SettingService::new(
+    let settings_inner = Arc::new(SettingService::new(
         StorageSettingRepository::new(database.clone()),
         setting_secret_cipher,
         LettreSmtpConnectionTester,
     ));
-    let groups = Arc::new(GroupService::new(
+    let system_settings = Arc::new(ProxyCachedSettingUseCase::new(settings_inner, proxy_cache.clone()));
+    let groups_inner = Arc::new(GroupService::new(
         StorageGroupRepository::new(database.clone()),
         StorageGroupModelCatalog::new(database.clone()),
         StorageGroupProviderCatalog::new(database.clone()),
     ));
+    let groups = Arc::new(ProxyCachedGroupUseCase::new(groups_inner, proxy_cache.clone()));
     let i18n = Arc::new(I18nService::new(StorageI18nRepository::new(database.clone())));
     let system_user_provider = ConfigSystemUserProvider::from_settings(settings)?;
-    let api_tokens = Arc::new(ApiTokenService::new(
+    let api_tokens_inner = Arc::new(ApiTokenService::new(
         StorageApiTokenRepository::new(database.clone()),
         StorageBillingGroupCatalog::new(database.clone()),
         StorageModelAccessCatalog::new(database.clone()),
         StorageUserCatalog::with_system_owner(database.clone(), api_token_system_owner(&system_user_provider)),
         StorageSystemTokenPolicy::new(database.clone()),
     ));
+    let api_tokens = Arc::new(ProxyCachedApiTokenUseCase::new(api_tokens_inner, proxy_cache.clone()));
     let users = Arc::new(UserService::with_system_user_and_registration(
         StorageUserRepository::new(database.clone()),
         BcryptPasswordHasher,
@@ -126,7 +135,6 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageInitialGrantLedger::new(database.clone()),
         StorageUserWalletCatalog::new(database.clone()),
     ));
-    let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
     let captcha = Arc::new(CaptchaService::new(
         StorageCaptchaSettingsReader::new(database.clone()),
         RedisCaptchaStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
@@ -136,6 +144,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageApiTokenRepository::new(database),
         provider_key_cipher,
         redis_connection,
+        proxy_cache,
         settings.redis.key_prefix.clone(),
     );
     let tokens = TokenService::new(token_settings(settings)?);

@@ -1,4 +1,4 @@
-use api_token::application::{ApiTokenRepository, hash_token};
+use api_token::application::hash_token;
 use axum::{
     extract::{Request, State},
     http::{HeaderMap, Uri, header::AUTHORIZATION},
@@ -18,7 +18,7 @@ pub async fn token_middleware(State(state): State<LlmProxyState>, mut request: R
 }
 
 async fn authenticate_token(state: &LlmProxyState, value: String) -> Result<ApiToken, LlmProxyError> {
-    let token = state.tokens.find_by_hash(&hash_token(&value)).await?.ok_or(LlmProxyError::Unauthorized)?;
+    let token = state.cached_api_token_by_hash(&hash_token(&value)).await?.ok_or(LlmProxyError::Unauthorized)?;
     validate_token(token)
 }
 

@@ -36,6 +36,8 @@ impl Display for LlmProxyError {
     }
 }
 
+impl std::error::Error for LlmProxyError {}
+
 impl LlmProxyError {
     fn status(&self) -> StatusCode {
         match self {

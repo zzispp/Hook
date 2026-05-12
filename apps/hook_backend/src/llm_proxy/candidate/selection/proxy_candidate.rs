@@ -1,11 +1,10 @@
 use provider::application::SecretCipher;
-use sea_orm::EntityTrait;
-use storage::provider::record::provider_api_keys;
-use types::{api_token::ApiToken, group::BillingGroup};
+use types::api_token::ApiToken;
 
 use super::{CandidateParts, DEFAULT_MAX_RETRIES, GlobalModelRef};
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
+    cache::snapshot::CachedBillingGroup,
     candidate::{CandidateRequest, CandidateTrace, ProxyCandidate, url},
 };
 
@@ -14,7 +13,7 @@ pub(super) async fn proxy_candidates(
     token: &ApiToken,
     request: CandidateRequest<'_>,
     global_model: &GlobalModelRef,
-    group: &BillingGroup,
+    group: &CachedBillingGroup,
     parts: &[CandidateParts],
 ) -> Result<Vec<ProxyCandidate>, LlmProxyError> {
     let mut candidates = Vec::with_capacity(parts.len());
@@ -29,12 +28,11 @@ async fn proxy_candidate(
     token: &ApiToken,
     request: CandidateRequest<'_>,
     global_model: &GlobalModelRef,
-    group: &BillingGroup,
+    group: &CachedBillingGroup,
     parts: &CandidateParts,
     index: i32,
 ) -> Result<ProxyCandidate, LlmProxyError> {
-    let encrypted = encrypted_key(state, &parts.key.id).await?;
-    let api_key = state.cipher.decrypt_provider_key(&encrypted)?;
+    let api_key = state.cipher.decrypt_provider_key(&parts.key.encrypted_api_key)?;
     Ok(ProxyCandidate {
         trace: candidate_trace(token, request, parts, index),
         api_key,
@@ -74,13 +72,4 @@ fn candidate_trace(token: &ApiToken, request: CandidateRequest<'_>, parts: &Cand
 
 fn max_retries(parts: &CandidateParts) -> i32 {
     parts.endpoint.max_retries.or(parts.provider.max_retries).unwrap_or(DEFAULT_MAX_RETRIES).max(0)
-}
-
-async fn encrypted_key(state: &LlmProxyState, key_id: &str) -> Result<String, LlmProxyError> {
-    let record = provider_api_keys::Entity::find_by_id(key_id.to_owned())
-        .one(state.database.connection())
-        .await?;
-    record
-        .map(|record| record.encrypted_api_key)
-        .ok_or_else(|| LlmProxyError::NotFound(format!("provider key not found: {key_id}")))
 }

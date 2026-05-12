@@ -3,6 +3,7 @@ mod commands;
 mod exchange_rates;
 mod llm_proxy;
 mod migration;
+mod proxy_cache_hooks;
 mod request_record_cleanup;
 mod startup;
 mod system;

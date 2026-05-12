@@ -9,7 +9,6 @@ import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
-import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -76,6 +75,7 @@ export function RequestRecordsView() {
   };
   const refreshRecords = records.refresh;
   const refreshInFlightRef = useRef<Promise<unknown> | null>(null);
+  const scrollSnapshotRef = useRef<number | null>(null);
   const pageVisible = usePageVisible();
   const activeRequestIds = useMemo(() => activeRecordIds(records.items), [records.items]);
   const pollingRequestIds = pageVisible ? activeRequestIds : EMPTY_REQUEST_IDS;
@@ -102,8 +102,14 @@ export function RequestRecordsView() {
     }
   }, [backgroundRefresh]);
 
+  const handleOpenRecord = useCallback((record: RequestRecord) => {
+    scrollSnapshotRef.current = window.scrollY;
+    setSelectedRecord(record);
+  }, []);
+
   useAutoRefresh(autoRefresh && pageVisible, backgroundRefresh);
   useActiveRequestPolling(pollingRequestIds, records.updateItems, backgroundRefresh);
+  useRestoreScrollOnSelection(displaySelectedRecord, scrollSnapshotRef);
 
   const handleFiltersChange = useCallback(
     (nextFilters: Filters) => {
@@ -130,9 +136,7 @@ export function RequestRecordsView() {
         <RequestRecordsToolbar
           filters={filters}
           autoRefresh={autoRefresh}
-          loading={manualRefreshing}
           onChange={handleFiltersChange}
-          onRefresh={() => void handleManualRefresh()}
           onAutoRefreshChange={setAutoRefresh}
         />
         <RequestRecordsTable
@@ -142,7 +146,7 @@ export function RequestRecordsView() {
           locale={locale}
           currencyDisplay={currencyDisplay}
           loading={records.isLoading}
-          onOpen={setSelectedRecord}
+          onOpen={handleOpenRecord}
         />
       </Card>
       <RequestRecordDetailDrawer
@@ -159,16 +163,12 @@ export function RequestRecordsView() {
 function RequestRecordsToolbar({
   filters,
   autoRefresh,
-  loading,
   onChange,
-  onRefresh,
   onAutoRefreshChange,
 }: {
   filters: Filters;
   autoRefresh: boolean;
-  loading: boolean;
   onChange: (filters: Filters) => void;
-  onRefresh: VoidFunction;
   onAutoRefreshChange: (value: boolean) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -207,16 +207,6 @@ function RequestRecordsToolbar({
         ))}
       </TextField>
       <Stack direction="row" spacing={1.5} alignItems="center">
-        <Button
-          color="inherit"
-          variant="outlined"
-          loading={loading}
-          startIcon={<Iconify icon="solar:restart-bold" />}
-          sx={refreshButtonSx}
-          onClick={onRefresh}
-        >
-          {t('common.refresh')}
-        </Button>
         <FormControlLabel
           control={
             <Switch
@@ -231,8 +221,6 @@ function RequestRecordsToolbar({
     </Stack>
   );
 }
-
-const refreshButtonSx = { whiteSpace: 'nowrap', flexShrink: 0 };
 
 function statusFilterValue(value: string) {
   return value === ALL_STATUS_FILTER_VALUE ? '' : value;
@@ -258,6 +246,21 @@ function usePageVisible() {
   }, []);
 
   return visible;
+}
+
+function useRestoreScrollOnSelection(
+  selectedRecord: RequestRecord | null,
+  scrollSnapshotRef: React.RefObject<number | null>
+) {
+  useEffect(() => {
+    const scrollY = scrollSnapshotRef.current;
+    if (!selectedRecord || scrollY === null) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollY, left: window.scrollX, behavior: 'instant' });
+      scrollSnapshotRef.current = null;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [scrollSnapshotRef, selectedRecord]);
 }
 
 function useActiveRequestPolling(

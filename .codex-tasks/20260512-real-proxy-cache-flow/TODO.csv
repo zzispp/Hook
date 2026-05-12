@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current proxy cache and reference flow,DONE,Current cache keys and reference script are understood,rg -n "llm_proxy:.*cache|scheduling_snapshot" apps/hook_backend/src crates,,0,
+2,Create real cache-flow test script,DONE,Script reads secrets from env and covers stream/non-stream/conversion/scheduling/cache,tail -n 5 .codex-tasks/20260512-real-proxy-cache-flow/real_proxy_cache_flow.mjs,2026-05-12T00:00:00+08:00,0,
+3,Run backend checks,DONE,cargo check passes for backend and proxy,cargo check -p backend -p proxy,2026-05-12T00:00:00+08:00,0,
+4,Run real proxy cache-flow test,FAILED,All local proxy/cache/scheduling paths pass; OpenAI-to-Claude is blocked by real Claude upstream timeout,node .codex-tasks/20260512-real-proxy-cache-flow/real_proxy_cache_flow.mjs,2026-05-12T00:00:00+08:00,0,OpenAI->Claude via Claude Messages failed with upstream_timeout; hook.rs /v1/messages timed out and api.aipaibox.com TLS failed
+5,Record evidence and residual risks,DONE,PROGRESS.md contains final command results and coverage summary,test -s .codex-tasks/20260512-real-proxy-cache-flow/PROGRESS.md,2026-05-12T00:00:00+08:00,0,

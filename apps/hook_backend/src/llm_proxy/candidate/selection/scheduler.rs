@@ -3,17 +3,21 @@ use std::collections::{HashMap, HashSet};
 use proxy::scheduler::{Candidate, CandidateBuilder, ModelAccessPolicy, ProviderSnapshot, SchedulerInput, SchedulingMode};
 use types::{
     api_token::{ApiToken, ModelAccessMode},
-    group::BillingGroup,
-    provider::{Provider, ProviderSchedulingMode},
+    provider::ProviderSchedulingMode,
 };
 
 use super::{CandidatePartKey, CandidateParts};
-use crate::llm_proxy::{LlmProxyError, candidate::CandidateRequest, formats};
+use crate::llm_proxy::{
+    LlmProxyError,
+    cache::snapshot::{CachedBillingGroup, CachedProvider},
+    candidate::CandidateRequest,
+    formats,
+};
 
 pub(super) fn order_candidate_parts(
     parts: Vec<CandidateParts>,
     token: &ApiToken,
-    group: &BillingGroup,
+    group: &CachedBillingGroup,
     request: CandidateRequest<'_>,
     model_id: &str,
     request_id: &str,
@@ -33,7 +37,7 @@ pub(super) fn order_candidate_parts(
 fn scheduler_input(
     parts: &[CandidateParts],
     token: &ApiToken,
-    group: &BillingGroup,
+    group: &CachedBillingGroup,
     request: CandidateRequest<'_>,
     model_id: &str,
     request_id: &str,
@@ -83,7 +87,7 @@ fn scheduler_providers(parts: &[CandidateParts]) -> Vec<ProviderSnapshot> {
         .collect()
 }
 
-fn provider_snapshot(provider: &Provider) -> ProviderSnapshot {
+fn provider_snapshot(provider: &CachedProvider) -> ProviderSnapshot {
     ProviderSnapshot {
         id: provider.id.clone(),
         name: provider.name.clone(),

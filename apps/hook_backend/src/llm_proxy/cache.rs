@@ -1,0 +1,180 @@
+mod auth;
+pub(super) mod snapshot;
+
+use redis::AsyncCommands;
+use storage::Database;
+use types::api_token::ApiToken;
+use uuid::Uuid;
+
+use self::snapshot::SchedulingSnapshot;
+use super::LlmProxyError;
+
+const SCHEDULING_REBUILD_LOCK_SECONDS: u64 = 30;
+const SCHEDULING_REBUILD_WAIT_MS: u64 = 50;
+
+#[derive(Clone)]
+pub struct LlmProxyCache {
+    database: Database,
+    connection: redis::aio::ConnectionManager,
+    key_prefix: String,
+}
+
+impl LlmProxyCache {
+    pub fn new(database: Database, connection: redis::aio::ConnectionManager, key_prefix: String) -> Self {
+        Self {
+            database,
+            connection,
+            key_prefix,
+        }
+    }
+
+    pub async fn api_token_by_hash(&self, token_hash: &str) -> Result<Option<ApiToken>, LlmProxyError> {
+        let version = self.auth_version().await?;
+        let cache_key = self.auth_token_key(version, token_hash);
+        if let Some(token) = self.read_cached_token(&cache_key, token_hash).await? {
+            return Ok(Some(token));
+        }
+        let token = auth::load_token(&self.database, token_hash).await?;
+        if let Some(token) = token.as_ref() {
+            self.write_cached_token(cache_key, token).await?;
+        }
+        Ok(token)
+    }
+
+    pub async fn bump_auth_version(&self) -> Result<(), LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let _: i64 = connection.incr(self.auth_version_key(), 1).await.map_err(redis_error)?;
+        Ok(())
+    }
+
+    pub async fn scheduling_snapshot(&self) -> Result<SchedulingSnapshot, LlmProxyError> {
+        if let Some(snapshot) = self.read_scheduling_snapshot().await? {
+            return Ok(snapshot);
+        }
+        let lock_token = self.wait_for_rebuild_lock().await?;
+        let result = match self.read_scheduling_snapshot().await {
+            Ok(Some(snapshot)) => Ok(snapshot),
+            Ok(None) => self.write_fresh_scheduling_snapshot().await,
+            Err(error) => Err(error),
+        };
+        self.release_locked_result(&lock_token, result).await
+    }
+
+    pub async fn refresh_scheduling_snapshot(&self) -> Result<SchedulingSnapshot, LlmProxyError> {
+        let lock_token = self.wait_for_rebuild_lock().await?;
+        let result = self.replace_scheduling_snapshot().await;
+        self.release_locked_result(&lock_token, result).await
+    }
+
+    async fn read_cached_token(&self, key: &str, token_hash: &str) -> Result<Option<ApiToken>, LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let value: Option<String> = connection.get(key).await.map_err(redis_error)?;
+        value.map(|json| auth::decode_token(&json, token_hash)).transpose()
+    }
+
+    async fn write_cached_token(&self, key: String, token: &ApiToken) -> Result<(), LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let value = auth::encode_token(token)?;
+        let seconds = auth::token_ttl_seconds(token);
+        let _: () = connection.set_ex(key, value, seconds).await.map_err(redis_error)?;
+        Ok(())
+    }
+
+    async fn auth_version(&self) -> Result<i64, LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let value: Option<i64> = connection.get(self.auth_version_key()).await.map_err(redis_error)?;
+        Ok(value.unwrap_or_default())
+    }
+
+    async fn read_scheduling_snapshot(&self) -> Result<Option<SchedulingSnapshot>, LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let value: Option<String> = connection.get(self.scheduling_snapshot_key()).await.map_err(redis_error)?;
+        value.map(|json| snapshot::decode(&json)).transpose()
+    }
+
+    async fn write_fresh_scheduling_snapshot(&self) -> Result<SchedulingSnapshot, LlmProxyError> {
+        let snapshot = snapshot::load(&self.database).await?;
+        let value = snapshot::encode(&snapshot)?;
+        let mut connection = self.connection.clone();
+        let _: () = connection.set(self.scheduling_snapshot_key(), value).await.map_err(redis_error)?;
+        Ok(snapshot)
+    }
+
+    async fn replace_scheduling_snapshot(&self) -> Result<SchedulingSnapshot, LlmProxyError> {
+        self.clear_scheduling_snapshot().await?;
+        self.write_fresh_scheduling_snapshot().await
+    }
+
+    async fn clear_scheduling_snapshot(&self) -> Result<(), LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let _: i32 = connection.del(self.scheduling_snapshot_key()).await.map_err(redis_error)?;
+        Ok(())
+    }
+
+    async fn wait_for_rebuild_lock(&self) -> Result<String, LlmProxyError> {
+        let token = Uuid::now_v7().to_string();
+        while !self.try_rebuild_lock(&token).await? {
+            tokio::time::sleep(std::time::Duration::from_millis(SCHEDULING_REBUILD_WAIT_MS)).await;
+        }
+        Ok(token)
+    }
+
+    async fn try_rebuild_lock(&self, token: &str) -> Result<bool, LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let result: Option<String> = redis::cmd("SET")
+            .arg(self.scheduling_rebuild_lock_key())
+            .arg(token)
+            .arg("NX")
+            .arg("EX")
+            .arg(SCHEDULING_REBUILD_LOCK_SECONDS)
+            .query_async(&mut connection)
+            .await
+            .map_err(redis_error)?;
+        Ok(result.is_some())
+    }
+
+    async fn release_rebuild_lock(&self, token: &str) -> Result<(), LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let _: i32 = redis::cmd("EVAL")
+            .arg("if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end")
+            .arg(1)
+            .arg(self.scheduling_rebuild_lock_key())
+            .arg(token)
+            .query_async(&mut connection)
+            .await
+            .map_err(redis_error)?;
+        Ok(())
+    }
+
+    async fn release_locked_result<T>(&self, token: &str, result: Result<T, LlmProxyError>) -> Result<T, LlmProxyError> {
+        let release = self.release_rebuild_lock(token).await;
+        match (result, release) {
+            (Ok(value), Ok(())) => Ok(value),
+            (Err(error), Ok(())) => Err(error),
+            (Ok(_), Err(error)) => Err(error),
+            (Err(error), Err(release_error)) => Err(LlmProxyError::Infrastructure(format!(
+                "{error}; additionally failed to release proxy scheduling cache rebuild lock: {release_error}"
+            ))),
+        }
+    }
+
+    fn auth_version_key(&self) -> String {
+        format!("{}:llm_proxy:auth:version", self.key_prefix)
+    }
+
+    fn auth_token_key(&self, version: i64, token_hash: &str) -> String {
+        format!("{}:llm_proxy:auth:v{version}:{token_hash}", self.key_prefix)
+    }
+
+    fn scheduling_snapshot_key(&self) -> String {
+        format!("{}:llm_proxy:scheduling:snapshot:v1", self.key_prefix)
+    }
+
+    fn scheduling_rebuild_lock_key(&self) -> String {
+        format!("{}:llm_proxy:scheduling:rebuild_lock", self.key_prefix)
+    }
+}
+
+fn redis_error(error: redis::RedisError) -> LlmProxyError {
+    LlmProxyError::Infrastructure(format!("redis error: {error}"))
+}

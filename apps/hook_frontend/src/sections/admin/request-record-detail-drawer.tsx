@@ -57,7 +57,13 @@ export function RequestRecordDetailDrawer({
   );
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose} slotProps={drawerSlotProps}>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      disableScrollLock
+      slotProps={drawerSlotProps}
+    >
       <DrawerHeader
         record={displayRecord}
         locale={locale}
