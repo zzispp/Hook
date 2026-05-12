@@ -23,12 +23,16 @@ pub struct SignUpPayload {
     pub username: String,
     pub password: String,
     pub email: String,
+    #[serde(default)]
+    pub captcha_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct SignInPayload {
     pub identifier: String,
     pub password: String,
+    #[serde(default)]
+    pub captcha_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

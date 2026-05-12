@@ -1,7 +1,8 @@
-import type { CurrencyDisplay } from './currency-format';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { RequestRecord, RequestRecordStatus } from 'src/types/provider';
 
-import { formatMoney } from './currency-format';
+import { formatMoney } from 'src/utils/currency-format';
+
 import { formatApiFormat } from './provider-management-utils';
 
 const THOUSAND_TOKENS = 1000;

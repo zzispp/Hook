@@ -1,4 +1,5 @@
 pub mod api_token;
+pub mod captcha;
 pub mod group;
 pub mod i18n;
 pub mod model;

@@ -707,15 +707,25 @@
       "site": "站点信息",
       "base": "基础配置",
       "tokens": "令牌配置",
+      "requestRecord": "请求记录",
       "cleanup": "清理策略"
     },
     "fields": {
       "siteName": "站点名称",
       "siteSubtitle": "站点副标题",
       "allowRegistration": "开放允许注册",
+      "loginCaptchaEnabled": "启用登录验证码",
+      "registrationCaptchaEnabled": "启用注册验证码",
       "autoDeleteExpiredTokens": "自动删除过期令牌",
       "requestRecordRetentionDays": "请求记录保留天数",
       "requestRecordPayloadRetentionDays": "请求头/体/响应体保留天数",
+      "requestRecordLevel": "记录详细程度",
+      "maxRequestBodySizeKb": "最大请求体大小 (KB)",
+      "maxResponseBodySizeKb": "最大响应体大小 (KB)",
+      "sensitiveRequestHeaders": "敏感请求头",
+      "recordRequestHeaders": "记录请求头",
+      "recordRequestBody": "记录请求体",
+      "recordResponseBody": "记录响应体",
       "defaultUserGrant": "默认用户初始赠款",
       "defaultRateLimitRpm": "默认速率限制",
       "currency": "显示货币"
@@ -726,7 +736,17 @@
       "defaultUserGrant": "新用户注册成功后写入赠款余额，并生成钱包流水。",
       "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。",
       "requestRecordRetentionDays": "超过该天数后删除整条请求记录。",
-      "requestRecordPayloadRetentionDays": "超过该天数后清空请求记录中的请求头、请求体和响应体，记录本身保留。"
+      "requestRecordPayloadRetentionDays": "超过该天数后清空请求记录中的请求头、请求体和响应体，记录本身保留。",
+      "requestRecordLevel": "敏感信息会自动脱敏",
+      "maxRequestBodySizeKb": "超过此大小的请求体将被截断记录。",
+      "maxResponseBodySizeKb": "超过此大小的响应体将被截断记录。",
+      "sensitiveRequestHeaders": "逗号分隔，这些请求头会被脱敏处理。"
+    },
+    "requestRecord": {
+      "description": "控制请求/响应详情的入库方式和内容",
+      "levels": {
+        "basic": "BASIC - 基本信息 (~1KB/条)"
+      }
     }
   },
   "translations": {

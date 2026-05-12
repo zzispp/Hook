@@ -5,7 +5,7 @@ pub const ADMIN_ROLE: &str = "admin";
 pub const USER_ROLE: &str = constants::auth::DEFAULT_USER_ROLE;
 
 #[cfg(test)]
-pub const AUTHENTICATED_API_CODES: &[&str] = &["auth_me", "navbar_read", "i18n_resources_read"];
+pub const AUTHENTICATED_API_CODES: &[&str] = &["auth_me", "navbar_read", "i18n_resources_read", "system_display_currency_read"];
 
 pub const ADMIN_MENU_CODES: &[&str] = &[
     "dashboard_home",

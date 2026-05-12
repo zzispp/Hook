@@ -1,4 +1,7 @@
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { PricingTier, GlobalModelResponse, TieredPricingConfig } from 'src/types/model';
+
+import { formatMoneyCompact } from 'src/utils/currency-format';
 
 // ----------------------------------------------------------------------
 
@@ -13,14 +16,22 @@ const CONFIG_CAPABILITY_KEYS = [
 ] as const;
 
 export const MODEL_DETAIL_CAPABILITIES = [
-  { key: 'streaming', title: 'Streaming', descriptionKey: 'models.capabilityDescriptions.streaming' },
+  {
+    key: 'streaming',
+    title: 'Streaming',
+    descriptionKey: 'models.capabilityDescriptions.streaming',
+  },
   {
     key: 'image_generation',
     title: 'Image Generation',
     descriptionKey: 'models.capabilityDescriptions.image_generation',
   },
   { key: 'vision', title: 'Vision', descriptionKey: 'models.capabilityDescriptions.vision' },
-  { key: 'function_calling', title: 'Tool Use', descriptionKey: 'models.capabilityDescriptions.function_calling' },
+  {
+    key: 'function_calling',
+    title: 'Tool Use',
+    descriptionKey: 'models.capabilityDescriptions.function_calling',
+  },
   {
     key: 'extended_thinking',
     title: 'Extended Thinking',
@@ -47,8 +58,8 @@ export function hasCapability(item: GlobalModelResponse, key: string) {
   return item.supported_capabilities?.includes(key) ?? false;
 }
 
-export function priceSummary(item: GlobalModelResponse) {
-  return `${formatPrice(firstTier(item)?.input_price_per_1m)} / ${formatPrice(firstTier(item)?.output_price_per_1m)}`;
+export function priceSummary(item: GlobalModelResponse, currencyDisplay?: CurrencyDisplay) {
+  return `${formatPrice(firstTier(item)?.input_price_per_1m, currencyDisplay)} / ${formatPrice(firstTier(item)?.output_price_per_1m, currencyDisplay)}`;
 }
 
 export function tierCount(pricing?: TieredPricingConfig | null) {
@@ -63,38 +74,41 @@ export function firstTierPrice(
     | 'output_price_per_1m'
     | 'cache_creation_price_per_1m'
     | 'cache_read_price_per_1m'
-  >
+  >,
+  currencyDisplay?: CurrencyDisplay
 ) {
-  return formatPrice(pricing?.tiers?.[0]?.[key]);
+  return formatPrice(pricing?.tiers?.[0]?.[key], currencyDisplay);
 }
 
-export function firstOneHourCachePrice(pricing?: TieredPricingConfig | null) {
-  return oneHourCachePrice(pricing?.tiers?.[0]);
+export function firstOneHourCachePrice(
+  pricing?: TieredPricingConfig | null,
+  currencyDisplay?: CurrencyDisplay
+) {
+  return oneHourCachePrice(pricing?.tiers?.[0], currencyDisplay);
 }
 
-export function oneHourCachePrice(tier?: PricingTier | null) {
+export function oneHourCachePrice(tier?: PricingTier | null, currencyDisplay?: CurrencyDisplay) {
   const price = tier?.cache_ttl_pricing?.find((item) => item.ttl_minutes === 60);
-  return formatPrice(price?.cache_creation_price_per_1m);
+  return formatPrice(price?.cache_creation_price_per_1m, currencyDisplay);
 }
 
-export function requestPrice(value?: number | null) {
+export function requestPrice(value?: number | null, currencyDisplay?: CurrencyDisplay) {
   if (!value || value <= 0) return null;
-  return `${formatPrice(value)}/次`;
+  return `${formatPrice(value, currencyDisplay)}/次`;
 }
 
 export function formatUsageCount(value?: number | null) {
   return value?.toLocaleString() ?? '0';
 }
 
-export function formatPrice(value?: number | null) {
-  return value === null || value === undefined ? '-' : `$${formatNumber(value)}`;
+export function formatPrice(value?: number | null, currencyDisplay?: CurrencyDisplay) {
+  if (value === null || value === undefined) return '-';
+  if (!currencyDisplay) return '-';
+  return formatMoneyCompact(value, currencyDisplay);
 }
 
 function catalogItemMatches(item: GlobalModelResponse, query: string) {
-  return [item.name, item.display_name, description(item)]
-    .join(' ')
-    .toLowerCase()
-    .includes(query);
+  return [item.name, item.display_name, description(item)].join(' ').toLowerCase().includes(query);
 }
 
 function description(item: GlobalModelResponse) {
@@ -109,8 +123,4 @@ function firstTier(item: GlobalModelResponse) {
 function configBool(item: GlobalModelResponse, key: string, defaultValue: boolean) {
   const value = item.config?.[key];
   return typeof value === 'boolean' ? value : defaultValue;
-}
-
-function formatNumber(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }

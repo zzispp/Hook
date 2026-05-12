@@ -12,10 +12,13 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 
+import { currencyDisplayFromResponse } from 'src/utils/currency-format';
+
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useUserModelCatalog } from 'src/actions/models';
 import { useAvailableBillingGroups } from 'src/actions/groups';
+import { useCurrencyDisplay } from 'src/actions/system-settings';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import {
   DASHBOARD_MENU_CODES,
@@ -32,9 +35,24 @@ import { filterCatalogItems } from './model-catalog-utils';
 
 // ----------------------------------------------------------------------
 
+type CatalogResultsProps = {
+  query: string;
+  total: number;
+  rows: GlobalModelResponse[];
+  loading: boolean;
+  refreshing: boolean;
+  catalogError?: Error;
+  currencyError?: Error;
+  currencyDisplay: ReturnType<typeof currencyDisplayFromResponse>;
+  onQueryChange: (value: string) => void;
+  onRefresh: () => void;
+  onSelectModel: (model: GlobalModelResponse) => void;
+};
+
 export function ModelCatalogView() {
   const { t } = useTranslate('admin');
   const catalog = useUserModelCatalog();
+  const currency = useCurrencyDisplay();
   const groups = useAvailableBillingGroups();
   const breadcrumbs = useDashboardBreadcrumbs({
     headingCode: DASHBOARD_MENU_CODES.modelCatalog,
@@ -44,6 +62,10 @@ export function ModelCatalogView() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<GlobalModelResponse | null>(null);
   const rows = useMemo(() => filterCatalogItems(catalog.items, query), [catalog.items, query]);
+  const currencyDisplay = useMemo(
+    () => currencyDisplayFromResponse(currency.data, t('requestRecords.exchangeRateUnavailable')),
+    [currency.data, t]
+  );
   const handleSelectModel = useCallback((model: GlobalModelResponse) => {
     setSelectedModel(model);
     setDrawerOpen(true);
@@ -61,37 +83,86 @@ export function ModelCatalogView() {
         sx={{ mb: { xs: 3, md: 5 } }}
       />
 
-      <Card>
-        <CatalogToolbar
-          query={query}
-          total={catalog.total}
-          refreshing={catalog.isValidating}
-          onQueryChange={setQuery}
-          onRefresh={() => catalog.refresh()}
-        />
-        {catalog.error ? <ErrorState message={catalog.error.message} /> : null}
-        <Stack sx={{ display: { xs: 'none', md: 'block' } }}>
-          <ModelCatalogTable rows={rows} loading={catalog.isLoading} onSelectRow={handleSelectModel} />
-        </Stack>
-        <Stack sx={{ display: { xs: 'flex', md: 'none' }, p: 2 }}>
-          <ModelCatalogCards rows={rows} onSelectRow={handleSelectModel} />
-          {!catalog.isLoading && rows.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              {t('models.emptyCatalog')}
-            </Typography>
-          )}
-        </Stack>
-      </Card>
+      <CatalogResults
+        query={query}
+        rows={rows}
+        total={catalog.total}
+        loading={catalog.isLoading || currency.isLoading}
+        refreshing={catalog.isValidating}
+        catalogError={catalog.error}
+        currencyError={currency.error}
+        currencyDisplay={currencyDisplay}
+        onQueryChange={setQuery}
+        onRefresh={() => catalog.refresh()}
+        onSelectModel={handleSelectModel}
+      />
       <ModelDetailDrawer
         model={selectedModel}
         groups={groups.items}
         groupsLoading={groups.isLoading}
         groupsErrorMessage={groups.error?.message}
+        currencyDisplay={currencyDisplay}
         open={drawerOpen}
         onClose={handleCloseDrawer}
         onExited={() => setSelectedModel(null)}
       />
     </DashboardContent>
+  );
+}
+
+function CatalogResults({
+  query,
+  total,
+  rows,
+  loading,
+  refreshing,
+  catalogError,
+  currencyError,
+  currencyDisplay,
+  onQueryChange,
+  onRefresh,
+  onSelectModel,
+}: CatalogResultsProps) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Card>
+      <CatalogToolbar
+        query={query}
+        total={total}
+        refreshing={refreshing}
+        onQueryChange={onQueryChange}
+        onRefresh={onRefresh}
+      />
+      {catalogError ? <ErrorState message={catalogError.message} /> : null}
+      {currencyError ? <ErrorState message={currencyError.message} /> : null}
+      <Stack sx={{ display: { xs: 'none', md: 'block' } }}>
+        <ModelCatalogTable
+          rows={rows}
+          loading={loading}
+          currencyDisplay={currencyDisplay}
+          onSelectRow={onSelectModel}
+        />
+      </Stack>
+      <Stack sx={{ display: { xs: 'flex', md: 'none' }, p: 2 }}>
+        <ModelCatalogCards
+          rows={rows}
+          currencyDisplay={currencyDisplay}
+          onSelectRow={onSelectModel}
+        />
+        {!loading && rows.length === 0 ? (
+          <EmptyCatalogMessage message={t('models.emptyCatalog')} />
+        ) : null}
+      </Stack>
+    </Card>
+  );
+}
+
+function EmptyCatalogMessage({ message }: { message: string }) {
+  return (
+    <Typography variant="body2" color="text.secondary">
+      {message}
+    </Typography>
   );
 }
 

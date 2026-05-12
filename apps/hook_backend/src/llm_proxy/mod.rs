@@ -5,6 +5,7 @@ mod error;
 mod formats;
 mod handlers;
 mod proxy;
+mod request_record_policy;
 mod ws;
 
 use api_token::infra::StorageApiTokenRepository;

@@ -10,7 +10,12 @@ use axum::{
     http::{HeaderValue, Method, header},
     middleware,
 };
-use configuration::Settings;
+use captcha::{
+    api::{CaptchaApiState, create_router as create_captcha_router},
+    application::CaptchaService,
+    infra::{RedisCaptchaStore, StorageCaptchaSettingsReader},
+};
+use configuration::{AuthWhitelistRule as ConfigAuthRule, Settings};
 use group::{
     api::{GroupApiState, create_router as create_group_router},
     application::GroupService,
@@ -66,8 +71,6 @@ use crate::{
 };
 use types::api_token::ApiTokenOwnerResponse;
 
-const AUTHENTICATED_BASE_APIS: &[(&str, &str)] = &[("GET", "/api/auth/me"), ("GET", "/api/navbar"), ("GET", "/api/i18n/resources")];
-
 pub async fn serve(settings: Settings) -> BackendResult<()> {
     let bind_addr = settings.bind_addr();
     hook_tracing::info_with_fields!("backend starting", addr = bind_addr);
@@ -118,12 +121,16 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageInitialGrantLedger::new(database.clone()),
         StorageUserWalletCatalog::new(database.clone()),
     ));
-    let proxy_redis = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
+    let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
+    let captcha = Arc::new(CaptchaService::new(
+        StorageCaptchaSettingsReader::new(database.clone()),
+        RedisCaptchaStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
+    ));
     let llm_proxy = LlmProxyState::new(
         database.clone(),
         StorageApiTokenRepository::new(database),
         provider_key_cipher,
-        proxy_redis,
+        redis_connection,
         settings.redis.key_prefix.clone(),
     );
     let tokens = TokenService::new(token_settings(settings)?);
@@ -140,6 +147,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         groups,
         i18n,
         api_tokens,
+        captcha,
         llm_proxy,
         exchange_rates,
         authorization,
@@ -167,7 +175,7 @@ async fn build_rbac_service(settings: &Settings, database: storage::Database) ->
 }
 
 fn create_app(state: AppState) -> Router {
-    let user_state = ApiState::new(state.users.clone(), state.tokens.clone());
+    let user_state = ApiState::new(state.users.clone(), state.tokens.clone(), state.captcha.clone());
     let rbac_state = RbacApiState::new(state.rbac.clone(), state.rbac.clone());
     let model_state = ModelApiState::new(state.models);
     let provider_state = ProviderApiState::new(state.providers);
@@ -176,6 +184,7 @@ fn create_app(state: AppState) -> Router {
     let group_state = GroupApiState::new(state.groups);
     let i18n_state = I18nApiState::new(state.i18n);
     let api_token_state = ApiTokenApiState::new(state.api_tokens);
+    let captcha_state = CaptchaApiState::new(state.captcha);
     let llm_v1_router = create_llm_proxy_router(state.llm_proxy.clone());
     let gemini_router = create_v1beta_router(state.llm_proxy);
     let auth_state = AuthState::new(AuthStateParts {
@@ -193,7 +202,8 @@ fn create_app(state: AppState) -> Router {
         .merge(create_setting_router(setting_state))
         .merge(create_group_router(group_state))
         .merge(create_i18n_router(i18n_state))
-        .merge(create_api_token_router(api_token_state));
+        .merge(create_api_token_router(api_token_state))
+        .merge(create_captcha_router(captcha_state));
 
     system::create_router()
         .nest("/v1", llm_v1_router)
@@ -213,23 +223,19 @@ fn cors_layer() -> CorsLayer {
 
 fn authorization_config(settings: &Settings) -> AuthorizationConfig {
     AuthorizationConfig {
-        whitelist: settings
-            .auth
-            .whitelist
-            .iter()
-            .map(|rule| AuthWhitelistRule {
-                methods: rule.methods.clone(),
-                path_pattern: rule.path_pattern.clone(),
-            })
-            .collect(),
-        authenticated: AUTHENTICATED_BASE_APIS
-            .iter()
-            .map(|(method, path_pattern)| AuthWhitelistRule {
-                methods: vec![(*method).into()],
-                path_pattern: (*path_pattern).into(),
-            })
-            .collect(),
+        whitelist: auth_rules(&settings.auth.whitelist),
+        authenticated: auth_rules(&settings.auth.authenticated),
     }
+}
+
+fn auth_rules(rules: &[ConfigAuthRule]) -> Vec<AuthWhitelistRule> {
+    rules
+        .iter()
+        .map(|rule| AuthWhitelistRule {
+            methods: rule.methods.clone(),
+            path_pattern: rule.path_pattern.clone(),
+        })
+        .collect()
 }
 
 fn token_settings(settings: &Settings) -> BackendResult<TokenSettings> {
@@ -251,6 +257,7 @@ struct AppState {
     groups: Arc<dyn group::application::GroupUseCase>,
     i18n: Arc<dyn i18n::application::I18nUseCase>,
     api_tokens: Arc<dyn api_token::application::ApiTokenUseCase>,
+    captcha: Arc<dyn captcha::application::CaptchaUseCase>,
     llm_proxy: LlmProxyState,
     exchange_rates: ExchangeRateCache,
     authorization: AuthorizationConfig,

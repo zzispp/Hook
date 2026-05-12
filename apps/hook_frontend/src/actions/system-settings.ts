@@ -5,6 +5,7 @@ import type {
   SystemSettings,
   ExchangeRateResponse,
   SystemSettingsUpdate,
+  CurrencyDisplayResponse,
 } from 'src/types/system-setting';
 
 import { useMemo } from 'react';
@@ -83,4 +84,30 @@ export function useUsdCnyExchangeRate(enabled: boolean) {
       refresh: revalidate,
     };
   }, [data, error, isLoading, isValidating, revalidate]);
+}
+
+export function useCurrencyDisplay(enabled = true) {
+  const {
+    data,
+    isLoading,
+    error,
+    isValidating,
+    mutate: revalidate,
+  } = useSWR<ApiEnvelope<CurrencyDisplayResponse>>(
+    enabled ? endpoints.settings.displayCurrency : null,
+    fetcher,
+    swrOptions
+  );
+
+  return useMemo(() => {
+    const apiError =
+      data && !data.success ? new Error(data.message || 'Request failed') : undefined;
+    return {
+      data: enabled && data?.success ? requireApiData(data) : undefined,
+      isLoading: enabled ? isLoading : false,
+      error: error ?? apiError,
+      isValidating: enabled ? isValidating : false,
+      refresh: revalidate,
+    };
+  }, [data, enabled, error, isLoading, isValidating, revalidate]);
 }

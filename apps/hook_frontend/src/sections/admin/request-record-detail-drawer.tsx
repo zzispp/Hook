@@ -2,7 +2,7 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { RequestRecord } from 'src/types/provider';
-import type { CurrencyDisplay } from './currency-format';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import { useMemo } from 'react';
 import { varAlpha } from 'minimal-shared/utils';

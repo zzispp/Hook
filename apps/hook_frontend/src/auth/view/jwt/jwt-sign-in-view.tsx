@@ -17,6 +17,8 @@ import { paths } from 'src/routes/paths';
 import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
+import { useCaptchaConfig } from 'src/actions/captcha';
+
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
 
@@ -24,6 +26,7 @@ import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
 import { FormHead } from '../../components/form-head';
 import { signInWithPassword } from '../../context/jwt';
+import { AuthCaptcha } from '../../components/cap-widget';
 import { passwordSchema, identifierSchema } from '../../context/jwt/validation';
 
 // ----------------------------------------------------------------------
@@ -43,8 +46,16 @@ export function JwtSignInView() {
   const showPassword = useBoolean();
 
   const { checkUserSession } = useAuthContext();
+  const captchaConfig = useCaptchaConfig();
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+
+  const captchaEnabled = captchaConfig.data?.login_captcha_enabled ?? false;
+  const captchaUnavailable = captchaConfig.isLoading || !!captchaConfig.error;
+  const visibleErrorMessage =
+    errorMessage ?? (captchaConfig.error ? getErrorMessage(captchaConfig.error) : null);
 
   const defaultValues: SignInSchemaType = {
     identifier: '',
@@ -62,8 +73,25 @@ export function JwtSignInView() {
   } = methods;
 
   const onSubmit = handleSubmit(async (data) => {
+    setErrorMessage(null);
+    if (captchaConfig.error) {
+      setErrorMessage(getErrorMessage(captchaConfig.error));
+      return;
+    }
+    if (captchaConfig.isLoading) {
+      return;
+    }
+    if (captchaEnabled && !captchaToken) {
+      setErrorMessage('Please complete CAPTCHA verification');
+      return;
+    }
+
     try {
-      await signInWithPassword({ identifier: data.identifier, password: data.password });
+      await signInWithPassword({
+        identifier: data.identifier,
+        password: data.password,
+        captchaToken: captchaEnabled ? (captchaToken ?? undefined) : undefined,
+      });
       await checkUserSession?.();
 
       router.refresh();
@@ -71,6 +99,10 @@ export function JwtSignInView() {
       console.error(error);
       const feedbackMessage = getErrorMessage(error);
       setErrorMessage(feedbackMessage);
+      if (captchaEnabled) {
+        setCaptchaToken(null);
+        setCaptchaResetKey((value) => value + 1);
+      }
     }
   });
 
@@ -116,14 +148,21 @@ export function JwtSignInView() {
         />
       </Box>
 
+      <AuthCaptcha
+        enabled={captchaEnabled}
+        resetKey={captchaResetKey}
+        onTokenChange={setCaptchaToken}
+      />
+
       <Button
         fullWidth
         color="inherit"
         size="large"
         type="submit"
         variant="contained"
-        loading={isSubmitting}
-        loadingIndicator="Sign in..."
+        disabled={captchaUnavailable}
+        loading={isSubmitting || captchaConfig.isLoading}
+        loadingIndicator={captchaConfig.isLoading ? 'Loading...' : 'Sign in...'}
       >
         Sign in
       </Button>
@@ -145,9 +184,9 @@ export function JwtSignInView() {
         sx={{ textAlign: { xs: 'center', md: 'left' } }}
       />
 
-      {!!errorMessage && (
+      {!!visibleErrorMessage && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {errorMessage}
+          {visibleErrorMessage}
         </Alert>
       )}
 

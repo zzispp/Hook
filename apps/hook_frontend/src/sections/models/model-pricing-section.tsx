@@ -1,6 +1,7 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { PricingTier, GlobalModelResponse } from 'src/types/model';
 
 import Grid from '@mui/material/Grid';
@@ -11,33 +12,56 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import {
   tierCount,
+  formatPrice,
   requestPrice,
   firstTierPrice,
   oneHourCachePrice,
   firstOneHourCachePrice,
 } from './model-catalog-utils';
 
-export function ModelPricingSection({ model }: { model: GlobalModelResponse }) {
+export function ModelPricingSection({
+  model,
+  currencyDisplay,
+}: {
+  model: GlobalModelResponse;
+  currencyDisplay?: CurrencyDisplay;
+}) {
   const { t } = useTranslate('admin');
   const pricing = model.default_tiered_pricing;
 
   return (
     <Stack spacing={1.5}>
       <Typography variant="subtitle2">{t('models.pricingInfo')}</Typography>
-      {tierCount(pricing) <= 1 ? <SingleTierPricing model={model} /> : <TieredPricing tiers={pricing.tiers} />}
-      <RequestPrice value={model.default_price_per_request} />
+      {tierCount(pricing) <= 1 ? (
+        <SingleTierPricing model={model} currencyDisplay={currencyDisplay} />
+      ) : (
+        <TieredPricing tiers={pricing.tiers} currencyDisplay={currencyDisplay} />
+      )}
+      <RequestPrice value={model.default_price_per_request} currencyDisplay={currencyDisplay} />
     </Stack>
   );
 }
 
-function SingleTierPricing({ model }: { model: GlobalModelResponse }) {
+function SingleTierPricing({
+  model,
+  currencyDisplay,
+}: {
+  model: GlobalModelResponse;
+  currencyDisplay?: CurrencyDisplay;
+}) {
   const { t } = useTranslate('admin');
   const pricing = model.default_tiered_pricing;
   const items = [
-    [t('fields.inputPrice'), firstTierPrice(pricing, 'input_price_per_1m')],
-    [t('fields.outputPrice'), firstTierPrice(pricing, 'output_price_per_1m')],
-    [t('fields.cacheCreationPrice'), firstTierPrice(pricing, 'cache_creation_price_per_1m')],
-    [t('fields.cacheReadPrice'), firstTierPrice(pricing, 'cache_read_price_per_1m')],
+    [t('fields.inputPrice'), firstTierPrice(pricing, 'input_price_per_1m', currencyDisplay)],
+    [t('fields.outputPrice'), firstTierPrice(pricing, 'output_price_per_1m', currencyDisplay)],
+    [
+      t('fields.cacheCreationPrice'),
+      firstTierPrice(pricing, 'cache_creation_price_per_1m', currencyDisplay),
+    ],
+    [
+      t('fields.cacheReadPrice'),
+      firstTierPrice(pricing, 'cache_read_price_per_1m', currencyDisplay),
+    ],
   ];
 
   return (
@@ -48,13 +72,22 @@ function SingleTierPricing({ model }: { model: GlobalModelResponse }) {
         </Grid>
       ))}
       <Grid size={{ xs: 12 }}>
-        <InlinePrice label={t('models.oneHourCache')} value={firstOneHourCachePrice(pricing)} />
+        <InlinePrice
+          label={t('models.oneHourCache')}
+          value={firstOneHourCachePrice(pricing, currencyDisplay)}
+        />
       </Grid>
     </Grid>
   );
 }
 
-function TieredPricing({ tiers }: { tiers: PricingTier[] }) {
+function TieredPricing({
+  tiers,
+  currencyDisplay,
+}: {
+  tiers: PricingTier[];
+  currencyDisplay?: CurrencyDisplay;
+}) {
   const { t } = useTranslate('admin');
 
   return (
@@ -64,19 +97,34 @@ function TieredPricing({ tiers }: { tiers: PricingTier[] }) {
           <Typography variant="subtitle2">{tierLabel({ t, tiers, tier, index })}</Typography>
           <Grid container spacing={1}>
             <Grid size={{ xs: 12 }}>
-              <PriceBox label={t('fields.inputPrice')} value={`$${tier.input_price_per_1m.toFixed(2)}`} />
+              <PriceBox
+                label={t('fields.inputPrice')}
+                value={formatPrice(tier.input_price_per_1m, currencyDisplay)}
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <PriceBox label={t('fields.outputPrice')} value={`$${tier.output_price_per_1m.toFixed(2)}`} />
+              <PriceBox
+                label={t('fields.outputPrice')}
+                value={formatPrice(tier.output_price_per_1m, currencyDisplay)}
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <PriceBox label={t('fields.cacheCreationPrice')} value={nullablePrice(tier.cache_creation_price_per_1m)} />
+              <PriceBox
+                label={t('fields.cacheCreationPrice')}
+                value={formatPrice(tier.cache_creation_price_per_1m, currencyDisplay)}
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <PriceBox label={t('fields.cacheReadPrice')} value={nullablePrice(tier.cache_read_price_per_1m)} />
+              <PriceBox
+                label={t('fields.cacheReadPrice')}
+                value={formatPrice(tier.cache_read_price_per_1m, currencyDisplay)}
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <InlinePrice label={t('models.oneHourCache')} value={oneHourCachePrice(tier)} />
+              <InlinePrice
+                label={t('models.oneHourCache')}
+                value={oneHourCachePrice(tier, currencyDisplay)}
+              />
             </Grid>
           </Grid>
         </Stack>
@@ -85,9 +133,15 @@ function TieredPricing({ tiers }: { tiers: PricingTier[] }) {
   );
 }
 
-function RequestPrice({ value }: { value?: number | null }) {
+function RequestPrice({
+  value,
+  currencyDisplay,
+}: {
+  value?: number | null;
+  currencyDisplay?: CurrencyDisplay;
+}) {
   const { t } = useTranslate('admin');
-  const price = requestPrice(value);
+  const price = requestPrice(value, currencyDisplay);
   if (!price) return null;
   return <InlinePrice label={t('fields.pricePerRequest')} value={price} />;
 }
@@ -107,7 +161,13 @@ function PriceBox({ label, value }: { label: string; value: string }) {
 
 function InlinePrice({ label, value }: { label: string; value: string }) {
   return (
-    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2} sx={panelSx}>
+    <Stack
+      direction="row"
+      alignItems="center"
+      justifyContent="space-between"
+      spacing={2}
+      sx={panelSx}
+    >
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
@@ -129,7 +189,8 @@ function tierLabel({
   tier: PricingTier;
   index: number;
 }) {
-  if (tier.up_to === null) return index === 0 ? t('models.tierAll') : `> ${formatTierLimit(tiers[index - 1]?.up_to)}`;
+  if (tier.up_to === null)
+    return index === 0 ? t('models.tierAll') : `> ${formatTierLimit(tiers[index - 1]?.up_to)}`;
   const start = index === 0 ? '0' : formatTierLimit(tiers[index - 1]?.up_to);
   return `${start} - ${formatTierLimit(tier.up_to)}`;
 }
@@ -139,10 +200,6 @@ function formatTierLimit(limit?: number | null) {
   if (limit >= 1000000) return `${(limit / 1000000).toFixed(1)}M`;
   if (limit >= 1000) return `${(limit / 1000).toFixed(0)}K`;
   return String(limit);
-}
-
-function nullablePrice(value?: number | null) {
-  return value === null || value === undefined ? '-' : `$${value.toFixed(2)}`;
 }
 
 const panelSx = {

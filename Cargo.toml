@@ -2,6 +2,7 @@
 members = [
     "apps/hook_backend",
     "crates/api_token",
+    "crates/captcha",
     "crates/config",
     "crates/constants",
     "crates/group",
@@ -28,6 +29,7 @@ async-trait = "0.1.89"
 axum = { version = "0.8.9", features = ["ws"] }
 bcrypt = "0.17.1"
 api_token = { path = "crates/api_token" }
+captcha = { path = "crates/captcha" }
 config_rs = { package = "config", version = "0.15.22", default-features = false, features = ["yaml"] }
 configuration = { path = "crates/config" }
 constants = { path = "crates/constants" }

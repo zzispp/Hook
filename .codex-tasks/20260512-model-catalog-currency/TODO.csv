@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate pricing and currency data flow,DONE,Root cause is identified from current source,rg-based source inspection,2026-05-12,0,Model catalog hardcodes USD formatting and user page has no display currency endpoint
+2,Implement minimal fix,DONE,Model catalog uses configured currency source consistently,targeted code edit,2026-05-12,0,Added authenticated display-currency endpoint and wired model catalog pricing to shared currency formatter
+3,Run verification,DONE,Relevant checks pass or failures are reported with evidence,cargo check -p backend; pnpm lint:frontend; pnpm build:frontend; just test; git diff --check,2026-05-12,0,All validation commands passed; frontend build logs existing Axios unauthorized with exit 0

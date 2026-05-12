@@ -1,7 +1,7 @@
 'use client';
 
 import type { RequestRecord } from 'src/types/provider';
-import type { CurrencyDisplay } from './currency-format';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import Stack from '@mui/material/Stack';

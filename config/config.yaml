@@ -34,10 +34,25 @@ auth:
       path_pattern: "/api/auth/sign-up"
     - methods: ["POST"]
       path_pattern: "/api/auth/refresh"
+    - methods: ["GET"]
+      path_pattern: "/api/captcha/config"
+    - methods: ["POST"]
+      path_pattern: "/api/captcha/challenge"
+    - methods: ["POST"]
+      path_pattern: "/api/captcha/redeem"
     - methods: ["GET", "POST"]
       path_pattern: "/v1/*"
     - methods: ["POST"]
       path_pattern: "/v1beta/*"
+  authenticated:
+    - methods: ["GET"]
+      path_pattern: "/api/auth/me"
+    - methods: ["GET"]
+      path_pattern: "/api/navbar"
+    - methods: ["GET"]
+      path_pattern: "/api/i18n/resources"
+    - methods: ["GET"]
+      path_pattern: "/api/settings/display-currency"
 
 security:
   provider_key_secret: "hook-local-development-provider-key-secret-change-before-deploy"

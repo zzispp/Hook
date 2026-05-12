@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate config and auth setup,DONE,Runtime source and config schema are identified,rg and source inspection,2026-05-13,0,AuthSettings only has whitelist; startup uses AUTHENTICATED_BASE_APIS
+2,Move authenticated rules into config,DONE,Backend authorization uses settings.auth.authenticated,targeted code edit,2026-05-13,0,Added AuthSettings.authenticated and removed AUTHENTICATED_BASE_APIS runtime source
+3,Run verification,DONE,Relevant checks pass or failures are reported with evidence,cargo check -p backend; cargo test -p configuration; just test; git diff --check,2026-05-13,0,All validation commands passed; initial cargo test -p config failed because package name is configuration

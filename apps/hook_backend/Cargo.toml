@@ -7,6 +7,7 @@ edition.workspace = true
 async-trait.workspace = true
 axum.workspace = true
 api_token.workspace = true
+captcha.workspace = true
 configuration.workspace = true
 constants.workspace = true
 futures-util.workspace = true

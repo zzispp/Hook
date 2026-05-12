@@ -5,8 +5,10 @@ use axum::{
     body::{Body, to_bytes},
     http::{Method, Request, Response, StatusCode, header},
 };
+use captcha::application::{CaptchaResult, CaptchaUseCase};
 use serde_json::{Value, json};
 use tower::ServiceExt;
+use types::captcha::{CaptchaChallengeResponse, CaptchaConfigResponse, CaptchaRedeemPayload, CaptchaRedeemResponse};
 
 use super::create_router;
 use crate::{
@@ -153,7 +155,35 @@ struct SessionTokens {
 fn test_router() -> Router {
     let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
     let users = UserService::new(repository, TestPasswordHasher);
-    Router::new().nest("/api", create_router(ApiState::new(Arc::new(users), token_service())))
+    Router::new().nest("/api", create_router(ApiState::new(Arc::new(users), token_service(), Arc::new(TestCaptcha))))
+}
+
+struct TestCaptcha;
+
+#[async_trait::async_trait]
+impl CaptchaUseCase for TestCaptcha {
+    async fn config(&self) -> CaptchaResult<CaptchaConfigResponse> {
+        Ok(CaptchaConfigResponse {
+            login_captcha_enabled: false,
+            registration_captcha_enabled: false,
+        })
+    }
+
+    async fn challenge(&self) -> CaptchaResult<CaptchaChallengeResponse> {
+        unimplemented!("auth route tests do not call captcha challenge")
+    }
+
+    async fn redeem(&self, _payload: CaptchaRedeemPayload) -> CaptchaResult<CaptchaRedeemResponse> {
+        unimplemented!("auth route tests do not call captcha redeem")
+    }
+
+    async fn verify_login(&self, _token: Option<&str>) -> CaptchaResult<()> {
+        Ok(())
+    }
+
+    async fn verify_registration(&self, _token: Option<&str>) -> CaptchaResult<()> {
+        Ok(())
+    }
 }
 
 fn token_service() -> TokenService {

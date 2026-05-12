@@ -5,7 +5,10 @@ import axios from 'axios';
 import { CONFIG } from 'src/global-config';
 
 import { JWT_REFRESH_ENDPOINT } from 'src/auth/context/jwt/constant';
-import { installJwtInterceptors, retryAfterUnauthorized } from 'src/auth/context/jwt/axios-interceptors';
+import {
+  installJwtInterceptors,
+  retryAfterUnauthorized,
+} from 'src/auth/context/jwt/axios-interceptors';
 
 // ----------------------------------------------------------------------
 
@@ -111,6 +114,10 @@ export const endpoints = {
     signIn: '/api/auth/sign-in',
     signUp: '/api/auth/sign-up',
   },
+  captcha: {
+    config: '/api/captcha/config',
+    apiEndpoint: '/api/captcha/',
+  },
   navbar: '/api/navbar',
   i18n: {
     resources: '/api/i18n/resources',
@@ -141,6 +148,9 @@ export const endpoints = {
   },
   models: {
     catalog: '/api/models/catalog',
+  },
+  settings: {
+    displayCurrency: '/api/settings/display-currency',
   },
   adminGroups: {
     list: '/api/admin/groups',

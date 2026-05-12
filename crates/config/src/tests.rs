@@ -180,7 +180,10 @@ fn settings_with_database(database: DatabaseSettings) -> Settings {
         database,
         jwt: jwt_settings(),
         admin: admin_settings(),
-        auth: AuthSettings { whitelist: vec![] },
+        auth: AuthSettings {
+            whitelist: vec![],
+            authenticated: vec![],
+        },
         security: security_settings(),
         redis: redis_settings(),
         tracing: tracing_settings(),

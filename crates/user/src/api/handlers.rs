@@ -7,6 +7,7 @@ use constants::auth::{DEFAULT_USER_IS_ACTIVE, DEFAULT_USER_ROLE};
 use serde::Serialize;
 
 use crate::api::{ApiState, TokenPair, error::ApiError};
+use crate::application::AppError;
 use types::{
     pagination::PageRequest,
     response::ApiResponse,
@@ -38,12 +39,14 @@ pub struct MeResponse {
 }
 
 pub async fn sign_up(State(state): State<ApiState>, Json(payload): Json<SignUpPayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
+    verify_registration_captcha(&state, payload.captcha_token.as_deref()).await?;
     let user = state.users.sign_up(new_sign_up_user(payload)).await?;
     let tokens = state.tokens.issue_pair(user.id.clone())?;
     Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
 }
 
 pub async fn sign_in(State(state): State<ApiState>, Json(payload): Json<SignInPayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
+    verify_login_captcha(&state, payload.captcha_token.as_deref()).await?;
     let user = state.users.sign_in(payload.into()).await?;
     let tokens = state.tokens.issue_pair(user.id.clone())?;
     Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
@@ -123,6 +126,21 @@ fn new_sign_up_user(payload: SignUpPayload) -> NewUser {
 
 fn user_ids(users: &[User]) -> Vec<String> {
     users.iter().filter(|user| !user.system).map(|user| user.id.0.clone()).collect()
+}
+
+async fn verify_login_captcha(state: &ApiState, token: Option<&str>) -> ApiResult<()> {
+    state.captcha.verify_login(token).await.map_err(captcha_error)
+}
+
+async fn verify_registration_captcha(state: &ApiState, token: Option<&str>) -> ApiResult<()> {
+    state.captcha.verify_registration(token).await.map_err(captcha_error)
+}
+
+fn captcha_error(error: captcha::application::CaptchaError) -> ApiError {
+    match error {
+        captcha::application::CaptchaError::InvalidInput(message) => ApiError(AppError::InvalidInput(message)),
+        captcha::application::CaptchaError::Infrastructure(message) => ApiError(AppError::Infrastructure(message)),
+    }
 }
 
 impl AuthSessionResponse {

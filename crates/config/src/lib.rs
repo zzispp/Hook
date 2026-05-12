@@ -59,6 +59,7 @@ pub struct AdminSettings {
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct AuthSettings {
     pub whitelist: Vec<AuthWhitelistRule>,
+    pub authenticated: Vec<AuthWhitelistRule>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]

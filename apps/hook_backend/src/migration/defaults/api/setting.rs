@@ -2,6 +2,12 @@ use super::ApiDefinition;
 
 pub const SETTING_APIS: &[ApiDefinition] = &[
     ApiDefinition {
+        code: "system_display_currency_read",
+        method: "GET",
+        path_pattern: "/api/settings/display-currency",
+        name: "读取显示货币",
+    },
+    ApiDefinition {
         code: "system_settings_read",
         method: "GET",
         path_pattern: "/api/admin/settings/system",

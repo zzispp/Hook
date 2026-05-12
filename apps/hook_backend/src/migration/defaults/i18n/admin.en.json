@@ -707,15 +707,25 @@
       "site": "Site information",
       "base": "Base configuration",
       "tokens": "Token configuration",
+      "requestRecord": "Request records",
       "cleanup": "Cleanup policy"
     },
     "fields": {
       "siteName": "Site name",
       "siteSubtitle": "Site subtitle",
       "allowRegistration": "Allow registration",
+      "loginCaptchaEnabled": "Enable login CAPTCHA",
+      "registrationCaptchaEnabled": "Enable registration CAPTCHA",
       "autoDeleteExpiredTokens": "Auto-delete expired tokens",
       "requestRecordRetentionDays": "Request record retention days",
       "requestRecordPayloadRetentionDays": "Request header/body/response retention days",
+      "requestRecordLevel": "Record detail level",
+      "maxRequestBodySizeKb": "Max request body size (KB)",
+      "maxResponseBodySizeKb": "Max response body size (KB)",
+      "sensitiveRequestHeaders": "Sensitive request headers",
+      "recordRequestHeaders": "Record request headers",
+      "recordRequestBody": "Record request body",
+      "recordResponseBody": "Record response body",
       "defaultUserGrant": "Default user initial grant",
       "defaultRateLimitRpm": "Default rate limit",
       "currency": "Display currency"
@@ -726,7 +736,17 @@
       "defaultUserGrant": "Added to the gift balance after sign-up and recorded in the wallet ledger.",
       "defaultRateLimitRpm": "Requests per minute; 0 means unlimited by system default.",
       "requestRecordRetentionDays": "Deletes the whole request record after this many days.",
-      "requestRecordPayloadRetentionDays": "Clears request headers, request body, and response body after this many days while keeping the record."
+      "requestRecordPayloadRetentionDays": "Clears request headers, request body, and response body after this many days while keeping the record.",
+      "requestRecordLevel": "Sensitive information is redacted automatically.",
+      "maxRequestBodySizeKb": "Request bodies larger than this are truncated before recording.",
+      "maxResponseBodySizeKb": "Response bodies larger than this are truncated before recording.",
+      "sensitiveRequestHeaders": "Comma-separated headers that will be redacted."
+    },
+    "requestRecord": {
+      "description": "Controls how request/response details are stored and what is recorded.",
+      "levels": {
+        "basic": "BASIC - Basic information (~1KB/record)"
+      }
     }
   },
   "translations": {

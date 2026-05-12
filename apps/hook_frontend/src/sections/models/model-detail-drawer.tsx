@@ -3,6 +3,7 @@
 import type { Theme } from '@mui/material/styles';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import { varAlpha } from 'minimal-shared/utils';
 
@@ -23,10 +24,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { ModelCopyButton } from './model-copy-button';
 import { ModelPricingSection } from './model-pricing-section';
 import { ModelGroupPricingSection } from './model-group-pricing-section';
-import {
-  hasCapability,
-  MODEL_DETAIL_CAPABILITIES,
-} from './model-catalog-utils';
+import { hasCapability, MODEL_DETAIL_CAPABILITIES } from './model-catalog-utils';
 
 // ----------------------------------------------------------------------
 
@@ -35,6 +33,7 @@ type Props = {
   groups: BillingGroup[];
   groupsLoading: boolean;
   groupsErrorMessage?: string;
+  currencyDisplay?: CurrencyDisplay;
   open: boolean;
   onClose: () => void;
   onExited: () => void;
@@ -45,17 +44,13 @@ export function ModelDetailDrawer({
   groups,
   groupsLoading,
   groupsErrorMessage,
+  currencyDisplay,
   open,
   onClose,
   onExited,
 }: Props) {
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      slotProps={drawerSlotProps(onExited)}
-    >
+    <Drawer anchor="right" open={open} onClose={onClose} slotProps={drawerSlotProps(onExited)}>
       {model ? (
         <>
           <DrawerHeader onClose={onClose} />
@@ -63,12 +58,13 @@ export function ModelDetailDrawer({
             <Stack spacing={3} sx={contentSx}>
               <ModelSummary model={model} />
               <CapabilitySection model={model} />
-              <ModelPricingSection model={model} />
+              <ModelPricingSection model={model} currencyDisplay={currencyDisplay} />
               <ModelGroupPricingSection
                 model={model}
                 groups={groups}
                 loading={groupsLoading}
                 errorMessage={groupsErrorMessage}
+                currencyDisplay={currencyDisplay}
               />
             </Stack>
           </Scrollbar>
@@ -162,7 +158,10 @@ function CapabilityItem({
 
   return (
     <Stack direction="row" alignItems="center" spacing={1.5} sx={capabilityPanelSx}>
-      <Iconify width={22} icon={supported ? 'solar:check-circle-bold' : 'solar:forbidden-circle-bold'} />
+      <Iconify
+        width={22}
+        icon={supported ? 'solar:check-circle-bold' : 'solar:forbidden-circle-bold'}
+      />
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography variant="subtitle2" noWrap>
           {title}

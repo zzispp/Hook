@@ -1,0 +1,8 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Clone and inspect Cap source,DONE,"Cap repo is cloned under raw/ and relevant client/server behavior is summarized","test -d .codex-tasks/20260512-login-register-captcha/raw/cap",2026-05-13T00:01:51+08:00,0,"Cap format-1 uses challenge/redeem endpoints; widget can consume raw Cap-compatible responses."
+2,Map existing auth settings and i18n architecture,DONE,"Relevant backend routes services frontend pages settings config and i18n seed paths are identified","rg -n \"login|register|system|i18n\" apps crates config -S",2026-05-13T00:03:31+08:00,0,"Auth lives in crates/user; settings persistence spans types/storage/setting/migration/frontend; admin copy is backend seed JSON."
+3,Implement backend captcha service and endpoints,DONE,"Rust backend exposes challenge and verification flow without mock fallback","cargo check -p backend && cargo test -p captcha",2026-05-13T00:14:32+08:00,0,"`just` is not installed in this environment; targeted backend check and captcha unit test passed."
+4,Wire auth flows to captcha setting,IN_PROGRESS,"Login/register require captcha only when the setting is enabled","timeout 60 cargo test -p user",,0,
+5,Add frontend captcha widget and auth integration,TODO,"Login/register show and submit captcha token when enabled","pnpm lint:frontend",,0,
+6,Add base settings switch and backend i18n seeds,TODO,"System base settings UI persists captcha switch and copy comes from backend resources","pnpm lint:frontend",,0,
+7,Run final validation and summarize,TODO,"All feasible validation has been run and results are recorded","timeout 60 just test && pnpm lint:frontend",,0,

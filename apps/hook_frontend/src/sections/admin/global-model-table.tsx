@@ -1,7 +1,7 @@
 'use client';
 
-import type { CurrencyDisplay } from './currency-format';
 import type { GlobalModelResponse } from 'src/types/model';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import Box from '@mui/material/Box';
@@ -15,6 +15,8 @@ import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { formatMoneyCompact } from 'src/utils/currency-format';
+
 import { useTranslate } from 'src/locales/use-locales';
 import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-settings';
 
@@ -22,18 +24,9 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
-import { formatMoneyCompact } from './currency-format';
 import { ModelCopyButton } from '../models/model-copy-button';
-import {
-  EnabledLabel,
-  TableLoadingRows,
-  ManagementTableHead,
-} from './shared';
-import {
-  firstTier,
-  formFromModel,
-  capabilitiesFromForm,
-} from './model-management-utils';
+import { EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
+import { firstTier, formFromModel, capabilitiesFromForm } from './model-management-utils';
 
 // ----------------------------------------------------------------------
 
@@ -128,7 +121,8 @@ function GlobalModelTableRow({
       <TableCell>
         <Stack spacing={0.25}>
           <Typography variant="body2">
-            {formatPrice(tier?.input_price_per_1m, currencyDisplay)} / {formatPrice(tier?.output_price_per_1m, currencyDisplay)}
+            {formatPrice(tier?.input_price_per_1m, currencyDisplay)} /{' '}
+            {formatPrice(tier?.output_price_per_1m, currencyDisplay)}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {t('models.inputOutputPrice')}

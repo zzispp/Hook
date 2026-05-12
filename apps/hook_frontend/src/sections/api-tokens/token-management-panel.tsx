@@ -1,8 +1,8 @@
 'use client';
 
 import type { ApiTokenFilters } from 'src/actions/api-tokens';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { TokenFilterState } from './api-token-filters-toolbar';
-import type { CurrencyDisplay } from 'src/sections/admin/currency-format';
 import type {
   TokenScope,
   TokenModelOption,

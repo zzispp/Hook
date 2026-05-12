@@ -2,7 +2,7 @@
 
 import type { ApiToken } from 'src/types/api-token';
 import type { DisplayCurrency } from 'src/types/system-setting';
-import type { CurrencyDisplay } from 'src/sections/admin/currency-format';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import Box from '@mui/material/Box';
@@ -15,13 +15,14 @@ import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { formatMoney } from 'src/utils/currency-format';
+
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
-import { formatMoney } from '../admin/currency-format';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from '../admin/shared';
 import { formatTime, formatInteger, formatCurrency } from './api-token-management-utils';
 

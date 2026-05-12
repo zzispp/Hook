@@ -1,8 +1,8 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
-import type { CurrencyDisplay } from './currency-format';
 import type { ProviderModelBinding } from 'src/types/provider';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { GlobalModelResponse, TieredPricingConfig } from 'src/types/model';
 
 import { useState } from 'react';
@@ -17,6 +17,8 @@ import TableBody from '@mui/material/TableBody';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { formatMoneyCompact } from 'src/utils/currency-format';
+
 import { useTranslate } from 'src/locales/use-locales';
 import { updateProviderModel } from 'src/actions/providers';
 import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-settings';
@@ -25,7 +27,6 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
 import { EmptyList } from './provider-bindings-shared';
-import { formatMoneyCompact } from './currency-format';
 import { GlobalModelPriceDialog } from './provider-model-price-dialog';
 
 type Props = {
@@ -36,7 +37,13 @@ type Props = {
   onAssociate: () => void;
 };
 
-export function ProviderModelBindingsSection({ providerId, items, loading, models, onAssociate }: Props) {
+export function ProviderModelBindingsSection({
+  providerId,
+  items,
+  loading,
+  models,
+  onAssociate,
+}: Props) {
   const { t } = useTranslate('admin');
   const settings = useSystemSettings();
   const exchangeRate = useUsdCnyExchangeRate(settings.data?.currency === 'CNY');
@@ -51,7 +58,13 @@ export function ProviderModelBindingsSection({ providerId, items, loading, model
     <Box sx={panelSx}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={headerSx}>
         <Typography variant="subtitle2">{t('providers.modelList')}</Typography>
-        <Button color="inherit" variant="outlined" size="small" startIcon={<Iconify icon="solar:list-bold" />} onClick={onAssociate}>
+        <Button
+          color="inherit"
+          variant="outlined"
+          size="small"
+          startIcon={<Iconify icon="solar:list-bold" />}
+          onClick={onAssociate}
+        >
           {t('actions.associateProviderModels')}
         </Button>
       </Stack>
@@ -106,7 +119,11 @@ function ProviderModelRow({
     setToggling(true);
     try {
       await updateProviderModel(providerId, binding.id, { is_active: !binding.is_active });
-      toast.success(!binding.is_active ? t('messages.providerModelEnabled') : t('messages.providerModelDisabled'));
+      toast.success(
+        !binding.is_active
+          ? t('messages.providerModelEnabled')
+          : t('messages.providerModelDisabled')
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
     } finally {
@@ -118,16 +135,27 @@ function ProviderModelRow({
     <TableRow hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
       <TableCell sx={modelCellSx}>
         <Stack direction="row" spacing={1.25} alignItems="flex-start">
-          <Box title={modelStatusTitle(binding, model, t)} sx={statusDotSx(active, binding.is_active)} />
+          <Box
+            title={modelStatusTitle(binding, model, t)}
+            sx={statusDotSx(active, binding.is_active)}
+          />
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="subtitle2" noWrap>
               {model?.display_name || binding.provider_model_name}
             </Typography>
             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5, minWidth: 0 }}>
-              <Typography variant="caption" noWrap sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{ fontFamily: 'monospace', color: 'text.secondary' }}
+              >
                 {binding.provider_model_name}
               </Typography>
-              <IconButton size="small" title={t('models.copyModelId')} onClick={() => void copyModelId(binding.provider_model_name, t)}>
+              <IconButton
+                size="small"
+                title={t('models.copyModelId')}
+                onClick={() => void copyModelId(binding.provider_model_name, t)}
+              >
                 <Iconify icon="solar:copy-bold" width={14} />
               </IconButton>
             </Stack>
@@ -137,13 +165,27 @@ function ProviderModelRow({
       <TableCell sx={pricingCellSx}>{pricingLines(model, t, currencyDisplay)}</TableCell>
       <TableCell sx={actionCellSx}>
         <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
-          <IconButton size="small" title={t('providers.testModel')} onClick={() => toast.error(t('providers.modelTestUnavailable'))}>
+          <IconButton
+            size="small"
+            title={t('providers.testModel')}
+            onClick={() => toast.error(t('providers.modelTestUnavailable'))}
+          >
             <Iconify icon="solar:play-circle-bold" width={16} />
           </IconButton>
-          <IconButton size="small" disabled={!model} title={t('common.edit')} onClick={() => model && onEdit(model)}>
+          <IconButton
+            size="small"
+            disabled={!model}
+            title={t('common.edit')}
+            onClick={() => model && onEdit(model)}
+          >
             <Iconify icon="solar:pen-bold" width={16} />
           </IconButton>
-          <IconButton size="small" disabled={toggling} title={binding.is_active ? t('providers.disableModel') : t('providers.enableModel')} onClick={toggleActive}>
+          <IconButton
+            size="small"
+            disabled={toggling}
+            title={binding.is_active ? t('providers.disableModel') : t('providers.enableModel')}
+            onClick={toggleActive}
+          >
             <Iconify icon="ic:round-power-settings-new" width={16} />
           </IconButton>
         </Stack>
@@ -152,10 +194,24 @@ function ProviderModelRow({
   );
 }
 
-function pricingLines(model: GlobalModelResponse | undefined, t: (key: string) => string, currencyDisplay: CurrencyDisplay) {
+function pricingLines(
+  model: GlobalModelResponse | undefined,
+  t: (key: string) => string,
+  currencyDisplay: CurrencyDisplay
+) {
   const requestPrice = model?.default_price_per_request;
   const tiers = model?.default_tiered_pricing;
-  if (requestPrice && requestPrice > 0) return <PriceGrid rows={[[t('providers.pricePerRequest'), `${formatPrice(requestPrice, currencyDisplay)}/${t('providers.perRequest')}`]]} />;
+  if (requestPrice && requestPrice > 0)
+    return (
+      <PriceGrid
+        rows={[
+          [
+            t('providers.pricePerRequest'),
+            `${formatPrice(requestPrice, currencyDisplay)}/${t('providers.perRequest')}`,
+          ],
+        ]}
+      />
+    );
   const tier = tiers?.tiers?.[0];
   if (!tier) return <Typography variant="caption">-</Typography>;
   return <PriceGrid rows={tierRows(tier, t, currencyDisplay)} />;
@@ -178,18 +234,35 @@ function PriceGrid({ rows }: { rows: string[][] }) {
   );
 }
 
-function tierRows(tier: TieredPricingConfig['tiers'][number], t: (key: string) => string, currencyDisplay: CurrencyDisplay) {
-  const rows = [[t('providers.inputOutputPrice'), `${formatPrice(tier.input_price_per_1m, currencyDisplay)}/${formatPrice(tier.output_price_per_1m, currencyDisplay)}`]];
+function tierRows(
+  tier: TieredPricingConfig['tiers'][number],
+  t: (key: string) => string,
+  currencyDisplay: CurrencyDisplay
+) {
+  const rows = [
+    [
+      t('providers.inputOutputPrice'),
+      `${formatPrice(tier.input_price_per_1m, currencyDisplay)}/${formatPrice(tier.output_price_per_1m, currencyDisplay)}`,
+    ],
+  ];
   if ((tier.cache_creation_price_per_1m ?? 0) > 0 || (tier.cache_read_price_per_1m ?? 0) > 0) {
-    rows.push([t('providers.cachePrice'), `${formatPrice(tier.cache_creation_price_per_1m, currencyDisplay)}/${formatPrice(tier.cache_read_price_per_1m, currencyDisplay)}`]);
+    rows.push([
+      t('providers.cachePrice'),
+      `${formatPrice(tier.cache_creation_price_per_1m, currencyDisplay)}/${formatPrice(tier.cache_read_price_per_1m, currencyDisplay)}`,
+    ]);
   }
   const ttl = tier.cache_ttl_pricing?.find((item) => item.ttl_minutes === 60);
-  if ((ttl?.cache_creation_price_per_1m ?? 0) > 0) rows.push([t('providers.cache1hCreationPrice'), formatPrice(ttl?.cache_creation_price_per_1m, currencyDisplay)]);
+  if ((ttl?.cache_creation_price_per_1m ?? 0) > 0)
+    rows.push([
+      t('providers.cache1hCreationPrice'),
+      formatPrice(ttl?.cache_creation_price_per_1m, currencyDisplay),
+    ]);
   return rows;
 }
 
 function compareBindings(models: GlobalModelResponse[]) {
-  return (left: ProviderModelBinding, right: ProviderModelBinding) => modelName(left, models).localeCompare(modelName(right, models));
+  return (left: ProviderModelBinding, right: ProviderModelBinding) =>
+    modelName(left, models).localeCompare(modelName(right, models));
 }
 
 function modelName(binding: ProviderModelBinding, models: GlobalModelResponse[]) {
@@ -201,7 +274,11 @@ function findGlobalModel(models: GlobalModelResponse[], id: string) {
   return models.find((model) => model.id === id);
 }
 
-function modelStatusTitle(binding: ProviderModelBinding, model: GlobalModelResponse | undefined, t: (key: string) => string) {
+function modelStatusTitle(
+  binding: ProviderModelBinding,
+  model: GlobalModelResponse | undefined,
+  t: (key: string) => string
+) {
   if (!binding.is_active) return t('common.disabled');
   if (model?.is_active === false) return t('providers.globalModelDisabled');
   return t('providers.activeAndAvailable');
@@ -221,15 +298,35 @@ function formatPrice(value: number | null | undefined, currencyDisplay: Currency
   return formatMoneyCompact(value, currencyDisplay);
 }
 
-const panelSx = { border: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 2, overflow: 'hidden' };
-const headerSx = { px: 2, py: 1.5, borderBottom: (theme: Theme) => `1px solid ${theme.vars.palette.divider}` };
+const panelSx = {
+  border: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`,
+  borderRadius: 2,
+  overflow: 'hidden',
+};
+const headerSx = {
+  px: 2,
+  py: 1.5,
+  borderBottom: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`,
+};
 const modelCellSx = { verticalAlign: 'top', px: 2, py: 1.5 };
 const pricingCellSx = { verticalAlign: 'top', px: 2, py: 1.5, whiteSpace: 'nowrap' };
 const actionCellSx = { verticalAlign: 'top', px: 2, py: 1.5 };
-const priceGridSx = { display: 'grid', gridTemplateColumns: 'max-content max-content', columnGap: 1, rowGap: 0.5 };
+const priceGridSx = {
+  display: 'grid',
+  gridTemplateColumns: 'max-content max-content',
+  columnGap: 1,
+  rowGap: 0.5,
+};
 const priceLabelSx = { textAlign: 'left', color: 'text.secondary', minWidth: 0 };
 const priceValueSx = { fontFamily: 'monospace', fontWeight: 600 };
 
 function statusDotSx(active: boolean, bindingActive: boolean) {
-  return { width: 8, height: 8, mt: 0.75, borderRadius: '50%', flexShrink: 0, bgcolor: active ? 'success.main' : bindingActive ? 'error.main' : 'text.disabled' };
+  return {
+    width: 8,
+    height: 8,
+    mt: 0.75,
+    borderRadius: '50%',
+    flexShrink: 0,
+    bgcolor: active ? 'success.main' : bindingActive ? 'error.main' : 'text.disabled',
+  };
 }

@@ -7,7 +7,6 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
-import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -16,7 +15,9 @@ import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-value
 
 import { Iconify } from 'src/components/iconify';
 
+import { SettingsSection } from './system-settings-section';
 import { useSystemSettingsForm } from './system-settings-state';
+import { RequestRecordSection } from './system-settings-request-record-section';
 import { SwitchRow, TextFieldRow, RefreshButton, AdminBreadcrumbs } from './shared';
 
 export function SystemSettingsView() {
@@ -50,6 +51,8 @@ export function SystemSettingsView() {
           <BaseSection form={form.form} setForm={form.setForm} />
           <Divider />
           <TokenSection form={form.form} setForm={form.setForm} />
+          <Divider />
+          <RequestRecordSection form={form.form} setForm={form.setForm} />
           <Divider />
           <CleanupSection form={form.form} setForm={form.setForm} />
         </Stack>
@@ -114,6 +117,20 @@ function BaseSection({
           label={t('systemSettings.fields.allowRegistration')}
           onChange={(checked) =>
             setForm((current) => ({ ...current, allow_registration: checked }))
+          }
+        />
+        <SwitchRow
+          checked={form.login_captcha_enabled}
+          label={t('systemSettings.fields.loginCaptchaEnabled')}
+          onChange={(checked) =>
+            setForm((current) => ({ ...current, login_captcha_enabled: checked }))
+          }
+        />
+        <SwitchRow
+          checked={form.registration_captcha_enabled}
+          label={t('systemSettings.fields.registrationCaptchaEnabled')}
+          onChange={(checked) =>
+            setForm((current) => ({ ...current, registration_captcha_enabled: checked }))
           }
         />
         <TextFieldRow
@@ -193,14 +210,5 @@ function CleanupSection({
         />
       </Stack>
     </SettingsSection>
-  );
-}
-
-function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Stack spacing={2}>
-      <Typography variant="subtitle1">{title}</Typography>
-      {children}
-    </Stack>
   );
 }

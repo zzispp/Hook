@@ -1,4 +1,8 @@
-import type { DisplayCurrency, ExchangeRateResponse } from 'src/types/system-setting';
+import type {
+  DisplayCurrency,
+  ExchangeRateResponse,
+  CurrencyDisplayResponse,
+} from 'src/types/system-setting';
 
 export type CurrencyDisplay = {
   currency: DisplayCurrency;
@@ -7,6 +11,19 @@ export type CurrencyDisplay = {
 };
 
 const DISPLAY_DIGITS = 6;
+
+export function currencyDisplayFromResponse(
+  response: CurrencyDisplayResponse | undefined,
+  unavailableLabel?: string
+) {
+  if (!response) return undefined;
+
+  return {
+    currency: response.currency,
+    usdCnyRate: response.usd_cny_rate ?? undefined,
+    unavailableLabel,
+  } satisfies CurrencyDisplay;
+}
 
 export function formatMoney(value: number | null | undefined, display: CurrencyDisplay) {
   const amount = displayAmount(value, display);

@@ -2,6 +2,7 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { BillingGroup } from 'src/types/group';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { PricingTier, GlobalModelResponse } from 'src/types/model';
 
 import Box from '@mui/material/Box';
@@ -21,9 +22,16 @@ type Props = {
   groups: BillingGroup[];
   loading: boolean;
   errorMessage?: string;
+  currencyDisplay?: CurrencyDisplay;
 };
 
-export function ModelGroupPricingSection({ model, groups, loading, errorMessage }: Props) {
+export function ModelGroupPricingSection({
+  model,
+  groups,
+  loading,
+  errorMessage,
+  currencyDisplay,
+}: Props) {
   const { t } = useTranslate('admin');
 
   return (
@@ -33,7 +41,12 @@ export function ModelGroupPricingSection({ model, groups, loading, errorMessage 
       {!loading && !errorMessage ? (
         <Stack spacing={1.5}>
           {groups.map((group) => (
-            <GroupPriceCard key={group.id} model={model} group={group} />
+            <GroupPriceCard
+              key={group.id}
+              model={model}
+              group={group}
+              currencyDisplay={currencyDisplay}
+            />
           ))}
         </Stack>
       ) : null}
@@ -70,7 +83,15 @@ function GroupPricingState({
   return null;
 }
 
-function GroupPriceCard({ model, group }: { model: GlobalModelResponse; group: BillingGroup }) {
+function GroupPriceCard({
+  model,
+  group,
+  currencyDisplay,
+}: {
+  model: GlobalModelResponse;
+  group: BillingGroup;
+  currencyDisplay?: CurrencyDisplay;
+}) {
   const pricing = model.default_tiered_pricing;
 
   return (
@@ -78,9 +99,19 @@ function GroupPriceCard({ model, group }: { model: GlobalModelResponse; group: B
       <GroupHeading group={group} />
       <Stack spacing={1}>
         {pricing.tiers.map((tier, index) => (
-          <GroupTierPrice key={`${group.code}-${tier.up_to ?? 'open'}-${index}`} tier={tier} index={index} multiplier={group.billing_multiplier} />
+          <GroupTierPrice
+            key={`${group.code}-${tier.up_to ?? 'open'}-${index}`}
+            tier={tier}
+            index={index}
+            multiplier={group.billing_multiplier}
+            currencyDisplay={currencyDisplay}
+          />
         ))}
-        <GroupRequestPrice value={model.default_price_per_request} multiplier={group.billing_multiplier} />
+        <GroupRequestPrice
+          value={model.default_price_per_request}
+          multiplier={group.billing_multiplier}
+          currencyDisplay={currencyDisplay}
+        />
       </Stack>
     </Stack>
   );
@@ -111,10 +142,12 @@ function GroupTierPrice({
   tier,
   index,
   multiplier,
+  currencyDisplay,
 }: {
   tier: PricingTier;
   index: number;
   multiplier: number;
+  currencyDisplay?: CurrencyDisplay;
 }) {
   const { t } = useTranslate('admin');
 
@@ -123,27 +156,59 @@ function GroupTierPrice({
       <Typography variant="caption" color="text.secondary">
         {t('models.tierTitle', { index: index + 1 })}
       </Typography>
-      <Grid container spacing={1}>
-        <Grid size={{ xs: 12 }}>
-          <PriceLine label={t('fields.inputPrice')} value={multipliedPrice(tier.input_price_per_1m, multiplier)} />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <PriceLine label={t('fields.outputPrice')} value={multipliedPrice(tier.output_price_per_1m, multiplier)} />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <PriceLine label={t('fields.cacheCreationPrice')} value={multipliedPrice(tier.cache_creation_price_per_1m, multiplier)} />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <PriceLine label={t('fields.cacheReadPrice')} value={multipliedPrice(tier.cache_read_price_per_1m, multiplier)} />
-        </Grid>
-      </Grid>
+      <GroupTierPriceGrid tier={tier} multiplier={multiplier} currencyDisplay={currencyDisplay} />
     </Stack>
   );
 }
 
-function GroupRequestPrice({ value, multiplier }: { value?: number | null; multiplier: number }) {
+function GroupTierPriceGrid({
+  tier,
+  multiplier,
+  currencyDisplay,
+}: {
+  tier: PricingTier;
+  multiplier: number;
+  currencyDisplay?: CurrencyDisplay;
+}) {
   const { t } = useTranslate('admin');
-  const price = value ? requestPrice(value * multiplier) : null;
+  const rows = [
+    [t('fields.inputPrice'), multipliedPrice(tier.input_price_per_1m, multiplier, currencyDisplay)],
+    [
+      t('fields.outputPrice'),
+      multipliedPrice(tier.output_price_per_1m, multiplier, currencyDisplay),
+    ],
+    [
+      t('fields.cacheCreationPrice'),
+      multipliedPrice(tier.cache_creation_price_per_1m, multiplier, currencyDisplay),
+    ],
+    [
+      t('fields.cacheReadPrice'),
+      multipliedPrice(tier.cache_read_price_per_1m, multiplier, currencyDisplay),
+    ],
+  ];
+
+  return (
+    <Grid container spacing={1}>
+      {rows.map(([label, value]) => (
+        <Grid key={label} size={{ xs: 12 }}>
+          <PriceLine label={label} value={value} />
+        </Grid>
+      ))}
+    </Grid>
+  );
+}
+
+function GroupRequestPrice({
+  value,
+  multiplier,
+  currencyDisplay,
+}: {
+  value?: number | null;
+  multiplier: number;
+  currencyDisplay?: CurrencyDisplay;
+}) {
+  const { t } = useTranslate('admin');
+  const price = value ? requestPrice(value * multiplier, currencyDisplay) : null;
   if (!price) return null;
 
   return (
@@ -166,12 +231,21 @@ function PriceLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function multipliedPrice(value: number | null | undefined, multiplier: number) {
-  return formatPrice(value === null || value === undefined ? value : value * multiplier);
+function multipliedPrice(
+  value: number | null | undefined,
+  multiplier: number,
+  currencyDisplay?: CurrencyDisplay
+) {
+  return formatPrice(
+    value === null || value === undefined ? value : value * multiplier,
+    currencyDisplay
+  );
 }
 
 function formatMultiplier(value: number) {
-  return Number.isInteger(value) ? String(value) : value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
 
 const panelSx = {
