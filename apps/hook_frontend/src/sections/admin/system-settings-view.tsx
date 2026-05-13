@@ -17,6 +17,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { SettingsSection } from './system-settings-section';
 import { useSystemSettingsForm } from './system-settings-state';
+import { EmailSettingsSection } from './system-settings-email-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { SwitchRow, TextFieldRow, RefreshButton, AdminBreadcrumbs } from './shared';
 
@@ -49,6 +50,8 @@ export function SystemSettingsView() {
           <SiteSection form={form.form} setForm={form.setForm} />
           <Divider />
           <BaseSection form={form.form} setForm={form.setForm} />
+          <Divider />
+          <EmailSettingsSection form={form.form} setForm={form.setForm} />
           <Divider />
           <TokenSection form={form.form} setForm={form.setForm} />
           <Divider />
@@ -131,6 +134,16 @@ function BaseSection({
           label={t('systemSettings.fields.registrationCaptchaEnabled')}
           onChange={(checked) =>
             setForm((current) => ({ ...current, registration_captcha_enabled: checked }))
+          }
+        />
+        <SwitchRow
+          checked={form.registration_email_verification_enabled}
+          label={t('systemSettings.fields.registrationEmailVerificationEnabled')}
+          onChange={(checked) =>
+            setForm((current) => ({
+              ...current,
+              registration_email_verification_enabled: checked,
+            }))
           }
         />
         <TextFieldRow

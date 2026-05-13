@@ -39,6 +39,7 @@ i18n = { path = "crates/i18n" }
 hex = "0.4.3"
 hook_tracing = { path = "crates/tracing" }
 jsonwebtoken = "9.3.1"
+lettre = { version = "0.11.21", default-features = false, features = ["smtp-transport", "tokio1-rustls-tls", "hostname"] }
 matchit = "0.8.4"
 rand = "0.8.5"
 rand_core = { version = "0.6.4", features = ["getrandom"] }

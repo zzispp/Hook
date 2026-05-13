@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::iden::*;
+use super::{iden::*, request_candidate_tables, setting_tables, translation_tables};
 
 pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
     vec![
@@ -10,47 +10,13 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         provider_api_keys_table(),
         provider_models_table(),
         billing_group_providers_table(),
-        system_settings_table(),
-        translation_languages_table(),
-        translation_entries_table(),
+        setting_tables::system_settings_table(),
+        translation_tables::translation_languages_table(),
+        translation_tables::translation_entries_table(),
         api_tokens_table(),
         billing_group_models_table(),
-        request_candidates_table(),
+        request_candidate_tables::request_candidates_table(),
     ]
-}
-
-fn translation_languages_table() -> TableCreateStatement {
-    Table::create()
-        .table(TranslationLanguages::Table)
-        .if_not_exists()
-        .col(string_len(TranslationLanguages::Code, 32).primary_key())
-        .col(string_len(TranslationLanguages::Name, 120))
-        .col(string_len(TranslationLanguages::NativeName, 120))
-        .col(boolean(TranslationLanguages::Enabled))
-        .col(boolean(TranslationLanguages::System))
-        .col(big_integer(TranslationLanguages::SortOrder))
-        .col(timestamp_tz(TranslationLanguages::CreatedAt))
-        .col(timestamp_tz(TranslationLanguages::UpdatedAt))
-        .to_owned()
-}
-
-fn translation_entries_table() -> TableCreateStatement {
-    let mut language_fk = translation_language_fk();
-    Table::create()
-        .table(TranslationEntries::Table)
-        .if_not_exists()
-        .col(string_len(TranslationEntries::Id, 36).primary_key())
-        .col(string_len(TranslationEntries::Namespace, 64))
-        .col(string_len(TranslationEntries::GroupKey, 120))
-        .col(string_len(TranslationEntries::ItemKey, 120))
-        .col(string_len(TranslationEntries::LangCode, 32))
-        .col(text(TranslationEntries::Value))
-        .col(text_null(TranslationEntries::Description))
-        .col(boolean(TranslationEntries::Enabled))
-        .col(timestamp_tz(TranslationEntries::CreatedAt))
-        .col(timestamp_tz(TranslationEntries::UpdatedAt))
-        .foreign_key(&mut language_fk)
-        .to_owned()
 }
 
 fn billing_groups_table() -> TableCreateStatement {
@@ -180,35 +146,6 @@ fn billing_group_providers_table() -> TableCreateStatement {
         .to_owned()
 }
 
-fn system_settings_table() -> TableCreateStatement {
-    Table::create()
-        .table(SystemSettings::Table)
-        .if_not_exists()
-        .col(string_len(SystemSettings::Id, 36).primary_key())
-        .col(string_len(SystemSettings::SiteName, 100))
-        .col(string_len(SystemSettings::SiteSubtitle, 200))
-        .col(boolean(SystemSettings::AllowRegistration))
-        .col(boolean(SystemSettings::LoginCaptchaEnabled).default(false))
-        .col(boolean(SystemSettings::RegistrationCaptchaEnabled).default(false))
-        .col(boolean(SystemSettings::AutoDeleteExpiredTokens))
-        .col(big_integer(SystemSettings::RequestRecordRetentionDays))
-        .col(big_integer(SystemSettings::RequestRecordPayloadRetentionDays))
-        .col(string_len(SystemSettings::RequestRecordLevel, 20).default("basic"))
-        .col(big_integer(SystemSettings::MaxRequestBodySizeKb).default(5120))
-        .col(big_integer(SystemSettings::MaxResponseBodySizeKb).default(5120))
-        .col(text(SystemSettings::SensitiveRequestHeaders).default("authorization, x-api-key, api-key, cookie, set-cookie"))
-        .col(boolean(SystemSettings::RecordRequestHeaders).default(false))
-        .col(boolean(SystemSettings::RecordRequestBody).default(false))
-        .col(boolean(SystemSettings::RecordResponseBody).default(false))
-        .col(decimal_len(SystemSettings::DefaultUserGrant, 20, 8))
-        .col(big_integer(SystemSettings::DefaultRateLimitRpm))
-        .col(string_len(SystemSettings::SchedulingMode, 30))
-        .col(string_len(SystemSettings::Currency, 3).default("USD"))
-        .col(timestamp_tz(SystemSettings::CreatedAt))
-        .col(timestamp_tz(SystemSettings::UpdatedAt))
-        .to_owned()
-}
-
 fn api_tokens_table() -> TableCreateStatement {
     Table::create()
         .table(ApiTokens::Table)
@@ -248,49 +185,6 @@ fn billing_group_models_table() -> TableCreateStatement {
         .col(timestamp_tz(BillingGroupModels::UpdatedAt))
         .foreign_key(&mut group_fk)
         .foreign_key(&mut model_fk)
-        .to_owned()
-}
-
-fn request_candidates_table() -> TableCreateStatement {
-    Table::create()
-        .table(RequestCandidates::Table)
-        .if_not_exists()
-        .col(string_len(RequestCandidates::Id, 36).primary_key())
-        .col(string_len(RequestCandidates::RequestId, 64))
-        .col(string_len_null(RequestCandidates::TokenId, 36))
-        .col(string_len_null(RequestCandidates::GroupCode, 64))
-        .col(string_len_null(RequestCandidates::GlobalModelId, 36))
-        .col(string_len_null(RequestCandidates::ProviderId, 36))
-        .col(string_len_null(RequestCandidates::EndpointId, 36))
-        .col(string_len_null(RequestCandidates::KeyId, 36))
-        .col(string_len(RequestCandidates::ClientApiFormat, 50))
-        .col(string_len_null(RequestCandidates::ProviderApiFormat, 50))
-        .col(boolean(RequestCandidates::NeedsConversion))
-        .col(boolean(RequestCandidates::IsStream))
-        .col(text_null(RequestCandidates::RequestHeaders))
-        .col(text_null(RequestCandidates::RequestBody))
-        .col(text_null(RequestCandidates::ResponseBody))
-        .col(integer(RequestCandidates::CandidateIndex))
-        .col(integer(RequestCandidates::RetryIndex))
-        .col(string_len(RequestCandidates::Status, 40))
-        .col(integer_null(RequestCandidates::StatusCode))
-        .col(big_integer_null(RequestCandidates::PromptTokens))
-        .col(big_integer_null(RequestCandidates::CompletionTokens))
-        .col(big_integer_null(RequestCandidates::TotalTokens))
-        .col(big_integer_null(RequestCandidates::CacheCreationInputTokens))
-        .col(big_integer_null(RequestCandidates::CacheReadInputTokens))
-        .col(string_len_null(RequestCandidates::CostCurrency, 3))
-        .col(decimal_len_null(RequestCandidates::TokenCost, 20, 8))
-        .col(decimal_len_null(RequestCandidates::BaseCost, 20, 8))
-        .col(decimal_len_null(RequestCandidates::TotalCost, 20, 8))
-        .col(decimal_len_null(RequestCandidates::BillingMultiplier, 20, 8))
-        .col(big_integer_null(RequestCandidates::LatencyMs))
-        .col(big_integer_null(RequestCandidates::FirstByteTimeMs))
-        .col(string_len_null(RequestCandidates::ErrorType, 100))
-        .col(text_null(RequestCandidates::ErrorMessage))
-        .col(timestamp_tz(RequestCandidates::CreatedAt))
-        .col(timestamp_tz_null(RequestCandidates::StartedAt))
-        .col(timestamp_tz_null(RequestCandidates::FinishedAt))
         .to_owned()
 }
 
@@ -344,16 +238,6 @@ fn billing_group_provider_group_fk() -> ForeignKeyCreateStatement {
         .name("fk_billing_group_providers_group")
         .from(BillingGroupProviders::Table, BillingGroupProviders::GroupCode)
         .to(BillingGroups::Table, BillingGroups::Code)
-        .on_delete(ForeignKeyAction::Cascade);
-    foreign_key
-}
-
-fn translation_language_fk() -> ForeignKeyCreateStatement {
-    let mut foreign_key = ForeignKey::create();
-    foreign_key
-        .name("fk_translation_entries_language")
-        .from(TranslationEntries::Table, TranslationEntries::LangCode)
-        .to(TranslationLanguages::Table, TranslationLanguages::Code)
         .on_delete(ForeignKeyAction::Cascade);
     foreign_key
 }

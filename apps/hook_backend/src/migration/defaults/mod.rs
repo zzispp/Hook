@@ -164,7 +164,12 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     },
     MenuApiBindingDefinition {
         menu_code: "admin_settings",
-        api_codes: &["system_settings_read", "system_settings_update", "system_exchange_rate_read"],
+        api_codes: &[
+            "system_settings_read",
+            "system_settings_update",
+            "system_settings_smtp_test",
+            "system_exchange_rate_read",
+        ],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_translations",

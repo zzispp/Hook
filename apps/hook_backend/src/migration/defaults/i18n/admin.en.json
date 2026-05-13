@@ -706,6 +706,7 @@
     "sections": {
       "site": "Site information",
       "base": "Base configuration",
+      "email": "Email configuration",
       "tokens": "Token configuration",
       "requestRecord": "Request records",
       "cleanup": "Cleanup policy"
@@ -716,6 +717,7 @@
       "allowRegistration": "Allow registration",
       "loginCaptchaEnabled": "Enable login CAPTCHA",
       "registrationCaptchaEnabled": "Enable registration CAPTCHA",
+      "registrationEmailVerificationEnabled": "Enable registration email verification",
       "autoDeleteExpiredTokens": "Auto-delete expired tokens",
       "requestRecordRetentionDays": "Request record retention days",
       "requestRecordPayloadRetentionDays": "Request header/body/response retention days",
@@ -728,7 +730,18 @@
       "recordResponseBody": "Record response body",
       "defaultUserGrant": "Default user initial grant",
       "defaultRateLimitRpm": "Default rate limit",
-      "currency": "Display currency"
+      "currency": "Display currency",
+      "smtpHost": "SMTP server host",
+      "smtpPort": "SMTP port",
+      "smtpUsername": "SMTP username",
+      "smtpPassword": "SMTP password",
+      "smtpFromEmail": "Sender email",
+      "smtpFromName": "Sender name",
+      "smtpEncryption": "Encryption",
+      "emailSuffixMode": "Suffix restriction mode",
+      "emailSuffixes": "Email suffix list",
+      "emailTemplateSubject": "Email subject",
+      "emailTemplateHtml": "HTML template"
     },
     "currencyUsd": "USD $",
     "currencyCny": "CNY ¥",
@@ -745,7 +758,35 @@
     "requestRecord": {
       "description": "Controls how request/response details are stored and what is recorded.",
       "levels": {
-        "basic": "BASIC - Basic information (~1KB/record)"
+        "basic": "BASIC - Basic information (~1KB/record)",
+        "headers": "HEADERS - Includes request headers (~2-3KB/record)",
+        "full": "FULL - Complete request/response (~50KB/record)"
+      }
+    },
+    "email": {
+      "description": "Configure SMTP, registration email suffix restrictions, and system email templates.",
+      "smtpTitle": "SMTP service",
+      "testConnection": "Test connection",
+      "suffixTitle": "Registration email restrictions",
+      "smtpPortHelper": "Common ports: 587/TLS, 465/SSL, 25/no encryption",
+      "smtpPasswordStored": "Already set. Leave empty to keep the current password.",
+      "smtpPasswordEmpty": "SMTP password is not set.",
+      "smtpTestSuccess": "SMTP connection test succeeded",
+      "smtpTestFailed": "SMTP connection test failed",
+      "emailSuffixesHelper": "Comma-separated, for example gmail.com, outlook.com",
+      "encryption": {
+        "tls": "TLS / STARTTLS",
+        "ssl": "SSL",
+        "none": "No encryption"
+      },
+      "suffixMode": {
+        "none": "No restriction",
+        "whitelist": "Whitelist",
+        "blacklist": "Blacklist"
+      },
+      "templates": {
+        "registration": "Registration code",
+        "passwordReset": "Password reset"
       }
     }
   },

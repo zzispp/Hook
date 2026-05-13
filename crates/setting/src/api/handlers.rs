@@ -1,7 +1,10 @@
 use axum::{Json, extract::State};
 use types::{
     response::ApiResponse,
-    system_setting::{CurrencyDisplayResponse, DisplayCurrency, ExchangeRateResponse, SystemSettingsResponse, SystemSettingsUpdate},
+    system_setting::{
+        CurrencyDisplayResponse, DisplayCurrency, ExchangeRateResponse, SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse,
+        SystemSettingsUpdate,
+    },
 };
 
 use crate::api::{SettingApiError, SettingApiState};
@@ -18,6 +21,13 @@ pub async fn update_system_settings(
     Json(payload): Json<SystemSettingsUpdate>,
 ) -> ApiResult<ApiJson<SystemSettingsResponse>> {
     Ok(ok(state.settings.update_system_settings(payload).await?))
+}
+
+pub async fn test_smtp_connection(
+    State(state): State<SettingApiState>,
+    Json(payload): Json<SystemSettingsSmtpTestRequest>,
+) -> ApiResult<ApiJson<SystemSettingsSmtpTestResponse>> {
+    Ok(ok(state.settings.test_smtp_connection(payload).await?))
 }
 
 pub async fn get_exchange_rate(State(state): State<SettingApiState>) -> ApiResult<ApiJson<ExchangeRateResponse>> {

@@ -189,6 +189,7 @@ export const endpoints = {
   },
   adminSettings: {
     system: '/api/admin/settings/system',
+    smtpTest: '/api/admin/settings/smtp/test',
     exchangeRate: '/api/admin/settings/exchange-rate',
   },
   adminI18n: {

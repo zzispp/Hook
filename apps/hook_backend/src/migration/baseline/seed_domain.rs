@@ -4,14 +4,13 @@ use serde_json::Value;
 use super::iden::*;
 
 const DEFAULT_GROUP_ID: &str = "00000000-0000-7000-8000-000000000401";
-const SYSTEM_SETTINGS_ID: &str = "global";
 pub(in crate::migration) const ADMIN_NAMESPACE: &str = "admin";
 pub(in crate::migration) const CN_ADMIN_TRANSLATIONS: &str = include_str!("../defaults/i18n/admin.cn.json");
 pub(in crate::migration) const EN_ADMIN_TRANSLATIONS: &str = include_str!("../defaults/i18n/admin.en.json");
 
 pub(super) async fn seed_domain_defaults(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     seed_default_group(manager).await?;
-    seed_system_settings(manager).await?;
+    super::setting_seed::seed_system_settings(manager).await?;
     seed_translation_languages(manager).await?;
     seed_admin_translations(manager).await
 }
@@ -191,62 +190,4 @@ mod tests {
         assert!(keys.contains(&("dashboard", "months.1", "Feb")));
         assert!(keys.contains(&("dashboard", "welcome", "Welcome")));
     }
-}
-
-async fn seed_system_settings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    manager
-        .execute(
-            Query::insert()
-                .into_table(SystemSettings::Table)
-                .columns([
-                    SystemSettings::Id,
-                    SystemSettings::SiteName,
-                    SystemSettings::SiteSubtitle,
-                    SystemSettings::AllowRegistration,
-                    SystemSettings::LoginCaptchaEnabled,
-                    SystemSettings::RegistrationCaptchaEnabled,
-                    SystemSettings::AutoDeleteExpiredTokens,
-                    SystemSettings::RequestRecordRetentionDays,
-                    SystemSettings::RequestRecordPayloadRetentionDays,
-                    SystemSettings::RequestRecordLevel,
-                    SystemSettings::MaxRequestBodySizeKb,
-                    SystemSettings::MaxResponseBodySizeKb,
-                    SystemSettings::SensitiveRequestHeaders,
-                    SystemSettings::RecordRequestHeaders,
-                    SystemSettings::RecordRequestBody,
-                    SystemSettings::RecordResponseBody,
-                    SystemSettings::DefaultUserGrant,
-                    SystemSettings::DefaultRateLimitRpm,
-                    SystemSettings::SchedulingMode,
-                    SystemSettings::Currency,
-                    SystemSettings::CreatedAt,
-                    SystemSettings::UpdatedAt,
-                ])
-                .values_panic([
-                    SYSTEM_SETTINGS_ID.into(),
-                    "Hook".into(),
-                    "AI API platform".into(),
-                    true.into(),
-                    false.into(),
-                    false.into(),
-                    false.into(),
-                    365.into(),
-                    30.into(),
-                    "basic".into(),
-                    5120.into(),
-                    5120.into(),
-                    "authorization, x-api-key, api-key, cookie, set-cookie".into(),
-                    false.into(),
-                    false.into(),
-                    false.into(),
-                    0.into(),
-                    0.into(),
-                    "cache_affinity".into(),
-                    "USD".into(),
-                    Expr::current_timestamp(),
-                    Expr::current_timestamp(),
-                ])
-                .to_owned(),
-        )
-        .await
 }

@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
+    system_setting::EmailSuffixMode,
     user::{Credentials, NewUser, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse},
 };
 
@@ -74,6 +75,8 @@ pub trait RegistrationPolicy: Send + Sync + 'static {
 pub struct RegistrationSettings {
     pub allow_registration: bool,
     pub default_user_grant: Decimal,
+    pub email_suffix_mode: EmailSuffixMode,
+    pub email_suffixes: String,
 }
 
 #[async_trait]

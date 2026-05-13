@@ -3,9 +3,13 @@ use sea_orm_migration::prelude::*;
 mod domain_tables;
 pub mod iden;
 mod indices;
+mod request_candidate_tables;
 mod seed;
 pub mod seed_domain;
+mod setting_seed;
+mod setting_tables;
 mod tables;
+mod translation_tables;
 mod wallet_tables;
 
 pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {

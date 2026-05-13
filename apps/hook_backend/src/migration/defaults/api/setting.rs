@@ -20,6 +20,12 @@ pub const SETTING_APIS: &[ApiDefinition] = &[
         name: "更新系统设置",
     },
     ApiDefinition {
+        code: "system_settings_smtp_test",
+        method: "POST",
+        path_pattern: "/api/admin/settings/smtp/test",
+        name: "测试 SMTP 连接",
+    },
+    ApiDefinition {
         code: "system_exchange_rate_read",
         method: "GET",
         path_pattern: "/api/admin/settings/exchange-rate",

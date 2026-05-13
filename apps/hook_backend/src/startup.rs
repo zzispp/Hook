@@ -44,7 +44,7 @@ use rbac::{
 use setting::{
     api::{SettingApiState, create_router as create_setting_router},
     application::SettingService,
-    infra::StorageSettingRepository,
+    infra::{LettreSmtpConnectionTester, SettingAesSecretCipher, StorageSettingRepository},
 };
 use storage::connect_database;
 use tokio::net::TcpListener;
@@ -98,7 +98,12 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         provider_key_cipher.clone(),
     ));
     let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));
-    let system_settings = Arc::new(SettingService::new(StorageSettingRepository::new(database.clone())));
+    let setting_secret_cipher = SettingAesSecretCipher::new(settings.provider_key_secret()?)?;
+    let system_settings = Arc::new(SettingService::new(
+        StorageSettingRepository::new(database.clone()),
+        setting_secret_cipher,
+        LettreSmtpConnectionTester,
+    ));
     let groups = Arc::new(GroupService::new(
         StorageGroupRepository::new(database.clone()),
         StorageGroupModelCatalog::new(database.clone()),

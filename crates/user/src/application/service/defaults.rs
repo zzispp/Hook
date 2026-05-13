@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 use rust_decimal::Decimal;
-use types::user::UserWalletSummaryResponse;
+use types::{system_setting::EmailSuffixMode, user::UserWalletSummaryResponse};
 
 use crate::application::{AppResult, InitialGrantLedger, RegistrationPolicy, RegistrationSettings, SystemUserProvider, SystemUserRecord, UserWalletCatalog};
 
@@ -30,6 +30,8 @@ impl RegistrationPolicy for AllowRegistrationPolicy {
         Ok(RegistrationSettings {
             allow_registration: true,
             default_user_grant: Decimal::ZERO,
+            email_suffix_mode: EmailSuffixMode::None,
+            email_suffixes: String::new(),
         })
     }
 }

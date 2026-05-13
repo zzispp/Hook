@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use storage::{Database, StorageError, setting::SettingStore};
 use types::system_setting::{SystemSettingsResponse, SystemSettingsUpdate};
 
-use crate::application::{SettingError, SettingRepository, SettingResult};
+use crate::application::{SettingError, SettingRepository, SettingResult, StoredSmtpSettings};
 
 #[derive(Clone)]
 pub struct StorageSettingRepository {
@@ -23,22 +23,39 @@ impl SettingRepository for StorageSettingRepository {
         self.store.get_system_settings().await.map(Into::into).map_err(storage_error)
     }
 
-    async fn update_system_settings(&self, input: SystemSettingsUpdate) -> SettingResult<SystemSettingsResponse> {
+    async fn get_smtp_settings(&self) -> SettingResult<StoredSmtpSettings> {
+        self.store.get_smtp_settings().await.map(stored_smtp_settings).map_err(storage_error)
+    }
+
+    async fn update_system_settings(&self, input: SystemSettingsUpdate, encrypted_smtp_password: Option<String>) -> SettingResult<SystemSettingsResponse> {
         self.store
-            .update_system_settings(record_patch(input))
+            .update_system_settings(record_patch(input, encrypted_smtp_password))
             .await
             .map(Into::into)
             .map_err(storage_error)
     }
 }
 
-fn record_patch(input: SystemSettingsUpdate) -> storage::setting::SystemSettingsRecordPatch {
+fn stored_smtp_settings(value: storage::setting::SystemSettingsSmtpRecord) -> StoredSmtpSettings {
+    StoredSmtpSettings {
+        smtp_host: value.smtp_host,
+        smtp_port: value.smtp_port,
+        smtp_username: value.smtp_username,
+        encrypted_smtp_password: value.encrypted_smtp_password,
+        smtp_from_email: value.smtp_from_email,
+        smtp_from_name: value.smtp_from_name,
+        smtp_encryption: value.smtp_encryption,
+    }
+}
+
+fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<String>) -> storage::setting::SystemSettingsRecordPatch {
     storage::setting::SystemSettingsRecordPatch {
         site_name: input.site_name,
         site_subtitle: input.site_subtitle,
         allow_registration: input.allow_registration,
         login_captcha_enabled: input.login_captcha_enabled,
         registration_captcha_enabled: input.registration_captcha_enabled,
+        registration_email_verification_enabled: input.registration_email_verification_enabled,
         auto_delete_expired_tokens: input.auto_delete_expired_tokens,
         request_record_retention_days: input.request_record_retention_days,
         request_record_payload_retention_days: input.request_record_payload_retention_days,
@@ -53,6 +70,19 @@ fn record_patch(input: SystemSettingsUpdate) -> storage::setting::SystemSettings
         default_rate_limit_rpm: input.default_rate_limit_rpm,
         scheduling_mode: input.scheduling_mode,
         currency: input.currency,
+        smtp_host: input.smtp_host,
+        smtp_port: input.smtp_port,
+        smtp_username: input.smtp_username,
+        encrypted_smtp_password,
+        smtp_from_email: input.smtp_from_email,
+        smtp_from_name: input.smtp_from_name,
+        smtp_encryption: input.smtp_encryption,
+        email_suffix_mode: input.email_suffix_mode,
+        email_suffixes: input.email_suffixes,
+        email_template_registration_subject: input.email_template_registration_subject,
+        email_template_registration_html: input.email_template_registration_html,
+        email_template_password_reset_subject: input.email_template_password_reset_subject,
+        email_template_password_reset_html: input.email_template_password_reset_html,
     }
 }
 

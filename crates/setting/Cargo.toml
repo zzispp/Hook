@@ -6,8 +6,15 @@ edition.workspace = true
 [dependencies]
 async-trait.workspace = true
 axum.workspace = true
+hex.workspace = true
+lettre.workspace = true
+ring.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
+sha2.workspace = true
 storage.workspace = true
 thiserror.workspace = true
 types.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

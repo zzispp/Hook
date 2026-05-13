@@ -6,6 +6,8 @@ import type {
   ExchangeRateResponse,
   SystemSettingsUpdate,
   CurrencyDisplayResponse,
+  SystemSettingsSmtpTestRequest,
+  SystemSettingsSmtpTestResponse,
 } from 'src/types/system-setting';
 
 import { useMemo } from 'react';
@@ -58,6 +60,14 @@ export async function updateSystemSettings(payload: SystemSettingsUpdate) {
 
 export async function updateSchedulingMode(schedulingMode: SystemSettings['scheduling_mode']) {
   return updateSystemSettings({ scheduling_mode: schedulingMode });
+}
+
+export async function testSmtpConnection(payload: SystemSettingsSmtpTestRequest) {
+  const response = await axios.post<ApiEnvelope<SystemSettingsSmtpTestResponse>>(
+    endpoints.adminSettings.smtpTest,
+    payload
+  );
+  return requireApiData(response.data);
 }
 
 export function useUsdCnyExchangeRate(enabled: boolean) {

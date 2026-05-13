@@ -1,11 +1,10 @@
 use serde_json::{Value, json};
-use types::system_setting::{RequestRecordLevel, SystemSettings};
+use types::system_setting::SystemSettings;
 
 const BYTES_PER_KB: i64 = 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::llm_proxy) struct RequestRecordPolicy {
-    pub(in crate::llm_proxy) level: RequestRecordLevel,
     pub(in crate::llm_proxy) record_request_headers: bool,
     pub(in crate::llm_proxy) record_request_body: bool,
     pub(in crate::llm_proxy) record_response_body: bool,
@@ -17,7 +16,6 @@ pub(in crate::llm_proxy) struct RequestRecordPolicy {
 impl RequestRecordPolicy {
     pub(in crate::llm_proxy) fn from_settings(settings: &SystemSettings) -> Result<Self, String> {
         Ok(Self {
-            level: settings.request_record_level,
             record_request_headers: settings.record_request_headers,
             record_request_body: settings.record_request_body,
             record_response_body: settings.record_response_body,
@@ -28,21 +26,15 @@ impl RequestRecordPolicy {
     }
 
     pub(in crate::llm_proxy) fn should_record_request_headers(&self) -> bool {
-        match self.level {
-            RequestRecordLevel::Basic => self.record_request_headers,
-        }
+        self.record_request_headers
     }
 
     pub(in crate::llm_proxy) fn should_record_request_body(&self) -> bool {
-        match self.level {
-            RequestRecordLevel::Basic => self.record_request_body,
-        }
+        self.record_request_body
     }
 
     pub(in crate::llm_proxy) fn should_record_response_body(&self) -> bool {
-        match self.level {
-            RequestRecordLevel::Basic => self.record_response_body,
-        }
+        self.record_response_body
     }
 
     pub(in crate::llm_proxy) fn response_body(&self, body: Option<Value>) -> Result<Option<Value>, serde_json::Error> {
@@ -96,12 +88,10 @@ fn truncate_text(text: &str, max_size_bytes: usize) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use axum::http::{HeaderMap, header};
-    use serde_json::json;
-    use types::system_setting::RequestRecordLevel;
-
     use super::*;
     use crate::llm_proxy::proxy::capture::RequestCapture;
+    use axum::http::{HeaderMap, header};
+    use serde_json::json;
 
     #[test]
     fn request_capture_applies_header_switch_and_sensitive_header_redaction() {
@@ -109,7 +99,6 @@ mod tests {
         headers.insert(header::AUTHORIZATION, "sk-test-secret".parse().unwrap());
         headers.insert("x-trace-id", "trace-1".parse().unwrap());
         let policy = RequestRecordPolicy {
-            level: RequestRecordLevel::Basic,
             record_request_headers: true,
             record_request_body: false,
             record_response_body: false,
@@ -131,7 +120,6 @@ mod tests {
     fn request_capture_truncates_enabled_request_body() {
         let headers = HeaderMap::new();
         let policy = RequestRecordPolicy {
-            level: RequestRecordLevel::Basic,
             record_request_headers: false,
             record_request_body: true,
             record_response_body: true,

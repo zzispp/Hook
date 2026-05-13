@@ -135,6 +135,8 @@ impl RegistrationPolicy for StorageRegistrationPolicy {
         Ok(RegistrationSettings {
             allow_registration: settings.allow_registration,
             default_user_grant: settings.default_user_grant,
+            email_suffix_mode: settings.email_suffix_mode,
+            email_suffixes: settings.email_suffixes,
         })
     }
 }

@@ -1,11 +1,14 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import type { Theme } from '@mui/material/styles';
 
 import Script from 'next/script';
+import { varAlpha } from 'minimal-shared/utils';
 import { useRef, useMemo, useEffect, createElement } from 'react';
 
 import Box from '@mui/material/Box';
+import { useTheme } from '@mui/material/styles';
 
 import { endpoints } from 'src/lib/axios';
 import { CONFIG } from 'src/global-config';
@@ -24,17 +27,10 @@ type CapWidgetProps = {
 };
 
 export function AuthCaptcha({ enabled, resetKey, onTokenChange }: CapWidgetProps) {
+  const theme = useTheme();
   const widgetRef = useRef<CapElement | null>(null);
   const apiEndpoint = useMemo(() => captchaApiEndpoint(), []);
-  const widgetStyle = useMemo(
-    () =>
-      ({
-        display: 'block',
-        width: '100%',
-        '--cap-widget-width': '100%',
-      }) as CSSProperties,
-    []
-  );
+  const widgetStyle = useMemo(() => capWidgetStyle(theme), [theme]);
 
   useEffect(() => {
     const widget = widgetRef.current;
@@ -95,4 +91,26 @@ export function AuthCaptcha({ enabled, resetKey, onTokenChange }: CapWidgetProps
 function captchaApiEndpoint() {
   const baseUrl = CONFIG.serverUrl.replace(/\/$/, '');
   return `${baseUrl}${endpoints.captcha.apiEndpoint}`;
+}
+
+function capWidgetStyle(theme: Theme) {
+  const palette = theme.vars.palette;
+
+  return {
+    display: 'block',
+    width: '100%',
+    colorScheme: theme.palette.mode,
+    '--cap-widget-width': '100%',
+    '--cap-background': palette.background.paper,
+    '--cap-color': palette.text.primary,
+    '--cap-border-color': varAlpha(palette.grey['500Channel'], 0.2),
+    '--cap-focus-ring': palette.primary.main,
+    '--cap-checkbox-border': `1px solid ${varAlpha(palette.grey['500Channel'], 0.32)}`,
+    '--cap-checkbox-background': varAlpha(palette.grey['500Channel'], 0.08),
+    '--cap-spinner-background-color': varAlpha(palette.grey['500Channel'], 0.16),
+    '--cap-spinner-color': palette.primary.main,
+    '--cap-invalid-border-color': palette.error.main,
+    '--cap-invalid-ring-color': varAlpha(palette.error.mainChannel, 0.2),
+    '--cap-troubleshoot-color': palette.primary.main,
+  } as CSSProperties;
 }

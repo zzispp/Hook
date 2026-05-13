@@ -706,6 +706,7 @@
     "sections": {
       "site": "站点信息",
       "base": "基础配置",
+      "email": "邮件配置",
       "tokens": "令牌配置",
       "requestRecord": "请求记录",
       "cleanup": "清理策略"
@@ -716,6 +717,7 @@
       "allowRegistration": "开放允许注册",
       "loginCaptchaEnabled": "启用登录验证码",
       "registrationCaptchaEnabled": "启用注册验证码",
+      "registrationEmailVerificationEnabled": "启用注册邮件验证",
       "autoDeleteExpiredTokens": "自动删除过期令牌",
       "requestRecordRetentionDays": "请求记录保留天数",
       "requestRecordPayloadRetentionDays": "请求头/体/响应体保留天数",
@@ -728,7 +730,18 @@
       "recordResponseBody": "记录响应体",
       "defaultUserGrant": "默认用户初始赠款",
       "defaultRateLimitRpm": "默认速率限制",
-      "currency": "显示货币"
+      "currency": "显示货币",
+      "smtpHost": "SMTP 服务器地址",
+      "smtpPort": "SMTP 端口",
+      "smtpUsername": "SMTP 用户名",
+      "smtpPassword": "SMTP 密码",
+      "smtpFromEmail": "发件人邮箱",
+      "smtpFromName": "发件人名称",
+      "smtpEncryption": "加密方式",
+      "emailSuffixMode": "后缀限制模式",
+      "emailSuffixes": "邮箱后缀列表",
+      "emailTemplateSubject": "邮件主题",
+      "emailTemplateHtml": "HTML 模板"
     },
     "currencyUsd": "USD $",
     "currencyCny": "CNY ¥",
@@ -745,7 +758,35 @@
     "requestRecord": {
       "description": "控制请求/响应详情的入库方式和内容",
       "levels": {
-        "basic": "BASIC - 基本信息 (~1KB/条)"
+        "basic": "BASIC - 基本信息 (~1KB/条)",
+        "headers": "HEADERS - 含请求头 (~2-3KB/条)",
+        "full": "FULL - 完整请求响应 (~50KB/条)"
+      }
+    },
+    "email": {
+      "description": "配置 SMTP、注册邮箱后缀限制和系统邮件模板",
+      "smtpTitle": "SMTP 服务",
+      "testConnection": "测试连接",
+      "suffixTitle": "注册邮箱限制",
+      "smtpPortHelper": "常用端口：587/TLS，465/SSL，25/无加密",
+      "smtpPasswordStored": "已设置；留空保存时保持原密码。",
+      "smtpPasswordEmpty": "未设置 SMTP 密码。",
+      "smtpTestSuccess": "SMTP 连接测试成功",
+      "smtpTestFailed": "SMTP 连接测试失败",
+      "emailSuffixesHelper": "逗号分隔，例如 gmail.com, outlook.com",
+      "encryption": {
+        "tls": "TLS / STARTTLS",
+        "ssl": "SSL",
+        "none": "无加密"
+      },
+      "suffixMode": {
+        "none": "不限制",
+        "whitelist": "白名单",
+        "blacklist": "黑名单"
+      },
+      "templates": {
+        "registration": "注册验证码",
+        "passwordReset": "找回密码"
       }
     }
   },

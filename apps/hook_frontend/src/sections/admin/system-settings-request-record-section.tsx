@@ -36,11 +36,13 @@ export function RequestRecordSection({
             onChange={(value) =>
               setForm((current) => ({
                 ...current,
-                request_record_level: value as typeof current.request_record_level,
+                ...requestRecordLevelPatch(value as typeof current.request_record_level),
               }))
             }
           >
             <MenuItem value="basic">{t('systemSettings.requestRecord.levels.basic')}</MenuItem>
+            <MenuItem value="headers">{t('systemSettings.requestRecord.levels.headers')}</MenuItem>
+            <MenuItem value="full">{t('systemSettings.requestRecord.levels.full')}</MenuItem>
           </TextFieldRow>
           <TextFieldRow
             type="number"
@@ -97,6 +99,31 @@ export function RequestRecordSection({
       </Stack>
     </SettingsSection>
   );
+}
+
+function requestRecordLevelPatch(level: SystemSettingsForm['request_record_level']) {
+  if (level === 'headers') {
+    return {
+      request_record_level: level,
+      record_request_headers: true,
+      record_request_body: false,
+      record_response_body: false,
+    };
+  }
+  if (level === 'full') {
+    return {
+      request_record_level: level,
+      record_request_headers: true,
+      record_request_body: true,
+      record_response_body: true,
+    };
+  }
+  return {
+    request_record_level: level,
+    record_request_headers: false,
+    record_request_body: false,
+    record_response_body: false,
+  };
 }
 
 function RequestRecordSwitch({

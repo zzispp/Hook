@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 
 use crate::application::{
-    AppError, AppResult, InitialGrantLedger, PasswordHasher, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, SystemUserProvider, UserAuthRecord,
-    UserRepository, UserUseCase, UserWalletCatalog,
+    AppError, AppResult, InitialGrantLedger, PasswordHasher, RegistrationPolicy, ReplaceUserRecord, SystemUserProvider, UserAuthRecord, UserRepository,
+    UserUseCase, UserWalletCatalog,
 };
 use types::{
     pagination::{Page, PageRequest},
@@ -13,6 +13,7 @@ use types::{
 };
 
 use self::{
+    registration::{reject_closed_registration, reject_disallowed_registration_email},
     system_user::{find_auth_by_identifier, list_with_system_user, reject_conflicting_system_user, reject_system_user_id, system_user_by_id},
     validation::{
         sanitize_credentials, sanitize_new_user, sanitize_replace_user, validate_credentials, validate_new_user, validate_page, validate_replace_user,
@@ -20,6 +21,7 @@ use self::{
 };
 
 mod defaults;
+mod registration;
 mod system_user;
 mod validation;
 
@@ -109,6 +111,10 @@ where
     async fn create_unique_user(&self, input: NewUser) -> AppResult<User> {
         let input = sanitize_new_user(input);
         validate_new_user(&input)?;
+        self.create_valid_user(input).await
+    }
+
+    async fn create_valid_user(&self, input: NewUser) -> AppResult<User> {
         self.ensure_unique_user(&input.username, &input.email, None).await?;
         self.ensure_unique_system_user(&input.username, &input.email)?;
         self.repository.create(self.new_user_record(input)?).await
@@ -180,7 +186,10 @@ where
     async fn sign_up(&self, input: NewUser) -> AppResult<User> {
         let settings = self.registration_policy.registration_settings().await?;
         reject_closed_registration(&settings)?;
-        let user = self.create_unique_user(input).await?;
+        let input = sanitize_new_user(input);
+        validate_new_user(&input)?;
+        reject_disallowed_registration_email(&settings, &input.email)?;
+        let user = self.create_valid_user(input).await?;
         grant_initial_balance(&self.initial_grants, &user, settings.default_user_grant).await?;
         Ok(user)
     }
@@ -239,13 +248,6 @@ where
     }
 }
 
-fn reject_closed_registration(settings: &RegistrationSettings) -> AppResult<()> {
-    if settings.allow_registration {
-        return Ok(());
-    }
-    Err(AppError::InvalidInput("registration is closed".into()))
-}
-
 async fn grant_initial_balance<G>(ledger: &G, user: &User, amount: Decimal) -> AppResult<()>
 where
     G: InitialGrantLedger,
@@ -286,6 +288,8 @@ fn verify_password<H: PasswordHasher>(hasher: &H, password: &str, found: &UserAu
     Err(AppError::InvalidCredentials)
 }
 
+#[cfg(test)]
+mod registration_tests;
 #[cfg(test)]
 mod system_tests;
 #[cfg(test)]
