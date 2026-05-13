@@ -17,7 +17,6 @@ import { currencyDisplayFromResponse } from 'src/utils/currency-format';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useUserModelCatalog } from 'src/actions/models';
-import { useAvailableBillingGroups } from 'src/actions/groups';
 import { useCurrencyDisplay } from 'src/actions/system-settings';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import {
@@ -30,7 +29,7 @@ import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 import { ModelCatalogCards } from './model-catalog-cards';
 import { ModelCatalogTable } from './model-catalog-table';
-import { ModelDetailDrawer } from './model-detail-drawer';
+import { ModelDetailDialog } from './model-detail-dialog';
 import { filterCatalogItems } from './model-catalog-utils';
 
 // ----------------------------------------------------------------------
@@ -53,13 +52,12 @@ export function ModelCatalogView() {
   const { t } = useTranslate('admin');
   const catalog = useUserModelCatalog();
   const currency = useCurrencyDisplay();
-  const groups = useAvailableBillingGroups();
   const breadcrumbs = useDashboardBreadcrumbs({
     headingCode: DASHBOARD_MENU_CODES.modelCatalog,
     sectionCode: DASHBOARD_SECTION_CODES.operations,
   });
   const [query, setQuery] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<GlobalModelResponse | null>(null);
   const rows = useMemo(() => filterCatalogItems(catalog.items, query), [catalog.items, query]);
   const currencyDisplay = useMemo(
@@ -68,11 +66,11 @@ export function ModelCatalogView() {
   );
   const handleSelectModel = useCallback((model: GlobalModelResponse) => {
     setSelectedModel(model);
-    setDrawerOpen(true);
+    setDialogOpen(true);
   }, []);
 
-  const handleCloseDrawer = useCallback(() => {
-    setDrawerOpen(false);
+  const handleCloseDialog = useCallback(() => {
+    setDialogOpen(false);
   }, []);
 
   return (
@@ -96,15 +94,11 @@ export function ModelCatalogView() {
         onRefresh={() => catalog.refresh()}
         onSelectModel={handleSelectModel}
       />
-      <ModelDetailDrawer
+      <ModelDetailDialog
         model={selectedModel}
-        groups={groups.items}
-        groupsLoading={groups.isLoading}
-        groupsErrorMessage={groups.error?.message}
         currencyDisplay={currencyDisplay}
-        open={drawerOpen}
-        onClose={handleCloseDrawer}
-        onExited={() => setSelectedModel(null)}
+        open={dialogOpen}
+        onClose={handleCloseDialog}
       />
     </DashboardContent>
   );

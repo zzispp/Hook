@@ -30,6 +30,7 @@ export function BillingGroupTable({
   total,
   loading,
   table,
+  onView,
   onEdit,
   onDelete,
 }: {
@@ -37,6 +38,7 @@ export function BillingGroupTable({
   total: number;
   loading: boolean;
   table: UseTableReturn;
+  onView: (group: BillingGroup) => void;
   onEdit: (group: BillingGroup) => void;
   onDelete: (group: BillingGroup) => void;
 }) {
@@ -50,9 +52,19 @@ export function BillingGroupTable({
           <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 1040 }}>
             <ManagementTableHead head={tableHead} />
             <TableBody>
-              {loading ? <TableLoadingRows head={tableHead} /> : rows.map((row) => (
-                <BillingGroupTableRow key={row.id} row={row} onEdit={onEdit} onDelete={onDelete} />
-              ))}
+              {loading ? (
+                <TableLoadingRows head={tableHead} />
+              ) : (
+                rows.map((row) => (
+                  <BillingGroupTableRow
+                    key={row.id}
+                    row={row}
+                    onView={onView}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                  />
+                ))
+              )}
               <EmptyRow loading={loading} rows={rows} colSpan={tableHead.length} />
             </TableBody>
           </Table>
@@ -73,10 +85,12 @@ export function BillingGroupTable({
 
 function BillingGroupTableRow({
   row,
+  onView,
   onEdit,
   onDelete,
 }: {
   row: BillingGroup;
+  onView: (group: BillingGroup) => void;
   onEdit: (group: BillingGroup) => void;
   onDelete: (group: BillingGroup) => void;
 }) {
@@ -98,7 +112,7 @@ function BillingGroupTableRow({
       <TableCell>{row.is_system ? t('common.system') : t('common.custom')}</TableCell>
       <TableCell>{row.sort_order}</TableCell>
       <TableCell align="right">
-        <GroupActions row={row} onEdit={onEdit} onDelete={onDelete} />
+        <GroupActions row={row} onView={onView} onEdit={onEdit} onDelete={onDelete} />
       </TableCell>
     </TableRow>
   );
@@ -106,10 +120,12 @@ function BillingGroupTableRow({
 
 function GroupActions({
   row,
+  onView,
   onEdit,
   onDelete,
 }: {
   row: BillingGroup;
+  onView: (group: BillingGroup) => void;
   onEdit: (group: BillingGroup) => void;
   onDelete: (group: BillingGroup) => void;
 }) {
@@ -117,6 +133,11 @@ function GroupActions({
 
   return (
     <>
+      <Tooltip title={t('common.details')}>
+        <IconButton onClick={() => onView(row)}>
+          <Iconify icon="solar:eye-bold" />
+        </IconButton>
+      </Tooltip>
       <Tooltip title={t('common.edit')}>
         <IconButton onClick={() => onEdit(row)}>
           <Iconify icon="solar:pen-bold" />
@@ -163,7 +184,7 @@ function groupTableHead(t: (key: string, options?: Record<string, unknown>) => s
     { id: 'status', label: t('common.status') },
     { id: 'system', label: t('common.system') },
     { id: 'sort_order', label: t('common.sortOrder') },
-    { id: '', width: 96 },
+    { id: '', width: 144 },
   ];
 }
 

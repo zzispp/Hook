@@ -80,6 +80,26 @@ export async function updateGlobalModel(id: string, payload: GlobalModelUpdate) 
   return model;
 }
 
+export function useGlobalModelProviders(id: string | null | undefined) {
+  const key = id ? endpoints.adminModels.globalProviders(id) : null;
+  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
+    ApiEnvelope<GlobalModelProvidersResponse>
+  >(key, fetcher, swrOptions);
+
+  return useMemo(() => {
+    const providerData = data ? requireApiData(data) : undefined;
+    return {
+      data: providerData,
+      items: providerData?.providers ?? [],
+      total: providerData?.total ?? 0,
+      isLoading,
+      error,
+      isValidating,
+      refresh: revalidate,
+    };
+  }, [data, error, isLoading, isValidating, revalidate]);
+}
+
 export async function deleteGlobalModel(id: string) {
   await requestSuccess(axios.delete(endpoints.adminModels.globalById(id)));
   await mutateGlobalModels();

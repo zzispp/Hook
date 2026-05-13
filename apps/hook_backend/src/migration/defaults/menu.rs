@@ -63,6 +63,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000217",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "dashboard_groups",
+        title: "价格分组",
+        path: "/dashboard/groups",
+        icon: "solar:bill-list-bold",
+        sort_order: 45,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000208",
         section_id: OPERATIONS_SECTION_ID,
         code: "wallet_center",

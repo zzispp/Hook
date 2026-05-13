@@ -63,8 +63,17 @@ where
     }
 
     async fn available_groups(&self) -> GroupResult<Vec<BillingGroupResponse>> {
-        self.repository.active_groups().await
+        self.repository.active_groups().await.map(sanitize_available_groups)
     }
+}
+
+fn sanitize_available_groups(groups: Vec<BillingGroupResponse>) -> Vec<BillingGroupResponse> {
+    groups.into_iter().map(sanitize_available_group).collect()
+}
+
+fn sanitize_available_group(mut group: BillingGroupResponse) -> BillingGroupResponse {
+    group.allowed_provider_ids.clear();
+    group
 }
 
 async fn reject_duplicate_code<R>(repository: &R, code: &str) -> GroupResult<()>
@@ -136,4 +145,35 @@ where
         return Err(GroupError::Conflict("billing group is bound to API tokens".into()));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+    use types::group::BillingGroupResponse;
+
+    use super::sanitize_available_group;
+
+    #[test]
+    fn sanitize_available_group_hides_provider_bindings() {
+        let group = BillingGroupResponse {
+            id: "group-1".into(),
+            code: "default".into(),
+            name: "Default".into(),
+            description: Some("default group".into()),
+            billing_multiplier: Decimal::ONE,
+            allowed_model_ids: vec!["model-1".into()],
+            allowed_provider_ids: vec!["provider-1".into(), "provider-2".into()],
+            is_active: true,
+            is_system: true,
+            sort_order: 0,
+            created_at: "2026-05-13T00:00:00Z".into(),
+            updated_at: "2026-05-13T00:00:00Z".into(),
+        };
+
+        let sanitized = sanitize_available_group(group);
+
+        assert!(sanitized.allowed_provider_ids.is_empty());
+        assert_eq!(sanitized.allowed_model_ids, vec!["model-1".to_string()]);
+    }
 }

@@ -25,6 +25,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
 import { ModelCopyButton } from '../models/model-copy-button';
+import { formatUsageCount } from '../models/model-catalog-utils';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
 import { firstTier, formFromModel, capabilitiesFromForm } from './model-management-utils';
 
@@ -35,11 +36,12 @@ type Props = {
   total: number;
   loading: boolean;
   table: UseTableReturn;
+  onDetail: (model: GlobalModelResponse) => void;
   onEdit: (model: GlobalModelResponse) => void;
   onDelete: (model: GlobalModelResponse) => void;
 };
 
-export function GlobalModelTable({ rows, total, loading, table, onEdit, onDelete }: Props) {
+export function GlobalModelTable({ rows, total, loading, table, onDetail, onEdit, onDelete }: Props) {
   const { t } = useTranslate('admin');
   const settings = useSystemSettings();
   const exchangeRate = useUsdCnyExchangeRate(settings.data?.currency === 'CNY');
@@ -52,8 +54,9 @@ export function GlobalModelTable({ rows, total, loading, table, onEdit, onDelete
     { id: 'pricing', label: t('models.pricing'), width: 220 },
     { id: 'capabilities', label: t('models.capabilities') },
     { id: 'providers', label: t('models.providers'), width: 150 },
+    { id: 'usage_count', label: t('models.usageCount'), width: 130 },
     { id: 'status', label: t('common.status'), width: 120 },
-    { id: '', width: 96 },
+    { id: '', width: 136 },
   ];
 
   return (
@@ -70,6 +73,7 @@ export function GlobalModelTable({ rows, total, loading, table, onEdit, onDelete
                   key={row.id}
                   row={row}
                   currencyDisplay={currencyDisplay}
+                  onDetail={onDetail}
                   onEdit={onEdit}
                   onDelete={onDelete}
                 />
@@ -95,11 +99,13 @@ export function GlobalModelTable({ rows, total, loading, table, onEdit, onDelete
 function GlobalModelTableRow({
   row,
   currencyDisplay,
+  onDetail,
   onEdit,
   onDelete,
 }: {
   row: GlobalModelResponse;
   currencyDisplay: CurrencyDisplay;
+  onDetail: (model: GlobalModelResponse) => void;
   onEdit: (model: GlobalModelResponse) => void;
   onDelete: (model: GlobalModelResponse) => void;
 }) {
@@ -143,10 +149,20 @@ function GlobalModelTableRow({
         </Typography>
       </TableCell>
       <TableCell>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {formatUsageCount(row.usage_count)}
+        </Typography>
+      </TableCell>
+      <TableCell>
         <EnabledLabel enabled={row.is_active} />
       </TableCell>
       <TableCell align="right">
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Tooltip title={t('models.detailTitle')}>
+            <IconButton onClick={() => onDetail(row)}>
+              <Iconify icon="solar:eye-bold" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={t('common.edit')}>
             <IconButton onClick={() => onEdit(row)}>
               <Iconify icon="solar:pen-bold" />

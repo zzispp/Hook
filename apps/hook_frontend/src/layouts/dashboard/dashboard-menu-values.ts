@@ -1,6 +1,7 @@
 export const DASHBOARD_MENU_CODES = {
   apiManagement: 'admin_apis',
   apiTokens: 'api_tokens',
+  billingGroupCatalog: 'dashboard_groups',
   billingGroups: 'admin_groups',
   dashboard: 'dashboard_home',
   menuManagement: 'admin_menus',

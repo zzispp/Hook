@@ -1,5 +1,7 @@
 'use client';
 
+import type { BillingGroup } from 'src/types/group';
+
 import { useState, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
@@ -19,19 +21,56 @@ import { ConfirmDialog } from 'src/components/custom-dialog';
 import { BillingGroupTable } from './billing-group-table';
 import { BillingGroupDialog } from './billing-group-dialog';
 import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
+import { BillingGroupDetailDialog } from './billing-group-detail-dialog';
 import { useGroupDialog, useDeleteGroupDialog } from './billing-group-management-state';
 import { toModelFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 
 export function BillingGroupManagementView() {
+  const state = useBillingGroupManagementPage();
+
+  return (
+    <DashboardContent maxWidth="xl">
+      <AdminBreadcrumbs
+        headingCode={DASHBOARD_MENU_CODES.billingGroups}
+        action={
+          <BillingGroupPageActions
+            loading={state.groups.isLoading}
+            onRefresh={() => void state.groups.refresh()}
+            onCreate={state.dialog.openCreate}
+          />
+        }
+      />
+      <Card>
+        <AdminFiltersToolbar
+          filters={state.filters}
+          searchPlaceholder={state.t('filters.searchGroups')}
+          onChange={state.handleFiltersChange}
+        />
+        <BillingGroupTable
+          rows={state.groups.items}
+          total={state.groups.total}
+          loading={state.groups.isLoading}
+          table={state.table}
+          onView={state.setDetailTarget}
+          onEdit={state.dialog.openEdit}
+          onDelete={state.deleteDialog.setDeleteTarget}
+        />
+      </Card>
+      <BillingGroupDialogs state={state} />
+    </DashboardContent>
+  );
+}
+
+function useBillingGroupManagementPage() {
   const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'code' });
   const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
+  const [detailTarget, setDetailTarget] = useState<BillingGroup | null>(null);
   const groups = useBillingGroups(table.page, table.rowsPerPage, toModelFilters(filters));
   const models = useGlobalModels(0, 1000);
   const providers = useProviders(0, 1000);
   const dialog = useGroupDialog(t);
   const deleteDialog = useDeleteGroupDialog(t);
-
   const handleFiltersChange = useCallback(
     (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
       table.onResetPage();
@@ -40,45 +79,90 @@ export function BillingGroupManagementView() {
     [table]
   );
 
+  return {
+    t,
+    table,
+    filters,
+    groups,
+    models,
+    providers,
+    dialog,
+    deleteDialog,
+    detailTarget,
+    setDetailTarget,
+    handleFiltersChange,
+  };
+}
+
+function BillingGroupDialogs({ state }: { state: ReturnType<typeof useBillingGroupManagementPage> }) {
   return (
-    <DashboardContent maxWidth="xl">
-      <AdminBreadcrumbs
-        headingCode={DASHBOARD_MENU_CODES.billingGroups}
-        action={
-          <Stack direction="row" spacing={1}>
-            <RefreshButton loading={groups.isLoading} onClick={() => void groups.refresh()} />
-            <AddButton onClick={dialog.openCreate}>{t('actions.addBillingGroup')}</AddButton>
-          </Stack>
-        }
+    <>
+      <BillingGroupDetailDialog
+        group={state.detailTarget}
+        models={state.models.items}
+        providers={state.providers.items}
+        open={!!state.detailTarget}
+        onClose={() => state.setDetailTarget(null)}
       />
-      <Card>
-        <AdminFiltersToolbar
-          filters={filters}
-          searchPlaceholder={t('filters.searchGroups')}
-          onChange={handleFiltersChange}
-        />
-        <BillingGroupTable
-          rows={groups.items}
-          total={groups.total}
-          loading={groups.isLoading}
-          table={table}
-          onEdit={dialog.openEdit}
-          onDelete={deleteDialog.setDeleteTarget}
-        />
-      </Card>
-      <BillingGroupDialog dialog={dialog} models={models.items} providers={providers.items} />
-      <ConfirmDialog
-        open={!!deleteDialog.deleteTarget}
-        onClose={() => deleteDialog.setDeleteTarget(null)}
-        title={t('dialogs.deleteBillingGroup')}
-        content={t('billingGroups.deleteConfirm', { name: deleteDialog.deleteTarget?.name ?? '' })}
-        cancelText={t('common.cancel')}
-        action={
-          <Button variant="contained" color="error" onClick={deleteDialog.confirmDelete}>
-            {t('common.delete')}
-          </Button>
-        }
+      <BillingGroupDialog
+        dialog={state.dialog}
+        models={state.models.items}
+        providers={state.providers.items}
       />
-    </DashboardContent>
+      <DeleteBillingGroupDialog
+        open={!!state.deleteDialog.deleteTarget}
+        targetName={state.deleteDialog.deleteTarget?.name ?? ''}
+        onClose={() => state.deleteDialog.setDeleteTarget(null)}
+        onConfirm={state.deleteDialog.confirmDelete}
+      />
+    </>
+  );
+}
+
+function BillingGroupPageActions({
+  loading,
+  onRefresh,
+  onCreate,
+}: {
+  loading: boolean;
+  onRefresh: () => void;
+  onCreate: () => void;
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Stack direction="row" spacing={1}>
+      <RefreshButton loading={loading} onClick={onRefresh} />
+      <AddButton onClick={onCreate}>{t('actions.addBillingGroup')}</AddButton>
+    </Stack>
+  );
+}
+
+function DeleteBillingGroupDialog({
+  open,
+  targetName,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  targetName: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <ConfirmDialog
+      open={open}
+      onClose={onClose}
+      title={t('dialogs.deleteBillingGroup')}
+      content={t('billingGroups.deleteConfirm', { name: targetName })}
+      cancelText={t('common.cancel')}
+      action={
+        <Button variant="contained" color="error" onClick={onConfirm}>
+          {t('common.delete')}
+        </Button>
+      }
+    />
   );
 }

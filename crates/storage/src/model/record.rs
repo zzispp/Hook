@@ -1,3 +1,4 @@
+use time::format_description::well_known::Rfc3339;
 use rust_decimal::Decimal;
 use types::model::{GlobalModelResponse, ModelCatalogProviderDetail, ModelPriceRange, PricingTier, TieredPricingConfig};
 
@@ -28,8 +29,8 @@ impl GlobalModelRecord {
             provider_count: Some(provider_count),
             active_provider_count: Some(active_provider_count),
             usage_count: Some(self.usage_count),
-            created_at: self.created_at.to_string(),
-            updated_at: Some(self.updated_at.to_string()),
+            created_at: format_timestamp(self.created_at),
+            updated_at: Some(format_timestamp(self.updated_at)),
         })
     }
 
@@ -106,4 +107,54 @@ fn cache_1h_creation_price(tier: &PricingTier) -> Option<Decimal> {
         .iter()
         .find(|item| item.ttl_minutes == 60)
         .map(|item| item.cache_creation_price_per_1m)
+}
+
+fn format_timestamp(value: sea_orm::prelude::TimeDateTimeWithTimeZone) -> String {
+    value.format(&Rfc3339).expect("global model timestamp must format as RFC3339")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use rust_decimal::Decimal;
+    use time::OffsetDateTime;
+
+    use super::{GlobalModelRecord, format_timestamp};
+
+    #[test]
+    fn with_counts_formats_model_timestamps_as_rfc3339() {
+        let created_at = OffsetDateTime::parse("2026-05-13T08:30:45Z", &super::Rfc3339)
+            .expect("test created_at should parse");
+        let updated_at = OffsetDateTime::parse("2026-05-13T09:31:46Z", &super::Rfc3339)
+            .expect("test updated_at should parse");
+        let record = GlobalModelRecord {
+            id: "model-1".into(),
+            name: "gpt-test".into(),
+            display_name: "GPT Test".into(),
+            default_price_per_request: Some(Decimal::from_str("0.5").expect("decimal")),
+            default_tiered_pricing:
+                "{\"tiers\":[{\"up_to\":null,\"input_price_per_1m\":0.1,\"output_price_per_1m\":0.2}]}"
+                    .into(),
+            supported_capabilities: Some("[\"vision\"]".into()),
+            config: Some("{\"streaming\":true}".into()),
+            is_active: true,
+            usage_count: 42,
+            created_at,
+            updated_at,
+        };
+
+        let response = record.with_counts(3, 2).expect("record should convert");
+
+        assert_eq!(response.created_at, "2026-05-13T08:30:45Z");
+        assert_eq!(response.updated_at.as_deref(), Some("2026-05-13T09:31:46Z"));
+    }
+
+    #[test]
+    fn format_timestamp_uses_rfc3339() {
+        let value = OffsetDateTime::parse("2026-05-13T08:30:45+08:00", &super::Rfc3339)
+            .expect("timestamp should parse");
+
+        assert_eq!(format_timestamp(value), "2026-05-13T08:30:45+08:00");
+    }
 }

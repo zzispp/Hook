@@ -23,7 +23,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_request_records",
 ];
 
-pub const USER_MENU_CODES: &[&str] = &["dashboard_home", "dashboard_models", "wallet_center", "api_tokens"];
+pub const USER_MENU_CODES: &[&str] = &["dashboard_home", "dashboard_models", "dashboard_groups", "wallet_center", "api_tokens"];
 
 pub struct MenuApiBindingDefinition {
     pub menu_code: &'static str,
@@ -40,7 +40,11 @@ pub const ROLE_API_BINDINGS: &[RoleApiBindingDefinition] = &[];
 pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     MenuApiBindingDefinition {
         menu_code: "dashboard_models",
-        api_codes: &["models_public_catalog_read", "groups_available_read"],
+        api_codes: &["models_public_catalog_read"],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "dashboard_groups",
+        api_codes: &["groups_available_read", "models_public_catalog_read"],
     },
     MenuApiBindingDefinition {
         menu_code: "wallet_center",

@@ -48,10 +48,10 @@ export function useBillingGroups(page: number, pageSize: number, filters: Billin
   }, [data, error, isLoading, isValidating, revalidate]);
 }
 
-export function useAvailableBillingGroups() {
+export function useAvailableBillingGroups(enabled = true) {
   const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
     ApiEnvelope<BillingGroup[]>
-  >(endpoints.groups.available, fetcher, swrOptions);
+  >(enabled ? endpoints.groups.available : null, fetcher, swrOptions);
 
   return useMemo(() => {
     const groups = data ? requireApiData(data) : undefined;

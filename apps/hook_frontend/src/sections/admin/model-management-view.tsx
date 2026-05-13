@@ -9,6 +9,7 @@ import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 
+import { useBillingGroups } from 'src/actions/groups';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
@@ -28,6 +29,7 @@ import { ModelDevPicker } from './model-dev-picker';
 import { GlobalModelTable } from './global-model-table';
 import { GlobalModelFormDialog } from './global-model-form-dialog';
 import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
+import { GlobalModelDetailDialog } from './global-model-detail-dialog';
 import { toModelFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 import {
   DEFAULT_FORM,
@@ -42,7 +44,9 @@ export function ModelManagementView() {
   const { t } = useTranslate('admin');
   const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'name' });
   const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
+  const [detailTarget, setDetailTarget] = useState<GlobalModelResponse | null>(null);
   const models = useGlobalModels(table.page, table.rowsPerPage, toModelFilters(filters));
+  const groups = useBillingGroups(0, 1000);
   const dialog = useModelDialog(t);
   const deleteDialog = useDeleteDialog(t);
   const handleFiltersChange = useCallback(
@@ -76,6 +80,7 @@ export function ModelManagementView() {
           total={models.total}
           loading={models.isLoading}
           table={table}
+          onDetail={setDetailTarget}
           onEdit={dialog.openEdit}
           onDelete={deleteDialog.setDeleteTarget}
         />
@@ -91,6 +96,18 @@ export function ModelManagementView() {
         onClose={dialog.closeDialog}
         onSubmit={dialog.submitModel}
         onChange={dialog.setForm}
+      />
+      <GlobalModelDetailDialog
+        open={!!detailTarget}
+        model={detailTarget}
+        groups={groups.items}
+        groupsLoading={groups.isLoading}
+        groupsErrorMessage={groups.error?.message}
+        onClose={() => setDetailTarget(null)}
+        onEdit={(model) => {
+          setDetailTarget(null);
+          dialog.openEdit(model);
+        }}
       />
 
       <ConfirmDialog
