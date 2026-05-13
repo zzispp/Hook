@@ -83,6 +83,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.registration_email_verification_enabled {
         active.registration_email_verification_enabled = Set(value);
     }
+    if let Some(value) = input.email_config_enabled {
+        active.email_config_enabled = Set(value);
+    }
     if let Some(value) = input.auto_delete_expired_tokens {
         active.auto_delete_expired_tokens = Set(value);
     }

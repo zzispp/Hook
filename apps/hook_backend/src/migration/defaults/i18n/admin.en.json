@@ -353,17 +353,7 @@
     "viewAll": "View all",
     "markComplete": "Mark complete",
     "share": "Share",
-    "months": [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep"
-    ],
+    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"],
     "regions": {
       "america": "America",
       "asia": "Asia",
@@ -718,6 +708,7 @@
       "loginCaptchaEnabled": "Enable login CAPTCHA",
       "registrationCaptchaEnabled": "Enable registration CAPTCHA",
       "registrationEmailVerificationEnabled": "Enable registration email verification",
+      "emailConfigEnabled": "Enable email configuration",
       "autoDeleteExpiredTokens": "Auto-delete expired tokens",
       "requestRecordRetentionDays": "Request record retention days",
       "requestRecordPayloadRetentionDays": "Request header/body/response retention days",
@@ -753,7 +744,8 @@
       "requestRecordLevel": "Sensitive information is redacted automatically.",
       "maxRequestBodySizeKb": "Request bodies larger than this are truncated before recording.",
       "maxResponseBodySizeKb": "Response bodies larger than this are truncated before recording.",
-      "sensitiveRequestHeaders": "Comma-separated headers that will be redacted."
+      "sensitiveRequestHeaders": "Comma-separated headers that will be redacted.",
+      "registrationEmailVerificationRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first."
     },
     "requestRecord": {
       "description": "Controls how request/response details are stored and what is recorded.",
@@ -773,6 +765,7 @@
       "smtpPasswordEmpty": "SMTP password is not set.",
       "smtpTestSuccess": "SMTP connection test succeeded",
       "smtpTestFailed": "SMTP connection test failed",
+      "emailConfigEnabledHelper": "When disabled, SMTP values are saved but not used by email features.",
       "emailSuffixesHelper": "Comma-separated, for example gmail.com, outlook.com",
       "encryption": {
         "tls": "TLS / STARTTLS",

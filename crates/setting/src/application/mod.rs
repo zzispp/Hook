@@ -1,3 +1,4 @@
+mod email_config;
 mod error;
 mod ports;
 mod service;

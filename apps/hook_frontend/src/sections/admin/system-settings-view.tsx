@@ -16,6 +16,7 @@ import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-value
 import { Iconify } from 'src/components/iconify';
 
 import { SettingsSection } from './system-settings-section';
+import { emailConfigComplete } from './system-settings-utils';
 import { useSystemSettingsForm } from './system-settings-state';
 import { EmailSettingsSection } from './system-settings-email-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
@@ -111,6 +112,9 @@ function BaseSection({
   setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
 }) {
   const { t } = useTranslate('admin');
+  const emailVerificationReady = form.email_config_enabled && emailConfigComplete(form);
+  const emailVerificationDisabled =
+    !emailVerificationReady && !form.registration_email_verification_enabled;
 
   return (
     <SettingsSection title={t('systemSettings.sections.base')}>
@@ -138,7 +142,13 @@ function BaseSection({
         />
         <SwitchRow
           checked={form.registration_email_verification_enabled}
+          disabled={emailVerificationDisabled}
           label={t('systemSettings.fields.registrationEmailVerificationEnabled')}
+          helperText={
+            emailVerificationReady
+              ? undefined
+              : t('systemSettings.helper.registrationEmailVerificationRequiresEmailConfig')
+          }
           onChange={(checked) =>
             setForm((current) => ({
               ...current,

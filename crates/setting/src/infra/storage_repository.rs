@@ -56,6 +56,7 @@ fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<Str
         login_captcha_enabled: input.login_captcha_enabled,
         registration_captcha_enabled: input.registration_captcha_enabled,
         registration_email_verification_enabled: input.registration_email_verification_enabled,
+        email_config_enabled: input.email_config_enabled,
         auto_delete_expired_tokens: input.auto_delete_expired_tokens,
         request_record_retention_days: input.request_record_retention_days,
         request_record_payload_retention_days: input.request_record_payload_retention_days,

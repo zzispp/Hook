@@ -17,7 +17,7 @@ import { testSmtpConnection } from 'src/actions/system-settings';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
-import { TextFieldRow } from './shared';
+import { SwitchRow, TextFieldRow } from './shared';
 import { smtpTestPayload } from './system-settings-utils';
 import { SettingsSection } from './system-settings-section';
 import { EmailTemplateEditor } from './system-settings-email-template-editor';
@@ -27,10 +27,7 @@ type SystemSettingsFormProps = {
   setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
 };
 
-export function EmailSettingsSection({
-  form,
-  setForm,
-}: SystemSettingsFormProps) {
+export function EmailSettingsSection({ form, setForm }: SystemSettingsFormProps) {
   const { t } = useTranslate('admin');
   const [templateType, setTemplateType] = useState<EmailTemplateType>('registration');
   const [testingSmtp, setTestingSmtp] = useState(false);
@@ -45,7 +42,9 @@ export function EmailSettingsSection({
       }
       toast.error(result.message || t('systemSettings.email.smtpTestFailed'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('systemSettings.email.smtpTestFailed'));
+      toast.error(
+        error instanceof Error ? error.message : t('systemSettings.email.smtpTestFailed')
+      );
     } finally {
       setTestingSmtp(false);
     }
@@ -87,9 +86,24 @@ function SmtpServerFields({
   onTestSmtp: () => void;
 }) {
   const { t } = useTranslate('admin');
+  const handleEmailConfigEnabledChange = (checked: boolean) => {
+    setForm((current) => ({
+      ...current,
+      email_config_enabled: checked,
+      registration_email_verification_enabled: checked
+        ? current.registration_email_verification_enabled
+        : false,
+    }));
+  };
 
   return (
     <Stack spacing={2}>
+      <SwitchRow
+        checked={form.email_config_enabled}
+        label={t('systemSettings.fields.emailConfigEnabled')}
+        helperText={t('systemSettings.email.emailConfigEnabledHelper')}
+        onChange={handleEmailConfigEnabledChange}
+      />
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
         <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
           {t('systemSettings.email.smtpTitle')}
@@ -193,10 +207,7 @@ function SmtpSenderFields({ form, setForm }: SystemSettingsFormProps) {
   );
 }
 
-function EmailRestrictionFields({
-  form,
-  setForm,
-}: SystemSettingsFormProps) {
+function EmailRestrictionFields({ form, setForm }: SystemSettingsFormProps) {
   const { t } = useTranslate('admin');
   const suffixEnabled = form.email_suffix_mode !== 'none';
 

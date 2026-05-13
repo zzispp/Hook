@@ -12,6 +12,7 @@ export type SystemSettings = {
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
+  email_config_enabled: boolean;
   auto_delete_expired_tokens: boolean;
   request_record_retention_days: number;
   request_record_payload_retention_days: number;
@@ -50,6 +51,7 @@ export type SystemSettingsUpdate = Partial<{
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
+  email_config_enabled: boolean;
   auto_delete_expired_tokens: boolean;
   request_record_retention_days: number;
   request_record_payload_retention_days: number;

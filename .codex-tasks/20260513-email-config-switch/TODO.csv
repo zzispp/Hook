@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate current system settings and email verification flow,DONE,Relevant backend/frontend files and data model are identified,rg searches and source inspection,2026-05-13,0,"System setting read/update path identified; no existing email sending consumer found"
+2,Implement persisted email config enabled setting and server-side constraints,DONE,Backend stores the switch and rejects invalid verification enablement,focused backend check,2026-05-13,0,"cargo test -p setting passed under 60s wrapper"
+3,Update admin settings UI and translations,DONE,UI exposes email config switch and gates verification switch from current values,frontend lint/build or targeted type check,2026-05-13,1,"pnpm lint:frontend passed after fixing import order"
+4,Run validation and record results,IN_PROGRESS,Checks run or blockers are documented,just/pnpm commands with 60s backend timeout,,0,

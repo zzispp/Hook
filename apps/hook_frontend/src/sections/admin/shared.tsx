@@ -5,9 +5,9 @@ import type { TableHeadCellProps } from 'src/components/table';
 import type { DashboardMenuCode } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import Checkbox from '@mui/material/Checkbox';
 import TableRow from '@mui/material/TableRow';
 import MenuItem from '@mui/material/MenuItem';
 import TableCell from '@mui/material/TableCell';
@@ -53,7 +53,13 @@ export function AdminBreadcrumbs({
   );
 }
 
-export function AddButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+export function AddButton({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <Button variant="contained" startIcon={<Iconify icon="mingcute:add-line" />} onClick={onClick}>
       {children}
@@ -90,7 +96,15 @@ export function EnabledLabel({ enabled }: { enabled: boolean }) {
   );
 }
 
-export function BooleanLabel({ enabled, trueText, falseText }: { enabled: boolean; trueText: string; falseText: string }) {
+export function BooleanLabel({
+  enabled,
+  trueText,
+  falseText,
+}: {
+  enabled: boolean;
+  trueText: string;
+  falseText: string;
+}) {
   return (
     <Label color={enabled ? 'info' : 'default'} variant="soft">
       {enabled ? trueText : falseText}
@@ -128,7 +142,10 @@ export function TableLoadingRows({
       {Array.from({ length: rows }).map((_, rowIndex) => (
         <TableRow key={rowIndex}>
           {head.map((cell) => (
-            <TableCell key={cell.id || cell.label?.toString() || 'action'} sx={{ color: 'text.disabled' }}>
+            <TableCell
+              key={cell.id || cell.label?.toString() || 'action'}
+              sx={{ color: 'text.disabled' }}
+            >
               {t('common.loading')}
             </TableCell>
           ))}
@@ -185,7 +202,11 @@ export function TextFieldRow({
       placeholder={placeholder}
       SelectProps={SelectProps}
       slotProps={slotProps}
-      onChange={(event) => onChange(Array.isArray(event.target.value) ? event.target.value.join(',') : event.target.value)}
+      onChange={(event) =>
+        onChange(
+          Array.isArray(event.target.value) ? event.target.value.join(',') : event.target.value
+        )
+      }
     >
       {children}
     </TextField>
@@ -196,16 +217,37 @@ export function SwitchRow({
   checked,
   label,
   onChange,
+  disabled,
+  helperText,
 }: {
   checked: boolean;
   label: string;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  helperText?: React.ReactNode;
 }) {
   return (
-    <FormControlLabel
-      control={<Checkbox checked={checked} onChange={(event) => onChange(event.target.checked)} />}
-      label={label}
-    />
+    <Stack spacing={0.5}>
+      <FormControlLabel
+        control={
+          <Switch
+            checked={checked}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.checked)}
+          />
+        }
+        label={label}
+      />
+      {helperText ? (
+        <Typography
+          variant="caption"
+          color={disabled ? 'text.disabled' : 'text.secondary'}
+          sx={{ pl: 6 }}
+        >
+          {helperText}
+        </Typography>
+      ) : null}
+    </Stack>
   );
 }
 
@@ -251,7 +293,12 @@ export function ManagementDialog({
         <Button variant="outlined" onClick={onClose}>
           {cancelText ?? t('common.cancel')}
         </Button>
-        <Button variant="contained" loading={submitting} disabled={submitDisabled} onClick={onSubmit}>
+        <Button
+          variant="contained"
+          loading={submitting}
+          disabled={submitDisabled}
+          onClick={onSubmit}
+        >
           {submitText ?? t('common.save')}
         </Button>
       </DialogActions>

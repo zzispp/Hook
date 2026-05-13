@@ -11,6 +11,7 @@ export type SystemSettingsForm = {
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
+  email_config_enabled: boolean;
   auto_delete_expired_tokens: boolean;
   request_record_retention_days: string;
   request_record_payload_retention_days: string;
@@ -102,6 +103,7 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   login_captcha_enabled: false,
   registration_captcha_enabled: false,
   registration_email_verification_enabled: false,
+  email_config_enabled: false,
   auto_delete_expired_tokens: false,
   request_record_retention_days: '365',
   request_record_payload_retention_days: '30',
@@ -139,6 +141,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     login_captcha_enabled: settings.login_captcha_enabled,
     registration_captcha_enabled: settings.registration_captcha_enabled,
     registration_email_verification_enabled: settings.registration_email_verification_enabled,
+    email_config_enabled: settings.email_config_enabled,
     auto_delete_expired_tokens: settings.auto_delete_expired_tokens,
     request_record_retention_days: String(settings.request_record_retention_days),
     request_record_payload_retention_days: String(settings.request_record_payload_retention_days),
@@ -177,6 +180,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     login_captcha_enabled: form.login_captcha_enabled,
     registration_captcha_enabled: form.registration_captcha_enabled,
     registration_email_verification_enabled: form.registration_email_verification_enabled,
+    email_config_enabled: form.email_config_enabled,
     auto_delete_expired_tokens: form.auto_delete_expired_tokens,
     request_record_retention_days: Number(form.request_record_retention_days || 0),
     request_record_payload_retention_days: Number(form.request_record_payload_retention_days || 0),
@@ -222,4 +226,16 @@ export function smtpTestPayload(form: SystemSettingsForm): SystemSettingsSmtpTes
     payload.smtp_password = form.smtp_password.trim();
   }
   return payload;
+}
+
+const MIN_SMTP_PORT = 1;
+
+export function emailConfigComplete(form: SystemSettingsForm) {
+  return Boolean(
+    form.smtp_host.trim() &&
+    Number(form.smtp_port || 0) >= MIN_SMTP_PORT &&
+    form.smtp_username.trim() &&
+    (form.smtp_password.trim() || form.smtp_password_set) &&
+    form.smtp_from_email.trim()
+  );
 }
