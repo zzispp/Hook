@@ -3,7 +3,7 @@ use types::{
     pagination::Page,
     rbac::{
         ApiMenuBindingInput, ApiPermission, ApiPermissionInput, MenuApiBindingInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse,
-        PermissionSnapshot, RbacListRequest, Role, RoleInput, RolePermissionBindingInput,
+        PermissionSnapshot, RbacListRequest, Role, RoleInput, RolePermissionBinding, RolePermissionBindingInput,
     },
 };
 
@@ -96,7 +96,7 @@ pub trait RbacAdminUseCase: Send + Sync + 'static {
     async fn replace_role_permissions(&self, role_code: &str, input: RolePermissionBindingInput) -> RbacResult<()>;
     async fn menu_api_ids(&self, menu_item_id: &str) -> RbacResult<Vec<String>>;
     async fn api_menu_ids(&self, api_permission_id: &str) -> RbacResult<Vec<String>>;
-    async fn role_permission_bindings(&self, role_code: &str) -> RbacResult<RolePermissionBindingInput>;
+    async fn role_permission_bindings(&self, role_code: &str, authorization: &AuthorizationConfig) -> RbacResult<RolePermissionBinding>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

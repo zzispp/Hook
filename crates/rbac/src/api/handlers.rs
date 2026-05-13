@@ -7,7 +7,7 @@ use types::{
     pagination::{Page, PageRequest},
     rbac::{
         ApiMenuBindingInput, ApiPermission, ApiPermissionInput, MenuApiBindingInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse,
-        RbacListFilters, RbacListRequest, Role, RoleInput, RolePermissionBindingInput,
+        RbacListFilters, RbacListRequest, Role, RoleInput, RolePermissionBinding, RolePermissionBindingInput,
     },
     response::ApiResponse,
 };
@@ -141,8 +141,8 @@ pub async fn replace_role_permissions(
     Ok(ok(()))
 }
 
-pub async fn role_permission_bindings(State(state): State<RbacApiState>, Path(code): Path<String>) -> ApiResult<ApiJson<RolePermissionBindingInput>> {
-    Ok(ok(state.rbac_admin.role_permission_bindings(&code).await?))
+pub async fn role_permission_bindings(State(state): State<RbacApiState>, Path(code): Path<String>) -> ApiResult<ApiJson<RolePermissionBinding>> {
+    Ok(ok(state.rbac_admin.role_permission_bindings(&code, &state.authorization).await?))
 }
 
 impl From<RbacListQuery> for RbacListRequest {

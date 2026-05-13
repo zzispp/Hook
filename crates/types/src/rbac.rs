@@ -118,6 +118,13 @@ pub struct RolePermissionBindingInput {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+pub struct RolePermissionBinding {
+    pub menu_item_ids: Vec<String>,
+    pub api_permission_ids: Vec<String>,
+    pub readonly_apis: Vec<ApiPermission>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct NavResponse {
     pub nav_items: Vec<NavSectionResponse>,
 }

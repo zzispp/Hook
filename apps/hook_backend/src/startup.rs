@@ -194,7 +194,7 @@ async fn build_rbac_service(settings: &Settings, database: storage::Database) ->
 
 fn create_app(state: AppState) -> Router {
     let user_state = ApiState::new(state.users.clone(), state.tokens.clone(), state.captcha.clone());
-    let rbac_state = RbacApiState::new(state.rbac.clone(), state.rbac.clone());
+    let rbac_state = RbacApiState::new(state.authorization.clone(), state.rbac.clone(), state.rbac.clone());
     let model_state = ModelApiState::new(state.models);
     let provider_state = ProviderApiState::new(state.providers);
     let wallet_state = WalletApiState::new(state.wallets);

@@ -1,10 +1,10 @@
 use types::{
     pagination::PageRequest,
-    rbac::{RbacListFilters, RbacListRequest, Role},
+    rbac::{ApiPermissionInput, RbacListFilters, RbacListRequest, Role},
 };
 
 use super::{
-    test_fixtures::{api_input, api_permission, menu_item, menu_item_input, menu_section, permission_snapshot, rbac_id, role_input},
+    test_fixtures::{api_input, api_permission, menu_item, menu_item_input, menu_section, permission_snapshot, rbac_id, role_from_input, role_input},
     test_support::{MemoryRbacCache, MemoryRbacRepository},
 };
 use crate::application::{ApiCheckRequest, AuthWhitelistRule, AuthorizationConfig, RbacError, RbacService};
@@ -168,10 +168,43 @@ async fn role_permission_reads_return_current_ids() {
     let repository = MemoryRbacRepository::with_role_bindings("admin", vec!["menu-1".into()]);
     let service = RbacService::new(repository, MemoryRbacCache::default());
 
-    let permissions = service.role_permission_bindings("admin").await.unwrap();
+    let permissions = service.role_permission_bindings("admin", &empty_config()).await.unwrap();
 
     assert_eq!(permissions.menu_item_ids, vec!["menu-1"]);
     assert!(permissions.api_permission_ids.is_empty());
+    assert!(permissions.readonly_apis.is_empty());
+}
+
+#[tokio::test]
+async fn role_permission_reads_include_config_based_readonly_apis() {
+    let me_api = api_permission(
+        1,
+        ApiPermissionInput {
+            code: "auth_me".into(),
+            method: "GET".into(),
+            path_pattern: "/api/auth/me".into(),
+            name: "当前用户".into(),
+            enabled: true,
+            menu_item_ids: vec![],
+        },
+    );
+    let custom_api = api_permission(
+        2,
+        ApiPermissionInput {
+            code: "users_read".into(),
+            method: "GET".into(),
+            path_pattern: "/api/users".into(),
+            name: "用户列表".into(),
+            enabled: true,
+            menu_item_ids: vec![],
+        },
+    );
+    let repository = MemoryRbacRepository::with_role_and_apis(role_from_input(role_input("admin")), vec![me_api.clone(), custom_api]);
+    let service = RbacService::new(repository, MemoryRbacCache::default());
+
+    let permissions = service.role_permission_bindings("admin", &authenticated_config()).await.unwrap();
+
+    assert_eq!(permissions.readonly_apis, vec![me_api]);
 }
 
 #[tokio::test]
@@ -321,6 +354,16 @@ fn empty_config() -> AuthorizationConfig {
     AuthorizationConfig {
         whitelist: vec![],
         authenticated: vec![],
+    }
+}
+
+fn authenticated_config() -> AuthorizationConfig {
+    AuthorizationConfig {
+        whitelist: vec![],
+        authenticated: vec![AuthWhitelistRule {
+            methods: vec!["GET".into()],
+            path_pattern: "/api/auth/me".into(),
+        }],
     }
 }
 

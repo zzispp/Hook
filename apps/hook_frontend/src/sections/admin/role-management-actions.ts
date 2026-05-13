@@ -10,6 +10,7 @@ import { deleteRole, updateRolePermissions } from 'src/actions/rbac';
 import { toast } from 'src/components/snackbar';
 
 import { saveRole } from './role-management-state';
+import { filterRoleAssignableApiIds } from './role-permission-utils';
 
 type ActionOptions = {
   deleteState: RoleDeleteState;
@@ -75,10 +76,14 @@ function useRolePermissionAction({
     if (!permissionState.target) return;
     setSubmitting(true);
     try {
+      const apiPermissionIds = filterRoleAssignableApiIds(
+        permissionState.selectedApis,
+        permissionState.readOnlyApis
+      );
       await updateRolePermissions(
         permissionState.target.code,
         permissionState.selectedMenus,
-        permissionState.selectedApis
+        apiPermissionIds
       );
       toast.success(t('messages.rolePermissionsUpdated'));
       permissionState.close();

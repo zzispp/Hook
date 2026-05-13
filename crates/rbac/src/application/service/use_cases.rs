@@ -3,7 +3,7 @@ use types::{
     pagination::Page,
     rbac::{
         ApiMenuBindingInput, ApiPermission, ApiPermissionInput, MenuApiBindingInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse,
-        RbacListRequest, Role, RoleInput, RolePermissionBindingInput,
+        RbacListRequest, Role, RoleInput, RolePermissionBinding, RolePermissionBindingInput,
     },
 };
 
@@ -122,7 +122,7 @@ where
         Ok(self.api_menu_bindings(api_permission_id).await?.menu_item_ids)
     }
 
-    async fn role_permission_bindings(&self, role_code: &str) -> RbacResult<RolePermissionBindingInput> {
-        self.role_permission_bindings(role_code).await
+    async fn role_permission_bindings(&self, role_code: &str, authorization: &AuthorizationConfig) -> RbacResult<RolePermissionBinding> {
+        self.role_permission_bindings(role_code, authorization).await
     }
 }

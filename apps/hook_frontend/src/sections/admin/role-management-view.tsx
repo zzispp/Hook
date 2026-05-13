@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
@@ -18,6 +18,10 @@ import { RoleDeleteDialog } from './role-delete-dialog';
 import { RolePermissionDialog } from './role-permission-dialog';
 import { useRoleManagementActions } from './role-management-actions';
 import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
+import {
+  filterRoleAssignableApis,
+  filterRoleAssignableApiIds,
+} from './role-permission-utils';
 import { toEnabledFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 import {
   useRoleFormState,
@@ -35,6 +39,14 @@ export function RoleManagementView() {
   const formState = useRoleFormState();
   const deleteState = useRoleDeleteState();
   const permissionState = useRolePermissionState();
+  const roleAssignableApis = useMemo(
+    () => filterRoleAssignableApis(apis.items, permissionState.readOnlyApis),
+    [apis.items, permissionState.readOnlyApis]
+  );
+  const roleAssignableSelectedApis = useMemo(
+    () => filterRoleAssignableApiIds(permissionState.selectedApis, permissionState.readOnlyApis),
+    [permissionState.readOnlyApis, permissionState.selectedApis]
+  );
   const actionState = useRoleManagementActions({ deleteState, formState, permissionState });
   const handleFiltersChange = useCallback(
     (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
@@ -87,9 +99,10 @@ export function RoleManagementView() {
         role={permissionState.target}
         loading={permissionState.loading}
         submitting={actionState.submitting}
-        apis={apis.items}
+        apis={roleAssignableApis}
+        readOnlyApis={permissionState.readOnlyApis}
         menus={menuItems.items}
-        selectedApis={permissionState.selectedApis}
+        selectedApis={roleAssignableSelectedApis}
         selectedMenus={permissionState.selectedMenus}
         onSelectedApisChange={permissionState.setSelectedApis}
         onSelectedMenusChange={permissionState.setSelectedMenus}

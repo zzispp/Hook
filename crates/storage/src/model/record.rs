@@ -1,5 +1,5 @@
-use time::format_description::well_known::Rfc3339;
 use rust_decimal::Decimal;
+use time::format_description::well_known::Rfc3339;
 use types::model::{GlobalModelResponse, ModelCatalogProviderDetail, ModelPriceRange, PricingTier, TieredPricingConfig};
 
 use crate::{StorageResult, json};
@@ -124,18 +124,14 @@ mod tests {
 
     #[test]
     fn with_counts_formats_model_timestamps_as_rfc3339() {
-        let created_at = OffsetDateTime::parse("2026-05-13T08:30:45Z", &super::Rfc3339)
-            .expect("test created_at should parse");
-        let updated_at = OffsetDateTime::parse("2026-05-13T09:31:46Z", &super::Rfc3339)
-            .expect("test updated_at should parse");
+        let created_at = OffsetDateTime::parse("2026-05-13T08:30:45Z", &super::Rfc3339).expect("test created_at should parse");
+        let updated_at = OffsetDateTime::parse("2026-05-13T09:31:46Z", &super::Rfc3339).expect("test updated_at should parse");
         let record = GlobalModelRecord {
             id: "model-1".into(),
             name: "gpt-test".into(),
             display_name: "GPT Test".into(),
             default_price_per_request: Some(Decimal::from_str("0.5").expect("decimal")),
-            default_tiered_pricing:
-                "{\"tiers\":[{\"up_to\":null,\"input_price_per_1m\":0.1,\"output_price_per_1m\":0.2}]}"
-                    .into(),
+            default_tiered_pricing: "{\"tiers\":[{\"up_to\":null,\"input_price_per_1m\":0.1,\"output_price_per_1m\":0.2}]}".into(),
             supported_capabilities: Some("[\"vision\"]".into()),
             config: Some("{\"streaming\":true}".into()),
             is_active: true,
@@ -152,8 +148,7 @@ mod tests {
 
     #[test]
     fn format_timestamp_uses_rfc3339() {
-        let value = OffsetDateTime::parse("2026-05-13T08:30:45+08:00", &super::Rfc3339)
-            .expect("timestamp should parse");
+        let value = OffsetDateTime::parse("2026-05-13T08:30:45+08:00", &super::Rfc3339).expect("timestamp should parse");
 
         assert_eq!(format_timestamp(value), "2026-05-13T08:30:45+08:00");
     }

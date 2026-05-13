@@ -77,6 +77,16 @@ impl MemoryRbacRepository {
         }
     }
 
+    pub(super) fn with_role_and_apis(role: Role, apis: Vec<ApiPermission>) -> Self {
+        Self {
+            state: Arc::new(Mutex::new(RepositoryState {
+                roles: vec![role],
+                apis,
+                ..RepositoryState::default()
+            })),
+        }
+    }
+
     pub(super) fn with_menu_state(sections: Vec<MenuSection>, items: Vec<MenuItem>) -> Self {
         Self {
             state: Arc::new(Mutex::new(RepositoryState {

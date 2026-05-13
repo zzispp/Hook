@@ -2,7 +2,7 @@ use types::{
     pagination::Page,
     rbac::{
         ApiMenuBindingInput, ApiPermission, ApiPermissionInput, MenuApiBindingInput, MenuItem, MenuItemInput, MenuSection, MenuSectionInput, NavResponse,
-        RbacListRequest, Role, RoleInput, RolePermissionBindingInput,
+        RbacListRequest, Role, RoleInput, RolePermissionBinding, RolePermissionBindingInput,
     },
 };
 
@@ -206,11 +206,12 @@ where
         })
     }
 
-    pub async fn role_permission_bindings(&self, role_code: &str) -> RbacResult<RolePermissionBindingInput> {
+    pub async fn role_permission_bindings(&self, role_code: &str, authorization: &AuthorizationConfig) -> RbacResult<RolePermissionBinding> {
         ensure_role_exists(&self.repository, role_code).await?;
-        Ok(RolePermissionBindingInput {
+        Ok(RolePermissionBinding {
             menu_item_ids: self.repository.role_menu_item_ids(role_code).await?,
             api_permission_ids: self.repository.role_api_ids(role_code).await?,
+            readonly_apis: self.readonly_apis(authorization).await?,
         })
     }
 
@@ -243,6 +244,25 @@ where
         let snapshot = self.repository.permission_snapshot().await?;
         self.cache.write_snapshot(&snapshot).await
     }
+
+    async fn readonly_apis(&self, authorization: &AuthorizationConfig) -> RbacResult<Vec<ApiPermission>> {
+        let apis = self.repository.list_apis().await?;
+        apis.into_iter().filter_map(|api| readonly_api_result(api, authorization)).collect()
+    }
+}
+
+fn readonly_api_result(api: ApiPermission, authorization: &AuthorizationConfig) -> Option<RbacResult<ApiPermission>> {
+    match readonly_api(&api, authorization) {
+        Ok(true) => Some(Ok(api)),
+        Ok(false) => None,
+        Err(error) => Some(Err(error)),
+    }
+}
+
+fn readonly_api(api: &ApiPermission, authorization: &AuthorizationConfig) -> RbacResult<bool> {
+    let whitelisted = is_whitelisted(authorization, &api.method, &api.path_pattern)?;
+    let authenticated = is_authenticated_base(authorization, &api.method, &api.path_pattern)?;
+    Ok(whitelisted || authenticated)
 }
 
 #[cfg(test)]

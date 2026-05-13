@@ -1,6 +1,6 @@
 'use client';
 
-import type { Role, RoleInput } from 'src/types/rbac';
+import type { Role, RoleInput, ApiPermission } from 'src/types/rbac';
 
 import { useState, useCallback } from 'react';
 
@@ -45,6 +45,7 @@ export function useRoleFormState() {
 export function useRolePermissionState() {
   const { t } = useTranslate('admin');
   const [target, setTarget] = useState<Role | null>(null);
+  const [readOnlyApis, setReadOnlyApis] = useState<ApiPermission[]>([]);
   const [selectedMenus, setSelectedMenus] = useState<string[]>([]);
   const [selectedApis, setSelectedApis] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,6 +55,7 @@ export function useRolePermissionState() {
     setLoading(true);
     try {
       const permissions = await getRolePermissions(role.code);
+      setReadOnlyApis(permissions.readonly_apis);
       setSelectedMenus(permissions.menu_item_ids);
       setSelectedApis(permissions.api_permission_ids);
     } catch (error) {
@@ -65,6 +67,7 @@ export function useRolePermissionState() {
 
   const close = useCallback(() => {
     setTarget(null);
+    setReadOnlyApis([]);
     setSelectedMenus([]);
     setSelectedApis([]);
   }, []);
@@ -73,6 +76,7 @@ export function useRolePermissionState() {
     close,
     loading,
     open,
+    readOnlyApis,
     selectedApis,
     selectedMenus,
     setSelectedApis,

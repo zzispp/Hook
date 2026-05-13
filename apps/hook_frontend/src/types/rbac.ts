@@ -103,6 +103,7 @@ export type ApiMenuBinding = {
 export type RolePermissionBinding = {
   menu_item_ids: string[];
   api_permission_ids: string[];
+  readonly_apis: ApiPermission[];
 };
 
 export type NavResponse = {

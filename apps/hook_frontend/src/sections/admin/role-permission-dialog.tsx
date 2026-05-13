@@ -12,6 +12,7 @@ import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Checkbox from '@mui/material/Checkbox';
 import ListItem from '@mui/material/ListItem';
+import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import ListItemText from '@mui/material/ListItemText';
 import DialogActions from '@mui/material/DialogActions';
@@ -24,12 +25,13 @@ import { Scrollbar } from 'src/components/scrollbar';
 
 import { MethodLabel } from './shared';
 
-type PermissionTab = 'menus' | 'apis';
+type PermissionTab = 'menus' | 'apis' | 'readOnlyApis';
 
 type Props = {
   apis: ApiPermission[];
   loading: boolean;
   menus: RbacMenuItem[];
+  readOnlyApis: ApiPermission[];
   role: Role | null;
   selectedApis: string[];
   selectedMenus: string[];
@@ -44,6 +46,7 @@ export function RolePermissionDialog({
   apis,
   loading,
   menus,
+  readOnlyApis,
   role,
   selectedApis,
   selectedMenus,
@@ -71,18 +74,27 @@ export function RolePermissionDialog({
             <Tabs value={tab} onChange={(_event, value: PermissionTab) => setTab(value)} sx={{ mb: 2 }}>
               <Tab value="menus" label={t('common.menus')} />
               <Tab value="apis" label={t('common.apis')} />
+              <Tab value="readOnlyApis" label={t('common.readOnlyApis')} />
             </Tabs>
             {tab === 'menus' ? (
               <MenuPermissionList
                 menus={menus}
+                emptyText={t('common.noData')}
                 selectedMenus={selectedMenus}
                 onSelectedMenusChange={onSelectedMenusChange}
               />
-            ) : (
+            ) : tab === 'apis' ? (
               <ApiPermissionList
                 apis={apis}
+                emptyText={t('common.noData')}
                 selectedApis={selectedApis}
                 onSelectedApisChange={onSelectedApisChange}
+              />
+            ) : (
+              <ReadOnlyApiList
+                apis={readOnlyApis}
+                emptyText={t('common.noData')}
+                helperText={t('messages.roleReadOnlyApisHint')}
               />
             )}
           </>
@@ -100,47 +112,28 @@ export function RolePermissionDialog({
   );
 }
 
-function MenuPermissionList({
-  menus,
-  selectedMenus,
-  onSelectedMenusChange,
-}: {
-  menus: RbacMenuItem[];
-  selectedMenus: string[];
-  onSelectedMenusChange: (value: string[]) => void;
-}) {
-  return (
-    <Scrollbar sx={{ maxHeight: 520 }}>
-      <List disablePadding>
-        {menus.map((menu) => (
-          <ListItem key={menu.id} disablePadding>
-            <ListItemButton onClick={() => onSelectedMenusChange(toggleValue(selectedMenus, menu.id))}>
-              <Checkbox edge="start" checked={selectedMenus.includes(menu.id)} tabIndex={-1} />
-              <ListItemText primary={menu.title} secondary={`${menu.code} · ${menu.path}`} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-    </Scrollbar>
-  );
-}
-
-function ApiPermissionList({
+function ReadOnlyApiList({
   apis,
-  selectedApis,
-  onSelectedApisChange,
+  emptyText,
+  helperText,
 }: {
   apis: ApiPermission[];
-  selectedApis: string[];
-  onSelectedApisChange: (value: string[]) => void;
+  emptyText: string;
+  helperText: string;
 }) {
   return (
     <Scrollbar sx={{ maxHeight: 520 }}>
-      <List disablePadding>
-        {apis.map((api) => (
-          <ListItem key={api.id} disablePadding>
-            <ListItemButton onClick={() => onSelectedApisChange(toggleValue(selectedApis, api.id))}>
-              <Checkbox edge="start" checked={selectedApis.includes(api.id)} tabIndex={-1} />
+      <Box sx={{ px: 2, pt: 1, pb: 2 }}>
+        <Typography color="text.secondary" variant="body2">
+          {helperText}
+        </Typography>
+      </Box>
+      {apis.length === 0 ? (
+        <Box sx={{ px: 2, pb: 3, color: 'text.secondary' }}>{emptyText}</Box>
+      ) : (
+        <List disablePadding>
+          {apis.map((api) => (
+            <ListItem key={api.id} sx={{ px: 2, py: 1.5 }}>
               <ListItemText
                 primary={
                   <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -150,10 +143,80 @@ function ApiPermissionList({
                 }
                 secondary={api.path_pattern}
               />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+            </ListItem>
+          ))}
+        </List>
+      )}
+    </Scrollbar>
+  );
+}
+
+function MenuPermissionList({
+  emptyText,
+  menus,
+  selectedMenus,
+  onSelectedMenusChange,
+}: {
+  emptyText: string;
+  menus: RbacMenuItem[];
+  selectedMenus: string[];
+  onSelectedMenusChange: (value: string[]) => void;
+}) {
+  return (
+    <Scrollbar sx={{ maxHeight: 520 }}>
+      {menus.length === 0 ? (
+        <Box sx={{ px: 2, py: 3, color: 'text.secondary' }}>{emptyText}</Box>
+      ) : (
+        <List disablePadding>
+          {menus.map((menu) => (
+            <ListItem key={menu.id} disablePadding>
+              <ListItemButton onClick={() => onSelectedMenusChange(toggleValue(selectedMenus, menu.id))}>
+                <Checkbox edge="start" checked={selectedMenus.includes(menu.id)} tabIndex={-1} />
+                <ListItemText primary={menu.title} secondary={`${menu.code} · ${menu.path}`} />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      )}
+    </Scrollbar>
+  );
+}
+
+function ApiPermissionList({
+  apis,
+  emptyText,
+  selectedApis,
+  onSelectedApisChange,
+}: {
+  apis: ApiPermission[];
+  emptyText: string;
+  selectedApis: string[];
+  onSelectedApisChange: (value: string[]) => void;
+}) {
+  return (
+    <Scrollbar sx={{ maxHeight: 520 }}>
+      {apis.length === 0 ? (
+        <Box sx={{ px: 2, py: 3, color: 'text.secondary' }}>{emptyText}</Box>
+      ) : (
+        <List disablePadding>
+          {apis.map((api) => (
+            <ListItem key={api.id} disablePadding>
+              <ListItemButton onClick={() => onSelectedApisChange(toggleValue(selectedApis, api.id))}>
+                <Checkbox edge="start" checked={selectedApis.includes(api.id)} tabIndex={-1} />
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <MethodLabel method={api.method} />
+                      <span>{api.name}</span>
+                    </Box>
+                  }
+                  secondary={api.path_pattern}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      )}
     </Scrollbar>
   );
 }
