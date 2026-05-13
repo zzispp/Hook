@@ -33,7 +33,7 @@
 
 ## Risk Assessment
 
-- [x] External dependencies — local backend on `localhost:3000` returned the reported error.
+- [x] External dependencies — local backend on `localhost:5555` returned the reported error.
 - [x] Breaking changes — storage schema and domain type may need nullable user owner.
 - [x] Large file generation — none.
 - [x] Long-running tests — use timeout for backend tests.

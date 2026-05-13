@@ -85,7 +85,7 @@
   - Ran scoped backend checks.
   - Ran frontend lint and build.
   - Verified current local database `api_tokens.user_id` is nullable.
-  - Created an independent admin token against `localhost:3000` after backend restart and deleted the verification token.
+  - Created an independent admin token against `localhost:5555` after backend restart and deleted the verification token.
 - **Key decisions**:
   - Decision: Do not edit `crates/provider/src/api/routes.rs`.
   - Reasoning: The user clarified request-records is owned by another AI; full provider/backend check is blocked by that unrelated route import.

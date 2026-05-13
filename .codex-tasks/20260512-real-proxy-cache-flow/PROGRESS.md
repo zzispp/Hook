@@ -3,7 +3,7 @@
 ## 2026-05-12
 
 - Created the task to validate the real proxy flow after the Redis cache module was added.
-- Confirmed the local backend was not listening on `127.0.0.1:3000` before the test run.
+- Confirmed the local backend was not listening on `127.0.0.1:5555` before the test run.
 - Confirmed the prior reference script already seeds deterministic provider/key/model fixtures and exercises core scheduling and conversion paths.
 - Added `.codex-tasks/20260512-real-proxy-cache-flow/real_proxy_cache_flow.mjs` and helper modules. All secrets are read from environment variables.
 - `cargo check -p backend -p proxy` passed.
@@ -16,7 +16,7 @@ Command shape:
 HOOK_SYSTEM_TOKEN=... HOOK_POOL_BASE_URL=https://www.hook.rs HOOK_POOL_KEY=... CLAUDE_KEY=... CLAUDE_BASE_URL=https://www.hook.rs EKAN8_KEY=... node .codex-tasks/20260512-real-proxy-cache-flow/real_proxy_cache_flow.mjs
 ```
 
-The script starts `cargo run -p backend` when `127.0.0.1:3000` is not already healthy, seeds deterministic DB fixtures, clears Redis proxy caches, runs each scenario, and kills the backend it started.
+The script starts `cargo run -p backend` when `127.0.0.1:5555` is not already healthy, seeds deterministic DB fixtures, clears Redis proxy caches, runs each scenario, and kills the backend it started.
 
 Passed real scenarios:
 
@@ -53,4 +53,3 @@ Recent DB evidence:
 Additional DB check:
 
 - All request rows for the seeded independent token were owned by admin user `00000000-0000-7000-8000-000000000000`.
-

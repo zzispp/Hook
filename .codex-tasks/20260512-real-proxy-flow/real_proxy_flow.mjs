@@ -42,7 +42,7 @@ const db = Object.freeze({
   name: env('HOOK_DB_NAME', 'postgres'),
 });
 
-const serverBaseUrl = env('HOOK_BACKEND_URL', 'http://127.0.0.1:3000');
+const serverBaseUrl = env('HOOK_BACKEND_URL', 'http://127.0.0.1:5555');
 const providerSecret = env('HOOK_PROVIDER_KEY_SECRET', 'hook-local-development-provider-key-secret-change-before-deploy');
 const adminUserId = env('HOOK_ADMIN_USER_ID', '00000000-0000-7000-8000-000000000000');
 const redisPrefix = env('HOOK_REDIS_PREFIX', 'hook');

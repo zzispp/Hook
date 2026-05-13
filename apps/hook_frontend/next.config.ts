@@ -14,7 +14,7 @@ import type { NextConfig } from 'next';
  * NOTE: Remove all "generateStaticParams()" functions if not using static exports.
  */
 const isStaticExport = false;
-const backendUrl = process.env.HOOK_BACKEND_URL ?? 'http://127.0.0.1:3000';
+const backendUrl = process.env.HOOK_BACKEND_URL ?? 'http://127.0.0.1:5555';
 
 // ----------------------------------------------------------------------
 

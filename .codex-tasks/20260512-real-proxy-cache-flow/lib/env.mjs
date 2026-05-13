@@ -1,6 +1,6 @@
 export function loadContext() {
   return Object.freeze({
-    serverBaseUrl: env('HOOK_BACKEND_URL', 'http://127.0.0.1:3000'),
+    serverBaseUrl: env('HOOK_BACKEND_URL', 'http://127.0.0.1:5555'),
     providerSecret: env('HOOK_PROVIDER_KEY_SECRET', 'hook-local-development-provider-key-secret-change-before-deploy'),
     adminUserId: env('HOOK_ADMIN_USER_ID', '00000000-0000-7000-8000-000000000000'),
     adminIdentifier: env('HOOK_ADMIN_IDENTIFIER', 'admin'),
