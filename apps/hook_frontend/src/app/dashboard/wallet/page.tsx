@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { dashboardPageMetadata } from 'src/app/dashboard/page-metadata';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { WalletCenterView } from 'src/sections/wallet/wallet-center-view';
 
-export const metadata: Metadata = { title: `钱包中心 | Dashboard - ${CONFIG.appName}` };
+export async function generateMetadata(): Promise<Metadata> {
+  return dashboardPageMetadata(DASHBOARD_MENU_CODES.walletCenter);
+}
 
 export default function Page() {
   return <WalletCenterView />;

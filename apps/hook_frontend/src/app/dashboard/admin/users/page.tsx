@@ -1,12 +1,15 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { dashboardPageMetadata } from 'src/app/dashboard/page-metadata';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { UserManagementView } from 'src/sections/admin/user-management-view';
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `用户管理 | Dashboard - ${CONFIG.appName}` };
+export async function generateMetadata(): Promise<Metadata> {
+  return dashboardPageMetadata(DASHBOARD_MENU_CODES.userManagement);
+}
 
 export default function Page() {
   return <UserManagementView />;

@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { dashboardPageMetadata } from 'src/app/dashboard/page-metadata';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { RequestRecordsView } from 'src/sections/admin/request-records-view';
 
-export const metadata: Metadata = { title: `请求记录 | Dashboard - ${CONFIG.appName}` };
+export async function generateMetadata(): Promise<Metadata> {
+  return dashboardPageMetadata(DASHBOARD_MENU_CODES.requestRecords);
+}
 
 export default function Page() {
   return <RequestRecordsView />;

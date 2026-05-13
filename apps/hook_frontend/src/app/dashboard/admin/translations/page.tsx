@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { dashboardPageMetadata } from 'src/app/dashboard/page-metadata';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { TranslationManagementView } from 'src/sections/admin/translation-management-view';
 
-export const metadata: Metadata = {
-  title: `翻译管理 | Dashboard - ${CONFIG.appName}`,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return dashboardPageMetadata(DASHBOARD_MENU_CODES.translationManagement);
+}
 
 export default function Page() {
   return <TranslationManagementView />;

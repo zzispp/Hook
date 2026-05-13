@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { dashboardPageMetadata } from 'src/app/dashboard/page-metadata';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { ApiTokenManagementView } from 'src/sections/api-tokens/api-token-management-view';
 
-export const metadata: Metadata = { title: `我的令牌 | Dashboard - ${CONFIG.appName}` };
+export async function generateMetadata(): Promise<Metadata> {
+  return dashboardPageMetadata(DASHBOARD_MENU_CODES.apiTokens);
+}
 
 export default function Page() {
   return <ApiTokenManagementView />;

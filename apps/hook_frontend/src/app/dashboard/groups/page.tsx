@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { dashboardPageMetadata } from 'src/app/dashboard/page-metadata';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { BillingGroupCatalogView } from 'src/sections/models/billing-group-catalog-view';
 
-export const metadata: Metadata = { title: `价格分组 | Dashboard - ${CONFIG.appName}` };
+export async function generateMetadata(): Promise<Metadata> {
+  return dashboardPageMetadata(DASHBOARD_MENU_CODES.billingGroupCatalog);
+}
 
 export default function Page() {
   return <BillingGroupCatalogView />;

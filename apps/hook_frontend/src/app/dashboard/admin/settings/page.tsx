@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { dashboardPageMetadata } from 'src/app/dashboard/page-metadata';
+import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { SystemSettingsView } from 'src/sections/admin/system-settings-view';
 
-export const metadata: Metadata = { title: `系统设置 | Dashboard - ${CONFIG.appName}` };
+export async function generateMetadata(): Promise<Metadata> {
+  return dashboardPageMetadata(DASHBOARD_MENU_CODES.systemSettings);
+}
 
 export default function Page() {
   return <SystemSettingsView />;
