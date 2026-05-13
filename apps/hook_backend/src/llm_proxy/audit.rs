@@ -1,5 +1,6 @@
 use provider::application::billing::{RequestBillingInput, calculate_request_billing};
 use storage::{
+    StorageError,
     api_token::ApiTokenUsageRecord,
     provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch},
     setting::SettingStore,
@@ -25,26 +26,48 @@ pub struct TokenUsage {
 pub async fn record_available_candidates(state: &LlmProxyState, selection: &CandidateSelection, capture: &RequestCapture) -> Result<(), LlmProxyError> {
     let policy = request_record_policy(state).await?;
     for candidate in &selection.candidates {
-        for retry_index in 0..=candidate.max_retries {
-            create_record(state, available_input(&selection.request_id, &candidate.trace, retry_index, capture, &policy)?).await?;
-        }
+        create_record(state, available_input(&selection.request_id, &candidate.trace, 0, capture, &policy)?).await?;
     }
     Ok(())
 }
 
 pub async fn record_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
-    update_attempt(state, request_id, input).await
+    update_attempt(state, request_id, input, None).await
 }
 
-pub async fn update_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
+pub async fn record_attempt_with_capture(
+    state: &LlmProxyState,
+    request_id: &str,
+    input: AttemptRecordInput<'_>,
+    capture: &RequestCapture,
+) -> Result<(), LlmProxyError> {
+    update_attempt(state, request_id, input, Some(capture)).await
+}
+
+pub async fn update_attempt(
+    state: &LlmProxyState,
+    request_id: &str,
+    input: AttemptRecordInput<'_>,
+    capture: Option<&RequestCapture>,
+) -> Result<(), LlmProxyError> {
     let usage_record = token_usage_record(request_id, &input, OffsetDateTime::now_utc());
     let policy = request_record_policy(state).await?;
-    ProviderStore::new(state.database.clone())
-        .update_request_candidate(attempt_patch(request_id, input, &policy)?)
-        .await?;
+    let store = ProviderStore::new(state.database.clone());
+    match store.update_request_candidate(attempt_patch(request_id, &input, &policy)?).await {
+        Ok(_) => {}
+        Err(StorageError::NotFound) => create_missing_attempt(&store, request_id, &input, capture, &policy).await?,
+        Err(error) => return Err(error.into()),
+    }
     if let Some(record) = usage_record? {
         state.tokens.record_usage(record).await?;
     }
+    Ok(())
+}
+
+pub async fn record_unused_candidates(state: &LlmProxyState, request_id: &str) -> Result<(), LlmProxyError> {
+    ProviderStore::new(state.database.clone())
+        .mark_available_request_candidates_unused(request_id)
+        .await?;
     Ok(())
 }
 
@@ -58,8 +81,25 @@ async fn request_record_policy(state: &LlmProxyState) -> Result<RequestRecordPol
     RequestRecordPolicy::from_settings(&settings).map_err(LlmProxyError::Infrastructure)
 }
 
-fn attempt_patch(request_id: &str, input: AttemptRecordInput<'_>, policy: &RequestRecordPolicy) -> Result<RequestCandidateRecordPatch, LlmProxyError> {
-    let billing = attempt_billing(&input);
+async fn create_missing_attempt(
+    store: &ProviderStore,
+    request_id: &str,
+    input: &AttemptRecordInput<'_>,
+    capture: Option<&RequestCapture>,
+    policy: &RequestRecordPolicy,
+) -> Result<(), LlmProxyError> {
+    let capture = capture.ok_or_else(|| {
+        LlmProxyError::Infrastructure(format!(
+            "missing request candidate record: {request_id}/{}:{}",
+            input.candidate.trace.candidate_index, input.retry_index
+        ))
+    })?;
+    store.create_request_candidate(attempt_input(request_id, input, capture, policy)?).await?;
+    Ok(())
+}
+
+fn attempt_patch(request_id: &str, input: &AttemptRecordInput<'_>, policy: &RequestRecordPolicy) -> Result<RequestCandidateRecordPatch, LlmProxyError> {
+    let billing = attempt_billing(input);
     Ok(RequestCandidateRecordPatch {
         request_id: request_id.to_owned(),
         candidate_index: input.candidate.trace.candidate_index,
@@ -81,10 +121,48 @@ fn attempt_patch(request_id: &str, input: AttemptRecordInput<'_>, policy: &Reque
         error_type: input.error_type.map(str::to_owned),
         error_message: input.error_message.map(str::to_owned),
         response_body: policy
-            .response_body(input.response_body)
+            .response_body(input.response_body.clone())
             .map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?,
         finished: input.finished,
     })
+}
+
+fn attempt_input(
+    request_id: &str,
+    input: &AttemptRecordInput<'_>,
+    capture: &RequestCapture,
+    policy: &RequestRecordPolicy,
+) -> Result<RequestCandidateRecordInput, LlmProxyError> {
+    let billing = attempt_billing(input);
+    let mut record = base_input(
+        request_id,
+        &input.candidate.trace,
+        input.retry_index,
+        input.status,
+        true,
+        input.finished,
+        capture,
+        policy,
+    )?;
+    record.status_code = input.status_code;
+    record.prompt_tokens = input.usage.and_then(|usage| usage.prompt_tokens);
+    record.completion_tokens = input.usage.and_then(|usage| usage.completion_tokens);
+    record.total_tokens = input.usage.and_then(|usage| usage.total_tokens);
+    record.cache_creation_input_tokens = input.usage.and_then(|usage| usage.cache_creation_input_tokens);
+    record.cache_read_input_tokens = input.usage.and_then(|usage| usage.cache_read_input_tokens);
+    record.cost_currency = billing.as_ref().map(|amount| amount.currency.clone());
+    record.token_cost = billing.as_ref().map(|amount| amount.token_cost);
+    record.base_cost = billing.as_ref().map(|amount| amount.base_cost);
+    record.total_cost = billing.as_ref().map(|amount| amount.total_cost);
+    record.billing_multiplier = billing.map(|amount| amount.billing_multiplier);
+    record.latency_ms = input.latency_ms;
+    record.first_byte_time_ms = input.first_byte_time_ms;
+    record.error_type = input.error_type.map(str::to_owned);
+    record.error_message = input.error_message.map(str::to_owned);
+    record.response_body = policy
+        .response_body(input.response_body.clone())
+        .map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?;
+    Ok(record)
 }
 
 fn base_input(

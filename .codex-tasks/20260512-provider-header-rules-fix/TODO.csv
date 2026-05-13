@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm current rule contract,DONE,Frontend/API rule JSON shape is identified,rg -n "HeaderRule|header_rules" apps/hook_frontend/src crates/types apps/hook_backend/src,,0,
+2,Add failing unit test for header rules,DONE,Test asserts set/drop/rename affect upstream request headers,cargo test -p backend llm_proxy::proxy::executor::tests::upstream_request_applies_provider_header_rules,2026-05-12T19:00:00+08:00,0,Failed before implementation because rules were not applied.
+3,Implement header rule propagation and application,DONE,ProxyCandidate carries rules and executor applies them,cargo test -p backend provider_header_rules,2026-05-12T19:05:00+08:00,0,
+4,Run backend validation and real request probe,DONE,Automated checks pass and echo upstream shows overwritten header,just test,2026-05-13T00:12:00+08:00,0,clippy is blocked by existing crates/types lints; cargo check and just test passed.

@@ -14,6 +14,10 @@ export type TraceGroup = {
   providerName: string;
   status: TraceStatus;
   attempts: TraceAttempt[];
+  totalAttemptCount: number;
+  hiddenAttemptCount: number;
+  endpointCount: number;
+  keyCount: number;
 };
 
 const STATUS_ORDER: Record<TraceStatus, number> = {
@@ -30,11 +34,7 @@ export function buildTraceGroups(record: RequestRecord | null, candidates: Reque
     ...candidate,
     traceStatus: traceStatus(candidate, candidates, record),
   }));
-  const groups: TraceGroup[] = [];
-  for (const attempt of attempts) {
-    appendAttempt(groups, attempt);
-  }
-  return groups;
+  return groupedAttempts(attempts).map(traceGroup);
 }
 
 export function defaultSelection(groups: TraceGroup[]) {
@@ -80,15 +80,38 @@ export function statusColor(status: TraceStatus) {
   }[status];
 }
 
-function appendAttempt(groups: TraceGroup[], attempt: TraceAttempt) {
-  const id = attempt.provider_id || attempt.provider_name || attempt.id;
-  const group = groups.find((item) => item.id === id);
-  if (group) {
-    group.attempts.push(attempt);
-    group.status = higherStatus(group.status, attempt.traceStatus);
-    return;
+function groupedAttempts(attempts: TraceAttempt[]) {
+  const groups = new Map<string, TraceAttempt[]>();
+  for (const attempt of attempts) {
+    const id = attemptGroupId(attempt);
+    groups.set(id, [...(groups.get(id) ?? []), attempt]);
   }
-  groups.push({ id, providerName: attempt.provider_name || id, status: attempt.traceStatus, attempts: [attempt] });
+  return [...groups.values()];
+}
+
+function traceGroup(attempts: TraceAttempt[]): TraceGroup {
+  const visibleAttempts = attempts.filter(visibleTraceAttempt);
+  const shownAttempts = visibleAttempts.length > 0 ? visibleAttempts : attempts.slice(0, 1);
+  const first = attempts[0];
+  const status = attempts.reduce((current, attempt) => higherStatus(current, attempt.traceStatus), 'notScheduled' as TraceStatus);
+  return {
+    id: attemptGroupId(first),
+    providerName: first.provider_name || attemptGroupId(first),
+    status,
+    attempts: shownAttempts,
+    totalAttemptCount: attempts.length,
+    hiddenAttemptCount: attempts.length - shownAttempts.length,
+    endpointCount: uniqueCount(attempts.map((attempt) => attempt.endpoint_id || attempt.provider_api_format || attempt.id)),
+    keyCount: uniqueCount(attempts.map((attempt) => attempt.key_id || attempt.key_preview || attempt.id)),
+  };
+}
+
+function attemptGroupId(attempt: TraceAttempt) {
+  return attempt.provider_id || attempt.provider_name || attempt.id;
+}
+
+function visibleTraceAttempt(attempt: TraceAttempt) {
+  return attempt.traceStatus !== 'notScheduled' && attempt.traceStatus !== 'unscheduled';
 }
 
 function preferredGroupIndex(groups: TraceGroup[]) {
@@ -104,6 +127,7 @@ function traceStatus(candidate: RequestCandidateDetail, candidates: RequestCandi
   if (candidate.status === 'failed' || failedStatusCode(candidate.status_code)) return 'failed';
   if (candidate.status === 'streaming' || activeCandidate(candidate)) return 'active';
   if (candidate.status === 'pending' && !candidate.started_at) return 'queued';
+  if (candidate.status === 'unused') return 'notScheduled';
   if (candidate.status === 'available') return availableStatus(candidates, record);
   return 'unscheduled';
 }
@@ -128,4 +152,8 @@ function failedStatusCode(value?: number | null) {
 
 function higherStatus(left: TraceStatus, right: TraceStatus) {
   return STATUS_ORDER[right] > STATUS_ORDER[left] ? right : left;
+}
+
+function uniqueCount(values: string[]) {
+  return new Set(values).size;
 }

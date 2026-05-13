@@ -7,7 +7,7 @@ use tokio_tungstenite::tungstenite::Message as UpstreamMessage;
 use super::connect::ConnectedUpstream;
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
-    audit::{AttemptRecordInput, update_attempt},
+    audit::{AttemptRecordInput, record_attempt},
     candidate::ProxyCandidate,
 };
 
@@ -65,7 +65,7 @@ async fn finish_relay(
         RelayOutcome::Success => ("success", None, None),
         RelayOutcome::Failed(message) => ("failed", Some("upstream_ws_error"), Some(message.as_str())),
     };
-    update_attempt(
+    record_attempt(
         &state,
         &request_id,
         AttemptRecordInput {

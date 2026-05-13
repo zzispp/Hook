@@ -66,6 +66,7 @@ pub struct CachedEndpoint {
     pub max_retries: Option<i32>,
     pub is_active: bool,
     pub format_acceptance_config: Option<serde_json::Value>,
+    pub header_rules: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -191,6 +192,7 @@ async fn load_endpoints(store: &ProviderStore, provider_id: &str) -> Result<Vec<
             max_retries: endpoint.max_retries,
             is_active: endpoint.is_active,
             format_acceptance_config: endpoint.format_acceptance_config,
+            header_rules: endpoint.header_rules,
         })
         .collect())
 }

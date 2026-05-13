@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect reference flow and current scheduler state,DONE,Reference scripts and scheduling/cache entry points are understood,find .codex-tasks/20260512-real-proxy-cache-flow -maxdepth 3 -type f -print,,0,
+2,Probe real upstream provider capabilities,DONE,OpenAI Claude and Gemini upstream model endpoints respond,node .codex-tasks/20260512-real-proxy-cache-flow/probe_upstreams.mjs,,0,Run with runtime env secrets only
+3,Create real route scheduler test harness,DONE,Harness seeds dedicated DB fixtures and covers route/audit/conversion/scheduling/concurrency,test -f .codex-tasks/20260513-real-route-scheduler-flow/real_route_scheduler_flow.mjs,2026-05-13T10:00:00+08:00,0,
+4,Run static/backend/frontend checks,DONE,Codebase checks still pass after harness addition,just test && pnpm --filter hook_frontend lint,2026-05-13T10:00:00+08:00,0,
+5,Run real route scheduler flow,DONE,All real scenarios pass and raw result evidence is written,node .codex-tasks/20260513-real-route-scheduler-flow/real_route_scheduler_flow.mjs,2026-05-13T10:00:00+08:00,2,First run exposed stale v1 cache key and compact body shape; final run passed all scenarios
+6,Record evidence and close task,DONE,PROGRESS.md summarizes scenario evidence and failures if any,test -s .codex-tasks/20260513-real-route-scheduler-flow/PROGRESS.md,2026-05-13T10:00:00+08:00,0,

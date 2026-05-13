@@ -63,18 +63,20 @@ fn scheduler_input(
 }
 
 fn scheduler_candidate(parts: &CandidateParts) -> Result<Candidate, LlmProxyError> {
+    let endpoint = primary_endpoint(parts);
+    let key = primary_key(parts);
     Ok(Candidate {
         provider_id: parts.provider.id.clone(),
         provider_name: parts.provider.name.clone(),
-        endpoint_id: parts.endpoint.id.clone(),
-        key_id: parts.key.id.clone(),
+        endpoint_id: endpoint.id.clone(),
+        key_id: key.id.clone(),
         global_model_id: parts.model.global_model_id.clone(),
         provider_model_name: parts.model.provider_model_name.clone(),
-        provider_api_format: formats::parse_api_format(&parts.endpoint.api_format)?,
-        needs_conversion: parts.needs_conversion,
+        provider_api_format: formats::parse_api_format(&endpoint.api_format)?,
+        needs_conversion: endpoint.api_format != parts.client_api_format,
         is_cached: false,
         provider_priority: parts.provider.priority,
-        key_priority: parts.key.internal_priority,
+        key_priority: key.internal_priority,
     })
 }
 
@@ -117,19 +119,17 @@ fn scheduler_mode(mode: ProviderSchedulingMode) -> SchedulingMode {
 }
 
 fn part_key(parts: &CandidateParts) -> CandidatePartKey {
-    (
-        parts.provider.id.clone(),
-        parts.endpoint.id.clone(),
-        parts.key.id.clone(),
-        parts.model.global_model_id.clone(),
-    )
+    (parts.provider.id.clone(), parts.model.global_model_id.clone())
 }
 
 fn candidate_key(candidate: &Candidate) -> CandidatePartKey {
-    (
-        candidate.provider_id.clone(),
-        candidate.endpoint_id.clone(),
-        candidate.key_id.clone(),
-        candidate.global_model_id.clone(),
-    )
+    (candidate.provider_id.clone(), candidate.global_model_id.clone())
+}
+
+fn primary_endpoint(parts: &CandidateParts) -> &crate::llm_proxy::cache::snapshot::CachedEndpoint {
+    &parts.endpoints[0]
+}
+
+fn primary_key(parts: &CandidateParts) -> &crate::llm_proxy::cache::snapshot::CachedProviderKey {
+    &parts.keys[0]
 }

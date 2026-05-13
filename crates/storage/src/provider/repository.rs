@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
-use types::provider::{ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderListRequest, ProviderListResponse, RequestRecordListRequest};
+use types::provider::{Provider, ProviderListRequest, ProviderListResponse};
 
 use crate::{Database, StorageError, StorageResult, json};
 
@@ -215,41 +215,6 @@ impl ProviderStore {
 
     pub async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> StorageResult<()> {
         super::provider_model_query::delete_model_binding(self, provider_id, model_id).await
-    }
-
-    pub async fn create_request_candidate(&self, input: super::RequestCandidateRecordInput) -> StorageResult<types::provider::RequestCandidate> {
-        super::request_candidate_query::create_request_candidate(self, input).await
-    }
-
-    pub async fn update_request_candidate(&self, input: super::RequestCandidateRecordPatch) -> StorageResult<types::provider::RequestCandidate> {
-        super::request_candidate_query::update_request_candidate(self, input).await
-    }
-
-    pub async fn list_request_candidates(
-        &self,
-        request: types::provider::RequestCandidateListRequest,
-    ) -> StorageResult<Vec<types::provider::RequestCandidate>> {
-        super::request_candidate_query::list_request_candidates(self, request).await
-    }
-
-    pub async fn list_request_records(&self, request: RequestRecordListRequest) -> StorageResult<types::provider::RequestRecordListResponse> {
-        super::request_record_query::list_request_records(self, request).await
-    }
-
-    pub async fn list_active_request_records(&self, request: ActiveRequestRecordRequest) -> StorageResult<ActiveRequestRecordResponse> {
-        super::request_record_query::list_active_request_records(self, request).await
-    }
-
-    pub async fn get_request_record(&self, request_id: &str) -> StorageResult<types::provider::RequestRecordDetail> {
-        super::request_record_query::get_request_record(self, request_id).await
-    }
-
-    pub async fn delete_request_records_before(&self, cutoff: time::OffsetDateTime) -> StorageResult<u64> {
-        super::request_record_cleanup::delete_request_records_before(self, cutoff).await
-    }
-
-    pub async fn clear_request_record_payloads_before(&self, cutoff: time::OffsetDateTime) -> StorageResult<u64> {
-        super::request_record_cleanup::clear_request_record_payloads_before(self, cutoff).await
     }
 
     pub(crate) fn connection(&self) -> &DatabaseConnection {

@@ -1,0 +1,114 @@
+[
+  {
+    "label": "fixed order exact endpoints",
+    "ok": true,
+    "evidence": [
+      "019e1f3c-855e-7900-9202-f9dc44a333e4",
+      "019e1f3c-9c6d-7ab0-874e-1f18d799585a",
+      "019e1f3c-abeb-7a71-a4f1-53e0c6ef5a72",
+      "019e1f3c-b59b-7033-8cc3-654e8074944d"
+    ]
+  },
+  {
+    "label": "route key failover",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e1f3c-c61c-71e3-a415-5f11c1bd62a8",
+      "attempts": 2
+    }
+  },
+  {
+    "label": "route endpoint fallback conversion",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e1f3c-e182-7960-aa2b-78433f217a51",
+      "attempts": 3,
+      "endpoint": "openai_cli"
+    }
+  },
+  {
+    "label": "provider failover",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e1f3c-ef01-7be2-a131-6d8c959d45d7",
+      "attempts": 3
+    }
+  },
+  {
+    "label": "cache affinity",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e1f3d-0b7e-74c3-961e-2477d27fb483",
+      "key": "Route Hook secondary"
+    }
+  },
+  {
+    "label": "load balance",
+    "ok": true,
+    "evidence": {
+      "keys": [
+        "Route Hook primary",
+        "Route Hook secondary"
+      ]
+    }
+  },
+  {
+    "label": "format conversion matrix",
+    "ok": true,
+    "evidence": [
+      {
+        "label": "openai to claude",
+        "requestId": "019e1f3e-7ae0-7393-8201-8ed4d76f8ead",
+        "provider": "Route Test AIPAI Claude",
+        "conversion": "true"
+      },
+      {
+        "label": "openai stream to claude",
+        "requestId": "019e1f3e-9214-7881-8ff6-6007bbf3ded4",
+        "provider": "Route Test AIPAI Claude",
+        "conversion": "true"
+      },
+      {
+        "label": "openai to gemini",
+        "requestId": "019e1f3e-a0ff-73a1-911b-dc4b1612dc9c",
+        "provider": "Route Test Ekan8 Gemini",
+        "conversion": "true"
+      },
+      {
+        "label": "openai stream to gemini",
+        "requestId": "019e1f3f-15a3-7191-92b1-7cbbcecccf8f",
+        "provider": "Route Test Ekan8 Gemini",
+        "conversion": "true"
+      },
+      {
+        "label": "claude to openai",
+        "requestId": "019e1f3f-5a54-7620-8f94-1bfc6da52540",
+        "provider": "Route Test Hook Pool",
+        "conversion": "true"
+      },
+      {
+        "label": "gemini exact",
+        "requestId": "019e1f3f-6f61-7891-aabc-60b306de72a0",
+        "provider": "Route Test Ekan8 Gemini",
+        "conversion": "false"
+      },
+      {
+        "label": "gemini stream exact",
+        "requestId": "019e1f3f-8357-7f00-8aa8-381e1f143da1",
+        "provider": "Route Test Ekan8 Gemini",
+        "conversion": "false"
+      }
+    ]
+  },
+  {
+    "label": "high concurrency load balance",
+    "ok": true,
+    "evidence": {
+      "requests": 32,
+      "keys": [
+        "Route Hook primary",
+        "Route Hook secondary"
+      ]
+    }
+  }
+]

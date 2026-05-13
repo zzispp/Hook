@@ -8,10 +8,11 @@ use serde_json::Value;
 use super::{
     LlmProxyError, LlmProxyState,
     attempt_log::{record_attempt_error, record_send_error, record_started_attempt},
+    header_rules::apply_provider_header_rules,
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
     stream_transport, transport,
 };
-use crate::llm_proxy::candidate::ProxyCandidate;
+use crate::llm_proxy::{audit::record_unused_candidates, candidate::ProxyCandidate};
 
 const ANTHROPIC_VERSION: &str = "2023-06-01";
 const RETRYABLE_AUTH_STATUS_UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
@@ -25,12 +26,15 @@ pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: Prepar
     for candidate in &prepared.candidates {
         let outcome = attempt_candidate(&state, &prepared, candidate, &mut last_failure, &mut last_error).await?;
         if let Some(response) = outcome {
+            record_unused_candidates(&state, &prepared.request_id).await?;
             return Ok(response);
         }
     }
     if let Some(failure) = last_failure {
+        record_unused_candidates(&state, &prepared.request_id).await?;
         return transport::failure_response(failure);
     }
+    record_unused_candidates(&state, &prepared.request_id).await?;
     Err(last_error.unwrap_or_else(|| LlmProxyError::Upstream("all provider candidates failed".into())))
 }
 
@@ -42,7 +46,8 @@ async fn attempt_candidate(
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<Option<Response>, LlmProxyError> {
     for retry_index in 0..=candidate.max_retries {
-        let Some(response) = attempt_once(state, prepared, candidate, retry_index, last_failure, last_error).await? else {
+        let attempt = candidate.for_attempt(retry_index);
+        let Some(response) = attempt_once(state, prepared, &attempt, retry_index, last_failure, last_error).await? else {
             continue;
         };
         return Ok(Some(response));
@@ -60,11 +65,15 @@ async fn attempt_once(
 ) -> Result<Option<Response>, LlmProxyError> {
     let payload = match attempt_payload(prepared.body.clone(), candidate, prepared.force_non_stream) {
         Ok(payload) => payload,
-        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await,
+        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, &prepared.capture, error, last_error).await,
     };
-    record_started_attempt(state, &prepared.request_id, candidate, prepared.is_stream, retry_index).await?;
+    record_started_attempt(state, &prepared.request_id, candidate, prepared.is_stream, retry_index, &prepared.capture).await?;
     let started = Instant::now();
-    let response = match upstream_request(&state.http, candidate, payload.target_format, &payload.body).send().await {
+    let request = match upstream_request(&state.http, candidate, payload.target_format, &payload.body, &payload.original_body) {
+        Ok(request) => request,
+        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, &prepared.capture, error, last_error).await,
+    };
+    let response = match state.http.execute(request).await {
         Ok(response) => response,
         Err(error) => return record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await,
     };
@@ -139,7 +148,13 @@ async fn success_response(
     full_response(state, prepared.request_id.clone(), response, candidate.clone(), payload, started, retry_index).await
 }
 
-fn upstream_request(client: &reqwest::Client, candidate: &ProxyCandidate, target_format: ApiFormat, body: &Value) -> reqwest::RequestBuilder {
+fn upstream_request(
+    client: &reqwest::Client,
+    candidate: &ProxyCandidate,
+    target_format: ApiFormat,
+    body: &Value,
+    original_body: &Value,
+) -> Result<reqwest::Request, LlmProxyError> {
     let builder = client.post(candidate.upstream_url.clone()).json(body);
     let builder = if candidate.trace.provider_api_format == "claude_cli" {
         builder.bearer_auth(candidate.api_key.as_str())
@@ -152,7 +167,9 @@ fn upstream_request(client: &reqwest::Client, candidate: &ProxyCandidate, target
             ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses => builder.bearer_auth(candidate.api_key.as_str()),
         }
     };
-    apply_timeout(builder, candidate)
+    let mut request = apply_timeout(builder, candidate).build()?;
+    apply_provider_header_rules(request.headers_mut(), &candidate.header_rules, body, original_body)?;
+    Ok(request)
 }
 
 fn apply_timeout(builder: reqwest::RequestBuilder, candidate: &ProxyCandidate) -> reqwest::RequestBuilder {

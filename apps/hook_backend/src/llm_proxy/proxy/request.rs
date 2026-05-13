@@ -14,6 +14,7 @@ use super::capture::RequestCapture;
 pub(super) struct PreparedProxyRequest {
     pub(super) request_id: String,
     pub(super) candidates: Vec<ProxyCandidate>,
+    pub(super) capture: RequestCapture,
     pub(super) body: Value,
     pub(super) is_stream: bool,
     pub(super) force_non_stream: bool,
@@ -21,6 +22,7 @@ pub(super) struct PreparedProxyRequest {
 
 pub(super) struct AttemptPayload {
     pub(super) body: Value,
+    pub(super) original_body: Value,
     pub(super) source_format: ApiFormat,
     pub(super) target_format: ApiFormat,
 }
@@ -49,6 +51,7 @@ pub(super) async fn prepare_proxy_request(
     Ok(PreparedProxyRequest {
         request_id: selection.request_id,
         candidates: selection.candidates,
+        capture,
         body,
         is_stream,
         force_non_stream,
@@ -56,9 +59,11 @@ pub(super) async fn prepare_proxy_request(
 }
 
 pub(super) fn attempt_payload(body: Value, candidate: &ProxyCandidate, force_non_stream: bool) -> Result<AttemptPayload, LlmProxyError> {
+    let original_body = body.clone();
     let (body, source_format, target_format) = upstream_body(body, candidate, force_non_stream)?;
     Ok(AttemptPayload {
         body,
+        original_body,
         source_format,
         target_format,
     })

@@ -459,6 +459,7 @@ dependencies = [
  "proxy",
  "rbac",
  "redis",
+ "regex",
  "reqwest",
  "rust_decimal",
  "sea-orm",

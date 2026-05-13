@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use sea_orm::{DatabaseBackend, MockDatabase};
+use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database,
     provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch},
@@ -69,6 +69,29 @@ async fn request_candidate_storage_updates_existing_attempt() {
     assert_eq!(updated.status, "success");
     assert_eq!(updated.status_code, Some(200));
     assert!(updated.finished_at.is_some());
+}
+
+#[tokio::test]
+async fn request_candidate_storage_marks_available_records_unused() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_exec_results([MockExecResult {
+            last_insert_id: 0,
+            rows_affected: 2,
+        }])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    let rows = store.mark_available_request_candidates_unused("req-1").await.unwrap();
+
+    assert_eq!(rows, 2);
+    let logs = connection.into_transaction_log();
+    assert_eq!(logs.len(), 1);
+    let sql = &logs[0].statements()[0].sql;
+    assert!(sql.contains("UPDATE \"request_candidates\" SET"), "{sql}");
+    assert!(sql.contains("\"status\" = $"), "{sql}");
+    assert!(sql.contains("\"finished_at\" = $"), "{sql}");
+    assert!(sql.contains("WHERE \"request_candidates\".\"request_id\" = $"), "{sql}");
+    assert!(sql.contains("AND \"request_candidates\".\"status\" = $"), "{sql}");
 }
 
 fn success_input() -> RequestCandidateRecordInput {

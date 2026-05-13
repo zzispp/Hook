@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current scheduling audit and trace UI contracts,DONE,Relevant call sites and tests identified,rg -n "request_candidates|record_available_candidates|TraceGroup" apps crates,2026-05-12T00:00:00+08:00,0,
+2,Implement on-demand retry audit and unused status,DONE,Only retry 0 is pre-created and remaining candidates are finalized after success,cargo check -p backend,2026-05-12T00:00:00+08:00,0,
+3,Compact frontend trace grouping,DONE,Dot display no longer expands every retry/key row as same provider dots,pnpm --filter hook_frontend lint,2026-05-12T00:00:00+08:00,0,
+4,Add or update focused tests,DONE,Behavior around candidate audit and trace grouping has concrete assertions,cargo test -p storage request_candidate_storage_marks_available_records_unused -- --nocapture,2026-05-12T00:00:00+08:00,0,
+5,Run final validation,DONE,Backend and frontend validation results recorded,just test && pnpm --filter hook_frontend lint,2026-05-12T00:00:00+08:00,0,

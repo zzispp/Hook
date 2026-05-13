@@ -2,10 +2,27 @@
 
 import type { Theme } from '@mui/material/styles';
 
+import { useState } from 'react';
+
+import Tab from '@mui/material/Tab';
+import Box from '@mui/material/Box';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
+import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
+
+import { RequestRecordJsonViewer } from './request-record-json-viewer';
+
+type PayloadTabValue = 'requestHeaders' | 'requestBody' | 'responseBody';
+
+type PayloadTab = {
+  value: PayloadTabValue;
+  label: string;
+  emptyText: string;
+  payload?: unknown | null;
+};
 
 export function RequestRecordPayloadPanels({
   requestHeaders,
@@ -17,51 +34,72 @@ export function RequestRecordPayloadPanels({
   responseBody?: unknown | null;
 }) {
   const { t } = useTranslate('admin');
+  const [activeTab, setActiveTab] = useState<PayloadTabValue>('requestHeaders');
+  const tabs: PayloadTab[] = [
+    {
+      value: 'requestHeaders',
+      label: t('requestRecords.requestHeaders'),
+      emptyText: t('requestRecords.noRequestHeaders'),
+      payload: requestHeaders,
+    },
+    {
+      value: 'requestBody',
+      label: t('requestRecords.requestBody'),
+      emptyText: t('requestRecords.noRequestBody'),
+      payload: requestBody,
+    },
+    {
+      value: 'responseBody',
+      label: t('requestRecords.responseBody'),
+      emptyText: t('requestRecords.noResponseBody'),
+      payload: responseBody,
+    },
+  ];
+  const activePanel = tabs.find((tab) => tab.value === activeTab);
+
+  if (!activePanel) {
+    throw new Error(`Unknown request record payload tab: ${activeTab}`);
+  }
 
   return (
-    <>
-      <PayloadPanel
-        title={t('requestRecords.requestHeaders')}
-        emptyText={t('requestRecords.noRequestHeaders')}
-        value={requestHeaders}
-      />
-      <PayloadPanel
-        title={t('requestRecords.requestBody')}
-        emptyText={t('requestRecords.noRequestBody')}
-        value={requestBody}
-      />
-      <PayloadPanel
-        title={t('requestRecords.responseBody')}
-        emptyText={t('requestRecords.noResponseBody')}
-        value={responseBody}
-      />
-    </>
+    <Stack spacing={2} sx={panelSx}>
+      <Tabs
+        value={activeTab}
+        variant="scrollable"
+        scrollButtons="auto"
+        onChange={(_event, value: PayloadTabValue) => setActiveTab(value)}
+        sx={tabsSx}
+      >
+        {tabs.map((tab) => (
+          <Tab key={tab.value} value={tab.value} label={tab.label} sx={tabSx} />
+        ))}
+      </Tabs>
+      <Divider />
+      <Box role="tabpanel" aria-label={activePanel.label}>
+        <PayloadContent value={activePanel.payload} emptyText={activePanel.emptyText} />
+      </Box>
+    </Stack>
   );
 }
 
-function PayloadPanel({
-  title,
+function PayloadContent({
   emptyText,
   value,
 }: {
-  title: string;
   emptyText: string;
   value?: unknown | null;
 }) {
   const hasValue = hasPayload(value);
 
-  return (
-    <Stack spacing={1.5} sx={panelSx}>
-      <Typography variant="subtitle2">{title}</Typography>
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{ whiteSpace: 'pre-wrap', fontFamily: hasValue ? 'monospace' : undefined }}
-      >
-        {hasValue ? formatPayload(value) : emptyText}
+  if (!hasValue) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        {emptyText}
       </Typography>
-    </Stack>
-  );
+    );
+  }
+
+  return <RequestRecordJsonViewer value={value} />;
 }
 
 function hasPayload(value: unknown): boolean {
@@ -72,13 +110,17 @@ function hasPayload(value: unknown): boolean {
   return true;
 }
 
-function formatPayload(value: unknown): string {
-  if (typeof value === 'string') return value;
-  return JSON.stringify(value, null, 2);
-}
-
 const panelSx = {
   p: 2,
   borderRadius: 1,
   border: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`,
+};
+
+const tabsSx = {
+  minHeight: 40,
+};
+
+const tabSx = {
+  minHeight: 40,
+  px: 1.5,
 };

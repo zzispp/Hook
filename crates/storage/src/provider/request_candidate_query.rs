@@ -1,4 +1,4 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set, sea_query::Expr};
 use types::provider::RequestCandidateListRequest;
 
 use crate::{StorageError, StorageResult, json};
@@ -87,6 +87,18 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
         record.finished_at = Set(Some(now));
     }
     Ok(record.update(store.connection()).await?.response())
+}
+
+pub async fn mark_available_request_candidates_unused(store: &ProviderStore, request_id: &str) -> StorageResult<u64> {
+    let now = time::OffsetDateTime::now_utc();
+    let result = request_candidates::Entity::update_many()
+        .col_expr(request_candidates::Column::Status, Expr::val("unused"))
+        .col_expr(request_candidates::Column::FinishedAt, Expr::val(now))
+        .filter(request_candidates::Column::RequestId.eq(request_id))
+        .filter(request_candidates::Column::Status.eq("available"))
+        .exec(store.connection())
+        .await?;
+    Ok(result.rows_affected)
 }
 
 pub async fn list_request_candidates(store: &ProviderStore, request: RequestCandidateListRequest) -> StorageResult<Vec<types::provider::RequestCandidate>> {

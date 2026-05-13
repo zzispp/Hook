@@ -144,6 +144,11 @@ function TraceGroupNode({
             ))}
           </Stack>
         ) : null}
+        {selected && group.hiddenAttemptCount > 0 ? (
+          <Typography variant="caption" sx={hiddenSummarySx}>
+            +{group.hiddenAttemptCount}
+          </Typography>
+        ) : null}
       </Stack>
       {showLine ? <Box sx={lineSx} /> : null}
     </Stack>
@@ -174,6 +179,7 @@ function TraceAttemptDetail({
         </Stack>
         <Typography variant="caption" color="text.secondary">
           {attempt.candidate_index + 1} / {attempt.retry_index + 1}
+          {group.hiddenAttemptCount > 0 ? ` (+${group.hiddenAttemptCount})` : ''}
         </Typography>
       </Stack>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} useFlexGap flexWrap="wrap">
@@ -221,6 +227,13 @@ const keyDotsSx = {
   py: 0.5,
   width: 'max-content',
   overflow: 'visible',
+  transform: 'translateX(-50%)',
+};
+const hiddenSummarySx = {
+  position: 'absolute',
+  top: 'calc(100% + 28px)',
+  left: '50%',
+  color: 'text.secondary',
   transform: 'translateX(-50%)',
 };
 const lineSx = { width: 64, height: 2, bgcolor: 'divider' };

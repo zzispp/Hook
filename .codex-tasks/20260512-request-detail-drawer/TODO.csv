@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate Hook drawer and aether reference,DONE,"Relevant files and component patterns identified","rg -n \"request|drawer|header|body|response\" apps/hook_frontend/src /Users/bubu/ZwjProjects/aether",2026-05-12 18:58:54,0,"Hook files: request-record-detail-drawer.tsx and request-record-payload-panels.tsx. Aether reference: RequestDetailDrawer.vue and JsonContent.vue."
+2,Implement tabbed detail drawer and collapsed JSON default,DONE,"Drawer renders request headers/body/response body via tabs and JSON default collapsed","pnpm lint:frontend",2026-05-12 19:16:38,0,"Updated payload panels and added RequestRecordJsonViewer."
+3,Validate and document outcome,DONE,"Validation command completed and task artifacts updated","pnpm lint:frontend",2026-05-12 19:16:38,0,"pnpm lint:frontend and pnpm build:frontend passed. Build emitted non-fatal Axios unauthorized log."

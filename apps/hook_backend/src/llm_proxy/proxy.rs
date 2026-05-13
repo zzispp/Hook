@@ -1,6 +1,8 @@
 mod attempt_log;
 pub(in crate::llm_proxy) mod capture;
 mod executor;
+mod header_condition;
+mod header_rules;
 mod request;
 mod response_payload;
 mod stream_transport;

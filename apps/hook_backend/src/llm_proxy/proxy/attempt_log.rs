@@ -4,8 +4,9 @@ use axum::response::Response;
 
 use super::{LlmProxyError, LlmProxyState};
 use crate::llm_proxy::{
-    audit::{AttemptRecordInput, record_attempt},
+    audit::{AttemptRecordInput, record_attempt, record_attempt_with_capture},
     candidate::ProxyCandidate,
+    proxy::capture::RequestCapture,
 };
 
 pub(super) async fn record_attempt_error(
@@ -13,10 +14,11 @@ pub(super) async fn record_attempt_error(
     request_id: &str,
     candidate: &ProxyCandidate,
     retry_index: i32,
+    capture: &RequestCapture,
     error: LlmProxyError,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<Option<Response>, LlmProxyError> {
-    record_conversion_error(state, request_id, candidate, retry_index, &error).await?;
+    record_conversion_error(state, request_id, candidate, retry_index, capture, &error).await?;
     *last_error = Some(error);
     Ok(None)
 }
@@ -26,10 +28,11 @@ async fn record_conversion_error(
     request_id: &str,
     candidate: &ProxyCandidate,
     retry_index: i32,
+    capture: &RequestCapture,
     error: &LlmProxyError,
 ) -> Result<(), LlmProxyError> {
     let error_message = error.to_string();
-    record_attempt(
+    record_attempt_with_capture(
         state,
         request_id,
         AttemptRecordInput {
@@ -45,6 +48,7 @@ async fn record_conversion_error(
             response_body: None,
             finished: true,
         },
+        capture,
     )
     .await
 }
@@ -55,8 +59,9 @@ pub(super) async fn record_started_attempt(
     candidate: &ProxyCandidate,
     is_stream: bool,
     retry_index: i32,
+    capture: &RequestCapture,
 ) -> Result<(), LlmProxyError> {
-    record_attempt(
+    record_attempt_with_capture(
         state,
         request_id,
         AttemptRecordInput {
@@ -72,6 +77,7 @@ pub(super) async fn record_started_attempt(
             response_body: None,
             finished: false,
         },
+        capture,
     )
     .await
 }

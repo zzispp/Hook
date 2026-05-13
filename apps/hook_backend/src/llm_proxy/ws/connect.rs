@@ -4,8 +4,9 @@ use tokio_tungstenite::{WebSocketStream, connect_async, tungstenite::client::Int
 
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState, REALTIME_PATH,
-    audit::{AttemptRecordInput, record_attempt},
+    audit::{AttemptRecordInput, record_attempt_with_capture, record_unused_candidates},
     candidate::{CandidateSelection, ProxyCandidate},
+    proxy::capture::RequestCapture,
 };
 
 const OPENAI_REALTIME_BETA_HEADER: &str = "realtime=v1";
@@ -22,25 +23,28 @@ pub(super) async fn connect_first_upstream(
     state: &LlmProxyState,
     selection: &CandidateSelection,
     query: &HashMap<String, String>,
+    capture: &RequestCapture,
 ) -> Result<ConnectedUpstream, LlmProxyError> {
     let mut last_error = None;
     for candidate in &selection.candidates {
         for retry_index in 0..=candidate.max_retries {
-            match connect_upstream(candidate, realtime_url(candidate, query)?, candidate.api_key.clone()).await {
+            let attempt = candidate.for_attempt(retry_index);
+            match connect_upstream(&attempt, realtime_url(&attempt, query)?, attempt.api_key.clone()).await {
                 Ok(stream) => {
                     return Ok(ConnectedUpstream {
-                        candidate: candidate.clone(),
+                        candidate: attempt,
                         retry_index,
                         stream,
                     });
                 }
                 Err(error) => {
-                    record_connect_error(state, selection, candidate, retry_index, &error).await?;
+                    record_connect_error(state, selection, &attempt, retry_index, capture, &error).await?;
                     last_error = Some(error);
                 }
             }
         }
     }
+    record_unused_candidates(state, &selection.request_id).await?;
     Err(last_error.unwrap_or_else(|| LlmProxyError::Upstream("all realtime provider candidates failed".into())))
 }
 
@@ -108,10 +112,11 @@ async fn record_connect_error(
     selection: &CandidateSelection,
     candidate: &ProxyCandidate,
     retry_index: i32,
+    capture: &RequestCapture,
     error: &LlmProxyError,
 ) -> Result<(), LlmProxyError> {
     let error_message = error.to_string();
-    record_attempt(
+    record_attempt_with_capture(
         state,
         &selection.request_id,
         AttemptRecordInput {
@@ -127,6 +132,7 @@ async fn record_connect_error(
             response_body: None,
             finished: true,
         },
+        capture,
     )
     .await
 }
