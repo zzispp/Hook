@@ -91,6 +91,43 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             BillingGroupProviders::GroupCode,
             false,
         ),
+        index("index_request_records_by_created_at", RequestRecords::Table, RequestRecords::CreatedAt, false),
+        compound_index(
+            "index_request_records_by_status_created",
+            RequestRecords::Table,
+            RequestRecords::Status,
+            RequestRecords::CreatedAt,
+        ),
+        compound_index(
+            "index_request_records_by_model_created",
+            RequestRecords::Table,
+            RequestRecords::GlobalModelId,
+            RequestRecords::CreatedAt,
+        ),
+        compound_index(
+            "index_request_records_by_provider_created",
+            RequestRecords::Table,
+            RequestRecords::ProviderId,
+            RequestRecords::CreatedAt,
+        ),
+        compound_index(
+            "index_request_records_by_client_format_created",
+            RequestRecords::Table,
+            RequestRecords::ClientApiFormat,
+            RequestRecords::CreatedAt,
+        ),
+        compound_index(
+            "index_request_records_by_provider_format_created",
+            RequestRecords::Table,
+            RequestRecords::ProviderApiFormat,
+            RequestRecords::CreatedAt,
+        ),
+        compound_index(
+            "index_request_records_by_stream_created",
+            RequestRecords::Table,
+            RequestRecords::IsStream,
+            RequestRecords::CreatedAt,
+        ),
         index(
             "index_request_candidates_by_request",
             RequestCandidates::Table,

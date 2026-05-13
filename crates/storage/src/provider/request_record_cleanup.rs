@@ -3,14 +3,21 @@ use time::OffsetDateTime;
 
 use crate::StorageResult;
 
-use super::{record::request_candidates, repository::ProviderStore};
+use super::{
+    record::{request_candidates, request_records},
+    repository::ProviderStore,
+};
 
 pub async fn delete_request_records_before(store: &ProviderStore, cutoff: OffsetDateTime) -> StorageResult<u64> {
-    let result = request_candidates::Entity::delete_many()
+    let summaries = request_records::Entity::delete_many()
+        .filter(request_records::Column::CreatedAt.lt(cutoff))
+        .exec(store.connection())
+        .await?;
+    request_candidates::Entity::delete_many()
         .filter(request_candidates::Column::CreatedAt.lt(cutoff))
         .exec(store.connection())
         .await?;
-    Ok(result.rows_affected)
+    Ok(summaries.rows_affected)
 }
 
 pub async fn clear_request_record_payloads_before(store: &ProviderStore, cutoff: OffsetDateTime) -> StorageResult<u64> {

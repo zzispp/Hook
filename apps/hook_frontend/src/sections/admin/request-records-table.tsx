@@ -21,10 +21,13 @@ import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
 import { TableLoadingRows, ManagementTableHead } from './shared';
 import {
+  RequestRecordDurationText,
+  useRequestRecordDurationNow,
+} from './request-record-duration-text';
+import {
   formatCost,
   userDisplay,
   hasTokenValue,
-  formatDuration,
   formatTokenCount,
   formatRequestDate,
   requestStatusColor,
@@ -52,6 +55,7 @@ export function RequestRecordsTable({
 }) {
   const { t } = useTranslate('admin');
   const head = tableHead(t);
+  const durationNow = useRequestRecordDurationNow(rows);
 
   return (
     <>
@@ -67,6 +71,7 @@ export function RequestRecordsTable({
                     row={row}
                     locale={locale}
                     currencyDisplay={currencyDisplay}
+                    durationNow={durationNow}
                     onOpen={onOpen}
                   />
                 ))
@@ -91,11 +96,13 @@ function RequestRecordRow({
   row,
   locale,
   currencyDisplay,
+  durationNow,
   onOpen,
 }: {
   row: RequestRecord;
   locale: string;
   currencyDisplay: CurrencyDisplay;
+  durationNow: number;
   onOpen: (record: RequestRecord) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -133,8 +140,12 @@ function RequestRecordRow({
         <RequestTokensCell record={row} />
       </TableCell>
       <TableCell>{formatCost(row.total_cost, currencyDisplay)}</TableCell>
-      <TableCell>{formatDuration(row.first_byte_time_ms)}</TableCell>
-      <TableCell>{formatDuration(row.total_latency_ms)}</TableCell>
+      <TableCell>
+        <RequestRecordDurationText record={row} metric="first_byte" now={durationNow} />
+      </TableCell>
+      <TableCell>
+        <RequestRecordDurationText record={row} metric="total_latency" now={durationNow} />
+      </TableCell>
     </TableRow>
   );
 }

@@ -4,9 +4,11 @@ mod repository;
 mod repository_helpers;
 mod request_candidate_query;
 mod request_record_cleanup;
+mod request_record_detail;
 mod request_record_query;
 mod request_record_refs;
 mod request_record_repository;
+mod request_record_summary;
 mod types;
 
 pub use repository::ProviderStore;

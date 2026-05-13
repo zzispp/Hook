@@ -9,7 +9,7 @@ use types::{
 use super::{CandidatePartKey, CandidateParts};
 use crate::llm_proxy::{
     LlmProxyError,
-    cache::snapshot::{CachedBillingGroup, CachedProvider},
+    cache::snapshot::{CachedBillingGroup, CachedProvider, CachedUserAccess},
     candidate::CandidateRequest,
     formats,
 };
@@ -18,13 +18,14 @@ pub(super) fn order_candidate_parts(
     parts: Vec<CandidateParts>,
     token: &ApiToken,
     group: &CachedBillingGroup,
+    user_access: Option<&CachedUserAccess>,
     request: CandidateRequest<'_>,
     model_id: &str,
     request_id: &str,
     affinity_key: Option<String>,
     mode: ProviderSchedulingMode,
 ) -> Result<Vec<CandidateParts>, LlmProxyError> {
-    let input = scheduler_input(&parts, token, group, request, model_id, request_id, affinity_key, mode)?;
+    let input = scheduler_input(&parts, token, group, user_access, request, model_id, request_id, affinity_key, mode)?;
     let mut by_key = parts.into_iter().map(|part| (part_key(&part), part)).collect::<HashMap<_, _>>();
     let mut candidates = by_key.values().map(scheduler_candidate).collect::<Result<Vec<_>, _>>()?;
     CandidateBuilder::order(&mut candidates, &input);
@@ -38,6 +39,7 @@ fn scheduler_input(
     parts: &[CandidateParts],
     token: &ApiToken,
     group: &CachedBillingGroup,
+    user_access: Option<&CachedUserAccess>,
     request: CandidateRequest<'_>,
     model_id: &str,
     request_id: &str,
@@ -49,6 +51,8 @@ fn scheduler_input(
         group_is_active: group.is_active,
         group_allowed_model_ids: group.allowed_model_ids.clone(),
         group_allowed_provider_ids: group.allowed_provider_ids.clone(),
+        user_allowed_model_ids: user_access.map(|access| access.allowed_model_ids.clone()).unwrap_or_default(),
+        user_allowed_provider_ids: user_access.map(|access| access.allowed_provider_ids.clone()).unwrap_or_default(),
         token_model_policy: token_model_policy(token),
         requested_model_id: model_id.to_owned(),
         client_format: formats::parse_api_format(request.api_format)?,

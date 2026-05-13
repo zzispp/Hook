@@ -18,6 +18,8 @@ pub struct Model {
     pub role: String,
     pub is_active: bool,
     pub is_deleted: bool,
+    pub allowed_model_ids: String,
+    pub allowed_provider_ids: String,
     pub created_at: TimeDateTimeWithTimeZone,
     pub updated_at: TimeDateTimeWithTimeZone,
     pub last_login_at: Option<TimeDateTimeWithTimeZone>,
@@ -34,32 +36,34 @@ impl ActiveModelBehavior for ActiveModel {}
 
 pub type UserRecord = Model;
 
-impl From<UserRecord> for User {
-    fn from(value: UserRecord) -> Self {
-        Self {
-            id: UserId(value.id),
-            username: value.username,
-            email: value.email,
-            role: value.role,
-            is_active: value.is_active,
-            auth_source: value.auth_source,
-            email_verified: value.email_verified,
-            system: false,
-            rate_limit_rpm: value.rate_limit_rpm,
-            quota_mode: value.quota_mode,
-            created_at: format_timestamp(value.created_at),
-            last_login_at: value.last_login_at.map(format_timestamp),
-        }
-    }
-}
-
 impl UserRecord {
-    pub fn into_auth(self) -> UserAuthRecord {
+    pub fn into_domain(self) -> crate::StorageResult<User> {
+        let allowed_model_ids = serde_json::from_str(&self.allowed_model_ids)?;
+        let allowed_provider_ids = serde_json::from_str(&self.allowed_provider_ids)?;
+        Ok(User {
+            id: UserId(self.id),
+            username: self.username,
+            email: self.email,
+            role: self.role,
+            is_active: self.is_active,
+            allowed_model_ids,
+            allowed_provider_ids,
+            auth_source: self.auth_source,
+            email_verified: self.email_verified,
+            system: false,
+            rate_limit_rpm: self.rate_limit_rpm,
+            quota_mode: self.quota_mode,
+            created_at: format_timestamp(self.created_at),
+            last_login_at: self.last_login_at.map(format_timestamp),
+        })
+    }
+
+    pub fn into_auth(self) -> crate::StorageResult<UserAuthRecord> {
         let password_hash = self.password_hash.clone();
-        UserAuthRecord {
-            user: self.into(),
+        Ok(UserAuthRecord {
+            user: self.into_domain()?,
             password_hash,
-        }
+        })
     }
 
     pub fn local_auth_source() -> String {

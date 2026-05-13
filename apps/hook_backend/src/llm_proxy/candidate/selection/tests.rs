@@ -8,7 +8,16 @@ fn matching_candidate_parts_compacts_endpoint_key_product_into_provider_route() 
     let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
     let group = &snapshot.groups[0];
 
-    let parts = matching_candidate_parts(&snapshot, group, "model-a", request(), None, ProviderSchedulingMode::FixedOrder, "request-1");
+    let parts = matching_candidate_parts(
+        &snapshot,
+        group,
+        None,
+        "model-a",
+        request(),
+        None,
+        ProviderSchedulingMode::FixedOrder,
+        "request-1",
+    );
 
     assert_eq!(parts.len(), 1);
     assert_eq!(parts[0].provider.id, "provider-a");
@@ -27,6 +36,7 @@ fn matching_candidate_parts_promotes_affinity_key_inside_route() {
     let parts = matching_candidate_parts(
         &snapshot,
         group,
+        None,
         "model-a",
         request(),
         Some("key-a-2"),
@@ -47,11 +57,48 @@ fn matching_candidate_parts_keeps_all_provider_routes_without_silent_budget() {
     };
     let group = &snapshot.groups[0];
 
-    let parts = matching_candidate_parts(&snapshot, group, "model-a", request(), None, ProviderSchedulingMode::FixedOrder, "request-1");
+    let parts = matching_candidate_parts(
+        &snapshot,
+        group,
+        None,
+        "model-a",
+        request(),
+        None,
+        ProviderSchedulingMode::FixedOrder,
+        "request-1",
+    );
 
     assert_eq!(parts.len(), 2);
     assert_eq!(parts[0].provider.id, "provider-a");
     assert_eq!(parts[1].provider.id, "provider-b");
+}
+
+#[test]
+fn matching_candidate_parts_filters_by_user_provider_access() {
+    let snapshot = SchedulingSnapshot {
+        providers: vec![provider_with_endpoints_and_keys(), provider_b()],
+        ..snapshot_with_provider(provider_with_endpoints_and_keys())
+    };
+    let group = &snapshot.groups[0];
+    let user_access = CachedUserAccess {
+        id: "user-a".into(),
+        allowed_model_ids: Vec::new(),
+        allowed_provider_ids: vec!["provider-b".into()],
+    };
+
+    let parts = matching_candidate_parts(
+        &snapshot,
+        group,
+        Some(&user_access),
+        "model-a",
+        request(),
+        None,
+        ProviderSchedulingMode::FixedOrder,
+        "request-1",
+    );
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].provider.id, "provider-b");
 }
 
 fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnapshot {
@@ -71,6 +118,7 @@ fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnapshot {
             allowed_provider_ids: Vec::new(),
             is_active: true,
         }],
+        users: Vec::new(),
         providers: vec![provider],
     }
 }

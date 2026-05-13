@@ -9,6 +9,8 @@ export type UserForm = {
   email: string;
   role: string;
   is_active: boolean;
+  allowed_model_ids: string[];
+  allowed_provider_ids: string[];
   rate_limit_rpm: string;
   quota_mode: UserQuotaMode;
 };
@@ -19,6 +21,8 @@ export const DEFAULT_USER_FORM: UserForm = {
   email: '',
   role: '',
   is_active: true,
+  allowed_model_ids: [],
+  allowed_provider_ids: [],
   rate_limit_rpm: '',
   quota_mode: 'wallet',
 };
@@ -41,6 +45,8 @@ export function formFromUser(user: SystemUser): UserForm {
     email: user.email,
     role: user.role,
     is_active: user.is_active,
+    allowed_model_ids: user.allowed_model_ids,
+    allowed_provider_ids: user.allowed_provider_ids,
     rate_limit_rpm: user.rate_limit_rpm ? String(user.rate_limit_rpm) : '',
     quota_mode: user.quota_mode,
   };
@@ -53,6 +59,8 @@ export function formToPayload(form: UserForm): UserInput {
     email: form.email,
     role: form.role,
     is_active: form.is_active,
+    allowed_model_ids: form.allowed_model_ids,
+    allowed_provider_ids: form.allowed_provider_ids,
     rate_limit_rpm: rateLimitValue(form.rate_limit_rpm),
     quota_mode: form.quota_mode,
   };
@@ -75,7 +83,9 @@ export function walletConsumedText(user: SystemUser) {
 
 export function userRateLimitText(user: SystemUser, t: AdminT) {
   const limit = user.rate_limit_rpm ?? 0;
-  return limit <= 0 ? t('users.followSystem') : `${fNumber(limit, { maximumFractionDigits: 0 })} ${t('tokens.rpm')}`;
+  return limit <= 0
+    ? t('users.followSystem')
+    : `${fNumber(limit, { maximumFractionDigits: 0 })} ${t('tokens.rpm')}`;
 }
 
 export function formatUserDateTime(value?: string | null) {

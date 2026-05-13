@@ -13,6 +13,14 @@ pub struct RequestRecordListRequest {
     pub search: Option<String>,
     #[serde(default)]
     pub status: Option<String>,
+    #[serde(default)]
+    pub model_id: Option<String>,
+    #[serde(default)]
+    pub provider_id: Option<String>,
+    #[serde(default)]
+    pub api_format: Option<String>,
+    #[serde(default, rename = "type")]
+    pub type_filter: Option<String>,
 }
 
 impl Default for RequestRecordListRequest {
@@ -22,6 +30,10 @@ impl Default for RequestRecordListRequest {
             limit: default_request_record_limit(),
             search: None,
             status: None,
+            model_id: None,
+            provider_id: None,
+            api_format: None,
+            type_filter: None,
         }
     }
 }

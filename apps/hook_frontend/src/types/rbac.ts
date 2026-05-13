@@ -131,6 +131,8 @@ export type SystemUser = {
   email: string;
   role: string;
   is_active: boolean;
+  allowed_model_ids: string[];
+  allowed_provider_ids: string[];
   auth_source: string;
   email_verified: boolean;
   system: boolean;
@@ -147,6 +149,8 @@ export type UserInput = {
   email: string;
   role: string;
   is_active: boolean;
+  allowed_model_ids: string[];
+  allowed_provider_ids: string[];
   rate_limit_rpm?: number | null;
   quota_mode: UserQuotaMode;
 };

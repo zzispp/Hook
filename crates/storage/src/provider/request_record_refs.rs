@@ -10,7 +10,7 @@ use crate::{
     user::{UserColumn, UserEntity},
 };
 
-use super::record::{ProviderApiKeyRecord, ProviderEndpointRecord, ProviderRecord, RequestCandidateRecord};
+use super::record::{ProviderApiKeyRecord, ProviderEndpointRecord, ProviderRecord, RequestCandidateRecord, RequestRecordSummaryRecord};
 
 #[derive(Default)]
 pub(super) struct RecordRefs {
@@ -28,6 +28,26 @@ pub(super) async fn load_refs(store: &super::ProviderStore, candidates: &[Reques
     let key_ids = ids(candidates.iter().filter_map(|item| item.key_id.as_deref()));
     let token_ids = ids(candidates.iter().filter_map(|item| item.token_id.as_deref()));
     let model_ids = ids(candidates.iter().filter_map(|item| item.global_model_id.as_deref()));
+    load_ref_records(store, provider_ids, endpoint_ids, key_ids, token_ids, model_ids).await
+}
+
+pub(super) async fn load_record_refs(store: &super::ProviderStore, records: &[RequestRecordSummaryRecord]) -> StorageResult<RecordRefs> {
+    let provider_ids = ids(records.iter().filter_map(|item| item.provider_id.as_deref()));
+    let endpoint_ids = ids(records.iter().filter_map(|item| item.endpoint_id.as_deref()));
+    let key_ids = ids(records.iter().filter_map(|item| item.key_id.as_deref()));
+    let token_ids = ids(records.iter().filter_map(|item| item.token_id.as_deref()));
+    let model_ids = ids(records.iter().filter_map(|item| item.global_model_id.as_deref()));
+    load_ref_records(store, provider_ids, endpoint_ids, key_ids, token_ids, model_ids).await
+}
+
+async fn load_ref_records(
+    store: &super::ProviderStore,
+    provider_ids: HashSet<String>,
+    endpoint_ids: HashSet<String>,
+    key_ids: HashSet<String>,
+    token_ids: HashSet<String>,
+    model_ids: HashSet<String>,
+) -> StorageResult<RecordRefs> {
     let providers = records_by_id(
         providers::Entity::find()
             .filter(providers::Column::Id.is_in(provider_ids))

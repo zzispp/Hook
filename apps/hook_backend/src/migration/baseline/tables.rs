@@ -31,6 +31,8 @@ fn users_table() -> TableCreateStatement {
         .col(string_len(Users::Role, 100))
         .col(boolean(Users::IsActive))
         .col(boolean(Users::IsDeleted))
+        .col(text(Users::AllowedModelIds).default("[]"))
+        .col(text(Users::AllowedProviderIds).default("[]"))
         .col(timestamp_tz(Users::CreatedAt))
         .col(timestamp_tz(Users::UpdatedAt))
         .col(timestamp_tz_null(Users::LastLoginAt))

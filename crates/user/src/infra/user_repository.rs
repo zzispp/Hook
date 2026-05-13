@@ -166,6 +166,8 @@ fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
         email: record.email,
         role: record.role,
         is_active: record.is_active,
+        allowed_model_ids: record.allowed_model_ids,
+        allowed_provider_ids: record.allowed_provider_ids,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode,
     }

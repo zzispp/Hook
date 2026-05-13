@@ -205,6 +205,8 @@
     "unlimitedExpiresAt": "Leave empty for no time limit.",
     "unlimitedQuota": "Leave empty for unlimited quota.",
     "userQuotaMode": "Unlimited ignores wallet balance; wallet-limited charges against the wallet balance.",
+    "userModelAccess": "Leave models unselected to allow all models for this user.",
+    "userProviderAccess": "Leave providers unselected to allow all providers for this user.",
     "userRateLimit": "Empty or 0 means no user-level limit; the final API rate is the minimum of the user and token limits."
   },
   "validation": {
@@ -833,6 +835,10 @@
     "firstByte": "TTFB",
     "totalLatency": "Total latency",
     "autoRefresh": "Auto refresh",
+    "allModels": "All models",
+    "allProviders": "All providers",
+    "allFormats": "All formats",
+    "allTypes": "All types",
     "detailTitle": "Request detail",
     "stream": "Stream",
     "nonStream": "Non-stream",

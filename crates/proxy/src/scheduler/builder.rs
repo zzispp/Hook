@@ -40,6 +40,11 @@ fn validate_scope(input: &SchedulerInput) -> Result<(), SchedulerError> {
             model: input.requested_model_id.clone(),
         });
     }
+    if !ids_allow(&input.user_allowed_model_ids, &input.requested_model_id) {
+        return Err(SchedulerError::UserModelDenied {
+            model: input.requested_model_id.clone(),
+        });
+    }
     Ok(())
 }
 
@@ -120,7 +125,7 @@ fn sort_candidates(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
 }
 
 fn provider_allowed(provider: &ProviderSnapshot, input: &SchedulerInput) -> bool {
-    provider.is_active && ids_allow(&input.group_allowed_provider_ids, &provider.id)
+    provider.is_active && ids_allow(&input.group_allowed_provider_ids, &provider.id) && ids_allow(&input.user_allowed_provider_ids, &provider.id)
 }
 
 fn matching_model<'a>(provider: &'a ProviderSnapshot, input: &SchedulerInput) -> Option<&'a ModelBindingSnapshot> {

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect reference real route flow and current schema,DONE,Reference harness and local schema requirements are understood,find .codex-tasks/20260513-real-route-scheduler-flow -maxdepth 2 -type f -print; psql information_schema check,2026-05-13T15:08:00+08:00,0,
+2,Create user access real flow harness,DONE,Harness seeds users/tokens and covers user provider/model limits plus scheduler modes,test -f .codex-tasks/20260513-user-access-real-flow/user_access_real_flow.mjs,2026-05-13T14:54:15+08:00,0,
+3,Run syntax and static checks,DONE,Harness syntax and changed code still pass,node --check and cargo/pnpm checks,2026-05-13T14:54:15+08:00,0,
+4,Run real end-to-end scenarios,DONE,All real scenarios pass and raw evidence is written,node .codex-tasks/20260513-user-access-real-flow/user_access_real_flow.mjs,2026-05-13T14:54:15+08:00,0,"Latest rerun after clearing request_candidates passed all scenarios."
+5,Record evidence and close task,DONE,PROGRESS.md and raw results summarize scenario evidence,test -s .codex-tasks/20260513-user-access-real-flow/PROGRESS.md,2026-05-13T14:54:15+08:00,0,

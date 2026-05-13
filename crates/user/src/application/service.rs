@@ -36,16 +36,6 @@ pub struct UserService<R, H, S = NoSystemUserProvider, P = AllowRegistrationPoli
     wallets: W,
 }
 
-struct UserRecordInput {
-    username: String,
-    password: String,
-    email: String,
-    role: String,
-    is_active: bool,
-    rate_limit_rpm: Option<i64>,
-    quota_mode: String,
-}
-
 impl<R, H> UserService<R, H, NoSystemUserProvider, AllowRegistrationPolicy, NoInitialGrantLedger>
 where
     R: UserRepository,
@@ -137,32 +127,28 @@ where
     }
 
     fn new_user_record(&self, input: NewUser) -> AppResult<ReplaceUserRecord> {
-        self.to_record(UserRecordInput::from(input))
-    }
-
-    fn replace_user_record(&self, input: ReplaceUser) -> AppResult<ReplaceUserRecord> {
-        self.to_replace_record(input)
-    }
-
-    fn to_record(&self, input: UserRecordInput) -> AppResult<ReplaceUserRecord> {
         Ok(ReplaceUserRecord {
             username: input.username,
             password_hash: Some(self.password_hasher.hash(&input.password)?),
             email: input.email,
             role: input.role,
             is_active: input.is_active,
+            allowed_model_ids: input.allowed_model_ids,
+            allowed_provider_ids: input.allowed_provider_ids,
             rate_limit_rpm: input.rate_limit_rpm,
             quota_mode: input.quota_mode,
         })
     }
 
-    fn to_replace_record(&self, input: ReplaceUser) -> AppResult<ReplaceUserRecord> {
+    fn replace_user_record(&self, input: ReplaceUser) -> AppResult<ReplaceUserRecord> {
         Ok(ReplaceUserRecord {
             username: input.username,
             password_hash: self.optional_password_hash(input.password)?,
             email: input.email,
             role: input.role,
             is_active: input.is_active,
+            allowed_model_ids: input.allowed_model_ids,
+            allowed_provider_ids: input.allowed_provider_ids,
             rate_limit_rpm: input.rate_limit_rpm,
             quota_mode: input.quota_mode,
         })
@@ -256,20 +242,6 @@ where
         return Ok(());
     }
     ledger.grant_initial_balance(&user.id.0, amount).await
-}
-
-impl From<NewUser> for UserRecordInput {
-    fn from(value: NewUser) -> Self {
-        Self {
-            username: value.username,
-            password: value.password,
-            email: value.email,
-            role: value.role,
-            is_active: value.is_active,
-            rate_limit_rpm: value.rate_limit_rpm,
-            quota_mode: value.quota_mode,
-        }
-    }
 }
 
 fn reject_conflicting_user(id: UserId, current_id: Option<&UserId>, field: &str) -> AppResult<()> {

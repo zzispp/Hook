@@ -1,6 +1,45 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::iden::RequestCandidates;
+use super::iden::{RequestCandidates, RequestRecords};
+
+pub(super) fn request_records_table() -> TableCreateStatement {
+    Table::create()
+        .table(RequestRecords::Table)
+        .if_not_exists()
+        .col(string_len(RequestRecords::RequestId, 64).primary_key())
+        .col(string_len_null(RequestRecords::TokenId, 36))
+        .col(string_len_null(RequestRecords::GroupCode, 64))
+        .col(string_len_null(RequestRecords::GlobalModelId, 36))
+        .col(string_len_null(RequestRecords::ProviderId, 36))
+        .col(string_len_null(RequestRecords::EndpointId, 36))
+        .col(string_len_null(RequestRecords::KeyId, 36))
+        .col(string_len(RequestRecords::ClientApiFormat, 50))
+        .col(string_len_null(RequestRecords::ProviderApiFormat, 50))
+        .col(string_len(RequestRecords::RequestType, 40))
+        .col(boolean(RequestRecords::IsStream))
+        .col(boolean(RequestRecords::HasFailover))
+        .col(boolean(RequestRecords::HasRetry))
+        .col(string_len(RequestRecords::Status, 40))
+        .col(string_len(RequestRecords::BillingStatus, 40))
+        .col(big_integer_null(RequestRecords::PromptTokens))
+        .col(big_integer_null(RequestRecords::CompletionTokens))
+        .col(big_integer_null(RequestRecords::TotalTokens))
+        .col(big_integer_null(RequestRecords::CacheCreationInputTokens))
+        .col(big_integer_null(RequestRecords::CacheReadInputTokens))
+        .col(string_len_null(RequestRecords::CostCurrency, 3))
+        .col(decimal_len_null(RequestRecords::TokenCost, 20, 8))
+        .col(decimal_len_null(RequestRecords::BaseCost, 20, 8))
+        .col(decimal_len_null(RequestRecords::TotalCost, 20, 8))
+        .col(decimal_len_null(RequestRecords::BillingMultiplier, 20, 8))
+        .col(big_integer_null(RequestRecords::FirstByteTimeMs))
+        .col(big_integer_null(RequestRecords::TotalLatencyMs))
+        .col(big_integer(RequestRecords::CandidateCount))
+        .col(timestamp_tz(RequestRecords::CreatedAt))
+        .col(timestamp_tz_null(RequestRecords::StartedAt))
+        .col(timestamp_tz_null(RequestRecords::FinishedAt))
+        .col(timestamp_tz(RequestRecords::UpdatedAt))
+        .to_owned()
+}
 
 pub(super) fn request_candidates_table() -> TableCreateStatement {
     Table::create()

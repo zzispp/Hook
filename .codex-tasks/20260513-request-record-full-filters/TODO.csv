@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing request record list semantics,DONE,Current pagination and filter behavior is confirmed,rg and sed relevant request record files,2026-05-13,0,Confirmed old backend capped recent candidates before grouping.
+2,Implement backend all-record filters,IN_PROGRESS,RequestRecordListRequest accepts filters and storage query filters request groups before pagination,cargo test -p storage --test provider_request_records --test provider_request_candidates,,0,Code is present; awaiting current-turn validation.
+3,Implement frontend filter controls,TODO,Request record toolbar sends model provider api format and type filters,pnpm lint:frontend,,0,
+4,Implement live duration display,TODO,First-byte wait and total latency use Aether-style rolling elapsed text for active records,pnpm lint:frontend,,0,
+5,Run validation,TODO,Rust and frontend checks pass within repository norms,cargo fmt --check && cargo check -p backend && cargo test -p storage --test provider_request_records --test provider_request_candidates && pnpm lint:frontend,,0,
+6,Record final evidence,TODO,PROGRESS.md summarizes changed semantics and validation,test -s .codex-tasks/20260513-request-record-full-filters/PROGRESS.md,,0,

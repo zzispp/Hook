@@ -10,6 +10,8 @@ pub(in crate::migration::baseline) enum Users {
     Role,
     IsActive,
     IsDeleted,
+    AllowedModelIds,
+    AllowedProviderIds,
     CreatedAt,
     UpdatedAt,
     LastLoginAt,

@@ -7,6 +7,8 @@ import { useState, useCallback } from 'react';
 import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 
+import { useGlobalModels } from 'src/actions/models';
+import { useProviders } from 'src/actions/providers';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
@@ -22,11 +24,7 @@ import { UserFormDialog } from './user-form-dialog';
 import { UserTokenDialog } from './user-token-dialog';
 import { UserWalletDialog } from './user-wallet-dialog';
 import { RefreshAddActions } from './admin-page-actions';
-import {
-  toUserFilters,
-  AdminFiltersToolbar,
-  DEFAULT_ADMIN_FILTERS,
-} from './admin-filters-toolbar';
+import { toUserFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 import {
   formFromUser,
   formToPayload,
@@ -53,6 +51,8 @@ function useUserManagementState() {
   const [filters, setFilters] = useState(DEFAULT_ADMIN_FILTERS);
   const users = useUsers(table.page, table.rowsPerPage, toUserFilters(filters));
   const roles = useRoles(0, 100);
+  const models = useGlobalModels(0, 1000);
+  const providers = useProviders(0, 1000);
   const dialog = useUserDialog(t, () => void users.refresh());
   const [deleteTarget, setDeleteTarget] = useState<SystemUser | null>(null);
   const [walletUser, setWalletUser] = useState<SystemUser | null>(null);
@@ -83,8 +83,10 @@ function useUserManagementState() {
     table,
     users,
     roles,
+    models,
     dialog,
     filters,
+    providers,
     tokenUser,
     walletUser,
     roleOptions,
@@ -144,7 +146,12 @@ function UserManagementDialogs({ state }: { state: ReturnType<typeof useUserMana
 
   return (
     <>
-      <UserFormDialog dialog={state.dialog} roles={state.roleOptions} />
+      <UserFormDialog
+        dialog={state.dialog}
+        roles={state.roleOptions}
+        models={state.models.items}
+        providers={state.providers.items}
+      />
       <UserWalletDialog
         user={state.walletUser}
         onClose={() => state.setWalletUser(null)}
@@ -210,5 +217,16 @@ function useUserDialog(t: ReturnType<typeof useTranslate>['t'], refresh: VoidFun
     }
   }, [close, editing, form, refresh, t]);
 
-  return { close, creating, editing, form, open: creating || !!editing, openCreate, openEdit, setForm, submit, submitting };
+  return {
+    close,
+    creating,
+    editing,
+    form,
+    open: creating || !!editing,
+    openCreate,
+    openEdit,
+    setForm,
+    submit,
+    submitting,
+  };
 }

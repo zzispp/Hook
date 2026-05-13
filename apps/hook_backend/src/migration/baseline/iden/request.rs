@@ -1,6 +1,43 @@
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum RequestRecords {
+    Table,
+    RequestId,
+    TokenId,
+    GroupCode,
+    GlobalModelId,
+    ProviderId,
+    EndpointId,
+    KeyId,
+    ClientApiFormat,
+    ProviderApiFormat,
+    RequestType,
+    IsStream,
+    HasFailover,
+    HasRetry,
+    Status,
+    BillingStatus,
+    PromptTokens,
+    CompletionTokens,
+    TotalTokens,
+    CacheCreationInputTokens,
+    CacheReadInputTokens,
+    CostCurrency,
+    TokenCost,
+    BaseCost,
+    TotalCost,
+    BillingMultiplier,
+    FirstByteTimeMs,
+    TotalLatencyMs,
+    CandidateCount,
+    CreatedAt,
+    StartedAt,
+    FinishedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
 pub(in crate::migration::baseline) enum RequestCandidates {
     Table,
     Id,

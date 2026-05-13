@@ -47,6 +47,7 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
     }
     .insert(store.connection())
     .await?;
+    super::request_record_summary::sync_request_record(store, &record.request_id).await?;
     Ok(record.response())
 }
 
@@ -86,7 +87,9 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     if input.finished {
         record.finished_at = Set(Some(now));
     }
-    Ok(record.update(store.connection()).await?.response())
+    let record = record.update(store.connection()).await?;
+    super::request_record_summary::sync_request_record(store, &record.request_id).await?;
+    Ok(record.response())
 }
 
 pub async fn mark_available_request_candidates_unused(store: &ProviderStore, request_id: &str) -> StorageResult<u64> {
@@ -98,6 +101,9 @@ pub async fn mark_available_request_candidates_unused(store: &ProviderStore, req
         .filter(request_candidates::Column::Status.eq("available"))
         .exec(store.connection())
         .await?;
+    if result.rows_affected > 0 {
+        super::request_record_summary::sync_request_record(store, request_id).await?;
+    }
     Ok(result.rows_affected)
 }
 

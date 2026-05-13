@@ -1,0 +1,108 @@
+[
+  {
+    "label": "fixed order non-stream and stream routes",
+    "ok": true,
+    "evidence": [
+      "019e2076-95b5-76e0-9526-4f79eefbd337",
+      "019e2076-b67e-73a0-abef-b89676aa79bc",
+      "019e2076-e32c-7a21-a8bd-027cedf2290c",
+      "019e2077-191d-7c80-8c08-6636f2ae8c4f"
+    ]
+  },
+  {
+    "label": "user provider and model allow matrix",
+    "ok": false,
+    "error": "Error: claude user allows claude conversion failed with HTTP 403: {\"error\":{\"type\":\"\\u003cnil\\u003e\",\"message\":\"用户额度不足, 剩余额度: ＄-0.073246 (request id: 20260513083231304807852tauRXdu9) (request id: 202605130832305387564068268d9d6qZrqZDwl)\"},\"type\":\"error\"}\n    at proxyCall (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-user-access-real-flow/lib/user_access_client.mjs:14:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async userAllowMatrix (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:122:18)\n    at async step (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:87:22)\n    at async runScenarios (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:71:3)\n    at async main (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:60:5)"
+  },
+  {
+    "label": "user provider and model deny matrix",
+    "ok": true,
+    "evidence": {
+      "modelDenied": {
+        "status": 403,
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e205d-276e-7291-856d-4d223b1ddc25\",\"type\":\"forbidden\"}}"
+      },
+      "modelOnlyDenied": {
+        "status": 403,
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e205d-276e-7291-856d-4d223b1ddc25\",\"type\":\"forbidden\"}}"
+      },
+      "providerDenied": {
+        "status": 404,
+        "text": "{\"error\":{\"code\":404,\"message\":\"no active provider candidate for model claude-opus-4-7\",\"type\":\"not_found_error\"}}"
+      }
+    }
+  },
+  {
+    "label": "route key failover",
+    "ok": false,
+    "error": "Error: claude key failover failed with HTTP 403: {\"error\":{\"type\":\"\\u003cnil\\u003e\",\"message\":\"用户额度不足, 剩余额度: ＄-0.073246 (request id: 20260513083232477950127t6pJUDyj) (request id: 202605130832317131582328268d9d6TOk7Gsmx)\"},\"type\":\"error\"}\n    at proxyCall (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-user-access-real-flow/lib/user_access_client.mjs:14:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async routeKeyFailover (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:180:18)\n    at async step (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:87:22)\n    at async runScenarios (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:73:3)\n    at async main (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:60:5)"
+  },
+  {
+    "label": "route endpoint fallback conversion",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2077-5865-7a20-b76b-776814ab7245",
+      "attempts": 3,
+      "endpoint": "openai_cli"
+    }
+  },
+  {
+    "label": "provider failover",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2077-9101-76b3-8daa-1b2d8eb0bbe7",
+      "attempts": 3
+    }
+  },
+  {
+    "label": "cache affinity",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2077-d94c-7d30-8f23-9af4094aa39d",
+      "key": "Route Hook secondary"
+    }
+  },
+  {
+    "label": "load balance",
+    "ok": true,
+    "evidence": {
+      "keys": [
+        "Route Hook primary",
+        "Route Hook secondary"
+      ],
+      "requests": 20
+    }
+  },
+  {
+    "label": "format conversion matrix",
+    "ok": false,
+    "error": "Error: openai to claude failed with HTTP 403: {\"error\":{\"type\":\"\\u003cnil\\u003e\",\"message\":\"用户额度不足, 剩余额度: ＄-0.077896 (request id: 20260513083707478001200wAQytcVs) (request id: 202605130837067087194078268d9d6wmTosSP9)\"},\"type\":\"error\"}\n    at proxyCall (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-user-access-real-flow/lib/user_access_client.mjs:14:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async runConversionCase (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:309:18)\n    at async formatConversionMatrix (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:304:43)\n    at async step (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:87:22)\n    at async runScenarios (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:78:3)\n    at async main (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:60:5)"
+  },
+  {
+    "label": "active streaming request record",
+    "ok": false,
+    "error": "Error: request candidate was not created for marker: request-record-real-active-stream-1778661428586\n    at waitForRequestIdByMarker (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:537:9)\n    at async activeStreamingRequestRecord (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:329:21)\n    at async step (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:87:22)\n    at async runScenarios (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:79:3)\n    at async main (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260513-request-record-full-filters/request_record_real_flow.mjs:60:5)"
+  },
+  {
+    "label": "100 concurrent mixed requests",
+    "ok": true,
+    "evidence": {
+      "requests": 100,
+      "stream": 70,
+      "nonStream": 30,
+      "openaiKeys": [
+        "Route Hook primary",
+        "Route Hook secondary"
+      ]
+    }
+  },
+  {
+    "label": "request record filters and details",
+    "ok": true,
+    "evidence": {
+      "total": 123,
+      "sample": "019e207b-c48b-7723-bd81-cac3635a9533",
+      "streamSample": "019e207b-c4fa-7362-94f4-241376fd340e"
+    }
+  }
+]

@@ -7,6 +7,8 @@ pub struct UserRecordInput {
     pub email: String,
     pub role: String,
     pub is_active: bool,
+    pub allowed_model_ids: Vec<String>,
+    pub allowed_provider_ids: Vec<String>,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,
 }

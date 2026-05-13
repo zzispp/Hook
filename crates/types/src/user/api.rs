@@ -13,6 +13,10 @@ pub struct UserPayload {
     pub role: String,
     pub is_active: bool,
     #[serde(default)]
+    pub allowed_model_ids: Vec<String>,
+    #[serde(default)]
+    pub allowed_provider_ids: Vec<String>,
+    #[serde(default)]
     pub rate_limit_rpm: Option<i64>,
     #[serde(default)]
     pub quota_mode: Option<String>,
@@ -59,6 +63,8 @@ pub struct UserResponse {
     pub email: String,
     pub role: String,
     pub is_active: bool,
+    pub allowed_model_ids: Vec<String>,
+    pub allowed_provider_ids: Vec<String>,
     pub auth_source: String,
     pub email_verified: bool,
     pub system: bool,
@@ -99,6 +105,8 @@ impl From<UserPayload> for NewUser {
             email: value.email,
             role: value.role,
             is_active: value.is_active,
+            allowed_model_ids: value.allowed_model_ids,
+            allowed_provider_ids: value.allowed_provider_ids,
             rate_limit_rpm: value.rate_limit_rpm,
             quota_mode: value.quota_mode.unwrap_or_else(|| super::USER_QUOTA_MODE_WALLET.into()),
         }
@@ -113,6 +121,8 @@ impl From<UserPayload> for ReplaceUser {
             email: value.email,
             role: value.role,
             is_active: value.is_active,
+            allowed_model_ids: value.allowed_model_ids,
+            allowed_provider_ids: value.allowed_provider_ids,
             rate_limit_rpm: value.rate_limit_rpm,
             quota_mode: value.quota_mode.unwrap_or_else(|| super::USER_QUOTA_MODE_WALLET.into()),
         }
@@ -155,6 +165,8 @@ impl From<User> for UserResponse {
             email: value.email,
             role: value.role,
             is_active: value.is_active,
+            allowed_model_ids: value.allowed_model_ids,
+            allowed_provider_ids: value.allowed_provider_ids,
             auth_source: value.auth_source,
             email_verified: value.email_verified,
             system: value.system,

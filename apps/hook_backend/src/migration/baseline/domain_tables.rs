@@ -15,6 +15,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         translation_tables::translation_entries_table(),
         api_tokens_table(),
         billing_group_models_table(),
+        request_candidate_tables::request_records_table(),
         request_candidate_tables::request_candidates_table(),
     ]
 }

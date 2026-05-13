@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use constants::auth::{PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH};
 use constants::pagination::{MAX_PAGE_SIZE, MIN_PAGE_NUMBER, MIN_PAGE_SIZE};
 use types::{
@@ -17,6 +19,8 @@ pub(super) fn validate_new_user(input: &NewUser) -> AppResult<()> {
     validate_password(&input.password)?;
     reject_blank("email", &input.email)?;
     reject_blank("role", &input.role)?;
+    validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
+    validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
     validate_rate_limit(input.rate_limit_rpm)?;
     validate_quota_mode(&input.quota_mode)
 }
@@ -28,6 +32,8 @@ pub(super) fn validate_replace_user(input: &ReplaceUser) -> AppResult<()> {
     }
     reject_blank("email", &input.email)?;
     reject_blank("role", &input.role)?;
+    validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
+    validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
     validate_rate_limit(input.rate_limit_rpm)?;
     validate_quota_mode(&input.quota_mode)
 }
@@ -59,6 +65,8 @@ pub(super) fn sanitize_new_user(input: NewUser) -> NewUser {
         email: input.email.trim().into(),
         role: input.role,
         is_active: input.is_active,
+        allowed_model_ids: normalize_ids(input.allowed_model_ids),
+        allowed_provider_ids: normalize_ids(input.allowed_provider_ids),
         rate_limit_rpm: input.rate_limit_rpm,
         quota_mode: input.quota_mode,
     }
@@ -71,6 +79,8 @@ pub(super) fn sanitize_replace_user(input: ReplaceUser) -> ReplaceUser {
         email: input.email.trim().into(),
         role: input.role,
         is_active: input.is_active,
+        allowed_model_ids: normalize_ids(input.allowed_model_ids),
+        allowed_provider_ids: normalize_ids(input.allowed_provider_ids),
         rate_limit_rpm: input.rate_limit_rpm,
         quota_mode: input.quota_mode,
     }
@@ -126,6 +136,25 @@ fn reject_blank(field: &str, value: &str) -> AppResult<()> {
         return Err(AppError::InvalidInput(format!("{field} cannot be blank")));
     }
     Ok(())
+}
+
+fn validate_ids(field: &str, values: &[String]) -> AppResult<()> {
+    if values.iter().any(|value| value.trim().is_empty()) {
+        return Err(AppError::InvalidInput(format!("{field} cannot contain blank values")));
+    }
+    Ok(())
+}
+
+fn normalize_ids(values: Vec<String>) -> Vec<String> {
+    let mut set = BTreeSet::new();
+    values
+        .into_iter()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+        .for_each(|value| {
+            set.insert(value);
+        });
+    set.into_iter().collect()
 }
 
 fn validate_rate_limit(value: Option<i64>) -> AppResult<()> {

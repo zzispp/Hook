@@ -23,6 +23,7 @@ pub(super) use wallet::*;
 pub fn reversed_tables() -> Vec<DynIden> {
     vec![
         RequestCandidates::Table.into_iden(),
+        RequestRecords::Table.into_iden(),
         ApiTokens::Table.into_iden(),
         BillingGroupProviders::Table.into_iden(),
         BillingGroupModels::Table.into_iden(),

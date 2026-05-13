@@ -67,7 +67,10 @@ use crate::{
     auth::{AuthState, AuthStateParts, auth_middleware},
     exchange_rates::ExchangeRateCache,
     llm_proxy::{LlmProxyCache, LlmProxyState, create_router as create_llm_proxy_router, create_v1beta_router},
-    proxy_cache_hooks::{ProxyCachedApiTokenUseCase, ProxyCachedGroupUseCase, ProxyCachedModelUseCase, ProxyCachedProviderUseCase, ProxyCachedSettingUseCase},
+    proxy_cache_hooks::{
+        ProxyCachedApiTokenUseCase, ProxyCachedGroupUseCase, ProxyCachedModelUseCase, ProxyCachedProviderUseCase, ProxyCachedSettingUseCase,
+        ProxyCachedUserUseCase,
+    },
     system,
 };
 use types::api_token::ApiTokenOwnerResponse;
@@ -127,7 +130,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageSystemTokenPolicy::new(database.clone()),
     ));
     let api_tokens = Arc::new(ProxyCachedApiTokenUseCase::new(api_tokens_inner, proxy_cache.clone()));
-    let users = Arc::new(UserService::with_system_user_and_registration(
+    let users_inner = Arc::new(UserService::with_system_user_and_registration(
         StorageUserRepository::new(database.clone()),
         BcryptPasswordHasher,
         system_user_provider,
@@ -135,6 +138,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageInitialGrantLedger::new(database.clone()),
         StorageUserWalletCatalog::new(database.clone()),
     ));
+    let users = Arc::new(ProxyCachedUserUseCase::new(users_inner, proxy_cache.clone()));
     let captcha = Arc::new(CaptchaService::new(
         StorageCaptchaSettingsReader::new(database.clone()),
         RedisCaptchaStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),

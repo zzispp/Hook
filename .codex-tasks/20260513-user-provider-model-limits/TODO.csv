@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理 Hook 与 Aether 中用户限制字段和 proxy 链路,DONE,相关文件与调用链已定位,rg provider/model/user/proxy paths,2026-05-13T13:52:00+08:00,0,
+2,实现后端数据结构/接口/代理校验,DONE,用户限制字段可保存并在 proxy 生效,cargo check -p backend; 60s cargo test -p proxy; 60s cargo test -p user; 60s cargo test -p backend,2026-05-13T14:55:00+08:00,0,
+3,实现前端编辑用户 modal 与 i18n,DONE,界面提供带搜索选择框且默认不限制,pnpm lint:frontend; pnpm build:frontend,2026-05-13T14:55:00+08:00,0,
+4,运行验证并整理结果,DONE,验证命令完成或失败原因明确,cargo fmt; cargo check -p backend; 60s cargo test -p proxy/user/backend; pnpm lint:frontend; pnpm build:frontend,2026-05-13T14:55:00+08:00,0,

@@ -11,6 +11,8 @@ pub fn base_input() -> SchedulerInput {
         group_is_active: true,
         group_allowed_model_ids: Vec::new(),
         group_allowed_provider_ids: Vec::new(),
+        user_allowed_model_ids: Vec::new(),
+        user_allowed_provider_ids: Vec::new(),
         token_model_policy: ModelAccessPolicy::All,
         requested_model_id: "gpt-4o-mini".into(),
         client_format: ApiFormat::OpenAiChat,

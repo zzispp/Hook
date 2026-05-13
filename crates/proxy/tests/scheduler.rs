@@ -24,6 +24,32 @@ fn scheduler_filters_by_group_provider_endpoint_format_and_model() {
 }
 
 #[test]
+fn scheduler_rejects_user_disallowed_model() {
+    let input = SchedulerInput {
+        user_allowed_model_ids: vec!["model-b".into()],
+        providers: vec![provider_a()],
+        ..base_input()
+    };
+
+    let error = CandidateBuilder::build(&input).unwrap_err();
+
+    assert_eq!(error, SchedulerError::UserModelDenied { model: "gpt-4o-mini".into() });
+}
+
+#[test]
+fn scheduler_filters_by_user_provider_scope() {
+    let input = SchedulerInput {
+        user_allowed_provider_ids: vec!["provider-b".into()],
+        providers: vec![provider_a()],
+        ..base_input()
+    };
+
+    let error = CandidateBuilder::build(&input).unwrap_err();
+
+    assert_eq!(error, SchedulerError::NoModelCandidate { model: "gpt-4o-mini".into() });
+}
+
+#[test]
 fn scheduler_returns_group_model_unavailable_when_no_provider_model_matches() {
     let input = SchedulerInput {
         requested_model_id: "claude-3-haiku".into(),

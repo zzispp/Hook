@@ -9,7 +9,7 @@ use types::{
 };
 
 use crate::{
-    Database, StorageError, StorageResult,
+    Database, StorageError, StorageResult, json,
     rbac::role_records,
     user::record::ActiveModel as UserActiveModel,
     user::{UserColumn, UserEntity as Users},
@@ -38,6 +38,8 @@ impl UserStore {
             role: Set(user.role),
             is_active: Set(user.is_active),
             is_deleted: Set(false),
+            allowed_model_ids: Set(json::encode_required(&user.allowed_model_ids)?),
+            allowed_provider_ids: Set(json::encode_required(&user.allowed_provider_ids)?),
             last_login_at: Set(None),
             auth_source: Set(UserRecord::local_auth_source()),
             email_verified: Set(false),
@@ -49,8 +51,8 @@ impl UserStore {
         }
         .insert(self.database.connection())
         .await
-        .map(User::from)
-        .map_err(StorageError::from)
+        .map_err(StorageError::from)?
+        .into_domain()
     }
 
     pub async fn replace(&self, id: UserId, user: UserRecordInput) -> StorageResult<User> {
@@ -66,6 +68,8 @@ impl UserStore {
         active.email = Set(user.email);
         active.role = Set(user.role);
         active.is_active = Set(user.is_active);
+        active.allowed_model_ids = Set(json::encode_required(&user.allowed_model_ids)?);
+        active.allowed_provider_ids = Set(json::encode_required(&user.allowed_provider_ids)?);
         active.rate_limit_rpm = Set(user.rate_limit_rpm);
         active.quota_mode = Set(user.quota_mode);
         active.updated_at = Set(time::OffsetDateTime::now_utc());
@@ -85,7 +89,7 @@ impl UserStore {
     }
 
     pub async fn find_by_id(&self, id: UserId) -> StorageResult<Option<User>> {
-        self.find_record_by_id(&id).await.map(|record| record.map(User::from))
+        self.find_record_by_id(&id).await?.map(UserRecord::into_domain).transpose()
     }
 
     pub async fn find_by_ids(&self, ids: &[String]) -> StorageResult<Vec<User>> {
@@ -96,28 +100,35 @@ impl UserStore {
             .filter(UserColumn::Id.is_in(ids.iter().cloned()))
             .all(self.database.connection())
             .await
-            .map(|users| users.into_iter().map(User::from).collect())
-            .map_err(StorageError::from)
+            .map_err(StorageError::from)?
+            .into_iter()
+            .map(UserRecord::into_domain)
+            .collect()
     }
 
     pub async fn find_auth_by_id(&self, id: UserId) -> StorageResult<Option<UserAuthRecord>> {
-        self.find_record_by_id(&id).await.map(|record| record.map(UserRecord::into_auth))
+        self.find_record_by_id(&id).await?.map(UserRecord::into_auth).transpose()
     }
 
     pub async fn find_by_email(&self, email: &str) -> StorageResult<Option<User>> {
-        self.find_record(UserColumn::Email.eq(email).into()).await.map(|record| record.map(User::from))
+        self.find_record(UserColumn::Email.eq(email).into())
+            .await?
+            .map(UserRecord::into_domain)
+            .transpose()
     }
 
     pub async fn find_auth_by_username(&self, username: &str) -> StorageResult<Option<UserAuthRecord>> {
         self.find_record(UserColumn::Username.eq(username).into())
-            .await
-            .map(|record| record.map(UserRecord::into_auth))
+            .await?
+            .map(UserRecord::into_auth)
+            .transpose()
     }
 
     pub async fn find_auth_by_email(&self, email: &str) -> StorageResult<Option<UserAuthRecord>> {
         self.find_record(UserColumn::Email.eq(email).into())
-            .await
-            .map(|record| record.map(UserRecord::into_auth))
+            .await?
+            .map(UserRecord::into_auth)
+            .transpose()
     }
 
     pub async fn record_login(&self, id: UserId) -> StorageResult<()> {
@@ -151,8 +162,9 @@ impl UserStore {
             .offset(request.offset)
             .all(self.database.connection())
             .await?;
+        let items = items.into_iter().map(UserRecord::into_domain).collect::<StorageResult<Vec<_>>>()?;
         Ok(Page {
-            items: items.into_iter().map(User::from).collect(),
+            items,
             total,
             page: request.page,
             page_size: request.page_size,

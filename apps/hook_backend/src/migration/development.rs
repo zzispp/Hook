@@ -66,6 +66,7 @@ pub fn table_names() -> Vec<&'static str> {
         "translation_entries",
         "api_tokens",
         "billing_group_models",
+        "request_records",
         "request_candidates",
     ]
 }

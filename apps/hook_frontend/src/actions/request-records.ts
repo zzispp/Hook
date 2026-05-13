@@ -16,8 +16,12 @@ import axios, { fetcher, endpoints } from 'src/lib/axios';
 import { requireApiData } from './rbac';
 
 export type RequestRecordFilters = {
+  api_format?: string;
+  model_id?: string;
+  provider_id?: string;
   search?: string;
   status?: string;
+  type?: string;
 };
 
 const swrOptions = {

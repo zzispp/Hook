@@ -19,6 +19,8 @@ pub struct SchedulerInput {
     pub group_is_active: bool,
     pub group_allowed_model_ids: Vec<String>,
     pub group_allowed_provider_ids: Vec<String>,
+    pub user_allowed_model_ids: Vec<String>,
+    pub user_allowed_provider_ids: Vec<String>,
     pub token_model_policy: ModelAccessPolicy,
     pub requested_model_id: String,
     pub client_format: ApiFormat,

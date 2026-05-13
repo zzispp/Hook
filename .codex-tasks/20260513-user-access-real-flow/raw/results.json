@@ -1,0 +1,157 @@
+[
+  {
+    "label": "fixed order unrestricted user exact routes",
+    "ok": true,
+    "evidence": [
+      "019e2016-264e-7be1-8bc0-9e36a93a8216",
+      "019e2016-356b-7813-83e7-1731c9ea35c0",
+      "019e2016-498d-7d50-aad1-a00064fe9767",
+      "019e2016-5322-74b1-b159-16445ae7014f"
+    ]
+  },
+  {
+    "label": "user provider and model allow matrix",
+    "ok": true,
+    "evidence": [
+      "019e2016-5979-7602-987b-f2a0496c6dfe",
+      "019e2016-67fb-73d2-8db8-580ea0dd3bf3",
+      "019e2016-d02a-74c0-bba8-2d1b9ce23bd3"
+    ]
+  },
+  {
+    "label": "user model and provider deny matrix",
+    "ok": true,
+    "evidence": {
+      "modelDenied": {
+        "status": 403,
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e2000-5558-7932-aeb4-82cf1c062017\",\"type\":\"forbidden\"}}"
+      },
+      "unrestrictedProviderDeniedByModel": {
+        "status": 403,
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e2000-5558-7932-aeb4-82cf1c062017\",\"type\":\"forbidden\"}}"
+      },
+      "providerDenied": {
+        "status": 404,
+        "text": "{\"error\":{\"code\":404,\"message\":\"no active provider candidate for model claude-opus-4-7\",\"type\":\"not_found_error\"}}"
+      }
+    }
+  },
+  {
+    "label": "edit user API refreshes proxy scheduling snapshot",
+    "ok": true,
+    "evidence": {
+      "before": "019e2017-0ad7-7eb3-932b-c6ffb2c737ce",
+      "updatedUser": "00000000-0000-7000-9200-000000000107",
+      "denied": {
+        "status": 403,
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e2000-5558-7932-aeb4-82cf1c062017\",\"type\":\"forbidden\"}}"
+      },
+      "allowed": "019e2017-2d96-70f0-90f9-0d20932e656a"
+    }
+  },
+  {
+    "label": "route key failover under user restrictions",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2017-3f38-76b1-ab77-b521a6f21e01",
+      "attempts": 2
+    }
+  },
+  {
+    "label": "route endpoint fallback conversion under user restrictions",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2017-5065-72e2-b7e3-42b630acbc4c",
+      "attempts": 3,
+      "endpoint": "openai_cli"
+    }
+  },
+  {
+    "label": "provider failover with unrestricted user",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2017-5a32-7f30-9ed8-7d988b77a9f9",
+      "attempts": 3
+    }
+  },
+  {
+    "label": "cache affinity under user restrictions",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2017-72fb-7f21-9122-461d92acace1",
+      "key": "Route Hook secondary"
+    }
+  },
+  {
+    "label": "load balance under user restrictions",
+    "ok": true,
+    "evidence": {
+      "keys": [
+        "Route Hook primary",
+        "Route Hook secondary"
+      ]
+    }
+  },
+  {
+    "label": "format conversion matrix under user restrictions",
+    "ok": true,
+    "evidence": [
+      {
+        "label": "openai to claude",
+        "requestId": "019e2019-0178-7833-a0f6-7a0997ea7521",
+        "provider": "Route Test AIPAI Claude",
+        "conversion": "true"
+      },
+      {
+        "label": "openai stream to claude",
+        "requestId": "019e2019-11f6-77d3-ae61-0d6e1aa16ed4",
+        "provider": "Route Test AIPAI Claude",
+        "conversion": "true"
+      },
+      {
+        "label": "openai to gemini",
+        "requestId": "019e2019-1ebf-7b01-b40d-5d80f65fd4a0",
+        "provider": "Route Test Ekan8 Gemini",
+        "conversion": "true"
+      },
+      {
+        "label": "openai stream to gemini",
+        "requestId": "019e2019-40ee-7670-9c1a-07b02b272ae6",
+        "provider": "Route Test Ekan8 Gemini",
+        "conversion": "true"
+      },
+      {
+        "label": "claude to openai",
+        "requestId": "019e2019-7de6-74d3-9722-6539b6267a4a",
+        "provider": "Route Test Hook Pool",
+        "conversion": "true"
+      },
+      {
+        "label": "gemini exact",
+        "requestId": "019e2019-92ff-74a3-b662-280084f6f092",
+        "provider": "Route Test Ekan8 Gemini",
+        "conversion": "false"
+      },
+      {
+        "label": "gemini stream exact",
+        "requestId": "019e2019-cf97-7c42-a32c-d40ad75650c7",
+        "provider": "Route Test Ekan8 Gemini",
+        "conversion": "false"
+      }
+    ]
+  },
+  {
+    "label": "100 concurrent mixed real requests",
+    "ok": true,
+    "evidence": {
+      "requests": 100,
+      "openaiKeys": [
+        "Route Hook primary",
+        "Route Hook secondary"
+      ],
+      "providers": [
+        "Route Test Hook Pool"
+      ]
+    }
+  }
+]

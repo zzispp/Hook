@@ -1,10 +1,12 @@
+use std::collections::BTreeMap;
+
 use rust_decimal::Decimal;
-use sea_orm::{DatabaseBackend, MockDatabase};
+use sea_orm::{DatabaseBackend, MockDatabase, Value};
 use storage::{
     Database,
     provider::{
         ProviderStore,
-        record::{provider_api_keys, provider_endpoints, providers, request_candidates},
+        record::{provider_api_keys, provider_endpoints, providers, request_candidates, request_records},
     },
 };
 use types::provider::{ActiveRequestRecordRequest, RequestRecordListRequest};
@@ -13,7 +15,8 @@ use types::provider::{ActiveRequestRecordRequest, RequestRecordListRequest};
 async fn request_record_storage_lists_aggregated_records() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([list_candidates()])
+            .append_query_results([[count_row(2)]])
+            .append_query_results([list_summaries()])
             .append_query_results([provider_records()])
             .append_query_results([endpoint_records()])
             .append_query_results([key_records()])
@@ -115,7 +118,7 @@ async fn request_record_storage_returns_trace_detail() {
 async fn request_record_storage_lists_active_records_by_ids() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([list_candidates()])
+            .append_query_results([list_summaries()])
             .append_query_results([provider_records()])
             .append_query_results([endpoint_records()])
             .append_query_results([key_records()])
@@ -141,8 +144,104 @@ async fn request_record_storage_lists_active_records_by_ids() {
     assert_eq!(streaming.status, "streaming");
 }
 
-fn list_candidates() -> Vec<request_candidates::Model> {
-    [success_candidates(), vec![candidate("req-stream", "stream-1", "streaming", 0, 0, 6)]].concat()
+#[tokio::test]
+async fn request_record_storage_filters_summary_before_pagination() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[count_row(0)]])
+        .append_query_results([Vec::<request_records::Model>::new()])
+        .append_query_results([Vec::<providers::Model>::new()])
+        .append_query_results([Vec::<provider_endpoints::Model>::new()])
+        .append_query_results([Vec::<provider_api_keys::Model>::new()])
+        .append_query_results([Vec::<storage::api_token::api_token_records::Model>::new()])
+        .append_query_results([Vec::<storage::user::UserRecord>::new()])
+        .append_query_results([Vec::<storage::model::global_models::Model>::new()])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    let response = store
+        .list_request_records(RequestRecordListRequest {
+            search: Some("hwnet".into()),
+            status: Some("success".into()),
+            model_id: Some("model-1".into()),
+            provider_id: Some("provider-1".into()),
+            api_format: Some("openai_chat".into()),
+            type_filter: Some("stream".into()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(response.total, 0);
+    let logs = connection.into_transaction_log();
+    let count_sql = &logs[0].statements()[0].sql;
+    let list_sql = &logs[1].statements()[0].sql;
+    assert!(count_sql.contains("FROM request_records r"), "{count_sql}");
+    assert!(count_sql.contains("r.status = $"), "{count_sql}");
+    assert!(count_sql.contains("r.global_model_id = $"), "{count_sql}");
+    assert!(count_sql.contains("r.provider_id = $"), "{count_sql}");
+    assert!(count_sql.contains("r.client_api_format = $"), "{count_sql}");
+    assert!(count_sql.contains("r.provider_api_format = $"), "{count_sql}");
+    assert!(count_sql.contains("r.is_stream = TRUE"), "{count_sql}");
+    assert!(count_sql.contains("LOWER(COALESCE(u.username, '')) LIKE $"), "{count_sql}");
+    assert!(list_sql.contains("ORDER BY r.created_at DESC"), "{list_sql}");
+    assert!(list_sql.contains("LIMIT $"), "{list_sql}");
+    assert!(list_sql.contains("OFFSET $"), "{list_sql}");
+}
+
+fn list_summaries() -> Vec<request_records::Model> {
+    vec![
+        summary("req-stream", "streaming", true, false, false, 1, 6),
+        summary("req-success", "success", false, true, true, 2, 2),
+    ]
+}
+
+fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, has_retry: bool, candidate_count: i64, minute: u8) -> request_records::Model {
+    request_records::Model {
+        request_id: request_id.into(),
+        token_id: Some("token-1".into()),
+        group_code: Some("default".into()),
+        global_model_id: Some("gpt-5.5".into()),
+        provider_id: Some("provider-1".into()),
+        endpoint_id: Some("endpoint-1".into()),
+        key_id: Some("key-1".into()),
+        client_api_format: "openai_cli".into(),
+        provider_api_format: Some("claude_chat".into()),
+        request_type: "chat".into(),
+        is_stream,
+        has_failover,
+        has_retry,
+        status: status.into(),
+        billing_status: billing_status(status).into(),
+        prompt_tokens: (status == "success").then_some(12),
+        completion_tokens: (status == "success").then_some(8),
+        total_tokens: (status == "success").then_some(20),
+        cache_creation_input_tokens: (status == "success").then_some(3),
+        cache_read_input_tokens: (status == "success").then_some(4),
+        cost_currency: (status == "success").then(|| "USD".into()),
+        token_cost: (status == "success").then_some(Decimal::new(1, 4)),
+        base_cost: (status == "success").then_some(Decimal::new(1, 5)),
+        total_cost: (status == "success").then_some(Decimal::new(2, 4)),
+        billing_multiplier: (status == "success").then_some(Decimal::new(2, 0)),
+        first_byte_time_ms: first_byte_time_ms(status),
+        total_latency_ms: (status == "success").then_some(570),
+        candidate_count,
+        created_at: at_minute(minute),
+        started_at: Some(at_minute(minute)),
+        finished_at: (status != "streaming").then(|| at_minute(minute + 1)),
+        updated_at: at_minute(minute + 1),
+    }
+}
+
+fn count_row(total: i64) -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([("total", total.into())])
+}
+
+fn billing_status(status: &str) -> &'static str {
+    match status {
+        "success" => "settled",
+        "failed" => "void",
+        _ => "pending",
+    }
 }
 
 fn success_candidates() -> Vec<request_candidates::Model> {
@@ -283,6 +382,8 @@ fn user_records() -> Vec<storage::user::UserRecord> {
         role: "user".into(),
         is_active: true,
         is_deleted: false,
+        allowed_model_ids: "[]".into(),
+        allowed_provider_ids: "[]".into(),
         created_at: at_minute(0),
         updated_at: at_minute(0),
         last_login_at: None,

@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database,
-    provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch},
+    provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_records},
 };
 use types::provider::RequestCandidateListRequest;
 
@@ -12,6 +12,9 @@ async fn request_candidate_storage_creates_success_record() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[record.clone()]])
+            .append_query_results([[record.clone()]])
+            .append_query_results([Vec::<request_records::Model>::new()])
+            .append_query_results([[summary_record("success")]])
             .into_connection(),
     );
     let store = ProviderStore::new(database);
@@ -60,6 +63,9 @@ async fn request_candidate_storage_updates_existing_attempt() {
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[streaming]])
             .append_query_results([[success]])
+            .append_query_results([[request_candidate_record("record-1", "success")]])
+            .append_query_results([Vec::<request_records::Model>::new()])
+            .append_query_results([[summary_record("success")]])
             .into_connection(),
     );
     let store = ProviderStore::new(database);
@@ -78,6 +84,9 @@ async fn request_candidate_storage_marks_available_records_unused() {
             last_insert_id: 0,
             rows_affected: 2,
         }])
+        .append_query_results([[request_candidate_record("record-1", "success")]])
+        .append_query_results([[summary_record("success")]])
+        .append_query_results([[summary_record("success")]])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -85,7 +94,7 @@ async fn request_candidate_storage_marks_available_records_unused() {
 
     assert_eq!(rows, 2);
     let logs = connection.into_transaction_log();
-    assert_eq!(logs.len(), 1);
+    assert!(logs.len() >= 4);
     let sql = &logs[0].statements()[0].sql;
     assert!(sql.contains("UPDATE \"request_candidates\" SET"), "{sql}");
     assert!(sql.contains("\"status\" = $"), "{sql}");
@@ -207,6 +216,43 @@ fn no_candidate_record(mut record: storage::provider::record::request_candidates
     record.error_type = Some("no_candidate".into());
     record.error_message = Some("该分组下暂无 missing-model 模型可用".into());
     record
+}
+
+fn summary_record(status: &str) -> request_records::Model {
+    request_records::Model {
+        request_id: "req-1".into(),
+        token_id: Some("token-1".into()),
+        group_code: Some("default".into()),
+        global_model_id: Some("gpt-4o-mini".into()),
+        provider_id: Some("provider-a".into()),
+        endpoint_id: Some("endpoint-a".into()),
+        key_id: Some("key-a".into()),
+        client_api_format: "openai_chat".into(),
+        provider_api_format: Some("openai_chat".into()),
+        request_type: "chat".into(),
+        is_stream: false,
+        has_failover: false,
+        has_retry: false,
+        status: status.into(),
+        billing_status: "settled".into(),
+        prompt_tokens: Some(12),
+        completion_tokens: Some(8),
+        total_tokens: Some(20),
+        cache_creation_input_tokens: Some(3),
+        cache_read_input_tokens: Some(4),
+        cost_currency: Some("USD".into()),
+        token_cost: Some(Decimal::new(1, 4)),
+        base_cost: Some(Decimal::new(1, 5)),
+        total_cost: Some(Decimal::new(2, 4)),
+        billing_multiplier: Some(Decimal::new(2, 0)),
+        first_byte_time_ms: Some(12),
+        total_latency_ms: Some(42),
+        candidate_count: 1,
+        created_at: now(),
+        started_at: Some(now()),
+        finished_at: Some(now()),
+        updated_at: now(),
+    }
 }
 
 fn failed_error_type(status: &str) -> Option<String> {

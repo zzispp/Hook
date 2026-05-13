@@ -7,16 +7,22 @@ use storage::{
     model::global_models,
     provider::{ProviderStore, record::provider_api_keys},
     setting::SettingStore,
+    user::UserStore,
 };
-use types::{group::BillingGroupListRequest, model::TieredPricingConfig, provider::ProviderSchedulingMode};
+use types::{
+    group::BillingGroupListRequest, model::TieredPricingConfig, pagination::PageSliceRequest, provider::ProviderSchedulingMode, user::UserListFilters,
+};
 
 use crate::llm_proxy::LlmProxyError;
+
+const SNAPSHOT_FULL_PAGE_LIMIT: u64 = i64::MAX as u64;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SchedulingSnapshot {
     pub scheduling_mode: ProviderSchedulingMode,
     pub models: Vec<CachedGlobalModel>,
     pub groups: Vec<CachedBillingGroup>,
+    pub users: Vec<CachedUserAccess>,
     pub providers: Vec<CachedProvider>,
 }
 
@@ -38,6 +44,13 @@ pub struct CachedBillingGroup {
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
     pub is_active: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CachedUserAccess {
+    pub id: String,
+    pub allowed_model_ids: Vec<String>,
+    pub allowed_provider_ids: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -97,6 +110,7 @@ pub async fn load(database: &Database) -> Result<SchedulingSnapshot, LlmProxyErr
         scheduling_mode: settings.scheduling_mode,
         models: load_models(database).await?,
         groups: load_groups(database).await?,
+        users: load_users(database).await?,
         providers: load_providers(database).await?,
     })
 }
@@ -121,7 +135,7 @@ async fn load_groups(database: &Database) -> Result<Vec<CachedBillingGroup>, Llm
     let response = GroupStore::new(database.clone())
         .list_groups(BillingGroupListRequest {
             skip: 0,
-            limit: u64::MAX,
+            limit: SNAPSHOT_FULL_PAGE_LIMIT,
             is_active: None,
             search: None,
         })
@@ -135,6 +149,29 @@ async fn load_groups(database: &Database) -> Result<Vec<CachedBillingGroup>, Llm
             allowed_model_ids: group.allowed_model_ids,
             allowed_provider_ids: group.allowed_provider_ids,
             is_active: group.is_active,
+        })
+        .collect())
+}
+
+async fn load_users(database: &Database) -> Result<Vec<CachedUserAccess>, LlmProxyError> {
+    let page = UserStore::new(database.clone())
+        .list_slice(
+            PageSliceRequest {
+                offset: 0,
+                limit: SNAPSHOT_FULL_PAGE_LIMIT,
+                page: 1,
+                page_size: SNAPSHOT_FULL_PAGE_LIMIT,
+            },
+            UserListFilters::default(),
+        )
+        .await?;
+    Ok(page
+        .items
+        .into_iter()
+        .map(|user| CachedUserAccess {
+            id: user.id.0,
+            allowed_model_ids: user.allowed_model_ids,
+            allowed_provider_ids: user.allowed_provider_ids,
         })
         .collect())
 }

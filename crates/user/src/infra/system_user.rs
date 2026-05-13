@@ -18,6 +18,8 @@ impl ConfigSystemUserProvider {
                     email: settings.admin.email.trim().into(),
                     role: settings.admin.role.trim().into(),
                     is_active: settings.admin.is_active,
+                    allowed_model_ids: Vec::new(),
+                    allowed_provider_ids: Vec::new(),
                     auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
                     email_verified: true,
                     system: true,

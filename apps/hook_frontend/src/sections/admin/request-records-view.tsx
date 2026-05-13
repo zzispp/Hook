@@ -7,14 +7,9 @@ import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
-import Stack from '@mui/material/Stack';
-import Switch from '@mui/material/Switch';
-import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import InputAdornment from '@mui/material/InputAdornment';
-import FormControlLabel from '@mui/material/FormControlLabel';
 
+import { useProviders } from 'src/actions/providers';
+import { useGlobalModels } from 'src/actions/models';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
@@ -22,20 +17,20 @@ import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-set
 import { useRequestRecords, fetchActiveRequestRecords } from 'src/actions/request-records';
 
 import { useTable } from 'src/components/table';
-import { Iconify } from 'src/components/iconify';
 
 import { RefreshButton, AdminBreadcrumbs } from './shared';
 import { RequestRecordsTable } from './request-records-table';
 import { RequestRecordDetailDrawer } from './request-record-detail-drawer';
+import { DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE } from './request-records-utils';
 import {
-  requestStatusLabel,
-  REQUEST_RECORD_STATUS_OPTIONS,
-  DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE,
-} from './request-records-utils';
+  RequestRecordsToolbar,
+  toRequestRecordQueryFilters,
+  type RequestRecordFilterState,
+  DEFAULT_REQUEST_RECORD_FILTERS,
+} from './request-records-toolbar';
 
 const AUTO_REFRESH_INTERVAL_MS = 3000;
 const ACTIVE_REQUEST_REFRESH_INTERVAL_MS = 1000;
-const ALL_STATUS_FILTER_VALUE = 'all';
 const EMPTY_REQUEST_IDS: string[] = [];
 const REQUEST_STATUS_RANK: Record<string, number> = {
   pending: 0,
@@ -44,29 +39,25 @@ const REQUEST_STATUS_RANK: Record<string, number> = {
   failed: 2,
 };
 
-type Filters = {
-  search: string;
-  status: string;
-};
-
-const DEFAULT_FILTERS: Filters = {
-  search: '',
-  status: '',
-};
-
 export function RequestRecordsView() {
   const { t, currentLang } = useTranslate('admin');
   const table = useTable({
     defaultRowsPerPage: DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE,
     defaultOrderBy: 'created_at',
   });
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState(DEFAULT_REQUEST_RECORD_FILTERS);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<RequestRecord | null>(null);
   const settings = useSystemSettings();
   const exchangeRate = useUsdCnyExchangeRate(settings.data?.currency === 'CNY');
-  const records = useRequestRecords(table.page, table.rowsPerPage, toQueryFilters(filters));
+  const models = useGlobalModels(0, 1000);
+  const providers = useProviders(0, 1000);
+  const records = useRequestRecords(
+    table.page,
+    table.rowsPerPage,
+    toRequestRecordQueryFilters(filters)
+  );
   const locale = currentLang.numberFormat.code;
   const currencyDisplay: CurrencyDisplay = {
     currency: settings.data?.currency ?? 'USD',
@@ -112,7 +103,7 @@ export function RequestRecordsView() {
   useRestoreScrollOnSelection(displaySelectedRecord, scrollSnapshotRef);
 
   const handleFiltersChange = useCallback(
-    (nextFilters: Filters) => {
+    (nextFilters: RequestRecordFilterState) => {
       table.onResetPage();
       setFilters(nextFilters);
     },
@@ -135,6 +126,8 @@ export function RequestRecordsView() {
         ) : null}
         <RequestRecordsToolbar
           filters={filters}
+          models={models.items}
+          providers={providers.items}
           autoRefresh={autoRefresh}
           onChange={handleFiltersChange}
           onAutoRefreshChange={setAutoRefresh}
@@ -158,72 +151,6 @@ export function RequestRecordsView() {
       />
     </DashboardContent>
   );
-}
-
-function RequestRecordsToolbar({
-  filters,
-  autoRefresh,
-  onChange,
-  onAutoRefreshChange,
-}: {
-  filters: Filters;
-  autoRefresh: boolean;
-  onChange: (filters: Filters) => void;
-  onAutoRefreshChange: (value: boolean) => void;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ p: 2.5 }}>
-      <TextField
-        fullWidth
-        value={filters.search}
-        placeholder={t('filters.searchRequestRecords')}
-        onChange={(event) => onChange({ ...filters, search: event.target.value })}
-        slotProps={{
-          input: {
-            startAdornment: (
-              <InputAdornment position="start">
-                <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
-              </InputAdornment>
-            ),
-          },
-        }}
-      />
-      <TextField
-        select
-        label={t('common.status')}
-        value={filters.status || ALL_STATUS_FILTER_VALUE}
-        sx={{ minWidth: 180 }}
-        onChange={(event) =>
-          onChange({ ...filters, status: statusFilterValue(event.target.value) })
-        }
-      >
-        <MenuItem value={ALL_STATUS_FILTER_VALUE}>{t('filters.allStatuses')}</MenuItem>
-        {REQUEST_RECORD_STATUS_OPTIONS.map((status) => (
-          <MenuItem key={status} value={status}>
-            {requestStatusLabel(status, t)}
-          </MenuItem>
-        ))}
-      </TextField>
-      <Stack direction="row" spacing={1.5} alignItems="center">
-        <FormControlLabel
-          control={
-            <Switch
-              checked={autoRefresh}
-              onChange={(event) => onAutoRefreshChange(event.target.checked)}
-            />
-          }
-          label={<Typography variant="body2">{t('requestRecords.autoRefresh')}</Typography>}
-          sx={{ whiteSpace: 'nowrap' }}
-        />
-      </Stack>
-    </Stack>
-  );
-}
-
-function statusFilterValue(value: string) {
-  return value === ALL_STATUS_FILTER_VALUE ? '' : value;
 }
 
 function useAutoRefresh(enabled: boolean, refresh: () => void) {
@@ -345,11 +272,4 @@ function statusRank(status: string) {
 function latestSelectedRecord(selectedRecord: RequestRecord | null, items: RequestRecord[]) {
   if (!selectedRecord) return null;
   return items.find((record) => record.request_id === selectedRecord.request_id) ?? selectedRecord;
-}
-
-function toQueryFilters(filters: Filters) {
-  return {
-    search: filters.search.trim() || undefined,
-    status: filters.status || undefined,
-  };
 }

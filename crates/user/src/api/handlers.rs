@@ -119,6 +119,8 @@ fn new_sign_up_user(payload: SignUpPayload) -> NewUser {
         email: payload.email,
         role: DEFAULT_USER_ROLE.into(),
         is_active: DEFAULT_USER_IS_ACTIVE,
+        allowed_model_ids: Vec::new(),
+        allowed_provider_ids: Vec::new(),
         rate_limit_rpm: None,
         quota_mode: USER_QUOTA_MODE_WALLET.into(),
     }

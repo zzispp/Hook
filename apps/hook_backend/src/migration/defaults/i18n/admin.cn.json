@@ -205,6 +205,8 @@
     "unlimitedExpiresAt": "不输入有效期表示无时间限制。",
     "unlimitedQuota": "留空表示不限额度。",
     "userQuotaMode": "无限制不受钱包余额约束；按余额限制会使用钱包余额计费。",
+    "userModelAccess": "不选择模型表示该用户允许所有模型。",
+    "userProviderAccess": "不选择提供商表示该用户允许所有提供商。",
     "userRateLimit": "留空或 0 表示不在用户层限制；最终 API 速率取用户限制和令牌限制的最小值。"
   },
   "validation": {
@@ -833,6 +835,10 @@
     "firstByte": "首字",
     "totalLatency": "总耗时",
     "autoRefresh": "自动刷新",
+    "allModels": "全部模型",
+    "allProviders": "全部提供商",
+    "allFormats": "全部格式",
+    "allTypes": "全部类型",
     "detailTitle": "请求详情",
     "stream": "流式",
     "nonStream": "非流式",
