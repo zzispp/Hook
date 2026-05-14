@@ -27,6 +27,7 @@ pub struct ProxyCandidate {
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
     pub cache_ttl_minutes: i32,
+    pub key_rpm_limit: Option<i32>,
     pub route: CandidateRoute,
 }
 
@@ -53,6 +54,7 @@ pub struct CandidateKeyOption {
     pub id: String,
     pub api_key: String,
     pub cache_ttl_minutes: i32,
+    pub rpm_limit: Option<i32>,
 }
 
 #[derive(Clone, Debug)]
@@ -182,6 +184,7 @@ mod tests {
             request_timeout_seconds: None,
             stream_first_byte_timeout_seconds: None,
             cache_ttl_minutes: 5,
+            key_rpm_limit: None,
             route: CandidateRoute {
                 endpoints: vec![
                     endpoint("endpoint-openai", "openai_chat", false),
@@ -210,6 +213,7 @@ mod tests {
             id: id.into(),
             api_key: api_key.into(),
             cache_ttl_minutes: 5,
+            rpm_limit: None,
         }
     }
 }

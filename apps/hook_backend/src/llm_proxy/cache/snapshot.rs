@@ -21,6 +21,8 @@ const SNAPSHOT_FULL_PAGE_LIMIT: u64 = i64::MAX as u64;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SchedulingSnapshot {
+    #[serde(default)]
+    pub default_rate_limit_rpm: i64,
     pub scheduling_mode: ProviderSchedulingMode,
     pub models: Vec<CachedGlobalModel>,
     pub groups: Vec<CachedBillingGroup>,
@@ -53,6 +55,8 @@ pub struct CachedUserAccess {
     pub id: String,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
+    #[serde(default)]
+    pub rate_limit_rpm: Option<i64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -91,6 +95,8 @@ pub struct CachedProviderKey {
     pub provider_id: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
+    #[serde(default)]
+    pub rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,
     pub is_active: bool,
 }
@@ -111,6 +117,7 @@ pub struct CachedModelBinding {
 pub async fn load(database: &Database) -> Result<SchedulingSnapshot, LlmProxyError> {
     let settings = SettingStore::new(database.clone()).get_system_settings().await?;
     Ok(SchedulingSnapshot {
+        default_rate_limit_rpm: settings.default_rate_limit_rpm,
         scheduling_mode: settings.scheduling_mode,
         models: load_models(database).await?,
         groups: load_groups(database).await?,
@@ -176,6 +183,7 @@ async fn load_users(database: &Database) -> Result<Vec<CachedUserAccess>, LlmPro
             id: user.id.0,
             allowed_model_ids: user.allowed_model_ids,
             allowed_provider_ids: user.allowed_provider_ids,
+            rate_limit_rpm: user.rate_limit_rpm,
         })
         .collect())
 }
@@ -253,6 +261,7 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
             provider_id: record.provider_id,
             encrypted_api_key: record.encrypted_api_key,
             internal_priority: record.internal_priority,
+            rpm_limit: record.rpm_limit,
             cache_ttl_minutes: record.cache_ttl_minutes,
             is_active: record.is_active,
         })

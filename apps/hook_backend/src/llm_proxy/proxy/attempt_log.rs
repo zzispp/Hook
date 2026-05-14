@@ -17,16 +17,46 @@ pub(super) async fn record_attempt_error(
     error: LlmProxyError,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<Option<Response>, LlmProxyError> {
-    record_conversion_error(state, request_id, candidate, retry_index, &error).await?;
+    record_failed_attempt(
+        state,
+        request_id,
+        candidate,
+        retry_index,
+        "request_conversion_error",
+        &error,
+    )
+    .await?;
     *last_error = Some(error);
     Ok(None)
 }
 
-async fn record_conversion_error(
+pub(super) async fn record_rate_limit_rejection(
     state: &LlmProxyState,
     request_id: &str,
     candidate: &ProxyCandidate,
     retry_index: i32,
+    error: LlmProxyError,
+    last_error: &mut Option<LlmProxyError>,
+) -> Result<Option<Response>, LlmProxyError> {
+    record_failed_attempt(
+        state,
+        request_id,
+        candidate,
+        retry_index,
+        "provider_key_rate_limit",
+        &error,
+    )
+    .await?;
+    *last_error = Some(error);
+    Ok(None)
+}
+
+async fn record_failed_attempt(
+    state: &LlmProxyState,
+    request_id: &str,
+    candidate: &ProxyCandidate,
+    retry_index: i32,
+    error_type: &'static str,
     error: &LlmProxyError,
 ) -> Result<(), LlmProxyError> {
     let error_message = error.to_string();
@@ -34,7 +64,7 @@ async fn record_conversion_error(
         state,
         request_id,
         AttemptRecordInput {
-            error_type: Some("request_conversion_error"),
+            error_type: Some(error_type),
             error_message: Some(error_message.as_str()),
             ..AttemptRecordInput::new(candidate, retry_index, "failed", true)
         },

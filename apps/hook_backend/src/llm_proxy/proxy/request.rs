@@ -7,6 +7,7 @@ use crate::llm_proxy::{
     audit::record_scheduled_candidates,
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
     formats,
+    rate_limit,
 };
 
 use super::{body_rules::apply_provider_body_rules, capture::RequestCapture};
@@ -35,6 +36,7 @@ pub(super) async fn prepare_proxy_request(
     capture: RequestCapture,
 ) -> Result<PreparedProxyRequest, LlmProxyError> {
     let model_name = required_model(&body)?;
+    rate_limit::enforce_request_limits(state, token).await?;
     let is_stream = is_streaming(&body) && !force_non_stream;
     let selection = select_candidates(
         state,
@@ -197,6 +199,7 @@ mod tests {
             request_timeout_seconds: None,
             stream_first_byte_timeout_seconds: None,
             cache_ttl_minutes: 5,
+            key_rpm_limit: None,
             route: CandidateRoute {
                 endpoints: Vec::new(),
                 keys: Vec::new(),

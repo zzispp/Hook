@@ -706,7 +706,7 @@
   },
   "providers": {
     "adaptive": "自适应",
-    "adaptiveWhenBlank": "留空表示自适应",
+    "adaptiveWhenBlank": "0 表示不限制",
     "allFormats": "全部格式",
     "allModels": "全部模型",
     "apiFormat": "API 格式",
@@ -752,7 +752,7 @@
     "requestPriceHint": "留空清空全局基础按次价格",
     "providerTypeCustom": "自定义",
     "requestConfig": "请求配置",
-    "rpmLimit": "RPM 限制",
+    "rpmLimit": "速率限制(请求/分钟)",
     "selectFormat": "选择格式...",
     "currentMode": "当前模式",
     "currentSchedulingMode": "当前调度：{{mode}}",

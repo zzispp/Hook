@@ -6,6 +6,7 @@ mod error;
 mod formats;
 mod handlers;
 mod proxy;
+mod rate_limit;
 mod request_record_policy;
 mod ws;
 

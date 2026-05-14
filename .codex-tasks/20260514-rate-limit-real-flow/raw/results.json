@@ -1,0 +1,73 @@
+[
+  {
+    "label": "current code inspection shows no preexisting runtime enforcement path",
+    "ok": true,
+    "evidence": {
+      "userRuntimePath": "apps/hook_backend/src/llm_proxy/rate_limit.rs::enforce_request_limits",
+      "tokenRuntimePath": "apps/hook_backend/src/llm_proxy/rate_limit.rs::token_scope",
+      "providerKeyRuntimePath": "apps/hook_backend/src/llm_proxy/proxy/executor.rs::attempt_once",
+      "note": "本轮代码检查前确认旧链路缺少运行时执行点；当前场景用于验证修复后真实生效。"
+    }
+  },
+  {
+    "label": "user limit blocks second request when token is unlimited",
+    "ok": true,
+    "evidence": {
+      "first": "019e258a-0060-79b1-a44d-920c038abf03",
+      "blocked": {
+        "status": 429,
+        "text": "{\"error\":{\"code\":429,\"message\":\"user rate limit exceeded\",\"type\":\"rate_limit_error\"}}"
+      }
+    }
+  },
+  {
+    "label": "token limit blocks second request when user is unlimited",
+    "ok": true,
+    "evidence": {
+      "first": "019e258a-21ce-7c63-8ead-e7f05287d7ec",
+      "blocked": {
+        "status": 429,
+        "text": "{\"error\":{\"code\":429,\"message\":\"token rate limit exceeded\",\"type\":\"rate_limit_error\"}}"
+      }
+    }
+  },
+  {
+    "label": "combined user and token limits use the tighter user cap",
+    "ok": true,
+    "evidence": {
+      "first": "019e258a-413d-7ea1-8990-71228dcdc055",
+      "blocked": {
+        "status": 429,
+        "text": "{\"error\":{\"code\":429,\"message\":\"user rate limit exceeded\",\"type\":\"rate_limit_error\"}}"
+      }
+    }
+  },
+  {
+    "label": "single user shared limit spans multiple tokens",
+    "ok": true,
+    "evidence": {
+      "first": "019e258a-ea5e-7e70-9764-2299ddb31541",
+      "blocked": {
+        "status": 429,
+        "text": "{\"error\":{\"code\":429,\"message\":\"user rate limit exceeded\",\"type\":\"rate_limit_error\"}}"
+      }
+    }
+  },
+  {
+    "label": "provider key limit fails over to secondary key",
+    "ok": true,
+    "evidence": {
+      "first": "019e258a-f609-7e20-8dd7-7677a4c666c5",
+      "second": "019e258b-0263-7890-841c-783c2cfbdc36"
+    }
+  },
+  {
+    "label": "provider key limit returns 429 when all keys are exhausted",
+    "ok": true,
+    "evidence": {
+      "first": "019e258b-11f4-70f1-aacf-8b8e12c467f6",
+      "second": "019e258b-31f2-7cd0-8a08-3408388b638f",
+      "blocked": "019e258b-4bde-7901-9412-6b86d304aa95"
+    }
+  }
+]

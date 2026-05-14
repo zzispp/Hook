@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,核对当前速率限制执行链路,DONE,确认用户/令牌/Provider Key 限制当前真正参与运行时请求路径,rg -n \"enforce_request_limits|claim_provider_key_limit|rpm_limit|rate_limit_rpm\" apps/hook_backend/src apps/hook_frontend/src,2026-05-14T16:07:43+08:00,0,已确认入口与 attempt 前均有运行时执行点
+2,实现后端运行时速率限制,DONE,代理请求路径在真实运行时会检查用户/令牌/Provider Key 限制,cargo check -p backend,2026-05-14T15:00:00+08:00,0,已完成
+3,调整 Provider Key 文案与默认值,DONE,Provider Key 表单显示“速率限制(请求/分钟)”且默认值为 0,pnpm lint:frontend,2026-05-14T15:00:00+08:00,0,已完成
+4,修正真实验证脚本分钟窗口漂移,DONE,1 RPM 场景在固定分钟窗口内执行以避免跨分钟误判,node --check .codex-tasks/20260514-rate-limit-real-flow/rate_limit_real_flow.mjs,2026-05-14T16:07:43+08:00,0,已补充窗口对齐 helper 并通过 node --check
+5,使用新的 Hook Pool 配置重跑真实场景,DONE,raw/results.json 反映用户/令牌/Provider Key 限流在真实请求下生效,node .codex-tasks/20260514-rate-limit-real-flow/rate_limit_real_flow.mjs,2026-05-14T16:12:49+08:00,0,使用 https://www.hook.rs 与新 key 实测全场景通过
+6,补跑静态检查并收尾,DONE,cargo/pnpm 检查通过且 PROGRESS.md 记录最终结论,\"cargo check -p backend && pnpm lint:frontend\",2026-05-14T16:12:49+08:00,0,cargo check -p backend 与 pnpm lint:frontend 均通过

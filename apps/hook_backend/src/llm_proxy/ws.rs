@@ -20,6 +20,7 @@ use super::{
     audit::{AttemptRecordInput, SKIP_REASON_REQUEST_TERMINATED, record_attempt, record_scheduled_candidates, record_skipped_candidates},
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
     proxy::capture::RequestCapture,
+    rate_limit,
 };
 
 pub async fn realtime(
@@ -30,6 +31,7 @@ pub async fn realtime(
     websocket: WebSocketUpgrade,
 ) -> Result<Response, LlmProxyError> {
     let model_name = required_query_model(&query)?;
+    rate_limit::enforce_request_limits(&state, &token.0).await?;
     let selection = select_candidates(
         &state,
         &token.0,

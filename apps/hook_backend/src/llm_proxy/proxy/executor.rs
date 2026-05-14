@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use super::{
     LlmProxyError, LlmProxyState,
-    attempt_log::{record_attempt_error, record_send_error, record_started_attempt},
+    attempt_log::{record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
     header_rules::apply_provider_header_rules,
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
     stream_transport, transport,
@@ -15,6 +15,7 @@ use super::{
 use crate::llm_proxy::{
     audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
     candidate::ProxyCandidate,
+    rate_limit,
 };
 
 const ANTHROPIC_VERSION: &str = "2023-06-01";
@@ -66,6 +67,13 @@ async fn attempt_once(
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<Option<Response>, LlmProxyError> {
+    match rate_limit::claim_provider_key_limit(state, &candidate.trace.key_id, candidate.key_rpm_limit).await {
+        Ok(()) => {}
+        Err(error @ LlmProxyError::RateLimited(_)) => {
+            return record_rate_limit_rejection(state, &prepared.request_id, candidate, retry_index, error, last_error).await;
+        }
+        Err(error) => return Err(error),
+    }
     let payload = match attempt_payload(prepared.body.clone(), candidate, prepared.force_non_stream) {
         Ok(payload) => payload,
         Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await,

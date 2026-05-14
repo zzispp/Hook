@@ -61,6 +61,7 @@ async fn proxy_candidate(
         request_timeout_seconds: parts.provider.request_timeout_seconds,
         stream_first_byte_timeout_seconds: parts.provider.stream_first_byte_timeout_seconds,
         cache_ttl_minutes: key.cache_ttl_minutes,
+        key_rpm_limit: key.rpm_limit,
         route,
     })
 }
@@ -134,6 +135,7 @@ fn key_options(state: &LlmProxyState, parts: &CandidateParts) -> Result<Vec<Cand
                 id: key.id.clone(),
                 api_key: state.cipher.decrypt_provider_key(&key.encrypted_api_key)?,
                 cache_ttl_minutes: key.cache_ttl_minutes,
+                rpm_limit: key.rpm_limit,
             })
         })
         .collect()
@@ -171,6 +173,7 @@ mod tests {
             id: id.into(),
             api_key: "secret".into(),
             cache_ttl_minutes: 5,
+            rpm_limit: None,
         }
     }
 }

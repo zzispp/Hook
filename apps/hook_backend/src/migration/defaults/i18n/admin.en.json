@@ -706,7 +706,7 @@
   },
   "providers": {
     "adaptive": "Adaptive",
-    "adaptiveWhenBlank": "Leave blank for adaptive",
+    "adaptiveWhenBlank": "0 means unlimited",
     "allFormats": "All formats",
     "allModels": "All models",
     "apiFormat": "API format",
@@ -752,7 +752,7 @@
     "requestPriceHint": "Leave blank to clear the global base per-request price",
     "providerTypeCustom": "Custom",
     "requestConfig": "Request config",
-    "rpmLimit": "RPM limit",
+    "rpmLimit": "Rate limit (requests/minute)",
     "selectFormat": "Select format...",
     "currentMode": "Current mode",
     "currentSchedulingMode": "Current scheduling: {{mode}}",

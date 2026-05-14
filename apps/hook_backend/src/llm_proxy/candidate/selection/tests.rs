@@ -115,6 +115,7 @@ fn matching_candidate_parts_filters_by_user_provider_access() {
         id: "user-a".into(),
         allowed_model_ids: Vec::new(),
         allowed_provider_ids: vec!["provider-b".into()],
+        rate_limit_rpm: None,
     };
 
     let parts = matching_candidate_parts(
@@ -134,6 +135,7 @@ fn matching_candidate_parts_filters_by_user_provider_access() {
 
 fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnapshot {
     SchedulingSnapshot {
+        default_rate_limit_rpm: 0,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         models: vec![CachedGlobalModel {
             id: "model-a".into(),
@@ -235,6 +237,7 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         provider_id: "provider-a".into(),
         encrypted_api_key: "encrypted".into(),
         internal_priority,
+        rpm_limit: None,
         cache_ttl_minutes: 5,
         is_active: true,
     }

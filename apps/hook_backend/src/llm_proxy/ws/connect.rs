@@ -8,6 +8,7 @@ use crate::llm_proxy::{
     LlmProxyError, LlmProxyState, REALTIME_PATH,
     audit::{AttemptRecordInput, SKIP_REASON_REQUEST_TERMINATED, record_attempt, record_skipped_candidates},
     candidate::{CandidateSelection, ProxyCandidate},
+    rate_limit,
 };
 
 const OPENAI_REALTIME_BETA_HEADER: &str = "realtime=v1";
@@ -32,6 +33,13 @@ pub(super) async fn connect_first_upstream(
     for candidate in &selection.candidates {
         for retry_index in 0..=candidate.max_retries {
             let attempt = candidate.for_attempt(retry_index);
+            if let Err(error @ LlmProxyError::RateLimited(_)) =
+                rate_limit::claim_provider_key_limit(state, &attempt.trace.key_id, attempt.key_rpm_limit).await
+            {
+                record_connect_error(state, selection, &attempt, retry_index, None, &error).await?;
+                last_error = Some(error);
+                continue;
+            }
             let request = match realtime_request(&attempt, query, attempt.api_key.clone()) {
                 Ok(request) => request,
                 Err(error) => {

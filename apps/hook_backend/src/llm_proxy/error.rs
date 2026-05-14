@@ -10,6 +10,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 pub enum LlmProxyError {
     Unauthorized,
     Forbidden(String),
+    RateLimited(String),
     InvalidRequest(String),
     NotFound(String),
     Upstream(String),
@@ -43,6 +44,7 @@ impl LlmProxyError {
         match self {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
+            Self::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
             Self::InvalidRequest(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::Upstream(_) | Self::Infrastructure(_) => StatusCode::BAD_GATEWAY,
@@ -53,6 +55,7 @@ impl LlmProxyError {
         match self {
             Self::Unauthorized => "unauthorized",
             Self::Forbidden(_) => "forbidden",
+            Self::RateLimited(_) => "rate_limit_error",
             Self::InvalidRequest(_) => "invalid_request_error",
             Self::NotFound(_) => "not_found_error",
             Self::Upstream(_) => "upstream_error",
@@ -63,7 +66,12 @@ impl LlmProxyError {
     fn message(&self) -> String {
         match self {
             Self::Unauthorized => "missing or invalid bearer token".into(),
-            Self::Forbidden(message) | Self::InvalidRequest(message) | Self::NotFound(message) | Self::Upstream(message) | Self::Infrastructure(message) => {
+            Self::Forbidden(message)
+            | Self::RateLimited(message)
+            | Self::InvalidRequest(message)
+            | Self::NotFound(message)
+            | Self::Upstream(message)
+            | Self::Infrastructure(message) => {
                 message.clone()
             }
         }
