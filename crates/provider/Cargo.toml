@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 async-trait.workspace = true
 axum.workspace = true
+currency.workspace = true
 hex.workspace = true
 ring.workspace = true
 reqwest.workspace = true

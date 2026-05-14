@@ -123,7 +123,7 @@ function UserWalletContent({
         <Tab value="ledger" label={t('userWallet.tabs.ledger')} />
         <Tab value="refund" label={t('userWallet.tabs.refund')} />
       </Tabs>
-      {tab === 'operation' ? <ManualRechargePanel form={form} /> : null}
+      {tab === 'operation' ? <ManualRechargePanel form={form} currency={wallet?.currency} /> : null}
       {tab === 'ledger' ? <UserWalletLedger table={table} wallet={wallet} ledger={ledger} locale={locale} onOpen={onOpenTransaction} /> : null}
       {tab === 'refund' ? <RefundEmptyState /> : null}
     </Stack>

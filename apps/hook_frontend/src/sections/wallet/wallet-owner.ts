@@ -1,5 +1,7 @@
 import type { AdminWallet, WalletSummary, WalletTransaction, AdminWalletLedgerTransaction } from 'src/types/wallet';
 
+import { DEFAULT_WALLET_CURRENCY } from 'src/utils/money-boundary';
+
 export type WalletOwner = {
   name?: string;
   status?: string | null;
@@ -34,7 +36,7 @@ export function walletFromTransaction(transaction: WalletTransaction): AdminWall
     recharge_balance: item.recharge_balance_after,
     gift_balance: item.gift_balance_after,
     refundable_balance: item.recharge_balance_after,
-    currency: 'CNY',
+    currency: item.currency || DEFAULT_WALLET_CURRENCY,
     status: item.wallet_status,
     limit_mode: 'finite',
     unlimited: false,

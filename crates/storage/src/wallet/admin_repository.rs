@@ -135,6 +135,7 @@ fn admin_wallet_response(record: AdminWalletRecord) -> AdminWalletResponse {
 fn admin_ledger_response(record: AdminWalletLedgerRecord) -> AdminWalletLedgerTransactionResponse {
     AdminWalletLedgerTransactionResponse {
         transaction: WalletTransactionResponse::from(record.transaction),
+        currency: record.wallet.currency,
         owner_name: record.wallet.owner_name,
         owner_email: record.wallet.owner_email,
         owner_type: record.wallet.owner_type,

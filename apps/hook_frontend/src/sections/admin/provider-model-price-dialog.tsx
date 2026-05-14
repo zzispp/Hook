@@ -14,6 +14,8 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogActions from '@mui/material/DialogActions';
 
+import { accountingCurrencyLabel } from 'src/utils/money-boundary';
+
 import { updateGlobalModel } from 'src/actions/models';
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -120,7 +122,7 @@ function RequestPriceField({
   return (
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', sm: 'center' }} sx={requestPriceSx}>
       <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', color: 'text.secondary' }}>
-        {t('fields.pricePerRequest')}
+        {accountingCurrencyLabel(t('fields.pricePerRequest'))}
       </Typography>
       <TextField
         size="small"

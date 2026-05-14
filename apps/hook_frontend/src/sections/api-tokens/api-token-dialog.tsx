@@ -13,6 +13,8 @@ import Stack from '@mui/material/Stack';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 
+import { accountingCurrencyLabel } from 'src/utils/money-boundary';
+
 import { useTranslate } from 'src/locales/use-locales';
 
 import { TextFieldRow, ManagementDialog } from '../admin/shared';
@@ -175,7 +177,7 @@ function LimitFields({ dialog }: { dialog: TokenDialogState }) {
       />
       <TextFieldRow
         type="number"
-        label={t('fields.quotaLimit')}
+        label={accountingCurrencyLabel(t('fields.quotaLimit'))}
         value={dialog.form.quota_limit}
         helperText={t('helper.unlimitedQuota')}
         onChange={(value) => dialog.setForm((form) => ({ ...form, quota_limit: value }))}

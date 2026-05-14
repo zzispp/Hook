@@ -54,6 +54,7 @@ export type WalletTransaction = {
 };
 
 export type AdminWalletLedgerTransaction = WalletTransaction & {
+  currency: string;
   owner_name: string;
   owner_email: string;
   owner_type: string;

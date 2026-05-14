@@ -3,6 +3,8 @@ import type { Role, UserInput, SystemUser, UserQuotaMode } from 'src/types/rbac'
 
 import { fNumber } from 'src/utils/format-number';
 
+import { formatWalletMoney } from '../wallet/wallet-display';
+
 export type UserForm = {
   username: string;
   password: string;
@@ -74,11 +76,11 @@ export function displayRole(code: string, roles: Role[]) {
 export function walletBalanceText(user: SystemUser, t: AdminT) {
   return user.quota_mode === 'unlimited'
     ? t('users.unlimited')
-    : formatUserMoney(user.wallet?.available_balance);
+    : formatUserMoney(user.wallet?.available_balance, user.wallet?.currency);
 }
 
 export function walletConsumedText(user: SystemUser) {
-  return formatUserMoney(user.wallet?.total_consumed);
+  return formatUserMoney(user.wallet?.total_consumed, user.wallet?.currency);
 }
 
 export function userRateLimitText(user: SystemUser, t: AdminT) {
@@ -94,8 +96,8 @@ export function formatUserDateTime(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export function formatUserMoney(value?: number | null) {
-  return `¥${Number(value ?? 0).toFixed(2)}`;
+export function formatUserMoney(value?: number | null, currency?: string | null) {
+  return formatWalletMoney(value, currency ?? undefined);
 }
 
 function rateLimitValue(value: string) {

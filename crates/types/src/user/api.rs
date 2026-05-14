@@ -86,6 +86,7 @@ pub struct UserWalletSummaryResponse {
     pub gift_balance: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_consumed: Decimal,
+    pub currency: String,
     pub status: String,
 }
 

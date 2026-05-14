@@ -14,12 +14,14 @@ import { useState, useCallback } from 'react';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 
+import { currencyDisplayFromResponse } from 'src/utils/currency-format';
+
 import { useUsers } from 'src/actions/rbac';
 import { useTranslate } from 'src/locales/use-locales';
 import { useUserModelCatalog } from 'src/actions/models';
 import { useScopedApiTokens } from 'src/actions/api-tokens';
 import { useAvailableBillingGroups } from 'src/actions/groups';
-import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-settings';
+import { useCurrencyDisplay } from 'src/actions/system-settings';
 
 import { useTable } from 'src/components/table';
 import { ConfirmDialog } from 'src/components/custom-dialog';
@@ -73,7 +75,7 @@ export function useTokenManagementPanelState({
   const dialog = useTokenDialog(scope, t, groups.items, fixedUserId ?? '');
   const deleteDialog = useDeleteDialog(scope, t);
   const copyToken = useCopyToken(scope, t);
-  const currency = useTokenCurrencyState(scope === 'admin' && !disabled, t);
+  const currency = useTokenCurrencyState(!disabled, t);
   const handleFiltersChange = useCallback(
     (nextFilters: TokenFilterState) => {
       table.onResetPage();
@@ -159,19 +161,15 @@ export function TokenManagementPanel({ state }: Props) {
 }
 
 function useTokenCurrencyState(enabled: boolean, t: (key: string) => string) {
-  const settings = useSystemSettings(enabled);
-  const exchangeRate = useUsdCnyExchangeRate(enabled && settings.data?.currency === 'CNY');
-  const display: CurrencyDisplay | undefined = enabled
-    ? {
-        currency: settings.data?.currency ?? 'USD',
-        usdCnyRate: exchangeRate.data,
-        unavailableLabel: t('requestRecords.exchangeRateUnavailable'),
-      }
-    : undefined;
+  const currency = useCurrencyDisplay(enabled);
+  const display: CurrencyDisplay | undefined = currencyDisplayFromResponse(
+    currency.data,
+    t('requestRecords.exchangeRateUnavailable')
+  );
 
   return {
     display,
-    exchangeRateError: Boolean(enabled && settings.data?.currency === 'CNY' && exchangeRate.error),
+    exchangeRateError: Boolean(enabled && currency.error),
   };
 }
 

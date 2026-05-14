@@ -37,7 +37,7 @@ pub fn calculate_request_billing(input: RequestBillingInput) -> RequestBillingAm
         base_cost: quantize(base_cost),
         total_cost,
         billing_multiplier: input.billing_multiplier,
-        currency: "USD".into(),
+        currency: currency::ACCOUNTING_CURRENCY.into(),
     }
 }
 

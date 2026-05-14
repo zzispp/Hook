@@ -1,0 +1,8 @@
+[package]
+name = "currency"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rust_decimal.workspace = true
+thiserror.workspace = true

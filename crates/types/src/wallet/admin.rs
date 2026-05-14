@@ -146,6 +146,7 @@ pub struct AdminWalletTransactionsResponse {
 pub struct AdminWalletLedgerTransactionResponse {
     #[serde(flatten)]
     pub transaction: WalletTransactionResponse,
+    pub currency: String,
     pub owner_name: String,
     pub owner_email: String,
     pub owner_type: String,

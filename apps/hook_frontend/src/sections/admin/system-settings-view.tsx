@@ -8,6 +8,8 @@ import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
 
+import { labelWithCurrency, DEFAULT_WALLET_CURRENCY } from 'src/utils/money-boundary';
+
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useSystemSettings } from 'src/actions/system-settings';
@@ -158,7 +160,7 @@ function BaseSection({
         />
         <TextFieldRow
           type="number"
-          label={t('systemSettings.fields.defaultUserGrant')}
+          label={labelWithCurrency(t('systemSettings.fields.defaultUserGrant'), DEFAULT_WALLET_CURRENCY)}
           value={form.default_user_grant}
           helperText={t('systemSettings.helper.defaultUserGrant')}
           onChange={(value) => setForm((current) => ({ ...current, default_user_grant: value }))}

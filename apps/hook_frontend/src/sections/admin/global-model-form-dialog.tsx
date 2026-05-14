@@ -12,6 +12,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
+import { accountingCurrencyLabel } from 'src/utils/money-boundary';
+
 import { useTranslate } from 'src/locales/use-locales';
 
 import { SwitchRow, TextFieldRow } from './shared';
@@ -139,7 +141,7 @@ function PricingFields({
       />
       <TextFieldRow
         type="number"
-        label={t('fields.pricePerRequest')}
+        label={accountingCurrencyLabel(t('fields.pricePerRequest'))}
         value={form.default_price_per_request}
         onChange={(value) => onChange({ ...form, default_price_per_request: value })}
       />

@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 constants.workspace = true
+currency.workspace = true
 flate2.workspace = true
 hex.workspace = true
 jiff.workspace = true

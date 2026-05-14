@@ -16,6 +16,7 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
 import { formatMoney } from 'src/utils/currency-format';
+import { ACCOUNTING_CURRENCY } from 'src/utils/money-boundary';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -23,8 +24,8 @@ import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
+import { formatTime, formatInteger } from './api-token-management-utils';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from '../admin/shared';
-import { formatTime, formatInteger, formatCurrency } from './api-token-management-utils';
 
 type Props = {
   rows: ApiToken[];
@@ -215,11 +216,11 @@ function costColumnLabel(
   t: (key: string, options?: Record<string, string>) => string,
   currency?: DisplayCurrency
 ) {
-  return currency ? t('fields.costWithCurrency', { currency }) : t('fields.costCny');
+  return t('fields.costWithCurrency', { currency: currency ?? ACCOUNTING_CURRENCY });
 }
 
 function formatTokenCost(value: number, currencyDisplay?: CurrencyDisplay) {
-  return currencyDisplay ? formatMoney(value, currencyDisplay) : formatCurrency(value);
+  return formatMoney(value, currencyDisplay ?? { currency: ACCOUNTING_CURRENCY });
 }
 
 function tokenTypeKey(type: ApiToken['token_type']) {

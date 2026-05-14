@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{Database, StorageError, StorageResult};
 
-const DEFAULT_CURRENCY: &str = "CNY";
+const DEFAULT_CURRENCY: &str = currency::DEFAULT_WALLET_CURRENCY;
 const DEFAULT_STATUS: &str = "active";
 const DEFAULT_LIMIT_MODE: &str = "finite";
 

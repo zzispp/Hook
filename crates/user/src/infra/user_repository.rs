@@ -180,6 +180,7 @@ fn wallet_summary(wallet: types::wallet::Wallet) -> UserWalletSummaryResponse {
         recharge_balance: wallet.recharge_balance,
         gift_balance: wallet.gift_balance,
         total_consumed: wallet.total_consumed,
+        currency: wallet.currency,
         status: wallet.status,
     }
 }

@@ -6,6 +6,7 @@ members = [
     "crates/card_code",
     "crates/config",
     "crates/constants",
+    "crates/currency",
     "crates/group",
     "crates/i18n",
     "crates/model",
@@ -36,6 +37,7 @@ card_code = { path = "crates/card_code" }
 config_rs = { package = "config", version = "0.15.22", default-features = false, features = ["yaml"] }
 configuration = { path = "crates/config" }
 constants = { path = "crates/constants" }
+currency = { path = "crates/currency" }
 futures-util = "0.3.31"
 flate2 = "1.1.5"
 group = { path = "crates/group" }

@@ -14,6 +14,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
+import { labelWithCurrency } from 'src/utils/money-boundary';
+
 import { adminWalletOwner } from './wallet-display';
 
 type Props = {
@@ -110,7 +112,7 @@ function AdjustFields({
     <Stack spacing={2.5} sx={{ pt: 1 }}>
       <TextField label={t('adminWallets.fields.owner')} value={wallet ? adminWalletOwner(wallet) : ''} disabled />
       <AdjustmentTypeSelect t={t} value={adjustmentType} onChange={setAdjustmentType} />
-      <AmountInput t={t} value={amount} onChange={setAmount} />
+      <AmountInput t={t} value={amount} currency={wallet?.currency} onChange={setAmount} />
       <BalanceTypeSelect t={t} value={balanceType} onChange={setBalanceType} />
       <DescriptionInput t={t} value={description} onChange={setDescription} />
     </Stack>
@@ -134,12 +136,12 @@ function AdjustmentTypeSelect({
   );
 }
 
-function AmountInput({ t, value, onChange }: { t: TFunction<'admin'>; value: string; onChange: (value: string) => void }) {
+function AmountInput({ t, value, currency, onChange }: { t: TFunction<'admin'>; value: string; currency?: string; onChange: (value: string) => void }) {
   return (
     <TextField
       required
       type="number"
-      label={t('adminWallets.adjust.amount')}
+      label={labelWithCurrency(t('adminWallets.adjust.amount'), currency)}
       value={value}
       slotProps={{ htmlInput: { min: 0, step: '0.0001' } }}
       onChange={(event) => onChange(event.target.value)}

@@ -164,5 +164,6 @@ export type UserWalletSummary = {
   recharge_balance: number;
   gift_balance: number;
   total_consumed: number;
+  currency: string;
   status: string;
 };

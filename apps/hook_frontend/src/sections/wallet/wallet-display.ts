@@ -1,14 +1,17 @@
 import type { TFunction } from 'i18next';
 import type { LabelColor } from 'src/components/label';
 
+import { DEFAULT_WALLET_CURRENCY } from 'src/utils/money-boundary';
+
 import { MONEY_DECIMAL_PLACES } from './wallet-constants';
 
-export function formatWalletMoney(value?: number | null, currency = 'CNY') {
+export function formatWalletMoney(value?: number | null, currency = DEFAULT_WALLET_CURRENCY) {
   return `${currency} ${formatWalletNumber(value)}`;
 }
 
-export function formatSignedAmount(value: number) {
+export function formatSignedAmount(value: number, currency?: string) {
   const sign = value >= 0 ? '+' : '';
+  if (currency) return `${value >= 0 ? '+' : '-'}${formatWalletMoney(Math.abs(value), currency)}`;
 
   return `${sign}${formatWalletNumber(value)}`;
 }

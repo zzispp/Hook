@@ -971,6 +971,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "currency"
+version = "0.1.0"
+dependencies = [
+ "rust_decimal",
+ "thiserror",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2634,6 +2642,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "currency",
  "hex",
  "rbac",
  "reqwest",
@@ -3754,6 +3763,7 @@ name = "storage"
 version = "0.1.0"
 dependencies = [
  "constants",
+ "currency",
  "flate2",
  "hex",
  "jiff",

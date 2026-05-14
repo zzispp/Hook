@@ -282,6 +282,7 @@ fn admin_wallet(wallet: Wallet) -> AdminWalletResponse {
 fn admin_ledger_transaction(transaction: WalletTransaction) -> AdminWalletLedgerTransactionResponse {
     AdminWalletLedgerTransactionResponse {
         transaction: WalletTransactionResponse::from(transaction),
+        currency: "CNY".into(),
         owner_name: "test-user".into(),
         owner_email: "test@example.com".into(),
         owner_type: "user".into(),

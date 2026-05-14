@@ -13,6 +13,7 @@ import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { accountingCurrencyLabel } from 'src/utils/money-boundary';
 import {
   CACHE_1H_TTL_MINUTES,
   aetherCacheReadPrice,
@@ -148,28 +149,28 @@ function TierPriceFields({
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: 'repeat(5, 1fr)' }, gap: 1.5 }}>
       <PriceField
         required
-        label={t('fields.inputPrice')}
+        label={accountingCurrencyLabel(t('fields.inputPrice'))}
         value={tier.input_price_per_1m}
         onChange={(value) => onChange(updateTier(pricing, index, inputPricePatch(tier, value)))}
       />
       <PriceField
         required
-        label={t('fields.outputPrice')}
+        label={accountingCurrencyLabel(t('fields.outputPrice'))}
         value={tier.output_price_per_1m}
         onChange={(value) => onChange(updateTier(pricing, index, { output_price_per_1m: toNumber(value) }))}
       />
       <PriceField
-        label={t('fields.cacheCreationPrice')}
+        label={accountingCurrencyLabel(t('fields.cacheCreationPrice'))}
         value={tier.cache_creation_price_per_1m ?? ''}
         onChange={(value) => onChange(updateTier(pricing, index, { cache_creation_price_per_1m: toNumber(value) }))}
       />
       <PriceField
-        label={t('fields.cacheReadPrice')}
+        label={accountingCurrencyLabel(t('fields.cacheReadPrice'))}
         value={tier.cache_read_price_per_1m ?? ''}
         onChange={(value) => onChange(updateTier(pricing, index, { cache_read_price_per_1m: toNumber(value) }))}
       />
       <PriceField
-        label={t('models.oneHourCache')}
+        label={accountingCurrencyLabel(t('models.oneHourCache'))}
         value={oneHourValue(tier)}
         onChange={(value) => onChange(updateTier(pricing, index, oneHourPatchForTier(tier, value)))}
       />
