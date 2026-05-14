@@ -54,6 +54,8 @@ pub fn table_names() -> Vec<&'static str> {
         "role_api_permissions",
         "wallets",
         "wallet_transactions",
+        "card_code_types",
+        "card_codes",
         "global_models",
         "providers",
         "provider_endpoints",
@@ -68,6 +70,11 @@ pub fn table_names() -> Vec<&'static str> {
         "billing_group_models",
         "request_records",
         "request_candidates",
+        "announcements",
+        "support_tickets",
+        "support_ticket_messages",
+        "support_ticket_email_events",
+        "notification_states",
     ]
 }
 

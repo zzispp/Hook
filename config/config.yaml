@@ -53,6 +53,14 @@ auth:
       path_pattern: "/api/navbar"
     - methods: ["GET"]
       path_pattern: "/api/settings/display-currency"
+    - methods: ["GET"]
+      path_pattern: "/api/notifications"
+    - methods: ["PATCH"]
+      path_pattern: "/api/notifications/read-all"
+    - methods: ["PATCH"]
+      path_pattern: "/api/notifications/{source_type}/{source_id}/read"
+    - methods: ["DELETE"]
+      path_pattern: "/api/notifications/{source_type}/{source_id}"
 
 security:
   provider_key_secret: "hook-local-development-provider-key-secret-change-before-deploy"

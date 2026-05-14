@@ -22,6 +22,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub email_config_enabled: Option<bool>,
     #[serde(default)]
+    pub support_ticket_email_notifications_enabled: Option<bool>,
+    #[serde(default)]
     pub auto_delete_expired_tokens: Option<bool>,
     #[serde(default)]
     pub request_record_retention_days: Option<i64>,
@@ -111,6 +113,7 @@ impl SystemSettingsUpdate {
     fn mail_fields_empty(&self) -> bool {
         self.smtp_host.is_none()
             && self.email_config_enabled.is_none()
+            && self.support_ticket_email_notifications_enabled.is_none()
             && self.smtp_port.is_none()
             && self.smtp_username.is_none()
             && self.smtp_password.is_none()

@@ -1,0 +1,18 @@
+[package]
+name = "operations"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+configuration.workspace = true
+constants.workspace = true
+lettre.workspace = true
+rbac.workspace = true
+serde.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+time.workspace = true
+types.workspace = true
+setting.workspace = true

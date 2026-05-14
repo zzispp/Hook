@@ -18,9 +18,9 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
 import { SwitchRow, TextFieldRow } from './shared';
-import { smtpTestPayload } from './system-settings-utils';
 import { SettingsSection } from './system-settings-section';
 import { EmailTemplateEditor } from './system-settings-email-template-editor';
+import { smtpTestPayload, emailConfigComplete } from './system-settings-utils';
 
 type SystemSettingsFormProps = {
   form: SystemSettingsForm;
@@ -86,12 +86,18 @@ function SmtpServerFields({
   onTestSmtp: () => void;
 }) {
   const { t } = useTranslate('admin');
+  const ticketEmailReady = form.email_config_enabled && emailConfigComplete(form);
+  const ticketEmailDisabled =
+    !ticketEmailReady && !form.support_ticket_email_notifications_enabled;
   const handleEmailConfigEnabledChange = (checked: boolean) => {
     setForm((current) => ({
       ...current,
       email_config_enabled: checked,
       registration_email_verification_enabled: checked
         ? current.registration_email_verification_enabled
+        : false,
+      support_ticket_email_notifications_enabled: checked
+        ? current.support_ticket_email_notifications_enabled
         : false,
     }));
   };
@@ -103,6 +109,22 @@ function SmtpServerFields({
         label={t('systemSettings.fields.emailConfigEnabled')}
         helperText={t('systemSettings.email.emailConfigEnabledHelper')}
         onChange={handleEmailConfigEnabledChange}
+      />
+      <SwitchRow
+        checked={form.support_ticket_email_notifications_enabled}
+        disabled={ticketEmailDisabled}
+        label={t('systemSettings.fields.supportTicketEmailNotificationsEnabled')}
+        helperText={
+          ticketEmailReady
+            ? t('systemSettings.email.supportTicketEmailNotificationsHelper')
+            : t('systemSettings.helper.supportTicketEmailNotificationsRequiresEmailConfig')
+        }
+        onChange={(checked) =>
+          setForm((current) => ({
+            ...current,
+            support_ticket_email_notifications_enabled: checked,
+          }))
+        }
       />
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
         <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>

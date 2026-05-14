@@ -8,9 +8,11 @@ import Tabs from '@mui/material/Tabs';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
+import { redeemCardCode } from 'src/actions/card-code';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import {
@@ -18,6 +20,7 @@ import {
   DASHBOARD_SECTION_CODES,
 } from 'src/layouts/dashboard/dashboard-menu-values';
 
+import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -32,8 +35,24 @@ type WalletTab = 'ledger';
 export function WalletCenterView() {
   const { t, currentLang } = useTranslate('admin');
   const [activeTab, setActiveTab] = useState<WalletTab>('ledger');
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
   const state = useWalletCenterState(t);
   const locale = currentLang.numberFormat.code;
+  const submitRedeemCode = async () => {
+    if (!redeemCode.trim()) return;
+    setRedeeming(true);
+    try {
+      await redeemCardCode({ code: redeemCode.trim() });
+      toast.success(t('wallet.cardCode.redeemed'));
+      setRedeemCode('');
+      state.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
+    } finally {
+      setRedeeming(false);
+    }
+  };
 
   return (
     <DashboardContent maxWidth="xl">
@@ -42,6 +61,33 @@ export function WalletCenterView() {
       {state.errorMessage ? <WalletErrorAlert message={state.errorMessage} /> : null}
 
       <WalletSummaryCards t={t} wallet={state.wallet} />
+
+      <Card sx={{ mb: 3, p: 2.5 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+          <TextField
+            fullWidth
+            label={t('wallet.cardCode.code')}
+            value={redeemCode}
+            onChange={(event) => setRedeemCode(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                void submitRedeemCode();
+              }
+            }}
+          />
+          <Button
+            variant="contained"
+            loading={redeeming}
+            disabled={!redeemCode.trim()}
+            startIcon={<Iconify icon="solar:bill-list-bold" />}
+            onClick={() => void submitRedeemCode()}
+            sx={{ minWidth: 140 }}
+          >
+            {t('wallet.cardCode.redeem')}
+          </Button>
+        </Stack>
+      </Card>
 
       <Card>
         <WalletTabs t={t} activeTab={activeTab} onChange={setActiveTab} />

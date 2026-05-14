@@ -2,7 +2,9 @@ use sea_orm_migration::prelude::*;
 
 mod domain_tables;
 pub mod iden;
+mod card_code_tables;
 mod indices;
+mod operations_tables;
 mod request_candidate_tables;
 mod seed;
 pub mod seed_domain;

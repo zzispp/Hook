@@ -11,6 +11,7 @@ pub struct SystemSettingsRecordPatch {
     pub registration_captcha_enabled: Option<bool>,
     pub registration_email_verification_enabled: Option<bool>,
     pub email_config_enabled: Option<bool>,
+    pub support_ticket_email_notifications_enabled: Option<bool>,
     pub auto_delete_expired_tokens: Option<bool>,
     pub request_record_retention_days: Option<i64>,
     pub request_record_payload_retention_days: Option<i64>,

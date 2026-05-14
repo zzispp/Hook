@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Record task boundary,DONE,Task files exist,test -f .codex-tasks/20260514-resolve-i18n-conflicts/SPEC.md,2026-05-14,0,
+2,Resolve i18n conflict markers,DONE,Conflict markers are removed from both files,sh -c '! rg -n "<<<<<<<|=======|>>>>>>>" apps/hook_backend/src/migration/defaults/i18n/admin.cn.json apps/hook_backend/src/migration/defaults/i18n/admin.en.json',2026-05-14,0,
+3,Validate JSON and git merge state,DONE,Both JSON files parse and no unmerged paths remain,jq empty apps/hook_backend/src/migration/defaults/i18n/admin.cn.json apps/hook_backend/src/migration/defaults/i18n/admin.en.json && test -z "$(git diff --name-only --diff-filter=U)",2026-05-14,0,

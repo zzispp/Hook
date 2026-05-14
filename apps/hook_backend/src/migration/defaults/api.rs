@@ -1,8 +1,10 @@
 mod admin_wallet;
 mod auth;
+mod card_code;
 mod group;
 mod i18n;
 mod model;
+mod operations;
 mod provider;
 mod rbac;
 mod setting;
@@ -22,12 +24,14 @@ const API_GROUPS: &[&[ApiDefinition]] = &[
     user::USER_APIS,
     rbac::RBAC_APIS,
     model::MODEL_APIS,
+    operations::OPERATIONS_APIS,
     provider::PROVIDER_APIS,
     group::GROUP_APIS,
     i18n::I18N_APIS,
     token::TOKEN_APIS,
     wallet::WALLET_APIS,
     admin_wallet::ADMIN_WALLET_APIS,
+    card_code::CARD_CODE_APIS,
     setting::SETTING_APIS,
 ];
 

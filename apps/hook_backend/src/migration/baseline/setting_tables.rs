@@ -14,6 +14,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(boolean(SystemSettings::RegistrationCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::RegistrationEmailVerificationEnabled).default(false))
         .col(boolean(SystemSettings::EmailConfigEnabled).default(false))
+        .col(boolean(SystemSettings::SupportTicketEmailNotificationsEnabled).default(false))
         .col(boolean(SystemSettings::AutoDeleteExpiredTokens))
         .col(big_integer(SystemSettings::RequestRecordRetentionDays))
         .col(big_integer(SystemSettings::RequestRecordPayloadRetentionDays))

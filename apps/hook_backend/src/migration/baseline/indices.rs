@@ -42,6 +42,20 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             WalletTransactions::Category,
             WalletTransactions::CreatedAt,
         ),
+        index("index_card_code_types_by_name", CardCodeTypes::Table, CardCodeTypes::Name, true),
+        index("index_card_code_types_by_status", CardCodeTypes::Table, CardCodeTypes::Status, false),
+        index("index_card_codes_by_code", CardCodes::Table, CardCodes::Code, true),
+        compound_index("index_card_codes_by_status_created", CardCodes::Table, CardCodes::Status, CardCodes::CreatedAt),
+        compound_index("index_card_codes_by_type_created", CardCodes::Table, CardCodes::TypeId, CardCodes::CreatedAt),
+        index("index_card_codes_by_batch_no", CardCodes::Table, CardCodes::BatchNo, false),
+        index("index_card_codes_by_expires_at", CardCodes::Table, CardCodes::ExpiresAt, false),
+        index("index_card_codes_by_used_at", CardCodes::Table, CardCodes::UsedAt, false),
+        index(
+            "index_card_codes_by_wallet_transaction",
+            CardCodes::Table,
+            CardCodes::WalletTransactionId,
+            true,
+        ),
         index("index_global_models_by_name", GlobalModels::Table, GlobalModels::Name, true),
         index("index_global_models_by_usage_count", GlobalModels::Table, GlobalModels::UsageCount, false),
         index("index_providers_by_name", Providers::Table, Providers::Name, true),
@@ -147,6 +161,33 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         translation_entry_unique_index(),
+        index("index_announcements_by_enabled", Announcements::Table, Announcements::Enabled, false),
+        compound_index(
+            "index_announcements_by_pinned_priority",
+            Announcements::Table,
+            Announcements::Pinned,
+            Announcements::Priority,
+        ),
+        index("index_support_tickets_by_user", SupportTickets::Table, SupportTickets::UserId, false),
+        compound_index(
+            "index_support_tickets_by_status_updated",
+            SupportTickets::Table,
+            SupportTickets::Status,
+            SupportTickets::UpdatedAt,
+        ),
+        index(
+            "index_support_ticket_messages_by_ticket",
+            SupportTicketMessages::Table,
+            SupportTicketMessages::TicketId,
+            false,
+        ),
+        index(
+            "index_support_ticket_email_events_by_ticket",
+            SupportTicketEmailEvents::Table,
+            SupportTicketEmailEvents::TicketId,
+            false,
+        ),
+        notification_states_unique_index(),
     ]
 }
 
@@ -191,6 +232,18 @@ fn translation_entry_unique_index() -> IndexCreateStatement {
         .col(TranslationEntries::GroupKey)
         .col(TranslationEntries::ItemKey)
         .col(TranslationEntries::LangCode)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn notification_states_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_notification_states_unique_source")
+        .table(NotificationStates::Table)
+        .col(NotificationStates::UserId)
+        .col(NotificationStates::SourceType)
+        .col(NotificationStates::SourceId)
         .unique()
         .if_not_exists()
         .to_owned()

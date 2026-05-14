@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm status semantics and affected files,DONE,Single status field is confirmed for active disabled used expired,rg "cardCodeStatusLabel|CARD_CODE_STATUS_USED|created_ip" crates apps/hook_frontend,2026-05-14T00:00:00Z,0,User clarified no separate usage status column
+2,Implement IP fallback and row UI polish,DONE,Direct connections record IP and rows have copy button plus nowrap type,pnpm lint:frontend,2026-05-14T00:00:00Z,0,Added ConnectInfo IP fallback copy icon nowrap type and amount mapping tests
+3,Run validation and push,DONE,Relevant checks pass and commit is pushed,cargo check -q,2026-05-14T00:00:00Z,0,cargo fmt cargo check -q cargo test -q -p card_code pnpm lint:frontend pnpm build:frontend and git diff --check passed

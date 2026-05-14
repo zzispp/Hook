@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Trace created_by_user_id source,DONE,CurrentUser source and card_codes FK are identified,rg "created_by_user_id|CurrentUser|user_fk" crates apps/hook_backend,2026-05-14T00:00:00Z,0,System admin comes from config provider and is not guaranteed to exist in users table
+2,Update generator operator mapping,DONE,System current user maps created_by_user_id to None,cargo test -q -p card_code,2026-05-14T00:00:00Z,0,Added unit tests for system and database current users
+3,Run validation and push,DONE,Checks pass and amended commit is pushed,cargo check -q,2026-05-14T00:00:00Z,0,cargo check -q pnpm lint:frontend and git diff --check passed

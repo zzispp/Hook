@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect affected card-code amount/type chain,DONE,Affected backend/frontend/i18n files are identified,rg "recharge_amount|gift_amount|balance_type" crates apps/hook_backend apps/hook_frontend,2026-05-14T00:00:00Z,0,Found stale type amount fields in validation service storage migration and frontend dialogs/table
+2,Update backend contract and storage schema,DONE,Card code type model uses balance_type and generation maps amount by type,cargo check -q,2026-05-14T00:00:00Z,0,cargo check -q passed
+3,Update frontend dialogs table and payload types,DONE,Type modal uses balance type select and generate modal sends single amount,pnpm lint:frontend,2026-05-14T00:00:00Z,0,pnpm lint:frontend passed
+4,Update i18n and run validations,DONE,i18n seeds include balance type label and checks are recorded,pnpm build:frontend,2026-05-14T00:00:00Z,0,cargo check -q pnpm lint:frontend and pnpm build:frontend passed

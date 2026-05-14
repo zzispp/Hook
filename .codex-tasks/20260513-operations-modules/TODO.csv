@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect implementation patterns,DONE,Relevant backend/frontend patterns are identified,rg -n "create_router|useSWR|NotificationsDrawer" apps crates,,0,
+2,Implement backend operations module,DONE,Operations APIs compile and are wired into startup and RBAC,cargo check --workspace,2026-05-13T00:00:00Z,0,
+3,Implement frontend operations pages,DONE,Pages compile and use real APIs,pnpm lint:frontend,2026-05-13T16:43:42Z,0,
+4,Update menus i18n and notification drawer,DONE,Navigation and drawer use backend data,pnpm build:frontend,2026-05-13T16:43:42Z,0,
+5,Run verification and record results,DONE,Validation commands completed or blockers recorded,perl timeout wrapper cargo test,2026-05-13T16:43:42Z,0,just command missing locally; equivalent justfile 60s wrapper passed

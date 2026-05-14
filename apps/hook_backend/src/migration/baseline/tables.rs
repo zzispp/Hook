@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::{domain_tables, iden::*, wallet_tables};
+use super::{card_code_tables, domain_tables, iden::*, operations_tables, wallet_tables};
 
 pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
     let mut tables = vec![
@@ -14,9 +14,12 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
         role_api_permissions_table(),
         wallet_tables::wallets_table(),
         wallet_tables::wallet_transactions_table(),
+        card_code_tables::card_code_types_table(),
+        card_code_tables::card_codes_table(),
         global_models_table(),
     ];
     tables.extend(domain_tables::domain_tables());
+    tables.extend(operations_tables::operations_tables());
     tables
 }
 

@@ -4,7 +4,7 @@ use types::system_setting::{SystemSettingsResponse, SystemSettingsSmtpTestReques
 use crate::application::{SettingRepository, SettingResult, SettingSecretCipher, SettingUseCase, SmtpConnectionTester};
 
 use super::{
-    email_config::validate_email_verification_prerequisites,
+    email_config::validate_email_feature_prerequisites,
     smtp::{failure_response, sanitize_smtp_test_request, smtp_connection_config, success_response},
     validation::{sanitize_update, validate_update},
 };
@@ -45,7 +45,7 @@ where
         let input = sanitize_update(input);
         validate_update(&input)?;
         let current = self.repository.get_system_settings().await?;
-        validate_email_verification_prerequisites(&input, &current)?;
+        validate_email_feature_prerequisites(&input, &current)?;
         let encrypted_smtp_password = input
             .smtp_password
             .as_deref()

@@ -5,12 +5,24 @@ pub const ADMIN_ROLE: &str = "admin";
 pub const USER_ROLE: &str = constants::auth::DEFAULT_USER_ROLE;
 
 #[cfg(test)]
-pub const AUTHENTICATED_API_CODES: &[&str] = &["auth_me", "navbar_read", "i18n_resources_read", "system_display_currency_read"];
+pub const AUTHENTICATED_API_CODES: &[&str] = &[
+    "auth_me",
+    "navbar_read",
+    "i18n_resources_read",
+    "system_display_currency_read",
+    "notifications_read",
+    "notifications_read_all",
+    "notification_read",
+    "notification_delete",
+];
 
 pub const ADMIN_MENU_CODES: &[&str] = &[
     "dashboard_home",
     "admin_wallets",
+    "admin_card_codes",
     "admin_tokens",
+    "admin_announcements",
+    "admin_tickets",
     "admin_groups",
     "admin_users",
     "admin_roles",
@@ -23,7 +35,15 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_request_records",
 ];
 
-pub const USER_MENU_CODES: &[&str] = &["dashboard_home", "dashboard_models", "dashboard_groups", "wallet_center", "api_tokens"];
+pub const USER_MENU_CODES: &[&str] = &[
+    "dashboard_home",
+    "announcements",
+    "support_tickets",
+    "dashboard_models",
+    "dashboard_groups",
+    "wallet_center",
+    "api_tokens",
+];
 
 pub struct MenuApiBindingDefinition {
     pub menu_code: &'static str,
@@ -39,6 +59,14 @@ pub const ROLE_API_BINDINGS: &[RoleApiBindingDefinition] = &[];
 
 pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     MenuApiBindingDefinition {
+        menu_code: "announcements",
+        api_codes: &["announcements_read", "announcements_detail"],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "support_tickets",
+        api_codes: &["tickets_read", "tickets_create", "tickets_detail", "tickets_reply"],
+    },
+    MenuApiBindingDefinition {
         menu_code: "dashboard_models",
         api_codes: &["models_public_catalog_read"],
     },
@@ -48,7 +76,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     },
     MenuApiBindingDefinition {
         menu_code: "wallet_center",
-        api_codes: &["wallet_balance_read", "wallet_transactions_read"],
+        api_codes: &["wallet_balance_read", "wallet_transactions_read", "card_codes_redeem"],
     },
     MenuApiBindingDefinition {
         menu_code: "api_tokens",
@@ -62,6 +90,20 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "api_tokens_delete",
             "api_tokens_secret_read",
         ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_announcements",
+        api_codes: &[
+            "admin_announcements_read",
+            "admin_announcements_create",
+            "admin_announcements_detail",
+            "admin_announcements_update",
+            "admin_announcements_delete",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_tickets",
+        api_codes: &["admin_tickets_read", "admin_tickets_detail", "admin_tickets_update", "admin_tickets_reply"],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_users",
@@ -198,6 +240,17 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "admin_wallet_transactions_read",
             "admin_wallet_adjust",
             "admin_wallet_recharge",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_card_codes",
+        api_codes: &[
+            "admin_card_codes_read",
+            "admin_card_codes_generate",
+            "admin_card_codes_batch_status",
+            "admin_card_code_types_read",
+            "admin_card_code_types_create",
+            "admin_card_code_types_update",
         ],
     },
     MenuApiBindingDefinition {

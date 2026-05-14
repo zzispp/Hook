@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use api_token::{
     api::{ApiTokenApiState, create_router as create_api_token_router},
@@ -15,6 +15,11 @@ use captcha::{
     application::CaptchaService,
     infra::{RedisCaptchaStore, StorageCaptchaSettingsReader},
 };
+use card_code::{
+    api::{CardCodeApiState, create_router as create_card_code_router},
+    application::CardCodeService,
+    infra::StorageCardCodeRepository,
+};
 use configuration::{AuthWhitelistRule as ConfigAuthRule, Settings};
 use group::{
     api::{GroupApiState, create_router as create_group_router},
@@ -30,6 +35,11 @@ use model::{
     api::{ModelApiState, create_router as create_model_router},
     application::ModelService,
     infra::{ModelsDevClient, StorageModelRepository},
+};
+use operations::{
+    api::{OperationsApiState, create_router as create_operations_router},
+    application::OperationsService,
+    infra::{SmtpTicketMailer, StorageOperationsRepository},
 };
 use provider::{
     api::{ProviderApiState, create_router as create_provider_router},
@@ -84,7 +94,7 @@ pub async fn serve(settings: Settings) -> BackendResult<()> {
     let listener = TcpListener::bind(&bind_addr).await?;
 
     hook_tracing::info_with_fields!("backend listening", addr = bind_addr);
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
     Ok(())
 }
 
@@ -108,10 +118,11 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     ));
     let providers = Arc::new(ProxyCachedProviderUseCase::new(providers_inner, proxy_cache.clone()));
     let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));
+    let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone())));
     let setting_secret_cipher = SettingAesSecretCipher::new(settings.provider_key_secret()?)?;
     let settings_inner = Arc::new(SettingService::new(
         StorageSettingRepository::new(database.clone()),
-        setting_secret_cipher,
+        setting_secret_cipher.clone(),
         LettreSmtpConnectionTester,
     ));
     let system_settings = Arc::new(ProxyCachedSettingUseCase::new(settings_inner, proxy_cache.clone()));
@@ -140,6 +151,11 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageUserWalletCatalog::new(database.clone()),
     ));
     let users = Arc::new(ProxyCachedUserUseCase::new(users_inner, proxy_cache.clone()));
+    let operations = Arc::new(OperationsService::new(
+        StorageOperationsRepository::new(database.clone()),
+        SmtpTicketMailer::new(database.clone(), setting_secret_cipher),
+        settings.admin.email.clone(),
+    ));
     let captcha = Arc::new(CaptchaService::new(
         StorageCaptchaSettingsReader::new(database.clone()),
         RedisCaptchaStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
@@ -162,10 +178,12 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         models,
         providers,
         wallets,
+        card_codes,
         system_settings,
         groups,
         i18n,
         api_tokens,
+        operations,
         captcha,
         llm_proxy,
         exchange_rates,
@@ -199,10 +217,12 @@ fn create_app(state: AppState) -> Router {
     let model_state = ModelApiState::new(state.models);
     let provider_state = ProviderApiState::new(state.providers);
     let wallet_state = WalletApiState::new(state.wallets);
+    let card_code_state = CardCodeApiState::new(state.card_codes);
     let setting_state = SettingApiState::new(state.system_settings, state.exchange_rates.clone());
     let group_state = GroupApiState::new(state.groups);
     let i18n_state = I18nApiState::new(state.i18n);
     let api_token_state = ApiTokenApiState::new(state.api_tokens);
+    let operations_state = OperationsApiState::new(state.operations);
     let captcha_state = CaptchaApiState::new(state.captcha);
     let llm_v1_router = create_llm_proxy_router(state.llm_proxy.clone());
     let gemini_router = create_v1beta_router(state.llm_proxy);
@@ -218,10 +238,12 @@ fn create_app(state: AppState) -> Router {
         .merge(create_model_router(model_state))
         .merge(create_provider_router(provider_state))
         .merge(create_wallet_router(wallet_state))
+        .merge(create_card_code_router(card_code_state))
         .merge(create_setting_router(setting_state))
         .merge(create_group_router(group_state))
         .merge(create_i18n_router(i18n_state))
         .merge(create_api_token_router(api_token_state))
+        .merge(create_operations_router(operations_state))
         .merge(create_captcha_router(captcha_state));
 
     system::create_router()
@@ -272,10 +294,12 @@ struct AppState {
     models: Arc<dyn model::application::ModelUseCase>,
     providers: Arc<dyn provider::application::ProviderUseCase>,
     wallets: Arc<dyn wallet::application::WalletUseCase>,
+    card_codes: Arc<dyn card_code::application::CardCodeUseCase>,
     system_settings: Arc<dyn setting::application::SettingUseCase>,
     groups: Arc<dyn group::application::GroupUseCase>,
     i18n: Arc<dyn i18n::application::I18nUseCase>,
     api_tokens: Arc<dyn api_token::application::ApiTokenUseCase>,
+    operations: Arc<dyn operations::application::OperationsUseCase>,
     captcha: Arc<dyn captcha::application::CaptchaUseCase>,
     llm_proxy: LlmProxyState,
     exchange_rates: ExchangeRateCache,

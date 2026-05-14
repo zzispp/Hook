@@ -2,6 +2,8 @@ use sea_orm_migration::prelude::*;
 
 mod auth;
 mod billing;
+mod card_code;
+mod operations;
 mod provider;
 mod rbac;
 mod request;
@@ -12,6 +14,8 @@ mod wallet;
 
 pub(super) use auth::*;
 pub(super) use billing::*;
+pub(super) use card_code::*;
+pub(super) use operations::*;
 pub(super) use provider::*;
 pub(super) use rbac::*;
 pub(super) use request::*;
@@ -22,6 +26,11 @@ pub(super) use wallet::*;
 
 pub fn reversed_tables() -> Vec<DynIden> {
     vec![
+        NotificationStates::Table.into_iden(),
+        SupportTicketEmailEvents::Table.into_iden(),
+        SupportTicketMessages::Table.into_iden(),
+        SupportTickets::Table.into_iden(),
+        Announcements::Table.into_iden(),
         RequestCandidates::Table.into_iden(),
         RequestRecords::Table.into_iden(),
         ApiTokens::Table.into_iden(),
@@ -36,6 +45,8 @@ pub fn reversed_tables() -> Vec<DynIden> {
         Providers::Table.into_iden(),
         GlobalModels::Table.into_iden(),
         BillingGroups::Table.into_iden(),
+        CardCodes::Table.into_iden(),
+        CardCodeTypes::Table.into_iden(),
         WalletTransactions::Table.into_iden(),
         Wallets::Table.into_iden(),
         RoleApiPermissions::Table.into_iden(),

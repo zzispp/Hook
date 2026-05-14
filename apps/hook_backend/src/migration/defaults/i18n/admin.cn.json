@@ -18,8 +18,13 @@
     "admin_models": "模型管理",
     "admin_providers": "提供商管理",
     "admin_wallets": "钱包管理",
+    "admin_card_codes": "卡密管理",
     "admin_groups": "计费分组",
-    "admin_request_records": "请求记录"
+    "admin_request_records": "请求记录",
+    "announcements": "公告",
+    "support_tickets": "工单",
+    "admin_announcements": "公告管理",
+    "admin_tickets": "工单管理"
   },
   "common": {
     "active": "启用",
@@ -433,6 +438,11 @@
     "tabs": {
       "ledger": "资金流水"
     },
+    "cardCode": {
+      "code": "卡密",
+      "redeem": "兑换",
+      "redeemed": "卡密兑换成功"
+    },
     "metrics": {
       "availableBalance": "可用余额",
       "rechargeBalance": "充值余额",
@@ -504,6 +514,7 @@
       "gift_recharge_bonus": "充值赠送",
       "gift_referral_commission": "邀请返佣",
       "gift_referral_commission_revert": "返佣回退",
+      "gift_card_code": "卡密赠款",
       "gift_redeem_code": "兑换码赠款",
       "gift_expire_reclaim": "赠款回收",
       "adjust_admin": "人工调账",
@@ -519,6 +530,7 @@
       "system_task": "系统任务",
       "campaign": "活动批次",
       "usage": "用量记录",
+      "card_code": "卡密",
       "redeem_code": "兑换码",
       "referral_commission": "返佣记录",
       "referral_commission_reversal": "返佣回退"
@@ -579,6 +591,75 @@
       "adjusted": "钱包调账已完成"
     },
     "walletSummary": "显示 {{shown}} 条，共 {{total}} 个钱包"
+  },
+  "adminCardCodes": {
+    "tabs": {
+      "codes": "卡密列表",
+      "types": "卡密类型"
+    },
+    "filters": {
+      "searchCodes": "搜索卡密、批次、备注、使用者或生成者...",
+      "searchTypes": "搜索类型名称或备注...",
+      "allTypes": "全部类型"
+    },
+    "fields": {
+      "code": "卡密",
+      "type": "类型",
+      "typeName": "类型名称",
+      "amount": "到账金额",
+      "balanceType": "到账类型",
+      "rechargeAmount": "充值",
+      "giftAmount": "赠款",
+      "quantity": "生成数量",
+      "codeLength": "卡密长度",
+      "expiresAt": "过期时间",
+      "remark": "备注",
+      "usedBy": "使用者",
+      "usedIp": "使用者 IP",
+      "usedAt": "使用时间",
+      "createdAt": "生成时间",
+      "createdIp": "生成者 IP",
+      "createdBy": "生成者",
+      "updatedAt": "更新时间"
+    },
+    "actions": {
+      "generate": "生成卡密",
+      "createType": "创建类型",
+      "exportCsv": "导出 CSV",
+      "exportTxt": "导出 TXT",
+      "exportSelectedCsv": "导出选中 CSV",
+      "exportSelectedTxt": "导出选中 TXT",
+      "copyCode": "复制卡密",
+      "enable": "批量启用",
+      "disable": "批量停用"
+    },
+    "dialogs": {
+      "generateTitle": "批量生成卡密",
+      "createTypeTitle": "创建卡密类型",
+      "editTypeTitle": "编辑卡密类型"
+    },
+    "status": {
+      "active": "启用",
+      "disabled": "停用",
+      "used": "已使用",
+      "expired": "已过期"
+    },
+    "summary": {
+      "codes": "显示 {{shown}} 条，共 {{total}} 个卡密",
+      "types": "显示 {{shown}} 条，共 {{total}} 个类型"
+    },
+    "empty": {
+      "codes": "暂无卡密",
+      "types": "暂无卡密类型",
+      "availableTypes": "暂无可用类型"
+    },
+    "messages": {
+      "typeSaved": "卡密类型已保存",
+      "generated": "已生成 {{count}} 个卡密",
+      "batchUpdated": "已更新 {{count}} 个卡密",
+      "exported": "已导出 {{count}} 个卡密",
+      "codeCopied": "卡密已复制"
+    }
   },
   "users": {
     "balance": "余额：{{amount}}",
@@ -705,6 +786,83 @@
     "unlimitedQuota": "不限额度",
     "userToken": "用户令牌"
   },
+  "operations": {
+    "messages": {
+      "saved": "已保存",
+      "deleted": "已删除"
+    },
+    "announcement": {
+      "create": "创建公告",
+      "createTitle": "创建公告",
+      "editTitle": "编辑公告",
+      "deleteTitle": "删除公告",
+      "searchPlaceholder": "搜索公告标题或内容...",
+      "empty": "暂无公告",
+      "contentMarkdown": "内容（Markdown）",
+      "priority": "优先级",
+      "pinned": "置顶",
+      "types": {
+        "info": "信息",
+        "warning": "警告",
+        "maintenance": "维护",
+        "important": "重要"
+      },
+      "table": {
+        "title": "标题",
+        "type": "类型",
+        "priority": "优先级",
+        "status": "状态",
+        "updated": "更新时间"
+      }
+    },
+    "ticket": {
+      "create": "创建工单",
+      "createTitle": "创建工单",
+      "searchPlaceholder": "搜索工单主题或邮箱...",
+      "selectEmpty": "请选择一个工单查看对话",
+      "subject": "主题",
+      "message": "问题描述（Markdown）",
+      "reply": "回复内容",
+      "sendReply": "发送回复",
+      "updateStatus": "更新状态",
+      "priorityLabel": "优先级",
+      "emailFailed": "工单已保存，但邮件发送失败",
+      "emailErrors": {
+        "emailConfigurationDisabled": "工单已保存，但邮件配置未开启，请检查系统邮件配置。",
+        "smtpConfigurationIncomplete": "工单已保存，但 SMTP 配置不完整，请检查服务器、端口、用户名、密码和发件人邮箱。"
+      },
+      "status": {
+        "open": "待处理",
+        "in_progress": "处理中",
+        "waiting_user": "等待用户",
+        "resolved": "已解决",
+        "closed": "已关闭"
+      },
+      "priority": {
+        "normal": "普通",
+        "high": "高",
+        "urgent": "紧急"
+      },
+      "sender": {
+        "user": "用户",
+        "admin": "管理员"
+      }
+    },
+    "notifications": {
+      "title": "通知",
+      "markAllRead": "全部标记为已读",
+      "empty": "暂无通知",
+      "tabs": {
+        "all": "全部",
+        "unread": "未读",
+        "read": "已读"
+      },
+      "categories": {
+        "announcement": "公告",
+        "ticket": "工单"
+      }
+    }
+  },
   "systemSettings": {
     "sections": {
       "site": "站点信息",
@@ -722,6 +880,7 @@
       "registrationCaptchaEnabled": "启用注册验证码",
       "registrationEmailVerificationEnabled": "启用注册邮件验证",
       "emailConfigEnabled": "开启邮件配置",
+      "supportTicketEmailNotificationsEnabled": "启用工单邮件通知",
       "autoDeleteExpiredTokens": "自动删除过期令牌",
       "requestRecordRetentionDays": "请求记录保留天数",
       "requestRecordPayloadRetentionDays": "请求 payload 保留天数",
@@ -758,7 +917,8 @@
       "maxRequestBodySizeKb": "超过此大小的请求体将被截断记录。",
       "maxResponseBodySizeKb": "超过此大小的响应体将被截断记录。",
       "sensitiveRequestHeaders": "逗号分隔，这些请求/响应头会被脱敏处理。",
-      "registrationEmailVerificationRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。"
+      "registrationEmailVerificationRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
+      "supportTicketEmailNotificationsRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。"
     },
     "requestRecord": {
       "description": "控制客户端与 Provider 双视角 payload 的记录方式和保留粒度",
@@ -779,6 +939,7 @@
       "smtpTestSuccess": "SMTP 连接测试成功",
       "smtpTestFailed": "SMTP 连接测试失败",
       "emailConfigEnabledHelper": "关闭时 SMTP 参数只会保存，不会用于邮件功能。",
+      "supportTicketEmailNotificationsHelper": "开启后，用户提交或回复工单会通知管理员，管理员回复或更新工单会通知用户。",
       "emailSuffixesHelper": "逗号分隔，例如 gmail.com, outlook.com",
       "encryption": {
         "tls": "TLS / STARTTLS",

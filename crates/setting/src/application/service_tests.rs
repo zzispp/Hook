@@ -4,13 +4,11 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
     provider::ProviderSchedulingMode,
-    system_setting::{
-        DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsUpdate,
-    },
+    system_setting::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettingsResponse, SystemSettingsUpdate},
 };
 
 use crate::application::{
-    SettingRepository, SettingResult, SettingSecretCipher, SettingService, SettingUseCase, SmtpConnectionConfig, SmtpConnectionTester, StoredSmtpSettings,
+    SettingRepository, SettingResult, SettingSecretCipher, SettingService, SmtpConnectionConfig, SmtpConnectionTester, StoredSmtpSettings,
 };
 
 struct FakeRepository {
@@ -69,125 +67,10 @@ impl SmtpConnectionTester for RecordingTester {
     }
 }
 
-#[tokio::test]
-async fn smtp_test_uses_saved_password_when_request_omits_password() {
-    let tester = RecordingTester::default();
-    let service = test_service(tester.clone(), stored_smtp_settings("encrypted:saved-password"));
-
-    let response = service
-        .test_smtp_connection(SystemSettingsSmtpTestRequest {
-            smtp_host: Some("smtp.form.test".into()),
-            smtp_port: Some(465),
-            smtp_username: Some("form-user".into()),
-            smtp_from_email: Some("noreply@example.com".into()),
-            smtp_encryption: Some(SmtpEncryption::Ssl),
-            ..Default::default()
-        })
-        .await
-        .unwrap();
-
-    let config = tester.config.lock().unwrap().clone().unwrap();
-    assert!(response.success);
-    assert_eq!(config.host, "smtp.form.test");
-    assert_eq!(config.port, 465);
-    assert_eq!(config.username, "form-user");
-    assert_eq!(config.password, "saved-password");
-    assert_eq!(config.encryption, SmtpEncryption::Ssl);
-}
-
-#[tokio::test]
-async fn smtp_test_reports_missing_password_before_connection_attempt() {
-    let tester = RecordingTester::default();
-    let service = test_service(tester.clone(), stored_smtp_settings(""));
-
-    let response = service
-        .test_smtp_connection(SystemSettingsSmtpTestRequest {
-            smtp_host: Some("smtp.example.com".into()),
-            smtp_port: Some(587),
-            smtp_username: Some("smtp-user".into()),
-            smtp_from_email: Some("noreply@example.com".into()),
-            smtp_encryption: Some(SmtpEncryption::Tls),
-            ..Default::default()
-        })
-        .await
-        .unwrap();
-
-    assert!(!response.success);
-    assert_eq!(response.message, "SMTP 配置不完整，请检查 SMTP 密码");
-    assert!(tester.config.lock().unwrap().is_none());
-}
-
-#[tokio::test]
-async fn update_rejects_email_verification_without_enabled_email_config() {
-    let mut settings = complete_email_settings();
-    settings.email_config_enabled = false;
-    let (service, update) = test_update_service(settings);
-
-    let result = service
-        .update_system_settings(SystemSettingsUpdate {
-            registration_email_verification_enabled: Some(true),
-            ..Default::default()
-        })
-        .await;
-
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "invalid input: registration_email_verification_enabled requires email_config_enabled and complete SMTP configuration"
-    );
-    assert!(update.lock().unwrap().is_none());
-}
-
-#[tokio::test]
-async fn update_rejects_email_verification_without_complete_smtp_config() {
-    let mut settings = system_settings_response();
-    settings.email_config_enabled = true;
-    let (service, update) = test_update_service(settings);
-
-    let result = service
-        .update_system_settings(SystemSettingsUpdate {
-            registration_email_verification_enabled: Some(true),
-            ..Default::default()
-        })
-        .await;
-
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "invalid input: registration_email_verification_enabled requires email_config_enabled and complete SMTP configuration"
-    );
-    assert!(update.lock().unwrap().is_none());
-}
-
-#[tokio::test]
-async fn update_allows_email_verification_when_payload_completes_email_config() {
-    let (service, update) = test_update_service(system_settings_response());
-    let input = complete_email_verification_update();
-
-    service.update_system_settings(input.clone()).await.unwrap();
-
-    let record = update.lock().unwrap().clone().unwrap();
-    assert_eq!(record.input, input);
-    assert_eq!(record.encrypted_smtp_password.as_deref(), Some("encrypted:smtp-password"));
-}
-
-#[tokio::test]
-async fn update_rejects_disabling_email_config_while_email_verification_remains_enabled() {
-    let mut settings = complete_email_settings();
-    settings.registration_email_verification_enabled = true;
-    let (service, update) = test_update_service(settings);
-
-    let result = service
-        .update_system_settings(SystemSettingsUpdate {
-            email_config_enabled: Some(false),
-            ..Default::default()
-        })
-        .await;
-
-    assert_eq!(
-        result.unwrap_err().to_string(),
-        "invalid input: registration_email_verification_enabled requires email_config_enabled and complete SMTP configuration"
-    );
-    assert!(update.lock().unwrap().is_none());
-}
+#[path = "service_tests/smtp.rs"]
+mod smtp;
+#[path = "service_tests/update.rs"]
+mod update;
 
 fn test_service(tester: RecordingTester, stored: StoredSmtpSettings) -> SettingService<FakeRepository, FakeCipher, RecordingTester> {
     SettingService::new(
@@ -228,6 +111,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         registration_captcha_enabled: false,
         registration_email_verification_enabled: false,
         email_config_enabled: false,
+        support_ticket_email_notifications_enabled: false,
         auto_delete_expired_tokens: false,
         request_record_retention_days: 365,
         request_record_payload_retention_days: 30,
@@ -274,6 +158,19 @@ fn complete_email_verification_update() -> SystemSettingsUpdate {
     SystemSettingsUpdate {
         email_config_enabled: Some(true),
         registration_email_verification_enabled: Some(true),
+        smtp_host: Some("smtp.example.com".into()),
+        smtp_port: Some(587),
+        smtp_username: Some("smtp-user".into()),
+        smtp_password: Some("smtp-password".into()),
+        smtp_from_email: Some("noreply@example.com".into()),
+        ..Default::default()
+    }
+}
+
+fn complete_ticket_email_update() -> SystemSettingsUpdate {
+    SystemSettingsUpdate {
+        email_config_enabled: Some(true),
+        support_ticket_email_notifications_enabled: Some(true),
         smtp_host: Some("smtp.example.com".into()),
         smtp_port: Some(587),
         smtp_username: Some("smtp-user".into()),

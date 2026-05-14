@@ -3,29 +3,42 @@ use types::system_setting::{SystemSettingsResponse, SystemSettingsUpdate};
 use super::{SettingError, SettingResult};
 
 const MIN_SMTP_PORT: i64 = 1;
+const REGISTRATION_EMAIL_CONFIG_ERROR: &str = "registration_email_verification_enabled requires email_config_enabled and complete SMTP configuration";
+const SUPPORT_TICKET_EMAIL_CONFIG_ERROR: &str = "support_ticket_email_notifications_enabled requires email_config_enabled and complete SMTP configuration";
 
-pub fn validate_email_verification_prerequisites(input: &SystemSettingsUpdate, current: &SystemSettingsResponse) -> SettingResult<()> {
-    let state = effective_email_verification_state(input, current);
-    if !state.registration_email_verification_enabled || state.email_config_enabled && state.smtp_config_complete {
-        return Ok(());
+pub fn validate_email_feature_prerequisites(input: &SystemSettingsUpdate, current: &SystemSettingsResponse) -> SettingResult<()> {
+    let state = effective_email_feature_state(input, current);
+    if state.registration_email_verification_enabled && !state.email_config_ready() {
+        return Err(SettingError::InvalidInput(REGISTRATION_EMAIL_CONFIG_ERROR.into()));
     }
-    Err(SettingError::InvalidInput(
-        "registration_email_verification_enabled requires email_config_enabled and complete SMTP configuration".into(),
-    ))
+    if state.support_ticket_email_notifications_enabled && !state.email_config_ready() {
+        return Err(SettingError::InvalidInput(SUPPORT_TICKET_EMAIL_CONFIG_ERROR.into()));
+    }
+    Ok(())
 }
 
-struct EmailVerificationState {
+struct EmailFeatureState {
     email_config_enabled: bool,
     registration_email_verification_enabled: bool,
+    support_ticket_email_notifications_enabled: bool,
     smtp_config_complete: bool,
 }
 
-fn effective_email_verification_state(input: &SystemSettingsUpdate, current: &SystemSettingsResponse) -> EmailVerificationState {
-    EmailVerificationState {
+impl EmailFeatureState {
+    const fn email_config_ready(&self) -> bool {
+        self.email_config_enabled && self.smtp_config_complete
+    }
+}
+
+fn effective_email_feature_state(input: &SystemSettingsUpdate, current: &SystemSettingsResponse) -> EmailFeatureState {
+    EmailFeatureState {
         email_config_enabled: input.email_config_enabled.unwrap_or(current.email_config_enabled),
         registration_email_verification_enabled: input
             .registration_email_verification_enabled
             .unwrap_or(current.registration_email_verification_enabled),
+        support_ticket_email_notifications_enabled: input
+            .support_ticket_email_notifications_enabled
+            .unwrap_or(current.support_ticket_email_notifications_enabled),
         smtp_config_complete: effective_smtp_config_complete(input, current),
     }
 }

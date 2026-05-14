@@ -200,6 +200,32 @@ export const endpoints = {
     translationBundle: (namespace: string, groupKey: string, itemKey: string) =>
       `/api/admin/i18n/translations/${namespace}/${groupKey}/${itemKey}`,
   },
+  announcements: {
+    list: '/api/announcements',
+    byId: (id: string) => `/api/announcements/${id}`,
+  },
+  adminAnnouncements: {
+    list: '/api/admin/announcements',
+    byId: (id: string) => `/api/admin/announcements/${id}`,
+  },
+  tickets: {
+    list: '/api/tickets',
+    byId: (id: string) => `/api/tickets/${id}`,
+    messages: (id: string) => `/api/tickets/${id}/messages`,
+  },
+  adminTickets: {
+    list: '/api/admin/tickets',
+    byId: (id: string) => `/api/admin/tickets/${id}`,
+    messages: (id: string) => `/api/admin/tickets/${id}/messages`,
+  },
+  notifications: {
+    list: '/api/notifications',
+    readAll: '/api/notifications/read-all',
+    read: (sourceType: string, sourceId: string) =>
+      `/api/notifications/${sourceType}/${sourceId}/read`,
+    delete: (sourceType: string, sourceId: string) =>
+      `/api/notifications/${sourceType}/${sourceId}`,
+  },
   wallet: {
     balance: '/api/wallet/balance',
     transactions: '/api/wallet/transactions',
@@ -211,6 +237,14 @@ export const endpoints = {
     transactions: (id: string) => `/api/admin/wallets/${id}/transactions`,
     adjust: (id: string) => `/api/admin/wallets/${id}/adjust`,
     recharge: (id: string) => `/api/admin/wallets/${id}/recharge`,
+  },
+  cardCodes: {
+    redeem: '/api/card-codes/redeem',
+    list: '/api/admin/card-codes',
+    generate: '/api/admin/card-codes/generate',
+    batchStatus: '/api/admin/card-codes/batch-status',
+    types: '/api/admin/card-code-types',
+    type: (id: string) => `/api/admin/card-code-types/${id}`,
   },
   mail: {
     list: '/api/mail/list',

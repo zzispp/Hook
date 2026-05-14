@@ -1,6 +1,8 @@
 export const DASHBOARD_MENU_CODES = {
   apiManagement: 'admin_apis',
   apiTokens: 'api_tokens',
+  announcementManagement: 'admin_announcements',
+  announcements: 'announcements',
   billingGroupCatalog: 'dashboard_groups',
   billingGroups: 'admin_groups',
   dashboard: 'dashboard_home',
@@ -13,9 +15,12 @@ export const DASHBOARD_MENU_CODES = {
   systemSettings: 'admin_settings',
   translationManagement: 'admin_translations',
   tokenManagement: 'admin_tokens',
+  ticketManagement: 'admin_tickets',
+  tickets: 'support_tickets',
   userManagement: 'admin_users',
   walletCenter: 'wallet_center',
   walletManagement: 'admin_wallets',
+  cardCodeManagement: 'admin_card_codes',
 } as const;
 
 export const DASHBOARD_SECTION_CODES = {

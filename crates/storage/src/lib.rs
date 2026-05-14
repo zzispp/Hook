@@ -1,10 +1,12 @@
 pub mod api_token;
+pub mod card_code;
 pub mod database;
 pub mod error;
 pub mod group;
 pub mod i18n;
 mod json;
 pub mod model;
+pub mod operations;
 pub mod provider;
 pub mod rbac;
 pub mod setting;

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect settings and mailer flow,DONE,Relevant setting storage UI mailer paths are identified,rg -n "email_config_enabled|smtp|SystemSettings" crates apps,2026-05-14T10:05:34+08:00,0,
+2,Implement backend setting and validation,DONE,Ticket email toggle is persisted and mailer skips when disabled,cargo check --workspace,2026-05-14T10:05:34+08:00,0,
+3,Implement frontend settings and localized delivery messages,DONE,Settings UI exposes switch and ticket toasts use i18n,pnpm lint:frontend,2026-05-14T10:05:34+08:00,0,
+4,Run verification,DONE,Frontend build and backend tests pass,pnpm build:frontend && cargo test,2026-05-14T10:05:34+08:00,0,

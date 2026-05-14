@@ -454,6 +454,7 @@ dependencies = [
  "async-trait",
  "axum",
  "captcha",
+ "card_code",
  "configuration",
  "constants",
  "futures-util",
@@ -461,6 +462,7 @@ dependencies = [
  "hook_tracing",
  "i18n",
  "model",
+ "operations",
  "provider",
  "proxy",
  "rbac",
@@ -662,6 +664,24 @@ dependencies = [
  "thiserror",
  "tokio",
  "types",
+]
+
+[[package]]
+name = "card_code"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "constants",
+ "rand 0.8.6",
+ "rbac",
+ "rust_decimal",
+ "serde",
+ "storage",
+ "thiserror",
+ "time",
+ "types",
+ "uuid",
 ]
 
 [[package]]
@@ -1080,6 +1100,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "email-encoding"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9298e6504d9b9e780ed3f7dfd43a61be8cd0e09eb07f7706a945b0072b6670b6"
+dependencies = [
+ "base64",
+ "memchr",
 ]
 
 [[package]]
@@ -1904,13 +1934,18 @@ checksum = "dabda5859ee7c06b995b9d1165aa52c39110e079ef609db97178d86aeb051fa7"
 dependencies = [
  "async-trait",
  "base64",
+ "email-encoding",
  "email_address",
+ "fastrand",
  "futures-io",
  "futures-util",
  "hostname",
+ "httpdate",
  "idna",
+ "mime",
  "nom",
  "percent-encoding",
+ "quoted_printable",
  "rustls",
  "socket2",
  "tokio",
@@ -2272,6 +2307,24 @@ name = "once_cell_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+
+[[package]]
+name = "operations"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "configuration",
+ "constants",
+ "lettre",
+ "rbac",
+ "serde",
+ "setting",
+ "storage",
+ "thiserror",
+ "time",
+ "types",
+]
 
 [[package]]
 name = "ordered-float"
@@ -2683,6 +2736,12 @@ checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "quoted_printable"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "478e0585659a122aa407eb7e3c0e1fa51b1d8a870038bd29f0cf4a8551eea972"
 
 [[package]]
 name = "r-efi"
@@ -4186,6 +4245,7 @@ dependencies = [
  "rust_decimal",
  "serde",
  "serde_json",
+ "time",
 ]
 
 [[package]]

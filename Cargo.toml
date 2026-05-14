@@ -3,11 +3,13 @@ members = [
     "apps/hook_backend",
     "crates/api_token",
     "crates/captcha",
+    "crates/card_code",
     "crates/config",
     "crates/constants",
     "crates/group",
     "crates/i18n",
     "crates/model",
+    "crates/operations",
     "crates/proxy",
     "crates/provider",
     "crates/rbac",
@@ -30,6 +32,7 @@ axum = { version = "0.8.9", features = ["ws"] }
 bcrypt = "0.17.1"
 api_token = { path = "crates/api_token" }
 captcha = { path = "crates/captcha" }
+card_code = { path = "crates/card_code" }
 config_rs = { package = "config", version = "0.15.22", default-features = false, features = ["yaml"] }
 configuration = { path = "crates/config" }
 constants = { path = "crates/constants" }
@@ -40,7 +43,7 @@ i18n = { path = "crates/i18n" }
 hex = "0.4.3"
 hook_tracing = { path = "crates/tracing" }
 jsonwebtoken = "9.3.1"
-lettre = { version = "0.11.21", default-features = false, features = ["smtp-transport", "tokio1-rustls-tls", "hostname"] }
+lettre = { version = "0.11.21", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "hostname"] }
 matchit = "0.8.4"
 rand = "0.8.5"
 rand_core = { version = "0.6.4", features = ["getrandom"] }
@@ -66,6 +69,7 @@ wallet = { path = "crates/wallet" }
 uuid = { version = "1.23.1", features = ["v7", "fast-rng"] }
 jiff = "0.2.23"
 model = { path = "crates/model" }
+operations = { path = "crates/operations" }
 provider = { path = "crates/provider" }
 proxy = { path = "crates/proxy" }
 reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls", "stream"] }

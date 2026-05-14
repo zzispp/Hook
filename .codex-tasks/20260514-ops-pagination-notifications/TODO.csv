@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect pagination notification patterns,DONE,Current APIs and frontend fixed paging are identified,rg -n "useNotifications|useTickets|page_tickets" apps crates,2026-05-14T10:10:00+08:00,0,
+2,Implement ticket priority sorting,DONE,Admin tickets sort unread or unfinished before completed tickets,cargo check --workspace,2026-05-14T10:18:00+08:00,0,
+3,Add frontend pagination controls,DONE,Announcement and ticket management pages use backend page and page_size,pnpm lint:frontend,2026-05-14T10:18:00+08:00,0,
+4,Implement notification refresh policy,DONE,Notifications revalidate on focus poll while visible and refresh on open or tab switch,pnpm lint:frontend,2026-05-14T10:18:00+08:00,0,
+5,Run verification,DONE,Rust and frontend checks pass,pnpm build:frontend && cargo test,2026-05-14T10:32:24+08:00,0,

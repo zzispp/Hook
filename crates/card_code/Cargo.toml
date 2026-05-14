@@ -1,0 +1,18 @@
+[package]
+name = "card_code"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+constants.workspace = true
+rand.workspace = true
+rbac.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+time.workspace = true
+types.workspace = true
+uuid.workspace = true
