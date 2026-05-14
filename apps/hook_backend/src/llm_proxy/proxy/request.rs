@@ -5,6 +5,7 @@ use types::api_token::ApiToken;
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
     audit::record_scheduled_candidates,
+    billing::enforce_preflight_access,
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
     formats, rate_limit,
 };
@@ -35,6 +36,7 @@ pub(super) async fn prepare_proxy_request(
     capture: RequestCapture,
 ) -> Result<PreparedProxyRequest, LlmProxyError> {
     let model_name = required_model(&body)?;
+    enforce_preflight_access(state, token).await?;
     rate_limit::enforce_request_limits(state, token).await?;
     let is_stream = is_streaming(&body) && !force_non_stream;
     let selection = select_candidates(

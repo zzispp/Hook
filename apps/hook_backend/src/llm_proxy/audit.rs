@@ -13,6 +13,7 @@ use types::model::PatchField;
 
 use super::{
     LlmProxyError, LlmProxyState,
+    billing::{WalletSettlementInput, settle_wallet_usage},
     candidate::{CandidateSelection, CandidateTrace, ProxyCandidate},
     proxy::capture::{RequestCapture, recorded_headers, recorded_request_body},
     request_record_policy::RequestRecordPolicy,
@@ -40,7 +41,8 @@ pub async fn record_scheduled_candidates(state: &LlmProxyState, selection: &Cand
 
 pub async fn record_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
     let model_usage_record = model_usage_record(&input);
-    let usage_record = token_usage_record(request_id, &input, OffsetDateTime::now_utc());
+    let usage_record = token_usage_record(request_id, &input, OffsetDateTime::now_utc())?;
+    let settlement = wallet_settlement_input(request_id, &input)?;
     let policy = request_record_policy(state).await?;
     let store = ProviderStore::new(state.database.clone());
     match store.update_request_candidate(attempt_patch(request_id, &input, &policy)?).await {
@@ -49,8 +51,12 @@ pub async fn record_attempt(state: &LlmProxyState, request_id: &str, input: Atte
         Err(error) => return Err(error.into()),
     }
     store.update_request_record(request_record_patch(request_id, &input, &policy)?).await?;
-    if let Some(record) = usage_record? {
+    if let Some(record) = usage_record {
         state.tokens.record_usage(record).await?;
+        state.cache.bump_auth_version().await?;
+    }
+    if let Some(settlement) = settlement {
+        settle_wallet_usage(state, settlement).await?;
     }
     if let Some(record) = model_usage_record {
         ModelStore::new(state.database.clone()).record_usage(record).await?;
@@ -318,6 +324,23 @@ fn model_usage_record(input: &AttemptRecordInput<'_>) -> Option<GlobalModelUsage
     Some(GlobalModelUsageRecord {
         model_id: input.candidate.trace.global_model_id.clone(),
     })
+}
+
+fn wallet_settlement_input<'a>(request_id: &'a str, input: &'a AttemptRecordInput<'a>) -> Result<Option<WalletSettlementInput<'a>>, LlmProxyError> {
+    if !should_record_successful_usage(input) {
+        return Ok(None);
+    }
+    let usage = input
+        .usage
+        .ok_or_else(|| LlmProxyError::Infrastructure(format!("successful wallet settlement missing usage: {request_id}")))?;
+    let amount =
+        attempt_billing(input).ok_or_else(|| LlmProxyError::Infrastructure(format!("successful wallet settlement missing billing amount: {request_id}")))?;
+    Ok(Some(WalletSettlementInput {
+        request_id,
+        candidate: input.candidate,
+        usage,
+        amount,
+    }))
 }
 
 fn should_record_successful_usage(input: &AttemptRecordInput<'_>) -> bool {

@@ -211,8 +211,10 @@ mod tests {
             users: vec![CachedUserAccess {
                 id: "user-1".into(),
                 username: "alice".into(),
+                is_active: true,
                 allowed_model_ids: Vec::new(),
                 allowed_provider_ids: Vec::new(),
+                quota_mode: "wallet".into(),
                 rate_limit_rpm: user_rate_limit_rpm,
             }],
             providers: Vec::new(),

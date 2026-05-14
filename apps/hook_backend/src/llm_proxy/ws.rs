@@ -18,6 +18,7 @@ use self::{
 use super::{
     CurrentApiToken, LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT,
     audit::{AttemptRecordInput, SKIP_REASON_REQUEST_TERMINATED, record_attempt, record_scheduled_candidates, record_skipped_candidates},
+    billing::enforce_preflight_access,
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
     proxy::capture::RequestCapture,
     rate_limit,
@@ -31,6 +32,7 @@ pub async fn realtime(
     websocket: WebSocketUpgrade,
 ) -> Result<Response, LlmProxyError> {
     let model_name = required_query_model(&query)?;
+    enforce_preflight_access(&state, &token.0).await?;
     rate_limit::enforce_request_limits(&state, &token.0).await?;
     let selection = select_candidates(
         &state,

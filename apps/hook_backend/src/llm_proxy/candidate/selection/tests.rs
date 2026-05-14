@@ -151,7 +151,7 @@ fn token_user_snapshot_rejects_orphaned_user_token() {
 
     let error = token_user_for_snapshot(&snapshot, &token).unwrap_err();
 
-    assert!(matches!(error, LlmProxyError::Forbidden(message) if message.contains("missing-user")));
+    assert!(matches!(error, LlmProxyError::CodedForbidden { code: "new_api_error", .. }));
 }
 
 fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnapshot {
@@ -181,8 +181,10 @@ fn user_access(id: &str, username: &str, allowed_provider_ids: Vec<String>) -> C
     CachedUserAccess {
         id: id.into(),
         username: username.into(),
+        is_active: true,
         allowed_model_ids: Vec::new(),
         allowed_provider_ids,
+        quota_mode: "wallet".into(),
         rate_limit_rpm: None,
     }
 }
@@ -267,6 +269,7 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         id: id.into(),
         provider_id: "provider-a".into(),
         name: format!("{id}-name"),
+        key_preview: format!("{id}-name"),
         encrypted_api_key: "encrypted".into(),
         internal_priority,
         rpm_limit: None,

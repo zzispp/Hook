@@ -98,6 +98,27 @@ fn scheduler_cache_affinity_promotes_matching_key() {
 }
 
 #[test]
+fn scheduler_cache_affinity_without_cached_key_uses_request_seed() {
+    let first = CandidateBuilder::build(&SchedulerInput {
+        scheduling_mode: SchedulingMode::CacheAffinity,
+        load_balance_seed: Some("request-1".into()),
+        providers: vec![provider_with_two_keys()],
+        ..base_input()
+    })
+    .unwrap();
+    let second = CandidateBuilder::build(&SchedulerInput {
+        scheduling_mode: SchedulingMode::CacheAffinity,
+        load_balance_seed: Some("request-2".into()),
+        providers: vec![provider_with_two_keys()],
+        ..base_input()
+    })
+    .unwrap();
+
+    assert_eq!(first[0].key_id, "key-a-2");
+    assert_eq!(second[0].key_id, "key-a-1");
+}
+
+#[test]
 fn scheduler_load_balance_keeps_priority_group_and_uses_stable_hash() {
     let input = SchedulerInput {
         scheduling_mode: SchedulingMode::LoadBalance,

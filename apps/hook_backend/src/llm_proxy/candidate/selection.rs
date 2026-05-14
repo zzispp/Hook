@@ -193,11 +193,19 @@ fn ordered_keys(
     let mut keys = provider.keys.iter().filter(|key| key_allowed(key)).cloned().collect::<Vec<_>>();
     keys.sort_by(|left, right| (left.internal_priority, &left.id).cmp(&(right.internal_priority, &right.id)));
     match scheduling_mode {
-        types::provider::ProviderSchedulingMode::CacheAffinity => promote_affinity_key(&mut keys, affinity_key),
+        types::provider::ProviderSchedulingMode::CacheAffinity => order_keys_for_cache_affinity(&mut keys, affinity_key, request_id),
         types::provider::ProviderSchedulingMode::LoadBalance => order_keys_for_load_balance(&mut keys, request_id),
         types::provider::ProviderSchedulingMode::FixedOrder => {}
     }
     keys
+}
+
+fn order_keys_for_cache_affinity(keys: &mut Vec<CachedProviderKey>, affinity_key: Option<&str>, request_id: &str) {
+    if affinity_key.is_some() {
+        promote_affinity_key(keys, affinity_key);
+        return;
+    }
+    order_keys_for_load_balance(keys, request_id);
 }
 
 fn promote_affinity_key(keys: &mut Vec<CachedProviderKey>, affinity_key: Option<&str>) {
@@ -262,7 +270,10 @@ fn token_user_for_snapshot<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToke
     };
     let user = snapshot.users.iter().find(|user| user.id == *user_id);
     if token.token_type == ApiTokenType::User && user.is_none() {
-        return Err(LlmProxyError::Forbidden(format!("token user is not active: {user_id}")));
+        return Err(LlmProxyError::new_api_forbidden("user is disabled or unavailable", "new_api_error"));
+    }
+    if token.token_type == ApiTokenType::User && user.is_some_and(|user| !user.is_active) {
+        return Err(LlmProxyError::new_api_forbidden("user is disabled or unavailable", "new_api_error"));
     }
     Ok(user)
 }

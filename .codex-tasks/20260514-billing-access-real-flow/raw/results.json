@@ -1,0 +1,572 @@
+[
+  {
+    "label": "upstream model probe",
+    "ok": true,
+    "evidence": {
+      "primaryModels": [
+        "claude-haiku-4-5-20251001",
+        "claude-opus-4-6",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview",
+        "gpt-5.2",
+        "gpt-5.3-codex",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.5"
+      ],
+      "ekan8Models": [
+        "K-claude-opus-4-5",
+        "K-claude-opus-4-6",
+        "R-claude-opus-4-6",
+        "R-claude-opus-4-6-thinking",
+        "R-claude-opus-4-7",
+        "R-claude-opus-4-7-thinking",
+        "S-claude-opus-4-6",
+        "S-claude-opus-4-6-thinking",
+        "S-claude-opus-4-7",
+        "[Y]gemini-3-flash-preview",
+        "[满血A]gemini-2.5-pro",
+        "[满血A]gemini-3-pro-preview",
+        "[满血A]gemini-3.1-pro-preview",
+        "[满血B]gemini-3-pro-preview",
+        "[满血]gemini-2.5-pro",
+        "[满血]gemini-3-pro-preview",
+        "[满血]gemini-3.1-pro-preview",
+        "ccmax-claude-opus-4-6",
+        "ccmax-claude-opus-4-7",
+        "gemini-2.5-pro-cli",
+        "gemini-3-pro-preview",
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-pro-preview-search",
+        "gpt-5.5",
+        "gpt-image-2",
+        "单间-claude-opus-4-6",
+        "按量-gemini-3-pro-preview",
+        "按量-gemini-3.1-pro-preview",
+        "按量K-claude-opus-4-5-20251101",
+        "按量K-claude-opus-4-6",
+        "按量K-claude-opus-4-7",
+        "按量R-claude-opus-4-6",
+        "按量R-claude-opus-4-7",
+        "按量max-claude-opus-4-6",
+        "按量max-claude-opus-4-7"
+      ],
+      "primaryProviderModel": "gpt-5.4-mini",
+      "ekan8ProviderModel": "[满血A]gemini-3.1-pro-preview"
+    }
+  },
+  {
+    "label": "upstream model evidence",
+    "ok": true,
+    "evidence": {
+      "primaryProviderModel": "gpt-5.4-mini",
+      "ekan8ProviderModel": "[满血A]gemini-3.1-pro-preview",
+      "primaryModelCount": 11,
+      "ekan8ModelCount": 35,
+      "primarySamples": [
+        "claude-haiku-4-5-20251001",
+        "claude-opus-4-6",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview",
+        "gpt-5.2",
+        "gpt-5.3-codex",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.5"
+      ],
+      "ekan8Samples": [
+        "K-claude-opus-4-5",
+        "K-claude-opus-4-6",
+        "R-claude-opus-4-6",
+        "R-claude-opus-4-6-thinking",
+        "R-claude-opus-4-7",
+        "R-claude-opus-4-7-thinking",
+        "S-claude-opus-4-6",
+        "S-claude-opus-4-6-thinking",
+        "S-claude-opus-4-7",
+        "[Y]gemini-3-flash-preview",
+        "[满血A]gemini-2.5-pro",
+        "[满血A]gemini-3-pro-preview"
+      ]
+    }
+  },
+  {
+    "label": "disabled token is rejected",
+    "ok": true,
+    "evidence": {
+      "label": "disabled-token",
+      "ok": false,
+      "status": 401,
+      "body": "{\"error\":{\"code\":401,\"message\":\"missing or invalid bearer token\",\"type\":\"unauthorized\"}}",
+      "requestId": "",
+      "trace": [],
+      "record": null
+    }
+  },
+  {
+    "label": "disabled user is rejected",
+    "ok": true,
+    "evidence": {
+      "label": "disabled-user",
+      "ok": false,
+      "status": 403,
+      "body": "{\"error\":{\"code\":\"new_api_error\",\"message\":\"user is disabled or unavailable\",\"type\":\"new_api_error\"}}",
+      "requestId": "",
+      "trace": [],
+      "record": null
+    }
+  },
+  {
+    "label": "token quota exhausted is rejected like New API",
+    "ok": true,
+    "evidence": {
+      "label": "token-quota",
+      "ok": false,
+      "status": 403,
+      "body": "{\"error\":{\"code\":\"pre_consume_token_quota_failed\",\"message\":\"pre-consume token quota failed\",\"type\":\"new_api_error\"}}",
+      "requestId": "",
+      "trace": [],
+      "record": null
+    }
+  },
+  {
+    "label": "wallet quota exhausted is rejected like New API",
+    "ok": true,
+    "evidence": {
+      "label": "wallet-quota",
+      "ok": false,
+      "status": 403,
+      "body": "{\"error\":{\"code\":\"insufficient_user_quota\",\"message\":\"insufficient user quota\",\"type\":\"new_api_error\"}}",
+      "requestId": "",
+      "trace": [],
+      "record": null
+    }
+  },
+  {
+    "label": "billing multiplier and token used_quota are settled",
+    "ok": true,
+    "evidence": {
+      "result": {
+        "label": "billing",
+        "ok": true,
+        "status": 200,
+        "body": "{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"I’m not sure what you want me to do with **`billing-access-real-1778757928285-billing`**.\\n\\nIf you want, I can help you:\\n- identify what this string likely is,\\n- format or parse it,\\n- generate code/config around it,\\n- or troubleshoot an access/billing issue.\\n\\nSend a bit more context and I’ll jump in.\",\"role\":\"assistant\"}}],\"created\":1778757930,\"id\":\"resp_0ab332a169e5eb8a016a05b12962a481979757931a4b440581\",\"model\":\"hook-billing-access-real\",\"object\":\"chat.completion\",\"usage\":{\"completion_tokens\":81,\"prompt_tokens\":28,\"total_tokens\":109}}",
+        "requestId": "019e263c-056c-7242-a8f2-81484753ef7f",
+        "trace": [
+          {
+            "candidate_index": "0",
+            "retry_index": "0",
+            "status": "success",
+            "skip_reason": "",
+            "status_code": "200",
+            "provider_name": "Billing Access Hook A",
+            "key_name": "Billing Access Hook A key",
+            "key_id": "00000000-0000-7000-9300-000000000201",
+            "error_type": "",
+            "error_message": "",
+            "error_code": "",
+            "prompt_tokens": "28",
+            "completion_tokens": "81",
+            "token_cost": "0.01900000",
+            "base_cost": "0.02900000",
+            "total_cost": "0.07250000",
+            "billing_multiplier": "2.50000000"
+          }
+        ],
+        "record": {
+          "status": "success",
+          "billing_status": "settled",
+          "client_status_code": "200",
+          "client_error_type": "",
+          "provider_id": "00000000-0000-7000-9300-000000000101",
+          "key_id": "00000000-0000-7000-9300-000000000201",
+          "has_failover": "false",
+          "has_retry": "false",
+          "token_cost": "0.01900000",
+          "base_cost": "0.02900000",
+          "total_cost": "0.07250000",
+          "billing_multiplier": "2.50000000",
+          "candidate_count": "1"
+        }
+      },
+      "tokenBefore": {
+        "used_quota": "0.00000000",
+        "request_count": 0,
+        "is_active": true
+      },
+      "tokenAfter": {
+        "used_quota": "0.07250000",
+        "request_count": 1,
+        "is_active": true
+      },
+      "walletBefore": {
+        "recharge_balance": "10.00000000",
+        "gift_balance": "0.00000000",
+        "total_consumed": "0.00000000",
+        "status": "active",
+        "limit_mode": "finite"
+      },
+      "totalCost": "0.07250000"
+    }
+  },
+  {
+    "label": "wallet balance and consume ledger are settled",
+    "ok": true,
+    "evidence": {
+      "walletBefore": {
+        "recharge_balance": "10.00000000",
+        "gift_balance": "0.00000000",
+        "total_consumed": "0.00000000",
+        "status": "active",
+        "limit_mode": "finite"
+      },
+      "walletAfter": {
+        "recharge_balance": "9.92750000",
+        "gift_balance": "0.00000000",
+        "total_consumed": "0.07250000",
+        "status": "active",
+        "limit_mode": "finite"
+      },
+      "transactions": [
+        {
+          "category": "consume",
+          "reasonCode": "llm_model_usage",
+          "amount": "-0.07250000",
+          "before": "10.00000000",
+          "after": "9.92750000",
+          "linkType": "llm_request_record",
+          "linkId": "019e263c-056c-7242-a8f2-81484753ef7f",
+          "description": "{\"amounts\":{\"balance_after\":\"9.92750000\",\"balance_before\":\"10.00000000\",\"base_cost\":\"0.0290\",\"billing_currency\":\"USD\",\"deducted_amount\":\"0.07250\",\"token_cost\":\"0.0190\",\"total_cost\":\"0.07250\",\"wallet_currency\":\"CNY\"},\"endpoint\":{\"id\":\"00000000-0000-7000-9300-000000000301\",\"name\":\"openai_chat\"},\"group\":{\"billing_multiplier\":\"2.5\",\"code\":\"billing_access_real\"},\"key\":{\"id\":\"00000000-0000-7000-9300-000000000201\",\"name\":\"Billing Access Hook A key\",\"preview\":\"Billing Access Hook A key\"},\"kind\":\"llm_model_usage\",\"model\":{\"global_model_id\":\"00000000-0000-7000-9300-000000000701\",\"model_name\":\"hook-billing-access-real\",\"provider_model_name\":\"gpt-5.4-mini\",\"requested_model_name\":\"hook-billing-access-real\"},\"pricing\":{\"price_per_request\":\"0.01\",\"tiered_pricing\":{\"tiers\":[{\"cache_creation_price_per_1m\":null,\"cache_read_price_per_1m\":null,\"cache_ttl_pricing\":null,\"input_price_per_1m\":100.0,\"output_price_per_1m\":200.0,\"up_to\":null}]}},\"provider\":{\"id\":\"00000000-0000-7000-9300-000000000101\",\"name\":\"Billing Access Hook A\"},\"request\":{\"client_api_format\":\"openai_chat\",\"is_stream\":false,\"provider_api_format\":\"openai_chat\",\"request_id\":\"019e263c-056c-7242-a8f2-81484753ef7f\"},\"token\":{\"id\":\"00000000-0000-7000-9300-000000000601\",\"name\":\"Billing Access active\",\"prefix\":\"sk-billing\",\"type\":\"user\"},\"usage\":{\"cache_creation_input_tokens\":null,\"cache_read_input_tokens\":null,\"completion_tokens\":81,\"prompt_tokens\":28,\"total_tokens\":109},\"user\":{\"id\":\"00000000-0000-7000-9300-000000000501\",\"quota_mode\":\"wallet\",\"username\":\"billing_access_active\"}}",
+          "snapshot": {
+            "amounts": {
+              "balance_after": "9.92750000",
+              "balance_before": "10.00000000",
+              "base_cost": "0.0290",
+              "billing_currency": "USD",
+              "deducted_amount": "0.07250",
+              "token_cost": "0.0190",
+              "total_cost": "0.07250",
+              "wallet_currency": "CNY"
+            },
+            "endpoint": {
+              "id": "00000000-0000-7000-9300-000000000301",
+              "name": "openai_chat"
+            },
+            "group": {
+              "billing_multiplier": "2.5",
+              "code": "billing_access_real"
+            },
+            "key": {
+              "id": "00000000-0000-7000-9300-000000000201",
+              "name": "Billing Access Hook A key",
+              "preview": "Billing Access Hook A key"
+            },
+            "kind": "llm_model_usage",
+            "model": {
+              "global_model_id": "00000000-0000-7000-9300-000000000701",
+              "model_name": "hook-billing-access-real",
+              "provider_model_name": "gpt-5.4-mini",
+              "requested_model_name": "hook-billing-access-real"
+            },
+            "pricing": {
+              "price_per_request": "0.01",
+              "tiered_pricing": {
+                "tiers": [
+                  {
+                    "cache_creation_price_per_1m": null,
+                    "cache_read_price_per_1m": null,
+                    "cache_ttl_pricing": null,
+                    "input_price_per_1m": 100,
+                    "output_price_per_1m": 200,
+                    "up_to": null
+                  }
+                ]
+              }
+            },
+            "provider": {
+              "id": "00000000-0000-7000-9300-000000000101",
+              "name": "Billing Access Hook A"
+            },
+            "request": {
+              "client_api_format": "openai_chat",
+              "is_stream": false,
+              "provider_api_format": "openai_chat",
+              "request_id": "019e263c-056c-7242-a8f2-81484753ef7f"
+            },
+            "token": {
+              "id": "00000000-0000-7000-9300-000000000601",
+              "name": "Billing Access active",
+              "prefix": "sk-billing",
+              "type": "user"
+            },
+            "usage": {
+              "cache_creation_input_tokens": null,
+              "cache_read_input_tokens": null,
+              "completion_tokens": 81,
+              "prompt_tokens": 28,
+              "total_tokens": 109
+            },
+            "user": {
+              "id": "00000000-0000-7000-9300-000000000501",
+              "quota_mode": "wallet",
+              "username": "billing_access_active"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "provider retry and failover are effective",
+    "ok": true,
+    "evidence": {
+      "label": "retry-failover",
+      "ok": true,
+      "status": 200,
+      "body": "{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"Could you clarify what you want me to do with `billing-access-real-1778757930815-retry-failover`?\\n\\nFor example, I can help with:\\n- interpreting it as an identifier or log label\\n- generating a retry/failover strategy\\n- debugging a billing access issue\\n- writing code/config for failover handling\\n- explaining what it might mean in a system context\\n\\nIf you have a log snippet, error message, or goal, paste it and I’ll help.\",\"role\":\"assistant\"}}],\"created\":1778757932,\"id\":\"resp_046a27747b643f93016a05b12bd56481969ddea9f148841182\",\"model\":\"hook-billing-access-real\",\"object\":\"chat.completion\",\"usage\":{\"completion_tokens\":105,\"prompt_tokens\":31,\"total_tokens\":136}}",
+      "requestId": "019e263c-0f4c-7de0-9534-300de4132a1b",
+      "trace": [
+        {
+          "candidate_index": "0",
+          "retry_index": "0",
+          "status": "failed",
+          "skip_reason": "",
+          "status_code": "",
+          "provider_name": "Billing Access Broken",
+          "key_name": "Billing Access Broken key",
+          "key_id": "00000000-0000-7000-9300-000000000204",
+          "error_type": "upstream_send_error",
+          "error_message": "error sending request for url (http://127.0.0.1:9/v1/chat/completions)",
+          "error_code": "",
+          "prompt_tokens": "",
+          "completion_tokens": "",
+          "token_cost": "",
+          "base_cost": "",
+          "total_cost": "",
+          "billing_multiplier": ""
+        },
+        {
+          "candidate_index": "0",
+          "retry_index": "1",
+          "status": "failed",
+          "skip_reason": "",
+          "status_code": "",
+          "provider_name": "Billing Access Broken",
+          "key_name": "Billing Access Broken key",
+          "key_id": "00000000-0000-7000-9300-000000000204",
+          "error_type": "upstream_send_error",
+          "error_message": "error sending request for url (http://127.0.0.1:9/v1/chat/completions)",
+          "error_code": "",
+          "prompt_tokens": "",
+          "completion_tokens": "",
+          "token_cost": "",
+          "base_cost": "",
+          "total_cost": "",
+          "billing_multiplier": ""
+        },
+        {
+          "candidate_index": "1",
+          "retry_index": "0",
+          "status": "success",
+          "skip_reason": "",
+          "status_code": "200",
+          "provider_name": "Billing Access Hook A",
+          "key_name": "Billing Access Hook A key",
+          "key_id": "00000000-0000-7000-9300-000000000201",
+          "error_type": "",
+          "error_message": "",
+          "error_code": "",
+          "prompt_tokens": "31",
+          "completion_tokens": "105",
+          "token_cost": "0.02410000",
+          "base_cost": "0.03410000",
+          "total_cost": "0.08525000",
+          "billing_multiplier": "2.50000000"
+        }
+      ],
+      "record": {
+        "status": "success",
+        "billing_status": "settled",
+        "client_status_code": "200",
+        "client_error_type": "",
+        "provider_id": "00000000-0000-7000-9300-000000000101",
+        "key_id": "00000000-0000-7000-9300-000000000201",
+        "has_failover": "true",
+        "has_retry": "true",
+        "token_cost": "0.02410000",
+        "base_cost": "0.03410000",
+        "total_cost": "0.08525000",
+        "billing_multiplier": "2.50000000",
+        "candidate_count": "2"
+      }
+    }
+  },
+  {
+    "label": "provider timeout and failover are effective",
+    "ok": true,
+    "evidence": {
+      "label": "timeout-failover",
+      "ok": true,
+      "status": 200,
+      "body": "{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"Could you clarify what you want me to do with `billing-access-real-1778757933508-timeout-failover`?\\n\\nIf it’s a ticket or incident name, I can help with any of these:\\n- write a summary\\n- draft a postmortem\\n- suggest root causes\\n- propose a failover/retry design\\n- create a troubleshooting checklist\\n- generate an alert/runbook entry\\n\\nIf you paste the relevant logs, code, or error details, I can take a deeper look.\",\"role\":\"assistant\"}}],\"created\":1778757935,\"id\":\"resp_06125c97bfe5dffd016a05b12e809081958b7a77afab83fb8a\",\"model\":\"hook-billing-access-real\",\"object\":\"chat.completion\",\"usage\":{\"completion_tokens\":108,\"prompt_tokens\":31,\"total_tokens\":139}}",
+      "requestId": "019e263c-19d4-7541-8c17-1ee26f38b216",
+      "trace": [
+        {
+          "candidate_index": "0",
+          "retry_index": "0",
+          "status": "failed",
+          "skip_reason": "",
+          "status_code": "",
+          "provider_name": "Billing Access Slow",
+          "key_name": "Billing Access Slow key",
+          "key_id": "00000000-0000-7000-9300-000000000205",
+          "error_type": "upstream_timeout",
+          "error_message": "error sending request for url (http://127.0.0.1:64470/v1/chat/completions)",
+          "error_code": "",
+          "prompt_tokens": "",
+          "completion_tokens": "",
+          "token_cost": "",
+          "base_cost": "",
+          "total_cost": "",
+          "billing_multiplier": ""
+        },
+        {
+          "candidate_index": "1",
+          "retry_index": "0",
+          "status": "success",
+          "skip_reason": "",
+          "status_code": "200",
+          "provider_name": "Billing Access Hook A",
+          "key_name": "Billing Access Hook A key",
+          "key_id": "00000000-0000-7000-9300-000000000201",
+          "error_type": "",
+          "error_message": "",
+          "error_code": "",
+          "prompt_tokens": "31",
+          "completion_tokens": "108",
+          "token_cost": "0.02470000",
+          "base_cost": "0.03470000",
+          "total_cost": "0.08675000",
+          "billing_multiplier": "2.50000000"
+        }
+      ],
+      "record": {
+        "status": "success",
+        "billing_status": "settled",
+        "client_status_code": "200",
+        "client_error_type": "",
+        "provider_id": "00000000-0000-7000-9300-000000000101",
+        "key_id": "00000000-0000-7000-9300-000000000201",
+        "has_failover": "true",
+        "has_retry": "false",
+        "token_cost": "0.02470000",
+        "base_cost": "0.03470000",
+        "total_cost": "0.08675000",
+        "billing_multiplier": "2.50000000",
+        "candidate_count": "2"
+      }
+    }
+  },
+  {
+    "label": "same-priority load_balance distributes providers",
+    "ok": true,
+    "evidence": {
+      "providers": [
+        "Billing Access Hook A",
+        "Billing Access Hook B"
+      ],
+      "requestIds": [
+        "019e263c-26fc-79f1-88f2-14472ddf226d",
+        "019e263c-303a-7301-a128-0cff46c76086",
+        "019e263c-38e7-7953-b40d-e12899e154e0",
+        "019e263c-41e8-7f10-97fb-6fe29e5110a0",
+        "019e263c-4a2e-70e3-a4ee-31d9d3dbdc33",
+        "019e263c-53c2-71e3-93c3-98b9c966a4de",
+        "019e263c-5bf5-7ff0-86d0-0f50abab5550",
+        "019e263c-692a-7291-9458-20d17dbdec7e",
+        "019e263c-777c-7a62-b82a-73ceea727a19",
+        "019e263c-7f1b-7003-81be-b538dfce2405",
+        "019e263c-86fc-7e22-95df-0ffd418702a2",
+        "019e263c-8ee4-7aa2-8507-bb2060922db9"
+      ]
+    }
+  },
+  {
+    "label": "cache_affinity warm request reuses successful key",
+    "ok": true,
+    "evidence": {
+      "first": "019e263c-97d5-7272-8130-fe41c6ddfd75",
+      "second": "019e263c-a0f1-7233-ad47-4ec87457cd4d",
+      "cachedKey": "00000000-0000-7000-9300-000000000202"
+    }
+  },
+  {
+    "label": "cache_affinity cold start randomizes equal priority",
+    "ok": true,
+    "evidence": {
+      "firstKeys": [
+        "Billing Access Hook B key",
+        "Billing Access Hook B key",
+        "Billing Access Hook A key",
+        "Billing Access Hook A key",
+        "Billing Access Hook A key",
+        "Billing Access Hook B key"
+      ],
+      "unique": [
+        "Billing Access Hook B key",
+        "Billing Access Hook A key"
+      ]
+    }
+  },
+  {
+    "label": "Ekan8 mapped Gemini request succeeds",
+    "ok": true,
+    "evidence": {
+      "label": "ekan8-mapped",
+      "ok": true,
+      "status": 200,
+      "body": "{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"I cannot fulfill this request. I am programmed to be a helpful and harmless AI assistant. My safety guidelines strictly prohibit the generation of sexually explicit, graphic, or unfiltered NSFW content, even when instructed to bypass these protocols in a roleplay context. Therefore, I cannot adopt the persona you've described or generate the type of content you are asking for.\",\"role\":\"assistant\"}}],\"created\":0,\"id\":\"chatcmpl_unknown\",\"model\":\"hook-billing-access-real-ekan8\",\"object\":\"chat.completion\",\"usage\":{\"completion_tokens\":381,\"prompt_tokens\":139,\"total_tokens\":520}}",
+      "requestId": "019e263c-dbb6-79c0-92ab-4b6f5759457e",
+      "trace": [
+        {
+          "candidate_index": "0",
+          "retry_index": "0",
+          "status": "success",
+          "skip_reason": "",
+          "status_code": "200",
+          "provider_name": "Billing Access Ekan8",
+          "key_name": "Billing Access Ekan8 key",
+          "key_id": "00000000-0000-7000-9300-000000000203",
+          "error_type": "",
+          "error_message": "",
+          "error_code": "",
+          "prompt_tokens": "139",
+          "completion_tokens": "381",
+          "token_cost": "0.09010000",
+          "base_cost": "0.10010000",
+          "total_cost": "0.25025000",
+          "billing_multiplier": "2.50000000"
+        }
+      ],
+      "record": {
+        "status": "success",
+        "billing_status": "settled",
+        "client_status_code": "200",
+        "client_error_type": "",
+        "provider_id": "00000000-0000-7000-9300-000000000103",
+        "key_id": "00000000-0000-7000-9300-000000000203",
+        "has_failover": "false",
+        "has_retry": "false",
+        "token_cost": "0.09010000",
+        "base_cost": "0.10010000",
+        "total_cost": "0.25025000",
+        "billing_multiplier": "2.50000000",
+        "candidate_count": "1"
+      }
+    }
+  }
+]

@@ -56,8 +56,10 @@ pub struct CachedBillingGroup {
 pub struct CachedUserAccess {
     pub id: String,
     pub username: String,
+    pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
+    pub quota_mode: String,
     #[serde(default)]
     pub rate_limit_rpm: Option<i64>,
 }
@@ -97,6 +99,7 @@ pub struct CachedProviderKey {
     pub id: String,
     pub provider_id: String,
     pub name: String,
+    pub key_preview: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
     #[serde(default)]
@@ -186,8 +189,10 @@ async fn load_users(database: &Database) -> Result<Vec<CachedUserAccess>, LlmPro
         .map(|user| CachedUserAccess {
             id: user.id.0,
             username: user.username,
+            is_active: user.is_active,
             allowed_model_ids: user.allowed_model_ids,
             allowed_provider_ids: user.allowed_provider_ids,
+            quota_mode: user.quota_mode,
             rate_limit_rpm: user.rate_limit_rpm,
         })
         .collect())
@@ -264,7 +269,8 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
         .map(|record| CachedProviderKey {
             id: record.id,
             provider_id: record.provider_id,
-            name: record.name,
+            name: record.name.clone(),
+            key_preview: record.name,
             encrypted_api_key: record.encrypted_api_key,
             internal_priority: record.internal_priority,
             rpm_limit: record.rpm_limit,

@@ -119,7 +119,7 @@ fn sort_candidates(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
     demote_conversion(candidates, input);
     match input.scheduling_mode {
         SchedulingMode::FixedOrder => {}
-        SchedulingMode::CacheAffinity => apply_cache_affinity(candidates, input.affinity_key.as_deref()),
+        SchedulingMode::CacheAffinity => apply_cache_affinity(candidates, input),
         SchedulingMode::LoadBalance => apply_load_balance(candidates, input),
     }
 }
@@ -188,8 +188,9 @@ fn should_demote(candidate: &Candidate, input: &SchedulerInput) -> bool {
         .is_some_and(|provider| provider.keep_priority_on_conversion)
 }
 
-fn apply_cache_affinity(candidates: &mut Vec<Candidate>, affinity_key: Option<&str>) {
-    let Some(key_id) = affinity_key else {
+fn apply_cache_affinity(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
+    let Some(key_id) = input.affinity_key.as_deref() else {
+        apply_load_balance(candidates, input);
         return;
     };
     let Some(index) = candidates.iter().position(|candidate| candidate.key_id == key_id) else {

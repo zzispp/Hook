@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current proxy error wallet auth and scheduling paths,DONE,Relevant implementation points and semantic decisions are recorded,test -f .codex-tasks/20260514-billing-access-fixes/raw/implementation-notes.md,2026-05-14T17:52:00+08:00,0,
+2,Implement access balance wallet settlement and cold affinity fixes,DONE,Backend code compiles and has direct tests where feasible,just check,2026-05-14T19:28:00+0800,0,已补前置访问检查 成功钱包扣费流水 JSON 快照 auth cache used_quota 失效刷新 以及 cache_affinity 冷启动打散
+3,Update real validation script if expectations need exact status/body alignment,DONE,Script remains syntax-valid and checks fixed behavior,node --check .codex-tasks/20260514-billing-access-real-flow/billing_access_real_flow.mjs,2026-05-14T19:28:00+0800,0,已增加钱包流水和快照断言 并补本地旧库 request snapshot 列自检
+4,Run static and targeted automated validation,DONE,Rust checks/tests and Node syntax checks pass,just check,2026-05-14T19:28:00+0800,0,just check proxy scheduler tests backend llm_proxy tests git diff --check node --check 均通过
+5,Run real DB and upstream validation,DONE,Real flow passes or exposes remaining root-cause failures with evidence JSON,node .codex-tasks/20260514-billing-access-real-flow/billing_access_real_flow.mjs,2026-05-14T19:28:00+0800,0,真实脚本第二轮通过 14/14 场景；第一轮 Hook A 成功计费场景遇到上游 timeout 已如实暴露
+6,Record final conclusions,DONE,Progress and evidence files summarize changes and validation,test -f .codex-tasks/20260514-billing-access-fixes/raw/final-results.md,2026-05-14T19:28:00+0800,0,

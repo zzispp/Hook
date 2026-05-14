@@ -23,6 +23,8 @@ struct CachedApiToken {
     rate_limit_rpm: Option<i64>,
     #[serde(with = "rust_decimal::serde::float_option")]
     quota_limit: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float")]
+    used_quota: Decimal,
     is_active: bool,
     created_at: String,
     updated_at: String,
@@ -69,6 +71,7 @@ impl From<&ApiToken> for CachedApiToken {
             allowed_model_ids: value.allowed_model_ids.clone(),
             rate_limit_rpm: value.rate_limit_rpm,
             quota_limit: value.quota_limit,
+            used_quota: value.used_quota,
             is_active: value.is_active,
             created_at: value.created_at.clone(),
             updated_at: value.updated_at.clone(),
@@ -92,7 +95,7 @@ impl CachedApiToken {
             allowed_model_ids: self.allowed_model_ids,
             rate_limit_rpm: self.rate_limit_rpm,
             quota_limit: self.quota_limit,
-            used_quota: Decimal::ZERO,
+            used_quota: self.used_quota,
             request_count: 0,
             is_active: self.is_active,
             last_used_at: None,

@@ -3,13 +3,18 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use serde_json::json;
+use serde_json::{Value, json};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 #[derive(Debug)]
 pub enum LlmProxyError {
     Unauthorized,
     Forbidden(String),
+    CodedForbidden {
+        message: String,
+        error_type: &'static str,
+        code: &'static str,
+    },
     RateLimited(String),
     InvalidRequest(String),
     NotFound(String),
@@ -24,7 +29,7 @@ impl IntoResponse for LlmProxyError {
             "error": {
                 "message": self.message(),
                 "type": self.error_type(),
-                "code": status.as_u16()
+                "code": self.error_code(status)
             }
         });
         (status, Json(body)).into_response()
@@ -43,7 +48,7 @@ impl LlmProxyError {
     fn status(&self) -> StatusCode {
         match self {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
-            Self::Forbidden(_) => StatusCode::FORBIDDEN,
+            Self::Forbidden(_) | Self::CodedForbidden { .. } => StatusCode::FORBIDDEN,
             Self::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
             Self::InvalidRequest(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
@@ -55,6 +60,7 @@ impl LlmProxyError {
         match self {
             Self::Unauthorized => "unauthorized",
             Self::Forbidden(_) => "forbidden",
+            Self::CodedForbidden { error_type, .. } => error_type,
             Self::RateLimited(_) => "rate_limit_error",
             Self::InvalidRequest(_) => "invalid_request_error",
             Self::NotFound(_) => "not_found_error",
@@ -66,12 +72,28 @@ impl LlmProxyError {
     fn message(&self) -> String {
         match self {
             Self::Unauthorized => "missing or invalid bearer token".into(),
+            Self::CodedForbidden { message, .. } => message.clone(),
             Self::Forbidden(message)
             | Self::RateLimited(message)
             | Self::InvalidRequest(message)
             | Self::NotFound(message)
             | Self::Upstream(message)
             | Self::Infrastructure(message) => message.clone(),
+        }
+    }
+
+    fn error_code(&self, status: StatusCode) -> Value {
+        match self {
+            Self::CodedForbidden { code, .. } => Value::String((*code).into()),
+            _ => Value::Number(status.as_u16().into()),
+        }
+    }
+
+    pub fn new_api_forbidden(message: impl Into<String>, code: &'static str) -> Self {
+        Self::CodedForbidden {
+            message: message.into(),
+            error_type: "new_api_error",
+            code,
         }
     }
 }

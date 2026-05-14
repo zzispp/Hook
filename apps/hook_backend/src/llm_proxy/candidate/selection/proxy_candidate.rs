@@ -89,7 +89,7 @@ fn candidate_trace(
         endpoint_name_snapshot: endpoint.api_format.clone(),
         key_id: key.id.clone(),
         key_name_snapshot: key.name.clone(),
-        key_preview_snapshot: masked_key(&key.encrypted_api_key),
+        key_preview_snapshot: key.key_preview.clone(),
         client_api_format: request.api_format.to_owned(),
         provider_api_format: endpoint.api_format.clone(),
         needs_conversion: endpoint.api_format != request.api_format,
@@ -149,7 +149,7 @@ fn key_options(state: &LlmProxyState, parts: &CandidateParts) -> Result<Vec<Cand
             Ok(CandidateKeyOption {
                 id: key.id.clone(),
                 name: key.name.clone(),
-                key_preview: masked_key(&key.encrypted_api_key),
+                key_preview: key.key_preview.clone(),
                 api_key: state.cipher.decrypt_provider_key(&key.encrypted_api_key)?,
                 cache_ttl_minutes: key.cache_ttl_minutes,
                 rpm_limit: key.rpm_limit,
@@ -196,9 +196,4 @@ mod tests {
             rpm_limit: None,
         }
     }
-}
-
-fn masked_key(value: &str) -> String {
-    let suffix: String = value.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
-    format!("***{suffix}")
 }
