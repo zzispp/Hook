@@ -1,0 +1,135 @@
+{
+  "executed_at": "2026-05-14T10:45:11.721Z",
+  "fixtures": {
+    "group_code": "usage_real_20260514",
+    "direct_model_name": "usage-real-openai-direct",
+    "mapped_model_name": "usage-real-openai-mapped"
+  },
+  "upstream": {
+    "directModel": "gpt-5.5",
+    "mappedModel": "R-claude-opus-4-7",
+    "hookModels": [
+      "claude-haiku-4-5-20251001",
+      "claude-opus-4-7",
+      "claude-opus-4-6",
+      "claude-sonnet-4-6",
+      "gpt-5.2",
+      "gpt-5.3-codex",
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "gpt-5.5",
+      "gemini-3-flash-preview",
+      "gemini-3.1-pro-preview"
+    ],
+    "ekan8Models": [
+      "[Y]gemini-3-flash-preview",
+      "[满血]gemini-2.5-pro",
+      "[满血]gemini-3-pro-preview",
+      "[满血]gemini-3.1-pro-preview",
+      "[满血A]gemini-2.5-pro",
+      "[满血A]gemini-3-pro-preview",
+      "[满血A]gemini-3.1-pro-preview",
+      "[满血B]gemini-3-pro-preview",
+      "ccmax-claude-opus-4-6",
+      "ccmax-claude-opus-4-7",
+      "gemini-2.5-pro-cli",
+      "gemini-3-pro-preview",
+      "gemini-3.1-pro-preview",
+      "gemini-3.1-pro-preview-search",
+      "gpt-5.5",
+      "gpt-image-2",
+      "K-claude-opus-4-5",
+      "K-claude-opus-4-6",
+      "R-claude-opus-4-6",
+      "R-claude-opus-4-6-thinking",
+      "R-claude-opus-4-7",
+      "R-claude-opus-4-7-thinking",
+      "S-claude-opus-4-6",
+      "S-claude-opus-4-6-thinking",
+      "S-claude-opus-4-7",
+      "单间-claude-opus-4-6",
+      "按量-gemini-3-pro-preview",
+      "按量-gemini-3.1-pro-preview",
+      "按量K-claude-opus-4-5-20251101",
+      "按量K-claude-opus-4-6",
+      "按量K-claude-opus-4-7",
+      "按量max-claude-opus-4-6",
+      "按量max-claude-opus-4-7",
+      "按量R-claude-opus-4-6",
+      "按量R-claude-opus-4-7"
+    ]
+  },
+  "before": {
+    "direct_usage_count": 0,
+    "mapped_usage_count": 0,
+    "token_request_count": 0
+  },
+  "after": {
+    "direct_usage_count": 1,
+    "mapped_usage_count": 1,
+    "token_request_count": 2
+  },
+  "direct": {
+    "requestId": "019e2617-0365-7793-989d-9b297a95aa7f",
+    "marker": "direct-1778755502913",
+    "modelName": "usage-real-openai-direct",
+    "beforeUsageCount": 0,
+    "afterUsageCount": 1,
+    "delta": 1,
+    "providerRequestModel": "gpt-5.5",
+    "providerResponseModel": "gpt-5.5",
+    "clientResponseModel": "usage-real-openai-direct",
+    "trace": [
+      {
+        "candidate_index": "0",
+        "retry_index": "0",
+        "status": "success",
+        "skip_reason": "",
+        "status_code": "200",
+        "provider_name": "Usage Real Hook.rs",
+        "key_name": "Usage Real Hook.rs Key",
+        "endpoint_api_format": "openai_chat",
+        "client_api_format": "openai_chat",
+        "provider_api_format": "openai_chat",
+        "needs_conversion": "false",
+        "is_stream": "false",
+        "latency_ms": "3829",
+        "first_byte_time_ms": "3829"
+      }
+    ]
+  },
+  "mapped": {
+    "requestId": "019e2617-13b6-7bc0-8432-2168c35bb9ad",
+    "marker": "mapped-1778755507123",
+    "modelName": "usage-real-openai-mapped",
+    "beforeUsageCount": 0,
+    "afterUsageCount": 1,
+    "delta": 1,
+    "providerRequestModel": "R-claude-opus-4-7",
+    "providerResponseModel": "claude-opus-4-7",
+    "clientResponseModel": "usage-real-openai-mapped",
+    "trace": [
+      {
+        "candidate_index": "0",
+        "retry_index": "0",
+        "status": "success",
+        "skip_reason": "",
+        "status_code": "200",
+        "provider_name": "Usage Real Ekan8",
+        "key_name": "Usage Real Ekan8 Key",
+        "endpoint_api_format": "openai_chat",
+        "client_api_format": "openai_chat",
+        "provider_api_format": "openai_chat",
+        "needs_conversion": "false",
+        "is_stream": "false",
+        "latency_ms": "4143",
+        "first_byte_time_ms": "4143"
+      }
+    ]
+  },
+  "token": {
+    "request_count_before": 0,
+    "request_count_after": 2,
+    "request_count_delta": 2
+  }
+}

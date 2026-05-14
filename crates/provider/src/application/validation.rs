@@ -210,13 +210,9 @@ fn trim_patch(value: PatchField<String>) -> PatchField<String> {
     }
 }
 
-fn sanitize_provider_model_mapping_patch(
-    mapping: PatchField<ProviderModelMapping>,
-) -> PatchField<ProviderModelMapping> {
+fn sanitize_provider_model_mapping_patch(mapping: PatchField<ProviderModelMapping>) -> PatchField<ProviderModelMapping> {
     match mapping {
-        PatchField::Value(value) => sanitize_provider_model_mapping(Some(value))
-            .map(PatchField::Value)
-            .unwrap_or(PatchField::Null),
+        PatchField::Value(value) => sanitize_provider_model_mapping(Some(value)).map(PatchField::Value).unwrap_or(PatchField::Null),
         other => other,
     }
 }
@@ -224,10 +220,7 @@ fn sanitize_provider_model_mapping_patch(
 fn sanitize_provider_model_mapping(mapping: Option<ProviderModelMapping>) -> Option<ProviderModelMapping> {
     let mapping = mapping?;
     let name = mapping.name.trim().to_owned();
-    let reasoning_effort = mapping
-        .reasoning_effort
-        .and_then(trim_optional)
-        .map(|value| value.to_ascii_lowercase());
+    let reasoning_effort = mapping.reasoning_effort.and_then(trim_optional).map(|value| value.to_ascii_lowercase());
     if name.is_empty() {
         return None;
     }
@@ -267,10 +260,7 @@ fn endpoint_update_is_empty(input: &ProviderEndpointUpdate) -> bool {
 }
 
 fn model_binding_update_is_empty(input: &ProviderModelBindingUpdate) -> bool {
-    input.provider_model_name.is_none()
-        && input.is_active.is_none()
-        && input.provider_model_mapping.is_missing()
-        && input.config.is_missing()
+    input.provider_model_name.is_none() && input.is_active.is_none() && input.provider_model_mapping.is_missing() && input.config.is_missing()
 }
 
 fn api_key_update_is_empty(input: &ProviderApiKeyUpdate) -> bool {

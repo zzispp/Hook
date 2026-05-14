@@ -66,18 +66,14 @@ fn wrapper_text<'a>(value: &'a Value, key: &str) -> StorageResult<&'a str> {
 
 fn compress_text(text: &str) -> StorageResult<Vec<u8>> {
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-    encoder
-        .write_all(text.as_bytes())
-        .map_err(|error| StorageError::Database(error.to_string()))?;
+    encoder.write_all(text.as_bytes()).map_err(|error| StorageError::Database(error.to_string()))?;
     encoder.finish().map_err(|error| StorageError::Database(error.to_string()))
 }
 
 fn decompress_bytes(bytes: &[u8]) -> StorageResult<Vec<u8>> {
     let mut decoder = ZlibDecoder::new(bytes);
     let mut output = Vec::new();
-    decoder
-        .read_to_end(&mut output)
-        .map_err(|error| StorageError::Database(error.to_string()))?;
+    decoder.read_to_end(&mut output).map_err(|error| StorageError::Database(error.to_string()))?;
     Ok(output)
 }
 

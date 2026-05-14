@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect model usage count data flow,DONE,Request path and current usage_count write path are confirmed,rg -n "usage_count|record_usage|global_model_id" apps/hook_backend crates,2026-05-14T18:30:00+08:00,0,Confirmed frontend reads global_models.usage_count and llm_proxy only records token usage
+2,Identify root cause and define minimal fix,DONE,Root cause and target write layer are documented,test -f .codex-tasks/20260514-model-usage-count-fix/PROGRESS.md,2026-05-14T18:37:00+08:00,0,Root cause is missing global model usage persistence in llm_proxy audit success path
+3,Implement usage_count persistence and tests,DONE,Model usage_count increments on recorded model usage,cargo test -p storage model_usage -- --nocapture,2026-05-14T18:39:00+08:00,0,Added ModelStore::record_usage and storage integration tests
+4,Run final verification,DONE,Relevant backend checks pass and task artifacts are updated,cargo check -p backend,2026-05-14T18:40:00+08:00,0,cargo fmt --all and cargo check -p backend passed

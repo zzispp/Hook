@@ -5,10 +5,7 @@ use axum::{
 
 use crate::api::{
     CardCodeApiState,
-    handlers::{
-        admin_batch_status, admin_create_type, admin_generate_codes, admin_list_codes,
-        admin_list_types, admin_update_type, redeem_code,
-    },
+    handlers::{admin_batch_status, admin_create_type, admin_generate_codes, admin_list_codes, admin_list_types, admin_update_type, redeem_code},
 };
 
 pub fn create_router(state: CardCodeApiState) -> Router {

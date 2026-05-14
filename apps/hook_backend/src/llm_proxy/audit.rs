@@ -4,6 +4,7 @@ use serde_json::Value;
 use storage::{
     StorageError,
     api_token::ApiTokenUsageRecord,
+    model::{GlobalModelUsageRecord, ModelStore},
     provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch},
     setting::SettingStore,
 };
@@ -38,6 +39,7 @@ pub async fn record_scheduled_candidates(state: &LlmProxyState, selection: &Cand
 }
 
 pub async fn record_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
+    let model_usage_record = model_usage_record(&input);
     let usage_record = token_usage_record(request_id, &input, OffsetDateTime::now_utc());
     let policy = request_record_policy(state).await?;
     let store = ProviderStore::new(state.database.clone());
@@ -49,6 +51,9 @@ pub async fn record_attempt(state: &LlmProxyState, request_id: &str, input: Atte
     store.update_request_record(request_record_patch(request_id, &input, &policy)?).await?;
     if let Some(record) = usage_record? {
         state.tokens.record_usage(record).await?;
+    }
+    if let Some(record) = model_usage_record {
+        ModelStore::new(state.database.clone()).record_usage(record).await?;
     }
     Ok(())
 }
@@ -294,7 +299,7 @@ fn attempt_billing(input: &AttemptRecordInput<'_>) -> Option<provider::applicati
 }
 
 fn token_usage_record(request_id: &str, input: &AttemptRecordInput<'_>, used_at: OffsetDateTime) -> Result<Option<ApiTokenUsageRecord>, LlmProxyError> {
-    if !should_record_token_usage(input) {
+    if !should_record_successful_usage(input) {
         return Ok(None);
     }
     let Some(token_id) = input.candidate.trace.token_id.clone() else {
@@ -306,7 +311,16 @@ fn token_usage_record(request_id: &str, input: &AttemptRecordInput<'_>, used_at:
     Ok(Some(ApiTokenUsageRecord { cost, token_id, used_at }))
 }
 
-fn should_record_token_usage(input: &AttemptRecordInput<'_>) -> bool {
+fn model_usage_record(input: &AttemptRecordInput<'_>) -> Option<GlobalModelUsageRecord> {
+    if !should_record_successful_usage(input) {
+        return None;
+    }
+    Some(GlobalModelUsageRecord {
+        model_id: input.candidate.trace.global_model_id.clone(),
+    })
+}
+
+fn should_record_successful_usage(input: &AttemptRecordInput<'_>) -> bool {
     input.status == "success" && input.finished
 }
 

@@ -1,9 +1,8 @@
 use rust_decimal::Decimal;
 use types::{
     card_code::{
-        CARD_CODE_BALANCE_TYPE_GIFT, CARD_CODE_BALANCE_TYPE_RECHARGE, CARD_CODE_STATUS_ACTIVE,
-        CARD_CODE_STATUS_DISABLED, CardCodeBatchStatusPayload, CardCodeGeneratePayload,
-        CardCodeTypeCreatePayload, CardCodeTypeUpdatePayload,
+        CARD_CODE_BALANCE_TYPE_GIFT, CARD_CODE_BALANCE_TYPE_RECHARGE, CARD_CODE_STATUS_ACTIVE, CARD_CODE_STATUS_DISABLED, CardCodeBatchStatusPayload,
+        CardCodeGeneratePayload, CardCodeTypeCreatePayload, CardCodeTypeUpdatePayload,
     },
     pagination::PageRequest,
 };
@@ -89,7 +88,9 @@ fn validate_balance_type(balance_type: &str) -> CardCodeResult<()> {
 
 fn validate_code_length(length: u8) -> CardCodeResult<()> {
     if !(MIN_CODE_LENGTH..=MAX_CODE_LENGTH).contains(&length) {
-        return Err(CardCodeError::InvalidInput(format!("code_length must be between {MIN_CODE_LENGTH} and {MAX_CODE_LENGTH}")));
+        return Err(CardCodeError::InvalidInput(format!(
+            "code_length must be between {MIN_CODE_LENGTH} and {MAX_CODE_LENGTH}"
+        )));
     }
     Ok(())
 }

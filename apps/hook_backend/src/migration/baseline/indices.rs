@@ -50,12 +50,7 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         index("index_card_codes_by_batch_no", CardCodes::Table, CardCodes::BatchNo, false),
         index("index_card_codes_by_expires_at", CardCodes::Table, CardCodes::ExpiresAt, false),
         index("index_card_codes_by_used_at", CardCodes::Table, CardCodes::UsedAt, false),
-        index(
-            "index_card_codes_by_wallet_transaction",
-            CardCodes::Table,
-            CardCodes::WalletTransactionId,
-            true,
-        ),
+        index("index_card_codes_by_wallet_transaction", CardCodes::Table, CardCodes::WalletTransactionId, true),
         index("index_global_models_by_name", GlobalModels::Table, GlobalModels::Name, true),
         index("index_global_models_by_usage_count", GlobalModels::Table, GlobalModels::UsageCount, false),
         index("index_providers_by_name", Providers::Table, Providers::Name, true),

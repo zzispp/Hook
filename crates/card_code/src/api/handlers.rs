@@ -8,10 +8,9 @@ use serde::Deserialize;
 use std::net::SocketAddr;
 use types::{
     card_code::{
-        CardCodeBatchStatusPayload, CardCodeBatchStatusResponse, CardCodeGeneratePayload,
-        CardCodeGenerateResponse, CardCodeListFilters, CardCodeListResponse, CardCodeRedeemPayload,
-        CardCodeRedeemResponse, CardCodeTypeCreatePayload, CardCodeTypeListFilters,
-        CardCodeTypeListResponse, CardCodeTypeResponse, CardCodeTypeUpdatePayload,
+        CardCodeBatchStatusPayload, CardCodeBatchStatusResponse, CardCodeGeneratePayload, CardCodeGenerateResponse, CardCodeListFilters, CardCodeListResponse,
+        CardCodeRedeemPayload, CardCodeRedeemResponse, CardCodeTypeCreatePayload, CardCodeTypeListFilters, CardCodeTypeListResponse, CardCodeTypeResponse,
+        CardCodeTypeUpdatePayload,
     },
     pagination::PageRequest,
     response::ApiResponse,
@@ -65,10 +64,7 @@ pub async fn admin_update_type(
     Ok(ok(state.card_codes.update_type(&id, payload).await?.into()))
 }
 
-pub async fn admin_list_codes(
-    State(state): State<CardCodeApiState>,
-    Query(query): Query<CardCodeListQuery>,
-) -> ApiResult<ApiJson<CardCodeListResponse>> {
+pub async fn admin_list_codes(State(state): State<CardCodeApiState>, Query(query): Query<CardCodeListQuery>) -> ApiResult<ApiJson<CardCodeListResponse>> {
     let page = PageRequest::from(&query);
     Ok(ok(state.card_codes.list_codes(page, query.into()).await?))
 }

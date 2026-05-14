@@ -33,8 +33,7 @@ pub(super) async fn connect_first_upstream(
     for candidate in &selection.candidates {
         for retry_index in 0..=candidate.max_retries {
             let attempt = candidate.for_attempt(retry_index);
-            if let Err(error @ LlmProxyError::RateLimited(_)) =
-                rate_limit::claim_provider_key_limit(state, &attempt.trace.key_id, attempt.key_rpm_limit).await
+            if let Err(error @ LlmProxyError::RateLimited(_)) = rate_limit::claim_provider_key_limit(state, &attempt.trace.key_id, attempt.key_rpm_limit).await
             {
                 record_connect_error(state, selection, &attempt, retry_index, None, &error).await?;
                 last_error = Some(error);

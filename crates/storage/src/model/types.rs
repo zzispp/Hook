@@ -2,6 +2,11 @@ use rust_decimal::Decimal;
 use types::model::{PatchField, TieredPricingConfig};
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct GlobalModelUsageRecord {
+    pub model_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct GlobalModelRecordInput {
     pub name: String,
     pub display_name: String,

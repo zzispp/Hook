@@ -6,8 +6,8 @@ use types::provider::{Provider, ProviderListRequest, ProviderListResponse};
 use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
-    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput,
-    ProviderApiKeySecretRecord, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,
+    ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
     record::{
         provider_api_keys, provider_endpoints, provider_models,
         providers::{self, ActiveModel as ProviderActiveModel},

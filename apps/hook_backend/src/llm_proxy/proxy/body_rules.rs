@@ -120,12 +120,7 @@ fn apply_rule(body: &mut Value, rule: BodyRule, original_body: &Value) -> Result
             }
             append_at_path(body, &parse_path(&path)?, resolve_rule_value(&value, original_body))
         }
-        BodyRule::Insert {
-            path,
-            index,
-            value,
-            condition,
-        } => {
+        BodyRule::Insert { path, index, value, condition } => {
             if !condition_matches(condition.as_ref(), bodies)? {
                 return Ok(());
             }
@@ -178,7 +173,9 @@ fn parse_segment(segment: &str, output: &mut Vec<PathSegment>) -> Result<(), Llm
             return Err(LlmProxyError::InvalidRequest(format!("invalid provider body rule path segment: {segment}")));
         };
         if index == "*" {
-            return Err(LlmProxyError::InvalidRequest("provider body rule path does not support wildcard indexes".into()));
+            return Err(LlmProxyError::InvalidRequest(
+                "provider body rule path does not support wildcard indexes".into(),
+            ));
         }
         let index = index
             .parse::<usize>()
@@ -207,11 +204,7 @@ fn set_at_path(root: &mut Value, path: &[PathSegment], value: Value) -> Result<(
     Ok(())
 }
 
-fn ensure_parent_path_mut<'a>(
-    root: &'a mut Value,
-    path: &[PathSegment],
-    terminal: &PathSegment,
-) -> Result<&'a mut Value, LlmProxyError> {
+fn ensure_parent_path_mut<'a>(root: &'a mut Value, path: &[PathSegment], terminal: &PathSegment) -> Result<&'a mut Value, LlmProxyError> {
     if path.is_empty() {
         return Ok(root);
     }
@@ -354,9 +347,7 @@ fn resolve_rule_value(value: &Value, original_body: &Value) -> Value {
     match value {
         Value::String(text) if text == ORIGINAL_PLACEHOLDER => original_body.clone(),
         Value::Array(items) => Value::Array(items.iter().map(|item| resolve_rule_value(item, original_body)).collect()),
-        Value::Object(items) => Value::Object(
-            items.iter().map(|(key, item)| (key.clone(), resolve_rule_value(item, original_body))).collect(),
-        ),
+        Value::Object(items) => Value::Object(items.iter().map(|(key, item)| (key.clone(), resolve_rule_value(item, original_body))).collect()),
         other => other.clone(),
     }
 }
@@ -371,7 +362,7 @@ fn build_regex(pattern: &str, flags: Option<&str>) -> Result<regex::Regex, LlmPr
             other => {
                 return Err(LlmProxyError::InvalidRequest(format!(
                     "invalid provider body rule regex flag {other:?}, expected i/m/s"
-                )))
+                )));
             }
         };
     }

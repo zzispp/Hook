@@ -17,15 +17,7 @@ pub(super) async fn record_attempt_error(
     error: LlmProxyError,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<Option<Response>, LlmProxyError> {
-    record_failed_attempt(
-        state,
-        request_id,
-        candidate,
-        retry_index,
-        "request_conversion_error",
-        &error,
-    )
-    .await?;
+    record_failed_attempt(state, request_id, candidate, retry_index, "request_conversion_error", &error).await?;
     *last_error = Some(error);
     Ok(None)
 }
@@ -38,15 +30,7 @@ pub(super) async fn record_rate_limit_rejection(
     error: LlmProxyError,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<Option<Response>, LlmProxyError> {
-    record_failed_attempt(
-        state,
-        request_id,
-        candidate,
-        retry_index,
-        "provider_key_rate_limit",
-        &error,
-    )
-    .await?;
+    record_failed_attempt(state, request_id, candidate, retry_index, "provider_key_rate_limit", &error).await?;
     *last_error = Some(error);
     Ok(None)
 }

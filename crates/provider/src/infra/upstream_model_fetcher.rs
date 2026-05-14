@@ -48,10 +48,7 @@ fn build_request(client: &reqwest::Client, endpoint: &ProviderEndpoint, api_key:
             .header("anthropic-version", ANTHROPIC_VERSION)
             .build()
             .map_err(reqwest_error),
-        "gemini_chat" | "gemini_cli" => client
-            .get(gemini_models_url(&endpoint.base_url, api_key)?)
-            .build()
-            .map_err(reqwest_error),
+        "gemini_chat" | "gemini_cli" => client.get(gemini_models_url(&endpoint.base_url, api_key)?).build().map_err(reqwest_error),
         other => Err(ProviderError::InvalidInput(format!(
             "api_format does not support upstream model fetch: {other}"
         ))),
@@ -62,10 +59,7 @@ async fn parse_models_response(response: Response, api_format: &str) -> Provider
     let status = response.status();
     let text = response.text().await.map_err(reqwest_error)?;
     if !status.is_success() {
-        return Err(ProviderError::Infrastructure(format!(
-            "upstream returned {status}: {}",
-            clipped_text(&text)
-        )));
+        return Err(ProviderError::Infrastructure(format!("upstream returned {status}: {}", clipped_text(&text))));
     }
     let value = if text.trim().is_empty() {
         Value::Null
@@ -148,11 +142,7 @@ fn parsed_url(value: String) -> ProviderResult<Url> {
 
 fn clipped_text(value: &str) -> String {
     let clipped = value.chars().take(MAX_ERROR_BODY_CHARS).collect::<String>();
-    if clipped.is_empty() {
-        "(empty)".into()
-    } else {
-        clipped
-    }
+    if clipped.is_empty() { "(empty)".into() } else { clipped }
 }
 
 fn reqwest_error(error: reqwest::Error) -> ProviderError {
@@ -190,9 +180,6 @@ mod tests {
             ]
         });
 
-        assert_eq!(
-            extract_model_names(&value, "gemini_chat"),
-            vec!["gemini-2.5-flash", "gemini-2.5-pro"]
-        );
+        assert_eq!(extract_model_names(&value, "gemini_chat"), vec!["gemini-2.5-flash", "gemini-2.5-pro"]);
     }
 }

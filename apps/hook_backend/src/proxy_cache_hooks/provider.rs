@@ -5,8 +5,8 @@ use provider::application::{ProviderError, ProviderResult, ProviderUseCase};
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
     ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail,
-    RequestRecordListRequest, RequestRecordListResponse,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
+    RequestRecordListResponse,
 };
 
 use crate::llm_proxy::LlmProxyCache;

@@ -4,7 +4,7 @@ mod repository_helpers;
 mod types;
 
 pub use repository::ModelStore;
-pub use types::{GlobalModelRecordInput, GlobalModelRecordPatch};
+pub use types::{GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord};
 
 pub(super) use record::{GlobalModelRecord, ModelRecord};
 pub use record::{global_models, provider_models};

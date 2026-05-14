@@ -86,11 +86,7 @@ impl StaleKind {
     }
 }
 
-fn stale_kind(
-    record: &request_records::Model,
-    pending_cutoff: OffsetDateTime,
-    streaming_cutoff: OffsetDateTime,
-) -> Option<StaleKind> {
+fn stale_kind(record: &request_records::Model, pending_cutoff: OffsetDateTime, streaming_cutoff: OffsetDateTime) -> Option<StaleKind> {
     let anchor = record.started_at.unwrap_or(record.created_at);
     match record.status.as_str() {
         "pending" if anchor < pending_cutoff => Some(StaleKind::Pending {

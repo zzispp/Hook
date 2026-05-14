@@ -6,9 +6,7 @@ use types::provider::{
     RequestRecordListResponse,
 };
 
-use crate::application::{
-    GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher,
-};
+use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
 
 use super::validation::{
     sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request, sanitize_model_binding,
@@ -261,9 +259,7 @@ fn active_endpoints(endpoints: Vec<ProviderEndpoint>) -> Vec<ProviderEndpoint> {
     endpoints.into_iter().filter(|endpoint| endpoint.is_active).collect()
 }
 
-fn active_api_key_secrets(
-    mut keys: Vec<crate::application::ProviderApiKeySecret>,
-) -> Vec<crate::application::ProviderApiKeySecret> {
+fn active_api_key_secrets(mut keys: Vec<crate::application::ProviderApiKeySecret>) -> Vec<crate::application::ProviderApiKeySecret> {
     keys.retain(|key| key.is_active);
     keys
 }

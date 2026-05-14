@@ -28,9 +28,7 @@ async fn user_delete_removes_owned_api_tokens_before_soft_delete() {
     assert!(statements.iter().any(|sql| sql.contains("DELETE FROM \"api_tokens\"")), "{statements:?}");
     assert!(statements.iter().any(|sql| sql.contains("\"api_tokens\".\"user_id\" = $")), "{statements:?}");
     assert!(
-        statements
-            .iter()
-            .all(|sql| !sql.contains("\"api_tokens\".\"token_type\" = $")),
+        statements.iter().all(|sql| !sql.contains("\"api_tokens\".\"token_type\" = $")),
         "{statements:?}"
     );
     assert!(statements.iter().any(|sql| sql.contains("UPDATE \"users\" SET")), "{statements:?}");

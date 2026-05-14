@@ -71,9 +71,7 @@ impl LlmProxyError {
             | Self::InvalidRequest(message)
             | Self::NotFound(message)
             | Self::Upstream(message)
-            | Self::Infrastructure(message) => {
-                message.clone()
-            }
+            | Self::Infrastructure(message) => message.clone(),
         }
     }
 }
