@@ -112,8 +112,12 @@ fn success_input() -> RequestCandidateRecordInput {
         group_code: Some("default".into()),
         global_model_id: Some("gpt-4o-mini".into()),
         provider_id: Some("provider-a".into()),
+        provider_name_snapshot: Some("Provider A".into()),
         endpoint_id: Some("endpoint-a".into()),
+        endpoint_name_snapshot: Some("openai_chat".into()),
         key_id: Some("key-a".into()),
+        key_name_snapshot: Some("Key A".into()),
+        key_preview_snapshot: Some("***test".into()),
         client_api_format: "openai_chat".into(),
         provider_api_format: Some("openai_chat".into()),
         needs_conversion: false,
@@ -188,8 +192,12 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         group_code: Some("default".into()),
         global_model_id: Some("gpt-4o-mini".into()),
         provider_id: Some("provider-a".into()),
+        provider_name_snapshot: Some("Provider A".into()),
         endpoint_id: Some("endpoint-a".into()),
+        endpoint_name_snapshot: Some("openai_chat".into()),
         key_id: Some("key-a".into()),
+        key_name_snapshot: Some("Key A".into()),
+        key_preview_snapshot: Some("***test".into()),
         client_api_format: "openai_chat".into(),
         provider_api_format: Some("openai_chat".into()),
         needs_conversion: false,
@@ -227,8 +235,12 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
 
 fn no_candidate_record(mut record: storage::provider::record::request_candidates::Model) -> storage::provider::record::request_candidates::Model {
     record.provider_id = None;
+    record.provider_name_snapshot = None;
     record.endpoint_id = None;
+    record.endpoint_name_snapshot = None;
     record.key_id = None;
+    record.key_name_snapshot = None;
+    record.key_preview_snapshot = None;
     record.error_type = Some("no_candidate".into());
     record.error_message = Some("该分组下暂无 missing-model 模型可用".into());
     record
@@ -238,11 +250,19 @@ fn summary_record(status: &str) -> request_records::Model {
     request_records::Model {
         request_id: "req-1".into(),
         token_id: Some("token-1".into()),
+        user_id_snapshot: Some("user-1".into()),
+        username_snapshot: Some("hwnet".into()),
+        token_name_snapshot: Some("Token A".into()),
+        token_prefix_snapshot: Some("sk-test".into()),
         group_code: Some("default".into()),
         global_model_id: Some("gpt-4o-mini".into()),
+        model_name_snapshot: Some("gpt-4o-mini".into()),
         provider_id: Some("provider-a".into()),
+        provider_name_snapshot: Some("Provider A".into()),
         endpoint_id: Some("endpoint-a".into()),
         key_id: Some("key-a".into()),
+        provider_key_name_snapshot: Some("Key A".into()),
+        provider_key_preview_snapshot: Some("***test".into()),
         client_api_format: "openai_chat".into(),
         provider_api_format: Some("openai_chat".into()),
         request_type: "chat".into(),

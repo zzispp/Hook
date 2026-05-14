@@ -32,11 +32,19 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
     Ok(request_records::ActiveModel {
         request_id: Set(input.request_id),
         token_id: Set(input.token_id),
+        user_id_snapshot: Set(input.user_id_snapshot),
+        username_snapshot: Set(input.username_snapshot),
+        token_name_snapshot: Set(input.token_name_snapshot),
+        token_prefix_snapshot: Set(input.token_prefix_snapshot),
         group_code: Set(input.group_code),
         global_model_id: Set(input.global_model_id),
+        model_name_snapshot: Set(input.model_name_snapshot),
         provider_id: Set(input.provider_id),
+        provider_name_snapshot: Set(input.provider_name_snapshot),
         endpoint_id: Set(input.endpoint_id),
         key_id: Set(input.key_id),
+        provider_key_name_snapshot: Set(input.provider_key_name_snapshot),
+        provider_key_preview_snapshot: Set(input.provider_key_preview_snapshot),
         client_api_format: Set(input.client_api_format),
         provider_api_format: Set(input.provider_api_format),
         request_type: Set(input.request_type),
@@ -86,11 +94,20 @@ fn apply_request_record_patch(
     if let Some(provider_id) = input.provider_id {
         active.provider_id = Set(Some(provider_id));
     }
+    if let Some(provider_name) = input.provider_name_snapshot {
+        active.provider_name_snapshot = Set(Some(provider_name));
+    }
     if let Some(endpoint_id) = input.endpoint_id {
         active.endpoint_id = Set(Some(endpoint_id));
     }
     if let Some(key_id) = input.key_id {
         active.key_id = Set(Some(key_id));
+    }
+    if let Some(key_name) = input.provider_key_name_snapshot {
+        active.provider_key_name_snapshot = Set(Some(key_name));
+    }
+    if let Some(key_preview) = input.provider_key_preview_snapshot {
+        active.provider_key_preview_snapshot = Set(Some(key_preview));
     }
     if let Some(provider_api_format) = input.provider_api_format {
         active.provider_api_format = Set(Some(provider_api_format));

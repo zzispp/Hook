@@ -4,7 +4,7 @@ use types::api_token::ApiToken;
 use super::{CandidateParts, DEFAULT_MAX_RETRIES, GlobalModelRef};
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
-    cache::snapshot::CachedBillingGroup,
+    cache::snapshot::{CachedBillingGroup, CachedUserAccess},
     candidate::{CandidateEndpointOption, CandidateKeyOption, CandidateRequest, CandidateRoute, CandidateTrace, ProxyCandidate, url},
 };
 
@@ -14,11 +14,12 @@ pub(super) async fn proxy_candidates(
     request: CandidateRequest<'_>,
     global_model: &GlobalModelRef,
     group: &CachedBillingGroup,
+    token_user: Option<&CachedUserAccess>,
     parts: &[CandidateParts],
 ) -> Result<Vec<ProxyCandidate>, LlmProxyError> {
     let mut candidates = Vec::with_capacity(parts.len());
     for (index, part) in parts.iter().enumerate() {
-        candidates.push(proxy_candidate(state, token, request, global_model, group, part, index as i32).await?);
+        candidates.push(proxy_candidate(state, token, request, global_model, group, token_user, part, index as i32).await?);
     }
     Ok(candidates)
 }
@@ -29,6 +30,7 @@ async fn proxy_candidate(
     request: CandidateRequest<'_>,
     global_model: &GlobalModelRef,
     group: &CachedBillingGroup,
+    token_user: Option<&CachedUserAccess>,
     parts: &CandidateParts,
     index: i32,
 ) -> Result<ProxyCandidate, LlmProxyError> {
@@ -36,18 +38,14 @@ async fn proxy_candidate(
     let endpoint = &route.endpoints[0];
     let key = &route.keys[0];
     Ok(ProxyCandidate {
-        trace: candidate_trace(token, request, parts, index),
+        trace: candidate_trace(token, request, global_model, token_user, parts, index),
         requested_model_name: request.model_name.to_owned(),
         api_key: key.api_key.clone(),
         base_url: endpoint.base_url.clone(),
         custom_path: endpoint.custom_path.clone(),
         upstream_url: endpoint.upstream_url.clone(),
         provider_model_name: parts.model.provider_model_name.clone(),
-        reasoning_effort: parts
-            .model
-            .provider_model_mapping
-            .as_ref()
-            .and_then(|mapping| mapping.reasoning_effort.clone()),
+        reasoning_effort: parts.model.provider_model_mapping.as_ref().and_then(|mapping| mapping.reasoning_effort.clone()),
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
         price_per_request: parts.model.price_per_request.or(global_model.default_price_per_request),
@@ -66,16 +64,32 @@ async fn proxy_candidate(
     })
 }
 
-fn candidate_trace(token: &ApiToken, request: CandidateRequest<'_>, parts: &CandidateParts, index: i32) -> CandidateTrace {
+fn candidate_trace(
+    token: &ApiToken,
+    request: CandidateRequest<'_>,
+    global_model: &GlobalModelRef,
+    token_user: Option<&CachedUserAccess>,
+    parts: &CandidateParts,
+    index: i32,
+) -> CandidateTrace {
     let endpoint = &parts.endpoints[0];
     let key = &parts.keys[0];
     CandidateTrace {
         token_id: Some(token.id.clone()),
+        user_id_snapshot: token.user_id.clone(),
+        username_snapshot: token_user.map(|user| user.username.clone()),
+        token_name_snapshot: Some(token.name.clone()),
+        token_prefix_snapshot: Some(token.token_prefix.clone()),
         group_code: Some(token.group_code.clone()),
         global_model_id: parts.model.global_model_id.clone(),
+        model_name_snapshot: global_model.name.clone(),
         provider_id: parts.provider.id.clone(),
+        provider_name_snapshot: parts.provider.name.clone(),
         endpoint_id: endpoint.id.clone(),
+        endpoint_name_snapshot: endpoint.api_format.clone(),
         key_id: key.id.clone(),
+        key_name_snapshot: key.name.clone(),
+        key_preview_snapshot: masked_key(&key.encrypted_api_key),
         client_api_format: request.api_format.to_owned(),
         provider_api_format: endpoint.api_format.clone(),
         needs_conversion: endpoint.api_format != request.api_format,
@@ -115,6 +129,7 @@ fn endpoint_options(request: CandidateRequest<'_>, parts: &CandidateParts) -> Ve
         .iter()
         .map(|endpoint| CandidateEndpointOption {
             id: endpoint.id.clone(),
+            name: endpoint.api_format.clone(),
             provider_api_format: endpoint.api_format.clone(),
             base_url: endpoint.base_url.clone(),
             custom_path: endpoint.custom_path.clone(),
@@ -133,6 +148,8 @@ fn key_options(state: &LlmProxyState, parts: &CandidateParts) -> Result<Vec<Cand
         .map(|key| {
             Ok(CandidateKeyOption {
                 id: key.id.clone(),
+                name: key.name.clone(),
+                key_preview: masked_key(&key.encrypted_api_key),
                 api_key: state.cipher.decrypt_provider_key(&key.encrypted_api_key)?,
                 cache_ttl_minutes: key.cache_ttl_minutes,
                 rpm_limit: key.rpm_limit,
@@ -158,6 +175,7 @@ mod tests {
     fn endpoint(id: &str) -> CandidateEndpointOption {
         CandidateEndpointOption {
             id: id.into(),
+            name: "openai_chat".into(),
             provider_api_format: "openai_chat".into(),
             base_url: "https://example.com".into(),
             custom_path: None,
@@ -171,9 +189,16 @@ mod tests {
     fn key(id: &str) -> CandidateKeyOption {
         CandidateKeyOption {
             id: id.into(),
+            name: format!("{id}-name"),
+            key_preview: "***cret".into(),
             api_key: "secret".into(),
             cache_ttl_minutes: 5,
             rpm_limit: None,
         }
     }
+}
+
+fn masked_key(value: &str) -> String {
+    let suffix: String = value.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
+    format!("***{suffix}")
 }

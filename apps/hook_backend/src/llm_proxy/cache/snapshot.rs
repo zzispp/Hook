@@ -10,7 +10,9 @@ use storage::{
     user::UserStore,
 };
 use types::{
-    group::BillingGroupListRequest, model::TieredPricingConfig, pagination::PageSliceRequest,
+    group::BillingGroupListRequest,
+    model::TieredPricingConfig,
+    pagination::PageSliceRequest,
     provider::{ProviderModelMapping, ProviderSchedulingMode},
     user::UserListFilters,
 };
@@ -53,6 +55,7 @@ pub struct CachedBillingGroup {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CachedUserAccess {
     pub id: String,
+    pub username: String,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
     #[serde(default)]
@@ -93,6 +96,7 @@ pub struct CachedEndpoint {
 pub struct CachedProviderKey {
     pub id: String,
     pub provider_id: String,
+    pub name: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
     #[serde(default)]
@@ -181,6 +185,7 @@ async fn load_users(database: &Database) -> Result<Vec<CachedUserAccess>, LlmPro
         .into_iter()
         .map(|user| CachedUserAccess {
             id: user.id.0,
+            username: user.username,
             allowed_model_ids: user.allowed_model_ids,
             allowed_provider_ids: user.allowed_provider_ids,
             rate_limit_rpm: user.rate_limit_rpm,
@@ -259,6 +264,7 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
         .map(|record| CachedProviderKey {
             id: record.id,
             provider_id: record.provider_id,
+            name: record.name,
             encrypted_api_key: record.encrypted_api_key,
             internal_priority: record.internal_priority,
             rpm_limit: record.rpm_limit,

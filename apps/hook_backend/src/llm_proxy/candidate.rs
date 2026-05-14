@@ -40,6 +40,7 @@ pub struct CandidateRoute {
 #[derive(Clone, Debug)]
 pub struct CandidateEndpointOption {
     pub id: String,
+    pub name: String,
     pub provider_api_format: String,
     pub base_url: String,
     pub custom_path: Option<String>,
@@ -52,6 +53,8 @@ pub struct CandidateEndpointOption {
 #[derive(Clone, Debug)]
 pub struct CandidateKeyOption {
     pub id: String,
+    pub name: String,
+    pub key_preview: String,
     pub api_key: String,
     pub cache_ttl_minutes: i32,
     pub rpm_limit: Option<i32>,
@@ -60,11 +63,20 @@ pub struct CandidateKeyOption {
 #[derive(Clone, Debug)]
 pub struct CandidateTrace {
     pub token_id: Option<String>,
+    pub user_id_snapshot: Option<String>,
+    pub username_snapshot: Option<String>,
+    pub token_name_snapshot: Option<String>,
+    pub token_prefix_snapshot: Option<String>,
     pub group_code: Option<String>,
     pub global_model_id: String,
+    pub model_name_snapshot: String,
     pub provider_id: String,
+    pub provider_name_snapshot: String,
     pub endpoint_id: String,
+    pub endpoint_name_snapshot: String,
     pub key_id: String,
+    pub key_name_snapshot: String,
+    pub key_preview_snapshot: String,
     pub client_api_format: String,
     pub provider_api_format: String,
     pub needs_conversion: bool,
@@ -113,7 +125,10 @@ impl ProxyCandidate {
     fn with_route_options(&self, endpoint: &CandidateEndpointOption, key: &CandidateKeyOption) -> Self {
         let mut candidate = self.clone();
         candidate.trace.endpoint_id = endpoint.id.clone();
+        candidate.trace.endpoint_name_snapshot = endpoint.name.clone();
         candidate.trace.key_id = key.id.clone();
+        candidate.trace.key_name_snapshot = key.name.clone();
+        candidate.trace.key_preview_snapshot = key.key_preview.clone();
         candidate.trace.provider_api_format = endpoint.provider_api_format.clone();
         candidate.trace.needs_conversion = endpoint.needs_conversion;
         candidate.api_key = key.api_key.clone();
@@ -157,11 +172,20 @@ mod tests {
         ProxyCandidate {
             trace: CandidateTrace {
                 token_id: Some("token-a".into()),
+                user_id_snapshot: Some("user-a".into()),
+                username_snapshot: Some("alice".into()),
+                token_name_snapshot: Some("token-a-name".into()),
+                token_prefix_snapshot: Some("sk-a".into()),
                 group_code: Some("default".into()),
                 global_model_id: "model-a".into(),
+                model_name_snapshot: "model-a".into(),
                 provider_id: "provider-a".into(),
+                provider_name_snapshot: "provider-a-name".into(),
                 endpoint_id: "endpoint-openai".into(),
+                endpoint_name_snapshot: "openai_chat".into(),
                 key_id: "key-a-1".into(),
+                key_name_snapshot: "key-a-1-name".into(),
+                key_preview_snapshot: "***cret".into(),
                 client_api_format: "openai_chat".into(),
                 provider_api_format: "openai_chat".into(),
                 needs_conversion: false,
@@ -198,6 +222,7 @@ mod tests {
     fn endpoint(id: &str, provider_api_format: &str, needs_conversion: bool) -> CandidateEndpointOption {
         CandidateEndpointOption {
             id: id.into(),
+            name: provider_api_format.into(),
             provider_api_format: provider_api_format.into(),
             base_url: format!("https://{id}.example.com"),
             custom_path: None,
@@ -211,6 +236,8 @@ mod tests {
     fn key(id: &str, api_key: &str) -> CandidateKeyOption {
         CandidateKeyOption {
             id: id.into(),
+            name: format!("{id}-name"),
+            key_preview: "***cret".into(),
             api_key: api_key.into(),
             cache_ttl_minutes: 5,
             rpm_limit: None,

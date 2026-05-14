@@ -29,11 +29,7 @@ pub async fn enforce_request_limits(state: &LlmProxyState, token: &ApiToken) -> 
     consume_scopes(state, &scopes).await
 }
 
-pub async fn claim_provider_key_limit(
-    state: &LlmProxyState,
-    key_id: &str,
-    rpm_limit: Option<i32>,
-) -> Result<(), LlmProxyError> {
+pub async fn claim_provider_key_limit(state: &LlmProxyState, key_id: &str, rpm_limit: Option<i32>) -> Result<(), LlmProxyError> {
     let Some(limit) = normalized_i64(rpm_limit.map(i64::from)) else {
         return Ok(());
     };
@@ -100,8 +96,7 @@ async fn consume_scopes(state: &LlmProxyState, scopes: &[RateLimitScope]) -> Res
     if blocked == 0 {
         return Ok(());
     }
-    let index = usize::try_from(blocked - 1)
-        .map_err(|_| LlmProxyError::Infrastructure("rate limit script returned invalid index".into()))?;
+    let index = usize::try_from(blocked - 1).map_err(|_| LlmProxyError::Infrastructure("rate limit script returned invalid index".into()))?;
     let scope = scopes
         .get(index)
         .ok_or_else(|| LlmProxyError::Infrastructure("rate limit script returned out-of-range index".into()))?;
@@ -196,10 +191,7 @@ mod tests {
         let snapshot = snapshot(7, Some(2));
         let scopes = request_scopes(&snapshot, &token(ApiTokenType::User, Some("user-1"), Some(5)));
 
-        assert_eq!(
-            scopes,
-            vec![RateLimitScope::user("user-1", 2), RateLimitScope::token("token-1", 5.min(7))]
-        );
+        assert_eq!(scopes, vec![RateLimitScope::user("user-1", 2), RateLimitScope::token("token-1", 5.min(7))]);
     }
 
     #[test]
@@ -218,6 +210,7 @@ mod tests {
             groups: Vec::new(),
             users: vec![CachedUserAccess {
                 id: "user-1".into(),
+                username: "alice".into(),
                 allowed_model_ids: Vec::new(),
                 allowed_provider_ids: Vec::new(),
                 rate_limit_rpm: user_rate_limit_rpm,

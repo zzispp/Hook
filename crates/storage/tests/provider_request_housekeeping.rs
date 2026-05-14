@@ -2,7 +2,10 @@ use rust_decimal::Decimal;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database,
-    provider::{ProviderStore, record::{request_candidates, request_records}},
+    provider::{
+        ProviderStore,
+        record::{request_candidates, request_records},
+    },
 };
 
 #[tokio::test]
@@ -43,10 +46,7 @@ async fn request_record_storage_compresses_old_payloads() {
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
-    let changed = store
-        .compress_request_record_payloads_before(time::OffsetDateTime::now_utc())
-        .await
-        .unwrap();
+    let changed = store.compress_request_record_payloads_before(time::OffsetDateTime::now_utc()).await.unwrap();
 
     assert_eq!(changed, 2);
     let logs = connection.into_transaction_log();
@@ -96,11 +96,19 @@ fn summary_record(
     request_records::Model {
         request_id: request_id.into(),
         token_id: Some("token-1".into()),
+        user_id_snapshot: Some("user-1".into()),
+        username_snapshot: Some("hwnet".into()),
+        token_name_snapshot: Some("Token A".into()),
+        token_prefix_snapshot: Some("sk-test".into()),
         group_code: Some("default".into()),
         global_model_id: Some("gpt-5.5".into()),
+        model_name_snapshot: Some("gpt-5.5".into()),
         provider_id: Some("provider-1".into()),
+        provider_name_snapshot: Some("Provider A".into()),
         endpoint_id: Some("endpoint-1".into()),
         key_id: Some("key-1".into()),
+        provider_key_name_snapshot: Some("Key A".into()),
+        provider_key_preview_snapshot: Some("***test".into()),
         client_api_format: "openai_chat".into(),
         provider_api_format: Some("openai_chat".into()),
         request_type: "chat".into(),
@@ -155,8 +163,12 @@ fn candidate_record(
         group_code: Some("default".into()),
         global_model_id: Some("gpt-5.5".into()),
         provider_id: Some("provider-1".into()),
+        provider_name_snapshot: Some("Provider A".into()),
         endpoint_id: Some("endpoint-1".into()),
+        endpoint_name_snapshot: Some("openai_chat".into()),
         key_id: Some("key-1".into()),
+        key_name_snapshot: Some("Key A".into()),
+        key_preview_snapshot: Some("***test".into()),
         client_api_format: "openai_chat".into(),
         provider_api_format: Some("openai_chat".into()),
         needs_conversion: false,
@@ -196,11 +208,19 @@ fn stale_pending_record(now: time::OffsetDateTime) -> request_records::Model {
     request_records::Model {
         request_id: "req-stale".into(),
         token_id: Some("token-1".into()),
+        user_id_snapshot: Some("user-1".into()),
+        username_snapshot: Some("hwnet".into()),
+        token_name_snapshot: Some("Token A".into()),
+        token_prefix_snapshot: Some("sk-test".into()),
         group_code: Some("default".into()),
         global_model_id: Some("gpt-5.5".into()),
+        model_name_snapshot: Some("gpt-5.5".into()),
         provider_id: Some("provider-1".into()),
+        provider_name_snapshot: Some("Provider A".into()),
         endpoint_id: Some("endpoint-1".into()),
         key_id: Some("key-1".into()),
+        provider_key_name_snapshot: Some("Key A".into()),
+        provider_key_preview_snapshot: Some("***test".into()),
         client_api_format: "openai_chat".into(),
         provider_api_format: Some("openai_chat".into()),
         request_type: "chat".into(),

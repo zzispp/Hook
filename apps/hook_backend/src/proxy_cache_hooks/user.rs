@@ -22,6 +22,10 @@ impl ProxyCachedUserUseCase {
     async fn refresh_proxy_snapshot(&self) -> AppResult<()> {
         self.cache.refresh_scheduling_snapshot().await.map(|_| ()).map_err(cache_error)
     }
+
+    async fn bump_proxy_auth(&self) -> AppResult<()> {
+        self.cache.bump_auth_version().await.map_err(cache_error)
+    }
 }
 
 #[async_trait]
@@ -52,6 +56,7 @@ impl UserUseCase for ProxyCachedUserUseCase {
 
     async fn delete_user(&self, id: UserId) -> AppResult<()> {
         self.inner.delete_user(id).await?;
+        self.bump_proxy_auth().await?;
         self.refresh_proxy_snapshot().await
     }
 

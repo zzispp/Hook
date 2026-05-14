@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Audit current deletion and request-record flows,DONE,"Request record joins, snapshot inputs, provider deletion, token deletion, and user deletion call sites are identified","rg \"request_records|request_candidates|delete_user|delete_token|provider_name\" apps crates",2026-05-14 17:23,0,
+2,Add request-record snapshot schema and write path,DONE,"New records persist provider/key/user/token/model display fields without relying on live associations","perl -e 'alarm shift; exec @ARGV' 60 cargo check -p storage",2026-05-14 17:38,0,
+3,Update request-record read path to use snapshots,DONE,"List/detail/search return snapshot names after associated rows are removed","perl -e 'alarm shift; exec @ARGV' 60 cargo test -p storage --test provider_request_records",2026-05-14 17:38,0,
+4,Delete user tokens when deleting a user,DONE,"API user deletion removes that user's API tokens and invalidates auth cache","perl -e 'alarm shift; exec @ARGV' 60 cargo test -p user",2026-05-14 17:38,0,
+5,Run final validation,DONE,"Relevant Rust checks/tests pass within timeout","perl -e 'alarm shift; exec @ARGV' 60 cargo test -p storage --test provider_request_records && perl -e 'alarm shift; exec @ARGV' 60 cargo test -p user",2026-05-14 17:38,0,

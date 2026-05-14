@@ -9,7 +9,9 @@ use types::{
 };
 
 use crate::{
-    Database, StorageError, StorageResult, json,
+    Database, StorageError, StorageResult,
+    api_token::api_token_records,
+    json,
     rbac::role_records,
     user::record::ActiveModel as UserActiveModel,
     user::{UserColumn, UserEntity as Users},
@@ -80,11 +82,14 @@ impl UserStore {
     }
 
     pub async fn delete(&self, id: UserId) -> StorageResult<()> {
-        let record = self.find_record_by_id(&id).await?.ok_or(StorageError::NotFound)?;
+        let tx = self.database.connection().begin().await?;
+        let record = self.find_record_by_id_in_tx(&id, &tx).await?.ok_or(StorageError::NotFound)?;
+        delete_user_api_tokens(&tx, &id.0).await?;
         let mut active: UserActiveModel = record.into();
         active.is_deleted = Set(true);
         active.updated_at = Set(time::OffsetDateTime::now_utc());
-        active.update(self.database.connection()).await?;
+        active.update(&tx).await?;
+        tx.commit().await?;
         Ok(())
     }
 
@@ -225,6 +230,14 @@ async fn set_wallet_limit_mode(db: &sea_orm::DatabaseTransaction, user_id: &str,
     crate::wallet::wallet_records::Entity::update_many()
         .col_expr(crate::wallet::wallet_records::Column::LimitMode, Expr::value(wallet_limit_mode(quota_mode)))
         .filter(crate::wallet::wallet_records::Column::UserId.eq(user_id))
+        .exec(db)
+        .await?;
+    Ok(())
+}
+
+async fn delete_user_api_tokens(db: &sea_orm::DatabaseTransaction, user_id: &str) -> StorageResult<()> {
+    api_token_records::Entity::delete_many()
+        .filter(api_token_records::Column::UserId.eq(user_id))
         .exec(db)
         .await?;
     Ok(())

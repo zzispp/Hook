@@ -6,8 +6,7 @@ use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
     audit::record_scheduled_candidates,
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
-    formats,
-    rate_limit,
+    formats, rate_limit,
 };
 
 use super::{body_rules::apply_provider_body_rules, capture::RequestCapture};
@@ -80,7 +79,12 @@ fn is_streaming(body: &Value) -> bool {
     body.get("stream").and_then(Value::as_bool).unwrap_or(false)
 }
 
-fn upstream_body(body: Value, original_body: &Value, candidate: &ProxyCandidate, force_non_stream: bool) -> Result<(Value, ApiFormat, ApiFormat), LlmProxyError> {
+fn upstream_body(
+    body: Value,
+    original_body: &Value,
+    candidate: &ProxyCandidate,
+    force_non_stream: bool,
+) -> Result<(Value, ApiFormat, ApiFormat), LlmProxyError> {
     let mut body = body;
     let source = formats::parse_api_format(candidate.trace.client_api_format.as_str())?;
     let target = formats::parse_api_format(candidate.trace.provider_api_format.as_str())?;
@@ -172,11 +176,20 @@ mod tests {
         ProxyCandidate {
             trace: CandidateTrace {
                 token_id: Some("token-1".into()),
+                user_id_snapshot: Some("user-1".into()),
+                username_snapshot: Some("alice".into()),
+                token_name_snapshot: Some("token".into()),
+                token_prefix_snapshot: Some("sk-test".into()),
                 group_code: Some("default".into()),
                 global_model_id: "model-1".into(),
+                model_name_snapshot: "gpt-5.5".into(),
                 provider_id: "provider-1".into(),
+                provider_name_snapshot: "Provider".into(),
                 endpoint_id: "endpoint-1".into(),
+                endpoint_name_snapshot: provider_api_format.into(),
                 key_id: "key-1".into(),
+                key_name_snapshot: "Key".into(),
+                key_preview_snapshot: "***test".into(),
                 client_api_format: "openai_chat".into(),
                 provider_api_format: provider_api_format.into(),
                 needs_conversion: false,

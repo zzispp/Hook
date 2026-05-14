@@ -1,10 +1,12 @@
 use rust_decimal::Decimal;
 use types::{
+    api_token::{ApiToken, ApiTokenType, ModelAccessMode},
     model::TieredPricingConfig,
     provider::{ProviderModelMapping, ProviderSchedulingMode},
 };
 
 use super::*;
+use crate::llm_proxy::LlmProxyError;
 
 #[test]
 fn matching_candidate_parts_compacts_endpoint_key_product_into_provider_route() {
@@ -111,12 +113,7 @@ fn matching_candidate_parts_filters_by_user_provider_access() {
         ..snapshot_with_provider(provider_with_endpoints_and_keys())
     };
     let group = &snapshot.groups[0];
-    let user_access = CachedUserAccess {
-        id: "user-a".into(),
-        allowed_model_ids: Vec::new(),
-        allowed_provider_ids: vec!["provider-b".into()],
-        rate_limit_rpm: None,
-    };
+    let user_access = user_access("user-a", "alice", vec!["provider-b".into()]);
 
     let parts = matching_candidate_parts(
         &snapshot,
@@ -131,6 +128,30 @@ fn matching_candidate_parts_filters_by_user_provider_access() {
 
     assert_eq!(parts.len(), 1);
     assert_eq!(parts[0].provider.id, "provider-b");
+}
+
+#[test]
+fn token_user_snapshot_keeps_independent_token_owner() {
+    let snapshot = SchedulingSnapshot {
+        users: vec![user_access("user-a", "alice", Vec::new())],
+        ..snapshot_with_provider(provider_with_endpoints_and_keys())
+    };
+    let token = api_token(ApiTokenType::Independent, Some("user-a"));
+
+    let token_user = token_user_for_snapshot(&snapshot, &token).unwrap();
+
+    assert_eq!(token_user.map(|user| user.username.as_str()), Some("alice"));
+    assert!(user_access_for_token(&token, token_user).is_none());
+}
+
+#[test]
+fn token_user_snapshot_rejects_orphaned_user_token() {
+    let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
+    let token = api_token(ApiTokenType::User, Some("missing-user"));
+
+    let error = token_user_for_snapshot(&snapshot, &token).unwrap_err();
+
+    assert!(matches!(error, LlmProxyError::Forbidden(message) if message.contains("missing-user")));
 }
 
 fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnapshot {
@@ -153,6 +174,16 @@ fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnapshot {
         }],
         users: Vec::new(),
         providers: vec![provider],
+    }
+}
+
+fn user_access(id: &str, username: &str, allowed_provider_ids: Vec<String>) -> CachedUserAccess {
+    CachedUserAccess {
+        id: id.into(),
+        username: username.into(),
+        allowed_model_ids: Vec::new(),
+        allowed_provider_ids,
+        rate_limit_rpm: None,
     }
 }
 
@@ -235,6 +266,7 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
     CachedProviderKey {
         id: id.into(),
         provider_id: "provider-a".into(),
+        name: format!("{id}-name"),
         encrypted_api_key: "encrypted".into(),
         internal_priority,
         rpm_limit: None,
@@ -248,5 +280,29 @@ fn request() -> CandidateRequest<'static> {
         api_format: "openai_chat",
         model_name: "gpt-test",
         is_stream: false,
+    }
+}
+
+fn api_token(token_type: ApiTokenType, user_id: Option<&str>) -> ApiToken {
+    ApiToken {
+        id: "token-a".into(),
+        user_id: user_id.map(str::to_owned),
+        token_type,
+        name: "Token A".into(),
+        token_value: String::new(),
+        token_hash: String::new(),
+        token_prefix: "sk-test".into(),
+        group_code: "default".into(),
+        expires_at: None,
+        model_access_mode: ModelAccessMode::All,
+        allowed_model_ids: Vec::new(),
+        rate_limit_rpm: None,
+        quota_limit: None,
+        used_quota: Decimal::ZERO,
+        request_count: 0,
+        is_active: true,
+        last_used_at: None,
+        created_at: String::new(),
+        updated_at: String::new(),
     }
 }

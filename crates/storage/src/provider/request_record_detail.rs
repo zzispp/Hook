@@ -4,23 +4,20 @@ use types::provider::RequestCandidateDetail;
 
 use crate::StorageResult;
 
-use super::{record::RequestCandidateRecord, request_record_payload_codec, request_record_refs::RecordRefs};
+use super::{record::RequestCandidateRecord, request_record_payload_codec};
 
-pub(super) fn candidate_detail(candidate: RequestCandidateRecord, refs: &RecordRefs) -> StorageResult<RequestCandidateDetail> {
-    let provider = candidate.provider_id.as_ref().and_then(|id| refs.providers.get(id));
-    let endpoint = candidate.endpoint_id.as_ref().and_then(|id| refs.endpoints.get(id));
-    let key = candidate.key_id.as_ref().and_then(|id| refs.keys.get(id));
+pub(super) fn candidate_detail(candidate: RequestCandidateRecord) -> StorageResult<RequestCandidateDetail> {
     let total_tokens = total_tokens(&candidate);
     Ok(RequestCandidateDetail {
         id: candidate.id,
         request_id: candidate.request_id,
         provider_id: candidate.provider_id,
-        provider_name: provider.map(|item| item.name.clone()),
+        provider_name: candidate.provider_name_snapshot,
         endpoint_id: candidate.endpoint_id,
-        endpoint_name: endpoint.map(|item| item.api_format.clone()),
+        endpoint_name: candidate.endpoint_name_snapshot,
         key_id: candidate.key_id,
-        key_name: key.map(|item| item.name.clone()),
-        key_preview: key.map(|item| masked_key(&item.encrypted_api_key)),
+        key_name: candidate.key_name_snapshot,
+        key_preview: candidate.key_preview_snapshot,
         client_api_format: candidate.client_api_format,
         provider_api_format: candidate.provider_api_format,
         needs_conversion: candidate.needs_conversion,
@@ -66,9 +63,4 @@ pub(super) fn format_timestamp(value: TimeDateTimeWithTimeZone) -> String {
 
 fn total_tokens(candidate: &RequestCandidateRecord) -> Option<i64> {
     candidate.total_tokens.or_else(|| Some(candidate.prompt_tokens? + candidate.completion_tokens?))
-}
-
-fn masked_key(value: &str) -> String {
-    let suffix: String = value.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
-    format!("***{suffix}")
 }

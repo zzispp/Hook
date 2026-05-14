@@ -29,7 +29,8 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
     let snapshot = state.scheduling_snapshot().await?;
     let model = resolve_global_model(&snapshot, request.model_name)?;
     ensure_token_allows_model(token, &model.id)?;
-    let user_access = user_access_for_token(&snapshot, token);
+    let token_user = token_user_for_snapshot(&snapshot, token)?;
+    let user_access = user_access_for_token(token, token_user);
     ensure_user_allows_model(user_access, &model.id)?;
     let group = active_group(&snapshot, token)?;
     ensure_group_allows_model(group, &model.id)?;
@@ -59,7 +60,7 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         affinity_key,
         snapshot.scheduling_mode,
     )?;
-    let candidates = proxy_candidates(state, token, request, &model, group, &ordered).await?;
+    let candidates = proxy_candidates(state, token, request, &model, group, token_user, &ordered).await?;
     Ok(CandidateSelection { request_id, candidates })
 }
 
@@ -252,12 +253,25 @@ fn provider_allowed(group: &CachedBillingGroup, user_access: Option<&CachedUserA
         && user_access.is_none_or(|access| ids_allow(&access.allowed_provider_ids, &provider.id))
 }
 
-fn user_access_for_token<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToken) -> Option<&'a CachedUserAccess> {
+fn token_user_for_snapshot<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToken) -> Result<Option<&'a CachedUserAccess>, LlmProxyError> {
+    let Some(user_id) = token.user_id.as_ref() else {
+        if token.token_type == ApiTokenType::User {
+            return Err(LlmProxyError::Forbidden(format!("user token missing user id: {}", token.id)));
+        }
+        return Ok(None);
+    };
+    let user = snapshot.users.iter().find(|user| user.id == *user_id);
+    if token.token_type == ApiTokenType::User && user.is_none() {
+        return Err(LlmProxyError::Forbidden(format!("token user is not active: {user_id}")));
+    }
+    Ok(user)
+}
+
+fn user_access_for_token<'a>(token: &ApiToken, token_user: Option<&'a CachedUserAccess>) -> Option<&'a CachedUserAccess> {
     if token.token_type != ApiTokenType::User {
         return None;
     }
-    let user_id = token.user_id.as_ref()?;
-    snapshot.users.iter().find(|user| user.id == *user_id)
+    token_user
 }
 
 fn key_allowed(key: &CachedProviderKey) -> bool {

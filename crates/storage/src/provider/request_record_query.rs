@@ -11,22 +11,19 @@ use crate::{
 
 use super::{
     request_record_detail::{candidate_detail, detail_payload, format_timestamp},
-    request_record_refs::{RecordRefs, load_record_refs, load_refs},
     request_record_summary::DEFAULT_COST_CURRENCY,
 };
 
 pub async fn list_request_records(store: &super::ProviderStore, request: RequestRecordListRequest) -> StorageResult<RequestRecordListResponse> {
     let total = count_summary_records(store, &request).await?;
     let summaries = list_summary_records(store, &request).await?;
-    let refs = load_record_refs(store, &summaries).await?;
-    let records = summaries.into_iter().map(|record| summary_record(record, &refs)).collect();
+    let records = summaries.into_iter().map(summary_record).collect();
     Ok(RequestRecordListResponse { records, total })
 }
 
 pub async fn list_active_request_records(store: &super::ProviderStore, request: ActiveRequestRecordRequest) -> StorageResult<ActiveRequestRecordResponse> {
     let summaries = active_summary_records(store, &request.ids).await?;
-    let refs = load_record_refs(store, &summaries).await?;
-    let records = summaries.into_iter().map(|record| summary_record(record, &refs)).collect();
+    let records = summaries.into_iter().map(summary_record).collect();
     Ok(ActiveRequestRecordResponse { records })
 }
 
@@ -41,20 +38,12 @@ pub async fn get_request_record(store: &super::ProviderStore, request_id: &str) 
         .order_by_asc(request_candidates::Column::RetryIndex)
         .all(store.connection())
         .await?;
-    let refs = if candidates.is_empty() {
-        load_record_refs(store, std::slice::from_ref(&summary)).await?
-    } else {
-        load_refs(store, &candidates).await?
-    };
-    let record = summary_record(summary.clone(), &refs);
+    let record = summary_record(summary.clone());
     let request_headers = detail_payload(summary.request_headers)?;
     let request_body = detail_payload(summary.request_body)?;
     let client_response_headers = detail_payload(summary.client_response_headers)?;
     let client_response_body = detail_payload(summary.client_response_body)?;
-    let details = candidates
-        .into_iter()
-        .map(|candidate| candidate_detail(candidate, &refs))
-        .collect::<StorageResult<Vec<_>>>()?;
+    let details = candidates.into_iter().map(candidate_detail).collect::<StorageResult<Vec<_>>>()?;
     Ok(RequestRecordDetail {
         record,
         candidates: details,
@@ -84,7 +73,7 @@ async fn active_summary_records(store: &super::ProviderStore, ids: &[String]) ->
 
 async fn count_summary_records(store: &super::ProviderStore, request: &RequestRecordListRequest) -> StorageResult<u64> {
     let filters = FilterSql::from_request(request);
-    let sql = format!("SELECT COUNT(*) AS total FROM request_records r {} {}", search_joins(), filters.where_clause);
+    let sql = format!("SELECT COUNT(*) AS total FROM request_records r {}", filters.where_clause);
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, filters.values);
     let row = store
         .connection()
@@ -100,8 +89,7 @@ async fn list_summary_records(store: &super::ProviderStore, request: &RequestRec
     let limit = filters.push(pagination_value("limit", request.limit)?);
     let offset = filters.push(pagination_value("skip", request.skip)?);
     let sql = format!(
-        "SELECT r.* FROM request_records r {} {} ORDER BY r.created_at DESC, r.request_id DESC LIMIT {limit} OFFSET {offset}",
-        search_joins(),
+        "SELECT r.* FROM request_records r {} ORDER BY r.created_at DESC, r.request_id DESC LIMIT {limit} OFFSET {offset}",
         filters.where_clause
     );
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, filters.values);
@@ -111,27 +99,22 @@ async fn list_summary_records(store: &super::ProviderStore, request: &RequestRec
         .map_err(StorageError::from)
 }
 
-fn summary_record(record: RequestRecordSummaryRecord, refs: &RecordRefs) -> RequestRecord {
-    let token = record.token_id.as_ref().and_then(|id| refs.tokens.get(id));
-    let user = token.and_then(|item| item.user_id.as_ref()).and_then(|id| refs.users.get(id));
-    let provider = record.provider_id.as_ref().and_then(|id| refs.providers.get(id));
-    let key = record.key_id.as_ref().and_then(|id| refs.keys.get(id));
-    let model = record.global_model_id.as_ref().and_then(|id| refs.models.get(id));
+fn summary_record(record: RequestRecordSummaryRecord) -> RequestRecord {
     RequestRecord {
         request_id: record.request_id,
         created_at: format_timestamp(record.created_at),
-        user_id: token.and_then(|item| item.user_id.clone()),
-        username: user.map(|item| item.username.clone()),
+        user_id: record.user_id_snapshot,
+        username: record.username_snapshot,
         token_id: record.token_id,
-        token_name: token.map(|item| item.name.clone()),
-        token_prefix: token.map(|item| item.token_prefix.clone()),
+        token_name: record.token_name_snapshot,
+        token_prefix: record.token_prefix_snapshot,
         group_code: record.group_code,
         global_model_id: record.global_model_id.clone(),
-        model_name: model.map(|item| item.name.clone()).or(record.global_model_id),
+        model_name: record.model_name_snapshot.or(record.global_model_id),
         provider_id: record.provider_id,
-        provider_name: provider.map(|item| item.name.clone()),
-        provider_key_name: key.map(|item| item.name.clone()),
-        provider_key_preview: key.map(|item| masked_key(&item.encrypted_api_key)),
+        provider_name: record.provider_name_snapshot,
+        provider_key_name: record.provider_key_name_snapshot,
+        provider_key_preview: record.provider_key_preview_snapshot,
         client_api_format: record.client_api_format,
         provider_api_format: record.provider_api_format,
         request_type: record.request_type,
@@ -160,13 +143,6 @@ fn summary_record(record: RequestRecordSummaryRecord, refs: &RecordRefs) -> Requ
         total_latency_ms: record.total_latency_ms,
         candidate_count: record.candidate_count.try_into().unwrap_or(0),
     }
-}
-
-fn search_joins() -> &'static str {
-    "LEFT JOIN api_tokens t ON t.id = r.token_id \
-     LEFT JOIN users u ON u.id = t.user_id \
-     LEFT JOIN global_models m ON m.id = r.global_model_id \
-     LEFT JOIN providers p ON p.id = r.provider_id"
 }
 
 struct FilterSql {
@@ -246,11 +222,13 @@ fn add_search_filter(filters: &mut Vec<String>, params: &mut SqlParams, value: O
 fn search_conditions(placeholder: &str) -> Vec<String> {
     [
         "LOWER(r.request_id)",
-        "LOWER(COALESCE(u.username, ''))",
-        "LOWER(COALESCE(m.name, ''))",
-        "LOWER(COALESCE(p.name, ''))",
-        "LOWER(COALESCE(t.name, ''))",
-        "LOWER(COALESCE(t.token_prefix, ''))",
+        "LOWER(COALESCE(r.user_id_snapshot, ''))",
+        "LOWER(COALESCE(r.username_snapshot, ''))",
+        "LOWER(COALESCE(r.token_name_snapshot, ''))",
+        "LOWER(COALESCE(r.token_prefix_snapshot, ''))",
+        "LOWER(COALESCE(r.model_name_snapshot, ''))",
+        "LOWER(COALESCE(r.provider_name_snapshot, ''))",
+        "LOWER(COALESCE(r.provider_key_name_snapshot, ''))",
     ]
     .into_iter()
     .map(|column| format!("{column} LIKE {placeholder}"))
@@ -266,11 +244,6 @@ fn where_clause(filters: Vec<String>) -> String {
 
 fn non_empty(value: Option<&str>) -> Option<&str> {
     value.map(str::trim).filter(|value| !value.is_empty())
-}
-
-fn masked_key(value: &str) -> String {
-    let suffix: String = value.chars().rev().take(4).collect::<Vec<_>>().into_iter().rev().collect();
-    format!("***{suffix}")
 }
 
 fn pagination_value(field: &str, value: u64) -> StorageResult<i64> {
