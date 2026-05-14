@@ -2635,6 +2635,7 @@ dependencies = [
  "axum",
  "hex",
  "rbac",
+ "reqwest",
  "ring",
  "rust_decimal",
  "serde",

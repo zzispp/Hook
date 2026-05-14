@@ -3,20 +3,20 @@
     "label": "fixed order exact non-stream and stream",
     "ok": true,
     "evidence": [
-      "019e2450-6bca-7eb0-a41d-d810c871bd85",
-      "019e2450-7dce-7670-9f8b-dc2a75aea193",
-      "019e2450-8fee-7922-b7c2-2197dbbe0f2e",
-      "019e2450-9dc7-77e3-ad4f-46dccb151b44"
+      "019e254d-4f25-7cf1-9525-869a9e9d3837",
+      "019e254d-673c-79b0-b179-48a25800b6d6",
+      "019e254d-7bad-7df0-8708-964b7759c4f4",
+      "019e254d-92e9-7f81-9f3d-ebd56583d91a"
     ]
   },
   {
     "label": "user provider and model allow matrix",
     "ok": true,
     "evidence": {
-      "openai": "019e2450-b506-7e40-b929-9b7ed2179c72",
-      "claude": "019e2450-c8a4-7e81-9996-f53587229cf8",
-      "gemini": "019e2450-da2c-73d1-b405-37bc00d1794d",
-      "claudeUnavailable": false
+      "openai": "019e254d-a289-7a73-a26d-139ef55aa949",
+      "claude": "019e254d-bcbc-7bb1-ba4d-4fbba4609b4f",
+      "gemini": "019e254d-c064-7113-955f-248a721dcce2",
+      "claudeUnavailable": true
     }
   },
   {
@@ -25,7 +25,7 @@
     "evidence": {
       "modelDenied": {
         "status": 403,
-        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e242a-4bc6-75a2-9f56-00f2f4cb8b05\",\"type\":\"forbidden\"}}"
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e24fe-7cbf-71e3-8982-13af42b6250a\",\"type\":\"forbidden\"}}"
       },
       "providerDenied": {
         "status": 404,
@@ -33,7 +33,7 @@
       },
       "modelOnlyDenied": {
         "status": 403,
-        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e242a-4bc6-75a2-9f56-00f2f4cb8b05\",\"type\":\"forbidden\"}}"
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e24fe-7cbf-71e3-8982-13af42b6250a\",\"type\":\"forbidden\"}}"
       }
     }
   },
@@ -41,16 +41,16 @@
     "label": "route key failover and skipped candidates",
     "ok": true,
     "evidence": {
-      "requestId": "019e2451-0c22-7b20-9d5e-4e7421b71ae2",
+      "requestId": "019e254e-0972-7182-8eda-6f2d4bc05ddd",
       "attempts": 2,
-      "claudeUnavailable": false
+      "claudeUnavailable": true
     }
   },
   {
     "label": "route endpoint fallback conversion",
     "ok": true,
     "evidence": {
-      "requestId": "019e2451-20b2-72a0-a03b-f14980dab9b0",
+      "requestId": "019e254e-0d29-7053-9c75-f2562bc32054",
       "endpoint": "openai_cli",
       "attempts": 3
     }
@@ -59,7 +59,7 @@
     "label": "provider failover",
     "ok": true,
     "evidence": {
-      "requestId": "019e2451-448e-7d70-bf56-b64cab417a3d",
+      "requestId": "019e254e-1fe3-7c01-9e4c-d9a4c0664b8e",
       "attempts": 3
     }
   },
@@ -67,7 +67,7 @@
     "label": "cache affinity",
     "ok": true,
     "evidence": {
-      "requestId": "019e2451-a64b-79a2-b7ed-33c181a13066",
+      "requestId": "019e254e-3c93-7490-bfe1-b315f6c11900",
       "key": "Route Hook secondary"
     }
   },
@@ -86,22 +86,20 @@
     "ok": true,
     "evidence": {
       "requestIds": [
-        "019e2453-8f7f-7353-ac0b-3b0eed0f3d49",
-        "019e2453-a023-72d2-9593-555a47db883b",
-        "019e2453-afae-7851-aed8-7276c3a59a40",
-        "019e2453-dfec-7803-a746-94dd200f5a5c",
-        "019e2454-04c1-7901-831d-8b337a79b7e6",
-        "019e2454-24f9-7861-b15f-803a0cbbedf8",
-        "019e2454-3740-76d3-a7c3-48737d9ea906"
+        "019e254f-dff5-7081-80d3-ea285591ac3b",
+        "019e2551-08eb-7df1-a2b5-d120f42c10d3",
+        "019e2551-3f1e-7431-8de4-aba78756b295",
+        "019e2551-5a1a-7ba0-b566-1cf7d8a75d41",
+        "019e2551-698d-7661-be29-262a198f5f78"
       ],
-      "claudeUnavailable": false
+      "claudeUnavailable": true
     }
   },
   {
     "label": "structured upstream error capture",
     "ok": true,
     "evidence": {
-      "requestId": "019e2454-6077-7c81-91db-12e91eef0d44",
+      "requestId": "019e2551-7670-7190-9fc7-70bad5497a45",
       "errorCode": "invalid_value",
       "errorParam": "input[0]"
     }
@@ -110,7 +108,7 @@
     "label": "client cancelled stream recording",
     "ok": true,
     "evidence": {
-      "requestId": "019e2454-63d0-72e3-beaa-1754a0160126",
+      "requestId": "019e2551-7896-76f3-afd9-1db91483d737",
       "status": "cancelled"
     }
   },
@@ -118,15 +116,15 @@
     "label": "payload compression retention",
     "ok": true,
     "evidence": {
-      "requestId": "019e2450-6bca-7eb0-a41d-d810c871bd85"
+      "requestId": "019e254d-4f25-7cf1-9525-869a9e9d3837"
     }
   },
   {
     "label": "stale pending and streaming sweep",
     "ok": true,
     "evidence": {
-      "pending": "019e2454-7dd2-7a41-9ec7-35b719db790b",
-      "streaming": "019e2454-9b2c-7a12-9f18-a0d88fd11d57"
+      "pending": "019e2551-8d1a-7f20-ae27-4ce5ecb29513",
+      "streaming": "019e2551-a0a0-7321-9563-c48462d7b72b"
     }
   },
   {
@@ -145,8 +143,46 @@
     "ok": true,
     "evidence": {
       "total": 124,
-      "cancelled": "019e2454-63d0-72e3-beaa-1754a0160126",
-      "failed": "019e2454-6077-7c81-91db-12e91eef0d44"
+      "cancelled": "019e2551-7896-76f3-afd9-1db91483d737",
+      "failed": "019e2551-7670-7190-9fc7-70bad5497a45"
+    }
+  },
+  {
+    "label": "provider upstream model fetch api",
+    "ok": true,
+    "evidence": {
+      "openai": [
+        "gpt-5.5",
+        "gpt-5.4-mini"
+      ],
+      "claude": [
+        "R-claude-opus-4-7",
+        "ccmax-claude-opus-4-7"
+      ],
+      "gemini": [
+        "gemini-3.1-pro-preview",
+        "[满血]gemini-3.1-pro-preview"
+      ]
+    }
+  },
+  {
+    "label": "mapped upstream runtime and cache rebuild",
+    "ok": true,
+    "evidence": {
+      "fetch": [
+        "R-claude-opus-4-7",
+        "ccmax-claude-opus-4-7"
+      ],
+      "nonStream": {
+        "requestId": "019e2551-fccf-7c53-a575-9a4eb10df08f",
+        "upstreamModel": "R-claude-opus-4-7",
+        "responseModel": "gpt-5.5"
+      },
+      "stream": {
+        "requestId": "019e2552-0bde-77a3-8d91-9d5d87d0ec2e",
+        "upstreamModel": "ccmax-claude-opus-4-7",
+        "traceModel": "gpt-5.5"
+      }
     }
   }
 ]

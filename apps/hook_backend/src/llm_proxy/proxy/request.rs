@@ -1,5 +1,5 @@
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
-use serde_json::Value;
+use serde_json::{Map, Value};
 use types::api_token::ApiToken;
 
 use crate::llm_proxy::{
@@ -9,7 +9,7 @@ use crate::llm_proxy::{
     formats,
 };
 
-use super::capture::RequestCapture;
+use super::{body_rules::apply_provider_body_rules, capture::RequestCapture};
 
 pub(super) struct PreparedProxyRequest {
     pub(super) request_id: String,
@@ -58,7 +58,7 @@ pub(super) async fn prepare_proxy_request(
 
 pub(super) fn attempt_payload(body: Value, candidate: &ProxyCandidate, force_non_stream: bool) -> Result<AttemptPayload, LlmProxyError> {
     let original_body = body.clone();
-    let (body, source_format, target_format) = upstream_body(body, candidate, force_non_stream)?;
+    let (body, source_format, target_format) = upstream_body(body, &original_body, candidate, force_non_stream)?;
     Ok(AttemptPayload {
         body,
         original_body,
@@ -78,7 +78,7 @@ fn is_streaming(body: &Value) -> bool {
     body.get("stream").and_then(Value::as_bool).unwrap_or(false)
 }
 
-fn upstream_body(body: Value, candidate: &ProxyCandidate, force_non_stream: bool) -> Result<(Value, ApiFormat, ApiFormat), LlmProxyError> {
+fn upstream_body(body: Value, original_body: &Value, candidate: &ProxyCandidate, force_non_stream: bool) -> Result<(Value, ApiFormat, ApiFormat), LlmProxyError> {
     let mut body = body;
     let source = formats::parse_api_format(candidate.trace.client_api_format.as_str())?;
     let target = formats::parse_api_format(candidate.trace.provider_api_format.as_str())?;
@@ -88,6 +88,8 @@ fn upstream_body(body: Value, candidate: &ProxyCandidate, force_non_stream: bool
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
     }
     rewrite_upstream_body(&mut body, candidate, force_non_stream, target)?;
+    apply_reasoning_effort(&mut body, candidate, target)?;
+    apply_provider_body_rules(&mut body, &candidate.body_rules, original_body)?;
     Ok((body, source, target))
 }
 
@@ -104,4 +106,101 @@ fn rewrite_upstream_body(body: &mut Value, candidate: &ProxyCandidate, force_non
         object.remove("stream");
     }
     Ok(())
+}
+
+fn apply_reasoning_effort(body: &mut Value, candidate: &ProxyCandidate, target: ApiFormat) -> Result<(), LlmProxyError> {
+    let Some(reasoning_effort) = candidate.reasoning_effort.as_deref() else {
+        return Ok(());
+    };
+    let object = body
+        .as_object_mut()
+        .ok_or_else(|| LlmProxyError::InvalidRequest("request body must be a JSON object".into()))?;
+    match target {
+        ApiFormat::OpenAiChat => {
+            object.insert("reasoning_effort".into(), Value::String(reasoning_effort.to_owned()));
+            Ok(())
+        }
+        ApiFormat::OpenAiResponses => {
+            reasoning_object(object)?.insert("effort".into(), Value::String(reasoning_effort.to_owned()));
+            Ok(())
+        }
+        _ => Err(LlmProxyError::InvalidRequest(format!(
+            "reasoning_effort override is not supported for provider format {}",
+            candidate.trace.provider_api_format
+        ))),
+    }
+}
+
+fn reasoning_object(object: &mut Map<String, Value>) -> Result<&mut Map<String, Value>, LlmProxyError> {
+    let value = object.entry("reasoning").or_insert_with(|| Value::Object(Map::new()));
+    value
+        .as_object_mut()
+        .ok_or_else(|| LlmProxyError::InvalidRequest("request field reasoning must be a JSON object".into()))
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+    use serde_json::json;
+    use types::model::TieredPricingConfig;
+
+    use super::apply_reasoning_effort;
+    use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
+    use proxy::format_conversion::ApiFormat;
+
+    #[test]
+    fn reasoning_effort_override_sets_openai_chat_field() {
+        let mut body = json!({"model": "gpt-5.5"});
+
+        apply_reasoning_effort(&mut body, &candidate("openai_chat"), ApiFormat::OpenAiChat).unwrap();
+
+        assert_eq!(body["reasoning_effort"], "high");
+    }
+
+    #[test]
+    fn reasoning_effort_override_sets_openai_responses_nested_field() {
+        let mut body = json!({"model": "gpt-5.5"});
+
+        apply_reasoning_effort(&mut body, &candidate("openai_cli"), ApiFormat::OpenAiResponses).unwrap();
+
+        assert_eq!(body["reasoning"]["effort"], "high");
+    }
+
+    fn candidate(provider_api_format: &str) -> ProxyCandidate {
+        ProxyCandidate {
+            trace: CandidateTrace {
+                token_id: Some("token-1".into()),
+                group_code: Some("default".into()),
+                global_model_id: "model-1".into(),
+                provider_id: "provider-1".into(),
+                endpoint_id: "endpoint-1".into(),
+                key_id: "key-1".into(),
+                client_api_format: "openai_chat".into(),
+                provider_api_format: provider_api_format.into(),
+                needs_conversion: false,
+                is_stream: false,
+                candidate_index: 0,
+            },
+            requested_model_name: "gpt-5.5".into(),
+            api_key: "secret".into(),
+            base_url: "https://example.com".into(),
+            custom_path: None,
+            upstream_url: "https://example.com/v1/chat/completions".into(),
+            provider_model_name: "upstream-model".into(),
+            reasoning_effort: Some("high".into()),
+            header_rules: None,
+            body_rules: None,
+            price_per_request: None,
+            tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
+            billing_multiplier: Decimal::ONE,
+            max_retries: 0,
+            request_timeout_seconds: None,
+            stream_first_byte_timeout_seconds: None,
+            cache_ttl_minutes: 5,
+            route: CandidateRoute {
+                endpoints: Vec::new(),
+                keys: Vec::new(),
+            },
+        }
+    }
 }

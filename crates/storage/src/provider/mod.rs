@@ -16,9 +16,9 @@ mod types;
 
 pub use repository::ProviderStore;
 pub use types::{
-    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput,
-    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput,
-    RequestRecordRecordPatch, StaleRequestSweepReport,
+    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,
+    ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestCandidateRecordInput,
+    RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch, StaleRequestSweepReport,
 };
 
 pub(super) use record::{ProviderEndpointRecord, ProviderModelRecord, ProviderRecord};

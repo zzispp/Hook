@@ -19,6 +19,7 @@ import {
 } from '../20260513-user-access-real-flow/lib/user_access_fixtures.mjs';
 import { restartBackend, startBackend, stopBackend } from './lib/backend_session.mjs';
 import { adminSignIn } from './lib/request_record_real_client.mjs';
+import { mappedOpenAiRuntime, upstreamModelFetch } from './lib/request_record_real_mapping_scenarios.mjs';
 import {
   cacheAffinity,
   fixedOrderRoutes,
@@ -106,6 +107,8 @@ async function runScenarios(modelIds) {
   await step('stale pending and streaming sweep', () => staleSweep(state));
   await step('100 concurrent mixed requests', () => highConcurrency(state, modelIds));
   await step('request record list and detail visibility', () => requestRecordVisibility(state, modelIds));
+  await step('provider upstream model fetch api', () => upstreamModelFetch(state, modelIds));
+  await step('mapped upstream runtime and cache rebuild', () => mappedOpenAiRuntime(state, modelIds));
 }
 
 async function step(label, action) {

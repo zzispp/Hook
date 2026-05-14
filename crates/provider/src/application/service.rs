@@ -2,10 +2,13 @@ use async_trait::async_trait;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
     ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
+    RequestRecordListResponse,
 };
 
-use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher};
+use crate::application::{
+    GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher,
+};
 
 use super::validation::{
     sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request, sanitize_model_binding,
@@ -15,29 +18,37 @@ use super::validation::{
 
 const MAX_REQUEST_RECORD_LIMIT: u64 = 100;
 
-pub struct ProviderService<R, M, C> {
+pub struct ProviderService<R, M, C, F> {
     repository: R,
     models: M,
     cipher: C,
+    fetcher: F,
 }
 
-impl<R, M, C> ProviderService<R, M, C>
+impl<R, M, C, F> ProviderService<R, M, C, F>
 where
     R: ProviderRepository,
     M: GlobalModelCatalog,
     C: SecretCipher,
+    F: UpstreamModelFetcher,
 {
-    pub const fn new(repository: R, models: M, cipher: C) -> Self {
-        Self { repository, models, cipher }
+    pub const fn new(repository: R, models: M, cipher: C, fetcher: F) -> Self {
+        Self {
+            repository,
+            models,
+            cipher,
+            fetcher,
+        }
     }
 }
 
 #[async_trait]
-impl<R, M, C> ProviderUseCase for ProviderService<R, M, C>
+impl<R, M, C, F> ProviderUseCase for ProviderService<R, M, C, F>
 where
     R: ProviderRepository,
     M: GlobalModelCatalog,
     C: SecretCipher,
+    F: UpstreamModelFetcher,
 {
     async fn create_provider(&self, input: ProviderCreate) -> ProviderResult<Provider> {
         let input = sanitize_create(input);
@@ -103,6 +114,33 @@ where
         self.repository.list_api_keys(provider_id).await
     }
 
+    async fn fetch_upstream_models(&self, provider_id: &str) -> ProviderResult<ProviderUpstreamModelsResponse> {
+        self.ensure_provider(provider_id).await?;
+        let endpoints = active_endpoints(self.repository.list_endpoints(provider_id).await?);
+        if endpoints.is_empty() {
+            return Err(ProviderError::InvalidInput("provider has no active endpoint".into()));
+        }
+        let keys = active_api_key_secrets(self.repository.list_api_key_secrets(provider_id).await?);
+        if keys.is_empty() {
+            return Err(ProviderError::InvalidInput("provider has no active API key".into()));
+        }
+
+        let mut errors = Vec::new();
+        for endpoint in endpoints {
+            for key in &keys {
+                let decrypted = self.cipher.decrypt_provider_key(&key.encrypted_api_key)?;
+                match self.fetcher.fetch_upstream_models(&endpoint, &decrypted).await {
+                    Ok(response) => return Ok(response),
+                    Err(error) => errors.push(format!("{} / {}: {error}", endpoint.api_format, key.name)),
+                }
+            }
+        }
+        Err(ProviderError::Infrastructure(format!(
+            "failed to fetch upstream models: {}",
+            errors.join(" | ")
+        )))
+    }
+
     async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyUpdate) -> ProviderResult<ProviderApiKey> {
         self.ensure_provider(provider_id).await?;
         let input = sanitize_api_key_update(input);
@@ -159,11 +197,12 @@ where
     }
 }
 
-impl<R, M, C> ProviderService<R, M, C>
+impl<R, M, C, F> ProviderService<R, M, C, F>
 where
     R: ProviderRepository,
     M: GlobalModelCatalog,
     C: SecretCipher,
+    F: UpstreamModelFetcher,
 {
     async fn ensure_provider(&self, provider_id: &str) -> ProviderResult<()> {
         self.repository.find_provider(provider_id).await?.ok_or(ProviderError::NotFound)?;
@@ -216,4 +255,15 @@ fn sanitize_active_request_record_request(request: ActiveRequestRecordRequest) -
     ids.sort();
     ids.dedup();
     ActiveRequestRecordRequest { ids }
+}
+
+fn active_endpoints(endpoints: Vec<ProviderEndpoint>) -> Vec<ProviderEndpoint> {
+    endpoints.into_iter().filter(|endpoint| endpoint.is_active).collect()
+}
+
+fn active_api_key_secrets(
+    mut keys: Vec<crate::application::ProviderApiKeySecret>,
+) -> Vec<crate::application::ProviderApiKeySecret> {
+    keys.retain(|key| key.is_active);
+    keys
 }

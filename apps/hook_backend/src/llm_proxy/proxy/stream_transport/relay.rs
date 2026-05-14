@@ -13,7 +13,7 @@ use super::{
 use crate::llm_proxy::{
     LlmProxyError,
     audit::TokenUsage,
-    proxy::{transport, usage},
+    proxy::{response_model::rewrite_response_model_value, transport, usage},
 };
 
 type DownstreamItem = Result<Bytes, std::io::Error>;
@@ -24,6 +24,7 @@ pub(super) struct StreamRelay {
     source_format: ApiFormat,
     target_format: ApiFormat,
     needs_conversion: bool,
+    rewrite_model: bool,
     conversion: StreamConversionState,
     buffer: Vec<u8>,
     pending: VecDeque<Bytes>,
@@ -43,12 +44,14 @@ pub(super) async fn next_body_item(mut relay: StreamRelay) -> Option<(Downstream
 impl StreamRelay {
     pub(super) fn new(context: StreamAttemptContext, upstream: UpstreamStream, source_format: ApiFormat, target_format: ApiFormat) -> Self {
         let needs_conversion = context.candidate.trace.needs_conversion;
+        let rewrite_model = context.candidate.provider_model_name != context.candidate.requested_model_name;
         Self {
             context,
             upstream,
             source_format,
             target_format,
             needs_conversion,
+            rewrite_model,
             conversion: StreamConversionState::default(),
             buffer: Vec::new(),
             pending: VecDeque::new(),
@@ -98,7 +101,7 @@ impl StreamRelay {
 
     async fn consume_bytes(&mut self, bytes: Bytes, fail_before_output: bool) -> Result<(), LlmProxyError> {
         self.collect_usage_from_bytes(&bytes);
-        if !self.needs_conversion {
+        if !self.needs_conversion && !self.rewrite_model {
             self.pending.push_back(bytes);
             return Ok(());
         }
@@ -133,8 +136,13 @@ impl StreamRelay {
             self.queue_done();
             return Ok(());
         }
-        let chunk = serde_json::from_str::<Value>(payload).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+        let mut chunk = serde_json::from_str::<Value>(payload).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         self.merge_usage(usage::from_stream_chunk(&chunk, self.target_format));
+        if !self.needs_conversion {
+            rewrite_response_model_value(&mut chunk, &self.context.candidate.requested_model_name);
+            self.pending.push_back(render_stream_event(&chunk, self.source_format));
+            return Ok(());
+        }
         let converted = FormatConversionRegistry::default()
             .convert_stream_chunk(StreamChunkConversion {
                 chunk: &chunk,
@@ -143,7 +151,8 @@ impl StreamRelay {
                 state: &mut self.conversion,
             })
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
-        for event in converted {
+        for mut event in converted {
+            rewrite_response_model_value(&mut event, &self.context.candidate.requested_model_name);
             self.pending.push_back(render_stream_event(&event, self.source_format));
         }
         Ok(())
@@ -186,7 +195,7 @@ impl StreamRelay {
         if self.finished {
             return Ok(());
         }
-        if self.needs_conversion {
+        if self.needs_conversion || self.rewrite_model {
             self.flush_remaining_buffer().await?;
             if matches!(self.source_format, ApiFormat::OpenAiChat) && !self.openai_done_sent {
                 self.pending.push_back(Bytes::from_static(b"data: [DONE]\n\n"));

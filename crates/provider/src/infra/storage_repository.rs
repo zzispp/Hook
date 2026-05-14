@@ -13,7 +13,7 @@ use types::provider::{
     ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
-use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult};
+use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
 const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
@@ -95,6 +95,24 @@ impl ProviderRepository for StorageProviderRepository {
 
     async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>> {
         self.store.api_keys_for_provider(provider_id).await.map_err(storage_error)
+    }
+
+    async fn list_api_key_secrets(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKeySecret>> {
+        self.store
+            .api_key_secrets_for_provider(provider_id)
+            .await
+            .map(|records| {
+                records
+                    .into_iter()
+                    .map(|record| ProviderApiKeySecret {
+                        name: record.name,
+                        encrypted_api_key: record.encrypted_api_key,
+                        internal_priority: record.internal_priority,
+                        is_active: record.is_active,
+                    })
+                    .collect()
+            })
+            .map_err(storage_error)
     }
 
     async fn update_api_key(
@@ -253,6 +271,7 @@ fn model_binding_input(provider_id: &str, input: ProviderModelBindingCreate) -> 
         provider_id: provider_id.to_owned(),
         global_model_id: input.global_model_id,
         provider_model_name: input.provider_model_name,
+        provider_model_mapping: input.provider_model_mapping,
         is_active: true,
         price_per_request: None,
         tiered_pricing: None,
@@ -264,6 +283,7 @@ fn model_binding_patch(input: ProviderModelBindingUpdate) -> ProviderModelRecord
     ProviderModelRecordPatch {
         provider_model_name: input.provider_model_name,
         is_active: input.is_active,
+        provider_model_mapping: input.provider_model_mapping,
         config: input.config,
     }
 }

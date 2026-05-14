@@ -15,6 +15,7 @@ import type {
   ProviderEndpointUpdate,
   ProviderModelBindingCreate,
   ProviderModelBindingUpdate,
+  ProviderUpstreamModelsResponse,
 } from 'src/types/provider';
 
 import { useMemo } from 'react';
@@ -134,6 +135,13 @@ export async function updateProviderApiKey(
   );
   await mutateProviderChildren(providerId);
   return apiKey;
+}
+
+export async function fetchProviderUpstreamModels(providerId: string) {
+  const response = await requestData<ProviderUpstreamModelsResponse>(
+    axios.get(endpoints.adminProviders.upstreamModels(providerId))
+  );
+  return response.models;
 }
 
 export async function deleteProviderApiKey(providerId: string, keyId: string) {

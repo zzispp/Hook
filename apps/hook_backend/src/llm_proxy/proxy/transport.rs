@@ -11,6 +11,7 @@ use types::model::PatchField;
 
 use super::{
     LlmProxyError, LlmProxyState,
+    response_model::rewrite_response_model_bytes,
     response_payload::{body_value, upstream_status_error_details},
     transport_read::response_bytes,
     usage,
@@ -101,6 +102,11 @@ async fn full_success_response(input: FullResponseInput) -> Result<Response, Llm
             record_response_conversion_failure(&input, &error).await?;
             return Err(error);
         }
+    };
+    let body = if input.candidate.provider_model_name != input.candidate.requested_model_name {
+        rewrite_response_model_bytes(&body, &input.candidate.requested_model_name)?
+    } else {
+        body
     };
     record_attempt(
         &input.state,

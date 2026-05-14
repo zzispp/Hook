@@ -2,10 +2,19 @@ use async_trait::async_trait;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
     ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
+    RequestRecordListResponse,
 };
 
 use super::ProviderResult;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderApiKeySecret {
+    pub name: String,
+    pub encrypted_api_key: String,
+    pub internal_priority: i32,
+    pub is_active: bool,
+}
 
 #[async_trait]
 pub trait ProviderRepository: Send + Sync + 'static {
@@ -20,6 +29,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn list_endpoints(&self, provider_id: &str) -> ProviderResult<Vec<ProviderEndpoint>>;
     async fn create_api_key(&self, provider_id: &str, input: ProviderApiKeyCreate, encrypted_api_key: String) -> ProviderResult<ProviderApiKey>;
     async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>>;
+    async fn list_api_key_secrets(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKeySecret>>;
     async fn update_api_key(
         &self,
         provider_id: &str,
@@ -48,6 +58,11 @@ pub trait SecretCipher: Send + Sync + 'static {
 }
 
 #[async_trait]
+pub trait UpstreamModelFetcher: Send + Sync + 'static {
+    async fn fetch_upstream_models(&self, endpoint: &ProviderEndpoint, api_key: &str) -> ProviderResult<ProviderUpstreamModelsResponse>;
+}
+
+#[async_trait]
 pub trait ProviderUseCase: Send + Sync + 'static {
     async fn create_provider(&self, input: ProviderCreate) -> ProviderResult<Provider>;
     async fn update_provider(&self, id: &str, input: ProviderUpdate) -> ProviderResult<Provider>;
@@ -60,6 +75,7 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn list_endpoints(&self, provider_id: &str) -> ProviderResult<Vec<ProviderEndpoint>>;
     async fn create_api_key(&self, provider_id: &str, input: ProviderApiKeyCreate) -> ProviderResult<ProviderApiKey>;
     async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>>;
+    async fn fetch_upstream_models(&self, provider_id: &str) -> ProviderResult<ProviderUpstreamModelsResponse>;
     async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyUpdate) -> ProviderResult<ProviderApiKey>;
     async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()>;
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding>;

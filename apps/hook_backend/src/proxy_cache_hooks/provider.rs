@@ -5,7 +5,8 @@ use provider::application::{ProviderError, ProviderResult, ProviderUseCase};
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
     ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail,
+    RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use crate::llm_proxy::LlmProxyCache;
@@ -81,6 +82,10 @@ impl ProviderUseCase for ProxyCachedProviderUseCase {
 
     async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>> {
         self.inner.list_api_keys(provider_id).await
+    }
+
+    async fn fetch_upstream_models(&self, provider_id: &str) -> ProviderResult<ProviderUpstreamModelsResponse> {
+        self.inner.fetch_upstream_models(provider_id).await
     }
 
     async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyUpdate) -> ProviderResult<ProviderApiKey> {

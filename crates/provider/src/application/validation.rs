@@ -2,7 +2,7 @@ use types::{
     model::PatchField,
     provider::{
         ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest,
-        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
+        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping, ProviderUpdate,
     },
 };
 
@@ -14,6 +14,7 @@ const MAX_TYPE_LENGTH: usize = 50;
 const MAX_API_FORMAT_LENGTH: usize = 50;
 const MAX_URL_LENGTH: usize = 500;
 const MAX_MODEL_NAME_LENGTH: usize = 200;
+const REASONING_EFFORTS: [&str; 4] = ["minimal", "low", "medium", "high"];
 const PROVIDER_TYPES: [&str; 1] = ["custom"];
 
 pub fn sanitize_create(input: ProviderCreate) -> ProviderCreate {
@@ -83,6 +84,7 @@ pub fn sanitize_model_binding(input: ProviderModelBindingCreate) -> ProviderMode
     ProviderModelBindingCreate {
         global_model_id: input.global_model_id.trim().to_owned(),
         provider_model_name: input.provider_model_name.trim().to_owned(),
+        provider_model_mapping: sanitize_provider_model_mapping(input.provider_model_mapping),
         ..input
     }
 }
@@ -90,6 +92,7 @@ pub fn sanitize_model_binding(input: ProviderModelBindingCreate) -> ProviderMode
 pub fn sanitize_model_binding_update(input: ProviderModelBindingUpdate) -> ProviderModelBindingUpdate {
     ProviderModelBindingUpdate {
         provider_model_name: input.provider_model_name.map(|value| value.trim().to_owned()),
+        provider_model_mapping: sanitize_provider_model_mapping_patch(input.provider_model_mapping),
         ..input
     }
 }
@@ -160,7 +163,8 @@ pub fn validate_api_key_update(input: &ProviderApiKeyUpdate) -> ProviderResult<(
 
 pub fn validate_model_binding(input: &ProviderModelBindingCreate) -> ProviderResult<()> {
     validate_text("global_model_id", &input.global_model_id, MAX_NAME_LENGTH)?;
-    validate_text("provider_model_name", &input.provider_model_name, MAX_MODEL_NAME_LENGTH)
+    validate_text("provider_model_name", &input.provider_model_name, MAX_MODEL_NAME_LENGTH)?;
+    validate_provider_model_mapping(input.provider_model_mapping.as_ref())
 }
 
 pub fn validate_model_binding_update(input: &ProviderModelBindingUpdate) -> ProviderResult<()> {
@@ -169,6 +173,9 @@ pub fn validate_model_binding_update(input: &ProviderModelBindingUpdate) -> Prov
     }
     if let Some(name) = input.provider_model_name.as_deref() {
         validate_text("provider_model_name", name, MAX_MODEL_NAME_LENGTH)?;
+    }
+    if let PatchField::Value(mapping) = &input.provider_model_mapping {
+        validate_provider_model_mapping(Some(mapping))?;
     }
     Ok(())
 }
@@ -203,6 +210,51 @@ fn trim_patch(value: PatchField<String>) -> PatchField<String> {
     }
 }
 
+fn sanitize_provider_model_mapping_patch(
+    mapping: PatchField<ProviderModelMapping>,
+) -> PatchField<ProviderModelMapping> {
+    match mapping {
+        PatchField::Value(value) => sanitize_provider_model_mapping(Some(value))
+            .map(PatchField::Value)
+            .unwrap_or(PatchField::Null),
+        other => other,
+    }
+}
+
+fn sanitize_provider_model_mapping(mapping: Option<ProviderModelMapping>) -> Option<ProviderModelMapping> {
+    let mapping = mapping?;
+    let name = mapping.name.trim().to_owned();
+    let reasoning_effort = mapping
+        .reasoning_effort
+        .and_then(trim_optional)
+        .map(|value| value.to_ascii_lowercase());
+    if name.is_empty() {
+        return None;
+    }
+    Some(ProviderModelMapping { name, reasoning_effort })
+}
+
+fn validate_provider_model_mapping(mapping: Option<&ProviderModelMapping>) -> ProviderResult<()> {
+    let Some(mapping) = mapping else {
+        return Ok(());
+    };
+    validate_text("provider_model_mapping.name", &mapping.name, MAX_MODEL_NAME_LENGTH)?;
+    if let Some(reasoning_effort) = mapping.reasoning_effort.as_deref() {
+        validate_reasoning_effort(reasoning_effort)?;
+    }
+    Ok(())
+}
+
+fn validate_reasoning_effort(value: &str) -> ProviderResult<()> {
+    if REASONING_EFFORTS.contains(&value) {
+        return Ok(());
+    }
+    Err(ProviderError::InvalidInput(format!(
+        "provider_model_mapping.reasoning_effort must be one of {}",
+        REASONING_EFFORTS.join(", ")
+    )))
+}
+
 fn endpoint_update_is_empty(input: &ProviderEndpointUpdate) -> bool {
     input.api_format.is_none()
         && input.base_url.is_none()
@@ -215,7 +267,10 @@ fn endpoint_update_is_empty(input: &ProviderEndpointUpdate) -> bool {
 }
 
 fn model_binding_update_is_empty(input: &ProviderModelBindingUpdate) -> bool {
-    input.provider_model_name.is_none() && input.is_active.is_none() && input.config.is_missing()
+    input.provider_model_name.is_none()
+        && input.is_active.is_none()
+        && input.provider_model_mapping.is_missing()
+        && input.config.is_missing()
 }
 
 fn api_key_update_is_empty(input: &ProviderApiKeyUpdate) -> bool {

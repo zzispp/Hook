@@ -1,6 +1,7 @@
 use rust_decimal::Decimal;
 use serde_json::Value;
 use types::model::{PatchField, TieredPricingConfig};
+use types::provider::ProviderModelMapping;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderRecordInput {
@@ -84,11 +85,20 @@ pub struct ProviderApiKeyRecordPatch {
     pub is_active: Option<bool>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderApiKeySecretRecord {
+    pub name: String,
+    pub encrypted_api_key: String,
+    pub internal_priority: i32,
+    pub is_active: bool,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderModelRecordInput {
     pub provider_id: String,
     pub global_model_id: String,
     pub provider_model_name: String,
+    pub provider_model_mapping: Option<ProviderModelMapping>,
     pub is_active: bool,
     pub price_per_request: Option<rust_decimal::Decimal>,
     pub tiered_pricing: Option<TieredPricingConfig>,
@@ -99,6 +109,7 @@ pub struct ProviderModelRecordInput {
 pub struct ProviderModelRecordPatch {
     pub provider_model_name: Option<String>,
     pub is_active: Option<bool>,
+    pub provider_model_mapping: types::model::PatchField<ProviderModelMapping>,
     pub config: types::model::PatchField<serde_json::Value>,
 }
 

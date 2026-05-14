@@ -1,5 +1,8 @@
 use rust_decimal::Decimal;
-use types::{model::TieredPricingConfig, provider::ProviderSchedulingMode};
+use types::{
+    model::TieredPricingConfig,
+    provider::{ProviderModelMapping, ProviderSchedulingMode},
+};
 
 use super::*;
 
@@ -74,6 +77,34 @@ fn matching_candidate_parts_keeps_all_provider_routes_without_silent_budget() {
 }
 
 #[test]
+fn matching_candidate_parts_prefers_highest_priority_mapped_provider_model_name() {
+    let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(
+        &snapshot,
+        group,
+        None,
+        "model-a",
+        request(),
+        None,
+        ProviderSchedulingMode::FixedOrder,
+        "request-1",
+    );
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].model.provider_model_name, "mapped-upstream-model");
+    assert_eq!(
+        parts[0]
+            .model
+            .provider_model_mapping
+            .as_ref()
+            .and_then(|mapping| mapping.reasoning_effort.as_deref()),
+        Some("high")
+    );
+}
+
+#[test]
 fn matching_candidate_parts_filters_by_user_provider_access() {
     let snapshot = SchedulingSnapshot {
         providers: vec![provider_with_endpoints_and_keys(), provider_b()],
@@ -145,6 +176,10 @@ fn provider_with_endpoints_and_keys() -> CachedProvider {
             provider_id: "provider-a".into(),
             global_model_id: "model-a".into(),
             provider_model_name: "upstream-model".into(),
+            provider_model_mapping: Some(ProviderModelMapping {
+                name: "mapped-upstream-model".into(),
+                reasoning_effort: Some("high".into()),
+            }),
             is_active: true,
             price_per_request: None,
             tiered_pricing: None,
@@ -170,6 +205,7 @@ fn provider_b() -> CachedProvider {
             provider_id: "provider-b".into(),
             global_model_id: "model-a".into(),
             provider_model_name: "provider-b-model".into(),
+            provider_model_mapping: None,
             is_active: true,
             price_per_request: None,
             tiered_pricing: None,
@@ -189,6 +225,7 @@ fn endpoint(id: &str, api_format: &str) -> CachedEndpoint {
         is_active: true,
         format_acceptance_config: Some(serde_json::json!({ "enabled": true })),
         header_rules: None,
+        body_rules: None,
     }
 }
 

@@ -1,0 +1,32 @@
+# 进度记录
+
+- 已确认端点级 override 当前只有一部分真正落到运行时：
+  - `custom_path` 已参与上游 URL 生成。
+  - `format_acceptance_config` 已参与格式转换准入。
+  - `header_rules` 已在发起上游请求前执行。
+  - `body_rules` 目前只有类型、存储和前端 UI，尚未进入 runtime candidate / snapshot / request rewrite 链路。
+- 已确认当前模型映射实现是 `1:N`：
+  - 存储与前端类型是 `provider_model_mappings: Vec<...>`。
+  - 运行时会从多个映射名里按 priority / affinity / 字典序选一个，不是主备 fallback。
+- 已确认新的执行顺序：
+  - 先应用模型映射自己的 `reasoning_effort` 覆盖。
+  - 再执行端点 `body_rules` 与 `header_rules`。
+  - 原因是端点层更接近 provider/endpoint，可在最终上游模型与映射级覆盖基础上继续细调。
+- 已完成后端收口：
+  - `ProviderModelBinding` 从 `provider_model_mappings: Vec<_>` 改为 `provider_model_mapping: Option<_>`。
+  - `ProviderModelMapping` 去掉 `priority`，新增 `reasoning_effort`。
+  - `CachedEndpoint` / `ProxyCandidate` / request rewrite 全链路已接入 `body_rules`。
+  - 成功响应和流式事件中的 `model` / `modelVersion` / `response.model` 会回写为客户端原始请求模型。
+- 已完成前端收口：
+  - 模型映射弹窗改成严格单选上游模型，不再允许一次保存多个映射目标。
+  - `reasoning_effort` 放到编辑弹窗上方，和单模型映射一起保存。
+  - 映射预览与列表行会展示单个上游模型和可选的 `reasoning_effort`。
+- 已完成验证：
+  - `cargo check -p provider`
+  - `cargo check -p backend`
+  - `cargo test -p backend llm_proxy::candidate::selection::tests::matching_candidate_parts_prefers_highest_priority_mapped_provider_model_name -- --nocapture`
+  - `cargo test -p backend llm_proxy::proxy::body_rules::tests -- --nocapture`
+  - `cargo test -p backend llm_proxy::proxy::request::tests -- --nocapture`
+  - `cargo test -p backend llm_proxy::proxy::response_model::tests -- --nocapture`
+  - `pnpm lint:frontend`
+  - `pnpm build:frontend`

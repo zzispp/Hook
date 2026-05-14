@@ -155,7 +155,7 @@ fn append_provider_candidate(
     request_id: &str,
     output: &mut Vec<CandidateParts>,
 ) {
-    let Some(model) = provider_model(provider, model_id) else {
+    let Some(model) = provider_model(provider, model_id, affinity_key) else {
         return;
     };
     let endpoints = ordered_endpoints(provider, request);
@@ -220,8 +220,12 @@ fn order_keys_for_load_balance(keys: &mut [CachedProviderKey], seed: &str) {
     });
 }
 
-fn provider_model<'a>(provider: &'a CachedProvider, model_id: &str) -> Option<&'a CachedModelBinding> {
-    provider.models.iter().find(|model| model.global_model_id == model_id && model.is_active)
+fn provider_model(provider: &CachedProvider, model_id: &str, affinity_key: Option<&str>) -> Option<CachedModelBinding> {
+    provider
+        .models
+        .iter()
+        .find(|model| model.global_model_id == model_id && model.is_active)
+        .map(|model| selected_provider_model(model, affinity_key))
 }
 
 fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
@@ -258,6 +262,20 @@ fn user_access_for_token<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToken)
 
 fn key_allowed(key: &CachedProviderKey) -> bool {
     key.is_active
+}
+
+fn selected_provider_model(model: &CachedModelBinding, _affinity_key: Option<&str>) -> CachedModelBinding {
+    let mut selected = model.clone();
+    selected.provider_model_name = selected_provider_model_name(model);
+    selected
+}
+
+fn selected_provider_model_name(model: &CachedModelBinding) -> String {
+    model
+        .provider_model_mapping
+        .as_ref()
+        .map(|mapping| mapping.name.clone())
+        .unwrap_or_else(|| model.provider_model_name.clone())
 }
 
 fn model_ref(model: &CachedGlobalModel) -> GlobalModelRef {

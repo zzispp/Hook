@@ -11,12 +11,15 @@ use super::{LlmProxyError, LlmProxyState};
 #[derive(Clone, Debug)]
 pub struct ProxyCandidate {
     pub trace: CandidateTrace,
+    pub requested_model_name: String,
     pub api_key: String,
     pub base_url: String,
     pub custom_path: Option<String>,
     pub upstream_url: String,
     pub provider_model_name: String,
+    pub reasoning_effort: Option<String>,
     pub header_rules: Option<Value>,
+    pub body_rules: Option<Value>,
     pub price_per_request: Option<Decimal>,
     pub tiered_pricing: TieredPricingConfig,
     pub billing_multiplier: Decimal,
@@ -41,6 +44,7 @@ pub struct CandidateEndpointOption {
     pub custom_path: Option<String>,
     pub upstream_url: String,
     pub header_rules: Option<Value>,
+    pub body_rules: Option<Value>,
     pub needs_conversion: bool,
 }
 
@@ -115,6 +119,7 @@ impl ProxyCandidate {
         candidate.custom_path = endpoint.custom_path.clone();
         candidate.upstream_url = endpoint.upstream_url.clone();
         candidate.header_rules = endpoint.header_rules.clone();
+        candidate.body_rules = endpoint.body_rules.clone();
         candidate.cache_ttl_minutes = key.cache_ttl_minutes;
         candidate
     }
@@ -161,12 +166,15 @@ mod tests {
                 is_stream: false,
                 candidate_index: 0,
             },
+            requested_model_name: "gpt-5.5".into(),
             api_key: "key-1-secret".into(),
             base_url: "https://openai.example.com".into(),
             custom_path: None,
             upstream_url: "https://openai.example.com/v1/chat/completions".into(),
             provider_model_name: "upstream-model".into(),
+            reasoning_effort: None,
             header_rules: None,
+            body_rules: None,
             price_per_request: None,
             tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
             billing_multiplier: Decimal::ONE,
@@ -192,6 +200,7 @@ mod tests {
             custom_path: None,
             upstream_url: format!("https://{id}.example.com/v1/chat/completions"),
             header_rules: None,
+            body_rules: None,
             needs_conversion,
         }
     }

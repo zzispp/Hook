@@ -164,11 +164,19 @@ export type ProviderApiKeyUpdate = Partial<Omit<ProviderApiKeyCreate, 'api_key'>
   api_key?: string;
 };
 
+export type ProviderModelReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
+
+export type ProviderModelMapping = {
+  name: string;
+  reasoning_effort?: ProviderModelReasoningEffort | null;
+};
+
 export type ProviderModelBinding = {
   id: string;
   provider_id: string;
   global_model_id: string;
   provider_model_name: string;
+  provider_model_mapping?: ProviderModelMapping | null;
   is_active: boolean;
   price_per_request?: number | null;
   tiered_pricing?: TieredPricingConfig | null;
@@ -180,13 +188,19 @@ export type ProviderModelBinding = {
 export type ProviderModelBindingCreate = {
   global_model_id: string;
   provider_model_name: string;
+  provider_model_mapping?: ProviderModelMapping | null;
   config?: Record<string, unknown> | null;
 };
 
 export type ProviderModelBindingUpdate = {
   provider_model_name?: string;
   is_active?: boolean;
+  provider_model_mapping?: ProviderModelMapping | null;
   config?: Record<string, unknown> | null;
+};
+
+export type ProviderUpstreamModelsResponse = {
+  models: string[];
 };
 
 export type RequestRecordStatus = 'pending' | 'streaming' | 'success' | 'failed' | 'cancelled';

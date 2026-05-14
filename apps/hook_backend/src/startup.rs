@@ -44,7 +44,7 @@ use operations::{
 use provider::{
     api::{ProviderApiState, create_router as create_provider_router},
     application::ProviderService,
-    infra::{ProviderKeyCipher, StorageGlobalModelCatalog, StorageProviderRepository},
+    infra::{ProviderKeyCipher, ReqwestUpstreamModelFetcher, StorageGlobalModelCatalog, StorageProviderRepository},
 };
 use rbac::{
     api::{RbacApiState, create_router as create_rbac_router},
@@ -115,6 +115,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageProviderRepository::new(database.clone()),
         StorageGlobalModelCatalog::new(database.clone()),
         provider_key_cipher.clone(),
+        ReqwestUpstreamModelFetcher::new()?,
     ));
     let providers = Arc::new(ProxyCachedProviderUseCase::new(providers_inner, proxy_cache.clone()));
     let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));

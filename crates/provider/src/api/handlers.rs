@@ -7,7 +7,8 @@ use types::{
     provider::{
         ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
         ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail,
+        RequestRecordListRequest, RequestRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -69,6 +70,13 @@ pub async fn delete_endpoint(State(state): State<ProviderApiState>, Path((provid
 
 pub async fn list_api_keys(State(state): State<ProviderApiState>, Path(provider_id): Path<String>) -> ApiResult<ApiJson<Vec<ProviderApiKey>>> {
     Ok(ok(state.providers.list_api_keys(&provider_id).await?))
+}
+
+pub async fn fetch_upstream_models(
+    State(state): State<ProviderApiState>,
+    Path(provider_id): Path<String>,
+) -> ApiResult<ApiJson<ProviderUpstreamModelsResponse>> {
+    Ok(ok(state.providers.fetch_upstream_models(&provider_id).await?))
 }
 
 pub async fn create_api_key(

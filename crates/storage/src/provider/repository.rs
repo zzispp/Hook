@@ -7,7 +7,7 @@ use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
     ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput,
-    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    ProviderApiKeySecretRecord, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
     record::{
         provider_api_keys, provider_endpoints, provider_models,
         providers::{self, ActiveModel as ProviderActiveModel},
@@ -178,6 +178,23 @@ impl ProviderStore {
             .all(self.database.connection())
             .await?;
         records.into_iter().map(|record| record.response()).collect()
+    }
+
+    pub async fn api_key_secrets_for_provider(&self, provider_id: &str) -> StorageResult<Vec<ProviderApiKeySecretRecord>> {
+        let records = provider_api_keys::Entity::find()
+            .filter(provider_api_keys::Column::ProviderId.eq(provider_id))
+            .order_by_asc(provider_api_keys::Column::InternalPriority)
+            .all(self.database.connection())
+            .await?;
+        Ok(records
+            .into_iter()
+            .map(|record| ProviderApiKeySecretRecord {
+                name: record.name,
+                encrypted_api_key: record.encrypted_api_key,
+                internal_priority: record.internal_priority,
+                is_active: record.is_active,
+            })
+            .collect())
     }
 
     pub async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyRecordPatch) -> StorageResult<types::provider::ProviderApiKey> {

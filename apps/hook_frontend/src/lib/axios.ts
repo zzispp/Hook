@@ -165,6 +165,7 @@ export const endpoints = {
     keys: (id: string) => `/api/admin/providers/${id}/keys`,
     keyById: (providerId: string, keyId: string) =>
       `/api/admin/providers/${providerId}/keys/${keyId}`,
+    upstreamModels: (id: string) => `/api/admin/providers/${id}/upstream-models`,
     models: (id: string) => `/api/admin/providers/${id}/models`,
     modelById: (providerId: string, modelId: string) =>
       `/api/admin/providers/${providerId}/models/${modelId}`,

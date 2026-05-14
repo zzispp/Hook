@@ -10,7 +10,9 @@ use storage::{
     user::UserStore,
 };
 use types::{
-    group::BillingGroupListRequest, model::TieredPricingConfig, pagination::PageSliceRequest, provider::ProviderSchedulingMode, user::UserListFilters,
+    group::BillingGroupListRequest, model::TieredPricingConfig, pagination::PageSliceRequest,
+    provider::{ProviderModelMapping, ProviderSchedulingMode},
+    user::UserListFilters,
 };
 
 use crate::llm_proxy::LlmProxyError;
@@ -80,6 +82,7 @@ pub struct CachedEndpoint {
     pub is_active: bool,
     pub format_acceptance_config: Option<serde_json::Value>,
     pub header_rules: Option<serde_json::Value>,
+    pub body_rules: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -98,6 +101,7 @@ pub struct CachedModelBinding {
     pub provider_id: String,
     pub global_model_id: String,
     pub provider_model_name: String,
+    pub provider_model_mapping: Option<ProviderModelMapping>,
     pub is_active: bool,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub price_per_request: Option<Decimal>,
@@ -208,6 +212,7 @@ async fn load_model_bindings(store: &ProviderStore, provider_id: &str) -> Result
             provider_id: model.provider_id,
             global_model_id: model.global_model_id,
             provider_model_name: model.provider_model_name,
+            provider_model_mapping: model.provider_model_mapping,
             is_active: model.is_active,
             price_per_request: model.price_per_request,
             tiered_pricing: model.tiered_pricing,
@@ -230,6 +235,7 @@ async fn load_endpoints(store: &ProviderStore, provider_id: &str) -> Result<Vec<
             is_active: endpoint.is_active,
             format_acceptance_config: endpoint.format_acceptance_config,
             header_rules: endpoint.header_rules,
+            body_rules: endpoint.body_rules,
         })
         .collect())
 }

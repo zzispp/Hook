@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use sea_orm::Set;
+use serde::Serialize;
 use types::provider::{ProviderListRequest, ProviderModelBinding};
 
 use crate::{StorageResult, json};
@@ -90,6 +91,7 @@ pub fn provider_model_response(record: ProviderModelRecord) -> StorageResult<Pro
         provider_id: record.provider_id,
         global_model_id: record.global_model_id,
         provider_model_name: record.provider_model_name,
+        provider_model_mapping: json::decode_optional(record.provider_model_mappings)?,
         is_active: record.is_active,
         price_per_request: record.price_per_request,
         tiered_pricing: json::decode_optional(record.tiered_pricing)?,
@@ -106,6 +108,7 @@ pub fn apply_provider_model_patch(active: &mut super::record::provider_models::A
     if let Some(value) = input.is_active {
         active.is_active = Set(value);
     }
+    apply_encoded_patch(&mut active.provider_model_mappings, input.provider_model_mapping)?;
     apply_json_patch(&mut active.config, input.config)?;
     Ok(())
 }
@@ -175,6 +178,18 @@ fn apply_string_patch(active: &mut sea_orm::ActiveValue<Option<String>>, patch: 
 }
 
 fn apply_json_patch(active: &mut sea_orm::ActiveValue<Option<String>>, patch: types::model::PatchField<serde_json::Value>) -> StorageResult<()> {
+    match patch {
+        types::model::PatchField::Value(value) => *active = Set(Some(json::encode_required(&value)?)),
+        types::model::PatchField::Null => *active = Set(None),
+        types::model::PatchField::Missing => {}
+    }
+    Ok(())
+}
+
+fn apply_encoded_patch<T>(active: &mut sea_orm::ActiveValue<Option<String>>, patch: types::model::PatchField<T>) -> StorageResult<()>
+where
+    T: Serialize,
+{
     match patch {
         types::model::PatchField::Value(value) => *active = Set(Some(json::encode_required(&value)?)),
         types::model::PatchField::Null => *active = Set(None),

@@ -1,19 +1,20 @@
 'use client';
 
-import type { EndpointEditState } from './provider-endpoint-rule-types';
+import type { AddEndpointForm } from './provider-endpoint-add-card';
 import type { useProviderChildDialogs } from './provider-management-state';
 import type { Provider, ProviderEndpoint, ProviderEndpointUpdate } from 'src/types/provider';
+import type {
+  EditableBodyRule,
+  EndpointEditState,
+  EditableHeaderRule,
+} from './provider-endpoint-rule-types';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
-import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import LoadingButton from '@mui/lab/LoadingButton';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
@@ -28,8 +29,8 @@ import {
 
 import { toast } from 'src/components/snackbar';
 
-import { ProviderEndpointSearchSelect } from './provider-endpoint-select';
-import { formatApiFormat, API_FORMAT_OPTIONS, defaultEndpointPath } from './provider-management-utils';
+import { OPENAI_COMPACT_API_FORMAT, defaultOpenAiCompactBodyRules } from './provider-endpoint-default-rules';
+import { addEndpointPayload, emptyAddEndpointForm, ProviderEndpointAddCard } from './provider-endpoint-add-card';
 import { ProviderEndpointCard, editStateFromEndpoint, validateEndpointEditState } from './provider-endpoint-card';
 
 type BusyState = { id: string; action: 'save' | 'delete' | 'toggle' } | null;
@@ -56,7 +57,18 @@ export function ProviderEndpointDialog({
       <DialogContent dividers sx={{ px: 3, py: 2 }}>
         <Stack spacing={2}>
           <ConfiguredEndpoints loading={endpointQuery.isLoading} manager={manager} endpoints={endpointQuery.items} />
-          <AddEndpointCard manager={manager} existingEndpoints={endpointQuery.items} />
+          <ProviderEndpointAddCard
+            form={manager.addForm}
+            rulesOpen={manager.addRulesOpen}
+            adding={manager.adding}
+            existingEndpoints={endpointQuery.items}
+            onFormChange={manager.setAddForm}
+            onApiFormatChange={manager.setAddApiFormat}
+            onRulesOpenChange={manager.setAddRulesOpen}
+            onHeaderRulesChange={manager.setAddHeaderRules}
+            onBodyRulesChange={manager.setAddBodyRules}
+            onAdd={() => void manager.addEndpoint()}
+          />
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -101,49 +113,6 @@ function ConfiguredEndpoints({
   );
 }
 
-function AddEndpointCard({
-  manager,
-  existingEndpoints,
-}: {
-  manager: EndpointManager;
-  existingEndpoints: ProviderEndpoint[];
-}) {
-  const { t } = useTranslate('admin');
-  const availableFormats = API_FORMAT_OPTIONS.filter((format) => !existingEndpoints.some((endpoint) => endpoint.api_format === format));
-  const selectedPath = defaultEndpointPath(manager.addForm.apiFormat);
-
-  return (
-    <Box sx={addCardSx}>
-      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ px: 2, py: 1.25, bgcolor: 'action.hover' }}>
-        <ProviderEndpointSearchSelect
-          value={manager.addForm.apiFormat}
-          options={availableFormats.map((value) => ({ value, label: formatApiFormat(value) }))}
-          placeholder={t('providers.selectFormat')}
-          sx={{ minWidth: 220 }}
-          onChange={(apiFormat) => manager.setAddForm({ ...manager.addForm, apiFormat })}
-        />
-        <Box sx={{ flex: 1 }} />
-        <LoadingButton size="small" variant="outlined" loading={manager.adding} disabled={!manager.addForm.apiFormat || !manager.addForm.baseUrl.trim()} onClick={() => void manager.addEndpoint()}>
-          {t('common.add')}
-        </LoadingButton>
-      </Stack>
-      <Divider />
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ p: 2 }}>
-        <TextField fullWidth size="small" label={t('providers.baseUrl')} value={manager.addForm.baseUrl} placeholder={t('providers.baseUrlPlaceholder')} onChange={(event) => manager.setAddForm({ ...manager.addForm, baseUrl: event.target.value })} />
-        <TextField
-          fullWidth
-          size="small"
-          label={t('providers.customPath')}
-          value={manager.addForm.customPath}
-          placeholder={selectedPath || '留空使用默认'}
-          helperText={selectedPath ? `${t('providers.defaultWhenBlank')} ${selectedPath}` : t('providers.defaultWhenBlank')}
-          onChange={(event) => manager.setAddForm({ ...manager.addForm, customPath: event.target.value })}
-        />
-      </Stack>
-    </Box>
-  );
-}
-
 function useEndpointManager(
   provider: Provider | undefined,
   endpoints: ProviderEndpoint[],
@@ -154,7 +123,9 @@ function useEndpointManager(
   const [adding, setAdding] = useState(false);
   const [expanded, setExpandedState] = useState<Record<string, boolean>>({});
   const [editStates, setEditStates] = useState<Record<string, EndpointEditState>>({});
-  const [addForm, setAddForm] = useState({ apiFormat: '', baseUrl: '', customPath: '' });
+  const [addForm, setAddForm] = useState<AddEndpointForm>(() => emptyAddEndpointForm());
+  const [addRulesOpen, setAddRulesOpen] = useState(false);
+  const [addBodyRulesCustomized, setAddBodyRulesCustomized] = useState(false);
 
   useEffect(() => {
     setEditStates(Object.fromEntries(endpoints.map((endpoint) => [endpoint.id, editStateFromEndpoint(endpoint)])));
@@ -167,6 +138,23 @@ function useEndpointManager(
 
   const setExpanded = useCallback((id: string, open: boolean) => {
     setExpandedState((current) => ({ ...current, [id]: open }));
+  }, []);
+
+  const setAddApiFormat = useCallback((apiFormat: string) => {
+    const selection = selectAddApiFormat(addForm, apiFormat, addBodyRulesCustomized);
+    setAddForm(selection.form);
+    if (selection.appliedDefaults) setAddRulesOpen(true);
+  }, [addBodyRulesCustomized, addForm]);
+
+  const setAddHeaderRules = useCallback((headerRules: EditableHeaderRule[]) => {
+    setAddForm((current) => ({ ...current, headerRules }));
+    setAddRulesOpen(true);
+  }, []);
+
+  const setAddBodyRules = useCallback((bodyRules: EditableBodyRule[]) => {
+    setAddForm((current) => ({ ...current, bodyRules }));
+    setAddBodyRulesCustomized(true);
+    setAddRulesOpen(true);
   }, []);
 
   const saveEndpoint = useCallback(async (endpoint: ProviderEndpoint, payload: ProviderEndpointUpdate) => {
@@ -215,11 +203,22 @@ function useEndpointManager(
 
   const addEndpoint = useCallback(async () => {
     if (!provider) return;
+    if (!addForm.apiFormat) {
+      toast.error('请选择端点格式');
+      return;
+    }
+    const error = validateEndpointEditState(addForm);
+    if (error) {
+      toast.error(error);
+      return;
+    }
     setAdding(true);
     try {
       await createProviderEndpoint(provider.id, addEndpointPayload(addForm));
       toast.success(t('messages.providerEndpointCreated'));
-      setAddForm({ apiFormat: '', baseUrl: addForm.baseUrl, customPath: '' });
+      setAddForm(emptyAddEndpointForm(addForm.baseUrl));
+      setAddRulesOpen(false);
+      setAddBodyRulesCustomized(false);
       await refresh();
     } catch (reason) {
       toast.error(reason instanceof Error ? reason.message : t('messages.saveFailed'));
@@ -228,19 +227,57 @@ function useEndpointManager(
     }
   }, [addForm, provider, refresh, t]);
 
-  return useMemo(() => ({ addForm, adding, busy, editStates, expanded, setAddForm, setEditState, setExpanded, saveEndpoint, deleteEndpoint, toggleEndpoint, addEndpoint }), [addEndpoint, addForm, adding, busy, deleteEndpoint, editStates, expanded, saveEndpoint, setEditState, setExpanded, toggleEndpoint]);
-}
-
-function addEndpointPayload(form: { apiFormat: string; baseUrl: string; customPath: string }) {
-  return {
-    api_format: form.apiFormat,
-    base_url: form.baseUrl,
-    custom_path: form.customPath.trim() || null,
-    is_active: true,
-  };
+  return useMemo(() => ({
+    addForm,
+    addRulesOpen,
+    adding,
+    busy,
+    editStates,
+    expanded,
+    setAddApiFormat,
+    setAddBodyRules,
+    setAddForm,
+    setAddHeaderRules,
+    setAddRulesOpen,
+    setEditState,
+    setExpanded,
+    saveEndpoint,
+    deleteEndpoint,
+    toggleEndpoint,
+    addEndpoint,
+  }), [
+    addEndpoint,
+    addForm,
+    addRulesOpen,
+    adding,
+    busy,
+    deleteEndpoint,
+    editStates,
+    expanded,
+    saveEndpoint,
+    setAddApiFormat,
+    setAddBodyRules,
+    setAddHeaderRules,
+    setEditState,
+    setExpanded,
+    toggleEndpoint,
+  ]);
 }
 
 type EndpointManager = ReturnType<typeof useEndpointManager>;
 
+function selectAddApiFormat(form: AddEndpointForm, apiFormat: string, addBodyRulesCustomized: boolean) {
+  if (!shouldApplyCompactDefaults(form, apiFormat, addBodyRulesCustomized)) {
+    return { form: { ...form, apiFormat }, appliedDefaults: false };
+  }
+  return {
+    form: { ...form, apiFormat, bodyRules: defaultOpenAiCompactBodyRules() },
+    appliedDefaults: true,
+  };
+}
+
+function shouldApplyCompactDefaults(form: AddEndpointForm, apiFormat: string, addBodyRulesCustomized: boolean) {
+  return apiFormat === OPENAI_COMPACT_API_FORMAT && !addBodyRulesCustomized && !form.bodyRules.length;
+}
+
 const labelSx = { color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 };
-const addCardSx = { border: '1px dashed', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' };

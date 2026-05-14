@@ -37,12 +37,19 @@ async fn proxy_candidate(
     let key = &route.keys[0];
     Ok(ProxyCandidate {
         trace: candidate_trace(token, request, parts, index),
+        requested_model_name: request.model_name.to_owned(),
         api_key: key.api_key.clone(),
         base_url: endpoint.base_url.clone(),
         custom_path: endpoint.custom_path.clone(),
         upstream_url: endpoint.upstream_url.clone(),
         provider_model_name: parts.model.provider_model_name.clone(),
+        reasoning_effort: parts
+            .model
+            .provider_model_mapping
+            .as_ref()
+            .and_then(|mapping| mapping.reasoning_effort.clone()),
         header_rules: endpoint.header_rules.clone(),
+        body_rules: endpoint.body_rules.clone(),
         price_per_request: parts.model.price_per_request.or(global_model.default_price_per_request),
         tiered_pricing: parts
             .model
@@ -112,6 +119,7 @@ fn endpoint_options(request: CandidateRequest<'_>, parts: &CandidateParts) -> Ve
             custom_path: endpoint.custom_path.clone(),
             upstream_url: url::upstream_url(endpoint, &parts.model.provider_model_name, request.is_stream),
             header_rules: endpoint.header_rules.clone(),
+            body_rules: endpoint.body_rules.clone(),
             needs_conversion: endpoint.api_format != request.api_format,
         })
         .collect()
@@ -153,6 +161,7 @@ mod tests {
             custom_path: None,
             upstream_url: "https://example.com/v1/chat/completions".into(),
             header_rules: None,
+            body_rules: None,
             needs_conversion: false,
         }
     }

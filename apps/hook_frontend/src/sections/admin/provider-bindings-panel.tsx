@@ -28,6 +28,7 @@ import { EnabledLabel } from './shared';
 import { EmptyList } from './provider-bindings-shared';
 import { ProviderApiKeysSection } from './provider-api-keys-section';
 import { ProviderModelBindingsSection } from './provider-model-bindings-section';
+import { ProviderModelMappingsSection } from './provider-model-mappings-section';
 import { formatApiFormat, defaultEndpointPath } from './provider-management-utils';
 
 export function ProviderBindingsPanel({
@@ -114,6 +115,12 @@ function ProviderBindingsContent(props: ProviderBindingsContentProps) {
         loading={props.providerModelLoading}
         models={props.models}
         onAdd={() => props.dialogs.setModelOpen(true)}
+      />
+      <ProviderModelMappingsSection
+        providerId={props.providerId}
+        items={props.providerModelItems}
+        loading={props.providerModelLoading}
+        models={props.models}
       />
     </Stack>
   );
