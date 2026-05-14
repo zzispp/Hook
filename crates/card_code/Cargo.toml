@@ -16,3 +16,6 @@ thiserror.workspace = true
 time.workspace = true
 types.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

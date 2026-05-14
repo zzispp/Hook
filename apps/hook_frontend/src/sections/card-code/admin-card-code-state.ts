@@ -5,6 +5,7 @@ import type { useTranslate } from 'src/locales/use-locales';
 
 import { useMemo, useState, useCallback } from 'react';
 
+import { useSystemSettings } from 'src/actions/system-settings';
 import {
   useCardCodes,
   useCardCodeTypes,
@@ -42,6 +43,7 @@ export function useCardCodeManagementState(t: ReturnType<typeof useTranslate>['t
   const codes = useCardCodes(codeTable.page, codeTable.rowsPerPage, cardCodeFilters);
   const types = useCardCodeTypes(typeTable.page, typeTable.rowsPerPage, cardCodeTypeFilters);
   const options = useCardCodeTypes(0, CARD_CODE_MAX_PAGE_SIZE);
+  const settings = useSystemSettings();
   const selectedCodes = useMemo(
     () => (codes.data?.items ?? []).filter((item) => codeTable.selected.includes(item.id)),
     [codeTable.selected, codes.data?.items]
@@ -67,7 +69,8 @@ export function useCardCodeManagementState(t: ReturnType<typeof useTranslate>['t
     typeDialogOpen,
     typeOptions: options.data?.items ?? [],
     activeTypes: (options.data?.items ?? []).filter((item) => item.status === 'active'),
-    errorMessage: codes.error?.message ?? types.error?.message ?? options.error?.message,
+    systemCurrency: settings.data?.currency,
+    errorMessage: codes.error?.message ?? types.error?.message ?? options.error?.message ?? settings.error?.message,
     setGenerateOpen,
     refresh,
     changeCodeFilters: codeFilterHandler(codeTable, setCodeFilters),

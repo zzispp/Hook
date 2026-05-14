@@ -40,6 +40,7 @@ pub(super) fn card_codes_table() -> TableCreateStatement {
         .col(string_len(CardCodes::TypeName, 100))
         .col(card_decimal(CardCodes::RechargeAmount).default(0))
         .col(card_decimal(CardCodes::GiftAmount).default(0))
+        .col(string_len(CardCodes::Currency, 3))
         .col(string_len(CardCodes::Status, 20).default("active"))
         .col(text_null(CardCodes::Remark))
         .col(timestamp_tz_null(CardCodes::ExpiresAt))
@@ -112,15 +113,13 @@ where
 }
 
 fn card_code_type_checks() -> [&'static str; 2] {
-    [
-        r#""status" IN ('active', 'disabled')"#,
-        r#""balance_type" IN ('recharge', 'gift')"#,
-    ]
+    [r#""status" IN ('active', 'disabled')"#, r#""balance_type" IN ('recharge', 'gift')"#]
 }
 
-fn card_code_checks() -> [&'static str; 4] {
+fn card_code_checks() -> [&'static str; 5] {
     [
         r#""status" IN ('active', 'disabled', 'used', 'expired')"#,
+        r#""currency" IN ('USD', 'CNY')"#,
         r#""recharge_amount" >= 0"#,
         r#""gift_amount" >= 0"#,
         r#""recharge_amount" + "gift_amount" > 0"#,

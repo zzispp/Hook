@@ -16,6 +16,7 @@ pub struct Model {
     pub type_name: String,
     pub recharge_amount: rust_decimal::Decimal,
     pub gift_amount: rust_decimal::Decimal,
+    pub currency: String,
     pub status: String,
     pub remark: Option<String>,
     pub expires_at: Option<TimeDateTimeWithTimeZone>,
@@ -34,11 +35,7 @@ pub struct Model {
 
 #[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(
-        belongs_to = "card_code_types::Entity",
-        from = "Column::TypeId",
-        to = "card_code_types::Column::Id"
-    )]
+    #[sea_orm(belongs_to = "card_code_types::Entity", from = "Column::TypeId", to = "card_code_types::Column::Id")]
     Type,
 }
 
@@ -60,6 +57,7 @@ impl From<Model> for CardCode {
             type_name: value.type_name,
             recharge_amount: value.recharge_amount,
             gift_amount: value.gift_amount,
+            currency: value.currency,
             status: value.status,
             remark: value.remark,
             expires_at: value.expires_at.map(format_timestamp),

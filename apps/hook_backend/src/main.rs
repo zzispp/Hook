@@ -1,4 +1,5 @@
 mod auth;
+mod card_code_currency;
 mod commands;
 mod exchange_rates;
 mod llm_proxy;

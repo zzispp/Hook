@@ -29,6 +29,7 @@ type GenerateDialogProps = {
   t: TFunction<'admin'>;
   open: boolean;
   types: CardCodeType[];
+  currency?: string;
   submitting: boolean;
   onClose: VoidFunction;
   onSubmit: (input: CardCodeGenerateInput) => void;
@@ -60,7 +61,7 @@ type TypeForm = {
   remark: string;
 };
 
-export function CardCodeGenerateDialog({ t, open, types, submitting, onClose, onSubmit }: GenerateDialogProps) {
+export function CardCodeGenerateDialog({ t, open, types, currency, submitting, onClose, onSubmit }: GenerateDialogProps) {
   const [form, setForm] = useState<GenerateForm>(() => defaultGenerateForm(types));
 
   useEffect(() => {
@@ -72,7 +73,7 @@ export function CardCodeGenerateDialog({ t, open, types, submitting, onClose, on
   const selectedType = types.find((item) => item.id === form.type_id) ?? null;
   const patch = (next: Partial<GenerateForm>) => setForm((current) => ({ ...current, ...next }));
   const submit = () => onSubmit(generatePayload(form));
-  const amountLabel = cardCodeAmountLabel(t, selectedType);
+  const amountLabel = cardCodeAmountLabel(t, selectedType, currency);
 
   return (
     <Dialog open={open} fullWidth maxWidth="sm" onClose={onClose}>
@@ -231,7 +232,12 @@ function balanceTypeSelectProps(t: TFunction<'admin'>) {
   };
 }
 
-function cardCodeAmountLabel(t: TFunction<'admin'>, type: CardCodeType | null) {
+function cardCodeAmountLabel(t: TFunction<'admin'>, type: CardCodeType | null, currency?: string) {
+  const label = baseAmountLabel(t, type);
+  return currency ? `${label} (${currency})` : label;
+}
+
+function baseAmountLabel(t: TFunction<'admin'>, type: CardCodeType | null) {
   if (type?.balance_type === 'gift') {
     return t('adminCardCodes.fields.giftAmount');
   }

@@ -1,5 +1,15 @@
-use std::{net::SocketAddr, sync::Arc};
-
+use crate::{
+    BackendResult,
+    auth::{AuthState, AuthStateParts, auth_middleware},
+    card_code_currency::BackendCardCodeCurrencyProvider,
+    exchange_rates::ExchangeRateCache,
+    llm_proxy::{LlmProxyCache, LlmProxyState, create_router as create_llm_proxy_router, create_v1beta_router},
+    proxy_cache_hooks::{
+        ProxyCachedApiTokenUseCase, ProxyCachedGroupUseCase, ProxyCachedModelUseCase, ProxyCachedProviderUseCase, ProxyCachedSettingUseCase,
+        ProxyCachedUserUseCase,
+    },
+    system,
+};
 use api_token::{
     api::{ApiTokenApiState, create_router as create_api_token_router},
     application::ApiTokenService,
@@ -56,9 +66,11 @@ use setting::{
     application::SettingService,
     infra::{LettreSmtpConnectionTester, SettingAesSecretCipher, StorageSettingRepository},
 };
+use std::{net::SocketAddr, sync::Arc};
 use storage::connect_database;
 use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use types::api_token::ApiTokenOwnerResponse;
 use user::{
     api::{ApiState, TokenService, TokenSettings, create_router as create_user_router},
     application::{SystemUserProvider, UserService},
@@ -71,20 +83,6 @@ use wallet::{
     application::WalletService,
     infra::StorageWalletRepository,
 };
-
-use crate::{
-    BackendResult,
-    auth::{AuthState, AuthStateParts, auth_middleware},
-    exchange_rates::ExchangeRateCache,
-    llm_proxy::{LlmProxyCache, LlmProxyState, create_router as create_llm_proxy_router, create_v1beta_router},
-    proxy_cache_hooks::{
-        ProxyCachedApiTokenUseCase, ProxyCachedGroupUseCase, ProxyCachedModelUseCase, ProxyCachedProviderUseCase, ProxyCachedSettingUseCase,
-        ProxyCachedUserUseCase,
-    },
-    system,
-};
-use types::api_token::ApiTokenOwnerResponse;
-
 pub async fn serve(settings: Settings) -> BackendResult<()> {
     let bind_addr = settings.bind_addr();
     hook_tracing::info_with_fields!("backend starting", addr = bind_addr);
@@ -92,12 +90,10 @@ pub async fn serve(settings: Settings) -> BackendResult<()> {
     let state = build_app_state(&settings).await?;
     let app = create_app(state);
     let listener = TcpListener::bind(&bind_addr).await?;
-
     hook_tracing::info_with_fields!("backend listening", addr = bind_addr);
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
     Ok(())
 }
-
 async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let database = connect_database(&settings.database_url()?).await?;
     let exchange_rates = ExchangeRateCache::connect(&settings.redis_url()?, settings.redis.key_prefix.clone()).await?;
@@ -119,7 +115,6 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     ));
     let providers = Arc::new(ProxyCachedProviderUseCase::new(providers_inner, proxy_cache.clone()));
     let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));
-    let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone())));
     let setting_secret_cipher = SettingAesSecretCipher::new(settings.provider_key_secret()?)?;
     let settings_inner = Arc::new(SettingService::new(
         StorageSettingRepository::new(database.clone()),
@@ -127,6 +122,8 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         LettreSmtpConnectionTester,
     ));
     let system_settings = Arc::new(ProxyCachedSettingUseCase::new(settings_inner, proxy_cache.clone()));
+    let card_code_currency = BackendCardCodeCurrencyProvider::new(system_settings.clone(), exchange_rates.clone());
+    let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone()), card_code_currency));
     let groups_inner = Arc::new(GroupService::new(
         StorageGroupRepository::new(database.clone()),
         StorageGroupModelCatalog::new(database.clone()),
@@ -255,21 +252,18 @@ fn create_app(state: AppState) -> Router {
         .layer(cors_layer())
         .layer(TraceLayer::new_for_http())
 }
-
 fn cors_layer() -> CorsLayer {
     CorsLayer::new()
         .allow_origin(HeaderValue::from_static("http://localhost:8082"))
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS])
         .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
 }
-
 fn authorization_config(settings: &Settings) -> AuthorizationConfig {
     AuthorizationConfig {
         whitelist: auth_rules(&settings.auth.whitelist),
         authenticated: auth_rules(&settings.auth.authenticated),
     }
 }
-
 fn auth_rules(rules: &[ConfigAuthRule]) -> Vec<AuthWhitelistRule> {
     rules
         .iter()
@@ -279,7 +273,6 @@ fn auth_rules(rules: &[ConfigAuthRule]) -> Vec<AuthWhitelistRule> {
         })
         .collect()
 }
-
 fn token_settings(settings: &Settings) -> BackendResult<TokenSettings> {
     Ok(TokenSettings {
         secret: settings.jwt_secret()?,

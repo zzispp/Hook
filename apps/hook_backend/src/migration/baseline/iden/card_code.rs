@@ -22,6 +22,7 @@ pub(in crate::migration::baseline) enum CardCodes {
     TypeName,
     RechargeAmount,
     GiftAmount,
+    Currency,
     Status,
     Remark,
     ExpiresAt,

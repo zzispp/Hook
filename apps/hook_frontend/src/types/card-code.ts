@@ -19,6 +19,7 @@ export type CardCode = {
   type_name: string;
   recharge_amount: number;
   gift_amount: number;
+  currency: string;
   status: CardCodeStatus;
   remark: string | null;
   expires_at: string | null;

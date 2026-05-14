@@ -612,6 +612,7 @@
       "code": "Card code",
       "type": "Type",
       "typeName": "Type name",
+      "currency": "Currency",
       "amount": "Credit amount",
       "balanceType": "Credit balance type",
       "rechargeAmount": "Recharge",

@@ -23,8 +23,8 @@ export function cardCodeBalanceTypeLabel(t: TFunction<'admin'>, balanceType: Car
   return t(`wallet.balanceTypeLabels.${balanceType}`);
 }
 
-export function formatCardCodeAmount(recharge: number, gift: number) {
-  return `${formatWalletMoney(recharge, 'CNY')} / ${formatWalletMoney(gift, 'CNY')}`;
+export function formatCardCodeAmount(recharge: number, gift: number, currency: string) {
+  return `${formatWalletMoney(recharge, currency)} / ${formatWalletMoney(gift, currency)}`;
 }
 
 export function formatCardCodeDate(value: string | null | undefined, locale: string) {

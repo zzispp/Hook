@@ -5,9 +5,8 @@ use storage::{
 };
 use types::{
     card_code::{
-        CardCode, CardCodeCreateRecord, CardCodeListFilters, CardCodeRedeemInput,
-        CardCodeRedeemResponse, CardCodeType, CardCodeTypeCreatePayload, CardCodeTypeListFilters,
-        CardCodeTypeUpdatePayload,
+        CardCode, CardCodeCreateRecord, CardCodeListFilters, CardCodeRedeemInput, CardCodeRedeemResponse, CardCodeType, CardCodeTypeCreatePayload,
+        CardCodeTypeListFilters, CardCodeTypeUpdatePayload,
     },
     pagination::{Page, PageRequest, PageSliceRequest},
 };
@@ -29,11 +28,7 @@ impl StorageCardCodeRepository {
 
 #[async_trait]
 impl CardCodeRepository for StorageCardCodeRepository {
-    async fn list_types(
-        &self,
-        page: PageRequest,
-        filters: CardCodeTypeListFilters,
-    ) -> CardCodeResult<Page<CardCodeType>> {
+    async fn list_types(&self, page: PageRequest, filters: CardCodeTypeListFilters) -> CardCodeResult<Page<CardCodeType>> {
         self.store.list_types(page_slice_request(page), filters).await.map_err(storage_error)
     }
 
@@ -41,16 +36,20 @@ impl CardCodeRepository for StorageCardCodeRepository {
         self.store.create_type(type_input(input)).await.map_err(storage_error)
     }
 
-    async fn update_type(
-        &self,
-        id: &str,
-        input: CardCodeTypeUpdatePayload,
-    ) -> CardCodeResult<CardCodeType> {
+    async fn update_type(&self, id: &str, input: CardCodeTypeUpdatePayload) -> CardCodeResult<CardCodeType> {
         self.store.update_type(id, type_patch(input)).await.map_err(storage_error)
     }
 
     async fn find_type(&self, id: &str) -> CardCodeResult<Option<CardCodeType>> {
         self.store.find_type(id).await.map_err(storage_error)
+    }
+
+    async fn find_code(&self, code: &str) -> CardCodeResult<Option<CardCode>> {
+        self.store.find_code(code).await.map_err(storage_error)
+    }
+
+    async fn user_wallet_currency(&self, user_id: &str) -> CardCodeResult<Option<String>> {
+        self.store.user_wallet_currency(user_id).await.map_err(storage_error)
     }
 
     async fn code_exists(&self, code: &str) -> CardCodeResult<bool> {
@@ -61,11 +60,7 @@ impl CardCodeRepository for StorageCardCodeRepository {
         self.store.create_codes(inputs).await.map_err(storage_error)
     }
 
-    async fn list_codes(
-        &self,
-        page: PageRequest,
-        filters: CardCodeListFilters,
-    ) -> CardCodeResult<Page<CardCode>> {
+    async fn list_codes(&self, page: PageRequest, filters: CardCodeListFilters) -> CardCodeResult<Page<CardCode>> {
         self.store.list_codes(page_slice_request(page), filters).await.map_err(storage_error)
     }
 

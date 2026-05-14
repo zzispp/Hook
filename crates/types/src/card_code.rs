@@ -23,7 +23,6 @@ pub struct CardCodeType {
     pub created_at: String,
     pub updated_at: String,
 }
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CardCode {
     pub id: String,
@@ -33,6 +32,7 @@ pub struct CardCode {
     pub type_name: String,
     pub recharge_amount: Decimal,
     pub gift_amount: Decimal,
+    pub currency: String,
     pub status: String,
     pub remark: Option<String>,
     pub expires_at: Option<String>,
@@ -48,20 +48,17 @@ pub struct CardCode {
     pub wallet_id: Option<String>,
     pub wallet_transaction_id: Option<String>,
 }
-
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CardCodeTypeListFilters {
     pub search: Option<String>,
     pub status: Option<String>,
 }
-
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CardCodeListFilters {
     pub search: Option<String>,
     pub status: Option<String>,
     pub type_id: Option<String>,
 }
-
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct CardCodeTypeCreatePayload {
     pub name: String,
@@ -71,7 +68,6 @@ pub struct CardCodeTypeCreatePayload {
     #[serde(default)]
     pub remark: Option<String>,
 }
-
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct CardCodeTypeUpdatePayload {
     pub name: String,
@@ -80,7 +76,6 @@ pub struct CardCodeTypeUpdatePayload {
     #[serde(default)]
     pub remark: Option<String>,
 }
-
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct CardCodeGeneratePayload {
     pub type_id: String,
@@ -115,6 +110,7 @@ pub struct CardCodeCreateRecord {
     pub type_name: String,
     pub recharge_amount: Decimal,
     pub gift_amount: Decimal,
+    pub currency: String,
     pub status: String,
     pub remark: Option<String>,
     pub expires_at: Option<String>,
@@ -129,6 +125,8 @@ pub struct CardCodeRedeemInput {
     pub user_id: String,
     pub username: String,
     pub client_ip: Option<String>,
+    pub target_currency: String,
+    pub usd_cny_rate: Option<Decimal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -159,6 +157,7 @@ pub struct CardCodeResponse {
     pub recharge_amount: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
     pub gift_amount: Decimal,
+    pub currency: String,
     pub status: String,
     pub remark: Option<String>,
     pub expires_at: Option<String>,
@@ -234,6 +233,7 @@ impl From<CardCode> for CardCodeResponse {
             type_name: value.type_name,
             recharge_amount: value.recharge_amount,
             gift_amount: value.gift_amount,
+            currency: value.currency,
             remark: value.remark,
             expires_at: value.expires_at,
             created_at: value.created_at,

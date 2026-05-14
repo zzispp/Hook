@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect currency and card-code integration points,DONE,"Relevant storage/service/frontend paths identified","rg -n \"card_code|currency|ExchangeRate\" crates apps/hook_backend apps/hook_frontend/src",2026-05-14T15:25:00+08:00,0,
+2,Implement backend currency snapshot and redemption conversion,DONE,"Card code stores currency and redemption credits current-system currency","cargo test -q -p card_code",2026-05-14T15:51:00+08:00,0,
+3,Update frontend display and export,DONE,"UI and export use card code snapshot currency","pnpm lint:frontend",2026-05-14T15:51:00+08:00,0,
+4,Run full validation,DONE,"Backend check, frontend build, and diff check complete","cargo test -q -p card_code && cargo test -q -p storage card_code::redemption_currency && cargo check -q && pnpm lint:frontend && pnpm build:frontend && git diff --check",2026-05-14T15:54:00+08:00,0,
+5,Commit amend and force push,DONE,"Remote main updated with requested commit message","git status --short --branch && git log -1 --oneline",2026-05-14T16:03:00+08:00,0,

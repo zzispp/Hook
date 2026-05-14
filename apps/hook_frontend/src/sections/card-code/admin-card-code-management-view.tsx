@@ -46,6 +46,7 @@ export function AdminCardCodeManagementView() {
         t={t}
         open={state.generateOpen}
         types={state.activeTypes}
+        currency={state.systemCurrency}
         submitting={state.submitting}
         onClose={() => state.setGenerateOpen(false)}
         onSubmit={state.submitGenerate}

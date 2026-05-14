@@ -1,22 +1,16 @@
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
-    Set, sea_query::Expr,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, sea_query::Expr};
 use types::{
     card_code::{
-        CARD_CODE_STATUS_ACTIVE, CARD_CODE_STATUS_DISABLED, CardCode, CardCodeCreateRecord,
-        CardCodeListFilters, CardCodeRedeemInput, CardCodeRedeemRecord, CardCodeType,
-        CardCodeTypeListFilters,
+        CARD_CODE_STATUS_ACTIVE, CARD_CODE_STATUS_DISABLED, CardCode, CardCodeCreateRecord, CardCodeListFilters, CardCodeRedeemInput, CardCodeRedeemRecord,
+        CardCodeType, CardCodeTypeListFilters,
     },
     pagination::{Page, PageSliceRequest},
 };
 
 use crate::{
     Database, StorageError, StorageResult,
-    card_code::{
-        CardCodeTypeRecordInput, CardCodeTypeRecordPatch, card_code_records, card_code_type_records,
-        query, redemption, time_format,
-    },
+    card_code::{CardCodeTypeRecordInput, CardCodeTypeRecordPatch, card_code_records, card_code_type_records, query, redemption, time_format},
+    wallet::wallet_records,
 };
 
 #[derive(Clone)]
@@ -45,11 +39,7 @@ impl CardCodeStore {
         Ok(record.into())
     }
 
-    pub async fn update_type(
-        &self,
-        id: &str,
-        input: CardCodeTypeRecordPatch,
-    ) -> StorageResult<CardCodeType> {
+    pub async fn update_type(&self, id: &str, input: CardCodeTypeRecordPatch) -> StorageResult<CardCodeType> {
         let record = self.find_type_record(id).await?.ok_or(StorageError::NotFound)?;
         let mut active: card_code_type_records::ActiveModel = record.into();
         active.name = Set(input.name);
@@ -64,11 +54,7 @@ impl CardCodeStore {
         self.find_type_record(id).await.map(|record| record.map(CardCodeType::from))
     }
 
-    pub async fn list_types(
-        &self,
-        request: PageSliceRequest,
-        filters: CardCodeTypeListFilters,
-    ) -> StorageResult<Page<CardCodeType>> {
+    pub async fn list_types(&self, request: PageSliceRequest, filters: CardCodeTypeListFilters) -> StorageResult<Page<CardCodeType>> {
         let query = query::filtered_types(filters);
         let total = query.clone().count(self.database.connection()).await?;
         let items = query
@@ -92,6 +78,26 @@ impl CardCodeStore {
             .map_err(StorageError::from)
     }
 
+    pub async fn find_code(&self, code: &str) -> StorageResult<Option<CardCode>> {
+        card_code_records::Entity::find()
+            .filter(card_code_records::Column::Code.eq(code))
+            .one(self.database.connection())
+            .await
+            .map(|record| record.map(CardCode::from))
+            .map_err(StorageError::from)
+    }
+
+    pub async fn user_wallet_currency(&self, user_id: &str) -> StorageResult<Option<String>> {
+        wallet_records::Entity::find()
+            .select_only()
+            .column(wallet_records::Column::Currency)
+            .filter(wallet_records::Column::UserId.eq(user_id))
+            .into_tuple()
+            .one(self.database.connection())
+            .await
+            .map_err(StorageError::from)
+    }
+
     pub async fn create_codes(&self, inputs: Vec<CardCodeCreateRecord>) -> StorageResult<Vec<CardCode>> {
         if inputs.is_empty() {
             return Ok(Vec::new());
@@ -103,11 +109,7 @@ impl CardCodeStore {
         Ok(inserted.into_iter().map(CardCode::from).collect())
     }
 
-    pub async fn list_codes(
-        &self,
-        request: PageSliceRequest,
-        filters: CardCodeListFilters,
-    ) -> StorageResult<Page<CardCode>> {
+    pub async fn list_codes(&self, request: PageSliceRequest, filters: CardCodeListFilters) -> StorageResult<Page<CardCode>> {
         let query = query::filtered_codes(filters);
         let total = query.clone().count(self.database.connection()).await?;
         let items = query
@@ -143,10 +145,7 @@ impl CardCodeStore {
         redemption::redeem(&self.database, input).await
     }
 
-    async fn find_type_record(
-        &self,
-        id: &str,
-    ) -> StorageResult<Option<crate::card_code::CardCodeTypeRecord>> {
+    async fn find_type_record(&self, id: &str) -> StorageResult<Option<crate::card_code::CardCodeTypeRecord>> {
         card_code_type_records::Entity::find_by_id(id.to_owned())
             .one(self.database.connection())
             .await
@@ -163,6 +162,7 @@ impl CardCodeStore {
             type_name: Set(input.type_name),
             recharge_amount: Set(input.recharge_amount),
             gift_amount: Set(input.gift_amount),
+            currency: Set(input.currency),
             status: Set(input.status),
             remark: Set(input.remark),
             expires_at: Set(time_format::parse_optional(input.expires_at.as_deref())),

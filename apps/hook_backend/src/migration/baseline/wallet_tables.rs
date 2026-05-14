@@ -91,7 +91,7 @@ where
 
 fn wallet_checks() -> [&'static str; 8] {
     [
-        r#""currency" = 'CNY'"#,
+        r#""currency" IN ('USD', 'CNY')"#,
         r#""status" IN ('active', 'disabled')"#,
         r#""limit_mode" IN ('finite', 'unlimited')"#,
         r#""recharge_balance" >= 0"#,

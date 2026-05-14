@@ -3,92 +3,71 @@ use rand::{Rng, rngs::OsRng};
 use rust_decimal::Decimal;
 use types::{
     card_code::{
-        CARD_CODE_BALANCE_TYPE_GIFT, CARD_CODE_BALANCE_TYPE_RECHARGE, CARD_CODE_STATUS_ACTIVE,
-        CardCodeBatchStatusPayload, CardCodeBatchStatusResponse, CardCodeCreateRecord,
-        CardCodeGeneratePayload, CardCodeGenerateResponse, CardCodeListFilters,
-        CardCodeListResponse, CardCodeRedeemInput, CardCodeRedeemPayload, CardCodeRedeemResponse,
-        CardCodeType, CardCodeTypeCreatePayload, CardCodeTypeListFilters,
+        CARD_CODE_BALANCE_TYPE_GIFT, CARD_CODE_BALANCE_TYPE_RECHARGE, CARD_CODE_STATUS_ACTIVE, CardCode, CardCodeBatchStatusPayload,
+        CardCodeBatchStatusResponse, CardCodeCreateRecord, CardCodeGeneratePayload, CardCodeGenerateResponse, CardCodeListFilters, CardCodeListResponse,
+        CardCodeRedeemInput, CardCodeRedeemPayload, CardCodeRedeemResponse, CardCodeType, CardCodeTypeCreatePayload, CardCodeTypeListFilters,
         CardCodeTypeListResponse, CardCodeTypeUpdatePayload,
     },
     pagination::PageRequest,
+    system_setting::DisplayCurrency,
 };
 use uuid::Uuid;
 
-use crate::application::{
-    CardCodeError, CardCodeOperator, CardCodeRedeemer, CardCodeRepository, CardCodeResult,
-    CardCodeUseCase,
-};
+use crate::application::{CardCodeCurrencyProvider, CardCodeError, CardCodeOperator, CardCodeRedeemer, CardCodeRepository, CardCodeResult, CardCodeUseCase};
 
-use super::validation::{
-    validate_batch_status, validate_generate, validate_page, validate_type_create, validate_type_update,
-};
+use super::validation::{validate_batch_status, validate_generate, validate_page, validate_type_create, validate_type_update};
 
 const CODE_ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_CODE_ATTEMPTS: u8 = 20;
 
-pub struct CardCodeService<R> {
+pub struct CardCodeService<R, C> {
     repository: R,
+    currency_provider: C,
 }
 
-impl<R> CardCodeService<R>
+impl<R, C> CardCodeService<R, C>
 where
     R: CardCodeRepository,
+    C: CardCodeCurrencyProvider,
 {
-    pub const fn new(repository: R) -> Self {
-        Self { repository }
+    pub const fn new(repository: R, currency_provider: C) -> Self {
+        Self { repository, currency_provider }
     }
 }
-
 #[async_trait]
-impl<R> CardCodeUseCase for CardCodeService<R>
+impl<R, C> CardCodeUseCase for CardCodeService<R, C>
 where
     R: CardCodeRepository,
+    C: CardCodeCurrencyProvider,
 {
-    async fn list_types(
-        &self,
-        page: PageRequest,
-        filters: CardCodeTypeListFilters,
-    ) -> CardCodeResult<CardCodeTypeListResponse> {
+    async fn list_types(&self, page: PageRequest, filters: CardCodeTypeListFilters) -> CardCodeResult<CardCodeTypeListResponse> {
         validate_page(page)?;
         self.repository.list_types(page, filters).await.map(Into::into)
     }
-
     async fn create_type(&self, input: CardCodeTypeCreatePayload) -> CardCodeResult<CardCodeType> {
         let input = sanitize_type_create(input);
         validate_type_create(&input)?;
         self.repository.create_type(input).await
     }
-
-    async fn update_type(
-        &self,
-        id: &str,
-        input: CardCodeTypeUpdatePayload,
-    ) -> CardCodeResult<CardCodeType> {
+    async fn update_type(&self, id: &str, input: CardCodeTypeUpdatePayload) -> CardCodeResult<CardCodeType> {
         let input = sanitize_type_update(input);
         validate_type_update(&input)?;
         self.repository.update_type(id, input).await
     }
-
-    async fn list_codes(
-        &self,
-        page: PageRequest,
-        filters: CardCodeListFilters,
-    ) -> CardCodeResult<CardCodeListResponse> {
+    async fn list_codes(&self, page: PageRequest, filters: CardCodeListFilters) -> CardCodeResult<CardCodeListResponse> {
         validate_page(page)?;
         self.repository.list_codes(page, filters).await.map(Into::into)
     }
-
-    async fn generate_codes(
-        &self,
-        input: CardCodeGeneratePayload,
-        operator: CardCodeOperator,
-    ) -> CardCodeResult<CardCodeGenerateResponse> {
+    async fn generate_codes(&self, input: CardCodeGeneratePayload, operator: CardCodeOperator) -> CardCodeResult<CardCodeGenerateResponse> {
         let input = sanitize_generate(input);
         validate_generate(&input)?;
         let card_type = self.active_type(&input.type_id).await?;
         let amounts = generation_amounts(&input, &card_type)?;
+        let currency = self.currency_provider.current_currency().await?;
         let batch_no = batch_no();
-        let records = self.generated_records(input, operator, card_type, amounts, &batch_no).await?;
+        let records = self
+            .generated_records(input, operator, card_type, amounts, currency.as_str(), &batch_no)
+            .await?;
         let items = self.repository.create_codes(records).await?;
         Ok(CardCodeGenerateResponse {
             total: items.len() as u64,
@@ -96,36 +75,32 @@ where
             items: items.into_iter().map(Into::into).collect(),
         })
     }
-
-    async fn batch_update_code_status(
-        &self,
-        input: CardCodeBatchStatusPayload,
-    ) -> CardCodeResult<CardCodeBatchStatusResponse> {
+    async fn batch_update_code_status(&self, input: CardCodeBatchStatusPayload) -> CardCodeResult<CardCodeBatchStatusResponse> {
         validate_batch_status(&input)?;
         let updated_count = self.repository.batch_update_code_status(&input.ids, &input.status).await?;
         Ok(CardCodeBatchStatusResponse { updated_count })
     }
-
-    async fn redeem(
-        &self,
-        input: CardCodeRedeemPayload,
-        user: CardCodeRedeemer,
-    ) -> CardCodeResult<CardCodeRedeemResponse> {
+    async fn redeem(&self, input: CardCodeRedeemPayload, user: CardCodeRedeemer) -> CardCodeResult<CardCodeRedeemResponse> {
         let code = normalize_code(&input.code)?;
+        let target_currency = self.currency_provider.current_currency().await?;
+        let usd_cny_rate = self.redemption_rate(&code, &user.user_id, &target_currency).await?;
         self.repository
             .redeem(CardCodeRedeemInput {
                 code,
                 user_id: user.user_id,
                 username: user.username,
                 client_ip: user.client_ip,
+                target_currency: target_currency.as_str().into(),
+                usd_cny_rate,
             })
             .await
     }
 }
 
-impl<R> CardCodeService<R>
+impl<R, C> CardCodeService<R, C>
 where
     R: CardCodeRepository,
+    C: CardCodeCurrencyProvider,
 {
     async fn active_type(&self, type_id: &str) -> CardCodeResult<CardCodeType> {
         let card_type = self.repository.find_type(type_id).await?.ok_or(CardCodeError::NotFound)?;
@@ -134,13 +109,13 @@ where
         }
         Ok(card_type)
     }
-
     async fn generated_records(
         &self,
         input: CardCodeGeneratePayload,
         operator: CardCodeOperator,
         card_type: CardCodeType,
         amounts: CardCodeAmounts,
+        currency: &str,
         batch_no: &str,
     ) -> CardCodeResult<Vec<CardCodeCreateRecord>> {
         let mut records = Vec::with_capacity(input.quantity as usize);
@@ -152,6 +127,7 @@ where
                 type_name: card_type.name.clone(),
                 recharge_amount: amounts.recharge,
                 gift_amount: amounts.gift,
+                currency: currency.into(),
                 status: input.status.clone().unwrap_or_else(|| CARD_CODE_STATUS_ACTIVE.into()),
                 remark: input.remark.clone(),
                 expires_at: input.expires_at.clone(),
@@ -162,7 +138,21 @@ where
         }
         Ok(records)
     }
-
+    async fn redemption_rate(&self, code: &str, user_id: &str, target_currency: &DisplayCurrency) -> CardCodeResult<Option<Decimal>> {
+        let Some(card_code) = self.repository.find_code(code).await? else {
+            return Ok(None);
+        };
+        let target_currency = target_currency.as_str();
+        if !is_redeemable(&card_code) {
+            return Ok(None);
+        }
+        let wallet_currency = self.repository.user_wallet_currency(user_id).await?;
+        let needs_rate = requires_exchange_rate(&card_code, target_currency) || wallet_currency.as_deref().is_some_and(|currency| currency != target_currency);
+        if !needs_rate {
+            return Ok(None);
+        }
+        self.currency_provider.usd_cny_rate().await.map(Some)
+    }
     async fn unique_code(&self, length: u8) -> CardCodeResult<String> {
         for _ in 0..MAX_CODE_ATTEMPTS {
             let code = build_code(length);
@@ -180,10 +170,7 @@ struct CardCodeAmounts {
     gift: Decimal,
 }
 
-fn generation_amounts(
-    input: &CardCodeGeneratePayload,
-    card_type: &CardCodeType,
-) -> CardCodeResult<CardCodeAmounts> {
+fn generation_amounts(input: &CardCodeGeneratePayload, card_type: &CardCodeType) -> CardCodeResult<CardCodeAmounts> {
     match card_type.balance_type.as_str() {
         CARD_CODE_BALANCE_TYPE_RECHARGE => Ok(CardCodeAmounts {
             recharge: input.amount,
@@ -238,11 +225,27 @@ fn normalize_code(raw: &str) -> CardCodeResult<String> {
     Ok(code)
 }
 
+fn requires_exchange_rate(code: &CardCode, target_currency: &str) -> bool {
+    code.currency != target_currency && is_redeemable(code)
+}
+
+fn is_redeemable(code: &CardCode) -> bool {
+    code.status == CARD_CODE_STATUS_ACTIVE && code.used_at.is_none() && !is_expired(code.expires_at.as_deref())
+}
+
+fn is_expired(value: Option<&str>) -> bool {
+    let Some(raw) = value else {
+        return false;
+    };
+    let Ok(expires_at) = time::OffsetDateTime::parse(raw, &time::format_description::well_known::Rfc3339) else {
+        return false;
+    };
+    expires_at <= time::OffsetDateTime::now_utc()
+}
+
 fn build_code(length: u8) -> String {
     let mut rng = OsRng;
-    (0..length)
-        .map(|_| CODE_ALPHABET[rng.gen_range(0..CODE_ALPHABET.len())] as char)
-        .collect()
+    (0..length).map(|_| CODE_ALPHABET[rng.gen_range(0..CODE_ALPHABET.len())] as char).collect()
 }
 
 fn batch_no() -> String {
@@ -250,46 +253,5 @@ fn batch_no() -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn generation_amounts_puts_recharge_type_amount_into_recharge_balance() {
-        let amounts = generation_amounts(&generate_payload(), &card_type(CARD_CODE_BALANCE_TYPE_RECHARGE)).unwrap();
-
-        assert_eq!(amounts.recharge, Decimal::new(1000, 2));
-        assert_eq!(amounts.gift, Decimal::ZERO);
-    }
-
-    #[test]
-    fn generation_amounts_puts_gift_type_amount_into_gift_balance() {
-        let amounts = generation_amounts(&generate_payload(), &card_type(CARD_CODE_BALANCE_TYPE_GIFT)).unwrap();
-
-        assert_eq!(amounts.recharge, Decimal::ZERO);
-        assert_eq!(amounts.gift, Decimal::new(1000, 2));
-    }
-
-    fn generate_payload() -> CardCodeGeneratePayload {
-        CardCodeGeneratePayload {
-            type_id: "type_1".into(),
-            quantity: 1,
-            code_length: 12,
-            status: None,
-            remark: None,
-            expires_at: None,
-            amount: Decimal::new(1000, 2),
-        }
-    }
-
-    fn card_type(balance_type: &str) -> CardCodeType {
-        CardCodeType {
-            id: "type_1".into(),
-            name: "type".into(),
-            balance_type: balance_type.into(),
-            status: CARD_CODE_STATUS_ACTIVE.into(),
-            remark: None,
-            created_at: "2026-05-14T00:00:00Z".into(),
-            updated_at: "2026-05-14T00:00:00Z".into(),
-        }
-    }
-}
+#[path = "service_tests.rs"]
+mod tests;
