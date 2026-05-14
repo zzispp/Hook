@@ -62,6 +62,7 @@ export function RequestRecordDetailDrawer({
       open={open}
       onClose={onClose}
       disableScrollLock
+      disableRestoreFocus
       slotProps={drawerSlotProps}
     >
       <DrawerHeader
