@@ -5,10 +5,11 @@ use sea_orm::{DatabaseBackend, MockDatabase, Value};
 use storage::{
     Database,
     provider::{
-        ProviderStore,
+        ProviderStore, RequestRecordRecordInput, RequestRecordRecordPatch,
         record::{provider_api_keys, provider_endpoints, providers, request_candidates, request_records},
     },
 };
+use types::model::PatchField;
 use types::provider::{ActiveRequestRecordRequest, RequestRecordListRequest};
 
 #[tokio::test]
@@ -34,6 +35,8 @@ async fn request_record_storage_lists_aggregated_records() {
     assert_eq!(response.total, 2);
     assert_eq!(success.status, "success");
     assert_eq!(success.billing_status, "settled");
+    assert_eq!(success.client_status_code, Some(200));
+    assert_eq!(success.client_error_type, None);
     assert_eq!(success.username.as_deref(), Some("hwnet"));
     assert_eq!(success.provider_name.as_deref(), Some("paid-channel-86"));
     assert_eq!(success.provider_key_name.as_deref(), Some("primary-key"));
@@ -62,6 +65,7 @@ async fn request_record_storage_lists_aggregated_records() {
 async fn request_record_storage_returns_trace_detail() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[summary("req-success", "success", false, true, true, 2, 2)]])
             .append_query_results([success_candidates()])
             .append_query_results([provider_records()])
             .append_query_results([endpoint_records()])
@@ -97,11 +101,26 @@ async fn request_record_storage_returns_trace_detail() {
         Some("gpt-5.5")
     );
     assert_eq!(
-        detail.response_body.as_ref().and_then(|value| value.get("id")).and_then(|value| value.as_str()),
+        detail
+            .client_response_body
+            .as_ref()
+            .and_then(|value| value.get("id"))
+            .and_then(|value| value.as_str()),
         Some("msg-1")
     );
+    assert!(detail.client_response_headers.is_none());
     assert_eq!(failed.status, "failed");
     assert_eq!(failed.error_message.as_deref(), Some("rate limit"));
+    assert_eq!(failed.error_code.as_deref(), Some("rate_limit"));
+    assert_eq!(failed.error_param.as_deref(), Some("model"));
+    assert_eq!(
+        failed
+            .provider_response_body
+            .as_ref()
+            .and_then(|value| value.get("error"))
+            .and_then(|value| value.as_str()),
+        Some("rate limit")
+    );
     assert_eq!(failed.created_at, "2026-05-11T11:01:17Z");
     assert_eq!(failed.started_at.as_deref(), Some("2026-05-11T11:01:17Z"));
     assert_eq!(failed.finished_at.as_deref(), Some("2026-05-11T11:02:17Z"));
@@ -112,6 +131,14 @@ async fn request_record_storage_returns_trace_detail() {
     assert_eq!(success.cache_read_input_tokens, Some(4));
     assert_eq!(success.key_name.as_deref(), Some("primary-key"));
     assert_eq!(success.key_preview.as_deref(), Some("***abcd"));
+    assert_eq!(
+        success
+            .provider_request_body
+            .as_ref()
+            .and_then(|value| value.get("model"))
+            .and_then(|value| value.as_str()),
+        Some("gpt-5.5")
+    );
 }
 
 #[tokio::test]
@@ -188,11 +215,103 @@ async fn request_record_storage_filters_summary_before_pagination() {
     assert!(list_sql.contains("OFFSET $"), "{list_sql}");
 }
 
+#[tokio::test]
+async fn request_record_storage_creates_main_record() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[summary("req-created", "pending", false, false, false, 1, 6)]])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    store.create_request_record(main_record_input()).await.unwrap();
+
+    let logs = connection.into_transaction_log();
+    let sql = &logs[0].statements()[0].sql;
+    assert!(sql.contains("INSERT INTO \"request_records\""), "{sql}");
+}
+
+#[tokio::test]
+async fn request_record_storage_updates_main_record() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
+        .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    store.update_request_record(main_record_patch()).await.unwrap();
+
+    let logs = connection.into_transaction_log();
+    let sql = &logs[1].statements()[0].sql;
+    assert!(sql.contains("UPDATE \"request_records\" SET"), "{sql}");
+    assert!(sql.contains("\"status\" = $"), "{sql}");
+    assert!(sql.contains("\"client_status_code\" = $"), "{sql}");
+    assert!(sql.contains("\"client_response_body\" = $"), "{sql}");
+}
+
 fn list_summaries() -> Vec<request_records::Model> {
     vec![
         summary("req-stream", "streaming", true, false, false, 1, 6),
         summary("req-success", "success", false, true, true, 2, 2),
     ]
+}
+
+fn main_record_input() -> RequestRecordRecordInput {
+    RequestRecordRecordInput {
+        request_id: "req-created".into(),
+        token_id: Some("token-1".into()),
+        group_code: Some("default".into()),
+        global_model_id: Some("gpt-5.5".into()),
+        provider_id: Some("provider-1".into()),
+        endpoint_id: Some("endpoint-1".into()),
+        key_id: Some("key-1".into()),
+        client_api_format: "openai_cli".into(),
+        provider_api_format: Some("claude_chat".into()),
+        request_type: "chat".into(),
+        is_stream: false,
+        has_failover: false,
+        has_retry: false,
+        status: "pending".into(),
+        billing_status: "pending".into(),
+        candidate_count: 1,
+        request_headers: Some(serde_json::json!({"authorization": "****"})),
+        request_body: Some(serde_json::json!({"model": "gpt-5.5"})),
+    }
+}
+
+fn main_record_patch() -> RequestRecordRecordPatch {
+    RequestRecordRecordPatch {
+        request_id: "req-success".into(),
+        provider_id: Some("provider-1".into()),
+        endpoint_id: Some("endpoint-1".into()),
+        key_id: Some("key-1".into()),
+        provider_api_format: Some("claude_chat".into()),
+        is_stream: Some(false),
+        has_failover: Some(true),
+        has_retry: Some(true),
+        status: "success".into(),
+        billing_status: "settled".into(),
+        client_status_code: PatchField::Value(200),
+        client_error_type: PatchField::Null,
+        client_error_message: PatchField::Null,
+        termination_origin: PatchField::Null,
+        termination_reason: PatchField::Null,
+        stream_end_reason: PatchField::Null,
+        prompt_tokens: PatchField::Value(12),
+        completion_tokens: PatchField::Value(8),
+        total_tokens: PatchField::Value(20),
+        cache_creation_input_tokens: PatchField::Value(3),
+        cache_read_input_tokens: PatchField::Value(4),
+        cost_currency: PatchField::Value("USD".into()),
+        token_cost: PatchField::Value(Decimal::new(1, 4)),
+        base_cost: PatchField::Value(Decimal::new(1, 5)),
+        total_cost: PatchField::Value(Decimal::new(2, 4)),
+        billing_multiplier: PatchField::Value(Decimal::new(2, 0)),
+        first_byte_time_ms: PatchField::Value(110),
+        total_latency_ms: PatchField::Value(570),
+        client_response_headers: PatchField::Value(serde_json::json!({"content-type": "application/json"})),
+        client_response_body: PatchField::Value(serde_json::json!({"id": "msg-1"})),
+        started: true,
+        finished: true,
+    }
 }
 
 fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, has_retry: bool, candidate_count: i64, minute: u8) -> request_records::Model {
@@ -212,6 +331,12 @@ fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, 
         has_retry,
         status: status.into(),
         billing_status: billing_status(status).into(),
+        client_status_code: client_status_code(status),
+        client_error_type: client_error_type(status),
+        client_error_message: client_error_message(status),
+        termination_origin: (status == "cancelled").then(|| "client".into()),
+        termination_reason: (status == "cancelled").then(|| "disconnected".into()),
+        stream_end_reason: (status == "cancelled").then(|| "client_disconnected".into()),
         prompt_tokens: (status == "success").then_some(12),
         completion_tokens: (status == "success").then_some(8),
         total_tokens: (status == "success").then_some(20),
@@ -225,6 +350,10 @@ fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, 
         first_byte_time_ms: first_byte_time_ms(status),
         total_latency_ms: (status == "success").then_some(570),
         candidate_count,
+        request_headers: request_headers(status),
+        request_body: request_body(status),
+        client_response_headers: None,
+        client_response_body: response_body(status),
         created_at: at_minute(minute),
         started_at: Some(at_minute(minute)),
         finished_at: (status != "streaming").then(|| at_minute(minute + 1)),
@@ -239,9 +368,26 @@ fn count_row(total: i64) -> BTreeMap<&'static str, Value> {
 fn billing_status(status: &str) -> &'static str {
     match status {
         "success" => "settled",
+        "cancelled" => "void",
         "failed" => "void",
         _ => "pending",
     }
+}
+
+fn client_status_code(status: &str) -> Option<i32> {
+    match status {
+        "success" => Some(200),
+        "cancelled" => Some(499),
+        _ => None,
+    }
+}
+
+fn client_error_type(status: &str) -> Option<String> {
+    (status == "cancelled").then(|| "client_disconnected".into())
+}
+
+fn client_error_message(status: &str) -> Option<String> {
+    (status == "cancelled").then(|| "client disconnected".into())
 }
 
 fn success_candidates() -> Vec<request_candidates::Model> {
@@ -265,12 +411,14 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         provider_api_format: Some("claude_chat".into()),
         needs_conversion: true,
         is_stream: status == "streaming",
-        request_headers: request_headers(status),
-        request_body: request_body(status),
-        response_body: response_body(status),
+        provider_request_headers: request_headers(status),
+        provider_request_body: request_body(status),
+        provider_response_headers: response_headers(status),
+        provider_response_body: response_body(status),
         candidate_index,
         retry_index,
         status: status.into(),
+        skip_reason: (status == "skipped").then(|| "request_terminated_before_attempt".into()),
         status_code: (status == "success").then_some(200),
         prompt_tokens: (status == "success").then_some(12),
         completion_tokens: (status == "success").then_some(8),
@@ -286,6 +434,8 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         first_byte_time_ms: first_byte_time_ms(status),
         error_type: (status == "failed").then(|| "upstream_error".into()),
         error_message: (status == "failed").then(|| "rate limit".into()),
+        error_code: (status == "failed").then(|| "rate_limit".into()),
+        error_param: (status == "failed").then(|| "model".into()),
         created_at: at_minute(minute),
         started_at: Some(at_minute(minute)),
         finished_at: (status != "streaming").then(|| at_minute(minute + 1)),
@@ -435,7 +585,15 @@ fn request_body(status: &str) -> Option<String> {
 }
 
 fn response_body(status: &str) -> Option<String> {
-    (status == "success").then(|| r#"{"id":"msg-1"}"#.into())
+    match status {
+        "success" => Some(r#"{"id":"msg-1"}"#.into()),
+        "failed" => Some(r#"{"error":"rate limit"}"#.into()),
+        _ => None,
+    }
+}
+
+fn response_headers(status: &str) -> Option<String> {
+    (status == "success" || status == "failed").then(|| r#"{"content-type":"application/json"}"#.into())
 }
 
 fn at_minute(minute: u8) -> time::OffsetDateTime {

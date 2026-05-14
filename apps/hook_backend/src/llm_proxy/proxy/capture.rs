@@ -20,12 +20,20 @@ impl RequestCapture {
     }
 
     pub(in crate::llm_proxy) fn request_headers(&self, policy: &RequestRecordPolicy) -> Option<Value> {
-        policy.should_record_request_headers().then(|| headers_value(&self.headers, policy))
+        recorded_headers(&self.headers, policy)
     }
 
     pub(in crate::llm_proxy) fn request_body(&self, policy: &RequestRecordPolicy) -> Result<Option<Value>, serde_json::Error> {
-        truncate_request_body(&self.body, policy)
+        recorded_request_body(&self.body, policy)
     }
+}
+
+pub(in crate::llm_proxy) fn recorded_headers(headers: &HeaderMap, policy: &RequestRecordPolicy) -> Option<Value> {
+    policy.should_record_request_headers().then(|| headers_value(headers, policy))
+}
+
+pub(in crate::llm_proxy) fn recorded_request_body(body: &Value, policy: &RequestRecordPolicy) -> Result<Option<Value>, serde_json::Error> {
+    truncate_request_body(body, policy)
 }
 
 fn headers_value(headers: &HeaderMap, policy: &RequestRecordPolicy) -> Value {

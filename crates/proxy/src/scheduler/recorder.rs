@@ -16,11 +16,14 @@ pub struct CandidateAuditRecord {
     pub candidate_index: i32,
     pub retry_index: i32,
     pub status: String,
+    pub skip_reason: Option<String>,
     pub status_code: Option<i32>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,
     pub error_message: Option<String>,
+    pub error_code: Option<String>,
+    pub error_param: Option<String>,
     pub started: bool,
     pub finished: bool,
 }
@@ -28,11 +31,11 @@ pub struct CandidateAuditRecord {
 pub struct CandidateAuditRecorder;
 
 impl CandidateAuditRecorder {
-    pub fn available_records(input: CandidateAuditInput<'_>, candidates: &[Candidate]) -> Vec<CandidateAuditRecord> {
+    pub fn scheduled_records(input: CandidateAuditInput<'_>, candidates: &[Candidate]) -> Vec<CandidateAuditRecord> {
         candidates
             .iter()
             .enumerate()
-            .map(|(index, candidate)| base_record(input, candidate, index as i32, "available"))
+            .map(|(index, candidate)| base_record(input, candidate, index as i32, "scheduled"))
             .collect()
     }
 
@@ -52,11 +55,14 @@ impl CandidateAuditRecorder {
             candidate_index: 0,
             retry_index: 0,
             status: "failed".into(),
+            skip_reason: None,
             status_code: None,
             latency_ms: None,
             first_byte_time_ms: None,
             error_type: Some("no_candidate".into()),
             error_message: Some(error_message),
+            error_code: None,
+            error_param: None,
             started: false,
             finished: true,
         }
@@ -113,11 +119,14 @@ fn base_record(input: CandidateAuditInput<'_>, candidate: &Candidate, index: i32
         candidate_index: index,
         retry_index: 0,
         status: status.to_owned(),
+        skip_reason: None,
         status_code: None,
         latency_ms: None,
         first_byte_time_ms: None,
         error_type: None,
         error_message: None,
+        error_code: None,
+        error_param: None,
         started: false,
         finished: false,
     }

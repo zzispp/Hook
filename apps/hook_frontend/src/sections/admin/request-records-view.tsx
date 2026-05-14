@@ -37,6 +37,7 @@ const REQUEST_STATUS_RANK: Record<string, number> = {
   streaming: 1,
   success: 2,
   failed: 2,
+  cancelled: 2,
 };
 
 export function RequestRecordsView() {

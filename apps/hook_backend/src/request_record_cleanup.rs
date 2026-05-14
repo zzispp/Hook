@@ -25,7 +25,7 @@ async fn run_and_log(database: Database) {
         Ok(report) => hook_tracing::info_with_fields!(
             "request record cleanup completed",
             deleted_records = report.deleted_records,
-            cleared_payloads = report.cleared_payloads,
+            compressed_payloads = report.compressed_payloads,
         ),
         Err(error) => hook_tracing::error("request record cleanup failed", error.as_ref()),
     }
@@ -38,14 +38,14 @@ async fn run_cleanup(database: Database) -> CleanupResult<CleanupReport> {
     let payload_cutoff = now - time::Duration::days(settings.request_record_payload_retention_days);
     let store = ProviderStore::new(database);
     let deleted_records = store.delete_request_records_before(record_cutoff).await?;
-    let cleared_payloads = store.clear_request_record_payloads_before(payload_cutoff).await?;
+    let compressed_payloads = store.compress_request_record_payloads_before(payload_cutoff).await?;
     Ok(CleanupReport {
         deleted_records,
-        cleared_payloads,
+        compressed_payloads,
     })
 }
 
 struct CleanupReport {
     deleted_records: u64,
-    cleared_payloads: u64,
+    compressed_payloads: u64,
 }

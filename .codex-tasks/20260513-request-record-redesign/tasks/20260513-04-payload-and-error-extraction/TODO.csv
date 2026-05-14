@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,定义 provider 侧 payload 字段边界,DONE,候选记录与主记录不再混用同一 payload 语义,rg -n "request_headers|request_body|response_body" crates/storage apps/hook_backend -S,2026-05-13 18:10,0,available/retry 记录已默认不再落 client payload 实际发送后才写 provider request/response
+2,提取非 2xx 响应的具体错误信息,DONE,upstream_status 失败记录包含可读错误片段,cargo test -p backend upstream_status_error_message -- --nocapture,2026-05-13 16:40,0,已从 JSON/plain text body 提取状态失败摘要
+3,回写详情查询与类型,DONE,详情返回能区分 client/provider payload,cargo test -p storage --test provider_request_records -- --nocapture,2026-05-13 18:15,0,detail types/query/front-end detail 已区分 client payload 与 provider payload

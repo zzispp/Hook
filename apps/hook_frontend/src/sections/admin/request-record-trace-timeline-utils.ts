@@ -3,7 +3,7 @@ import type { RequestRecord, RequestCandidateDetail } from 'src/types/provider';
 import { formatRequestDate } from './request-records-utils';
 import { formatApiFormat } from './provider-management-utils';
 
-export type TraceStatus = 'success' | 'failed' | 'active' | 'queued' | 'unscheduled' | 'notScheduled';
+export type TraceStatus = 'success' | 'cancelled' | 'failed' | 'active' | 'queued' | 'unscheduled' | 'notScheduled';
 
 export type TraceAttempt = RequestCandidateDetail & {
   traceStatus: TraceStatus;
@@ -25,8 +25,9 @@ const STATUS_ORDER: Record<TraceStatus, number> = {
   unscheduled: 1,
   queued: 2,
   failed: 3,
-  active: 4,
-  success: 5,
+  cancelled: 4,
+  active: 5,
+  success: 6,
 };
 
 export function buildTraceGroups(record: RequestRecord | null, candidates: RequestCandidateDetail[]) {
@@ -64,6 +65,7 @@ export function attemptTime(attempt: RequestCandidateDetail, locale: string, t: 
 
 export function requestTraceLabelColor(status: string) {
   if (status === 'success') return 'success';
+  if (status === 'cancelled') return 'warning';
   if (status === 'failed') return 'error';
   if (status === 'active' || status === 'pending' || status === 'streaming') return 'info';
   return 'default';
@@ -72,6 +74,7 @@ export function requestTraceLabelColor(status: string) {
 export function statusColor(status: TraceStatus) {
   return {
     success: '#22c55e',
+    cancelled: '#f59e0b',
     failed: '#ef4444',
     active: '#3b82f6',
     queued: '#94a3b8',
@@ -115,7 +118,7 @@ function visibleTraceAttempt(attempt: TraceAttempt) {
 }
 
 function preferredGroupIndex(groups: TraceGroup[]) {
-  for (const status of ['success', 'active', 'failed'] as const) {
+  for (const status of ['success', 'active', 'cancelled', 'failed'] as const) {
     const index = groups.findIndex((group) => group.status === status);
     if (index >= 0) return index;
   }
@@ -124,16 +127,17 @@ function preferredGroupIndex(groups: TraceGroup[]) {
 
 function traceStatus(candidate: RequestCandidateDetail, candidates: RequestCandidateDetail[], record: RequestRecord | null): TraceStatus {
   if (candidate.status === 'success' || successStatusCode(candidate.status_code)) return 'success';
+  if (candidate.status === 'cancelled' || cancelledStatusCode(candidate.status_code)) return 'cancelled';
   if (candidate.status === 'failed' || failedStatusCode(candidate.status_code)) return 'failed';
   if (candidate.status === 'streaming' || activeCandidate(candidate)) return 'active';
   if (candidate.status === 'pending' && !candidate.started_at) return 'queued';
-  if (candidate.status === 'unused') return 'notScheduled';
-  if (candidate.status === 'available') return availableStatus(candidates, record);
+  if (candidate.status === 'skipped') return 'notScheduled';
+  if (candidate.status === 'scheduled') return scheduledStatus(candidates, record);
   return 'unscheduled';
 }
 
-function availableStatus(candidates: RequestCandidateDetail[], record: RequestRecord | null): TraceStatus {
-  if (record?.status === 'success' || record?.status === 'failed') return 'notScheduled';
+function scheduledStatus(candidates: RequestCandidateDetail[], record: RequestRecord | null): TraceStatus {
+  if (record?.status === 'success' || record?.status === 'failed' || record?.status === 'cancelled') return 'notScheduled';
   if (candidates.some(activeCandidate)) return 'queued';
   return 'unscheduled';
 }
@@ -144,6 +148,10 @@ function activeCandidate(candidate: RequestCandidateDetail) {
 
 function successStatusCode(value?: number | null) {
   return value !== null && value !== undefined && value >= 200 && value < 300;
+}
+
+function cancelledStatusCode(value?: number | null) {
+  return value === 499;
 }
 
 function failedStatusCode(value?: number | null) {

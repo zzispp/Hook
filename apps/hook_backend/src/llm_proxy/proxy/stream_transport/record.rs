@@ -1,4 +1,5 @@
 use serde_json::Value;
+use types::model::PatchField;
 
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
@@ -18,7 +19,10 @@ pub(super) struct StreamAttemptRecord {
     pub(super) first_byte_time_ms: Option<i64>,
     pub(super) error_type: Option<&'static str>,
     pub(super) error_message: Option<String>,
-    pub(super) response_body: Option<Value>,
+    pub(super) client_response_body: PatchField<Value>,
+    pub(super) termination_origin: PatchField<String>,
+    pub(super) termination_reason: PatchField<String>,
+    pub(super) stream_end_reason: PatchField<String>,
     pub(super) finished: bool,
 }
 
@@ -36,8 +40,11 @@ pub(super) async fn record_stream_attempt(input: StreamAttemptRecord) -> Result<
             first_byte_time_ms: input.first_byte_time_ms,
             error_type: input.error_type,
             error_message: input.error_message.as_deref(),
-            response_body: input.response_body,
-            finished: input.finished,
+            client_response_body: input.client_response_body,
+            termination_origin: input.termination_origin,
+            termination_reason: input.termination_reason,
+            stream_end_reason: input.stream_end_reason,
+            ..AttemptRecordInput::new(&input.candidate, input.retry_index, input.status, input.finished)
         },
     )
     .await

@@ -4,17 +4,17 @@ mod common;
 use common::{base_input, provider_a, provider_with_two_keys};
 
 #[test]
-fn request_candidate_audit_records_available_candidates() {
+fn request_candidate_audit_records_scheduled_candidates() {
     let candidates = CandidateBuilder::build(&SchedulerInput {
         providers: vec![provider_with_two_keys()],
         ..base_input()
     })
     .unwrap();
 
-    let records = CandidateAuditRecorder::available_records(audit_input(), &candidates);
+    let records = CandidateAuditRecorder::scheduled_records(audit_input(), &candidates);
 
     assert_eq!(records.len(), 2);
-    assert_eq!(records[0].status, "available");
+    assert_eq!(records[0].status, "scheduled");
     assert_eq!(records[0].request_id, "req-1");
     assert_eq!(records[0].token_id.as_deref(), Some("token-1"));
     assert_eq!(records[0].provider_id.as_deref(), Some("provider-a"));
@@ -80,7 +80,7 @@ fn request_candidate_audit_preserves_model_scope_from_candidate() {
     })
     .unwrap();
 
-    let records = CandidateAuditRecorder::available_records(
+    let records = CandidateAuditRecorder::scheduled_records(
         CandidateAuditInput {
             global_model_id: None,
             ..audit_input()

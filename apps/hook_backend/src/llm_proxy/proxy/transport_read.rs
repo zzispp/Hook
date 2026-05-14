@@ -38,17 +38,11 @@ async fn record_response_read_error(
         state,
         request_id,
         AttemptRecordInput {
-            candidate,
-            retry_index,
-            status: "failed",
-            status_code: None,
-            usage: None,
             latency_ms: Some(elapsed_ms(started)),
             first_byte_time_ms,
             error_type: Some(response_read_error_type(error)),
             error_message: Some(error_message.as_str()),
-            response_body: None,
-            finished: true,
+            ..AttemptRecordInput::new(candidate, retry_index, "failed", true)
         },
     )
     .await

@@ -3,6 +3,7 @@ use std::time::Instant;
 use axum::extract::ws::{Message as ClientMessage, WebSocket};
 use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::tungstenite::Message as UpstreamMessage;
+use types::model::PatchField;
 
 use super::connect::ConnectedUpstream;
 use crate::llm_proxy::{
@@ -19,33 +20,38 @@ pub(super) async fn relay(state: LlmProxyState, request_id: String, connected: C
     let (mut upstream_sender, mut upstream_receiver) = upstream.split();
     let client_to_upstream = async move {
         while let Some(result) = client_receiver.next().await {
-            let Ok(message) = result else { break };
+            let Ok(message) = result else {
+                return RelayOutcome::Cancelled;
+            };
+            if matches!(message, ClientMessage::Close(_)) {
+                return RelayOutcome::Cancelled;
+            }
             if upstream_sender.send(client_message(message)).await.is_err() {
-                break;
+                return RelayOutcome::Failed("upstream websocket write failed".into());
             }
         }
+        RelayOutcome::Cancelled
     };
     let upstream_to_client = async move {
         let mut outcome = RelayOutcome::Success;
         while let Some(result) = upstream_receiver.next().await {
             let Ok(message) = result else {
-                outcome = RelayOutcome::Failed("upstream websocket read failed".into());
-                break;
+                return RelayOutcome::Failed("upstream websocket read failed".into());
             };
             if let Some(error_message) = upstream_error_message(&message) {
                 outcome = RelayOutcome::Failed(error_message);
             }
             if client_sender.send(upstream_message(message)).await.is_err() {
-                break;
+                return RelayOutcome::Cancelled;
             }
             if matches!(outcome, RelayOutcome::Failed(_)) {
-                break;
+                return outcome;
             }
         }
         outcome
     };
     let outcome = tokio::select! {
-        _ = client_to_upstream => RelayOutcome::Success,
+        outcome = client_to_upstream => outcome,
         outcome = upstream_to_client => outcome,
     };
     if let Err(error) = finish_relay(state, request_id, candidate, retry_index, started, outcome).await {
@@ -61,28 +67,38 @@ async fn finish_relay(
     started: Instant,
     outcome: RelayOutcome,
 ) -> Result<(), LlmProxyError> {
-    let (status, error_type, error_message) = match &outcome {
-        RelayOutcome::Success => ("success", None, None),
-        RelayOutcome::Failed(message) => ("failed", Some("upstream_ws_error"), Some(message.as_str())),
-    };
-    record_attempt(
-        &state,
-        &request_id,
-        AttemptRecordInput {
-            candidate: &candidate,
-            retry_index,
-            status,
-            status_code: Some(200),
-            usage: None,
-            latency_ms: Some(elapsed_ms(started)),
-            first_byte_time_ms: None,
-            error_type,
-            error_message,
-            response_body: None,
-            finished: true,
+    let latency_ms = Some(elapsed_ms(started));
+    let input = match &outcome {
+        RelayOutcome::Success => AttemptRecordInput {
+            status_code: Some(101),
+            latency_ms,
+            termination_origin: PatchField::Null,
+            termination_reason: PatchField::Null,
+            stream_end_reason: PatchField::Null,
+            ..AttemptRecordInput::new(&candidate, retry_index, "success", true)
         },
-    )
-    .await
+        RelayOutcome::Cancelled => AttemptRecordInput {
+            status_code: Some(499),
+            latency_ms,
+            error_type: Some("client_disconnected"),
+            error_message: Some("client disconnected before websocket completed"),
+            termination_origin: PatchField::Value("client".into()),
+            termination_reason: PatchField::Value("disconnected".into()),
+            stream_end_reason: PatchField::Value("client_disconnected".into()),
+            ..AttemptRecordInput::new(&candidate, retry_index, "cancelled", true)
+        },
+        RelayOutcome::Failed(message) => AttemptRecordInput {
+            status_code: Some(101),
+            latency_ms,
+            error_type: Some("upstream_ws_error"),
+            error_message: Some(message.as_str()),
+            termination_origin: PatchField::Null,
+            termination_reason: PatchField::Null,
+            stream_end_reason: PatchField::Null,
+            ..AttemptRecordInput::new(&candidate, retry_index, "failed", true)
+        },
+    };
+    record_attempt(&state, &request_id, input).await
 }
 
 fn elapsed_ms(started: Instant) -> i64 {
@@ -91,6 +107,7 @@ fn elapsed_ms(started: Instant) -> i64 {
 
 enum RelayOutcome {
     Success,
+    Cancelled,
     Failed(String),
 }
 

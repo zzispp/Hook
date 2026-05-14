@@ -83,7 +83,8 @@ export function RequestRecordDetailDrawer({
           <RequestRecordPayloadPanels
             requestHeaders={detail.data?.request_headers}
             requestBody={detail.data?.request_body}
-            responseBody={detail.data?.response_body}
+            clientResponseHeaders={detail.data?.client_response_headers}
+            clientResponseBody={detail.data?.client_response_body}
           />
         </Stack>
       </Scrollbar>
@@ -96,6 +97,7 @@ const RECORD_STATUS_RANK: Record<string, number> = {
   streaming: 1,
   success: 2,
   failed: 2,
+  cancelled: 2,
 };
 
 function freshestRecord(base: RequestRecord | null, detail?: RequestRecord) {

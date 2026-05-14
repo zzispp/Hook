@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    request_record_detail::{aggregate_records, candidate_detail, detail_payload, format_timestamp, primary_candidate},
+    request_record_detail::{candidate_detail, detail_payload, format_timestamp},
     request_record_refs::{RecordRefs, load_record_refs, load_refs},
     request_record_summary::DEFAULT_COST_CURRENCY,
 };
@@ -31,29 +31,37 @@ pub async fn list_active_request_records(store: &super::ProviderStore, request: 
 }
 
 pub async fn get_request_record(store: &super::ProviderStore, request_id: &str) -> StorageResult<RequestRecordDetail> {
+    let summary = request_records::Entity::find_by_id(request_id.to_owned())
+        .one(store.connection())
+        .await?
+        .ok_or(StorageError::NotFound)?;
     let candidates = request_candidates::Entity::find()
         .filter(request_candidates::Column::RequestId.eq(request_id))
         .order_by_asc(request_candidates::Column::CandidateIndex)
         .order_by_asc(request_candidates::Column::RetryIndex)
         .all(store.connection())
         .await?;
-    if candidates.is_empty() {
-        return Err(StorageError::NotFound);
-    }
-    let refs = load_refs(store, &candidates).await?;
-    let mut records = aggregate_records(candidates.clone(), &refs);
-    let record = records.pop().ok_or(StorageError::NotFound)?;
-    let primary = primary_candidate(&candidates);
-    let request_headers = detail_payload(primary.request_headers.clone())?;
-    let request_body = detail_payload(primary.request_body.clone())?;
-    let response_body = detail_payload(primary.response_body.clone())?;
-    let details = candidates.into_iter().map(|candidate| candidate_detail(candidate, &refs)).collect();
+    let refs = if candidates.is_empty() {
+        load_record_refs(store, std::slice::from_ref(&summary)).await?
+    } else {
+        load_refs(store, &candidates).await?
+    };
+    let record = summary_record(summary.clone(), &refs);
+    let request_headers = detail_payload(summary.request_headers)?;
+    let request_body = detail_payload(summary.request_body)?;
+    let client_response_headers = detail_payload(summary.client_response_headers)?;
+    let client_response_body = detail_payload(summary.client_response_body)?;
+    let details = candidates
+        .into_iter()
+        .map(|candidate| candidate_detail(candidate, &refs))
+        .collect::<StorageResult<Vec<_>>>()?;
     Ok(RequestRecordDetail {
         record,
         candidates: details,
         request_headers,
         request_body,
-        response_body,
+        client_response_headers,
+        client_response_body,
     })
 }
 
@@ -132,6 +140,12 @@ fn summary_record(record: RequestRecordSummaryRecord, refs: &RecordRefs) -> Requ
         has_retry: record.has_retry,
         status: record.status,
         billing_status: record.billing_status,
+        client_status_code: record.client_status_code,
+        client_error_type: record.client_error_type,
+        client_error_message: record.client_error_message,
+        termination_origin: record.termination_origin,
+        termination_reason: record.termination_reason,
+        stream_end_reason: record.stream_end_reason,
         prompt_tokens: record.prompt_tokens,
         completion_tokens: record.completion_tokens,
         total_tokens: record.total_tokens,

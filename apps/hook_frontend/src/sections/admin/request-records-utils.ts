@@ -18,6 +18,7 @@ export const REQUEST_RECORD_STATUS_OPTIONS: RequestRecordStatus[] = [
   'streaming',
   'success',
   'failed',
+  'cancelled',
 ];
 
 export function requestStatusLabel(status: string, t: (key: string) => string) {
@@ -27,6 +28,7 @@ export function requestStatusLabel(status: string, t: (key: string) => string) {
 
 export function requestStatusColor(status: string) {
   if (status === 'success') return 'success';
+  if (status === 'cancelled') return 'warning';
   if (status === 'failed') return 'error';
   if (status === 'streaming') return 'info';
   return 'warning';

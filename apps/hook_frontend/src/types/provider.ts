@@ -189,7 +189,7 @@ export type ProviderModelBindingUpdate = {
   config?: Record<string, unknown> | null;
 };
 
-export type RequestRecordStatus = 'pending' | 'streaming' | 'success' | 'failed';
+export type RequestRecordStatus = 'pending' | 'streaming' | 'success' | 'failed' | 'cancelled';
 
 export type RequestRecord = {
   request_id: string;
@@ -214,6 +214,12 @@ export type RequestRecord = {
   has_retry: boolean;
   status: RequestRecordStatus;
   billing_status: string;
+  client_status_code?: number | null;
+  client_error_type?: string | null;
+  client_error_message?: string | null;
+  termination_origin?: string | null;
+  termination_reason?: string | null;
+  stream_end_reason?: string | null;
   prompt_tokens?: number | null;
   completion_tokens?: number | null;
   total_tokens?: number | null;
@@ -255,6 +261,7 @@ export type RequestCandidateDetail = {
   candidate_index: number;
   retry_index: number;
   status: string;
+  skip_reason?: string | null;
   status_code?: number | null;
   prompt_tokens?: number | null;
   completion_tokens?: number | null;
@@ -270,6 +277,12 @@ export type RequestCandidateDetail = {
   first_byte_time_ms?: number | null;
   error_type?: string | null;
   error_message?: string | null;
+  error_code?: string | null;
+  error_param?: string | null;
+  provider_request_headers?: unknown | null;
+  provider_request_body?: unknown | null;
+  provider_response_headers?: unknown | null;
+  provider_response_body?: unknown | null;
   created_at: string;
   started_at?: string | null;
   finished_at?: string | null;
@@ -280,5 +293,6 @@ export type RequestRecordDetail = {
   candidates: RequestCandidateDetail[];
   request_headers?: unknown | null;
   request_body?: unknown | null;
-  response_body?: unknown | null;
+  client_response_headers?: unknown | null;
+  client_response_body?: unknown | null;
 };

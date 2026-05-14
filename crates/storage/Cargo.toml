@@ -5,6 +5,8 @@ edition.workspace = true
 
 [dependencies]
 constants.workspace = true
+flate2.workspace = true
+hex.workspace = true
 jiff.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true

@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理 HTTP 流式终态路径,DONE,明确 first-byte 后成功 失败 断开三条路径,rg -n "finish_success|record_failure|record_read_error" apps/hook_backend/src/llm_proxy/proxy/stream_transport -S,2026-05-13 18:20,0,已在 stream relay 中拆出成功 失败 Drop 取消三条终态路径
+2,修正 WS relay outcome 语义,DONE,客户端先断开不再直接记 success,cargo test -p backend llm_proxy -- --nocapture,2026-05-13 18:25,0,client_to_upstream 与 upstream_to_client 已分别映射 success failed cancelled
+3,把取消来源写入主记录字段,DONE,主记录开始携带 termination_origin stream_end_reason,cargo test -p backend llm_proxy -- --nocapture,2026-05-13 18:25,0,主记录与候选记录均会写 client/disconnected/client_disconnected 与 499

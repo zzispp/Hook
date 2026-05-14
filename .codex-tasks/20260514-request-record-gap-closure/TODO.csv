@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理并更新 candidate 状态与附加字段 schema,DONE,request_candidates schema 与共享类型支持 scheduled skipped skip_reason error_code error_param,rg -n "scheduled|skipped|skip_reason|error_code|error_param" apps/hook_backend crates/types crates/storage apps/hook_frontend -S,2026-05-14 09:47,0,baseline entity storage types frontend types 与 proxy audit 记录已完成对齐
+2,打通 audit storage frontend 的 candidate 新语义,DONE,写入链路和前端 trace 统一使用 scheduled skipped 并展示附加字段,cargo test -p storage --test provider_request_candidates -- --nocapture,2026-05-14 09:47,0,audit transport ws storage repository trace timeline 与 i18n 已切换到 scheduled skipped
+3,把 payload retention 改成压缩保留,DONE,cleanup 会压缩 payload 且详情查询能透明解压,cargo test -p storage --test provider_request_housekeeping -- --nocapture,2026-05-14 09:47,0,新增 payload codec cleanup 改为压缩保留并补 housekeeping 回归测试
+4,实现 stale pending streaming sweep,DONE,后台周期任务会终结僵尸主记录与候选记录,cargo test -p storage --test provider_request_housekeeping -- --nocapture,2026-05-14 09:47,0,新增 storage stale sweep 与 backend 周期任务 主记录失败化 候选记录 failed skipped 双路处理
+5,补齐回归测试并完成验证,DONE,Rust 检查和相关测试通过,just check && just test && pnpm lint:frontend,2026-05-14 09:47,0,proxy storage backend llm_proxy just check just test 与 frontend lint 全部通过

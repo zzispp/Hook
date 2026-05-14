@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理并修改 request iden 与基线表定义,DONE,基线表定义包含新增状态与字段,rg -n "ClientResponseHeaders|TerminationOrigin|Cancelled" apps/hook_backend/src/migration/baseline,2026-05-13 16:10,0,已补 request_records 客户端终态字段
+2,更新 storage entities 与 record 输入输出类型,DONE,storage entity 与 patch/input 类型覆盖新字段,cargo test -p storage --test provider_request_candidates -- --nocapture,2026-05-13 16:20,0,entity 与 storage 类型已覆盖主记录新字段
+3,更新 provider 共享 detail list 类型,DONE,RequestRecordDetail 与 RequestCandidateDetail 暴露新字段,cargo test -p storage --test provider_request_records -- --nocapture,2026-05-13 16:20,0,详情已暴露 client_response_headers client_response_body
+4,更新前端 request record status 与 detail payload 类型,DONE,前端类型支持 cancelled 与双视角 payload,pnpm lint:frontend,2026-05-13 16:30,0,admin 文案 状态 rank 与 payload panel 已更新

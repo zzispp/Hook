@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,补齐 cancelled 与 client payload 文案,DONE,前端 admin i18n 能覆盖新状态和新字段,pnpm lint:frontend,2026-05-13 16:30,0,已补 cancelled clientResponseHeaders clientResponseBody 文案
+2,统一详情页和列表页状态语义,DONE,selected record 排序与状态颜色兼容 cancelled,pnpm lint:frontend,2026-05-13 16:30,0,detail drawer 与 records view 状态 rank 已补齐 cancelled
+3,预留 provider client 双视角展示结构,DONE,详情页组件不再绑定旧 responseBody 命名,pnpm lint:frontend,2026-05-13 18:20,0,trace detail 已新增 selected attempt provider payload panels 并补 cancelled trace 状态

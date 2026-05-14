@@ -4,7 +4,7 @@ use types::api_token::ApiToken;
 
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
-    audit::record_available_candidates,
+    audit::record_scheduled_candidates,
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
     formats,
 };
@@ -14,7 +14,6 @@ use super::capture::RequestCapture;
 pub(super) struct PreparedProxyRequest {
     pub(super) request_id: String,
     pub(super) candidates: Vec<ProxyCandidate>,
-    pub(super) capture: RequestCapture,
     pub(super) body: Value,
     pub(super) is_stream: bool,
     pub(super) force_non_stream: bool,
@@ -47,11 +46,10 @@ pub(super) async fn prepare_proxy_request(
         },
     )
     .await?;
-    record_available_candidates(state, &selection, &capture).await?;
+    record_scheduled_candidates(state, &selection, &capture).await?;
     Ok(PreparedProxyRequest {
         request_id: selection.request_id,
         candidates: selection.candidates,
-        capture,
         body,
         is_stream,
         force_non_stream,

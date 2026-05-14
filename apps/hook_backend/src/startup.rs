@@ -93,6 +93,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let exchange_rates = ExchangeRateCache::connect(&settings.redis_url()?, settings.redis.key_prefix.clone()).await?;
     exchange_rates.clone().spawn_refresh_task();
     crate::request_record_cleanup::spawn_request_record_cleanup(database.clone());
+    crate::request_record_sweep::spawn_request_record_sweep(database.clone());
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let provider_key_cipher = ProviderKeyCipher::new(settings.provider_key_secret()?)?;
     let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;

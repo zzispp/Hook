@@ -15,6 +15,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Label } from 'src/components/label';
 
 import { formatDuration } from './request-records-utils';
+import { RequestCandidatePayloadPanels } from './request-record-payload-panels';
 import {
   attemptKey,
   attemptTime,
@@ -187,12 +188,21 @@ function TraceAttemptDetail({
         <TraceInfo label={t('requestRecords.apiFormat')} value={attemptFormat(attempt)} />
         <TraceInfo label={t('requestRecords.traceKey')} value={attemptKey(attempt)} />
         <TraceInfo label={t('requestRecords.totalLatency')} value={formatDuration(attempt.latency_ms)} />
+        {attempt.skip_reason ? <TraceInfo label={t('requestRecords.traceSkipReason')} value={attempt.skip_reason} /> : null}
+        {attempt.error_code ? <TraceInfo label={t('requestRecords.traceErrorCode')} value={attempt.error_code} /> : null}
+        {attempt.error_param ? <TraceInfo label={t('requestRecords.traceErrorParam')} value={attempt.error_param} /> : null}
       </Stack>
       {attempt.error_message ? (
         <Typography variant="caption" color="error">
           {attempt.error_message}
         </Typography>
       ) : null}
+      <RequestCandidatePayloadPanels
+        providerRequestHeaders={attempt.provider_request_headers}
+        providerRequestBody={attempt.provider_request_body}
+        providerResponseHeaders={attempt.provider_response_headers}
+        providerResponseBody={attempt.provider_response_body}
+      />
     </Stack>
   );
 }

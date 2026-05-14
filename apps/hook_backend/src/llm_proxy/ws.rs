@@ -9,11 +9,15 @@ use axum::{
     http::HeaderMap,
     response::Response,
 };
+use types::model::PatchField;
 
-use self::{connect::connect_first_upstream, relay::relay};
+use self::{
+    connect::{ConnectedUpstream, connect_first_upstream},
+    relay::relay,
+};
 use super::{
     CurrentApiToken, LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT,
-    audit::{AttemptRecordInput, record_attempt_with_capture, record_available_candidates, record_unused_candidates},
+    audit::{AttemptRecordInput, SKIP_REASON_REQUEST_TERMINATED, record_attempt, record_scheduled_candidates, record_skipped_candidates},
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
     proxy::capture::RequestCapture,
 };
@@ -38,12 +42,12 @@ pub async fn realtime(
     .await?;
     let request_body = serde_json::to_value(&query).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?;
     let capture = RequestCapture::new(&headers, &request_body);
-    record_available_candidates(&state, &selection, &capture).await?;
-    let connected = connect_first_upstream(&state, &selection, &query, &capture).await?;
+    record_scheduled_candidates(&state, &selection, &capture).await?;
+    let connected = connect_first_upstream(&state, &selection, &query).await?;
     let started = Instant::now();
-    record_streaming_attempt(&state, &selection.request_id, &connected.candidate, connected.retry_index, &capture).await?;
+    record_streaming_attempt(&state, &selection.request_id, &connected).await?;
     remember_affinity(&state, &connected.candidate).await?;
-    record_unused_candidates(&state, &selection.request_id).await?;
+    record_skipped_candidates(&state, &selection.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
     Ok(websocket.on_upgrade(move |client| relay(state, selection.request_id, connected, started, client)))
 }
 
@@ -55,30 +59,19 @@ fn required_query_model(query: &HashMap<String, String>) -> Result<&str, LlmProx
         .ok_or_else(|| LlmProxyError::InvalidRequest("websocket request must include model query parameter".into()))
 }
 
-async fn record_streaming_attempt(
-    state: &LlmProxyState,
-    request_id: &str,
-    candidate: &ProxyCandidate,
-    retry_index: i32,
-    capture: &RequestCapture,
-) -> Result<(), LlmProxyError> {
-    record_attempt_with_capture(
+async fn record_streaming_attempt(state: &LlmProxyState, request_id: &str, connected: &ConnectedUpstream) -> Result<(), LlmProxyError> {
+    record_attempt(
         state,
         request_id,
         AttemptRecordInput {
-            candidate,
-            retry_index,
             status: "streaming",
-            status_code: Some(200),
-            usage: None,
-            latency_ms: None,
-            first_byte_time_ms: None,
-            error_type: None,
-            error_message: None,
-            response_body: None,
-            finished: false,
+            status_code: Some(101),
+            provider_request_headers: PatchField::Value(connected.request_headers.clone()),
+            provider_response_headers: PatchField::Value(connected.response_headers.clone()),
+            client_response_headers: PatchField::Null,
+            client_response_body: PatchField::Null,
+            ..AttemptRecordInput::new(&connected.candidate, connected.retry_index, "pending", false)
         },
-        capture,
     )
     .await
 }

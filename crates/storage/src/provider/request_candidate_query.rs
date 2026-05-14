@@ -20,12 +20,14 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         provider_api_format: Set(input.provider_api_format),
         needs_conversion: Set(input.needs_conversion),
         is_stream: Set(input.is_stream),
-        request_headers: Set(json::encode_optional(&input.request_headers)?),
-        request_body: Set(json::encode_optional(&input.request_body)?),
-        response_body: Set(json::encode_optional(&input.response_body)?),
+        provider_request_headers: Set(json::encode_optional(&input.provider_request_headers)?),
+        provider_request_body: Set(json::encode_optional(&input.provider_request_body)?),
+        provider_response_headers: Set(json::encode_optional(&input.provider_response_headers)?),
+        provider_response_body: Set(json::encode_optional(&input.provider_response_body)?),
         candidate_index: Set(input.candidate_index),
         retry_index: Set(input.retry_index),
         status: Set(input.status),
+        skip_reason: Set(input.skip_reason),
         status_code: Set(input.status_code),
         prompt_tokens: Set(input.prompt_tokens),
         completion_tokens: Set(input.completion_tokens),
@@ -41,13 +43,14 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         first_byte_time_ms: Set(input.first_byte_time_ms),
         error_type: Set(input.error_type),
         error_message: Set(input.error_message),
+        error_code: Set(input.error_code),
+        error_param: Set(input.error_param),
         created_at: Set(now),
         started_at: Set(input.started.then_some(now)),
         finished_at: Set(input.finished.then_some(now)),
     }
     .insert(store.connection())
     .await?;
-    super::request_record_summary::sync_request_record(store, &record.request_id).await?;
     Ok(record.response())
 }
 
@@ -65,6 +68,7 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     let now = time::OffsetDateTime::now_utc();
     let mut record: request_candidates::ActiveModel = record.into();
     record.status = Set(input.status);
+    record.skip_reason = Set(input.skip_reason);
     record.status_code = Set(input.status_code);
     record.prompt_tokens = Set(input.prompt_tokens);
     record.completion_tokens = Set(input.completion_tokens);
@@ -80,7 +84,12 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     record.first_byte_time_ms = Set(input.first_byte_time_ms);
     record.error_type = Set(input.error_type);
     record.error_message = Set(input.error_message);
-    record.response_body = Set(json::encode_optional(&input.response_body)?);
+    record.error_code = Set(input.error_code);
+    record.error_param = Set(input.error_param);
+    apply_json_patch(&mut record.provider_request_headers, input.provider_request_headers)?;
+    apply_json_patch(&mut record.provider_request_body, input.provider_request_body)?;
+    apply_json_patch(&mut record.provider_response_headers, input.provider_response_headers)?;
+    apply_json_patch(&mut record.provider_response_body, input.provider_response_body)?;
     if !was_started {
         record.started_at = Set(Some(now));
     }
@@ -88,22 +97,19 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
         record.finished_at = Set(Some(now));
     }
     let record = record.update(store.connection()).await?;
-    super::request_record_summary::sync_request_record(store, &record.request_id).await?;
     Ok(record.response())
 }
 
-pub async fn mark_available_request_candidates_unused(store: &ProviderStore, request_id: &str) -> StorageResult<u64> {
+pub async fn mark_scheduled_request_candidates_skipped(store: &ProviderStore, request_id: &str, skip_reason: &str) -> StorageResult<u64> {
     let now = time::OffsetDateTime::now_utc();
     let result = request_candidates::Entity::update_many()
-        .col_expr(request_candidates::Column::Status, Expr::val("unused"))
+        .col_expr(request_candidates::Column::Status, Expr::val("skipped"))
+        .col_expr(request_candidates::Column::SkipReason, Expr::val(skip_reason))
         .col_expr(request_candidates::Column::FinishedAt, Expr::val(now))
         .filter(request_candidates::Column::RequestId.eq(request_id))
-        .filter(request_candidates::Column::Status.eq("available"))
+        .filter(request_candidates::Column::Status.eq("scheduled"))
         .exec(store.connection())
         .await?;
-    if result.rows_affected > 0 {
-        super::request_record_summary::sync_request_record(store, request_id).await?;
-    }
     Ok(result.rows_affected)
 }
 
@@ -116,4 +122,13 @@ pub async fn list_request_candidates(store: &ProviderStore, request: RequestCand
     }
     let records = query.offset(request.skip).limit(request.limit).all(store.connection()).await?;
     Ok(records.into_iter().map(|record| record.response()).collect())
+}
+
+fn apply_json_patch(active: &mut sea_orm::ActiveValue<Option<String>>, patch: types::model::PatchField<serde_json::Value>) -> StorageResult<()> {
+    match patch {
+        types::model::PatchField::Value(value) => *active = Set(Some(json::encode_required(&value)?)),
+        types::model::PatchField::Null => *active = Set(None),
+        types::model::PatchField::Missing => {}
+    }
+    Ok(())
 }

@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理 request_records request_candidates 的 payload 清理位点,DONE,清理语义覆盖双表 payload 字段,rg -n "clear_request_record_payloads_before|request_record_cleanup" crates/storage apps/hook_backend -S,2026-05-13 17:00,0,已确认 cleanup 覆盖主记录与候选记录的四类 payload 字段
+2,更新 payload 清理 SQL,DONE,主记录 payload 不会永久残留,cargo test -p storage --test provider_request_records -- --nocapture,2026-05-13 17:05,0,clear_request_record_payloads_before 已同步清理 request_records 与 request_candidates
+3,校验 retention 统计输出,DONE,cleanup log 统计值与实际行为一致,just check,2026-05-13 18:20,0,cleanup 日志仍输出 deleted_records 与 cleared_payloads 两项总计

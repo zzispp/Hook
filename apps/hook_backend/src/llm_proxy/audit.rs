@@ -1,18 +1,23 @@
+use axum::http::HeaderMap;
 use provider::application::billing::{RequestBillingInput, calculate_request_billing};
+use serde_json::Value;
 use storage::{
     StorageError,
     api_token::ApiTokenUsageRecord,
-    provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch},
+    provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch},
     setting::SettingStore,
 };
 use time::OffsetDateTime;
+use types::model::PatchField;
 
 use super::{
     LlmProxyError, LlmProxyState,
     candidate::{CandidateSelection, CandidateTrace, ProxyCandidate},
-    proxy::capture::RequestCapture,
+    proxy::capture::{RequestCapture, recorded_headers, recorded_request_body},
     request_record_policy::RequestRecordPolicy,
 };
+
+pub const SKIP_REASON_REQUEST_TERMINATED: &str = "request_terminated_before_attempt";
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TokenUsage {
@@ -23,56 +28,45 @@ pub struct TokenUsage {
     pub cache_read_input_tokens: Option<i64>,
 }
 
-pub async fn record_available_candidates(state: &LlmProxyState, selection: &CandidateSelection, capture: &RequestCapture) -> Result<(), LlmProxyError> {
+pub async fn record_scheduled_candidates(state: &LlmProxyState, selection: &CandidateSelection, capture: &RequestCapture) -> Result<(), LlmProxyError> {
     let policy = request_record_policy(state).await?;
+    create_request_record(state, request_record_input(selection, capture, &policy)?).await?;
     for candidate in &selection.candidates {
-        create_record(state, available_input(&selection.request_id, &candidate.trace, 0, capture, &policy)?).await?;
+        create_record(state, scheduled_input(&selection.request_id, &candidate.trace, 0)).await?;
     }
     Ok(())
 }
 
 pub async fn record_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
-    update_attempt(state, request_id, input, None).await
-}
-
-pub async fn record_attempt_with_capture(
-    state: &LlmProxyState,
-    request_id: &str,
-    input: AttemptRecordInput<'_>,
-    capture: &RequestCapture,
-) -> Result<(), LlmProxyError> {
-    update_attempt(state, request_id, input, Some(capture)).await
-}
-
-pub async fn update_attempt(
-    state: &LlmProxyState,
-    request_id: &str,
-    input: AttemptRecordInput<'_>,
-    capture: Option<&RequestCapture>,
-) -> Result<(), LlmProxyError> {
     let usage_record = token_usage_record(request_id, &input, OffsetDateTime::now_utc());
     let policy = request_record_policy(state).await?;
     let store = ProviderStore::new(state.database.clone());
     match store.update_request_candidate(attempt_patch(request_id, &input, &policy)?).await {
         Ok(_) => {}
-        Err(StorageError::NotFound) => create_missing_attempt(&store, request_id, &input, capture, &policy).await?,
+        Err(StorageError::NotFound) => create_missing_attempt(&store, request_id, &input, &policy).await?,
         Err(error) => return Err(error.into()),
     }
+    store.update_request_record(request_record_patch(request_id, &input, &policy)?).await?;
     if let Some(record) = usage_record? {
         state.tokens.record_usage(record).await?;
     }
     Ok(())
 }
 
-pub async fn record_unused_candidates(state: &LlmProxyState, request_id: &str) -> Result<(), LlmProxyError> {
+pub async fn record_skipped_candidates(state: &LlmProxyState, request_id: &str, skip_reason: &str) -> Result<(), LlmProxyError> {
     ProviderStore::new(state.database.clone())
-        .mark_available_request_candidates_unused(request_id)
+        .mark_scheduled_request_candidates_skipped(request_id, skip_reason)
         .await?;
     Ok(())
 }
 
 async fn create_record(state: &LlmProxyState, input: RequestCandidateRecordInput) -> Result<(), LlmProxyError> {
     ProviderStore::new(state.database.clone()).create_request_candidate(input).await?;
+    Ok(())
+}
+
+async fn create_request_record(state: &LlmProxyState, input: RequestRecordRecordInput) -> Result<(), LlmProxyError> {
+    ProviderStore::new(state.database.clone()).create_request_record(input).await?;
     Ok(())
 }
 
@@ -85,16 +79,9 @@ async fn create_missing_attempt(
     store: &ProviderStore,
     request_id: &str,
     input: &AttemptRecordInput<'_>,
-    capture: Option<&RequestCapture>,
     policy: &RequestRecordPolicy,
 ) -> Result<(), LlmProxyError> {
-    let capture = capture.ok_or_else(|| {
-        LlmProxyError::Infrastructure(format!(
-            "missing request candidate record: {request_id}/{}:{}",
-            input.candidate.trace.candidate_index, input.retry_index
-        ))
-    })?;
-    store.create_request_candidate(attempt_input(request_id, input, capture, policy)?).await?;
+    store.create_request_candidate(attempt_input(request_id, input, policy)?).await?;
     Ok(())
 }
 
@@ -105,6 +92,7 @@ fn attempt_patch(request_id: &str, input: &AttemptRecordInput<'_>, policy: &Requ
         candidate_index: input.candidate.trace.candidate_index,
         retry_index: input.retry_index,
         status: input.status.to_owned(),
+        skip_reason: input.skip_reason.map(str::to_owned),
         status_code: input.status_code,
         prompt_tokens: input.usage.and_then(|usage| usage.prompt_tokens),
         completion_tokens: input.usage.and_then(|usage| usage.completion_tokens),
@@ -120,31 +108,21 @@ fn attempt_patch(request_id: &str, input: &AttemptRecordInput<'_>, policy: &Requ
         first_byte_time_ms: input.first_byte_time_ms,
         error_type: input.error_type.map(str::to_owned),
         error_message: input.error_message.map(str::to_owned),
-        response_body: policy
-            .response_body(input.response_body.clone())
-            .map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?,
+        error_code: input.error_code.map(str::to_owned),
+        error_param: input.error_param.map(str::to_owned),
+        provider_request_headers: header_patch(input.provider_request_headers.clone(), policy)?,
+        provider_request_body: request_body_patch(input.provider_request_body.clone(), policy)?,
+        provider_response_headers: header_patch(input.provider_response_headers.clone(), policy)?,
+        provider_response_body: response_body_patch(input.provider_response_body.clone(), policy)?,
         finished: input.finished,
     })
 }
 
-fn attempt_input(
-    request_id: &str,
-    input: &AttemptRecordInput<'_>,
-    capture: &RequestCapture,
-    policy: &RequestRecordPolicy,
-) -> Result<RequestCandidateRecordInput, LlmProxyError> {
+fn attempt_input(request_id: &str, input: &AttemptRecordInput<'_>, policy: &RequestRecordPolicy) -> Result<RequestCandidateRecordInput, LlmProxyError> {
     let billing = attempt_billing(input);
-    let mut record = base_input(
-        request_id,
-        &input.candidate.trace,
-        input.retry_index,
-        input.status,
-        true,
-        input.finished,
-        capture,
-        policy,
-    )?;
+    let mut record = base_input(request_id, &input.candidate.trace, input.retry_index, input.status, true, input.finished);
     record.status_code = input.status_code;
+    record.skip_reason = input.skip_reason.map(str::to_owned);
     record.prompt_tokens = input.usage.and_then(|usage| usage.prompt_tokens);
     record.completion_tokens = input.usage.and_then(|usage| usage.completion_tokens);
     record.total_tokens = input.usage.and_then(|usage| usage.total_tokens);
@@ -159,23 +137,17 @@ fn attempt_input(
     record.first_byte_time_ms = input.first_byte_time_ms;
     record.error_type = input.error_type.map(str::to_owned);
     record.error_message = input.error_message.map(str::to_owned);
-    record.response_body = policy
-        .response_body(input.response_body.clone())
-        .map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?;
+    record.error_code = input.error_code.map(str::to_owned);
+    record.error_param = input.error_param.map(str::to_owned);
+    record.provider_request_headers = header_input(input.provider_request_headers.clone(), policy)?;
+    record.provider_request_body = request_body_input(input.provider_request_body.clone(), policy)?;
+    record.provider_response_headers = header_input(input.provider_response_headers.clone(), policy)?;
+    record.provider_response_body = response_body_input(input.provider_response_body.clone(), policy)?;
     Ok(record)
 }
 
-fn base_input(
-    request_id: &str,
-    trace: &CandidateTrace,
-    retry_index: i32,
-    status: &str,
-    started: bool,
-    finished: bool,
-    capture: &RequestCapture,
-    policy: &RequestRecordPolicy,
-) -> Result<RequestCandidateRecordInput, LlmProxyError> {
-    Ok(RequestCandidateRecordInput {
+fn base_input(request_id: &str, trace: &CandidateTrace, retry_index: i32, status: &str, started: bool, finished: bool) -> RequestCandidateRecordInput {
+    RequestCandidateRecordInput {
         request_id: request_id.to_owned(),
         token_id: trace.token_id.clone(),
         group_code: trace.group_code.clone(),
@@ -187,12 +159,14 @@ fn base_input(
         provider_api_format: Some(trace.provider_api_format.clone()),
         needs_conversion: trace.needs_conversion,
         is_stream: trace.is_stream,
-        request_headers: capture.request_headers(policy),
-        request_body: capture.request_body(policy).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?,
-        response_body: None,
+        provider_request_headers: None,
+        provider_request_body: None,
+        provider_response_headers: None,
+        provider_response_body: None,
         candidate_index: trace.candidate_index,
         retry_index,
         status: status.to_owned(),
+        skip_reason: None,
         status_code: None,
         prompt_tokens: None,
         completion_tokens: None,
@@ -208,19 +182,84 @@ fn base_input(
         first_byte_time_ms: None,
         error_type: None,
         error_message: None,
+        error_code: None,
+        error_param: None,
         started,
         finished,
+    }
+}
+
+fn scheduled_input(request_id: &str, trace: &CandidateTrace, retry_index: i32) -> RequestCandidateRecordInput {
+    base_input(request_id, trace, retry_index, "scheduled", false, false)
+}
+
+fn request_record_input(
+    selection: &CandidateSelection,
+    capture: &RequestCapture,
+    policy: &RequestRecordPolicy,
+) -> Result<RequestRecordRecordInput, LlmProxyError> {
+    let primary = selection
+        .candidates
+        .first()
+        .ok_or_else(|| LlmProxyError::Infrastructure("candidate selection must include at least one candidate".into()))?;
+    Ok(RequestRecordRecordInput {
+        request_id: selection.request_id.clone(),
+        token_id: primary.trace.token_id.clone(),
+        group_code: primary.trace.group_code.clone(),
+        global_model_id: Some(primary.trace.global_model_id.clone()),
+        provider_id: Some(primary.trace.provider_id.clone()),
+        endpoint_id: Some(primary.trace.endpoint_id.clone()),
+        key_id: Some(primary.trace.key_id.clone()),
+        client_api_format: primary.trace.client_api_format.clone(),
+        provider_api_format: Some(primary.trace.provider_api_format.clone()),
+        request_type: "chat".into(),
+        is_stream: primary.trace.is_stream,
+        has_failover: false,
+        has_retry: false,
+        status: "pending".into(),
+        billing_status: "pending".into(),
+        candidate_count: selection.candidates.len().try_into().unwrap_or(i64::MAX),
+        request_headers: capture.request_headers(policy),
+        request_body: capture.request_body(policy).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?,
     })
 }
 
-fn available_input(
-    request_id: &str,
-    trace: &CandidateTrace,
-    retry_index: i32,
-    capture: &RequestCapture,
-    policy: &RequestRecordPolicy,
-) -> Result<RequestCandidateRecordInput, LlmProxyError> {
-    base_input(request_id, trace, retry_index, "available", false, false, capture, policy)
+fn request_record_patch(request_id: &str, input: &AttemptRecordInput<'_>, policy: &RequestRecordPolicy) -> Result<RequestRecordRecordPatch, LlmProxyError> {
+    let billing = attempt_billing(input);
+    Ok(RequestRecordRecordPatch {
+        request_id: request_id.to_owned(),
+        provider_id: Some(input.candidate.trace.provider_id.clone()),
+        endpoint_id: Some(input.candidate.trace.endpoint_id.clone()),
+        key_id: Some(input.candidate.trace.key_id.clone()),
+        provider_api_format: Some(input.candidate.trace.provider_api_format.clone()),
+        is_stream: Some(input.candidate.trace.is_stream),
+        has_failover: Some(input.candidate.trace.candidate_index > 0),
+        has_retry: Some(input.retry_index > 0),
+        status: input.status.to_owned(),
+        billing_status: billing_status(input.status).into(),
+        client_status_code: option_patch(input.status_code),
+        client_error_type: option_str_patch(input.error_type),
+        client_error_message: option_str_patch(input.error_message),
+        termination_origin: input.termination_origin.clone(),
+        termination_reason: input.termination_reason.clone(),
+        stream_end_reason: input.stream_end_reason.clone(),
+        prompt_tokens: option_patch(input.usage.and_then(|usage| usage.prompt_tokens)),
+        completion_tokens: option_patch(input.usage.and_then(|usage| usage.completion_tokens)),
+        total_tokens: option_patch(total_tokens(input.usage)),
+        cache_creation_input_tokens: option_patch(input.usage.and_then(|usage| usage.cache_creation_input_tokens)),
+        cache_read_input_tokens: option_patch(input.usage.and_then(|usage| usage.cache_read_input_tokens)),
+        cost_currency: option_patch(billing.as_ref().map(|amount| amount.currency.clone())),
+        token_cost: option_patch(billing.as_ref().map(|amount| amount.token_cost)),
+        base_cost: option_patch(billing.as_ref().map(|amount| amount.base_cost)),
+        total_cost: option_patch(billing.as_ref().map(|amount| amount.total_cost)),
+        billing_multiplier: option_patch(billing.map(|amount| amount.billing_multiplier)),
+        first_byte_time_ms: option_patch(input.first_byte_time_ms),
+        total_latency_ms: option_patch(input.latency_ms),
+        client_response_headers: header_patch(input.client_response_headers.clone(), policy)?,
+        client_response_body: response_body_patch(input.client_response_body.clone(), policy)?,
+        started: true,
+        finished: input.finished,
+    })
 }
 
 fn attempt_billing(input: &AttemptRecordInput<'_>) -> Option<provider::application::billing::RequestBillingAmount> {
@@ -256,16 +295,128 @@ fn should_record_token_usage(input: &AttemptRecordInput<'_>) -> bool {
     input.status == "success" && input.finished
 }
 
+fn billing_status(status: &str) -> &'static str {
+    match status {
+        "success" => "settled",
+        "failed" | "cancelled" => "void",
+        _ => "pending",
+    }
+}
+
+fn total_tokens(usage: Option<TokenUsage>) -> Option<i64> {
+    usage.and_then(|item| item.total_tokens.or_else(|| Some(item.prompt_tokens? + item.completion_tokens?)))
+}
+
+fn header_patch(headers: PatchField<HeaderMap>, policy: &RequestRecordPolicy) -> Result<PatchField<Value>, LlmProxyError> {
+    match headers {
+        PatchField::Value(headers) => Ok(option_patch(recorded_headers(&headers, policy))),
+        PatchField::Null => Ok(PatchField::Null),
+        PatchField::Missing => Ok(PatchField::Missing),
+    }
+}
+
+fn header_input(headers: PatchField<HeaderMap>, policy: &RequestRecordPolicy) -> Result<Option<Value>, LlmProxyError> {
+    match headers {
+        PatchField::Value(headers) => Ok(recorded_headers(&headers, policy)),
+        PatchField::Null | PatchField::Missing => Ok(None),
+    }
+}
+
+fn request_body_patch(body: PatchField<Value>, policy: &RequestRecordPolicy) -> Result<PatchField<Value>, LlmProxyError> {
+    match body {
+        PatchField::Value(body) => Ok(option_patch(recorded_request_body(&body, policy).map_err(infra_error)?)),
+        PatchField::Null => Ok(PatchField::Null),
+        PatchField::Missing => Ok(PatchField::Missing),
+    }
+}
+
+fn request_body_input(body: PatchField<Value>, policy: &RequestRecordPolicy) -> Result<Option<Value>, LlmProxyError> {
+    match body {
+        PatchField::Value(body) => recorded_request_body(&body, policy).map_err(infra_error),
+        PatchField::Null | PatchField::Missing => Ok(None),
+    }
+}
+
+fn response_body_patch(body: PatchField<Value>, policy: &RequestRecordPolicy) -> Result<PatchField<Value>, LlmProxyError> {
+    match body {
+        PatchField::Value(body) => Ok(option_patch(policy.response_body(Some(body)).map_err(infra_error)?)),
+        PatchField::Null => Ok(PatchField::Null),
+        PatchField::Missing => Ok(PatchField::Missing),
+    }
+}
+
+fn response_body_input(body: PatchField<Value>, policy: &RequestRecordPolicy) -> Result<Option<Value>, LlmProxyError> {
+    match body {
+        PatchField::Value(body) => policy.response_body(Some(body)).map_err(infra_error),
+        PatchField::Null | PatchField::Missing => Ok(None),
+    }
+}
+
+fn option_str_patch(value: Option<&str>) -> PatchField<String> {
+    option_patch(value.map(str::to_owned))
+}
+
+fn option_patch<T>(value: Option<T>) -> PatchField<T> {
+    match value {
+        Some(value) => PatchField::Value(value),
+        None => PatchField::Null,
+    }
+}
+
+fn infra_error(error: serde_json::Error) -> LlmProxyError {
+    LlmProxyError::Infrastructure(error.to_string())
+}
+
 pub struct AttemptRecordInput<'a> {
     pub candidate: &'a ProxyCandidate,
     pub retry_index: i32,
     pub status: &'a str,
+    pub skip_reason: Option<&'a str>,
     pub status_code: Option<i32>,
     pub usage: Option<TokenUsage>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<&'a str>,
     pub error_message: Option<&'a str>,
-    pub response_body: Option<serde_json::Value>,
+    pub error_code: Option<&'a str>,
+    pub error_param: Option<&'a str>,
+    pub provider_request_headers: PatchField<HeaderMap>,
+    pub provider_request_body: PatchField<Value>,
+    pub provider_response_headers: PatchField<HeaderMap>,
+    pub provider_response_body: PatchField<Value>,
+    pub client_response_headers: PatchField<HeaderMap>,
+    pub client_response_body: PatchField<Value>,
+    pub termination_origin: PatchField<String>,
+    pub termination_reason: PatchField<String>,
+    pub stream_end_reason: PatchField<String>,
     pub finished: bool,
+}
+
+impl<'a> AttemptRecordInput<'a> {
+    pub fn new(candidate: &'a ProxyCandidate, retry_index: i32, status: &'a str, finished: bool) -> Self {
+        Self {
+            candidate,
+            retry_index,
+            status,
+            skip_reason: None,
+            status_code: None,
+            usage: None,
+            latency_ms: None,
+            first_byte_time_ms: None,
+            error_type: None,
+            error_message: None,
+            error_code: None,
+            error_param: None,
+            provider_request_headers: PatchField::Missing,
+            provider_request_body: PatchField::Missing,
+            provider_response_headers: PatchField::Missing,
+            provider_response_body: PatchField::Missing,
+            client_response_headers: PatchField::Missing,
+            client_response_body: PatchField::Missing,
+            termination_origin: PatchField::Missing,
+            termination_reason: PatchField::Missing,
+            stream_end_reason: PatchField::Missing,
+            finished,
+        }
+    }
 }

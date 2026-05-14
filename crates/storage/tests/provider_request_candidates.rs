@@ -4,6 +4,7 @@ use storage::{
     Database,
     provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_records},
 };
+use types::model::PatchField;
 use types::provider::RequestCandidateListRequest;
 
 #[tokio::test]
@@ -78,26 +79,27 @@ async fn request_candidate_storage_updates_existing_attempt() {
 }
 
 #[tokio::test]
-async fn request_candidate_storage_marks_available_records_unused() {
+async fn request_candidate_storage_marks_scheduled_records_skipped() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_exec_results([MockExecResult {
             last_insert_id: 0,
             rows_affected: 2,
         }])
-        .append_query_results([[request_candidate_record("record-1", "success")]])
-        .append_query_results([[summary_record("success")]])
-        .append_query_results([[summary_record("success")]])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
-    let rows = store.mark_available_request_candidates_unused("req-1").await.unwrap();
+    let rows = store
+        .mark_scheduled_request_candidates_skipped("req-1", "request_terminated_before_attempt")
+        .await
+        .unwrap();
 
     assert_eq!(rows, 2);
     let logs = connection.into_transaction_log();
-    assert!(logs.len() >= 4);
+    assert!(!logs.is_empty());
     let sql = &logs[0].statements()[0].sql;
     assert!(sql.contains("UPDATE \"request_candidates\" SET"), "{sql}");
     assert!(sql.contains("\"status\" = $"), "{sql}");
+    assert!(sql.contains("\"skip_reason\" = $"), "{sql}");
     assert!(sql.contains("\"finished_at\" = $"), "{sql}");
     assert!(sql.contains("WHERE \"request_candidates\".\"request_id\" = $"), "{sql}");
     assert!(sql.contains("AND \"request_candidates\".\"status\" = $"), "{sql}");
@@ -116,12 +118,14 @@ fn success_input() -> RequestCandidateRecordInput {
         provider_api_format: Some("openai_chat".into()),
         needs_conversion: false,
         is_stream: false,
-        request_headers: Some(serde_json::json!({"authorization": "****"})),
-        request_body: Some(serde_json::json!({"model": "gpt-4o-mini"})),
-        response_body: Some(serde_json::json!({"id": "chatcmpl-1"})),
+        provider_request_headers: Some(serde_json::json!({"authorization": "****"})),
+        provider_request_body: Some(serde_json::json!({"model": "gpt-4o-mini"})),
+        provider_response_headers: Some(serde_json::json!({"content-type": "application/json"})),
+        provider_response_body: Some(serde_json::json!({"id": "chatcmpl-1"})),
         candidate_index: 0,
         retry_index: 0,
         status: "success".into(),
+        skip_reason: None,
         status_code: Some(200),
         prompt_tokens: Some(12),
         completion_tokens: Some(8),
@@ -137,6 +141,8 @@ fn success_input() -> RequestCandidateRecordInput {
         first_byte_time_ms: Some(12),
         error_type: None,
         error_message: None,
+        error_code: None,
+        error_param: None,
         started: true,
         finished: true,
     }
@@ -148,6 +154,7 @@ fn success_patch() -> RequestCandidateRecordPatch {
         candidate_index: 0,
         retry_index: 0,
         status: "success".into(),
+        skip_reason: None,
         status_code: Some(200),
         prompt_tokens: Some(12),
         completion_tokens: Some(8),
@@ -163,7 +170,12 @@ fn success_patch() -> RequestCandidateRecordPatch {
         first_byte_time_ms: Some(12),
         error_type: None,
         error_message: None,
-        response_body: Some(serde_json::json!({"id": "chatcmpl-1"})),
+        error_code: None,
+        error_param: None,
+        provider_request_headers: PatchField::Missing,
+        provider_request_body: PatchField::Missing,
+        provider_response_headers: PatchField::Missing,
+        provider_response_body: PatchField::Value(serde_json::json!({"id": "chatcmpl-1"})),
         finished: true,
     }
 }
@@ -182,12 +194,14 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         provider_api_format: Some("openai_chat".into()),
         needs_conversion: false,
         is_stream: false,
-        request_headers: None,
-        request_body: None,
-        response_body: None,
+        provider_request_headers: None,
+        provider_request_body: None,
+        provider_response_headers: None,
+        provider_response_body: None,
         candidate_index: 0,
         retry_index: 0,
         status: status.into(),
+        skip_reason: skipped_reason(status),
         status_code: Some(200),
         prompt_tokens: Some(12),
         completion_tokens: Some(8),
@@ -203,6 +217,8 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         first_byte_time_ms: Some(12),
         error_type: failed_error_type(status),
         error_message: failed_error_message(status),
+        error_code: failed_error_code(status),
+        error_param: failed_error_param(status),
         created_at: now(),
         started_at: Some(now()),
         finished_at: Some(now()),
@@ -235,6 +251,12 @@ fn summary_record(status: &str) -> request_records::Model {
         has_retry: false,
         status: status.into(),
         billing_status: "settled".into(),
+        client_status_code: Some(200),
+        client_error_type: None,
+        client_error_message: None,
+        termination_origin: None,
+        termination_reason: None,
+        stream_end_reason: None,
         prompt_tokens: Some(12),
         completion_tokens: Some(8),
         total_tokens: Some(20),
@@ -248,6 +270,10 @@ fn summary_record(status: &str) -> request_records::Model {
         first_byte_time_ms: Some(12),
         total_latency_ms: Some(42),
         candidate_count: 1,
+        request_headers: None,
+        request_body: None,
+        client_response_headers: None,
+        client_response_body: None,
         created_at: now(),
         started_at: Some(now()),
         finished_at: Some(now()),
@@ -261,6 +287,18 @@ fn failed_error_type(status: &str) -> Option<String> {
 
 fn failed_error_message(status: &str) -> Option<String> {
     (status == "failed").then(|| "rate limit".into())
+}
+
+fn failed_error_code(status: &str) -> Option<String> {
+    (status == "failed").then(|| "rate_limit".into())
+}
+
+fn failed_error_param(status: &str) -> Option<String> {
+    (status == "failed").then(|| "model".into())
+}
+
+fn skipped_reason(status: &str) -> Option<String> {
+    (status == "skipped").then(|| "request_terminated_before_attempt".into())
 }
 
 fn now() -> time::OffsetDateTime {

@@ -1,0 +1,152 @@
+[
+  {
+    "label": "fixed order exact non-stream and stream",
+    "ok": true,
+    "evidence": [
+      "019e2450-6bca-7eb0-a41d-d810c871bd85",
+      "019e2450-7dce-7670-9f8b-dc2a75aea193",
+      "019e2450-8fee-7922-b7c2-2197dbbe0f2e",
+      "019e2450-9dc7-77e3-ad4f-46dccb151b44"
+    ]
+  },
+  {
+    "label": "user provider and model allow matrix",
+    "ok": true,
+    "evidence": {
+      "openai": "019e2450-b506-7e40-b929-9b7ed2179c72",
+      "claude": "019e2450-c8a4-7e81-9996-f53587229cf8",
+      "gemini": "019e2450-da2c-73d1-b405-37bc00d1794d",
+      "claudeUnavailable": false
+    }
+  },
+  {
+    "label": "user provider and model deny matrix",
+    "ok": true,
+    "evidence": {
+      "modelDenied": {
+        "status": 403,
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e242a-4bc6-75a2-9f56-00f2f4cb8b05\",\"type\":\"forbidden\"}}"
+      },
+      "providerDenied": {
+        "status": 404,
+        "text": "{\"error\":{\"code\":404,\"message\":\"no active provider candidate for model claude-opus-4-7\",\"type\":\"not_found_error\"}}"
+      },
+      "modelOnlyDenied": {
+        "status": 403,
+        "text": "{\"error\":{\"code\":403,\"message\":\"model is not allowed by user: 019e242a-4bc6-75a2-9f56-00f2f4cb8b05\",\"type\":\"forbidden\"}}"
+      }
+    }
+  },
+  {
+    "label": "route key failover and skipped candidates",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2451-0c22-7b20-9d5e-4e7421b71ae2",
+      "attempts": 2,
+      "claudeUnavailable": false
+    }
+  },
+  {
+    "label": "route endpoint fallback conversion",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2451-20b2-72a0-a03b-f14980dab9b0",
+      "endpoint": "openai_cli",
+      "attempts": 3
+    }
+  },
+  {
+    "label": "provider failover",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2451-448e-7d70-bf56-b64cab417a3d",
+      "attempts": 3
+    }
+  },
+  {
+    "label": "cache affinity",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2451-a64b-79a2-b7ed-33c181a13066",
+      "key": "Route Hook secondary"
+    }
+  },
+  {
+    "label": "load balance",
+    "ok": true,
+    "evidence": {
+      "keys": [
+        "Route Hook primary",
+        "Route Hook secondary"
+      ]
+    }
+  },
+  {
+    "label": "format conversion matrix",
+    "ok": true,
+    "evidence": {
+      "requestIds": [
+        "019e2453-8f7f-7353-ac0b-3b0eed0f3d49",
+        "019e2453-a023-72d2-9593-555a47db883b",
+        "019e2453-afae-7851-aed8-7276c3a59a40",
+        "019e2453-dfec-7803-a746-94dd200f5a5c",
+        "019e2454-04c1-7901-831d-8b337a79b7e6",
+        "019e2454-24f9-7861-b15f-803a0cbbedf8",
+        "019e2454-3740-76d3-a7c3-48737d9ea906"
+      ],
+      "claudeUnavailable": false
+    }
+  },
+  {
+    "label": "structured upstream error capture",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2454-6077-7c81-91db-12e91eef0d44",
+      "errorCode": "invalid_value",
+      "errorParam": "input[0]"
+    }
+  },
+  {
+    "label": "client cancelled stream recording",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2454-63d0-72e3-beaa-1754a0160126",
+      "status": "cancelled"
+    }
+  },
+  {
+    "label": "payload compression retention",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2450-6bca-7eb0-a41d-d810c871bd85"
+    }
+  },
+  {
+    "label": "stale pending and streaming sweep",
+    "ok": true,
+    "evidence": {
+      "pending": "019e2454-7dd2-7a41-9ec7-35b719db790b",
+      "streaming": "019e2454-9b2c-7a12-9f18-a0d88fd11d57"
+    }
+  },
+  {
+    "label": "100 concurrent mixed requests",
+    "ok": true,
+    "evidence": {
+      "requests": 100,
+      "keys": [
+        "Route Hook primary",
+        "Route Hook secondary"
+      ]
+    }
+  },
+  {
+    "label": "request record list and detail visibility",
+    "ok": true,
+    "evidence": {
+      "total": 124,
+      "cancelled": "019e2454-63d0-72e3-beaa-1754a0160126",
+      "failed": "019e2454-6077-7c81-91db-12e91eef0d44"
+    }
+  }
+]

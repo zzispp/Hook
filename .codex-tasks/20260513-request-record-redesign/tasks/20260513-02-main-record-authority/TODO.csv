@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,设计主记录 create update 输入模型,DONE,storage 暴露 request_records 显式写入接口,rg -n "RequestRecordRecordInput|RequestRecordRecordPatch|create_request_record|update_request_record" crates/storage,2026-05-13 16:00,0,已新增 request record 显式写入类型和仓储接口
+2,切断 request_candidates 自动 summary 反推,DONE,candidate query 不再自动 sync_request_record,cargo test -p storage --test provider_request_candidates -- --nocapture,2026-05-13 16:10,0,create update unused 路径均已移除自动反推
+3,在 audit 中初始化并回写主记录,DONE,record_available_candidates 和 record_attempt 会显式更新主记录,cargo test -p storage --test provider_request_records -- --nocapture,2026-05-13 16:20,0,request_records 已在 selection 和 attempt 两段显式更新
+4,让详情页读取主记录权威字段,DONE,get_request_record 详情从 request_records 提取主状态和 client payload,cargo test -p storage --test provider_request_records -- --nocapture,2026-05-13 16:30,0,详情查询已读主记录权威字段

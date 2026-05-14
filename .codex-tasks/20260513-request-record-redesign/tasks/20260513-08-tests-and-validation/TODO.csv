@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,补 storage 主记录写入测试,DONE,显式 create update 主记录路径有测试,cargo test -p storage --test provider_request_records -- --nocapture,2026-05-13 18:22,0,主记录与候选记录测试已改为双视角 payload 字段并全部通过
+2,补 llm_proxy 终态回归验证,DONE,HTTP 流式和 WS 终态改动有最小验证,cargo test -p backend llm_proxy -- --nocapture,2026-05-13 18:24,0,llm_proxy 相关单测通过并覆盖新的错误摘要与请求记录策略
+3,运行仓库级验证,DONE,关键 Rust 测试与前端 lint 通过,just test && pnpm lint:frontend,2026-05-13 18:25,0,just check just test cargo check backend storage tests 与前端 lint 全部通过

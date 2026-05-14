@@ -5,6 +5,7 @@ mod llm_proxy;
 mod migration;
 mod proxy_cache_hooks;
 mod request_record_cleanup;
+mod request_record_sweep;
 mod startup;
 mod system;
 

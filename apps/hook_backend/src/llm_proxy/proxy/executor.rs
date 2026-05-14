@@ -12,7 +12,10 @@ use super::{
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
     stream_transport, transport,
 };
-use crate::llm_proxy::{audit::record_unused_candidates, candidate::ProxyCandidate};
+use crate::llm_proxy::{
+    audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
+    candidate::ProxyCandidate,
+};
 
 const ANTHROPIC_VERSION: &str = "2023-06-01";
 const RETRYABLE_AUTH_STATUS_UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
@@ -26,15 +29,15 @@ pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: Prepar
     for candidate in &prepared.candidates {
         let outcome = attempt_candidate(&state, &prepared, candidate, &mut last_failure, &mut last_error).await?;
         if let Some(response) = outcome {
-            record_unused_candidates(&state, &prepared.request_id).await?;
+            record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
             return Ok(response);
         }
     }
     if let Some(failure) = last_failure {
-        record_unused_candidates(&state, &prepared.request_id).await?;
+        record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
         return transport::failure_response(failure);
     }
-    record_unused_candidates(&state, &prepared.request_id).await?;
+    record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
     Err(last_error.unwrap_or_else(|| LlmProxyError::Upstream("all provider candidates failed".into())))
 }
 
@@ -65,14 +68,14 @@ async fn attempt_once(
 ) -> Result<Option<Response>, LlmProxyError> {
     let payload = match attempt_payload(prepared.body.clone(), candidate, prepared.force_non_stream) {
         Ok(payload) => payload,
-        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, &prepared.capture, error, last_error).await,
+        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await,
     };
-    record_started_attempt(state, &prepared.request_id, candidate, prepared.is_stream, retry_index, &prepared.capture).await?;
     let started = Instant::now();
     let request = match upstream_request(&state.http, candidate, payload.target_format, &payload.body, &payload.original_body) {
         Ok(request) => request,
-        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, &prepared.capture, error, last_error).await,
+        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await,
     };
+    record_started_attempt(state, &prepared.request_id, candidate, prepared.is_stream, retry_index, &request, &payload.body).await?;
     let response = match state.http.execute(request).await {
         Ok(response) => response,
         Err(error) => return record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await,

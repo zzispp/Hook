@@ -2,13 +2,19 @@ use std::time::Instant;
 
 use axum::{
     body::Body,
-    http::{HeaderValue, StatusCode, header},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
     response::Response,
 };
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
 use serde_json::Value;
+use types::model::PatchField;
 
-use super::{LlmProxyError, LlmProxyState, response_payload::body_value, transport_read::response_bytes, usage};
+use super::{
+    LlmProxyError, LlmProxyState,
+    response_payload::{body_value, upstream_status_error_details},
+    transport_read::response_bytes,
+    usage,
+};
 use crate::llm_proxy::{
     audit::{AttemptRecordInput, record_attempt},
     candidate::ProxyCandidate,
@@ -32,6 +38,7 @@ pub async fn full_response(
 ) -> Result<Response, LlmProxyError> {
     let status = status_code(response.status())?;
     let content_type = response_content_type(&response);
+    let upstream_headers = response.headers().clone();
     let bytes = response_bytes(&state, &request_id, &candidate, retry_index, started, None, response).await?;
     let elapsed = elapsed_ms(started);
     if status.is_success() {
@@ -44,26 +51,29 @@ pub async fn full_response(
             retry_index,
             status,
             content_type,
+            upstream_headers,
             bytes,
             elapsed,
         })
         .await;
     }
+    let error = upstream_status_error_details(status.as_u16(), &bytes);
     record_attempt(
         &state,
         &request_id,
         AttemptRecordInput {
-            candidate: &candidate,
-            retry_index,
-            status: "failed",
             status_code: Some(status.as_u16() as i32),
-            usage: None,
             latency_ms: Some(elapsed),
             first_byte_time_ms: Some(elapsed),
             error_type: Some("upstream_status"),
-            error_message: Some("upstream returned non-success status"),
-            response_body: Some(body_value(&bytes)),
-            finished: true,
+            error_message: Some(error.message.as_str()),
+            error_code: error.code.as_deref(),
+            error_param: error.param.as_deref(),
+            provider_response_headers: PatchField::Value(upstream_headers),
+            provider_response_body: PatchField::Value(body_value(&bytes)),
+            client_response_headers: content_type_headers(content_type.as_ref()),
+            client_response_body: PatchField::Value(body_value(&bytes)),
+            ..AttemptRecordInput::new(&candidate, retry_index, "failed", true)
         },
     )
     .await?;
@@ -79,6 +89,7 @@ struct FullResponseInput {
     retry_index: i32,
     status: StatusCode,
     content_type: Option<HeaderValue>,
+    upstream_headers: HeaderMap,
     bytes: Vec<u8>,
     elapsed: i64,
 }
@@ -95,17 +106,15 @@ async fn full_success_response(input: FullResponseInput) -> Result<Response, Llm
         &input.state,
         &input.request_id,
         AttemptRecordInput {
-            candidate: &input.candidate,
-            retry_index: input.retry_index,
-            status: "success",
             status_code: Some(input.status.as_u16() as i32),
             usage: usage::from_response_bytes(&input.bytes, input.target_format),
             latency_ms: Some(input.elapsed),
             first_byte_time_ms: Some(input.elapsed),
-            error_type: None,
-            error_message: None,
-            response_body: Some(body_value(&body)),
-            finished: true,
+            provider_response_headers: PatchField::Value(input.upstream_headers.clone()),
+            provider_response_body: PatchField::Value(body_value(&input.bytes)),
+            client_response_headers: content_type_headers(input.content_type.as_ref()),
+            client_response_body: PatchField::Value(body_value(&body)),
+            ..AttemptRecordInput::new(&input.candidate, input.retry_index, "success", true)
         },
     )
     .await?;
@@ -120,17 +129,16 @@ async fn record_response_conversion_failure(input: &FullResponseInput, error: &L
         &input.state,
         &input.request_id,
         AttemptRecordInput {
-            candidate: &input.candidate,
-            retry_index: input.retry_index,
-            status: "failed",
             status_code: Some(input.status.as_u16() as i32),
-            usage: None,
             latency_ms: Some(input.elapsed),
             first_byte_time_ms: Some(input.elapsed),
             error_type: Some("response_conversion_error"),
             error_message: Some(error_message.as_str()),
-            response_body: Some(body_value(&input.bytes)),
-            finished: true,
+            provider_response_headers: PatchField::Value(input.upstream_headers.clone()),
+            provider_response_body: PatchField::Value(body_value(&input.bytes)),
+            client_response_headers: PatchField::Null,
+            client_response_body: PatchField::Null,
+            ..AttemptRecordInput::new(&input.candidate, input.retry_index, "failed", true)
         },
     )
     .await
@@ -146,22 +154,24 @@ pub async fn record_upstream_failure(
 ) -> Result<UpstreamFailure, LlmProxyError> {
     let status = status_code(response.status())?;
     let content_type = response_content_type(&response);
+    let upstream_headers = response.headers().clone();
     let body = response.bytes().await?.to_vec();
+    let error = upstream_status_error_details(status.as_u16(), &body);
     record_attempt(
         state,
         request_id,
         AttemptRecordInput {
-            candidate,
-            retry_index,
-            status: "failed",
             status_code: Some(status.as_u16() as i32),
-            usage: None,
             latency_ms: Some(elapsed_ms(started)),
-            first_byte_time_ms: None,
             error_type: Some("upstream_status"),
-            error_message: Some("upstream returned non-success status"),
-            response_body: Some(body_value(&body)),
-            finished: true,
+            error_message: Some(error.message.as_str()),
+            error_code: error.code.as_deref(),
+            error_param: error.param.as_deref(),
+            provider_response_headers: PatchField::Value(upstream_headers),
+            provider_response_body: PatchField::Value(body_value(&body)),
+            client_response_headers: content_type_headers(content_type.as_ref()),
+            client_response_body: PatchField::Value(body_value(&body)),
+            ..AttemptRecordInput::new(candidate, retry_index, "failed", true)
         },
     )
     .await?;
@@ -183,6 +193,15 @@ fn response_body(bytes: &[u8], needs_conversion: bool, source_format: ApiFormat,
         .convert_response(&value, target_format, source_format)
         .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
     serde_json::to_vec(&converted).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))
+}
+
+pub(super) fn content_type_headers(content_type: Option<&HeaderValue>) -> PatchField<HeaderMap> {
+    let Some(content_type) = content_type.cloned() else {
+        return PatchField::Null;
+    };
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, content_type);
+    PatchField::Value(headers)
 }
 
 pub(super) fn elapsed_ms(started: Instant) -> i64 {

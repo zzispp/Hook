@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,核对 baseline 新字段与默认设置语义,DONE,基线字段与 settings seed 语义一致,rg -n "record_response_body|request_record" apps/hook_backend/src/migration -S,2026-05-13 18:15,0,baseline 新字段与 request record seed 默认值已对齐为 full 级别
+2,补齐 admin i18n seed 与管理面板文案,DONE,新字段和状态在管理面板中有稳定文案,just check,2026-05-13 18:20,0,已补 provider payload 文案 traceStatus.cancelled 与双视角设置说明
+3,校验 migration 入口行为,DONE,开发库 refresh 后新表结构完整,just check,2026-05-13 18:20,0,workspace check 通过且 baseline/seed 编译链路正常

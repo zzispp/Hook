@@ -15,7 +15,15 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { RequestRecordJsonViewer } from './request-record-json-viewer';
 
-type PayloadTabValue = 'requestHeaders' | 'requestBody' | 'responseBody';
+type PayloadTabValue =
+  | 'requestHeaders'
+  | 'requestBody'
+  | 'clientResponseHeaders'
+  | 'clientResponseBody'
+  | 'providerRequestHeaders'
+  | 'providerRequestBody'
+  | 'providerResponseHeaders'
+  | 'providerResponseBody';
 
 type PayloadTab = {
   value: PayloadTabValue;
@@ -27,38 +35,105 @@ type PayloadTab = {
 export function RequestRecordPayloadPanels({
   requestHeaders,
   requestBody,
-  responseBody,
+  clientResponseHeaders,
+  clientResponseBody,
 }: {
   requestHeaders?: unknown | null;
   requestBody?: unknown | null;
-  responseBody?: unknown | null;
+  clientResponseHeaders?: unknown | null;
+  clientResponseBody?: unknown | null;
 }) {
   const { t } = useTranslate('admin');
-  const [activeTab, setActiveTab] = useState<PayloadTabValue>('requestHeaders');
-  const tabs: PayloadTab[] = [
-    {
-      value: 'requestHeaders',
-      label: t('requestRecords.requestHeaders'),
-      emptyText: t('requestRecords.noRequestHeaders'),
-      payload: requestHeaders,
-    },
-    {
-      value: 'requestBody',
-      label: t('requestRecords.requestBody'),
-      emptyText: t('requestRecords.noRequestBody'),
-      payload: requestBody,
-    },
-    {
-      value: 'responseBody',
-      label: t('requestRecords.responseBody'),
-      emptyText: t('requestRecords.noResponseBody'),
-      payload: responseBody,
-    },
-  ];
-  const activePanel = tabs.find((tab) => tab.value === activeTab);
+  return (
+    <PayloadTabs
+      defaultTab="requestHeaders"
+      tabs={[
+        {
+          value: 'requestHeaders',
+          label: t('requestRecords.requestHeaders'),
+          emptyText: t('requestRecords.noRequestHeaders'),
+          payload: requestHeaders,
+        },
+        {
+          value: 'requestBody',
+          label: t('requestRecords.requestBody'),
+          emptyText: t('requestRecords.noRequestBody'),
+          payload: requestBody,
+        },
+        {
+          value: 'clientResponseHeaders',
+          label: t('requestRecords.clientResponseHeaders'),
+          emptyText: t('requestRecords.noClientResponseHeaders'),
+          payload: clientResponseHeaders,
+        },
+        {
+          value: 'clientResponseBody',
+          label: t('requestRecords.clientResponseBody'),
+          emptyText: t('requestRecords.noClientResponseBody'),
+          payload: clientResponseBody,
+        },
+      ]}
+    />
+  );
+}
+
+export function RequestCandidatePayloadPanels({
+  providerRequestHeaders,
+  providerRequestBody,
+  providerResponseHeaders,
+  providerResponseBody,
+}: {
+  providerRequestHeaders?: unknown | null;
+  providerRequestBody?: unknown | null;
+  providerResponseHeaders?: unknown | null;
+  providerResponseBody?: unknown | null;
+}) {
+  const { t } = useTranslate('admin');
+  return (
+    <PayloadTabs
+      defaultTab="providerRequestHeaders"
+      tabs={[
+        {
+          value: 'providerRequestHeaders',
+          label: t('requestRecords.providerRequestHeaders'),
+          emptyText: t('requestRecords.noProviderRequestHeaders'),
+          payload: providerRequestHeaders,
+        },
+        {
+          value: 'providerRequestBody',
+          label: t('requestRecords.providerRequestBody'),
+          emptyText: t('requestRecords.noProviderRequestBody'),
+          payload: providerRequestBody,
+        },
+        {
+          value: 'providerResponseHeaders',
+          label: t('requestRecords.providerResponseHeaders'),
+          emptyText: t('requestRecords.noProviderResponseHeaders'),
+          payload: providerResponseHeaders,
+        },
+        {
+          value: 'providerResponseBody',
+          label: t('requestRecords.providerResponseBody'),
+          emptyText: t('requestRecords.noProviderResponseBody'),
+          payload: providerResponseBody,
+        },
+      ]}
+    />
+  );
+}
+
+function PayloadTabs({
+  tabs,
+  defaultTab,
+}: {
+  tabs: PayloadTab[];
+  defaultTab: PayloadTabValue;
+}) {
+  const [activeTab, setActiveTab] = useState<PayloadTabValue>(defaultTab);
+  const activePanel = tabs.find((tab) => tab.value === activeTab) ?? tabs[0];
 
   if (!activePanel) {
-    throw new Error(`Unknown request record payload tab: ${activeTab}`);
+    throw new Error('Request record payload tabs cannot be empty');
   }
 
   return (
@@ -90,7 +165,6 @@ function PayloadContent({
   value?: unknown | null;
 }) {
   const hasValue = hasPayload(value);
-
   if (!hasValue) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -98,7 +172,6 @@ function PayloadContent({
       </Typography>
     );
   }
-
   return <RequestRecordJsonViewer value={value} />;
 }
 
