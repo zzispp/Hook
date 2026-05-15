@@ -1,9 +1,11 @@
 use axum::http::HeaderMap;
 use serde_json::Value;
-use storage::provider::{RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch};
+use storage::provider::{
+    RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch,
+};
 use types::model::PatchField;
 
-use super::{AttemptRecordInput, attempt_billing, billing_status, total_tokens};
+use super::{AttemptRecordInput, attempt_billing, billing_status, record_billing, total_tokens};
 use crate::llm_proxy::{
     LlmProxyError,
     candidate::{CandidateSelection, CandidateTrace},
@@ -16,7 +18,6 @@ pub(super) fn attempt_patch(
     input: &AttemptRecordInput<'_>,
     policy: &RequestRecordPolicy,
 ) -> Result<RequestCandidateRecordPatch, LlmProxyError> {
-    let billing = attempt_billing(input);
     Ok(RequestCandidateRecordPatch {
         request_id: request_id.to_owned(),
         candidate_index: input.candidate.trace.candidate_index,
@@ -29,11 +30,7 @@ pub(super) fn attempt_patch(
         total_tokens: input.usage.and_then(|usage| usage.total_tokens),
         cache_creation_input_tokens: input.usage.and_then(|usage| usage.cache_creation_input_tokens),
         cache_read_input_tokens: input.usage.and_then(|usage| usage.cache_read_input_tokens),
-        cost_currency: billing.as_ref().map(|amount| amount.currency.clone()),
-        token_cost: billing.as_ref().map(|amount| amount.token_cost),
-        base_cost: billing.as_ref().map(|amount| amount.base_cost),
-        total_cost: billing.as_ref().map(|amount| amount.total_cost),
-        billing_multiplier: billing.map(|amount| amount.billing_multiplier),
+        billing: record_billing::billing_values(input.service_tier.clone(), attempt_billing(input).as_ref()),
         latency_ms: input.latency_ms,
         first_byte_time_ms: input.first_byte_time_ms,
         error_type: input.error_type.map(str::to_owned),
@@ -53,7 +50,6 @@ pub(super) fn attempt_input(
     input: &AttemptRecordInput<'_>,
     policy: &RequestRecordPolicy,
 ) -> Result<RequestCandidateRecordInput, LlmProxyError> {
-    let billing = attempt_billing(input);
     let mut record = base_input(request_id, &input.candidate.trace, input.retry_index, input.status, true, input.finished);
     record.status_code = input.status_code;
     record.skip_reason = input.skip_reason.map(str::to_owned);
@@ -62,11 +58,7 @@ pub(super) fn attempt_input(
     record.total_tokens = input.usage.and_then(|usage| usage.total_tokens);
     record.cache_creation_input_tokens = input.usage.and_then(|usage| usage.cache_creation_input_tokens);
     record.cache_read_input_tokens = input.usage.and_then(|usage| usage.cache_read_input_tokens);
-    record.cost_currency = billing.as_ref().map(|amount| amount.currency.clone());
-    record.token_cost = billing.as_ref().map(|amount| amount.token_cost);
-    record.base_cost = billing.as_ref().map(|amount| amount.base_cost);
-    record.total_cost = billing.as_ref().map(|amount| amount.total_cost);
-    record.billing_multiplier = billing.map(|amount| amount.billing_multiplier);
+    record.billing = record_billing::billing_values(input.service_tier.clone(), attempt_billing(input).as_ref());
     record.latency_ms = input.latency_ms;
     record.first_byte_time_ms = input.first_byte_time_ms;
     record.error_type = input.error_type.map(str::to_owned);
@@ -117,6 +109,10 @@ pub(super) fn request_record_input(
         has_retry: false,
         status: "pending".into(),
         billing_status: "pending".into(),
+        billing: RequestBillingRecordValues {
+            service_tier: capture.service_tier(),
+            ..RequestBillingRecordValues::default()
+        },
         candidate_count: selection.candidates.len().try_into().unwrap_or(i64::MAX),
         request_headers: capture.request_headers(policy),
         request_body: capture.request_body(policy).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?,
@@ -128,7 +124,6 @@ pub(super) fn request_record_patch(
     input: &AttemptRecordInput<'_>,
     policy: &RequestRecordPolicy,
 ) -> Result<RequestRecordRecordPatch, LlmProxyError> {
-    let billing = attempt_billing(input);
     Ok(RequestRecordRecordPatch {
         request_id: request_id.to_owned(),
         provider_id: Some(input.candidate.trace.provider_id.clone()),
@@ -154,11 +149,7 @@ pub(super) fn request_record_patch(
         total_tokens: option_patch(total_tokens(input.usage)),
         cache_creation_input_tokens: option_patch(input.usage.and_then(|usage| usage.cache_creation_input_tokens)),
         cache_read_input_tokens: option_patch(input.usage.and_then(|usage| usage.cache_read_input_tokens)),
-        cost_currency: option_patch(billing.as_ref().map(|amount| amount.currency.clone())),
-        token_cost: option_patch(billing.as_ref().map(|amount| amount.token_cost)),
-        base_cost: option_patch(billing.as_ref().map(|amount| amount.base_cost)),
-        total_cost: option_patch(billing.as_ref().map(|amount| amount.total_cost)),
-        billing_multiplier: option_patch(billing.map(|amount| amount.billing_multiplier)),
+        billing: record_billing::billing_patch(attempt_billing(input).as_ref()),
         first_byte_time_ms: option_patch(input.first_byte_time_ms),
         total_latency_ms: option_patch(input.latency_ms),
         client_response_headers: header_patch(input.client_response_headers.clone(), policy)?,
@@ -199,11 +190,7 @@ fn base_input(request_id: &str, trace: &CandidateTrace, retry_index: i32, status
         total_tokens: None,
         cache_creation_input_tokens: None,
         cache_read_input_tokens: None,
-        cost_currency: None,
-        token_cost: None,
-        base_cost: None,
-        total_cost: None,
-        billing_multiplier: None,
+        billing: RequestBillingRecordValues::default(),
         latency_ms: None,
         first_byte_time_ms: None,
         error_type: None,

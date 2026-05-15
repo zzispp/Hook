@@ -24,6 +24,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 
 import { RequestRecordTraceTimeline } from './request-record-trace-timeline';
 import { RequestRecordPayloadPanels } from './request-record-payload-panels';
+import { RequestRecordBillingDetails } from './request-record-billing-details';
 import {
   compactId,
   formatCost,
@@ -199,9 +200,7 @@ function CostSummary({
         ))}
       </Stack>
       <Divider />
-      <Typography variant="caption" color="text.secondary">
-        {t('requestRecords.billingFormula')}
-      </Typography>
+      <RequestRecordBillingDetails record={record} currencyDisplay={currencyDisplay} />
     </Stack>
   );
 }

@@ -90,6 +90,25 @@ pub struct RequestRecord {
     pub total_tokens: Option<i64>,
     pub cache_creation_input_tokens: Option<i64>,
     pub cache_read_input_tokens: Option<i64>,
+    pub service_tier: Option<String>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub input_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub output_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub cache_creation_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub cache_read_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub request_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub input_price_per_million: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub output_price_per_million: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub cache_creation_price_per_million: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub cache_read_price_per_million: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
@@ -139,6 +158,25 @@ pub struct RequestCandidateDetail {
     pub total_tokens: Option<i64>,
     pub cache_creation_input_tokens: Option<i64>,
     pub cache_read_input_tokens: Option<i64>,
+    pub service_tier: Option<String>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub input_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub output_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub cache_creation_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub cache_read_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub request_cost: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub input_price_per_million: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub output_price_per_million: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub cache_creation_price_per_million: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub cache_read_price_per_million: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub token_cost: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::float_option")]

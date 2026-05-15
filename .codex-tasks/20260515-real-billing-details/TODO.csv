@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current billing detail record path,DONE,Service tier and billing fields write path understood,rg/sed inspections,2026-05-15T00:00:00+08:00,0,Found non-stream candidate write missing service_tier propagation
+2,Patch non-stream candidate service tier propagation,DONE,Successful non-stream attempts receive request service_tier,cargo check -p backend,2026-05-15T00:00:00+08:00,0,Stored service_tier in PreparedProxyRequest and passed it to full_response
+3,Create real verification script,DONE,Script seeds fixtures and asserts DB billing fields,node real_billing_details.mjs,2026-05-15T00:00:00+08:00,0,Keys are read from env only and results are written under raw/
+4,Run real provider and local DB verification,DONE,request_records and request_candidates contain tier and cost details,node real_billing_details.mjs,2026-05-15T00:00:00+08:00,0,Verified standard tier and 0.15x billed cost with real request
+5,Run targeted automated checks,DONE,Rust checks and targeted tests pass,cargo fmt/check/test,2026-05-15T00:00:00+08:00,0,cargo fmt --check, backend check, provider billing tests, storage request record tests passed

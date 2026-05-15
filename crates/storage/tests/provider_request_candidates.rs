@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database,
-    provider::{ProviderStore, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_records},
+    provider::{ProviderStore, RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_records},
 };
 use types::model::PatchField;
 use types::provider::RequestCandidateListRequest;
@@ -136,11 +136,7 @@ fn success_input() -> RequestCandidateRecordInput {
         total_tokens: Some(20),
         cache_creation_input_tokens: Some(3),
         cache_read_input_tokens: Some(4),
-        cost_currency: Some("USD".into()),
-        token_cost: Some(Decimal::new(1, 4)),
-        base_cost: Some(Decimal::new(1, 5)),
-        total_cost: Some(Decimal::new(2, 4)),
-        billing_multiplier: Some(Decimal::new(2, 0)),
+        billing: success_billing_values(),
         latency_ms: Some(42),
         first_byte_time_ms: Some(12),
         error_type: None,
@@ -165,11 +161,7 @@ fn success_patch() -> RequestCandidateRecordPatch {
         total_tokens: Some(20),
         cache_creation_input_tokens: Some(3),
         cache_read_input_tokens: Some(4),
-        cost_currency: Some("USD".into()),
-        token_cost: Some(Decimal::new(1, 4)),
-        base_cost: Some(Decimal::new(1, 5)),
-        total_cost: Some(Decimal::new(2, 4)),
-        billing_multiplier: Some(Decimal::new(2, 0)),
+        billing: success_billing_values(),
         latency_ms: Some(42),
         first_byte_time_ms: Some(12),
         error_type: None,
@@ -216,7 +208,17 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         total_tokens: Some(20),
         cache_creation_input_tokens: Some(3),
         cache_read_input_tokens: Some(4),
-        cost_currency: Some("USD".into()),
+        service_tier: Some("standard".into()),
+        input_cost: Some(Decimal::new(25, 4)),
+        output_cost: Some(Decimal::new(30, 4)),
+        cache_creation_cost: Some(Decimal::new(125, 5)),
+        cache_read_cost: Some(Decimal::new(125, 6)),
+        request_cost: Some(Decimal::new(1, 2)),
+        input_price_per_million: Some(Decimal::new(250, 2)),
+        output_price_per_million: Some(Decimal::new(1500, 2)),
+        cache_creation_price_per_million: Some(Decimal::new(125, 2)),
+        cache_read_price_per_million: Some(Decimal::new(25, 2)),
+        cost_currency: Some(currency::ACCOUNTING_CURRENCY.into()),
         token_cost: Some(Decimal::new(1, 4)),
         base_cost: Some(Decimal::new(1, 5)),
         total_cost: Some(Decimal::new(2, 4)),
@@ -244,6 +246,26 @@ fn no_candidate_record(mut record: storage::provider::record::request_candidates
     record.error_type = Some("no_candidate".into());
     record.error_message = Some("该分组下暂无 missing-model 模型可用".into());
     record
+}
+
+fn success_billing_values() -> RequestBillingRecordValues {
+    RequestBillingRecordValues {
+        service_tier: Some("standard".into()),
+        cost_currency: Some(currency::ACCOUNTING_CURRENCY.into()),
+        input_cost: Some(Decimal::new(25, 4)),
+        output_cost: Some(Decimal::new(30, 4)),
+        cache_creation_cost: Some(Decimal::new(125, 5)),
+        cache_read_cost: Some(Decimal::new(125, 6)),
+        request_cost: Some(Decimal::new(1, 2)),
+        token_cost: Some(Decimal::new(1, 4)),
+        base_cost: Some(Decimal::new(1, 5)),
+        total_cost: Some(Decimal::new(2, 4)),
+        billing_multiplier: Some(Decimal::new(2, 0)),
+        input_price_per_million: Some(Decimal::new(250, 2)),
+        output_price_per_million: Some(Decimal::new(1500, 2)),
+        cache_creation_price_per_million: Some(Decimal::new(125, 2)),
+        cache_read_price_per_million: Some(Decimal::new(25, 2)),
+    }
 }
 
 fn summary_record(status: &str) -> request_records::Model {
@@ -282,7 +304,17 @@ fn summary_record(status: &str) -> request_records::Model {
         total_tokens: Some(20),
         cache_creation_input_tokens: Some(3),
         cache_read_input_tokens: Some(4),
-        cost_currency: Some("USD".into()),
+        service_tier: Some("standard".into()),
+        input_cost: Some(Decimal::new(25, 4)),
+        output_cost: Some(Decimal::new(30, 4)),
+        cache_creation_cost: Some(Decimal::new(125, 5)),
+        cache_read_cost: Some(Decimal::new(125, 6)),
+        request_cost: Some(Decimal::new(1, 2)),
+        input_price_per_million: Some(Decimal::new(250, 2)),
+        output_price_per_million: Some(Decimal::new(1500, 2)),
+        cache_creation_price_per_million: Some(Decimal::new(125, 2)),
+        cache_read_price_per_million: Some(Decimal::new(25, 2)),
+        cost_currency: Some(currency::ACCOUNTING_CURRENCY.into()),
         token_cost: Some(Decimal::new(1, 4)),
         base_cost: Some(Decimal::new(1, 5)),
         total_cost: Some(Decimal::new(2, 4)),

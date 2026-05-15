@@ -5,7 +5,10 @@ use types::model::PatchField;
 
 use crate::{StorageError, StorageResult, json};
 
-use super::{RequestRecordRecordInput, RequestRecordRecordPatch, record::request_records, repository::ProviderStore};
+use super::{
+    RequestBillingRecordPatch, RequestBillingRecordValues, RequestRecordRecordInput, RequestRecordRecordPatch, record::request_records,
+    repository::ProviderStore,
+};
 
 pub async fn create_request_record(store: &ProviderStore, input: RequestRecordRecordInput) -> StorageResult<()> {
     request_record_active_model(input)?.insert(store.connection()).await?;
@@ -29,7 +32,7 @@ pub async fn update_request_record(store: &ProviderStore, input: RequestRecordRe
 
 fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult<request_records::ActiveModel> {
     let now = time::OffsetDateTime::now_utc();
-    Ok(request_records::ActiveModel {
+    let mut record = request_records::ActiveModel {
         request_id: Set(input.request_id),
         token_id: Set(input.token_id),
         user_id_snapshot: Set(input.user_id_snapshot),
@@ -64,6 +67,16 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         total_tokens: Set(None),
         cache_creation_input_tokens: Set(None),
         cache_read_input_tokens: Set(None),
+        service_tier: Set(None),
+        input_cost: Set(None),
+        output_cost: Set(None),
+        cache_creation_cost: Set(None),
+        cache_read_cost: Set(None),
+        request_cost: Set(None),
+        input_price_per_million: Set(None),
+        output_price_per_million: Set(None),
+        cache_creation_price_per_million: Set(None),
+        cache_read_price_per_million: Set(None),
         cost_currency: Set(None),
         token_cost: Set(None),
         base_cost: Set(None),
@@ -80,7 +93,9 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         started_at: Set(None),
         finished_at: Set(None),
         updated_at: Set(now),
-    })
+    };
+    apply_billing_values(&mut record, input.billing);
+    Ok(record)
 }
 
 fn apply_request_record_patch(
@@ -134,11 +149,7 @@ fn apply_request_record_patch(
     apply_i64_patch(&mut active.total_tokens, input.total_tokens);
     apply_i64_patch(&mut active.cache_creation_input_tokens, input.cache_creation_input_tokens);
     apply_i64_patch(&mut active.cache_read_input_tokens, input.cache_read_input_tokens);
-    apply_string_patch(&mut active.cost_currency, input.cost_currency);
-    apply_decimal_patch(&mut active.token_cost, input.token_cost);
-    apply_decimal_patch(&mut active.base_cost, input.base_cost);
-    apply_decimal_patch(&mut active.total_cost, input.total_cost);
-    apply_decimal_patch(&mut active.billing_multiplier, input.billing_multiplier);
+    apply_billing_patch(active, input.billing);
     apply_i64_patch(&mut active.first_byte_time_ms, input.first_byte_time_ms);
     apply_i64_patch(&mut active.total_latency_ms, input.total_latency_ms);
     apply_json_patch(&mut active.client_response_headers, input.client_response_headers)?;
@@ -152,6 +163,44 @@ fn apply_request_record_patch(
         active.finished_at = Set(None);
     }
     Ok(())
+}
+
+fn apply_billing_values(active: &mut request_records::ActiveModel, billing: RequestBillingRecordValues) {
+    if let Some(service_tier) = billing.service_tier {
+        active.service_tier = Set(Some(service_tier));
+    }
+    active.cost_currency = Set(billing.cost_currency);
+    active.input_cost = Set(billing.input_cost);
+    active.output_cost = Set(billing.output_cost);
+    active.cache_creation_cost = Set(billing.cache_creation_cost);
+    active.cache_read_cost = Set(billing.cache_read_cost);
+    active.request_cost = Set(billing.request_cost);
+    active.token_cost = Set(billing.token_cost);
+    active.base_cost = Set(billing.base_cost);
+    active.total_cost = Set(billing.total_cost);
+    active.billing_multiplier = Set(billing.billing_multiplier);
+    active.input_price_per_million = Set(billing.input_price_per_million);
+    active.output_price_per_million = Set(billing.output_price_per_million);
+    active.cache_creation_price_per_million = Set(billing.cache_creation_price_per_million);
+    active.cache_read_price_per_million = Set(billing.cache_read_price_per_million);
+}
+
+fn apply_billing_patch(active: &mut request_records::ActiveModel, billing: RequestBillingRecordPatch) {
+    apply_string_patch(&mut active.service_tier, billing.service_tier);
+    apply_string_patch(&mut active.cost_currency, billing.cost_currency);
+    apply_decimal_patch(&mut active.input_cost, billing.input_cost);
+    apply_decimal_patch(&mut active.output_cost, billing.output_cost);
+    apply_decimal_patch(&mut active.cache_creation_cost, billing.cache_creation_cost);
+    apply_decimal_patch(&mut active.cache_read_cost, billing.cache_read_cost);
+    apply_decimal_patch(&mut active.request_cost, billing.request_cost);
+    apply_decimal_patch(&mut active.token_cost, billing.token_cost);
+    apply_decimal_patch(&mut active.base_cost, billing.base_cost);
+    apply_decimal_patch(&mut active.total_cost, billing.total_cost);
+    apply_decimal_patch(&mut active.billing_multiplier, billing.billing_multiplier);
+    apply_decimal_patch(&mut active.input_price_per_million, billing.input_price_per_million);
+    apply_decimal_patch(&mut active.output_price_per_million, billing.output_price_per_million);
+    apply_decimal_patch(&mut active.cache_creation_price_per_million, billing.cache_creation_price_per_million);
+    apply_decimal_patch(&mut active.cache_read_price_per_million, billing.cache_read_price_per_million);
 }
 
 fn apply_i32_patch(active: &mut sea_orm::ActiveValue<Option<i32>>, patch: PatchField<i32>) {

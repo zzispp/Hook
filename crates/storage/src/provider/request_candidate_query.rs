@@ -3,11 +3,11 @@ use types::provider::RequestCandidateListRequest;
 
 use crate::{StorageError, StorageResult, json};
 
-use super::{RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_candidates, repository::ProviderStore};
+use super::{RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_candidates, repository::ProviderStore};
 
 pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandidateRecordInput) -> StorageResult<types::provider::RequestCandidate> {
     let now = time::OffsetDateTime::now_utc();
-    let record = request_candidates::ActiveModel {
+    let mut record = request_candidates::ActiveModel {
         id: Set(store.next_id()),
         request_id: Set(input.request_id),
         token_id: Set(input.token_id),
@@ -38,11 +38,21 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         total_tokens: Set(input.total_tokens),
         cache_creation_input_tokens: Set(input.cache_creation_input_tokens),
         cache_read_input_tokens: Set(input.cache_read_input_tokens),
-        cost_currency: Set(input.cost_currency),
-        token_cost: Set(input.token_cost),
-        base_cost: Set(input.base_cost),
-        total_cost: Set(input.total_cost),
-        billing_multiplier: Set(input.billing_multiplier),
+        service_tier: Set(None),
+        cost_currency: Set(None),
+        input_cost: Set(None),
+        output_cost: Set(None),
+        cache_creation_cost: Set(None),
+        cache_read_cost: Set(None),
+        request_cost: Set(None),
+        token_cost: Set(None),
+        base_cost: Set(None),
+        total_cost: Set(None),
+        billing_multiplier: Set(None),
+        input_price_per_million: Set(None),
+        output_price_per_million: Set(None),
+        cache_creation_price_per_million: Set(None),
+        cache_read_price_per_million: Set(None),
         latency_ms: Set(input.latency_ms),
         first_byte_time_ms: Set(input.first_byte_time_ms),
         error_type: Set(input.error_type),
@@ -52,9 +62,9 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         created_at: Set(now),
         started_at: Set(input.started.then_some(now)),
         finished_at: Set(input.finished.then_some(now)),
-    }
-    .insert(store.connection())
-    .await?;
+    };
+    apply_billing_values(&mut record, input.billing);
+    let record = record.insert(store.connection()).await?;
     Ok(record.response())
 }
 
@@ -79,11 +89,7 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     record.total_tokens = Set(input.total_tokens);
     record.cache_creation_input_tokens = Set(input.cache_creation_input_tokens);
     record.cache_read_input_tokens = Set(input.cache_read_input_tokens);
-    record.cost_currency = Set(input.cost_currency);
-    record.token_cost = Set(input.token_cost);
-    record.base_cost = Set(input.base_cost);
-    record.total_cost = Set(input.total_cost);
-    record.billing_multiplier = Set(input.billing_multiplier);
+    apply_billing_values(&mut record, input.billing);
     record.latency_ms = Set(input.latency_ms);
     record.first_byte_time_ms = Set(input.first_byte_time_ms);
     record.error_type = Set(input.error_type);
@@ -102,6 +108,26 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     }
     let record = record.update(store.connection()).await?;
     Ok(record.response())
+}
+
+fn apply_billing_values(record: &mut request_candidates::ActiveModel, billing: RequestBillingRecordValues) {
+    if let Some(service_tier) = billing.service_tier {
+        record.service_tier = Set(Some(service_tier));
+    }
+    record.cost_currency = Set(billing.cost_currency);
+    record.input_cost = Set(billing.input_cost);
+    record.output_cost = Set(billing.output_cost);
+    record.cache_creation_cost = Set(billing.cache_creation_cost);
+    record.cache_read_cost = Set(billing.cache_read_cost);
+    record.request_cost = Set(billing.request_cost);
+    record.token_cost = Set(billing.token_cost);
+    record.base_cost = Set(billing.base_cost);
+    record.total_cost = Set(billing.total_cost);
+    record.billing_multiplier = Set(billing.billing_multiplier);
+    record.input_price_per_million = Set(billing.input_price_per_million);
+    record.output_price_per_million = Set(billing.output_price_per_million);
+    record.cache_creation_price_per_million = Set(billing.cache_creation_price_per_million);
+    record.cache_read_price_per_million = Set(billing.cache_read_price_per_million);
 }
 
 pub async fn mark_scheduled_request_candidates_skipped(store: &ProviderStore, request_id: &str, skip_reason: &str) -> StorageResult<u64> {

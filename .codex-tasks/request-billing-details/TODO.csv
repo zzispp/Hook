@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate Hook request detail and sub2api reference implementation,DONE,Relevant files and data contracts identified,rg/sed inspections,2026-05-15T00:00:00+08:00,0,Found Hook request drawer/data contracts and sub2api billing detail reference
+2,Implement billing detail data and UI changes,DONE,Hook request detail displays required billing fields,Targeted code inspection,2026-05-15T00:00:00+08:00,0,Added backend billing fields and frontend billing details component using existing currency display
+3,Update translations or shared types if required,DONE,No missing admin translation keys or type mismatches,Targeted lint/typecheck,2026-05-15T00:00:00+08:00,0,Updated backend admin seed translations and request record DTOs
+4,Run verification and record outcome,DONE,Relevant automated checks complete or blockers documented,Verification command,2026-05-15T00:00:00+08:00,0,Ran cargo tests/check plus frontend lint/build

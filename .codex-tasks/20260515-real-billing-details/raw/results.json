@@ -1,0 +1,136 @@
+[
+  {
+    "label": "resolve upstream models",
+    "ok": true,
+    "evidence": {
+      "msutoolsModel": "gpt-5.4-mini",
+      "ekan8Model": "gemini-3.1-pro-preview",
+      "msutoolsSample": [
+        "gpt-5.4-mini",
+        "claude-3-5-haiku-20241022",
+        "claude-3-5-sonnet-20240620",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-7-sonnet-20250219",
+        "claude-haiku-4-5-20251001",
+        "claude-opus-4-1-20250805",
+        "claude-opus-4-20250514",
+        "claude-opus-4-5-20251101"
+      ],
+      "ekan8Sample": [
+        "gemini-3.1-pro-preview",
+        "K-claude-opus-4-5",
+        "K-claude-opus-4-6",
+        "R-claude-opus-4-6",
+        "R-claude-opus-4-6-thinking",
+        "R-claude-opus-4-7",
+        "R-claude-opus-4-7-thinking",
+        "S-claude-opus-4-6",
+        "S-claude-opus-4-6-thinking"
+      ]
+    }
+  },
+  {
+    "label": "seed local DB fixtures",
+    "ok": true,
+    "evidence": {
+      "modelName": "hook-real-billing-details",
+      "groupCode": "real_billing_details",
+      "upstream": {
+        "msutoolsModel": "gpt-5.4-mini",
+        "ekan8Model": "gemini-3.1-pro-preview",
+        "msutoolsSample": [
+          "gpt-5.4-mini",
+          "claude-3-5-haiku-20241022",
+          "claude-3-5-sonnet-20240620",
+          "claude-3-5-sonnet-20241022",
+          "claude-3-7-sonnet-20250219",
+          "claude-haiku-4-5-20251001",
+          "claude-opus-4-1-20250805",
+          "claude-opus-4-20250514",
+          "claude-opus-4-5-20251101"
+        ],
+        "ekan8Sample": [
+          "gemini-3.1-pro-preview",
+          "K-claude-opus-4-5",
+          "K-claude-opus-4-6",
+          "R-claude-opus-4-6",
+          "R-claude-opus-4-6-thinking",
+          "R-claude-opus-4-7",
+          "R-claude-opus-4-7-thinking",
+          "S-claude-opus-4-6",
+          "S-claude-opus-4-6-thinking"
+        ]
+      }
+    }
+  },
+  {
+    "label": "send real proxy request",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2b24-0fd4-7810-bf94-e39b165438ea",
+      "status": 200,
+      "body": {
+        "id": "resp_00fe069a1fe6f0b2016a06f2b4b818819b991b645c2b936112",
+        "model": "hook-real-billing-details",
+        "usage": {
+          "completion_tokens": 26,
+          "prompt_tokens": 34,
+          "total_tokens": 60
+        }
+      }
+    }
+  },
+  {
+    "label": "verify billing detail records",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2b24-0fd4-7810-bf94-e39b165438ea",
+      "summary": {
+        "source": "request_records",
+        "request_id": "019e2b24-0fd4-7810-bf94-e39b165438ea",
+        "status": "success",
+        "billing_status": "settled",
+        "service_tier": "standard",
+        "prompt_tokens": "34",
+        "completion_tokens": "26",
+        "cache_read_input_tokens": "",
+        "input_cost": "0.00008500",
+        "output_cost": "0.00039000",
+        "cache_creation_cost": "0.00000000",
+        "cache_read_cost": "0.00000000",
+        "request_cost": "0.00000000",
+        "base_cost": "0.00047500",
+        "total_cost": "0.00007125",
+        "billing_multiplier": "0.15000000",
+        "cost_currency": "USD",
+        "input_price_per_million": "2.50000000",
+        "output_price_per_million": "15.00000000",
+        "cache_creation_price_per_million": "1.25000000",
+        "cache_read_price_per_million": "0.25000000"
+      },
+      "candidate": {
+        "source": "request_candidates",
+        "request_id": "019e2b24-0fd4-7810-bf94-e39b165438ea",
+        "status": "success",
+        "billing_status": "",
+        "service_tier": "standard",
+        "prompt_tokens": "34",
+        "completion_tokens": "26",
+        "cache_read_input_tokens": "",
+        "input_cost": "0.00008500",
+        "output_cost": "0.00039000",
+        "cache_creation_cost": "0.00000000",
+        "cache_read_cost": "0.00000000",
+        "request_cost": "0.00000000",
+        "base_cost": "0.00047500",
+        "total_cost": "0.00007125",
+        "billing_multiplier": "0.15000000",
+        "cost_currency": "USD",
+        "input_price_per_million": "2.50000000",
+        "output_price_per_million": "15.00000000",
+        "cache_creation_price_per_million": "1.25000000",
+        "cache_read_price_per_million": "0.25000000"
+      }
+    }
+  }
+]

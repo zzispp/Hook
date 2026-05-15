@@ -16,6 +16,7 @@ pub(super) struct PreparedProxyRequest {
     pub(super) request_id: String,
     pub(super) candidates: Vec<ProxyCandidate>,
     pub(super) body: Value,
+    pub(super) service_tier: Option<String>,
     pub(super) is_stream: bool,
     pub(super) force_non_stream: bool,
 }
@@ -50,10 +51,12 @@ pub(super) async fn prepare_proxy_request(
     )
     .await?;
     record_scheduled_candidates(state, &selection, &capture).await?;
+    let service_tier = capture.service_tier();
     Ok(PreparedProxyRequest {
         request_id: selection.request_id,
         candidates: selection.candidates,
         body,
+        service_tier,
         is_stream,
         force_non_stream,
     })

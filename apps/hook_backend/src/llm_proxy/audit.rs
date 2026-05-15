@@ -1,4 +1,5 @@
 mod event;
+mod record_billing;
 mod records;
 
 use provider::application::billing::{RequestBillingAmount, RequestBillingInput, calculate_request_billing};

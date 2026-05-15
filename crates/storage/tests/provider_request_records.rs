@@ -5,7 +5,7 @@ use sea_orm::{DatabaseBackend, MockDatabase, Value};
 use storage::{
     Database,
     provider::{
-        ProviderStore, RequestRecordRecordInput, RequestRecordRecordPatch,
+        ProviderStore, RequestBillingRecordPatch, RequestBillingRecordValues, RequestRecordRecordInput, RequestRecordRecordPatch,
         record::{request_candidates, request_records},
     },
 };
@@ -94,6 +94,11 @@ async fn request_record_storage_returns_trace_detail() {
     assert_eq!(detail.record.request_id, "req-success");
     assert_eq!(detail.record.candidate_count, 2);
     assert_eq!(detail.record.total_cost, Decimal::new(2, 4));
+    assert_eq!(detail.record.service_tier.as_deref(), Some("standard"));
+    assert_eq!(detail.record.input_cost, Some(Decimal::new(25, 4)));
+    assert_eq!(detail.record.output_cost, Some(Decimal::new(30, 4)));
+    assert_eq!(detail.record.cache_read_cost, Some(Decimal::new(125, 6)));
+    assert_eq!(detail.record.input_price_per_million, Some(Decimal::new(250, 2)));
     assert_eq!(
         detail
             .request_headers
@@ -277,6 +282,10 @@ fn main_record_input() -> RequestRecordRecordInput {
         has_retry: false,
         status: "pending".into(),
         billing_status: "pending".into(),
+        billing: RequestBillingRecordValues {
+            service_tier: Some("standard".into()),
+            ..RequestBillingRecordValues::default()
+        },
         candidate_count: 1,
         request_headers: Some(serde_json::json!({"authorization": "****"})),
         request_body: Some(serde_json::json!({"model": "gpt-5.5"})),
@@ -309,11 +318,7 @@ fn main_record_patch() -> RequestRecordRecordPatch {
         total_tokens: PatchField::Value(20),
         cache_creation_input_tokens: PatchField::Value(3),
         cache_read_input_tokens: PatchField::Value(4),
-        cost_currency: PatchField::Value("USD".into()),
-        token_cost: PatchField::Value(Decimal::new(1, 4)),
-        base_cost: PatchField::Value(Decimal::new(1, 5)),
-        total_cost: PatchField::Value(Decimal::new(2, 4)),
-        billing_multiplier: PatchField::Value(Decimal::new(2, 0)),
+        billing: success_billing_patch(),
         first_byte_time_ms: PatchField::Value(110),
         total_latency_ms: PatchField::Value(570),
         client_response_headers: PatchField::Value(serde_json::json!({"content-type": "application/json"})),
@@ -359,7 +364,17 @@ fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, 
         total_tokens: (status == "success").then_some(20),
         cache_creation_input_tokens: (status == "success").then_some(3),
         cache_read_input_tokens: (status == "success").then_some(4),
-        cost_currency: (status == "success").then(|| "USD".into()),
+        service_tier: (status == "success").then(|| "standard".into()),
+        input_cost: (status == "success").then_some(Decimal::new(25, 4)),
+        output_cost: (status == "success").then_some(Decimal::new(30, 4)),
+        cache_creation_cost: (status == "success").then_some(Decimal::new(125, 5)),
+        cache_read_cost: (status == "success").then_some(Decimal::new(125, 6)),
+        request_cost: (status == "success").then_some(Decimal::new(1, 2)),
+        input_price_per_million: (status == "success").then_some(Decimal::new(250, 2)),
+        output_price_per_million: (status == "success").then_some(Decimal::new(1500, 2)),
+        cache_creation_price_per_million: (status == "success").then_some(Decimal::new(125, 2)),
+        cache_read_price_per_million: (status == "success").then_some(Decimal::new(25, 2)),
+        cost_currency: (status == "success").then(|| currency::ACCOUNTING_CURRENCY.into()),
         token_cost: (status == "success").then_some(Decimal::new(1, 4)),
         base_cost: (status == "success").then_some(Decimal::new(1, 5)),
         total_cost: (status == "success").then_some(Decimal::new(2, 4)),
@@ -388,6 +403,26 @@ fn billing_status(status: &str) -> &'static str {
         "cancelled" => "void",
         "failed" => "void",
         _ => "pending",
+    }
+}
+
+fn success_billing_patch() -> RequestBillingRecordPatch {
+    RequestBillingRecordPatch {
+        service_tier: PatchField::Value("standard".into()),
+        cost_currency: PatchField::Value(currency::ACCOUNTING_CURRENCY.into()),
+        input_cost: PatchField::Value(Decimal::new(25, 4)),
+        output_cost: PatchField::Value(Decimal::new(30, 4)),
+        cache_creation_cost: PatchField::Value(Decimal::new(125, 5)),
+        cache_read_cost: PatchField::Value(Decimal::new(125, 6)),
+        request_cost: PatchField::Value(Decimal::new(1, 2)),
+        token_cost: PatchField::Value(Decimal::new(1, 4)),
+        base_cost: PatchField::Value(Decimal::new(1, 5)),
+        total_cost: PatchField::Value(Decimal::new(2, 4)),
+        billing_multiplier: PatchField::Value(Decimal::new(2, 0)),
+        input_price_per_million: PatchField::Value(Decimal::new(250, 2)),
+        output_price_per_million: PatchField::Value(Decimal::new(1500, 2)),
+        cache_creation_price_per_million: PatchField::Value(Decimal::new(125, 2)),
+        cache_read_price_per_million: PatchField::Value(Decimal::new(25, 2)),
     }
 }
 
@@ -446,7 +481,17 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         total_tokens: (status == "success").then_some(20),
         cache_creation_input_tokens: (status == "success").then_some(3),
         cache_read_input_tokens: (status == "success").then_some(4),
-        cost_currency: (status == "success").then(|| "USD".into()),
+        service_tier: (status == "success").then(|| "standard".into()),
+        input_cost: (status == "success").then_some(Decimal::new(25, 4)),
+        output_cost: (status == "success").then_some(Decimal::new(30, 4)),
+        cache_creation_cost: (status == "success").then_some(Decimal::new(125, 5)),
+        cache_read_cost: (status == "success").then_some(Decimal::new(125, 6)),
+        request_cost: (status == "success").then_some(Decimal::new(1, 2)),
+        input_price_per_million: (status == "success").then_some(Decimal::new(250, 2)),
+        output_price_per_million: (status == "success").then_some(Decimal::new(1500, 2)),
+        cache_creation_price_per_million: (status == "success").then_some(Decimal::new(125, 2)),
+        cache_read_price_per_million: (status == "success").then_some(Decimal::new(25, 2)),
+        cost_currency: (status == "success").then(|| currency::ACCOUNTING_CURRENCY.into()),
         token_cost: (status == "success").then_some(Decimal::new(1, 4)),
         base_cost: (status == "success").then_some(Decimal::new(1, 5)),
         total_cost: (status == "success").then_some(Decimal::new(2, 4)),

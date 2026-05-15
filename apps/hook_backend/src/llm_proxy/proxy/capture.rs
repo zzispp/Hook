@@ -26,6 +26,15 @@ impl RequestCapture {
     pub(in crate::llm_proxy) fn request_body(&self, policy: &RequestRecordPolicy) -> Result<Option<Value>, serde_json::Error> {
         recorded_request_body(&self.body, policy)
     }
+
+    pub(in crate::llm_proxy) fn service_tier(&self) -> Option<String> {
+        self.body
+            .get("service_tier")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+    }
 }
 
 pub(in crate::llm_proxy) fn recorded_headers(headers: &HeaderMap, policy: &RequestRecordPolicy) -> Option<Value> {

@@ -194,6 +194,7 @@ async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, L
         request_id: input.prepared.request_id.clone(),
         response: input.response,
         candidate: input.candidate.clone(),
+        service_tier: input.prepared.service_tier.clone(),
         source_format: input.payload.source_format,
         target_format: input.payload.target_format,
         started: input.started,
