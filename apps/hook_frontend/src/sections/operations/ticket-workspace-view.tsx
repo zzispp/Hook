@@ -68,7 +68,7 @@ export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
 
   return (
     <DashboardContent
-      maxWidth={false}
+      maxWidth="xl"
       sx={{ display: 'flex', flex: '1 1 auto', flexDirection: 'column' }}
     >
       <AdminBreadcrumbs
