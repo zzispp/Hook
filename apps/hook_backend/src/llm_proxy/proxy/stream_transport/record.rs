@@ -50,8 +50,8 @@ pub(super) async fn record_stream_attempt(input: StreamAttemptRecord) -> Result<
     .await
 }
 
-pub(super) fn response_read_error_type(error: &reqwest::Error) -> &'static str {
-    if error.is_timeout() {
+pub(super) fn response_read_error_type(error: &req::ClientError) -> &'static str {
+    if matches!(error, req::ClientError::Timeout) {
         return "upstream_timeout";
     }
     "upstream_response_read_error"

@@ -5,11 +5,11 @@ mod relay;
 use std::{pin::Pin, time::Instant};
 
 use axum::{
-    body::{Body, Bytes},
+    body::Body,
     http::{HeaderMap, HeaderValue, StatusCode},
     response::Response,
 };
-use futures_util::{Stream, StreamExt, stream};
+use futures_util::{Stream, stream};
 use proxy::format_conversion::ApiFormat;
 use types::model::PatchField;
 
@@ -23,7 +23,7 @@ use crate::llm_proxy::{
     candidate::ProxyCandidate,
 };
 
-type UpstreamStream = Pin<Box<dyn Stream<Item = Result<Bytes, reqwest::Error>> + Send>>;
+type UpstreamStream = Pin<Box<dyn Stream<Item = Result<req::Bytes, req::ClientError>> + Send>>;
 
 pub(super) struct StreamAttemptContext {
     state: LlmProxyState,
@@ -37,7 +37,7 @@ pub(super) struct StreamAttemptContext {
 pub async fn stream_response(
     state: LlmProxyState,
     request_id: String,
-    response: reqwest::Response,
+    response: req::Response,
     candidate: ProxyCandidate,
     source_format: ApiFormat,
     target_format: ApiFormat,
@@ -60,7 +60,7 @@ pub async fn stream_response(
     }
 
     record_stream_headers(&context, upstream_headers, content_type.as_ref()).await?;
-    let upstream = response.bytes_stream().boxed();
+    let upstream = req::response_bytes_stream(response);
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
     relay.prefetch().await?;
     let body = Body::from_stream(stream::unfold(relay, relay::next_body_item));
@@ -69,11 +69,11 @@ pub async fn stream_response(
 
 async fn stream_status_failure(
     context: StreamAttemptContext,
-    response: reqwest::Response,
+    response: req::Response,
     upstream_headers: HeaderMap,
     content_type: Option<HeaderValue>,
 ) -> Result<Response, LlmProxyError> {
-    let bytes = response.bytes().await?;
+    let bytes = req::response_bytes(response).await?;
     let error = upstream_status_error_details(context.status.as_u16(), &bytes);
     record_attempt(
         &context.state,

@@ -17,7 +17,7 @@ use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
 const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
-const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS: f64 = 60.0;
+const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS: f64 = 30.0;
 
 #[derive(Clone)]
 pub struct StorageProviderRepository {

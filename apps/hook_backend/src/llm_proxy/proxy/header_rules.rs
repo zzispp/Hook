@@ -1,4 +1,4 @@
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use req::{HeaderMap, HeaderName, HeaderValue};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -92,7 +92,7 @@ fn header_value(key: &str, value: &str) -> Result<HeaderValue, LlmProxyError> {
 
 #[cfg(test)]
 mod tests {
-    use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
+    use req::{AUTHORIZATION, HeaderMap, HeaderValue};
     use serde_json::json;
 
     use super::apply_provider_header_rules;

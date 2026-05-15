@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, time::Duration};
 
 use async_trait::async_trait;
-use reqwest::{Response, Url};
+use req::{Request, ReqwestClient, Response, Url};
 use serde_json::Value;
 use types::provider::{ProviderEndpoint, ProviderUpstreamModelsResponse};
 
@@ -13,15 +13,12 @@ const MAX_ERROR_BODY_CHARS: usize = 300;
 
 #[derive(Clone)]
 pub struct ReqwestUpstreamModelFetcher {
-    http: reqwest::Client,
+    http: ReqwestClient,
 }
 
 impl ReqwestUpstreamModelFetcher {
     pub fn new() -> ProviderResult<Self> {
-        let http = reqwest::Client::builder()
-            .timeout(Duration::from_secs(FETCH_TIMEOUT_SECONDS))
-            .build()
-            .map_err(reqwest_error)?;
+        let http = ReqwestClient::from_builder(req::builder().timeout(Duration::from_secs(FETCH_TIMEOUT_SECONDS))).map_err(client_error)?;
         Ok(Self { http })
     }
 }
@@ -30,34 +27,29 @@ impl ReqwestUpstreamModelFetcher {
 impl UpstreamModelFetcher for ReqwestUpstreamModelFetcher {
     async fn fetch_upstream_models(&self, endpoint: &ProviderEndpoint, api_key: &str) -> ProviderResult<ProviderUpstreamModelsResponse> {
         let request = build_request(&self.http, endpoint, api_key)?;
-        let response = self.http.execute(request).await.map_err(reqwest_error)?;
+        let response = self.http.execute(request).await.map_err(client_error)?;
         parse_models_response(response, &endpoint.api_format).await
     }
 }
 
-fn build_request(client: &reqwest::Client, endpoint: &ProviderEndpoint, api_key: &str) -> ProviderResult<reqwest::Request> {
-    match endpoint.api_format.as_str() {
-        "openai_chat" | "openai_cli" | "openai_compact" => client
-            .get(openai_models_url(&endpoint.base_url)?)
-            .bearer_auth(api_key)
-            .build()
-            .map_err(reqwest_error),
+fn build_request(client: &ReqwestClient, endpoint: &ProviderEndpoint, api_key: &str) -> ProviderResult<Request> {
+    let request = match endpoint.api_format.as_str() {
+        "openai_chat" | "openai_cli" | "openai_compact" => client.get(openai_models_url(&endpoint.base_url)?).bearer_auth(api_key),
         "claude_chat" | "claude_messages" => client
             .get(openai_models_url(&endpoint.base_url)?)
             .header("x-api-key", api_key)
-            .header("anthropic-version", ANTHROPIC_VERSION)
-            .build()
-            .map_err(reqwest_error),
-        "gemini_chat" | "gemini_cli" => client.get(gemini_models_url(&endpoint.base_url, api_key)?).build().map_err(reqwest_error),
+            .header("anthropic-version", ANTHROPIC_VERSION),
+        "gemini_chat" | "gemini_cli" => client.get(gemini_models_url(&endpoint.base_url, api_key)?),
         other => Err(ProviderError::InvalidInput(format!(
             "api_format does not support upstream model fetch: {other}"
-        ))),
-    }
+        )))?,
+    };
+    client.build_request(request).map_err(client_error)
 }
 
 async fn parse_models_response(response: Response, api_format: &str) -> ProviderResult<ProviderUpstreamModelsResponse> {
     let status = response.status();
-    let text = response.text().await.map_err(reqwest_error)?;
+    let text = req::response_text(response).await.map_err(client_error)?;
     if !status.is_success() {
         return Err(ProviderError::Infrastructure(format!("upstream returned {status}: {}", clipped_text(&text))));
     }
@@ -145,7 +137,7 @@ fn clipped_text(value: &str) -> String {
     if clipped.is_empty() { "(empty)".into() } else { clipped }
 }
 
-fn reqwest_error(error: reqwest::Error) -> ProviderError {
+fn client_error(error: req::ClientError) -> ProviderError {
     ProviderError::Infrastructure(error.to_string())
 }
 

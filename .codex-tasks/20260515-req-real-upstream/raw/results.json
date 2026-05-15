@@ -1,0 +1,219 @@
+[
+  {
+    "label": "admin upstream model fetch uses req client",
+    "ok": true,
+    "evidence": {
+      "hook": [
+        "gpt-5.4-mini",
+        "claude-haiku-4-5-20251001"
+      ],
+      "ekan8": [
+        "[满血]gemini-3.1-pro-preview",
+        "ccmax-claude-opus-4-7"
+      ]
+    }
+  },
+  {
+    "label": "hook openai non-stream through proxy",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2962-5927-7580-b5bc-d23d1e586c2f",
+      "record": {
+        "request_id": "019e2962-5927-7580-b5bc-d23d1e586c2f",
+        "status": "success",
+        "client_status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000101",
+        "client_api_format": "openai_chat",
+        "provider_api_format": "openai_chat",
+        "is_stream": "false",
+        "model_name_snapshot": "req-real-openai"
+      },
+      "candidate": {
+        "status": "success",
+        "status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000101",
+        "client_api_format": "openai_chat",
+        "provider_api_format": "openai_chat",
+        "needs_conversion": "false",
+        "is_stream": "false",
+        "latency_ms": "5137",
+        "first_byte_time_ms": "5137"
+      },
+      "providerRequestBody": {
+        "max_tokens": 16,
+        "messages": [
+          {
+            "content": "req-real-hook-openai-non-stream-1778810771734",
+            "role": "user"
+          }
+        ],
+        "model": "gpt-5.4-mini",
+        "stream": false,
+        "temperature": 0
+      }
+    }
+  },
+  {
+    "label": "hook openai stream through proxy",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2962-6de3-7a40-9b26-4250c8d5913b",
+      "record": {
+        "request_id": "019e2962-6de3-7a40-9b26-4250c8d5913b",
+        "status": "success",
+        "client_status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000101",
+        "client_api_format": "openai_chat",
+        "provider_api_format": "openai_chat",
+        "is_stream": "true",
+        "model_name_snapshot": "req-real-openai"
+      },
+      "candidate": {
+        "status": "success",
+        "status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000101",
+        "client_api_format": "openai_chat",
+        "provider_api_format": "openai_chat",
+        "needs_conversion": "false",
+        "is_stream": "true",
+        "latency_ms": "4047",
+        "first_byte_time_ms": "3521"
+      },
+      "providerRequestBody": {
+        "max_tokens": 16,
+        "messages": [
+          {
+            "content": "req-real-hook-openai-stream-1778810777055",
+            "role": "user"
+          }
+        ],
+        "model": "gpt-5.4-mini",
+        "stream": true,
+        "temperature": 0
+      }
+    }
+  },
+  {
+    "label": "hook claude through proxy",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2962-7e41-7861-89ec-cbdc61e5bc4c",
+      "record": {
+        "request_id": "019e2962-7e41-7861-89ec-cbdc61e5bc4c",
+        "status": "success",
+        "client_status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000101",
+        "client_api_format": "claude_chat",
+        "provider_api_format": "claude_chat",
+        "is_stream": "false",
+        "model_name_snapshot": "req-real-claude"
+      },
+      "candidate": {
+        "status": "success",
+        "status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000101",
+        "client_api_format": "claude_chat",
+        "provider_api_format": "claude_chat",
+        "needs_conversion": "false",
+        "is_stream": "false",
+        "latency_ms": "4052",
+        "first_byte_time_ms": "4052"
+      },
+      "providerRequestBody": {
+        "max_tokens": 16,
+        "messages": [
+          {
+            "content": "req-real-hook-claude-1778810781244",
+            "role": "user"
+          }
+        ],
+        "model": "claude-haiku-4-5-20251001",
+        "temperature": 0
+      }
+    }
+  },
+  {
+    "label": "ekan8 gemini direct through proxy",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2962-8eba-7aa0-8328-447da793279e",
+      "record": {
+        "request_id": "019e2962-8eba-7aa0-8328-447da793279e",
+        "status": "success",
+        "client_status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000102",
+        "client_api_format": "gemini_chat",
+        "provider_api_format": "gemini_chat",
+        "is_stream": "false",
+        "model_name_snapshot": "req-real-gemini"
+      },
+      "candidate": {
+        "status": "success",
+        "status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000102",
+        "client_api_format": "gemini_chat",
+        "provider_api_format": "gemini_chat",
+        "needs_conversion": "false",
+        "is_stream": "false",
+        "latency_ms": "4327",
+        "first_byte_time_ms": "4327"
+      },
+      "providerRequestBody": {
+        "contents": [
+          {
+            "parts": [
+              {
+                "text": "req-real-ekan8-gemini-1778810785461"
+              }
+            ],
+            "role": "user"
+          }
+        ],
+        "generationConfig": {
+          "maxOutputTokens": 16,
+          "temperature": 0
+        }
+      }
+    }
+  },
+  {
+    "label": "ekan8 openai-compatible mapped model through proxy",
+    "ok": true,
+    "evidence": {
+      "requestId": "019e2962-a023-78f0-a473-28e79f463a60",
+      "record": {
+        "request_id": "019e2962-a023-78f0-a473-28e79f463a60",
+        "status": "success",
+        "client_status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000102",
+        "client_api_format": "openai_chat",
+        "provider_api_format": "openai_chat",
+        "is_stream": "false",
+        "model_name_snapshot": "req-real-ekan8-openai-mapped"
+      },
+      "candidate": {
+        "status": "success",
+        "status_code": "200",
+        "provider_id": "00000000-0000-7000-9300-000000000102",
+        "client_api_format": "openai_chat",
+        "provider_api_format": "openai_chat",
+        "needs_conversion": "false",
+        "is_stream": "false",
+        "latency_ms": "1567",
+        "first_byte_time_ms": "1567"
+      },
+      "providerRequestBody": {
+        "max_tokens": 16,
+        "messages": [
+          {
+            "content": "req-real-ekan8-mapped-1778810789918",
+            "role": "user"
+          }
+        ],
+        "model": "ccmax-claude-opus-4-7",
+        "stream": false,
+        "temperature": 0
+      }
+    }
+  }
+]

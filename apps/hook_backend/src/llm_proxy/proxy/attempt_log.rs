@@ -62,7 +62,7 @@ pub(super) async fn record_started_attempt(
     candidate: &ProxyCandidate,
     is_stream: bool,
     retry_index: i32,
-    request: &reqwest::Request,
+    request: &req::Request,
     provider_body: &serde_json::Value,
 ) -> Result<(), LlmProxyError> {
     record_attempt(
@@ -86,7 +86,7 @@ pub(super) async fn record_send_error(
     candidate: &ProxyCandidate,
     retry_index: i32,
     started: Instant,
-    error: &reqwest::Error,
+    error: &req::ClientError,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<Option<Response>, LlmProxyError> {
     let error_message = error.to_string();
@@ -105,8 +105,8 @@ pub(super) async fn record_send_error(
     Ok(None)
 }
 
-fn send_error_type(error: &reqwest::Error) -> &'static str {
-    if error.is_timeout() {
+fn send_error_type(error: &req::ClientError) -> &'static str {
+    if matches!(error, req::ClientError::Timeout) {
         return "upstream_timeout";
     }
     "upstream_send_error"

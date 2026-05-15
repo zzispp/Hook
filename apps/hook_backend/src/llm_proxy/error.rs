@@ -116,8 +116,8 @@ impl From<provider::application::ProviderError> for LlmProxyError {
     }
 }
 
-impl From<reqwest::Error> for LlmProxyError {
-    fn from(value: reqwest::Error) -> Self {
+impl From<req::ClientError> for LlmProxyError {
+    fn from(value: req::ClientError) -> Self {
         Self::Upstream(value.to_string())
     }
 }

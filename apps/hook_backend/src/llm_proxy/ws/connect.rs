@@ -1,7 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use axum::http::HeaderMap;
-use tokio_tungstenite::{WebSocketStream, connect_async, tungstenite::client::IntoClientRequest};
+use axum::http::{HeaderMap, HeaderValue};
 use types::model::PatchField;
 
 use crate::llm_proxy::{
@@ -13,8 +12,8 @@ use crate::llm_proxy::{
 
 const OPENAI_REALTIME_BETA_HEADER: &str = "realtime=v1";
 
-type UpstreamWs = WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
-type UpstreamRequest = tokio_tungstenite::tungstenite::http::Request<()>;
+type UpstreamWs = req::WebSocketStream;
+type UpstreamRequest = req::WebSocketRequest;
 
 pub(super) struct ConnectedUpstream {
     pub(super) candidate: ProxyCandidate,
@@ -71,20 +70,12 @@ pub(super) async fn connect_first_upstream(
 
 fn realtime_request(candidate: &ProxyCandidate, query: &HashMap<String, String>, api_key: String) -> Result<UpstreamRequest, LlmProxyError> {
     let url = realtime_url(candidate, query)?;
-    let mut request = url.as_str().into_client_request().map_err(|error| LlmProxyError::Upstream(error.to_string()))?;
-    request
-        .headers_mut()
-        .insert("Authorization", format!("Bearer {api_key}").parse().map_err(header_error)?);
-    request
-        .headers_mut()
-        .insert("OpenAI-Beta", OPENAI_REALTIME_BETA_HEADER.parse().map_err(header_error)?);
-    Ok(request)
+    req::build_websocket_request(url, realtime_headers(api_key)?).map_err(LlmProxyError::from)
 }
 
-fn realtime_url(candidate: &ProxyCandidate, query: &HashMap<String, String>) -> Result<reqwest::Url, LlmProxyError> {
-    let mut url =
-        reqwest::Url::parse(&realtime_base_url(candidate)).map_err(|error| LlmProxyError::InvalidRequest(format!("invalid realtime url: {error}")))?;
-    set_ws_scheme(&mut url)?;
+fn realtime_url(candidate: &ProxyCandidate, query: &HashMap<String, String>) -> Result<req::Url, LlmProxyError> {
+    let mut url = req::Url::parse(&realtime_base_url(candidate)).map_err(|error| LlmProxyError::InvalidRequest(format!("invalid realtime url: {error}")))?;
+    req::set_ws_scheme(&mut url).map_err(LlmProxyError::from)?;
     {
         let mut pairs = url.query_pairs_mut();
         pairs.clear();
@@ -94,15 +85,11 @@ fn realtime_url(candidate: &ProxyCandidate, query: &HashMap<String, String>) -> 
     Ok(url)
 }
 
-fn set_ws_scheme(url: &mut reqwest::Url) -> Result<(), LlmProxyError> {
-    let scheme = match url.scheme() {
-        "http" => "ws",
-        "https" => "wss",
-        "ws" | "wss" => return Ok(()),
-        other => return Err(LlmProxyError::InvalidRequest(format!("unsupported upstream scheme for websocket: {other}"))),
-    };
-    url.set_scheme(scheme)
-        .map_err(|_| LlmProxyError::InvalidRequest("failed to build websocket upstream url".into()))
+fn realtime_headers(api_key: String) -> Result<HeaderMap, LlmProxyError> {
+    let mut headers = HeaderMap::new();
+    headers.insert("Authorization", HeaderValue::from_str(&format!("Bearer {api_key}")).map_err(header_error)?);
+    headers.insert("OpenAI-Beta", HeaderValue::from_static(OPENAI_REALTIME_BETA_HEADER));
+    Ok(headers)
 }
 
 fn realtime_base_url(candidate: &ProxyCandidate) -> String {
@@ -118,15 +105,9 @@ fn realtime_base_url(candidate: &ProxyCandidate) -> String {
 }
 
 async fn connect_upstream(candidate: &ProxyCandidate, request: UpstreamRequest) -> Result<(UpstreamWs, HeaderMap), LlmProxyError> {
-    let connect = connect_async(request);
-    let result = match candidate.stream_first_byte_timeout_seconds.and_then(timeout_duration) {
-        Some(timeout) => tokio::time::timeout(timeout, connect)
-            .await
-            .map_err(|_| LlmProxyError::Upstream("upstream websocket connect timed out".into()))?,
-        None => connect.await,
-    };
-    let (stream, response) = result.map_err(|error| LlmProxyError::Upstream(error.to_string()))?;
-    Ok((stream, response.headers().clone()))
+    req::connect_websocket(request, candidate.stream_first_byte_timeout_seconds.and_then(timeout_duration))
+        .await
+        .map_err(LlmProxyError::from)
 }
 
 fn timeout_duration(seconds: f64) -> Option<Duration> {

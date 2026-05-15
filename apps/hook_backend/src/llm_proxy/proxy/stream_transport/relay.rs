@@ -1,6 +1,5 @@
 use std::collections::VecDeque;
 
-use axum::body::Bytes;
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry, StreamChunkConversion, StreamConversionState};
 use serde_json::Value;
 use types::model::PatchField;
@@ -16,7 +15,7 @@ use crate::llm_proxy::{
     proxy::{response_model::rewrite_response_model_value, transport, usage},
 };
 
-type DownstreamItem = Result<Bytes, std::io::Error>;
+type DownstreamItem = Result<req::Bytes, std::io::Error>;
 
 pub(super) struct StreamRelay {
     context: StreamAttemptContext,
@@ -27,7 +26,7 @@ pub(super) struct StreamRelay {
     rewrite_model: bool,
     conversion: StreamConversionState,
     buffer: Vec<u8>,
-    pending: VecDeque<Bytes>,
+    pending: VecDeque<req::Bytes>,
     usage: Option<TokenUsage>,
     first_byte_time_ms: Option<i64>,
     yielded_any: bool,
@@ -92,14 +91,14 @@ impl StreamRelay {
         }
     }
 
-    async fn handle_upstream_item(&mut self, item: Result<Bytes, reqwest::Error>, fail_before_output: bool) -> Result<(), LlmProxyError> {
+    async fn handle_upstream_item(&mut self, item: Result<req::Bytes, req::ClientError>, fail_before_output: bool) -> Result<(), LlmProxyError> {
         match item {
             Ok(bytes) => self.consume_bytes(bytes, fail_before_output).await,
             Err(error) => self.record_read_error(&error).await.and_then(|()| Err(error.into())),
         }
     }
 
-    async fn consume_bytes(&mut self, bytes: Bytes, fail_before_output: bool) -> Result<(), LlmProxyError> {
+    async fn consume_bytes(&mut self, bytes: req::Bytes, fail_before_output: bool) -> Result<(), LlmProxyError> {
         self.collect_usage_from_bytes(&bytes);
         if !self.needs_conversion && !self.rewrite_model {
             self.pending.push_back(bytes);
@@ -170,7 +169,7 @@ impl StreamRelay {
         Ok(())
     }
 
-    async fn mark_first_byte(&mut self, bytes: Bytes) -> DownstreamItem {
+    async fn mark_first_byte(&mut self, bytes: req::Bytes) -> DownstreamItem {
         if self.yielded_any {
             return Ok(bytes);
         }
@@ -198,7 +197,7 @@ impl StreamRelay {
         if self.needs_conversion || self.rewrite_model {
             self.flush_remaining_buffer().await?;
             if matches!(self.source_format, ApiFormat::OpenAiChat) && !self.openai_done_sent {
-                self.pending.push_back(Bytes::from_static(b"data: [DONE]\n\n"));
+                self.pending.push_back(req::Bytes::from_static(b"data: [DONE]\n\n"));
                 self.openai_done_sent = true;
             }
         }
@@ -292,7 +291,7 @@ impl StreamRelay {
         .await
     }
 
-    async fn record_read_error(&mut self, error: &reqwest::Error) -> Result<(), LlmProxyError> {
+    async fn record_read_error(&mut self, error: &req::ClientError) -> Result<(), LlmProxyError> {
         let error_message = error.to_string();
         self.record_failure(response_read_error_type(error), &error_message).await
     }
@@ -314,7 +313,7 @@ impl StreamRelay {
 
     fn queue_done(&mut self) {
         if matches!(self.source_format, ApiFormat::OpenAiChat) && !self.openai_done_sent {
-            self.pending.push_back(Bytes::from_static(b"data: [DONE]\n\n"));
+            self.pending.push_back(req::Bytes::from_static(b"data: [DONE]\n\n"));
             self.openai_done_sent = true;
         }
     }

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current request call sites and shape the new crate,DONE,Shared HTTP helpers are identified and scoped,cargo metadata --no-deps,2026-05-15T00:00:00+08:00,0,"Scoped to shared HTTP builder, query helper, retry helper, content types, and reqwest JSON/text client"
+2,Add crates/req and workspace wiring,DONE,New crate compiles and exports the request helpers,cargo check -p req,2026-05-15T00:00:00+08:00,0,
+3,Migrate existing consumers to the new crate,DONE,Updated crates compile against the shared helper,cargo check --workspace,2026-05-15T00:00:00+08:00,0,"Migrated model, provider send path, and exchange rate JSON fetch; kept LLM proxy raw reqwest paths where stream/error semantics require native types"
+4,Run validation and record the outcome,DONE,Validation passes with no hidden failures,just test,2026-05-15T00:00:00+08:00,0,"cargo check --workspace, cargo test -p req, and just test passed"

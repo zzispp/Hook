@@ -30,7 +30,7 @@ pub struct UpstreamFailure {
 pub async fn full_response(
     state: LlmProxyState,
     request_id: String,
-    response: reqwest::Response,
+    response: req::Response,
     candidate: ProxyCandidate,
     source_format: ApiFormat,
     target_format: ApiFormat,
@@ -153,7 +153,7 @@ async fn record_response_conversion_failure(input: &FullResponseInput, error: &L
 pub async fn record_upstream_failure(
     state: &LlmProxyState,
     request_id: &str,
-    response: reqwest::Response,
+    response: req::Response,
     candidate: &ProxyCandidate,
     started: Instant,
     retry_index: i32,
@@ -161,7 +161,7 @@ pub async fn record_upstream_failure(
     let status = status_code(response.status())?;
     let content_type = response_content_type(&response);
     let upstream_headers = response.headers().clone();
-    let body = response.bytes().await?.to_vec();
+    let body = req::response_bytes(response).await?;
     let error = upstream_status_error_details(status.as_u16(), &body);
     record_attempt(
         state,
@@ -214,12 +214,12 @@ pub(super) fn elapsed_ms(started: Instant) -> i64 {
     started.elapsed().as_millis().try_into().unwrap_or(i64::MAX)
 }
 
-pub(super) fn status_code(status: reqwest::StatusCode) -> Result<StatusCode, LlmProxyError> {
-    StatusCode::from_u16(status.as_u16()).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))
+pub(super) fn status_code(status: req::StatusCode) -> Result<StatusCode, LlmProxyError> {
+    Ok(req::response_status_code(status))
 }
 
-pub(super) fn response_content_type(response: &reqwest::Response) -> Option<HeaderValue> {
-    response.headers().get(header::CONTENT_TYPE).cloned()
+pub(super) fn response_content_type(response: &req::Response) -> Option<HeaderValue> {
+    req::response_content_type(response)
 }
 
 pub(super) fn response_builder(status: StatusCode, content_type: Option<HeaderValue>) -> axum::http::response::Builder {

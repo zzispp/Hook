@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use axum::extract::ws::{Message as ClientMessage, WebSocket};
 use futures_util::{SinkExt, StreamExt};
-use tokio_tungstenite::tungstenite::Message as UpstreamMessage;
+use req::WebSocketMessage as UpstreamMessage;
 use types::model::PatchField;
 
 use super::connect::ConnectedUpstream;

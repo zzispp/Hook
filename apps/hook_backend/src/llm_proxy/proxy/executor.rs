@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use axum::response::Response;
 use proxy::format_conversion::ApiFormat;
-use reqwest::StatusCode;
+use req::{Request, RequestBuilder, Response as UpstreamResponse, StatusCode};
 use serde_json::Value;
 
 use super::{
@@ -108,7 +108,7 @@ async fn handle_upstream_response(
     retry_index: i32,
     started: Instant,
     payload: AttemptPayload,
-    response: reqwest::Response,
+    response: UpstreamResponse,
     failures: (&mut Option<transport::UpstreamFailure>, &mut Option<LlmProxyError>),
 ) -> Result<Option<Response>, LlmProxyError> {
     if !response.status().is_success() {
@@ -132,7 +132,7 @@ async fn handle_upstream_failure(
     candidate: &ProxyCandidate,
     retry_index: i32,
     started: Instant,
-    response: reqwest::Response,
+    response: UpstreamResponse,
     last_failure: &mut Option<transport::UpstreamFailure>,
 ) -> Result<Option<Response>, LlmProxyError> {
     let retryable = status_retryable(response.status());
@@ -151,7 +151,7 @@ async fn success_response(
     retry_index: i32,
     started: Instant,
     payload: AttemptPayload,
-    response: reqwest::Response,
+    response: UpstreamResponse,
 ) -> Result<Response, LlmProxyError> {
     if prepared.is_stream {
         return stream_response(state, prepared.request_id.clone(), response, candidate.clone(), payload, started, retry_index).await;
@@ -160,12 +160,12 @@ async fn success_response(
 }
 
 fn upstream_request(
-    client: &reqwest::Client,
+    client: &req::ReqwestClient,
     candidate: &ProxyCandidate,
     target_format: ApiFormat,
     body: &Value,
     original_body: &Value,
-) -> Result<reqwest::Request, LlmProxyError> {
+) -> Result<Request, LlmProxyError> {
     let builder = client.post(candidate.upstream_url.clone()).json(body);
     let builder = if candidate.trace.provider_api_format == "claude_cli" {
         builder.bearer_auth(candidate.api_key.as_str())
@@ -178,12 +178,12 @@ fn upstream_request(
             ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses => builder.bearer_auth(candidate.api_key.as_str()),
         }
     };
-    let mut request = apply_timeout(builder, candidate).build()?;
+    let mut request = client.build_request(apply_timeout(builder, candidate))?;
     apply_provider_header_rules(request.headers_mut(), &candidate.header_rules, body, original_body)?;
     Ok(request)
 }
 
-fn apply_timeout(builder: reqwest::RequestBuilder, candidate: &ProxyCandidate) -> reqwest::RequestBuilder {
+fn apply_timeout(builder: RequestBuilder, candidate: &ProxyCandidate) -> RequestBuilder {
     let timeout_seconds = if candidate.trace.is_stream {
         candidate.stream_first_byte_timeout_seconds
     } else {
@@ -225,7 +225,7 @@ async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) ->
 async fn full_response(
     state: LlmProxyState,
     request_id: String,
-    response: reqwest::Response,
+    response: UpstreamResponse,
     candidate: ProxyCandidate,
     payload: AttemptPayload,
     started: Instant,
@@ -247,7 +247,7 @@ async fn full_response(
 async fn stream_response(
     state: LlmProxyState,
     request_id: String,
-    response: reqwest::Response,
+    response: UpstreamResponse,
     candidate: ProxyCandidate,
     payload: AttemptPayload,
     started: Instant,

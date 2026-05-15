@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add generic HTTP helpers to crates/req,DONE,Helpers exist and compile,cargo check -p req,2026-05-15 09:34:45 +0800,0,"Added response body/text/stream helpers, request builders, HTTP header exports, and websocket connect helpers."
+2,Migrate provider and llm_proxy to reuse the helpers,DONE,Shared HTTP code is replaced without behavior drift,cargo check --workspace,2026-05-15 09:34:45 +0800,0,"provider and llm_proxy no longer directly depend on reqwest or tokio-tungstenite."
+3,Run validation and record the outcome,DONE,Full validation passes,just test,2026-05-15 09:34:45 +0800,0,"cargo fmt --all, cargo check --workspace, cargo test -p req, and just test passed."

@@ -1,4 +1,5 @@
 use redis::AsyncCommands;
+use req::ReqwestClient;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::{error::Error, time::Duration};
@@ -15,6 +16,7 @@ const SOURCE_NAME: &str = "frankfurter";
 pub struct ExchangeRateCache {
     connection: redis::aio::ConnectionManager,
     key_prefix: String,
+    http: ReqwestClient,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -45,7 +47,8 @@ impl ExchangeRateCache {
     pub async fn connect(url: &str, key_prefix: String) -> BackendResult<Self> {
         let client = redis::Client::open(url)?;
         let connection = client.get_connection_manager().await?;
-        Ok(Self { connection, key_prefix })
+        let http = ReqwestClient::default();
+        Ok(Self { connection, key_prefix, http })
     }
 
     pub fn spawn_refresh_task(self) {
@@ -62,8 +65,7 @@ impl ExchangeRateCache {
     }
 
     async fn refresh_usd_cny(&self) -> BackendResult<ExchangeRateSnapshot> {
-        let response = reqwest::get(FRANKFURTER_URL).await?.error_for_status()?;
-        let response = response.json::<FrankfurterResponse>().await?;
+        let response = self.http.get_json::<FrankfurterResponse>(FRANKFURTER_URL).await?;
         let snapshot = ExchangeRateSnapshot {
             base: response.base,
             target: "CNY".into(),

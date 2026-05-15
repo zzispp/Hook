@@ -13,10 +13,10 @@ pub(super) async fn response_bytes(
     retry_index: i32,
     started: Instant,
     first_byte_time_ms: Option<i64>,
-    response: reqwest::Response,
+    response: req::Response,
 ) -> Result<Vec<u8>, LlmProxyError> {
-    match response.bytes().await {
-        Ok(bytes) => Ok(bytes.to_vec()),
+    match req::response_bytes(response).await {
+        Ok(bytes) => Ok(bytes),
         Err(error) => {
             record_response_read_error(state, request_id, candidate, retry_index, started, first_byte_time_ms, &error).await?;
             Err(error.into())
@@ -31,7 +31,7 @@ async fn record_response_read_error(
     retry_index: i32,
     started: Instant,
     first_byte_time_ms: Option<i64>,
-    error: &reqwest::Error,
+    error: &req::ClientError,
 ) -> Result<(), LlmProxyError> {
     let error_message = error.to_string();
     record_attempt(
@@ -48,8 +48,8 @@ async fn record_response_read_error(
     .await
 }
 
-fn response_read_error_type(error: &reqwest::Error) -> &'static str {
-    if error.is_timeout() {
+fn response_read_error_type(error: &req::ClientError) -> &'static str {
+    if matches!(error, req::ClientError::Timeout) {
         return "upstream_timeout";
     }
     "upstream_response_read_error"

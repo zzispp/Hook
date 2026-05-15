@@ -733,6 +733,8 @@
     "disableKey": "点击停用",
     "enableKey": "点击启用",
     "maxRetries": "最大重试次数",
+    "requestTimeoutSeconds": "非流式请求超时 (秒)",
+    "streamFirstByteTimeoutSeconds": "流式首字节超时 (秒)",
     "model": "模型",
     "modelAssociationHint": "选中的模型将被关联到提供商，取消选中将移除关联",
     "modelBindings": "模型绑定",

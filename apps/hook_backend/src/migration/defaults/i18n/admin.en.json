@@ -733,6 +733,8 @@
     "disableKey": "Disable",
     "enableKey": "Enable",
     "maxRetries": "Max retries",
+    "requestTimeoutSeconds": "Non-stream request timeout (seconds)",
+    "streamFirstByteTimeoutSeconds": "Stream first-byte timeout (seconds)",
     "model": "Model",
     "modelAssociationHint": "Selected models are associated with the provider; unselected models are removed",
     "modelBindings": "Model bindings",

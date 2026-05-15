@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect provider form and timeout data flow,DONE,"Relevant frontend/backend timeout paths are identified","rg -n \"request_timeout_seconds|stream_first_byte_timeout_seconds\" apps/hook_frontend/src crates/provider apps/hook_backend/src/migration/defaults/i18n","2026-05-15 10:10:26 CST",0,"Types and backend payload already exist; form mapping and UI are missing."
+2,Implement timeout fields and defaults,DONE,"Create/edit provider modal maps timeout values and backend default stream timeout is 30","pnpm lint:frontend","2026-05-15 10:16:01 CST",0,"Added form fields, payload mapping, i18n labels, and backend stream default."
+3,Validate and summarize,DONE,"Validation result and changed files are recorded","pnpm lint:frontend; just check; git diff --check","2026-05-15 10:16:01 CST",0,"All validation commands passed."

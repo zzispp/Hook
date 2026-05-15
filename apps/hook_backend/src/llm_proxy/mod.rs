@@ -18,6 +18,7 @@ use axum::{
 };
 use provider::infra::ProviderKeyCipher;
 use redis::AsyncCommands;
+use req::ReqwestClient;
 use storage::Database;
 
 pub use cache::LlmProxyCache;
@@ -36,7 +37,7 @@ pub struct LlmProxyState {
     database: Database,
     tokens: StorageApiTokenRepository,
     cipher: ProviderKeyCipher,
-    http: reqwest::Client,
+    http: ReqwestClient,
     affinity: redis::aio::ConnectionManager,
     cache: LlmProxyCache,
     key_prefix: String,
@@ -55,7 +56,7 @@ impl LlmProxyState {
             database,
             tokens,
             cipher,
-            http: reqwest::Client::new(),
+            http: ReqwestClient::default(),
             affinity,
             cache,
             key_prefix,

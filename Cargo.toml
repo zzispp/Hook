@@ -13,6 +13,7 @@ members = [
     "crates/operations",
     "crates/proxy",
     "crates/provider",
+    "crates/req",
     "crates/rbac",
     "crates/setting",
     "crates/storage",
@@ -56,6 +57,7 @@ regex = "1.12.2"
 ring = "0.17.14"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
+serde_urlencoded = "0.7"
 sha2 = "0.10.9"
 storage = { path = "crates/storage" }
 thiserror = "2.0.17"
@@ -74,6 +76,7 @@ model = { path = "crates/model" }
 operations = { path = "crates/operations" }
 provider = { path = "crates/provider" }
 proxy = { path = "crates/proxy" }
+req = { path = "crates/req" }
 reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls", "stream"] }
 rust_decimal = { version = "1.41.0", features = ["serde-with-float"] }
 sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "with-rust_decimal", "with-time", "with-json"] }

@@ -468,7 +468,7 @@ dependencies = [
  "rbac",
  "redis",
  "regex",
- "reqwest",
+ "req",
  "rust_decimal",
  "sea-orm",
  "sea-orm-migration",
@@ -479,7 +479,6 @@ dependencies = [
  "time",
  "tokio",
  "tokio-postgres",
- "tokio-tungstenite 0.28.0",
  "tower-http",
  "types",
  "user",
@@ -2175,7 +2174,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
- "reqwest",
+ "req",
  "rust_decimal",
  "serde",
  "serde_json",
@@ -2645,7 +2644,7 @@ dependencies = [
  "currency",
  "hex",
  "rbac",
- "reqwest",
+ "req",
  "ring",
  "rust_decimal",
  "serde",
@@ -2946,6 +2945,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71fe3824f5629716b1589be05dacd749f6aa084c87e00e016714a8cdfccc997c"
 dependencies = [
  "bytecheck",
+]
+
+[[package]]
+name = "req"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "futures-util",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "tokio",
+ "tokio-tungstenite 0.28.0",
 ]
 
 [[package]]

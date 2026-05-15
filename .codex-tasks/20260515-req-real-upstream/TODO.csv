@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect local DB and previous real-flow harness,DONE,Local DB tables and fixture patterns are understood,PGPASSWORD=123456 psql -h localhost -p 5433 -U postgres -d postgres -c "select 1",2026-05-15 09:50:00 +0800,0,"Read prior real request-record flow and verified required tables exist."
+2,Write req real upstream harness,DONE,Harness file exists and syntax-checks,node --check .codex-tasks/20260515-req-real-upstream/req_real_upstream_flow.mjs,2026-05-15 10:02:00 +0800,0,
+3,Run real upstream validation,DONE,Real Hook.rs and Ekan8 scenarios pass,node .codex-tasks/20260515-req-real-upstream/req_real_upstream_flow.mjs,2026-05-15 10:06:50 +0800,0,"Passed with real Hook.rs OpenAI/Claude, Ekan8 Gemini, and Ekan8 mapped OpenAI-compatible requests."
+4,Record results,DONE,Result JSON and progress notes exist,test -f .codex-tasks/20260515-req-real-upstream/raw/results.json,2026-05-15 10:06:50 +0800,0,"raw/results.json contains request ids and DB evidence for every scenario."

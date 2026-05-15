@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use req::ReqwestClient;
 use serde_json::{Map, Value};
 
 use crate::application::{ExternalModelCatalog, ModelError, ModelResult};
@@ -26,12 +27,14 @@ const OFFICIAL_PROVIDERS: &[&str] = &[
 
 #[derive(Clone)]
 pub struct ModelsDevClient {
-    http: reqwest::Client,
+    http: ReqwestClient,
 }
 
 impl ModelsDevClient {
     pub fn new() -> Self {
-        Self { http: reqwest::Client::new() }
+        Self {
+            http: ReqwestClient::default(),
+        }
     }
 }
 
@@ -44,12 +47,7 @@ impl Default for ModelsDevClient {
 #[async_trait]
 impl ExternalModelCatalog for ModelsDevClient {
     async fn models_dev(&self) -> ModelResult<Value> {
-        let response = self.http.get(MODELS_DEV_URL).send().await.map_err(external_error)?;
-        let status = response.status();
-        if !status.is_success() {
-            return Err(ModelError::External(format!("models.dev returned HTTP {status}")));
-        }
-        let data = response.json::<Value>().await.map_err(external_error)?;
+        let data = self.http.get_json::<Value>(MODELS_DEV_URL).await.map_err(external_error)?;
         mark_official_providers(data)
     }
 }
@@ -78,6 +76,6 @@ fn mark_provider((provider_id, provider_data): (String, Value)) -> (String, Valu
     }
 }
 
-fn external_error(error: reqwest::Error) -> ModelError {
+fn external_error(error: req::ClientError) -> ModelError {
     ModelError::External(error.to_string())
 }
