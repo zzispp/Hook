@@ -6,6 +6,7 @@ mod candidate;
 mod error;
 mod formats;
 mod handlers;
+mod model_access;
 mod proxy;
 mod rate_limit;
 mod request_record_policy;
@@ -92,6 +93,10 @@ fn redis_error(error: redis::RedisError) -> LlmProxyError {
 
 pub fn create_router(state: LlmProxyState) -> Router {
     Router::new()
+        .route("/models", get(handlers::list_models))
+        .route("/models/", get(handlers::list_models))
+        .route("/models/{model}", get(handlers::retrieve_model))
+        .route("/models/{model}/", get(handlers::retrieve_model))
         .route("/chat/completions", post(handlers::chat_completions))
         .route("/chat/completions/", post(handlers::chat_completions))
         .route("/responses", post(handlers::responses))

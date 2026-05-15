@@ -1,10 +1,11 @@
 use types::provider::ProviderSchedulingMode;
 
-use super::{CandidateParts, ids_allow};
+use super::CandidateParts;
 use crate::llm_proxy::{
     cache::snapshot::{CachedBillingGroup, CachedEndpoint, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot},
     candidate::CandidateRequest,
     formats,
+    model_access::provider_allowed,
 };
 
 const FNV_OFFSET_BASIS: u64 = 14_695_981_039_346_656_037;
@@ -157,12 +158,6 @@ fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {
         .and_then(|value| value.get("enabled"))
         .and_then(serde_json::Value::as_bool)
         .unwrap_or(false)
-}
-
-fn provider_allowed(group: &CachedBillingGroup, user_access: Option<&CachedUserAccess>, provider: &CachedProvider) -> bool {
-    provider.is_active
-        && ids_allow(&group.allowed_provider_ids, &provider.id)
-        && user_access.is_none_or(|access| ids_allow(&access.allowed_provider_ids, &provider.id))
 }
 
 fn key_allowed(key: &CachedProviderKey) -> bool {

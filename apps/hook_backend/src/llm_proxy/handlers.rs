@@ -4,12 +4,16 @@ use axum::{
     http::HeaderMap,
     response::Response,
 };
+use serde::Serialize;
 use serde_json::Value;
 
 use super::{
     CLAUDE_CHAT_FORMAT, CurrentApiToken, GEMINI_CHAT_FORMAT, LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, OPENAI_COMPACT_FORMAT,
+    model_access::{visible_model_for_token, visible_models_for_token},
     proxy::{ProxyJsonRequest, proxy_json},
 };
+
+const OPENAI_MODEL_CREATED_AT: i64 = 1_626_777_600;
 
 pub async fn chat_completions(
     State(state): State<LlmProxyState>,
@@ -59,6 +63,22 @@ pub async fn gemini_generate_content(
     proxy_json(ProxyJsonRequest::new(state, token, headers, body, GEMINI_CHAT_FORMAT, false)).await
 }
 
+pub async fn list_models(State(state): State<LlmProxyState>, Extension(token): Extension<CurrentApiToken>) -> Result<Json<OpenAiModelList>, LlmProxyError> {
+    let snapshot = state.scheduling_snapshot().await?;
+    let models = visible_models_for_token(&snapshot, &token.0)?.into_iter().map(openai_model).collect();
+    Ok(Json(OpenAiModelList { object: "list", data: models }))
+}
+
+pub async fn retrieve_model(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    Path(model): Path<String>,
+) -> Result<Json<OpenAiModel>, LlmProxyError> {
+    let snapshot = state.scheduling_snapshot().await?;
+    let model = visible_model_for_token(&snapshot, &token.0, &model)?;
+    Ok(Json(openai_model(model)))
+}
+
 fn gemini_model_action(value: &str) -> Result<(&str, &str), LlmProxyError> {
     let Some((model, action)) = value.split_once(':') else {
         return Err(LlmProxyError::InvalidRequest("Gemini route must be /v1beta/models/{model}:{action}".into()));
@@ -81,4 +101,59 @@ fn gemini_body(mut body: Value, model: &str, action: &str) -> Result<Value, LlmP
         object.insert("stream".into(), Value::Bool(true));
     }
     Ok(body)
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+pub struct OpenAiModelList {
+    object: &'static str,
+    data: Vec<OpenAiModel>,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+pub struct OpenAiModel {
+    id: String,
+    object: &'static str,
+    created: i64,
+    owned_by: &'static str,
+}
+
+fn openai_model(model: &crate::llm_proxy::cache::snapshot::CachedGlobalModel) -> OpenAiModel {
+    OpenAiModel {
+        id: model.name.clone(),
+        object: "model",
+        created: OPENAI_MODEL_CREATED_AT,
+        owned_by: "hook",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+    use types::model::TieredPricingConfig;
+
+    use super::*;
+    use crate::llm_proxy::cache::snapshot::CachedGlobalModel;
+
+    #[test]
+    fn openai_model_uses_global_model_name_as_id() {
+        let model = CachedGlobalModel {
+            id: "global-model-a".into(),
+            name: "gpt-5".into(),
+            is_active: true,
+            default_price_per_request: Some(Decimal::ZERO),
+            default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
+        };
+
+        let response = openai_model(&model);
+
+        assert_eq!(
+            response,
+            OpenAiModel {
+                id: "gpt-5".into(),
+                object: "model",
+                created: OPENAI_MODEL_CREATED_AT,
+                owned_by: "hook",
+            }
+        );
+    }
 }

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,建立任务台账并确认实现切点,DONE,"SPEC.md、PROGRESS.md、TODO.csv 已创建，并明确复用 llm_proxy 令牌过滤逻辑","test -f .codex-tasks/20260515-v1-models/SPEC.md && test -f .codex-tasks/20260515-v1-models/PROGRESS.md && test -f .codex-tasks/20260515-v1-models/TODO.csv","2026-05-15 13:47",0,
+2,先补失败测试再实现 /v1/models 与共享过滤逻辑,DONE,"存在覆盖模型可见性与接口行为的测试，并实现通过","cargo test -p backend llm_proxy -- --nocapture","2026-05-15 14:02",0,
+3,对齐 new-api 的模型列表语义,DONE,"/v1/models 不再要求 provider 绑定，仅按权限交集返回模型","cargo test -p backend llm_proxy -- --nocapture","2026-05-15 14:15",0,
+4,运行最终校验并整理结果,DONE,"目标测试通过，任务记录完成","cargo test -p backend llm_proxy -- --nocapture","2026-05-15 14:17",0,
