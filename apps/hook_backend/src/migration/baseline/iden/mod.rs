@@ -10,6 +10,7 @@ mod request;
 mod settings;
 mod token;
 mod translation;
+mod usage_flush;
 mod wallet;
 
 pub(super) use auth::*;
@@ -22,10 +23,12 @@ pub(super) use request::*;
 pub(super) use settings::*;
 pub(super) use token::*;
 pub(super) use translation::*;
+pub(super) use usage_flush::*;
 pub(super) use wallet::*;
 
 pub fn reversed_tables() -> Vec<DynIden> {
     vec![
+        UsageFlushBatches::Table.into_iden(),
         NotificationStates::Table.into_iden(),
         SupportTicketEmailEvents::Table.into_iden(),
         SupportTicketMessages::Table.into_iden(),

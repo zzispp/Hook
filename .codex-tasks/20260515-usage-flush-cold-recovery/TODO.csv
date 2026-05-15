@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Design idempotent cold recovery semantics,DONE,DB marker and Redis processing batch id semantics are explicit,cargo check -p backend,2026-05-15T15:55:08+0800,0,"processing is now the durable retry batch; DB marker covers post-commit/pre-clear crash window"
+2,Implement storage batch marker and Redis processing batch id,DONE,Usage flush can distinguish committed processing batches from uncommitted ones,cargo check -p backend,2026-05-15T15:55:08+0800,0,"usage_flush_batches table plus record_usage_batch_once implemented"
+3,Validate cold recovery behavior,DONE,Tests and backend validation pass,just test,2026-05-15T15:55:08+0800,0,"storage idempotency tests and full backend checks passed"

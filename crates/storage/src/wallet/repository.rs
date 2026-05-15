@@ -15,7 +15,6 @@ use crate::{Database, StorageError, StorageResult};
 const DEFAULT_CURRENCY: &str = currency::DEFAULT_WALLET_CURRENCY;
 const DEFAULT_STATUS: &str = "active";
 const DEFAULT_LIMIT_MODE: &str = "finite";
-
 #[derive(Clone)]
 pub struct WalletStore {
     pub(super) database: Database,
@@ -149,7 +148,7 @@ impl WalletStore {
     }
 }
 
-fn set_wallet_balance_fields(active: &mut WalletActiveModel, wallet: Wallet) {
+pub(super) fn set_wallet_balance_fields(active: &mut WalletActiveModel, wallet: Wallet) {
     active.recharge_balance = Set(wallet.recharge_balance);
     active.gift_balance = Set(wallet.gift_balance);
     active.total_recharged = Set(wallet.total_recharged);
@@ -159,7 +158,7 @@ fn set_wallet_balance_fields(active: &mut WalletActiveModel, wallet: Wallet) {
     active.updated_at = Set(time::OffsetDateTime::now_utc());
 }
 
-fn transaction_active_model(input: WalletTransactionRecordInput, id: String) -> WalletTransactionActiveModel {
+pub(super) fn transaction_active_model(input: WalletTransactionRecordInput, id: String) -> WalletTransactionActiveModel {
     WalletTransactionActiveModel {
         id: Set(id),
         wallet_id: Set(input.wallet_id),

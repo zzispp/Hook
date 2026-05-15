@@ -1,0 +1,393 @@
+[
+  {
+    "label": "load runtime context",
+    "ok": true,
+    "evidence": {
+      "serverBaseUrl": "http://127.0.0.1:5555",
+      "db": {
+        "host": "localhost",
+        "port": "5433",
+        "name": "postgres"
+      },
+      "redis": {
+        "host": "127.0.0.1",
+        "port": 6380,
+        "prefix": "hook"
+      },
+      "requestCount": 36
+    }
+  },
+  {
+    "label": "fetch real upstream models",
+    "ok": true,
+    "evidence": {
+      "provider1KeyCount": 1,
+      "provider2KeyCount": 1,
+      "hookModel": "gpt-5.4-mini",
+      "ekan8Model": "gemini-3.1-pro-preview",
+      "hookModelSample": [
+        "gpt-5.4-mini",
+        "claude-haiku-4-5-20251001",
+        "claude-opus-4-6",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview",
+        "gpt-5.2",
+        "gpt-5.3-codex"
+      ],
+      "ekan8ModelSample": [
+        "gemini-3.1-pro-preview",
+        "K-claude-opus-4-5",
+        "K-claude-opus-4-6",
+        "R-claude-opus-4-6",
+        "R-claude-opus-4-6-thinking",
+        "R-claude-opus-4-7",
+        "R-claude-opus-4-7-thinking",
+        "S-claude-opus-4-6",
+        "S-claude-opus-4-6-thinking"
+      ]
+    }
+  },
+  {
+    "label": "seed local DB fixtures",
+    "ok": true,
+    "evidence": {
+      "model": "hook-real-usage-chat",
+      "groupCode": "real_usage_concurrency",
+      "providers": [
+        "hook",
+        "ekan8"
+      ]
+    }
+  },
+  {
+    "label": "create customer tokens through admin API",
+    "ok": true,
+    "evidence": [
+      {
+        "id": "019e2adf-6a62-7e13-b034-2b1dbee2faee",
+        "userId": "00000000-0000-7000-9300-000000000901",
+        "value": "[redacted]",
+        "prefix": "sk-rkIezFw"
+      },
+      {
+        "id": "019e2adf-6a6b-7542-b73b-3b1e65f0cb0e",
+        "userId": "00000000-0000-7000-9300-000000000902",
+        "value": "[redacted]",
+        "prefix": "sk-Jma0N0N"
+      },
+      {
+        "id": "019e2adf-6a70-7903-a00a-40386acec81e",
+        "userId": "00000000-0000-7000-9300-000000000903",
+        "value": "[redacted]",
+        "prefix": "sk-KhH4P6K"
+      }
+    ]
+  },
+  {
+    "label": "high-concurrency real proxy traffic",
+    "ok": true,
+    "evidence": {
+      "requestIds": [
+        "019e2adf-6a96-7a31-b67c-8802c96e2a88",
+        "019e2adf-6a95-7dc0-b760-664a20da7c52",
+        "019e2adf-6a97-78e0-a9af-f5b08b027c4f",
+        "019e2adf-6acd-7fa0-bbb8-224c98c6aeeb",
+        "019e2adf-6ac9-7fa2-89f2-eb3664de6bfb",
+        "019e2adf-6a96-7a31-b67c-87f21b2deda0",
+        "019e2adf-6a9a-7703-8dc3-16aa4171aad3",
+        "019e2adf-6ac9-7fa2-89f2-eb420e988859",
+        "019e2adf-6ac4-7890-b077-2dcbb0d2731d",
+        "019e2adf-6aa5-7dc1-a7d1-bd8473d30ab7",
+        "019e2adf-6ace-72f3-ad33-10be04bec121",
+        "019e2adf-6aa5-7dc1-a7d1-bd901ce72ced",
+        "019e2adf-6a97-78e0-a9af-f59a94b2746b",
+        "019e2adf-6aa0-77e2-8fa0-f12875f8ff69",
+        "019e2adf-6aa4-7d72-80cd-c24ec70d1e02",
+        "019e2adf-6a98-7542-ae27-cf5ad5285982",
+        "019e2adf-6a9b-7d33-b9ca-de17a6f6a8a3",
+        "019e2adf-6a9a-7703-8dc3-16881d046df9",
+        "019e2adf-6a9b-7d33-b9ca-de0b912e2444",
+        "019e2adf-6a9d-7ba0-92d3-3d5a4480ffe5",
+        "019e2adf-6a98-7542-ae27-cf4fa0ee750d",
+        "019e2adf-6a97-78e0-a9af-f5873d9f4de5",
+        "019e2adf-6a9c-7da1-b3a4-4cf428565053",
+        "019e2adf-6a9a-7703-8dc3-1693cfe14288",
+        "019e2adf-6a9c-7da1-b3a4-4d0a88ea0db8",
+        "019e2adf-6ad1-7510-90b6-76c4d5a349eb",
+        "019e2adf-6a9d-7ba0-92d3-3d60042f7b95",
+        "019e2adf-6aa2-77b1-b242-47102b935bd9",
+        "019e2adf-6a9e-7cb0-92c1-8d9c1c2d62e1",
+        "019e2adf-6aa3-7871-a765-a20e924fd0bb",
+        "019e2adf-6aa6-7b91-b98b-c77f1f8f6bf9",
+        "019e2adf-6aa3-7871-a765-a213ec2eeedc",
+        "019e2adf-6aa5-7dc1-a7d1-bda1811a1cb0",
+        "019e2adf-6a9e-7cb0-92c1-8da5d3039e9e",
+        "019e2adf-6a9f-7a31-8b6e-3338512aff0c",
+        "019e2adf-6a9d-7ba0-92d3-3d7e2f7a3eef"
+      ],
+      "recordSummary": [
+        {
+          "status": "success",
+          "billingStatus": "settled",
+          "count": 36
+        }
+      ],
+      "candidateAggregate": [
+        {
+          "providerName": "Real Usage Ekan8 Gemini",
+          "keyName": "Real Usage Ekan8 key A",
+          "providerApiFormat": "gemini_chat",
+          "status": "skipped",
+          "count": 13
+        },
+        {
+          "providerName": "Real Usage Ekan8 Gemini",
+          "keyName": "Real Usage Ekan8 key A",
+          "providerApiFormat": "gemini_chat",
+          "status": "success",
+          "count": 4
+        },
+        {
+          "providerName": "Real Usage Ekan8 Gemini",
+          "keyName": "Real Usage Ekan8 key B",
+          "providerApiFormat": "gemini_chat",
+          "status": "success",
+          "count": 19
+        },
+        {
+          "providerName": "Real Usage Hook OpenAI",
+          "keyName": "Real Usage Hook key A",
+          "providerApiFormat": "openai_chat",
+          "status": "skipped",
+          "count": 8
+        },
+        {
+          "providerName": "Real Usage Hook OpenAI",
+          "keyName": "Real Usage Hook key A",
+          "providerApiFormat": "openai_chat",
+          "status": "success",
+          "count": 8
+        },
+        {
+          "providerName": "Real Usage Hook OpenAI",
+          "keyName": "Real Usage Hook key B",
+          "providerApiFormat": "openai_chat",
+          "status": "skipped",
+          "count": 15
+        },
+        {
+          "providerName": "Real Usage Hook OpenAI",
+          "keyName": "Real Usage Hook key B",
+          "providerApiFormat": "openai_chat",
+          "status": "success",
+          "count": 5
+        }
+      ],
+      "sample": [
+        {
+          "requestId": "019e2adf-6a96-7a31-b67c-8802c96e2a88",
+          "status": 200,
+          "trace": [
+            {
+              "providerName": "Real Usage Ekan8 Gemini",
+              "keyName": "Real Usage Ekan8 key B",
+              "providerApiFormat": "gemini_chat",
+              "status": "success",
+              "totalCost": "0.00010000",
+              "totalTokens": "847"
+            },
+            {
+              "providerName": "Real Usage Hook OpenAI",
+              "keyName": "Real Usage Hook key A",
+              "providerApiFormat": "openai_chat",
+              "status": "skipped"
+            }
+          ]
+        },
+        {
+          "requestId": "019e2adf-6a95-7dc0-b760-664a20da7c52",
+          "status": 200,
+          "trace": [
+            {
+              "providerName": "Real Usage Ekan8 Gemini",
+              "keyName": "Real Usage Ekan8 key A",
+              "providerApiFormat": "gemini_chat",
+              "status": "success",
+              "totalCost": "0.00010000",
+              "totalTokens": "746"
+            },
+            {
+              "providerName": "Real Usage Hook OpenAI",
+              "keyName": "Real Usage Hook key B",
+              "providerApiFormat": "openai_chat",
+              "status": "skipped"
+            }
+          ]
+        },
+        {
+          "requestId": "019e2adf-6a97-78e0-a9af-f5b08b027c4f",
+          "status": 200,
+          "trace": [
+            {
+              "providerName": "Real Usage Ekan8 Gemini",
+              "keyName": "Real Usage Ekan8 key A",
+              "providerApiFormat": "gemini_chat",
+              "status": "success",
+              "totalCost": "0.00010000",
+              "totalTokens": "791"
+            },
+            {
+              "providerName": "Real Usage Hook OpenAI",
+              "keyName": "Real Usage Hook key B",
+              "providerApiFormat": "openai_chat",
+              "status": "skipped"
+            }
+          ]
+        },
+        {
+          "requestId": "019e2adf-6acd-7fa0-bbb8-224c98c6aeeb",
+          "status": 200,
+          "trace": [
+            {
+              "providerName": "Real Usage Hook OpenAI",
+              "keyName": "Real Usage Hook key B",
+              "providerApiFormat": "openai_chat",
+              "status": "success",
+              "totalCost": "0.00010000",
+              "totalTokens": "34"
+            },
+            {
+              "providerName": "Real Usage Ekan8 Gemini",
+              "keyName": "Real Usage Ekan8 key A",
+              "providerApiFormat": "gemini_chat",
+              "status": "skipped"
+            }
+          ]
+        },
+        {
+          "requestId": "019e2adf-6ac9-7fa2-89f2-eb3664de6bfb",
+          "status": 200,
+          "trace": [
+            {
+              "providerName": "Real Usage Ekan8 Gemini",
+              "keyName": "Real Usage Ekan8 key B",
+              "providerApiFormat": "gemini_chat",
+              "status": "success",
+              "totalCost": "0.00010000",
+              "totalTokens": "751"
+            },
+            {
+              "providerName": "Real Usage Hook OpenAI",
+              "keyName": "Real Usage Hook key A",
+              "providerApiFormat": "openai_chat",
+              "status": "skipped"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "usage flush and billing verification",
+    "ok": true,
+    "evidence": {
+      "usage": {
+        "tokens": [
+          {
+            "id": "019e2adf-6a62-7e13-b034-2b1dbee2faee",
+            "usedQuota": "0.00120000",
+            "requestCount": 12,
+            "lastUsedAt": "2026-05-15 09:02:37.36388+00"
+          },
+          {
+            "id": "019e2adf-6a6b-7542-b73b-3b1e65f0cb0e",
+            "usedQuota": "0.00120000",
+            "requestCount": 12,
+            "lastUsedAt": "2026-05-15 09:02:37.30578+00"
+          },
+          {
+            "id": "019e2adf-6a70-7903-a00a-40386acec81e",
+            "usedQuota": "0.00120000",
+            "requestCount": 12,
+            "lastUsedAt": "2026-05-15 09:02:38.224821+00"
+          }
+        ],
+        "modelUsageCount": 36
+      },
+      "wallets": [
+        {
+          "userId": "00000000-0000-7000-9300-000000000901",
+          "giftBalance": "24.99880000",
+          "rechargeBalance": "0.00000000",
+          "totalConsumed": "0.00120000",
+          "transactionCount": 12,
+          "transactionAmount": "0.00120000"
+        },
+        {
+          "userId": "00000000-0000-7000-9300-000000000902",
+          "giftBalance": "24.99880000",
+          "rechargeBalance": "0.00000000",
+          "totalConsumed": "0.00120000",
+          "transactionCount": 12,
+          "transactionAmount": "0.00120000"
+        },
+        {
+          "userId": "00000000-0000-7000-9300-000000000903",
+          "giftBalance": "24.99880000",
+          "rechargeBalance": "0.00000000",
+          "totalConsumed": "0.00120000",
+          "transactionCount": 12,
+          "transactionAmount": "0.00120000"
+        }
+      ],
+      "redisState": {
+        "pendingTokenCost": 0,
+        "pendingTokenCount": 0,
+        "pendingTokenLastUsedAt": 0,
+        "processingTokenCost": 0,
+        "processingTokenCount": 0,
+        "processingTokenLastUsedAt": 0,
+        "processingTokenBatchId": null,
+        "pendingModelCount": 0,
+        "processingModelCount": 0,
+        "processingModelBatchId": null
+      }
+    }
+  },
+  {
+    "label": "usage processing recovery after restart",
+    "ok": true,
+    "evidence": {
+      "unapplied": {
+        "before": {
+          "tokenUsedQuota": "0.00120000",
+          "tokenRequestCount": 12,
+          "tokenLastUsedAt": "2026-05-15 09:02:37.36388+00",
+          "modelUsageCount": 36
+        },
+        "after": {
+          "tokenUsedQuota": "0.00132345",
+          "tokenRequestCount": 14,
+          "tokenLastUsedAt": "2026-05-15 08:00:00+00",
+          "modelUsageCount": 38
+        }
+      },
+      "applied": {
+        "before": {
+          "tokenUsedQuota": "0.00120000",
+          "tokenRequestCount": 12,
+          "tokenLastUsedAt": "2026-05-15 09:02:37.30578+00",
+          "modelUsageCount": 38
+        },
+        "after": {
+          "tokenUsedQuota": "0.00120000",
+          "tokenRequestCount": 12,
+          "tokenLastUsedAt": "2026-05-15 09:02:37.30578+00",
+          "modelUsageCount": 38
+        }
+      }
+    }
+  }
+]

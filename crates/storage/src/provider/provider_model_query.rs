@@ -23,7 +23,6 @@ pub async fn create_model_binding(store: &ProviderStore, input: ProviderModelRec
         config: Set(json::encode_optional(&input.config)?),
         created_at: Set(now),
         updated_at: Set(now),
-        ..Default::default()
     }
     .insert(store.connection())
     .await?;

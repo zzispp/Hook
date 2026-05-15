@@ -1,0 +1,2 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Design runtime state offload boundary,DONE,Customer request hot path runtime reads are cache-backed and admin active inspection boundary is explicit,just test,2026-05-15 14:56:57 CST,0,Verified no steady-state DB reads remain on customer request path after auth/request-policy snapshot changes

@@ -2,6 +2,7 @@ use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database, StorageError,
     model::{GlobalModelUsageRecord, ModelStore},
+    usage_flush::usage_flush_batches,
 };
 
 #[tokio::test]
@@ -39,6 +40,69 @@ async fn global_model_usage_record_requires_existing_model() {
     assert!(matches!(error, StorageError::NotFound));
 }
 
+#[tokio::test]
+async fn global_model_usage_batch_once_skips_existing_batch() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[batch_record("batch-1")]])
+        .into_connection();
+    let store = ModelStore::new(Database::new(connection.clone()));
+
+    let applied = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
+
+    assert!(!applied);
+    let statements = logged_sql(connection);
+    assert!(statements.iter().any(|sql| sql.contains("SELECT")), "{statements:?}");
+    assert!(!statements.iter().any(|sql| sql.contains("UPDATE \"global_models\"")), "{statements:?}");
+}
+
+#[tokio::test]
+async fn global_model_usage_batch_once_marks_applied_batch() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([Vec::<usage_flush_batches::Model>::new()])
+        .append_exec_results([MockExecResult {
+            last_insert_id: 0,
+            rows_affected: 1,
+        }])
+        .append_query_results([[batch_record("batch-1")]])
+        .into_connection();
+    let store = ModelStore::new(Database::new(connection.clone()));
+
+    let applied = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
+
+    assert!(applied);
+    let statements = logged_sql(connection);
+    assert!(statements.iter().any(|sql| sql.contains("UPDATE \"global_models\"")), "{statements:?}");
+    assert!(
+        statements.iter().any(|sql| sql.contains("INSERT INTO \"usage_flush_batches\"")),
+        "{statements:?}"
+    );
+}
+
 fn usage_record() -> GlobalModelUsageRecord {
-    GlobalModelUsageRecord { model_id: "model-1".into() }
+    GlobalModelUsageRecord {
+        model_id: "model-1".into(),
+        count: 5,
+    }
+}
+
+fn batch_record(id: &str) -> usage_flush_batches::Model {
+    usage_flush_batches::Model {
+        id: id.into(),
+        usage_kind: "model".into(),
+        record_count: 1,
+        created_at: time::Date::from_calendar_date(2026, time::Month::May, 12)
+            .unwrap()
+            .with_hms(10, 30, 0)
+            .unwrap()
+            .assume_utc(),
+    }
+}
+
+fn logged_sql(connection: sea_orm::DatabaseConnection) -> Vec<String> {
+    connection
+        .into_transaction_log()
+        .iter()
+        .flat_map(|entry| entry.statements())
+        .map(|statement| statement.sql.clone())
+        .collect()
 }

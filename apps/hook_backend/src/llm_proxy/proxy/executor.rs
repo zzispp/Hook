@@ -88,39 +88,60 @@ async fn attempt_once(
         Ok(response) => response,
         Err(error) => return record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await,
     };
-    handle_upstream_response(
-        state.clone(),
+    handle_upstream_response(HandleUpstreamResponseInput {
+        state: state.clone(),
         prepared,
         candidate,
         retry_index,
         started,
         payload,
         response,
-        (last_failure, last_error),
-    )
+        failures: (last_failure, last_error),
+    })
     .await
 }
 
-async fn handle_upstream_response(
+struct HandleUpstreamResponseInput<'a> {
     state: LlmProxyState,
-    prepared: &PreparedProxyRequest,
-    candidate: &ProxyCandidate,
+    prepared: &'a PreparedProxyRequest,
+    candidate: &'a ProxyCandidate,
     retry_index: i32,
     started: Instant,
     payload: AttemptPayload,
     response: UpstreamResponse,
-    failures: (&mut Option<transport::UpstreamFailure>, &mut Option<LlmProxyError>),
-) -> Result<Option<Response>, LlmProxyError> {
-    if !response.status().is_success() {
-        return handle_upstream_failure(&state, prepared, candidate, retry_index, started, response, failures.0).await;
+    failures: (&'a mut Option<transport::UpstreamFailure>, &'a mut Option<LlmProxyError>),
+}
+
+async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Result<Option<Response>, LlmProxyError> {
+    if !input.response.status().is_success() {
+        return handle_upstream_failure(
+            &input.state,
+            input.prepared,
+            input.candidate,
+            input.retry_index,
+            input.started,
+            input.response,
+            input.failures.0,
+        )
+        .await;
     }
-    match success_response(state.clone(), prepared, candidate, retry_index, started, payload, response).await {
+    match success_response(SuccessResponseInput {
+        state: input.state.clone(),
+        prepared: input.prepared,
+        candidate: input.candidate,
+        retry_index: input.retry_index,
+        started: input.started,
+        payload: input.payload,
+        response: input.response,
+    })
+    .await
+    {
         Ok(response) => {
-            remember_affinity(&state, candidate).await?;
+            remember_affinity(&input.state, input.candidate).await?;
             Ok(Some(response))
         }
         Err(error) => {
-            *failures.1 = Some(error);
+            *input.failures.1 = Some(error);
             Ok(None)
         }
     }
@@ -144,19 +165,41 @@ async fn handle_upstream_failure(
     transport::failure_response(failure).map(Some)
 }
 
-async fn success_response(
+struct SuccessResponseInput<'a> {
     state: LlmProxyState,
-    prepared: &PreparedProxyRequest,
-    candidate: &ProxyCandidate,
+    prepared: &'a PreparedProxyRequest,
+    candidate: &'a ProxyCandidate,
     retry_index: i32,
     started: Instant,
     payload: AttemptPayload,
     response: UpstreamResponse,
-) -> Result<Response, LlmProxyError> {
-    if prepared.is_stream {
-        return stream_response(state, prepared.request_id.clone(), response, candidate.clone(), payload, started, retry_index).await;
+}
+
+async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, LlmProxyError> {
+    if input.prepared.is_stream {
+        return stream_transport::stream_response(stream_transport::StreamResponseArgs {
+            state: input.state,
+            request_id: input.prepared.request_id.clone(),
+            response: input.response,
+            candidate: input.candidate.clone(),
+            source_format: input.payload.source_format,
+            target_format: input.payload.target_format,
+            started: input.started,
+            retry_index: input.retry_index,
+        })
+        .await;
     }
-    full_response(state, prepared.request_id.clone(), response, candidate.clone(), payload, started, retry_index).await
+    transport::full_response(transport::FullResponseArgs {
+        state: input.state,
+        request_id: input.prepared.request_id.clone(),
+        response: input.response,
+        candidate: input.candidate.clone(),
+        source_format: input.payload.source_format,
+        target_format: input.payload.target_format,
+        started: input.started,
+        retry_index: input.retry_index,
+    })
+    .await
 }
 
 fn upstream_request(
@@ -220,48 +263,4 @@ async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) ->
             candidate.cache_ttl_minutes,
         )
         .await
-}
-
-async fn full_response(
-    state: LlmProxyState,
-    request_id: String,
-    response: UpstreamResponse,
-    candidate: ProxyCandidate,
-    payload: AttemptPayload,
-    started: Instant,
-    retry_index: i32,
-) -> Result<Response, LlmProxyError> {
-    transport::full_response(
-        state,
-        request_id,
-        response,
-        candidate,
-        payload.source_format,
-        payload.target_format,
-        started,
-        retry_index,
-    )
-    .await
-}
-
-async fn stream_response(
-    state: LlmProxyState,
-    request_id: String,
-    response: UpstreamResponse,
-    candidate: ProxyCandidate,
-    payload: AttemptPayload,
-    started: Instant,
-    retry_index: i32,
-) -> Result<Response, LlmProxyError> {
-    stream_transport::stream_response(
-        state,
-        request_id,
-        response,
-        candidate,
-        payload.source_format,
-        payload.target_format,
-        started,
-        retry_index,
-    )
-    .await
 }

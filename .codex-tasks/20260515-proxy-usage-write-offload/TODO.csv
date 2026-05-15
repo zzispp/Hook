@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Design pending usage aggregation and flush recovery,DONE,Pending usage keys and failure recovery path are explicit,cargo check -p backend,2026-05-15T15:36:28+0800,0,"Pending/processing Redis hashes, lock, atomic move, recovery, and requeue semantics implemented"
+2,Implement Redis-backed usage accumulation and background flush worker,DONE,Token/model usage can be accumulated and flushed without per-request DB writes,cargo check -p backend,2026-05-15T15:36:28+0800,0,"LlmProxyCache now enqueues pending usage and starts a flush worker"
+3,Switch hot path and validate storage/tests,DONE,Audit success path no longer performs direct token/model usage DB writes,just test,2026-05-15T15:36:28+0800,0,"audit.rs now enqueues token/model usage; rg confirms no direct sync usage DB write remains"

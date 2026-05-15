@@ -4,7 +4,7 @@ use types::{
     wallet::Wallet,
 };
 
-use super::{BalanceChange, REASON_LLM_MODEL_USAGE, WalletSettlementInput};
+use super::{REASON_LLM_MODEL_USAGE, WalletSettlementInput};
 use crate::llm_proxy::{LlmProxyError, cache::snapshot::CachedUserAccess, candidate::ProxyCandidate};
 
 pub(super) struct DescriptionInput<'a, 'b> {
@@ -12,7 +12,6 @@ pub(super) struct DescriptionInput<'a, 'b> {
     pub(super) token: &'a ApiToken,
     pub(super) user: &'a CachedUserAccess,
     pub(super) wallet: &'a Wallet,
-    pub(super) change: &'a BalanceChange,
 }
 
 pub(super) fn settlement_description(input: DescriptionInput<'_, '_>) -> Result<String, LlmProxyError> {
@@ -104,8 +103,7 @@ fn amount_snapshot(input: DescriptionInput<'_, '_>) -> Value {
         "base_cost": input.input.amount.base_cost.to_string(),
         "total_cost": input.input.amount.total_cost.to_string(),
         "deducted_amount": input.input.amount.total_cost.to_string(),
-        "balance_before": input.change.before_total().to_string(),
-        "balance_after": input.change.after_total().to_string(),
+        "balance_before": (input.wallet.recharge_balance + input.wallet.gift_balance).to_string(),
     })
 }
 

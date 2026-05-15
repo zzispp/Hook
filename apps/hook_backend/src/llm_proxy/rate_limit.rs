@@ -191,7 +191,7 @@ mod tests {
         let snapshot = snapshot(7, Some(2));
         let scopes = request_scopes(&snapshot, &token(ApiTokenType::User, Some("user-1"), Some(5)));
 
-        assert_eq!(scopes, vec![RateLimitScope::user("user-1", 2), RateLimitScope::token("token-1", 5.min(7))]);
+        assert_eq!(scopes, vec![RateLimitScope::user("user-1", 2), RateLimitScope::token("token-1", 5)]);
     }
 
     #[test]
@@ -199,13 +199,19 @@ mod tests {
         let snapshot = snapshot(7, Some(2));
         let scopes = request_scopes(&snapshot, &token(ApiTokenType::Independent, None, Some(5)));
 
-        assert_eq!(scopes, vec![RateLimitScope::token("token-1", 5.min(7))]);
+        assert_eq!(scopes, vec![RateLimitScope::token("token-1", 5)]);
     }
 
     fn snapshot(default_rate_limit_rpm: i64, user_rate_limit_rpm: Option<i64>) -> SchedulingSnapshot {
         SchedulingSnapshot {
             default_rate_limit_rpm,
             scheduling_mode: ProviderSchedulingMode::FixedOrder,
+            record_request_headers: false,
+            record_request_body: false,
+            record_response_body: false,
+            max_request_body_size_kb: 1024,
+            max_response_body_size_kb: 1024,
+            sensitive_request_headers: String::new(),
             models: Vec::new(),
             groups: Vec::new(),
             users: vec![CachedUserAccess {

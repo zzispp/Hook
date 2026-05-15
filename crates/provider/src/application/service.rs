@@ -235,10 +235,10 @@ fn validate_request_record_list_request(request: &RequestRecordListRequest) -> P
     if i64::try_from(request.skip).is_err() {
         return Err(ProviderError::InvalidInput("skip exceeds PostgreSQL integer range".into()));
     }
-    if let Some(value) = request.type_filter.as_deref().filter(|value| !value.is_empty()) {
-        if !matches!(value, "stream" | "non_stream") {
-            return Err(ProviderError::InvalidInput("type must be stream or non_stream".into()));
-        }
+    if let Some(value) = request.type_filter.as_deref().filter(|value| !value.is_empty())
+        && !matches!(value, "stream" | "non_stream")
+    {
+        return Err(ProviderError::InvalidInput("type must be stream or non_stream".into()));
     }
     Ok(())
 }

@@ -1,8 +1,9 @@
 use provider::application::billing::RequestBillingAmount;
 use rust_decimal::Decimal;
 use storage::{
+    StorageError,
     api_token::ApiTokenStore,
-    wallet::{WalletLedgerRecordInput, WalletStore, WalletTransactionRecordInput},
+    wallet::{WALLET_CONSUME_INSUFFICIENT_BALANCE, WalletConsumeRecordInput, WalletStore},
 };
 use types::{
     api_token::{ApiToken, ApiTokenType},
@@ -122,75 +123,26 @@ async fn settlement_token(state: &LlmProxyState, candidate: &ProxyCandidate) -> 
 }
 
 async fn settle_user_wallet(state: &LlmProxyState, input: WalletSettlementInput<'_>, token: &ApiToken, user: &CachedUserAccess) -> Result<(), LlmProxyError> {
-    let store = WalletStore::new(state.database.clone());
-    let wallet = store.find_by_user_id(&user.id).await?.ok_or_else(wallet_quota_error)?;
+    let wallet = WalletStore::new(state.database.clone())
+        .find_by_user_id(&user.id)
+        .await?
+        .ok_or_else(wallet_quota_error)?;
     if wallet.limit_mode == WALLET_LIMIT_UNLIMITED {
         return Ok(());
     }
     ensure_wallet_available(&wallet)?;
-    let change = balance_change(&wallet, input.amount.total_cost)?;
     let description = snapshot::settlement_description(snapshot::DescriptionInput {
         input: &input,
         token,
         user,
         wallet: &wallet,
-        change: &change,
     })?;
-    let ledger = ledger_input(wallet, input.amount.total_cost, change, input.request_id, description);
-    store.update_balances_with_transaction(ledger).await?;
+    let consume = consume_input(&user.id, input.amount.total_cost, input.request_id, description);
+    WalletStore::new(state.database.clone())
+        .consume_with_transaction(consume)
+        .await
+        .map_err(wallet_settlement_error)?;
     Ok(())
-}
-
-fn balance_change(wallet: &Wallet, amount: Decimal) -> Result<BalanceChange, LlmProxyError> {
-    let gift_charge = wallet.gift_balance.min(amount);
-    let recharge_charge = amount - gift_charge;
-    if wallet.recharge_balance < recharge_charge {
-        return Err(wallet_quota_error());
-    }
-    Ok(BalanceChange {
-        before_recharge: wallet.recharge_balance,
-        after_recharge: wallet.recharge_balance - recharge_charge,
-        before_gift: wallet.gift_balance,
-        after_gift: wallet.gift_balance - gift_charge,
-    })
-}
-
-fn ledger_input(wallet: Wallet, amount: Decimal, change: BalanceChange, request_id: &str, description: String) -> WalletLedgerRecordInput {
-    let updated_wallet = Wallet {
-        recharge_balance: change.after_recharge,
-        gift_balance: change.after_gift,
-        total_consumed: wallet.total_consumed + amount,
-        ..wallet.clone()
-    };
-    WalletLedgerRecordInput {
-        wallet: updated_wallet,
-        transaction: transaction_input(TransactionInput {
-            wallet_id: wallet.id.0,
-            amount,
-            change,
-            request_id,
-            description,
-        }),
-    }
-}
-
-fn transaction_input(input: TransactionInput<'_>) -> WalletTransactionRecordInput {
-    WalletTransactionRecordInput {
-        wallet_id: input.wallet_id,
-        category: CATEGORY_CONSUME.into(),
-        reason_code: REASON_LLM_MODEL_USAGE.into(),
-        amount: -input.amount,
-        balance_before: input.change.before_total(),
-        balance_after: input.change.after_total(),
-        recharge_balance_before: input.change.before_recharge,
-        recharge_balance_after: input.change.after_recharge,
-        gift_balance_before: input.change.before_gift,
-        gift_balance_after: input.change.after_gift,
-        link_type: Some(LINK_LLM_REQUEST_RECORD.into()),
-        link_id: Some(input.request_id.into()),
-        operator_id: None,
-        description: Some(input.description),
-    }
 }
 
 fn disabled_user_error() -> LlmProxyError {
@@ -201,28 +153,22 @@ fn wallet_quota_error() -> LlmProxyError {
     LlmProxyError::new_api_forbidden("insufficient user quota", ERROR_CODE_WALLET_QUOTA)
 }
 
-#[derive(Clone, Copy)]
-struct BalanceChange {
-    before_recharge: Decimal,
-    after_recharge: Decimal,
-    before_gift: Decimal,
-    after_gift: Decimal,
-}
-
-impl BalanceChange {
-    fn before_total(&self) -> Decimal {
-        self.before_recharge + self.before_gift
-    }
-
-    fn after_total(&self) -> Decimal {
-        self.after_recharge + self.after_gift
+fn wallet_settlement_error(error: StorageError) -> LlmProxyError {
+    match error {
+        StorageError::Conflict(message) if message == WALLET_CONSUME_INSUFFICIENT_BALANCE => wallet_quota_error(),
+        error => error.into(),
     }
 }
 
-struct TransactionInput<'a> {
-    wallet_id: String,
-    amount: Decimal,
-    change: BalanceChange,
-    request_id: &'a str,
-    description: String,
+fn consume_input(user_id: &str, amount: Decimal, request_id: &str, description: String) -> WalletConsumeRecordInput {
+    WalletConsumeRecordInput {
+        user_id: user_id.into(),
+        amount,
+        category: CATEGORY_CONSUME.into(),
+        reason_code: REASON_LLM_MODEL_USAGE.into(),
+        link_type: Some(LINK_LLM_REQUEST_RECORD.into()),
+        link_id: Some(request_id.into()),
+        operator_id: None,
+        description: Some(description),
+    }
 }

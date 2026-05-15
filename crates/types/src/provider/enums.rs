@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ProviderSchedulingMode {
+    #[default]
     FixedOrder,
     CacheAffinity,
     LoadBalance,
@@ -15,12 +16,6 @@ impl ProviderSchedulingMode {
             Self::CacheAffinity => "cache_affinity",
             Self::LoadBalance => "load_balance",
         }
-    }
-}
-
-impl Default for ProviderSchedulingMode {
-    fn default() -> Self {
-        Self::FixedOrder
     }
 }
 

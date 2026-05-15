@@ -18,12 +18,12 @@ pub(super) fn parse_stream_values(bytes: &[u8]) -> Vec<Value> {
 
 pub(super) fn render_stream_event(event: &Value, source_format: ApiFormat) -> Bytes {
     let mut output = String::new();
-    if matches!(source_format, ApiFormat::ClaudeChat) {
-        if let Some(event_type) = event.get("type").and_then(Value::as_str) {
-            output.push_str("event: ");
-            output.push_str(event_type);
-            output.push('\n');
-        }
+    if matches!(source_format, ApiFormat::ClaudeChat)
+        && let Some(event_type) = event.get("type").and_then(Value::as_str)
+    {
+        output.push_str("event: ");
+        output.push_str(event_type);
+        output.push('\n');
     }
     output.push_str("data: ");
     output.push_str(&event.to_string());

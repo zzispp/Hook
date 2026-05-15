@@ -1,5 +1,6 @@
 use serde_json::{Value, json};
-use types::system_setting::SystemSettings;
+
+use crate::llm_proxy::cache::snapshot::SchedulingSnapshot;
 
 const BYTES_PER_KB: i64 = 1024;
 
@@ -14,14 +15,14 @@ pub(in crate::llm_proxy) struct RequestRecordPolicy {
 }
 
 impl RequestRecordPolicy {
-    pub(in crate::llm_proxy) fn from_settings(settings: &SystemSettings) -> Result<Self, String> {
+    pub(in crate::llm_proxy) fn from_snapshot(snapshot: &SchedulingSnapshot) -> Result<Self, String> {
         Ok(Self {
-            record_request_headers: settings.record_request_headers,
-            record_request_body: settings.record_request_body,
-            record_response_body: settings.record_response_body,
-            max_request_body_size_bytes: size_kb_to_bytes(settings.max_request_body_size_kb, "max_request_body_size_kb")?,
-            max_response_body_size_bytes: size_kb_to_bytes(settings.max_response_body_size_kb, "max_response_body_size_kb")?,
-            sensitive_request_headers: sensitive_headers(&settings.sensitive_request_headers),
+            record_request_headers: snapshot.record_request_headers,
+            record_request_body: snapshot.record_request_body,
+            record_response_body: snapshot.record_response_body,
+            max_request_body_size_bytes: size_kb_to_bytes(snapshot.max_request_body_size_kb, "max_request_body_size_kb")?,
+            max_response_body_size_bytes: size_kb_to_bytes(snapshot.max_response_body_size_kb, "max_response_body_size_kb")?,
+            sensitive_request_headers: sensitive_headers(&snapshot.sensitive_request_headers),
         })
     }
 
@@ -88,6 +89,9 @@ fn truncate_text(text: &str, max_size_bytes: usize) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use crate::llm_proxy::cache::snapshot::SchedulingSnapshot;
+    use types::provider::ProviderSchedulingMode;
+
     use super::*;
     use crate::llm_proxy::proxy::capture::RequestCapture;
     use axum::http::{HeaderMap, header};
@@ -135,5 +139,37 @@ mod tests {
 
         assert_eq!(request_body.get("_truncated").and_then(Value::as_bool), Some(true));
         assert_eq!(response_body.get("_truncated").and_then(Value::as_bool), Some(true));
+    }
+
+    #[test]
+    fn request_record_policy_can_be_restored_from_runtime_snapshot() {
+        let snapshot = SchedulingSnapshot {
+            default_rate_limit_rpm: 0,
+            scheduling_mode: ProviderSchedulingMode::FixedOrder,
+            models: Vec::new(),
+            groups: Vec::new(),
+            users: Vec::new(),
+            providers: Vec::new(),
+            record_request_headers: true,
+            record_request_body: false,
+            record_response_body: true,
+            max_request_body_size_kb: 12,
+            max_response_body_size_kb: 34,
+            sensitive_request_headers: "authorization, x-api-key".into(),
+        };
+
+        let policy = RequestRecordPolicy::from_snapshot(&snapshot).unwrap();
+
+        assert_eq!(
+            policy,
+            RequestRecordPolicy {
+                record_request_headers: true,
+                record_request_body: false,
+                record_response_body: true,
+                max_request_body_size_bytes: 12 * 1024,
+                max_response_body_size_bytes: 34 * 1024,
+                sensitive_request_headers: vec!["authorization".into(), "x-api-key".into()],
+            }
+        );
     }
 }

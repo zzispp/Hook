@@ -49,7 +49,6 @@ impl UserStore {
             quota_mode: Set(user.quota_mode),
             created_at: Set(now),
             updated_at: Set(now),
-            ..Default::default()
         }
         .insert(self.database.connection())
         .await

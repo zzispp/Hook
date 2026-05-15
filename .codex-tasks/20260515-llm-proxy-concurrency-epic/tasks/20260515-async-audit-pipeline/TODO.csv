@@ -1,0 +1,2 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Design audit event model and worker boundary,DONE,Event model and persistence boundary are explicit,cargo check -p backend,2026-05-15 14:31:00 CST,0,

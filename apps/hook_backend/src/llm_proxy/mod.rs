@@ -11,7 +11,6 @@ mod rate_limit;
 mod request_record_policy;
 mod ws;
 
-use api_token::infra::StorageApiTokenRepository;
 use axum::{
     Router, middleware,
     routing::{get, post},
@@ -35,7 +34,6 @@ pub const REALTIME_PATH: &str = "/v1/realtime";
 #[derive(Clone)]
 pub struct LlmProxyState {
     database: Database,
-    tokens: StorageApiTokenRepository,
     cipher: ProviderKeyCipher,
     http: ReqwestClient,
     affinity: redis::aio::ConnectionManager,
@@ -44,17 +42,9 @@ pub struct LlmProxyState {
 }
 
 impl LlmProxyState {
-    pub fn new(
-        database: Database,
-        tokens: StorageApiTokenRepository,
-        cipher: ProviderKeyCipher,
-        affinity: redis::aio::ConnectionManager,
-        cache: LlmProxyCache,
-        key_prefix: String,
-    ) -> Self {
+    pub fn new(database: Database, cipher: ProviderKeyCipher, affinity: redis::aio::ConnectionManager, cache: LlmProxyCache, key_prefix: String) -> Self {
         Self {
             database,
-            tokens,
             cipher,
             http: ReqwestClient::default(),
             affinity,

@@ -17,6 +17,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         billing_group_models_table(),
         request_candidate_tables::request_records_table(),
         request_candidate_tables::request_candidates_table(),
+        usage_flush_batches_table(),
     ]
 }
 
@@ -170,6 +171,17 @@ fn api_tokens_table() -> TableCreateStatement {
         .col(timestamp_tz_null(ApiTokens::LastUsedAt))
         .col(timestamp_tz(ApiTokens::CreatedAt))
         .col(timestamp_tz(ApiTokens::UpdatedAt))
+        .to_owned()
+}
+
+fn usage_flush_batches_table() -> TableCreateStatement {
+    Table::create()
+        .table(UsageFlushBatches::Table)
+        .if_not_exists()
+        .col(string_len(UsageFlushBatches::Id, 36).primary_key())
+        .col(string_len(UsageFlushBatches::UsageKind, 20))
+        .col(big_integer(UsageFlushBatches::RecordCount))
+        .col(timestamp_tz(UsageFlushBatches::CreatedAt))
         .to_owned()
 }
 

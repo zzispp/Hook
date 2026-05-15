@@ -27,16 +27,28 @@ pub struct UpstreamFailure {
     body: Vec<u8>,
 }
 
-pub async fn full_response(
-    state: LlmProxyState,
-    request_id: String,
-    response: req::Response,
-    candidate: ProxyCandidate,
-    source_format: ApiFormat,
-    target_format: ApiFormat,
-    started: Instant,
-    retry_index: i32,
-) -> Result<Response, LlmProxyError> {
+pub struct FullResponseArgs {
+    pub state: LlmProxyState,
+    pub request_id: String,
+    pub response: req::Response,
+    pub candidate: ProxyCandidate,
+    pub source_format: ApiFormat,
+    pub target_format: ApiFormat,
+    pub started: Instant,
+    pub retry_index: i32,
+}
+
+pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyError> {
+    let FullResponseArgs {
+        state,
+        request_id,
+        response,
+        candidate,
+        source_format,
+        target_format,
+        started,
+        retry_index,
+    } = args;
     let status = status_code(response.status())?;
     let content_type = response_content_type(&response);
     let upstream_headers = response.headers().clone();

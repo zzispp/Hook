@@ -8,38 +8,31 @@ use crate::llm_proxy::{
     candidate::{CandidateEndpointOption, CandidateKeyOption, CandidateRequest, CandidateRoute, CandidateTrace, ProxyCandidate, url},
 };
 
-pub(super) async fn proxy_candidates(
-    state: &LlmProxyState,
-    token: &ApiToken,
-    request: CandidateRequest<'_>,
-    global_model: &GlobalModelRef,
-    group: &CachedBillingGroup,
-    token_user: Option<&CachedUserAccess>,
-    parts: &[CandidateParts],
-) -> Result<Vec<ProxyCandidate>, LlmProxyError> {
-    let mut candidates = Vec::with_capacity(parts.len());
-    for (index, part) in parts.iter().enumerate() {
-        candidates.push(proxy_candidate(state, token, request, global_model, group, token_user, part, index as i32).await?);
+pub(super) struct ProxyCandidateBuildInput<'a> {
+    pub(super) state: &'a LlmProxyState,
+    pub(super) token: &'a ApiToken,
+    pub(super) request: CandidateRequest<'a>,
+    pub(super) global_model: &'a GlobalModelRef,
+    pub(super) group: &'a CachedBillingGroup,
+    pub(super) token_user: Option<&'a CachedUserAccess>,
+    pub(super) parts: &'a [CandidateParts],
+}
+
+pub(super) async fn proxy_candidates(input: ProxyCandidateBuildInput<'_>) -> Result<Vec<ProxyCandidate>, LlmProxyError> {
+    let mut candidates = Vec::with_capacity(input.parts.len());
+    for (index, part) in input.parts.iter().enumerate() {
+        candidates.push(proxy_candidate(&input, part, index as i32).await?);
     }
     Ok(candidates)
 }
 
-async fn proxy_candidate(
-    state: &LlmProxyState,
-    token: &ApiToken,
-    request: CandidateRequest<'_>,
-    global_model: &GlobalModelRef,
-    group: &CachedBillingGroup,
-    token_user: Option<&CachedUserAccess>,
-    parts: &CandidateParts,
-    index: i32,
-) -> Result<ProxyCandidate, LlmProxyError> {
-    let route = candidate_route(state, request, parts)?;
+async fn proxy_candidate(input: &ProxyCandidateBuildInput<'_>, parts: &CandidateParts, index: i32) -> Result<ProxyCandidate, LlmProxyError> {
+    let route = candidate_route(input.state, input.request, parts)?;
     let endpoint = &route.endpoints[0];
     let key = &route.keys[0];
     Ok(ProxyCandidate {
-        trace: candidate_trace(token, request, global_model, token_user, parts, index),
-        requested_model_name: request.model_name.to_owned(),
+        trace: candidate_trace(input.token, input.request, input.global_model, input.token_user, parts, index),
+        requested_model_name: input.request.model_name.to_owned(),
         api_key: key.api_key.clone(),
         base_url: endpoint.base_url.clone(),
         custom_path: endpoint.custom_path.clone(),
@@ -48,13 +41,13 @@ async fn proxy_candidate(
         reasoning_effort: parts.model.provider_model_mapping.as_ref().and_then(|mapping| mapping.reasoning_effort.clone()),
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
-        price_per_request: parts.model.price_per_request.or(global_model.default_price_per_request),
+        price_per_request: parts.model.price_per_request.or(input.global_model.default_price_per_request),
         tiered_pricing: parts
             .model
             .tiered_pricing
             .clone()
-            .unwrap_or_else(|| global_model.default_tiered_pricing.clone()),
-        billing_multiplier: group.billing_multiplier,
+            .unwrap_or_else(|| input.global_model.default_tiered_pricing.clone()),
+        billing_multiplier: input.group.billing_multiplier,
         max_retries: max_retries(parts, &route)?,
         request_timeout_seconds: parts.provider.request_timeout_seconds,
         stream_first_byte_timeout_seconds: parts.provider.stream_first_byte_timeout_seconds,

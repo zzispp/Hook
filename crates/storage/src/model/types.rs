@@ -4,6 +4,7 @@ use types::model::{PatchField, TieredPricingConfig};
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlobalModelUsageRecord {
     pub model_id: String,
+    pub count: i64,
 }
 
 #[derive(Clone, Debug, PartialEq)]

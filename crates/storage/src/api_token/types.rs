@@ -36,5 +36,6 @@ pub struct ApiTokenRecordPatch {
 pub struct ApiTokenUsageRecord {
     pub token_id: String,
     pub cost: Decimal,
+    pub request_count: i64,
     pub used_at: time::OffsetDateTime,
 }

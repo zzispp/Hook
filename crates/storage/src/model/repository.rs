@@ -1,7 +1,4 @@
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set,
-    sea_query::{Expr, ExprTrait},
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set};
 use types::model::{GlobalModelListRequest, GlobalModelResponse, GlobalModelWithStats, ModelCatalogItem, ModelCatalogResponse};
 
 use crate::{Database, StorageError, StorageResult, json};
@@ -10,6 +7,7 @@ use super::{
     GlobalModelRecord, GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord, ModelRecord,
     record::{global_models, global_models::ActiveModel as GlobalModelActiveModel, provider_models},
     repository_helpers::{apply_global_model_patch, capabilities, description, record_matches, unique_provider_count},
+    usage,
 };
 
 #[derive(Clone)]
@@ -36,7 +34,6 @@ impl ModelStore {
             usage_count: Set(0),
             created_at: Set(now),
             updated_at: Set(now),
-            ..Default::default()
         }
         .insert(self.database.connection())
         .await?;
@@ -128,14 +125,19 @@ impl ModelStore {
     }
 
     pub async fn record_usage(&self, input: GlobalModelUsageRecord) -> StorageResult<()> {
-        let result = global_models::Entity::update_many()
-            .col_expr(global_models::Column::UsageCount, usage_count_expr())
-            .filter(global_models::Column::Id.eq(input.model_id))
-            .exec(self.database.connection())
-            .await?;
-        ensure_usage_recorded(result.rows_affected)
+        usage::record_usage(self.database.connection(), &input).await
     }
 
+    pub async fn record_usage_batch(&self, inputs: &[GlobalModelUsageRecord]) -> StorageResult<()> {
+        usage::record_usage_batch(self.database.connection(), inputs).await
+    }
+
+    pub async fn record_usage_batch_once(&self, batch_id: &str, inputs: &[GlobalModelUsageRecord]) -> StorageResult<bool> {
+        usage::record_usage_batch_once(self.database.connection(), batch_id, inputs).await
+    }
+}
+
+impl ModelStore {
     async fn catalog_item(&self, record: GlobalModelRecord) -> StorageResult<ModelCatalogItem> {
         let providers = self.active_provider_details(&record).await?;
         let price_range = record.price_range()?;
@@ -230,15 +232,4 @@ impl ModelStore {
             .await
             .map_err(StorageError::from)
     }
-}
-
-fn usage_count_expr() -> Expr {
-    Expr::col(global_models::Column::UsageCount).add(Expr::val(1))
-}
-
-fn ensure_usage_recorded(rows_affected: u64) -> StorageResult<()> {
-    if rows_affected == 0 {
-        return Err(StorageError::NotFound);
-    }
-    Ok(())
 }

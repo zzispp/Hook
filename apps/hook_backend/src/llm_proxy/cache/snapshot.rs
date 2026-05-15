@@ -1,6 +1,6 @@
-use rust_decimal::Decimal;
+mod cached_types;
+
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
-use serde::{Deserialize, Serialize};
 use storage::{
     Database,
     group::GroupStore,
@@ -9,123 +9,27 @@ use storage::{
     setting::SettingStore,
     user::UserStore,
 };
-use types::{
-    group::BillingGroupListRequest,
-    model::TieredPricingConfig,
-    pagination::PageSliceRequest,
-    provider::{ProviderModelMapping, ProviderSchedulingMode},
-    user::UserListFilters,
+use types::{group::BillingGroupListRequest, pagination::PageSliceRequest, user::UserListFilters};
+
+pub use cached_types::{
+    CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
 };
 
 use crate::llm_proxy::LlmProxyError;
 
 const SNAPSHOT_FULL_PAGE_LIMIT: u64 = i64::MAX as u64;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct SchedulingSnapshot {
-    #[serde(default)]
-    pub default_rate_limit_rpm: i64,
-    pub scheduling_mode: ProviderSchedulingMode,
-    pub models: Vec<CachedGlobalModel>,
-    pub groups: Vec<CachedBillingGroup>,
-    pub users: Vec<CachedUserAccess>,
-    pub providers: Vec<CachedProvider>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CachedGlobalModel {
-    pub id: String,
-    pub name: String,
-    pub is_active: bool,
-    #[serde(with = "rust_decimal::serde::float_option")]
-    pub default_price_per_request: Option<Decimal>,
-    pub default_tiered_pricing: TieredPricingConfig,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CachedBillingGroup {
-    pub code: String,
-    #[serde(with = "rust_decimal::serde::float")]
-    pub billing_multiplier: Decimal,
-    pub allowed_model_ids: Vec<String>,
-    pub allowed_provider_ids: Vec<String>,
-    pub is_active: bool,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CachedUserAccess {
-    pub id: String,
-    pub username: String,
-    pub is_active: bool,
-    pub allowed_model_ids: Vec<String>,
-    pub allowed_provider_ids: Vec<String>,
-    pub quota_mode: String,
-    #[serde(default)]
-    pub rate_limit_rpm: Option<i64>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CachedProvider {
-    pub id: String,
-    pub name: String,
-    pub max_retries: Option<i32>,
-    pub request_timeout_seconds: Option<f64>,
-    pub stream_first_byte_timeout_seconds: Option<f64>,
-    pub priority: i32,
-    pub keep_priority_on_conversion: bool,
-    pub enable_format_conversion: bool,
-    pub is_active: bool,
-    pub endpoints: Vec<CachedEndpoint>,
-    pub keys: Vec<CachedProviderKey>,
-    pub models: Vec<CachedModelBinding>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CachedEndpoint {
-    pub id: String,
-    pub provider_id: String,
-    pub api_format: String,
-    pub base_url: String,
-    pub custom_path: Option<String>,
-    pub max_retries: Option<i32>,
-    pub is_active: bool,
-    pub format_acceptance_config: Option<serde_json::Value>,
-    pub header_rules: Option<serde_json::Value>,
-    pub body_rules: Option<serde_json::Value>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CachedProviderKey {
-    pub id: String,
-    pub provider_id: String,
-    pub name: String,
-    pub key_preview: String,
-    pub encrypted_api_key: String,
-    pub internal_priority: i32,
-    #[serde(default)]
-    pub rpm_limit: Option<i32>,
-    pub cache_ttl_minutes: i32,
-    pub is_active: bool,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct CachedModelBinding {
-    pub id: String,
-    pub provider_id: String,
-    pub global_model_id: String,
-    pub provider_model_name: String,
-    pub provider_model_mapping: Option<ProviderModelMapping>,
-    pub is_active: bool,
-    #[serde(with = "rust_decimal::serde::float_option")]
-    pub price_per_request: Option<Decimal>,
-    pub tiered_pricing: Option<TieredPricingConfig>,
-}
-
 pub async fn load(database: &Database) -> Result<SchedulingSnapshot, LlmProxyError> {
     let settings = SettingStore::new(database.clone()).get_system_settings().await?;
     Ok(SchedulingSnapshot {
         default_rate_limit_rpm: settings.default_rate_limit_rpm,
         scheduling_mode: settings.scheduling_mode,
+        record_request_headers: settings.record_request_headers,
+        record_request_body: settings.record_request_body,
+        record_response_body: settings.record_response_body,
+        max_request_body_size_kb: settings.max_request_body_size_kb,
+        max_response_body_size_kb: settings.max_response_body_size_kb,
+        sensitive_request_headers: settings.sensitive_request_headers,
         models: load_models(database).await?,
         groups: load_groups(database).await?,
         users: load_users(database).await?,

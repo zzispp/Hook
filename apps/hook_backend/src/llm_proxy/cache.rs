@@ -1,14 +1,20 @@
 mod auth;
 pub(super) mod snapshot;
+mod usage_flush;
 
 use redis::AsyncCommands;
+use rust_decimal::Decimal;
 use storage::Database;
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use types::api_token::ApiToken;
 use uuid::Uuid;
 
 use self::snapshot::SchedulingSnapshot;
 use super::LlmProxyError;
 
+const AUTH_USAGE_USED_QUOTA_FIELD: &str = "used_quota";
+const AUTH_USAGE_REQUEST_COUNT_FIELD: &str = "request_count";
+const AUTH_USAGE_LAST_USED_AT_FIELD: &str = "last_used_at";
 const SCHEDULING_REBUILD_LOCK_SECONDS: u64 = 30;
 const SCHEDULING_REBUILD_WAIT_MS: u64 = 50;
 
@@ -21,29 +27,64 @@ pub struct LlmProxyCache {
 
 impl LlmProxyCache {
     pub fn new(database: Database, connection: redis::aio::ConnectionManager, key_prefix: String) -> Self {
-        Self {
+        let cache = Self {
             database,
             connection,
             key_prefix,
-        }
+        };
+        usage_flush::spawn_usage_flush_task(cache.clone());
+        cache
     }
 
     pub async fn api_token_by_hash(&self, token_hash: &str) -> Result<Option<ApiToken>, LlmProxyError> {
         let version = self.auth_version().await?;
         let cache_key = self.auth_token_key(version, token_hash);
         if let Some(token) = self.read_cached_token(&cache_key, token_hash).await? {
-            return Ok(Some(token));
+            return self.with_runtime_token_usage(token).await.map(Some);
         }
         let token = auth::load_token(&self.database, token_hash).await?;
         if let Some(token) = token.as_ref() {
             self.write_cached_token(cache_key, token).await?;
         }
-        Ok(token)
+        match token {
+            Some(token) => self.with_runtime_token_usage(token).await.map(Some),
+            None => Ok(None),
+        }
     }
 
     pub async fn bump_auth_version(&self) -> Result<(), LlmProxyError> {
         let mut connection = self.connection.clone();
         let _: i64 = connection.incr(self.auth_version_key(), 1).await.map_err(redis_error)?;
+        Ok(())
+    }
+
+    pub async fn record_token_usage(&self, token_id: &str, cost: Decimal, used_at: OffsetDateTime) -> Result<(), LlmProxyError> {
+        let key = self.auth_usage_key(token_id);
+        let mut connection = self.connection.clone();
+        let exists: bool = connection.exists(&key).await.map_err(redis_error)?;
+        if !exists {
+            return Ok(());
+        }
+        let used_at = used_at.format(&Rfc3339).map_err(runtime_usage_time_error)?;
+        let _: () = redis::pipe()
+            .cmd("HINCRBYFLOAT")
+            .arg(&key)
+            .arg(AUTH_USAGE_USED_QUOTA_FIELD)
+            .arg(cost.to_string())
+            .ignore()
+            .cmd("HINCRBY")
+            .arg(&key)
+            .arg(AUTH_USAGE_REQUEST_COUNT_FIELD)
+            .arg(1)
+            .ignore()
+            .cmd("HSET")
+            .arg(&key)
+            .arg(AUTH_USAGE_LAST_USED_AT_FIELD)
+            .arg(used_at)
+            .ignore()
+            .query_async(&mut connection)
+            .await
+            .map_err(redis_error)?;
         Ok(())
     }
 
@@ -77,6 +118,57 @@ impl LlmProxyCache {
         let value = auth::encode_token(token)?;
         let seconds = auth::token_ttl_seconds(token);
         let _: () = connection.set_ex(key, value, seconds).await.map_err(redis_error)?;
+        Ok(())
+    }
+
+    async fn with_runtime_token_usage(&self, token: ApiToken) -> Result<ApiToken, LlmProxyError> {
+        if let Some(usage) = self.read_token_usage(&token.id).await? {
+            return Ok(auth::apply_cached_usage(token, &usage));
+        }
+        self.seed_token_usage(&token).await?;
+        Ok(auth::apply_cached_usage(token.clone(), &auth::seed_cached_usage(&token)))
+    }
+
+    async fn read_token_usage(&self, token_id: &str) -> Result<Option<auth::CachedTokenUsage>, LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let values: Vec<Option<String>> = redis::cmd("HMGET")
+            .arg(self.auth_usage_key(token_id))
+            .arg(&[AUTH_USAGE_USED_QUOTA_FIELD, AUTH_USAGE_REQUEST_COUNT_FIELD, AUTH_USAGE_LAST_USED_AT_FIELD])
+            .query_async(&mut connection)
+            .await
+            .map_err(redis_error)?;
+        let [used_quota, request_count, last_used_at] = usage_values(values)?;
+        auth::decode_cached_usage(used_quota, request_count, last_used_at)
+    }
+
+    async fn seed_token_usage(&self, token: &ApiToken) -> Result<(), LlmProxyError> {
+        let usage = auth::seed_cached_usage(token);
+        let last_used_at = usage.last_used_at.unwrap_or_default();
+        let key = self.auth_usage_key(&token.id);
+        let mut connection = self.connection.clone();
+        let _: () = redis::pipe()
+            .cmd("HSETNX")
+            .arg(&key)
+            .arg(AUTH_USAGE_USED_QUOTA_FIELD)
+            .arg(usage.used_quota.to_string())
+            .ignore()
+            .cmd("HSETNX")
+            .arg(&key)
+            .arg(AUTH_USAGE_REQUEST_COUNT_FIELD)
+            .arg(usage.request_count.to_string())
+            .ignore()
+            .cmd("HSETNX")
+            .arg(&key)
+            .arg(AUTH_USAGE_LAST_USED_AT_FIELD)
+            .arg(last_used_at)
+            .ignore()
+            .cmd("EXPIRE")
+            .arg(&key)
+            .arg(auth::token_ttl_seconds(token))
+            .ignore()
+            .query_async(&mut connection)
+            .await
+            .map_err(redis_error)?;
         Ok(())
     }
 
@@ -166,6 +258,10 @@ impl LlmProxyCache {
         format!("{}:llm_proxy:auth:v{version}:{token_hash}", self.key_prefix)
     }
 
+    fn auth_usage_key(&self, token_id: &str) -> String {
+        format!("{}:llm_proxy:auth:usage:{token_id}", self.key_prefix)
+    }
+
     fn scheduling_snapshot_key(&self) -> String {
         format!("{}:llm_proxy:scheduling:snapshot:v2", self.key_prefix)
     }
@@ -177,4 +273,14 @@ impl LlmProxyCache {
 
 fn redis_error(error: redis::RedisError) -> LlmProxyError {
     LlmProxyError::Infrastructure(format!("redis error: {error}"))
+}
+
+fn runtime_usage_time_error(error: time::error::Format) -> LlmProxyError {
+    LlmProxyError::Infrastructure(format!("cached token usage timestamp error: {error}"))
+}
+
+fn usage_values(values: Vec<Option<String>>) -> Result<[Option<String>; 3], LlmProxyError> {
+    values
+        .try_into()
+        .map_err(|_| LlmProxyError::Infrastructure("cached token usage hmget returned unexpected field count".into()))
 }

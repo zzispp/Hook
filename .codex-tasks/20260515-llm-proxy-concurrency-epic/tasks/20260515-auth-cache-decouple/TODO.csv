@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add failing tests for cached token usage synchronization,DONE,Tests fail before production fix,cargo test -p backend llm_proxy::cache::auth -- --nocapture,2026-05-15 14:21:33 CST,0,
+2,Implement token-id indexed auth cache usage patching,DONE,Successful usage updates patch cached token state without global invalidation,cargo test -p backend llm_proxy::cache::auth -- --nocapture,2026-05-15 14:21:33 CST,0,
+3,Remove usage-triggered global auth version bump and validate call sites,DONE,Audit path updates token usage without auth version bump,cargo test -p backend llm_proxy::cache::auth -- --nocapture,2026-05-15 14:21:33 CST,0,

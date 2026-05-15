@@ -75,6 +75,7 @@ pub fn table_names() -> Vec<&'static str> {
         "support_ticket_messages",
         "support_ticket_email_events",
         "notification_states",
+        "usage_flush_batches",
     ]
 }
 

@@ -1,0 +1,93 @@
+[
+  {
+    "label": "load runtime context",
+    "ok": true,
+    "evidence": {
+      "serverBaseUrl": "http://127.0.0.1:5555",
+      "db": {
+        "host": "localhost",
+        "port": "5433",
+        "name": "postgres"
+      },
+      "redis": {
+        "host": "127.0.0.1",
+        "port": 6380,
+        "prefix": "hook"
+      },
+      "requestCount": 60
+    }
+  },
+  {
+    "label": "fetch real upstream models",
+    "ok": true,
+    "evidence": {
+      "provider1KeyCount": 1,
+      "provider2KeyCount": 1,
+      "hookModel": "gpt-5.4-mini",
+      "ekan8Model": "gemini-3.1-pro-preview",
+      "hookModelSample": [
+        "gpt-5.4-mini",
+        "claude-haiku-4-5-20251001",
+        "claude-opus-4-6",
+        "claude-opus-4-7",
+        "claude-sonnet-4-6",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview",
+        "gpt-5.2",
+        "gpt-5.3-codex"
+      ],
+      "ekan8ModelSample": [
+        "gemini-3.1-pro-preview",
+        "K-claude-opus-4-5",
+        "K-claude-opus-4-6",
+        "R-claude-opus-4-6",
+        "R-claude-opus-4-6-thinking",
+        "R-claude-opus-4-7",
+        "R-claude-opus-4-7-thinking",
+        "S-claude-opus-4-6",
+        "S-claude-opus-4-6-thinking"
+      ]
+    }
+  },
+  {
+    "label": "seed local DB fixtures",
+    "ok": true,
+    "evidence": {
+      "model": "hook-real-usage-chat",
+      "groupCode": "real_usage_concurrency",
+      "providers": [
+        "hook",
+        "ekan8"
+      ]
+    }
+  },
+  {
+    "label": "create customer tokens through admin API",
+    "ok": true,
+    "evidence": [
+      {
+        "id": "019e2ae0-65ba-7790-b0a2-5c3063c29cff",
+        "userId": "00000000-0000-7000-9300-000000000901",
+        "value": "[redacted]",
+        "prefix": "sk-sscnU05"
+      },
+      {
+        "id": "019e2ae0-65c3-7392-b7e9-e6fd2ccfd6ab",
+        "userId": "00000000-0000-7000-9300-000000000902",
+        "value": "[redacted]",
+        "prefix": "sk-KGQzaSo"
+      },
+      {
+        "id": "019e2ae0-65cb-7052-9f19-c849b9fe63a1",
+        "userId": "00000000-0000-7000-9300-000000000903",
+        "value": "[redacted]",
+        "prefix": "sk-JZZyC9U"
+      }
+    ]
+  },
+  {
+    "label": "high-concurrency real proxy traffic",
+    "ok": false,
+    "error": "Error: expected at least 4 provider keys, got 3\n    at assert (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260512-real-proxy-cache-flow/lib/assertions.mjs:3:11)\n    at assertMultiAccountAndKeyCoverage (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260515-real-usage-concurrency-flow/lib/real_usage_client.mjs:146:3)\n    at runHighConcurrency (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260515-real-usage-concurrency-flow/real_usage_concurrency_flow.mjs:152:3)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async step (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260515-real-usage-concurrency-flow/real_usage_concurrency_flow.mjs:187:22)\n    at async runScenarios (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260515-real-usage-concurrency-flow/real_usage_concurrency_flow.mjs:85:16)\n    at async main (file:///Users/bubu/ZwjProjects/Hook/.codex-tasks/20260515-real-usage-concurrency-flow/real_usage_concurrency_flow.mjs:74:5)"
+  }
+]

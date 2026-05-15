@@ -92,7 +92,6 @@ impl ProviderStore {
             body_rules: Set(json::encode_optional(&input.body_rules)?),
             created_at: Set(now),
             updated_at: Set(now),
-            ..Default::default()
         }
         .insert(self.database.connection())
         .await?;
@@ -164,7 +163,6 @@ impl ProviderStore {
             is_active: Set(input.is_active),
             created_at: Set(now),
             updated_at: Set(now),
-            ..Default::default()
         }
         .insert(self.database.connection())
         .await?;

@@ -3,6 +3,7 @@ use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database, StorageError,
     api_token::{ApiTokenStore, ApiTokenUsageRecord},
+    usage_flush::usage_flush_batches,
 };
 
 #[tokio::test]
@@ -42,10 +43,49 @@ async fn api_token_usage_record_requires_existing_token() {
     assert!(matches!(error, StorageError::NotFound));
 }
 
+#[tokio::test]
+async fn api_token_usage_batch_once_skips_existing_batch() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[batch_record("batch-1")]])
+        .into_connection();
+    let store = ApiTokenStore::new(Database::new(connection.clone()));
+
+    let applied = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
+
+    assert!(!applied);
+    let statements = logged_sql(connection);
+    assert!(statements.iter().any(|sql| sql.contains("SELECT")), "{statements:?}");
+    assert!(!statements.iter().any(|sql| sql.contains("UPDATE \"api_tokens\"")), "{statements:?}");
+}
+
+#[tokio::test]
+async fn api_token_usage_batch_once_marks_applied_batch() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([Vec::<usage_flush_batches::Model>::new()])
+        .append_exec_results([MockExecResult {
+            last_insert_id: 0,
+            rows_affected: 1,
+        }])
+        .append_query_results([[batch_record("batch-1")]])
+        .into_connection();
+    let store = ApiTokenStore::new(Database::new(connection.clone()));
+
+    let applied = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
+
+    assert!(applied);
+    let statements = logged_sql(connection);
+    assert!(statements.iter().any(|sql| sql.contains("UPDATE \"api_tokens\"")), "{statements:?}");
+    assert!(
+        statements.iter().any(|sql| sql.contains("INSERT INTO \"usage_flush_batches\"")),
+        "{statements:?}"
+    );
+}
+
 fn usage_record() -> ApiTokenUsageRecord {
     ApiTokenUsageRecord {
         token_id: "token-1".into(),
         cost: Decimal::new(25, 4),
+        request_count: 3,
         used_at: used_at(),
     }
 }
@@ -56,4 +96,22 @@ fn used_at() -> time::OffsetDateTime {
         .with_hms(10, 30, 0)
         .unwrap()
         .assume_utc()
+}
+
+fn batch_record(id: &str) -> usage_flush_batches::Model {
+    usage_flush_batches::Model {
+        id: id.into(),
+        usage_kind: "token".into(),
+        record_count: 1,
+        created_at: used_at(),
+    }
+}
+
+fn logged_sql(connection: sea_orm::DatabaseConnection) -> Vec<String> {
+    connection
+        .into_transaction_log()
+        .iter()
+        .flat_map(|entry| entry.statements())
+        .map(|statement| statement.sql.clone())
+        .collect()
 }

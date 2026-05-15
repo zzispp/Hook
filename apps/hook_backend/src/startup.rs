@@ -160,7 +160,6 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     ));
     let llm_proxy = LlmProxyState::new(
         database.clone(),
-        StorageApiTokenRepository::new(database),
         provider_key_cipher,
         redis_connection,
         proxy_cache,

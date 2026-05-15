@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add failing tests for snapshot-backed request record policy,DONE,Tests fail before snapshot-backed production fix,cargo test -p backend llm_proxy::request_record_policy -- --nocapture,2026-05-15 14:21:33 CST,0,
+2,Extend runtime snapshot with request record policy fields,DONE,Snapshot load/encode/decode includes policy fields,cargo test -p backend llm_proxy::request_record_policy -- --nocapture,2026-05-15 14:21:33 CST,0,
+3,Switch audit path from settings store to runtime snapshot,DONE,Audit path builds policy from snapshot instead of DB settings lookups,cargo test -p backend llm_proxy::request_record_policy -- --nocapture,2026-05-15 14:21:33 CST,0,

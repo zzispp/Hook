@@ -10,6 +10,7 @@ pub mod operations;
 pub mod provider;
 pub mod rbac;
 pub mod setting;
+pub mod usage_flush;
 pub mod user;
 pub mod wallet;
 

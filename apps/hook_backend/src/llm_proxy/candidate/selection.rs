@@ -1,3 +1,4 @@
+mod matching;
 mod proxy_candidate;
 mod scheduler;
 #[cfg(test)]
@@ -9,18 +10,17 @@ use types::{
 };
 use uuid::Uuid;
 
-use self::{proxy_candidate::proxy_candidates, scheduler::order_candidate_parts};
+use self::{
+    matching::{MatchingCandidatePartsInput, matching_candidate_parts},
+    proxy_candidate::{ProxyCandidateBuildInput, proxy_candidates},
+    scheduler::{OrderCandidatePartsInput, order_candidate_parts},
+};
 use super::{CandidateRequest, CandidateSelection, LlmProxyError, LlmProxyState};
-use crate::llm_proxy::{
-    cache::snapshot::{
-        CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
-    },
-    formats,
+use crate::llm_proxy::cache::snapshot::{
+    CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
 };
 
 pub(super) const DEFAULT_MAX_RETRIES: i32 = 2;
-const FNV_OFFSET_BASIS: u64 = 14_695_981_039_346_656_037;
-const FNV_PRIME: u64 = 1_099_511_628_211;
 
 pub(super) type CandidatePartKey = (String, String);
 
@@ -35,32 +35,41 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
     let group = active_group(&snapshot, token)?;
     ensure_group_allows_model(group, &model.id)?;
     let affinity_key = state.cached_affinity_key(&token.id, &model.id, request.api_format).await?;
-    let parts = matching_candidate_parts(
-        &snapshot,
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
         group,
         user_access,
-        &model.id,
+        model_id: &model.id,
         request,
-        affinity_key.as_deref(),
-        snapshot.scheduling_mode,
-        &request_id,
-    );
+        affinity_key: affinity_key.as_deref(),
+        scheduling_mode: snapshot.scheduling_mode,
+        request_id: &request_id,
+    });
     if parts.is_empty() {
         return Err(LlmProxyError::NotFound(format!("no active provider candidate for model {}", model.name)));
     }
 
-    let ordered = order_candidate_parts(
+    let ordered = order_candidate_parts(OrderCandidatePartsInput {
         parts,
         token,
         group,
         user_access,
         request,
-        &model.id,
-        &request_id,
+        model_id: &model.id,
+        request_id: &request_id,
         affinity_key,
-        snapshot.scheduling_mode,
-    )?;
-    let candidates = proxy_candidates(state, token, request, &model, group, token_user, &ordered).await?;
+        mode: snapshot.scheduling_mode,
+    })?;
+    let candidates = proxy_candidates(ProxyCandidateBuildInput {
+        state,
+        token,
+        request,
+        global_model: &model,
+        group,
+        token_user,
+        parts: &ordered,
+    })
+    .await?;
     Ok(CandidateSelection { request_id, candidates })
 }
 
@@ -130,137 +139,6 @@ fn ensure_user_allows_model(access: Option<&CachedUserAccess>, model_id: &str) -
     Err(LlmProxyError::Forbidden(format!("model is not allowed by user: {model_id}")))
 }
 
-fn matching_candidate_parts(
-    snapshot: &SchedulingSnapshot,
-    group: &CachedBillingGroup,
-    user_access: Option<&CachedUserAccess>,
-    model_id: &str,
-    request: CandidateRequest<'_>,
-    affinity_key: Option<&str>,
-    scheduling_mode: types::provider::ProviderSchedulingMode,
-    request_id: &str,
-) -> Vec<CandidateParts> {
-    let mut candidates = Vec::new();
-    for provider in snapshot.providers.iter().filter(|provider| provider_allowed(group, user_access, provider)) {
-        append_provider_candidate(provider, model_id, request, affinity_key, scheduling_mode, request_id, &mut candidates);
-    }
-    candidates
-}
-
-fn append_provider_candidate(
-    provider: &CachedProvider,
-    model_id: &str,
-    request: CandidateRequest<'_>,
-    affinity_key: Option<&str>,
-    scheduling_mode: types::provider::ProviderSchedulingMode,
-    request_id: &str,
-    output: &mut Vec<CandidateParts>,
-) {
-    let Some(model) = provider_model(provider, model_id, affinity_key) else {
-        return;
-    };
-    let endpoints = ordered_endpoints(provider, request);
-    let keys = ordered_keys(provider, affinity_key, scheduling_mode, request_id);
-    if endpoints.is_empty() || keys.is_empty() {
-        return;
-    }
-    output.push(CandidateParts {
-        provider: provider.clone(),
-        endpoints,
-        keys,
-        model: model.clone(),
-        client_api_format: request.api_format.to_owned(),
-    });
-}
-
-fn ordered_endpoints(provider: &CachedProvider, request: CandidateRequest<'_>) -> Vec<CachedEndpoint> {
-    let (mut exact, converted): (Vec<_>, Vec<_>) = provider
-        .endpoints
-        .iter()
-        .filter(|endpoint| endpoint_allowed(provider, endpoint, request))
-        .cloned()
-        .partition(|endpoint| endpoint.api_format == request.api_format);
-    exact.extend(converted);
-    exact
-}
-
-fn ordered_keys(
-    provider: &CachedProvider,
-    affinity_key: Option<&str>,
-    scheduling_mode: types::provider::ProviderSchedulingMode,
-    request_id: &str,
-) -> Vec<CachedProviderKey> {
-    let mut keys = provider.keys.iter().filter(|key| key_allowed(key)).cloned().collect::<Vec<_>>();
-    keys.sort_by(|left, right| (left.internal_priority, &left.id).cmp(&(right.internal_priority, &right.id)));
-    match scheduling_mode {
-        types::provider::ProviderSchedulingMode::CacheAffinity => order_keys_for_cache_affinity(&mut keys, affinity_key, request_id),
-        types::provider::ProviderSchedulingMode::LoadBalance => order_keys_for_load_balance(&mut keys, request_id),
-        types::provider::ProviderSchedulingMode::FixedOrder => {}
-    }
-    keys
-}
-
-fn order_keys_for_cache_affinity(keys: &mut Vec<CachedProviderKey>, affinity_key: Option<&str>, request_id: &str) {
-    if affinity_key.is_some() {
-        promote_affinity_key(keys, affinity_key);
-        return;
-    }
-    order_keys_for_load_balance(keys, request_id);
-}
-
-fn promote_affinity_key(keys: &mut Vec<CachedProviderKey>, affinity_key: Option<&str>) {
-    let Some(key_id) = affinity_key else {
-        return;
-    };
-    let Some(index) = keys.iter().position(|key| key.id == key_id) else {
-        return;
-    };
-    let key = keys.remove(index);
-    keys.insert(0, key);
-}
-
-fn order_keys_for_load_balance(keys: &mut [CachedProviderKey], seed: &str) {
-    keys.sort_by(|left, right| {
-        (left.internal_priority, stable_hash(&format!("{seed}:{}", left.id)), &left.id).cmp(&(
-            right.internal_priority,
-            stable_hash(&format!("{seed}:{}", right.id)),
-            &right.id,
-        ))
-    });
-}
-
-fn provider_model(provider: &CachedProvider, model_id: &str, affinity_key: Option<&str>) -> Option<CachedModelBinding> {
-    provider
-        .models
-        .iter()
-        .find(|model| model.global_model_id == model_id && model.is_active)
-        .map(|model| selected_provider_model(model, affinity_key))
-}
-
-fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
-    endpoint.is_active && (endpoint.api_format == request.api_format || conversion_allowed(provider, endpoint, request))
-}
-
-fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
-    (provider.enable_format_conversion || endpoint_accepts_conversion(endpoint))
-        && formats::formats_compatible(request.api_format, &endpoint.api_format, request.is_stream)
-}
-
-fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {
-    endpoint
-        .format_acceptance_config
-        .as_ref()
-        .and_then(|value| value.get("enabled"))
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false)
-}
-
-fn provider_allowed(group: &CachedBillingGroup, user_access: Option<&CachedUserAccess>, provider: &CachedProvider) -> bool {
-    provider.is_active
-        && ids_allow(&group.allowed_provider_ids, &provider.id)
-        && user_access.is_none_or(|access| ids_allow(&access.allowed_provider_ids, &provider.id))
-}
-
 fn token_user_for_snapshot<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToken) -> Result<Option<&'a CachedUserAccess>, LlmProxyError> {
     let Some(user_id) = token.user_id.as_ref() else {
         if token.token_type == ApiTokenType::User {
@@ -285,24 +163,6 @@ fn user_access_for_token<'a>(token: &ApiToken, token_user: Option<&'a CachedUser
     token_user
 }
 
-fn key_allowed(key: &CachedProviderKey) -> bool {
-    key.is_active
-}
-
-fn selected_provider_model(model: &CachedModelBinding, _affinity_key: Option<&str>) -> CachedModelBinding {
-    let mut selected = model.clone();
-    selected.provider_model_name = selected_provider_model_name(model);
-    selected
-}
-
-fn selected_provider_model_name(model: &CachedModelBinding) -> String {
-    model
-        .provider_model_mapping
-        .as_ref()
-        .map(|mapping| mapping.name.clone())
-        .unwrap_or_else(|| model.provider_model_name.clone())
-}
-
 fn model_ref(model: &CachedGlobalModel) -> GlobalModelRef {
     GlobalModelRef {
         id: model.id.clone(),
@@ -314,10 +174,4 @@ fn model_ref(model: &CachedGlobalModel) -> GlobalModelRef {
 
 fn ids_allow(ids: &[String], id: &str) -> bool {
     ids.is_empty() || ids.iter().any(|item| item == id)
-}
-
-fn stable_hash(value: &str) -> u64 {
-    value
-        .bytes()
-        .fold(FNV_OFFSET_BASIS, |hash, byte| (hash ^ u64::from(byte)).wrapping_mul(FNV_PRIME))
 }

@@ -1,0 +1,2 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Design transaction-safe wallet settlement path,DONE,Settlement reads and computes inside transaction,cargo test -p storage --test wallet_consumption -- --nocapture,2026-05-15 14:21:33 CST,0,

@@ -1,6 +1,8 @@
 use rust_decimal::Decimal;
 use types::wallet::{AdminWalletResponse, Wallet, WalletTransaction};
 
+pub const WALLET_CONSUME_INSUFFICIENT_BALANCE: &str = "insufficient wallet balance";
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdminWalletRecord {
     pub wallet: Wallet,
@@ -18,6 +20,18 @@ pub struct AdminWalletLedgerRecord {
 pub struct WalletLedgerRecordInput {
     pub wallet: Wallet,
     pub transaction: WalletTransactionRecordInput,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct WalletConsumeRecordInput {
+    pub user_id: String,
+    pub amount: Decimal,
+    pub category: String,
+    pub reason_code: String,
+    pub link_type: Option<String>,
+    pub link_id: Option<String>,
+    pub operator_id: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
