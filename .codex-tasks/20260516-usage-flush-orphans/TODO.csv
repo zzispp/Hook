@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm usage flush failure path,DONE,Relevant storage and flush code inspected,rg usage_flush,,0,
+2,Implement orphan usage handling,DONE,Flush skips missing token/model with explicit warning,cargo check -p backend,,0,
+3,Validate storage tests,DONE,Targeted storage tests pass,ruby timeout wrapper cargo test -p storage --test api_token_usage --test model_usage,,0,

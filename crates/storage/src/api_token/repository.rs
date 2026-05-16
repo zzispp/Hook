@@ -5,7 +5,7 @@ use types::{
     model::PatchField,
 };
 
-use crate::{Database, StorageError, StorageResult, json};
+use crate::{Database, StorageError, StorageResult, json, usage_flush::UsageFlushApplyReport};
 
 use super::{
     ApiTokenRecordInput, ApiTokenRecordPatch, ApiTokenUsageRecord,
@@ -104,7 +104,7 @@ impl ApiTokenStore {
         usage::record_usage_batch(self.database.connection(), inputs).await
     }
 
-    pub async fn record_usage_batch_once(&self, batch_id: &str, inputs: &[ApiTokenUsageRecord]) -> StorageResult<bool> {
+    pub async fn record_usage_batch_once(&self, batch_id: &str, inputs: &[ApiTokenUsageRecord]) -> StorageResult<UsageFlushApplyReport> {
         usage::record_usage_batch_once(self.database.connection(), batch_id, inputs).await
     }
 

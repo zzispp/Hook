@@ -18,6 +18,7 @@ pub const AUTHENTICATED_API_CODES: &[&str] = &[
 
 pub const ADMIN_MENU_CODES: &[&str] = &[
     "dashboard_home",
+    "admin_performance_monitoring",
     "admin_wallets",
     "admin_card_codes",
     "admin_tokens",
@@ -90,6 +91,10 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "api_tokens_delete",
             "api_tokens_secret_read",
         ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_performance_monitoring",
+        api_codes: &["performance_monitoring_overview_read", "performance_monitoring_realtime_read"],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_announcements",

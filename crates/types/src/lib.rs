@@ -6,6 +6,7 @@ pub mod i18n;
 pub mod model;
 pub mod operations;
 pub mod pagination;
+pub mod performance_monitoring;
 pub mod provider;
 pub mod rbac;
 pub mod response;

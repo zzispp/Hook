@@ -1,5 +1,6 @@
 mod codec;
 mod keys;
+mod report;
 
 use std::{collections::HashMap, time::Duration};
 
@@ -13,6 +14,7 @@ use time::format_description::well_known::Rfc3339;
 use uuid::Uuid;
 
 use self::codec::{decode_model_usage_batch, decode_token_usage_batch, token_cost_units};
+use self::report::{FlushReport, ProcessingBatch, log_skipped_usage, merge_flush_outcome, processing_batch};
 use super::{LlmProxyCache, LlmProxyError};
 
 const USAGE_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
@@ -21,28 +23,6 @@ const TOKEN_ENQUEUE_LUA: &str = r#"redis.call('HINCRBY', KEYS[1], ARGV[1], ARGV[
 const TOKEN_MOVE_LUA: &str = r#"redis.call('DEL', KEYS[4], KEYS[5], KEYS[6], KEYS[7]) local moved = 0 if redis.call('EXISTS', KEYS[1]) == 1 then redis.call('RENAME', KEYS[1], KEYS[4]) moved = 1 end if redis.call('EXISTS', KEYS[2]) == 1 then redis.call('RENAME', KEYS[2], KEYS[5]) moved = 1 end if redis.call('EXISTS', KEYS[3]) == 1 then redis.call('RENAME', KEYS[3], KEYS[6]) moved = 1 end if moved == 1 then redis.call('SET', KEYS[7], ARGV[1]) end return moved"#;
 const MODEL_MOVE_LUA: &str = r#"redis.call('DEL', KEYS[2], KEYS[3]) if redis.call('EXISTS', KEYS[1]) == 1 then redis.call('RENAME', KEYS[1], KEYS[2]) redis.call('SET', KEYS[3], ARGV[1]) return 1 end return 0"#;
 const LOCK_RELEASE_LUA: &str = r#"if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0"#;
-
-#[derive(Default)]
-struct FlushReport {
-    token_records: usize,
-    model_records: usize,
-}
-
-impl FlushReport {
-    fn is_empty(&self) -> bool {
-        self.token_records == 0 && self.model_records == 0
-    }
-
-    fn add(&mut self, other: Self) {
-        self.token_records += other.token_records;
-        self.model_records += other.model_records;
-    }
-}
-
-struct ProcessingBatch<T> {
-    id: String,
-    records: Vec<T>,
-}
 
 pub(super) fn spawn_usage_flush_task(cache: LlmProxyCache) {
     tokio::spawn(async move {
@@ -105,10 +85,11 @@ impl LlmProxyCache {
             return Ok(0);
         };
         let store = ApiTokenStore::new(self.database.clone());
-        store.record_usage_batch_once(&batch.id, &batch.records).await?;
+        let report = store.record_usage_batch_once(&batch.id, &batch.records).await?;
+        log_skipped_usage("token", &batch.id, &report);
         self.clear_token_processing_usage().await?;
         self.delete_usage_flush_batch(&batch.id).await?;
-        Ok(batch.records.len())
+        Ok(report.applied_records)
     }
 
     async fn flush_model_usage_batch(&self) -> Result<usize, LlmProxyError> {
@@ -116,10 +97,11 @@ impl LlmProxyCache {
             return Ok(0);
         };
         let store = ModelStore::new(self.database.clone());
-        store.record_usage_batch_once(&batch.id, &batch.records).await?;
+        let report = store.record_usage_batch_once(&batch.id, &batch.records).await?;
+        log_skipped_usage("model", &batch.id, &report);
         self.clear_model_processing_usage().await?;
         self.delete_usage_flush_batch(&batch.id).await?;
-        Ok(batch.records.len())
+        Ok(report.applied_records)
     }
 
     async fn drain_pending_usage(&self) -> Result<(), LlmProxyError> {
@@ -262,27 +244,6 @@ async fn flush_loop(cache: LlmProxyCache) {
             Err(error) => hook_tracing::error("llm proxy usage flush failed", &error),
         }
     }
-}
-
-fn merge_flush_outcome(token: Result<usize, LlmProxyError>, model: Result<usize, LlmProxyError>) -> Result<FlushReport, LlmProxyError> {
-    match (token, model) {
-        (Ok(token_records), Ok(model_records)) => Ok(FlushReport { token_records, model_records }),
-        (Err(error), Ok(_)) | (Ok(_), Err(error)) => Err(error),
-        (Err(token_error), Err(model_error)) => Err(LlmProxyError::Infrastructure(format!(
-            "token usage flush failed: {token_error}; model usage flush failed: {model_error}"
-        ))),
-    }
-}
-
-fn processing_batch<T>(id: Option<String>, records: Vec<T>, label: &str) -> Result<Option<ProcessingBatch<T>>, LlmProxyError> {
-    if records.is_empty() && id.is_none() {
-        return Ok(None);
-    }
-    if records.is_empty() {
-        return Err(LlmProxyError::Infrastructure(format!("{label} usage processing records are missing")));
-    }
-    let id = id.ok_or_else(|| LlmProxyError::Infrastructure(format!("{label} usage processing batch id is missing")))?;
-    Ok(Some(ProcessingBatch { id, records }))
 }
 
 fn redis_error(error: redis::RedisError) -> LlmProxyError {

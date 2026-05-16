@@ -15,6 +15,7 @@ pub struct SystemSettingsRecordPatch {
     pub auto_delete_expired_tokens: Option<bool>,
     pub request_record_retention_days: Option<i64>,
     pub request_record_payload_retention_days: Option<i64>,
+    pub performance_monitoring_retention_days: Option<i64>,
     pub request_record_level: Option<RequestRecordLevel>,
     pub max_request_body_size_kb: Option<i64>,
     pub max_response_body_size_kb: Option<i64>,

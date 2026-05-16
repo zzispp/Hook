@@ -15,6 +15,7 @@ pub(in crate::migration::baseline) enum SystemSettings {
     AutoDeleteExpiredTokens,
     RequestRecordRetentionDays,
     RequestRecordPayloadRetentionDays,
+    PerformanceMonitoringRetentionDays,
     RequestRecordLevel,
     MaxRequestBodySizeKb,
     MaxResponseBodySizeKb,

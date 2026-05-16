@@ -4,6 +4,7 @@
     "operations": "Operations",
     "system_management": "System Management",
     "dashboard_home": "Dashboard",
+    "admin_performance_monitoring": "Performance Monitoring",
     "dashboard_models": "Model Catalog",
     "dashboard_groups": "Price Groups",
     "wallet_center": "Wallet Center",
@@ -677,6 +678,64 @@
     "unlimited": "Unlimited",
     "walletLimited": "Wallet limited"
   },
+  "performanceMonitoring": {
+    "ranges": {
+      "today": "Today",
+      "7d": "7 days",
+      "30d": "30 days",
+      "all": "ALL"
+    },
+    "granularity": {
+      "minute": "minute buckets",
+      "hour": "hour buckets",
+      "day": "day buckets"
+    },
+    "charts": {
+      "requests": "Core request trend",
+      "latency": "Latency and TTFT",
+      "models": "Model distribution",
+      "providers": "Provider distribution"
+    },
+    "metrics": {
+      "qps": "QPS",
+      "successRate": "Success rate",
+      "p95": "P95 latency",
+      "tokensPerSecond": "Tokens/s",
+      "totalTokens": "Total tokens",
+      "cost": "Cost"
+    },
+    "groups": {
+      "core": "Core requests",
+      "llm": "LLM business",
+      "network": "Network / connections",
+      "host": "Host resources"
+    },
+    "rows": {
+      "qpsConcurrency": "QPS / concurrency",
+      "rateLimitedServerErrors": "429 / 5xx",
+      "timeoutRetryCircuitBreaker": "Timeout / retry / circuit breaker",
+      "streamRequests": "Streaming requests",
+      "inputOutputTotalTokens": "Input / output / total tokens",
+      "tokensPerRequestPerSecond": "Tokens per request / tokens/s",
+      "failoverCacheHit": "Failover / cache hit",
+      "quotaLimited": "Quota hits",
+      "totalInboundOutbound": "Total inbound / outbound",
+      "realtimeBandwidth": "Realtime inbound / outbound bandwidth",
+      "connectionStatus": "Connection status",
+      "tcpEstablishedCloseWait": "TCP ESTABLISHED / CLOSE_WAIT",
+      "cpuLoad": "CPU usage / 1m load",
+      "memory": "Process RSS / system used memory",
+      "diskSpace": "Filesystem available / total",
+      "collectionStatus": "Collection status"
+    },
+    "status": {
+      "ready": "Collection ready",
+      "unsupported": "Collection unsupported"
+    },
+    "emptySnapshot": "No monitoring snapshots exist for this range. The query layer will not scan request details to backfill data.",
+    "allRangeNotice": "ALL shows every retained snapshot bucket using {{granularity}}, capped at 720 points.",
+    "noDimensionData": "No distribution data"
+  },
   "userWallet": {
     "title": "User wallet",
     "tabs": {
@@ -909,6 +968,7 @@
       "autoDeleteExpiredTokens": "Auto-delete expired tokens",
       "requestRecordRetentionDays": "Request record retention days",
       "requestRecordPayloadRetentionDays": "Request payload retention days",
+      "performanceMonitoringRetentionDays": "Performance snapshot retention days",
       "requestRecordLevel": "Record detail level",
       "maxRequestBodySizeKb": "Max request body size (KB)",
       "maxResponseBodySizeKb": "Max response body size (KB)",
@@ -938,6 +998,7 @@
       "defaultRateLimitRpm": "Requests per minute; 0 means unlimited by system default.",
       "requestRecordRetentionDays": "Deletes the whole request record after this many days.",
       "requestRecordPayloadRetentionDays": "Compresses client/provider payloads after this many days while keeping the record until the full retention window expires.",
+      "performanceMonitoringRetentionDays": "Deletes monitoring snapshots after this many days; ALL covers only currently retained snapshot buckets.",
       "requestRecordLevel": "Sensitive information is redacted automatically. Use full mode to keep failed response snippets.",
       "maxRequestBodySizeKb": "Request bodies larger than this are truncated before recording.",
       "maxResponseBodySizeKb": "Response bodies larger than this are truncated before recording.",

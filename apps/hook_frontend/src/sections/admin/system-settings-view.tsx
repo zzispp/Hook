@@ -233,6 +233,15 @@ function CleanupSection({
             setForm((current) => ({ ...current, request_record_payload_retention_days: value }))
           }
         />
+        <TextFieldRow
+          type="number"
+          label={t('systemSettings.fields.performanceMonitoringRetentionDays')}
+          value={form.performance_monitoring_retention_days}
+          helperText={t('systemSettings.helper.performanceMonitoringRetentionDays')}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, performance_monitoring_retention_days: value }))
+          }
+        />
       </Stack>
     </SettingsSection>
   );

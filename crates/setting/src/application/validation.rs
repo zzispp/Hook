@@ -45,6 +45,7 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_site_subtitle(input.site_subtitle.as_deref())?;
     validate_positive_i64("request_record_retention_days", input.request_record_retention_days)?;
     validate_positive_i64("request_record_payload_retention_days", input.request_record_payload_retention_days)?;
+    validate_positive_i64("performance_monitoring_retention_days", input.performance_monitoring_retention_days)?;
     validate_positive_i64("max_request_body_size_kb", input.max_request_body_size_kb)?;
     validate_positive_i64("max_response_body_size_kb", input.max_response_body_size_kb)?;
     validate_sensitive_request_headers(input.sensitive_request_headers.as_deref())?;

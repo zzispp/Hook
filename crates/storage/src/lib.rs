@@ -7,6 +7,7 @@ pub mod i18n;
 mod json;
 pub mod model;
 pub mod operations;
+pub mod performance_monitoring;
 pub mod provider;
 pub mod rbac;
 pub mod setting;

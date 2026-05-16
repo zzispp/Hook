@@ -30,6 +30,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub request_record_payload_retention_days: Option<i64>,
     #[serde(default)]
+    pub performance_monitoring_retention_days: Option<i64>,
+    #[serde(default)]
     pub request_record_level: Option<RequestRecordLevel>,
     #[serde(default)]
     pub max_request_body_size_kb: Option<i64>,
@@ -101,6 +103,7 @@ impl SystemSettingsUpdate {
     fn request_record_fields_empty(&self) -> bool {
         self.request_record_retention_days.is_none()
             && self.request_record_payload_retention_days.is_none()
+            && self.performance_monitoring_retention_days.is_none()
             && self.request_record_level.is_none()
             && self.max_request_body_size_kb.is_none()
             && self.max_response_body_size_kb.is_none()

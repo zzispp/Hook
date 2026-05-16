@@ -68,6 +68,7 @@ export const paths = {
       menus: `${ROOTS.DASHBOARD}/admin/menus`,
       models: `${ROOTS.DASHBOARD}/admin/models`,
       providers: `${ROOTS.DASHBOARD}/admin/providers`,
+      performanceMonitoring: `${ROOTS.DASHBOARD}/admin/performance-monitoring`,
       requestRecords: `${ROOTS.DASHBOARD}/admin/request-records`,
       tickets: `${ROOTS.DASHBOARD}/admin/tickets`,
       tokens: `${ROOTS.DASHBOARD}/admin/tokens`,

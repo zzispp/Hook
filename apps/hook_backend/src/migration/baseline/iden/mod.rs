@@ -4,6 +4,7 @@ mod auth;
 mod billing;
 mod card_code;
 mod operations;
+mod performance_monitoring;
 mod provider;
 mod rbac;
 mod request;
@@ -17,6 +18,7 @@ pub(super) use auth::*;
 pub(super) use billing::*;
 pub(super) use card_code::*;
 pub(super) use operations::*;
+pub(super) use performance_monitoring::*;
 pub(super) use provider::*;
 pub(super) use rbac::*;
 pub(super) use request::*;
@@ -29,6 +31,7 @@ pub(super) use wallet::*;
 pub fn reversed_tables() -> Vec<DynIden> {
     vec![
         UsageFlushBatches::Table.into_iden(),
+        PerformanceMonitoringSnapshots::Table.into_iden(),
         NotificationStates::Table.into_iden(),
         SupportTicketEmailEvents::Table.into_iden(),
         SupportTicketMessages::Table.into_iden(),

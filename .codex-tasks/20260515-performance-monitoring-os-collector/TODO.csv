@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,确认依赖与采集边界,DONE,OS采集放backend层且不污染storage聚合职责,rg -n "sysinfo|performance_monitoring" Cargo.toml apps/hook_backend crates,2026-05-15T19:20:00+08:00,0,
+2,实现真实OS采集器,DONE,realtime和worker快照返回ready的host/network指标,cargo check -p backend,2026-05-15T19:59:11+08:00,0,
+3,补充测试与验证,DONE,测试覆盖采集器输出和worker注入,cargo test -p backend performance_monitoring -- --nocapture,2026-05-15T19:59:11+08:00,0,
+4,运行最终检查,DONE,格式化编译目标测试通过,cargo fmt --check && cargo check -p backend,2026-05-15T20:02:54+08:00,0,TCP采集失败改为显式warn日志后重新验证通过

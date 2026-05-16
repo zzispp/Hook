@@ -17,6 +17,7 @@ pub struct SystemSettings {
     pub auto_delete_expired_tokens: bool,
     pub request_record_retention_days: i64,
     pub request_record_payload_retention_days: i64,
+    pub performance_monitoring_retention_days: i64,
     pub request_record_level: RequestRecordLevel,
     pub max_request_body_size_kb: i64,
     pub max_response_body_size_kb: i64,

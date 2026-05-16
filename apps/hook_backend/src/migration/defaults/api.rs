@@ -5,6 +5,7 @@ mod group;
 mod i18n;
 mod model;
 mod operations;
+mod performance_monitoring;
 mod provider;
 mod rbac;
 mod setting;
@@ -33,6 +34,7 @@ const API_GROUPS: &[&[ApiDefinition]] = &[
     admin_wallet::ADMIN_WALLET_APIS,
     card_code::CARD_CODE_APIS,
     setting::SETTING_APIS,
+    performance_monitoring::PERFORMANCE_MONITORING_APIS,
 ];
 
 pub fn iter_definitions() -> impl Iterator<Item = &'static ApiDefinition> {

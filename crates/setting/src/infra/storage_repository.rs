@@ -61,6 +61,7 @@ fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<Str
         auto_delete_expired_tokens: input.auto_delete_expired_tokens,
         request_record_retention_days: input.request_record_retention_days,
         request_record_payload_retention_days: input.request_record_payload_retention_days,
+        performance_monitoring_retention_days: input.performance_monitoring_retention_days,
         request_record_level: input.request_record_level,
         max_request_body_size_kb: input.max_request_body_size_kb,
         max_response_body_size_kb: input.max_response_body_size_kb,

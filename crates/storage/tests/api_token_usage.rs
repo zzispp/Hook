@@ -50,9 +50,11 @@ async fn api_token_usage_batch_once_skips_existing_batch() {
         .into_connection();
     let store = ApiTokenStore::new(Database::new(connection.clone()));
 
-    let applied = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
+    let report = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
 
-    assert!(!applied);
+    assert!(report.already_applied);
+    assert_eq!(report.applied_records, 0);
+    assert_eq!(report.skipped_missing_resource_ids, Vec::<String>::new());
     let statements = logged_sql(connection);
     assert!(statements.iter().any(|sql| sql.contains("SELECT")), "{statements:?}");
     assert!(!statements.iter().any(|sql| sql.contains("UPDATE \"api_tokens\"")), "{statements:?}");
@@ -70,9 +72,36 @@ async fn api_token_usage_batch_once_marks_applied_batch() {
         .into_connection();
     let store = ApiTokenStore::new(Database::new(connection.clone()));
 
-    let applied = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
+    let report = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
 
-    assert!(applied);
+    assert!(!report.already_applied);
+    assert_eq!(report.applied_records, 1);
+    assert_eq!(report.skipped_missing_resource_ids, Vec::<String>::new());
+    let statements = logged_sql(connection);
+    assert!(statements.iter().any(|sql| sql.contains("UPDATE \"api_tokens\"")), "{statements:?}");
+    assert!(
+        statements.iter().any(|sql| sql.contains("INSERT INTO \"usage_flush_batches\"")),
+        "{statements:?}"
+    );
+}
+
+#[tokio::test]
+async fn api_token_usage_batch_once_skips_missing_tokens() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([Vec::<usage_flush_batches::Model>::new()])
+        .append_exec_results([MockExecResult {
+            last_insert_id: 0,
+            rows_affected: 0,
+        }])
+        .append_query_results([[batch_record("batch-1")]])
+        .into_connection();
+    let store = ApiTokenStore::new(Database::new(connection.clone()));
+
+    let report = store.record_usage_batch_once("batch-1", &[usage_record()]).await.unwrap();
+
+    assert!(!report.already_applied);
+    assert_eq!(report.applied_records, 0);
+    assert_eq!(report.skipped_missing_resource_ids, vec!["token-1"]);
     let statements = logged_sql(connection);
     assert!(statements.iter().any(|sql| sql.contains("UPDATE \"api_tokens\"")), "{statements:?}");
     assert!(

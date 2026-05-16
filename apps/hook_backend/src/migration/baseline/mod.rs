@@ -5,6 +5,7 @@ mod domain_tables;
 pub mod iden;
 mod indices;
 mod operations_tables;
+mod performance_monitoring_tables;
 mod request_candidate_tables;
 mod seed;
 pub mod seed_domain;

@@ -53,6 +53,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: false,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000223",
+        section_id: OVERVIEW_SECTION_ID,
+        code: "admin_performance_monitoring",
+        title: "性能监控",
+        path: "/dashboard/admin/performance-monitoring",
+        icon: "solar:monitor-bold",
+        sort_order: 1,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000202",
         section_id: OPERATIONS_SECTION_ID,
         code: "dashboard_models",

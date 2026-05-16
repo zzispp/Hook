@@ -17,6 +17,7 @@ export type SystemSettings = {
   auto_delete_expired_tokens: boolean;
   request_record_retention_days: number;
   request_record_payload_retention_days: number;
+  performance_monitoring_retention_days: number;
   request_record_level: RequestRecordLevel;
   max_request_body_size_kb: number;
   max_response_body_size_kb: number;
@@ -57,6 +58,7 @@ export type SystemSettingsUpdate = Partial<{
   auto_delete_expired_tokens: boolean;
   request_record_retention_days: number;
   request_record_payload_retention_days: number;
+  performance_monitoring_retention_days: number;
   request_record_level: RequestRecordLevel;
   max_request_body_size_kb: number;
   max_response_body_size_kb: number;

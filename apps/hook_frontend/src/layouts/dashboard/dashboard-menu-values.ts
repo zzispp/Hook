@@ -9,6 +9,7 @@ export const DASHBOARD_MENU_CODES = {
   menuManagement: 'admin_menus',
   modelCatalog: 'dashboard_models',
   modelManagement: 'admin_models',
+  performanceMonitoring: 'admin_performance_monitoring',
   providerManagement: 'admin_providers',
   requestRecords: 'admin_request_records',
   roleManagement: 'admin_roles',

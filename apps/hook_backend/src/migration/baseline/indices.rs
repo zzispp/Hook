@@ -183,6 +183,13 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         notification_states_unique_index(),
+        performance_monitoring_bucket_unique_index(),
+        compound_index(
+            "index_performance_monitoring_snapshots_by_bucket",
+            PerformanceMonitoringSnapshots::Table,
+            PerformanceMonitoringSnapshots::BucketGranularity,
+            PerformanceMonitoringSnapshots::BucketStartedAt,
+        ),
     ]
 }
 
@@ -239,6 +246,17 @@ fn notification_states_unique_index() -> IndexCreateStatement {
         .col(NotificationStates::UserId)
         .col(NotificationStates::SourceType)
         .col(NotificationStates::SourceId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn performance_monitoring_bucket_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_performance_monitoring_snapshots_unique_bucket")
+        .table(PerformanceMonitoringSnapshots::Table)
+        .col(PerformanceMonitoringSnapshots::BucketGranularity)
+        .col(PerformanceMonitoringSnapshots::BucketStartedAt)
         .unique()
         .if_not_exists()
         .to_owned()

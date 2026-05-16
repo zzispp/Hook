@@ -4,6 +4,8 @@ use crate::{
     card_code_currency::BackendCardCodeCurrencyProvider,
     exchange_rates::ExchangeRateCache,
     llm_proxy::{LlmProxyCache, LlmProxyState, create_router as create_llm_proxy_router, create_v1beta_router},
+    performance_monitoring_api::{PerformanceMonitoringApiState, create_router as create_performance_monitoring_router},
+    performance_monitoring_os::PerformanceOsCollector,
     proxy_cache_hooks::{
         ProxyCachedApiTokenUseCase, ProxyCachedGroupUseCase, ProxyCachedModelUseCase, ProxyCachedProviderUseCase, ProxyCachedSettingUseCase,
         ProxyCachedUserUseCase,
@@ -100,6 +102,8 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     exchange_rates.clone().spawn_refresh_task();
     crate::request_record_cleanup::spawn_request_record_cleanup(database.clone());
     crate::request_record_sweep::spawn_request_record_sweep(database.clone());
+    let performance_os_collector = Arc::new(PerformanceOsCollector::new()?);
+    crate::performance_monitoring_worker::spawn_performance_monitoring_workers(database.clone(), performance_os_collector.clone());
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let provider_key_cipher = ProviderKeyCipher::new(settings.provider_key_secret()?)?;
     let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
@@ -169,6 +173,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let authorization = authorization_config(settings);
 
     Ok(AppState {
+        database,
         users,
         tokens,
         rbac,
@@ -183,6 +188,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         operations,
         captcha,
         llm_proxy,
+        performance_os_collector,
         exchange_rates,
         authorization,
     })
@@ -221,6 +227,7 @@ fn create_app(state: AppState) -> Router {
     let api_token_state = ApiTokenApiState::new(state.api_tokens);
     let operations_state = OperationsApiState::new(state.operations);
     let captcha_state = CaptchaApiState::new(state.captcha);
+    let performance_monitoring_state = PerformanceMonitoringApiState::new(state.database.clone(), state.performance_os_collector.clone());
     let llm_v1_router = create_llm_proxy_router(state.llm_proxy.clone());
     let gemini_router = create_v1beta_router(state.llm_proxy);
     let auth_state = AuthState::new(AuthStateParts {
@@ -241,7 +248,8 @@ fn create_app(state: AppState) -> Router {
         .merge(create_i18n_router(i18n_state))
         .merge(create_api_token_router(api_token_state))
         .merge(create_operations_router(operations_state))
-        .merge(create_captcha_router(captcha_state));
+        .merge(create_captcha_router(captcha_state))
+        .merge(create_performance_monitoring_router(performance_monitoring_state));
 
     system::create_router()
         .nest("/v1", llm_v1_router)
@@ -281,6 +289,7 @@ fn token_settings(settings: &Settings) -> BackendResult<TokenSettings> {
 }
 
 struct AppState {
+    database: storage::Database,
     users: Arc<dyn user::application::UserUseCase>,
     tokens: TokenService,
     rbac: Arc<RbacService<StorageRbacRepository, RedisRbacCache>>,
@@ -295,6 +304,7 @@ struct AppState {
     operations: Arc<dyn operations::application::OperationsUseCase>,
     captcha: Arc<dyn captcha::application::CaptchaUseCase>,
     llm_proxy: LlmProxyState,
+    performance_os_collector: Arc<PerformanceOsCollector>,
     exchange_rates: ExchangeRateCache,
     authorization: AuthorizationConfig,
 }

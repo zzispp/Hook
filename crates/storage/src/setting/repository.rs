@@ -113,6 +113,9 @@ fn apply_request_record_patch(active: &mut SystemSettingsActiveModel, input: &Sy
     if let Some(value) = input.request_record_payload_retention_days {
         active.request_record_payload_retention_days = Set(value);
     }
+    if let Some(value) = input.performance_monitoring_retention_days {
+        active.performance_monitoring_retention_days = Set(value);
+    }
     if let Some(value) = input.request_record_level {
         active.request_record_level = Set(value.as_str().to_owned());
     }

@@ -40,6 +40,42 @@ pub(crate) struct UsageFlushBatch {
     pub record_count: i64,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UsageFlushApplyReport {
+    pub applied_records: usize,
+    pub skipped_missing_resource_ids: Vec<String>,
+    pub already_applied: bool,
+}
+
+impl UsageFlushApplyReport {
+    pub(crate) fn empty() -> Self {
+        Self::default()
+    }
+
+    pub(crate) fn already_applied() -> Self {
+        Self {
+            already_applied: true,
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn applied(applied_records: usize, skipped_missing_resource_ids: Vec<String>) -> Self {
+        Self {
+            applied_records,
+            skipped_missing_resource_ids,
+            already_applied: false,
+        }
+    }
+
+    pub fn consumed_records(&self) -> usize {
+        self.applied_records + self.skipped_missing_resource_ids.len()
+    }
+
+    pub fn skipped_missing_count(&self) -> usize {
+        self.skipped_missing_resource_ids.len()
+    }
+}
+
 impl UsageFlushStore {
     pub fn new(database: Database) -> Self {
         Self { database }

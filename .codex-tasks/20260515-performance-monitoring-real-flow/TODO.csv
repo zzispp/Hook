@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,读取历史真实测试链路,DONE,明确复用 DB/backend/provider/admin/token/request 工具,find .codex-tasks/20260515-real-usage-concurrency-flow -maxdepth 3 -type f -print,2026-05-15T19:00:00+08:00,0,
+2,新增真实性能监控统计脚本,DONE,脚本只读 env 密钥并验证 worker 快照与 API,node --check .codex-tasks/20260515-performance-monitoring-real-flow/real_performance_monitoring_flow.mjs,2026-05-15T19:00:16+08:00,0,
+3,执行真实 provider 请求与统计校验,DONE,结果文件显示核心请求与 LLM 指标匹配,node .codex-tasks/20260515-performance-monitoring-real-flow/real_performance_monitoring_flow.mjs,2026-05-15T19:12:24+08:00,0,
+4,记录验证结果,DONE,PROGRESS 和 raw/results.json 包含脱敏证据,test -f .codex-tasks/20260515-performance-monitoring-real-flow/raw/results.json,2026-05-15T19:12:24+08:00,0,

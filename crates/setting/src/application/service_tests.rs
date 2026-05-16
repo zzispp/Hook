@@ -115,6 +115,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         auto_delete_expired_tokens: false,
         request_record_retention_days: 365,
         request_record_payload_retention_days: 30,
+        performance_monitoring_retention_days: 30,
         request_record_level: RequestRecordLevel::Basic,
         max_request_body_size_kb: 5120,
         max_response_body_size_kb: 5120,

@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,核对主机资源展示口径,DONE,确认CPU/load/rss/memory/disk当前含义,rg -n "disk_|load_average|memory_rss" apps/hook_frontend apps/hook_backend crates/types,2026-05-16T12:57:01+08:00,0,磁盘旧口径为所有挂载卷相加；CPU右侧为1分钟load；内存右侧为系统已用内存
+2,修正磁盘采集与展示文案,DONE,磁盘空间显示明确且采集口径与根文件系统一致,cargo check -p backend,2026-05-16T12:57:01+08:00,0,磁盘改为当前backend工作目录所在文件系统可用/总量；文案改为明确左右值
+3,补充验证并记录结果,DONE,格式/编译/相关测试通过,cargo fmt --check && cargo check -p backend,2026-05-16T12:57:01+08:00,0,同时通过pnpm lint:frontend和backend/storage性能监控测试

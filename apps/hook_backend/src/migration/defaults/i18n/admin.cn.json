@@ -4,6 +4,7 @@
     "operations": "运营管理",
     "system_management": "系统管理",
     "dashboard_home": "仪表盘",
+    "admin_performance_monitoring": "性能监控",
     "dashboard_models": "模型目录",
     "dashboard_groups": "价格分组",
     "wallet_center": "钱包中心",
@@ -677,6 +678,64 @@
     "unlimited": "无限制",
     "walletLimited": "按余额限制"
   },
+  "performanceMonitoring": {
+    "ranges": {
+      "today": "今日",
+      "7d": "7 天",
+      "30d": "30 天",
+      "all": "ALL"
+    },
+    "granularity": {
+      "minute": "分钟桶",
+      "hour": "小时桶",
+      "day": "天桶"
+    },
+    "charts": {
+      "requests": "核心请求趋势",
+      "latency": "延迟与 TTFT",
+      "models": "模型分布",
+      "providers": "提供商分布"
+    },
+    "metrics": {
+      "qps": "QPS",
+      "successRate": "成功率",
+      "p95": "P95 延迟",
+      "tokensPerSecond": "Tokens/s",
+      "totalTokens": "总 token",
+      "cost": "成本"
+    },
+    "groups": {
+      "core": "核心请求",
+      "llm": "LLM 业务",
+      "network": "网络 / 连接",
+      "host": "主机资源"
+    },
+    "rows": {
+      "qpsConcurrency": "QPS / 并发",
+      "rateLimitedServerErrors": "429 / 5xx",
+      "timeoutRetryCircuitBreaker": "超时 / 重试 / 熔断",
+      "streamRequests": "流式请求",
+      "inputOutputTotalTokens": "输入 / 输出 / 总 token",
+      "tokensPerRequestPerSecond": "每请求 token / tokens/s",
+      "failoverCacheHit": "回退 / 缓存命中",
+      "quotaLimited": "配额命中",
+      "totalInboundOutbound": "总入站 / 总出站",
+      "realtimeBandwidth": "实时入站 / 出站带宽",
+      "connectionStatus": "连接状态",
+      "tcpEstablishedCloseWait": "TCP ESTABLISHED / CLOSE_WAIT",
+      "cpuLoad": "CPU 使用率 / 1分钟负载",
+      "memory": "进程 RSS / 系统已用内存",
+      "diskSpace": "文件系统可用 / 总量",
+      "collectionStatus": "采集状态"
+    },
+    "status": {
+      "ready": "采集正常",
+      "unsupported": "不支持采集"
+    },
+    "emptySnapshot": "当前范围没有监控快照。查询层不会临时扫描请求明细补数据。",
+    "allRangeNotice": "ALL 当前展示保留期内全部快照，使用 {{granularity}}，最大 720 个点。",
+    "noDimensionData": "暂无分布数据"
+  },
   "userWallet": {
     "title": "用户钱包",
     "tabs": {
@@ -909,6 +968,7 @@
       "autoDeleteExpiredTokens": "自动删除过期令牌",
       "requestRecordRetentionDays": "请求记录保留天数",
       "requestRecordPayloadRetentionDays": "请求 payload 保留天数",
+      "performanceMonitoringRetentionDays": "性能监控快照保留天数",
       "requestRecordLevel": "记录详细程度",
       "maxRequestBodySizeKb": "最大请求体大小 (KB)",
       "maxResponseBodySizeKb": "最大响应体大小 (KB)",
@@ -938,6 +998,7 @@
       "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。",
       "requestRecordRetentionDays": "超过该天数后删除整条请求记录。",
       "requestRecordPayloadRetentionDays": "超过该天数后压缩客户端与 Provider 侧 payload，记录本身保留，直到总保留期到期再删除。",
+      "performanceMonitoringRetentionDays": "超过该天数后删除监控快照；ALL 最多覆盖当前已保留的快照时间桶。",
       "requestRecordLevel": "敏感信息会自动脱敏；要保留失败响应片段，请开启完整级别。",
       "maxRequestBodySizeKb": "超过此大小的请求体将被截断记录。",
       "maxResponseBodySizeKb": "超过此大小的响应体将被截断记录。",

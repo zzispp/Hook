@@ -1,7 +1,7 @@
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set};
 use types::model::{GlobalModelListRequest, GlobalModelResponse, GlobalModelWithStats, ModelCatalogItem, ModelCatalogResponse};
 
-use crate::{Database, StorageError, StorageResult, json};
+use crate::{Database, StorageError, StorageResult, json, usage_flush::UsageFlushApplyReport};
 
 use super::{
     GlobalModelRecord, GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord, ModelRecord,
@@ -132,7 +132,7 @@ impl ModelStore {
         usage::record_usage_batch(self.database.connection(), inputs).await
     }
 
-    pub async fn record_usage_batch_once(&self, batch_id: &str, inputs: &[GlobalModelUsageRecord]) -> StorageResult<bool> {
+    pub async fn record_usage_batch_once(&self, batch_id: &str, inputs: &[GlobalModelUsageRecord]) -> StorageResult<UsageFlushApplyReport> {
         usage::record_usage_batch_once(self.database.connection(), batch_id, inputs).await
     }
 }

@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,补齐系统设置保留天数字段,DONE,后端与前端设置链路读写 performance_monitoring_retention_days 并拒绝非正数,cargo test -p setting validation -- --nocapture,2026-05-15T18:10:00+08:00,0,
+2,新增性能监控快照存储与查询策略,DONE,快照表支持 minute/hour/day 查询 all 不扫明细且点数不超过 720,cargo test -p storage --test performance_monitoring -- --nocapture,2026-05-15T18:24:00+08:00,0,
+3,实现快照生成与清理 worker,DONE,启动注册异步 worker 且清理按设置删除过期快照,cargo test -p backend performance_monitoring -- --nocapture,2026-05-15T18:35:00+08:00,0,
+4,新增性能监控 API 与管理员菜单权限,DONE,管理员菜单包含性能监控且 API 权限绑定存在,cargo test -p backend defaults -- --nocapture,2026-05-15T18:36:00+08:00,0,
+5,新增前端性能监控页面与系统设置字段,DONE,页面含 today/7d/30d/all tabs 空状态和 i18n 文案,pnpm lint:frontend,2026-05-15T18:52:06+08:00,0,
+6,运行端到端验证,DONE,Rust 与前端检查通过或记录明确失败原因,cargo fmt --check && cargo check -p backend && perl -e 'alarm 60; exec @ARGV' cargo test --workspace && pnpm lint:frontend,2026-05-15T18:52:06+08:00,0,just not in PATH; used equivalent checked commands from justfile

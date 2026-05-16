@@ -18,6 +18,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(boolean(SystemSettings::AutoDeleteExpiredTokens))
         .col(big_integer(SystemSettings::RequestRecordRetentionDays))
         .col(big_integer(SystemSettings::RequestRecordPayloadRetentionDays))
+        .col(big_integer(SystemSettings::PerformanceMonitoringRetentionDays).default(30))
         .col(string_len(SystemSettings::RequestRecordLevel, 20).default("basic"))
         .col(big_integer(SystemSettings::MaxRequestBodySizeKb).default(5120))
         .col(big_integer(SystemSettings::MaxResponseBodySizeKb).default(5120))
