@@ -20,12 +20,11 @@ use crate::llm_proxy::{
     audit::{AttemptRecordInput, record_attempt},
     cache::ProviderCooldownFailureInput,
     candidate::ProxyCandidate,
+    client_error,
 };
 
 pub struct UpstreamFailure {
     status: StatusCode,
-    content_type: Option<HeaderValue>,
-    body: Vec<u8>,
     cooldown_triggered: bool,
 }
 
@@ -82,6 +81,7 @@ pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyE
         .await;
     }
     let error = upstream_status_error_details(status.as_u16(), &bytes);
+    let client_error = client_error::upstream_failure(status);
     record_attempt(
         &state,
         &request_id,
@@ -95,13 +95,15 @@ pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyE
             error_param: error.param.as_deref(),
             provider_response_headers: PatchField::Value(upstream_headers),
             provider_response_body: PatchField::Value(body_value(&bytes)),
-            client_response_headers: content_type_headers(content_type.as_ref()),
-            client_response_body: PatchField::Value(body_value(&bytes)),
+            client_response_headers: PatchField::Value(client_error::json_headers()),
+            client_response_body: PatchField::Value(client_error.value.clone()),
             ..AttemptRecordInput::new(&candidate, retry_index, "failed", true)
         },
     )
     .await?;
-    response_builder(status, content_type).body(Body::from(bytes)).map_err(response_error)
+    response_builder(client_error.status, Some(client_error::json_content_type()))
+        .body(Body::from(client_error.bytes().map_err(json_error)?))
+        .map_err(response_error)
 }
 
 struct FullResponseInput {
@@ -182,13 +184,14 @@ pub async fn record_upstream_failure(
     candidate: &ProxyCandidate,
     started: Instant,
     retry_index: i32,
+    record_cooldown: bool,
 ) -> Result<UpstreamFailure, LlmProxyError> {
     let status = status_code(response.status())?;
-    let content_type = response_content_type(&response);
     let upstream_headers = response.headers().clone();
     let body = req::response_bytes(response).await?;
     let error = upstream_status_error_details(status.as_u16(), &body);
     let error_type = "upstream_status";
+    let client_error = client_error::upstream_failure(status);
     record_attempt(
         state,
         request_id,
@@ -201,13 +204,30 @@ pub async fn record_upstream_failure(
             error_param: error.param.as_deref(),
             provider_response_headers: PatchField::Value(upstream_headers),
             provider_response_body: PatchField::Value(body_value(&body)),
-            client_response_headers: content_type_headers(content_type.as_ref()),
-            client_response_body: PatchField::Value(body_value(&body)),
+            client_response_headers: PatchField::Value(client_error::json_headers()),
+            client_response_body: PatchField::Value(client_error.value.clone()),
             ..AttemptRecordInput::new(candidate, retry_index, "failed", true)
         },
     )
     .await?;
-    let cooldown_triggered = state
+    let cooldown_triggered = if record_cooldown {
+        record_provider_cooldown(state, request_id, candidate, retry_index, status, error_type, &error).await?
+    } else {
+        false
+    };
+    Ok(UpstreamFailure { status, cooldown_triggered })
+}
+
+async fn record_provider_cooldown(
+    state: &LlmProxyState,
+    request_id: &str,
+    candidate: &ProxyCandidate,
+    retry_index: i32,
+    status: StatusCode,
+    error_type: &str,
+    error: &super::response_payload::UpstreamStatusErrorDetails,
+) -> Result<bool, LlmProxyError> {
+    state
         .record_provider_status_failure(ProviderCooldownFailureInput {
             request_id,
             candidate,
@@ -218,18 +238,13 @@ pub async fn record_upstream_failure(
             error_code: error.code.as_deref(),
             error_param: error.param.as_deref(),
         })
-        .await?;
-    Ok(UpstreamFailure {
-        status,
-        content_type,
-        body,
-        cooldown_triggered,
-    })
+        .await
 }
 
 pub fn failure_response(failure: UpstreamFailure) -> Result<Response, LlmProxyError> {
-    response_builder(failure.status, failure.content_type)
-        .body(Body::from(failure.body))
+    let client_error = client_error::upstream_failure(failure.status);
+    response_builder(client_error.status, Some(client_error::json_content_type()))
+        .body(Body::from(client_error.bytes().map_err(json_error)?))
         .map_err(response_error)
 }
 
@@ -276,3 +291,10 @@ pub(super) fn response_builder(status: StatusCode, content_type: Option<HeaderVa
 pub(super) fn response_error(error: axum::http::Error) -> LlmProxyError {
     LlmProxyError::Infrastructure(error.to_string())
 }
+
+fn json_error(error: serde_json::Error) -> LlmProxyError {
+    LlmProxyError::Infrastructure(error.to_string())
+}
+
+#[cfg(test)]
+mod tests;

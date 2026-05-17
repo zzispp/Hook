@@ -144,6 +144,32 @@ pub struct ProviderCooldownRecordInput {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct BillingRuleRecordInput {
+    pub global_model_id: Option<String>,
+    pub model_id: Option<String>,
+    pub name: String,
+    pub task_type: String,
+    pub expression: String,
+    pub variables: Value,
+    pub dimension_mappings: Value,
+    pub is_enabled: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DimensionCollectorRecordInput {
+    pub api_format: String,
+    pub task_type: String,
+    pub dimension_name: String,
+    pub source_type: String,
+    pub source_path: Option<String>,
+    pub value_type: String,
+    pub transform_expression: Option<String>,
+    pub default_value: Option<String>,
+    pub priority: i32,
+    pub is_enabled: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct RequestCandidateRecordInput {
     pub request_id: String,
     pub token_id: Option<String>,
@@ -186,6 +212,7 @@ pub struct RequestCandidateRecordInput {
     pub usage_source: Option<String>,
     pub usage_semantic: Option<String>,
     pub billing: RequestBillingRecordValues,
+    pub billing_snapshot: Option<Value>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,
@@ -221,6 +248,7 @@ pub struct RequestCandidateRecordPatch {
     pub usage_source: Option<String>,
     pub usage_semantic: Option<String>,
     pub billing: RequestBillingRecordValues,
+    pub billing_snapshot: PatchField<Value>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,
@@ -260,6 +288,7 @@ pub struct RequestRecordRecordInput {
     pub status: String,
     pub billing_status: String,
     pub billing: RequestBillingRecordValues,
+    pub billing_snapshot: Option<Value>,
     pub candidate_count: i64,
     pub request_headers: Option<Value>,
     pub request_body: Option<Value>,
@@ -303,6 +332,7 @@ pub struct RequestRecordRecordPatch {
     pub usage_source: PatchField<String>,
     pub usage_semantic: PatchField<String>,
     pub billing: RequestBillingRecordPatch,
+    pub billing_snapshot: PatchField<Value>,
     pub first_byte_time_ms: PatchField<i64>,
     pub total_latency_ms: PatchField<i64>,
     pub client_response_headers: PatchField<Value>,

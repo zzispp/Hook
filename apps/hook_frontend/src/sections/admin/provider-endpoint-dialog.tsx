@@ -214,9 +214,10 @@ function useEndpointManager(
     }
     setAdding(true);
     try {
-      await createProviderEndpoint(provider.id, addEndpointPayload(addForm));
+      const payload = addEndpointPayload(addForm);
+      await createProviderEndpoint(provider.id, payload);
       toast.success(t('messages.providerEndpointCreated'));
-      setAddForm(emptyAddEndpointForm(addForm.baseUrl));
+      setAddForm(emptyAddEndpointForm(payload.base_url));
       setAddRulesOpen(false);
       setAddBodyRulesCustomized(false);
       await refresh();

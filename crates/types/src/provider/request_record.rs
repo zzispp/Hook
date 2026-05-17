@@ -128,6 +128,7 @@ pub struct RequestRecord {
     pub base_cost: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
     pub billing_multiplier: Decimal,
+    pub billing_snapshot: Option<serde_json::Value>,
     pub cost_currency: String,
     pub first_byte_time_ms: Option<i64>,
     pub total_latency_ms: Option<i64>,
@@ -207,6 +208,7 @@ pub struct RequestCandidateDetail {
     pub total_cost: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub billing_multiplier: Option<Decimal>,
+    pub billing_snapshot: Option<serde_json::Value>,
     pub cost_currency: Option<String>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,

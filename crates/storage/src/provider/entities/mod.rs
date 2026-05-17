@@ -1,4 +1,6 @@
 pub mod billing_group_providers;
+pub mod billing_rules;
+pub mod dimension_collectors;
 pub mod provider_api_keys;
 pub mod provider_cooldowns;
 pub mod provider_endpoints;

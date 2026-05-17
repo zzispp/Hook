@@ -8,14 +8,19 @@ use types::provider::{
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
 
+mod key_permissions;
+mod request_queries;
+
+use key_permissions::ensure_allowed_models_bound;
+use request_queries::{
+    sanitize_active_request_record_request, sanitize_provider_cooldown_request, validate_provider_cooldown_request, validate_request_record_list_request,
+};
+
 use super::validation::{
     sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request, sanitize_model_binding,
     sanitize_model_binding_update, sanitize_update, validate_api_key, validate_api_key_update, validate_create, validate_endpoint, validate_endpoint_update,
     validate_list_request, validate_model_binding, validate_model_binding_update, validate_update,
 };
-
-const MAX_REQUEST_RECORD_LIMIT: u64 = 100;
-const MAX_PROVIDER_COOLDOWN_LIMIT: u64 = 100;
 
 pub struct ProviderService<R, M, C, F> {
     repository: R,
@@ -104,6 +109,7 @@ where
         self.ensure_provider(provider_id).await?;
         let input = sanitize_api_key(input);
         validate_api_key(&input)?;
+        ensure_allowed_models_bound(&self.repository, provider_id, &input.allowed_model_ids).await?;
         let encrypted = self.cipher.encrypt_provider_key(&input.api_key)?;
         self.repository.create_api_key(provider_id, input, encrypted).await
     }
@@ -144,6 +150,9 @@ where
         self.ensure_provider(provider_id).await?;
         let input = sanitize_api_key_update(input);
         validate_api_key_update(&input)?;
+        if let Some(allowed_model_ids) = &input.allowed_model_ids {
+            ensure_allowed_models_bound(&self.repository, provider_id, allowed_model_ids).await?;
+        }
         let encrypted = input.api_key.as_deref().map(|api_key| self.cipher.encrypt_provider_key(api_key)).transpose()?;
         self.repository.update_api_key(provider_id, key_id, input, encrypted).await
     }
@@ -238,55 +247,6 @@ where
 {
     if !models.global_model_exists(id).await? {
         return Err(ProviderError::InvalidInput(format!("global model does not exist: {id}")));
-    }
-    Ok(())
-}
-
-fn validate_request_record_list_request(request: &RequestRecordListRequest) -> ProviderResult<()> {
-    if request.limit == 0 || request.limit > MAX_REQUEST_RECORD_LIMIT {
-        return Err(ProviderError::InvalidInput(format!("limit must be between 1 and {MAX_REQUEST_RECORD_LIMIT}")));
-    }
-    if i64::try_from(request.skip).is_err() {
-        return Err(ProviderError::InvalidInput("skip exceeds PostgreSQL integer range".into()));
-    }
-    if let Some(value) = request.type_filter.as_deref().filter(|value| !value.is_empty())
-        && !matches!(value, "stream" | "non_stream")
-    {
-        return Err(ProviderError::InvalidInput("type must be stream or non_stream".into()));
-    }
-    Ok(())
-}
-
-fn sanitize_active_request_record_request(request: ActiveRequestRecordRequest) -> ActiveRequestRecordRequest {
-    let mut ids = request
-        .ids
-        .into_iter()
-        .map(|id| id.trim().to_owned())
-        .filter(|id| !id.is_empty())
-        .collect::<Vec<_>>();
-    ids.sort();
-    ids.dedup();
-    ActiveRequestRecordRequest { ids }
-}
-
-fn sanitize_provider_cooldown_request(request: ProviderCooldownListRequest) -> ProviderCooldownListRequest {
-    ProviderCooldownListRequest {
-        search: request.search.and_then(|value| {
-            let trimmed = value.trim().to_owned();
-            (!trimmed.is_empty()).then_some(trimmed)
-        }),
-        ..request
-    }
-}
-
-fn validate_provider_cooldown_request(request: &ProviderCooldownListRequest) -> ProviderResult<()> {
-    if request.limit == 0 || request.limit > MAX_PROVIDER_COOLDOWN_LIMIT {
-        return Err(ProviderError::InvalidInput(format!(
-            "limit must be between 1 and {MAX_PROVIDER_COOLDOWN_LIMIT}"
-        )));
-    }
-    if request.status_code.is_some_and(|value| !(100..=599).contains(&value)) {
-        return Err(ProviderError::InvalidInput("status_code must be between 100 and 599".into()));
     }
     Ok(())
 }

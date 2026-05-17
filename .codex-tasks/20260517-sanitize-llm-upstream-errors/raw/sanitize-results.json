@@ -1,0 +1,39 @@
+{
+  "executed_at": "2026-05-17T09:09:13.747Z",
+  "request_id": "019e3532-5cd6-7432-8925-5be4701c5770",
+  "upstream_request_count": 1,
+  "client": {
+    "status": 502,
+    "content_type": "application/json",
+    "body": {
+      "error": {
+        "code": "model_service_unavailable",
+        "message": "The model service is temporarily unavailable. Please retry later.",
+        "type": "server_error"
+      }
+    },
+    "leaked_sensitive_marker": false
+  },
+  "request_record": {
+    "status": "failed",
+    "billing_status": "void",
+    "client_status_code": "429",
+    "client_error_type": "upstream_status",
+    "client_error_message": "upstream returned status 429: quota exhausted at api.86gamestore.com using sk-upstream-secret-real-test",
+    "client_response_body": {
+      "error": {
+        "code": "model_service_unavailable",
+        "message": "The model service is temporarily unavailable. Please retry later.",
+        "type": "server_error"
+      }
+    },
+    "client_response_leaked_sensitive_marker": false
+  },
+  "candidate": {
+    "status": "failed",
+    "status_code": "429",
+    "error_type": "upstream_status",
+    "error_code": "sk-upstream-secret-real-test",
+    "provider_response_retained_sensitive_marker": true
+  }
+}

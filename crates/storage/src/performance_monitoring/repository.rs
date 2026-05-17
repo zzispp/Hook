@@ -1,7 +1,7 @@
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use types::performance_monitoring::{
-    EffectiveTimeRange, MAX_SERIES_POINTS, PerformanceMonitoringOverviewResponse, PerformanceMonitoringRange, PerformanceSnapshotPoint, SnapshotDataStatus,
-    SnapshotGranularity,
+    EffectiveTimeRange, MAX_SERIES_POINTS, PerformanceMonitoringOverviewResponse, PerformanceMonitoringRange, PerformanceSnapshotMetrics,
+    PerformanceSnapshotPoint, SnapshotDataStatus, SnapshotGranularity,
 };
 
 use crate::{Database, StorageResult};
@@ -33,8 +33,13 @@ impl PerformanceMonitoringStore {
         Ok(overview_response(range, plan, series))
     }
 
-    pub async fn latest_snapshot(&self) -> StorageResult<Option<PerformanceSnapshotPoint>> {
-        query::latest_snapshot(self).await?.map(snapshot_point).transpose()
+    pub async fn aggregate_point(
+        &self,
+        window: super::SnapshotAggregationWindow,
+        system: super::SystemMetricsSnapshot,
+    ) -> StorageResult<PerformanceSnapshotPoint> {
+        let metrics = super::aggregation::aggregate_window_point(self, window.clone(), system).await?;
+        Ok(window_point(window, metrics))
     }
 
     pub async fn delete_snapshots_before(&self, cutoff: time::OffsetDateTime) -> StorageResult<u64> {
@@ -130,4 +135,12 @@ fn snapshot_point(record: snapshots::Model) -> StorageResult<PerformanceSnapshot
         bucket_ended_at: query::format_timestamp(record.bucket_ended_at),
         metrics: serde_json::from_str(&record.metrics)?,
     })
+}
+
+fn window_point(window: super::SnapshotAggregationWindow, metrics: PerformanceSnapshotMetrics) -> PerformanceSnapshotPoint {
+    PerformanceSnapshotPoint {
+        bucket_started_at: query::format_timestamp(window.started_at),
+        bucket_ended_at: query::format_timestamp(window.ended_at),
+        metrics,
+    }
 }

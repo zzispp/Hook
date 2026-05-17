@@ -7,13 +7,18 @@ use crate::{StorageResult, json};
 pub mod entities;
 
 pub(crate) use crate::model::provider_models;
-pub use entities::{billing_group_providers, provider_api_keys, provider_cooldowns, provider_endpoints, providers, request_candidates, request_records};
+pub use entities::{
+    billing_group_providers, billing_rules, dimension_collectors, provider_api_keys, provider_cooldowns, provider_endpoints, providers, request_candidates,
+    request_records,
+};
 
 pub type ProviderRecord = providers::Model;
 pub type ProviderEndpointRecord = provider_endpoints::Model;
 pub type ProviderApiKeyRecord = provider_api_keys::Model;
 pub type ProviderCooldownRecord = provider_cooldowns::Model;
 pub type ProviderModelRecord = provider_models::Model;
+pub type BillingRuleRecord = billing_rules::Model;
+pub type DimensionCollectorRecord = dimension_collectors::Model;
 pub type RequestCandidateRecord = request_candidates::Model;
 pub type RequestRecordSummaryRecord = request_records::Model;
 
@@ -114,6 +119,7 @@ impl RequestCandidateRecord {
             base_cost: self.base_cost,
             total_cost: self.total_cost,
             billing_multiplier: self.billing_multiplier,
+            billing_snapshot: json::decode_optional(self.billing_snapshot).ok().flatten(),
             latency_ms: self.latency_ms,
             first_byte_time_ms: self.first_byte_time_ms,
             error_type: self.error_type,

@@ -28,14 +28,16 @@ import {
   DistributionCard,
 } from './performance-monitoring-cards';
 
-const RANGE_OPTIONS: PerformanceMonitoringRange[] = ['today', '7d', '30d', 'all'];
+const RANGE_OPTIONS: PerformanceMonitoringRange[] = ['realtime', 'today', '7d', '30d', 'all'];
 
 export function PerformanceMonitoringView() {
   const { t } = useTranslate('admin');
-  const [range, setRange] = useState<PerformanceMonitoringRange>('today');
-  const overview = usePerformanceMonitoringOverview(range);
-  const realtime = usePerformanceMonitoringRealtime();
-  const latest = realtime.data?.snapshot ?? overview.data?.series.at(-1);
+  const [range, setRange] = useState<PerformanceMonitoringRange>('realtime');
+  const isRealtime = range === 'realtime';
+  const overview = usePerformanceMonitoringOverview(isRealtime ? null : range);
+  const realtime = usePerformanceMonitoringRealtime(isRealtime);
+  const activeSnapshot = range === 'realtime' ? realtime.data?.snapshot : overview.data?.series.at(-1);
+  const chartSeries = isRealtime && realtime.data?.snapshot ? [realtime.data.snapshot] : overview.data?.series ?? [];
 
   return (
     <DashboardContent maxWidth="xl">
@@ -46,7 +48,9 @@ export function PerformanceMonitoringView() {
             loading={overview.isLoading || realtime.isLoading}
             onClick={() => {
               void overview.refresh();
-              void realtime.refresh();
+              if (isRealtime) {
+                void realtime.refresh();
+              }
             }}
           />
         }
@@ -55,34 +59,34 @@ export function PerformanceMonitoringView() {
       <Stack spacing={3}>
         <RangeTabs value={range} onChange={setRange} />
         <StatusAlerts overview={overview.data} error={overview.error ?? realtime.error} />
-        <SummaryGrid snapshot={latest} />
+        <SummaryGrid snapshot={activeSnapshot} />
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 8 }}>
             <SeriesChart
               title={t('performanceMonitoring.charts.requests')}
-              series={overview.data?.series ?? []}
+              series={chartSeries}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <DistributionCard
               title={t('performanceMonitoring.charts.models')}
-              items={latest?.metrics.llm.model_distribution ?? []}
+              items={activeSnapshot?.metrics.llm.model_distribution ?? []}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 8 }}>
             <LatencyChart
               title={t('performanceMonitoring.charts.latency')}
-              series={overview.data?.series ?? []}
+              series={chartSeries}
             />
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <DistributionCard
               title={t('performanceMonitoring.charts.providers')}
-              items={latest?.metrics.llm.provider_distribution ?? []}
+              items={activeSnapshot?.metrics.llm.provider_distribution ?? []}
             />
           </Grid>
         </Grid>
-        <DetailCards snapshot={latest} hostStatus={realtime.data?.host.metrics.status} />
+        <DetailCards snapshot={activeSnapshot} hostStatus={realtime.data?.host.metrics.status} />
       </Stack>
     </DashboardContent>
   );

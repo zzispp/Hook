@@ -1,12 +1,16 @@
 use types::{
     model::PatchField,
     provider::{
-        ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest,
-        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping, ProviderUpdate,
+        ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderListRequest, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+        ProviderModelMapping, ProviderUpdate,
     },
 };
 
 use super::{ProviderError, ProviderResult};
+
+mod endpoint;
+
+pub use endpoint::{sanitize_endpoint, sanitize_endpoint_update, validate_endpoint, validate_endpoint_update};
 
 const MAX_LIST_LIMIT: u64 = 1000;
 const MAX_NAME_LENGTH: usize = 100;
@@ -39,24 +43,6 @@ pub fn sanitize_update(input: ProviderUpdate) -> ProviderUpdate {
     ProviderUpdate {
         name: input.name.map(|value| value.trim().to_owned()),
         provider_type: input.provider_type.map(|value| value.trim().to_owned()),
-        ..input
-    }
-}
-
-pub fn sanitize_endpoint(input: ProviderEndpointCreate) -> ProviderEndpointCreate {
-    ProviderEndpointCreate {
-        api_format: input.api_format.trim().to_ascii_lowercase(),
-        base_url: input.base_url.trim().to_owned(),
-        custom_path: input.custom_path.and_then(trim_optional),
-        ..input
-    }
-}
-
-pub fn sanitize_endpoint_update(input: ProviderEndpointUpdate) -> ProviderEndpointUpdate {
-    ProviderEndpointUpdate {
-        api_format: input.api_format.map(|value| value.trim().to_ascii_lowercase()),
-        base_url: input.base_url.map(|value| value.trim().to_owned()),
-        custom_path: trim_patch(input.custom_path),
         ..input
     }
 }
@@ -127,24 +113,6 @@ pub fn validate_list_request(request: &ProviderListRequest) -> ProviderResult<()
     Ok(())
 }
 
-pub fn validate_endpoint(input: &ProviderEndpointCreate) -> ProviderResult<()> {
-    validate_text("api_format", &input.api_format, MAX_API_FORMAT_LENGTH)?;
-    validate_text("base_url", &input.base_url, MAX_URL_LENGTH)
-}
-
-pub fn validate_endpoint_update(input: &ProviderEndpointUpdate) -> ProviderResult<()> {
-    if endpoint_update_is_empty(input) {
-        return Err(ProviderError::InvalidInput("endpoint update payload is empty".into()));
-    }
-    if let Some(api_format) = input.api_format.as_deref() {
-        validate_text("api_format", api_format, MAX_API_FORMAT_LENGTH)?;
-    }
-    if let Some(base_url) = input.base_url.as_deref() {
-        validate_text("base_url", base_url, MAX_URL_LENGTH)?;
-    }
-    Ok(())
-}
-
 pub fn validate_api_key(input: &ProviderApiKeyCreate) -> ProviderResult<()> {
     validate_text("name", &input.name, MAX_NAME_LENGTH)?;
     if input.api_key.is_empty() {
@@ -210,7 +178,7 @@ pub fn validate_model_binding_update(input: &ProviderModelBindingUpdate) -> Prov
     Ok(())
 }
 
-fn validate_text(field: &str, value: &str, max_length: usize) -> ProviderResult<()> {
+pub(super) fn validate_text(field: &str, value: &str, max_length: usize) -> ProviderResult<()> {
     if value.is_empty() || value.len() > max_length {
         return Err(ProviderError::InvalidInput(format!("{field} length must be between 1 and {max_length}")));
     }
@@ -228,12 +196,12 @@ fn validate_provider_type(value: &str) -> ProviderResult<()> {
     )))
 }
 
-fn trim_optional(value: String) -> Option<String> {
+pub(super) fn trim_optional(value: String) -> Option<String> {
     let value = value.trim().to_owned();
     if value.is_empty() { None } else { Some(value) }
 }
 
-fn trim_patch(value: PatchField<String>) -> PatchField<String> {
+pub(super) fn trim_patch(value: PatchField<String>) -> PatchField<String> {
     match value {
         PatchField::Value(value) => trim_optional(value).map(PatchField::Value).unwrap_or(PatchField::Null),
         other => other,
@@ -298,17 +266,6 @@ fn validate_reasoning_effort(value: &str) -> ProviderResult<()> {
         "provider_model_mapping.reasoning_effort must be one of {}",
         REASONING_EFFORTS.join(", ")
     )))
-}
-
-fn endpoint_update_is_empty(input: &ProviderEndpointUpdate) -> bool {
-    input.api_format.is_none()
-        && input.base_url.is_none()
-        && input.custom_path.is_missing()
-        && input.max_retries.is_missing()
-        && input.is_active.is_none()
-        && input.format_acceptance_config.is_missing()
-        && input.header_rules.is_missing()
-        && input.body_rules.is_missing()
 }
 
 fn model_binding_update_is_empty(input: &ProviderModelBindingUpdate) -> bool {

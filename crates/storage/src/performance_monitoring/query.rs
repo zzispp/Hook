@@ -10,6 +10,7 @@ use super::{
     types::{PerformanceSnapshotInput, SnapshotQueryPlan},
 };
 
+const REALTIME_MINUTES: i64 = 5;
 const TODAY_HOURS: i64 = 24;
 const SEVEN_DAYS: i64 = 7;
 const THIRTY_DAYS: i64 = 30;
@@ -37,18 +38,10 @@ pub(super) async fn list_snapshots(store: &PerformanceMonitoringStore, plan: &Sn
         .map_err(Into::into)
 }
 
-pub(super) async fn latest_snapshot(store: &PerformanceMonitoringStore) -> StorageResult<Option<snapshots::Model>> {
-    snapshots::Entity::find()
-        .filter(snapshots::Column::BucketGranularity.eq(SnapshotGranularity::Minute.as_str()))
-        .order_by_desc(snapshots::Column::BucketStartedAt)
-        .one(store.connection())
-        .await
-        .map_err(Into::into)
-}
-
 pub fn range_plan(range: PerformanceMonitoringRange, now: time::OffsetDateTime) -> SnapshotQueryPlan {
     match range {
-        PerformanceMonitoringRange::Today => fixed_plan(SnapshotGranularity::Minute, now - time::Duration::hours(TODAY_HOURS), now),
+        PerformanceMonitoringRange::Realtime => fixed_plan(SnapshotGranularity::Minute, now - time::Duration::minutes(REALTIME_MINUTES), now),
+        PerformanceMonitoringRange::Today => fixed_plan(SnapshotGranularity::Hour, now - time::Duration::hours(TODAY_HOURS), now),
         PerformanceMonitoringRange::SevenDays => fixed_plan(SnapshotGranularity::Hour, now - time::Duration::days(SEVEN_DAYS), now),
         PerformanceMonitoringRange::ThirtyDays => thirty_day_plan(now),
         PerformanceMonitoringRange::All => all_plan(now),
@@ -137,6 +130,24 @@ mod tests {
     use types::performance_monitoring::PerformanceMonitoringRange;
 
     use super::{MAX_SERIES_POINTS, SnapshotGranularity, range_plan};
+
+    #[test]
+    fn realtime_range_uses_last_five_minute_buckets() {
+        let now = time::OffsetDateTime::from_unix_timestamp(600).unwrap();
+        let plan = range_plan(PerformanceMonitoringRange::Realtime, now);
+
+        assert_eq!(plan.granularity, SnapshotGranularity::Minute);
+        assert_eq!((plan.ended_at - plan.started_at).whole_minutes(), 5);
+    }
+
+    #[test]
+    fn today_range_uses_twenty_four_hour_buckets() {
+        let now = time::OffsetDateTime::from_unix_timestamp(86_400).unwrap();
+        let plan = range_plan(PerformanceMonitoringRange::Today, now);
+
+        assert_eq!(plan.granularity, SnapshotGranularity::Hour);
+        assert_eq!((plan.ended_at - plan.started_at).whole_hours(), 24);
+    }
 
     #[test]
     fn range_all_uses_day_buckets_without_detail_range() {

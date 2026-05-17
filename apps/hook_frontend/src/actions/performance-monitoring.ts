@@ -19,8 +19,8 @@ const swrOptions = {
   revalidateOnFocus: false,
 };
 
-export function usePerformanceMonitoringOverview(range: PerformanceMonitoringRange) {
-  const url = `${endpoints.performanceMonitoring.overview}?range=${range}`;
+export function usePerformanceMonitoringOverview(range: PerformanceMonitoringRange | null) {
+  const url = range ? `${endpoints.performanceMonitoring.overview}?range=${range}` : null;
   const { data, isLoading, error, isValidating, mutate } = useSWR<
     ApiEnvelope<PerformanceMonitoringOverviewResponse>
   >(url, fetcher, swrOptions);
@@ -38,10 +38,10 @@ export function usePerformanceMonitoringOverview(range: PerformanceMonitoringRan
   }, [data, error, isLoading, isValidating, mutate]);
 }
 
-export function usePerformanceMonitoringRealtime() {
+export function usePerformanceMonitoringRealtime(enabled = true) {
   const { data, isLoading, error, isValidating, mutate } = useSWR<
     ApiEnvelope<PerformanceMonitoringRealtimeResponse>
-  >(endpoints.performanceMonitoring.realtime, fetcher, {
+  >(enabled ? endpoints.performanceMonitoring.realtime : null, fetcher, {
     ...swrOptions,
     refreshInterval: 5000,
   });

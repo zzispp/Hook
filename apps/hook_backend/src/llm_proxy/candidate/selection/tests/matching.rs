@@ -179,6 +179,7 @@ fn matching_candidate_parts_does_not_route_chat_request_to_non_chat_endpoint() {
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert!(parts[0].endpoints.iter().all(|endpoint| endpoint.api_format != "openai_image"));
@@ -202,6 +203,7 @@ fn matching_candidate_parts_routes_non_chat_request_only_to_matching_data_format
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert_eq!(parts.len(), 1);
@@ -227,6 +229,7 @@ fn matching_candidate_parts_requires_key_to_support_endpoint_format() {
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert_eq!(parts.len(), 1);
@@ -251,6 +254,7 @@ fn matching_candidate_parts_excludes_key_with_empty_api_formats() {
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert!(parts.is_empty());
@@ -271,6 +275,7 @@ fn matching_candidate_parts_excludes_key_that_does_not_allow_requested_model() {
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert!(parts.is_empty());
@@ -291,6 +296,7 @@ fn matching_candidate_parts_treats_empty_key_allowed_models_as_all_models() {
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert_eq!(parts.len(), 1);

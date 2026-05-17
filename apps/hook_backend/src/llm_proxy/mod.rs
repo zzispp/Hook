@@ -3,6 +3,7 @@ mod auth;
 mod billing;
 mod cache;
 mod candidate;
+mod client_error;
 mod error;
 mod formats;
 mod handlers;

@@ -11,13 +11,16 @@ import Autocomplete from '@mui/material/Autocomplete';
 import ListItemText from '@mui/material/ListItemText';
 
 import { useTranslate } from 'src/locales/use-locales';
+import { useProviderModels } from 'src/actions/providers';
 
 import { SwitchRow, TextFieldRow, ManagementDialog } from './shared';
 import { formatApiFormat, API_FORMAT_OPTIONS } from './provider-management-utils';
+import { selectedOptions, providerModelOptions } from './provider-api-key-options';
 
 export function ProviderApiKeyDialog({
   dialogs,
   models,
+  providerId,
 }: {
   dialogs: ReturnType<typeof useProviderChildDialogs>;
   models: GlobalModelResponse[];
@@ -25,6 +28,7 @@ export function ProviderApiKeyDialog({
 }) {
   const { t } = useTranslate('admin');
   const editing = !!dialogs.editingApiKey;
+  const providerModels = useProviderModels(dialogs.apiKeyOpen ? providerId : null);
 
   return (
     <ManagementDialog
@@ -36,7 +40,12 @@ export function ProviderApiKeyDialog({
     >
       <ApiKeyBasicFields dialogs={dialogs} />
       <ApiKeyFormatFields dialogs={dialogs} />
-      <ApiKeyModelFields dialogs={dialogs} models={models} />
+      <ApiKeyModelFields
+        dialogs={dialogs}
+        loading={providerModels.isLoading}
+        models={models}
+        providerModels={providerModels.items}
+      />
       <ApiKeyLimitFields dialogs={dialogs} />
       <ApiKeyTimeRangeFields dialogs={dialogs} />
       <ApiKeySwitches dialogs={dialogs} />
@@ -123,13 +132,17 @@ function ApiKeyFormatFields({ dialogs }: { dialogs: ReturnType<typeof useProvide
 
 function ApiKeyModelFields({
   dialogs,
+  loading,
   models,
+  providerModels,
 }: {
   dialogs: ReturnType<typeof useProviderChildDialogs>;
+  loading: boolean;
   models: GlobalModelResponse[];
+  providerModels: ReturnType<typeof useProviderModels>['items'];
 }) {
   const { t } = useTranslate('admin');
-  const options = modelOptions(models);
+  const options = providerModelOptions(models, providerModels);
   const selected = selectedOptions(dialogs.apiKeyForm.allowed_model_ids, options);
 
   return (
@@ -140,7 +153,8 @@ function ApiKeyModelFields({
       value={selected}
       getOptionLabel={(option) => option.label}
       isOptionEqualToValue={(option, current) => option.value === current.value}
-      noOptionsText={t('providers.noBindableModels')}
+      loading={loading}
+      noOptionsText={loading ? t('common.loading') : t('providers.noBindableModels')}
       onChange={(_, values) =>
         dialogs.setApiKeyForm((form) => ({
           ...form,
@@ -186,24 +200,6 @@ function ApiKeyLimitFields({ dialogs }: { dialogs: ReturnType<typeof useProvider
       />
     </Stack>
   );
-}
-
-type SelectOption = {
-  value: string;
-  label: string;
-  description?: string;
-};
-
-function modelOptions(models: GlobalModelResponse[]): SelectOption[] {
-  return models.map((model) => ({
-    value: model.id,
-    label: model.display_name || model.name,
-    description: model.name,
-  }));
-}
-
-function selectedOptions(value: string[], options: SelectOption[]) {
-  return value.map((id) => options.find((option) => option.value === id) ?? { value: id, label: id });
 }
 
 function ApiKeyTimeRangeFields({

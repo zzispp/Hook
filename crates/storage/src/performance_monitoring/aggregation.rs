@@ -22,6 +22,16 @@ pub(super) async fn aggregate_window_with_system(
     store.upsert_snapshot(input).await
 }
 
+pub(super) async fn aggregate_window_point(
+    store: &PerformanceMonitoringStore,
+    window: SnapshotAggregationWindow,
+    system: SystemMetricsSnapshot,
+) -> StorageResult<PerformanceSnapshotMetrics> {
+    let summary = request_summary(store, &window).await?;
+    let dimensions = request_dimensions(store, &window).await?;
+    Ok(metrics(summary, dimensions, window_duration_seconds(&window), system))
+}
+
 async fn request_summary(store: &PerformanceMonitoringStore, window: &SnapshotAggregationWindow) -> StorageResult<RequestSummaryRow> {
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, summary_sql(), window_values(window));
     store

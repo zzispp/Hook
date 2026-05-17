@@ -279,8 +279,13 @@
     "providerModelDisabled": "模型绑定已停用",
     "providerModelEnabled": "模型绑定已启用",
     "providerModelUpdated": "模型绑定已更新",
+    "providerCooldownDuplicateStatusCode": "冷却规则的状态码不能重复",
     "providerCooldownPolicyUpdated": "冷却策略已更新",
+    "providerCooldownPositiveValuesRequired": "失败次数和冷却时长必须是大于 0 的整数",
     "providerCooldownReleased": "提供商冷却已解除",
+    "providerCooldownRuleRequired": "已添加的冷却规则必须填写完整",
+    "providerCooldownStatusCodeInvalid": "状态码必须是 100-599 的整数",
+    "providerCooldownWindowRequired": "固定窗口时长必须是大于 0 的整数",
     "providerPriorityInvalid": "优先级必须是整数",
     "providerPriorityUpdated": "提供商优先级已更新",
     "providerUpdated": "提供商已更新",
@@ -682,6 +687,7 @@
   },
   "performanceMonitoring": {
     "ranges": {
+      "realtime": "实时",
       "today": "今日",
       "7d": "7 天",
       "30d": "30 天",

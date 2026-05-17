@@ -1,0 +1,154 @@
+{
+  "executed_at": "2026-05-17T06:54:26.303Z",
+  "upstream": {
+    "game86_model": "gpt-5.4-mini",
+    "ekan8_openai_model": "R-claude-opus-4-7",
+    "game86_model_sample": [
+      "codex-auto-review",
+      "gpt-5.3-codex",
+      "gpt-5.3-codex-spark",
+      "gpt-5.4",
+      "gpt-5.4-2026-03-05",
+      "gpt-5.4-mini",
+      "gpt-5.5",
+      "gpt-image-1",
+      "gpt-image-1.5",
+      "gpt-image-2"
+    ],
+    "ekan8_model_sample": [
+      "[Y]gemini-3-flash-preview",
+      "[满血]gemini-2.5-pro",
+      "[满血]gemini-3-pro-preview",
+      "[满血]gemini-3.1-pro-preview",
+      "[满血A]gemini-2.5-pro",
+      "[满血A]gemini-3-pro-preview",
+      "[满血A]gemini-3.1-pro-preview",
+      "[满血B]gemini-3-pro-preview",
+      "[满血C]-gemini-2.5-pro",
+      "[满血C]-gemini-3-pro-preview",
+      "[满血C]-gemini-3.1-pro-preview-search",
+      "[满血C]gemini-3.1-pro-preview",
+      "ccmax-claude-opus-4-6",
+      "ccmax-claude-opus-4-7",
+      "gemini-2.5-pro-cli",
+      "gemini-3-pro-preview",
+      "gemini-3.1-pro-preview",
+      "gemini-3.1-pro-preview-search",
+      "gpt-5.5",
+      "gpt-image-2",
+      "K-claude-opus-4-5",
+      "K-claude-opus-4-6",
+      "R-claude-opus-4-6",
+      "R-claude-opus-4-6-thinking",
+      "R-claude-opus-4-7",
+      "R-claude-opus-4-7-thinking",
+      "S-claude-opus-4-6",
+      "S-claude-opus-4-6-thinking",
+      "S-claude-opus-4-7",
+      "单间-claude-opus-4-6",
+      "按量-gemini-3-pro-preview",
+      "按量-gemini-3.1-pro-preview",
+      "按量B-claude-opus-4-5-20251101",
+      "按量B-claude-opus-4-6",
+      "按量B-claude-opus-4-7",
+      "按量K-claude-opus-4-5-20251101",
+      "按量K-claude-opus-4-6",
+      "按量K-claude-opus-4-7",
+      "按量max-claude-opus-4-6",
+      "按量max-claude-opus-4-7",
+      "按量R-claude-opus-4-6",
+      "按量R-claude-opus-4-7",
+      "福利B-claude-opus-4-5",
+      "福利B-claude-opus-4-6",
+      "福利B-claude-opus-4-7"
+    ]
+  },
+  "before": {
+    "wallet": {
+      "rechargeBalance": 10,
+      "giftBalance": 0,
+      "totalConsumed": 0
+    },
+    "token": {
+      "usedQuota": 0,
+      "requestCount": 0
+    },
+    "game86Usage": 0,
+    "ekan8Usage": 0
+  },
+  "after": {
+    "wallet": {
+      "rechargeBalance": 9.9987575,
+      "giftBalance": 0,
+      "totalConsumed": 0.0012425
+    },
+    "token": {
+      "usedQuota": 0.0012425,
+      "requestCount": 2
+    },
+    "game86Usage": 1,
+    "ekan8Usage": 1,
+    "walletTransactions": 2
+  },
+  "scenarios": [
+    {
+      "request_id": "019e34b6-e366-7ab0-a1a4-bd129831ab90",
+      "status": "success",
+      "billing_status": "settled",
+      "prompt_tokens": "31",
+      "completion_tokens": "13",
+      "base_cost": "0.00041400",
+      "total_cost": "0.00051750",
+      "multiplier": "1.25000000",
+      "snapshot_status": "complete",
+      "snapshot_scope": "global",
+      "snapshot_rule_id": "00000000-0000-7000-9500-000000000601",
+      "provider_request_model": "gpt-5.4-mini",
+      "client_response_model": "aether-real-86gamestore-chat",
+      "trace": [
+        {
+          "candidate_index": "0",
+          "retry_index": "0",
+          "status": "success",
+          "status_code": "200",
+          "provider": "Aether Real 86GameStore",
+          "key": "Aether 86GameStore key",
+          "provider_api_format": "openai_chat",
+          "base_cost": "0.00041400",
+          "total_cost": "0.00051750",
+          "billing_multiplier": "1.25000000"
+        }
+      ]
+    },
+    {
+      "request_id": "019e34b6-eaa5-7cc1-9c85-1399205e87fa",
+      "status": "success",
+      "billing_status": "settled",
+      "prompt_tokens": "90",
+      "completion_tokens": "25",
+      "base_cost": "0.00058000",
+      "total_cost": "0.00072500",
+      "multiplier": "1.25000000",
+      "snapshot_status": "complete",
+      "snapshot_scope": "global",
+      "snapshot_rule_id": "00000000-0000-7000-9500-000000000602",
+      "provider_request_model": "R-claude-opus-4-7",
+      "client_response_model": "aether-real-ekan8-mapped-chat",
+      "trace": [
+        {
+          "candidate_index": "0",
+          "retry_index": "0",
+          "status": "success",
+          "status_code": "200",
+          "provider": "Aether Real Ekan8",
+          "key": "Aether Ekan8 key",
+          "provider_api_format": "openai_chat",
+          "base_cost": "0.00058000",
+          "total_cost": "0.00072500",
+          "billing_multiplier": "1.25000000"
+        }
+      ]
+    }
+  ],
+  "generated_token_prefix": "sk-aether-"
+}

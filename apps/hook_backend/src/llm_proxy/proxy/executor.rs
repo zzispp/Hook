@@ -2,12 +2,13 @@ use std::time::Instant;
 
 use axum::response::Response;
 use proxy::format_conversion::ApiFormat;
-use req::{Request, RequestBuilder, Response as UpstreamResponse, StatusCode};
+use req::{Request, RequestBuilder, Response as UpstreamResponse};
 use serde_json::Value;
 
 use super::{
     LlmProxyError, LlmProxyState,
     attempt_log::{record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
+    failure_classification::{FailureDecision, classify_status},
     header_rules::apply_provider_header_rules,
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
     stream_transport,
@@ -22,11 +23,6 @@ use crate::llm_proxy::{
 };
 
 const ANTHROPIC_VERSION: &str = "2023-06-01";
-const RETRYABLE_AUTH_STATUS_UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
-const RETRYABLE_AUTH_STATUS_FORBIDDEN: StatusCode = StatusCode::FORBIDDEN;
-const RETRYABLE_STATUS_TIMEOUT: StatusCode = StatusCode::REQUEST_TIMEOUT;
-const RETRYABLE_STATUS_RATE_LIMIT: StatusCode = StatusCode::TOO_MANY_REQUESTS;
-
 enum AttemptCandidateOutcome {
     Continue,
     Response(Response),
@@ -181,18 +177,25 @@ async fn handle_upstream_failure(
     response: UpstreamResponse,
     last_failure: &mut Option<transport::UpstreamFailure>,
 ) -> Result<AttemptOnceOutcome, LlmProxyError> {
-    let retryable = status_retryable(response.status());
-    let failure = transport::record_upstream_failure(state, &prepared.request_id, response, candidate, started, retry_index).await?;
-    if retryable {
-        let cooldown_triggered = failure.cooldown_triggered();
-        *last_failure = Some(failure);
-        return Ok(if cooldown_triggered {
-            AttemptOnceOutcome::NextCandidate
-        } else {
-            AttemptOnceOutcome::ContinueCandidate
-        });
+    let decision = classify_status(response.status());
+    let record_cooldown = decision.records_provider_cooldown();
+    let failure = transport::record_upstream_failure(state, &prepared.request_id, response, candidate, started, retry_index, record_cooldown).await?;
+    match decision {
+        FailureDecision::ReturnResponse => transport::failure_response(failure).map(AttemptOnceOutcome::Response),
+        FailureDecision::NextCandidate => {
+            *last_failure = Some(failure);
+            Ok(AttemptOnceOutcome::NextCandidate)
+        }
+        FailureDecision::RetryOrNextCandidate => {
+            let cooldown_triggered = failure.cooldown_triggered();
+            *last_failure = Some(failure);
+            Ok(if cooldown_triggered {
+                AttemptOnceOutcome::NextCandidate
+            } else {
+                AttemptOnceOutcome::ContinueCandidate
+            })
+        }
     }
-    transport::failure_response(failure).map(AttemptOnceOutcome::Response)
 }
 
 fn option_response_outcome(response: Option<Response>) -> AttemptOnceOutcome {
@@ -279,14 +282,6 @@ fn apply_timeout(builder: RequestBuilder, candidate: &ProxyCandidate) -> Request
         Some(timeout) => builder.timeout(timeout),
         None => builder,
     }
-}
-
-fn status_retryable(status: StatusCode) -> bool {
-    status.is_server_error()
-        || matches!(
-            status,
-            RETRYABLE_AUTH_STATUS_UNAUTHORIZED | RETRYABLE_AUTH_STATUS_FORBIDDEN | RETRYABLE_STATUS_TIMEOUT | RETRYABLE_STATUS_RATE_LIMIT
-        )
 }
 
 async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {

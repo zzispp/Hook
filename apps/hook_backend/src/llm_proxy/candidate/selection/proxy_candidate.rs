@@ -76,6 +76,7 @@ fn candidate_trace(
         token_prefix_snapshot: Some(token.token_prefix.clone()),
         group_code: Some(token.group_code.clone()),
         global_model_id: parts.model.global_model_id.clone(),
+        provider_model_id: parts.model.id.clone(),
         model_name_snapshot: global_model.name.clone(),
         provider_id: parts.provider.id.clone(),
         provider_name_snapshot: parts.provider.name.clone(),

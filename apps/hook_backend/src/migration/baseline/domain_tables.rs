@@ -9,6 +9,8 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         provider_endpoints_table(),
         provider_api_keys_table(),
         provider_models_table(),
+        billing_rules_table(),
+        dimension_collectors_table(),
         provider_cooldowns_table(),
         billing_group_providers_table(),
         setting_tables::system_settings_table(),
@@ -23,6 +25,55 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
     .into_iter()
     .chain(performance_monitoring_tables::performance_monitoring_tables())
     .collect()
+}
+
+fn billing_rules_table() -> TableCreateStatement {
+    let mut global_model_fk = billing_rule_global_model_fk();
+    let mut model_fk = billing_rule_model_fk();
+    Table::create()
+        .table(BillingRules::Table)
+        .if_not_exists()
+        .col(string_len(BillingRules::Id, 36).primary_key())
+        .col(string_len_null(BillingRules::GlobalModelId, 36))
+        .col(string_len_null(BillingRules::ModelId, 36))
+        .col(string_len(BillingRules::Name, 100))
+        .col(string_len(BillingRules::TaskType, 20).default("chat"))
+        .col(text(BillingRules::Expression))
+        .col(text(BillingRules::Variables).default("{}"))
+        .col(text(BillingRules::DimensionMappings).default("{}"))
+        .col(boolean(BillingRules::IsEnabled).default(true))
+        .col(timestamp_tz(BillingRules::CreatedAt))
+        .col(timestamp_tz(BillingRules::UpdatedAt))
+        .check(Expr::cust("(global_model_id IS NOT NULL AND model_id IS NULL) OR (global_model_id IS NULL AND model_id IS NOT NULL)").into_condition())
+        .foreign_key(&mut global_model_fk)
+        .foreign_key(&mut model_fk)
+        .to_owned()
+}
+
+fn dimension_collectors_table() -> TableCreateStatement {
+    Table::create()
+        .table(DimensionCollectors::Table)
+        .if_not_exists()
+        .col(string_len(DimensionCollectors::Id, 36).primary_key())
+        .col(string_len(DimensionCollectors::ApiFormat, 50))
+        .col(string_len(DimensionCollectors::TaskType, 20))
+        .col(string_len(DimensionCollectors::DimensionName, 100))
+        .col(string_len(DimensionCollectors::SourceType, 20))
+        .col(string_len_null(DimensionCollectors::SourcePath, 200))
+        .col(string_len(DimensionCollectors::ValueType, 20).default("float"))
+        .col(text_null(DimensionCollectors::TransformExpression))
+        .col(string_len_null(DimensionCollectors::DefaultValue, 100))
+        .col(integer(DimensionCollectors::Priority).default(0))
+        .col(boolean(DimensionCollectors::IsEnabled).default(true))
+        .col(timestamp_tz(DimensionCollectors::CreatedAt))
+        .col(timestamp_tz(DimensionCollectors::UpdatedAt))
+        .check(
+            Expr::cust(
+                "(source_type = 'computed' AND source_path IS NULL AND transform_expression IS NOT NULL) OR (source_type != 'computed' AND source_path IS NOT NULL)",
+            )
+            .into_condition(),
+        )
+        .to_owned()
 }
 
 fn billing_groups_table() -> TableCreateStatement {
@@ -279,6 +330,26 @@ fn provider_model_global_model_fk() -> ForeignKeyCreateStatement {
         .name("fk_provider_models_global_model")
         .from(ProviderModels::Table, ProviderModels::GlobalModelId)
         .to(GlobalModels::Table, GlobalModels::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn billing_rule_global_model_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_billing_rules_global_model")
+        .from(BillingRules::Table, BillingRules::GlobalModelId)
+        .to(GlobalModels::Table, GlobalModels::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn billing_rule_model_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_billing_rules_model")
+        .from(BillingRules::Table, BillingRules::ModelId)
+        .to(ProviderModels::Table, ProviderModels::Id)
         .on_delete(ForeignKeyAction::Cascade);
     foreign_key
 }

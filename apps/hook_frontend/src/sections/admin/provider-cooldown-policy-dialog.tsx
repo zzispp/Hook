@@ -35,6 +35,8 @@ type Props = {
 };
 
 const EMPTY_POLICY: ProviderCooldownPolicy = { window_seconds: 0, rules: [] };
+const MIN_STATUS_CODE = 100;
+const MAX_STATUS_CODE = 599;
 
 export function ProviderCooldownPolicyDialog({ open, policy, onClose, onSaved }: Props) {
   const state = usePolicyDialogState({ open, policy, onClose, onSaved });
@@ -45,13 +47,16 @@ export function ProviderCooldownPolicyDialog({ open, policy, onClose, onSaved }:
       <DialogTitle>{t('providers.cooldownPolicy')}</DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2.5}>
-          <TextField
-            fullWidth
-            type="number"
-            label={t('providers.cooldownWindowSeconds')}
-            value={state.windowSeconds}
-            onChange={(event) => state.setWindowSeconds(event.target.value)}
-          />
+          {state.rules.length > 0 && (
+            <TextField
+              fullWidth
+              type="number"
+              label={t('providers.cooldownWindowSeconds')}
+              value={state.windowSeconds}
+              onChange={(event) => state.setWindowSeconds(event.target.value)}
+              sx={{ mt: 1 }}
+            />
+          )}
           <Stack spacing={1.5}>
             {state.rules.map((rule, index) => (
               <RuleRow
@@ -169,7 +174,7 @@ function usePolicyDialogState({ open, policy, onClose, onSaved }: Props) {
   const save = useCallback(async () => {
     try {
       setSubmitting(true);
-      await updateSystemSettings({ provider_cooldown_policy: policyPayload(windowSeconds, rules) });
+      await updateSystemSettings({ provider_cooldown_policy: policyPayload(windowSeconds, rules, t) });
       toast.success(t('messages.providerCooldownPolicyUpdated'));
       onSaved();
       onClose();
@@ -183,18 +188,48 @@ function usePolicyDialogState({ open, policy, onClose, onSaved }: Props) {
   return { addRule, changeRule, deleteRule, rules, save, setWindowSeconds, submitting, windowSeconds };
 }
 
-function policyPayload(windowSeconds: string, rules: RuleForm[]): ProviderCooldownPolicy {
+function policyPayload(
+  windowSeconds: string,
+  rules: RuleForm[],
+  t: (key: string) => string
+): ProviderCooldownPolicy {
+  if (rules.length === 0) return EMPTY_POLICY;
+  const window = positiveInteger(windowSeconds);
+  if (window === null) {
+    throw new Error(t('messages.providerCooldownWindowRequired'));
+  }
+  const statusCodes = new Set<number>();
   return {
-    window_seconds: numberValue(windowSeconds),
-    rules: rules.map(rulePayload),
+    window_seconds: window,
+    rules: rules.map((rule) => rulePayload(rule, statusCodes, t)),
   };
 }
 
-function rulePayload(rule: RuleForm): ProviderCooldownRule {
+function rulePayload(
+  rule: RuleForm,
+  statusCodes: Set<number>,
+  t: (key: string) => string
+): ProviderCooldownRule {
+  if (ruleIncomplete(rule)) {
+    throw new Error(t('messages.providerCooldownRuleRequired'));
+  }
+  const statusCode = integerValue(rule.status_code);
+  const failureCount = positiveInteger(rule.failure_count);
+  const cooldownSeconds = positiveInteger(rule.cooldown_seconds);
+  if (statusCode === null || statusCode < MIN_STATUS_CODE || statusCode > MAX_STATUS_CODE) {
+    throw new Error(t('messages.providerCooldownStatusCodeInvalid'));
+  }
+  if (failureCount === null || cooldownSeconds === null) {
+    throw new Error(t('messages.providerCooldownPositiveValuesRequired'));
+  }
+  if (statusCodes.has(statusCode)) {
+    throw new Error(t('messages.providerCooldownDuplicateStatusCode'));
+  }
+  statusCodes.add(statusCode);
   return {
-    status_code: numberValue(rule.status_code),
-    failure_count: numberValue(rule.failure_count),
-    cooldown_seconds: numberValue(rule.cooldown_seconds),
+    status_code: statusCode,
+    failure_count: failureCount,
+    cooldown_seconds: cooldownSeconds,
   };
 }
 
@@ -206,6 +241,18 @@ function ruleForm(rule: ProviderCooldownRule): RuleForm {
   };
 }
 
-function numberValue(value: string) {
-  return Number(value.trim() || 0);
+function ruleIncomplete(rule: RuleForm) {
+  return !rule.status_code.trim() || !rule.failure_count.trim() || !rule.cooldown_seconds.trim();
+}
+
+function positiveInteger(value: string) {
+  const number = integerValue(value);
+  return number !== null && number > 0 ? number : null;
+}
+
+function integerValue(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const number = Number(trimmed);
+  return Number.isInteger(number) ? number : null;
 }

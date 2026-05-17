@@ -22,7 +22,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Iconify } from 'src/components/iconify';
 
 import { ProviderEndpointRuleList } from './provider-endpoint-rule-list';
-import { formatApiFormat, defaultEndpointPath } from './provider-management-utils';
+import { formatApiFormat, normalizeBaseUrl, defaultEndpointPath } from './provider-management-utils';
 import {
   validateBodyRules,
   bodyRulesToEditable,
@@ -102,7 +102,7 @@ export function endpointRuleCount(endpoint: ProviderEndpoint) {
 }
 
 export function validateEndpointEditState(state: EndpointEditState) {
-  if (!state.baseUrl.trim()) return 'Base URL 不能为空';
+  if (!normalizeBaseUrl(state.baseUrl)) return 'Base URL 不能为空';
   return validateHeaderRules(state.headerRules) || validateBodyRules(state.bodyRules);
 }
 
@@ -170,12 +170,13 @@ function endpointChanged(endpoint: ProviderEndpoint, state: EndpointEditState) {
 }
 
 function urlChanged(endpoint: ProviderEndpoint, state: EndpointEditState) {
-  return state.baseUrl !== endpoint.base_url || state.customPath !== (endpoint.custom_path ?? '');
+  return normalizeBaseUrl(state.baseUrl) !== endpoint.base_url || state.customPath !== (endpoint.custom_path ?? '');
 }
 
 function buildPatch(endpoint: ProviderEndpoint, state: EndpointEditState): ProviderEndpointUpdate {
   const patch: ProviderEndpointUpdate = {};
-  if (state.baseUrl !== endpoint.base_url) patch.base_url = state.baseUrl;
+  const baseUrl = normalizeBaseUrl(state.baseUrl);
+  if (baseUrl !== endpoint.base_url) patch.base_url = baseUrl;
   if (state.customPath !== (endpoint.custom_path ?? '')) patch.custom_path = state.customPath.trim() || null;
   if (headerRulesChanged(endpoint.header_rules, state.headerRules)) patch.header_rules = editableHeaderRulesToApi(state.headerRules);
   if (bodyRulesChanged(endpoint.body_rules, state.bodyRules)) patch.body_rules = editableBodyRulesToApi(state.bodyRules);

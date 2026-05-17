@@ -6,6 +6,7 @@ pub const MAX_SERIES_POINTS: usize = 720;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PerformanceMonitoringRange {
+    Realtime,
     Today,
     #[serde(rename = "7d")]
     SevenDays,

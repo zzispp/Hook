@@ -6,6 +6,37 @@ use storage::{
 use types::performance_monitoring::{CoreRequestMetrics, PerformanceMonitoringRange, PerformanceSnapshotMetrics, SnapshotDataStatus, SnapshotGranularity};
 
 #[tokio::test]
+async fn realtime_range_queries_minute_snapshot_buckets() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([Vec::<snapshots::Model>::new()])
+        .into_connection();
+    let store = PerformanceMonitoringStore::new(Database::new(connection.clone()));
+
+    let response = store.overview(PerformanceMonitoringRange::Realtime, ts(600)).await.unwrap();
+
+    assert_eq!(response.bucket_granularity, SnapshotGranularity::Minute);
+    assert_eq!(response.status, SnapshotDataStatus::EmptySnapshot);
+    assert_eq!(response.effective_range.started_at, "1970-01-01T00:05:00Z");
+    let logs = connection.into_transaction_log();
+    let sql = &logs[0].statements()[0].sql;
+    assert!(sql.contains("\"bucket_granularity\" ="), "{sql}");
+}
+
+#[tokio::test]
+async fn today_range_queries_hour_snapshot_buckets() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([Vec::<snapshots::Model>::new()])
+        .into_connection();
+    let store = PerformanceMonitoringStore::new(Database::new(connection.clone()));
+
+    let response = store.overview(PerformanceMonitoringRange::Today, ts(86_400)).await.unwrap();
+
+    assert_eq!(response.bucket_granularity, SnapshotGranularity::Hour);
+    assert_eq!(response.status, SnapshotDataStatus::EmptySnapshot);
+    assert_eq!(response.effective_range.started_at, "1970-01-01T00:00:00Z");
+}
+
+#[tokio::test]
 async fn range_all_queries_only_day_snapshot_buckets() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([vec![snapshot("day-1", SnapshotGranularity::Day, 0)]])

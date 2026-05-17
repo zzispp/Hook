@@ -16,50 +16,18 @@ export const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS = 30;
 
 export const API_FORMAT_OPTIONS = [
   'openai_chat',
-  'openai_completion',
   'openai_cli',
   'openai_compact',
-  'openai_image',
-  'openai_image_edit',
-  'openai_embedding',
-  'openai_audio_transcription',
-  'openai_audio_translation',
-  'openai_audio_speech',
-  'openai_moderation',
-  'openai_realtime',
-  'gemini_chat',
-  'gemini_cli',
-  'gemini_embedding',
-  'gemini_batch_embedding',
-  'gemini_video',
   'claude_chat',
-  'claude_messages',
-  'claude_cli',
-  'rerank',
+  'gemini_cli',
 ];
 
 const API_FORMAT_DEFAULT_PATHS: Record<string, string> = {
   openai_chat: '/v1/chat/completions',
-  openai_completion: '/v1/completions',
   openai_cli: '/v1/responses',
   openai_compact: '/v1/responses/compact',
-  openai_image: '/v1/images/generations',
-  openai_image_edit: '/v1/images/edits',
-  openai_embedding: '/v1/embeddings',
-  openai_audio_transcription: '/v1/audio/transcriptions',
-  openai_audio_translation: '/v1/audio/translations',
-  openai_audio_speech: '/v1/audio/speech',
-  openai_moderation: '/v1/moderations',
-  openai_realtime: '/v1/realtime',
-  gemini_chat: '/v1beta/models/{model}:{action}',
   gemini_cli: '/v1beta/models/{model}:{action}',
-  gemini_embedding: '/v1beta/models/{model}:embedContent',
-  gemini_batch_embedding: '/v1beta/models/{model}:batchEmbedContents',
-  gemini_video: '/v1beta/models/{model}:predictLongRunning',
   claude_chat: '/v1/messages',
-  claude_messages: '/v1/messages',
-  claude_cli: '/v1/messages',
-  rerank: '/v1/rerank',
 };
 
 export type ProviderForm = {
@@ -222,6 +190,12 @@ export function defaultEndpointPath(apiFormat: string) {
   return API_FORMAT_DEFAULT_PATHS[apiFormat] ?? '';
 }
 
+export function normalizeBaseUrl(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.endsWith('://')) return trimmed;
+  return trimmed.replace(/\/+$/, '');
+}
+
 export function providerTypeLabel(value: ProviderType, t: AdminT) {
   const labels: Record<ProviderType, string> = {
     custom: t('providers.providerTypeCustom'),
@@ -249,7 +223,9 @@ function trimmedOrNull(value: string) {
 }
 
 function normalizeSelectedApiFormats(values: string[]) {
-  return Array.from(new Set(values.map((value) => value.trim().toLowerCase()).filter(Boolean)));
+  const allowed = new Set(API_FORMAT_OPTIONS);
+  const normalized = values.map((value) => value.trim().toLowerCase());
+  return Array.from(new Set(normalized.filter((value) => allowed.has(value))));
 }
 
 function normalizeSelectedIds(values: string[]) {

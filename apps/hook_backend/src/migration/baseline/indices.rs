@@ -81,6 +81,15 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         provider_models_unique_index(),
+        billing_rules_global_model_unique_index(),
+        billing_rules_model_unique_index(),
+        dimension_collectors_enabled_unique_index(),
+        compound_index(
+            "index_dimension_collectors_by_scope",
+            DimensionCollectors::Table,
+            DimensionCollectors::ApiFormat,
+            DimensionCollectors::TaskType,
+        ),
         index(
             "index_provider_cooldowns_by_until",
             ProviderCooldowns::Table,
@@ -214,6 +223,47 @@ fn provider_models_unique_index() -> IndexCreateStatement {
         .unique()
         .if_not_exists()
         .to_owned()
+}
+
+fn billing_rules_global_model_unique_index() -> IndexCreateStatement {
+    let mut index = Index::create();
+    index
+        .name("uq_billing_rules_global_model_task")
+        .table(BillingRules::Table)
+        .col(BillingRules::GlobalModelId)
+        .col(BillingRules::TaskType)
+        .unique()
+        .if_not_exists()
+        .cond_where(Expr::cust("is_enabled = TRUE AND global_model_id IS NOT NULL"));
+    index.to_owned()
+}
+
+fn billing_rules_model_unique_index() -> IndexCreateStatement {
+    let mut index = Index::create();
+    index
+        .name("uq_billing_rules_model_task")
+        .table(BillingRules::Table)
+        .col(BillingRules::ModelId)
+        .col(BillingRules::TaskType)
+        .unique()
+        .if_not_exists()
+        .cond_where(Expr::cust("is_enabled = TRUE AND model_id IS NOT NULL"));
+    index.to_owned()
+}
+
+fn dimension_collectors_enabled_unique_index() -> IndexCreateStatement {
+    let mut index = Index::create();
+    index
+        .name("uq_dimension_collectors_enabled")
+        .table(DimensionCollectors::Table)
+        .col(DimensionCollectors::ApiFormat)
+        .col(DimensionCollectors::TaskType)
+        .col(DimensionCollectors::DimensionName)
+        .col(DimensionCollectors::Priority)
+        .unique()
+        .if_not_exists()
+        .cond_where(Expr::cust("is_enabled = TRUE"));
+    index.to_owned()
 }
 
 fn billing_group_models_unique_index() -> IndexCreateStatement {

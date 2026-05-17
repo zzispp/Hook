@@ -57,6 +57,7 @@ pub(super) fn candidate_detail(candidate: RequestCandidateRecord) -> StorageResu
         base_cost: candidate.base_cost,
         total_cost: candidate.total_cost,
         billing_multiplier: candidate.billing_multiplier,
+        billing_snapshot: detail_payload(candidate.billing_snapshot)?,
         cost_currency: candidate.cost_currency,
         latency_ms: candidate.latency_ms,
         first_byte_time_ms: candidate.first_byte_time_ms,

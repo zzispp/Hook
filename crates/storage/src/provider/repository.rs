@@ -6,8 +6,9 @@ use types::provider::{Provider, ProviderCooldownListRequest, ProviderCooldownLis
 use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
-    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord, ProviderCooldownRecordInput, ProviderEndpointRecordInput,
-    ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord,
+    ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderModelRecordPatch,
+    ProviderRecordInput, ProviderRecordPatch,
     record::{
         provider_api_keys, provider_endpoints, provider_models,
         providers::{self, ActiveModel as ProviderActiveModel},
@@ -252,6 +253,30 @@ impl ProviderStore {
 
     pub async fn active_provider_cooldowns_for_restore(&self) -> StorageResult<Vec<types::provider::ProviderCooldown>> {
         super::provider_cooldown_query::active_provider_cooldowns_for_restore(self).await
+    }
+
+    pub async fn create_billing_rule(&self, input: BillingRuleRecordInput) -> StorageResult<super::record::BillingRuleRecord> {
+        super::billing_config_query::create_billing_rule(self, input).await
+    }
+
+    pub async fn enabled_billing_rule_for_model(&self, model_id: &str, task_type: &str) -> StorageResult<Option<super::record::BillingRuleRecord>> {
+        super::billing_config_query::enabled_rule_for_model(self, model_id, task_type).await
+    }
+
+    pub async fn enabled_billing_rule_for_global_model(
+        &self,
+        global_model_id: &str,
+        task_type: &str,
+    ) -> StorageResult<Option<super::record::BillingRuleRecord>> {
+        super::billing_config_query::enabled_rule_for_global_model(self, global_model_id, task_type).await
+    }
+
+    pub async fn create_dimension_collector(&self, input: DimensionCollectorRecordInput) -> StorageResult<super::record::DimensionCollectorRecord> {
+        super::billing_config_query::create_dimension_collector(self, input).await
+    }
+
+    pub async fn enabled_dimension_collectors(&self, api_format: &str, task_type: &str) -> StorageResult<Vec<super::record::DimensionCollectorRecord>> {
+        super::billing_config_query::enabled_collectors(self, api_format, task_type).await
     }
 
     pub(crate) fn connection(&self) -> &DatabaseConnection {

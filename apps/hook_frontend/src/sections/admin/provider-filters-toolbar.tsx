@@ -83,7 +83,7 @@ function FilterControls({
         alignItems: 'center',
         gridTemplateColumns: {
           xs: '1fr',
-          lg: 'minmax(220px, 1fr) 132px 148px 180px auto auto auto',
+          lg: 'minmax(220px, 1fr) 132px 148px 180px max-content max-content auto',
         },
       }}
     >
@@ -170,7 +170,7 @@ function SchedulingButton({ label, onClick }: { label: string; onClick: () => vo
   const { t } = useTranslate('admin');
 
   return (
-    <Button color="inherit" variant="outlined" endIcon={<Iconify icon="eva:chevron-down-fill" />} onClick={onClick}>
+    <Button color="inherit" variant="outlined" endIcon={<Iconify icon="eva:chevron-down-fill" />} onClick={onClick} sx={{ whiteSpace: 'nowrap' }}>
       <Box component="span" sx={{ color: 'text.secondary', mr: 0.75 }}>{t('providers.scheduling')}:</Box>
       {label}
     </Button>
@@ -181,7 +181,7 @@ function CooldownPolicyButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslate('admin');
 
   return (
-    <Button color="inherit" variant="outlined" startIcon={<Iconify icon="solar:flag-bold" />} onClick={onClick}>
+    <Button color="inherit" variant="outlined" startIcon={<Iconify icon="solar:flag-bold" />} onClick={onClick} sx={{ whiteSpace: 'nowrap' }}>
       {t('providers.cooldownPolicy')}
     </Button>
   );

@@ -6,6 +6,8 @@ use axum::{
 use serde_json::{Value, json};
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
+use super::client_error;
+
 #[derive(Debug)]
 pub enum LlmProxyError {
     Unauthorized,
@@ -38,7 +40,7 @@ impl IntoResponse for LlmProxyError {
 
 impl Display for LlmProxyError {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.write_str(&self.message())
+        f.write_str(&self.internal_message())
     }
 }
 
@@ -64,8 +66,7 @@ impl LlmProxyError {
             Self::RateLimited(_) => "rate_limit_error",
             Self::InvalidRequest(_) => "invalid_request_error",
             Self::NotFound(_) => "not_found_error",
-            Self::Upstream(_) => "upstream_error",
-            Self::Infrastructure(_) => "infrastructure_error",
+            Self::Upstream(_) | Self::Infrastructure(_) => client_error::SERVER_ERROR_TYPE,
         }
     }
 
@@ -73,18 +74,30 @@ impl LlmProxyError {
         match self {
             Self::Unauthorized => "missing or invalid bearer token".into(),
             Self::CodedForbidden { message, .. } => message.clone(),
+            Self::Forbidden(message) | Self::RateLimited(message) | Self::InvalidRequest(message) | Self::NotFound(message) => message.clone(),
+            Self::Upstream(_) => client_error::MODEL_SERVICE_UNAVAILABLE_MESSAGE.into(),
+            Self::Infrastructure(_) => client_error::SERVICE_UNAVAILABLE_MESSAGE.into(),
+        }
+    }
+
+    fn internal_message(&self) -> &str {
+        match self {
+            Self::Unauthorized => "missing or invalid bearer token",
             Self::Forbidden(message)
+            | Self::CodedForbidden { message, .. }
             | Self::RateLimited(message)
             | Self::InvalidRequest(message)
             | Self::NotFound(message)
             | Self::Upstream(message)
-            | Self::Infrastructure(message) => message.clone(),
+            | Self::Infrastructure(message) => message,
         }
     }
 
     fn error_code(&self, status: StatusCode) -> Value {
         match self {
             Self::CodedForbidden { code, .. } => Value::String((*code).into()),
+            Self::Upstream(_) => Value::String(client_error::MODEL_SERVICE_UNAVAILABLE_CODE.into()),
+            Self::Infrastructure(_) => Value::String(client_error::SERVICE_UNAVAILABLE_CODE.into()),
             _ => Value::Number(status.as_u16().into()),
         }
     }
@@ -127,3 +140,6 @@ impl From<sea_orm::DbErr> for LlmProxyError {
         Self::Infrastructure(value.to_string())
     }
 }
+
+#[cfg(test)]
+mod tests;

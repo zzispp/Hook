@@ -159,6 +159,7 @@ fn summary_record(record: RequestRecordSummaryRecord) -> RequestRecord {
         token_cost: record.token_cost.unwrap_or(Decimal::ZERO),
         base_cost: record.base_cost.unwrap_or(Decimal::ZERO),
         billing_multiplier: record.billing_multiplier.unwrap_or(Decimal::ONE),
+        billing_snapshot: crate::json::decode_optional(record.billing_snapshot).ok().flatten(),
         cost_currency: record.cost_currency.unwrap_or_else(|| DEFAULT_COST_CURRENCY.into()),
         first_byte_time_ms: record.first_byte_time_ms,
         total_latency_ms: record.total_latency_ms,

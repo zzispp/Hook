@@ -4,3 +4,8 @@ id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,n
 3,Filter candidate keys by endpoint format,DONE,Route options only include keys supporting selected endpoint,cargo test -p backend llm_proxy::candidate -- --nocapture,2026-05-16T17:37:21Z,0,
 4,Update frontend key form and display,DONE,Admin UI can edit supported endpoint formats and key model permissions,pnpm lint:frontend,2026-05-16T17:37:21Z,0,
 5,Run final validation,DONE,Rust and frontend validation pass,cargo fmt --all --check; cargo check -p storage -p provider -p backend; cargo test -p backend llm_proxy::candidate -- --nocapture; cargo test -p provider -- --nocapture; cargo test -p storage -- --nocapture; pnpm lint:frontend,2026-05-16T17:37:21Z,0,
+6,Align key model options to provider bindings,DONE,Key permission selector only offers provider-bound global model ids,pnpm lint:frontend,2026-05-17T16:14:03Z,0,
+7,Limit admin API format choices,DONE,Admin endpoint/key/filter format options only include requested five formats,rg API_FORMAT_OPTIONS apps/hook_frontend/src/sections/admin/provider-management-utils.ts,2026-05-17T16:14:03Z,0,
+8,Normalize provider endpoint base_url,DONE,Endpoint create/update trims whitespace and trailing slash before persistence,cargo test -p provider validation -- --nocapture,2026-05-17T16:14:03Z,0,
+9,Reject key permissions outside provider bindings,DONE,Provider service rejects allowed_model_ids not bound to provider,cargo test -p provider key_permissions -- --nocapture,2026-05-17T16:14:03Z,0,
+10,Run final validation,DONE,Frontend and provider/backend Rust checks pass,pnpm lint:frontend; pnpm build:frontend; cargo test/check,2026-05-17T16:14:03Z,0,

@@ -34,3 +34,37 @@ pub(in crate::migration::baseline) enum BillingGroupProviders {
     CreatedAt,
     UpdatedAt,
 }
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum BillingRules {
+    Table,
+    Id,
+    GlobalModelId,
+    ModelId,
+    Name,
+    TaskType,
+    Expression,
+    Variables,
+    DimensionMappings,
+    IsEnabled,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum DimensionCollectors {
+    Table,
+    Id,
+    ApiFormat,
+    TaskType,
+    DimensionName,
+    SourceType,
+    SourcePath,
+    ValueType,
+    TransformExpression,
+    DefaultValue,
+    Priority,
+    IsEnabled,
+    CreatedAt,
+    UpdatedAt,
+}

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect backend and frontend cooldown policy semantics,DONE,Backend validator and dialog implementation inspected,rg -n "provider_cooldown_policy|cooldownWindowSeconds" apps crates,2026-05-17T00:00:00+08:00,0,Backend allows empty rules as disabled; rules require positive window and values.
+2,Implement dialog display and save validation,DONE,No-rule state hides window; added rules require complete valid fields,pnpm lint:frontend,2026-05-17T00:00:00+08:00,0,Rules trigger window display; save validates required fields positive integers status range and duplicates.
+3,Update admin i18n validation keys,DONE,Validation copy is seeded through backend admin resources,pnpm lint:frontend,2026-05-17T00:00:00+08:00,0,Added CN/EN backend admin seed keys for cooldown validation messages.
+4,Run validation,DONE,Frontend lint and build pass,pnpm build:frontend,2026-05-17T00:00:00+08:00,0,pnpm lint:frontend pnpm build:frontend cargo check --workspace passed.
+5,Record result,DONE,PROGRESS.md includes implementation and validation,test -f .codex-tasks/20260517-cooldown-policy-form-validation/PROGRESS.md,2026-05-17T00:00:00+08:00,0,Progress log updated.

@@ -1,3 +1,5 @@
+mod finalize;
+
 use std::collections::VecDeque;
 
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry, StreamChunkConversion, StreamConversionState};
@@ -6,7 +8,7 @@ use serde_json::Value;
 use super::{
     StreamAttemptContext, UpstreamStream,
     event::{render_stream_error, render_stream_event, stream_error},
-    record::{cancelled_record, failure_record, record_stream_attempt, response_read_error_type, streaming_record, success_record},
+    record::{cancelled_record, record_stream_attempt, response_read_error_type, streaming_record},
     usage_parser::StreamUsageParser,
 };
 use crate::llm_proxy::{
@@ -32,6 +34,7 @@ pub(super) struct StreamRelay {
     first_byte_time_ms: Option<i64>,
     yielded_any: bool,
     finished: bool,
+    protocol_completed: bool,
     recorded_terminal: bool,
     openai_done_sent: bool,
 }
@@ -60,6 +63,7 @@ impl StreamRelay {
             first_byte_time_ms: None,
             yielded_any: false,
             finished: false,
+            protocol_completed: false,
             recorded_terminal: false,
             openai_done_sent: false,
         }
@@ -77,8 +81,9 @@ impl StreamRelay {
     }
 
     pub(super) async fn record_first_byte_timeout(&mut self) -> Result<(), LlmProxyError> {
+        self.record_failure("upstream_timeout", "stream first byte timeout").await?;
         self.finished = true;
-        self.record_failure("upstream_timeout", "stream first byte timeout").await
+        Ok(())
     }
 
     async fn next_item(&mut self) -> Option<DownstreamItem> {
@@ -106,10 +111,13 @@ impl StreamRelay {
     }
 
     async fn consume_bytes(&mut self, bytes: req::Bytes, fail_before_output: bool) -> Result<(), LlmProxyError> {
-        let usage = self.usage_parser.consume(&bytes)?;
-        self.merge_usage(usage);
+        let parsed = self.usage_parser.consume(&bytes)?;
+        self.merge_usage(parsed.usage);
         if !self.needs_conversion && !self.rewrite_model {
             self.pending.push_back(bytes);
+            if parsed.completed {
+                self.handle_protocol_completion().await?;
+            }
             return Ok(());
         }
         self.buffer.extend_from_slice(&bytes);
@@ -117,6 +125,9 @@ impl StreamRelay {
             if let Err(error) = self.consume_converted_line(&line) {
                 return self.handle_conversion_error(error, fail_before_output).await;
             }
+        }
+        if parsed.completed {
+            self.handle_protocol_completion().await?;
         }
         Ok(())
     }
@@ -188,6 +199,11 @@ impl StreamRelay {
         }
         self.first_byte_time_ms = Some(first_byte);
         self.yielded_any = true;
+        if self.protocol_completed && !self.finished {
+            if let Err(error) = self.finish_after_protocol_completion().await {
+                return Err(stream_error(error.to_string()));
+            }
+        }
         Ok(bytes)
     }
 
@@ -196,67 +212,6 @@ impl StreamRelay {
             Ok(()) => self.pending.pop_front().map(Ok),
             Err(error) => Some(Err(stream_error(error.to_string()))),
         }
-    }
-
-    async fn finish_success(&mut self) -> Result<(), LlmProxyError> {
-        if self.finished {
-            return Ok(());
-        }
-        if self.needs_conversion || self.rewrite_model {
-            self.flush_remaining_buffer().await?;
-            self.flush_conversion_state()?;
-            if matches!(self.source_format, ApiFormat::OpenAiChat) && !self.openai_done_sent {
-                self.pending.push_back(req::Bytes::from_static(b"data: [DONE]\n\n"));
-                self.openai_done_sent = true;
-            }
-        }
-        self.finished = true;
-        let usage = self.usage_parser.finish()?;
-        self.merge_usage(usage);
-        self.record_success().await
-    }
-
-    async fn flush_remaining_buffer(&mut self) -> Result<(), LlmProxyError> {
-        if self.buffer.is_empty() {
-            return Ok(());
-        }
-        let line = String::from_utf8(std::mem::take(&mut self.buffer)).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
-        if let Err(error) = self.consume_converted_line(&line) {
-            let message = error.to_string();
-            self.record_failure("response_conversion_error", &message).await?;
-            return Err(error);
-        }
-        Ok(())
-    }
-
-    fn flush_conversion_state(&mut self) -> Result<(), LlmProxyError> {
-        if !self.needs_conversion {
-            return Ok(());
-        }
-        let converted = FormatConversionRegistry::default()
-            .flush_stream(self.target_format, self.source_format, &mut self.conversion)
-            .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
-        for mut event in converted {
-            rewrite_response_model_value(&mut event, &self.context.candidate.requested_model_name);
-            self.pending.push_back(render_stream_event(&event, self.source_format));
-        }
-        Ok(())
-    }
-
-    async fn record_success(&mut self) -> Result<(), LlmProxyError> {
-        if self.recorded_terminal {
-            return Ok(());
-        }
-        self.recorded_terminal = true;
-        record_stream_attempt(success_record(&self.context, self.usage, self.first_byte_time_ms)).await
-    }
-
-    async fn record_failure(&mut self, error_type: &'static str, error_message: &str) -> Result<(), LlmProxyError> {
-        if self.recorded_terminal {
-            return Ok(());
-        }
-        self.recorded_terminal = true;
-        record_stream_attempt(failure_record(&self.context, self.first_byte_time_ms, error_type, error_message)).await
     }
 
     async fn record_read_error(&mut self, error: &req::ClientError) -> Result<(), LlmProxyError> {

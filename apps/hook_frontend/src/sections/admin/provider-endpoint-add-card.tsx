@@ -18,7 +18,12 @@ import { useTranslate } from 'src/locales/use-locales';
 import { ProviderEndpointRuleList } from './provider-endpoint-rule-list';
 import { ProviderEndpointSearchSelect } from './provider-endpoint-select';
 import { editableBodyRulesToApi, editableHeaderRulesToApi } from './provider-endpoint-rule-types';
-import { formatApiFormat, API_FORMAT_OPTIONS, defaultEndpointPath } from './provider-management-utils';
+import {
+  formatApiFormat,
+  normalizeBaseUrl,
+  API_FORMAT_OPTIONS,
+  defaultEndpointPath,
+} from './provider-management-utils';
 
 export type AddEndpointForm = EndpointEditState & {
   apiFormat: string;
@@ -68,7 +73,7 @@ export function ProviderEndpointAddCard({
           size="small"
           variant="outlined"
           loading={adding}
-          disabled={!form.apiFormat || !form.baseUrl.trim()}
+          disabled={!form.apiFormat || !normalizeBaseUrl(form.baseUrl)}
           onClick={onAdd}
         >
           {t('common.add')}
@@ -121,7 +126,7 @@ export function emptyAddEndpointForm(baseUrl = ''): AddEndpointForm {
 export function addEndpointPayload(form: AddEndpointForm): ProviderEndpointCreate {
   return {
     api_format: form.apiFormat,
-    base_url: form.baseUrl,
+    base_url: normalizeBaseUrl(form.baseUrl),
     custom_path: form.customPath.trim() || null,
     header_rules: editableHeaderRulesToApi(form.headerRules),
     body_rules: editableBodyRulesToApi(form.bodyRules),

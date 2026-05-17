@@ -1,13 +1,15 @@
+mod billing_runtime;
 mod event;
 mod record_billing;
 mod records;
 #[cfg(test)]
 mod tests;
 
-use provider::application::billing::{RequestBillingAmount, RequestBillingInput, calculate_request_billing};
 use storage::{StorageError, api_token::ApiTokenUsageRecord, model::GlobalModelUsageRecord, provider::ProviderStore};
 use time::OffsetDateTime;
 
+pub(crate) use self::billing_runtime::{BillingAttempt, request_billing_status, total_tokens};
+use self::billing_runtime::{attempt_billing, model_usage_record, token_usage_record, wallet_settlement_input};
 use self::event::AuditEvent;
 pub use self::event::{AttemptRecordInput, TokenUsage};
 use super::{
@@ -60,25 +62,24 @@ async fn persist_scheduled_candidates(state: &LlmProxyState, selection: &Candida
 }
 
 async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
-    let model_usage_record = model_usage_record(&input);
-    let usage_record = token_usage_record(request_id, &input, OffsetDateTime::now_utc())?;
-    let settlement = wallet_settlement_input(request_id, &input)?;
-    let policy = request_record_policy(state).await?;
     let store = ProviderStore::new(state.database.clone());
-    match store.update_request_candidate(records::attempt_patch(request_id, &input, &policy)?).await {
+    let billing = attempt_billing(&store, request_id, &input).await?;
+    let policy = request_record_policy(state).await?;
+    match store
+        .update_request_candidate(records::attempt_patch(request_id, &input, billing.as_ref(), &policy)?)
+        .await
+    {
         Ok(_) => {}
-        Err(StorageError::NotFound) => create_missing_attempt(&store, request_id, &input, &policy).await?,
+        Err(StorageError::NotFound) => create_missing_attempt(&store, request_id, &input, billing.as_ref(), &policy).await?,
         Err(error) => return Err(error.into()),
     }
-    store.update_request_record(records::request_record_patch(request_id, &input, &policy)?).await?;
+    store
+        .update_request_record(records::request_record_patch(request_id, &input, billing.as_ref(), &policy)?)
+        .await?;
+    let model_usage_record = model_usage_record(&input, billing.as_ref());
+    let usage_record = token_usage_record(request_id, &input, billing.as_ref(), OffsetDateTime::now_utc())?;
+    let settlement = wallet_settlement_input(request_id, &input, billing.as_ref())?;
     record_success_usage(state, usage_record, settlement, model_usage_record).await
-}
-
-fn request_billing_status(input: &AttemptRecordInput<'_>) -> &'static str {
-    match input.status {
-        "success" if input.finished && input.usage.is_none() => "missing_usage",
-        status => billing_status(status),
-    }
 }
 
 async fn persist_skipped_candidates(state: &LlmProxyState, request_id: &str, skip_reason: &str) -> Result<(), LlmProxyError> {
@@ -92,9 +93,12 @@ async fn create_missing_attempt(
     store: &ProviderStore,
     request_id: &str,
     input: &AttemptRecordInput<'_>,
+    billing: Option<&BillingAttempt>,
     policy: &RequestRecordPolicy,
 ) -> Result<(), LlmProxyError> {
-    store.create_request_candidate(records::attempt_input(request_id, input, policy)?).await?;
+    store
+        .create_request_candidate(records::attempt_input(request_id, input, billing, policy)?)
+        .await?;
     Ok(())
 }
 
@@ -123,81 +127,4 @@ async fn record_success_usage(
 async fn request_record_policy(state: &LlmProxyState) -> Result<RequestRecordPolicy, LlmProxyError> {
     let snapshot = state.scheduling_snapshot().await?;
     RequestRecordPolicy::from_snapshot(&snapshot).map_err(LlmProxyError::Infrastructure)
-}
-
-fn attempt_billing(input: &AttemptRecordInput<'_>) -> Option<RequestBillingAmount> {
-    if input.status != "success" {
-        return None;
-    }
-    let usage = input.usage?;
-    Some(calculate_request_billing(RequestBillingInput {
-        prompt_tokens: usage.prompt_tokens.unwrap_or(0),
-        completion_tokens: usage.completion_tokens.unwrap_or(0),
-        cache_creation_input_tokens: usage.cache_creation_input_tokens.unwrap_or(0),
-        cache_read_input_tokens: usage.cache_read_input_tokens.unwrap_or(0),
-        price_per_request: input.candidate.price_per_request,
-        tiered_pricing: input.candidate.tiered_pricing.clone(),
-        billing_multiplier: input.candidate.billing_multiplier,
-    }))
-}
-
-fn token_usage_record(request_id: &str, input: &AttemptRecordInput<'_>, used_at: OffsetDateTime) -> Result<Option<ApiTokenUsageRecord>, LlmProxyError> {
-    if !should_record_successful_usage(input) {
-        return Ok(None);
-    }
-    let Some(token_id) = input.candidate.trace.token_id.clone() else {
-        return Ok(None);
-    };
-    let cost = attempt_billing(input)
-        .map(|amount| amount.total_cost)
-        .ok_or_else(|| LlmProxyError::Infrastructure(format!("successful token request missing billing usage: {request_id}/{token_id}")))?;
-    Ok(Some(ApiTokenUsageRecord {
-        cost,
-        token_id,
-        request_count: 1,
-        used_at,
-    }))
-}
-
-fn model_usage_record(input: &AttemptRecordInput<'_>) -> Option<GlobalModelUsageRecord> {
-    if !should_record_successful_usage(input) {
-        return None;
-    }
-    Some(GlobalModelUsageRecord {
-        count: 1,
-        model_id: input.candidate.trace.global_model_id.clone(),
-    })
-}
-
-fn wallet_settlement_input<'a>(request_id: &'a str, input: &'a AttemptRecordInput<'a>) -> Result<Option<WalletSettlementInput<'a>>, LlmProxyError> {
-    if !should_record_successful_usage(input) {
-        return Ok(None);
-    }
-    let usage = input
-        .usage
-        .ok_or_else(|| LlmProxyError::Infrastructure(format!("successful wallet settlement missing usage: {request_id}")))?;
-    let amount =
-        attempt_billing(input).ok_or_else(|| LlmProxyError::Infrastructure(format!("successful wallet settlement missing billing amount: {request_id}")))?;
-    Ok(Some(WalletSettlementInput {
-        request_id,
-        candidate: input.candidate,
-        usage,
-        amount,
-    }))
-}
-
-fn should_record_successful_usage(input: &AttemptRecordInput<'_>) -> bool {
-    input.status == "success" && input.finished && input.usage.is_some()
-}
-
-fn billing_status(status: &str) -> &'static str {
-    match status {
-        "success" => "settled",
-        "failed" | "cancelled" => "void",
-        _ => "pending",
-    }
-}
-
-fn total_tokens(usage: Option<TokenUsage>) -> Option<i64> {
-    usage.and_then(|item| item.total_tokens.or_else(|| Some(item.prompt_tokens? + item.completion_tokens?)))
 }

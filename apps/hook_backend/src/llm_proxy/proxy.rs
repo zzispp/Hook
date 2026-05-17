@@ -2,6 +2,7 @@ mod attempt_log;
 mod body_rules;
 pub(in crate::llm_proxy) mod capture;
 mod executor;
+mod failure_classification;
 mod header_condition;
 mod header_rules;
 mod request;

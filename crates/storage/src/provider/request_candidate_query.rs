@@ -64,6 +64,7 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         output_price_per_million: Set(None),
         cache_creation_price_per_million: Set(None),
         cache_read_price_per_million: Set(None),
+        billing_snapshot: Set(json::encode_optional(&input.billing_snapshot)?),
         latency_ms: Set(input.latency_ms),
         first_byte_time_ms: Set(input.first_byte_time_ms),
         error_type: Set(input.error_type),
@@ -112,6 +113,7 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     record.usage_source = Set(input.usage_source);
     record.usage_semantic = Set(input.usage_semantic);
     apply_billing_values(&mut record, input.billing);
+    apply_json_patch(&mut record.billing_snapshot, input.billing_snapshot)?;
     record.latency_ms = Set(input.latency_ms);
     record.first_byte_time_ms = Set(input.first_byte_time_ms);
     record.error_type = Set(input.error_type);

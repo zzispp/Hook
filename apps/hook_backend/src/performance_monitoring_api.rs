@@ -16,6 +16,8 @@ use types::{
 
 use crate::performance_monitoring_os::PerformanceOsCollector;
 
+const REALTIME_WINDOW_MINUTES: i64 = 5;
+
 #[derive(Clone)]
 pub struct PerformanceMonitoringApiState {
     database: Database,
@@ -52,20 +54,24 @@ async fn overview(
 }
 
 async fn realtime(State(state): State<PerformanceMonitoringApiState>) -> ApiResult<ApiJson<PerformanceMonitoringRealtimeResponse>> {
-    let snapshot = PerformanceMonitoringStore::new(state.database).latest_snapshot().await?;
+    let store = PerformanceMonitoringStore::new(state.database);
     let system = state.os_collector.clone().snapshot().await.map_err(PerformanceMonitoringApiError::from)?;
-    let snapshot = snapshot.map(|mut point| {
-        point.metrics.network = system.network.clone();
-        point.metrics.host = system.host.clone();
-        point
-    });
+    let snapshot = store.aggregate_point(realtime_window(time::OffsetDateTime::now_utc()), system.clone()).await?;
     Ok(ok(PerformanceMonitoringRealtimeResponse {
-        snapshot,
+        snapshot: Some(snapshot),
         host: HostRealtimeMetrics {
             collected_at: format_timestamp(time::OffsetDateTime::now_utc()),
             metrics: system.host,
         },
     }))
+}
+
+fn realtime_window(now: time::OffsetDateTime) -> storage::performance_monitoring::SnapshotAggregationWindow {
+    storage::performance_monitoring::SnapshotAggregationWindow {
+        granularity: types::performance_monitoring::SnapshotGranularity::Minute,
+        started_at: now - time::Duration::minutes(REALTIME_WINDOW_MINUTES),
+        ended_at: now,
+    }
 }
 
 fn ok<T>(data: T) -> ApiJson<T> {

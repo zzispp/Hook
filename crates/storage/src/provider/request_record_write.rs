@@ -93,6 +93,7 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         base_cost: Set(None),
         total_cost: Set(None),
         billing_multiplier: Set(None),
+        billing_snapshot: Set(json::encode_optional(&input.billing_snapshot)?),
         first_byte_time_ms: Set(None),
         total_latency_ms: Set(None),
         candidate_count: Set(input.candidate_count),
@@ -172,6 +173,7 @@ fn apply_request_record_patch(
     apply_string_patch(&mut active.usage_source, input.usage_source);
     apply_string_patch(&mut active.usage_semantic, input.usage_semantic);
     apply_billing_patch(active, input.billing);
+    apply_json_patch(&mut active.billing_snapshot, input.billing_snapshot)?;
     apply_i64_patch(&mut active.first_byte_time_ms, input.first_byte_time_ms);
     apply_i64_patch(&mut active.total_latency_ms, input.total_latency_ms);
     apply_json_patch(&mut active.client_response_headers, input.client_response_headers)?;

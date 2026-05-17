@@ -72,6 +72,7 @@ mod tests {
             token_prefix_snapshot: Some("sk-test".into()),
             group_code: Some("default".into()),
             global_model_id: "model-1".into(),
+            provider_model_id: "provider-model-1".into(),
             model_name_snapshot: "gpt-5.5".into(),
             provider_id: "provider-1".into(),
             provider_name_snapshot: "Provider".into(),

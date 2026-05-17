@@ -61,6 +61,7 @@ pub struct Model {
     pub base_cost: Option<Decimal>,
     pub total_cost: Option<Decimal>,
     pub billing_multiplier: Option<Decimal>,
+    pub billing_snapshot: Option<String>,
     pub latency_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,

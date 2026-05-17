@@ -279,8 +279,13 @@
     "providerModelDisabled": "Model binding disabled",
     "providerModelEnabled": "Model binding enabled",
     "providerModelUpdated": "Model binding updated",
+    "providerCooldownDuplicateStatusCode": "Cooldown rule status codes cannot be duplicated",
     "providerCooldownPolicyUpdated": "Cooldown policy updated",
+    "providerCooldownPositiveValuesRequired": "Failure count and cooldown duration must be integers greater than 0",
     "providerCooldownReleased": "Provider cooldown released",
+    "providerCooldownRuleRequired": "Added cooldown rules must be fully filled",
+    "providerCooldownStatusCodeInvalid": "Status code must be an integer from 100 to 599",
+    "providerCooldownWindowRequired": "Fixed window duration must be an integer greater than 0",
     "providerPriorityInvalid": "Priority must be an integer",
     "providerPriorityUpdated": "Provider priority updated",
     "providerUpdated": "Provider updated",
@@ -682,6 +687,7 @@
   },
   "performanceMonitoring": {
     "ranges": {
+      "realtime": "Realtime",
       "today": "Today",
       "7d": "7 days",
       "30d": "30 days",

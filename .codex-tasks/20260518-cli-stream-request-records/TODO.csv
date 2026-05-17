@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect Hook DB records,DONE,request_records/request_candidates around 019e36d7 are captured,docker exec hook-postgres psql,2026-05-18T00:00:00Z,0,019e36d7 has 3 openai_cli stream records but all stuck streaming/pending
+2,Trace Hook stream audit path,DONE,Hook write boundary for CLI stream is identified,rg llm_proxy audit stream,2026-05-18T00:00:00Z,0,Hook waited for upstream EOF and Drop used best-effort async cancellation
+3,Compare Aether implementation,DONE,Aether record boundary for CLI stream is identified,rg in Aether,2026-05-18T00:00:00Z,0,Aether records after protocol completion/cancelled finally via telemetry
+4,Implement alignment fix,DONE,Hook emits records at the same required boundary or documents non-bug difference,tests/check,2026-05-18T00:00:00Z,0,Protocol completion now triggers stream success finalization after first-byte audit
+5,Validate with targeted checks,DONE,Automated checks and DB/script evidence are recorded,cargo tests plus DB query,2026-05-18T00:00:00Z,0,targeted cargo test/cargo check and real :5566 CLI stream DB verification passed

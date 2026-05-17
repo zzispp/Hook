@@ -1,4 +1,4 @@
-export type PerformanceMonitoringRange = 'today' | '7d' | '30d' | 'all';
+export type PerformanceMonitoringRange = 'realtime' | 'today' | '7d' | '30d' | 'all';
 export type SnapshotGranularity = 'minute' | 'hour' | 'day';
 export type SnapshotDataStatus = 'ready' | 'empty_snapshot';
 export type MetricSupportStatus = 'ready' | 'unsupported';

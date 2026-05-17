@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current monitoring range semantics,DONE,Existing backend/frontend range behavior is identified,rg PerformanceMonitoringRange,2026-05-17T16:40:00Z,0,Today currently uses minute buckets for last 24h and UI overlays latest realtime minute snapshot
+2,Update backend range plan,DONE,Realtime range and 24h hourly today plan are implemented,cargo test performance_monitoring,2026-05-17T16:48:00Z,0,Added realtime range and realtime API now aggregates the latest 5 minutes
+3,Update frontend tabs and labels,IN_PROGRESS,Realtime tab appears before Today and uses overview data,frontend lint/build,,0,
+4,Validate checks,TODO,Rust and frontend checks pass,just check plus pnpm lint/build,,0,
