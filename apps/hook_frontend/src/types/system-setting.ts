@@ -1,4 +1,4 @@
-import type { ProviderSchedulingMode } from './provider';
+import type { ProviderCooldownPolicy, ProviderSchedulingMode } from './provider';
 
 export type DisplayCurrency = 'USD' | 'CNY';
 export type RequestRecordLevel = 'basic' | 'headers' | 'full';
@@ -28,6 +28,7 @@ export type SystemSettings = {
   default_user_grant: number;
   default_rate_limit_rpm: number;
   scheduling_mode: ProviderSchedulingMode;
+  provider_cooldown_policy: ProviderCooldownPolicy;
   currency: DisplayCurrency;
   smtp_host: string;
   smtp_port: number;
@@ -69,6 +70,7 @@ export type SystemSettingsUpdate = Partial<{
   default_user_grant: number;
   default_rate_limit_rpm: number;
   scheduling_mode: ProviderSchedulingMode;
+  provider_cooldown_policy: ProviderCooldownPolicy;
   currency: DisplayCurrency;
   smtp_host: string;
   smtp_port: number;

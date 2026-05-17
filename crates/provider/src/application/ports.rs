@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
-    ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
-    RequestRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
+    ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
+    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -47,6 +47,8 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_active_request_records(&self, request: ActiveRequestRecordRequest) -> ProviderResult<ActiveRequestRecordResponse>;
     async fn get_request_record(&self, request_id: &str) -> ProviderResult<RequestRecordDetail>;
+    async fn list_provider_cooldowns(&self, request: ProviderCooldownListRequest) -> ProviderResult<ProviderCooldownListResponse>;
+    async fn release_provider_cooldown(&self, provider_id: &str) -> ProviderResult<ProviderCooldown>;
 }
 
 #[async_trait]
@@ -87,4 +89,6 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_active_request_records(&self, request: ActiveRequestRecordRequest) -> ProviderResult<ActiveRequestRecordResponse>;
     async fn get_request_record(&self, request_id: &str) -> ProviderResult<RequestRecordDetail>;
+    async fn list_provider_cooldowns(&self, request: ProviderCooldownListRequest) -> ProviderResult<ProviderCooldownListResponse>;
+    async fn release_provider_cooldown(&self, provider_id: &str) -> ProviderResult<ProviderCooldown>;
 }

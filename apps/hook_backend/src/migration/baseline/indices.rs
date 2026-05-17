@@ -81,6 +81,18 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         provider_models_unique_index(),
+        index(
+            "index_provider_cooldowns_by_until",
+            ProviderCooldowns::Table,
+            ProviderCooldowns::CooldownUntil,
+            false,
+        ),
+        index(
+            "index_provider_cooldowns_by_status",
+            ProviderCooldowns::Table,
+            ProviderCooldowns::StatusCode,
+            false,
+        ),
         index("index_billing_groups_by_active", BillingGroups::Table, BillingGroups::IsActive, false),
         index("index_api_tokens_by_hash", ApiTokens::Table, ApiTokens::TokenHash, true),
         index("index_api_tokens_by_user_id", ApiTokens::Table, ApiTokens::UserId, false),

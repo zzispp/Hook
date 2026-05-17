@@ -35,6 +35,7 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
     let group = active_group(&snapshot, token)?;
     ensure_group_allows_model(group, &model.id)?;
     let affinity_key = state.cached_affinity_key(&token.id, &model.id, request.api_format).await?;
+    let cooled_provider_ids = cooled_provider_ids(state, &snapshot).await?;
     let parts = matching_candidate_parts(MatchingCandidatePartsInput {
         snapshot: &snapshot,
         group,
@@ -44,6 +45,7 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         affinity_key: affinity_key.as_deref(),
         scheduling_mode: snapshot.scheduling_mode,
         request_id: &request_id,
+        cooled_provider_ids: &cooled_provider_ids,
     });
     if parts.is_empty() {
         return Err(LlmProxyError::NotFound(format!("no active provider candidate for model {}", model.name)));
@@ -110,4 +112,9 @@ fn model_ref(model: &CachedGlobalModel) -> GlobalModelRef {
         default_price_per_request: model.default_price_per_request,
         default_tiered_pricing: model.default_tiered_pricing.clone(),
     }
+}
+
+async fn cooled_provider_ids(state: &LlmProxyState, snapshot: &SchedulingSnapshot) -> Result<std::collections::HashSet<String>, LlmProxyError> {
+    let provider_ids = snapshot.providers.iter().map(|provider| provider.id.clone()).collect::<Vec<_>>();
+    state.cooled_provider_ids(&provider_ids).await
 }

@@ -120,6 +120,30 @@ pub struct ProviderModelRecordPatch {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct ProviderCooldownRecordInput {
+    pub provider_id: String,
+    pub provider_name_snapshot: String,
+    pub status_code: i32,
+    pub observed_count: i64,
+    pub threshold_count: i64,
+    pub window_seconds: i64,
+    pub cooldown_seconds: i64,
+    pub triggered_at: time::OffsetDateTime,
+    pub cooldown_until: time::OffsetDateTime,
+    pub request_id: String,
+    pub candidate_index: i32,
+    pub retry_index: i32,
+    pub endpoint_id: Option<String>,
+    pub endpoint_name_snapshot: Option<String>,
+    pub key_id: Option<String>,
+    pub key_name_snapshot: Option<String>,
+    pub error_type: Option<String>,
+    pub error_message: Option<String>,
+    pub error_code: Option<String>,
+    pub error_param: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct RequestCandidateRecordInput {
     pub request_id: String,
     pub token_id: Option<String>,

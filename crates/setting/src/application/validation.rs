@@ -1,5 +1,8 @@
+use std::collections::HashSet;
+
 use axum::http::HeaderName;
 use rust_decimal::Decimal;
+use types::provider::ProviderCooldownPolicy;
 use types::system_setting::{EmailSuffixMode, RequestRecordLevel, SystemSettingsUpdate};
 
 use super::{SettingError, SettingResult};
@@ -15,6 +18,8 @@ const MAX_EMAIL_TEMPLATE_SUBJECT_LENGTH: usize = 200;
 const MIN_SMTP_PORT: i64 = 1;
 const MAX_SMTP_PORT: i64 = 65_535;
 const HEADER_SEPARATOR: &str = ", ";
+const MIN_STATUS_CODE: i32 = 100;
+const MAX_STATUS_CODE: i32 = 599;
 
 pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
     let defaults = input.request_record_level.map(request_record_level_defaults);
@@ -51,6 +56,7 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_sensitive_request_headers(input.sensitive_request_headers.as_deref())?;
     validate_non_negative_decimal("default_user_grant", input.default_user_grant)?;
     validate_non_negative_i64("default_rate_limit_rpm", input.default_rate_limit_rpm)?;
+    validate_provider_cooldown_policy(input.provider_cooldown_policy.as_ref())?;
     validate_mail_settings(input)
 }
 
@@ -132,6 +138,45 @@ fn validate_non_negative_decimal(field: &str, value: Option<Decimal>) -> Setting
 fn validate_non_negative_i64(field: &str, value: Option<i64>) -> SettingResult<()> {
     if value.is_some_and(|item| item < 0) {
         return Err(SettingError::InvalidInput(format!("{field} must be greater than or equal to 0")));
+    }
+    Ok(())
+}
+
+fn validate_provider_cooldown_policy(policy: Option<&ProviderCooldownPolicy>) -> SettingResult<()> {
+    let Some(policy) = policy else {
+        return Ok(());
+    };
+    if policy.rules.is_empty() {
+        return Ok(());
+    }
+    validate_positive_value("provider_cooldown_policy.window_seconds", policy.window_seconds)?;
+    let mut status_codes = HashSet::new();
+    for rule in &policy.rules {
+        validate_status_code(rule.status_code)?;
+        validate_positive_value("provider_cooldown_policy.failure_count", rule.failure_count)?;
+        validate_positive_value("provider_cooldown_policy.cooldown_seconds", rule.cooldown_seconds)?;
+        if !status_codes.insert(rule.status_code) {
+            return Err(SettingError::InvalidInput(format!(
+                "provider_cooldown_policy contains duplicate status_code: {}",
+                rule.status_code
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn validate_positive_value(field: &str, value: i64) -> SettingResult<()> {
+    if value <= 0 {
+        return Err(SettingError::InvalidInput(format!("{field} must be greater than 0")));
+    }
+    Ok(())
+}
+
+fn validate_status_code(value: i32) -> SettingResult<()> {
+    if !(MIN_STATUS_CODE..=MAX_STATUS_CODE).contains(&value) {
+        return Err(SettingError::InvalidInput(format!(
+            "provider_cooldown_policy.status_code must be between {MIN_STATUS_CODE} and {MAX_STATUS_CODE}"
+        )));
     }
     Ok(())
 }

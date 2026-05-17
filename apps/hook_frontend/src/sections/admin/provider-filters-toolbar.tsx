@@ -35,6 +35,7 @@ type Props = {
   schedulingLabel: string;
   onChange: (filters: ProviderFilterState) => void;
   onOpenPriority: () => void;
+  onOpenCooldownPolicy: () => void;
 };
 
 type FilterOption = {
@@ -68,6 +69,7 @@ function FilterControls({
   modelOptions,
   schedulingLabel,
   onOpenPriority,
+  onOpenCooldownPolicy,
   hasActiveFilters,
 }: Props & ReturnType<typeof useProviderFilterOptions> & { hasActiveFilters: boolean }) {
   const { t } = useTranslate('admin');
@@ -81,7 +83,7 @@ function FilterControls({
         alignItems: 'center',
         gridTemplateColumns: {
           xs: '1fr',
-          lg: 'minmax(220px, 1fr) 132px 148px 180px auto auto',
+          lg: 'minmax(220px, 1fr) 132px 148px 180px auto auto auto',
         },
       }}
     >
@@ -110,6 +112,7 @@ function FilterControls({
         ))}
       </SelectFilter>
       <SchedulingButton label={schedulingLabel} onClick={onOpenPriority} />
+      <CooldownPolicyButton onClick={onOpenCooldownPolicy} />
       {hasActiveFilters && <ResetFiltersButton onClick={() => onChange(DEFAULT_PROVIDER_FILTERS)} />}
     </Box>
   );
@@ -174,11 +177,21 @@ function SchedulingButton({ label, onClick }: { label: string; onClick: () => vo
   );
 }
 
+function CooldownPolicyButton({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Button color="inherit" variant="outlined" startIcon={<Iconify icon="solar:flag-bold" />} onClick={onClick}>
+      {t('providers.cooldownPolicy')}
+    </Button>
+  );
+}
+
 function ResetFiltersButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslate('admin');
 
   return (
-      <Tooltip title={t('wallet.actions.reset')}>
+    <Tooltip title={t('wallet.actions.reset')}>
       <IconButton onClick={onClick}>
         <Iconify icon="solar:close-circle-bold" />
       </IconButton>

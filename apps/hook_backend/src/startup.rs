@@ -109,6 +109,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
     let proxy_cache = LlmProxyCache::new(database.clone(), redis_connection.clone(), settings.redis.key_prefix.clone());
     proxy_cache.refresh_scheduling_snapshot().await?;
+    proxy_cache.restore_provider_cooldowns().await?;
     let models_inner = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
     let models = Arc::new(ProxyCachedModelUseCase::new(models_inner, proxy_cache.clone()));
     let providers_inner = Arc::new(ProviderService::new(

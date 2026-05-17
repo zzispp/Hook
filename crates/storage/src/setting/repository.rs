@@ -101,6 +101,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.scheduling_mode {
         active.scheduling_mode = Set(value.as_str().to_owned());
     }
+    if let Some(value) = &input.provider_cooldown_policy {
+        active.provider_cooldown_policy = Set(serde_json::to_string(&value).expect("provider cooldown policy must serialize"));
+    }
     if let Some(value) = &input.currency {
         active.currency = Set(value.as_str().to_owned());
     }

@@ -27,12 +27,23 @@ const RETRYABLE_AUTH_STATUS_FORBIDDEN: StatusCode = StatusCode::FORBIDDEN;
 const RETRYABLE_STATUS_TIMEOUT: StatusCode = StatusCode::REQUEST_TIMEOUT;
 const RETRYABLE_STATUS_RATE_LIMIT: StatusCode = StatusCode::TOO_MANY_REQUESTS;
 
+enum AttemptCandidateOutcome {
+    Continue,
+    Response(Response),
+}
+
+enum AttemptOnceOutcome {
+    ContinueCandidate,
+    NextCandidate,
+    Response(Response),
+}
+
 pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: PreparedProxyRequest) -> Result<Response, LlmProxyError> {
     let mut last_failure = None;
     let mut last_error = None;
     for candidate in &prepared.candidates {
         let outcome = attempt_candidate(&state, &prepared, candidate, &mut last_failure, &mut last_error).await?;
-        if let Some(response) = outcome {
+        if let AttemptCandidateOutcome::Response(response) = outcome {
             record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
             return Ok(response);
         }
@@ -51,15 +62,16 @@ async fn attempt_candidate(
     candidate: &ProxyCandidate,
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
-) -> Result<Option<Response>, LlmProxyError> {
+) -> Result<AttemptCandidateOutcome, LlmProxyError> {
     for retry_index in 0..=candidate.max_retries {
         let attempt = candidate.for_attempt(retry_index);
-        let Some(response) = attempt_once(state, prepared, &attempt, retry_index, last_failure, last_error).await? else {
-            continue;
-        };
-        return Ok(Some(response));
+        match attempt_once(state, prepared, &attempt, retry_index, last_failure, last_error).await? {
+            AttemptOnceOutcome::ContinueCandidate => {}
+            AttemptOnceOutcome::NextCandidate => return Ok(AttemptCandidateOutcome::Continue),
+            AttemptOnceOutcome::Response(response) => return Ok(AttemptCandidateOutcome::Response(response)),
+        }
     }
-    Ok(None)
+    Ok(AttemptCandidateOutcome::Continue)
 }
 
 async fn attempt_once(
@@ -69,27 +81,37 @@ async fn attempt_once(
     retry_index: i32,
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
-) -> Result<Option<Response>, LlmProxyError> {
+) -> Result<AttemptOnceOutcome, LlmProxyError> {
     match rate_limit::claim_provider_key_limit(state, &candidate.trace.key_id, candidate.key_rpm_limit).await {
         Ok(()) => {}
         Err(error @ LlmProxyError::RateLimited(_)) => {
-            return record_rate_limit_rejection(state, &prepared.request_id, candidate, retry_index, error, last_error).await;
+            let outcome = record_rate_limit_rejection(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;
+            return Ok(option_response_outcome(outcome));
         }
         Err(error) => return Err(error),
     }
     let payload = match attempt_payload(prepared.body.clone(), candidate, prepared.force_non_stream) {
         Ok(payload) => payload,
-        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await,
+        Err(error) => {
+            let outcome = record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;
+            return Ok(option_response_outcome(outcome));
+        }
     };
     let started = Instant::now();
     let request = match upstream_request(&state.http, candidate, payload.target_format, &payload.body, &payload.original_body) {
         Ok(request) => request,
-        Err(error) => return record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await,
+        Err(error) => {
+            let outcome = record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;
+            return Ok(option_response_outcome(outcome));
+        }
     };
     record_started_attempt(state, &prepared.request_id, candidate, prepared.is_stream, retry_index, &request, &payload.body).await?;
     let response = match state.http.execute(request).await {
         Ok(response) => response,
-        Err(error) => return record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await,
+        Err(error) => {
+            let outcome = record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await?;
+            return Ok(option_response_outcome(outcome));
+        }
     };
     handle_upstream_response(HandleUpstreamResponseInput {
         state: state.clone(),
@@ -115,7 +137,7 @@ struct HandleUpstreamResponseInput<'a> {
     failures: (&'a mut Option<transport::UpstreamFailure>, &'a mut Option<LlmProxyError>),
 }
 
-async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Result<Option<Response>, LlmProxyError> {
+async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Result<AttemptOnceOutcome, LlmProxyError> {
     if !input.response.status().is_success() {
         return handle_upstream_failure(
             &input.state,
@@ -141,11 +163,11 @@ async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Res
     {
         Ok(response) => {
             remember_affinity(&input.state, input.candidate).await?;
-            Ok(Some(response))
+            Ok(AttemptOnceOutcome::Response(response))
         }
         Err(error) => {
             *input.failures.1 = Some(error);
-            Ok(None)
+            Ok(AttemptOnceOutcome::ContinueCandidate)
         }
     }
 }
@@ -158,14 +180,26 @@ async fn handle_upstream_failure(
     started: Instant,
     response: UpstreamResponse,
     last_failure: &mut Option<transport::UpstreamFailure>,
-) -> Result<Option<Response>, LlmProxyError> {
+) -> Result<AttemptOnceOutcome, LlmProxyError> {
     let retryable = status_retryable(response.status());
     let failure = transport::record_upstream_failure(state, &prepared.request_id, response, candidate, started, retry_index).await?;
     if retryable {
+        let cooldown_triggered = failure.cooldown_triggered();
         *last_failure = Some(failure);
-        return Ok(None);
+        return Ok(if cooldown_triggered {
+            AttemptOnceOutcome::NextCandidate
+        } else {
+            AttemptOnceOutcome::ContinueCandidate
+        });
     }
-    transport::failure_response(failure).map(Some)
+    transport::failure_response(failure).map(AttemptOnceOutcome::Response)
+}
+
+fn option_response_outcome(response: Option<Response>) -> AttemptOnceOutcome {
+    match response {
+        Some(response) => AttemptOnceOutcome::Response(response),
+        None => AttemptOnceOutcome::ContinueCandidate,
+    }
 }
 
 struct SuccessResponseInput<'a> {

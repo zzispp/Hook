@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
-use types::provider::{Provider, ProviderListRequest, ProviderListResponse};
+use types::provider::{Provider, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderListRequest, ProviderListResponse};
 
 use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
-    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,
-    ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord, ProviderCooldownRecordInput, ProviderEndpointRecordInput,
+    ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
     record::{
         provider_api_keys, provider_endpoints, provider_models,
         providers::{self, ActiveModel as ProviderActiveModel},
@@ -236,6 +236,22 @@ impl ProviderStore {
 
     pub async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> StorageResult<()> {
         super::provider_model_query::delete_model_binding(self, provider_id, model_id).await
+    }
+
+    pub async fn upsert_provider_cooldown(&self, input: ProviderCooldownRecordInput) -> StorageResult<types::provider::ProviderCooldown> {
+        super::provider_cooldown_query::upsert_provider_cooldown(self, input).await
+    }
+
+    pub async fn list_active_provider_cooldowns(&self, request: ProviderCooldownListRequest) -> StorageResult<ProviderCooldownListResponse> {
+        super::provider_cooldown_query::list_active_provider_cooldowns(self, request).await
+    }
+
+    pub async fn release_provider_cooldown(&self, provider_id: &str) -> StorageResult<types::provider::ProviderCooldown> {
+        super::provider_cooldown_query::release_provider_cooldown(self, provider_id).await
+    }
+
+    pub async fn active_provider_cooldowns_for_restore(&self) -> StorageResult<Vec<types::provider::ProviderCooldown>> {
+        super::provider_cooldown_query::active_provider_cooldowns_for_restore(self).await
     }
 
     pub(crate) fn connection(&self) -> &DatabaseConnection {

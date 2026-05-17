@@ -18,6 +18,7 @@ use super::{
 };
 use crate::llm_proxy::{
     audit::{AttemptRecordInput, record_attempt},
+    cache::ProviderCooldownFailureInput,
     candidate::ProxyCandidate,
 };
 
@@ -25,6 +26,13 @@ pub struct UpstreamFailure {
     status: StatusCode,
     content_type: Option<HeaderValue>,
     body: Vec<u8>,
+    cooldown_triggered: bool,
+}
+
+impl UpstreamFailure {
+    pub fn cooldown_triggered(&self) -> bool {
+        self.cooldown_triggered
+    }
 }
 
 pub struct FullResponseArgs {
@@ -180,13 +188,14 @@ pub async fn record_upstream_failure(
     let upstream_headers = response.headers().clone();
     let body = req::response_bytes(response).await?;
     let error = upstream_status_error_details(status.as_u16(), &body);
+    let error_type = "upstream_status";
     record_attempt(
         state,
         request_id,
         AttemptRecordInput {
             status_code: Some(status.as_u16() as i32),
             latency_ms: Some(elapsed_ms(started)),
-            error_type: Some("upstream_status"),
+            error_type: Some(error_type),
             error_message: Some(error.message.as_str()),
             error_code: error.code.as_deref(),
             error_param: error.param.as_deref(),
@@ -198,7 +207,24 @@ pub async fn record_upstream_failure(
         },
     )
     .await?;
-    Ok(UpstreamFailure { status, content_type, body })
+    let cooldown_triggered = state
+        .record_provider_status_failure(ProviderCooldownFailureInput {
+            request_id,
+            candidate,
+            retry_index,
+            status_code: status.as_u16() as i32,
+            error_type,
+            error_message: &error.message,
+            error_code: error.code.as_deref(),
+            error_param: error.param.as_deref(),
+        })
+        .await?;
+    Ok(UpstreamFailure {
+        status,
+        content_type,
+        body,
+        cooldown_triggered,
+    })
 }
 
 pub fn failure_response(failure: UpstreamFailure) -> Result<Response, LlmProxyError> {

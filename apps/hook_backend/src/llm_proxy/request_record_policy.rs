@@ -156,6 +156,7 @@ mod tests {
             max_request_body_size_kb: 12,
             max_response_body_size_kb: 34,
             sensitive_request_headers: "authorization, x-api-key".into(),
+            provider_cooldown_policy: Default::default(),
         };
 
         let policy = RequestRecordPolicy::from_snapshot(&snapshot).unwrap();

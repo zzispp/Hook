@@ -1,0 +1,30 @@
+import { randomUUID } from 'node:crypto';
+
+export const fixtureIds = Object.freeze({
+  providerMsutools: '00000000-0000-7000-9500-000000000101',
+  providerEkan8: '00000000-0000-7000-9500-000000000102',
+  keyMsutools: '00000000-0000-7000-9500-000000000201',
+  keyEkan8: '00000000-0000-7000-9500-000000000202',
+  endpointMsutools: '00000000-0000-7000-9500-000000000301',
+  endpointEkan8: '00000000-0000-7000-9500-000000000302',
+  modelBindingMsutools: '00000000-0000-7000-9500-000000000401',
+  modelBindingEkan8: '00000000-0000-7000-9500-000000000402',
+  groupBindingMsutools: '00000000-0000-7000-9500-000000000501',
+  groupBindingEkan8: '00000000-0000-7000-9500-000000000502',
+  groupModel: '00000000-0000-7000-9500-000000000503',
+  group: '00000000-0000-7000-9500-000000000801',
+  model: '00000000-0000-7000-9500-000000000701',
+  user: '00000000-0000-7000-9500-000000000901',
+  wallet: '00000000-0000-7000-9500-000000000951',
+});
+
+export const providerCooldownPermissionIds = Object.freeze({
+  read: '00000000-0000-7000-9500-000000000991',
+  release: '00000000-0000-7000-9500-000000000992',
+});
+
+export const groupCode = 'provider_cooldown_real';
+
+export function uniqueRunId() {
+  return randomUUID();
+}

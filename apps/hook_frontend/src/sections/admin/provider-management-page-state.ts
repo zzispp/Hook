@@ -1,0 +1,105 @@
+'use client';
+
+import type { Provider } from 'src/types/provider';
+
+import { useState, useCallback } from 'react';
+
+import { useGlobalModels } from 'src/actions/models';
+import { useProviders } from 'src/actions/providers';
+import { useTranslate } from 'src/locales/use-locales';
+import { useSystemSettings } from 'src/actions/system-settings';
+
+import { useTable } from 'src/components/table';
+
+import { useProviderCooldownState } from './provider-cooldown-state';
+import { toProviderFilters, DEFAULT_PROVIDER_FILTERS } from './provider-filters-toolbar';
+import {
+  useProviderDialog,
+  useDeleteProviderDialog,
+  useProviderChildDialogs,
+} from './provider-management-state';
+
+const PROVIDER_PRIORITY_LIMIT = 1000;
+
+export type ProviderTab = 'providers' | 'cooldowns';
+
+export function useProviderManagementState() {
+  const { t, currentLang } = useTranslate('admin');
+  const ui = useProviderUiState();
+  const providers = useProviders(ui.table.page, ui.table.rowsPerPage, toProviderFilters(ui.filters));
+  const cooldownState = useProviderCooldownState(t, ui.cooldownTable);
+  const priorityProviders = useProviders(0, PROVIDER_PRIORITY_LIMIT);
+  const settings = useSystemSettings();
+  const models = useGlobalModels(0, 1000);
+  const dialog = useProviderDialog(t);
+  const deleteDialog = useDeleteProviderDialog(t);
+  const childDialogs = useProviderChildDialogs(t, ui.selectedProvider?.id);
+
+  return {
+    ...ui,
+    t,
+    models,
+    dialog,
+    providers,
+    settings,
+    currentLang,
+    childDialogs,
+    deleteDialog,
+    cooldowns: cooldownState.cooldowns,
+    errorMessage: errorMessage(providers.error, cooldownState.cooldowns.error, settings.error, models.error),
+    priorityProviders,
+    cooldownFilters: cooldownState.filters,
+    releasingCooldownId: cooldownState.releasingId,
+    releaseCooldown: cooldownState.release,
+    handleCooldownFiltersChange: cooldownState.changeFilters,
+  };
+}
+
+function useProviderUiState() {
+  const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'name' });
+  const cooldownTable = useTable({ defaultRowsPerPage: 10 });
+  const [tab, setTab] = useState<ProviderTab>('providers');
+  const [filters, setFilters] = useState(DEFAULT_PROVIDER_FILTERS);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | undefined>();
+  const [bindingsOpen, setBindingsOpen] = useState(false);
+  const [priorityOpen, setPriorityOpen] = useState(false);
+  const [cooldownPolicyOpen, setCooldownPolicyOpen] = useState(false);
+
+  const handleFiltersChange = useCallback((nextFilters: typeof DEFAULT_PROVIDER_FILTERS) => {
+    table.onResetPage();
+    setFilters(nextFilters);
+    setSelectedProvider(undefined);
+    setBindingsOpen(false);
+  }, [table]);
+
+  const openProviderBindings = useCallback((provider: Provider) => {
+    setSelectedProvider(provider);
+    setBindingsOpen(true);
+  }, []);
+
+  const closeProviderBindings = useCallback(() => {
+    setBindingsOpen(false);
+  }, []);
+
+  return {
+    tab,
+    table,
+    filters,
+    bindingsOpen,
+    priorityOpen,
+    cooldownTable,
+    selectedProvider,
+    cooldownPolicyOpen,
+    setTab,
+    setPriorityOpen,
+    setCooldownPolicyOpen,
+    openProviderBindings,
+    closeProviderBindings,
+    handleFiltersChange,
+  };
+}
+
+function errorMessage(...errors: unknown[]) {
+  const error = errors.find(Boolean);
+  return error instanceof Error ? error.message : undefined;
+}

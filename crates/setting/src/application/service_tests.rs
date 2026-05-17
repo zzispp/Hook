@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
-    provider::ProviderSchedulingMode,
+    provider::{ProviderCooldownPolicy, ProviderSchedulingMode},
     system_setting::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettingsResponse, SystemSettingsUpdate},
 };
 
@@ -126,6 +126,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         default_user_grant: Decimal::ZERO,
         default_rate_limit_rpm: 0,
         scheduling_mode: ProviderSchedulingMode::CacheAffinity,
+        provider_cooldown_policy: ProviderCooldownPolicy::default(),
         currency: DisplayCurrency::Usd,
         smtp_host: String::new(),
         smtp_port: 587,

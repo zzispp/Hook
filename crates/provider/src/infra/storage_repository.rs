@@ -8,9 +8,10 @@ use storage::{
     },
 };
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
-    ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
+    ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
+    RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
@@ -166,6 +167,14 @@ impl ProviderRepository for StorageProviderRepository {
 
     async fn get_request_record(&self, request_id: &str) -> ProviderResult<RequestRecordDetail> {
         self.store.get_request_record(request_id).await.map_err(storage_error)
+    }
+
+    async fn list_provider_cooldowns(&self, request: ProviderCooldownListRequest) -> ProviderResult<ProviderCooldownListResponse> {
+        self.store.list_active_provider_cooldowns(request).await.map_err(storage_error)
+    }
+
+    async fn release_provider_cooldown(&self, provider_id: &str) -> ProviderResult<ProviderCooldown> {
+        self.store.release_provider_cooldown(provider_id).await.map_err(storage_error)
     }
 }
 

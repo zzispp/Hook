@@ -212,6 +212,7 @@ mod tests {
             max_request_body_size_kb: 1024,
             max_response_body_size_kb: 1024,
             sensitive_request_headers: String::new(),
+            provider_cooldown_policy: Default::default(),
             models: Vec::new(),
             groups: Vec::new(),
             users: vec![CachedUserAccess {

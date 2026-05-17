@@ -1,21 +1,18 @@
 'use client';
 
-import type { Provider } from 'src/types/provider';
+import type { ProviderTab } from './provider-management-page-state';
 
-import { useState, useCallback } from 'react';
-
+import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
+import Tabs from '@mui/material/Tabs';
+import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 
-import { useGlobalModels } from 'src/actions/models';
-import { useProviders } from 'src/actions/providers';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useSystemSettings } from 'src/actions/system-settings';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
-import { useTable } from 'src/components/table';
 import { ConfirmDialog } from 'src/components/custom-dialog';
 
 import { ProviderTable } from './provider-table';
@@ -23,21 +20,13 @@ import { ProviderFormDialog } from './provider-form-dialog';
 import { ProviderModelDialog } from './provider-model-dialog';
 import { ProviderApiKeyDialog } from './provider-api-key-dialog';
 import { ProviderBindingsPanel } from './provider-bindings-panel';
+import { ProviderCooldownTable } from './provider-cooldown-table';
 import { ProviderEndpointDialog } from './provider-endpoint-dialog';
+import { ProviderFiltersToolbar } from './provider-filters-toolbar';
 import { ProviderPriorityDialog } from './provider-priority-dialog';
 import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
-import {
-  toProviderFilters,
-  ProviderFiltersToolbar,
-  DEFAULT_PROVIDER_FILTERS,
-} from './provider-filters-toolbar';
-import {
-  useProviderDialog,
-  useDeleteProviderDialog,
-  useProviderChildDialogs,
-} from './provider-management-state';
-
-const PROVIDER_PRIORITY_LIMIT = 1000;
+import { useProviderManagementState } from './provider-management-page-state';
+import { ProviderCooldownPolicyDialog } from './provider-cooldown-policy-dialog';
 
 export function ProviderManagementView() {
   const state = useProviderManagementState();
@@ -45,78 +34,38 @@ export function ProviderManagementView() {
   return (
     <DashboardContent maxWidth="xl">
       <ProviderHeader state={state} />
-      <ProviderTableCard state={state} />
+      <ProviderTabs state={state} />
+      {state.errorMessage ? <ErrorAlert message={state.errorMessage} /> : null}
+      {state.tab === 'providers' ? <ProviderTableCard state={state} /> : null}
+      {state.tab === 'cooldowns' ? <ProviderCooldownCard state={state} /> : null}
       <ProviderDialogs state={state} />
     </DashboardContent>
   );
 }
 
-function useProviderManagementState() {
-  const { t } = useTranslate('admin');
-  const table = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'name' });
-  const [filters, setFilters] = useState(DEFAULT_PROVIDER_FILTERS);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | undefined>();
-  const [bindingsOpen, setBindingsOpen] = useState(false);
-  const [priorityOpen, setPriorityOpen] = useState(false);
-  const providers = useProviders(table.page, table.rowsPerPage, toProviderFilters(filters));
-  const priorityProviders = useProviders(0, PROVIDER_PRIORITY_LIMIT);
-  const settings = useSystemSettings();
-  const models = useGlobalModels(0, 1000);
-  const dialog = useProviderDialog(t);
-  const deleteDialog = useDeleteProviderDialog(t);
-  const childDialogs = useProviderChildDialogs(t, selectedProvider?.id);
-
-  const handleFiltersChange = useCallback(
-    (nextFilters: typeof DEFAULT_PROVIDER_FILTERS) => {
-      table.onResetPage();
-      setFilters(nextFilters);
-      setSelectedProvider(undefined);
-      setBindingsOpen(false);
-    },
-    [table]
-  );
-
-  const openProviderBindings = useCallback((provider: Provider) => {
-    setSelectedProvider(provider);
-    setBindingsOpen(true);
-  }, []);
-
-  const closeProviderBindings = useCallback(() => {
-    setBindingsOpen(false);
-  }, []);
-
-  return {
-    t,
-    table,
-    models,
-    dialog,
-    filters,
-    providers,
-    settings,
-    childDialogs,
-    bindingsOpen,
-    priorityOpen,
-    deleteDialog,
-    selectedProvider,
-    priorityProviders,
-    setPriorityOpen,
-    openProviderBindings,
-    closeProviderBindings,
-    handleFiltersChange,
-  };
-}
-
 function ProviderHeader({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
+  const loading = state.tab === 'providers' ? state.providers.isLoading : state.cooldowns.isLoading;
+  const refresh = state.tab === 'providers' ? state.providers.refresh : state.cooldowns.refresh;
+
   return (
     <AdminBreadcrumbs
       headingCode={DASHBOARD_MENU_CODES.providerManagement}
       action={
         <Stack direction="row" spacing={1}>
-          <RefreshButton loading={state.providers.isLoading} onClick={() => void state.providers.refresh()} />
+          <RefreshButton loading={loading} onClick={() => void refresh()} />
           <AddButton onClick={state.dialog.openCreate}>{state.t('actions.addProvider')}</AddButton>
         </Stack>
       }
     />
+  );
+}
+
+function ProviderTabs({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
+  return (
+    <Tabs value={state.tab} onChange={(_event, next: ProviderTab) => state.setTab(next)} sx={{ mb: 3 }}>
+      <Tab value="providers" label={state.t('providers.providerListTab')} />
+      <Tab value="cooldowns" label={state.t('providers.cooldownsTab')} />
+    </Tabs>
   );
 }
 
@@ -129,6 +78,7 @@ function ProviderTableCard({ state }: { state: ReturnType<typeof useProviderMana
         schedulingLabel={schedulingModeLabel(state.settings.data?.scheduling_mode ?? 'cache_affinity', state.t)}
         onChange={state.handleFiltersChange}
         onOpenPriority={() => state.setPriorityOpen(true)}
+        onOpenCooldownPolicy={() => state.setCooldownPolicyOpen(true)}
       />
       <ProviderTable
         rows={state.providers.items}
@@ -139,6 +89,24 @@ function ProviderTableCard({ state }: { state: ReturnType<typeof useProviderMana
         onSelect={state.openProviderBindings}
         onEdit={state.dialog.openEdit}
         onDelete={state.deleteDialog.setDeleteTarget}
+      />
+    </Card>
+  );
+}
+
+function ProviderCooldownCard({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
+  return (
+    <Card>
+      <ProviderCooldownTable
+        rows={state.cooldowns.items}
+        total={state.cooldowns.total}
+        loading={state.cooldowns.isLoading}
+        table={state.cooldownTable}
+        filters={state.cooldownFilters}
+        locale={state.currentLang.numberFormat.code}
+        releasingId={state.releasingCooldownId}
+        onFiltersChange={state.handleCooldownFiltersChange}
+        onRelease={state.releaseCooldown}
       />
     </Card>
   );
@@ -191,6 +159,14 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
           void state.settings.refresh();
         }}
       />
+      <ProviderCooldownPolicyDialog
+        open={state.cooldownPolicyOpen}
+        policy={state.settings.data?.provider_cooldown_policy}
+        onClose={() => state.setCooldownPolicyOpen(false)}
+        onSaved={() => {
+          void state.settings.refresh();
+        }}
+      />
       <ConfirmDialog
         open={!!state.deleteDialog.deleteTarget}
         onClose={() => state.deleteDialog.setDeleteTarget(null)}
@@ -217,4 +193,8 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
       />
     </>
   );
+}
+
+function ErrorAlert({ message }: { message: string }) {
+  return <Alert severity="error" sx={{ mb: 3 }}>{message}</Alert>;
 }

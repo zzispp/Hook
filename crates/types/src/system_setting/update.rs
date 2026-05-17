@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
-use crate::provider::ProviderSchedulingMode;
+use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
 
 use super::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
@@ -52,6 +52,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub scheduling_mode: Option<ProviderSchedulingMode>,
     #[serde(default)]
+    pub provider_cooldown_policy: Option<ProviderCooldownPolicy>,
+    #[serde(default)]
     pub currency: Option<DisplayCurrency>,
     #[serde(default)]
     pub smtp_host: Option<String>,
@@ -96,6 +98,7 @@ impl SystemSettingsUpdate {
             && self.default_user_grant.is_none()
             && self.default_rate_limit_rpm.is_none()
             && self.scheduling_mode.is_none()
+            && self.provider_cooldown_policy.is_none()
             && self.currency.is_none()
             && self.auto_delete_expired_tokens.is_none()
     }

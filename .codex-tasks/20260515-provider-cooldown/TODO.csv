@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Implement backend types storage migrations and APIs,DONE,System settings policy and provider cooldown CRUD compile,cargo check --workspace,2026-05-15T19:11:30+0800,0,Passed with cargo check --workspace
+2,Implement proxy cooldown runtime and scheduling filter,DONE,HTTP status failures trigger provider cooldown and cooled providers are skipped,cargo test -p backend matching_candidate_parts_filters_cooled_providers -- --nocapture,2026-05-15T19:11:30+0800,0,Passed targeted scheduling filter test and just test
+3,Implement frontend provider tabs policy dialog and cooldown table,DONE,Provider page exposes policy editor and cooldown release flow,pnpm lint:frontend,2026-05-15T19:11:30+0800,0,Passed lint and build after state split
+4,Update backend i18n seeds,DONE,admin.cn/en contain provider cooldown keys,jq empty apps/hook_backend/src/migration/defaults/i18n/admin.cn.json apps/hook_backend/src/migration/defaults/i18n/admin.en.json,2026-05-15T19:11:30+0800,0,Seed JSON parsed and keys verified
+5,Run final validation,DONE,Rust and frontend validation commands complete,just test && pnpm lint:frontend && pnpm build:frontend,2026-05-15T19:11:30+0800,0,Passed just test; cargo fmt --check; cargo check --workspace; pnpm lint:frontend; pnpm build:frontend

@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use serde::Serialize;
 
-use crate::provider::ProviderSchedulingMode;
+use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
 
 use super::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
 
@@ -30,6 +30,7 @@ pub struct SystemSettingsResponse {
     pub default_user_grant: Decimal,
     pub default_rate_limit_rpm: i64,
     pub scheduling_mode: ProviderSchedulingMode,
+    pub provider_cooldown_policy: ProviderCooldownPolicy,
     pub currency: DisplayCurrency,
     pub smtp_host: String,
     pub smtp_port: i64,
@@ -90,6 +91,7 @@ impl From<SystemSettings> for SystemSettingsResponse {
             default_user_grant: value.default_user_grant,
             default_rate_limit_rpm: value.default_rate_limit_rpm,
             scheduling_mode: value.scheduling_mode,
+            provider_cooldown_policy: value.provider_cooldown_policy,
             currency: value.currency,
             smtp_host: value.smtp_host,
             smtp_port: value.smtp_port,

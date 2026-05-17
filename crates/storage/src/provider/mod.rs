@@ -1,3 +1,4 @@
+mod provider_cooldown_query;
 mod provider_model_query;
 pub mod record;
 mod repository;
@@ -15,9 +16,10 @@ mod types;
 
 pub use repository::ProviderStore;
 pub use types::{
-    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,
-    ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch, RequestBillingRecordValues,
-    RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch, StaleRequestSweepReport,
+    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord, ProviderCooldownRecordInput, ProviderEndpointRecordInput,
+    ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch,
+    RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch,
+    StaleRequestSweepReport,
 };
 
 pub(super) use record::{ProviderEndpointRecord, ProviderModelRecord, ProviderRecord};

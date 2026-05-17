@@ -73,6 +73,14 @@ impl LlmProxyState {
         self.cache.scheduling_snapshot().await
     }
 
+    pub async fn cooled_provider_ids(&self, provider_ids: &[String]) -> Result<std::collections::HashSet<String>, LlmProxyError> {
+        self.cache.cooled_provider_ids(provider_ids).await
+    }
+
+    pub async fn record_provider_status_failure(&self, input: cache::ProviderCooldownFailureInput<'_>) -> Result<bool, LlmProxyError> {
+        self.cache.record_provider_status_failure(input).await
+    }
+
     pub async fn cached_affinity_key(&self, token_id: &str, model_id: &str, api_format: &str) -> Result<Option<String>, LlmProxyError> {
         let mut connection = self.affinity.clone();
         connection

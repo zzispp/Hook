@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use types::{
     model::TieredPricingConfig,
-    provider::{ProviderModelMapping, ProviderSchedulingMode},
+    provider::{ProviderCooldownPolicy, ProviderModelMapping, ProviderSchedulingMode},
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -16,6 +16,8 @@ pub struct SchedulingSnapshot {
     pub max_request_body_size_kb: i64,
     pub max_response_body_size_kb: i64,
     pub sensitive_request_headers: String,
+    #[serde(default)]
+    pub provider_cooldown_policy: ProviderCooldownPolicy,
     pub models: Vec<CachedGlobalModel>,
     pub groups: Vec<CachedBillingGroup>,
     pub users: Vec<CachedUserAccess>,

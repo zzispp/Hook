@@ -177,6 +177,7 @@ mod tests {
             max_request_body_size_kb: 1024,
             max_response_body_size_kb: 1024,
             sensitive_request_headers: String::new(),
+            provider_cooldown_policy: Default::default(),
             models: vec![
                 model("global-model-a", "model-a"),
                 model("global-model-b", "model-b"),

@@ -6,6 +6,7 @@ import type {
   ProviderApiKey,
   ProviderCreate,
   ProviderUpdate,
+  ProviderCooldown,
   ProviderEndpoint,
   ProviderApiKeyCreate,
   ProviderApiKeyUpdate,
@@ -15,6 +16,7 @@ import type {
   ProviderEndpointUpdate,
   ProviderModelBindingCreate,
   ProviderModelBindingUpdate,
+  ProviderCooldownListResponse,
   ProviderUpstreamModelsResponse,
 } from 'src/types/provider';
 
@@ -30,6 +32,11 @@ export type ProviderFilters = {
   is_active?: boolean;
   model_id?: string;
   search?: string;
+};
+
+export type ProviderCooldownFilters = {
+  search?: string;
+  status_code?: number;
 };
 
 const swrOptions = {
@@ -75,6 +82,37 @@ export function useProviderModels(providerId?: string | null) {
   return useProviderChildResource<ProviderModelBinding>(providerId, endpoints.adminProviders.models);
 }
 
+export function useProviderCooldowns(
+  page: number,
+  pageSize: number,
+  filters: ProviderCooldownFilters = {}
+) {
+  const key = [
+    endpoints.adminProviders.cooldowns,
+    { params: { skip: page * pageSize, limit: pageSize, ...filters } },
+  ] as const;
+  const {
+    data,
+    isLoading,
+    error,
+    isValidating,
+    mutate: revalidate,
+  } = useSWR<ApiEnvelope<ProviderCooldownListResponse>>(key, fetcher, swrOptions);
+
+  return useMemo(() => {
+    const pageData = data ? requireApiData(data) : undefined;
+    return {
+      data: pageData,
+      items: pageData?.cooldowns ?? [],
+      total: pageData?.total ?? 0,
+      isLoading,
+      error,
+      isValidating,
+      refresh: revalidate,
+    };
+  }, [data, error, isLoading, isValidating, revalidate]);
+}
+
 export async function createProvider(payload: ProviderCreate) {
   const provider = await requestData<Provider>(axios.post(endpoints.adminProviders.list, payload));
   await mutateProviders();
@@ -90,6 +128,15 @@ export async function updateProvider(id: string, payload: ProviderUpdate) {
 export async function deleteProvider(id: string) {
   await requestSuccess(axios.delete(endpoints.adminProviders.byId(id)));
   await mutateProviders();
+  await mutateProviderCooldowns();
+}
+
+export async function releaseProviderCooldown(providerId: string) {
+  const cooldown = await requestData<ProviderCooldown>(
+    axios.post(endpoints.adminProviders.releaseCooldown(providerId))
+  );
+  await mutateProviderCooldowns();
+  return cooldown;
 }
 
 export async function createProviderEndpoint(providerId: string, payload: ProviderEndpointCreate) {
@@ -213,10 +260,18 @@ async function mutateProviders() {
   await mutate((key) => isProviderKey(key));
 }
 
+async function mutateProviderCooldowns() {
+  await mutate((key) => isEndpointKey(key, endpoints.adminProviders.cooldowns));
+}
+
 async function mutateProviderChildren(providerId: string) {
   await mutate((key) => typeof key === 'string' && key.startsWith(`/api/admin/providers/${providerId}/`));
 }
 
 function isProviderKey(key: unknown) {
   return key === endpoints.adminProviders.list || (Array.isArray(key) && key[0] === endpoints.adminProviders.list);
+}
+
+function isEndpointKey(key: unknown, endpoint: string) {
+  return key === endpoint || (Array.isArray(key) && key[0] === endpoint);
 }

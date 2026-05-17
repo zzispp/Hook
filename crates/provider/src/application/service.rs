@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
-    ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
-    RequestRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
+    ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
+    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
@@ -15,6 +15,7 @@ use super::validation::{
 };
 
 const MAX_REQUEST_RECORD_LIMIT: u64 = 100;
+const MAX_PROVIDER_COOLDOWN_LIMIT: u64 = 100;
 
 pub struct ProviderService<R, M, C, F> {
     repository: R,
@@ -193,6 +194,19 @@ where
         }
         self.repository.get_request_record(request_id).await
     }
+
+    async fn list_provider_cooldowns(&self, request: ProviderCooldownListRequest) -> ProviderResult<ProviderCooldownListResponse> {
+        let request = sanitize_provider_cooldown_request(request);
+        validate_provider_cooldown_request(&request)?;
+        self.repository.list_provider_cooldowns(request).await
+    }
+
+    async fn release_provider_cooldown(&self, provider_id: &str) -> ProviderResult<ProviderCooldown> {
+        if provider_id.trim().is_empty() {
+            return Err(ProviderError::InvalidInput("provider_id cannot be blank".into()));
+        }
+        self.repository.release_provider_cooldown(provider_id).await
+    }
 }
 
 impl<R, M, C, F> ProviderService<R, M, C, F>
@@ -253,6 +267,28 @@ fn sanitize_active_request_record_request(request: ActiveRequestRecordRequest) -
     ids.sort();
     ids.dedup();
     ActiveRequestRecordRequest { ids }
+}
+
+fn sanitize_provider_cooldown_request(request: ProviderCooldownListRequest) -> ProviderCooldownListRequest {
+    ProviderCooldownListRequest {
+        search: request.search.and_then(|value| {
+            let trimmed = value.trim().to_owned();
+            (!trimmed.is_empty()).then_some(trimmed)
+        }),
+        ..request
+    }
+}
+
+fn validate_provider_cooldown_request(request: &ProviderCooldownListRequest) -> ProviderResult<()> {
+    if request.limit == 0 || request.limit > MAX_PROVIDER_COOLDOWN_LIMIT {
+        return Err(ProviderError::InvalidInput(format!(
+            "limit must be between 1 and {MAX_PROVIDER_COOLDOWN_LIMIT}"
+        )));
+    }
+    if request.status_code.is_some_and(|value| !(100..=599).contains(&value)) {
+        return Err(ProviderError::InvalidInput("status_code must be between 100 and 599".into()));
+    }
+    Ok(())
 }
 
 fn active_endpoints(endpoints: Vec<ProviderEndpoint>) -> Vec<ProviderEndpoint> {

@@ -1,0 +1,248 @@
+[
+  {
+    "label": "load context and prepare schema",
+    "ok": true,
+    "evidence": {
+      "serverBaseUrl": "http://127.0.0.1:5555",
+      "db": {
+        "host": "localhost",
+        "port": "5433",
+        "name": "postgres"
+      },
+      "redis": {
+        "host": "127.0.0.1",
+        "port": 6380,
+        "prefix": "hook"
+      },
+      "cooldown": {
+        "model": "hook-provider-cooldown-real-chat",
+        "statusCode": 404,
+        "windowSeconds": 60,
+        "thresholdCount": 1,
+        "cooldownSeconds": 120,
+        "timeoutMs": 180000
+      }
+    }
+  },
+  {
+    "label": "fetch real upstream model names",
+    "ok": true,
+    "evidence": {
+      "msutoolsModel": "gpt-5.4-mini",
+      "ekan8Model": "gemini-3.1-pro-preview",
+      "msutoolsModelSample": [
+        "gpt-5.4-mini",
+        "claude-3-5-haiku-20241022",
+        "claude-3-5-sonnet-20240620",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-7-sonnet-20250219",
+        "claude-haiku-4-5-20251001",
+        "claude-opus-4-1-20250805",
+        "claude-opus-4-20250514",
+        "claude-opus-4-5-20251101"
+      ],
+      "ekan8ModelSample": [
+        "gemini-3.1-pro-preview",
+        "B-claude-opus-4-5",
+        "B-claude-opus-4-6",
+        "B-claude-opus-4-7",
+        "K-claude-opus-4-5",
+        "K-claude-opus-4-6",
+        "R-claude-opus-4-6",
+        "R-claude-opus-4-6-thinking",
+        "R-claude-opus-4-7"
+      ]
+    }
+  },
+  {
+    "label": "seed local DB fixtures",
+    "ok": true,
+    "evidence": {
+      "providers": [
+        "Cooldown Real Msutools",
+        "Cooldown Real Ekan8"
+      ],
+      "model": "hook-provider-cooldown-real-chat",
+      "upstream": {
+        "msutoolsModel": "gpt-5.4-mini",
+        "ekan8Model": "gemini-3.1-pro-preview",
+        "msutoolsModelSample": [
+          "gpt-5.4-mini",
+          "claude-3-5-haiku-20241022",
+          "claude-3-5-sonnet-20240620",
+          "claude-3-5-sonnet-20241022",
+          "claude-3-7-sonnet-20250219",
+          "claude-haiku-4-5-20251001",
+          "claude-opus-4-1-20250805",
+          "claude-opus-4-20250514",
+          "claude-opus-4-5-20251101"
+        ],
+        "ekan8ModelSample": [
+          "gemini-3.1-pro-preview",
+          "B-claude-opus-4-5",
+          "B-claude-opus-4-6",
+          "B-claude-opus-4-7",
+          "K-claude-opus-4-5",
+          "K-claude-opus-4-6",
+          "R-claude-opus-4-6",
+          "R-claude-opus-4-6-thinking",
+          "R-claude-opus-4-7"
+        ]
+      },
+      "policy": {
+        "statusCode": 404,
+        "thresholdCount": 1,
+        "windowSeconds": 60,
+        "cooldownSeconds": 120
+      }
+    }
+  },
+  {
+    "label": "create customer token through admin API",
+    "ok": true,
+    "evidence": {
+      "id": "019e2b78-120f-7ab2-b234-64ab9b4a9f98",
+      "prefix": "sk-[redacted]",
+      "groupCode": "provider_cooldown_real",
+      "tokenType": "user"
+    }
+  },
+  {
+    "label": "trigger 404 cooldown on first provider",
+    "ok": true,
+    "evidence": {
+      "ok": false,
+      "status": 404,
+      "body": {
+        "text": "404 page not found"
+      },
+      "requestId": "019e2b78-1219-70d3-833e-ee24fd6b35a2",
+      "record": {
+        "request_id": "019e2b78-1219-70d3-833e-ee24fd6b35a2",
+        "status": "failed",
+        "billing_status": "void",
+        "client_status_code": "404",
+        "client_error_type": "upstream_status",
+        "client_error_message": "upstream returned status 404: 404 page not found"
+      },
+      "trace": [
+        {
+          "candidate_index": "0",
+          "retry_index": "0",
+          "status": "failed",
+          "skip_reason": "",
+          "status_code": "404",
+          "provider_id": "00000000-0000-7000-9500-000000000101",
+          "provider_name": "Cooldown Real Msutools",
+          "endpoint_id": "00000000-0000-7000-9500-000000000301",
+          "endpoint_api_format": "openai_chat",
+          "key_id": "00000000-0000-7000-9500-000000000201",
+          "key_name": "Cooldown Real Msutools key",
+          "client_api_format": "openai_chat",
+          "provider_api_format": "openai_chat",
+          "needs_conversion": "false",
+          "error_type": "upstream_status",
+          "error_message": "upstream returned status 404: 404 page not found",
+          "error_code": "404 page not found",
+          "error_param": "404 page not found"
+        },
+        {
+          "candidate_index": "1",
+          "retry_index": "0",
+          "status": "skipped",
+          "skip_reason": "request_terminated_before_attempt",
+          "status_code": "",
+          "provider_id": "00000000-0000-7000-9500-000000000102",
+          "provider_name": "Cooldown Real Ekan8",
+          "endpoint_id": "00000000-0000-7000-9500-000000000302",
+          "endpoint_api_format": "gemini_chat",
+          "key_id": "00000000-0000-7000-9500-000000000202",
+          "key_name": "Cooldown Real Ekan8 key",
+          "client_api_format": "openai_chat",
+          "provider_api_format": "gemini_chat",
+          "needs_conversion": "true"
+        }
+      ]
+    }
+  },
+  {
+    "label": "verify DB and Redis cooldown state",
+    "ok": true,
+    "evidence": {
+      "cooldown": {
+        "provider_id": "00000000-0000-7000-9500-000000000101",
+        "provider_name": "Cooldown Real Msutools",
+        "status_code": "404",
+        "observed_count": "1",
+        "threshold_count": "1",
+        "window_seconds": "60",
+        "cooldown_seconds": "120",
+        "request_id": "019e2b78-1219-70d3-833e-ee24fd6b35a2",
+        "candidate_index": "0",
+        "retry_index": "0",
+        "error_type": "upstream_status",
+        "error_message": "upstream returned status 404: 404 page not found",
+        "error_code": "404 page not found",
+        "error_param": "404 page not found"
+      },
+      "redisValue": "1",
+      "failureCount": 1,
+      "apiTotal": 1
+    }
+  },
+  {
+    "label": "cooled provider is skipped and second provider succeeds",
+    "ok": true,
+    "evidence": {
+      "ok": true,
+      "status": 200,
+      "body": {
+        "id": "chatcmpl_unknown",
+        "model": "hook-provider-cooldown-real-chat",
+        "object": "chat.completion",
+        "finishReasons": [
+          "stop"
+        ],
+        "usage": {
+          "completion_tokens": 847,
+          "prompt_tokens": 149,
+          "total_tokens": 996
+        }
+      },
+      "requestId": "019e2b78-141a-7c30-8d7a-fd023966de5b",
+      "record": {
+        "request_id": "019e2b78-141a-7c30-8d7a-fd023966de5b",
+        "status": "success",
+        "billing_status": "settled",
+        "client_status_code": "200"
+      },
+      "trace": [
+        {
+          "candidate_index": "0",
+          "retry_index": "0",
+          "status": "success",
+          "skip_reason": "",
+          "status_code": "200",
+          "provider_id": "00000000-0000-7000-9500-000000000102",
+          "provider_name": "Cooldown Real Ekan8",
+          "endpoint_id": "00000000-0000-7000-9500-000000000302",
+          "endpoint_api_format": "gemini_chat",
+          "key_id": "00000000-0000-7000-9500-000000000202",
+          "key_name": "Cooldown Real Ekan8 key",
+          "client_api_format": "openai_chat",
+          "provider_api_format": "gemini_chat",
+          "needs_conversion": "true"
+        }
+      ]
+    }
+  },
+  {
+    "label": "manual release clears DB list and Redis key",
+    "ok": true,
+    "evidence": {
+      "releasedProviderId": "00000000-0000-7000-9500-000000000101",
+      "secondRequestId": "019e2b78-141a-7c30-8d7a-fd023966de5b",
+      "remainingTotal": 0
+    }
+  }
+]

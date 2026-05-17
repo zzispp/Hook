@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use types::provider::ProviderSchedulingMode;
 
 use super::helpers::{
@@ -25,6 +27,7 @@ fn matching_candidate_parts_compacts_endpoint_key_product_into_provider_route() 
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert_eq!(parts.len(), 1);
@@ -50,6 +53,7 @@ fn matching_candidate_parts_promotes_affinity_key_inside_route() {
         affinity_key: Some("key-a-2"),
         scheduling_mode: ProviderSchedulingMode::CacheAffinity,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert_eq!(parts.len(), 1);
@@ -74,6 +78,7 @@ fn matching_candidate_parts_keeps_all_provider_routes_without_silent_budget() {
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert_eq!(parts.len(), 2);
@@ -95,6 +100,7 @@ fn matching_candidate_parts_prefers_highest_priority_mapped_provider_model_name(
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
     });
 
     assert_eq!(parts.len(), 1);
@@ -127,6 +133,32 @@ fn matching_candidate_parts_filters_by_user_provider_access() {
         affinity_key: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
+    });
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].provider.id, "provider-b");
+}
+
+#[test]
+fn matching_candidate_parts_filters_cooled_providers() {
+    let snapshot = SchedulingSnapshot {
+        providers: vec![provider_with_endpoints_and_keys(), provider_b()],
+        ..snapshot_with_provider(provider_with_endpoints_and_keys())
+    };
+    let group = &snapshot.groups[0];
+    let cooled_provider_ids = HashSet::from(["provider-a".to_owned()]);
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: request(),
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+        cooled_provider_ids: &cooled_provider_ids,
     });
 
     assert_eq!(parts.len(), 1);

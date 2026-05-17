@@ -7,11 +7,12 @@ use crate::{StorageResult, json};
 pub mod entities;
 
 pub(crate) use crate::model::provider_models;
-pub use entities::{billing_group_providers, provider_api_keys, provider_endpoints, providers, request_candidates, request_records};
+pub use entities::{billing_group_providers, provider_api_keys, provider_cooldowns, provider_endpoints, providers, request_candidates, request_records};
 
 pub type ProviderRecord = providers::Model;
 pub type ProviderEndpointRecord = provider_endpoints::Model;
 pub type ProviderApiKeyRecord = provider_api_keys::Model;
+pub type ProviderCooldownRecord = provider_cooldowns::Model;
 pub type ProviderModelRecord = provider_models::Model;
 pub type RequestCandidateRecord = request_candidates::Model;
 pub type RequestRecordSummaryRecord = request_records::Model;

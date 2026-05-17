@@ -30,6 +30,7 @@ pub async fn load(database: &Database) -> Result<SchedulingSnapshot, LlmProxyErr
         max_request_body_size_kb: settings.max_request_body_size_kb,
         max_response_body_size_kb: settings.max_response_body_size_kb,
         sensitive_request_headers: settings.sensitive_request_headers,
+        provider_cooldown_policy: settings.provider_cooldown_policy,
         models: load_models(database).await?,
         groups: load_groups(database).await?,
         users: load_users(database).await?,

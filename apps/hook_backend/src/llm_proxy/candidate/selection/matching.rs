@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use types::provider::ProviderSchedulingMode;
 
 use super::CandidateParts;
@@ -20,6 +22,7 @@ pub(super) struct MatchingCandidatePartsInput<'a> {
     pub(super) affinity_key: Option<&'a str>,
     pub(super) scheduling_mode: ProviderSchedulingMode,
     pub(super) request_id: &'a str,
+    pub(super) cooled_provider_ids: &'a HashSet<String>,
 }
 
 pub(super) fn matching_candidate_parts(input: MatchingCandidatePartsInput<'_>) -> Vec<CandidateParts> {
@@ -28,6 +31,7 @@ pub(super) fn matching_candidate_parts(input: MatchingCandidatePartsInput<'_>) -
         .snapshot
         .providers
         .iter()
+        .filter(|provider| !input.cooled_provider_ids.contains(&provider.id))
         .filter(|provider| provider_allowed(input.group, input.user_access, provider))
     {
         append_provider_candidate(

@@ -3,10 +3,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use provider::application::{ProviderError, ProviderResult, ProviderUseCase};
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
-    ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
-    RequestRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
+    ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
+    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use crate::llm_proxy::LlmProxyCache;
@@ -42,6 +42,7 @@ impl ProviderUseCase for ProxyCachedProviderUseCase {
 
     async fn delete_provider(&self, id: &str) -> ProviderResult<()> {
         self.inner.delete_provider(id).await?;
+        self.cache.clear_provider_cooldown(id).await.map_err(cache_error)?;
         self.refresh_scheduling().await
     }
 
@@ -51,6 +52,16 @@ impl ProviderUseCase for ProxyCachedProviderUseCase {
 
     async fn list_providers(&self, request: ProviderListRequest) -> ProviderResult<ProviderListResponse> {
         self.inner.list_providers(request).await
+    }
+
+    async fn list_provider_cooldowns(&self, request: ProviderCooldownListRequest) -> ProviderResult<ProviderCooldownListResponse> {
+        self.inner.list_provider_cooldowns(request).await
+    }
+
+    async fn release_provider_cooldown(&self, provider_id: &str) -> ProviderResult<ProviderCooldown> {
+        let value = self.inner.release_provider_cooldown(provider_id).await?;
+        self.cache.clear_provider_cooldown(provider_id).await.map_err(cache_error)?;
+        Ok(value)
     }
 
     async fn create_endpoint(&self, provider_id: &str, input: ProviderEndpointCreate) -> ProviderResult<ProviderEndpoint> {

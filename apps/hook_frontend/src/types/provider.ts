@@ -13,6 +13,17 @@ export type ProviderType = 'custom';
 
 export type ProviderSchedulingMode = 'fixed_order' | 'cache_affinity' | 'load_balance';
 
+export type ProviderCooldownRule = {
+  status_code: number;
+  failure_count: number;
+  cooldown_seconds: number;
+};
+
+export type ProviderCooldownPolicy = {
+  window_seconds: number;
+  rules: ProviderCooldownRule[];
+};
+
 export type Provider = {
   id: string;
   name: string;
@@ -30,6 +41,37 @@ export type Provider = {
 
 export type ProviderListResponse = {
   providers: Provider[];
+  total: number;
+};
+
+export type ProviderCooldown = {
+  provider_id: string;
+  provider_name: string;
+  status_code: number;
+  observed_count: number;
+  threshold_count: number;
+  window_seconds: number;
+  cooldown_seconds: number;
+  triggered_at: string;
+  cooldown_until: string;
+  released_at?: string | null;
+  request_id: string;
+  candidate_index: number;
+  retry_index: number;
+  endpoint_id?: string | null;
+  endpoint_name?: string | null;
+  key_id?: string | null;
+  key_name?: string | null;
+  error_type?: string | null;
+  error_message?: string | null;
+  error_code?: string | null;
+  error_param?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProviderCooldownListResponse = {
+  cooldowns: ProviderCooldown[];
   total: number;
 };
 

@@ -5,10 +5,10 @@ use axum::{
 use rbac::api::CurrentUser;
 use types::{
     provider::{
-        ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate,
-        ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding,
-        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
-        RequestRecordListResponse,
+        ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
+        ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
+        ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
+        ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -41,6 +41,17 @@ pub async fn update_provider(
 pub async fn delete_provider(State(state): State<ProviderApiState>, Path(id): Path<String>) -> ApiResult<ApiJson<()>> {
     state.providers.delete_provider(&id).await?;
     Ok(ok(()))
+}
+
+pub async fn list_provider_cooldowns(
+    State(state): State<ProviderApiState>,
+    Query(query): Query<ProviderCooldownListRequest>,
+) -> ApiResult<ApiJson<ProviderCooldownListResponse>> {
+    Ok(ok(state.providers.list_provider_cooldowns(query).await?))
+}
+
+pub async fn release_provider_cooldown(State(state): State<ProviderApiState>, Path(provider_id): Path<String>) -> ApiResult<ApiJson<ProviderCooldown>> {
+    Ok(ok(state.providers.release_provider_cooldown(&provider_id).await?))
 }
 
 pub async fn list_endpoints(State(state): State<ProviderApiState>, Path(provider_id): Path<String>) -> ApiResult<ApiJson<Vec<ProviderEndpoint>>> {

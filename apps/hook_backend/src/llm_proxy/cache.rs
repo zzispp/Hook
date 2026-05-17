@@ -1,6 +1,9 @@
 mod auth;
+mod provider_cooldown;
 pub(super) mod snapshot;
 mod usage_flush;
+
+pub use provider_cooldown::ProviderCooldownFailureInput;
 
 use redis::AsyncCommands;
 use rust_decimal::Decimal;

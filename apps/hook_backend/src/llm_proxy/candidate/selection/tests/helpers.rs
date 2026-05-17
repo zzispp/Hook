@@ -22,6 +22,7 @@ pub(super) fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnap
         max_request_body_size_kb: 1024,
         max_response_body_size_kb: 1024,
         sensitive_request_headers: String::new(),
+        provider_cooldown_policy: Default::default(),
         models: vec![CachedGlobalModel {
             id: "model-a".into(),
             name: "gpt-test".into(),
