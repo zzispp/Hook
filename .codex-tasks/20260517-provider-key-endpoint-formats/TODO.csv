@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect provider key storage API and UI,DONE,Current key lifecycle and scheduling write/read sites identified,rg provider_api_keys apps crates,2026-05-16T17:37:21Z,0,
+2,Add api_formats storage and DTO propagation,DONE,Provider key create/update/list carries api_formats,cargo check -p storage -p provider -p backend,2026-05-16T17:37:21Z,0,
+3,Filter candidate keys by endpoint format,DONE,Route options only include keys supporting selected endpoint,cargo test -p backend llm_proxy::candidate -- --nocapture,2026-05-16T17:37:21Z,0,
+4,Update frontend key form and display,DONE,Admin UI can edit supported endpoint formats and key model permissions,pnpm lint:frontend,2026-05-16T17:37:21Z,0,
+5,Run final validation,DONE,Rust and frontend validation pass,cargo fmt --all --check; cargo check -p storage -p provider -p backend; cargo test -p backend llm_proxy::candidate -- --nocapture; cargo test -p provider -- --nocapture; cargo test -p storage -- --nocapture; pnpm lint:frontend,2026-05-16T17:37:21Z,0,

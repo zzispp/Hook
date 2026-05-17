@@ -1,6 +1,8 @@
 mod event;
 mod record_billing;
 mod records;
+#[cfg(test)]
+mod tests;
 
 use provider::application::billing::{RequestBillingAmount, RequestBillingInput, calculate_request_billing};
 use storage::{StorageError, api_token::ApiTokenUsageRecord, model::GlobalModelUsageRecord, provider::ProviderStore};
@@ -70,6 +72,13 @@ async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: Attempt
     }
     store.update_request_record(records::request_record_patch(request_id, &input, &policy)?).await?;
     record_success_usage(state, usage_record, settlement, model_usage_record).await
+}
+
+fn request_billing_status(input: &AttemptRecordInput<'_>) -> &'static str {
+    match input.status {
+        "success" if input.finished && input.usage.is_none() => "missing_usage",
+        status => billing_status(status),
+    }
 }
 
 async fn persist_skipped_candidates(state: &LlmProxyState, request_id: &str, skip_reason: &str) -> Result<(), LlmProxyError> {
@@ -178,7 +187,7 @@ fn wallet_settlement_input<'a>(request_id: &'a str, input: &'a AttemptRecordInpu
 }
 
 fn should_record_successful_usage(input: &AttemptRecordInput<'_>) -> bool {
-    input.status == "success" && input.finished
+    input.status == "success" && input.finished && input.usage.is_some()
 }
 
 fn billing_status(status: &str) -> &'static str {

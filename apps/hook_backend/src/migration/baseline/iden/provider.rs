@@ -56,6 +56,8 @@ pub(in crate::migration::baseline) enum ProviderApiKeys {
     Id,
     ProviderId,
     Name,
+    ApiFormats,
+    AllowedModelIds,
     EncryptedApiKey,
     Note,
     InternalPriority,

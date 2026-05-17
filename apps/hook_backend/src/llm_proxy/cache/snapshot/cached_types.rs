@@ -89,6 +89,8 @@ pub struct CachedProviderKey {
     pub id: String,
     pub provider_id: String,
     pub name: String,
+    pub api_formats: Vec<String>,
+    pub allowed_model_ids: Vec<String>,
     pub key_preview: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,

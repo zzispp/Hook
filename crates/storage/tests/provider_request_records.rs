@@ -43,6 +43,11 @@ async fn request_record_storage_lists_aggregated_records() {
     assert_eq!(success.total_tokens, Some(20));
     assert_eq!(success.cache_creation_input_tokens, Some(3));
     assert_eq!(success.cache_read_input_tokens, Some(4));
+    assert_eq!(success.input_text_tokens, Some(7));
+    assert_eq!(success.output_text_tokens, Some(5));
+    assert_eq!(success.reasoning_tokens, Some(2));
+    assert_eq!(success.usage_source.as_deref(), Some("openai"));
+    assert_eq!(success.usage_semantic.as_deref(), Some("openai"));
     assert_eq!(success.created_at, "2026-05-11T11:02:17Z");
     assert_eq!(success.first_byte_time_ms, Some(110));
     assert_eq!(success.total_latency_ms, Some(570));
@@ -144,6 +149,8 @@ async fn request_record_storage_returns_trace_detail() {
     assert_eq!(success.total_tokens, Some(20));
     assert_eq!(success.cache_creation_input_tokens, Some(3));
     assert_eq!(success.cache_read_input_tokens, Some(4));
+    assert_eq!(success.cache_creation_5m_input_tokens, Some(1));
+    assert_eq!(success.cache_creation_1h_input_tokens, Some(2));
     assert_eq!(success.key_name.as_deref(), Some("primary-key"));
     assert_eq!(success.key_preview.as_deref(), Some("***abcd"));
     assert_eq!(
@@ -318,6 +325,17 @@ fn main_record_patch() -> RequestRecordRecordPatch {
         total_tokens: PatchField::Value(20),
         cache_creation_input_tokens: PatchField::Value(3),
         cache_read_input_tokens: PatchField::Value(4),
+        input_text_tokens: PatchField::Value(7),
+        input_audio_tokens: PatchField::Value(1),
+        input_image_tokens: PatchField::Value(2),
+        output_text_tokens: PatchField::Value(5),
+        output_audio_tokens: PatchField::Value(1),
+        output_image_tokens: PatchField::Value(2),
+        reasoning_tokens: PatchField::Value(2),
+        cache_creation_5m_input_tokens: PatchField::Value(1),
+        cache_creation_1h_input_tokens: PatchField::Value(2),
+        usage_source: PatchField::Value("openai".into()),
+        usage_semantic: PatchField::Value("openai".into()),
         billing: success_billing_patch(),
         first_byte_time_ms: PatchField::Value(110),
         total_latency_ms: PatchField::Value(570),
@@ -364,6 +382,17 @@ fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, 
         total_tokens: (status == "success").then_some(20),
         cache_creation_input_tokens: (status == "success").then_some(3),
         cache_read_input_tokens: (status == "success").then_some(4),
+        input_text_tokens: (status == "success").then_some(7),
+        input_audio_tokens: (status == "success").then_some(1),
+        input_image_tokens: (status == "success").then_some(2),
+        output_text_tokens: (status == "success").then_some(5),
+        output_audio_tokens: (status == "success").then_some(1),
+        output_image_tokens: (status == "success").then_some(2),
+        reasoning_tokens: (status == "success").then_some(2),
+        cache_creation_5m_input_tokens: (status == "success").then_some(1),
+        cache_creation_1h_input_tokens: (status == "success").then_some(2),
+        usage_source: (status == "success").then(|| "openai".into()),
+        usage_semantic: (status == "success").then(|| "openai".into()),
         service_tier: (status == "success").then(|| "standard".into()),
         input_cost: (status == "success").then_some(Decimal::new(25, 4)),
         output_cost: (status == "success").then_some(Decimal::new(30, 4)),
@@ -481,6 +510,17 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         total_tokens: (status == "success").then_some(20),
         cache_creation_input_tokens: (status == "success").then_some(3),
         cache_read_input_tokens: (status == "success").then_some(4),
+        input_text_tokens: (status == "success").then_some(7),
+        input_audio_tokens: (status == "success").then_some(1),
+        input_image_tokens: (status == "success").then_some(2),
+        output_text_tokens: (status == "success").then_some(5),
+        output_audio_tokens: (status == "success").then_some(1),
+        output_image_tokens: (status == "success").then_some(2),
+        reasoning_tokens: (status == "success").then_some(2),
+        cache_creation_5m_input_tokens: (status == "success").then_some(1),
+        cache_creation_1h_input_tokens: (status == "success").then_some(2),
+        usage_source: (status == "success").then(|| "openai".into()),
+        usage_semantic: (status == "success").then(|| "openai".into()),
         service_tier: (status == "success").then(|| "standard".into()),
         input_cost: (status == "success").then_some(Decimal::new(25, 4)),
         output_cost: (status == "success").then_some(Decimal::new(30, 4)),

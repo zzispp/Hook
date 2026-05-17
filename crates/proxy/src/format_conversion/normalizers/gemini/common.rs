@@ -4,16 +4,6 @@ use crate::format_conversion::{FormatConversionError, InternalUsage, StopReason}
 
 pub const FORMAT: &str = "gemini";
 
-pub fn ensure_tools_disabled(request: &Value) -> Result<(), FormatConversionError> {
-    if request.get("tools").is_some() {
-        return Err(FormatConversionError::unsupported_feature(FORMAT, "tools"));
-    }
-    if request.get("toolConfig").is_some() || request.get("tool_config").is_some() {
-        return Err(FormatConversionError::unsupported_feature(FORMAT, "tool_config"));
-    }
-    Ok(())
-}
-
 pub fn generation_config(value: &Value) -> Option<&Map<String, Value>> {
     value
         .get("generationConfig")
@@ -23,14 +13,6 @@ pub fn generation_config(value: &Value) -> Option<&Map<String, Value>> {
 
 pub fn generation_config_value<'a>(config: &'a Map<String, Value>, camel: &str, snake: &str) -> Option<&'a Value> {
     config.get(camel).or_else(|| config.get(snake))
-}
-
-pub fn system_instruction_text(request: &Value) -> Result<Option<String>, FormatConversionError> {
-    let value = request.get("systemInstruction").or_else(|| request.get("system_instruction"));
-    match value {
-        Some(instruction) => parts_text(instruction.get("parts"), "$.systemInstruction.parts").map(Some),
-        None => Ok(None),
-    }
 }
 
 pub fn parts_text(value: Option<&Value>, path: &str) -> Result<String, FormatConversionError> {

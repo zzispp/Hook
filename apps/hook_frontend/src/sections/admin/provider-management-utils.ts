@@ -16,22 +16,50 @@ export const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS = 30;
 
 export const API_FORMAT_OPTIONS = [
   'openai_chat',
+  'openai_completion',
   'openai_cli',
   'openai_compact',
+  'openai_image',
+  'openai_image_edit',
+  'openai_embedding',
+  'openai_audio_transcription',
+  'openai_audio_translation',
+  'openai_audio_speech',
+  'openai_moderation',
+  'openai_realtime',
   'gemini_chat',
   'gemini_cli',
+  'gemini_embedding',
+  'gemini_batch_embedding',
+  'gemini_video',
   'claude_chat',
   'claude_messages',
+  'claude_cli',
+  'rerank',
 ];
 
 const API_FORMAT_DEFAULT_PATHS: Record<string, string> = {
   openai_chat: '/v1/chat/completions',
+  openai_completion: '/v1/completions',
   openai_cli: '/v1/responses',
   openai_compact: '/v1/responses/compact',
+  openai_image: '/v1/images/generations',
+  openai_image_edit: '/v1/images/edits',
+  openai_embedding: '/v1/embeddings',
+  openai_audio_transcription: '/v1/audio/transcriptions',
+  openai_audio_translation: '/v1/audio/translations',
+  openai_audio_speech: '/v1/audio/speech',
+  openai_moderation: '/v1/moderations',
+  openai_realtime: '/v1/realtime',
   gemini_chat: '/v1beta/models/{model}:{action}',
   gemini_cli: '/v1beta/models/{model}:{action}',
+  gemini_embedding: '/v1beta/models/{model}:embedContent',
+  gemini_batch_embedding: '/v1beta/models/{model}:batchEmbedContents',
+  gemini_video: '/v1beta/models/{model}:predictLongRunning',
   claude_chat: '/v1/messages',
   claude_messages: '/v1/messages',
+  claude_cli: '/v1/messages',
+  rerank: '/v1/rerank',
 };
 
 export type ProviderForm = {
@@ -49,6 +77,8 @@ export type ProviderForm = {
 export type ApiKeyForm = {
   name: string;
   api_key: string;
+  api_formats: string[];
+  allowed_model_ids: string[];
   note: string;
   internal_priority: string;
   rpm_limit: string;
@@ -78,6 +108,8 @@ export const DEFAULT_PROVIDER_FORM: ProviderForm = {
 export const DEFAULT_API_KEY_FORM: ApiKeyForm = {
   name: '',
   api_key: '',
+  api_formats: [],
+  allowed_model_ids: [],
   note: '',
   internal_priority: '10',
   rpm_limit: '0',
@@ -127,6 +159,8 @@ export function apiKeyPayload(form: ApiKeyForm): ProviderApiKeyCreate {
   return {
     name: form.name,
     api_key: form.api_key,
+    api_formats: normalizeSelectedApiFormats(form.api_formats),
+    allowed_model_ids: normalizeSelectedIds(form.allowed_model_ids),
     note: trimmedOrNull(form.note),
     internal_priority: requiredNumber(form.internal_priority),
     rpm_limit: optionalNumber(form.rpm_limit),
@@ -141,6 +175,8 @@ export function apiKeyFormFromKey(apiKey: ProviderApiKey): ApiKeyForm {
   return {
     name: apiKey.name,
     api_key: '',
+    api_formats: apiKey.api_formats,
+    allowed_model_ids: apiKey.allowed_model_ids,
     note: apiKey.note ?? '',
     internal_priority: String(apiKey.internal_priority),
     rpm_limit: String(apiKey.rpm_limit ?? 0),
@@ -155,6 +191,8 @@ export function apiKeyUpdatePayload(form: ApiKeyForm): ProviderApiKeyUpdate {
   return {
     name: form.name,
     ...(form.api_key.trim() ? { api_key: form.api_key } : {}),
+    api_formats: normalizeSelectedApiFormats(form.api_formats),
+    allowed_model_ids: normalizeSelectedIds(form.allowed_model_ids),
     note: trimmedOrNull(form.note),
     internal_priority: requiredNumber(form.internal_priority),
     rpm_limit: optionalNumber(form.rpm_limit),
@@ -208,4 +246,12 @@ function requiredNumber(value: string) {
 function trimmedOrNull(value: string) {
   const trimmed = value.trim();
   return trimmed || null;
+}
+
+function normalizeSelectedApiFormats(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim().toLowerCase()).filter(Boolean)));
+}
+
+function normalizeSelectedIds(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }

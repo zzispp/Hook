@@ -5,7 +5,7 @@ use storage::provider::{
 };
 use types::model::PatchField;
 
-use super::{AttemptRecordInput, attempt_billing, billing_status, record_billing, total_tokens};
+use super::{AttemptRecordInput, attempt_billing, record_billing, request_billing_status, total_tokens};
 use crate::llm_proxy::{
     LlmProxyError,
     candidate::{CandidateSelection, CandidateTrace},
@@ -30,6 +30,17 @@ pub(super) fn attempt_patch(
         total_tokens: input.usage.and_then(|usage| usage.total_tokens),
         cache_creation_input_tokens: input.usage.and_then(|usage| usage.cache_creation_input_tokens),
         cache_read_input_tokens: input.usage.and_then(|usage| usage.cache_read_input_tokens),
+        input_text_tokens: input.usage.and_then(|usage| usage.input_text_tokens),
+        input_audio_tokens: input.usage.and_then(|usage| usage.input_audio_tokens),
+        input_image_tokens: input.usage.and_then(|usage| usage.input_image_tokens),
+        output_text_tokens: input.usage.and_then(|usage| usage.output_text_tokens),
+        output_audio_tokens: input.usage.and_then(|usage| usage.output_audio_tokens),
+        output_image_tokens: input.usage.and_then(|usage| usage.output_image_tokens),
+        reasoning_tokens: input.usage.and_then(|usage| usage.reasoning_tokens),
+        cache_creation_5m_input_tokens: input.usage.and_then(|usage| usage.cache_creation_5m_input_tokens),
+        cache_creation_1h_input_tokens: input.usage.and_then(|usage| usage.cache_creation_1h_input_tokens),
+        usage_source: input.usage.and_then(|usage| usage.usage_source.map(str::to_owned)),
+        usage_semantic: input.usage.and_then(|usage| usage.usage_semantic.map(str::to_owned)),
         billing: record_billing::billing_values(input.service_tier.clone(), attempt_billing(input).as_ref()),
         latency_ms: input.latency_ms,
         first_byte_time_ms: input.first_byte_time_ms,
@@ -58,6 +69,17 @@ pub(super) fn attempt_input(
     record.total_tokens = input.usage.and_then(|usage| usage.total_tokens);
     record.cache_creation_input_tokens = input.usage.and_then(|usage| usage.cache_creation_input_tokens);
     record.cache_read_input_tokens = input.usage.and_then(|usage| usage.cache_read_input_tokens);
+    record.input_text_tokens = input.usage.and_then(|usage| usage.input_text_tokens);
+    record.input_audio_tokens = input.usage.and_then(|usage| usage.input_audio_tokens);
+    record.input_image_tokens = input.usage.and_then(|usage| usage.input_image_tokens);
+    record.output_text_tokens = input.usage.and_then(|usage| usage.output_text_tokens);
+    record.output_audio_tokens = input.usage.and_then(|usage| usage.output_audio_tokens);
+    record.output_image_tokens = input.usage.and_then(|usage| usage.output_image_tokens);
+    record.reasoning_tokens = input.usage.and_then(|usage| usage.reasoning_tokens);
+    record.cache_creation_5m_input_tokens = input.usage.and_then(|usage| usage.cache_creation_5m_input_tokens);
+    record.cache_creation_1h_input_tokens = input.usage.and_then(|usage| usage.cache_creation_1h_input_tokens);
+    record.usage_source = input.usage.and_then(|usage| usage.usage_source.map(str::to_owned));
+    record.usage_semantic = input.usage.and_then(|usage| usage.usage_semantic.map(str::to_owned));
     record.billing = record_billing::billing_values(input.service_tier.clone(), attempt_billing(input).as_ref());
     record.latency_ms = input.latency_ms;
     record.first_byte_time_ms = input.first_byte_time_ms;
@@ -137,7 +159,7 @@ pub(super) fn request_record_patch(
         has_failover: Some(input.candidate.trace.candidate_index > 0),
         has_retry: Some(input.retry_index > 0),
         status: input.status.to_owned(),
-        billing_status: billing_status(input.status).into(),
+        billing_status: request_billing_status(input).into(),
         client_status_code: option_patch(input.status_code),
         client_error_type: option_str_patch(input.error_type),
         client_error_message: option_str_patch(input.error_message),
@@ -149,6 +171,17 @@ pub(super) fn request_record_patch(
         total_tokens: option_patch(total_tokens(input.usage)),
         cache_creation_input_tokens: option_patch(input.usage.and_then(|usage| usage.cache_creation_input_tokens)),
         cache_read_input_tokens: option_patch(input.usage.and_then(|usage| usage.cache_read_input_tokens)),
+        input_text_tokens: option_patch(input.usage.and_then(|usage| usage.input_text_tokens)),
+        input_audio_tokens: option_patch(input.usage.and_then(|usage| usage.input_audio_tokens)),
+        input_image_tokens: option_patch(input.usage.and_then(|usage| usage.input_image_tokens)),
+        output_text_tokens: option_patch(input.usage.and_then(|usage| usage.output_text_tokens)),
+        output_audio_tokens: option_patch(input.usage.and_then(|usage| usage.output_audio_tokens)),
+        output_image_tokens: option_patch(input.usage.and_then(|usage| usage.output_image_tokens)),
+        reasoning_tokens: option_patch(input.usage.and_then(|usage| usage.reasoning_tokens)),
+        cache_creation_5m_input_tokens: option_patch(input.usage.and_then(|usage| usage.cache_creation_5m_input_tokens)),
+        cache_creation_1h_input_tokens: option_patch(input.usage.and_then(|usage| usage.cache_creation_1h_input_tokens)),
+        usage_source: option_patch(input.usage.and_then(|usage| usage.usage_source.map(str::to_owned))),
+        usage_semantic: option_patch(input.usage.and_then(|usage| usage.usage_semantic.map(str::to_owned))),
         billing: record_billing::billing_patch(attempt_billing(input).as_ref()),
         first_byte_time_ms: option_patch(input.first_byte_time_ms),
         total_latency_ms: option_patch(input.latency_ms),
@@ -190,6 +223,17 @@ fn base_input(request_id: &str, trace: &CandidateTrace, retry_index: i32, status
         total_tokens: None,
         cache_creation_input_tokens: None,
         cache_read_input_tokens: None,
+        input_text_tokens: None,
+        input_audio_tokens: None,
+        input_image_tokens: None,
+        output_text_tokens: None,
+        output_audio_tokens: None,
+        output_image_tokens: None,
+        reasoning_tokens: None,
+        cache_creation_5m_input_tokens: None,
+        cache_creation_1h_input_tokens: None,
+        usage_source: None,
+        usage_semantic: None,
         billing: RequestBillingRecordValues::default(),
         latency_ms: None,
         first_byte_time_ms: None,

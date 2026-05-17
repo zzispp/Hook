@@ -4,16 +4,6 @@ use crate::format_conversion::{FormatConversionError, InternalUsage, StopReason}
 
 pub const FORMAT: &str = "claude";
 
-pub fn ensure_tools_disabled(request: &Value) -> Result<(), FormatConversionError> {
-    if request.get("tools").is_some() {
-        return Err(FormatConversionError::unsupported_feature(FORMAT, "tools"));
-    }
-    if request.get("tool_choice").is_some() {
-        return Err(FormatConversionError::unsupported_feature(FORMAT, "tool_choice"));
-    }
-    Ok(())
-}
-
 pub fn content_text(value: Option<&Value>, path: &str) -> Result<String, FormatConversionError> {
     match value {
         Some(Value::String(text)) => Ok(text.to_owned()),

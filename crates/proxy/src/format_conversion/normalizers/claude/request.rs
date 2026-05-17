@@ -1,103 +1,86 @@
 use serde_json::{Map, Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalMessage, InternalRequest, InternalRole};
+use crate::format_conversion::{FormatConversionError, InternalRequest};
 
-use super::common::{
-    content_text, ensure_tools_disabled, insert_optional_integer, insert_optional_number, optional_bool, optional_f64, optional_string, optional_u32,
-    required_array, required_object,
+use super::{
+    common::{insert_optional_integer, insert_optional_number, optional_bool, optional_f64, optional_string, optional_u32},
+    request_codec::{
+        joined_system, messages_from_internal, parse_messages, parse_tool_choice, parse_tools, system_messages, tool_choice_from_internal, tools_from_internal,
+    },
 };
 
 pub fn to_internal(request: &Value) -> Result<InternalRequest, FormatConversionError> {
-    ensure_tools_disabled(request)?;
     let mut messages = system_messages(request)?;
     messages.extend(parse_messages(request)?);
-    Ok(InternalRequest {
-        model: optional_string(request, "model").unwrap_or_default(),
+    let mut internal = InternalRequest::new(
+        optional_string(request, "model").unwrap_or_default(),
         messages,
-        temperature: optional_f64(request, "temperature"),
-        max_tokens: optional_u32(request, "max_tokens"),
-        stream: optional_bool(request, "stream").unwrap_or(false),
-    })
+        optional_bool(request, "stream").unwrap_or(false),
+    );
+    internal.temperature = optional_f64(request, "temperature");
+    internal.max_tokens = optional_u32(request, "max_tokens");
+    internal.tools = parse_tools(request.get("tools"))?;
+    internal.tool_choice = parse_tool_choice(request.get("tool_choice"))?;
+    internal.top_p = optional_f64(request, "top_p");
+    internal.stop_sequences = parse_stop_sequences(request.get("stop_sequences"))?;
+    internal.thinking_budget_tokens = thinking_budget(request.get("thinking"));
+    Ok(internal)
 }
 
 pub fn from_internal(internal: &InternalRequest) -> Result<Value, FormatConversionError> {
     let mut output = Map::new();
     output.insert("model".into(), Value::String(internal.model.clone()));
-    output.insert("messages".into(), Value::Array(messages_from_internal(&internal.messages)));
-    if let Some(system) = joined_system(&internal.messages) {
+    output.insert("messages".into(), Value::Array(messages_from_internal(&internal.messages)?));
+    if let Some(system) = joined_system(&internal.messages)? {
         output.insert("system".into(), Value::String(system));
     }
     insert_optional_integer(&mut output, "max_tokens", internal.max_tokens);
     insert_optional_number(&mut output, "temperature", internal.temperature);
+    insert_optional_number(&mut output, "top_p", internal.top_p);
+    insert_stop_sequences(&mut output, &internal.stop_sequences);
+    insert_tool_fields(&mut output, internal);
+    if let Some(budget) = internal.thinking_budget_tokens {
+        output.insert("thinking".into(), json!({ "type": "enabled", "budget_tokens": budget }));
+    }
     if internal.stream {
         output.insert("stream".into(), Value::Bool(true));
     }
     Ok(Value::Object(output))
 }
 
-fn system_messages(request: &Value) -> Result<Vec<InternalMessage>, FormatConversionError> {
-    match request.get("system") {
-        Some(Value::String(text)) if !text.is_empty() => Ok(vec![system_message(text)]),
-        Some(Value::Array(_)) => Ok(vec![system_message(&content_text(request.get("system"), "$.system")?)]),
-        Some(_) => Err(FormatConversionError::invalid_payload("claude", "$.system")),
+fn parse_stop_sequences(value: Option<&Value>) -> Result<Vec<String>, FormatConversionError> {
+    match value {
         None => Ok(Vec::new()),
-    }
-}
-
-fn system_message(text: &str) -> InternalMessage {
-    InternalMessage {
-        role: InternalRole::System,
-        text: text.to_owned(),
-    }
-}
-
-fn parse_messages(request: &Value) -> Result<Vec<InternalMessage>, FormatConversionError> {
-    let source = required_array(request, "messages", "$.messages")?;
-    let mut messages = Vec::with_capacity(source.len());
-    for (index, value) in source.iter().enumerate() {
-        messages.push(parse_message(value, index)?);
-    }
-    Ok(messages)
-}
-
-fn parse_message(value: &Value, index: usize) -> Result<InternalMessage, FormatConversionError> {
-    let object = required_object(Some(value), &format!("$.messages[{index}]"))?;
-    let role = object.get("role").and_then(Value::as_str).unwrap_or("user");
-    Ok(InternalMessage {
-        role: claude_role(role),
-        text: content_text(object.get("content"), &format!("$.messages[{index}].content"))?,
-    })
-}
-
-fn messages_from_internal(messages: &[InternalMessage]) -> Vec<Value> {
-    messages
-        .iter()
-        .filter(|message| message.role != InternalRole::System)
-        .map(|message| {
-            json!({
-                "role": message_role(&message.role),
-                "content": message.text,
+        Some(Value::Array(items)) => items
+            .iter()
+            .map(|item| {
+                item.as_str()
+                    .map(str::to_owned)
+                    .ok_or_else(|| FormatConversionError::invalid_payload(super::common::FORMAT, "$.stop_sequences[]"))
             })
-        })
-        .collect()
-}
-
-fn joined_system(messages: &[InternalMessage]) -> Option<String> {
-    let system: Vec<&str> = messages
-        .iter()
-        .filter(|message| message.role == InternalRole::System && !message.text.is_empty())
-        .map(|message| message.text.as_str())
-        .collect();
-    (!system.is_empty()).then(|| system.join("\n\n"))
-}
-
-fn claude_role(value: &str) -> InternalRole {
-    if value == "assistant" { InternalRole::Assistant } else { InternalRole::User }
-}
-
-fn message_role(role: &InternalRole) -> &'static str {
-    match role {
-        InternalRole::Assistant => "assistant",
-        _ => "user",
+            .collect(),
+        Some(_) => Err(FormatConversionError::invalid_payload(super::common::FORMAT, "$.stop_sequences")),
     }
+}
+
+fn insert_stop_sequences(output: &mut Map<String, Value>, stop_sequences: &[String]) {
+    if !stop_sequences.is_empty() {
+        output.insert(
+            "stop_sequences".into(),
+            Value::Array(stop_sequences.iter().cloned().map(Value::String).collect()),
+        );
+    }
+}
+
+fn insert_tool_fields(output: &mut Map<String, Value>, internal: &InternalRequest) {
+    if !internal.tools.is_empty() {
+        output.insert("tools".into(), Value::Array(tools_from_internal(&internal.tools)));
+    }
+    if let Some(choice) = &internal.tool_choice {
+        output.insert("tool_choice".into(), tool_choice_from_internal(choice));
+    }
+}
+
+fn thinking_budget(value: Option<&Value>) -> Option<u32> {
+    value?.get("budget_tokens")?.as_u64().and_then(|value| u32::try_from(value).ok())
 }

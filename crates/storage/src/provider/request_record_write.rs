@@ -67,6 +67,17 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         total_tokens: Set(None),
         cache_creation_input_tokens: Set(None),
         cache_read_input_tokens: Set(None),
+        input_text_tokens: Set(None),
+        input_audio_tokens: Set(None),
+        input_image_tokens: Set(None),
+        output_text_tokens: Set(None),
+        output_audio_tokens: Set(None),
+        output_image_tokens: Set(None),
+        reasoning_tokens: Set(None),
+        cache_creation_5m_input_tokens: Set(None),
+        cache_creation_1h_input_tokens: Set(None),
+        usage_source: Set(None),
+        usage_semantic: Set(None),
         service_tier: Set(None),
         input_cost: Set(None),
         output_cost: Set(None),
@@ -149,6 +160,17 @@ fn apply_request_record_patch(
     apply_i64_patch(&mut active.total_tokens, input.total_tokens);
     apply_i64_patch(&mut active.cache_creation_input_tokens, input.cache_creation_input_tokens);
     apply_i64_patch(&mut active.cache_read_input_tokens, input.cache_read_input_tokens);
+    apply_i64_patch(&mut active.input_text_tokens, input.input_text_tokens);
+    apply_i64_patch(&mut active.input_audio_tokens, input.input_audio_tokens);
+    apply_i64_patch(&mut active.input_image_tokens, input.input_image_tokens);
+    apply_i64_patch(&mut active.output_text_tokens, input.output_text_tokens);
+    apply_i64_patch(&mut active.output_audio_tokens, input.output_audio_tokens);
+    apply_i64_patch(&mut active.output_image_tokens, input.output_image_tokens);
+    apply_i64_patch(&mut active.reasoning_tokens, input.reasoning_tokens);
+    apply_i64_patch(&mut active.cache_creation_5m_input_tokens, input.cache_creation_5m_input_tokens);
+    apply_i64_patch(&mut active.cache_creation_1h_input_tokens, input.cache_creation_1h_input_tokens);
+    apply_string_patch(&mut active.usage_source, input.usage_source);
+    apply_string_patch(&mut active.usage_semantic, input.usage_semantic);
     apply_billing_patch(active, input.billing);
     apply_i64_patch(&mut active.first_byte_time_ms, input.first_byte_time_ms);
     apply_i64_patch(&mut active.total_latency_ms, input.total_latency_ms);

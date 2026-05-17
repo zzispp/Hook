@@ -787,6 +787,11 @@
     "keyManagement": "密钥管理",
     "keyMasked": "sk-***",
     "keyUpdateSecretHint": "留空则不更换密钥",
+    "supportedFormats": "支持的端点格式",
+    "selectSupportedFormats": "选择端点格式...",
+    "noSupportedFormats": "未配置端点格式",
+    "modelPermission": "模型权限",
+    "modelPermissionHelper": "选中的模型将被允许访问，不选择则允许全部",
     "copyKeyName": "复制密钥名称",
     "deleteKey": "删除密钥",
     "disableKey": "点击停用",
@@ -1168,6 +1173,7 @@
     "billingStatus": {
       "pending": "待计费",
       "settled": "已计费",
+      "missing_usage": "缺少用量",
       "void": "不计费"
     }
   }

@@ -18,6 +18,7 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
 import { EmptyList } from './provider-bindings-shared';
+import { formatApiFormat } from './provider-management-utils';
 
 export function ProviderApiKeysSection({
   items,
@@ -110,6 +111,14 @@ function ApiKeyRow({
         <Typography component="span" variant="caption" sx={prioritySx}>
           P{apiKey.internal_priority}
         </Typography>
+        <MetaDivider />
+        <Typography component="span" variant="caption">
+          {formatList(apiKey.api_formats, t('providers.noSupportedFormats'))}
+        </Typography>
+        <MetaDivider />
+        <Typography component="span" variant="caption">
+          {modelPermissionText(apiKey.allowed_model_ids, t)}
+        </Typography>
         {apiKey.time_range_enabled ? (
           <>
             <MetaDivider />
@@ -150,6 +159,16 @@ function timeRangeText(apiKey: ProviderApiKey) {
   const start = apiKey.time_range_start || '--:--';
   const end = apiKey.time_range_end || '--:--';
   return `${start}-${end}`;
+}
+
+function formatList(values: string[], emptyText: string) {
+  if (!values.length) return emptyText;
+  return values.map(formatApiFormat).join(', ');
+}
+
+function modelPermissionText(values: string[], t: (key: string, options?: Record<string, unknown>) => string) {
+  if (!values.length) return t('providers.allModels');
+  return t('providers.selectedModelCount', { count: values.length });
 }
 
 const panelSx = { border: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 2, overflow: 'hidden' };

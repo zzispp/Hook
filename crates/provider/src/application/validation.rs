@@ -13,6 +13,7 @@ const MAX_NAME_LENGTH: usize = 100;
 const MAX_TYPE_LENGTH: usize = 50;
 const MAX_API_FORMAT_LENGTH: usize = 50;
 const MAX_URL_LENGTH: usize = 500;
+const MAX_MODEL_ID_LENGTH: usize = 100;
 const MAX_MODEL_NAME_LENGTH: usize = 200;
 const REASONING_EFFORTS: [&str; 4] = ["minimal", "low", "medium", "high"];
 const PROVIDER_TYPES: [&str; 1] = ["custom"];
@@ -64,6 +65,8 @@ pub fn sanitize_api_key(input: ProviderApiKeyCreate) -> ProviderApiKeyCreate {
     ProviderApiKeyCreate {
         name: input.name.trim().to_owned(),
         api_key: input.api_key.trim().to_owned(),
+        api_formats: normalize_api_formats(input.api_formats),
+        allowed_model_ids: normalize_ids(input.allowed_model_ids),
         note: input.note.and_then(trim_optional),
         ..input
     }
@@ -73,6 +76,8 @@ pub fn sanitize_api_key_update(input: ProviderApiKeyUpdate) -> ProviderApiKeyUpd
     ProviderApiKeyUpdate {
         name: input.name.map(|value| value.trim().to_owned()),
         api_key: input.api_key.map(|value| value.trim().to_owned()),
+        api_formats: input.api_formats.map(normalize_api_formats),
+        allowed_model_ids: input.allowed_model_ids.map(normalize_ids),
         note: trim_patch(input.note),
         time_range_start: trim_patch(input.time_range_start),
         time_range_end: trim_patch(input.time_range_end),
@@ -145,6 +150,8 @@ pub fn validate_api_key(input: &ProviderApiKeyCreate) -> ProviderResult<()> {
     if input.api_key.is_empty() {
         return Err(ProviderError::InvalidInput("api_key cannot be blank".into()));
     }
+    validate_api_formats(&input.api_formats)?;
+    validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
     Ok(())
 }
 
@@ -157,6 +164,29 @@ pub fn validate_api_key_update(input: &ProviderApiKeyUpdate) -> ProviderResult<(
     }
     if input.api_key.as_deref().is_some_and(str::is_empty) {
         return Err(ProviderError::InvalidInput("api_key cannot be blank".into()));
+    }
+    if let Some(api_formats) = &input.api_formats {
+        validate_api_formats(api_formats)?;
+    }
+    if let Some(allowed_model_ids) = &input.allowed_model_ids {
+        validate_ids("allowed_model_ids", allowed_model_ids)?;
+    }
+    Ok(())
+}
+
+fn validate_api_formats(api_formats: &[String]) -> ProviderResult<()> {
+    if api_formats.is_empty() {
+        return Err(ProviderError::InvalidInput("api_formats cannot be empty".into()));
+    }
+    for api_format in api_formats {
+        validate_text("api_formats", api_format, MAX_API_FORMAT_LENGTH)?;
+    }
+    Ok(())
+}
+
+fn validate_ids(field: &str, values: &[String]) -> ProviderResult<()> {
+    for value in values {
+        validate_text(field, value, MAX_MODEL_ID_LENGTH)?;
     }
     Ok(())
 }
@@ -208,6 +238,28 @@ fn trim_patch(value: PatchField<String>) -> PatchField<String> {
         PatchField::Value(value) => trim_optional(value).map(PatchField::Value).unwrap_or(PatchField::Null),
         other => other,
     }
+}
+
+fn normalize_api_formats(values: Vec<String>) -> Vec<String> {
+    let mut output = Vec::new();
+    for value in values {
+        let value = value.trim().to_ascii_lowercase();
+        if !value.is_empty() && !output.contains(&value) {
+            output.push(value);
+        }
+    }
+    output
+}
+
+fn normalize_ids(values: Vec<String>) -> Vec<String> {
+    let mut output = Vec::new();
+    for value in values {
+        let value = value.trim().to_owned();
+        if !value.is_empty() && !output.contains(&value) {
+            output.push(value);
+        }
+    }
+    output
 }
 
 fn sanitize_provider_model_mapping_patch(mapping: PatchField<ProviderModelMapping>) -> PatchField<ProviderModelMapping> {
@@ -266,6 +318,8 @@ fn model_binding_update_is_empty(input: &ProviderModelBindingUpdate) -> bool {
 fn api_key_update_is_empty(input: &ProviderApiKeyUpdate) -> bool {
     input.name.is_none()
         && input.api_key.is_none()
+        && input.api_formats.is_none()
+        && input.allowed_model_ids.is_none()
         && input.note.is_missing()
         && input.internal_priority.is_none()
         && input.rpm_limit.is_missing()

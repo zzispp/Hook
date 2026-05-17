@@ -38,6 +38,17 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         total_tokens: Set(input.total_tokens),
         cache_creation_input_tokens: Set(input.cache_creation_input_tokens),
         cache_read_input_tokens: Set(input.cache_read_input_tokens),
+        input_text_tokens: Set(input.input_text_tokens),
+        input_audio_tokens: Set(input.input_audio_tokens),
+        input_image_tokens: Set(input.input_image_tokens),
+        output_text_tokens: Set(input.output_text_tokens),
+        output_audio_tokens: Set(input.output_audio_tokens),
+        output_image_tokens: Set(input.output_image_tokens),
+        reasoning_tokens: Set(input.reasoning_tokens),
+        cache_creation_5m_input_tokens: Set(input.cache_creation_5m_input_tokens),
+        cache_creation_1h_input_tokens: Set(input.cache_creation_1h_input_tokens),
+        usage_source: Set(input.usage_source),
+        usage_semantic: Set(input.usage_semantic),
         service_tier: Set(None),
         cost_currency: Set(None),
         input_cost: Set(None),
@@ -89,6 +100,17 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     record.total_tokens = Set(input.total_tokens);
     record.cache_creation_input_tokens = Set(input.cache_creation_input_tokens);
     record.cache_read_input_tokens = Set(input.cache_read_input_tokens);
+    record.input_text_tokens = Set(input.input_text_tokens);
+    record.input_audio_tokens = Set(input.input_audio_tokens);
+    record.input_image_tokens = Set(input.input_image_tokens);
+    record.output_text_tokens = Set(input.output_text_tokens);
+    record.output_audio_tokens = Set(input.output_audio_tokens);
+    record.output_image_tokens = Set(input.output_image_tokens);
+    record.reasoning_tokens = Set(input.reasoning_tokens);
+    record.cache_creation_5m_input_tokens = Set(input.cache_creation_5m_input_tokens);
+    record.cache_creation_1h_input_tokens = Set(input.cache_creation_1h_input_tokens);
+    record.usage_source = Set(input.usage_source);
+    record.usage_semantic = Set(input.usage_semantic);
     apply_billing_values(&mut record, input.billing);
     record.latency_ms = Set(input.latency_ms);
     record.first_byte_time_ms = Set(input.first_byte_time_ms);

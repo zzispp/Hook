@@ -1,8 +1,9 @@
 mod event;
 mod record;
 mod relay;
+mod usage_parser;
 
-use std::{pin::Pin, time::Instant};
+use std::{pin::Pin, time::Duration, time::Instant};
 
 use axum::{
     body::Body,
@@ -16,6 +17,7 @@ use types::model::PatchField;
 use super::{
     LlmProxyError, LlmProxyState,
     response_payload::{body_value, upstream_status_error_details},
+    timeout::proxy_timeouts,
     transport,
 };
 use crate::llm_proxy::{
@@ -73,10 +75,24 @@ pub async fn stream_response(args: StreamResponseArgs) -> Result<Response, LlmPr
 
     record_stream_headers(&context, upstream_headers, content_type.as_ref()).await?;
     let upstream = req::response_bytes_stream(response);
+    let first_byte_timeout = proxy_timeouts(&context.candidate).stream_first_byte;
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
-    relay.prefetch().await?;
+    prefetch_with_timeout(&mut relay, first_byte_timeout).await?;
     let body = Body::from_stream(stream::unfold(relay, relay::next_body_item));
     transport::response_builder(status, content_type).body(body).map_err(transport::response_error)
+}
+
+async fn prefetch_with_timeout(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<(), LlmProxyError> {
+    match timeout {
+        Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch()).await {
+            Ok(result) => result,
+            Err(_) => {
+                relay.record_first_byte_timeout().await?;
+                Err(LlmProxyError::Upstream("stream first byte timeout".into()))
+            }
+        },
+        None => relay.prefetch().await,
+    }
 }
 
 async fn stream_status_failure(

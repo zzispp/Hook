@@ -2,17 +2,17 @@ use std::collections::VecDeque;
 
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry, StreamChunkConversion, StreamConversionState};
 use serde_json::Value;
-use types::model::PatchField;
 
 use super::{
     StreamAttemptContext, UpstreamStream,
-    event::{parse_stream_values, render_stream_error, render_stream_event, stream_error},
-    record::{StreamAttemptRecord, record_stream_attempt, response_read_error_type},
+    event::{render_stream_error, render_stream_event, stream_error},
+    record::{cancelled_record, failure_record, record_stream_attempt, response_read_error_type, streaming_record, success_record},
+    usage_parser::StreamUsageParser,
 };
 use crate::llm_proxy::{
     LlmProxyError,
     audit::TokenUsage,
-    proxy::{response_model::rewrite_response_model_value, transport, usage},
+    proxy::{response_model::rewrite_response_model_value, usage},
 };
 
 type DownstreamItem = Result<req::Bytes, std::io::Error>;
@@ -27,6 +27,7 @@ pub(super) struct StreamRelay {
     conversion: StreamConversionState,
     buffer: Vec<u8>,
     pending: VecDeque<req::Bytes>,
+    usage_parser: StreamUsageParser,
     usage: Option<TokenUsage>,
     first_byte_time_ms: Option<i64>,
     yielded_any: bool,
@@ -54,6 +55,7 @@ impl StreamRelay {
             conversion: StreamConversionState::default(),
             buffer: Vec::new(),
             pending: VecDeque::new(),
+            usage_parser: StreamUsageParser::new(target_format),
             usage: None,
             first_byte_time_ms: None,
             yielded_any: false,
@@ -72,6 +74,11 @@ impl StreamRelay {
             self.handle_upstream_item(item, true).await?;
         }
         Ok(())
+    }
+
+    pub(super) async fn record_first_byte_timeout(&mut self) -> Result<(), LlmProxyError> {
+        self.finished = true;
+        self.record_failure("upstream_timeout", "stream first byte timeout").await
     }
 
     async fn next_item(&mut self) -> Option<DownstreamItem> {
@@ -99,7 +106,8 @@ impl StreamRelay {
     }
 
     async fn consume_bytes(&mut self, bytes: req::Bytes, fail_before_output: bool) -> Result<(), LlmProxyError> {
-        self.collect_usage_from_bytes(&bytes);
+        let usage = self.usage_parser.consume(&bytes)?;
+        self.merge_usage(usage);
         if !self.needs_conversion && !self.rewrite_model {
             self.pending.push_back(bytes);
             return Ok(());
@@ -173,8 +181,8 @@ impl StreamRelay {
         if self.yielded_any {
             return Ok(bytes);
         }
-        let first_byte = transport::elapsed_ms(self.context.started);
-        let record = self.first_byte_record(first_byte);
+        let first_byte = self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX);
+        let record = streaming_record(&self.context, first_byte);
         if let Err(error) = record_stream_attempt(record).await {
             return Err(stream_error(error.to_string()));
         }
@@ -196,12 +204,15 @@ impl StreamRelay {
         }
         if self.needs_conversion || self.rewrite_model {
             self.flush_remaining_buffer().await?;
+            self.flush_conversion_state()?;
             if matches!(self.source_format, ApiFormat::OpenAiChat) && !self.openai_done_sent {
                 self.pending.push_back(req::Bytes::from_static(b"data: [DONE]\n\n"));
                 self.openai_done_sent = true;
             }
         }
         self.finished = true;
+        let usage = self.usage_parser.finish()?;
+        self.merge_usage(usage);
         self.record_success().await
     }
 
@@ -218,25 +229,18 @@ impl StreamRelay {
         Ok(())
     }
 
-    fn first_byte_record(&self, first_byte_elapsed: i64) -> StreamAttemptRecord {
-        StreamAttemptRecord {
-            state: self.context.state.clone(),
-            request_id: self.context.request_id.clone(),
-            candidate: self.context.candidate.clone(),
-            retry_index: self.context.retry_index,
-            status: "streaming",
-            status_code: Some(self.context.status.as_u16() as i32),
-            usage: None,
-            latency_ms: None,
-            first_byte_time_ms: Some(first_byte_elapsed),
-            error_type: None,
-            error_message: None,
-            client_response_body: PatchField::Missing,
-            termination_origin: PatchField::Missing,
-            termination_reason: PatchField::Missing,
-            stream_end_reason: PatchField::Missing,
-            finished: false,
+    fn flush_conversion_state(&mut self) -> Result<(), LlmProxyError> {
+        if !self.needs_conversion {
+            return Ok(());
         }
+        let converted = FormatConversionRegistry::default()
+            .flush_stream(self.target_format, self.source_format, &mut self.conversion)
+            .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+        for mut event in converted {
+            rewrite_response_model_value(&mut event, &self.context.candidate.requested_model_name);
+            self.pending.push_back(render_stream_event(&event, self.source_format));
+        }
+        Ok(())
     }
 
     async fn record_success(&mut self) -> Result<(), LlmProxyError> {
@@ -244,25 +248,7 @@ impl StreamRelay {
             return Ok(());
         }
         self.recorded_terminal = true;
-        record_stream_attempt(StreamAttemptRecord {
-            state: self.context.state.clone(),
-            request_id: self.context.request_id.clone(),
-            candidate: self.context.candidate.clone(),
-            retry_index: self.context.retry_index,
-            status: "success",
-            status_code: Some(self.context.status.as_u16() as i32),
-            usage: self.usage,
-            latency_ms: Some(transport::elapsed_ms(self.context.started)),
-            first_byte_time_ms: self.first_byte_time_ms,
-            error_type: None,
-            error_message: None,
-            client_response_body: PatchField::Missing,
-            termination_origin: PatchField::Null,
-            termination_reason: PatchField::Null,
-            stream_end_reason: PatchField::Null,
-            finished: true,
-        })
-        .await
+        record_stream_attempt(success_record(&self.context, self.usage, self.first_byte_time_ms)).await
     }
 
     async fn record_failure(&mut self, error_type: &'static str, error_message: &str) -> Result<(), LlmProxyError> {
@@ -270,39 +256,12 @@ impl StreamRelay {
             return Ok(());
         }
         self.recorded_terminal = true;
-        record_stream_attempt(StreamAttemptRecord {
-            state: self.context.state.clone(),
-            request_id: self.context.request_id.clone(),
-            candidate: self.context.candidate.clone(),
-            retry_index: self.context.retry_index,
-            status: "failed",
-            status_code: Some(self.context.status.as_u16() as i32),
-            usage: None,
-            latency_ms: Some(transport::elapsed_ms(self.context.started)),
-            first_byte_time_ms: self.first_byte_time_ms,
-            error_type: Some(error_type),
-            error_message: Some(error_message.to_owned()),
-            client_response_body: PatchField::Missing,
-            termination_origin: PatchField::Null,
-            termination_reason: PatchField::Null,
-            stream_end_reason: PatchField::Null,
-            finished: true,
-        })
-        .await
+        record_stream_attempt(failure_record(&self.context, self.first_byte_time_ms, error_type, error_message)).await
     }
 
     async fn record_read_error(&mut self, error: &req::ClientError) -> Result<(), LlmProxyError> {
         let error_message = error.to_string();
         self.record_failure(response_read_error_type(error), &error_message).await
-    }
-
-    fn collect_usage_from_bytes(&mut self, bytes: &[u8]) {
-        if self.needs_conversion {
-            return;
-        }
-        for chunk in parse_stream_values(bytes) {
-            self.merge_usage(usage::from_stream_chunk(&chunk, self.target_format));
-        }
     }
 
     fn merge_usage(&mut self, incoming: Option<TokenUsage>) {
@@ -317,27 +276,6 @@ impl StreamRelay {
             self.openai_done_sent = true;
         }
     }
-
-    fn cancelled_record(&self) -> StreamAttemptRecord {
-        StreamAttemptRecord {
-            state: self.context.state.clone(),
-            request_id: self.context.request_id.clone(),
-            candidate: self.context.candidate.clone(),
-            retry_index: self.context.retry_index,
-            status: "cancelled",
-            status_code: Some(499),
-            usage: self.usage,
-            latency_ms: Some(transport::elapsed_ms(self.context.started)),
-            first_byte_time_ms: self.first_byte_time_ms,
-            error_type: Some("client_disconnected"),
-            error_message: Some("client disconnected before stream completed".into()),
-            client_response_body: PatchField::Missing,
-            termination_origin: PatchField::Value("client".into()),
-            termination_reason: PatchField::Value("disconnected".into()),
-            stream_end_reason: PatchField::Value("client_disconnected".into()),
-            finished: true,
-        }
-    }
 }
 
 impl Drop for StreamRelay {
@@ -345,7 +283,7 @@ impl Drop for StreamRelay {
         if self.recorded_terminal || self.finished {
             return;
         }
-        let record = self.cancelled_record();
+        let record = cancelled_record(&self.context, self.usage, self.first_byte_time_ms);
         tokio::spawn(async move {
             if let Err(error) = record_stream_attempt(record).await {
                 hook_tracing::warn_with_fields!("failed to record cancelled streaming request candidate", error = error);

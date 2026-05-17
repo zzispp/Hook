@@ -8,9 +8,10 @@ mod request;
 mod response_model;
 mod response_payload;
 mod stream_transport;
+mod timeout;
 mod transport;
 mod transport_read;
-mod usage;
+pub(super) mod usage;
 
 use axum::http::HeaderMap;
 use axum::response::Response;

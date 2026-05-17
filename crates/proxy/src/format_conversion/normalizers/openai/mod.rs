@@ -1,5 +1,6 @@
 mod common;
 mod request;
+mod request_codec;
 mod response;
 mod stream;
 
@@ -39,6 +40,10 @@ impl FormatNormalizer for OpenAiNormalizer {
 
     fn stream_chunk_to_internal(&self, chunk: &Value, state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
         stream::chunk_to_internal(chunk, state)
+    }
+
+    fn stream_flush_to_internal(&self, state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
+        Ok(stream::flush_to_internal(state))
     }
 
     fn stream_event_from_internal(&self, event: &InternalStreamEvent, state: &mut StreamConversionState) -> Result<Vec<Value>, FormatConversionError> {

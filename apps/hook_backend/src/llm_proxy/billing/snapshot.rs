@@ -85,6 +85,17 @@ fn usage_snapshot(usage: crate::llm_proxy::audit::TokenUsage) -> Value {
         "total_tokens": usage.total_tokens,
         "cache_creation_input_tokens": usage.cache_creation_input_tokens,
         "cache_read_input_tokens": usage.cache_read_input_tokens,
+        "input_text_tokens": usage.input_text_tokens,
+        "input_audio_tokens": usage.input_audio_tokens,
+        "input_image_tokens": usage.input_image_tokens,
+        "output_text_tokens": usage.output_text_tokens,
+        "output_audio_tokens": usage.output_audio_tokens,
+        "output_image_tokens": usage.output_image_tokens,
+        "reasoning_tokens": usage.reasoning_tokens,
+        "cache_creation_5m_input_tokens": usage.cache_creation_5m_input_tokens,
+        "cache_creation_1h_input_tokens": usage.cache_creation_1h_input_tokens,
+        "usage_source": usage.usage_source,
+        "usage_semantic": usage.usage_semantic,
     })
 }
 

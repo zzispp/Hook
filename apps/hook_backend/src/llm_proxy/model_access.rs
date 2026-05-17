@@ -224,6 +224,8 @@ mod tests {
                     id: "key-a".into(),
                     provider_id: "provider-a".into(),
                     name: "Key A".into(),
+                    api_formats: vec!["openai_chat".into()],
+                    allowed_model_ids: Vec::new(),
                     key_preview: "sk-***".into(),
                     encrypted_api_key: "encrypted".into(),
                     internal_priority: 0,

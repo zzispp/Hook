@@ -25,10 +25,21 @@ pub use cache::LlmProxyCache;
 pub use error::LlmProxyError;
 
 pub const OPENAI_CHAT_FORMAT: &str = "openai_chat";
+pub const OPENAI_COMPLETION_FORMAT: &str = "openai_completion";
 pub const OPENAI_CLI_FORMAT: &str = "openai_cli";
 pub const OPENAI_COMPACT_FORMAT: &str = "openai_compact";
+pub const OPENAI_IMAGE_FORMAT: &str = "openai_image";
+pub const OPENAI_IMAGE_EDIT_FORMAT: &str = "openai_image_edit";
+pub const OPENAI_EMBEDDING_FORMAT: &str = "openai_embedding";
+pub const OPENAI_AUDIO_TRANSCRIPTION_FORMAT: &str = "openai_audio_transcription";
+pub const OPENAI_AUDIO_TRANSLATION_FORMAT: &str = "openai_audio_translation";
+pub const OPENAI_AUDIO_SPEECH_FORMAT: &str = "openai_audio_speech";
+pub const OPENAI_MODERATION_FORMAT: &str = "openai_moderation";
 pub const CLAUDE_CHAT_FORMAT: &str = "claude_chat";
 pub const GEMINI_CHAT_FORMAT: &str = "gemini_chat";
+pub const GEMINI_EMBEDDING_FORMAT: &str = "gemini_embedding";
+pub const GEMINI_BATCH_EMBEDDING_FORMAT: &str = "gemini_batch_embedding";
+pub const RERANK_FORMAT: &str = "rerank";
 
 pub const REALTIME_PATH: &str = "/v1/realtime";
 
@@ -97,12 +108,32 @@ pub fn create_router(state: LlmProxyState) -> Router {
         .route("/models/", get(handlers::list_models))
         .route("/models/{model}", get(handlers::retrieve_model))
         .route("/models/{model}/", get(handlers::retrieve_model))
+        .route("/completions", post(handlers::completions))
+        .route("/completions/", post(handlers::completions))
         .route("/chat/completions", post(handlers::chat_completions))
         .route("/chat/completions/", post(handlers::chat_completions))
         .route("/responses", post(handlers::responses))
         .route("/responses/", post(handlers::responses))
         .route("/responses/compact", post(handlers::responses_compact))
         .route("/responses/compact/", post(handlers::responses_compact))
+        .route("/images/generations", post(handlers::image_generations))
+        .route("/images/generations/", post(handlers::image_generations))
+        .route("/images/edits", post(handlers::image_edits))
+        .route("/images/edits/", post(handlers::image_edits))
+        .route("/edits", post(handlers::image_edits))
+        .route("/edits/", post(handlers::image_edits))
+        .route("/embeddings", post(handlers::embeddings))
+        .route("/embeddings/", post(handlers::embeddings))
+        .route("/audio/transcriptions", post(handlers::audio_transcriptions))
+        .route("/audio/transcriptions/", post(handlers::audio_transcriptions))
+        .route("/audio/translations", post(handlers::audio_translations))
+        .route("/audio/translations/", post(handlers::audio_translations))
+        .route("/audio/speech", post(handlers::audio_speech))
+        .route("/audio/speech/", post(handlers::audio_speech))
+        .route("/moderations", post(handlers::moderations))
+        .route("/moderations/", post(handlers::moderations))
+        .route("/rerank", post(handlers::rerank))
+        .route("/rerank/", post(handlers::rerank))
         .route("/messages", post(handlers::claude_messages))
         .route("/messages/", post(handlers::claude_messages))
         .route("/realtime", get(ws::realtime))
@@ -115,6 +146,10 @@ pub fn create_v1beta_router(state: LlmProxyState) -> Router {
     Router::new()
         .route("/models/{model_action}", post(handlers::gemini_generate_content))
         .route("/models/{model_action}/", post(handlers::gemini_generate_content))
+        .route("/models/{model}/embedContent", post(handlers::gemini_embed_content))
+        .route("/models/{model}/embedContent/", post(handlers::gemini_embed_content))
+        .route("/models/{model}/batchEmbedContents", post(handlers::gemini_batch_embed_contents))
+        .route("/models/{model}/batchEmbedContents/", post(handlers::gemini_batch_embed_contents))
         .with_state(state.clone())
         .layer(middleware::from_fn_with_state(state, auth::token_middleware))
 }

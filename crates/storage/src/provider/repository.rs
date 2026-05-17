@@ -148,6 +148,8 @@ impl ProviderStore {
             id: Set(self.database.next_id()),
             provider_id: Set(input.provider_id),
             name: Set(input.name),
+            api_formats: Set(json::encode_required(&input.api_formats)?),
+            allowed_model_ids: Set(json::encode_required(&input.allowed_model_ids)?),
             encrypted_api_key: Set(input.encrypted_api_key),
             note: Set(input.note),
             internal_priority: Set(input.internal_priority),
@@ -184,15 +186,19 @@ impl ProviderStore {
             .order_by_asc(provider_api_keys::Column::InternalPriority)
             .all(self.database.connection())
             .await?;
-        Ok(records
+        records
             .into_iter()
-            .map(|record| ProviderApiKeySecretRecord {
-                name: record.name,
-                encrypted_api_key: record.encrypted_api_key,
-                internal_priority: record.internal_priority,
-                is_active: record.is_active,
+            .map(|record| {
+                Ok(ProviderApiKeySecretRecord {
+                    name: record.name,
+                    api_formats: json::decode_required(record.api_formats)?,
+                    allowed_model_ids: json::decode_required(record.allowed_model_ids)?,
+                    encrypted_api_key: record.encrypted_api_key,
+                    internal_priority: record.internal_priority,
+                    is_active: record.is_active,
+                })
             })
-            .collect())
+            .collect()
     }
 
     pub async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyRecordPatch) -> StorageResult<types::provider::ProviderApiKey> {

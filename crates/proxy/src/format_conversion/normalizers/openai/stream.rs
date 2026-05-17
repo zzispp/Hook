@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalStreamEvent, InternalUsage, StreamConversionState};
+use crate::format_conversion::{FormatConversionError, InternalStreamEvent, InternalUsage, PendingStreamDone, StreamConversionState};
 
 use super::common::{first_choice, map_openai_stop_reason, openai_finish_reason, optional_string, optional_string_value, required_object, usage_from_openai};
 
@@ -10,6 +10,7 @@ pub fn to_internal(chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatC
     for chunk in chunks {
         events.extend(chunk_to_internal(chunk, &mut state)?);
     }
+    events.extend(flush_to_internal(&mut state));
     Ok(events)
 }
 
@@ -24,7 +25,7 @@ pub fn from_internal(events: &[InternalStreamEvent]) -> Result<Vec<Value>, Forma
 
 pub fn chunk_to_internal(chunk: &Value, state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
     let mut events = Vec::new();
-    parse_stream_chunk(chunk, &mut state.openai_started, &mut events)?;
+    parse_stream_chunk(chunk, state, &mut events)?;
     Ok(events)
 }
 
@@ -40,25 +41,64 @@ pub fn event_from_internal(event: &InternalStreamEvent, state: &mut StreamConver
     Ok(output)
 }
 
-fn parse_stream_chunk(chunk: &Value, started: &mut bool, events: &mut Vec<InternalStreamEvent>) -> Result<(), FormatConversionError> {
+pub fn flush_to_internal(state: &mut StreamConversionState) -> Vec<InternalStreamEvent> {
+    match state.openai_pending_done.take() {
+        Some(done) => vec![InternalStreamEvent::Done {
+            reason: done.reason,
+            usage: done.usage,
+        }],
+        None => Vec::new(),
+    }
+}
+
+fn parse_stream_chunk(chunk: &Value, state: &mut StreamConversionState, events: &mut Vec<InternalStreamEvent>) -> Result<(), FormatConversionError> {
+    if openai_choices_empty(chunk)? {
+        merge_pending_usage(chunk, state);
+        events.extend(flush_to_internal(state));
+        return Ok(());
+    }
     let id = optional_string(chunk, "id");
     let model = optional_string(chunk, "model");
     let choice = first_choice(chunk, "$.choices")?;
     let delta = required_object(choice.get("delta"), "$.choices[0].delta")?;
-    emit_start_if_needed(started, events, &id, &model, delta.get("role").and_then(Value::as_str) == Some("assistant"));
+    emit_start_if_needed(
+        &mut state.openai_started,
+        events,
+        &id,
+        &model,
+        delta.get("role").and_then(Value::as_str) == Some("assistant"),
+    );
     if let Some(content) = delta.get("content").and_then(Value::as_str) {
-        emit_start_if_needed(started, events, &id, &model, true);
+        emit_start_if_needed(&mut state.openai_started, events, &id, &model, true);
         if !content.is_empty() {
             events.push(InternalStreamEvent::TextDelta(content.to_owned()));
         }
     }
     if let Some(reason) = optional_string_value(choice.get("finish_reason")) {
-        events.push(InternalStreamEvent::Done {
+        state.openai_pending_done = Some(PendingStreamDone {
             reason: Some(map_openai_stop_reason(&reason)),
             usage: usage_from_openai(chunk.get("usage")),
         });
+        if chunk.get("usage").is_some() {
+            events.extend(flush_to_internal(state));
+        }
     }
     Ok(())
+}
+
+fn openai_choices_empty(chunk: &Value) -> Result<bool, FormatConversionError> {
+    Ok(super::common::required_array(chunk, "choices", "$.choices")?.is_empty())
+}
+
+fn merge_pending_usage(chunk: &Value, state: &mut StreamConversionState) {
+    let usage = usage_from_openai(chunk.get("usage"));
+    match state.openai_pending_done.as_mut() {
+        Some(done) => done.usage = usage.or_else(|| done.usage.take()),
+        None if usage.is_some() => {
+            state.openai_pending_done = Some(PendingStreamDone { reason: None, usage });
+        }
+        None => {}
+    }
 }
 
 fn emit_start_if_needed(started: &mut bool, events: &mut Vec<InternalStreamEvent>, id: &Option<String>, model: &Option<String>, should_start: bool) {

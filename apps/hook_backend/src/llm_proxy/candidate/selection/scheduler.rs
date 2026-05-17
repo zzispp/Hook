@@ -59,6 +59,7 @@ pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Resu
 }
 
 fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmProxyError> {
+    let client_format = formats::endpoint_metadata(args.request.api_format, args.request.is_stream)?.data_format;
     Ok(SchedulerInput {
         group_code: args.group.code.clone(),
         group_is_active: args.group.is_active,
@@ -68,7 +69,7 @@ fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmPr
         user_allowed_provider_ids: args.user_access.map(|access| access.allowed_provider_ids.clone()).unwrap_or_default(),
         token_model_policy: token_model_policy(args.token),
         requested_model_id: args.model_id.to_owned(),
-        client_format: formats::parse_api_format(args.request.api_format)?,
+        client_format,
         is_stream: args.request.is_stream,
         affinity_key: args.affinity_key,
         load_balance_seed: Some(args.request_id.to_owned()),
@@ -94,6 +95,8 @@ struct SchedulerInputArgs<'a> {
 fn scheduler_candidate(parts: &CandidateParts) -> Result<Candidate, LlmProxyError> {
     let endpoint = primary_endpoint(parts);
     let key = primary_key(parts);
+    let provider_api_format = formats::endpoint_metadata(&endpoint.api_format, false)?.data_format;
+    let needs_conversion = formats::needs_conversion(&parts.client_api_format, &endpoint.api_format, false)?;
     Ok(Candidate {
         provider_id: parts.provider.id.clone(),
         provider_name: parts.provider.name.clone(),
@@ -101,8 +104,8 @@ fn scheduler_candidate(parts: &CandidateParts) -> Result<Candidate, LlmProxyErro
         key_id: key.id.clone(),
         global_model_id: parts.model.global_model_id.clone(),
         provider_model_name: parts.model.provider_model_name.clone(),
-        provider_api_format: formats::parse_api_format(&endpoint.api_format)?,
-        needs_conversion: endpoint.api_format != parts.client_api_format,
+        provider_api_format,
+        needs_conversion,
         is_cached: false,
         provider_priority: parts.provider.priority,
         key_priority: key.internal_priority,
@@ -160,5 +163,10 @@ fn primary_endpoint(parts: &CandidateParts) -> &crate::llm_proxy::cache::snapsho
 }
 
 fn primary_key(parts: &CandidateParts) -> &crate::llm_proxy::cache::snapshot::CachedProviderKey {
-    &parts.keys[0]
+    let endpoint = primary_endpoint(parts);
+    parts
+        .keys
+        .iter()
+        .find(|key| key.api_formats.iter().any(|format| format == &endpoint.api_format))
+        .expect("candidate parts must contain at least one key for the primary endpoint")
 }

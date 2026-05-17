@@ -29,6 +29,17 @@ pub struct TokenUsage {
     pub total_tokens: Option<i64>,
     pub cache_creation_input_tokens: Option<i64>,
     pub cache_read_input_tokens: Option<i64>,
+    pub input_text_tokens: Option<i64>,
+    pub input_audio_tokens: Option<i64>,
+    pub input_image_tokens: Option<i64>,
+    pub output_text_tokens: Option<i64>,
+    pub output_audio_tokens: Option<i64>,
+    pub output_image_tokens: Option<i64>,
+    pub reasoning_tokens: Option<i64>,
+    pub cache_creation_5m_input_tokens: Option<i64>,
+    pub cache_creation_1h_input_tokens: Option<i64>,
+    pub usage_source: Option<&'static str>,
+    pub usage_semantic: Option<&'static str>,
 }
 
 pub struct AttemptRecordInput<'a> {

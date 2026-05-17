@@ -255,6 +255,19 @@ function mergeRequestRecord(item: RequestRecord, update?: RequestRecord) {
     cache_creation_input_tokens:
       update.cache_creation_input_tokens ?? item.cache_creation_input_tokens,
     cache_read_input_tokens: update.cache_read_input_tokens ?? item.cache_read_input_tokens,
+    input_text_tokens: update.input_text_tokens ?? item.input_text_tokens,
+    input_audio_tokens: update.input_audio_tokens ?? item.input_audio_tokens,
+    input_image_tokens: update.input_image_tokens ?? item.input_image_tokens,
+    output_text_tokens: update.output_text_tokens ?? item.output_text_tokens,
+    output_audio_tokens: update.output_audio_tokens ?? item.output_audio_tokens,
+    output_image_tokens: update.output_image_tokens ?? item.output_image_tokens,
+    reasoning_tokens: update.reasoning_tokens ?? item.reasoning_tokens,
+    cache_creation_5m_input_tokens:
+      update.cache_creation_5m_input_tokens ?? item.cache_creation_5m_input_tokens,
+    cache_creation_1h_input_tokens:
+      update.cache_creation_1h_input_tokens ?? item.cache_creation_1h_input_tokens,
+    usage_source: update.usage_source ?? item.usage_source,
+    usage_semantic: update.usage_semantic ?? item.usage_semantic,
     has_failover: item.has_failover || update.has_failover,
     has_retry: item.has_retry || update.has_retry,
     candidate_count: Math.max(item.candidate_count, update.candidate_count),

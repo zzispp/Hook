@@ -138,6 +138,8 @@ export type ProviderApiKey = {
   id: string;
   provider_id: string;
   name: string;
+  api_formats: string[];
+  allowed_model_ids: string[];
   note?: string | null;
   internal_priority: number;
   rpm_limit?: number | null;
@@ -158,6 +160,8 @@ export type ProviderApiKey = {
 export type ProviderApiKeyCreate = {
   name: string;
   api_key: string;
+  api_formats: string[];
+  allowed_model_ids: string[];
   note?: string | null;
   internal_priority?: number;
   rpm_limit?: number | null;

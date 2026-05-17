@@ -106,6 +106,8 @@ impl ProviderRepository for StorageProviderRepository {
                     .into_iter()
                     .map(|record| ProviderApiKeySecret {
                         name: record.name,
+                        api_formats: record.api_formats,
+                        allowed_model_ids: record.allowed_model_ids,
                         encrypted_api_key: record.encrypted_api_key,
                         internal_priority: record.internal_priority,
                         is_active: record.is_active,
@@ -237,6 +239,8 @@ fn api_key_input(provider_id: &str, input: ProviderApiKeyCreate, encrypted_api_k
     ProviderApiKeyRecordInput {
         provider_id: provider_id.to_owned(),
         name: input.name,
+        api_formats: input.api_formats,
+        allowed_model_ids: input.allowed_model_ids,
         encrypted_api_key,
         note: input.note,
         internal_priority: input.internal_priority.unwrap_or(10),
@@ -253,6 +257,8 @@ fn api_key_input(provider_id: &str, input: ProviderApiKeyCreate, encrypted_api_k
 fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Option<String>) -> ProviderApiKeyRecordPatch {
     ProviderApiKeyRecordPatch {
         name: input.name,
+        api_formats: input.api_formats,
+        allowed_model_ids: input.allowed_model_ids,
         encrypted_api_key,
         note: input.note,
         internal_priority: input.internal_priority,

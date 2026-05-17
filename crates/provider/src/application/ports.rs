@@ -11,6 +11,8 @@ use super::ProviderResult;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProviderApiKeySecret {
     pub name: String,
+    pub api_formats: Vec<String>,
+    pub allowed_model_ids: Vec<String>,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
     pub is_active: bool,

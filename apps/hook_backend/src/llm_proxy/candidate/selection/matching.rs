@@ -58,7 +58,7 @@ fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &m
     let Some(model) = provider_model(input.provider, input.model_id, input.affinity_key) else {
         return;
     };
-    let endpoints = ordered_endpoints(input.provider, input.request);
+    let endpoints = ordered_endpoints(input.provider, input.model_id, input.request);
     let keys = ordered_keys(OrderedKeysInput {
         provider: input.provider,
         affinity_key: input.affinity_key,
@@ -84,13 +84,14 @@ struct OrderedKeysInput<'a> {
     request_id: &'a str,
 }
 
-fn ordered_endpoints(provider: &CachedProvider, request: CandidateRequest<'_>) -> Vec<CachedEndpoint> {
+fn ordered_endpoints(provider: &CachedProvider, model_id: &str, request: CandidateRequest<'_>) -> Vec<CachedEndpoint> {
     let (mut exact, converted): (Vec<_>, Vec<_>) = provider
         .endpoints
         .iter()
         .filter(|endpoint| endpoint_allowed(provider, endpoint, request))
+        .filter(|endpoint| provider.keys.iter().any(|key| key_allowed_for_model_endpoint(key, model_id, endpoint)))
         .cloned()
-        .partition(|endpoint| endpoint.api_format == request.api_format);
+        .partition(|endpoint| endpoint_exact(endpoint, request));
     exact.extend(converted);
     exact
 }
@@ -143,12 +144,19 @@ fn provider_model(provider: &CachedProvider, model_id: &str, affinity_key: Optio
 }
 
 fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
-    endpoint.is_active && (endpoint.api_format == request.api_format || conversion_allowed(provider, endpoint, request))
+    endpoint.is_active && (endpoint_exact(endpoint, request) || conversion_allowed(provider, endpoint, request))
 }
 
 fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
     (provider.enable_format_conversion || endpoint_accepts_conversion(endpoint))
         && formats::formats_compatible(request.api_format, &endpoint.api_format, request.is_stream)
+        && !endpoint_exact(endpoint, request)
+}
+
+fn endpoint_exact(endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
+    formats::needs_conversion(request.api_format, &endpoint.api_format, request.is_stream)
+        .map(|needs_conversion| !needs_conversion)
+        .unwrap_or(false)
 }
 
 fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {
@@ -161,7 +169,15 @@ fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {
 }
 
 fn key_allowed(key: &CachedProviderKey) -> bool {
-    key.is_active
+    key.is_active && !key.api_formats.is_empty()
+}
+
+fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint) -> bool {
+    key_allowed(key) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
+}
+
+fn key_allows_model(key: &CachedProviderKey, model_id: &str) -> bool {
+    key.allowed_model_ids.is_empty() || key.allowed_model_ids.iter().any(|id| id == model_id)
 }
 
 fn selected_provider_model(model: &CachedModelBinding, _affinity_key: Option<&str>) -> CachedModelBinding {

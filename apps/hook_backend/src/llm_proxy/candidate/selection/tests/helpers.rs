@@ -67,6 +67,7 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
         endpoints: vec![
             endpoint("endpoint-gemini", "gemini_chat"),
             endpoint("endpoint-openai", "openai_chat"),
+            endpoint("endpoint-image", "openai_image"),
             endpoint("endpoint-compact", "openai_compact"),
         ],
         keys: vec![key("key-a-2", 20), key("key-a-1", 10)],
@@ -83,6 +84,25 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
             price_per_request: None,
             tiered_pricing: None,
         }],
+    }
+}
+
+pub(super) fn provider_key(id: &str, internal_priority: i32, api_formats: Vec<&str>) -> CachedProviderKey {
+    let mut output = key(id, internal_priority);
+    output.api_formats = api_formats.into_iter().map(str::to_owned).collect();
+    output
+}
+
+pub(super) fn provider_key_for_models(id: &str, internal_priority: i32, api_formats: Vec<&str>, model_ids: Vec<&str>) -> CachedProviderKey {
+    let mut output = provider_key(id, internal_priority, api_formats);
+    output.allowed_model_ids = model_ids.into_iter().map(str::to_owned).collect();
+    output
+}
+
+pub(super) fn provider_with_keys(keys: Vec<CachedProviderKey>) -> CachedProvider {
+    CachedProvider {
+        keys,
+        ..provider_with_endpoints_and_keys()
     }
 }
 
@@ -165,6 +185,8 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         id: id.into(),
         provider_id: "provider-a".into(),
         name: format!("{id}-name"),
+        api_formats: vec!["openai_chat".into(), "gemini_chat".into(), "openai_image".into(), "openai_compact".into()],
+        allowed_model_ids: Vec::new(),
         key_preview: format!("{id}-name"),
         encrypted_api_key: "encrypted".into(),
         internal_priority,

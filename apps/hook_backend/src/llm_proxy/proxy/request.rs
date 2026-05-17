@@ -91,8 +91,8 @@ fn upstream_body(
     force_non_stream: bool,
 ) -> Result<(Value, ApiFormat, ApiFormat), LlmProxyError> {
     let mut body = body;
-    let source = formats::parse_api_format(candidate.trace.client_api_format.as_str())?;
-    let target = formats::parse_api_format(candidate.trace.provider_api_format.as_str())?;
+    let is_stream = body.get("stream").and_then(Value::as_bool).unwrap_or(false);
+    let (source, target) = formats::conversion_formats(&candidate.trace.client_api_format, &candidate.trace.provider_api_format, is_stream)?;
     if candidate.trace.needs_conversion {
         body = FormatConversionRegistry::default()
             .convert_request(&body, source, target)
@@ -108,14 +108,36 @@ fn rewrite_upstream_body(body: &mut Value, candidate: &ProxyCandidate, force_non
     let object = body
         .as_object_mut()
         .ok_or_else(|| LlmProxyError::InvalidRequest("request body must be a JSON object".into()))?;
-    object.insert("model".into(), Value::String(candidate.provider_model_name.clone()));
-    if force_non_stream {
-        object.remove("stream");
-    }
-    if target == ApiFormat::GeminiChat {
+    let metadata = formats::endpoint_metadata(
+        &candidate.trace.provider_api_format,
+        object.get("stream").and_then(Value::as_bool).unwrap_or(false),
+    )?;
+    if metadata.model_in_body {
+        object.insert("model".into(), Value::String(candidate.provider_model_name.clone()));
+    } else {
         object.remove("model");
+    }
+    if !metadata.stream_in_body || force_non_stream || metadata.upstream_stream_policy == formats::UpstreamStreamPolicy::ForceNonStream {
         object.remove("stream");
     }
+    ensure_stream_usage(object, metadata, target, force_non_stream)?;
+    Ok(())
+}
+
+fn ensure_stream_usage(
+    object: &mut Map<String, Value>,
+    metadata: formats::EndpointMetadata,
+    target: ApiFormat,
+    force_non_stream: bool,
+) -> Result<(), LlmProxyError> {
+    if target != metadata.data_format || !metadata.include_usage_for_stream || force_non_stream || object.get("stream").and_then(Value::as_bool) != Some(true) {
+        return Ok(());
+    }
+    let stream_options = object.entry("stream_options").or_insert_with(|| Value::Object(Map::new()));
+    let options = stream_options
+        .as_object_mut()
+        .ok_or_else(|| LlmProxyError::InvalidRequest("request field stream_options must be a JSON object".into()))?;
+    options.insert("include_usage".into(), Value::Bool(true));
     Ok(())
 }
 
@@ -155,7 +177,7 @@ mod tests {
     use serde_json::json;
     use types::model::TieredPricingConfig;
 
-    use super::apply_reasoning_effort;
+    use super::{apply_reasoning_effort, rewrite_upstream_body};
     use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
     use proxy::format_conversion::ApiFormat;
 
@@ -175,6 +197,19 @@ mod tests {
         apply_reasoning_effort(&mut body, &candidate("openai_cli"), ApiFormat::OpenAiResponses).unwrap();
 
         assert_eq!(body["reasoning"]["effort"], "high");
+    }
+
+    #[test]
+    fn openai_chat_stream_requests_include_usage() {
+        let mut body = json!({
+            "model": "gpt-5.5",
+            "messages": [{"role": "user", "content": "hello"}],
+            "stream": true
+        });
+
+        rewrite_upstream_body(&mut body, &candidate("openai_chat"), false, ApiFormat::OpenAiChat).unwrap();
+
+        assert_eq!(body["stream_options"]["include_usage"], true);
     }
 
     fn candidate(provider_api_format: &str) -> ProxyCandidate {
@@ -218,10 +253,7 @@ mod tests {
             stream_first_byte_timeout_seconds: None,
             cache_ttl_minutes: 5,
             key_rpm_limit: None,
-            route: CandidateRoute {
-                endpoints: Vec::new(),
-                keys: Vec::new(),
-            },
+            route: CandidateRoute { options: Vec::new() },
         }
     }
 }

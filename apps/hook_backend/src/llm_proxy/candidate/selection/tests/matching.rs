@@ -1,9 +1,14 @@
 use types::provider::ProviderSchedulingMode;
 
-use super::helpers::{provider_b, provider_with_endpoints_and_keys, request, snapshot_with_provider, user_access};
+use super::helpers::{
+    provider_b, provider_key, provider_key_for_models, provider_with_endpoints_and_keys, provider_with_keys, request, snapshot_with_provider, user_access,
+};
 use crate::llm_proxy::{
     cache::snapshot::SchedulingSnapshot,
-    candidate::selection::matching::{MatchingCandidatePartsInput, matching_candidate_parts},
+    candidate::{
+        CandidateRequest,
+        selection::matching::{MatchingCandidatePartsInput, matching_candidate_parts},
+    },
 };
 
 #[test]
@@ -126,4 +131,136 @@ fn matching_candidate_parts_filters_by_user_provider_access() {
 
     assert_eq!(parts.len(), 1);
     assert_eq!(parts[0].provider.id, "provider-b");
+}
+
+#[test]
+fn matching_candidate_parts_does_not_route_chat_request_to_non_chat_endpoint() {
+    let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: request(),
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+    });
+
+    assert!(parts[0].endpoints.iter().all(|endpoint| endpoint.api_format != "openai_image"));
+}
+
+#[test]
+fn matching_candidate_parts_routes_non_chat_request_only_to_matching_data_format() {
+    let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: CandidateRequest {
+            api_format: "openai_image",
+            model_name: "gpt-test",
+            is_stream: false,
+        },
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+    });
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].endpoints.len(), 1);
+    assert_eq!(parts[0].endpoints[0].api_format, "openai_image");
+}
+
+#[test]
+fn matching_candidate_parts_requires_key_to_support_endpoint_format() {
+    let provider = provider_with_keys(vec![
+        provider_key("key-openai", 10, vec!["openai_chat"]),
+        provider_key("key-gemini", 20, vec!["gemini_chat"]),
+    ]);
+    let snapshot = snapshot_with_provider(provider);
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: request(),
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+    });
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].endpoints.len(), 2);
+    assert_eq!(parts[0].keys.len(), 2);
+    assert!(parts[0].endpoints.iter().any(|endpoint| endpoint.api_format == "openai_chat"));
+    assert!(parts[0].endpoints.iter().any(|endpoint| endpoint.api_format == "gemini_chat"));
+}
+
+#[test]
+fn matching_candidate_parts_excludes_key_with_empty_api_formats() {
+    let provider = provider_with_keys(vec![provider_key("key-empty", 10, Vec::new())]);
+    let snapshot = snapshot_with_provider(provider);
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: request(),
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+    });
+
+    assert!(parts.is_empty());
+}
+
+#[test]
+fn matching_candidate_parts_excludes_key_that_does_not_allow_requested_model() {
+    let provider = provider_with_keys(vec![provider_key_for_models("key-model-b", 10, vec!["openai_chat"], vec!["model-b"])]);
+    let snapshot = snapshot_with_provider(provider);
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: request(),
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+    });
+
+    assert!(parts.is_empty());
+}
+
+#[test]
+fn matching_candidate_parts_treats_empty_key_allowed_models_as_all_models() {
+    let provider = provider_with_keys(vec![provider_key("key-all-models", 10, vec!["openai_chat"])]);
+    let snapshot = snapshot_with_provider(provider);
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: request(),
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+    });
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].keys[0].id, "key-all-models");
 }

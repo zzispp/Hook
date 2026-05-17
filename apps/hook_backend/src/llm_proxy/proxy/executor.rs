@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use axum::response::Response;
 use proxy::format_conversion::ApiFormat;
@@ -10,11 +10,14 @@ use super::{
     attempt_log::{record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
     header_rules::apply_provider_header_rules,
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
-    stream_transport, transport,
+    stream_transport,
+    timeout::proxy_timeouts,
+    transport,
 };
 use crate::llm_proxy::{
     audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
     candidate::ProxyCandidate,
+    formats::{self, AuthScheme},
     rate_limit,
 };
 
@@ -211,36 +214,37 @@ fn upstream_request(
     original_body: &Value,
 ) -> Result<Request, LlmProxyError> {
     let builder = client.post(candidate.upstream_url.clone()).json(body);
-    let builder = if candidate.trace.provider_api_format == "claude_cli" {
-        builder.bearer_auth(candidate.api_key.as_str())
-    } else {
-        match target_format {
-            ApiFormat::ClaudeChat => builder
-                .header("x-api-key", candidate.api_key.as_str())
-                .header("anthropic-version", ANTHROPIC_VERSION),
-            ApiFormat::GeminiChat => builder.header("x-goog-api-key", candidate.api_key.as_str()),
-            ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses => builder.bearer_auth(candidate.api_key.as_str()),
-        }
-    };
+    let metadata = formats::endpoint_metadata(
+        &candidate.trace.provider_api_format,
+        body.get("stream").and_then(Value::as_bool).unwrap_or(false),
+    )?;
+    if target_format != metadata.data_format {
+        return Err(LlmProxyError::InvalidRequest(format!(
+            "provider format metadata mismatch: {}",
+            candidate.trace.provider_api_format
+        )));
+    }
+    let builder = apply_auth(builder, candidate, metadata.auth_scheme);
     let mut request = client.build_request(apply_timeout(builder, candidate))?;
     apply_provider_header_rules(request.headers_mut(), &candidate.header_rules, body, original_body)?;
     Ok(request)
 }
 
-fn apply_timeout(builder: RequestBuilder, candidate: &ProxyCandidate) -> RequestBuilder {
-    let timeout_seconds = if candidate.trace.is_stream {
-        candidate.stream_first_byte_timeout_seconds
-    } else {
-        candidate.request_timeout_seconds
-    };
-    match timeout_seconds.and_then(timeout_duration) {
-        Some(timeout) => builder.timeout(timeout),
-        None => builder,
+fn apply_auth(builder: RequestBuilder, candidate: &ProxyCandidate, scheme: AuthScheme) -> RequestBuilder {
+    match scheme {
+        AuthScheme::Bearer => builder.bearer_auth(candidate.api_key.as_str()),
+        AuthScheme::Anthropic => builder
+            .header("x-api-key", candidate.api_key.as_str())
+            .header("anthropic-version", ANTHROPIC_VERSION),
+        AuthScheme::Gemini => builder.header("x-goog-api-key", candidate.api_key.as_str()),
     }
 }
 
-fn timeout_duration(seconds: f64) -> Option<Duration> {
-    (seconds.is_finite() && seconds > 0.0).then(|| Duration::from_secs_f64(seconds))
+fn apply_timeout(builder: RequestBuilder, candidate: &ProxyCandidate) -> RequestBuilder {
+    match proxy_timeouts(candidate).request {
+        Some(timeout) => builder.timeout(timeout),
+        None => builder,
+    }
 }
 
 fn status_retryable(status: StatusCode) -> bool {

@@ -7,6 +7,8 @@ pub struct Model {
     pub id: String,
     pub provider_id: String,
     pub name: String,
+    pub api_formats: String,
+    pub allowed_model_ids: String,
     pub encrypted_api_key: String,
     pub note: Option<String>,
     pub internal_priority: i32,

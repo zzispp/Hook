@@ -1,17 +1,16 @@
 use serde_json::{Map, Value};
 
-use crate::format_conversion::{FormatConversionError, InternalUsage, StopReason};
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalUsage, StopReason};
 
 pub const FORMAT: &str = "openai";
 
-pub fn ensure_tools_disabled(request: &Value) -> Result<(), FormatConversionError> {
-    if request.get("tools").is_some() {
-        return Err(FormatConversionError::unsupported_feature(FORMAT, "tools"));
+pub fn content_blocks(value: Option<&Value>, path: &str) -> Result<Vec<InternalContentBlock>, FormatConversionError> {
+    match value {
+        Some(Value::String(text)) => Ok(vec![InternalContentBlock::Text(text.to_owned())]),
+        Some(Value::Array(blocks)) => parse_blocks(blocks, path),
+        Some(Value::Null) | None => Ok(Vec::new()),
+        Some(_) => Err(FormatConversionError::invalid_payload(FORMAT, path)),
     }
-    if request.get("tool_choice").is_some() {
-        return Err(FormatConversionError::unsupported_feature(FORMAT, "tool_choice"));
-    }
-    Ok(())
 }
 
 pub fn parse_content(value: Option<&Value>, path: &str) -> Result<String, FormatConversionError> {
@@ -21,6 +20,17 @@ pub fn parse_content(value: Option<&Value>, path: &str) -> Result<String, Format
         Some(_) => Err(FormatConversionError::invalid_payload(FORMAT, path)),
         None => Ok(String::new()),
     }
+}
+
+pub fn text_from_blocks(blocks: &[InternalContentBlock]) -> Result<String, FormatConversionError> {
+    let mut output = String::new();
+    for block in blocks {
+        let Some(text) = block.plain_text() else {
+            return Err(FormatConversionError::unsupported_content(FORMAT, "non-text content cannot be flattened"));
+        };
+        output.push_str(text);
+    }
+    Ok(output)
 }
 
 pub fn first_choice<'a>(value: &'a Value, path: &str) -> Result<&'a Map<String, Value>, FormatConversionError> {
@@ -133,6 +143,73 @@ fn parse_text_blocks(blocks: &[Value], path: &str) -> Result<String, FormatConve
         result.push_str(required_block_text(object, path)?);
     }
     Ok(result)
+}
+
+fn parse_blocks(blocks: &[Value], path: &str) -> Result<Vec<InternalContentBlock>, FormatConversionError> {
+    let mut output = Vec::new();
+    for (index, block) in blocks.iter().enumerate() {
+        output.push(parse_block(block, &format!("{path}[{index}]"))?);
+    }
+    Ok(output)
+}
+
+fn parse_block(value: &Value, path: &str) -> Result<InternalContentBlock, FormatConversionError> {
+    let object = required_object(Some(value), path)?;
+    match optional_string_value(object.get("type")).unwrap_or_default().as_str() {
+        "text" | "input_text" => Ok(InternalContentBlock::Text(required_block_text(object, path)?.to_owned())),
+        "image_url" => openai_image_block(object, path),
+        "input_audio" => openai_audio_block(object, path),
+        "file" => openai_file_block(object, path),
+        other => Err(FormatConversionError::unsupported_content(
+            FORMAT,
+            format!("{path}: unsupported block type {other}"),
+        )),
+    }
+}
+
+fn openai_image_block(object: &Map<String, Value>, path: &str) -> Result<InternalContentBlock, FormatConversionError> {
+    let image_path = format!("{path}.image_url");
+    let image = required_object(object.get("image_url"), &image_path)?;
+    let url = image
+        .get("url")
+        .and_then(Value::as_str)
+        .ok_or_else(|| FormatConversionError::invalid_payload(FORMAT, format!("{image_path}.url")))?;
+    if let Some((media_type, data)) = crate::format_conversion::data_url::parse_base64_data_url(url, FORMAT, &format!("{image_path}.url"))? {
+        return Ok(InternalContentBlock::Image {
+            url: None,
+            data: Some(data),
+            media_type: Some(media_type),
+        });
+    }
+    Ok(InternalContentBlock::Image {
+        url: Some(url.to_owned()),
+        data: None,
+        media_type: None,
+    })
+}
+
+fn openai_audio_block(object: &Map<String, Value>, path: &str) -> Result<InternalContentBlock, FormatConversionError> {
+    let audio = required_object(object.get("input_audio"), &format!("{path}.input_audio"))?;
+    let data = audio
+        .get("data")
+        .and_then(Value::as_str)
+        .ok_or_else(|| FormatConversionError::invalid_payload(FORMAT, format!("{path}.input_audio.data")))?;
+    Ok(InternalContentBlock::Audio {
+        data: data.to_owned(),
+        format: audio.get("format").and_then(Value::as_str).map(str::to_owned),
+        media_type: None,
+    })
+}
+
+fn openai_file_block(object: &Map<String, Value>, path: &str) -> Result<InternalContentBlock, FormatConversionError> {
+    let file = required_object(object.get("file"), &format!("{path}.file"))?;
+    Ok(InternalContentBlock::File {
+        file_id: file.get("file_id").and_then(Value::as_str).map(str::to_owned),
+        file_url: None,
+        data: file.get("file_data").and_then(Value::as_str).map(str::to_owned),
+        media_type: None,
+        filename: file.get("filename").and_then(Value::as_str).map(str::to_owned),
+    })
 }
 
 fn required_block_text<'a>(object: &'a Map<String, Value>, path: &str) -> Result<&'a str, FormatConversionError> {

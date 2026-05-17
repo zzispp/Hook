@@ -168,20 +168,32 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
         .order_by_asc(provider_api_keys::Column::InternalPriority)
         .all(database.connection())
         .await?;
-    Ok(records
+    records
         .into_iter()
-        .map(|record| CachedProviderKey {
-            id: record.id,
-            provider_id: record.provider_id,
-            name: record.name.clone(),
-            key_preview: record.name,
-            encrypted_api_key: record.encrypted_api_key,
-            internal_priority: record.internal_priority,
-            rpm_limit: record.rpm_limit,
-            cache_ttl_minutes: record.cache_ttl_minutes,
-            is_active: record.is_active,
+        .map(|record| {
+            Ok(CachedProviderKey {
+                id: record.id,
+                provider_id: record.provider_id,
+                name: record.name.clone(),
+                api_formats: decode_key_api_formats(record.api_formats)?,
+                allowed_model_ids: decode_key_allowed_model_ids(record.allowed_model_ids)?,
+                key_preview: record.name,
+                encrypted_api_key: record.encrypted_api_key,
+                internal_priority: record.internal_priority,
+                rpm_limit: record.rpm_limit,
+                cache_ttl_minutes: record.cache_ttl_minutes,
+                is_active: record.is_active,
+            })
         })
-        .collect())
+        .collect()
+}
+
+fn decode_key_api_formats(value: String) -> Result<Vec<String>, LlmProxyError> {
+    serde_json::from_str(&value).map_err(|error| LlmProxyError::Infrastructure(format!("provider key api_formats decode error: {error}")))
+}
+
+fn decode_key_allowed_model_ids(value: String) -> Result<Vec<String>, LlmProxyError> {
+    serde_json::from_str(&value).map_err(|error| LlmProxyError::Infrastructure(format!("provider key allowed_model_ids decode error: {error}")))
 }
 
 fn cached_model(record: global_models::Model) -> Result<CachedGlobalModel, LlmProxyError> {

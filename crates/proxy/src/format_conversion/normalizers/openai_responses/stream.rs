@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalStreamEvent, StreamConversionState};
+use crate::format_conversion::{FormatConversionError, InternalStreamEvent, InternalUsage, StreamConversionState};
 
 use super::response::to_internal as response_to_internal;
 
@@ -88,14 +88,33 @@ fn push_event(event: &InternalStreamEvent, state: &mut StreamConversionState, ou
                 .push(json!({"type": "response.created", "response": {"id": state.target_openai_responses_id, "model": state.target_openai_responses_model}}));
         }
         InternalStreamEvent::TextDelta(text) => output.push(json!({"type": "response.output_text.delta", "delta": text})),
-        InternalStreamEvent::Done { .. } => {
-            output.push(
-                json!({"type": "response.completed", "response": {"id": state.target_openai_responses_id, "model": state.target_openai_responses_model}}),
-            );
-        }
+        InternalStreamEvent::Done { usage, .. } => push_completed_event(usage.as_ref(), state, output),
     }
 }
 
 fn nested_string(value: Option<&Value>, key: &str) -> Option<String> {
     value?.get(key).and_then(Value::as_str).map(str::to_owned)
+}
+
+fn push_completed_event(usage: Option<&InternalUsage>, state: &StreamConversionState, output: &mut Vec<Value>) {
+    let mut event = json!({
+        "type": "response.completed",
+        "response": {
+            "id": state.target_openai_responses_id,
+            "model": state.target_openai_responses_model,
+        }
+    });
+    if let Some(usage_value) = usage_json(usage) {
+        event["response"]["usage"] = usage_value;
+    }
+    output.push(event);
+}
+
+fn usage_json(usage: Option<&InternalUsage>) -> Option<Value> {
+    let complete = usage.cloned()?.with_total();
+    Some(json!({
+        "input_tokens": complete.prompt_tokens,
+        "output_tokens": complete.completion_tokens,
+        "total_tokens": complete.total_tokens,
+    }))
 }

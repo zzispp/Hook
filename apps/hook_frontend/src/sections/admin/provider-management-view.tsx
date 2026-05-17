@@ -168,7 +168,11 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
         onClose={state.closeProviderBindings}
       />
       <ProviderEndpointDialog dialogs={state.childDialogs} provider={state.selectedProvider} />
-      <ProviderApiKeyDialog dialogs={state.childDialogs} providerId={state.selectedProvider?.id} />
+      <ProviderApiKeyDialog
+        dialogs={state.childDialogs}
+        models={state.models.items}
+        providerId={state.selectedProvider?.id}
+      />
       <ProviderModelDialog
         dialogs={state.childDialogs}
         models={state.models.items}

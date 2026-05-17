@@ -33,8 +33,13 @@ pub struct ProxyCandidate {
 
 #[derive(Clone, Debug)]
 pub struct CandidateRoute {
-    pub endpoints: Vec<CandidateEndpointOption>,
-    pub keys: Vec<CandidateKeyOption>,
+    pub options: Vec<CandidateRouteOption>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CandidateRouteOption {
+    pub endpoint: CandidateEndpointOption,
+    pub key: CandidateKeyOption,
 }
 
 #[derive(Clone, Debug)]
@@ -45,6 +50,7 @@ pub struct CandidateEndpointOption {
     pub base_url: String,
     pub custom_path: Option<String>,
     pub upstream_url: String,
+    pub max_retries: Option<i32>,
     pub header_rules: Option<Value>,
     pub body_rules: Option<Value>,
     pub needs_conversion: bool,
@@ -103,27 +109,20 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
 
 impl ProxyCandidate {
     pub fn for_attempt(&self, retry_index: i32) -> Self {
-        let (endpoint_index, key_index) = self.route_indices(retry_index);
-        self.with_route_options(&self.route.endpoints[endpoint_index], &self.route.keys[key_index])
+        let option_index = self.route_index(retry_index);
+        self.with_route_option(&self.route.options[option_index])
     }
 
-    fn route_indices(&self, retry_index: i32) -> (usize, usize) {
-        assert!(!self.route.endpoints.is_empty(), "candidate route must contain endpoints");
-        assert!(!self.route.keys.is_empty(), "candidate route must contain keys");
+    fn route_index(&self, retry_index: i32) -> usize {
+        assert!(!self.route.options.is_empty(), "candidate route must contain options");
         let attempt_index = usize::try_from(retry_index).expect("retry index must be non-negative");
-        let key_count = self.route.keys.len();
-        let route_count = self
-            .route
-            .endpoints
-            .len()
-            .checked_mul(key_count)
-            .expect("candidate route option count overflowed");
-        let route_index = attempt_index % route_count;
-        (route_index / key_count, route_index % key_count)
+        attempt_index % self.route.options.len()
     }
 
-    fn with_route_options(&self, endpoint: &CandidateEndpointOption, key: &CandidateKeyOption) -> Self {
+    fn with_route_option(&self, option: &CandidateRouteOption) -> Self {
         let mut candidate = self.clone();
+        let endpoint = &option.endpoint;
+        let key = &option.key;
         candidate.trace.endpoint_id = endpoint.id.clone();
         candidate.trace.endpoint_name_snapshot = endpoint.name.clone();
         candidate.trace.key_id = key.id.clone();
@@ -138,6 +137,7 @@ impl ProxyCandidate {
         candidate.header_rules = endpoint.header_rules.clone();
         candidate.body_rules = endpoint.body_rules.clone();
         candidate.cache_ttl_minutes = key.cache_ttl_minutes;
+        candidate.key_rpm_limit = key.rpm_limit;
         candidate
     }
 }
@@ -210,13 +210,18 @@ mod tests {
             cache_ttl_minutes: 5,
             key_rpm_limit: None,
             route: CandidateRoute {
-                endpoints: vec![
-                    endpoint("endpoint-openai", "openai_chat", false),
-                    endpoint("endpoint-gemini", "gemini_chat", true),
+                options: vec![
+                    route_option(endpoint("endpoint-openai", "openai_chat", false), key("key-a-1", "key-1-secret")),
+                    route_option(endpoint("endpoint-openai", "openai_chat", false), key("key-a-2", "key-2-secret")),
+                    route_option(endpoint("endpoint-gemini", "gemini_chat", true), key("key-a-1", "key-1-secret")),
+                    route_option(endpoint("endpoint-gemini", "gemini_chat", true), key("key-a-2", "key-2-secret")),
                 ],
-                keys: vec![key("key-a-1", "key-1-secret"), key("key-a-2", "key-2-secret")],
             },
         }
+    }
+
+    fn route_option(endpoint: CandidateEndpointOption, key: CandidateKeyOption) -> CandidateRouteOption {
+        CandidateRouteOption { endpoint, key }
     }
 
     fn endpoint(id: &str, provider_api_format: &str, needs_conversion: bool) -> CandidateEndpointOption {
@@ -227,6 +232,7 @@ mod tests {
             base_url: format!("https://{id}.example.com"),
             custom_path: None,
             upstream_url: format!("https://{id}.example.com/v1/chat/completions"),
+            max_retries: None,
             header_rules: None,
             body_rules: None,
             needs_conversion,

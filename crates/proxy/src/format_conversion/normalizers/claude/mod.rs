@@ -1,5 +1,6 @@
 mod common;
 mod request;
+mod request_codec;
 mod response;
 mod stream;
 

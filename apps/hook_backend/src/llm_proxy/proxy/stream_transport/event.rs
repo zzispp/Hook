@@ -4,18 +4,6 @@ use axum::body::Bytes;
 use proxy::format_conversion::ApiFormat;
 use serde_json::{Value, json};
 
-pub(super) fn parse_stream_values(bytes: &[u8]) -> Vec<Value> {
-    let Ok(text) = std::str::from_utf8(bytes) else {
-        return Vec::new();
-    };
-    text.lines()
-        .filter_map(|line| line.strip_prefix("data:"))
-        .map(str::trim)
-        .filter(|payload| !payload.is_empty() && *payload != "[DONE]")
-        .filter_map(|payload| serde_json::from_str(payload).ok())
-        .collect()
-}
-
 pub(super) fn render_stream_event(event: &Value, source_format: ApiFormat) -> Bytes {
     let mut output = String::new();
     if matches!(source_format, ApiFormat::ClaudeChat)

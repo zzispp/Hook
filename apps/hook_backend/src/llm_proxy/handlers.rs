@@ -8,7 +8,10 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::{
-    CLAUDE_CHAT_FORMAT, CurrentApiToken, GEMINI_CHAT_FORMAT, LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, OPENAI_COMPACT_FORMAT,
+    CLAUDE_CHAT_FORMAT, CurrentApiToken, GEMINI_BATCH_EMBEDDING_FORMAT, GEMINI_CHAT_FORMAT, GEMINI_EMBEDDING_FORMAT, LlmProxyError, LlmProxyState,
+    OPENAI_AUDIO_SPEECH_FORMAT, OPENAI_AUDIO_TRANSCRIPTION_FORMAT, OPENAI_AUDIO_TRANSLATION_FORMAT, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
+    OPENAI_COMPACT_FORMAT, OPENAI_COMPLETION_FORMAT, OPENAI_EMBEDDING_FORMAT, OPENAI_IMAGE_EDIT_FORMAT, OPENAI_IMAGE_FORMAT, OPENAI_MODERATION_FORMAT,
+    RERANK_FORMAT,
     model_access::{visible_model_for_token, visible_models_for_token},
     proxy::{ProxyJsonRequest, proxy_json},
 };
@@ -22,6 +25,15 @@ pub async fn chat_completions(
     Json(body): Json<Value>,
 ) -> Result<Response, LlmProxyError> {
     proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_CHAT_FORMAT, false)).await
+}
+
+pub async fn completions(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_COMPLETION_FORMAT, false)).await
 }
 
 pub async fn responses(
@@ -40,6 +52,78 @@ pub async fn responses_compact(
     Json(body): Json<Value>,
 ) -> Result<Response, LlmProxyError> {
     proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_COMPACT_FORMAT, true)).await
+}
+
+pub async fn image_generations(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_IMAGE_FORMAT, false)).await
+}
+
+pub async fn image_edits(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_IMAGE_EDIT_FORMAT, false)).await
+}
+
+pub async fn embeddings(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_EMBEDDING_FORMAT, false)).await
+}
+
+pub async fn audio_transcriptions(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_AUDIO_TRANSCRIPTION_FORMAT, false)).await
+}
+
+pub async fn audio_translations(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_AUDIO_TRANSLATION_FORMAT, false)).await
+}
+
+pub async fn audio_speech(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_AUDIO_SPEECH_FORMAT, false)).await
+}
+
+pub async fn moderations(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_MODERATION_FORMAT, false)).await
+}
+
+pub async fn rerank(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, RERANK_FORMAT, false)).await
 }
 
 pub async fn claude_messages(
@@ -61,6 +145,28 @@ pub async fn gemini_generate_content(
     let (model, action) = gemini_model_action(&model_action)?;
     let body = gemini_body(body, model, action)?;
     proxy_json(ProxyJsonRequest::new(state, token, headers, body, GEMINI_CHAT_FORMAT, false)).await
+}
+
+pub async fn gemini_embed_content(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    Path(model): Path<String>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    let body = gemini_model_body(body, &model)?;
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, GEMINI_EMBEDDING_FORMAT, false)).await
+}
+
+pub async fn gemini_batch_embed_contents(
+    State(state): State<LlmProxyState>,
+    Extension(token): Extension<CurrentApiToken>,
+    Path(model): Path<String>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Result<Response, LlmProxyError> {
+    let body = gemini_model_body(body, &model)?;
+    proxy_json(ProxyJsonRequest::new(state, token, headers, body, GEMINI_BATCH_EMBEDDING_FORMAT, false)).await
 }
 
 pub async fn list_models(State(state): State<LlmProxyState>, Extension(token): Extension<CurrentApiToken>) -> Result<Json<OpenAiModelList>, LlmProxyError> {
@@ -100,6 +206,14 @@ fn gemini_body(mut body: Value, model: &str, action: &str) -> Result<Value, LlmP
     if action == "streamGenerateContent" {
         object.insert("stream".into(), Value::Bool(true));
     }
+    Ok(body)
+}
+
+fn gemini_model_body(mut body: Value, model: &str) -> Result<Value, LlmProxyError> {
+    let object = body
+        .as_object_mut()
+        .ok_or_else(|| LlmProxyError::InvalidRequest("request body must be a JSON object".into()))?;
+    object.insert("model".into(), Value::String(model.to_owned()));
     Ok(body)
 }
 

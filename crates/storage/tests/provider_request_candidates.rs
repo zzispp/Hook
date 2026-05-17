@@ -26,6 +26,11 @@ async fn request_candidate_storage_creates_success_record() {
     assert_eq!(created.provider_id.as_deref(), Some("provider-a"));
     assert_eq!(created.status, "success");
     assert_eq!(created.status_code, Some(200));
+    assert_eq!(created.input_text_tokens, Some(7));
+    assert_eq!(created.output_text_tokens, Some(5));
+    assert_eq!(created.reasoning_tokens, Some(2));
+    assert_eq!(created.usage_source.as_deref(), Some("openai"));
+    assert_eq!(created.usage_semantic.as_deref(), Some("openai"));
     assert_eq!(created.error_type, None);
     assert!(created.started_at.is_some());
     assert!(created.finished_at.is_some());
@@ -75,6 +80,8 @@ async fn request_candidate_storage_updates_existing_attempt() {
 
     assert_eq!(updated.status, "success");
     assert_eq!(updated.status_code, Some(200));
+    assert_eq!(updated.cache_creation_5m_input_tokens, Some(1));
+    assert_eq!(updated.cache_creation_1h_input_tokens, Some(2));
     assert!(updated.finished_at.is_some());
 }
 
@@ -136,6 +143,17 @@ fn success_input() -> RequestCandidateRecordInput {
         total_tokens: Some(20),
         cache_creation_input_tokens: Some(3),
         cache_read_input_tokens: Some(4),
+        input_text_tokens: Some(7),
+        input_audio_tokens: Some(1),
+        input_image_tokens: Some(2),
+        output_text_tokens: Some(5),
+        output_audio_tokens: Some(1),
+        output_image_tokens: Some(2),
+        reasoning_tokens: Some(2),
+        cache_creation_5m_input_tokens: Some(1),
+        cache_creation_1h_input_tokens: Some(2),
+        usage_source: Some("openai".into()),
+        usage_semantic: Some("openai".into()),
         billing: success_billing_values(),
         latency_ms: Some(42),
         first_byte_time_ms: Some(12),
@@ -161,6 +179,17 @@ fn success_patch() -> RequestCandidateRecordPatch {
         total_tokens: Some(20),
         cache_creation_input_tokens: Some(3),
         cache_read_input_tokens: Some(4),
+        input_text_tokens: Some(7),
+        input_audio_tokens: Some(1),
+        input_image_tokens: Some(2),
+        output_text_tokens: Some(5),
+        output_audio_tokens: Some(1),
+        output_image_tokens: Some(2),
+        reasoning_tokens: Some(2),
+        cache_creation_5m_input_tokens: Some(1),
+        cache_creation_1h_input_tokens: Some(2),
+        usage_source: Some("openai".into()),
+        usage_semantic: Some("openai".into()),
         billing: success_billing_values(),
         latency_ms: Some(42),
         first_byte_time_ms: Some(12),
@@ -208,6 +237,17 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         total_tokens: Some(20),
         cache_creation_input_tokens: Some(3),
         cache_read_input_tokens: Some(4),
+        input_text_tokens: Some(7),
+        input_audio_tokens: Some(1),
+        input_image_tokens: Some(2),
+        output_text_tokens: Some(5),
+        output_audio_tokens: Some(1),
+        output_image_tokens: Some(2),
+        reasoning_tokens: Some(2),
+        cache_creation_5m_input_tokens: Some(1),
+        cache_creation_1h_input_tokens: Some(2),
+        usage_source: Some("openai".into()),
+        usage_semantic: Some("openai".into()),
         service_tier: Some("standard".into()),
         input_cost: Some(Decimal::new(25, 4)),
         output_cost: Some(Decimal::new(30, 4)),
@@ -304,6 +344,17 @@ fn summary_record(status: &str) -> request_records::Model {
         total_tokens: Some(20),
         cache_creation_input_tokens: Some(3),
         cache_read_input_tokens: Some(4),
+        input_text_tokens: Some(7),
+        input_audio_tokens: Some(1),
+        input_image_tokens: Some(2),
+        output_text_tokens: Some(5),
+        output_audio_tokens: Some(1),
+        output_image_tokens: Some(2),
+        reasoning_tokens: Some(2),
+        cache_creation_5m_input_tokens: Some(1),
+        cache_creation_1h_input_tokens: Some(2),
+        usage_source: Some("openai".into()),
+        usage_semantic: Some("openai".into()),
         service_tier: Some("standard".into()),
         input_cost: Some(Decimal::new(25, 4)),
         output_cost: Some(Decimal::new(30, 4)),

@@ -61,14 +61,34 @@ impl FormatConversionRegistry {
             return Ok(vec![input.chunk.clone()]);
         }
         let events = self.normalizer(input.source).stream_chunk_to_internal(input.chunk, input.state)?;
+        self.convert_stream_events(events, input.target, input.state)
+    }
+
+    pub fn flush_stream(&self, source: ApiFormat, target: ApiFormat, state: &mut StreamConversionState) -> Result<Vec<Value>, FormatConversionError> {
+        if source == target {
+            return Ok(Vec::new());
+        }
+        let events = self.normalizer(source).stream_flush_to_internal(state)?;
+        self.convert_stream_events(events, target, state)
+    }
+
+    fn convert_stream_events(
+        &self,
+        events: Vec<super::InternalStreamEvent>,
+        target: ApiFormat,
+        state: &mut StreamConversionState,
+    ) -> Result<Vec<Value>, FormatConversionError> {
         let mut converted = Vec::new();
         for event in events {
-            converted.extend(self.normalizer(input.target).stream_event_from_internal(&event, input.state)?);
+            converted.extend(self.normalizer(target).stream_event_from_internal(&event, state)?);
         }
         Ok(converted)
     }
 
     pub fn can_convert(&self, source: ApiFormat, target: ApiFormat, require_stream: bool) -> bool {
+        if !source.supports_chat_conversion() || !target.supports_chat_conversion() {
+            return false;
+        }
         let request = source != target;
         let response = source != target;
         if require_stream { request && response } else { request || source == target }
@@ -80,6 +100,7 @@ impl FormatConversionRegistry {
             ApiFormat::OpenAiResponses => &self.openai_responses,
             ApiFormat::GeminiChat => &self.gemini,
             ApiFormat::ClaudeChat => &self.claude,
+            _ => unreachable!("non-chat API formats do not have format normalizers"),
         }
     }
 }

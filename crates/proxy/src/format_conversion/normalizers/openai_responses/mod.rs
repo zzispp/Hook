@@ -1,4 +1,6 @@
 mod request;
+mod request_codec;
+mod request_fields;
 mod response;
 mod stream;
 

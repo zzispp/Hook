@@ -90,6 +90,8 @@ fn provider_api_keys_table() -> TableCreateStatement {
         .col(string_len(ProviderApiKeys::Id, 36).primary_key())
         .col(string_len(ProviderApiKeys::ProviderId, 36))
         .col(string_len(ProviderApiKeys::Name, 100))
+        .col(text(ProviderApiKeys::ApiFormats))
+        .col(text(ProviderApiKeys::AllowedModelIds))
         .col(text(ProviderApiKeys::EncryptedApiKey))
         .col(text_null(ProviderApiKeys::Note))
         .col(integer(ProviderApiKeys::InternalPriority))

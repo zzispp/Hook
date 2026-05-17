@@ -12,5 +12,8 @@ pub trait FormatNormalizer {
     fn stream_to_internal(&self, chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatConversionError>;
     fn stream_from_internal(&self, events: &[InternalStreamEvent]) -> Result<Vec<Value>, FormatConversionError>;
     fn stream_chunk_to_internal(&self, chunk: &Value, state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError>;
+    fn stream_flush_to_internal(&self, _state: &mut StreamConversionState) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
+        Ok(Vec::new())
+    }
     fn stream_event_from_internal(&self, event: &InternalStreamEvent, state: &mut StreamConversionState) -> Result<Vec<Value>, FormatConversionError>;
 }
