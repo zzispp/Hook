@@ -1,6 +1,7 @@
 'use client';
 
 import type { ChartOptions } from 'src/components/chart';
+import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { MetricDimension, PerformanceSnapshotPoint } from 'src/types/performance-monitoring';
 
 import Box from '@mui/material/Box';
@@ -11,14 +12,21 @@ import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 
-import { fData, fNumber, fPercent, fCurrency } from 'src/utils/format-number';
+import { formatMoneyCompact } from 'src/utils/currency-format';
+import { fData, fNumber, fPercent } from 'src/utils/format-number';
 
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Label } from 'src/components/label';
 import { Chart, useChart } from 'src/components/chart';
 
-export function SummaryGrid({ snapshot }: { snapshot?: PerformanceSnapshotPoint }) {
+export function SummaryGrid({
+  snapshot,
+  currencyDisplay,
+}: {
+  snapshot?: PerformanceSnapshotPoint;
+  currencyDisplay?: CurrencyDisplay;
+}) {
   const { t } = useTranslate('admin');
   const core = snapshot?.metrics.core;
   const llm = snapshot?.metrics.llm;
@@ -36,7 +44,10 @@ export function SummaryGrid({ snapshot }: { snapshot?: PerformanceSnapshotPoint 
         value={formatRate(llm?.tokens_per_second)}
       />
       <MetricCard label={t('performanceMonitoring.metrics.totalTokens')} value={fNumber(llm?.total_tokens ?? 0)} />
-      <MetricCard label={t('performanceMonitoring.metrics.cost')} value={fCurrency(llm?.cost ?? 0)} />
+      <MetricCard
+        label={t('performanceMonitoring.metrics.cost')}
+        value={formatCost(llm?.cost, currencyDisplay)}
+      />
     </Grid>
   );
 }
@@ -206,6 +217,7 @@ function useLineOptions(series: PerformanceSnapshotPoint[]): ChartOptions {
   return useChart({
     xaxis: { categories: series.map((point) => new Date(point.bucket_started_at).toLocaleString()) },
     legend: { show: true },
+    markers: { size: series.length === 1 ? 4 : 0 },
     tooltip: { x: { show: true } },
   });
 }
@@ -220,6 +232,11 @@ function formatRate(value?: number | null) {
 
 function formatRatio(value?: number | null) {
   return fPercent((value ?? 0) * 100);
+}
+
+function formatCost(value: number | null | undefined, display?: CurrencyDisplay) {
+  if (!display) return '-';
+  return formatMoneyCompact(value, display);
 }
 
 function formatBytes(value?: number | null) {

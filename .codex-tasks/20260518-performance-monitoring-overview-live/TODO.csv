@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Diagnose monitoring data path,DONE,"DB and code identify whether source aggregation or UI is empty","docker exec hook-postgres psql -U postgres -d postgres -c 'select count(*) from request_records'",2026-05-18T01:10:00Z,0,"request_records has latency/TTFT; overview reads persisted snapshots only"
+2,Implement live overview aggregation,DONE,"overview series includes current window data for non-realtime ranges","cargo test -p storage performance_monitoring",2026-05-18T01:24:00Z,0,"overview now appends a real live tail aggregate from request_records"
+3,Add focused tests,DONE,"range/current-window behavior is covered","cargo test -p storage performance_monitoring",2026-05-18T01:25:00Z,0,"covered live tail window and ALL without day snapshots"
+4,Run validation and record results,DONE,"validation output captured in PROGRESS.md","cargo test -p storage performance_monitoring",2026-05-18T01:29:00Z,0,"Rust tests cargo check frontend lint/build passed"

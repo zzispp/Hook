@@ -23,7 +23,7 @@ pub struct SnapshotAggregationWindow {
     pub ended_at: time::OffsetDateTime,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct SystemMetricsSnapshot {
     pub network: NetworkConnectionMetrics,
     pub host: HostResourceMetrics,

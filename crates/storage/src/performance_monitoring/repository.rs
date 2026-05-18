@@ -9,7 +9,7 @@ use crate::{Database, StorageResult};
 use super::{
     query::{self, range_plan},
     record::snapshots,
-    types::{PerformanceSnapshotInput, SnapshotQueryPlan},
+    types::{PerformanceSnapshotInput, SnapshotAggregationWindow, SnapshotQueryPlan, SystemMetricsSnapshot},
 };
 
 #[derive(Clone)]
@@ -27,9 +27,20 @@ impl PerformanceMonitoringStore {
     }
 
     pub async fn overview(&self, range: PerformanceMonitoringRange, now: time::OffsetDateTime) -> StorageResult<PerformanceMonitoringOverviewResponse> {
+        self.overview_with_system(range, now, SystemMetricsSnapshot::default()).await
+    }
+
+    pub async fn overview_with_system(
+        &self,
+        range: PerformanceMonitoringRange,
+        now: time::OffsetDateTime,
+        system: SystemMetricsSnapshot,
+    ) -> StorageResult<PerformanceMonitoringOverviewResponse> {
         let plan = range_plan(range, now);
         let records = query::list_snapshots(self, &plan).await?;
+        let live_window = live_tail_window(&plan, records.last().map(|record| record.bucket_ended_at));
         let series = records.into_iter().map(snapshot_point).collect::<StorageResult<Vec<_>>>()?;
+        let series = self.append_live_tail(series, live_window, system).await?;
         Ok(overview_response(range, plan, series))
     }
 
@@ -48,6 +59,20 @@ impl PerformanceMonitoringStore {
 
     pub async fn aggregate_window_with_system(&self, window: super::SnapshotAggregationWindow, system: super::SystemMetricsSnapshot) -> StorageResult<()> {
         super::aggregation::aggregate_window_with_system(self, window, system).await
+    }
+
+    async fn append_live_tail(
+        &self,
+        mut series: Vec<PerformanceSnapshotPoint>,
+        window: Option<SnapshotAggregationWindow>,
+        system: SystemMetricsSnapshot,
+    ) -> StorageResult<Vec<PerformanceSnapshotPoint>> {
+        let Some(window) = window else {
+            return Ok(series);
+        };
+        let point = self.aggregate_point(window, system).await?;
+        push_live_point(&mut series, point);
+        Ok(series)
     }
 
     pub(crate) fn connection(&self) -> &DatabaseConnection {
@@ -129,6 +154,35 @@ fn data_status(series: &[PerformanceSnapshotPoint]) -> SnapshotDataStatus {
     SnapshotDataStatus::Ready
 }
 
+fn live_tail_window(plan: &SnapshotQueryPlan, last_bucket_ended_at: Option<time::OffsetDateTime>) -> Option<SnapshotAggregationWindow> {
+    let started_at = last_bucket_ended_at.unwrap_or(plan.started_at).max(plan.started_at);
+    if started_at >= plan.ended_at {
+        return None;
+    }
+    Some(SnapshotAggregationWindow {
+        granularity: plan.granularity,
+        started_at,
+        ended_at: plan.ended_at,
+    })
+}
+
+fn push_live_point(series: &mut Vec<PerformanceSnapshotPoint>, point: PerformanceSnapshotPoint) {
+    if !should_append_live_point(series, &point) {
+        return;
+    }
+    series.push(point);
+    if series.len() > MAX_SERIES_POINTS {
+        series.drain(0..series.len() - MAX_SERIES_POINTS);
+    }
+}
+
+fn should_append_live_point(series: &[PerformanceSnapshotPoint], point: &PerformanceSnapshotPoint) -> bool {
+    if series.last().is_some_and(|last| last.bucket_ended_at >= point.bucket_ended_at) {
+        return false;
+    }
+    !series.is_empty() || point.metrics.core.request_count > 0
+}
+
 fn snapshot_point(record: snapshots::Model) -> StorageResult<PerformanceSnapshotPoint> {
     Ok(PerformanceSnapshotPoint {
         bucket_started_at: query::format_timestamp(record.bucket_started_at),
@@ -142,5 +196,86 @@ fn window_point(window: super::SnapshotAggregationWindow, metrics: PerformanceSn
         bucket_started_at: query::format_timestamp(window.started_at),
         bucket_ended_at: query::format_timestamp(window.ended_at),
         metrics,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use types::performance_monitoring::{CoreRequestMetrics, PerformanceSnapshotMetrics, SnapshotGranularity};
+
+    use super::{PerformanceSnapshotPoint, live_tail_window, push_live_point};
+    use crate::performance_monitoring::SnapshotQueryPlan;
+
+    #[test]
+    fn live_tail_window_starts_after_last_persisted_bucket() {
+        let plan = plan(0, 180);
+
+        let window = live_tail_window(&plan, Some(ts(120))).unwrap();
+
+        assert_eq!(window.started_at, ts(120));
+        assert_eq!(window.ended_at, ts(180));
+    }
+
+    #[test]
+    fn live_tail_window_uses_plan_start_without_persisted_bucket() {
+        let plan = plan(0, 180);
+
+        let window = live_tail_window(&plan, None).unwrap();
+
+        assert_eq!(window.started_at, ts(0));
+        assert_eq!(window.ended_at, ts(180));
+    }
+
+    #[test]
+    fn live_tail_window_skips_closed_range() {
+        let plan = plan(0, 180);
+
+        assert!(live_tail_window(&plan, Some(ts(180))).is_none());
+    }
+
+    #[test]
+    fn push_live_point_keeps_non_empty_current_data_without_snapshots() {
+        let mut series = Vec::new();
+
+        push_live_point(&mut series, point(0, 180, 3));
+
+        assert_eq!(series.len(), 1);
+        assert_eq!(series[0].metrics.core.request_count, 3);
+    }
+
+    #[test]
+    fn push_live_point_skips_empty_live_only_series() {
+        let mut series = Vec::new();
+
+        push_live_point(&mut series, point(0, 180, 0));
+
+        assert!(series.is_empty());
+    }
+
+    fn plan(started_at: i64, ended_at: i64) -> SnapshotQueryPlan {
+        SnapshotQueryPlan {
+            granularity: SnapshotGranularity::Minute,
+            started_at: ts(started_at),
+            ended_at: ts(ended_at),
+            effective_all: false,
+        }
+    }
+
+    fn point(started_at: i64, ended_at: i64, request_count: i64) -> PerformanceSnapshotPoint {
+        PerformanceSnapshotPoint {
+            bucket_started_at: super::query::format_timestamp(ts(started_at)),
+            bucket_ended_at: super::query::format_timestamp(ts(ended_at)),
+            metrics: PerformanceSnapshotMetrics {
+                core: CoreRequestMetrics {
+                    request_count,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        }
+    }
+
+    fn ts(seconds: i64) -> time::OffsetDateTime {
+        time::OffsetDateTime::from_unix_timestamp(seconds).unwrap()
     }
 }

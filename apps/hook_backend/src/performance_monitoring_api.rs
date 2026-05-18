@@ -47,8 +47,9 @@ async fn overview(
     State(state): State<PerformanceMonitoringApiState>,
     Query(query): Query<PerformanceMonitoringOverviewRequest>,
 ) -> ApiResult<ApiJson<PerformanceMonitoringOverviewResponse>> {
+    let system = state.os_collector.clone().snapshot().await.map_err(PerformanceMonitoringApiError::from)?;
     let response = PerformanceMonitoringStore::new(state.database)
-        .overview(query.range, time::OffsetDateTime::now_utc())
+        .overview_with_system(query.range, time::OffsetDateTime::now_utc(), system)
         .await?;
     Ok(ok(response))
 }

@@ -8,9 +8,11 @@ use types::provider::{
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
 
+mod key_endpoint_scope;
 mod key_permissions;
 mod request_queries;
 
+use key_endpoint_scope::ensure_api_formats_bound;
 use key_permissions::ensure_allowed_models_bound;
 use request_queries::{
     sanitize_active_request_record_request, sanitize_provider_cooldown_request, validate_provider_cooldown_request, validate_request_record_list_request,
@@ -109,6 +111,7 @@ where
         self.ensure_provider(provider_id).await?;
         let input = sanitize_api_key(input);
         validate_api_key(&input)?;
+        ensure_api_formats_bound(&self.repository, provider_id, &input.api_formats).await?;
         ensure_allowed_models_bound(&self.repository, provider_id, &input.allowed_model_ids).await?;
         let encrypted = self.cipher.encrypt_provider_key(&input.api_key)?;
         self.repository.create_api_key(provider_id, input, encrypted).await
@@ -132,7 +135,7 @@ where
 
         let mut errors = Vec::new();
         for endpoint in endpoints {
-            for key in &keys {
+            for key in keys.iter().filter(|key| key_supports_endpoint(key, &endpoint.api_format)) {
                 let decrypted = self.cipher.decrypt_provider_key(&key.encrypted_api_key)?;
                 match self.fetcher.fetch_upstream_models(&endpoint, &decrypted).await {
                     Ok(response) => return Ok(response),
@@ -150,6 +153,9 @@ where
         self.ensure_provider(provider_id).await?;
         let input = sanitize_api_key_update(input);
         validate_api_key_update(&input)?;
+        if let Some(api_formats) = &input.api_formats {
+            ensure_api_formats_bound(&self.repository, provider_id, api_formats).await?;
+        }
         if let Some(allowed_model_ids) = &input.allowed_model_ids {
             ensure_allowed_models_bound(&self.repository, provider_id, allowed_model_ids).await?;
         }
@@ -258,4 +264,8 @@ fn active_endpoints(endpoints: Vec<ProviderEndpoint>) -> Vec<ProviderEndpoint> {
 fn active_api_key_secrets(mut keys: Vec<crate::application::ProviderApiKeySecret>) -> Vec<crate::application::ProviderApiKeySecret> {
     keys.retain(|key| key.is_active);
     keys
+}
+
+fn key_supports_endpoint(key: &crate::application::ProviderApiKeySecret, api_format: &str) -> bool {
+    key.api_formats.iter().any(|format| format == api_format)
 }

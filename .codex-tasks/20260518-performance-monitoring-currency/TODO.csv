@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing currency display implementation,DONE,Existing request-record/model currency pattern identified,test -f apps/hook_frontend/src/utils/currency-format.ts,2026-05-18T00:00:00+08:00,0,
+2,Wire performance monitoring to display currency,DONE,PerformanceMonitoringView passes CurrencyDisplay into SummaryGrid and surfaces display-currency errors,rg -n "currencyDisplay" apps/hook_frontend/src/sections/admin/performance-monitoring-*.tsx,2026-05-18T00:00:00+08:00,0,
+3,Replace hard-coded currency formatting,DONE,PerformanceMonitoring cards no longer use fCurrency for cost,! rg -n "fCurrency" apps/hook_frontend/src/sections/admin/performance-monitoring-cards.tsx,2026-05-18T00:00:00+08:00,0,
+4,Run frontend validation,DONE,Frontend lint and build complete,pnpm lint:frontend && pnpm build:frontend,2026-05-18T00:00:00+08:00,1,timeout command unavailable on this macOS shell; ran repository scripts directly

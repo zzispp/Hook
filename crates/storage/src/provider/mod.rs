@@ -1,5 +1,6 @@
 mod billing_config_query;
 mod provider_cooldown_query;
+mod provider_endpoint_query;
 mod provider_model_query;
 pub mod record;
 mod repository;

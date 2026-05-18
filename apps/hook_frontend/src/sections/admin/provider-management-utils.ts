@@ -98,7 +98,9 @@ export function providerFormFromProvider(provider: Provider): ProviderForm {
     provider_type: provider.provider_type,
     max_retries: optionalNumberText(provider.max_retries),
     request_timeout_seconds: optionalNumberText(provider.request_timeout_seconds),
-    stream_first_byte_timeout_seconds: optionalNumberText(provider.stream_first_byte_timeout_seconds),
+    stream_first_byte_timeout_seconds: optionalNumberText(
+      provider.stream_first_byte_timeout_seconds
+    ),
     priority: String(provider.priority),
     keep_priority_on_conversion: provider.keep_priority_on_conversion,
     enable_format_conversion: provider.enable_format_conversion,
@@ -223,9 +225,8 @@ function trimmedOrNull(value: string) {
 }
 
 function normalizeSelectedApiFormats(values: string[]) {
-  const allowed = new Set(API_FORMAT_OPTIONS);
   const normalized = values.map((value) => value.trim().toLowerCase());
-  return Array.from(new Set(normalized.filter((value) => allowed.has(value))));
+  return Array.from(new Set(normalized.filter(Boolean)));
 }
 
 function normalizeSelectedIds(values: string[]) {

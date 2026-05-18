@@ -131,9 +131,7 @@ mod tests {
     fn detects_openai_responses_completion_with_usage() {
         let mut parser = StreamUsageParser::new(ApiFormat::OpenAiResponses);
         let result = parser
-            .consume(
-                b"data: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":12,\"output_tokens\":7,\"total_tokens\":19}}}\n\n",
-            )
+            .consume(b"data: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":12,\"output_tokens\":7,\"total_tokens\":19}}}\n\n")
             .unwrap();
 
         let usage = result.usage.expect("usage should be extracted");

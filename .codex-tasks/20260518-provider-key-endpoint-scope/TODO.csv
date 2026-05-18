@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect Hook and Aether endpoint/key semantics,DONE,Aether and Hook routing semantics are recorded in PROGRESS.md,rg/sed inspection,2026-05-18T00:00:00+08:00,0,
+2,Add backend key api_format subset validation,DONE,Create/update key rejects formats not bound to provider endpoints,cargo test -p provider key_endpoint_scope -- --nocapture,2026-05-18T02:00:39+08:00,0,
+3,Limit frontend key supported-format options to provider endpoints,DONE,Dialog options come from selected provider endpoints and stale selections remain visible for correction,pnpm lint:frontend,2026-05-18T02:00:39+08:00,0,
+4,Run focused verification,DONE,Rust check and frontend lint/build status recorded,python timeout wrapper,2026-05-18T02:00:39+08:00,0,

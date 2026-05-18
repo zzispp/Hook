@@ -1,5 +1,7 @@
 import type { GlobalModelResponse } from 'src/types/model';
-import type { ProviderModelBinding } from 'src/types/provider';
+import type { ProviderEndpoint, ProviderModelBinding } from 'src/types/provider';
+
+import { formatApiFormat } from './provider-management-utils';
 
 export type SelectOption = {
   value: string;
@@ -27,8 +29,25 @@ export function providerModelOptions(
   return Array.from(options.values());
 }
 
+export function providerEndpointFormatOptions(endpoints: ProviderEndpoint[]): SelectOption[] {
+  const options = new Map<string, SelectOption>();
+
+  for (const endpoint of endpoints) {
+    if (options.has(endpoint.api_format)) continue;
+    options.set(endpoint.api_format, {
+      value: endpoint.api_format,
+      label: formatApiFormat(endpoint.api_format),
+      description: endpoint.base_url,
+    });
+  }
+
+  return Array.from(options.values());
+}
+
 export function selectedOptions(value: string[], options: SelectOption[]) {
-  return value.map((id) => options.find((option) => option.value === id) ?? { value: id, label: id });
+  return value.map(
+    (id) => options.find((option) => option.value === id) ?? { value: id, label: id }
+  );
 }
 
 function modelLabels(models: GlobalModelResponse[]) {

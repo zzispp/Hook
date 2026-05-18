@@ -106,10 +106,22 @@ fn thirty_day_plan(now: time::OffsetDateTime) -> SnapshotQueryPlan {
 fn all_plan(now: time::OffsetDateTime) -> SnapshotQueryPlan {
     SnapshotQueryPlan {
         granularity: SnapshotGranularity::Day,
-        started_at: now,
+        started_at: floor_day(now),
         ended_at: now,
         effective_all: true,
     }
+}
+
+fn floor_day(value: time::OffsetDateTime) -> time::OffsetDateTime {
+    value
+        .replace_hour(0)
+        .unwrap()
+        .replace_minute(0)
+        .unwrap()
+        .replace_second(0)
+        .unwrap()
+        .replace_nanosecond(0)
+        .unwrap()
 }
 
 fn safe_granularity(started_at: time::OffsetDateTime, ended_at: time::OffsetDateTime, preferred: SnapshotGranularity) -> SnapshotGranularity {
@@ -155,6 +167,7 @@ mod tests {
         let plan = range_plan(PerformanceMonitoringRange::All, now);
 
         assert_eq!(plan.granularity, SnapshotGranularity::Day);
+        assert!(plan.started_at < plan.ended_at);
         assert!(plan.effective_all);
     }
 
