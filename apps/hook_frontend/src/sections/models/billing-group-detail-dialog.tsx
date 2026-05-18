@@ -3,10 +3,8 @@
 import type { Theme } from '@mui/material/styles';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import Box from '@mui/material/Box';
-import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
 import Tooltip from '@mui/material/Tooltip';
@@ -28,8 +26,6 @@ import { ModelEffectivePricingSection } from './model-effective-pricing-section'
 type Props = {
   group: BillingGroup | null;
   models: GlobalModelResponse[];
-  currencyDisplay?: CurrencyDisplay;
-  currencyErrorMessage?: string;
   open: boolean;
   onClose: () => void;
 };
@@ -37,8 +33,6 @@ type Props = {
 export function BillingGroupDetailDialog({
   group,
   models,
-  currencyDisplay,
-  currencyErrorMessage,
   open,
   onClose,
 }: Props) {
@@ -53,12 +47,7 @@ export function BillingGroupDetailDialog({
         <Stack spacing={2.5}>
           <SummaryGrid group={group} modelCount={scopedModels.length} />
           <Description group={group} />
-          {currencyErrorMessage ? <Alert severity="error">{currencyErrorMessage}</Alert> : null}
-          <ModelsPricingList
-            group={group}
-            models={scopedModels}
-            currencyDisplay={currencyDisplay}
-          />
+          <ModelsPricingList group={group} models={scopedModels} />
         </Stack>
       </DialogContent>
     </Dialog>
@@ -138,11 +127,9 @@ function Description({ group }: { group: BillingGroup }) {
 function ModelsPricingList({
   group,
   models,
-  currencyDisplay,
 }: {
   group: BillingGroup;
   models: GlobalModelResponse[];
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const { t } = useTranslate('admin');
   if (models.length === 0) {
@@ -156,7 +143,6 @@ function ModelsPricingList({
           key={model.id}
           group={group}
           model={model}
-          currencyDisplay={currencyDisplay}
         />
       ))}
     </Stack>
@@ -166,11 +152,9 @@ function ModelsPricingList({
 function ModelPricingCard({
   group,
   model,
-  currencyDisplay,
 }: {
   group: BillingGroup;
   model: GlobalModelResponse;
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const { t } = useTranslate('admin');
 
@@ -199,12 +183,11 @@ function ModelPricingCard({
       </Stack>
 
       <Divider />
-      <ModelPricingSection model={model} currencyDisplay={currencyDisplay} />
+      <ModelPricingSection model={model} />
       <Divider />
       <ModelEffectivePricingSection
         model={model}
         multiplier={group.billing_multiplier}
-        currencyDisplay={currencyDisplay}
         title={t('models.priceGroupPricing')}
       />
     </Stack>

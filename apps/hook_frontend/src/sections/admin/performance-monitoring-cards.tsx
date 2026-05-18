@@ -2,7 +2,6 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { ChartOptions } from 'src/components/chart';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { MetricDimension, PerformanceSnapshotPoint } from 'src/types/performance-monitoring';
 
 import Box from '@mui/material/Box';
@@ -23,10 +22,8 @@ import { Chart, useChart, ChartLegends } from 'src/components/chart';
 
 export function SummaryGrid({
   snapshot,
-  currencyDisplay,
 }: {
   snapshot?: PerformanceSnapshotPoint;
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const { t } = useTranslate('admin');
   const core = snapshot?.metrics.core;
@@ -47,7 +44,7 @@ export function SummaryGrid({
       <MetricCard label={t('performanceMonitoring.metrics.totalTokens')} value={fNumber(llm?.total_tokens ?? 0)} />
       <MetricCard
         label={t('performanceMonitoring.metrics.cost')}
-        value={formatCost(llm?.cost, currencyDisplay)}
+        value={formatCost(llm?.cost)}
       />
     </Grid>
   );
@@ -265,9 +262,8 @@ function formatRatio(value?: number | null) {
   return fPercent((value ?? 0) * 100);
 }
 
-function formatCost(value: number | null | undefined, display?: CurrencyDisplay) {
-  if (!display) return '-';
-  return formatMoneyCompact(value, display);
+function formatCost(value: number | null | undefined) {
+  return formatMoneyCompact(value);
 }
 
 function formatBytes(value?: number | null) {

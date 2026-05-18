@@ -9,7 +9,6 @@ pub const AUTHENTICATED_API_CODES: &[&str] = &[
     "auth_me",
     "navbar_read",
     "i18n_resources_read",
-    "system_display_currency_read",
     "notifications_read",
     "notifications_read_all",
     "notification_read",
@@ -219,12 +218,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     },
     MenuApiBindingDefinition {
         menu_code: "admin_settings",
-        api_codes: &[
-            "system_settings_read",
-            "system_settings_update",
-            "system_settings_smtp_test",
-            "system_exchange_rate_read",
-        ],
+        api_codes: &["system_settings_read", "system_settings_update", "system_settings_smtp_test"],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_translations",

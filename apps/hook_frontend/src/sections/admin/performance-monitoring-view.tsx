@@ -2,7 +2,7 @@
 
 import type { PerformanceMonitoringRange } from 'src/types/performance-monitoring';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
@@ -10,11 +10,8 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import ButtonGroup from '@mui/material/ButtonGroup';
 
-import { currencyDisplayFromResponse } from 'src/utils/currency-format';
-
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useCurrencyDisplay } from 'src/actions/system-settings';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 import {
   usePerformanceMonitoringOverview,
@@ -36,13 +33,8 @@ export function PerformanceMonitoringView() {
   const { t } = useTranslate('admin');
   const [range, setRange] = useState<PerformanceMonitoringRange>('realtime');
   const isRealtime = range === 'realtime';
-  const currency = useCurrencyDisplay();
   const overview = usePerformanceMonitoringOverview(range);
   const realtime = usePerformanceMonitoringRealtime(isRealtime);
-  const currencyDisplay = useMemo(
-    () => currencyDisplayFromResponse(currency.data, t('requestRecords.exchangeRateUnavailable')),
-    [currency.data, t]
-  );
   const activeSnapshot =
     (range === 'realtime' ? realtime.data?.snapshot : overview.data?.series.at(-1)) ?? undefined;
   const chartSeries =
@@ -70,9 +62,9 @@ export function PerformanceMonitoringView() {
       <Stack spacing={3}>
         <StatusAlerts
           overview={overview.data}
-          error={overview.error ?? realtime.error ?? currency.error}
+          error={overview.error ?? realtime.error}
         />
-        <SummaryGrid snapshot={activeSnapshot} currencyDisplay={currencyDisplay} />
+        <SummaryGrid snapshot={activeSnapshot} />
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 8 }}>
             <SeriesChart title={t('performanceMonitoring.charts.requests')} series={chartSeries} />

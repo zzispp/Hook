@@ -1,8 +1,6 @@
 'use client';
 
 import type { ApiToken } from 'src/types/api-token';
-import type { DisplayCurrency } from 'src/types/system-setting';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import Box from '@mui/material/Box';
@@ -33,7 +31,6 @@ type Props = {
   loading: boolean;
   table: UseTableReturn;
   showOwner?: boolean;
-  currencyDisplay?: CurrencyDisplay;
   onCopy: (token: ApiToken) => void;
   onEdit: (token: ApiToken) => void;
   onToggle: (token: ApiToken) => void;
@@ -42,7 +39,7 @@ type Props = {
 
 export function ApiTokenTable(props: Props) {
   const { t } = useTranslate('admin');
-  const tableHead = tokenTableHead(t, props.showOwner, props.currencyDisplay?.currency);
+  const tableHead = tokenTableHead(t, props.showOwner);
 
   return (
     <>
@@ -90,7 +87,7 @@ function ApiTokenTableRow({ row, props }: { row: ApiToken; props: Props }) {
         </TableCell>
       ) : null}
       {props.showOwner ? <TableCell>{t(tokenTypeKey(row.token_type))}</TableCell> : null}
-      <TableCell>{formatTokenCost(row.used_quota, props.currencyDisplay)}</TableCell>
+      <TableCell>{formatTokenCost(row.used_quota)}</TableCell>
       <TableCell>{formatInteger(row.request_count)}</TableCell>
       <TableCell>{rateLimitText(row, t)}</TableCell>
       <TableCell>
@@ -189,8 +186,7 @@ function RowActions({
 
 function tokenTableHead(
   t: (key: string, options?: Record<string, string>) => string,
-  showOwner?: boolean,
-  currency?: DisplayCurrency
+  showOwner?: boolean
 ): TableHeadCellProps[] {
   const ownerColumns = showOwner
     ? [
@@ -203,7 +199,7 @@ function tokenTableHead(
     { id: 'name', label: t('fields.keyName'), width: 180 },
     { id: 'key', label: t('fields.apiKey'), width: 180 },
     ...ownerColumns,
-    { id: 'used_quota', label: costColumnLabel(t, currency), width: 140 },
+    { id: 'used_quota', label: costColumnLabel(t), width: 140 },
     { id: 'request_count', label: t('fields.requestCount'), width: 130 },
     { id: 'rate_limit_rpm', label: t('fields.rateLimitRpm'), width: 140 },
     { id: 'status', label: t('common.status'), width: 110 },
@@ -213,14 +209,13 @@ function tokenTableHead(
 }
 
 function costColumnLabel(
-  t: (key: string, options?: Record<string, string>) => string,
-  currency?: DisplayCurrency
+  t: (key: string, options?: Record<string, string>) => string
 ) {
-  return t('fields.costWithCurrency', { currency: currency ?? ACCOUNTING_CURRENCY });
+  return t('fields.costWithCurrency', { currency: ACCOUNTING_CURRENCY });
 }
 
-function formatTokenCost(value: number, currencyDisplay?: CurrencyDisplay) {
-  return formatMoney(value, currencyDisplay ?? { currency: ACCOUNTING_CURRENCY });
+function formatTokenCost(value: number) {
+  return formatMoney(value);
 }
 
 function tokenTypeKey(type: ApiToken['token_type']) {

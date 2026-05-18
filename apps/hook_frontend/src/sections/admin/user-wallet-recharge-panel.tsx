@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 
-import { labelWithCurrency } from 'src/utils/money-boundary';
+import { labelWithAccountingCurrency } from 'src/utils/money-boundary';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { rechargeAdminWallet } from 'src/actions/wallet';
@@ -22,7 +22,7 @@ type RechargeFormOptions = {
   refreshBalance: VoidFunction;
 };
 
-export function ManualRechargePanel({ form, currency }: { form: ManualRechargeForm; currency?: string }) {
+export function ManualRechargePanel({ form }: { form: ManualRechargeForm }) {
   const { t } = useTranslate('admin');
 
   return (
@@ -31,7 +31,7 @@ export function ManualRechargePanel({ form, currency }: { form: ManualRechargeFo
       <TextField
         required
         type="number"
-        label={labelWithCurrency(t('userWallet.amount'), currency)}
+        label={labelWithAccountingCurrency(t('userWallet.amount'))}
         value={form.amount}
         helperText={t('userWallet.positiveAmount')}
         slotProps={{ htmlInput: { min: 0, step: '0.01' } }}

@@ -147,7 +147,6 @@
     "allowedProviders": "Allowed providers",
     "apiKey": "Key",
     "billingMultiplier": "Billing multiplier",
-    "costCny": "Cost (USD)",
     "costWithCurrency": "Cost ({{currency}})",
     "expiresAt": "Expires at",
     "keyName": "Key name",
@@ -1073,7 +1072,6 @@
       "sensitiveRequestHeaders": "Sensitive request headers",
       "defaultUserGrant": "Default user initial grant",
       "defaultRateLimitRpm": "Default rate limit",
-      "currency": "Display currency",
       "smtpHost": "SMTP server host",
       "smtpPort": "SMTP port",
       "smtpUsername": "SMTP username",
@@ -1086,8 +1084,6 @@
       "emailTemplateSubject": "Email subject",
       "emailTemplateHtml": "HTML template"
     },
-    "currencyUsd": "USD $",
-    "currencyCny": "CNY ¥",
     "helper": {
       "defaultUserGrant": "Added to the gift balance after sign-up and recorded in the wallet ledger.",
       "defaultRateLimitRpm": "Requests per minute; 0 means unlimited by system default.",
@@ -1242,8 +1238,6 @@
     "original": "Original",
     "billed": "Billed",
     "billingFormula": "Billing formula | Total = (token cost + per-request cost) × billing group multiplier",
-    "exchangeRateUnavailable": "Exchange rate unavailable",
-    "exchangeRateLoadFailed": "USD/CNY exchange-rate cache is unavailable, so CNY amounts cannot be displayed yet.",
     "traceTitle": "Request trace",
     "requestHeaders": "Request headers",
     "requestBody": "Request body",

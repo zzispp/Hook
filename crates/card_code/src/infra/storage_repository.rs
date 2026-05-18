@@ -44,14 +44,6 @@ impl CardCodeRepository for StorageCardCodeRepository {
         self.store.find_type(id).await.map_err(storage_error)
     }
 
-    async fn find_code(&self, code: &str) -> CardCodeResult<Option<CardCode>> {
-        self.store.find_code(code).await.map_err(storage_error)
-    }
-
-    async fn user_wallet_currency(&self, user_id: &str) -> CardCodeResult<Option<String>> {
-        self.store.user_wallet_currency(user_id).await.map_err(storage_error)
-    }
-
     async fn code_exists(&self, code: &str) -> CardCodeResult<bool> {
         self.store.code_exists(code).await.map_err(storage_error)
     }

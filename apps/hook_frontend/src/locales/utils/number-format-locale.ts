@@ -9,6 +9,5 @@ export function formatNumberLocale() {
 
   return {
     code: currentLang?.numberFormat.code,
-    currency: currentLang?.numberFormat.currency,
   };
 }

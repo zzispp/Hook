@@ -1,7 +1,6 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { PricingTier, GlobalModelResponse } from 'src/types/model';
 
 import Grid from '@mui/material/Grid';
@@ -21,10 +20,8 @@ import {
 
 export function ModelPricingSection({
   model,
-  currencyDisplay,
 }: {
   model: GlobalModelResponse;
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const { t } = useTranslate('admin');
   const pricing = model.default_tiered_pricing;
@@ -33,34 +30,28 @@ export function ModelPricingSection({
     <Stack spacing={1.5}>
       <Typography variant="subtitle2">{t('models.pricingInfo')}</Typography>
       {tierCount(pricing) <= 1 ? (
-        <SingleTierPricing model={model} currencyDisplay={currencyDisplay} />
+        <SingleTierPricing model={model} />
       ) : (
-        <TieredPricing tiers={pricing.tiers} currencyDisplay={currencyDisplay} />
+        <TieredPricing tiers={pricing.tiers} />
       )}
-      <RequestPrice value={model.default_price_per_request} currencyDisplay={currencyDisplay} />
+      <RequestPrice value={model.default_price_per_request} />
     </Stack>
   );
 }
 
-function SingleTierPricing({
-  model,
-  currencyDisplay,
-}: {
-  model: GlobalModelResponse;
-  currencyDisplay?: CurrencyDisplay;
-}) {
+function SingleTierPricing({ model }: { model: GlobalModelResponse }) {
   const { t } = useTranslate('admin');
   const pricing = model.default_tiered_pricing;
   const items = [
-    [t('fields.inputPrice'), firstTierPrice(pricing, 'input_price_per_1m', currencyDisplay)],
-    [t('fields.outputPrice'), firstTierPrice(pricing, 'output_price_per_1m', currencyDisplay)],
+    [t('fields.inputPrice'), firstTierPrice(pricing, 'input_price_per_1m')],
+    [t('fields.outputPrice'), firstTierPrice(pricing, 'output_price_per_1m')],
     [
       t('fields.cacheCreationPrice'),
-      firstTierPrice(pricing, 'cache_creation_price_per_1m', currencyDisplay),
+      firstTierPrice(pricing, 'cache_creation_price_per_1m'),
     ],
     [
       t('fields.cacheReadPrice'),
-      firstTierPrice(pricing, 'cache_read_price_per_1m', currencyDisplay),
+      firstTierPrice(pricing, 'cache_read_price_per_1m'),
     ],
   ];
 
@@ -74,20 +65,14 @@ function SingleTierPricing({
       <Grid size={{ xs: 12 }}>
         <InlinePrice
           label={t('models.oneHourCache')}
-          value={firstOneHourCachePrice(pricing, currencyDisplay)}
+          value={firstOneHourCachePrice(pricing)}
         />
       </Grid>
     </Grid>
   );
 }
 
-function TieredPricing({
-  tiers,
-  currencyDisplay,
-}: {
-  tiers: PricingTier[];
-  currencyDisplay?: CurrencyDisplay;
-}) {
+function TieredPricing({ tiers }: { tiers: PricingTier[] }) {
   const { t } = useTranslate('admin');
 
   return (
@@ -99,31 +84,31 @@ function TieredPricing({
             <Grid size={{ xs: 12 }}>
               <PriceBox
                 label={t('fields.inputPrice')}
-                value={formatPrice(tier.input_price_per_1m, currencyDisplay)}
+                value={formatPrice(tier.input_price_per_1m)}
               />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <PriceBox
                 label={t('fields.outputPrice')}
-                value={formatPrice(tier.output_price_per_1m, currencyDisplay)}
+                value={formatPrice(tier.output_price_per_1m)}
               />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <PriceBox
                 label={t('fields.cacheCreationPrice')}
-                value={formatPrice(tier.cache_creation_price_per_1m, currencyDisplay)}
+                value={formatPrice(tier.cache_creation_price_per_1m)}
               />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <PriceBox
                 label={t('fields.cacheReadPrice')}
-                value={formatPrice(tier.cache_read_price_per_1m, currencyDisplay)}
+                value={formatPrice(tier.cache_read_price_per_1m)}
               />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <InlinePrice
                 label={t('models.oneHourCache')}
-                value={oneHourCachePrice(tier, currencyDisplay)}
+                value={oneHourCachePrice(tier)}
               />
             </Grid>
           </Grid>
@@ -133,15 +118,9 @@ function TieredPricing({
   );
 }
 
-function RequestPrice({
-  value,
-  currencyDisplay,
-}: {
-  value?: number | null;
-  currencyDisplay?: CurrencyDisplay;
-}) {
+function RequestPrice({ value }: { value?: number | null }) {
   const { t } = useTranslate('admin');
-  const price = requestPrice(value, currencyDisplay);
+  const price = requestPrice(value);
   if (!price) return null;
   return <InlinePrice label={t('fields.pricePerRequest')} value={price} />;
 }

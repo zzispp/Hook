@@ -1,19 +1,16 @@
 'use client';
 
 import type { RequestRecord } from 'src/types/provider';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
-import Alert from '@mui/material/Alert';
 
 import { useProviders } from 'src/actions/providers';
 import { useGlobalModels } from 'src/actions/models';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
-import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-settings';
 import { useRequestRecords, fetchActiveRequestRecords } from 'src/actions/request-records';
 
 import { useTable } from 'src/components/table';
@@ -41,7 +38,7 @@ const REQUEST_STATUS_RANK: Record<string, number> = {
 };
 
 export function RequestRecordsView() {
-  const { t, currentLang } = useTranslate('admin');
+  const { currentLang } = useTranslate('admin');
   const table = useTable({
     defaultRowsPerPage: DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE,
     defaultOrderBy: 'created_at',
@@ -50,8 +47,6 @@ export function RequestRecordsView() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<RequestRecord | null>(null);
-  const settings = useSystemSettings();
-  const exchangeRate = useUsdCnyExchangeRate(settings.data?.currency === 'CNY');
   const models = useGlobalModels(0, 1000);
   const providers = useProviders(0, 1000);
   const records = useRequestRecords(
@@ -60,11 +55,6 @@ export function RequestRecordsView() {
     toRequestRecordQueryFilters(filters)
   );
   const locale = currentLang.numberFormat.code;
-  const currencyDisplay: CurrencyDisplay = {
-    currency: settings.data?.currency ?? 'USD',
-    usdCnyRate: exchangeRate.data,
-    unavailableLabel: t('requestRecords.exchangeRateUnavailable'),
-  };
   const refreshRecords = records.refresh;
   const refreshInFlightRef = useRef<Promise<unknown> | null>(null);
   const scrollSnapshotRef = useRef<number | null>(null);
@@ -120,11 +110,6 @@ export function RequestRecordsView() {
         }
       />
       <Card>
-        {settings.data?.currency === 'CNY' && exchangeRate.error ? (
-          <Alert severity="error" sx={{ m: 2.5, mb: 0 }}>
-            {t('requestRecords.exchangeRateLoadFailed')}
-          </Alert>
-        ) : null}
         <RequestRecordsToolbar
           filters={filters}
           models={models.items}
@@ -138,7 +123,6 @@ export function RequestRecordsView() {
           total={records.total}
           table={table}
           locale={locale}
-          currencyDisplay={currencyDisplay}
           loading={records.isLoading}
           onOpen={handleOpenRecord}
         />
@@ -147,7 +131,6 @@ export function RequestRecordsView() {
         open={Boolean(displaySelectedRecord)}
         record={displaySelectedRecord}
         locale={locale}
-        currencyDisplay={currencyDisplay}
         onClose={() => setSelectedRecord(null)}
       />
     </DashboardContent>

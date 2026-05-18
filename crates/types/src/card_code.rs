@@ -126,7 +126,6 @@ pub struct CardCodeRedeemInput {
     pub username: String,
     pub client_ip: Option<String>,
     pub target_currency: String,
-    pub usd_cny_rate: Option<Decimal>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

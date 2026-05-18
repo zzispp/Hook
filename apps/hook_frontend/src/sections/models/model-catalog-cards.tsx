@@ -1,7 +1,6 @@
 'use client';
 
 import type { GlobalModelResponse } from 'src/types/model';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -20,18 +19,16 @@ import { priceSummary, formatUsageCount } from './model-catalog-utils';
 
 type Props = {
   rows: GlobalModelResponse[];
-  currencyDisplay?: CurrencyDisplay;
   onSelectRow: (row: GlobalModelResponse) => void;
 };
 
-export function ModelCatalogCards({ rows, currencyDisplay, onSelectRow }: Props) {
+export function ModelCatalogCards({ rows, onSelectRow }: Props) {
   return (
     <Stack spacing={2}>
       {rows.map((row) => (
         <CatalogCard
           key={row.id}
           row={row}
-          currencyDisplay={currencyDisplay}
           onSelectRow={onSelectRow}
         />
       ))}
@@ -41,11 +38,9 @@ export function ModelCatalogCards({ rows, currencyDisplay, onSelectRow }: Props)
 
 function CatalogCard({
   row,
-  currencyDisplay,
   onSelectRow,
 }: {
   row: GlobalModelResponse;
-  currencyDisplay?: CurrencyDisplay;
   onSelectRow: (row: GlobalModelResponse) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -77,7 +72,7 @@ function CatalogCard({
         <Stack direction="row" flexWrap="wrap" sx={{ gap: 1 }}>
           <Chip
             size="small"
-            label={`${t('models.pricing')}: ${priceSummary(row, currencyDisplay)}`}
+            label={`${t('models.pricing')}: ${priceSummary(row)}`}
           />
           <Chip
             size="small"

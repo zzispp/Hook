@@ -19,6 +19,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 
+import { labelWithAccountingCurrency } from 'src/utils/money-boundary';
+
 const MIN_NUMBER_VALUE = 0;
 const NUMBER_STEP = 1;
 const DEFAULT_GENERATE_QUANTITY = 1;
@@ -29,7 +31,6 @@ type GenerateDialogProps = {
   t: TFunction<'admin'>;
   open: boolean;
   types: CardCodeType[];
-  currency?: string;
   submitting: boolean;
   onClose: VoidFunction;
   onSubmit: (input: CardCodeGenerateInput) => void;
@@ -61,7 +62,7 @@ type TypeForm = {
   remark: string;
 };
 
-export function CardCodeGenerateDialog({ t, open, types, currency, submitting, onClose, onSubmit }: GenerateDialogProps) {
+export function CardCodeGenerateDialog({ t, open, types, submitting, onClose, onSubmit }: GenerateDialogProps) {
   const [form, setForm] = useState<GenerateForm>(() => defaultGenerateForm(types));
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export function CardCodeGenerateDialog({ t, open, types, currency, submitting, o
   const selectedType = types.find((item) => item.id === form.type_id) ?? null;
   const patch = (next: Partial<GenerateForm>) => setForm((current) => ({ ...current, ...next }));
   const submit = () => onSubmit(generatePayload(form));
-  const amountLabel = cardCodeAmountLabel(t, selectedType, currency);
+  const amountLabel = cardCodeAmountLabel(t, selectedType);
 
   return (
     <Dialog open={open} fullWidth maxWidth="sm" onClose={onClose}>
@@ -232,9 +233,8 @@ function balanceTypeSelectProps(t: TFunction<'admin'>) {
   };
 }
 
-function cardCodeAmountLabel(t: TFunction<'admin'>, type: CardCodeType | null, currency?: string) {
-  const label = baseAmountLabel(t, type);
-  return currency ? `${label} (${currency})` : label;
+function cardCodeAmountLabel(t: TFunction<'admin'>, type: CardCodeType | null) {
+  return labelWithAccountingCurrency(baseAmountLabel(t, type));
 }
 
 function baseAmountLabel(t: TFunction<'admin'>, type: CardCodeType | null) {

@@ -3,7 +3,6 @@
 import type { Theme } from '@mui/material/styles';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
@@ -20,7 +19,6 @@ type Props = {
   groups: BillingGroup[];
   loading: boolean;
   errorMessage?: string;
-  currencyDisplay?: CurrencyDisplay;
   title?: string;
 };
 
@@ -39,7 +37,6 @@ export function GlobalModelBillingGroupPricing(props: Props) {
               key={group.id}
               model={props.model}
               group={group}
-              currencyDisplay={props.currencyDisplay}
             />
           ))}
         </Stack>
@@ -63,11 +60,9 @@ function groupPricingState(
 function GroupCard({
   model,
   group,
-  currencyDisplay,
 }: {
   model: GlobalModelResponse;
   group: BillingGroup;
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const allowed = groupAllowsModel(group, model.id);
   const usable = group.is_active && allowed;
@@ -80,7 +75,6 @@ function GroupCard({
         <ModelEffectivePricingSection
           model={model}
           multiplier={group.billing_multiplier}
-          currencyDisplay={currencyDisplay}
         />
       ) : null}
     </Stack>

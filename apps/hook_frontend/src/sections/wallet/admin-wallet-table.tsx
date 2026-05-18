@@ -80,9 +80,9 @@ function AdminWalletRow({
       <TableCell>
         <OwnerCell t={t} row={row} />
       </TableCell>
-      <TableCell>{formatWalletMoney(row.balance, row.currency)}</TableCell>
-      <TableCell>{formatWalletMoney(row.recharge_balance, row.currency)}</TableCell>
-      <TableCell>{formatWalletMoney(row.gift_balance, row.currency)}</TableCell>
+      <TableCell>{formatWalletMoney(row.balance)}</TableCell>
+      <TableCell>{formatWalletMoney(row.recharge_balance)}</TableCell>
+      <TableCell>{formatWalletMoney(row.gift_balance)}</TableCell>
       <TableCell>
         <Label color={row.status === 'active' ? 'success' : 'default'} variant="soft">
           {walletStatusLabel(t, row.status)}

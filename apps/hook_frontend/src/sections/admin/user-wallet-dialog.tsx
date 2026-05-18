@@ -123,7 +123,7 @@ function UserWalletContent({
         <Tab value="ledger" label={t('userWallet.tabs.ledger')} />
         <Tab value="refund" label={t('userWallet.tabs.refund')} />
       </Tabs>
-      {tab === 'operation' ? <ManualRechargePanel form={form} currency={wallet?.currency} /> : null}
+      {tab === 'operation' ? <ManualRechargePanel form={form} /> : null}
       {tab === 'ledger' ? <UserWalletLedger table={table} wallet={wallet} ledger={ledger} locale={locale} onOpen={onOpenTransaction} /> : null}
       {tab === 'refund' ? <RefundEmptyState /> : null}
     </Stack>
@@ -197,10 +197,10 @@ function DialogHeader({
 function WalletMetrics({ wallet }: { wallet?: WalletSummary | null }) {
   const { t } = useTranslate('admin');
   const metrics = [
-    { label: t('wallet.metrics.availableBalance'), value: formatWalletMoney(wallet?.balance, wallet?.currency) },
-    { label: t('wallet.metrics.rechargeBalance'), value: formatWalletMoney(wallet?.recharge_balance, wallet?.currency) },
-    { label: t('wallet.metrics.giftBalance'), value: formatWalletMoney(wallet?.gift_balance, wallet?.currency) },
-    { label: t('wallet.metrics.totalConsumed'), value: formatWalletMoney(wallet?.total_consumed, wallet?.currency) },
+    { label: t('wallet.metrics.availableBalance'), value: formatWalletMoney(wallet?.balance) },
+    { label: t('wallet.metrics.rechargeBalance'), value: formatWalletMoney(wallet?.recharge_balance) },
+    { label: t('wallet.metrics.giftBalance'), value: formatWalletMoney(wallet?.gift_balance) },
+    { label: t('wallet.metrics.totalConsumed'), value: formatWalletMoney(wallet?.total_consumed) },
   ];
 
   return (

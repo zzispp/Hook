@@ -9,8 +9,9 @@ use types::{
 
 use crate::{
     Database, StorageError, StorageResult,
-    card_code::{CardCodeTypeRecordInput, CardCodeTypeRecordPatch, card_code_records, card_code_type_records, query, redemption, time_format},
-    wallet::wallet_records,
+    card_code::{
+        CardCodeTypeRecordInput, CardCodeTypeRecordPatch, card_code_records, card_code_type_records, query, redemption, redemption_currency, time_format,
+    },
 };
 
 #[derive(Clone)]
@@ -78,31 +79,14 @@ impl CardCodeStore {
             .map_err(StorageError::from)
     }
 
-    pub async fn find_code(&self, code: &str) -> StorageResult<Option<CardCode>> {
-        card_code_records::Entity::find()
-            .filter(card_code_records::Column::Code.eq(code))
-            .one(self.database.connection())
-            .await
-            .map(|record| record.map(CardCode::from))
-            .map_err(StorageError::from)
-    }
-
-    pub async fn user_wallet_currency(&self, user_id: &str) -> StorageResult<Option<String>> {
-        wallet_records::Entity::find()
-            .select_only()
-            .column(wallet_records::Column::Currency)
-            .filter(wallet_records::Column::UserId.eq(user_id))
-            .into_tuple()
-            .one(self.database.connection())
-            .await
-            .map_err(StorageError::from)
-    }
-
     pub async fn create_codes(&self, inputs: Vec<CardCodeCreateRecord>) -> StorageResult<Vec<CardCode>> {
         if inputs.is_empty() {
             return Ok(Vec::new());
         }
-        let records = inputs.into_iter().map(|input| self.code_active_model(input));
+        let records = inputs
+            .into_iter()
+            .map(|input| self.code_active_model(input))
+            .collect::<StorageResult<Vec<_>>>()?;
         let inserted = card_code_records::Entity::insert_many(records)
             .exec_with_returning(self.database.connection())
             .await?;
@@ -152,9 +136,10 @@ impl CardCodeStore {
             .map_err(StorageError::from)
     }
 
-    fn code_active_model(&self, input: CardCodeCreateRecord) -> card_code_records::ActiveModel {
+    fn code_active_model(&self, input: CardCodeCreateRecord) -> StorageResult<card_code_records::ActiveModel> {
+        redemption_currency::ensure_accounting_currency(&input.currency, "card code currency")?;
         let now = time::OffsetDateTime::now_utc();
-        card_code_records::ActiveModel {
+        Ok(card_code_records::ActiveModel {
             id: Set(self.database.next_id()),
             code: Set(input.code),
             batch_no: Set(input.batch_no),
@@ -177,7 +162,7 @@ impl CardCodeStore {
             wallet_transaction_id: Set(None),
             created_at: Set(now),
             updated_at: Set(now),
-        }
+        })
     }
 }
 

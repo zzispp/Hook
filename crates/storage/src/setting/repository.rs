@@ -116,9 +116,6 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = &input.provider_cooldown_policy {
         active.provider_cooldown_policy = Set(serde_json::to_string(&value).expect("provider cooldown policy must serialize"));
     }
-    if let Some(value) = &input.currency {
-        active.currency = Set(value.as_str().to_owned());
-    }
 }
 
 fn apply_request_record_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettingsRecordPatch) {

@@ -1,7 +1,6 @@
 'use client';
 
 import type { ApiTokenFilters } from 'src/actions/api-tokens';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { TokenFilterState } from './api-token-filters-toolbar';
 import type {
   TokenScope,
@@ -11,17 +10,13 @@ import type {
 
 import { useState, useCallback } from 'react';
 
-import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-
-import { currencyDisplayFromResponse } from 'src/utils/currency-format';
 
 import { useUsers } from 'src/actions/rbac';
 import { useTranslate } from 'src/locales/use-locales';
 import { useUserModelCatalog } from 'src/actions/models';
 import { useScopedApiTokens } from 'src/actions/api-tokens';
 import { useAvailableBillingGroups } from 'src/actions/groups';
-import { useCurrencyDisplay } from 'src/actions/system-settings';
 
 import { useTable } from 'src/components/table';
 import { ConfirmDialog } from 'src/components/custom-dialog';
@@ -75,7 +70,6 @@ export function useTokenManagementPanelState({
   const dialog = useTokenDialog(scope, t, groups.items, fixedUserId ?? '');
   const deleteDialog = useDeleteDialog(scope, t);
   const copyToken = useCopyToken(scope, t);
-  const currency = useTokenCurrencyState(!disabled, t);
   const handleFiltersChange = useCallback(
     (nextFilters: TokenFilterState) => {
       table.onResetPage();
@@ -86,7 +80,6 @@ export function useTokenManagementPanelState({
 
   return {
     copyToken,
-    currency,
     deleteDialog,
     dialog,
     filters,
@@ -106,11 +99,6 @@ export function TokenManagementPanel({ state }: Props) {
 
   return (
     <>
-      {state.currency.exchangeRateError ? (
-        <Alert severity="error" sx={{ m: 2.5, mb: 0 }}>
-          {t('requestRecords.exchangeRateLoadFailed')}
-        </Alert>
-      ) : null}
       <ApiTokenFiltersToolbar
         filters={state.filters}
         showTokenType={state.scope === 'admin' && !state.fixedUserId}
@@ -122,7 +110,6 @@ export function TokenManagementPanel({ state }: Props) {
         loading={state.tokens.isLoading}
         table={state.table}
         showOwner={state.scope === 'admin' && !state.fixedUserId}
-        currencyDisplay={state.currency.display}
         onCopy={state.copyToken}
         onEdit={state.dialog.openEdit}
         onToggle={(token) => void toggleTokenAndNotify(state.scope, token, t)}
@@ -158,19 +145,6 @@ export function TokenManagementPanel({ state }: Props) {
       />
     </>
   );
-}
-
-function useTokenCurrencyState(enabled: boolean, t: (key: string) => string) {
-  const currency = useCurrencyDisplay(enabled);
-  const display: CurrencyDisplay | undefined = currencyDisplayFromResponse(
-    currency.data,
-    t('requestRecords.exchangeRateUnavailable')
-  );
-
-  return {
-    display,
-    exchangeRateError: Boolean(enabled && currency.error),
-  };
 }
 
 function tokenFilters(filters: TokenFilterState, fixedUserId?: string): ApiTokenFilters {

@@ -38,7 +38,7 @@ export type LangOption = {
   label: string;
   countryCode: string;
   adapterLocale?: string;
-  numberFormat: { code: string; currency: string };
+  numberFormat: { code: string };
   systemValue?: { components: Components<Theme> };
 };
 
@@ -48,7 +48,7 @@ export const allLangs: LangOption[] = [
     label: 'English',
     countryCode: 'GB',
     adapterLocale: 'en',
-    numberFormat: { code: 'en-US', currency: 'USD' },
+    numberFormat: { code: 'en-US' },
     systemValue: {
       components: { ...enUSDate.components, ...enUSDataGrid.components },
     },
@@ -58,7 +58,7 @@ export const allLangs: LangOption[] = [
     label: '中文',
     countryCode: 'CN',
     adapterLocale: 'zh-cn',
-    numberFormat: { code: 'zh-CN', currency: 'CNY' },
+    numberFormat: { code: 'zh-CN' },
     systemValue: {
       components: { ...zhCNCore.components, ...zhCNDate.components, ...zhCNDataGrid.components },
     },

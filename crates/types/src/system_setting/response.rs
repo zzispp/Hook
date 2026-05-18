@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
 
-use super::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
+use super::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct SystemSettingsResponse {
@@ -36,7 +36,6 @@ pub struct SystemSettingsResponse {
     pub default_rate_limit_rpm: i64,
     pub scheduling_mode: ProviderSchedulingMode,
     pub provider_cooldown_policy: ProviderCooldownPolicy,
-    pub currency: DisplayCurrency,
     pub smtp_host: String,
     pub smtp_port: i64,
     pub smtp_username: String,
@@ -52,23 +51,6 @@ pub struct SystemSettingsResponse {
     pub email_template_password_reset_html: String,
     pub created_at: String,
     pub updated_at: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ExchangeRateResponse {
-    pub base: String,
-    pub target: String,
-    #[serde(with = "rust_decimal::serde::float")]
-    pub rate: Decimal,
-    pub source: String,
-    pub source_date: String,
-    pub updated_at: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct CurrencyDisplayResponse {
-    pub currency: DisplayCurrency,
-    pub usd_cny_rate: Option<ExchangeRateResponse>,
 }
 
 impl From<SystemSettings> for SystemSettingsResponse {
@@ -102,7 +84,6 @@ impl From<SystemSettings> for SystemSettingsResponse {
             default_rate_limit_rpm: value.default_rate_limit_rpm,
             scheduling_mode: value.scheduling_mode,
             provider_cooldown_policy: value.provider_cooldown_policy,
-            currency: value.currency,
             smtp_host: value.smtp_host,
             smtp_port: value.smtp_port,
             smtp_username: value.smtp_username,

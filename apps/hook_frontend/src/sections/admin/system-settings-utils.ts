@@ -31,7 +31,6 @@ export type SystemSettingsForm = {
   provider_sensitive_request_headers: string;
   default_user_grant: string;
   default_rate_limit_rpm: string;
-  currency: SystemSettings['currency'];
   smtp_host: string;
   smtp_port: string;
   smtp_username: string;
@@ -130,7 +129,6 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   provider_sensitive_request_headers: 'authorization, x-api-key, api-key, cookie, set-cookie',
   default_user_grant: '0',
   default_rate_limit_rpm: '0',
-  currency: 'USD',
   smtp_host: '',
   smtp_port: '587',
   smtp_username: '',
@@ -180,7 +178,6 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     provider_sensitive_request_headers: settings.provider_sensitive_request_headers,
     default_user_grant: String(settings.default_user_grant),
     default_rate_limit_rpm: String(settings.default_rate_limit_rpm),
-    currency: settings.currency,
     smtp_host: settings.smtp_host,
     smtp_port: String(settings.smtp_port),
     smtp_username: settings.smtp_username,
@@ -231,7 +228,6 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     provider_sensitive_request_headers: form.provider_sensitive_request_headers,
     default_user_grant: Number(form.default_user_grant || 0),
     default_rate_limit_rpm: Number(form.default_rate_limit_rpm || 0),
-    currency: form.currency,
     smtp_host: form.smtp_host,
     smtp_port: Number(form.smtp_port || 0),
     smtp_username: form.smtp_username,

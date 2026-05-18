@@ -2,7 +2,6 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { RequestRecord } from 'src/types/provider';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import { useMemo } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
@@ -42,13 +41,11 @@ export function RequestRecordDetailDrawer({
   open,
   record,
   locale,
-  currencyDisplay,
   onClose,
 }: {
   open: boolean;
   record: RequestRecord | null;
   locale: string;
-  currencyDisplay: CurrencyDisplay;
   onClose: VoidFunction;
 }) {
   const detail = useRequestRecordDetail(open ? record?.request_id : null);
@@ -75,7 +72,7 @@ export function RequestRecordDetailDrawer({
       />
       <Scrollbar>
         <Stack spacing={2.5} sx={{ px: 2.5, pb: 5 }}>
-          <CostSummary record={displayRecord} currencyDisplay={currencyDisplay} />
+          <CostSummary record={displayRecord} />
           <RequestRecordTraceTimeline
             record={displayRecord}
             candidates={detail.data?.candidates ?? []}
@@ -171,18 +168,12 @@ function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string 
   );
 }
 
-function CostSummary({
-  record,
-  currencyDisplay,
-}: {
-  record: RequestRecord | null;
-  currencyDisplay: CurrencyDisplay;
-}) {
+function CostSummary({ record }: { record: RequestRecord | null }) {
   const { t } = useTranslate('admin');
   const metrics = [
-    [t('requestRecords.totalCost'), formatCost(record?.total_cost, currencyDisplay)],
-    [t('requestRecords.actualCost'), formatCost(record?.base_cost, currencyDisplay)],
-    [t('requestRecords.profit'), formatCost(profit(record), currencyDisplay)],
+    [t('requestRecords.totalCost'), formatCost(record?.total_cost)],
+    [t('requestRecords.actualCost'), formatCost(record?.base_cost)],
+    [t('requestRecords.profit'), formatCost(profit(record))],
     [t('requestRecords.profitRate'), profitRate(record)],
     [t('requestRecords.responseTime'), formatDuration(record?.total_latency_ms)],
   ];
@@ -200,7 +191,7 @@ function CostSummary({
         ))}
       </Stack>
       <Divider />
-      <RequestRecordBillingDetails record={record} currencyDisplay={currencyDisplay} />
+      <RequestRecordBillingDetails record={record} />
     </Stack>
   );
 }

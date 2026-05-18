@@ -13,7 +13,7 @@ use types::{
 };
 
 use super::*;
-use crate::application::{CardCodeCurrencyProvider, CardCodeRepository};
+use crate::application::CardCodeRepository;
 
 #[test]
 fn generation_amounts_puts_recharge_type_amount_into_recharge_balance() {
@@ -33,7 +33,7 @@ fn generation_amounts_puts_gift_type_amount_into_gift_balance() {
 
 #[tokio::test]
 async fn generate_codes_uses_default_wallet_currency() {
-    let service = CardCodeService::new(MockRepository, MockCurrencyProvider);
+    let service = CardCodeService::new(MockRepository);
     let response = service.generate_codes(generate_payload(), operator()).await.unwrap();
 
     assert_eq!(response.items[0].currency, currency::DEFAULT_WALLET_CURRENCY);
@@ -42,24 +42,12 @@ async fn generate_codes_uses_default_wallet_currency() {
 #[tokio::test]
 async fn redeem_uses_default_wallet_currency_not_display_currency() {
     let repository = RedeemRepository::default();
-    let service = CardCodeService::new(repository.clone(), CnyCurrencyProvider);
+    let service = CardCodeService::new(repository.clone());
 
     service.redeem(CardCodeRedeemPayload { code: "card-code".into() }, redeemer()).await.unwrap();
 
     let input = repository.redeem_input().unwrap();
     assert_eq!(input.target_currency, currency::DEFAULT_WALLET_CURRENCY);
-    assert_eq!(input.usd_cny_rate, Some(Decimal::new(7, 0)));
-}
-
-#[test]
-fn exchange_rate_is_required_only_for_redeemable_currency_mismatch() {
-    let mut code = card_code("CNY", CARD_CODE_STATUS_ACTIVE);
-
-    assert!(requires_exchange_rate(&code, "USD"));
-
-    code.status = "used".into();
-    assert!(!requires_exchange_rate(&code, "USD"));
-    assert!(!requires_exchange_rate(&card_code("USD", CARD_CODE_STATUS_ACTIVE), "USD"));
 }
 
 struct MockRepository;
@@ -82,14 +70,6 @@ impl CardCodeRepository for MockRepository {
         Ok(Some(card_type(CARD_CODE_BALANCE_TYPE_GIFT)))
     }
 
-    async fn find_code(&self, _code: &str) -> CardCodeResult<Option<CardCode>> {
-        Ok(None)
-    }
-
-    async fn user_wallet_currency(&self, _user_id: &str) -> CardCodeResult<Option<String>> {
-        Ok(None)
-    }
-
     async fn code_exists(&self, _code: &str) -> CardCodeResult<bool> {
         Ok(false)
     }
@@ -108,15 +88,6 @@ impl CardCodeRepository for MockRepository {
 
     async fn redeem(&self, _input: CardCodeRedeemInput) -> CardCodeResult<CardCodeRedeemResponse> {
         unreachable!()
-    }
-}
-
-struct MockCurrencyProvider;
-
-#[async_trait]
-impl CardCodeCurrencyProvider for MockCurrencyProvider {
-    async fn usd_cny_rate(&self) -> CardCodeResult<Decimal> {
-        Ok(Decimal::new(7, 0))
     }
 }
 
@@ -149,14 +120,6 @@ impl CardCodeRepository for RedeemRepository {
         unreachable!()
     }
 
-    async fn find_code(&self, _code: &str) -> CardCodeResult<Option<CardCode>> {
-        Ok(Some(card_code("CNY", CARD_CODE_STATUS_ACTIVE)))
-    }
-
-    async fn user_wallet_currency(&self, _user_id: &str) -> CardCodeResult<Option<String>> {
-        Ok(None)
-    }
-
     async fn code_exists(&self, _code: &str) -> CardCodeResult<bool> {
         unreachable!()
     }
@@ -176,18 +139,9 @@ impl CardCodeRepository for RedeemRepository {
     async fn redeem(&self, input: CardCodeRedeemInput) -> CardCodeResult<CardCodeRedeemResponse> {
         *self.input.lock().unwrap() = Some(input);
         Ok(CardCodeRedeemResponse {
-            card_code: card_code("CNY", CARD_CODE_STATUS_ACTIVE).into(),
+            card_code: card_code(currency::DEFAULT_WALLET_CURRENCY, CARD_CODE_STATUS_ACTIVE).into(),
             transaction: wallet_transaction().into(),
         })
-    }
-}
-
-struct CnyCurrencyProvider;
-
-#[async_trait]
-impl CardCodeCurrencyProvider for CnyCurrencyProvider {
-    async fn usd_cny_rate(&self) -> CardCodeResult<Decimal> {
-        Ok(Decimal::new(7, 0))
     }
 }
 

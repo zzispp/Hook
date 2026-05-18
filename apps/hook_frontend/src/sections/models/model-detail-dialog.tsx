@@ -2,7 +2,6 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import { useState } from 'react';
 
@@ -37,7 +36,6 @@ import {
 
 type Props = {
   model: GlobalModelResponse | null;
-  currencyDisplay?: CurrencyDisplay;
   open: boolean;
   onClose: () => void;
 };
@@ -46,7 +44,6 @@ type DetailTab = 'basic' | 'groups';
 
 export function ModelDetailDialog({
   model,
-  currencyDisplay,
   open,
   onClose,
 }: Props) {
@@ -65,14 +62,13 @@ export function ModelDetailDialog({
           <Tab value="groups" label={t('models.priceGroupPricing')} />
         </Tabs>
         <Stack spacing={2.5} sx={{ p: 2.5 }}>
-          {tab === 'basic' ? <BasicTab model={model} currencyDisplay={currencyDisplay} /> : null}
+          {tab === 'basic' ? <BasicTab model={model} /> : null}
           {tab === 'groups' ? (
             <GlobalModelBillingGroupPricing
               model={model}
               groups={groups.items}
               loading={groups.isLoading}
               errorMessage={groups.error?.message}
-              currencyDisplay={currencyDisplay}
               title={t('models.priceGroupPricing')}
             />
           ) : null}
@@ -118,35 +114,23 @@ function DialogHeader({
   );
 }
 
-function BasicTab({
-  model,
-  currencyDisplay,
-}: {
-  model: GlobalModelResponse;
-  currencyDisplay?: CurrencyDisplay;
-}) {
+function BasicTab({ model }: { model: GlobalModelResponse }) {
   return (
     <Stack spacing={2.5}>
-      <SummaryGrid model={model} currencyDisplay={currencyDisplay} />
+      <SummaryGrid model={model} />
       <Description model={model} />
       <CapabilitySection model={model} />
       <Divider />
-      <ModelPricingSection model={model} currencyDisplay={currencyDisplay} />
+      <ModelPricingSection model={model} />
     </Stack>
   );
 }
 
-function SummaryGrid({
-  model,
-  currencyDisplay,
-}: {
-  model: GlobalModelResponse;
-  currencyDisplay?: CurrencyDisplay;
-}) {
+function SummaryGrid({ model }: { model: GlobalModelResponse }) {
   const { t } = useTranslate('admin');
   const items = [
     [t('fields.createdAt'), fDateTime(model.created_at)],
-    [t('systemSettings.fields.currency'), currencyDisplay?.currency ?? t('common.loading')],
+    [t('fields.currency'), 'USD'],
     [t('models.usageCount'), formatUsageCount(model.usage_count)],
   ];
 

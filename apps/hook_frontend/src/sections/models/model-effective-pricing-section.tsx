@@ -1,6 +1,5 @@
 'use client';
 
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { PricingTier, GlobalModelResponse } from 'src/types/model';
 
 import Stack from '@mui/material/Stack';
@@ -13,14 +12,12 @@ import { formatPrice } from './model-catalog-utils';
 type Props = {
   model: GlobalModelResponse;
   multiplier: number;
-  currencyDisplay?: CurrencyDisplay;
   title?: string;
 };
 
 export function ModelEffectivePricingSection({
   model,
   multiplier,
-  currencyDisplay,
   title,
 }: Props) {
   return (
@@ -32,14 +29,9 @@ export function ModelEffectivePricingSection({
           tier={tier}
           index={index}
           multiplier={multiplier}
-          currencyDisplay={currencyDisplay}
         />
       ))}
-      <RequestPrice
-        value={model.default_price_per_request}
-        multiplier={multiplier}
-        currencyDisplay={currencyDisplay}
-      />
+      <RequestPrice value={model.default_price_per_request} multiplier={multiplier} />
     </Stack>
   );
 }
@@ -52,15 +44,13 @@ function TierPrice({
   tier,
   index,
   multiplier,
-  currencyDisplay,
 }: {
   tier: PricingTier;
   index: number;
   multiplier: number;
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const { t } = useTranslate('admin');
-  const rows = tierRows(tier, multiplier, currencyDisplay, t);
+  const rows = tierRows(tier, multiplier, t);
 
   return (
     <Stack spacing={0.75} sx={innerPanelSx}>
@@ -77,11 +67,9 @@ function TierPrice({
 function RequestPrice({
   value,
   multiplier,
-  currencyDisplay,
 }: {
   value?: number | null;
   multiplier: number;
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const { t } = useTranslate('admin');
   if (!value || value <= 0) return null;
@@ -90,7 +78,7 @@ function RequestPrice({
     <Stack sx={innerPanelSx}>
       <PriceLine
         label={t('fields.pricePerRequest')}
-        value={`${multipliedPrice(value, multiplier, currencyDisplay)}/${t('providers.perRequest')}`}
+        value={`${multipliedPrice(value, multiplier)}/${t('providers.perRequest')}`}
       />
     </Stack>
   );
@@ -112,24 +100,19 @@ function PriceLine({ label, value }: { label: string; value: string }) {
 function tierRows(
   tier: PricingTier,
   multiplier: number,
-  currencyDisplay: CurrencyDisplay | undefined,
   t: (key: string) => string
 ) {
   return [
-    [t('fields.inputPrice'), multipliedPrice(tier.input_price_per_1m, multiplier, currencyDisplay)],
-    [t('fields.outputPrice'), multipliedPrice(tier.output_price_per_1m, multiplier, currencyDisplay)],
-    [t('fields.cacheCreationPrice'), multipliedPrice(tier.cache_creation_price_per_1m, multiplier, currencyDisplay)],
-    [t('fields.cacheReadPrice'), multipliedPrice(tier.cache_read_price_per_1m, multiplier, currencyDisplay)],
-    [t('models.oneHourCache'), multipliedPrice(oneHourCacheRaw(tier), multiplier, currencyDisplay)],
+    [t('fields.inputPrice'), multipliedPrice(tier.input_price_per_1m, multiplier)],
+    [t('fields.outputPrice'), multipliedPrice(tier.output_price_per_1m, multiplier)],
+    [t('fields.cacheCreationPrice'), multipliedPrice(tier.cache_creation_price_per_1m, multiplier)],
+    [t('fields.cacheReadPrice'), multipliedPrice(tier.cache_read_price_per_1m, multiplier)],
+    [t('models.oneHourCache'), multipliedPrice(oneHourCacheRaw(tier), multiplier)],
   ];
 }
 
-function multipliedPrice(
-  value: number | null | undefined,
-  multiplier: number,
-  currencyDisplay?: CurrencyDisplay
-) {
-  return formatPrice(value === null || value === undefined ? value : value * multiplier, currencyDisplay);
+function multipliedPrice(value: number | null | undefined, multiplier: number) {
+  return formatPrice(value === null || value === undefined ? value : value * multiplier);
 }
 
 function oneHourCacheRaw(tier: PricingTier) {

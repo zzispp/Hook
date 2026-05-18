@@ -149,9 +149,6 @@ export const endpoints = {
   models: {
     catalog: '/api/models/catalog',
   },
-  settings: {
-    displayCurrency: '/api/settings/display-currency',
-  },
   adminGroups: {
     list: '/api/admin/groups',
     byId: (id: string) => `/api/admin/groups/${id}`,
@@ -202,7 +199,6 @@ export const endpoints = {
   adminSettings: {
     system: '/api/admin/settings/system',
     smtpTest: '/api/admin/settings/smtp/test',
-    exchangeRate: '/api/admin/settings/exchange-rate',
   },
   adminI18n: {
     languages: '/api/admin/i18n/languages',

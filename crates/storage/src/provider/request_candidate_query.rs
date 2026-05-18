@@ -3,7 +3,10 @@ use types::provider::RequestCandidateListRequest;
 
 use crate::{StorageError, StorageResult, json};
 
-use super::{RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_candidates, repository::ProviderStore};
+use super::{
+    RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_candidates, repository::ProviderStore,
+    request_record_write::ensure_accounting_cost_currency,
+};
 
 pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandidateRecordInput) -> StorageResult<types::provider::RequestCandidate> {
     let now = time::OffsetDateTime::now_utc();
@@ -75,7 +78,7 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         started_at: Set(input.started.then_some(now)),
         finished_at: Set(input.finished.then_some(now)),
     };
-    apply_billing_values(&mut record, input.billing);
+    apply_billing_values(&mut record, input.billing)?;
     let record = record.insert(store.connection()).await?;
     Ok(record.response())
 }
@@ -112,7 +115,7 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     record.cache_creation_1h_input_tokens = Set(input.cache_creation_1h_input_tokens);
     record.usage_source = Set(input.usage_source);
     record.usage_semantic = Set(input.usage_semantic);
-    apply_billing_values(&mut record, input.billing);
+    apply_billing_values(&mut record, input.billing)?;
     apply_json_patch(&mut record.billing_snapshot, input.billing_snapshot)?;
     record.latency_ms = Set(input.latency_ms);
     record.first_byte_time_ms = Set(input.first_byte_time_ms);
@@ -134,11 +137,11 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     Ok(record.response())
 }
 
-fn apply_billing_values(record: &mut request_candidates::ActiveModel, billing: RequestBillingRecordValues) {
+fn apply_billing_values(record: &mut request_candidates::ActiveModel, billing: RequestBillingRecordValues) -> StorageResult<()> {
     if let Some(service_tier) = billing.service_tier {
         record.service_tier = Set(Some(service_tier));
     }
-    record.cost_currency = Set(billing.cost_currency);
+    record.cost_currency = Set(ensure_accounting_cost_currency(billing.cost_currency)?);
     record.input_cost = Set(billing.input_cost);
     record.output_cost = Set(billing.output_cost);
     record.cache_creation_cost = Set(billing.cache_creation_cost);
@@ -152,6 +155,7 @@ fn apply_billing_values(record: &mut request_candidates::ActiveModel, billing: R
     record.output_price_per_million = Set(billing.output_price_per_million);
     record.cache_creation_price_per_million = Set(billing.cache_creation_price_per_million);
     record.cache_read_price_per_million = Set(billing.cache_read_price_per_million);
+    Ok(())
 }
 
 pub async fn mark_scheduled_request_candidates_skipped(store: &ProviderStore, request_id: &str, skip_reason: &str) -> StorageResult<u64> {

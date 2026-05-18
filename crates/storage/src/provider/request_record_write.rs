@@ -106,7 +106,7 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         finished_at: Set(None),
         updated_at: Set(now),
     };
-    apply_billing_values(&mut record, input.billing);
+    apply_billing_values(&mut record, input.billing)?;
     Ok(record)
 }
 
@@ -172,7 +172,7 @@ fn apply_request_record_patch(
     apply_i64_patch(&mut active.cache_creation_1h_input_tokens, input.cache_creation_1h_input_tokens);
     apply_string_patch(&mut active.usage_source, input.usage_source);
     apply_string_patch(&mut active.usage_semantic, input.usage_semantic);
-    apply_billing_patch(active, input.billing);
+    apply_billing_patch(active, input.billing)?;
     apply_json_patch(&mut active.billing_snapshot, input.billing_snapshot)?;
     apply_i64_patch(&mut active.first_byte_time_ms, input.first_byte_time_ms);
     apply_i64_patch(&mut active.total_latency_ms, input.total_latency_ms);
@@ -189,11 +189,19 @@ fn apply_request_record_patch(
     Ok(())
 }
 
-fn apply_billing_values(active: &mut request_records::ActiveModel, billing: RequestBillingRecordValues) {
+pub(super) fn ensure_accounting_cost_currency(value: Option<String>) -> StorageResult<Option<String>> {
+    match value {
+        Some(currency) if currency == currency::ACCOUNTING_CURRENCY => Ok(Some(currency)),
+        Some(_) => Err(StorageError::Conflict(format!("cost currency must be {}", currency::ACCOUNTING_CURRENCY))),
+        None => Ok(None),
+    }
+}
+
+fn apply_billing_values(active: &mut request_records::ActiveModel, billing: RequestBillingRecordValues) -> StorageResult<()> {
     if let Some(service_tier) = billing.service_tier {
         active.service_tier = Set(Some(service_tier));
     }
-    active.cost_currency = Set(billing.cost_currency);
+    active.cost_currency = Set(ensure_accounting_cost_currency(billing.cost_currency)?);
     active.input_cost = Set(billing.input_cost);
     active.output_cost = Set(billing.output_cost);
     active.cache_creation_cost = Set(billing.cache_creation_cost);
@@ -207,11 +215,16 @@ fn apply_billing_values(active: &mut request_records::ActiveModel, billing: Requ
     active.output_price_per_million = Set(billing.output_price_per_million);
     active.cache_creation_price_per_million = Set(billing.cache_creation_price_per_million);
     active.cache_read_price_per_million = Set(billing.cache_read_price_per_million);
+    Ok(())
 }
 
-fn apply_billing_patch(active: &mut request_records::ActiveModel, billing: RequestBillingRecordPatch) {
+fn apply_billing_patch(active: &mut request_records::ActiveModel, billing: RequestBillingRecordPatch) -> StorageResult<()> {
     apply_string_patch(&mut active.service_tier, billing.service_tier);
-    apply_string_patch(&mut active.cost_currency, billing.cost_currency);
+    match billing.cost_currency {
+        PatchField::Value(value) => active.cost_currency = Set(ensure_accounting_cost_currency(Some(value))?),
+        PatchField::Null => active.cost_currency = Set(None),
+        PatchField::Missing => {}
+    }
     apply_decimal_patch(&mut active.input_cost, billing.input_cost);
     apply_decimal_patch(&mut active.output_cost, billing.output_cost);
     apply_decimal_patch(&mut active.cache_creation_cost, billing.cache_creation_cost);
@@ -225,6 +238,7 @@ fn apply_billing_patch(active: &mut request_records::ActiveModel, billing: Reque
     apply_decimal_patch(&mut active.output_price_per_million, billing.output_price_per_million);
     apply_decimal_patch(&mut active.cache_creation_price_per_million, billing.cache_creation_price_per_million);
     apply_decimal_patch(&mut active.cache_read_price_per_million, billing.cache_read_price_per_million);
+    Ok(())
 }
 
 fn apply_i32_patch(active: &mut sea_orm::ActiveValue<Option<i32>>, patch: PatchField<i32>) {

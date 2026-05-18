@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use rust_decimal::Decimal;
 use types::{
     card_code::{
         CardCode, CardCodeBatchStatusPayload, CardCodeBatchStatusResponse, CardCodeCreateRecord, CardCodeGeneratePayload, CardCodeGenerateResponse,
@@ -17,18 +16,11 @@ pub trait CardCodeRepository: Send + Sync + 'static {
     async fn create_type(&self, input: CardCodeTypeCreatePayload) -> CardCodeResult<CardCodeType>;
     async fn update_type(&self, id: &str, input: CardCodeTypeUpdatePayload) -> CardCodeResult<CardCodeType>;
     async fn find_type(&self, id: &str) -> CardCodeResult<Option<CardCodeType>>;
-    async fn find_code(&self, code: &str) -> CardCodeResult<Option<CardCode>>;
-    async fn user_wallet_currency(&self, user_id: &str) -> CardCodeResult<Option<String>>;
     async fn code_exists(&self, code: &str) -> CardCodeResult<bool>;
     async fn create_codes(&self, inputs: Vec<CardCodeCreateRecord>) -> CardCodeResult<Vec<CardCode>>;
     async fn list_codes(&self, page: PageRequest, filters: CardCodeListFilters) -> CardCodeResult<Page<CardCode>>;
     async fn batch_update_code_status(&self, ids: &[String], status: &str) -> CardCodeResult<u64>;
     async fn redeem(&self, input: CardCodeRedeemInput) -> CardCodeResult<CardCodeRedeemResponse>;
-}
-
-#[async_trait]
-pub trait CardCodeCurrencyProvider: Send + Sync + 'static {
-    async fn usd_cny_rate(&self) -> CardCodeResult<Decimal>;
 }
 
 #[async_trait]

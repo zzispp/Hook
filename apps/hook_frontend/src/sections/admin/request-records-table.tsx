@@ -1,7 +1,6 @@
 'use client';
 
 import type { RequestRecord } from 'src/types/provider';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import Stack from '@mui/material/Stack';
@@ -41,7 +40,6 @@ export function RequestRecordsTable({
   total,
   table,
   locale,
-  currencyDisplay,
   loading,
   onOpen,
 }: {
@@ -49,7 +47,6 @@ export function RequestRecordsTable({
   total: number;
   table: UseTableReturn;
   locale: string;
-  currencyDisplay: CurrencyDisplay;
   loading: boolean;
   onOpen: (record: RequestRecord) => void;
 }) {
@@ -70,7 +67,6 @@ export function RequestRecordsTable({
                     key={row.request_id}
                     row={row}
                     locale={locale}
-                    currencyDisplay={currencyDisplay}
                     durationNow={durationNow}
                     onOpen={onOpen}
                   />
@@ -95,13 +91,11 @@ export function RequestRecordsTable({
 function RequestRecordRow({
   row,
   locale,
-  currencyDisplay,
   durationNow,
   onOpen,
 }: {
   row: RequestRecord;
   locale: string;
-  currencyDisplay: CurrencyDisplay;
   durationNow: number;
   onOpen: (record: RequestRecord) => void;
 }) {
@@ -139,7 +133,7 @@ function RequestRecordRow({
       <TableCell align="right">
         <RequestTokensCell record={row} />
       </TableCell>
-      <TableCell>{formatCost(row.total_cost, currencyDisplay)}</TableCell>
+      <TableCell>{formatCost(row.total_cost)}</TableCell>
       <TableCell>
         <RequestRecordDurationText record={row} metric="first_byte" now={durationNow} />
       </TableCell>

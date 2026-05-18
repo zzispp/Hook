@@ -1,67 +1,69 @@
 use rust_decimal::Decimal;
-use types::{
-    card_code::CardCodeRedeemInput,
-    wallet::{Wallet, WalletId},
-};
+use types::wallet::{Wallet, WalletId};
 
 use super::*;
 use crate::StorageError;
 
 #[test]
-fn converts_usd_card_amount_to_cny_target_currency() {
-    let input = redeem_input(CURRENCY_CNY, Some(Decimal::new(720, 2)));
+fn uses_accounting_card_amounts_without_conversion() {
+    let amounts = accounting_redemption_amounts(&card_code(currency::ACCOUNTING_CURRENCY)).unwrap();
 
-    let amount = convert_amount(Decimal::new(1000, 2), CURRENCY_USD, &input).unwrap();
-
-    assert_eq!(amount, Decimal::new(7200, 2));
+    assert_eq!(amounts.recharge, Decimal::new(1000, 2));
+    assert_eq!(amounts.gift, Decimal::new(200, 2));
 }
 
 #[test]
-fn converts_cny_card_amount_to_usd_target_currency() {
-    let input = redeem_input(CURRENCY_USD, Some(Decimal::new(720, 2)));
+fn rejects_non_accounting_card_currency() {
+    let error = accounting_redemption_amounts(&card_code("CNY")).unwrap_err();
 
-    let amount = convert_amount(Decimal::new(7200, 2), CURRENCY_CNY, &input).unwrap();
-
-    assert_eq!(amount, Decimal::new(1000, 2));
+    assert!(matches!(error, StorageError::Conflict(message) if message == "card code currency must be USD"));
 }
 
 #[test]
-fn same_currency_conversion_does_not_require_exchange_rate() {
-    let input = redeem_input(CURRENCY_CNY, None);
+fn rejects_non_accounting_create_currency() {
+    let error = ensure_accounting_currency("CNY", "card code currency").unwrap_err();
 
-    let amount = convert_amount(Decimal::new(1000, 2), CURRENCY_CNY, &input).unwrap();
-
-    assert_eq!(amount, Decimal::new(1000, 2));
+    assert!(matches!(error, StorageError::Conflict(message) if message == "card code currency must be USD"));
 }
 
 #[test]
-fn wallet_balances_are_normalized_before_crediting_target_currency() {
-    let input = redeem_input(CURRENCY_USD, Some(Decimal::new(700, 2)));
+fn accepts_accounting_wallet_currency() {
+    let wallet = wallet_in_accounting_currency(wallet(currency::ACCOUNTING_CURRENCY)).unwrap();
 
-    let wallet = wallet_in_target_currency(wallet(CURRENCY_CNY), &input).unwrap();
-
-    assert_eq!(wallet.currency, CURRENCY_USD);
-    assert_eq!(wallet.recharge_balance, Decimal::new(1000, 2));
-    assert_eq!(wallet.gift_balance, Decimal::new(200, 2));
+    assert_eq!(wallet.currency, currency::ACCOUNTING_CURRENCY);
 }
 
 #[test]
-fn currency_mismatch_exposes_missing_exchange_rate() {
-    let input = redeem_input(CURRENCY_USD, None);
+fn rejects_non_accounting_wallet_currency() {
+    let error = wallet_in_accounting_currency(wallet("CNY")).unwrap_err();
 
-    let error = convert_amount(Decimal::new(1000, 2), CURRENCY_CNY, &input).unwrap_err();
-
-    assert!(matches!(error, StorageError::Database(message) if message.contains("exchange rate")));
+    assert!(matches!(error, StorageError::Conflict(message) if message == "wallet currency must be USD"));
 }
 
-fn redeem_input(target_currency: &str, usd_cny_rate: Option<Decimal>) -> CardCodeRedeemInput {
-    CardCodeRedeemInput {
+fn card_code(currency: &str) -> CardCodeRecord {
+    CardCodeRecord {
+        id: "card_1".into(),
         code: "CARD-CODE".into(),
-        user_id: "user_1".into(),
-        username: "alice".into(),
-        client_ip: None,
-        target_currency: target_currency.into(),
-        usd_cny_rate,
+        batch_no: "batch_1".into(),
+        type_id: "type_1".into(),
+        type_name: "Recharge".into(),
+        recharge_amount: Decimal::new(1000, 2),
+        gift_amount: Decimal::new(200, 2),
+        currency: currency.into(),
+        status: "active".into(),
+        remark: None,
+        expires_at: None,
+        created_by_user_id: None,
+        created_by_username: None,
+        created_ip: None,
+        used_by_user_id: None,
+        used_by_username: None,
+        used_ip: None,
+        used_at: None,
+        wallet_id: None,
+        wallet_transaction_id: None,
+        created_at: time::OffsetDateTime::UNIX_EPOCH,
+        updated_at: time::OffsetDateTime::UNIX_EPOCH,
     }
 }
 

@@ -5,4 +5,4 @@ mod state;
 
 pub use error::SettingApiError;
 pub use routes::create_router;
-pub use state::{ExchangeRateReader, SettingApiState};
+pub use state::SettingApiState;

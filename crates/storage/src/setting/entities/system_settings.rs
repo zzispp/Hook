@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use time::format_description::well_known::Rfc3339;
 use types::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
-use types::system_setting::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
+use types::system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "system_settings")]
@@ -36,7 +36,6 @@ pub struct Model {
     pub default_rate_limit_rpm: i64,
     pub scheduling_mode: String,
     pub provider_cooldown_policy: String,
-    pub currency: String,
     pub smtp_host: String,
     pub smtp_port: i64,
     pub smtp_username: String,
@@ -92,7 +91,6 @@ impl TryFrom<Model> for SystemSettings {
             default_rate_limit_rpm: value.default_rate_limit_rpm,
             scheduling_mode: ProviderSchedulingMode::from(value.scheduling_mode.as_str()),
             provider_cooldown_policy: decode_provider_cooldown_policy(&value.provider_cooldown_policy)?,
-            currency: DisplayCurrency::from(value.currency.as_str()),
             smtp_host: value.smtp_host,
             smtp_port: value.smtp_port,
             smtp_username: value.smtp_username,

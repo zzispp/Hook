@@ -112,7 +112,7 @@ function CardCodeRow({
           {row.type_name}
         </Typography>
       </TableCell>
-      <TableCell>{formatCardCodeAmount(row.recharge_amount, row.gift_amount, row.currency)}</TableCell>
+      <TableCell>{formatCardCodeAmount(row.recharge_amount, row.gift_amount)}</TableCell>
       <TableCell>
         <Label color={cardCodeStatusColor(row.status)} variant="soft">
           {cardCodeStatusLabel(t, row.status)}

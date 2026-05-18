@@ -1,19 +1,20 @@
 import type { TFunction } from 'i18next';
 import type { LabelColor } from 'src/components/label';
 
-import { DEFAULT_WALLET_CURRENCY } from 'src/utils/money-boundary';
+import { formatMoney } from 'src/utils/currency-format';
 
 import { MONEY_DECIMAL_PLACES } from './wallet-constants';
 
-export function formatWalletMoney(value?: number | null, currency = DEFAULT_WALLET_CURRENCY) {
-  return `${currency} ${formatWalletNumber(value)}`;
+export function formatAccountingWalletMoney(value?: number | null) {
+  return formatMoney(value);
 }
 
-export function formatSignedAmount(value: number, currency?: string) {
-  const sign = value >= 0 ? '+' : '';
-  if (currency) return `${value >= 0 ? '+' : '-'}${formatWalletMoney(Math.abs(value), currency)}`;
+export function formatWalletMoney(value?: number | null) {
+  return formatMoney(value);
+}
 
-  return `${sign}${formatWalletNumber(value)}`;
+export function formatSignedAmount(value: number) {
+  return `${value >= 0 ? '+' : '-'}${formatWalletMoney(Math.abs(value))}`;
 }
 
 export function formatWalletNumber(value?: number | null) {
@@ -21,7 +22,7 @@ export function formatWalletNumber(value?: number | null) {
 }
 
 export function formatBalanceChange(before: number, after: number) {
-  return `${formatWalletNumber(before)} -> ${formatWalletNumber(after)}`;
+  return `${formatWalletMoney(before)} -> ${formatWalletMoney(after)}`;
 }
 
 export function formatBalanceBreakdown(
@@ -34,10 +35,10 @@ export function formatBalanceBreakdown(
   }
 ) {
   return t('wallet.balanceBreakdown', {
-    rechargeBefore: formatWalletNumber(transaction.recharge_balance_before),
-    rechargeAfter: formatWalletNumber(transaction.recharge_balance_after),
-    giftBefore: formatWalletNumber(transaction.gift_balance_before),
-    giftAfter: formatWalletNumber(transaction.gift_balance_after),
+    rechargeBefore: formatWalletMoney(transaction.recharge_balance_before),
+    rechargeAfter: formatWalletMoney(transaction.recharge_balance_after),
+    giftBefore: formatWalletMoney(transaction.gift_balance_before),
+    giftAfter: formatWalletMoney(transaction.gift_balance_after),
   });
 }
 

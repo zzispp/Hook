@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
-    Database,
+    Database, StorageError,
     provider::{ProviderStore, RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_records},
 };
 use types::model::PatchField;
@@ -34,6 +34,18 @@ async fn request_candidate_storage_creates_success_record() {
     assert_eq!(created.error_type, None);
     assert!(created.started_at.is_some());
     assert!(created.finished_at.is_some());
+}
+
+#[tokio::test]
+async fn request_candidate_storage_rejects_non_accounting_cost_currency() {
+    let database = Database::new(MockDatabase::new(DatabaseBackend::Postgres).into_connection());
+    let store = ProviderStore::new(database);
+    let mut input = success_input();
+    input.billing.cost_currency = Some("CNY".into());
+
+    let error = store.create_request_candidate(input).await.unwrap_err();
+
+    assert!(matches!(error, StorageError::Conflict(message) if message == "cost currency must be USD"));
 }
 
 #[tokio::test]

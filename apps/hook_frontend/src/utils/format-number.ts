@@ -1,3 +1,5 @@
+import { ACCOUNTING_CURRENCY } from 'src/utils/money-boundary';
+
 import { formatNumberLocale } from 'src/locales';
 
 // ----------------------------------------------------------------------
@@ -11,7 +13,7 @@ export type InputNumberValue = string | number | null | undefined;
 
 type Options = Intl.NumberFormatOptions;
 
-const DEFAULT_LOCALE = { code: 'en-US', currency: 'USD' };
+const DEFAULT_LOCALE = { code: 'en-US' };
 
 function processInput(inputValue: InputNumberValue): number | null {
   if (inputValue == null || Number.isNaN(inputValue)) return null;
@@ -45,7 +47,7 @@ export function fCurrency(inputValue: InputNumberValue, options?: Options) {
 
   const fm = new Intl.NumberFormat(locale.code, {
     style: 'currency',
-    currency: locale.currency,
+    currency: ACCOUNTING_CURRENCY,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
     ...options,

@@ -1,4 +1,3 @@
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { RequestRecord, RequestRecordStatus } from 'src/types/provider';
 
 import { formatMoney } from 'src/utils/currency-format';
@@ -44,8 +43,8 @@ export function formatDuration(value?: number | null) {
   return `${(value / 1000).toFixed(2)}s`;
 }
 
-export function formatCost(value: number | null | undefined, display: CurrencyDisplay) {
-  return formatMoney(value, display);
+export function formatCost(value: number | null | undefined) {
+  return formatMoney(value);
 }
 
 export function formatTokenCount(value?: number | null) {

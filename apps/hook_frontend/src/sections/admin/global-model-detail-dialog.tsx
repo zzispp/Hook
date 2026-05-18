@@ -4,14 +4,12 @@ import type { ComponentProps } from 'react';
 import type { Theme } from '@mui/material/styles';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import { useState } from 'react';
 
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
-import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
 import Tooltip from '@mui/material/Tooltip';
@@ -25,7 +23,6 @@ import { fDateTime } from 'src/utils/format-time';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { useGlobalModelProviders } from 'src/actions/models';
-import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-settings';
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
@@ -54,7 +51,6 @@ export function GlobalModelDetailDialog(props: Props) {
   const { t } = useTranslate('admin');
   const [tab, setTab] = useState<DetailTab>('basic');
   const providers = useGlobalModelProviders(props.open ? props.model?.id : null);
-  const currency = useDetailCurrency(props.open);
 
   if (!props.model) return null;
 
@@ -68,15 +64,13 @@ export function GlobalModelDetailDialog(props: Props) {
           <Tab value="providers" label={t('models.providers')} />
         </Tabs>
         <Stack spacing={2.5} sx={{ p: 2.5 }}>
-          <CurrencyState currency={currency} />
-          {tab === 'basic' ? <BasicTab model={props.model} currencyDisplay={currency.display} /> : null}
+          {tab === 'basic' ? <BasicTab model={props.model} /> : null}
           {tab === 'groups' ? (
             <GlobalModelBillingGroupPricing
               model={props.model}
               groups={props.groups}
               loading={props.groupsLoading}
               errorMessage={props.groupsErrorMessage}
-              currencyDisplay={currency.display}
             />
           ) : null}
           {tab === 'providers' ? (
@@ -84,7 +78,6 @@ export function GlobalModelDetailDialog(props: Props) {
               providers={providers.items}
               loading={providers.isLoading}
               errorMessage={providers.error?.message}
-              currencyDisplay={currency.display}
             />
           ) : null}
         </Stack>
@@ -142,20 +135,14 @@ function HeaderButton({
   );
 }
 
-function BasicTab({
-  model,
-  currencyDisplay,
-}: {
-  model: GlobalModelResponse;
-  currencyDisplay?: CurrencyDisplay;
-}) {
+function BasicTab({ model }: { model: GlobalModelResponse }) {
   const capabilities = capabilitiesFromForm(formFromModel(model));
 
   return (
     <Stack spacing={2.5}>
-      <SummaryGrid model={model} capabilities={capabilities} currencyDisplay={currencyDisplay} />
+      <SummaryGrid model={model} capabilities={capabilities} />
       <Divider />
-      <ModelPricingSection model={model} currencyDisplay={currencyDisplay} />
+      <ModelPricingSection model={model} />
     </Stack>
   );
 }
@@ -163,16 +150,14 @@ function BasicTab({
 function SummaryGrid({
   model,
   capabilities,
-  currencyDisplay,
 }: {
   model: GlobalModelResponse;
   capabilities: string[];
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const { t } = useTranslate('admin');
   const items = [
     [t('fields.createdAt'), fDateTime(model.created_at)],
-    [t('systemSettings.fields.currency'), currencyDisplay?.currency ?? t('common.loading')],
+    [t('fields.currency'), 'USD'],
     [t('models.providers'), `${model.active_provider_count ?? 0} / ${model.provider_count ?? 0}`],
     [t('models.usageCount'), formatUsageCount(model.usage_count)],
   ];
@@ -208,36 +193,6 @@ function CapabilitySummary({ capabilities }: { capabilities: string[] }) {
       </Stack>
     </Stack>
   );
-}
-
-function useDetailCurrency(enabled: boolean) {
-  const { t } = useTranslate('admin');
-  const settings = useSystemSettings(enabled);
-  const needsExchangeRate = enabled && settings.data?.currency === 'CNY';
-  const exchangeRate = useUsdCnyExchangeRate(needsExchangeRate);
-
-  return {
-    display: settings.data
-      ? ({
-          currency: settings.data.currency,
-          usdCnyRate: exchangeRate.data,
-          unavailableLabel: t('requestRecords.exchangeRateUnavailable'),
-        } satisfies CurrencyDisplay)
-      : undefined,
-    loading: settings.isLoading || (needsExchangeRate && exchangeRate.isLoading),
-    error: settings.error ?? exchangeRate.error,
-  };
-}
-
-function CurrencyState({
-  currency,
-}: {
-  currency: ReturnType<typeof useDetailCurrency>;
-}) {
-  const { t } = useTranslate('admin');
-  if (currency.error) return <Alert severity="error">{currency.error.message}</Alert>;
-  if (currency.loading) return <Alert severity="info">{t('common.loading')}</Alert>;
-  return null;
 }
 
 const titleSx = {

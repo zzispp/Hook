@@ -147,7 +147,6 @@
     "allowedProviders": "允许提供商",
     "apiKey": "密钥",
     "billingMultiplier": "计费倍率",
-    "costCny": "费用(USD)",
     "costWithCurrency": "费用({{currency}})",
     "expiresAt": "有效期",
     "keyName": "密钥名称",
@@ -1073,7 +1072,6 @@
       "sensitiveRequestHeaders": "敏感请求头",
       "defaultUserGrant": "默认用户初始赠款",
       "defaultRateLimitRpm": "默认速率限制",
-      "currency": "显示货币",
       "smtpHost": "SMTP 服务器地址",
       "smtpPort": "SMTP 端口",
       "smtpUsername": "SMTP 用户名",
@@ -1086,8 +1084,6 @@
       "emailTemplateSubject": "邮件主题",
       "emailTemplateHtml": "HTML 模板"
     },
-    "currencyUsd": "USD $",
-    "currencyCny": "CNY ¥",
     "helper": {
       "defaultUserGrant": "新用户注册成功后写入赠款余额，并生成钱包流水。",
       "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。",
@@ -1242,8 +1238,6 @@
     "original": "原始",
     "billed": "计费",
     "billingFormula": "计费公式 | 总费用 = (Token费用 + 按次费用) × 计费分组倍率",
-    "exchangeRateUnavailable": "汇率不可用",
-    "exchangeRateLoadFailed": "USD/CNY 汇率缓存不可用，CNY 金额暂不可展示。",
     "traceTitle": "请求链路追踪",
     "requestHeaders": "请求头",
     "requestBody": "请求体",

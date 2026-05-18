@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
 
-use super::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
+use super::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 pub struct SystemSettingsUpdate {
@@ -63,9 +63,6 @@ pub struct SystemSettingsUpdate {
     pub scheduling_mode: Option<ProviderSchedulingMode>,
     #[serde(default)]
     pub provider_cooldown_policy: Option<ProviderCooldownPolicy>,
-    #[serde(default)]
-    pub currency: Option<DisplayCurrency>,
-    #[serde(default)]
     pub smtp_host: Option<String>,
     #[serde(default)]
     pub smtp_port: Option<i64>,
@@ -109,7 +106,6 @@ impl SystemSettingsUpdate {
             && self.default_rate_limit_rpm.is_none()
             && self.scheduling_mode.is_none()
             && self.provider_cooldown_policy.is_none()
-            && self.currency.is_none()
             && self.auto_delete_expired_tokens.is_none()
             && self.request_record_cleanup_enabled.is_none()
             && self.request_record_cleanup_interval_hours.is_none()

@@ -6,9 +6,8 @@ import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
-import MenuItem from '@mui/material/MenuItem';
 
-import { labelWithCurrency, DEFAULT_WALLET_CURRENCY } from 'src/utils/money-boundary';
+import { labelWithAccountingCurrency } from 'src/utils/money-boundary';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -91,17 +90,6 @@ function SiteSection({
           value={form.site_subtitle}
           onChange={(value) => setForm((current) => ({ ...current, site_subtitle: value }))}
         />
-        <TextFieldRow
-          select
-          label={t('systemSettings.fields.currency')}
-          value={form.currency}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, currency: value as typeof current.currency }))
-          }
-        >
-          <MenuItem value="USD">{t('systemSettings.currencyUsd')}</MenuItem>
-          <MenuItem value="CNY">{t('systemSettings.currencyCny')}</MenuItem>
-        </TextFieldRow>
       </Stack>
     </SettingsSection>
   );
@@ -161,7 +149,7 @@ function BaseSection({
         />
         <TextFieldRow
           type="number"
-          label={labelWithCurrency(t('systemSettings.fields.defaultUserGrant'), DEFAULT_WALLET_CURRENCY)}
+          label={labelWithAccountingCurrency(t('systemSettings.fields.defaultUserGrant'))}
           value={form.default_user_grant}
           helperText={t('systemSettings.helper.defaultUserGrant')}
           onChange={(value) => setForm((current) => ({ ...current, default_user_grant: value }))}

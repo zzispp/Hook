@@ -19,7 +19,13 @@ type WalletMetric = {
   icon: IconifyProps['icon'];
 };
 
-export function WalletSummaryCards({ t, wallet }: { t: TFunction<'admin'>; wallet?: WalletSummary }) {
+export function WalletSummaryCards({
+  t,
+  wallet,
+}: {
+  t: TFunction<'admin'>;
+  wallet?: WalletSummary;
+}) {
   const metrics = walletMetrics(t, wallet);
 
   return (
@@ -50,27 +56,25 @@ function WalletSummaryCard({ metric }: { metric: WalletMetric }) {
 }
 
 function walletMetrics(t: TFunction<'admin'>, wallet?: WalletSummary): WalletMetric[] {
-  const currency = wallet?.currency;
-
   return [
     {
       label: t('wallet.metrics.availableBalance'),
-      value: formatWalletMoney(wallet?.balance, currency),
+      value: formatWalletMoney(wallet?.balance),
       icon: 'solar:wad-of-money-bold',
     },
     {
       label: t('wallet.metrics.rechargeBalance'),
-      value: formatWalletMoney(wallet?.recharge_balance, currency),
+      value: formatWalletMoney(wallet?.recharge_balance),
       icon: 'solar:bill-list-bold',
     },
     {
       label: t('wallet.metrics.giftBalance'),
-      value: formatWalletMoney(wallet?.gift_balance, currency),
+      value: formatWalletMoney(wallet?.gift_balance),
       icon: 'solar:cup-star-bold',
     },
     {
       label: t('wallet.metrics.totalConsumed'),
-      value: formatWalletMoney(wallet?.total_consumed, currency),
+      value: formatWalletMoney(wallet?.total_consumed),
       icon: 'solar:cart-3-bold',
     },
   ];

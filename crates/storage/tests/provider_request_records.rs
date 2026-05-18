@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use rust_decimal::Decimal;
 use sea_orm::{DatabaseBackend, MockDatabase, Value};
 use storage::{
-    Database,
+    Database, StorageError,
     provider::{
         ProviderStore, RequestBillingRecordPatch, RequestBillingRecordValues, RequestRecordRecordInput, RequestRecordRecordPatch,
         record::{request_candidates, request_records},
@@ -255,6 +255,34 @@ async fn request_record_storage_updates_main_record() {
     assert!(sql.contains("\"status\" = $"), "{sql}");
     assert!(sql.contains("\"client_status_code\" = $"), "{sql}");
     assert!(sql.contains("\"client_response_body\" = $"), "{sql}");
+}
+
+#[tokio::test]
+async fn request_record_storage_rejects_non_accounting_cost_currency_on_create() {
+    let database = Database::new(MockDatabase::new(DatabaseBackend::Postgres).into_connection());
+    let store = ProviderStore::new(database);
+    let mut input = main_record_input();
+    input.billing.cost_currency = Some("CNY".into());
+
+    let error = store.create_request_record(input).await.unwrap_err();
+
+    assert!(matches!(error, StorageError::Conflict(message) if message == "cost currency must be USD"));
+}
+
+#[tokio::test]
+async fn request_record_storage_rejects_non_accounting_cost_currency_on_update() {
+    let database = Database::new(
+        MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
+            .into_connection(),
+    );
+    let store = ProviderStore::new(database);
+    let mut input = main_record_patch();
+    input.billing.cost_currency = PatchField::Value("CNY".into());
+
+    let error = store.update_request_record(input).await.unwrap_err();
+
+    assert!(matches!(error, StorageError::Conflict(message) if message == "cost currency must be USD"));
 }
 
 fn list_summaries() -> Vec<request_records::Model> {

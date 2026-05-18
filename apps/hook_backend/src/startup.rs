@@ -1,8 +1,6 @@
 use crate::{
     BackendResult,
     auth::{AuthState, AuthStateParts, auth_middleware},
-    card_code_currency::BackendCardCodeCurrencyProvider,
-    exchange_rates::ExchangeRateCache,
     llm_proxy::{LlmProxyCache, LlmProxyState, cached_system_user_access, create_router as create_llm_proxy_router, create_v1beta_router},
     performance_monitoring_api::{PerformanceMonitoringApiState, create_router as create_performance_monitoring_router},
     performance_monitoring_os::PerformanceOsCollector,
@@ -103,8 +101,6 @@ pub async fn serve(settings: Settings) -> BackendResult<()> {
 }
 async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let database = connect_database(&settings.database_url()?).await?;
-    let exchange_rates = ExchangeRateCache::connect(&settings.redis_url()?, settings.redis.key_prefix.clone()).await?;
-    exchange_rates.clone().spawn_refresh_task();
     crate::request_record_cleanup::spawn_request_record_cleanup(database.clone());
     crate::request_record_sweep::spawn_request_record_sweep(database.clone());
     let performance_os_collector = Arc::new(PerformanceOsCollector::new()?);
@@ -143,8 +139,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         LettreSmtpConnectionTester,
     ));
     let system_settings = Arc::new(ProxyCachedSettingUseCase::new(settings_inner, proxy_cache.clone()));
-    let card_code_currency = BackendCardCodeCurrencyProvider::new(exchange_rates.clone());
-    let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone()), card_code_currency));
+    let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone())));
     let groups_inner = Arc::new(GroupService::new(
         StorageGroupRepository::new(database.clone()),
         StorageGroupModelCatalog::new(database.clone()),
@@ -207,7 +202,6 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         captcha,
         llm_proxy,
         performance_os_collector,
-        exchange_rates,
         authorization,
     })
 }
@@ -240,7 +234,7 @@ fn create_app(state: AppState) -> Router {
     let dashboard_state = DashboardApiState::new(state.dashboard);
     let wallet_state = WalletApiState::new(state.wallets);
     let card_code_state = CardCodeApiState::new(state.card_codes);
-    let setting_state = SettingApiState::new(state.system_settings, state.exchange_rates.clone());
+    let setting_state = SettingApiState::new(state.system_settings);
     let group_state = GroupApiState::new(state.groups);
     let i18n_state = I18nApiState::new(state.i18n);
     let api_token_state = ApiTokenApiState::new(state.api_tokens);
@@ -326,6 +320,5 @@ struct AppState {
     captcha: Arc<dyn captcha::application::CaptchaUseCase>,
     llm_proxy: LlmProxyState,
     performance_os_collector: Arc<PerformanceOsCollector>,
-    exchange_rates: ExchangeRateCache,
     authorization: AuthorizationConfig,
 }

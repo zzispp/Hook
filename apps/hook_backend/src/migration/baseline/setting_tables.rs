@@ -35,7 +35,6 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(big_integer(SystemSettings::DefaultRateLimitRpm))
         .col(string_len(SystemSettings::SchedulingMode, 30))
         .col(text(SystemSettings::ProviderCooldownPolicy).default(r#"{"window_seconds":0,"rules":[]}"#))
-        .col(string_len(SystemSettings::Currency, 3).default("USD"))
         .col(string_len(SystemSettings::SmtpHost, 255))
         .col(big_integer(SystemSettings::SmtpPort).default(587))
         .col(string_len(SystemSettings::SmtpUsername, 255))

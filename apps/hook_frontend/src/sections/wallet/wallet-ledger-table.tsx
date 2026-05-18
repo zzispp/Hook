@@ -149,7 +149,7 @@ function WalletLedgerRow({
       <TableCell>
         <TransactionTypeCell t={t} transaction={transaction} />
       </TableCell>
-      <AmountCell amount={transaction.amount} currency={rowWallet?.currency} />
+      <AmountCell amount={transaction.amount} />
       <TableCell sx={{ whiteSpace: 'nowrap' }}>
         <BalanceChangeCell t={t} transaction={transaction} />
       </TableCell>
@@ -159,12 +159,12 @@ function WalletLedgerRow({
   );
 }
 
-function AmountCell({ amount, currency }: { amount: number; currency?: string }) {
+function AmountCell({ amount }: { amount: number }) {
   const positive = amount >= 0;
 
   return (
     <TableCell sx={{ color: positive ? 'success.main' : 'error.main', fontWeight: 700 }}>
-      {formatSignedAmount(amount, currency)}
+      {formatSignedAmount(amount)}
     </TableCell>
   );
 }

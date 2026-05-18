@@ -2,7 +2,6 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { ProviderModelBinding } from 'src/types/provider';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { GlobalModelResponse, TieredPricingConfig } from 'src/types/model';
 
 import { useState } from 'react';
@@ -21,7 +20,6 @@ import { formatMoneyCompact } from 'src/utils/currency-format';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { updateProviderModel } from 'src/actions/providers';
-import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-settings';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -45,12 +43,6 @@ export function ProviderModelBindingsSection({
   onAssociate,
 }: Props) {
   const { t } = useTranslate('admin');
-  const settings = useSystemSettings();
-  const exchangeRate = useUsdCnyExchangeRate(settings.data?.currency === 'CNY');
-  const currencyDisplay: CurrencyDisplay = {
-    currency: settings.data?.currency ?? 'USD',
-    usdCnyRate: exchangeRate.data,
-  };
   const [editingModel, setEditingModel] = useState<GlobalModelResponse | null>(null);
   const sortedItems = [...items].sort(compareBindings(models));
 
@@ -83,7 +75,6 @@ export function ProviderModelBindingsSection({
                   binding={binding}
                   providerId={providerId}
                   model={findGlobalModel(models, binding.global_model_id)}
-                  currencyDisplay={currencyDisplay}
                   onEdit={setEditingModel}
                 />
               ))}
@@ -102,13 +93,11 @@ function ProviderModelRow({
   binding,
   providerId,
   model,
-  currencyDisplay,
   onEdit,
 }: {
   binding: ProviderModelBinding;
   providerId: string;
   model?: GlobalModelResponse;
-  currencyDisplay: CurrencyDisplay;
   onEdit: (model: GlobalModelResponse) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -162,7 +151,7 @@ function ProviderModelRow({
           </Box>
         </Stack>
       </TableCell>
-      <TableCell sx={pricingCellSx}>{pricingLines(model, t, currencyDisplay)}</TableCell>
+      <TableCell sx={pricingCellSx}>{pricingLines(model, t)}</TableCell>
       <TableCell sx={actionCellSx}>
         <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
           <IconButton
@@ -194,11 +183,7 @@ function ProviderModelRow({
   );
 }
 
-function pricingLines(
-  model: GlobalModelResponse | undefined,
-  t: (key: string) => string,
-  currencyDisplay: CurrencyDisplay
-) {
+function pricingLines(model: GlobalModelResponse | undefined, t: (key: string) => string) {
   const requestPrice = model?.default_price_per_request;
   const tiers = model?.default_tiered_pricing;
   if (requestPrice && requestPrice > 0)
@@ -207,14 +192,14 @@ function pricingLines(
         rows={[
           [
             t('providers.pricePerRequest'),
-            `${formatPrice(requestPrice, currencyDisplay)}/${t('providers.perRequest')}`,
+            `${formatPrice(requestPrice)}/${t('providers.perRequest')}`,
           ],
         ]}
       />
     );
   const tier = tiers?.tiers?.[0];
   if (!tier) return <Typography variant="caption">-</Typography>;
-  return <PriceGrid rows={tierRows(tier, t, currencyDisplay)} />;
+  return <PriceGrid rows={tierRows(tier, t)} />;
 }
 
 function PriceGrid({ rows }: { rows: string[][] }) {
@@ -234,28 +219,24 @@ function PriceGrid({ rows }: { rows: string[][] }) {
   );
 }
 
-function tierRows(
-  tier: TieredPricingConfig['tiers'][number],
-  t: (key: string) => string,
-  currencyDisplay: CurrencyDisplay
-) {
+function tierRows(tier: TieredPricingConfig['tiers'][number], t: (key: string) => string) {
   const rows = [
     [
       t('providers.inputOutputPrice'),
-      `${formatPrice(tier.input_price_per_1m, currencyDisplay)}/${formatPrice(tier.output_price_per_1m, currencyDisplay)}`,
+      `${formatPrice(tier.input_price_per_1m)}/${formatPrice(tier.output_price_per_1m)}`,
     ],
   ];
   if ((tier.cache_creation_price_per_1m ?? 0) > 0 || (tier.cache_read_price_per_1m ?? 0) > 0) {
     rows.push([
       t('providers.cachePrice'),
-      `${formatPrice(tier.cache_creation_price_per_1m, currencyDisplay)}/${formatPrice(tier.cache_read_price_per_1m, currencyDisplay)}`,
+      `${formatPrice(tier.cache_creation_price_per_1m)}/${formatPrice(tier.cache_read_price_per_1m)}`,
     ]);
   }
   const ttl = tier.cache_ttl_pricing?.find((item) => item.ttl_minutes === 60);
   if ((ttl?.cache_creation_price_per_1m ?? 0) > 0)
     rows.push([
       t('providers.cache1hCreationPrice'),
-      formatPrice(ttl?.cache_creation_price_per_1m, currencyDisplay),
+      formatPrice(ttl?.cache_creation_price_per_1m),
     ]);
   return rows;
 }
@@ -293,9 +274,9 @@ async function copyModelId(modelId: string, t: (key: string) => string) {
   }
 }
 
-function formatPrice(value: number | null | undefined, currencyDisplay: CurrencyDisplay) {
+function formatPrice(value: number | null | undefined) {
   if (value === null || value === undefined) return '-';
-  return formatMoneyCompact(value, currencyDisplay);
+  return formatMoneyCompact(value);
 }
 
 const panelSx = {

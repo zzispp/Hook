@@ -32,7 +32,6 @@ pub(in crate::migration::baseline) enum SystemSettings {
     DefaultRateLimitRpm,
     SchedulingMode,
     ProviderCooldownPolicy,
-    Currency,
     SmtpHost,
     SmtpPort,
     SmtpUsername,

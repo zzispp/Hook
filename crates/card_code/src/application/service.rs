@@ -3,41 +3,38 @@ use rand::{Rng, rngs::OsRng};
 use rust_decimal::Decimal;
 use types::{
     card_code::{
-        CARD_CODE_BALANCE_TYPE_GIFT, CARD_CODE_BALANCE_TYPE_RECHARGE, CARD_CODE_STATUS_ACTIVE, CardCode, CardCodeBatchStatusPayload,
-        CardCodeBatchStatusResponse, CardCodeCreateRecord, CardCodeGeneratePayload, CardCodeGenerateResponse, CardCodeListFilters, CardCodeListResponse,
-        CardCodeRedeemInput, CardCodeRedeemPayload, CardCodeRedeemResponse, CardCodeType, CardCodeTypeCreatePayload, CardCodeTypeListFilters,
-        CardCodeTypeListResponse, CardCodeTypeUpdatePayload,
+        CARD_CODE_BALANCE_TYPE_GIFT, CARD_CODE_BALANCE_TYPE_RECHARGE, CARD_CODE_STATUS_ACTIVE, CardCodeBatchStatusPayload, CardCodeBatchStatusResponse,
+        CardCodeCreateRecord, CardCodeGeneratePayload, CardCodeGenerateResponse, CardCodeListFilters, CardCodeListResponse, CardCodeRedeemInput,
+        CardCodeRedeemPayload, CardCodeRedeemResponse, CardCodeType, CardCodeTypeCreatePayload, CardCodeTypeListFilters, CardCodeTypeListResponse,
+        CardCodeTypeUpdatePayload,
     },
     pagination::PageRequest,
 };
 use uuid::Uuid;
 
-use crate::application::{CardCodeCurrencyProvider, CardCodeError, CardCodeOperator, CardCodeRedeemer, CardCodeRepository, CardCodeResult, CardCodeUseCase};
+use crate::application::{CardCodeError, CardCodeOperator, CardCodeRedeemer, CardCodeRepository, CardCodeResult, CardCodeUseCase};
 
 use super::validation::{validate_batch_status, validate_generate, validate_page, validate_type_create, validate_type_update};
 
 const CODE_ALPHABET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_CODE_ATTEMPTS: u8 = 20;
 
-pub struct CardCodeService<R, C> {
+pub struct CardCodeService<R> {
     repository: R,
-    currency_provider: C,
 }
 
-impl<R, C> CardCodeService<R, C>
+impl<R> CardCodeService<R>
 where
     R: CardCodeRepository,
-    C: CardCodeCurrencyProvider,
 {
-    pub const fn new(repository: R, currency_provider: C) -> Self {
-        Self { repository, currency_provider }
+    pub const fn new(repository: R) -> Self {
+        Self { repository }
     }
 }
 #[async_trait]
-impl<R, C> CardCodeUseCase for CardCodeService<R, C>
+impl<R> CardCodeUseCase for CardCodeService<R>
 where
     R: CardCodeRepository,
-    C: CardCodeCurrencyProvider,
 {
     async fn list_types(&self, page: PageRequest, filters: CardCodeTypeListFilters) -> CardCodeResult<CardCodeTypeListResponse> {
         validate_page(page)?;
@@ -80,7 +77,6 @@ where
     async fn redeem(&self, input: CardCodeRedeemPayload, user: CardCodeRedeemer) -> CardCodeResult<CardCodeRedeemResponse> {
         let code = normalize_code(&input.code)?;
         let target_currency = currency::DEFAULT_WALLET_CURRENCY;
-        let usd_cny_rate = self.redemption_rate(&code, &user.user_id, target_currency).await?;
         self.repository
             .redeem(CardCodeRedeemInput {
                 code,
@@ -88,16 +84,14 @@ where
                 username: user.username,
                 client_ip: user.client_ip,
                 target_currency: target_currency.into(),
-                usd_cny_rate,
             })
             .await
     }
 }
 
-impl<R, C> CardCodeService<R, C>
+impl<R> CardCodeService<R>
 where
     R: CardCodeRepository,
-    C: CardCodeCurrencyProvider,
 {
     async fn active_type(&self, type_id: &str) -> CardCodeResult<CardCodeType> {
         let card_type = self.repository.find_type(type_id).await?.ok_or(CardCodeError::NotFound)?;
@@ -134,20 +128,6 @@ where
             });
         }
         Ok(records)
-    }
-    async fn redemption_rate(&self, code: &str, user_id: &str, target_currency: &str) -> CardCodeResult<Option<Decimal>> {
-        let Some(card_code) = self.repository.find_code(code).await? else {
-            return Ok(None);
-        };
-        if !is_redeemable(&card_code) {
-            return Ok(None);
-        }
-        let wallet_currency = self.repository.user_wallet_currency(user_id).await?;
-        let needs_rate = requires_exchange_rate(&card_code, target_currency) || wallet_currency.as_deref().is_some_and(|currency| currency != target_currency);
-        if !needs_rate {
-            return Ok(None);
-        }
-        self.currency_provider.usd_cny_rate().await.map(Some)
     }
     async fn unique_code(&self, length: u8) -> CardCodeResult<String> {
         for _ in 0..MAX_CODE_ATTEMPTS {
@@ -219,24 +199,6 @@ fn normalize_code(raw: &str) -> CardCodeResult<String> {
         return Err(CardCodeError::InvalidInput("code is required".into()));
     }
     Ok(code)
-}
-
-fn requires_exchange_rate(code: &CardCode, target_currency: &str) -> bool {
-    code.currency != target_currency && is_redeemable(code)
-}
-
-fn is_redeemable(code: &CardCode) -> bool {
-    code.status == CARD_CODE_STATUS_ACTIVE && code.used_at.is_none() && !is_expired(code.expires_at.as_deref())
-}
-
-fn is_expired(value: Option<&str>) -> bool {
-    let Some(raw) = value else {
-        return false;
-    };
-    let Ok(expires_at) = time::OffsetDateTime::parse(raw, &time::format_description::well_known::Rfc3339) else {
-        return false;
-    };
-    expires_at <= time::OffsetDateTime::now_utc()
 }
 
 fn build_code(length: u8) -> String {

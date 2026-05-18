@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 
 use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
 
-use super::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
+use super::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SystemSettings {
@@ -34,7 +34,6 @@ pub struct SystemSettings {
     pub default_rate_limit_rpm: i64,
     pub scheduling_mode: ProviderSchedulingMode,
     pub provider_cooldown_policy: ProviderCooldownPolicy,
-    pub currency: DisplayCurrency,
     pub smtp_host: String,
     pub smtp_port: i64,
     pub smtp_username: String,

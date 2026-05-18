@@ -1,6 +1,6 @@
 use rust_decimal::Decimal;
 use types::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
-use types::system_setting::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
+use types::system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SystemSettingsRecordPatch {
@@ -32,7 +32,6 @@ pub struct SystemSettingsRecordPatch {
     pub default_rate_limit_rpm: Option<i64>,
     pub scheduling_mode: Option<ProviderSchedulingMode>,
     pub provider_cooldown_policy: Option<ProviderCooldownPolicy>,
-    pub currency: Option<DisplayCurrency>,
     pub smtp_host: Option<String>,
     pub smtp_port: Option<i64>,
     pub smtp_username: Option<String>,

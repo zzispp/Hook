@@ -9,7 +9,7 @@ use crate::{
     Database, StorageError, StorageResult,
     card_code::{
         CardCodeRecord, card_code_records, query,
-        redemption_currency::{RedemptionAmounts, redemption_amounts, wallet_in_target_currency},
+        redemption_currency::{RedemptionAmounts, accounting_redemption_amounts, wallet_in_accounting_currency},
     },
     wallet::{wallet_records, wallet_records::ActiveModel as WalletActiveModel, wallet_transaction_records},
 };
@@ -21,13 +21,14 @@ const TOPUP_CARD_CODE_REASON: &str = "topup_card_code";
 const GIFT_CARD_CODE_REASON: &str = "gift_card_code";
 
 pub(super) async fn redeem(database: &Database, input: CardCodeRedeemInput) -> StorageResult<CardCodeRedeemRecord> {
+    ensure_accounting_currency(&input.target_currency)?;
     let tx = database.connection().begin().await?;
     let now = time::OffsetDateTime::now_utc();
     mark_code_used(&input, now, &tx).await?;
     let code = find_code_by_code_in_tx(&input.code, &tx).await?.ok_or(StorageError::NotFound)?;
     let wallet = ensure_wallet_in_tx(database, &input.user_id, &input.target_currency, &tx).await?;
-    let wallet = wallet_in_target_currency(wallet, &input)?;
-    let amounts = redemption_amounts(&code, &input)?;
+    let wallet = wallet_in_accounting_currency(wallet)?;
+    let amounts = accounting_redemption_amounts(&code)?;
     let transaction = build_transaction(database.next_id(), &wallet, &code, &input, amounts, now);
     let updated_wallet = credited_wallet(wallet, amounts, &input.target_currency);
     update_wallet_in_tx(updated_wallet, &tx).await?;
@@ -38,6 +39,16 @@ pub(super) async fn redeem(database: &Database, input: CardCodeRedeemInput) -> S
         card_code: code.into(),
         transaction: transaction.into(),
     })
+}
+
+fn ensure_accounting_currency(currency: &str) -> StorageResult<()> {
+    if currency == currency::ACCOUNTING_CURRENCY {
+        return Ok(());
+    }
+    Err(StorageError::Conflict(format!(
+        "card code redemption target currency must be {}",
+        currency::ACCOUNTING_CURRENCY
+    )))
 }
 
 async fn mark_code_used(input: &CardCodeRedeemInput, now: time::OffsetDateTime, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {
@@ -231,4 +242,16 @@ fn mask_code(code: &str) -> String {
         return code.into();
     }
     format!("{}...{}", &code[..4], &code[code.len() - 4..])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_non_accounting_target_currency() {
+        let error = ensure_accounting_currency("CNY").unwrap_err();
+
+        assert!(matches!(error, StorageError::Conflict(message) if message.contains("target currency must be USD")));
+    }
 }

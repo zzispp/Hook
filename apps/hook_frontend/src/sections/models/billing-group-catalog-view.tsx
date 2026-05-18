@@ -2,7 +2,7 @@
 
 import type { BillingGroup } from 'src/types/group';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
@@ -10,13 +10,10 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
-import { currencyDisplayFromResponse } from 'src/utils/currency-format';
-
 import { useTranslate } from 'src/locales/use-locales';
 import { useUserModelCatalog } from 'src/actions/models';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useAvailableBillingGroups } from 'src/actions/groups';
-import { useCurrencyDisplay } from 'src/actions/system-settings';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import {
   DASHBOARD_MENU_CODES,
@@ -33,7 +30,6 @@ export function BillingGroupCatalogView() {
   const { t } = useTranslate('admin');
   const groups = useAvailableBillingGroups();
   const models = useUserModelCatalog();
-  const currency = useCurrencyDisplay();
   const breadcrumbs = useDashboardBreadcrumbs({
     headingCode: DASHBOARD_MENU_CODES.billingGroupCatalog,
     sectionCode: DASHBOARD_SECTION_CODES.operations,
@@ -41,10 +37,6 @@ export function BillingGroupCatalogView() {
   const [detailTarget, setDetailTarget] = useState<BillingGroup | null>(null);
   const errorMessage = groups.error?.message ?? models.error?.message;
   const loading = groups.isLoading || models.isLoading;
-  const currencyDisplay = useMemo(
-    () => currencyDisplayFromResponse(currency.data, t('requestRecords.exchangeRateUnavailable')),
-    [currency.data, t]
-  );
 
   return (
     <DashboardContent maxWidth="xl">
@@ -70,12 +62,11 @@ export function BillingGroupCatalogView() {
           </Stack>
           <Button
             variant="outlined"
-            loading={groups.isValidating || models.isValidating || currency.isValidating}
+            loading={groups.isValidating || models.isValidating}
             startIcon={<Iconify icon="solar:restart-bold" />}
             onClick={() => {
               void groups.refresh();
               void models.refresh();
-              void currency.refresh();
             }}
             sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
           >
@@ -102,8 +93,6 @@ export function BillingGroupCatalogView() {
       <BillingGroupDetailDialog
         group={detailTarget}
         models={models.items}
-        currencyDisplay={currencyDisplay}
-        currencyErrorMessage={currency.error?.message}
         open={!!detailTarget}
         onClose={() => setDetailTarget(null)}
       />

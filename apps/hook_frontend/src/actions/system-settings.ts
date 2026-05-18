@@ -3,9 +3,7 @@
 import type { ApiEnvelope } from 'src/types/rbac';
 import type {
   SystemSettings,
-  ExchangeRateResponse,
   SystemSettingsUpdate,
-  CurrencyDisplayResponse,
   SystemSettingsSmtpTestRequest,
   SystemSettingsSmtpTestResponse,
 } from 'src/types/system-setting';
@@ -68,56 +66,4 @@ export async function testSmtpConnection(payload: SystemSettingsSmtpTestRequest)
     payload
   );
   return requireApiData(response.data);
-}
-
-export function useUsdCnyExchangeRate(enabled: boolean) {
-  const {
-    data,
-    isLoading,
-    error,
-    isValidating,
-    mutate: revalidate,
-  } = useSWR<ApiEnvelope<ExchangeRateResponse>>(
-    enabled ? endpoints.adminSettings.exchangeRate : null,
-    fetcher,
-    swrOptions
-  );
-
-  return useMemo(() => {
-    const apiError =
-      data && !data.success ? new Error(data.message || 'Request failed') : undefined;
-    return {
-      data: data?.success ? requireApiData(data) : undefined,
-      isLoading,
-      error: error ?? apiError,
-      isValidating,
-      refresh: revalidate,
-    };
-  }, [data, error, isLoading, isValidating, revalidate]);
-}
-
-export function useCurrencyDisplay(enabled = true) {
-  const {
-    data,
-    isLoading,
-    error,
-    isValidating,
-    mutate: revalidate,
-  } = useSWR<ApiEnvelope<CurrencyDisplayResponse>>(
-    enabled ? endpoints.settings.displayCurrency : null,
-    fetcher,
-    swrOptions
-  );
-
-  return useMemo(() => {
-    const apiError =
-      data && !data.success ? new Error(data.message || 'Request failed') : undefined;
-    return {
-      data: enabled && data?.success ? requireApiData(data) : undefined,
-      isLoading: enabled ? isLoading : false,
-      error: error ?? apiError,
-      isValidating: enabled ? isValidating : false,
-      refresh: revalidate,
-    };
-  }, [data, enabled, error, isLoading, isValidating, revalidate]);
 }

@@ -50,14 +50,12 @@ export function WalletTransactionDetailDialog({
   if (!transaction) {
     return null;
   }
-  const currency = wallet?.currency ?? walletFromTransaction(transaction)?.currency;
-
   return (
     <Dialog fullWidth maxWidth={DETAIL_DIALOG_MAX_WIDTH} open={open} onClose={onClose}>
       <WalletDetailTitle t={t} onClose={onClose} />
       <DialogContent sx={{ pb: 3 }}>
         <Stack spacing={2.5}>
-          <DetailOverview t={t} locale={locale} transaction={transaction} currency={currency} />
+          <DetailOverview t={t} locale={locale} transaction={transaction} />
           <TransactionAuditGrid t={t} wallet={wallet} transaction={transaction} />
           <Divider />
           <DetailField label={t('wallet.fields.description')} value={transaction.description || t('wallet.emptyValue')} multiline />
@@ -90,12 +88,10 @@ function DetailOverview({
   t,
   locale,
   transaction,
-  currency,
 }: {
   t: TFunction<'admin'>;
   locale: string;
   transaction: WalletTransaction;
-  currency?: string;
 }) {
   const positive = transaction.amount >= 0;
 
@@ -114,7 +110,7 @@ function DetailOverview({
           variant="subtitle1"
           sx={{ color: positive ? 'success.main' : 'error.main', fontWeight: 700 }}
         >
-          {formatSignedAmount(transaction.amount, currency)}
+          {formatSignedAmount(transaction.amount)}
         </Typography>
       </Stack>
       <Typography variant="caption" color="text.secondary">

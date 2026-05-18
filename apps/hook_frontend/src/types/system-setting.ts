@@ -1,6 +1,5 @@
 import type { ProviderCooldownPolicy, ProviderSchedulingMode } from './provider';
 
-export type DisplayCurrency = 'USD' | 'CNY';
 export type RequestRecordLevel = 'basic' | 'headers' | 'full';
 export type SmtpEncryption = 'none' | 'tls' | 'ssl';
 export type EmailSuffixMode = 'none' | 'whitelist' | 'blacklist';
@@ -34,7 +33,6 @@ export type SystemSettings = {
   default_rate_limit_rpm: number;
   scheduling_mode: ProviderSchedulingMode;
   provider_cooldown_policy: ProviderCooldownPolicy;
-  currency: DisplayCurrency;
   smtp_host: string;
   smtp_port: number;
   smtp_username: string;
@@ -81,7 +79,6 @@ export type SystemSettingsUpdate = Partial<{
   default_rate_limit_rpm: number;
   scheduling_mode: ProviderSchedulingMode;
   provider_cooldown_policy: ProviderCooldownPolicy;
-  currency: DisplayCurrency;
   smtp_host: string;
   smtp_port: number;
   smtp_username: string;
@@ -110,18 +107,4 @@ export type SystemSettingsSmtpTestRequest = Partial<{
 export type SystemSettingsSmtpTestResponse = {
   success: boolean;
   message: string;
-};
-
-export type ExchangeRateResponse = {
-  base: string;
-  target: string;
-  rate: number;
-  source: string;
-  source_date: string;
-  updated_at: string;
-};
-
-export type CurrencyDisplayResponse = {
-  currency: DisplayCurrency;
-  usd_cny_rate?: ExchangeRateResponse | null;
 };

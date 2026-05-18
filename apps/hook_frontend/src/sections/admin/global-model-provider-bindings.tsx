@@ -1,6 +1,5 @@
 'use client';
 
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { ModelCatalogProviderDetail } from 'src/types/model';
 
 import Alert from '@mui/material/Alert';
@@ -17,14 +16,12 @@ type Props = {
   providers: ModelCatalogProviderDetail[];
   loading: boolean;
   errorMessage?: string;
-  currencyDisplay?: CurrencyDisplay;
 };
 
 export function GlobalModelProviderBindings({
   providers,
   loading,
   errorMessage,
-  currencyDisplay,
 }: Props) {
   const { t } = useTranslate('admin');
   const state = providerState(loading, errorMessage, providers.length, t);
@@ -39,7 +36,6 @@ export function GlobalModelProviderBindings({
             <ProviderCard
               key={provider.model_id ?? `${provider.provider_id}-${provider.target_model}`}
               provider={provider}
-              currencyDisplay={currencyDisplay}
             />
           ))}
         </Stack>
@@ -60,13 +56,7 @@ function providerState(
   return null;
 }
 
-function ProviderCard({
-  provider,
-  currencyDisplay,
-}: {
-  provider: ModelCatalogProviderDetail;
-  currencyDisplay?: CurrencyDisplay;
-}) {
+function ProviderCard({ provider }: { provider: ModelCatalogProviderDetail }) {
   const { t } = useTranslate('admin');
 
   return (
@@ -82,34 +72,28 @@ function ProviderCard({
       <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
         {provider.target_model}
       </Typography>
-      <ProviderPrice provider={provider} currencyDisplay={currencyDisplay} />
+      <ProviderPrice provider={provider} />
     </Stack>
   );
 }
 
-function ProviderPrice({
-  provider,
-  currencyDisplay,
-}: {
-  provider: ModelCatalogProviderDetail;
-  currencyDisplay?: CurrencyDisplay;
-}) {
+function ProviderPrice({ provider }: { provider: ModelCatalogProviderDetail }) {
   const { t } = useTranslate('admin');
   const rows = [
     [
       t('providers.inputOutputPrice'),
-      `${formatPrice(provider.input_price_per_1m, currencyDisplay)} / ${formatPrice(provider.output_price_per_1m, currencyDisplay)}`,
+      `${formatPrice(provider.input_price_per_1m)} / ${formatPrice(provider.output_price_per_1m)}`,
     ],
     [
       t('providers.cachePrice'),
-      `${formatPrice(provider.cache_creation_price_per_1m, currencyDisplay)} / ${formatPrice(provider.cache_read_price_per_1m, currencyDisplay)}`,
+      `${formatPrice(provider.cache_creation_price_per_1m)} / ${formatPrice(provider.cache_read_price_per_1m)}`,
     ],
   ];
 
   if (provider.price_per_request && provider.price_per_request > 0) {
     rows.push([
       t('providers.pricePerRequest'),
-      `${formatPrice(provider.price_per_request, currencyDisplay)}/${t('providers.perRequest')}`,
+      `${formatPrice(provider.price_per_request)}/${t('providers.perRequest')}`,
     ]);
   }
 

@@ -76,11 +76,11 @@ export function displayRole(code: string, roles: Role[]) {
 export function walletBalanceText(user: SystemUser, t: AdminT) {
   return user.quota_mode === 'unlimited'
     ? t('users.unlimited')
-    : formatUserMoney(user.wallet?.available_balance, user.wallet?.currency);
+    : formatUserMoney(user.wallet?.available_balance);
 }
 
 export function walletConsumedText(user: SystemUser) {
-  return formatUserMoney(user.wallet?.total_consumed, user.wallet?.currency);
+  return formatUserMoney(user.wallet?.total_consumed);
 }
 
 export function userRateLimitText(user: SystemUser, t: AdminT) {
@@ -96,8 +96,8 @@ export function formatUserDateTime(value?: string | null) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export function formatUserMoney(value?: number | null, currency?: string | null) {
-  return formatWalletMoney(value, currency ?? undefined);
+export function formatUserMoney(value?: number | null) {
+  return formatWalletMoney(value);
 }
 
 function rateLimitValue(value: string) {

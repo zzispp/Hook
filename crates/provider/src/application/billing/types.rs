@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 pub const BILLING_SNAPSHOT_SCHEMA_VERSION: &str = "2.0";
 pub const BILLING_SCALE: u32 = 8;
-pub const ACCOUNTING_CURRENCY: &str = "USD";
+pub const ACCOUNTING_CURRENCY: &str = currency::ACCOUNTING_CURRENCY;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

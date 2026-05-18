@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
     provider::{ProviderCooldownPolicy, ProviderSchedulingMode},
-    system_setting::{DisplayCurrency, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettingsResponse, SystemSettingsUpdate},
+    system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettingsResponse, SystemSettingsUpdate},
 };
 
 use crate::application::{
@@ -132,7 +132,6 @@ fn system_settings_response() -> SystemSettingsResponse {
         default_rate_limit_rpm: 0,
         scheduling_mode: ProviderSchedulingMode::CacheAffinity,
         provider_cooldown_policy: ProviderCooldownPolicy::default(),
-        currency: DisplayCurrency::Usd,
         smtp_host: String::new(),
         smtp_port: 587,
         smtp_username: String::new(),

@@ -3,13 +3,9 @@ import type { TextFieldProps } from '@mui/material/TextField';
 import { useState, useCallback } from 'react';
 
 import Input from '@mui/material/Input';
-import Select from '@mui/material/Select';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
-import InputLabel from '@mui/material/InputLabel';
-import FormControl from '@mui/material/FormControl';
 import FilledInput from '@mui/material/FilledInput';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -17,15 +13,6 @@ import InputAdornment from '@mui/material/InputAdornment';
 import { Iconify } from 'src/components/iconify';
 
 import { ComponentBox } from '../../layout';
-
-// ----------------------------------------------------------------------
-
-const CURRENCIES = [
-  { value: 'USD', label: '$' },
-  { value: 'EUR', label: '€' },
-  { value: 'BTC', label: '฿' },
-  { value: 'JPY', label: '¥' },
-];
 
 // ----------------------------------------------------------------------
 
@@ -42,8 +29,6 @@ type Props = {
 };
 
 export function TextFieldVariant({ variant }: Props) {
-  const [currency, setCurrency] = useState('EUR');
-
   const [values, setValues] = useState<State>({
     amount: '',
     password: '',
@@ -58,10 +43,6 @@ export function TextFieldVariant({ variant }: Props) {
     },
     []
   );
-
-  const handleChangeCurrency = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrency(event.target.value);
-  }, []);
 
   const handleShowPassword = useCallback(() => {
     setValues((prev) => ({ ...prev, showPassword: !prev.showPassword }));
@@ -245,83 +226,6 @@ export function TextFieldVariant({ variant }: Props) {
       <ComponentBox title="Sizes">
         <TextField {...textFieldProps} label="Size" size="small" defaultValue="Small" />
         <TextField {...textFieldProps} label="Size" defaultValue="Medium" />
-      </ComponentBox>
-
-      <ComponentBox title="Select">
-        <TextField
-          {...textFieldProps}
-          select
-          label="Select"
-          value={currency}
-          onChange={handleChangeCurrency}
-          helperText="Please select your currency"
-          slotProps={{
-            htmlInput: { id: `${variant}-currency-select` },
-            inputLabel: { htmlFor: `${variant}-currency-select` },
-          }}
-        >
-          {CURRENCIES.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
-              {option.label}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          {...textFieldProps}
-          select
-          size="small"
-          value={currency}
-          label="Native select"
-          onChange={handleChangeCurrency}
-          helperText="Please select your currency"
-          slotProps={{
-            select: { native: true },
-            htmlInput: { id: `${variant}-currency-native-select` },
-            inputLabel: { htmlFor: `${variant}-currency-native-select` },
-          }}
-        >
-          {CURRENCIES.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </TextField>
-
-        <FormControl {...textFieldProps} size="small">
-          <InputLabel htmlFor={`form-control-${variant}-select`}>Form control select</InputLabel>
-          <Select
-            label="Form control select"
-            value={currency}
-            onChange={(event) => setCurrency(event.target.value)}
-            inputProps={{ id: `form-control-${variant}-select` }}
-          >
-            {CURRENCIES.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl {...textFieldProps} size="small">
-          <InputLabel htmlFor={`form-control-${variant}-native-select`}>
-            Form control select (native)
-          </InputLabel>
-          <Select
-            native
-            label="Form control select (native)"
-            value={currency}
-            onChange={(event) => setCurrency(event.target.value)}
-            inputProps={{ id: `form-control-${variant}-native-select` }}
-          >
-            {CURRENCIES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
       </ComponentBox>
 
       <ComponentBox title="Multiline">

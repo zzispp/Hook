@@ -1,7 +1,6 @@
 'use client';
 
 import type { GlobalModelResponse } from 'src/types/model';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import Box from '@mui/material/Box';
@@ -18,7 +17,6 @@ import Typography from '@mui/material/Typography';
 import { formatMoneyCompact } from 'src/utils/currency-format';
 
 import { useTranslate } from 'src/locales/use-locales';
-import { useSystemSettings, useUsdCnyExchangeRate } from 'src/actions/system-settings';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -43,12 +41,6 @@ type Props = {
 
 export function GlobalModelTable({ rows, total, loading, table, onDetail, onEdit, onDelete }: Props) {
   const { t } = useTranslate('admin');
-  const settings = useSystemSettings();
-  const exchangeRate = useUsdCnyExchangeRate(settings.data?.currency === 'CNY');
-  const currencyDisplay: CurrencyDisplay = {
-    currency: settings.data?.currency ?? 'USD',
-    usdCnyRate: exchangeRate.data,
-  };
   const tableHead: TableHeadCellProps[] = [
     { id: 'name', label: t('fields.model'), width: 280 },
     { id: 'pricing', label: t('models.pricing'), width: 220 },
@@ -72,7 +64,6 @@ export function GlobalModelTable({ rows, total, loading, table, onDetail, onEdit
                 <GlobalModelTableRow
                   key={row.id}
                   row={row}
-                  currencyDisplay={currencyDisplay}
                   onDetail={onDetail}
                   onEdit={onEdit}
                   onDelete={onDelete}
@@ -98,13 +89,11 @@ export function GlobalModelTable({ rows, total, loading, table, onDetail, onEdit
 
 function GlobalModelTableRow({
   row,
-  currencyDisplay,
   onDetail,
   onEdit,
   onDelete,
 }: {
   row: GlobalModelResponse;
-  currencyDisplay: CurrencyDisplay;
   onDetail: (model: GlobalModelResponse) => void;
   onEdit: (model: GlobalModelResponse) => void;
   onDelete: (model: GlobalModelResponse) => void;
@@ -127,8 +116,7 @@ function GlobalModelTableRow({
       <TableCell>
         <Stack spacing={0.25}>
           <Typography variant="body2">
-            {formatPrice(tier?.input_price_per_1m, currencyDisplay)} /{' '}
-            {formatPrice(tier?.output_price_per_1m, currencyDisplay)}
+            {formatPrice(tier?.input_price_per_1m)} / {formatPrice(tier?.output_price_per_1m)}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             {t('models.inputOutputPrice')}
@@ -179,7 +167,7 @@ function GlobalModelTableRow({
   );
 }
 
-function formatPrice(value: number | null | undefined, currencyDisplay: CurrencyDisplay) {
+function formatPrice(value: number | null | undefined) {
   if (value === null || value === undefined) return '-';
-  return formatMoneyCompact(value, currencyDisplay);
+  return formatMoneyCompact(value);
 }

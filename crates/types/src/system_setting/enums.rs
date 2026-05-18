@@ -1,12 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
-pub enum DisplayCurrency {
-    Usd,
-    Cny,
-}
-
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RequestRecordLevel {
@@ -99,24 +92,6 @@ impl TryFrom<&str> for EmailSuffixMode {
             "whitelist" => Ok(Self::Whitelist),
             "blacklist" => Ok(Self::Blacklist),
             _ => Err(format!("unsupported email_suffix_mode: {value}")),
-        }
-    }
-}
-
-impl DisplayCurrency {
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Usd => "USD",
-            Self::Cny => "CNY",
-        }
-    }
-}
-
-impl From<&str> for DisplayCurrency {
-    fn from(value: &str) -> Self {
-        match value {
-            "CNY" => Self::Cny,
-            _ => Self::Usd,
         }
     }
 }

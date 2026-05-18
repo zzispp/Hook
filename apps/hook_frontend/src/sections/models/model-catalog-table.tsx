@@ -2,7 +2,6 @@
 
 import type { GlobalModelResponse } from 'src/types/model';
 import type { TableHeadCellProps } from 'src/components/table';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
@@ -25,11 +24,10 @@ import { priceSummary, formatUsageCount } from './model-catalog-utils';
 type Props = {
   rows: GlobalModelResponse[];
   loading: boolean;
-  currencyDisplay?: CurrencyDisplay;
   onSelectRow: (row: GlobalModelResponse) => void;
 };
 
-export function ModelCatalogTable({ rows, loading, currencyDisplay, onSelectRow }: Props) {
+export function ModelCatalogTable({ rows, loading, onSelectRow }: Props) {
   const { t } = useTranslate('admin');
   const tableHead: TableHeadCellProps[] = [
     { id: 'model', label: t('fields.model'), width: 320 },
@@ -50,7 +48,6 @@ export function ModelCatalogTable({ rows, loading, currencyDisplay, onSelectRow 
               <CatalogRow
                 key={row.id}
                 row={row}
-                currencyDisplay={currencyDisplay}
                 onSelectRow={onSelectRow}
               />
             ))
@@ -64,11 +61,9 @@ export function ModelCatalogTable({ rows, loading, currencyDisplay, onSelectRow 
 
 function CatalogRow({
   row,
-  currencyDisplay,
   onSelectRow,
 }: {
   row: GlobalModelResponse;
-  currencyDisplay?: CurrencyDisplay;
   onSelectRow: (row: GlobalModelResponse) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -85,7 +80,7 @@ function CatalogRow({
         </Stack>
       </TableCell>
       <TableCell>
-        <Typography variant="body2">{priceSummary(row, currencyDisplay)}</Typography>
+        <Typography variant="body2">{priceSummary(row)}</Typography>
         <Typography variant="caption" color="text.secondary">
           {t('models.inputOutputPrice')}
         </Typography>
