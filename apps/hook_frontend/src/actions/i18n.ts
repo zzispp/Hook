@@ -44,6 +44,10 @@ export function useAdminI18nResource(lang: string, namespace = 'admin') {
   }, [data, error, isLoading, isValidating, refresh]);
 }
 
+export function useI18nResource(lang: string, namespace: string) {
+  return useAdminI18nResource(lang, namespace);
+}
+
 export function useTranslationLanguages(page: number, pageSize: number, filters: TranslationFilters = {}) {
   const key = [endpoints.adminI18n.languages, { params: { ...pageQuery(page, pageSize), ...filters } }] as const;
   const { data, error, isLoading, isValidating, mutate: refresh } = useSWR<
@@ -147,4 +151,3 @@ async function requestData<T>(request: Promise<{ data: I18nApiEnvelope<T> }>) {
 async function mutateI18n() {
   await mutate((key) => Array.isArray(key) && typeof key[0] === 'string' && key[0].includes('/i18n/'));
 }
-

@@ -43,6 +43,12 @@ impl I18nStore {
         })
     }
 
+    pub async fn entry_value(&self, lang: &str, namespace: &str, group_key: &str, item_key: &str) -> StorageResult<Option<String>> {
+        self.find_entry_by_key(namespace, group_key, item_key, lang)
+            .await
+            .map(|record| record.filter(|entry| entry.enabled).map(|entry| entry.value))
+    }
+
     pub async fn list_languages(&self, request: TranslationLanguageListRequest) -> StorageResult<TranslationLanguageListResponse> {
         let records = filtered_languages(request.clone())
             .order_by_asc(translation_languages::Column::SortOrder)

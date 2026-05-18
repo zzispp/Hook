@@ -5,7 +5,7 @@ use types::i18n::{
 
 use super::{I18nError, I18nResult};
 
-const ADMIN_NAMESPACE: &str = "admin";
+const SUPPORTED_NAMESPACES: &[&str] = &["admin", "auth"];
 const MIN_KEY_LEN: usize = 1;
 const MAX_CODE_LEN: usize = 32;
 const MAX_KEY_LEN: usize = 120;
@@ -74,8 +74,8 @@ pub fn sanitize_bundle(input: TranslationBundleUpsert) -> TranslationBundleUpser
 }
 
 pub fn validate_namespace(namespace: &str) -> I18nResult<()> {
-    if namespace != ADMIN_NAMESPACE {
-        return Err(I18nError::InvalidInput("only admin namespace is supported".into()));
+    if !SUPPORTED_NAMESPACES.contains(&namespace) {
+        return Err(I18nError::InvalidInput("unsupported translation namespace".into()));
     }
     Ok(())
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import * as z from 'zod';
-import { useState } from 'react';
+import type * as z from 'zod';
+
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,10 +15,11 @@ import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 
 import { paths } from 'src/routes/paths';
-import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
+import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { useCaptchaConfig } from 'src/actions/captcha';
+import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
@@ -27,21 +29,23 @@ import { getErrorMessage } from '../../utils';
 import { FormHead } from '../../components/form-head';
 import { signInWithPassword } from '../../context/jwt';
 import { AuthCaptcha } from '../../components/cap-widget';
-import { passwordSchema, identifierSchema } from '../../context/jwt/validation';
+import { signInSchema } from '../../context/jwt/validation';
 
 // ----------------------------------------------------------------------
 
-export type SignInSchemaType = z.infer<typeof SignInSchema>;
+type SignInSchemaType = z.infer<ReturnType<typeof signInSchema>>;
 
-export const SignInSchema = z.object({
-  identifier: identifierSchema,
-  password: passwordSchema,
-});
+// ----------------------------------------------------------------------
+
+const PASSWORD_RESET_SUCCESS_PARAM = 'reset';
+const PASSWORD_RESET_SUCCESS_VALUE = 'success';
 
 // ----------------------------------------------------------------------
 
 export function JwtSignInView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { t } = useTranslate('auth');
 
   const showPassword = useBoolean();
 
@@ -56,14 +60,17 @@ export function JwtSignInView() {
   const captchaUnavailable = captchaConfig.isLoading || !!captchaConfig.error;
   const visibleErrorMessage =
     errorMessage ?? (captchaConfig.error ? getErrorMessage(captchaConfig.error) : null);
+  const passwordResetSucceeded =
+    searchParams.get(PASSWORD_RESET_SUCCESS_PARAM) === PASSWORD_RESET_SUCCESS_VALUE;
 
   const defaultValues: SignInSchemaType = {
     identifier: '',
     password: '',
   };
+  const schema = useMemo(() => signInSchema(t), [t]);
 
   const methods = useForm({
-    resolver: zodResolver(SignInSchema),
+    resolver: zodResolver(schema),
     defaultValues,
   });
 
@@ -82,7 +89,7 @@ export function JwtSignInView() {
       return;
     }
     if (captchaEnabled && !captchaToken) {
-      setErrorMessage('Please complete CAPTCHA verification');
+      setErrorMessage(t('captcha.required'));
       return;
     }
 
@@ -110,26 +117,26 @@ export function JwtSignInView() {
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
       <Field.Text
         name="identifier"
-        label="Username or email"
-        placeholder="username or name@example.com"
+        label={t('fields.identifier')}
+        placeholder={t('placeholders.identifier')}
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
         <Link
           component={RouterLink}
-          href="#"
+          href={paths.auth.jwt.forgotPassword}
           variant="body2"
           color="inherit"
           sx={{ alignSelf: 'flex-end' }}
         >
-          Forgot password?
+          {t('signIn.forgotPassword')}
         </Link>
 
         <Field.Text
           name="password"
-          label="Password"
-          placeholder="8+ characters"
+          label={t('fields.password')}
+          placeholder={t('placeholders.password')}
           type={showPassword.value ? 'text' : 'password'}
           slotProps={{
             inputLabel: { shrink: true },
@@ -162,9 +169,11 @@ export function JwtSignInView() {
         variant="contained"
         disabled={captchaUnavailable}
         loading={isSubmitting || captchaConfig.isLoading}
-        loadingIndicator={captchaConfig.isLoading ? 'Loading...' : 'Sign in...'}
+        loadingIndicator={
+          captchaConfig.isLoading ? t('common.loading', { ns: 'common' }) : t('actions.signInLoading')
+        }
       >
-        Sign in
+        {t('actions.signIn')}
       </Button>
     </Box>
   );
@@ -172,12 +181,12 @@ export function JwtSignInView() {
   return (
     <>
       <FormHead
-        title="Sign in to your account"
+        title={t('signIn.title')}
         description={
           <>
-            {`Don’t have an account? `}
+            {t('signIn.noAccount')}{' '}
             <Link component={RouterLink} href={paths.auth.jwt.signUp} variant="subtitle2">
-              Get started
+              {t('signIn.createAccount')}
             </Link>
           </>
         }
@@ -187,6 +196,12 @@ export function JwtSignInView() {
       {!!visibleErrorMessage && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {visibleErrorMessage}
+        </Alert>
+      )}
+
+      {passwordResetSucceeded && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {t('resetPassword.success')}
         </Alert>
       )}
 

@@ -80,7 +80,8 @@ use user::{
     api::{ApiState, TokenService, TokenSettings, create_router as create_user_router},
     application::{SystemUserProvider, UserService},
     infra::{
-        BcryptPasswordHasher, ConfigSystemUserProvider, StorageInitialGrantLedger, StorageRegistrationPolicy, StorageUserRepository, StorageUserWalletCatalog,
+        BcryptPasswordHasher, ConfigSystemUserProvider, SmtpPasswordResetMailer, StorageInitialGrantLedger, StoragePasswordResetConfig,
+        StorageRegistrationPolicy, StorageUserRepository, StorageUserWalletCatalog,
     },
 };
 use wallet::{
@@ -162,6 +163,10 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageRegistrationPolicy::new(database.clone()),
         StorageInitialGrantLedger::new(database.clone()),
         StorageUserWalletCatalog::new(database.clone()),
+    )
+    .with_password_reset(
+        StoragePasswordResetConfig::new(database.clone()),
+        SmtpPasswordResetMailer::new(database.clone(), setting_secret_cipher.clone()),
     ));
     let users = Arc::new(ProxyCachedUserUseCase::new(users_inner, proxy_cache.clone()));
     let operations = Arc::new(OperationsService::new(

@@ -22,7 +22,7 @@ import { i18nOptions, fallbackLng, storageConfig } from './locales-config';
  */
 i18next.use(initReactI18next).init({
   ...i18nOptions(fallbackLng),
-  ns: ['common', 'messages', 'admin', 'navbar'],
+  ns: ['common', 'messages', 'admin', 'auth', 'navbar'],
   resources: {
     cn: { common: cnCommon, messages: cnMessages, navbar: cnNavbar },
     en: { common: enCommon, messages: enMessages, navbar: enNavbar },

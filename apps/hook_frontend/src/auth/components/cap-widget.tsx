@@ -12,6 +12,7 @@ import { useTheme } from '@mui/material/styles';
 
 import { endpoints } from 'src/lib/axios';
 import { CONFIG } from 'src/global-config';
+import { useTranslate } from 'src/locales/use-locales';
 
 type CapElement = HTMLElement & {
   reset?: () => void;
@@ -28,6 +29,7 @@ type CapWidgetProps = {
 
 export function AuthCaptcha({ enabled, resetKey, onTokenChange }: CapWidgetProps) {
   const theme = useTheme();
+  const { t } = useTranslate('auth');
   const widgetRef = useRef<CapElement | null>(null);
   const apiEndpoint = useMemo(() => captchaApiEndpoint(), []);
   const widgetStyle = useMemo(() => capWidgetStyle(theme), [theme]);
@@ -79,10 +81,10 @@ export function AuthCaptcha({ enabled, resetKey, onTokenChange }: CapWidgetProps
         style: widgetStyle,
         'data-cap-api-endpoint': apiEndpoint,
         'data-cap-hidden-field-name': 'captcha_token',
-        'data-cap-i18n-initial-state': "Verify you're human",
-        'data-cap-i18n-verifying-label': 'Verifying...',
-        'data-cap-i18n-solved-label': 'Verified',
-        'data-cap-i18n-error-label': 'Verification failed. Try again.',
+        'data-cap-i18n-initial-state': t('captcha.initial'),
+        'data-cap-i18n-verifying-label': t('captcha.verifying'),
+        'data-cap-i18n-solved-label': t('captcha.solved'),
+        'data-cap-i18n-error-label': t('captcha.error'),
       })}
     </Box>
   );

@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect auth i18n email reset architecture,DONE,Relevant call sites and schema are identified,rg -n "forgot|reset|email_template|resource_bundle" apps crates,,0,
+2,Implement backend password reset and multilingual email templates,DONE,APIs validate inputs and send through existing SMTP only when configured,cargo test -p user,2026-05-18,0,
+3,Add password reset enable switch to system settings,DONE,Base settings expose switch and backend requires switch plus complete email config,cargo test -p user,2026-05-18,0,
+4,Implement frontend auth translations and forgot reset UI,DONE,Auth UI uses backend resources and reset flow routes,pnpm lint:frontend,2026-05-18,0,
+5,Seed auth translations and template content,DONE,Fresh baseline contains cn/en auth resource and email templates,just check,2026-05-18,0,
+6,Run focused validation,DONE,Relevant Rust and frontend checks pass,just test && pnpm lint:frontend,2026-05-18,0,

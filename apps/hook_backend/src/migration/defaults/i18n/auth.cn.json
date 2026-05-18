@@ -1,0 +1,86 @@
+{
+  "layout": {
+    "help": "需要帮助？",
+    "sectionTitle": "安全访问 Hook",
+    "sectionSubtitle": "统一管理账户、令牌和模型访问。"
+  },
+  "fields": {
+    "username": "用户名",
+    "email": "邮箱地址",
+    "identifier": "用户名或邮箱",
+    "password": "密码",
+    "newPassword": "新密码"
+  },
+  "placeholders": {
+    "username": "username",
+    "email": "name@example.com",
+    "identifier": "username 或 name@example.com",
+    "password": "至少 8 个字符"
+  },
+  "actions": {
+    "signIn": "登录",
+    "signInLoading": "正在登录...",
+    "signUp": "创建账户",
+    "signUpLoading": "正在创建账户...",
+    "requestPasswordReset": "发送重置邮件",
+    "requestPasswordResetLoading": "正在发送...",
+    "resetPassword": "重置密码",
+    "resetPasswordLoading": "正在重置...",
+    "backToSignIn": "返回登录"
+  },
+  "signIn": {
+    "title": "登录你的账户",
+    "noAccount": "还没有账户？",
+    "createAccount": "立即注册",
+    "forgotPassword": "忘记密码？"
+  },
+  "signUp": {
+    "title": "创建你的账户",
+    "hasAccount": "已有账户？",
+    "signIn": "去登录"
+  },
+  "forgotPassword": {
+    "title": "找回密码",
+    "description": "输入账户邮箱，我们会发送密码重置链接。",
+    "success": "重置邮件已发送，请检查邮箱。"
+  },
+  "resetPassword": {
+    "title": "设置新密码",
+    "description": "请输入新的账户密码。",
+    "missingToken": "密码重置链接无效或缺少 token。",
+    "success": "密码已重置，请重新登录。"
+  },
+  "terms": {
+    "prefix": "注册即表示你同意 ",
+    "terms": "服务条款",
+    "middle": " 和 ",
+    "privacy": "隐私政策",
+    "suffix": "。"
+  },
+  "captcha": {
+    "required": "请先完成人机验证",
+    "initial": "验证你是真人",
+    "verifying": "正在验证...",
+    "solved": "已验证",
+    "error": "验证失败，请重试。"
+  },
+  "validation": {
+    "usernameLength": "用户名必须为 {{min}} 到 {{max}} 个字符",
+    "usernamePattern": "用户名只能包含字母、数字、下划线和连字符，且必须以字母或数字开头和结尾",
+    "passwordLength": "密码必须为 {{min}} 到 {{max}} 个字符",
+    "emailRequired": "请输入邮箱地址",
+    "emailInvalid": "请输入有效的邮箱地址",
+    "identifierRequired": "请输入用户名或邮箱",
+    "identifierInvalid": "请输入有效的用户名或邮箱地址"
+  },
+  "emailTemplates": {
+    "passwordReset": {
+      "subject": "{{app_name}} 密码重置",
+      "html": "<!DOCTYPE html><html lang=\"zh-CN\"><body style=\"margin:0;padding:0;background:#F9FAFB;font-family:Arial,'Microsoft YaHei',sans-serif;color:#1C252E;\"><table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"background:#F9FAFB;padding:32px 16px;\"><tr><td align=\"center\"><table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:560px;background:#FFFFFF;border:1px solid #DFE3E8;border-radius:8px;overflow:hidden;\"><tr><td style=\"height:6px;background:#00A76F;\"></td></tr><tr><td style=\"padding:32px;\"><p style=\"margin:0 0 16px;color:#007867;font-size:13px;font-weight:700;\">{{app_name}}</p><h1 style=\"margin:0 0 12px;color:#1C252E;font-size:24px;line-height:1.35;font-weight:700;\">重置密码</h1><p style=\"margin:0 0 24px;color:#637381;font-size:15px;line-height:1.7;\">请点击下方按钮继续重置账户密码。</p><p style=\"margin:0 0 24px;\"><a href=\"{{reset_link}}\" style=\"display:inline-block;padding:12px 22px;background:#00A76F;color:#FFFFFF;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;\">重置密码</a></p><p style=\"margin:0 0 12px;color:#637381;font-size:14px;line-height:1.7;\">链接将在 {{expire_minutes}} 分钟后失效。</p><p style=\"margin:0;color:#919EAB;font-size:13px;line-height:1.7;\">无法打开按钮时，请复制链接访问：{{reset_link}}</p><p style=\"margin:8px 0 0;color:#919EAB;font-size:13px;line-height:1.7;\">收件邮箱：{{email}}</p></td></tr></table></td></tr></table></body></html>"
+    },
+    "registration": {
+      "subject": "{{app_name}} 注册验证码",
+      "html": "<p>{{app_name}} 注册验证码：{{code}}，有效期 {{expire_minutes}} 分钟。收件邮箱：{{email}}</p>"
+    }
+  }
+}

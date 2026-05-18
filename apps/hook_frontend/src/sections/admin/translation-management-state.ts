@@ -1,7 +1,12 @@
 'use client';
 
 import type { TranslationLanguage } from 'src/types/i18n';
-import type { TranslationValueRow, TranslationValueForm, TranslationLanguageForm } from './translation-management-utils';
+import type {
+  TranslationValueRow,
+  TranslationNamespace,
+  TranslationValueForm,
+  TranslationLanguageForm,
+} from './translation-management-utils';
 
 import { useState, useCallback } from 'react';
 
@@ -14,7 +19,7 @@ import {
 
 export type TranslationTab = 'values' | 'languages';
 
-export function useTranslationValueForm(languages: TranslationLanguage[]) {
+export function useTranslationValueForm(languages: TranslationLanguage[], namespace: TranslationNamespace) {
   const [form, setForm] = useState<TranslationValueForm>(DEFAULT_TRANSLATION_VALUE_FORM);
   const [editing, setEditing] = useState<TranslationValueRow | null>(null);
   const [creating, setCreating] = useState(false);
@@ -22,8 +27,8 @@ export function useTranslationValueForm(languages: TranslationLanguage[]) {
   const openCreate = useCallback(() => {
     setEditing(null);
     setCreating(true);
-    setForm({ ...DEFAULT_TRANSLATION_VALUE_FORM, values: defaultValues(languages) });
-  }, [languages]);
+    setForm({ ...DEFAULT_TRANSLATION_VALUE_FORM, namespace, values: defaultValues(languages) });
+  }, [languages, namespace]);
 
   const openEdit = useCallback((row: TranslationValueRow) => {
     setEditing(row);
@@ -80,4 +85,3 @@ function defaultValues(languages: TranslationLanguage[]) {
 export type TranslationValueFormState = ReturnType<typeof useTranslationValueForm>;
 export type TranslationLanguageFormState = ReturnType<typeof useTranslationLanguageForm>;
 export type TranslationDeleteState = ReturnType<typeof useTranslationDeleteState>;
-

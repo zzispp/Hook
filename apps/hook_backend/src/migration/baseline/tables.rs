@@ -5,6 +5,7 @@ use super::{card_code_tables, domain_tables, iden::*, operations_tables, wallet_
 pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
     let mut tables = vec![
         users_table(),
+        user_password_reset_tokens_table(),
         roles_table(),
         api_permissions_table(),
         menu_sections_table(),
@@ -44,6 +45,31 @@ fn users_table() -> TableCreateStatement {
         .col(big_integer_null(Users::RateLimitRpm))
         .col(string_len(Users::QuotaMode, 20).default("wallet"))
         .to_owned()
+}
+
+fn user_password_reset_tokens_table() -> TableCreateStatement {
+    let mut user_fk = user_password_reset_token_user_fk();
+    Table::create()
+        .table(UserPasswordResetTokens::Table)
+        .if_not_exists()
+        .col(string_len(UserPasswordResetTokens::Id, 36).primary_key())
+        .col(string_len(UserPasswordResetTokens::UserId, 36))
+        .col(string_len(UserPasswordResetTokens::TokenHash, 64))
+        .col(timestamp_tz(UserPasswordResetTokens::ExpiresAt))
+        .col(timestamp_tz_null(UserPasswordResetTokens::ConsumedAt))
+        .col(timestamp_tz(UserPasswordResetTokens::CreatedAt))
+        .foreign_key(&mut user_fk)
+        .to_owned()
+}
+
+fn user_password_reset_token_user_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_user_password_reset_tokens_user")
+        .from(UserPasswordResetTokens::Table, UserPasswordResetTokens::UserId)
+        .to(Users::Table, Users::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
 }
 
 fn roles_table() -> TableCreateStatement {

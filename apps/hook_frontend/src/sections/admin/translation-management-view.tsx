@@ -1,13 +1,15 @@
 'use client';
 
-import type {
-  TranslationTab} from './translation-management-state';
+import type { TranslationTab } from './translation-management-state';
+import type { TranslationNamespace } from './translation-management-utils';
 
 import { useMemo, useState, useCallback } from 'react';
 
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -18,12 +20,12 @@ import { useTable } from 'src/components/table';
 
 import { AdminBreadcrumbs } from './shared';
 import { RefreshAddActions } from './admin-page-actions';
-import { translationRows } from './translation-management-utils';
 import { TranslationValuesTable } from './translation-values-table';
 import { TranslationLanguagesTable } from './translation-languages-table';
 import { TranslationValueFormDialog } from './translation-value-form-dialog';
 import { TranslationLanguageFormDialog } from './translation-language-form-dialog';
 import { useTranslationManagementActions } from './translation-management-actions';
+import { translationRows, TRANSLATION_NAMESPACES } from './translation-management-utils';
 import { toEnabledFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 import {
   DeleteTranslationValueDialog,
@@ -38,10 +40,11 @@ import {
 export function TranslationManagementView() {
   const { t } = useTranslate('admin');
   const [tab, setTab] = useState<TranslationTab>('values');
+  const [namespace, setNamespace] = useState<TranslationNamespace>('admin');
   const [valueFilters, setValueFilters] = useState(DEFAULT_ADMIN_FILTERS);
   const [languageFilters, setLanguageFilters] = useState(DEFAULT_ADMIN_FILTERS);
-  const data = useTranslationManagementData({ languageFilters, valueFilters });
-  const valueForm = useTranslationValueForm(data.allLanguages.items);
+  const data = useTranslationManagementData({ languageFilters, namespace, valueFilters });
+  const valueForm = useTranslationValueForm(data.allLanguages.items, namespace);
   const languageForm = useTranslationLanguageForm();
   const deleteState = useTranslationDeleteState();
   const actions = useTranslationManagementActions({ deleteState, languageForm, valueForm });
@@ -79,7 +82,25 @@ export function TranslationManagementView() {
             tab === 'values' ? 'translations.filters.searchValues' : 'translations.filters.searchLanguages'
           )}
           onChange={handleFiltersChange}
-        />
+        >
+          {tab === 'values' ? (
+            <TextField
+              select
+              label={t('translations.fields.namespace')}
+              value={namespace}
+              onChange={(event) => {
+                data.valueTable.onResetPage();
+                setNamespace(event.target.value as TranslationNamespace);
+              }}
+            >
+              {TRANSLATION_NAMESPACES.map((value) => (
+                <MenuItem key={value} value={value}>
+                  {t(`translations.namespaces.${value}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : null}
+        </AdminFiltersToolbar>
         {tab === 'values' ? (
           <TranslationValuesTable
             languages={data.allLanguages.items}
@@ -137,9 +158,11 @@ export function TranslationManagementView() {
 
 function useTranslationManagementData({
   languageFilters,
+  namespace,
   valueFilters,
 }: {
   languageFilters: typeof DEFAULT_ADMIN_FILTERS;
+  namespace: TranslationNamespace;
   valueFilters: typeof DEFAULT_ADMIN_FILTERS;
 }) {
   const languageTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'sort_order' });
@@ -152,7 +175,7 @@ function useTranslationManagementData({
   const allLanguages = useTranslationLanguages(0, 100, { enabled: true });
   const entries = useTranslationEntries(valueTable.page, valueTable.rowsPerPage, {
     ...toEnabledFilters(valueFilters),
-    namespace: 'admin',
+    namespace,
   });
   const valueRows = useMemo(() => translationRows(entries.items), [entries.items]);
 

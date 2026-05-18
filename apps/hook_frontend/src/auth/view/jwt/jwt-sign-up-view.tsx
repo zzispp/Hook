@@ -1,7 +1,8 @@
 'use client';
 
-import * as z from 'zod';
-import { useState } from 'react';
+import type * as z from 'zod';
+
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useBoolean } from 'minimal-shared/hooks';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +19,7 @@ import { useRouter } from 'src/routes/hooks';
 import { RouterLink } from 'src/routes/components';
 
 import { useCaptchaConfig } from 'src/actions/captcha';
+import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Form, Field } from 'src/components/hook-form';
@@ -27,23 +29,18 @@ import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
 import { FormHead } from '../../components/form-head';
 import { AuthCaptcha } from '../../components/cap-widget';
+import { signUpSchema } from '../../context/jwt/validation';
 import { SignUpTerms } from '../../components/sign-up-terms';
-import { emailSchema, passwordSchema, usernameSchema } from '../../context/jwt/validation';
 
 // ----------------------------------------------------------------------
 
-export type SignUpSchemaType = z.infer<typeof SignUpSchema>;
-
-export const SignUpSchema = z.object({
-  username: usernameSchema,
-  email: emailSchema,
-  password: passwordSchema,
-});
+type SignUpSchemaType = z.infer<ReturnType<typeof signUpSchema>>;
 
 // ----------------------------------------------------------------------
 
 export function JwtSignUpView() {
   const router = useRouter();
+  const { t } = useTranslate('auth');
 
   const showPassword = useBoolean();
 
@@ -64,9 +61,10 @@ export function JwtSignUpView() {
     email: '',
     password: '',
   };
+  const schema = useMemo(() => signUpSchema(t), [t]);
 
   const methods = useForm({
-    resolver: zodResolver(SignUpSchema),
+    resolver: zodResolver(schema),
     defaultValues,
   });
 
@@ -85,7 +83,7 @@ export function JwtSignUpView() {
       return;
     }
     if (captchaEnabled && !captchaToken) {
-      setErrorMessage('Please complete CAPTCHA verification');
+      setErrorMessage(t('captcha.required'));
       return;
     }
 
@@ -114,22 +112,22 @@ export function JwtSignUpView() {
     <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
       <Field.Text
         name="username"
-        label="Username"
-        placeholder="username"
+        label={t('fields.username')}
+        placeholder={t('placeholders.username')}
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <Field.Text
         name="email"
-        label="Email address"
-        placeholder="name@example.com"
+        label={t('fields.email')}
+        placeholder={t('placeholders.email')}
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <Field.Text
         name="password"
-        label="Password"
-        placeholder="8+ characters"
+        label={t('fields.password')}
+        placeholder={t('placeholders.password')}
         type={showPassword.value ? 'text' : 'password'}
         slotProps={{
           inputLabel: { shrink: true },
@@ -159,9 +157,11 @@ export function JwtSignUpView() {
         variant="contained"
         disabled={captchaUnavailable}
         loading={isSubmitting || captchaConfig.isLoading}
-        loadingIndicator={captchaConfig.isLoading ? 'Loading...' : 'Create account...'}
+        loadingIndicator={
+          captchaConfig.isLoading ? t('common.loading', { ns: 'common' }) : t('actions.signUpLoading')
+        }
       >
-        Create account
+        {t('actions.signUp')}
       </Button>
     </Box>
   );
@@ -169,12 +169,12 @@ export function JwtSignUpView() {
   return (
     <>
       <FormHead
-        title="Get started absolutely free"
+        title={t('signUp.title')}
         description={
           <>
-            {`Already have an account? `}
+            {t('signUp.hasAccount')}{' '}
             <Link component={RouterLink} href={paths.auth.jwt.signIn} variant="subtitle2">
-              Get started
+              {t('signUp.signIn')}
             </Link>
           </>
         }

@@ -6,7 +6,10 @@ use types::{
     user::{NewUser, ReplaceUser, USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, default_user_created_at},
 };
 
-use crate::application::{AppError, AppResult, PasswordHasher, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository};
+use crate::application::{
+    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, SystemUserProvider, SystemUserRecord,
+    UserAuthRecord, UserRepository,
+};
 
 pub(crate) const VALID_PASSWORD: &str = "secret123";
 
@@ -23,12 +26,21 @@ struct RepositoryState {
     replaced: Vec<(UserId, ReplaceUserRecord)>,
     deleted: Vec<UserId>,
     logins: Vec<UserId>,
+    reset_tokens: Vec<StoredPasswordResetToken>,
 }
 
 #[derive(Clone)]
 pub(crate) struct StoredUser {
     user: User,
     password_hash: String,
+}
+
+#[derive(Clone)]
+struct StoredPasswordResetToken {
+    user_id: UserId,
+    token_hash: String,
+    expires_at: time::OffsetDateTime,
+    consumed_at: Option<time::OffsetDateTime>,
 }
 
 #[derive(Clone)]
@@ -67,6 +79,7 @@ impl MemoryUserRepository {
     pub(crate) fn login_records(&self) -> Vec<UserId> {
         self.state.lock().unwrap().logins.clone()
     }
+
 }
 
 #[async_trait]
@@ -182,6 +195,35 @@ impl UserRepository for MemoryUserRepository {
             page: request.page,
             page_size: request.page_size,
         })
+    }
+}
+
+#[async_trait]
+impl PasswordResetRepository for MemoryUserRepository {
+    async fn create_password_reset_token(&self, record: PasswordResetRecord) -> AppResult<()> {
+        self.state.lock().unwrap().reset_tokens.push(StoredPasswordResetToken {
+            user_id: record.user_id,
+            token_hash: record.token_hash,
+            expires_at: record.expires_at,
+            consumed_at: None,
+        });
+        Ok(())
+    }
+
+    async fn consume_password_reset_token(&self, token_hash: &str, password_hash: &str, now: time::OffsetDateTime) -> AppResult<Option<User>> {
+        let mut state = self.state.lock().unwrap();
+        let Some(index) = state.reset_tokens.iter().position(|token| token.token_hash == token_hash) else {
+            return Ok(None);
+        };
+        if state.reset_tokens[index].consumed_at.is_some() || state.reset_tokens[index].expires_at <= now {
+            return Ok(None);
+        }
+        let user_id = state.reset_tokens[index].user_id.clone();
+        let stored = find_stored_user_mut(&mut state, &user_id)?;
+        stored.password_hash = password_hash.to_owned();
+        let user = stored.user.clone();
+        state.reset_tokens[index].consumed_at = Some(now);
+        Ok(Some(user))
     }
 }
 

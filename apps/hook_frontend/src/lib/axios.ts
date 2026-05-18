@@ -113,6 +113,8 @@ export const endpoints = {
     refresh: JWT_REFRESH_ENDPOINT,
     signIn: '/api/auth/sign-in',
     signUp: '/api/auth/sign-up',
+    passwordResetRequest: '/api/auth/password-reset/request',
+    passwordResetConfirm: '/api/auth/password-reset/confirm',
   },
   captcha: {
     config: '/api/captcha/config',

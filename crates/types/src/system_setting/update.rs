@@ -20,6 +20,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub registration_email_verification_enabled: Option<bool>,
     #[serde(default)]
+    pub password_reset_enabled: Option<bool>,
+    #[serde(default)]
     pub email_config_enabled: Option<bool>,
     #[serde(default)]
     pub support_ticket_email_notifications_enabled: Option<bool>,
@@ -102,6 +104,7 @@ impl SystemSettingsUpdate {
             && self.login_captcha_enabled.is_none()
             && self.registration_captcha_enabled.is_none()
             && self.registration_email_verification_enabled.is_none()
+            && self.password_reset_enabled.is_none()
             && self.default_user_grant.is_none()
             && self.default_rate_limit_rpm.is_none()
             && self.scheduling_mode.is_none()

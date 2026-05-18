@@ -1,11 +1,12 @@
 'use client';
 
 import type { TranslationLanguage } from 'src/types/i18n';
-import type { TranslationValueRow , TranslationValueForm } from './translation-management-utils';
+import type { TranslationValueRow, TranslationValueForm } from './translation-management-utils';
 
 import { useTranslate } from 'src/locales/use-locales';
 
-import { SwitchRow, TextFieldRow, ManagementDialog } from './shared';
+import { TRANSLATION_NAMESPACES } from './translation-management-utils';
+import { SwitchRow, SelectOption, TextFieldRow, ManagementDialog } from './shared';
 
 type Props = {
   editing: TranslationValueRow | null;
@@ -34,12 +35,17 @@ export function TranslationValueFormDialog({
   return (
     <ManagementDialog open={open} title={title} submitting={submitting} onClose={onClose} onSubmit={onSubmit}>
       <TextFieldRow
+        select
         required
         disabled={!!editing}
         label={t('translations.fields.namespace')}
         value={form.namespace}
         onChange={(value) => onFormChange({ ...form, namespace: value })}
-      />
+      >
+        {TRANSLATION_NAMESPACES.map((value) => (
+          <SelectOption key={value} value={value} label={t(`translations.namespaces.${value}`)} />
+        ))}
+      </TextFieldRow>
       <TextFieldRow
         required
         disabled={!!editing}
@@ -73,4 +79,3 @@ export function TranslationValueFormDialog({
     </ManagementDialog>
   );
 }
-

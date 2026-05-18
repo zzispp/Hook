@@ -22,6 +22,17 @@ export type SignUpParams = {
   captchaToken?: string;
 };
 
+export type PasswordResetRequestParams = {
+  email: string;
+  lang: string;
+  resetOrigin: string;
+};
+
+export type PasswordResetConfirmParams = {
+  token: string;
+  password: string;
+};
+
 type AuthSessionResponse = {
   access_token: string;
   refresh_token: string;
@@ -75,6 +86,31 @@ export const signUp = async ({
     console.error('Error during sign up:', error);
     throw error;
   }
+};
+
+/** **************************************
+ * Password reset
+ *************************************** */
+export const requestPasswordReset = async ({
+  email,
+  lang,
+  resetOrigin,
+}: PasswordResetRequestParams): Promise<void> => {
+  await axios.post(endpoints.auth.passwordResetRequest, {
+    email: trimCredential(email),
+    lang: trimCredential(lang),
+    reset_origin: trimCredential(resetOrigin),
+  });
+};
+
+export const confirmPasswordReset = async ({
+  token,
+  password,
+}: PasswordResetConfirmParams): Promise<void> => {
+  await axios.post(endpoints.auth.passwordResetConfirm, {
+    token: trimCredential(token),
+    password: trimCredential(password),
+  });
 };
 
 /** **************************************

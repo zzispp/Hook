@@ -13,4 +13,16 @@ pub const AUTH_APIS: &[ApiDefinition] = &[
         path_pattern: "/api/navbar",
         name: "导航菜单",
     },
+    ApiDefinition {
+        code: "password_reset_request",
+        method: "POST",
+        path_pattern: "/api/auth/password-reset/request",
+        name: "请求找回密码",
+    },
+    ApiDefinition {
+        code: "password_reset_confirm",
+        method: "POST",
+        path_pattern: "/api/auth/password-reset/confirm",
+        name: "重置密码",
+    },
 ];

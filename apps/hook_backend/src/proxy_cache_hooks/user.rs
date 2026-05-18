@@ -3,7 +3,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest},
-    user::{Credentials, NewUser, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse},
+    user::{
+        Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse,
+    },
 };
 use user::application::{AppError, AppResult, UserUseCase};
 
@@ -36,6 +38,15 @@ impl UserUseCase for ProxyCachedUserUseCase {
 
     async fn sign_in(&self, input: Credentials) -> AppResult<User> {
         self.inner.sign_in(input).await
+    }
+
+    async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()> {
+        self.inner.request_password_reset(input).await
+    }
+
+    async fn reset_password(&self, input: PasswordResetConfirm) -> AppResult<()> {
+        self.inner.reset_password(input).await?;
+        self.bump_proxy_auth().await
     }
 
     async fn authenticated_user(&self, id: UserId) -> AppResult<User> {

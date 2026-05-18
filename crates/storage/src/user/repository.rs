@@ -13,11 +13,12 @@ use crate::{
     api_token::api_token_records,
     json,
     rbac::role_records,
+    user::password_reset_tokens::{self, ActiveModel as PasswordResetTokenActiveModel},
     user::record::ActiveModel as UserActiveModel,
     user::{UserColumn, UserEntity as Users},
 };
 
-use super::{UserAuthRecord, UserRecord, UserRecordInput};
+use super::{PasswordResetTokenRecord, PasswordResetTokenRecordInput, UserAuthRecord, UserRecord, UserRecordInput};
 
 #[derive(Clone)]
 pub struct UserStore {
@@ -78,6 +79,45 @@ impl UserStore {
         set_wallet_limit_mode(&tx, &id.0, &quota_mode).await?;
         tx.commit().await?;
         self.find_by_id(id).await?.ok_or(StorageError::NotFound)
+    }
+
+    pub async fn create_password_reset_token(&self, input: PasswordResetTokenRecordInput) -> StorageResult<PasswordResetTokenRecord> {
+        PasswordResetTokenActiveModel {
+            id: Set(self.database.next_id()),
+            user_id: Set(input.user_id),
+            token_hash: Set(input.token_hash),
+            expires_at: Set(input.expires_at),
+            consumed_at: Set(None),
+            created_at: Set(time::OffsetDateTime::now_utc()),
+        }
+        .insert(self.database.connection())
+        .await
+        .map(password_reset_token_record)
+        .map_err(StorageError::from)
+    }
+
+    pub async fn consume_password_reset_token(&self, token_hash: &str, password_hash: &str, now: time::OffsetDateTime) -> StorageResult<Option<User>> {
+        let tx = self.database.connection().begin().await?;
+        let Some(token) = self.find_reset_token_in_tx(token_hash, &tx).await? else {
+            tx.commit().await?;
+            return Ok(None);
+        };
+        if token.consumed_at.is_some() || token.expires_at <= now {
+            tx.commit().await?;
+            return Ok(None);
+        }
+        let user_id = UserId(token.user_id.clone());
+        let record = self.find_record_by_id_in_tx(&user_id, &tx).await?.ok_or(StorageError::NotFound)?;
+        let mut user_active: UserActiveModel = record.into();
+        user_active.password_hash = Set(password_hash.to_owned());
+        user_active.updated_at = Set(now);
+        user_active.update(&tx).await?;
+
+        let mut token_active = password_reset_token_active_model(token);
+        token_active.consumed_at = Set(Some(now));
+        token_active.update(&tx).await?;
+        tx.commit().await?;
+        self.find_by_id(user_id).await
     }
 
     pub async fn delete(&self, id: UserId) -> StorageResult<()> {
@@ -190,6 +230,19 @@ impl UserStore {
     async fn find_record(&self, filter: Condition) -> StorageResult<Option<UserRecord>> {
         active_users().filter(filter).one(self.database.connection()).await.map_err(StorageError::from)
     }
+
+    async fn find_reset_token_in_tx(
+        &self,
+        token_hash: &str,
+        tx: &sea_orm::DatabaseTransaction,
+    ) -> StorageResult<Option<PasswordResetTokenRecord>> {
+        password_reset_tokens::Entity::find()
+            .filter(password_reset_tokens::Column::TokenHash.eq(token_hash))
+            .one(tx)
+            .await
+            .map(|record| record.map(password_reset_token_record))
+            .map_err(StorageError::from)
+    }
 }
 
 fn active_users() -> Select<Users> {
@@ -251,4 +304,26 @@ fn wallet_limit_mode(quota_mode: &str) -> &'static str {
 
 fn required_password_hash(password_hash: Option<String>) -> StorageResult<String> {
     password_hash.ok_or_else(|| StorageError::Conflict("password_hash is required".into()))
+}
+
+fn password_reset_token_record(record: password_reset_tokens::Model) -> PasswordResetTokenRecord {
+    PasswordResetTokenRecord {
+        id: record.id,
+        user_id: record.user_id,
+        token_hash: record.token_hash,
+        expires_at: record.expires_at,
+        consumed_at: record.consumed_at,
+        created_at: record.created_at,
+    }
+}
+
+fn password_reset_token_active_model(record: PasswordResetTokenRecord) -> PasswordResetTokenActiveModel {
+    PasswordResetTokenActiveModel {
+        id: Set(record.id),
+        user_id: Set(record.user_id),
+        token_hash: Set(record.token_hash),
+        expires_at: Set(record.expires_at),
+        consumed_at: Set(record.consumed_at),
+        created_at: Set(record.created_at),
+    }
 }

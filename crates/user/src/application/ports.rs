@@ -5,7 +5,9 @@ use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     system_setting::EmailSuffixMode,
-    user::{Credentials, NewUser, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse},
+    user::{
+        Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse,
+    },
 };
 
 use super::AppResult;
@@ -36,6 +38,13 @@ impl ReplaceUserRecord {
 pub struct UserAuthRecord {
     pub user: User,
     pub password_hash: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PasswordResetRecord {
+    pub user_id: UserId,
+    pub token_hash: String,
+    pub expires_at: time::OffsetDateTime,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -81,6 +90,50 @@ pub struct RegistrationSettings {
     pub email_suffixes: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PasswordResetSettings {
+    pub site_name: String,
+    pub password_reset_enabled: bool,
+    pub email_config_enabled: bool,
+    pub smtp_host: String,
+    pub smtp_username: String,
+    pub smtp_password_set: bool,
+    pub smtp_from_email: String,
+    pub smtp_from_name: String,
+    pub smtp_encryption: types::system_setting::SmtpEncryption,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PasswordResetTemplate {
+    pub subject: String,
+    pub html: String,
+}
+
+#[async_trait]
+pub trait PasswordResetRepository: Send + Sync + 'static {
+    async fn create_password_reset_token(&self, record: PasswordResetRecord) -> AppResult<()>;
+    async fn consume_password_reset_token(&self, token_hash: &str, password_hash: &str, now: time::OffsetDateTime) -> AppResult<Option<User>>;
+}
+
+#[async_trait]
+pub trait PasswordResetConfig: Send + Sync + 'static {
+    async fn password_reset_settings(&self) -> AppResult<PasswordResetSettings>;
+    async fn password_reset_template(&self, lang: &str) -> AppResult<PasswordResetTemplate>;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PasswordResetEmail {
+    pub recipient_email: String,
+    pub subject: String,
+    pub html: String,
+    pub settings: PasswordResetSettings,
+}
+
+#[async_trait]
+pub trait PasswordResetMailer: Send + Sync + 'static {
+    async fn send_password_reset(&self, email: PasswordResetEmail) -> AppResult<()>;
+}
+
 #[async_trait]
 pub trait InitialGrantLedger: Send + Sync + 'static {
     async fn grant_initial_balance(&self, user_id: &str, amount: Decimal) -> AppResult<()>;
@@ -95,6 +148,8 @@ pub trait UserWalletCatalog: Send + Sync + 'static {
 pub trait UserUseCase: Send + Sync + 'static {
     async fn sign_up(&self, input: NewUser) -> AppResult<User>;
     async fn sign_in(&self, input: Credentials) -> AppResult<User>;
+    async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()>;
+    async fn reset_password(&self, input: PasswordResetConfirm) -> AppResult<()>;
     async fn authenticated_user(&self, id: UserId) -> AppResult<User>;
     async fn create_user(&self, input: NewUser) -> AppResult<User>;
     async fn replace_user(&self, id: UserId, input: ReplaceUser) -> AppResult<User>;

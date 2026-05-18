@@ -45,6 +45,7 @@ async fn existing_tables(manager: &SchemaManager<'_>) -> Result<Vec<&'static str
 pub fn table_names() -> Vec<&'static str> {
     vec![
         "users",
+        "user_password_reset_tokens",
         "roles",
         "api_permissions",
         "menu_sections",

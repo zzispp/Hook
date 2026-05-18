@@ -10,6 +10,7 @@ pub(in crate::migration::baseline) enum SystemSettings {
     LoginCaptchaEnabled,
     RegistrationCaptchaEnabled,
     RegistrationEmailVerificationEnabled,
+    PasswordResetEnabled,
     EmailConfigEnabled,
     SupportTicketEmailNotificationsEnabled,
     AutoDeleteExpiredTokens,

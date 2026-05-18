@@ -13,6 +13,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(boolean(SystemSettings::LoginCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::RegistrationCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::RegistrationEmailVerificationEnabled).default(false))
+        .col(boolean(SystemSettings::PasswordResetEnabled).default(false))
         .col(boolean(SystemSettings::EmailConfigEnabled).default(false))
         .col(boolean(SystemSettings::SupportTicketEmailNotificationsEnabled).default(false))
         .col(boolean(SystemSettings::AutoDeleteExpiredTokens))

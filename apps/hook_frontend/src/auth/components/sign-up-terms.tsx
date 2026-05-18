@@ -3,9 +3,13 @@ import type { BoxProps } from '@mui/material/Box';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 
+import { useTranslate } from 'src/locales/use-locales';
+
 // ----------------------------------------------------------------------
 
 export function SignUpTerms({ sx, ...other }: BoxProps) {
+  const { t } = useTranslate('auth');
+
   return (
     <Box
       component="span"
@@ -21,15 +25,15 @@ export function SignUpTerms({ sx, ...other }: BoxProps) {
       ]}
       {...other}
     >
-      {'By signing up, I agree to '}
+      {t('terms.prefix')}
       <Link underline="always" color="text.primary">
-        Terms of service
+        {t('terms.terms')}
       </Link>
-      {' and '}
+      {t('terms.middle')}
       <Link underline="always" color="text.primary">
-        Privacy policy
+        {t('terms.privacy')}
       </Link>
-      .
+      {t('terms.suffix')}
     </Box>
   );
 }

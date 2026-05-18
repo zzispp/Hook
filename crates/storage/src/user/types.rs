@@ -18,3 +18,20 @@ pub struct UserAuthRecord {
     pub user: User,
     pub password_hash: String,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PasswordResetTokenRecordInput {
+    pub user_id: String,
+    pub token_hash: String,
+    pub expires_at: time::OffsetDateTime,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PasswordResetTokenRecord {
+    pub id: String,
+    pub user_id: String,
+    pub token_hash: String,
+    pub expires_at: time::OffsetDateTime,
+    pub consumed_at: Option<time::OffsetDateTime>,
+    pub created_at: time::OffsetDateTime,
+}

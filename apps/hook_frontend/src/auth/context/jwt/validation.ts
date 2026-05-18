@@ -9,6 +9,8 @@ const USERNAME_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9_-]*[A-Za-z0-9])?$/;
 
 export const trimCredential = (value: string) => value.trim();
 
+type AuthT = (key: string, options?: Record<string, unknown>) => string;
+
 export const usernameSchema = z
   .string()
   .transform(trimCredential)
@@ -68,4 +70,104 @@ function passwordLengthMessage() {
 
 function usernamePatternMessage() {
   return 'Username can only contain letters, numbers, underscores, and hyphens, and must start and end with a letter or number';
+}
+
+export function signInSchema(t: AuthT) {
+  return z.object({
+    identifier: identifierSchemaFor(t),
+    password: passwordSchemaFor(t),
+  });
+}
+
+export function signUpSchema(t: AuthT) {
+  return z.object({
+    username: usernameSchemaFor(t),
+    email: emailSchemaFor(t),
+    password: passwordSchemaFor(t),
+  });
+}
+
+export function forgotPasswordSchema(t: AuthT) {
+  return z.object({
+    email: emailSchemaFor(t),
+  });
+}
+
+export function resetPasswordSchema(t: AuthT) {
+  return z.object({
+    password: passwordSchemaFor(t),
+  });
+}
+
+function usernameSchemaFor(t: AuthT) {
+  return z
+    .string()
+    .transform(trimCredential)
+    .pipe(
+      z
+        .string()
+        .min(USERNAME_MIN_LENGTH, { error: () => t('validation.usernameLength', usernameLengthParams()) })
+        .max(USERNAME_MAX_LENGTH, { error: () => t('validation.usernameLength', usernameLengthParams()) })
+        .regex(USERNAME_PATTERN, { error: () => t('validation.usernamePattern') })
+    );
+}
+
+function passwordSchemaFor(t: AuthT) {
+  return z
+    .string()
+    .transform(trimCredential)
+    .pipe(
+      z
+        .string()
+        .min(PASSWORD_MIN_LENGTH, { error: () => t('validation.passwordLength', passwordLengthParams()) })
+        .max(PASSWORD_MAX_LENGTH, { error: () => t('validation.passwordLength', passwordLengthParams()) })
+    );
+}
+
+function emailSchemaFor(t: AuthT) {
+  return z
+    .string()
+    .transform(trimCredential)
+    .pipe(
+      z.email({
+        error: ({ input }) =>
+          input ? t('validation.emailInvalid') : t('validation.emailRequired'),
+      })
+    );
+}
+
+function identifierSchemaFor(t: AuthT) {
+  return z
+    .string()
+    .transform(trimCredential)
+    .pipe(
+      z
+        .string()
+        .min(1, { error: () => t('validation.identifierRequired') })
+        .refine((value) => isValidIdentifierWithSchema(value, t), {
+          error: () => t('validation.identifierInvalid'),
+        })
+    );
+}
+
+function isValidIdentifierWithSchema(value: string, t: AuthT) {
+  if (value.includes('@')) {
+    return emailSchemaFor(t).safeParse(value).success;
+  }
+
+  return usernameSchemaFor(t).safeParse(value).success;
+}
+
+function usernameLengthParams() {
+  return {
+    min: USERNAME_MIN_LENGTH,
+    max: USERNAME_MAX_LENGTH,
+  };
+}
+
+function passwordLengthParams() {
+  return {
+    min: PASSWORD_MIN_LENGTH,
+    max: PASSWORD_MAX_LENGTH,
+  };
 }

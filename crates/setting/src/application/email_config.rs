@@ -4,12 +4,16 @@ use super::{SettingError, SettingResult};
 
 const MIN_SMTP_PORT: i64 = 1;
 const REGISTRATION_EMAIL_CONFIG_ERROR: &str = "registration_email_verification_enabled requires email_config_enabled and complete SMTP configuration";
+const PASSWORD_RESET_EMAIL_CONFIG_ERROR: &str = "password_reset_enabled requires email_config_enabled and complete SMTP configuration";
 const SUPPORT_TICKET_EMAIL_CONFIG_ERROR: &str = "support_ticket_email_notifications_enabled requires email_config_enabled and complete SMTP configuration";
 
 pub fn validate_email_feature_prerequisites(input: &SystemSettingsUpdate, current: &SystemSettingsResponse) -> SettingResult<()> {
     let state = effective_email_feature_state(input, current);
     if state.registration_email_verification_enabled && !state.email_config_ready() {
         return Err(SettingError::InvalidInput(REGISTRATION_EMAIL_CONFIG_ERROR.into()));
+    }
+    if state.password_reset_enabled && !state.email_config_ready() {
+        return Err(SettingError::InvalidInput(PASSWORD_RESET_EMAIL_CONFIG_ERROR.into()));
     }
     if state.support_ticket_email_notifications_enabled && !state.email_config_ready() {
         return Err(SettingError::InvalidInput(SUPPORT_TICKET_EMAIL_CONFIG_ERROR.into()));
@@ -20,6 +24,7 @@ pub fn validate_email_feature_prerequisites(input: &SystemSettingsUpdate, curren
 struct EmailFeatureState {
     email_config_enabled: bool,
     registration_email_verification_enabled: bool,
+    password_reset_enabled: bool,
     support_ticket_email_notifications_enabled: bool,
     smtp_config_complete: bool,
 }
@@ -36,6 +41,7 @@ fn effective_email_feature_state(input: &SystemSettingsUpdate, current: &SystemS
         registration_email_verification_enabled: input
             .registration_email_verification_enabled
             .unwrap_or(current.registration_email_verification_enabled),
+        password_reset_enabled: input.password_reset_enabled.unwrap_or(current.password_reset_enabled),
         support_ticket_email_notifications_enabled: input
             .support_ticket_email_notifications_enabled
             .unwrap_or(current.support_ticket_email_notifications_enabled),

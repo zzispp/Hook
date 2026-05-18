@@ -1056,6 +1056,7 @@
       "loginCaptchaEnabled": "启用登录验证码",
       "registrationCaptchaEnabled": "启用注册验证码",
       "registrationEmailVerificationEnabled": "启用注册邮件验证",
+      "passwordResetEnabled": "启用找回密码",
       "emailConfigEnabled": "开启邮件配置",
       "supportTicketEmailNotificationsEnabled": "启用工单邮件通知",
       "autoDeleteExpiredTokens": "自动删除过期令牌",
@@ -1103,6 +1104,7 @@
       "providerMaxResponseBodySizeKb": "超过此大小的 Provider 响应体将被截断记录。",
       "providerSensitiveRequestHeaders": "逗号分隔；Provider 请求头和响应头命中后会脱敏。",
       "registrationEmailVerificationRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
+      "passwordResetRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
       "supportTicketEmailNotificationsRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。"
     },
     "requestRecord": {
@@ -1166,6 +1168,10 @@
     "tabs": {
       "values": "翻译值",
       "languages": "语言"
+    },
+    "namespaces": {
+      "admin": "管理后台",
+      "auth": "登录注册"
     },
     "fields": {
       "namespace": "命名空间",

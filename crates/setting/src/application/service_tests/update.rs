@@ -57,6 +57,78 @@ async fn update_allows_email_verification_when_payload_completes_email_config() 
 }
 
 #[tokio::test]
+async fn update_rejects_password_reset_without_enabled_email_config() {
+    let mut settings = complete_email_settings();
+    settings.email_config_enabled = false;
+    let (service, update) = test_update_service(settings);
+
+    let result = service
+        .update_system_settings(SystemSettingsUpdate {
+            password_reset_enabled: Some(true),
+            ..Default::default()
+        })
+        .await;
+
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "invalid input: password_reset_enabled requires email_config_enabled and complete SMTP configuration"
+    );
+    assert!(update.lock().unwrap().is_none());
+}
+
+#[tokio::test]
+async fn update_rejects_password_reset_without_complete_smtp_config() {
+    let mut settings = system_settings_response();
+    settings.email_config_enabled = true;
+    let (service, update) = test_update_service(settings);
+
+    let result = service
+        .update_system_settings(SystemSettingsUpdate {
+            password_reset_enabled: Some(true),
+            ..Default::default()
+        })
+        .await;
+
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "invalid input: password_reset_enabled requires email_config_enabled and complete SMTP configuration"
+    );
+    assert!(update.lock().unwrap().is_none());
+}
+
+#[tokio::test]
+async fn update_allows_password_reset_when_payload_completes_email_config() {
+    let (service, update) = test_update_service(system_settings_response());
+    let input = complete_password_reset_update();
+
+    service.update_system_settings(input.clone()).await.unwrap();
+
+    let record = update.lock().unwrap().clone().unwrap();
+    assert_eq!(record.input, input);
+    assert_eq!(record.encrypted_smtp_password.as_deref(), Some("encrypted:smtp-password"));
+}
+
+#[tokio::test]
+async fn update_rejects_disabling_email_config_while_password_reset_remains_enabled() {
+    let mut settings = complete_email_settings();
+    settings.password_reset_enabled = true;
+    let (service, update) = test_update_service(settings);
+
+    let result = service
+        .update_system_settings(SystemSettingsUpdate {
+            email_config_enabled: Some(false),
+            ..Default::default()
+        })
+        .await;
+
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "invalid input: password_reset_enabled requires email_config_enabled and complete SMTP configuration"
+    );
+    assert!(update.lock().unwrap().is_none());
+}
+
+#[tokio::test]
 async fn update_rejects_disabling_email_config_while_email_verification_remains_enabled() {
     let mut settings = complete_email_settings();
     settings.registration_email_verification_enabled = true;
@@ -74,6 +146,13 @@ async fn update_rejects_disabling_email_config_while_email_verification_remains_
         "invalid input: registration_email_verification_enabled requires email_config_enabled and complete SMTP configuration"
     );
     assert!(update.lock().unwrap().is_none());
+}
+
+fn complete_password_reset_update() -> SystemSettingsUpdate {
+    SystemSettingsUpdate {
+        password_reset_enabled: Some(true),
+        ..complete_email_verification_update()
+    }
 }
 
 #[tokio::test]

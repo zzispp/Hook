@@ -7,7 +7,12 @@ use types::{
     user::{Credentials, NewUser, ReplaceUser, USER_QUOTA_MODE_UNLIMITED, USER_QUOTA_MODE_WALLET},
 };
 
-use crate::application::{AppError, AppResult};
+use crate::application::{AppError, AppResult, PasswordResetConfirm, PasswordResetRequest};
+
+const MAX_LANG_LEN: usize = 32;
+const MAX_RESET_ORIGIN_LEN: usize = 512;
+const RESET_TOKEN_MIN_LENGTH: usize = 32;
+const RESET_TOKEN_MAX_LENGTH: usize = 512;
 
 pub(super) fn validate_credentials(input: &Credentials) -> AppResult<()> {
     reject_blank("identifier", &input.identifier)?;
@@ -36,6 +41,17 @@ pub(super) fn validate_replace_user(input: &ReplaceUser) -> AppResult<()> {
     validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
     validate_rate_limit(input.rate_limit_rpm)?;
     validate_quota_mode(&input.quota_mode)
+}
+
+pub(super) fn validate_password_reset_request(input: &PasswordResetRequest) -> AppResult<()> {
+    validate_email(&input.email)?;
+    validate_lang(&input.lang)?;
+    validate_reset_origin(&input.reset_origin)
+}
+
+pub(super) fn validate_password_reset_confirm(input: &PasswordResetConfirm) -> AppResult<()> {
+    reject_length("reset token", &input.token, RESET_TOKEN_MIN_LENGTH, RESET_TOKEN_MAX_LENGTH)?;
+    validate_password(&input.password)
 }
 
 pub(super) fn validate_page(page: PageRequest) -> AppResult<()> {
@@ -83,6 +99,21 @@ pub(super) fn sanitize_replace_user(input: ReplaceUser) -> ReplaceUser {
         allowed_provider_ids: normalize_ids(input.allowed_provider_ids),
         rate_limit_rpm: input.rate_limit_rpm,
         quota_mode: input.quota_mode,
+    }
+}
+
+pub(super) fn sanitize_password_reset_request(input: PasswordResetRequest) -> PasswordResetRequest {
+    PasswordResetRequest {
+        email: input.email.trim().to_ascii_lowercase(),
+        lang: input.lang.trim().to_ascii_lowercase(),
+        reset_origin: input.reset_origin.trim().trim_end_matches('/').to_owned(),
+    }
+}
+
+pub(super) fn sanitize_password_reset_confirm(input: PasswordResetConfirm) -> PasswordResetConfirm {
+    PasswordResetConfirm {
+        token: input.token.trim().to_owned(),
+        password: input.password.trim().to_owned(),
     }
 }
 
@@ -164,6 +195,27 @@ fn invalid_email() -> AppError {
 fn reject_blank(field: &str, value: &str) -> AppResult<()> {
     if value.trim().is_empty() {
         return Err(AppError::InvalidInput(format!("{field} cannot be blank")));
+    }
+    Ok(())
+}
+
+fn validate_lang(value: &str) -> AppResult<()> {
+    reject_length("lang", value, 1, MAX_LANG_LEN)?;
+    if !value.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_') {
+        return Err(AppError::InvalidInput("lang contains invalid characters".into()));
+    }
+    Ok(())
+}
+
+fn validate_reset_origin(value: &str) -> AppResult<()> {
+    reject_length("reset_origin", value, 1, MAX_RESET_ORIGIN_LEN)?;
+    let has_valid_scheme = value.starts_with("https://") || value.starts_with("http://");
+    let has_path = value
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .contains('/');
+    if !has_valid_scheme || has_path {
+        return Err(AppError::InvalidInput("reset_origin must be an http or https origin".into()));
     }
     Ok(())
 }

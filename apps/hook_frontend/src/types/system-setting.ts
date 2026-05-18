@@ -11,6 +11,7 @@ export type SystemSettings = {
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
+  password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
   auto_delete_expired_tokens: boolean;
@@ -57,6 +58,7 @@ export type SystemSettingsUpdate = Partial<{
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
+  password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
   auto_delete_expired_tokens: boolean;

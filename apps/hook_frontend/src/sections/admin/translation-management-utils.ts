@@ -12,6 +12,8 @@ export type TranslationValueForm = {
 
 export type TranslationLanguageForm = TranslationLanguageInput;
 
+export type TranslationNamespace = 'admin' | 'auth';
+
 export type TranslationValueRow = {
   id: string;
   namespace: string;
@@ -29,6 +31,8 @@ export const DEFAULT_TRANSLATION_VALUE_FORM: TranslationValueForm = {
   values: {},
   enabled: true,
 };
+
+export const TRANSLATION_NAMESPACES: TranslationNamespace[] = ['admin', 'auth'];
 
 export const DEFAULT_TRANSLATION_LANGUAGE_FORM: TranslationLanguageForm = {
   code: '',
@@ -110,4 +114,3 @@ function compareRows(left: TranslationValueRow, right: TranslationValueRow) {
 function rowId(entry: TranslationEntry) {
   return `${entry.namespace}:${entry.group_key}:${entry.item_key}`;
 }
-

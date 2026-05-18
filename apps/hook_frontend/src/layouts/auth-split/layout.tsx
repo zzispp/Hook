@@ -14,6 +14,8 @@ import Alert from '@mui/material/Alert';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { useTranslate } from 'src/locales/use-locales';
+
 import { Logo } from 'src/components/logo';
 
 import { AuthSplitSection } from './section';
@@ -42,6 +44,8 @@ export function AuthSplitLayout({
   slotProps,
   layoutQuery = 'md',
 }: AuthSplitLayoutProps) {
+  const { t } = useTranslate('auth');
+
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
       container: { maxWidth: false },
@@ -68,7 +72,7 @@ export function AuthSplitLayout({
             color="inherit"
             sx={{ typography: 'subtitle2' }}
           >
-            Need help?
+            {t('layout.help')}
           </Link>
 
           {/** @slot Settings button */}

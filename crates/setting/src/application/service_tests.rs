@@ -110,6 +110,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         login_captcha_enabled: false,
         registration_captcha_enabled: false,
         registration_email_verification_enabled: false,
+        password_reset_enabled: false,
         email_config_enabled: false,
         support_ticket_email_notifications_enabled: false,
         auto_delete_expired_tokens: false,

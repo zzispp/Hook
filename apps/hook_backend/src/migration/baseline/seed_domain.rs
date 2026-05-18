@@ -5,8 +5,11 @@ use super::iden::*;
 
 const DEFAULT_GROUP_ID: &str = "00000000-0000-7000-8000-000000000401";
 pub(in crate::migration) const ADMIN_NAMESPACE: &str = "admin";
+pub(in crate::migration) const AUTH_NAMESPACE: &str = "auth";
 pub(in crate::migration) const CN_ADMIN_TRANSLATIONS: &str = include_str!("../defaults/i18n/admin.cn.json");
 pub(in crate::migration) const EN_ADMIN_TRANSLATIONS: &str = include_str!("../defaults/i18n/admin.en.json");
+pub(in crate::migration) const CN_AUTH_TRANSLATIONS: &str = include_str!("../defaults/i18n/auth.cn.json");
+pub(in crate::migration) const EN_AUTH_TRANSLATIONS: &str = include_str!("../defaults/i18n/auth.en.json");
 
 pub(super) async fn seed_domain_defaults(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     seed_default_group(manager).await?;
@@ -85,7 +88,7 @@ async fn seed_admin_translations(manager: &SchemaManager<'_>) -> Result<(), DbEr
         TranslationEntries::CreatedAt,
         TranslationEntries::UpdatedAt,
     ]);
-    for (index, entry) in admin_translation_seeds()?.into_iter().enumerate() {
+    for (index, entry) in translation_seeds()?.into_iter().enumerate() {
         insert.values_panic(translation_values(index, entry));
     }
     manager.execute(insert.to_owned()).await
@@ -107,7 +110,7 @@ fn language_values(code: &'static str, name: &'static str, native_name: &'static
 fn translation_values(index: usize, entry: TranslationSeed) -> [Expr; 10] {
     [
         default_translation_id(index).into(),
-        ADMIN_NAMESPACE.into(),
+        entry.namespace.into(),
         entry.group_key.into(),
         entry.item_key.into(),
         entry.lang_code.into(),
@@ -119,46 +122,56 @@ fn translation_values(index: usize, entry: TranslationSeed) -> [Expr; 10] {
     ]
 }
 
-pub(in crate::migration) fn admin_translation_seeds() -> Result<Vec<TranslationSeed>, DbErr> {
+pub(in crate::migration) fn translation_seeds() -> Result<Vec<TranslationSeed>, DbErr> {
     let mut seeds = Vec::new();
-    for (lang, source) in [("cn", CN_ADMIN_TRANSLATIONS), ("en", EN_ADMIN_TRANSLATIONS)] {
-        seeds.extend(flatten_admin_translations(lang, source)?);
+    for (namespace, lang, source) in [
+        (ADMIN_NAMESPACE, "cn", CN_ADMIN_TRANSLATIONS),
+        (ADMIN_NAMESPACE, "en", EN_ADMIN_TRANSLATIONS),
+        (AUTH_NAMESPACE, "cn", CN_AUTH_TRANSLATIONS),
+        (AUTH_NAMESPACE, "en", EN_AUTH_TRANSLATIONS),
+    ] {
+        seeds.extend(flatten_translations(namespace, lang, source)?);
     }
     Ok(seeds)
 }
 
-pub(in crate::migration) fn flatten_admin_translations(lang_code: &'static str, source: &str) -> Result<Vec<TranslationSeed>, DbErr> {
+pub(in crate::migration) fn flatten_translations(
+    namespace: &'static str,
+    lang_code: &'static str,
+    source: &str,
+) -> Result<Vec<TranslationSeed>, DbErr> {
     let value = serde_json::from_str(source).map_err(|error| DbErr::Migration(error.to_string()))?;
     let mut entries = Vec::new();
-    flatten_value(lang_code, &mut entries, Vec::new(), &value);
+    flatten_value(namespace, lang_code, &mut entries, Vec::new(), &value);
     Ok(entries)
 }
 
-fn flatten_value(lang_code: &'static str, entries: &mut Vec<TranslationSeed>, path: Vec<String>, value: &Value) {
+fn flatten_value(namespace: &'static str, lang_code: &'static str, entries: &mut Vec<TranslationSeed>, path: Vec<String>, value: &Value) {
     match value {
         Value::Object(map) => {
             for (key, child) in map {
                 let mut next_path = path.clone();
                 next_path.push(key.clone());
-                flatten_value(lang_code, entries, next_path, child);
+                flatten_value(namespace, lang_code, entries, next_path, child);
             }
         }
         Value::String(text) if path.len() >= 2 => entries.push(TranslationSeed {
+            namespace,
             lang_code,
             group_key: path[0].clone(),
             item_key: path[1..].join("."),
             value: text.clone(),
         }),
-        Value::Array(items) => flatten_array(lang_code, entries, path, items),
+        Value::Array(items) => flatten_array(namespace, lang_code, entries, path, items),
         _ => {}
     }
 }
 
-fn flatten_array(lang_code: &'static str, entries: &mut Vec<TranslationSeed>, path: Vec<String>, items: &[Value]) {
+fn flatten_array(namespace: &'static str, lang_code: &'static str, entries: &mut Vec<TranslationSeed>, path: Vec<String>, items: &[Value]) {
     for (index, item) in items.iter().enumerate() {
         let mut next_path = path.clone();
         next_path.push(index.to_string());
-        flatten_value(lang_code, entries, next_path, item);
+        flatten_value(namespace, lang_code, entries, next_path, item);
     }
 }
 
@@ -167,6 +180,7 @@ fn default_translation_id(index: usize) -> String {
 }
 
 pub(in crate::migration) struct TranslationSeed {
+    pub(in crate::migration) namespace: &'static str,
     pub(in crate::migration) lang_code: &'static str,
     pub(in crate::migration) group_key: String,
     pub(in crate::migration) item_key: String,
@@ -180,7 +194,7 @@ mod tests {
     #[test]
     fn flatten_admin_translations_keeps_string_arrays() {
         let source = r#"{"dashboard":{"months":["Jan","Feb"],"welcome":"Welcome"}}"#;
-        let entries = flatten_admin_translations("en", source).unwrap();
+        let entries = flatten_translations(ADMIN_NAMESPACE, "en", source).unwrap();
         let keys: Vec<_> = entries
             .iter()
             .map(|entry| (entry.group_key.as_str(), entry.item_key.as_str(), entry.value.as_str()))

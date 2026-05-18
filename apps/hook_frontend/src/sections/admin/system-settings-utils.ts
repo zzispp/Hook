@@ -11,6 +11,7 @@ export type SystemSettingsForm = {
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
+  password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
   auto_delete_expired_tokens: boolean;
@@ -109,6 +110,7 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   login_captcha_enabled: false,
   registration_captcha_enabled: false,
   registration_email_verification_enabled: false,
+  password_reset_enabled: false,
   email_config_enabled: false,
   support_ticket_email_notifications_enabled: false,
   auto_delete_expired_tokens: false,
@@ -153,6 +155,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     login_captcha_enabled: settings.login_captcha_enabled,
     registration_captcha_enabled: settings.registration_captcha_enabled,
     registration_email_verification_enabled: settings.registration_email_verification_enabled,
+    password_reset_enabled: settings.password_reset_enabled,
     email_config_enabled: settings.email_config_enabled,
     support_ticket_email_notifications_enabled:
       settings.support_ticket_email_notifications_enabled,
@@ -203,6 +206,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     login_captcha_enabled: form.login_captcha_enabled,
     registration_captcha_enabled: form.registration_captcha_enabled,
     registration_email_verification_enabled: form.registration_email_verification_enabled,
+    password_reset_enabled: form.password_reset_enabled,
     email_config_enabled: form.email_config_enabled,
     support_ticket_email_notifications_enabled:
       form.support_ticket_email_notifications_enabled,

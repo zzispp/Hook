@@ -1056,6 +1056,7 @@
       "loginCaptchaEnabled": "Enable login CAPTCHA",
       "registrationCaptchaEnabled": "Enable registration CAPTCHA",
       "registrationEmailVerificationEnabled": "Enable registration email verification",
+      "passwordResetEnabled": "Enable password reset",
       "emailConfigEnabled": "Enable email configuration",
       "supportTicketEmailNotificationsEnabled": "Enable ticket email notifications",
       "autoDeleteExpiredTokens": "Auto-delete expired tokens",
@@ -1103,6 +1104,7 @@
       "providerMaxResponseBodySizeKb": "Provider response bodies larger than this are truncated before recording.",
       "providerSensitiveRequestHeaders": "Comma-separated headers redacted from Provider request and response headers.",
       "registrationEmailVerificationRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first.",
+      "passwordResetRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first.",
       "supportTicketEmailNotificationsRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first."
     },
     "requestRecord": {
@@ -1166,6 +1168,10 @@
     "tabs": {
       "values": "Translation values",
       "languages": "Languages"
+    },
+    "namespaces": {
+      "admin": "Admin",
+      "auth": "Auth"
     },
     "fields": {
       "namespace": "Namespace",

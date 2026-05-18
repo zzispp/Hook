@@ -56,6 +56,19 @@ pub struct Credentials {
     pub password: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PasswordResetRequest {
+    pub email: String,
+    pub lang: String,
+    pub reset_origin: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PasswordResetConfirm {
+    pub token: String,
+    pub password: String,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct UserListFilters {
     pub search: Option<String>,

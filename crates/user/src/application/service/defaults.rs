@@ -4,7 +4,10 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{system_setting::EmailSuffixMode, user::UserWalletSummaryResponse};
 
-use crate::application::{AppResult, InitialGrantLedger, RegistrationPolicy, RegistrationSettings, SystemUserProvider, SystemUserRecord, UserWalletCatalog};
+use crate::application::{
+    AppResult, InitialGrantLedger, PasswordResetConfig, PasswordResetEmail, PasswordResetMailer, PasswordResetTemplate, RegistrationPolicy,
+    RegistrationSettings, SystemUserProvider, SystemUserRecord, UserWalletCatalog,
+};
 
 #[derive(Clone, Copy)]
 pub struct NoSystemUserProvider;
@@ -17,6 +20,12 @@ pub struct NoInitialGrantLedger;
 
 #[derive(Clone, Copy)]
 pub struct NoUserWalletCatalog;
+
+#[derive(Clone, Copy)]
+pub struct NoPasswordResetConfig;
+
+#[derive(Clone, Copy)]
+pub struct NoPasswordResetMailer;
 
 impl SystemUserProvider for NoSystemUserProvider {
     fn system_user(&self) -> Option<SystemUserRecord> {
@@ -47,5 +56,29 @@ impl InitialGrantLedger for NoInitialGrantLedger {
 impl UserWalletCatalog for NoUserWalletCatalog {
     async fn wallet_summaries(&self, _user_ids: &[String]) -> AppResult<BTreeMap<String, UserWalletSummaryResponse>> {
         Ok(BTreeMap::new())
+    }
+}
+
+#[async_trait]
+impl PasswordResetConfig for NoPasswordResetConfig {
+    async fn password_reset_settings(&self) -> AppResult<crate::application::PasswordResetSettings> {
+        Err(crate::application::AppError::Infrastructure(
+            "password reset configuration is not available".into(),
+        ))
+    }
+
+    async fn password_reset_template(&self, _lang: &str) -> AppResult<PasswordResetTemplate> {
+        Err(crate::application::AppError::Infrastructure(
+            "password reset template is not available".into(),
+        ))
+    }
+}
+
+#[async_trait]
+impl PasswordResetMailer for NoPasswordResetMailer {
+    async fn send_password_reset(&self, _email: PasswordResetEmail) -> AppResult<()> {
+        Err(crate::application::AppError::Infrastructure(
+            "password reset mailer is not available".into(),
+        ))
     }
 }

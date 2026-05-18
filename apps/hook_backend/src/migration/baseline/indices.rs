@@ -6,6 +6,18 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
     vec![
         index("index_users_by_username", Users::Table, Users::Username, true),
         index("index_users_by_email", Users::Table, Users::Email, true),
+        index(
+            "index_user_password_reset_tokens_by_hash",
+            UserPasswordResetTokens::Table,
+            UserPasswordResetTokens::TokenHash,
+            true,
+        ),
+        index(
+            "index_user_password_reset_tokens_by_user",
+            UserPasswordResetTokens::Table,
+            UserPasswordResetTokens::UserId,
+            false,
+        ),
         index("index_api_permissions_by_code", ApiPermissions::Table, ApiPermissions::Code, true),
         index("index_menu_sections_by_code", MenuSections::Table, MenuSections::Code, true),
         index("index_menu_items_by_section_id", MenuItems::Table, MenuItems::SectionId, false),

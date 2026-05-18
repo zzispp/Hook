@@ -40,6 +40,10 @@ auth:
       path_pattern: "/api/auth/sign-up"
     - methods: ["POST"]
       path_pattern: "/api/auth/refresh"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/password-reset/request"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/password-reset/confirm"
     - methods: ["GET"]
       path_pattern: "/api/captcha/config"
     - methods: ["POST"]

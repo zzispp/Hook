@@ -20,3 +20,14 @@ pub(in crate::migration::baseline) enum Users {
     RateLimitRpm,
     QuotaMode,
 }
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum UserPasswordResetTokens {
+    Table,
+    Id,
+    UserId,
+    TokenHash,
+    ExpiresAt,
+    ConsumedAt,
+    CreatedAt,
+}

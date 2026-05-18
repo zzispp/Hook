@@ -12,6 +12,7 @@ pub struct SystemSettings {
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,
     pub registration_email_verification_enabled: bool,
+    pub password_reset_enabled: bool,
     pub email_config_enabled: bool,
     pub support_ticket_email_notifications_enabled: bool,
     pub auto_delete_expired_tokens: bool,

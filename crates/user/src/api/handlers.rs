@@ -12,8 +12,8 @@ use types::{
     pagination::PageRequest,
     response::ApiResponse,
     user::{
-        ListUsersQuery, NewUser, RefreshTokenPayload, SignInPayload, SignUpPayload, USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, UserPayload,
-        UserResponse, UsersPageResponse,
+        ListUsersQuery, NewUser, PasswordResetConfirmPayload, PasswordResetRequestPayload, RefreshTokenPayload, SignInPayload, SignUpPayload,
+        USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, UserPayload, UserResponse, UsersPageResponse,
     },
 };
 
@@ -56,6 +56,16 @@ pub async fn refresh(State(state): State<ApiState>, Json(payload): Json<RefreshT
     let (user_id, tokens) = state.tokens.refresh(&payload.refresh_token)?;
     state.users.authenticated_user(user_id).await?;
     Ok(ok(tokens.into()))
+}
+
+pub async fn request_password_reset(State(state): State<ApiState>, Json(payload): Json<PasswordResetRequestPayload>) -> ApiResult<ApiJson<()>> {
+    state.users.request_password_reset(payload.into()).await?;
+    Ok(ok(()))
+}
+
+pub async fn reset_password(State(state): State<ApiState>, Json(payload): Json<PasswordResetConfirmPayload>) -> ApiResult<ApiJson<()>> {
+    state.users.reset_password(payload.into()).await?;
+    Ok(ok(()))
 }
 
 pub async fn me(State(state): State<ApiState>, headers: HeaderMap) -> ApiResult<ApiJson<MeResponse>> {

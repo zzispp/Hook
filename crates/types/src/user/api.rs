@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::pagination::{Page, PageRequest};
 
-use super::{Credentials, NewUser, ReplaceUser, User, UserListFilters};
+use super::{Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserListFilters};
 
 #[derive(Debug, Deserialize)]
 pub struct UserPayload {
@@ -37,6 +37,19 @@ pub struct SignInPayload {
     pub password: String,
     #[serde(default)]
     pub captcha_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PasswordResetRequestPayload {
+    pub email: String,
+    pub lang: String,
+    pub reset_origin: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PasswordResetConfirmPayload {
+    pub token: String,
+    pub password: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -134,6 +147,25 @@ impl From<SignInPayload> for Credentials {
     fn from(value: SignInPayload) -> Self {
         Self {
             identifier: value.identifier,
+            password: value.password,
+        }
+    }
+}
+
+impl From<PasswordResetRequestPayload> for PasswordResetRequest {
+    fn from(value: PasswordResetRequestPayload) -> Self {
+        Self {
+            email: value.email,
+            lang: value.lang,
+            reset_origin: value.reset_origin,
+        }
+    }
+}
+
+impl From<PasswordResetConfirmPayload> for PasswordResetConfirm {
+    fn from(value: PasswordResetConfirmPayload) -> Self {
+        Self {
+            token: value.token,
             password: value.password,
         }
     }

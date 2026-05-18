@@ -7,6 +7,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 
 import { CONFIG } from 'src/global-config';
+import { useTranslate } from 'src/locales/use-locales';
 
 // ----------------------------------------------------------------------
 
@@ -20,11 +21,15 @@ export type AuthSplitSectionProps = BoxProps & {
 export function AuthSplitSection({
   sx,
   layoutQuery = 'md',
-  title = 'Manage the job',
+  title,
   imgUrl = `${CONFIG.assetsDir}/assets/illustrations/illustration-dashboard.webp`,
-  subtitle = 'More effectively with optimized workflows.',
+  subtitle,
   ...other
 }: AuthSplitSectionProps) {
+  const { t } = useTranslate('auth');
+  const sectionTitle = title ?? t('layout.sectionTitle');
+  const sectionSubtitle = subtitle ?? t('layout.sectionSubtitle');
+
   return (
     <Box
       sx={[
@@ -56,12 +61,12 @@ export function AuthSplitSection({
     >
       <div>
         <Typography variant="h3" sx={{ textAlign: 'center' }}>
-          {title}
+          {sectionTitle}
         </Typography>
 
-        {subtitle && (
+        {sectionSubtitle && (
           <Typography sx={{ color: 'text.secondary', textAlign: 'center', mt: 2 }}>
-            {subtitle}
+            {sectionSubtitle}
           </Typography>
         )}
       </div>

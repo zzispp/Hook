@@ -106,6 +106,7 @@ function BaseSection({
   const emailVerificationReady = form.email_config_enabled && emailConfigComplete(form);
   const emailVerificationDisabled =
     !emailVerificationReady && !form.registration_email_verification_enabled;
+  const passwordResetDisabled = !emailVerificationReady && !form.password_reset_enabled;
 
   return (
     <SettingsSection title={t('systemSettings.sections.base')}>
@@ -144,6 +145,22 @@ function BaseSection({
             setForm((current) => ({
               ...current,
               registration_email_verification_enabled: checked,
+            }))
+          }
+        />
+        <SwitchRow
+          checked={form.password_reset_enabled}
+          disabled={passwordResetDisabled}
+          label={t('systemSettings.fields.passwordResetEnabled')}
+          helperText={
+            emailVerificationReady
+              ? undefined
+              : t('systemSettings.helper.passwordResetRequiresEmailConfig')
+          }
+          onChange={(checked) =>
+            setForm((current) => ({
+              ...current,
+              password_reset_enabled: checked,
             }))
           }
         />

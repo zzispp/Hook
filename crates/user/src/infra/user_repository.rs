@@ -14,7 +14,8 @@ use types::{
 };
 
 use crate::application::{
-    AppError, AppResult, InitialGrantLedger, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, UserAuthRecord, UserRepository, UserWalletCatalog,
+    AppError, AppResult, InitialGrantLedger, PasswordResetRecord, PasswordResetRepository, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord,
+    UserAuthRecord, UserRepository, UserWalletCatalog,
 };
 
 #[derive(Clone)]
@@ -129,6 +130,24 @@ impl UserRepository for StorageUserRepository {
 }
 
 #[async_trait]
+impl PasswordResetRepository for StorageUserRepository {
+    async fn create_password_reset_token(&self, record: PasswordResetRecord) -> AppResult<()> {
+        self.store
+            .create_password_reset_token(storage_password_reset_token(record))
+            .await
+            .map(|_| ())
+            .map_err(storage_error)
+    }
+
+    async fn consume_password_reset_token(&self, token_hash: &str, password_hash: &str, now: time::OffsetDateTime) -> AppResult<Option<User>> {
+        self.store
+            .consume_password_reset_token(token_hash, password_hash, now)
+            .await
+            .map_err(storage_error)
+    }
+}
+
+#[async_trait]
 impl RegistrationPolicy for StorageRegistrationPolicy {
     async fn registration_settings(&self) -> AppResult<RegistrationSettings> {
         let settings = self.store.get_system_settings().await.map_err(storage_error)?;
@@ -170,6 +189,14 @@ fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
         allowed_provider_ids: record.allowed_provider_ids,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode,
+    }
+}
+
+fn storage_password_reset_token(record: PasswordResetRecord) -> storage::user::PasswordResetTokenRecordInput {
+    storage::user::PasswordResetTokenRecordInput {
+        user_id: record.user_id.0,
+        token_hash: record.token_hash,
+        expires_at: record.expires_at,
     }
 }
 

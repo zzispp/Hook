@@ -1,0 +1,86 @@
+{
+  "layout": {
+    "help": "Need help?",
+    "sectionTitle": "Secure access to Hook",
+    "sectionSubtitle": "Manage accounts, tokens, and model access in one place."
+  },
+  "fields": {
+    "username": "Username",
+    "email": "Email address",
+    "identifier": "Username or email",
+    "password": "Password",
+    "newPassword": "New password"
+  },
+  "placeholders": {
+    "username": "username",
+    "email": "name@example.com",
+    "identifier": "username or name@example.com",
+    "password": "8+ characters"
+  },
+  "actions": {
+    "signIn": "Sign in",
+    "signInLoading": "Signing in...",
+    "signUp": "Create account",
+    "signUpLoading": "Creating account...",
+    "requestPasswordReset": "Send reset email",
+    "requestPasswordResetLoading": "Sending...",
+    "resetPassword": "Reset password",
+    "resetPasswordLoading": "Resetting...",
+    "backToSignIn": "Back to sign in"
+  },
+  "signIn": {
+    "title": "Sign in to your account",
+    "noAccount": "Don’t have an account?",
+    "createAccount": "Create one",
+    "forgotPassword": "Forgot password?"
+  },
+  "signUp": {
+    "title": "Create your account",
+    "hasAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "forgotPassword": {
+    "title": "Forgot password",
+    "description": "Enter your account email and we’ll send a password reset link.",
+    "success": "Reset email sent. Please check your inbox."
+  },
+  "resetPassword": {
+    "title": "Set a new password",
+    "description": "Enter a new password for your account.",
+    "missingToken": "The password reset link is invalid or missing a token.",
+    "success": "Password reset. Please sign in again."
+  },
+  "terms": {
+    "prefix": "By signing up, I agree to ",
+    "terms": "Terms of service",
+    "middle": " and ",
+    "privacy": "Privacy policy",
+    "suffix": "."
+  },
+  "captcha": {
+    "required": "Please complete CAPTCHA verification",
+    "initial": "Verify you're human",
+    "verifying": "Verifying...",
+    "solved": "Verified",
+    "error": "Verification failed. Try again."
+  },
+  "validation": {
+    "usernameLength": "Username must be between {{min}} and {{max}} characters",
+    "usernamePattern": "Username can only contain letters, numbers, underscores, and hyphens, and must start and end with a letter or number",
+    "passwordLength": "Password must be between {{min}} and {{max}} characters",
+    "emailRequired": "Email is required",
+    "emailInvalid": "Email must be a valid email address",
+    "identifierRequired": "Username or email is required",
+    "identifierInvalid": "Enter a valid username or email address"
+  },
+  "emailTemplates": {
+    "passwordReset": {
+      "subject": "{{app_name}} password reset",
+      "html": "<!DOCTYPE html><html lang=\"en\"><body style=\"margin:0;padding:0;background:#F9FAFB;font-family:Arial,sans-serif;color:#1C252E;\"><table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"background:#F9FAFB;padding:32px 16px;\"><tr><td align=\"center\"><table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"max-width:560px;background:#FFFFFF;border:1px solid #DFE3E8;border-radius:8px;overflow:hidden;\"><tr><td style=\"height:6px;background:#00A76F;\"></td></tr><tr><td style=\"padding:32px;\"><p style=\"margin:0 0 16px;color:#007867;font-size:13px;font-weight:700;\">{{app_name}}</p><h1 style=\"margin:0 0 12px;color:#1C252E;font-size:24px;line-height:1.35;font-weight:700;\">Reset your password</h1><p style=\"margin:0 0 24px;color:#637381;font-size:15px;line-height:1.7;\">Click the button below to continue resetting your account password.</p><p style=\"margin:0 0 24px;\"><a href=\"{{reset_link}}\" style=\"display:inline-block;padding:12px 22px;background:#00A76F;color:#FFFFFF;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;\">Reset password</a></p><p style=\"margin:0 0 12px;color:#637381;font-size:14px;line-height:1.7;\">This link expires in {{expire_minutes}} minutes.</p><p style=\"margin:0;color:#919EAB;font-size:13px;line-height:1.7;\">If the button does not open, copy this link: {{reset_link}}</p><p style=\"margin:8px 0 0;color:#919EAB;font-size:13px;line-height:1.7;\">Recipient: {{email}}</p></td></tr></table></td></tr></table></body></html>"
+    },
+    "registration": {
+      "subject": "{{app_name}} registration code",
+      "html": "<p>{{app_name}} registration code: {{code}}. It expires in {{expire_minutes}} minutes. Recipient: {{email}}</p>"
+    }
+  }
+}
