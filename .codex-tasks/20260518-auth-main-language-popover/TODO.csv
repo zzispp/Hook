@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing header and i18n components,DONE,Relevant layouts and language popover behavior are identified,rg -n "LanguagePopover|allLangs|AuthSplitLayout|MainLayout" apps/hook_frontend/src/layouts apps/hook_frontend/src/app,2026-05-18T00:00:00+08:00,0,Found reusable LanguagePopover and allLangs; target layouts are main and auth-split.
+2,Add language popover to auth and main headers,DONE,Auth and main headers render the existing language icon button,pnpm --filter hook_frontend lint,2026-05-18T00:00:00+08:00,0,Added LanguagePopover to MainLayout and AuthSplitLayout.
+3,Run frontend validation,IN_PROGRESS,Frontend validation command completes or reports concrete errors,pnpm --filter hook_frontend lint,,0,

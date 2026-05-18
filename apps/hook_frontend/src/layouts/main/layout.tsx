@@ -14,6 +14,8 @@ import Button from '@mui/material/Button';
 import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 
+import { allLangs } from 'src/locales';
+
 import { Logo } from 'src/components/logo';
 
 import { NavMobile } from './nav/mobile';
@@ -23,6 +25,7 @@ import { MenuButton } from '../components/menu-button';
 import { navData as mainNavData } from '../nav-config-main';
 import { SignInButton } from '../components/sign-in-button';
 import { SettingsButton } from '../components/settings-button';
+import { LanguagePopover } from '../components/language-popover';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 
 // ----------------------------------------------------------------------
@@ -92,6 +95,9 @@ export function MainLayout({
           />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            {/** @slot Language popover */}
+            <LanguagePopover data={allLangs} />
+
             {/** @slot Settings button */}
             <SettingsButton />
 
