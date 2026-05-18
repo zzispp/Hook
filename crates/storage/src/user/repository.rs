@@ -231,11 +231,7 @@ impl UserStore {
         active_users().filter(filter).one(self.database.connection()).await.map_err(StorageError::from)
     }
 
-    async fn find_reset_token_in_tx(
-        &self,
-        token_hash: &str,
-        tx: &sea_orm::DatabaseTransaction,
-    ) -> StorageResult<Option<PasswordResetTokenRecord>> {
+    async fn find_reset_token_in_tx(&self, token_hash: &str, tx: &sea_orm::DatabaseTransaction) -> StorageResult<Option<PasswordResetTokenRecord>> {
         password_reset_tokens::Entity::find()
             .filter(password_reset_tokens::Column::TokenHash.eq(token_hash))
             .one(tx)

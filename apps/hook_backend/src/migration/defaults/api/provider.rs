@@ -92,6 +92,12 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "删除提供商模型绑定",
     },
     ApiDefinition {
+        code: "provider_models_test",
+        method: "POST",
+        path_pattern: "/api/admin/providers/{provider_id}/models/{model_id}/test",
+        name: "测试提供商模型",
+    },
+    ApiDefinition {
         code: "provider_cooldowns_read",
         method: "GET",
         path_pattern: "/api/admin/provider-cooldowns",

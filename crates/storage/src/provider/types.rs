@@ -91,6 +91,7 @@ pub struct ProviderApiKeyRecordPatch {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProviderApiKeySecretRecord {
+    pub id: String,
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,

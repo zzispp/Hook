@@ -135,11 +135,7 @@ pub(in crate::migration) fn translation_seeds() -> Result<Vec<TranslationSeed>, 
     Ok(seeds)
 }
 
-pub(in crate::migration) fn flatten_translations(
-    namespace: &'static str,
-    lang_code: &'static str,
-    source: &str,
-) -> Result<Vec<TranslationSeed>, DbErr> {
+pub(in crate::migration) fn flatten_translations(namespace: &'static str, lang_code: &'static str, source: &str) -> Result<Vec<TranslationSeed>, DbErr> {
     let value = serde_json::from_str(source).map_err(|error| DbErr::Migration(error.to_string()))?;
     let mut entries = Vec::new();
     flatten_value(namespace, lang_code, &mut entries, Vec::new(), &value);

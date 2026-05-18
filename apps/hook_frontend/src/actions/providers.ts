@@ -14,6 +14,8 @@ import type {
   ProviderModelBinding,
   ProviderEndpointCreate,
   ProviderEndpointUpdate,
+  ProviderModelTestRequest,
+  ProviderModelTestResponse,
   ProviderModelBindingCreate,
   ProviderModelBindingUpdate,
   ProviderCooldownListResponse,
@@ -219,6 +221,16 @@ export async function updateProviderModel(
 export async function deleteProviderModel(providerId: string, modelId: string) {
   await requestSuccess(axios.delete(endpoints.adminProviders.modelById(providerId, modelId)));
   await mutateProviderChildren(providerId);
+}
+
+export async function testProviderModel(
+  providerId: string,
+  modelId: string,
+  payload: ProviderModelTestRequest
+) {
+  return requestData<ProviderModelTestResponse>(
+    axios.post(endpoints.adminProviders.modelTest(providerId, modelId), payload)
+  );
 }
 
 function useProviderChildResource<T>(

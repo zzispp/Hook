@@ -68,17 +68,13 @@ impl PasswordResetConfig for NoPasswordResetConfig {
     }
 
     async fn password_reset_template(&self, _lang: &str) -> AppResult<PasswordResetTemplate> {
-        Err(crate::application::AppError::Infrastructure(
-            "password reset template is not available".into(),
-        ))
+        Err(crate::application::AppError::Infrastructure("password reset template is not available".into()))
     }
 }
 
 #[async_trait]
 impl PasswordResetMailer for NoPasswordResetMailer {
     async fn send_password_reset(&self, _email: PasswordResetEmail) -> AppResult<()> {
-        Err(crate::application::AppError::Infrastructure(
-            "password reset mailer is not available".into(),
-        ))
+        Err(crate::application::AppError::Infrastructure("password reset mailer is not available".into()))
     }
 }

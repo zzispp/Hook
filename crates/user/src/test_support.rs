@@ -7,8 +7,8 @@ use types::{
 };
 
 use crate::application::{
-    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, SystemUserProvider, SystemUserRecord,
-    UserAuthRecord, UserRepository,
+    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord,
+    UserRepository,
 };
 
 pub(crate) const VALID_PASSWORD: &str = "secret123";
@@ -79,7 +79,6 @@ impl MemoryUserRepository {
     pub(crate) fn login_records(&self) -> Vec<UserId> {
         self.state.lock().unwrap().logins.clone()
     }
-
 }
 
 #[async_trait]

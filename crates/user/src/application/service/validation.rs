@@ -210,10 +210,7 @@ fn validate_lang(value: &str) -> AppResult<()> {
 fn validate_reset_origin(value: &str) -> AppResult<()> {
     reject_length("reset_origin", value, 1, MAX_RESET_ORIGIN_LEN)?;
     let has_valid_scheme = value.starts_with("https://") || value.starts_with("http://");
-    let has_path = value
-        .trim_start_matches("https://")
-        .trim_start_matches("http://")
-        .contains('/');
+    let has_path = value.trim_start_matches("https://").trim_start_matches("http://").contains('/');
     if !has_valid_scheme || has_path {
         return Err(AppError::InvalidInput("reset_origin must be an http or https origin".into()));
     }

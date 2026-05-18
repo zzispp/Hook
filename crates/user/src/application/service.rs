@@ -129,11 +129,7 @@ where
     G: InitialGrantLedger,
     W: UserWalletCatalog,
 {
-    pub fn with_password_reset<NC, NM>(
-        self,
-        password_reset_config: NC,
-        password_reset_mailer: NM,
-    ) -> UserService<R, H, S, P, G, W, NC, NM> {
+    pub fn with_password_reset<NC, NM>(self, password_reset_config: NC, password_reset_mailer: NM) -> UserService<R, H, S, P, G, W, NC, NM> {
         UserService {
             repository: self.repository,
             password_hasher: self.password_hasher,
@@ -247,13 +243,7 @@ where
     async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()> {
         let input = sanitize_password_reset_request(input);
         validate_password_reset_request(&input)?;
-        request_password_reset(
-            &self.repository,
-            &self.password_reset_config,
-            &self.password_reset_mailer,
-            input,
-        )
-        .await
+        request_password_reset(&self.repository, &self.password_reset_config, &self.password_reset_mailer, input).await
     }
 
     async fn reset_password(&self, input: PasswordResetConfirm) -> AppResult<()> {

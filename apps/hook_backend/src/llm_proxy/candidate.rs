@@ -1,5 +1,5 @@
 mod selection;
-mod url;
+pub(super) mod url;
 
 use rust_decimal::Decimal;
 use serde_json::Value;

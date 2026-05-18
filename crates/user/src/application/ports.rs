@@ -5,9 +5,7 @@ use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     system_setting::EmailSuffixMode,
-    user::{
-        Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse,
-    },
+    user::{Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse},
 };
 
 use super::AppResult;

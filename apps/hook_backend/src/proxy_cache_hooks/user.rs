@@ -3,9 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest},
-    user::{
-        Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse,
-    },
+    user::{Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse},
 };
 use user::application::{AppError, AppResult, UserUseCase};
 

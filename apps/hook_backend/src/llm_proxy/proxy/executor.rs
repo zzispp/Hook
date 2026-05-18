@@ -1,28 +1,22 @@
 use std::time::Instant;
 
 use axum::response::Response;
-use proxy::format_conversion::ApiFormat;
-use req::{Request, RequestBuilder, Response as UpstreamResponse};
-use serde_json::Value;
+use req::Response as UpstreamResponse;
 
 use super::{
     LlmProxyError, LlmProxyState,
     attempt_log::{record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
     failure_classification::{FailureDecision, classify_status},
-    header_rules::apply_provider_header_rules,
+    outbound_request::upstream_request,
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
-    stream_transport,
-    timeout::proxy_timeouts,
-    transport,
+    stream_transport, transport,
 };
 use crate::llm_proxy::{
     audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
     candidate::ProxyCandidate,
-    formats::{self, AuthScheme},
     rate_limit,
 };
 
-const ANTHROPIC_VERSION: &str = "2023-06-01";
 enum AttemptCandidateOutcome {
     Continue,
     Response(Response),
@@ -94,7 +88,14 @@ async fn attempt_once(
         }
     };
     let started = Instant::now();
-    let request = match upstream_request(&state.http, candidate, payload.target_format, &payload.body, &payload.original_body) {
+    let request = match upstream_request(
+        &state.http,
+        candidate,
+        payload.target_format,
+        &payload.body,
+        &payload.original_body,
+        &prepared.provider_headers,
+    ) {
         Ok(request) => request,
         Err(error) => {
             let outcome = record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;
@@ -241,47 +242,6 @@ async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, L
         retry_index: input.retry_index,
     })
     .await
-}
-
-fn upstream_request(
-    client: &req::ReqwestClient,
-    candidate: &ProxyCandidate,
-    target_format: ApiFormat,
-    body: &Value,
-    original_body: &Value,
-) -> Result<Request, LlmProxyError> {
-    let builder = client.post(candidate.upstream_url.clone()).json(body);
-    let metadata = formats::endpoint_metadata(
-        &candidate.trace.provider_api_format,
-        body.get("stream").and_then(Value::as_bool).unwrap_or(false),
-    )?;
-    if target_format != metadata.data_format {
-        return Err(LlmProxyError::InvalidRequest(format!(
-            "provider format metadata mismatch: {}",
-            candidate.trace.provider_api_format
-        )));
-    }
-    let builder = apply_auth(builder, candidate, metadata.auth_scheme);
-    let mut request = client.build_request(apply_timeout(builder, candidate))?;
-    apply_provider_header_rules(request.headers_mut(), &candidate.header_rules, body, original_body)?;
-    Ok(request)
-}
-
-fn apply_auth(builder: RequestBuilder, candidate: &ProxyCandidate, scheme: AuthScheme) -> RequestBuilder {
-    match scheme {
-        AuthScheme::Bearer => builder.bearer_auth(candidate.api_key.as_str()),
-        AuthScheme::Anthropic => builder
-            .header("x-api-key", candidate.api_key.as_str())
-            .header("anthropic-version", ANTHROPIC_VERSION),
-        AuthScheme::Gemini => builder.header("x-goog-api-key", candidate.api_key.as_str()),
-    }
-}
-
-fn apply_timeout(builder: RequestBuilder, candidate: &ProxyCandidate) -> RequestBuilder {
-    match proxy_timeouts(candidate).request {
-        Some(timeout) => builder.timeout(timeout),
-        None => builder,
-    }
 }
 
 async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {

@@ -51,3 +51,32 @@ pub struct ProviderModelBindingUpdate {
 pub struct ProviderUpstreamModelsResponse {
     pub models: Vec<String>,
 }
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct ProviderModelTestRequest {
+    pub endpoint_id: String,
+    #[serde(default)]
+    pub request_headers: std::collections::BTreeMap<String, String>,
+    pub request_body: serde_json::Value,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderModelTestEndpoint {
+    pub id: String,
+    pub api_format: String,
+    pub base_url: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderModelTestResponse {
+    pub success: bool,
+    pub model: String,
+    pub endpoint: ProviderModelTestEndpoint,
+    pub status_code: Option<u16>,
+    pub latency_ms: u128,
+    pub request_url: String,
+    pub request_body: serde_json::Value,
+    pub response_headers: std::collections::BTreeMap<String, String>,
+    pub response_body: serde_json::Value,
+    pub error: Option<String>,
+}

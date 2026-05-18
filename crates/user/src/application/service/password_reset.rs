@@ -14,12 +14,7 @@ const PASSWORD_RESET_DISABLED: &str = "password reset is disabled";
 const EMAIL_CONFIGURATION_DISABLED: &str = "email configuration is disabled";
 const SMTP_CONFIGURATION_INCOMPLETE: &str = "SMTP configuration is incomplete";
 
-pub(super) async fn request_password_reset<R, C, M>(
-    repository: &R,
-    config: &C,
-    mailer: &M,
-    input: PasswordResetRequest,
-) -> AppResult<()>
+pub(super) async fn request_password_reset<R, C, M>(repository: &R, config: &C, mailer: &M, input: PasswordResetRequest) -> AppResult<()>
 where
     R: PasswordResetRepository + crate::application::UserRepository,
     C: PasswordResetConfig,

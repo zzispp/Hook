@@ -7,8 +7,8 @@ use types::{
     provider::{
         ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
         ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-        ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
-        ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+        ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelTestRequest,
+        ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -134,6 +134,14 @@ pub async fn update_model_binding(
 pub async fn delete_model_binding(State(state): State<ProviderApiState>, Path((provider_id, model_id)): Path<(String, String)>) -> ApiResult<ApiJson<()>> {
     state.providers.delete_model_binding(&provider_id, &model_id).await?;
     Ok(ok(()))
+}
+
+pub async fn test_model_binding(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, model_id)): Path<(String, String)>,
+    Json(payload): Json<ProviderModelTestRequest>,
+) -> ApiResult<ApiJson<ProviderModelTestResponse>> {
+    Ok(ok(state.model_tester.test_model_binding(&provider_id, &model_id, payload).await?))
 }
 
 pub async fn list_request_records(

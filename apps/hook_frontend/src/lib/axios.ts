@@ -170,6 +170,8 @@ export const endpoints = {
     models: (id: string) => `/api/admin/providers/${id}/models`,
     modelById: (providerId: string, modelId: string) =>
       `/api/admin/providers/${providerId}/models/${modelId}`,
+    modelTest: (providerId: string, modelId: string) =>
+      `/api/admin/providers/${providerId}/models/${modelId}/test`,
   },
   adminRequestRecords: {
     list: '/api/admin/request-records',

@@ -8,8 +8,8 @@ use crate::api::{
     handlers::{
         create_api_key, create_endpoint, create_model_binding, create_provider, delete_api_key, delete_endpoint, delete_model_binding, delete_provider,
         fetch_upstream_models, get_provider, get_request_record, list_active_request_records, list_api_keys, list_endpoints, list_model_bindings,
-        list_provider_cooldowns, list_providers, list_request_records, release_provider_cooldown, update_api_key, update_endpoint, update_model_binding,
-        update_provider,
+        list_provider_cooldowns, list_providers, list_request_records, release_provider_cooldown, test_model_binding, update_api_key, update_endpoint,
+        update_model_binding, update_provider,
     },
 };
 
@@ -30,6 +30,7 @@ pub fn create_router(state: ProviderApiState) -> Router {
             "/admin/providers/{provider_id}/models/{model_id}",
             patch(update_model_binding).delete(delete_model_binding),
         )
+        .route("/admin/providers/{provider_id}/models/{model_id}/test", post(test_model_binding))
         .route("/admin/provider-cooldowns", get(list_provider_cooldowns))
         .route("/admin/provider-cooldowns/{provider_id}/release", post(release_provider_cooldown))
         .route("/admin/request-records", get(list_request_records))

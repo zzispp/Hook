@@ -55,13 +55,7 @@ where
     }
 }
 
-fn smtp_transport(
-    host: &str,
-    port: i64,
-    encryption: SmtpEncryption,
-    username: &str,
-    password: &str,
-) -> AppResult<AsyncSmtpTransport<Tokio1Executor>> {
+fn smtp_transport(host: &str, port: i64, encryption: SmtpEncryption, username: &str, password: &str) -> AppResult<AsyncSmtpTransport<Tokio1Executor>> {
     let port = u16::try_from(port).map_err(|_| AppError::InvalidInput("SMTP port is invalid".into()))?;
     let builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(host)
         .port(port)

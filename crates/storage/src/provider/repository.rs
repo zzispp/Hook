@@ -144,6 +144,7 @@ impl ProviderStore {
             .into_iter()
             .map(|record| {
                 Ok(ProviderApiKeySecretRecord {
+                    id: record.id,
                     name: record.name,
                     api_formats: json::decode_required(record.api_formats)?,
                     allowed_model_ids: json::decode_required(record.allowed_model_ids)?,

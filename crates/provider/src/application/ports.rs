@@ -2,14 +2,15 @@ use async_trait::async_trait;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
-    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelTestRequest,
+    ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
 };
 
 use super::ProviderResult;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProviderApiKeySecret {
+    pub id: String,
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
@@ -64,6 +65,11 @@ pub trait SecretCipher: Send + Sync + 'static {
 #[async_trait]
 pub trait UpstreamModelFetcher: Send + Sync + 'static {
     async fn fetch_upstream_models(&self, endpoint: &ProviderEndpoint, api_key: &str) -> ProviderResult<ProviderUpstreamModelsResponse>;
+}
+
+#[async_trait]
+pub trait ProviderModelTester: Send + Sync + 'static {
+    async fn test_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelTestRequest) -> ProviderResult<ProviderModelTestResponse>;
 }
 
 #[async_trait]

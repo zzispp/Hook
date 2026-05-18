@@ -1,3 +1,4 @@
+use axum::http::HeaderMap;
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
 use serde_json::{Map, Value};
 use types::api_token::ApiToken;
@@ -6,7 +7,7 @@ use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
     audit::record_scheduled_candidates,
     billing::enforce_preflight_access,
-    candidate::{CandidateRequest, ProxyCandidate, select_candidates},
+    candidate::{CandidateRequest, CandidateSelection, ProxyCandidate, select_candidates},
     formats, rate_limit,
 };
 
@@ -19,6 +20,7 @@ pub(super) struct PreparedProxyRequest {
     pub(super) service_tier: Option<String>,
     pub(super) is_stream: bool,
     pub(super) force_non_stream: bool,
+    pub(super) provider_headers: HeaderMap,
 }
 
 pub(super) struct AttemptPayload {
@@ -59,6 +61,32 @@ pub(super) async fn prepare_proxy_request(
         service_tier,
         is_stream,
         force_non_stream,
+        provider_headers: HeaderMap::new(),
+    })
+}
+
+pub(super) async fn prepare_proxy_request_with_candidates(
+    state: &LlmProxyState,
+    body: Value,
+    api_format: &str,
+    force_non_stream: bool,
+    provider_headers: HeaderMap,
+    selection: CandidateSelection,
+    capture: RequestCapture,
+) -> Result<PreparedProxyRequest, LlmProxyError> {
+    required_model(&body)?;
+    let is_stream = is_streaming(&body) && !force_non_stream;
+    ensure_selection_format(&selection, api_format, is_stream)?;
+    record_scheduled_candidates(state, &selection, &capture).await?;
+    let service_tier = capture.service_tier();
+    Ok(PreparedProxyRequest {
+        request_id: selection.request_id,
+        candidates: selection.candidates,
+        body,
+        service_tier,
+        is_stream,
+        force_non_stream,
+        provider_headers,
     })
 }
 
@@ -82,6 +110,18 @@ fn required_model(body: &Value) -> Result<&str, LlmProxyError> {
 
 fn is_streaming(body: &Value) -> bool {
     body.get("stream").and_then(Value::as_bool).unwrap_or(false)
+}
+
+fn ensure_selection_format(selection: &CandidateSelection, api_format: &str, is_stream: bool) -> Result<(), LlmProxyError> {
+    for candidate in &selection.candidates {
+        if candidate.trace.client_api_format != api_format {
+            return Err(LlmProxyError::InvalidRequest("fixed candidate client format mismatch".into()));
+        }
+        if candidate.trace.is_stream != is_stream {
+            return Err(LlmProxyError::InvalidRequest("fixed candidate stream flag does not match request body".into()));
+        }
+    }
+    Ok(())
 }
 
 fn upstream_body(

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm aether routing semantics,DONE,Aether model test and proxy distinguish client request format from provider endpoint format,rg -n "test_model_failover|execute_sync_candidates|needs_conversion" /Users/bubu/ZwjProjects/aether/src,2026-05-18T00:00:00Z,0,Main proxy confirmed; model test endpoint_id still fixed in aether UI path
+2,Compare Hook proxy/test candidate selection,DONE,Hook main proxy and admin test routing gaps are identified,rg -n "select_candidates|fixed_parts|formats_compatible" apps/hook_backend/src/llm_proxy,2026-05-18T00:00:00Z,0,Hook main proxy already separates client/provider formats; Hook model_test fixed selected endpoint as upstream
+3,Implement routing alignment,DONE,Test and main proxy use compatible provider endpoints and key formats while preserving selected client test format,cargo check -p backend -p provider -p types,2026-05-18T00:00:00Z,0,
+4,Validate and summarize,DONE,Targeted tests and lint pass or failures are reported,perl -e 'alarm shift; exec @ARGV' 60 cargo test -p backend llm_proxy,2026-05-18T00:00:00Z,0,

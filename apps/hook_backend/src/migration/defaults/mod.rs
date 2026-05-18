@@ -209,6 +209,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "provider_models_create",
             "provider_models_update",
             "provider_models_delete",
+            "provider_models_test",
             "models_global_read",
         ],
     },

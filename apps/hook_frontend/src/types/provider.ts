@@ -257,3 +257,28 @@ export type ProviderModelBindingUpdate = {
 export type ProviderUpstreamModelsResponse = {
   models: string[];
 };
+
+export type ProviderModelTestRequest = {
+  endpoint_id: string;
+  request_headers: Record<string, string>;
+  request_body: Record<string, unknown>;
+};
+
+export type ProviderModelTestEndpoint = {
+  id: string;
+  api_format: string;
+  base_url: string;
+};
+
+export type ProviderModelTestResponse = {
+  success: boolean;
+  model: string;
+  endpoint: ProviderModelTestEndpoint;
+  status_code?: number | null;
+  latency_ms: number;
+  request_url: string;
+  request_body: unknown;
+  response_headers: Record<string, string>;
+  response_body: unknown;
+  error?: string | null;
+};

@@ -8,6 +8,7 @@ mod error;
 mod formats;
 mod handlers;
 mod model_access;
+mod model_test;
 mod proxy;
 mod rate_limit;
 mod request_record_policy;
@@ -27,6 +28,7 @@ use user::application::SystemUserProvider;
 pub use cache::LlmProxyCache;
 pub(crate) use cache::snapshot::CachedUserAccess;
 pub use error::LlmProxyError;
+pub(crate) use model_test::LlmProxyProviderModelTester;
 
 pub const OPENAI_CHAT_FORMAT: &str = "openai_chat";
 pub const OPENAI_COMPLETION_FORMAT: &str = "openai_completion";

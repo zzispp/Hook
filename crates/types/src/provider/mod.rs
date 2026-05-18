@@ -13,7 +13,10 @@ pub use core::{Provider, ProviderCreate, ProviderListRequest, ProviderListRespon
 pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate};
 pub use enums::ProviderSchedulingMode;
 pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate};
-pub use model_binding::{ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping, ProviderUpstreamModelsResponse};
+pub use model_binding::{
+    ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping, ProviderModelTestEndpoint, ProviderModelTestRequest,
+    ProviderModelTestResponse, ProviderUpstreamModelsResponse,
+};
 pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestCandidateDetail, RequestRecord, RequestRecordDetail, RequestRecordListRequest,

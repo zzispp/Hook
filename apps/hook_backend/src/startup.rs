@@ -1,7 +1,9 @@
 use crate::{
     BackendResult,
     auth::{AuthState, AuthStateParts, auth_middleware},
-    llm_proxy::{LlmProxyCache, LlmProxyState, cached_system_user_access, create_router as create_llm_proxy_router, create_v1beta_router},
+    llm_proxy::{
+        LlmProxyCache, LlmProxyProviderModelTester, LlmProxyState, cached_system_user_access, create_router as create_llm_proxy_router, create_v1beta_router,
+    },
     performance_monitoring_api::{PerformanceMonitoringApiState, create_router as create_performance_monitoring_router},
     performance_monitoring_os::PerformanceOsCollector,
     proxy_cache_hooks::{
@@ -156,18 +158,20 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageSystemTokenPolicy::new(database.clone()),
     ));
     let api_tokens = Arc::new(ProxyCachedApiTokenUseCase::new(api_tokens_inner, proxy_cache.clone()));
-    let users_inner = Arc::new(UserService::with_system_user_and_registration(
-        StorageUserRepository::new(database.clone()),
-        BcryptPasswordHasher,
-        system_user_provider,
-        StorageRegistrationPolicy::new(database.clone()),
-        StorageInitialGrantLedger::new(database.clone()),
-        StorageUserWalletCatalog::new(database.clone()),
-    )
-    .with_password_reset(
-        StoragePasswordResetConfig::new(database.clone()),
-        SmtpPasswordResetMailer::new(database.clone(), setting_secret_cipher.clone()),
-    ));
+    let users_inner = Arc::new(
+        UserService::with_system_user_and_registration(
+            StorageUserRepository::new(database.clone()),
+            BcryptPasswordHasher,
+            system_user_provider,
+            StorageRegistrationPolicy::new(database.clone()),
+            StorageInitialGrantLedger::new(database.clone()),
+            StorageUserWalletCatalog::new(database.clone()),
+        )
+        .with_password_reset(
+            StoragePasswordResetConfig::new(database.clone()),
+            SmtpPasswordResetMailer::new(database.clone(), setting_secret_cipher.clone()),
+        ),
+    );
     let users = Arc::new(ProxyCachedUserUseCase::new(users_inner, proxy_cache.clone()));
     let operations = Arc::new(OperationsService::new(
         StorageOperationsRepository::new(database.clone()),
@@ -235,7 +239,7 @@ fn create_app(state: AppState) -> Router {
     let user_state = ApiState::new(state.users.clone(), state.tokens.clone(), state.captcha.clone());
     let rbac_state = RbacApiState::new(state.authorization.clone(), state.rbac.clone(), state.rbac.clone());
     let model_state = ModelApiState::new(state.models);
-    let provider_state = ProviderApiState::new(state.providers);
+    let provider_state = ProviderApiState::new(state.providers, Arc::new(LlmProxyProviderModelTester::new(state.llm_proxy.clone())));
     let dashboard_state = DashboardApiState::new(state.dashboard);
     let wallet_state = WalletApiState::new(state.wallets);
     let card_code_state = CardCodeApiState::new(state.card_codes);

@@ -106,6 +106,7 @@ impl ProviderRepository for StorageProviderRepository {
                 records
                     .into_iter()
                     .map(|record| ProviderApiKeySecret {
+                        id: record.id,
                         name: record.name,
                         api_formats: record.api_formats,
                         allowed_model_ids: record.allowed_model_ids,
