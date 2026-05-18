@@ -91,9 +91,7 @@ export function HomeZoneUI({ sx, ...other }: BoxProps) {
       <Box sx={{ p: 0.5, bgcolor: 'common.white', borderRadius: '0 0 8px 8px' }}>
         <Button
           variant="contained"
-          target="_blank"
-          rel="noopener noreferrer"
-          href={paths.zoneStore}
+          href={paths.dashboard.root}
           endIcon={<Iconify icon="eva:arrow-ios-forward-fill" />}
           sx={{
             color: 'grey.800',
@@ -101,7 +99,7 @@ export function HomeZoneUI({ sx, ...other }: BoxProps) {
             '&:hover': { bgcolor: 'common.white' },
           }}
         >
-          Visit Zone UI
+          Open dashboard
         </Button>
       </Box>
     </Stack>

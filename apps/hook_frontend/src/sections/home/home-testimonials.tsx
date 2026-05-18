@@ -14,6 +14,7 @@ import Typography from '@mui/material/Typography';
 import { fToNow } from 'src/utils/format-time';
 
 import { _mock } from 'src/_mock';
+import { useTranslate } from 'src/locales/use-locales';
 
 import { varFade, MotionViewport, AnimateCountUp } from 'src/components/animate';
 import {
@@ -57,6 +58,7 @@ const renderLines = () => (
 );
 
 export function HomeTestimonials({ sx, ...other }: BoxProps) {
+  const { currentLang } = useTranslate();
   const carousel = useCarousel({
     align: 'start',
     slidesToShow: {
@@ -144,7 +146,7 @@ export function HomeTestimonials({ sx, ...other }: BoxProps) {
                 <Box component="span">{item.name}</Box>
 
                 <Box component="span" sx={{ typography: 'body2', color: 'text.disabled' }}>
-                  {fToNow(new Date(item.postedAt))}
+                  {fToNow(new Date(item.postedAt), currentLang.adapterLocale)}
                 </Box>
               </Stack>
             </Box>

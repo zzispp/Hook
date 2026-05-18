@@ -214,7 +214,7 @@ function MessageBubble({
   mine: boolean;
   detail: SupportTicketDetail['messages'][number];
 }) {
-  const { t } = useTranslate('admin');
+  const { t, currentLang } = useTranslate('admin');
 
   return (
     <Box sx={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
@@ -227,7 +227,8 @@ function MessageBubble({
         }}
       >
         <Typography variant="caption" color="text.disabled">
-          {t(`operations.ticket.sender.${detail.sender_role}`)} · {fToNow(detail.created_at)}
+          {t(`operations.ticket.sender.${detail.sender_role}`)} ·{' '}
+          {fToNow(detail.created_at, currentLang.adapterLocale)}
         </Typography>
         <Markdown sx={{ mt: 1, '& p': { typography: 'body2' } }}>{detail.body_markdown}</Markdown>
       </Box>

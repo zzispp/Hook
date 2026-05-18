@@ -16,6 +16,8 @@ import ListItemText from '@mui/material/ListItemText';
 
 import { fToNow } from 'src/utils/format-time';
 
+import { useTranslate } from 'src/locales/use-locales';
+
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { CustomPopover } from 'src/components/custom-popover';
@@ -39,6 +41,7 @@ export type ContactsPopoverProps = IconButtonProps & {
 
 export function ContactsPopover({ data = [], sx, ...other }: ContactsPopoverProps) {
   const { open, anchorEl, onClose, onOpen } = usePopover();
+  const { currentLang } = useTranslate();
 
   const renderMenuList = () => (
     <CustomPopover open={open} anchorEl={anchorEl} onClose={onClose}>
@@ -56,7 +59,11 @@ export function ContactsPopover({ data = [], sx, ...other }: ContactsPopoverProp
 
               <ListItemText
                 primary={contact.name}
-                secondary={contact.status === 'offline' ? fToNow(contact.lastActivity) : ''}
+                secondary={
+                  contact.status === 'offline'
+                    ? fToNow(contact.lastActivity, currentLang.adapterLocale)
+                    : ''
+                }
                 slotProps={{
                   secondary: {
                     sx: { typography: 'caption', color: 'text.disabled' },

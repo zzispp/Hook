@@ -22,13 +22,7 @@ export function CarouselSlide({ sx, options, children, className, ...other }: Ca
       sx={[{ flex: slideSize }, ...(Array.isArray(sx) ? sx : [sx])]}
       {...other}
     >
-      {options?.parallax ? (
-        <div className={carouselClasses.slide.content}>
-          <div className={carouselClasses.slide.parallax}>{children}</div>
-        </div>
-      ) : (
-        children
-      )}
+      {children}
     </CarouselSlideRoot>
   );
 }
@@ -40,11 +34,6 @@ const CarouselSlideRoot = styled('li', {
 })<Pick<CarouselOptions, 'axis' | 'slideSpacing'>>(({ slideSpacing }) => ({
   display: 'block',
   position: 'relative',
-  [`& .${carouselClasses.slide.content}`]: {
-    overflow: 'hidden',
-    position: 'relative',
-    borderRadius: 'inherit',
-  },
   variants: [
     { props: { axis: 'x' }, style: { minWidth: 0, paddingLeft: slideSpacing } },
     { props: { axis: 'y' }, style: { minHeight: 0, paddingTop: slideSpacing } },

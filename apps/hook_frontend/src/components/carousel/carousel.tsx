@@ -51,18 +51,7 @@ export function Carousel({
         axis={axis}
         slideSpacing={slideSpacing}
         className={carouselClasses.container}
-        sx={[
-          (theme) => ({
-            ...(carousel.pluginNames?.includes('autoHeight') && {
-              alignItems: 'flex-start',
-              transition: theme.transitions.create(['height'], {
-                easing: theme.transitions.easing.easeInOut,
-                duration: theme.transitions.duration.shorter,
-              }),
-            }),
-          }),
-          ...(Array.isArray(slotProps?.container) ? slotProps.container : [slotProps?.container]),
-        ]}
+        sx={slotProps?.container}
       >
         {renderChildren()}
       </CarouselContainer>

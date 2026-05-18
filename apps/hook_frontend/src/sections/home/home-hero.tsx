@@ -198,14 +198,12 @@ export function HomeHero({ sx, ...other }: BoxProps) {
           <Link
             color="inherit"
             variant="body2"
-            target="_blank"
-            rel="noopener noreferrer"
-            href={paths.freeUI}
+            href={paths.dashboard.root}
             underline="always"
             sx={{ gap: 0.75, alignItems: 'center', display: 'inline-flex' }}
           >
             <Iconify width={16} icon="eva:external-link-fill" />
-            Try free version
+            Open dashboard
           </Link>
         </Stack>
       </m.div>
@@ -215,13 +213,11 @@ export function HomeHero({ sx, ...other }: BoxProps) {
           color="inherit"
           size="large"
           variant="outlined"
-          target="_blank"
-          rel="noopener noreferrer"
-          href={paths.figmaUrl}
+          href={paths.dashboard.root}
           startIcon={<Iconify width={24} icon="solar:figma-outline" />}
           sx={{ height: 52, borderColor: 'currentColor' }}
         >
-          Figma preview
+          Open dashboard
         </Button>
       </m.div>
     </Box>

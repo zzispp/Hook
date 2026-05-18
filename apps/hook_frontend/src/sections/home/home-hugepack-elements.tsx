@@ -74,13 +74,11 @@ export function HomeHugePackElements({ sx, ...other }: BoxProps) {
               size="large"
               color="inherit"
               variant="outlined"
-              target="_blank"
-              rel="noopener noreferrer"
-              href={paths.components}
+              href={paths.dashboard.root}
               endIcon={<Iconify icon="eva:arrow-ios-forward-fill" />}
               sx={{ mt: 5, mx: 'auto' }}
             >
-              Browse components
+              Open dashboard
             </Button>
           </m.div>
         </Container>

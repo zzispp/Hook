@@ -12,6 +12,8 @@ import ListItemText from '@mui/material/ListItemText';
 
 import { fToNow } from 'src/utils/format-time';
 
+import { useTranslate } from 'src/locales/use-locales';
+
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
@@ -63,6 +65,8 @@ type ItemProps = BoxProps & {
 };
 
 function Item({ item, sx, ...other }: ItemProps) {
+  const { currentLang } = useTranslate('admin');
+
   return (
     <Box
       sx={[
@@ -98,7 +102,7 @@ function Item({ item, sx, ...other }: ItemProps) {
       />
 
       <Box sx={{ flexShrink: 0, typography: 'caption', color: 'text.disabled' }}>
-        {fToNow(item.postedAt)}
+        {fToNow(item.postedAt, currentLang.adapterLocale)}
       </Box>
     </Box>
   );

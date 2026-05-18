@@ -277,11 +277,9 @@ function PlanCard({ plan, sx, ...other }: PlanCardProps) {
             variant={plusLicense ? 'contained' : 'outlined'}
             color="inherit"
             size="large"
-            target="_blank"
-            rel="noopener noreferrer"
-            href={paths.minimalStore}
+            href={paths.dashboard.root}
           >
-            Get started
+            Open dashboard
           </Button>
         </m.div>
       </Box>

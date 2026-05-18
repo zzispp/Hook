@@ -60,7 +60,7 @@ export function AnnouncementListView() {
 }
 
 function AnnouncementCard({ item }: { item: Announcement }) {
-  const { t } = useTranslate('admin');
+  const { t, currentLang } = useTranslate('admin');
 
   return (
     <Card sx={{ p: 3 }}>
@@ -69,7 +69,7 @@ function AnnouncementCard({ item }: { item: Announcement }) {
           <AnnouncementTypeLabel value={item.announcement_type} />
           {item.pinned ? <Iconify icon="solar:flag-bold" color="warning.main" /> : null}
           <Typography variant="caption" color="text.disabled">
-            {fToNow(item.updated_at)}
+            {fToNow(item.updated_at, currentLang.adapterLocale)}
           </Typography>
         </Stack>
         <Typography variant="h6">{item.title}</Typography>

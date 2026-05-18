@@ -2,9 +2,8 @@
 
 import type { LangCode } from './locales-config';
 
-import i18next from 'i18next';
+import { createInstance } from 'i18next';
 import { useRef, useEffect } from 'react';
-import { getStorage } from 'minimal-shared/utils';
 import { initReactI18next, I18nextProvider as Provider } from 'react-i18next';
 
 import enCommon from './langs/en/common.json';
@@ -13,21 +12,32 @@ import enNavbar from './langs/en/navbar.json';
 import cnNavbar from './langs/cn/navbar.json';
 import enMessages from './langs/en/messages.json';
 import cnMessages from './langs/cn/messages.json';
-import { i18nOptions, fallbackLng, storageConfig } from './locales-config';
+import { i18nOptions, fallbackLng } from './locales-config';
 
 // ----------------------------------------------------------------------
 
 /**
  * Initialize i18next
  */
-i18next.use(initReactI18next).init({
-  ...i18nOptions(fallbackLng),
-  ns: ['common', 'messages', 'admin', 'auth', 'navbar'],
-  resources: {
-    cn: { common: cnCommon, messages: cnMessages, navbar: cnNavbar },
-    en: { common: enCommon, messages: enMessages, navbar: enNavbar },
-  },
-});
+const I18N_NAMESPACES = ['common', 'messages', 'admin', 'auth', 'navbar'];
+
+const I18N_RESOURCES = {
+  cn: { common: cnCommon, messages: cnMessages, navbar: cnNavbar },
+  en: { common: enCommon, messages: enMessages, navbar: enNavbar },
+};
+
+function createI18n(lang: LangCode) {
+  const instance = createInstance();
+
+  instance.use(initReactI18next).init({
+    ...i18nOptions(lang),
+    ns: I18N_NAMESPACES,
+    resources: I18N_RESOURCES,
+    initAsync: false,
+  });
+
+  return instance;
+}
 
 // ----------------------------------------------------------------------
 
@@ -39,39 +49,26 @@ type I18nProviderProps = {
 export function I18nProvider({ lang, children }: I18nProviderProps) {
   const mounted = useRef(false);
   const initialLang = lang ?? fallbackLng;
+  const i18nRef = useRef<ReturnType<typeof createI18n> | null>(null);
 
-  if (!mounted.current && i18next.language !== initialLang) {
-    i18next.changeLanguage(initialLang);
+  if (!i18nRef.current) {
+    i18nRef.current = createI18n(initialLang);
+  }
+
+  const i18n = i18nRef.current;
+
+  if (!mounted.current && i18n.language !== initialLang) {
+    i18n.changeLanguage(initialLang);
   }
 
   useEffect(() => {
     mounted.current = true;
+    const nextLang = lang ?? fallbackLng;
 
-    const storedLang = normalizeDetectedLanguage(getStorage(storageConfig.localStorage.key));
-    const nextLang = storedLang ?? lang ?? fallbackLng;
-
-    if (i18next.language !== nextLang) {
-      i18next.changeLanguage(nextLang);
+    if (i18n.language !== nextLang) {
+      i18n.changeLanguage(nextLang);
     }
-  }, [lang]);
+  }, [i18n, lang]);
 
-  return <Provider i18n={i18next}>{children}</Provider>;
-}
-
-function normalizeDetectedLanguage(lang?: string | null): LangCode | undefined {
-  if (!lang) {
-    return undefined;
-  }
-
-  const lower = lang.toLowerCase();
-
-  if (lower === 'cn' || lower.startsWith('zh')) {
-    return 'cn';
-  }
-
-  if (lower === 'en' || lower.startsWith('en')) {
-    return 'en';
-  }
-
-  return undefined;
+  return <Provider i18n={i18n}>{children}</Provider>;
 }

@@ -19,17 +19,5 @@ export const carouselClasses = {
   },
   slide: {
     root: createClasses('carousel__slide__root'),
-    content: createClasses('carousel__slide__content'),
-    parallax: createClasses('carousel__slide__content__parallax'),
-  },
-  thumbs: {
-    root: createClasses('carousel__thumbs__root'),
-    container: createClasses('carousel__thumbs__container'),
-    item: createClasses('carousel__thumb__item'),
-    image: createClasses('carousel__thumb__item__image'),
-  },
-  progress: {
-    root: createClasses('carousel__progress__root'),
-    bar: createClasses('carousel__progress__bar'),
   },
 };

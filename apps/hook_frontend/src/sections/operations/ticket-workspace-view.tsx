@@ -10,6 +10,7 @@ import Typography from '@mui/material/Typography';
 
 import { fToNow } from 'src/utils/format-time';
 
+import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
@@ -146,6 +147,8 @@ function TicketListItem({
   selected: boolean;
   onClick: () => void;
 }) {
+  const { currentLang } = useTranslate('admin');
+
   return (
     <Button
       fullWidth
@@ -166,7 +169,8 @@ function TicketListItem({
           <TicketPriorityLabel value={ticket.priority} />
         </Stack>
         <Typography variant="caption" color="text.disabled">
-          <Iconify icon="solar:clock-circle-bold" width={14} /> {fToNow(ticket.last_message_at)}
+          <Iconify icon="solar:clock-circle-bold" width={14} />{' '}
+          {fToNow(ticket.last_message_at, currentLang.adapterLocale)}
         </Typography>
       </Stack>
     </Button>

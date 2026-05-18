@@ -38,7 +38,6 @@ import { pagination } from './pagination';
 import { iconButton } from './button-icon';
 import { breadcrumbs } from './breadcrumbs';
 import { dataGrid } from './mui-x-data-grid';
-import { treeView } from './mui-x-tree-view';
 import { buttonGroup } from './button-group';
 import { autocomplete } from './autocomplete';
 import { toggleButton } from './button-toggle';
@@ -90,7 +89,6 @@ export const components: Components<Theme> = {
   ...buttonGroup,
   ...toggleButton,
   // ➤➤ MUI X ➤➤
-  ...treeView,
   ...dataGrid,
   ...datePicker,
 };

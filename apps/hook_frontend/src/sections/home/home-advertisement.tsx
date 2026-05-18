@@ -113,11 +113,9 @@ const renderDescription = () => (
           color="primary"
           size="large"
           variant="contained"
-          target="_blank"
-          rel="noopener noreferrer"
-          href={paths.minimalStore}
+          href={paths.dashboard.root}
         >
-          Purchase now
+          Open dashboard
         </Button>
       </m.div>
 
@@ -126,9 +124,7 @@ const renderDescription = () => (
           color="inherit"
           size="large"
           variant="outlined"
-          target="_blank"
-          rel="noopener noreferrer"
-          href={paths.freeUI}
+          href={paths.dashboard.root}
           startIcon={<Iconify width={16} icon="eva:external-link-fill" sx={{ mr: 0.5 }} />}
           sx={{
             color: 'common.white',
@@ -136,7 +132,7 @@ const renderDescription = () => (
             '&:hover': { borderColor: 'currentColor' },
           }}
         >
-          Get free version
+          Open dashboard
         </Button>
       </m.div>
     </Box>

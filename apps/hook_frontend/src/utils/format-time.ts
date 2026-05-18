@@ -31,6 +31,7 @@ dayjs.extend(relativeTime);
 // ----------------------------------------------------------------------
 
 export type DateInput = Dayjs | Date | string | number | null | undefined;
+export type DateLocaleInput = string | null | undefined;
 
 export const FORMAT_PATTERNS = {
   dateTime: 'DD MMM YYYY h:mm a', // 17 Apr 2022 12:00 am
@@ -130,10 +131,10 @@ export function fTimestamp(input: DateInput): number | string {
  * @example
  * fToNow(dayjs().subtract(2, 'days')) // '2 days'
  */
-export function fToNow(input: DateInput): string {
+export function fToNow(input: DateInput, locale?: DateLocaleInput): string {
   if (!input) return '';
 
-  const date = dayjs(input);
+  const date = locale ? dayjs(input).locale(locale) : dayjs(input);
   if (!date.isValid()) return INVALID_DATE;
 
   return date.toNow(true);

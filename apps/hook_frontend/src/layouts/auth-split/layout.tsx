@@ -14,7 +14,6 @@ import Alert from '@mui/material/Alert';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { allLangs } from 'src/locales';
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Logo } from 'src/components/logo';
@@ -22,7 +21,6 @@ import { Logo } from 'src/components/logo';
 import { AuthSplitSection } from './section';
 import { AuthSplitContent } from './content';
 import { SettingsButton } from '../components/settings-button';
-import { LanguagePopover } from '../components/language-popover';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 
 // ----------------------------------------------------------------------
@@ -76,9 +74,6 @@ export function AuthSplitLayout({
           >
             {t('layout.help')}
           </Link>
-
-          {/** @slot Language popover */}
-          <LanguagePopover data={allLangs} />
 
           {/** @slot Settings button */}
           <SettingsButton />

@@ -62,53 +62,6 @@ export type CarouselArrowButtonsProps = React.ComponentProps<'div'> &
   };
 
 /**
- * Thumbs
- */
-export type UseCarouselThumbsReturn = {
-  selectedIndex: number;
-  thumbsApi?: EmblaCarouselType;
-  thumbsRef: UseEmblaCarouselType[0];
-  onClickThumb: (index: number) => void;
-};
-
-export type CarouselThumbProps = ButtonBaseProps & {
-  src: string;
-  index: number;
-  selected: boolean;
-};
-
-export type CarouselThumbsProps = React.ComponentProps<'div'> & {
-  options?: Partial<CarouselOptions>;
-  sx?: SxProps<Theme>;
-  slotProps?: {
-    slide?: SxProps<Theme>;
-    container?: SxProps<Theme>;
-    disableMask?: boolean;
-  };
-};
-
-/**
- * Progress
- */
-export type UseCarouselProgressReturn = {
-  value: number;
-};
-
-export type CarouselProgressBarProps = React.ComponentProps<'div'> &
-  UseCarouselProgressReturn & {
-    sx?: SxProps<Theme>;
-  };
-
-/**
- * Autoplay
- */
-export type UseCarouselAutoplayReturn = {
-  isPlaying: boolean;
-  onTogglePlay: () => void;
-  onClickPlay: (callback: () => void) => void;
-};
-
-/**
  * Slide
  */
 export type CarouselSlideProps = React.ComponentProps<'li'> & {
@@ -121,12 +74,10 @@ export type CarouselSlideProps = React.ComponentProps<'li'> & {
  */
 export type CarouselBaseOptions = EmblaOptionsType & {
   slideSpacing?: string;
-  parallax?: boolean | number;
   slidesToShow?: string | number | Partial<Record<Breakpoint, string | number>>;
 };
 
 export type CarouselOptions = CarouselBaseOptions & {
-  thumbs?: CarouselBaseOptions;
   breakpoints?: {
     [key: string]: Omit<CarouselBaseOptions, 'slidesToShow'>;
   };
@@ -137,11 +88,7 @@ export type UseCarouselReturn = {
   options?: CarouselOptions;
   mainRef: UseEmblaCarouselType[0];
   mainApi?: EmblaCarouselType;
-  thumbs: UseCarouselThumbsReturn;
   dots: UseCarouselDotsReturn;
-  autoplay: UseCarouselAutoplayReturn;
-  progress: UseCarouselProgressReturn;
-  autoScroll: UseCarouselAutoplayReturn;
   arrows: UseCarouselArrowsReturn;
 };
 

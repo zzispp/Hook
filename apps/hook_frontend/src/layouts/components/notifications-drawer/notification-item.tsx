@@ -22,7 +22,7 @@ export type NotificationItemProps = {
 };
 
 export function NotificationItem({ notification, onOpen, onDelete }: NotificationItemProps) {
-  const { t } = useTranslate('admin');
+  const { t, currentLang } = useTranslate('admin');
 
   return (
     <ListItemButton
@@ -58,7 +58,7 @@ export function NotificationItem({ notification, onOpen, onDelete }: Notificatio
         primary={notification.title}
         secondary={
           <>
-            {fToNow(notification.created_at)}
+            {fToNow(notification.created_at, currentLang.adapterLocale)}
             <Box
               component="span"
               sx={{ width: 2, height: 2, borderRadius: '50%', bgcolor: 'currentColor' }}

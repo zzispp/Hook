@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Remove template routes and section directories,DONE,Removed planned template route and section files,test ! -d apps/hook_frontend/src/app/components,2026-05-18,0,
+2,Update path and navigation interfaces,DONE,No main nav links to deleted template routes,rg "paths\\.(docs|components|minimalStore|freeUI|figmaUrl)" apps/hook_frontend/src/layouts apps/hook_frontend/src/routes,2026-05-18,0,
+3,Prune template-only actions types mocks and dependencies,DONE,No imports from deleted template modules,rg "src/actions/(blog|blog-ssr|calendar|chat|kanban|mail)|src/types/(blog|calendar|chat|file|invoice|job|kanban|mail|order|tour|user)|sections/_examples" apps/hook_frontend/src,2026-05-18,0,
+4,Run frontend validation,DONE,lint and build complete,pnpm --filter hook_frontend build,2026-05-18,0,

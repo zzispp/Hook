@@ -20,11 +20,6 @@ export type LangCode = (typeof supportedLngs)[number];
 export const fallbackLng: LangCode = 'cn';
 export const defaultNS = 'common';
 
-// Storage config
-export const storageConfig = {
-  localStorage: { key: 'i18nextLng', autoDetection: false },
-} as const;
-
 // ----------------------------------------------------------------------
 
 /**
