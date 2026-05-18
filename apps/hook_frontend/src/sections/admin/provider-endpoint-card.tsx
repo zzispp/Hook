@@ -22,6 +22,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Iconify } from 'src/components/iconify';
 
 import { ProviderEndpointRuleList } from './provider-endpoint-rule-list';
+import { validateEndpointUrlFields } from './provider-endpoint-validation';
 import { formatApiFormat, normalizeBaseUrl, defaultEndpointPath } from './provider-management-utils';
 import {
   validateBodyRules,
@@ -101,9 +102,8 @@ export function endpointRuleCount(endpoint: ProviderEndpoint) {
   return (endpoint.header_rules?.length ?? 0) + (endpoint.body_rules?.length ?? 0);
 }
 
-export function validateEndpointEditState(state: EndpointEditState) {
-  if (!normalizeBaseUrl(state.baseUrl)) return 'Base URL 不能为空';
-  return validateHeaderRules(state.headerRules) || validateBodyRules(state.bodyRules);
+export function validateEndpointEditState(state: EndpointEditState, t: ReturnType<typeof useTranslate>['t']) {
+  return validateEndpointUrlFields(state, t) || validateHeaderRules(state.headerRules) || validateBodyRules(state.bodyRules);
 }
 
 function EndpointCardHeader({

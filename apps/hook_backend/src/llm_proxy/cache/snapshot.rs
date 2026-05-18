@@ -9,7 +9,7 @@ use storage::{
     setting::SettingStore,
     user::UserStore,
 };
-use types::{group::BillingGroupListRequest, pagination::PageSliceRequest, user::UserListFilters};
+use types::{group::BillingGroupListRequest, pagination::PageSliceRequest, provider::parse_provider_key_time_range_minute, user::UserListFilters};
 
 pub use cached_types::{
     CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
@@ -19,7 +19,7 @@ use crate::llm_proxy::LlmProxyError;
 
 const SNAPSHOT_FULL_PAGE_LIMIT: u64 = i64::MAX as u64;
 
-pub async fn load(database: &Database) -> Result<SchedulingSnapshot, LlmProxyError> {
+pub async fn load(database: &Database, system_users: &[CachedUserAccess]) -> Result<SchedulingSnapshot, LlmProxyError> {
     let settings = SettingStore::new(database.clone()).get_system_settings().await?;
     Ok(SchedulingSnapshot {
         default_rate_limit_rpm: settings.default_rate_limit_rpm,
@@ -33,7 +33,7 @@ pub async fn load(database: &Database) -> Result<SchedulingSnapshot, LlmProxyErr
         provider_cooldown_policy: settings.provider_cooldown_policy,
         models: load_models(database).await?,
         groups: load_groups(database).await?,
-        users: load_users(database).await?,
+        users: load_users(database, system_users).await?,
         providers: load_providers(database).await?,
     })
 }
@@ -76,7 +76,7 @@ async fn load_groups(database: &Database) -> Result<Vec<CachedBillingGroup>, Llm
         .collect())
 }
 
-async fn load_users(database: &Database) -> Result<Vec<CachedUserAccess>, LlmProxyError> {
+async fn load_users(database: &Database, system_users: &[CachedUserAccess]) -> Result<Vec<CachedUserAccess>, LlmProxyError> {
     let page = UserStore::new(database.clone())
         .list_slice(
             PageSliceRequest {
@@ -88,19 +88,23 @@ async fn load_users(database: &Database) -> Result<Vec<CachedUserAccess>, LlmPro
             UserListFilters::default(),
         )
         .await?;
-    Ok(page
-        .items
-        .into_iter()
-        .map(|user| CachedUserAccess {
-            id: user.id.0,
-            username: user.username,
-            is_active: user.is_active,
-            allowed_model_ids: user.allowed_model_ids,
-            allowed_provider_ids: user.allowed_provider_ids,
-            quota_mode: user.quota_mode,
-            rate_limit_rpm: user.rate_limit_rpm,
-        })
-        .collect())
+    let mut users = system_users.to_vec();
+    users.extend(
+        page.items
+            .into_iter()
+            .filter(|user| !system_users.iter().any(|system| system.id == user.id.0))
+            .map(|user| CachedUserAccess {
+                id: user.id.0,
+                username: user.username,
+                is_active: user.is_active,
+                allowed_model_ids: user.allowed_model_ids,
+                allowed_provider_ids: user.allowed_provider_ids,
+                quota_mode: user.quota_mode,
+                rate_limit_rpm: user.rate_limit_rpm,
+            })
+            .collect::<Vec<_>>(),
+    );
+    Ok(users)
 }
 
 async fn load_providers(database: &Database) -> Result<Vec<CachedProvider>, LlmProxyError> {
@@ -172,6 +176,7 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
     records
         .into_iter()
         .map(|record| {
+            let (time_range_start_minute, time_range_end_minute) = cached_key_time_range(&record)?;
             Ok(CachedProviderKey {
                 id: record.id,
                 provider_id: record.provider_id,
@@ -183,10 +188,37 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
                 internal_priority: record.internal_priority,
                 rpm_limit: record.rpm_limit,
                 cache_ttl_minutes: record.cache_ttl_minutes,
+                time_range_enabled: record.time_range_enabled,
+                time_range_start_minute,
+                time_range_end_minute,
                 is_active: record.is_active,
             })
         })
         .collect()
+}
+
+fn cached_key_time_range(record: &provider_api_keys::Model) -> Result<(Option<u16>, Option<u16>), LlmProxyError> {
+    if !record.time_range_enabled {
+        return Ok((None, None));
+    }
+    let start = cached_key_time_range_minute(&record.id, "time_range_start", record.time_range_start.as_deref())?;
+    let end = cached_key_time_range_minute(&record.id, "time_range_end", record.time_range_end.as_deref())?;
+    if start == end {
+        return Err(LlmProxyError::Infrastructure(format!(
+            "provider key {} time_range_start and time_range_end cannot be equal",
+            record.id
+        )));
+    }
+    Ok((Some(start), Some(end)))
+}
+
+fn cached_key_time_range_minute(key_id: &str, field: &str, value: Option<&str>) -> Result<u16, LlmProxyError> {
+    let Some(value) = value else {
+        return Err(LlmProxyError::Infrastructure(format!(
+            "provider key {key_id} {field} is required when time_range_enabled is true"
+        )));
+    };
+    parse_provider_key_time_range_minute(value).ok_or_else(|| LlmProxyError::Infrastructure(format!("provider key {key_id} {field} must use HH:mm format")))
 }
 
 fn decode_key_api_formats(value: String) -> Result<Vec<String>, LlmProxyError> {

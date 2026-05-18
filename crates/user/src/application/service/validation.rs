@@ -17,7 +17,7 @@ pub(super) fn validate_credentials(input: &Credentials) -> AppResult<()> {
 pub(super) fn validate_new_user(input: &NewUser) -> AppResult<()> {
     validate_username(&input.username)?;
     validate_password(&input.password)?;
-    reject_blank("email", &input.email)?;
+    validate_email(&input.email)?;
     reject_blank("role", &input.role)?;
     validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
     validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
@@ -30,7 +30,7 @@ pub(super) fn validate_replace_user(input: &ReplaceUser) -> AppResult<()> {
     if let Some(password) = &input.password {
         validate_password(password)?;
     }
-    reject_blank("email", &input.email)?;
+    validate_email(&input.email)?;
     reject_blank("role", &input.role)?;
     validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
     validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
@@ -129,6 +129,36 @@ fn has_alphanumeric_edges(value: &str) -> bool {
         .next()
         .zip(value.chars().next_back())
         .is_some_and(|(first, last)| first.is_ascii_alphanumeric() && last.is_ascii_alphanumeric())
+}
+
+fn validate_email(email: &str) -> AppResult<()> {
+    reject_blank("email", email)?;
+    if email.chars().any(char::is_whitespace) || email.matches('@').count() != 1 {
+        return Err(invalid_email());
+    }
+    let (local, domain) = email.split_once('@').ok_or_else(invalid_email)?;
+    if !valid_email_local(local) || !valid_email_domain(domain) {
+        return Err(invalid_email());
+    }
+    Ok(())
+}
+
+fn valid_email_local(value: &str) -> bool {
+    !value.is_empty()
+        && !value.starts_with('.')
+        && !value.ends_with('.')
+        && value.chars().all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '%' | '+' | '-'))
+}
+
+fn valid_email_domain(value: &str) -> bool {
+    value.contains('.')
+        && value
+            .split('.')
+            .all(|part| !part.is_empty() && part.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-'))
+}
+
+fn invalid_email() -> AppError {
+    AppError::InvalidInput("email must be a valid email address".into())
 }
 
 fn reject_blank(field: &str, value: &str) -> AppResult<()> {

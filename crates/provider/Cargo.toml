@@ -10,6 +10,7 @@ currency.workspace = true
 hex.workspace = true
 ring.workspace = true
 req.workspace = true
+regex.workspace = true
 rust_decimal.workspace = true
 rbac.workspace = true
 serde.workspace = true

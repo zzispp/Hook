@@ -35,7 +35,7 @@ async fn sign_up_rejects_email_outside_whitelist() {
 
     let result = service.sign_up(user_with_email("alice", "alice@blocked.com")).await;
 
-    assert_invalid_input(result, "email suffix is not allowed for registration");
+    assert_invalid_input(result, "email suffix is not allowed for new users");
     assert_eq!(repository.created_records().len(), 0);
 }
 
@@ -46,23 +46,58 @@ async fn sign_up_rejects_blacklisted_email_suffix() {
 
     let result = service.sign_up(new_user("alice")).await;
 
-    assert_invalid_input(result, "email suffix is not allowed for registration");
+    assert_invalid_input(result, "email suffix is not allowed for new users");
     assert_eq!(repository.created_records().len(), 0);
 }
 
+#[tokio::test]
+async fn create_user_rejects_email_outside_whitelist() {
+    let repository = MemoryUserRepository::default();
+    let service = service_with_suffix_policy(repository.clone(), EmailSuffixMode::Whitelist, "example.com");
+
+    let result = service.create_user(user_with_email("alice", "alice@blocked.com")).await;
+
+    assert_invalid_input(result, "email suffix is not allowed for new users");
+    assert_eq!(repository.created_records().len(), 0);
+}
+
+#[tokio::test]
+async fn create_user_ignores_closed_self_registration() {
+    let repository = MemoryUserRepository::default();
+    let service = service_with_registration_settings(
+        repository.clone(),
+        RegistrationSettings {
+            allow_registration: false,
+            default_user_grant: Decimal::ZERO,
+            email_suffix_mode: EmailSuffixMode::None,
+            email_suffixes: String::new(),
+        },
+    );
+
+    let user = service.create_user(new_user("alice")).await.unwrap();
+
+    assert_eq!(user.username, "alice");
+    assert_eq!(repository.created_records().len(), 1);
+}
+
 fn service_with_suffix_policy(repository: MemoryUserRepository, mode: EmailSuffixMode, suffixes: &str) -> TestRegistrationService {
+    service_with_registration_settings(
+        repository,
+        RegistrationSettings {
+            allow_registration: true,
+            default_user_grant: Decimal::ZERO,
+            email_suffix_mode: mode,
+            email_suffixes: suffixes.into(),
+        },
+    )
+}
+
+fn service_with_registration_settings(repository: MemoryUserRepository, settings: RegistrationSettings) -> TestRegistrationService {
     UserService::with_system_user_and_registration(
         repository,
         TestPasswordHasher,
         NoSystemUserProvider,
-        TestRegistrationPolicy {
-            settings: RegistrationSettings {
-                allow_registration: true,
-                default_user_grant: Decimal::ZERO,
-                email_suffix_mode: mode,
-                email_suffixes: suffixes.into(),
-            },
-        },
+        TestRegistrationPolicy { settings },
         NoInitialGrantLedger,
         NoUserWalletCatalog,
     )

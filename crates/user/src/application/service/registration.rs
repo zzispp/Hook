@@ -63,5 +63,5 @@ fn email_domain(email: &str) -> AppResult<String> {
 }
 
 fn disallowed_suffix() -> AppError {
-    AppError::InvalidInput("email suffix is not allowed for registration".into())
+    AppError::InvalidInput("email suffix is not allowed for new users".into())
 }

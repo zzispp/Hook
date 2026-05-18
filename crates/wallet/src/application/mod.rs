@@ -4,5 +4,5 @@ mod service;
 mod validation;
 
 pub use error::{WalletError, WalletResult};
-pub use ports::{WalletRepository, WalletUseCase};
+pub use ports::{NoSystemWalletProvider, SystemWalletProvider, SystemWalletRecord, WalletRepository, WalletUseCase};
 pub use service::WalletService;

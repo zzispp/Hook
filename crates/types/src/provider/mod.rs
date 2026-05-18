@@ -6,6 +6,7 @@ mod key;
 mod model_binding;
 mod request_candidate;
 mod request_record;
+mod time_range;
 
 pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCooldownPolicy, ProviderCooldownRule};
 pub use core::{Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderUpdate};
@@ -18,3 +19,4 @@ pub use request_record::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestCandidateDetail, RequestRecord, RequestRecordDetail, RequestRecordListRequest,
     RequestRecordListResponse,
 };
+pub use time_range::{parse_provider_key_time_range_minute, provider_key_minute_of_day, provider_key_time_range_contains};

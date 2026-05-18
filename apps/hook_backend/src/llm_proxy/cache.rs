@@ -12,7 +12,7 @@ use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use types::api_token::ApiToken;
 use uuid::Uuid;
 
-use self::snapshot::SchedulingSnapshot;
+use self::snapshot::{CachedUserAccess, SchedulingSnapshot};
 use super::LlmProxyError;
 
 const AUTH_USAGE_USED_QUOTA_FIELD: &str = "used_quota";
@@ -26,14 +26,16 @@ pub struct LlmProxyCache {
     database: Database,
     connection: redis::aio::ConnectionManager,
     key_prefix: String,
+    system_users: Vec<CachedUserAccess>,
 }
 
 impl LlmProxyCache {
-    pub fn new(database: Database, connection: redis::aio::ConnectionManager, key_prefix: String) -> Self {
+    pub fn new(database: Database, connection: redis::aio::ConnectionManager, key_prefix: String, system_users: Vec<CachedUserAccess>) -> Self {
         let cache = Self {
             database,
             connection,
             key_prefix,
+            system_users,
         };
         usage_flush::spawn_usage_flush_task(cache.clone());
         cache
@@ -188,7 +190,7 @@ impl LlmProxyCache {
     }
 
     async fn write_fresh_scheduling_snapshot(&self) -> Result<SchedulingSnapshot, LlmProxyError> {
-        let snapshot = snapshot::load(&self.database).await?;
+        let snapshot = snapshot::load(&self.database, &self.system_users).await?;
         let value = snapshot::encode(&snapshot)?;
         let mut connection = self.connection.clone();
         let _: () = connection.set(self.scheduling_snapshot_key(), value).await.map_err(redis_error)?;

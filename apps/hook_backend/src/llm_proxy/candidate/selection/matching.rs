@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use types::provider::ProviderSchedulingMode;
+use time::OffsetDateTime;
+use types::provider::{ProviderSchedulingMode, provider_key_minute_of_day, provider_key_time_range_contains};
 
 use super::CandidateParts;
 use crate::llm_proxy::{
@@ -26,6 +27,10 @@ pub(super) struct MatchingCandidatePartsInput<'a> {
 }
 
 pub(super) fn matching_candidate_parts(input: MatchingCandidatePartsInput<'_>) -> Vec<CandidateParts> {
+    matching_candidate_parts_at(input, current_utc_minute())
+}
+
+pub(super) fn matching_candidate_parts_at(input: MatchingCandidatePartsInput<'_>, current_minute: u16) -> Vec<CandidateParts> {
     let mut candidates = Vec::new();
     for provider in input
         .snapshot
@@ -42,6 +47,7 @@ pub(super) fn matching_candidate_parts(input: MatchingCandidatePartsInput<'_>) -
                 affinity_key: input.affinity_key,
                 scheduling_mode: input.scheduling_mode,
                 request_id: input.request_id,
+                current_minute,
             },
             &mut candidates,
         );
@@ -56,18 +62,20 @@ struct AppendProviderCandidateInput<'a> {
     affinity_key: Option<&'a str>,
     scheduling_mode: ProviderSchedulingMode,
     request_id: &'a str,
+    current_minute: u16,
 }
 
 fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &mut Vec<CandidateParts>) {
     let Some(model) = provider_model(input.provider, input.model_id, input.affinity_key) else {
         return;
     };
-    let endpoints = ordered_endpoints(input.provider, input.model_id, input.request);
+    let endpoints = ordered_endpoints(input.provider, input.model_id, input.request, input.current_minute);
     let keys = ordered_keys(OrderedKeysInput {
         provider: input.provider,
         affinity_key: input.affinity_key,
         scheduling_mode: input.scheduling_mode,
         request_id: input.request_id,
+        current_minute: input.current_minute,
     });
     if endpoints.is_empty() || keys.is_empty() {
         return;
@@ -86,14 +94,20 @@ struct OrderedKeysInput<'a> {
     affinity_key: Option<&'a str>,
     scheduling_mode: ProviderSchedulingMode,
     request_id: &'a str,
+    current_minute: u16,
 }
 
-fn ordered_endpoints(provider: &CachedProvider, model_id: &str, request: CandidateRequest<'_>) -> Vec<CachedEndpoint> {
+fn ordered_endpoints(provider: &CachedProvider, model_id: &str, request: CandidateRequest<'_>, current_minute: u16) -> Vec<CachedEndpoint> {
     let (mut exact, converted): (Vec<_>, Vec<_>) = provider
         .endpoints
         .iter()
         .filter(|endpoint| endpoint_allowed(provider, endpoint, request))
-        .filter(|endpoint| provider.keys.iter().any(|key| key_allowed_for_model_endpoint(key, model_id, endpoint)))
+        .filter(|endpoint| {
+            provider
+                .keys
+                .iter()
+                .any(|key| key_allowed_for_model_endpoint(key, model_id, endpoint, current_minute))
+        })
         .cloned()
         .partition(|endpoint| endpoint_exact(endpoint, request));
     exact.extend(converted);
@@ -101,7 +115,13 @@ fn ordered_endpoints(provider: &CachedProvider, model_id: &str, request: Candida
 }
 
 fn ordered_keys(input: OrderedKeysInput<'_>) -> Vec<CachedProviderKey> {
-    let mut keys = input.provider.keys.iter().filter(|key| key_allowed(key)).cloned().collect::<Vec<_>>();
+    let mut keys = input
+        .provider
+        .keys
+        .iter()
+        .filter(|key| key_allowed(key, input.current_minute))
+        .cloned()
+        .collect::<Vec<_>>();
     keys.sort_by(|left, right| (left.internal_priority, &left.id).cmp(&(right.internal_priority, &right.id)));
     match input.scheduling_mode {
         ProviderSchedulingMode::CacheAffinity => order_keys_for_cache_affinity(&mut keys, input.affinity_key, input.request_id),
@@ -172,12 +192,22 @@ fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {
         .unwrap_or(false)
 }
 
-fn key_allowed(key: &CachedProviderKey) -> bool {
-    key.is_active && !key.api_formats.is_empty()
+fn key_allowed(key: &CachedProviderKey, current_minute: u16) -> bool {
+    key.is_active && !key.api_formats.is_empty() && key_time_range_allowed(key, current_minute)
 }
 
-fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint) -> bool {
-    key_allowed(key) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
+fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, current_minute: u16) -> bool {
+    key_allowed(key, current_minute) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
+}
+
+fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool {
+    if !key.time_range_enabled {
+        return true;
+    }
+    let (Some(start), Some(end)) = (key.time_range_start_minute, key.time_range_end_minute) else {
+        return false;
+    };
+    provider_key_time_range_contains(current_minute, start, end)
 }
 
 fn key_allows_model(key: &CachedProviderKey, model_id: &str) -> bool {
@@ -202,4 +232,9 @@ fn stable_hash(value: &str) -> u64 {
     value
         .bytes()
         .fold(FNV_OFFSET_BASIS, |hash, byte| (hash ^ u64::from(byte)).wrapping_mul(FNV_PRIME))
+}
+
+fn current_utc_minute() -> u16 {
+    let time = OffsetDateTime::now_utc().time();
+    provider_key_minute_of_day(u16::from(time.hour()), u16::from(time.minute())).expect("UTC time must have a valid minute of day")
 }

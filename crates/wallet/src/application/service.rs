@@ -9,9 +9,11 @@ use types::{
     },
 };
 
-use crate::application::{WalletError, WalletRepository, WalletResult, WalletUseCase};
+use crate::application::{NoSystemWalletProvider, SystemWalletProvider, WalletError, WalletRepository, WalletResult, WalletUseCase};
 
 use super::validation::{validate_page, validate_positive_amount, validate_user_id, validate_wallet_id};
+
+mod system_wallet;
 
 const CATEGORY_ADJUST: &str = "adjust";
 const CATEGORY_RECHARGE: &str = "recharge";
@@ -19,20 +21,37 @@ const REASON_ADJUST_ADMIN: &str = "adjust_admin";
 const REASON_TOPUP_ADMIN_MANUAL: &str = "topup_admin_manual";
 const LINK_ADMIN_ACTION: &str = "admin_action";
 
-pub struct WalletService<R> {
+pub struct WalletService<R, S = NoSystemWalletProvider> {
     repository: R,
+    system_wallets: S,
 }
 
-impl<R> WalletService<R>
+impl<R> WalletService<R, NoSystemWalletProvider>
 where
     R: WalletRepository,
 {
     pub const fn new(repository: R) -> Self {
-        Self { repository }
+        Self {
+            repository,
+            system_wallets: NoSystemWalletProvider,
+        }
+    }
+}
+
+impl<R, S> WalletService<R, S>
+where
+    R: WalletRepository,
+    S: SystemWalletProvider,
+{
+    pub const fn with_system_wallet(repository: R, system_wallets: S) -> Self {
+        Self { repository, system_wallets }
     }
 
     async fn user_wallet(&self, user_id: &str) -> WalletResult<Wallet> {
         validate_user_id(user_id)?;
+        if let Some(wallet) = system_wallet::wallet_for_user(self.system_wallets.system_wallet(), user_id) {
+            return Ok(wallet);
+        }
         match self.repository.find_by_user_id(user_id).await? {
             Some(wallet) => Ok(wallet),
             None => self.repository.ensure_user_wallet(user_id).await,
@@ -41,14 +60,25 @@ where
 
     async fn wallet_by_id(&self, wallet_id: &str) -> WalletResult<Wallet> {
         validate_wallet_id(wallet_id)?;
+        if system_wallet::wallet_for_id(self.system_wallets.system_wallet(), wallet_id).is_some() {
+            return Err(WalletError::Forbidden);
+        }
         self.repository.find_by_id(wallet_id).await?.ok_or(WalletError::NotFound)
+    }
+
+    fn system_admin_wallet(&self, filters: &AdminWalletListFilters) -> Option<AdminWalletResponse> {
+        self.system_wallets
+            .system_wallet()
+            .filter(|record| system_wallet::system_wallet_matches(record, filters))
+            .map(system_wallet::admin_wallet_response)
     }
 }
 
 #[async_trait]
-impl<R> WalletUseCase for WalletService<R>
+impl<R, S> WalletUseCase for WalletService<R, S>
 where
     R: WalletRepository,
+    S: SystemWalletProvider,
 {
     async fn balance(&self, user_id: &str) -> WalletResult<WalletBalanceResponse> {
         let wallet = self.user_wallet(user_id).await?;
@@ -62,6 +92,9 @@ where
 
     async fn transactions(&self, user_id: &str, page: PageRequest) -> WalletResult<WalletTransactionsResponse> {
         validate_page(page)?;
+        if let Some(wallet) = system_wallet::wallet_for_user(self.system_wallets.system_wallet(), user_id) {
+            return Ok(system_wallet::user_transactions_response(wallet, page));
+        }
         let wallet = self.user_wallet(user_id).await?;
         let wallet_summary = WalletSummaryResponse::from(wallet.clone());
         let transactions = self.repository.page_transactions(&wallet.id.0, page).await?;
@@ -70,7 +103,10 @@ where
 
     async fn admin_wallets(&self, page: PageRequest, filters: AdminWalletListFilters) -> WalletResult<AdminWalletListResponse> {
         validate_page(page)?;
-        let wallets = self.repository.page_admin_wallets(page, filters).await?;
+        let system_wallet = self.system_admin_wallet(&filters);
+        let (slice, include_system, db_limit) = system_wallet::admin_wallet_slice(page, system_wallet.is_some());
+        let wallets = self.repository.page_admin_wallets(slice, filters).await?;
+        let wallets = system_wallet::admin_wallet_page(page, wallets, system_wallet, include_system, db_limit);
         Ok(AdminWalletListResponse {
             items: wallets.items,
             total: wallets.total,
@@ -93,6 +129,9 @@ where
     async fn admin_transactions(&self, wallet_id: &str, page: PageRequest) -> WalletResult<AdminWalletTransactionsResponse> {
         validate_page(page)?;
         validate_wallet_id(wallet_id)?;
+        if let Some(record) = system_wallet::wallet_for_id(self.system_wallets.system_wallet(), wallet_id) {
+            return Ok(system_wallet::admin_transactions_response(record, page));
+        }
         let wallet = self.repository.find_admin_wallet_by_id(wallet_id).await?.ok_or(WalletError::NotFound)?;
         let transactions = self.repository.page_transactions(wallet_id, page).await?;
         Ok(admin_transactions_response(wallet, transactions))

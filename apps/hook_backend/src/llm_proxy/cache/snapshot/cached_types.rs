@@ -99,6 +99,12 @@ pub struct CachedProviderKey {
     #[serde(default)]
     pub rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,
+    #[serde(default)]
+    pub time_range_enabled: bool,
+    #[serde(default)]
+    pub time_range_start_minute: Option<u16>,
+    #[serde(default)]
+    pub time_range_end_minute: Option<u16>,
     pub is_active: bool,
 }
 

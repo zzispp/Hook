@@ -159,7 +159,7 @@ function useEndpointManager(
 
   const saveEndpoint = useCallback(async (endpoint: ProviderEndpoint, payload: ProviderEndpointUpdate) => {
     if (!provider) return;
-    const error = validateEndpointEditState(editStates[endpoint.id] ?? editStateFromEndpoint(endpoint));
+    const error = validateEndpointEditState(editStates[endpoint.id] ?? editStateFromEndpoint(endpoint), t);
     if (error) {
       toast.error(error);
       return;
@@ -207,7 +207,7 @@ function useEndpointManager(
       toast.error('请选择端点格式');
       return;
     }
-    const error = validateEndpointEditState(addForm);
+    const error = validateEndpointEditState(addForm, t);
     if (error) {
       toast.error(error);
       return;

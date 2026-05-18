@@ -7,7 +7,6 @@ use types::{
         CardCodeTypeListFilters, CardCodeTypeListResponse, CardCodeTypeUpdatePayload,
     },
     pagination::{Page, PageRequest},
-    system_setting::DisplayCurrency,
 };
 
 use super::CardCodeResult;
@@ -29,7 +28,6 @@ pub trait CardCodeRepository: Send + Sync + 'static {
 
 #[async_trait]
 pub trait CardCodeCurrencyProvider: Send + Sync + 'static {
-    async fn current_currency(&self) -> CardCodeResult<DisplayCurrency>;
     async fn usd_cny_rate(&self) -> CardCodeResult<Decimal>;
 }
 

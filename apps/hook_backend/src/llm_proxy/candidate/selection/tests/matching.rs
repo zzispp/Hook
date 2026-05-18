@@ -3,13 +3,14 @@ use std::collections::HashSet;
 use types::provider::ProviderSchedulingMode;
 
 use super::helpers::{
-    provider_b, provider_key, provider_key_for_models, provider_with_endpoints_and_keys, provider_with_keys, request, snapshot_with_provider, user_access,
+    minute_of_day, provider_b, provider_key, provider_key_for_models, provider_key_with_time_range, provider_with_endpoints_and_keys, provider_with_keys,
+    request, snapshot_with_provider, user_access,
 };
 use crate::llm_proxy::{
     cache::snapshot::SchedulingSnapshot,
     candidate::{
         CandidateRequest,
-        selection::matching::{MatchingCandidatePartsInput, matching_candidate_parts},
+        selection::matching::{MatchingCandidatePartsInput, matching_candidate_parts, matching_candidate_parts_at},
     },
 };
 
@@ -279,6 +280,35 @@ fn matching_candidate_parts_excludes_key_that_does_not_allow_requested_model() {
     });
 
     assert!(parts.is_empty());
+}
+
+#[test]
+fn matching_candidate_parts_skips_key_outside_enabled_time_range() {
+    let provider = provider_with_keys(vec![
+        provider_key_with_time_range("key-current", 10, minute_of_day(8, 0), minute_of_day(18, 0)),
+        provider_key_with_time_range("key-expired", 20, minute_of_day(18, 0), minute_of_day(20, 0)),
+    ]);
+    let snapshot = snapshot_with_provider(provider);
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts_at(
+        MatchingCandidatePartsInput {
+            snapshot: &snapshot,
+            group,
+            user_access: None,
+            model_id: "model-a",
+            request: request(),
+            affinity_key: None,
+            scheduling_mode: ProviderSchedulingMode::FixedOrder,
+            request_id: "request-1",
+            cooled_provider_ids: &HashSet::new(),
+        },
+        minute_of_day(10, 0),
+    );
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].keys.len(), 1);
+    assert_eq!(parts[0].keys[0].id, "key-current");
 }
 
 #[test]

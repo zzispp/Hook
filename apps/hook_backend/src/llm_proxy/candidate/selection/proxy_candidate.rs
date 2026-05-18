@@ -308,6 +308,9 @@ mod tests {
             internal_priority: 10,
             rpm_limit: None,
             cache_ttl_minutes: 5,
+            time_range_enabled: false,
+            time_range_start_minute: None,
+            time_range_end_minute: None,
             is_active: true,
         }
     }

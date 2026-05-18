@@ -13,7 +13,12 @@ use types::{
 
 mod snapshot;
 
-use super::{LlmProxyError, LlmProxyState, audit::TokenUsage, cache::snapshot::CachedUserAccess, candidate::ProxyCandidate};
+use super::{
+    LlmProxyError, LlmProxyState,
+    audit::TokenUsage,
+    cache::snapshot::{CachedUserAccess, SchedulingSnapshot},
+    candidate::ProxyCandidate,
+};
 
 const CATEGORY_CONSUME: &str = "consume";
 const ERROR_CODE_DISABLED_USER: &str = "new_api_error";
@@ -58,13 +63,14 @@ pub(super) async fn settle_wallet_usage(state: &LlmProxyState, input: WalletSett
 }
 
 async fn user_for_token(state: &LlmProxyState, token: &ApiToken) -> Result<Option<CachedUserAccess>, LlmProxyError> {
-    if token.token_type != ApiTokenType::User {
-        return Ok(None);
-    }
-    let Some(user_id) = token.user_id.as_deref() else {
-        return Err(disabled_user_error());
-    };
     let snapshot = state.scheduling_snapshot().await?;
+    billing_user_for_token(&snapshot, token)
+}
+
+fn billing_user_for_token(snapshot: &SchedulingSnapshot, token: &ApiToken) -> Result<Option<CachedUserAccess>, LlmProxyError> {
+    let user_id = match token.token_type {
+        ApiTokenType::User | ApiTokenType::Independent => token.user_id.as_deref().ok_or_else(disabled_user_error)?,
+    };
     snapshot
         .users
         .iter()
@@ -95,10 +101,7 @@ async fn ensure_wallet_quota(state: &LlmProxyState, user: &CachedUserAccess) -> 
     if user.quota_mode == USER_QUOTA_MODE_UNLIMITED {
         return Ok(());
     }
-    let wallet = WalletStore::new(state.database.clone())
-        .find_by_user_id(&user.id)
-        .await?
-        .ok_or_else(wallet_quota_error)?;
+    let wallet = wallet_for_user(state, &user.id).await?;
     ensure_wallet_available(&wallet)
 }
 
@@ -123,10 +126,7 @@ async fn settlement_token(state: &LlmProxyState, candidate: &ProxyCandidate) -> 
 }
 
 async fn settle_user_wallet(state: &LlmProxyState, input: WalletSettlementInput<'_>, token: &ApiToken, user: &CachedUserAccess) -> Result<(), LlmProxyError> {
-    let wallet = WalletStore::new(state.database.clone())
-        .find_by_user_id(&user.id)
-        .await?
-        .ok_or_else(wallet_quota_error)?;
+    let wallet = wallet_for_user(state, &user.id).await?;
     if wallet.limit_mode == WALLET_LIMIT_UNLIMITED {
         return Ok(());
     }
@@ -143,6 +143,16 @@ async fn settle_user_wallet(state: &LlmProxyState, input: WalletSettlementInput<
         .await
         .map_err(wallet_settlement_error)?;
     Ok(())
+}
+
+async fn wallet_for_user(state: &LlmProxyState, user_id: &str) -> Result<Wallet, LlmProxyError> {
+    if let Some(wallet) = state.system_wallet_for_user(user_id) {
+        return Ok(wallet);
+    }
+    WalletStore::new(state.database.clone())
+        .find_by_user_id(user_id)
+        .await?
+        .ok_or_else(wallet_quota_error)
 }
 
 fn disabled_user_error() -> LlmProxyError {
@@ -170,5 +180,81 @@ fn consume_input(user_id: &str, amount: Decimal, request_id: &str, description: 
         link_id: Some(request_id.into()),
         operator_id: None,
         description: Some(description),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+    use types::{
+        api_token::{ApiToken, ApiTokenType, ModelAccessMode},
+        provider::ProviderSchedulingMode,
+    };
+
+    use super::billing_user_for_token;
+    use crate::llm_proxy::cache::snapshot::{CachedUserAccess, SchedulingSnapshot};
+
+    #[test]
+    fn billing_user_for_token_returns_independent_token_owner() {
+        let snapshot = snapshot_with_user(user_access("system-admin", "admin", "wallet"));
+        let token = api_token(ApiTokenType::Independent, Some("system-admin"));
+
+        let user = billing_user_for_token(&snapshot, &token).unwrap();
+
+        assert_eq!(user.as_ref().map(|user| user.id.as_str()), Some("system-admin"));
+    }
+
+    fn snapshot_with_user(user: CachedUserAccess) -> SchedulingSnapshot {
+        SchedulingSnapshot {
+            default_rate_limit_rpm: 0,
+            scheduling_mode: ProviderSchedulingMode::FixedOrder,
+            record_request_headers: false,
+            record_request_body: false,
+            record_response_body: false,
+            max_request_body_size_kb: 1024,
+            max_response_body_size_kb: 1024,
+            sensitive_request_headers: String::new(),
+            provider_cooldown_policy: Default::default(),
+            models: Vec::new(),
+            groups: Vec::new(),
+            users: vec![user],
+            providers: Vec::new(),
+        }
+    }
+
+    fn user_access(id: &str, username: &str, quota_mode: &str) -> CachedUserAccess {
+        CachedUserAccess {
+            id: id.into(),
+            username: username.into(),
+            is_active: true,
+            allowed_model_ids: Vec::new(),
+            allowed_provider_ids: Vec::new(),
+            quota_mode: quota_mode.into(),
+            rate_limit_rpm: None,
+        }
+    }
+
+    fn api_token(token_type: ApiTokenType, user_id: Option<&str>) -> ApiToken {
+        ApiToken {
+            id: "token-a".into(),
+            user_id: user_id.map(str::to_owned),
+            token_type,
+            name: "Token A".into(),
+            token_value: String::new(),
+            token_hash: String::new(),
+            token_prefix: "sk-test".into(),
+            group_code: "default".into(),
+            expires_at: None,
+            model_access_mode: ModelAccessMode::All,
+            allowed_model_ids: Vec::new(),
+            rate_limit_rpm: None,
+            quota_limit: None,
+            used_quota: Decimal::ZERO,
+            request_count: 0,
+            is_active: true,
+            last_used_at: None,
+            created_at: String::new(),
+            updated_at: String::new(),
+        }
     }
 }

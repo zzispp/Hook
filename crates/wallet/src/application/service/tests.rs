@@ -3,25 +3,75 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
-    pagination::{Page, PageRequest},
+    pagination::{Page, PageRequest, PageSliceRequest},
     wallet::{
         AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, Wallet, WalletAdjustment,
         WalletAdjustmentType, WalletBalanceType, WalletId, WalletTransaction, WalletTransactionResponse,
     },
 };
 
-use crate::application::{WalletError, WalletRepository, WalletResult, WalletService, WalletUseCase};
+use crate::application::{SystemWalletProvider, SystemWalletRecord, WalletError, WalletRepository, WalletResult, WalletService, WalletUseCase};
 
 #[tokio::test]
-async fn balance_creates_cny_wallet_for_user() {
+async fn balance_creates_usd_wallet_for_user() {
     let repository = MemoryWalletRepository::default();
     let service = WalletService::new(repository.clone());
 
     let response = service.balance("user-1").await.unwrap();
 
-    assert_eq!(response.currency, "CNY");
+    assert_eq!(response.currency, currency::DEFAULT_WALLET_CURRENCY);
     assert_eq!(response.balance, Decimal::ZERO);
     assert_eq!(repository.wallets().len(), 1);
+}
+
+#[tokio::test]
+async fn balance_returns_configured_system_wallet_without_persisting() {
+    let repository = MemoryWalletRepository::default();
+    let service = WalletService::with_system_wallet(repository.clone(), system_wallet_provider());
+
+    let response = service.balance("system-admin").await.unwrap();
+
+    assert_eq!(response.wallet.id, "system-wallet");
+    assert_eq!(response.currency, currency::DEFAULT_WALLET_CURRENCY);
+    assert!(response.unlimited);
+    assert_eq!(repository.wallets().len(), 0);
+}
+
+#[tokio::test]
+async fn admin_wallets_include_configured_system_wallet() {
+    let repository = MemoryWalletRepository::default();
+    repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::ZERO, Decimal::ZERO));
+    let service = WalletService::with_system_wallet(repository, system_wallet_provider());
+
+    let response = service
+        .admin_wallets(PageRequest { page: 1, page_size: 20 }, AdminWalletListFilters::default())
+        .await
+        .unwrap();
+
+    assert_eq!(response.total, 2);
+    assert_eq!(response.items[0].id, "system-wallet");
+    assert_eq!(response.items[0].owner_name, "admin");
+    assert_eq!(response.items[0].owner_type, "system");
+    assert!(response.items[0].unlimited);
+}
+
+#[tokio::test]
+async fn adjust_rejects_configured_system_wallet() {
+    let repository = MemoryWalletRepository::default();
+    let service = WalletService::with_system_wallet(repository, system_wallet_provider());
+
+    let result = service
+        .adjust_wallet(WalletAdjustment {
+            wallet_id: "system-wallet".into(),
+            amount: Decimal::ONE,
+            balance_type: WalletBalanceType::Recharge,
+            adjustment_type: WalletAdjustmentType::Increase,
+            operator_id: Some("operator-1".into()),
+            description: None,
+        })
+        .await;
+
+    assert!(matches!(result, Err(WalletError::Forbidden)));
 }
 
 #[tokio::test]
@@ -157,6 +207,17 @@ struct MemoryState {
     transactions: Vec<WalletTransaction>,
 }
 
+#[derive(Clone)]
+struct TestSystemWalletProvider {
+    record: SystemWalletRecord,
+}
+
+impl SystemWalletProvider for TestSystemWalletProvider {
+    fn system_wallet(&self) -> Option<SystemWalletRecord> {
+        Some(self.record.clone())
+    }
+}
+
 impl MemoryWalletRepository {
     fn insert_wallet(&self, wallet: Wallet) {
         self.state.lock().unwrap().wallets.push(wallet);
@@ -234,11 +295,11 @@ impl WalletRepository for MemoryWalletRepository {
             .map(admin_wallet))
     }
 
-    async fn page_admin_wallets(&self, page: PageRequest, _filters: AdminWalletListFilters) -> WalletResult<Page<AdminWalletResponse>> {
+    async fn page_admin_wallets(&self, page: PageSliceRequest, _filters: AdminWalletListFilters) -> WalletResult<Page<AdminWalletResponse>> {
         let items: Vec<_> = self.state.lock().unwrap().wallets.iter().cloned().map(admin_wallet).collect();
         Ok(Page {
             total: items.len() as u64,
-            items,
+            items: items.into_iter().skip(page.offset as usize).take(page.limit as usize).collect(),
             page: page.page,
             page_size: page.page_size,
         })
@@ -252,6 +313,20 @@ impl WalletRepository for MemoryWalletRepository {
             page: page.page,
             page_size: page.page_size,
         })
+    }
+}
+
+fn system_wallet_provider() -> TestSystemWalletProvider {
+    TestSystemWalletProvider {
+        record: SystemWalletRecord {
+            wallet: Wallet {
+                limit_mode: "unlimited".into(),
+                currency: currency::DEFAULT_WALLET_CURRENCY.into(),
+                ..wallet("system-wallet", "system-admin", Decimal::ZERO, Decimal::ZERO)
+            },
+            owner_name: "admin".into(),
+            owner_email: "admin@example.com".into(),
+        },
     }
 }
 
@@ -282,7 +357,7 @@ fn admin_wallet(wallet: Wallet) -> AdminWalletResponse {
 fn admin_ledger_transaction(transaction: WalletTransaction) -> AdminWalletLedgerTransactionResponse {
     AdminWalletLedgerTransactionResponse {
         transaction: WalletTransactionResponse::from(transaction),
-        currency: "CNY".into(),
+        currency: currency::DEFAULT_WALLET_CURRENCY.into(),
         owner_name: "test-user".into(),
         owner_email: "test@example.com".into(),
         owner_type: "user".into(),
@@ -296,7 +371,7 @@ fn wallet(id: &str, user_id: &str, recharge_balance: Decimal, gift_balance: Deci
         user_id: user_id.into(),
         recharge_balance,
         gift_balance,
-        currency: "CNY".into(),
+        currency: currency::DEFAULT_WALLET_CURRENCY.into(),
         status: "active".into(),
         limit_mode: "finite".into(),
         total_recharged: Decimal::ZERO,

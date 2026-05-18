@@ -1,6 +1,6 @@
 use super::{
-    AdminSettings, AuthSettings, DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, RedisSettings, SecuritySettings, ServerSettings,
-    Settings, SettingsError, TracingSettings, explicit_config_path,
+    AdminSettings, AdminWalletSettings, AuthSettings, DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, RedisSettings, SecuritySettings,
+    ServerSettings, Settings, SettingsError, TracingSettings, explicit_config_path,
 };
 use std::{ffi::OsString, path::PathBuf};
 
@@ -253,6 +253,11 @@ fn admin_settings() -> AdminSettings {
         role: "admin".into(),
         is_active: true,
         password_hash: "admin-password-hash-from-config".into(),
+        wallet: AdminWalletSettings {
+            id: "00000000-0000-7000-8000-000000000001".into(),
+            status: "active".into(),
+            limit_mode: "unlimited".into(),
+        },
     }
 }
 

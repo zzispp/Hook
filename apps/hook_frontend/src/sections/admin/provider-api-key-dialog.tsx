@@ -199,15 +199,19 @@ function ApiKeyTimeRangeFields({
       {dialogs.apiKeyForm.time_range_enabled && (
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <TextFieldRow
+            type="time"
             label={t('providers.timeRangeStart')}
             value={dialogs.apiKeyForm.time_range_start}
+            slotProps={{ inputLabel: { shrink: true } }}
             onChange={(value) =>
               dialogs.setApiKeyForm((form) => ({ ...form, time_range_start: value }))
             }
           />
           <TextFieldRow
+            type="time"
             label={t('providers.timeRangeEnd')}
             value={dialogs.apiKeyForm.time_range_end}
+            slotProps={{ inputLabel: { shrink: true } }}
             onChange={(value) =>
               dialogs.setApiKeyForm((form) => ({ ...form, time_range_end: value }))
             }

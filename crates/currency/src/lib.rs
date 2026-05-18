@@ -4,7 +4,7 @@ use thiserror::Error;
 pub const USD: &str = "USD";
 pub const CNY: &str = "CNY";
 pub const ACCOUNTING_CURRENCY: &str = USD;
-pub const DEFAULT_WALLET_CURRENCY: &str = CNY;
+pub const DEFAULT_WALLET_CURRENCY: &str = ACCOUNTING_CURRENCY;
 
 const MONEY_SCALE: u32 = 8;
 

@@ -3,7 +3,7 @@ use crate::{
     auth::{AuthState, AuthStateParts, auth_middleware},
     card_code_currency::BackendCardCodeCurrencyProvider,
     exchange_rates::ExchangeRateCache,
-    llm_proxy::{LlmProxyCache, LlmProxyState, create_router as create_llm_proxy_router, create_v1beta_router},
+    llm_proxy::{LlmProxyCache, LlmProxyState, cached_system_user_access, create_router as create_llm_proxy_router, create_v1beta_router},
     performance_monitoring_api::{PerformanceMonitoringApiState, create_router as create_performance_monitoring_router},
     performance_monitoring_os::PerformanceOsCollector,
     proxy_cache_hooks::{
@@ -82,8 +82,8 @@ use user::{
 };
 use wallet::{
     api::{WalletApiState, create_router as create_wallet_router},
-    application::WalletService,
-    infra::StorageWalletRepository,
+    application::{SystemWalletProvider, WalletService},
+    infra::{ConfigSystemWalletProvider, StorageWalletRepository},
 };
 pub async fn serve(settings: Settings) -> BackendResult<()> {
     let bind_addr = settings.bind_addr();
@@ -107,7 +107,14 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let provider_key_cipher = ProviderKeyCipher::new(settings.provider_key_secret()?)?;
     let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
-    let proxy_cache = LlmProxyCache::new(database.clone(), redis_connection.clone(), settings.redis.key_prefix.clone());
+    let system_user_provider = ConfigSystemUserProvider::from_settings(settings)?;
+    let system_wallet_provider = ConfigSystemWalletProvider::from_settings(settings)?;
+    let proxy_cache = LlmProxyCache::new(
+        database.clone(),
+        redis_connection.clone(),
+        settings.redis.key_prefix.clone(),
+        cached_system_user_access(&system_user_provider),
+    );
     proxy_cache.refresh_scheduling_snapshot().await?;
     proxy_cache.restore_provider_cooldowns().await?;
     let models_inner = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
@@ -119,7 +126,10 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         ReqwestUpstreamModelFetcher::new()?,
     ));
     let providers = Arc::new(ProxyCachedProviderUseCase::new(providers_inner, proxy_cache.clone()));
-    let wallets = Arc::new(WalletService::new(StorageWalletRepository::new(database.clone())));
+    let wallets = Arc::new(WalletService::with_system_wallet(
+        StorageWalletRepository::new(database.clone()),
+        system_wallet_provider.clone(),
+    ));
     let setting_secret_cipher = SettingAesSecretCipher::new(settings.provider_key_secret()?)?;
     let settings_inner = Arc::new(SettingService::new(
         StorageSettingRepository::new(database.clone()),
@@ -127,7 +137,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         LettreSmtpConnectionTester,
     ));
     let system_settings = Arc::new(ProxyCachedSettingUseCase::new(settings_inner, proxy_cache.clone()));
-    let card_code_currency = BackendCardCodeCurrencyProvider::new(system_settings.clone(), exchange_rates.clone());
+    let card_code_currency = BackendCardCodeCurrencyProvider::new(exchange_rates.clone());
     let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone()), card_code_currency));
     let groups_inner = Arc::new(GroupService::new(
         StorageGroupRepository::new(database.clone()),
@@ -136,7 +146,6 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     ));
     let groups = Arc::new(ProxyCachedGroupUseCase::new(groups_inner, proxy_cache.clone()));
     let i18n = Arc::new(I18nService::new(StorageI18nRepository::new(database.clone())));
-    let system_user_provider = ConfigSystemUserProvider::from_settings(settings)?;
     let api_tokens_inner = Arc::new(ApiTokenService::new(
         StorageApiTokenRepository::new(database.clone()),
         StorageBillingGroupCatalog::new(database.clone()),
@@ -169,6 +178,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         redis_connection,
         proxy_cache,
         settings.redis.key_prefix.clone(),
+        system_wallet_provider.system_wallet().map(|record| record.wallet),
     );
     let tokens = TokenService::new(token_settings(settings)?);
     let authorization = authorization_config(settings);

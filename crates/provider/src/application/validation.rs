@@ -1,15 +1,14 @@
 use types::{
     model::PatchField,
-    provider::{
-        ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderListRequest, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-        ProviderModelMapping, ProviderUpdate,
-    },
+    provider::{ProviderCreate, ProviderListRequest, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping, ProviderUpdate},
 };
 
 use super::{ProviderError, ProviderResult};
 
+mod api_key;
 mod endpoint;
 
+pub use api_key::{sanitize_api_key, sanitize_api_key_update, validate_api_key, validate_api_key_update};
 pub use endpoint::{sanitize_endpoint, sanitize_endpoint_update, validate_endpoint, validate_endpoint_update};
 
 const MAX_LIST_LIMIT: u64 = 1000;
@@ -43,30 +42,6 @@ pub fn sanitize_update(input: ProviderUpdate) -> ProviderUpdate {
     ProviderUpdate {
         name: input.name.map(|value| value.trim().to_owned()),
         provider_type: input.provider_type.map(|value| value.trim().to_owned()),
-        ..input
-    }
-}
-
-pub fn sanitize_api_key(input: ProviderApiKeyCreate) -> ProviderApiKeyCreate {
-    ProviderApiKeyCreate {
-        name: input.name.trim().to_owned(),
-        api_key: input.api_key.trim().to_owned(),
-        api_formats: normalize_api_formats(input.api_formats),
-        allowed_model_ids: normalize_ids(input.allowed_model_ids),
-        note: input.note.and_then(trim_optional),
-        ..input
-    }
-}
-
-pub fn sanitize_api_key_update(input: ProviderApiKeyUpdate) -> ProviderApiKeyUpdate {
-    ProviderApiKeyUpdate {
-        name: input.name.map(|value| value.trim().to_owned()),
-        api_key: input.api_key.map(|value| value.trim().to_owned()),
-        api_formats: input.api_formats.map(normalize_api_formats),
-        allowed_model_ids: input.allowed_model_ids.map(normalize_ids),
-        note: trim_patch(input.note),
-        time_range_start: trim_patch(input.time_range_start),
-        time_range_end: trim_patch(input.time_range_end),
         ..input
     }
 }
@@ -109,52 +84,6 @@ pub fn validate_update(input: &ProviderUpdate) -> ProviderResult<()> {
 pub fn validate_list_request(request: &ProviderListRequest) -> ProviderResult<()> {
     if request.limit == 0 || request.limit > MAX_LIST_LIMIT {
         return Err(ProviderError::InvalidInput(format!("limit must be between 1 and {MAX_LIST_LIMIT}")));
-    }
-    Ok(())
-}
-
-pub fn validate_api_key(input: &ProviderApiKeyCreate) -> ProviderResult<()> {
-    validate_text("name", &input.name, MAX_NAME_LENGTH)?;
-    if input.api_key.is_empty() {
-        return Err(ProviderError::InvalidInput("api_key cannot be blank".into()));
-    }
-    validate_api_formats(&input.api_formats)?;
-    validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
-    Ok(())
-}
-
-pub fn validate_api_key_update(input: &ProviderApiKeyUpdate) -> ProviderResult<()> {
-    if api_key_update_is_empty(input) {
-        return Err(ProviderError::InvalidInput("api key update payload is empty".into()));
-    }
-    if let Some(name) = input.name.as_deref() {
-        validate_text("name", name, MAX_NAME_LENGTH)?;
-    }
-    if input.api_key.as_deref().is_some_and(str::is_empty) {
-        return Err(ProviderError::InvalidInput("api_key cannot be blank".into()));
-    }
-    if let Some(api_formats) = &input.api_formats {
-        validate_api_formats(api_formats)?;
-    }
-    if let Some(allowed_model_ids) = &input.allowed_model_ids {
-        validate_ids("allowed_model_ids", allowed_model_ids)?;
-    }
-    Ok(())
-}
-
-fn validate_api_formats(api_formats: &[String]) -> ProviderResult<()> {
-    if api_formats.is_empty() {
-        return Err(ProviderError::InvalidInput("api_formats cannot be empty".into()));
-    }
-    for api_format in api_formats {
-        validate_text("api_formats", api_format, MAX_API_FORMAT_LENGTH)?;
-    }
-    Ok(())
-}
-
-fn validate_ids(field: &str, values: &[String]) -> ProviderResult<()> {
-    for value in values {
-        validate_text(field, value, MAX_MODEL_ID_LENGTH)?;
     }
     Ok(())
 }
@@ -208,28 +137,6 @@ pub(super) fn trim_patch(value: PatchField<String>) -> PatchField<String> {
     }
 }
 
-fn normalize_api_formats(values: Vec<String>) -> Vec<String> {
-    let mut output = Vec::new();
-    for value in values {
-        let value = value.trim().to_ascii_lowercase();
-        if !value.is_empty() && !output.contains(&value) {
-            output.push(value);
-        }
-    }
-    output
-}
-
-fn normalize_ids(values: Vec<String>) -> Vec<String> {
-    let mut output = Vec::new();
-    for value in values {
-        let value = value.trim().to_owned();
-        if !value.is_empty() && !output.contains(&value) {
-            output.push(value);
-        }
-    }
-    output
-}
-
 fn sanitize_provider_model_mapping_patch(mapping: PatchField<ProviderModelMapping>) -> PatchField<ProviderModelMapping> {
     match mapping {
         PatchField::Value(value) => sanitize_provider_model_mapping(Some(value)).map(PatchField::Value).unwrap_or(PatchField::Null),
@@ -270,20 +177,4 @@ fn validate_reasoning_effort(value: &str) -> ProviderResult<()> {
 
 fn model_binding_update_is_empty(input: &ProviderModelBindingUpdate) -> bool {
     input.provider_model_name.is_none() && input.is_active.is_none() && input.provider_model_mapping.is_missing() && input.config.is_missing()
-}
-
-fn api_key_update_is_empty(input: &ProviderApiKeyUpdate) -> bool {
-    input.name.is_none()
-        && input.api_key.is_none()
-        && input.api_formats.is_none()
-        && input.allowed_model_ids.is_none()
-        && input.note.is_missing()
-        && input.internal_priority.is_none()
-        && input.rpm_limit.is_missing()
-        && input.cache_ttl_minutes.is_none()
-        && input.max_probe_interval_minutes.is_none()
-        && input.time_range_enabled.is_none()
-        && input.time_range_start.is_missing()
-        && input.time_range_end.is_missing()
-        && input.is_active.is_none()
 }

@@ -15,6 +15,7 @@ import LoadingButton from '@mui/lab/LoadingButton';
 
 import { useTranslate } from 'src/locales/use-locales';
 
+import { isValidEndpointBaseUrl } from './provider-endpoint-validation';
 import { ProviderEndpointRuleList } from './provider-endpoint-rule-list';
 import { ProviderEndpointSearchSelect } from './provider-endpoint-select';
 import { editableBodyRulesToApi, editableHeaderRulesToApi } from './provider-endpoint-rule-types';
@@ -73,7 +74,7 @@ export function ProviderEndpointAddCard({
           size="small"
           variant="outlined"
           loading={adding}
-          disabled={!form.apiFormat || !normalizeBaseUrl(form.baseUrl)}
+          disabled={!form.apiFormat || !isValidEndpointBaseUrl(form.baseUrl)}
           onClick={onAdd}
         >
           {t('common.add')}

@@ -232,6 +232,9 @@ mod tests {
                     internal_priority: 0,
                     rpm_limit: None,
                     cache_ttl_minutes: 0,
+                    time_range_enabled: false,
+                    time_range_start_minute: None,
+                    time_range_end_minute: None,
                     is_active: true,
                 }],
                 models: vec![CachedModelBinding {

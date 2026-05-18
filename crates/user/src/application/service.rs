@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 
 use crate::application::{
-    AppError, AppResult, InitialGrantLedger, PasswordHasher, RegistrationPolicy, ReplaceUserRecord, SystemUserProvider, UserAuthRecord, UserRepository,
-    UserUseCase, UserWalletCatalog,
+    AppError, AppResult, InitialGrantLedger, PasswordHasher, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, SystemUserProvider, UserAuthRecord,
+    UserRepository, UserUseCase, UserWalletCatalog,
 };
 use types::{
     pagination::{Page, PageRequest},
@@ -98,9 +98,10 @@ where
         }
     }
 
-    async fn create_unique_user(&self, input: NewUser) -> AppResult<User> {
+    async fn create_unique_user(&self, input: NewUser, settings: &RegistrationSettings) -> AppResult<User> {
         let input = sanitize_new_user(input);
         validate_new_user(&input)?;
+        reject_disallowed_registration_email(settings, &input.email)?;
         self.create_valid_user(input).await
     }
 
@@ -201,7 +202,8 @@ where
     }
 
     async fn create_user(&self, input: NewUser) -> AppResult<User> {
-        self.create_unique_user(input).await
+        let settings = self.registration_policy.registration_settings().await?;
+        self.create_unique_user(input, &settings).await
     }
 
     async fn replace_user(&self, id: UserId, input: ReplaceUser) -> AppResult<User> {

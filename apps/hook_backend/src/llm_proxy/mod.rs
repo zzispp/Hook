@@ -21,8 +21,11 @@ use provider::infra::ProviderKeyCipher;
 use redis::AsyncCommands;
 use req::ReqwestClient;
 use storage::Database;
+use types::wallet::Wallet;
+use user::application::SystemUserProvider;
 
 pub use cache::LlmProxyCache;
+pub(crate) use cache::snapshot::CachedUserAccess;
 pub use error::LlmProxyError;
 
 pub const OPENAI_CHAT_FORMAT: &str = "openai_chat";
@@ -44,6 +47,22 @@ pub const RERANK_FORMAT: &str = "rerank";
 
 pub const REALTIME_PATH: &str = "/v1/realtime";
 
+pub(crate) fn cached_system_user_access(provider: &impl SystemUserProvider) -> Vec<CachedUserAccess> {
+    provider.system_user().map(|record| cached_user_access(record.user)).into_iter().collect()
+}
+
+fn cached_user_access(user: types::user::User) -> CachedUserAccess {
+    CachedUserAccess {
+        id: user.id.0,
+        username: user.username,
+        is_active: user.is_active,
+        allowed_model_ids: user.allowed_model_ids,
+        allowed_provider_ids: user.allowed_provider_ids,
+        quota_mode: user.quota_mode,
+        rate_limit_rpm: user.rate_limit_rpm,
+    }
+}
+
 #[derive(Clone)]
 pub struct LlmProxyState {
     database: Database,
@@ -52,10 +71,18 @@ pub struct LlmProxyState {
     affinity: redis::aio::ConnectionManager,
     cache: LlmProxyCache,
     key_prefix: String,
+    system_wallet: Option<Wallet>,
 }
 
 impl LlmProxyState {
-    pub fn new(database: Database, cipher: ProviderKeyCipher, affinity: redis::aio::ConnectionManager, cache: LlmProxyCache, key_prefix: String) -> Self {
+    pub fn new(
+        database: Database,
+        cipher: ProviderKeyCipher,
+        affinity: redis::aio::ConnectionManager,
+        cache: LlmProxyCache,
+        key_prefix: String,
+        system_wallet: Option<Wallet>,
+    ) -> Self {
         Self {
             database,
             cipher,
@@ -63,6 +90,7 @@ impl LlmProxyState {
             affinity,
             cache,
             key_prefix,
+            system_wallet,
         }
     }
 
@@ -72,6 +100,10 @@ impl LlmProxyState {
 
     pub async fn scheduling_snapshot(&self) -> Result<cache::snapshot::SchedulingSnapshot, LlmProxyError> {
         self.cache.scheduling_snapshot().await
+    }
+
+    pub fn system_wallet_for_user(&self, user_id: &str) -> Option<Wallet> {
+        self.system_wallet.as_ref().filter(|wallet| wallet.user_id == user_id).cloned()
     }
 
     pub async fn cooled_provider_ids(&self, provider_ids: &[String]) -> Result<std::collections::HashSet<String>, LlmProxyError> {

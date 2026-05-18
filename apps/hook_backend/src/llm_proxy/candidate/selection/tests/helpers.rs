@@ -100,6 +100,14 @@ pub(super) fn provider_key_for_models(id: &str, internal_priority: i32, api_form
     output
 }
 
+pub(super) fn provider_key_with_time_range(id: &str, internal_priority: i32, start_minute: u16, end_minute: u16) -> CachedProviderKey {
+    let mut output = provider_key(id, internal_priority, vec!["openai_chat"]);
+    output.time_range_enabled = true;
+    output.time_range_start_minute = Some(start_minute);
+    output.time_range_end_minute = Some(end_minute);
+    output
+}
+
 pub(super) fn provider_with_keys(keys: Vec<CachedProviderKey>) -> CachedProvider {
     CachedProvider {
         keys,
@@ -140,6 +148,10 @@ pub(super) fn request() -> CandidateRequest<'static> {
         model_name: "gpt-test",
         is_stream: false,
     }
+}
+
+pub(super) const fn minute_of_day(hour: u16, minute: u16) -> u16 {
+    hour * 60 + minute
 }
 
 pub(super) fn api_token(token_type: ApiTokenType, user_id: Option<&str>) -> ApiToken {
@@ -193,6 +205,9 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         internal_priority,
         rpm_limit: None,
         cache_ttl_minutes: 5,
+        time_range_enabled: false,
+        time_range_start_minute: None,
+        time_range_end_minute: None,
         is_active: true,
     }
 }

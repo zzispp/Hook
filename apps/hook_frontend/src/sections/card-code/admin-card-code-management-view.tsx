@@ -7,6 +7,8 @@ import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
 import Alert from '@mui/material/Alert';
 
+import { DEFAULT_WALLET_CURRENCY } from 'src/utils/money-boundary';
+
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
@@ -46,7 +48,7 @@ export function AdminCardCodeManagementView() {
         t={t}
         open={state.generateOpen}
         types={state.activeTypes}
-        currency={state.systemCurrency}
+        currency={DEFAULT_WALLET_CURRENCY}
         submitting={state.submitting}
         onClose={() => state.setGenerateOpen(false)}
         onSubmit={state.submitGenerate}

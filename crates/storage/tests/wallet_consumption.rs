@@ -1,9 +1,25 @@
 use rust_decimal::Decimal;
-use sea_orm::{DatabaseBackend, MockDatabase};
+use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database, StorageError,
     wallet::{WalletConsumeRecordInput, WalletStore, record::wallets},
 };
+
+#[tokio::test]
+async fn ensure_user_wallet_creates_usd_wallet() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_exec_results([MockExecResult {
+            last_insert_id: 0,
+            rows_affected: 1,
+        }])
+        .append_query_results([[wallet_record()]])
+        .into_connection();
+    let store = WalletStore::new(Database::new(connection));
+
+    let wallet = store.ensure_user_wallet("user-1").await.unwrap();
+
+    assert_eq!(wallet.currency, currency::DEFAULT_WALLET_CURRENCY);
+}
 
 #[tokio::test]
 async fn wallet_consumption_locks_wallet_and_recomputes_balances_in_transaction() {

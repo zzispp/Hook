@@ -1,13 +1,15 @@
+use std::sync::{Arc, Mutex};
+
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
     card_code::{
         CARD_CODE_BALANCE_TYPE_GIFT, CARD_CODE_BALANCE_TYPE_RECHARGE, CARD_CODE_STATUS_ACTIVE, CardCode, CardCodeCreateRecord, CardCodeGeneratePayload,
-        CardCodeListFilters, CardCodeRedeemInput, CardCodeRedeemResponse, CardCodeType, CardCodeTypeCreatePayload, CardCodeTypeListFilters,
-        CardCodeTypeUpdatePayload,
+        CardCodeListFilters, CardCodeRedeemInput, CardCodeRedeemPayload, CardCodeRedeemResponse, CardCodeType, CardCodeTypeCreatePayload,
+        CardCodeTypeListFilters, CardCodeTypeUpdatePayload,
     },
     pagination::{Page, PageRequest},
-    system_setting::DisplayCurrency,
+    wallet::{WalletId, WalletTransaction},
 };
 
 use super::*;
@@ -30,11 +32,23 @@ fn generation_amounts_puts_gift_type_amount_into_gift_balance() {
 }
 
 #[tokio::test]
-async fn generate_codes_uses_current_currency_as_snapshot() {
+async fn generate_codes_uses_default_wallet_currency() {
     let service = CardCodeService::new(MockRepository, MockCurrencyProvider);
     let response = service.generate_codes(generate_payload(), operator()).await.unwrap();
 
-    assert_eq!(response.items[0].currency, "USD");
+    assert_eq!(response.items[0].currency, currency::DEFAULT_WALLET_CURRENCY);
+}
+
+#[tokio::test]
+async fn redeem_uses_default_wallet_currency_not_display_currency() {
+    let repository = RedeemRepository::default();
+    let service = CardCodeService::new(repository.clone(), CnyCurrencyProvider);
+
+    service.redeem(CardCodeRedeemPayload { code: "card-code".into() }, redeemer()).await.unwrap();
+
+    let input = repository.redeem_input().unwrap();
+    assert_eq!(input.target_currency, currency::DEFAULT_WALLET_CURRENCY);
+    assert_eq!(input.usd_cny_rate, Some(Decimal::new(7, 0)));
 }
 
 #[test]
@@ -101,10 +115,77 @@ struct MockCurrencyProvider;
 
 #[async_trait]
 impl CardCodeCurrencyProvider for MockCurrencyProvider {
-    async fn current_currency(&self) -> CardCodeResult<DisplayCurrency> {
-        Ok(DisplayCurrency::Usd)
+    async fn usd_cny_rate(&self) -> CardCodeResult<Decimal> {
+        Ok(Decimal::new(7, 0))
+    }
+}
+
+#[derive(Clone, Default)]
+struct RedeemRepository {
+    input: Arc<Mutex<Option<CardCodeRedeemInput>>>,
+}
+
+impl RedeemRepository {
+    fn redeem_input(&self) -> Option<CardCodeRedeemInput> {
+        self.input.lock().unwrap().clone()
+    }
+}
+
+#[async_trait]
+impl CardCodeRepository for RedeemRepository {
+    async fn list_types(&self, _page: PageRequest, _filters: CardCodeTypeListFilters) -> CardCodeResult<Page<CardCodeType>> {
+        unreachable!()
     }
 
+    async fn create_type(&self, _input: CardCodeTypeCreatePayload) -> CardCodeResult<CardCodeType> {
+        unreachable!()
+    }
+
+    async fn update_type(&self, _id: &str, _input: CardCodeTypeUpdatePayload) -> CardCodeResult<CardCodeType> {
+        unreachable!()
+    }
+
+    async fn find_type(&self, _id: &str) -> CardCodeResult<Option<CardCodeType>> {
+        unreachable!()
+    }
+
+    async fn find_code(&self, _code: &str) -> CardCodeResult<Option<CardCode>> {
+        Ok(Some(card_code("CNY", CARD_CODE_STATUS_ACTIVE)))
+    }
+
+    async fn user_wallet_currency(&self, _user_id: &str) -> CardCodeResult<Option<String>> {
+        Ok(None)
+    }
+
+    async fn code_exists(&self, _code: &str) -> CardCodeResult<bool> {
+        unreachable!()
+    }
+
+    async fn create_codes(&self, _inputs: Vec<CardCodeCreateRecord>) -> CardCodeResult<Vec<CardCode>> {
+        unreachable!()
+    }
+
+    async fn list_codes(&self, _page: PageRequest, _filters: CardCodeListFilters) -> CardCodeResult<Page<CardCode>> {
+        unreachable!()
+    }
+
+    async fn batch_update_code_status(&self, _ids: &[String], _status: &str) -> CardCodeResult<u64> {
+        unreachable!()
+    }
+
+    async fn redeem(&self, input: CardCodeRedeemInput) -> CardCodeResult<CardCodeRedeemResponse> {
+        *self.input.lock().unwrap() = Some(input);
+        Ok(CardCodeRedeemResponse {
+            card_code: card_code("CNY", CARD_CODE_STATUS_ACTIVE).into(),
+            transaction: wallet_transaction().into(),
+        })
+    }
+}
+
+struct CnyCurrencyProvider;
+
+#[async_trait]
+impl CardCodeCurrencyProvider for CnyCurrencyProvider {
     async fn usd_cny_rate(&self) -> CardCodeResult<Decimal> {
         Ok(Decimal::new(7, 0))
     }
@@ -119,6 +200,14 @@ fn generate_payload() -> CardCodeGeneratePayload {
         remark: None,
         expires_at: None,
         amount: Decimal::new(1000, 2),
+    }
+}
+
+fn redeemer() -> CardCodeRedeemer {
+    CardCodeRedeemer {
+        user_id: "user_1".into(),
+        username: "alice".into(),
+        client_ip: Some("127.0.0.1".into()),
     }
 }
 
@@ -193,6 +282,27 @@ fn card_code_from_record(input: CardCodeCreateRecord) -> CardCode {
         used_at: None,
         wallet_id: None,
         wallet_transaction_id: None,
+    }
+}
+
+fn wallet_transaction() -> WalletTransaction {
+    WalletTransaction {
+        id: "tx_1".into(),
+        wallet_id: WalletId("wallet_1".into()).0,
+        category: "recharge".into(),
+        reason_code: "topup_card_code".into(),
+        amount: Decimal::new(1000, 2),
+        balance_before: Decimal::ZERO,
+        balance_after: Decimal::new(1000, 2),
+        recharge_balance_before: Decimal::ZERO,
+        recharge_balance_after: Decimal::new(1000, 2),
+        gift_balance_before: Decimal::ZERO,
+        gift_balance_after: Decimal::ZERO,
+        link_type: None,
+        link_id: None,
+        operator_id: None,
+        description: None,
+        created_at: timestamp(),
     }
 }
 

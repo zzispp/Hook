@@ -2,7 +2,7 @@ use sea_orm_migration::{prelude::*, schema::*};
 
 use super::iden::*;
 
-const DEFAULT_CURRENCY: &str = "CNY";
+const DEFAULT_CURRENCY: &str = "USD";
 const DEFAULT_WALLET_STATUS: &str = "active";
 const DEFAULT_WALLET_LIMIT_MODE: &str = "finite";
 const DECIMAL_PRECISION: u32 = 20;
@@ -91,7 +91,7 @@ where
 
 fn wallet_checks() -> [&'static str; 8] {
     [
-        r#""currency" IN ('USD', 'CNY')"#,
+        r#""currency" = 'USD'"#,
         r#""status" IN ('active', 'disabled')"#,
         r#""limit_mode" IN ('finite', 'unlimited')"#,
         r#""recharge_balance" >= 0"#,

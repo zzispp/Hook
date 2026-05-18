@@ -109,6 +109,17 @@ async fn sign_up_rejects_invalid_password_constraints() {
 }
 
 #[tokio::test]
+async fn create_user_rejects_invalid_email_format() {
+    let repository = MemoryUserRepository::default();
+    let service = UserService::new(repository.clone(), TestPasswordHasher);
+
+    let result = service.create_user(new_user("alice").with_email("not-an-email")).await;
+
+    assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "email must be a valid email address"));
+    assert_eq!(repository.created_records().len(), 0);
+}
+
+#[tokio::test]
 async fn authenticated_user_returns_user_from_token_subject() {
     let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
     let service = UserService::new(repository, TestPasswordHasher);

@@ -54,6 +54,15 @@ pub struct AdminSettings {
     pub role: String,
     pub is_active: bool,
     pub password_hash: String,
+    #[serde(default = "default_admin_wallet_settings")]
+    pub wallet: AdminWalletSettings,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct AdminWalletSettings {
+    pub id: String,
+    pub status: String,
+    pub limit_mode: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -248,6 +257,14 @@ fn required_config_value(key: &'static str, value: &str) -> Result<String, Setti
     }
 
     Ok(trimmed.to_owned())
+}
+
+fn default_admin_wallet_settings() -> AdminWalletSettings {
+    AdminWalletSettings {
+        id: "00000000-0000-7000-8000-000000000001".into(),
+        status: "active".into(),
+        limit_mode: "unlimited".into(),
+    }
 }
 
 #[cfg(test)]

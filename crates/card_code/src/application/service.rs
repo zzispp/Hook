@@ -9,7 +9,6 @@ use types::{
         CardCodeTypeListResponse, CardCodeTypeUpdatePayload,
     },
     pagination::PageRequest,
-    system_setting::DisplayCurrency,
 };
 use uuid::Uuid;
 
@@ -63,11 +62,9 @@ where
         validate_generate(&input)?;
         let card_type = self.active_type(&input.type_id).await?;
         let amounts = generation_amounts(&input, &card_type)?;
-        let currency = self.currency_provider.current_currency().await?;
+        let currency = currency::DEFAULT_WALLET_CURRENCY;
         let batch_no = batch_no();
-        let records = self
-            .generated_records(input, operator, card_type, amounts, currency.as_str(), &batch_no)
-            .await?;
+        let records = self.generated_records(input, operator, card_type, amounts, currency, &batch_no).await?;
         let items = self.repository.create_codes(records).await?;
         Ok(CardCodeGenerateResponse {
             total: items.len() as u64,
@@ -82,15 +79,15 @@ where
     }
     async fn redeem(&self, input: CardCodeRedeemPayload, user: CardCodeRedeemer) -> CardCodeResult<CardCodeRedeemResponse> {
         let code = normalize_code(&input.code)?;
-        let target_currency = self.currency_provider.current_currency().await?;
-        let usd_cny_rate = self.redemption_rate(&code, &user.user_id, &target_currency).await?;
+        let target_currency = currency::DEFAULT_WALLET_CURRENCY;
+        let usd_cny_rate = self.redemption_rate(&code, &user.user_id, target_currency).await?;
         self.repository
             .redeem(CardCodeRedeemInput {
                 code,
                 user_id: user.user_id,
                 username: user.username,
                 client_ip: user.client_ip,
-                target_currency: target_currency.as_str().into(),
+                target_currency: target_currency.into(),
                 usd_cny_rate,
             })
             .await
@@ -138,11 +135,10 @@ where
         }
         Ok(records)
     }
-    async fn redemption_rate(&self, code: &str, user_id: &str, target_currency: &DisplayCurrency) -> CardCodeResult<Option<Decimal>> {
+    async fn redemption_rate(&self, code: &str, user_id: &str, target_currency: &str) -> CardCodeResult<Option<Decimal>> {
         let Some(card_code) = self.repository.find_code(code).await? else {
             return Ok(None);
         };
-        let target_currency = target_currency.as_str();
         if !is_redeemable(&card_code) {
             return Ok(None);
         }

@@ -119,7 +119,7 @@ fn card_code_type_checks() -> [&'static str; 2] {
 fn card_code_checks() -> [&'static str; 5] {
     [
         r#""status" IN ('active', 'disabled', 'used', 'expired')"#,
-        r#""currency" IN ('USD', 'CNY')"#,
+        r#""currency" = 'USD'"#,
         r#""recharge_amount" >= 0"#,
         r#""gift_amount" >= 0"#,
         r#""recharge_amount" + "gift_amount" > 0"#,
