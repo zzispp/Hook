@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use types::system_setting::{SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate};
+use types::system_setting::{
+    PublicSiteInfoResponse, SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate,
+};
 
 use super::{SettingResult, SmtpConnectionConfig, StoredSmtpSettings};
 
@@ -23,6 +25,7 @@ pub trait SmtpConnectionTester: Send + Sync + 'static {
 #[async_trait]
 pub trait SettingUseCase: Send + Sync + 'static {
     async fn get_system_settings(&self) -> SettingResult<SystemSettingsResponse>;
+    async fn get_public_site_info(&self) -> SettingResult<PublicSiteInfoResponse>;
     async fn update_system_settings(&self, input: SystemSettingsUpdate) -> SettingResult<SystemSettingsResponse>;
     async fn test_smtp_connection(&self, input: SystemSettingsSmtpTestRequest) -> SettingResult<SystemSettingsSmtpTestResponse>;
 }

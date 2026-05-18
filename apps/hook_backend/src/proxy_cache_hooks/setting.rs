@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use setting::application::{SettingError, SettingResult, SettingUseCase};
-use types::system_setting::{SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate};
+use types::system_setting::{
+    PublicSiteInfoResponse, SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate,
+};
 
 use crate::llm_proxy::LlmProxyCache;
 
@@ -25,6 +27,10 @@ impl ProxyCachedSettingUseCase {
 impl SettingUseCase for ProxyCachedSettingUseCase {
     async fn get_system_settings(&self) -> SettingResult<SystemSettingsResponse> {
         self.inner.get_system_settings().await
+    }
+
+    async fn get_public_site_info(&self) -> SettingResult<PublicSiteInfoResponse> {
+        self.inner.get_public_site_info().await
     }
 
     async fn update_system_settings(&self, input: SystemSettingsUpdate) -> SettingResult<SystemSettingsResponse> {

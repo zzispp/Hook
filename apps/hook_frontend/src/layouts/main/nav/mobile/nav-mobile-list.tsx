@@ -8,6 +8,7 @@ import Collapse from '@mui/material/Collapse';
 
 import { usePathname } from 'src/routes/hooks';
 
+import { useTranslate } from 'src/locales';
 import { CONFIG } from 'src/global-config';
 
 import { navSectionClasses, NavSectionVertical } from 'src/components/nav-section';
@@ -19,11 +20,13 @@ import { NavItem } from './nav-mobile-item';
 
 export function NavList({ data, sx, ...other }: NavListProps) {
   const pathname = usePathname();
+  const { t } = useTranslate('common');
   const navItemRef = useRef<HTMLButtonElement>(null);
 
   const isOpenPath = !!data.children && pathname !== '/';
 
   const isActive = isActiveLink(pathname, data.path, data.deepMatch ?? !!data.children);
+  const title = data.titleKey ? t(data.titleKey) : data.title;
 
   const { value: open, onToggle } = useBoolean(isOpenPath);
 
@@ -39,7 +42,7 @@ export function NavList({ data, sx, ...other }: NavListProps) {
       // slots
       path={data.path}
       icon={data.icon}
-      title={data.title}
+      title={title}
       // state
       open={open}
       active={isActive}

@@ -14,6 +14,8 @@ import Button from '@mui/material/Button';
 import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 
+import { useTranslate } from 'src/locales';
+
 import { Logo } from 'src/components/logo';
 
 import { NavMobile } from './nav/mobile';
@@ -49,6 +51,7 @@ export function MainLayout({
   layoutQuery = 'md',
 }: MainLayoutProps) {
   const pathname = usePathname();
+  const { t } = useTranslate('common');
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
@@ -107,7 +110,7 @@ export function MainLayout({
                 [theme.breakpoints.up(layoutQuery)]: { display: 'inline-flex' },
               })}
             >
-              Dashboard
+              {t('nav.dashboard')}
             </Button>
           </Box>
         </>

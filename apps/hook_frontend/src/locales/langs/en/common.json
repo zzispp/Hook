@@ -2,5 +2,171 @@
   "demo": {
     "lang": "English",
     "description": "The starting point for your next project is based on MUI. Easy customization helps you build apps faster and better."
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "signIn": "Sign in",
+    "logout": "Logout"
+  },
+  "auth": {
+    "logoutError": "Unable to logout"
+  },
+  "home": {
+    "hero": {
+      "headingSuffix": "Gateway",
+      "description": "Unify Claude, OpenAI, Gemini, and CLI tool traffic behind one entry point, with user tokens, model routing, cost quotas, and health monitoring in one control plane.",
+      "signals": {
+        "tokenManagement": "User token management",
+        "loadBalancing": "Smart load balancing",
+        "costQuota": "Cost quota control",
+        "healthMonitoring": "Health monitoring"
+      },
+      "primaryAction": "Open console",
+      "secondaryAction": "View model catalog",
+      "compatibilityCaption": "Compatible with mainstream AI services",
+      "compatibleTargets": {
+        "openai": "OpenAI",
+        "claude": "Claude",
+        "gemini": "Gemini",
+        "cliTools": "CLI tools"
+      }
+    },
+    "overview": {
+      "caption": "Gateway Control Plane",
+      "title": "Bring scattered AI calls",
+      "gradient": "into one gateway",
+      "description": "Hook starts from a simple principle: unify the entry point, centralize governance, and keep provider differences inside the gateway.",
+      "flow": {
+        "client": "Client / CLI",
+        "gateway": "Hook Gateway",
+        "policy": "Routing Policy",
+        "provider": "AI Provider"
+      },
+      "capabilities": {
+        "unifiedEntry": {
+          "title": "One entry for multiple AI providers",
+          "description": "Applications keep one API base URL while Hook maps Claude, OpenAI, Gemini, and different request formats at the gateway layer."
+        },
+        "accessControl": {
+          "title": "Users, groups, and tokens in layers",
+          "description": "Users, groups, API tokens, and permissions converge in one console so credentials do not scatter across scripts and environments."
+        },
+        "quotaControl": {
+          "title": "Cost quotas near real traffic",
+          "description": "Track tokens, cost, and balance by model, group, and user where requests actually pass through."
+        }
+      }
+    },
+    "providers": {
+      "caption": "Provider Mesh",
+      "title": "Keep provider differences",
+      "gradient": "inside the gateway",
+      "description": "A unified entry point is more than a proxy. Hook understands endpoints, models, formats, and health before sending traffic to the right provider.",
+      "signals": {
+        "health": "Exclude unhealthy endpoints",
+        "priority": "Route by priority and weight",
+        "modelMapping": "Map public models to provider models",
+        "formatRewrite": "Rewrite requests and responses by API format"
+      },
+      "items": {
+        "openai": {
+          "name": "OpenAI",
+          "note": "Chat Completions / Responses / CLI"
+        },
+        "claude": {
+          "name": "Claude",
+          "note": "Anthropic Messages / Claude Code"
+        },
+        "gemini": {
+          "name": "Gemini",
+          "note": "Gemini API / Google-compatible flows"
+        },
+        "custom": {
+          "name": "Custom",
+          "note": "Custom endpoints, headers, and body rules"
+        }
+      }
+    },
+    "operations": {
+      "caption": "Operations",
+      "title": "Governance close to",
+      "gradient": "the request path",
+      "description": "An AI gateway should do more than forward traffic. Teams need quotas, audit trails, health, and provider strategy on the same request path.",
+      "metrics": {
+        "entry": "Request entry",
+        "access": "Access objects",
+        "budget": "Budget basis",
+        "health": "Health dimensions"
+      },
+      "items": {
+        "loadBalancing": {
+          "title": "Smart load balancing",
+          "description": "Put multiple provider endpoints into one policy and route by priority, weight, and health status."
+        },
+        "quota": {
+          "title": "Cost and quota control",
+          "description": "Aggregate usage from API tokens to users, groups, and models, and explicitly block real requests when budgets run out."
+        },
+        "monitoring": {
+          "title": "Health monitoring and tracing",
+          "description": "Record request success rate, latency, errors, and provider responses so debugging starts from the real chain."
+        },
+        "adminConfig": {
+          "title": "Admin-controlled configuration",
+          "description": "Manage models, providers, prices, menus, and permissions in the dashboard instead of changing code for every strategy update."
+        }
+      }
+    },
+    "useCases": {
+      "caption": "Use Cases",
+      "title": "From personal scripts to team platforms",
+      "gradient": "one shared entry",
+      "items": {
+        "individual": {
+          "title": "Individual developers",
+          "description": "Manage all AI service credentials behind one local or private endpoint so CLI tools, scripts, and projects do not keep switching provider config."
+        },
+        "team": {
+          "title": "Engineering teams",
+          "description": "Share one model catalog and quota policy across projects, then add providers at the gateway without interrupting application code."
+        },
+        "admin": {
+          "title": "Platform admins",
+          "description": "Review request records, provider health, user balances, and model prices in one operational dashboard."
+        }
+      }
+    },
+    "faqs": {
+      "caption": "FAQs",
+      "title": "Answers for common",
+      "gradient": "gateway rollout questions",
+      "items": {
+        "sdk": {
+          "question": "Does Hook require a new SDK in business systems?",
+          "answer": "The goal is to keep provider differences away from application code. Existing OpenAI-compatible calls, scripts, and CLI tools can point to the gateway, while provider routing and model mapping stay in Hook."
+        },
+        "selfHosted": {
+          "question": "What does self-hosted mean here?",
+          "answer": "You deploy and manage the gateway, users, tokens, prices, records, and policies. The actual model capabilities still come from Claude, OpenAI, Gemini, or custom provider endpoints you configure."
+        },
+        "quota": {
+          "question": "How do cost quotas work?",
+          "answer": "Hook records tokens, model prices, and user balances on the request path, then aggregates by user, group, or token. When a quota is exhausted, the request is explicitly rejected instead of silently degraded."
+        },
+        "monitoring": {
+          "question": "What does health monitoring help solve?",
+          "answer": "It centralizes provider latency, errors, success rate, and request records so admins can identify upstream outages, model mapping mistakes, token issues, or malformed business requests."
+        }
+      }
+    },
+    "cta": {
+      "title": "Unify your AI traffic with Hook",
+      "description": "Start with the first API token and bring providers, models, quotas, and monitoring into a visible, controllable, auditable gateway.",
+      "action": "Open console"
+    },
+    "footer": {
+      "copy": "© Hook. Self-hosted AI API gateway."
+    }
   }
 }

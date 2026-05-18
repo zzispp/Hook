@@ -124,6 +124,7 @@ export const endpoints = {
   i18n: {
     resources: '/api/i18n/resources',
   },
+  siteInfo: '/api/site-info',
   users: '/api/users',
   user: (id: string) => `/api/users/${id}`,
   rbac: {

@@ -1068,6 +1068,7 @@
     "fields": {
       "siteName": "Site name",
       "siteSubtitle": "Site subtitle",
+      "siteLogoUpload": "Upload logo",
       "allowRegistration": "Allow registration",
       "loginCaptchaEnabled": "Enable login CAPTCHA",
       "registrationCaptchaEnabled": "Enable registration CAPTCHA",
@@ -1104,6 +1105,7 @@
     "helper": {
       "defaultUserGrant": "Added to the gift balance after sign-up and recorded in the wallet ledger.",
       "defaultRateLimitRpm": "Requests per minute; 0 means unlimited by system default.",
+      "siteLogoUpload": "Uploaded images are saved to the database and used by the frontend navigation, homepage, and auth pages.",
       "requestRecordCleanupEnabled": "When enabled, the background worker periodically cleans request records.",
       "requestRecordCleanupIntervalHours": "Execution interval for the request record cleanup worker; saved changes are picked up by the next worker loop.",
       "performanceMonitoringCleanupEnabled": "When enabled, the background worker periodically cleans performance monitoring snapshots.",

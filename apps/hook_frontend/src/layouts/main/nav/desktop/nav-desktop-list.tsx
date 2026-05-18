@@ -6,6 +6,8 @@ import { isEqualPath, isActiveLink, isExternalLink } from 'minimal-shared/utils'
 
 import { usePathname } from 'src/routes/hooks';
 
+import { useTranslate } from 'src/locales';
+
 import { NavItem } from './nav-desktop-item';
 import { Nav, NavLi, NavUl, NavDropdown } from '../components';
 import { NavItemDashboard } from './nav-desktop-item-dashboard';
@@ -14,9 +16,11 @@ import { NavItemDashboard } from './nav-desktop-item-dashboard';
 
 export function NavList({ data, sx, ...other }: NavListProps) {
   const pathname = usePathname();
+  const { t } = useTranslate('common');
   const navItemRef = useRef<HTMLButtonElement>(null);
 
   const isActive = isActiveLink(pathname, data.path, data.deepMatch ?? !!data.children);
+  const title = data.titleKey ? t(data.titleKey) : data.title;
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
@@ -38,7 +42,7 @@ export function NavList({ data, sx, ...other }: NavListProps) {
       ref={navItemRef}
       // slots
       path={data.path}
-      title={data.title}
+      title={title}
       // state
       open={open}
       active={isActive}
@@ -76,8 +80,10 @@ export function NavList({ data, sx, ...other }: NavListProps) {
 
 function NavSubList({ data, subheader, sx, ...other }: NavSubListProps) {
   const pathname = usePathname();
+  const { t } = useTranslate('common');
 
   const isDashboard = subheader === 'Dashboard';
+  const label = subheader === 'Dashboard' ? t('nav.dashboard') : subheader;
 
   return (
     <NavLi
@@ -100,7 +106,7 @@ function NavSubList({ data, subheader, sx, ...other }: NavSubListProps) {
             fontSize: theme.typography.pxToRem(11),
           })}
         >
-          {subheader}
+          {label}
         </NavLi>
 
         {data.map((item) =>
@@ -112,7 +118,7 @@ function NavSubList({ data, subheader, sx, ...other }: NavSubListProps) {
             <NavLi key={item.title} sx={{ mt: 0.75 }}>
               <NavItem
                 subItem
-                title={item.title}
+                title={item.titleKey ? t(item.titleKey) : item.title}
                 path={item.path}
                 active={isEqualPath(item.path, pathname)}
               />

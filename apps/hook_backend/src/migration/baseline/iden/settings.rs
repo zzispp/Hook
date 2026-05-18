@@ -6,6 +6,7 @@ pub(in crate::migration::baseline) enum SystemSettings {
     Id,
     SiteName,
     SiteSubtitle,
+    SiteLogoBase64,
     AllowRegistration,
     LoginCaptchaEnabled,
     RegistrationCaptchaEnabled,

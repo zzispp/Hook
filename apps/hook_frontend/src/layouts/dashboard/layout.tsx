@@ -22,7 +22,6 @@ import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
 import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
-import { _account } from '../nav-config-account';
 import { Searchbar } from '../components/searchbar';
 import { DashboardRouteGuard } from './route-guard';
 import { MenuButton } from '../components/menu-button';
@@ -137,7 +136,7 @@ export function DashboardLayout({
           <SettingsButton />
 
           {/** @slot Account drawer */}
-          <AccountDrawer data={_account} />
+          <AccountDrawer data={navData} />
         </Box>
       ),
     };

@@ -1,0 +1,10 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing homepage composition,DONE,Homepage entry and section patterns are identified,rg -n "HomeView|HomeHero" apps/hook_frontend/src/sections/home,2026-05-18T00:00:00+08:00,0,
+2,Implement Hook-specific non-hero sections,DONE,Homepage renders AI gateway content below the existing hero,pnpm --filter hook_frontend lint,2026-05-18T00:00:00+08:00,0,
+3,Add dynamic site logo backend field,DONE,site_logo_base64 is persisted and returned by settings APIs,cargo test -p setting sanitize_update_trims_site_logo_base64,2026-05-18T00:00:00+08:00,0,
+4,Expose public site info to frontend,DONE,Homepage can read site name subtitle and logo without admin auth,pnpm --filter hook_frontend lint,2026-05-18T00:00:00+08:00,0,
+5,Wire homepage title and Logo to site info,DONE,Hero gradient brand title and UI logo use backend site info,pnpm --filter hook_frontend lint,2026-05-18T00:00:00+08:00,0,
+6,Run validation,TODO,Relevant checks complete or exposes real failure,pnpm --filter hook_frontend lint && just test, ,0,
+7,Replace account drawer template nav,DONE,Account drawer uses permission nav data and no mock account switcher,pnpm --filter hook_frontend lint,2026-05-19T00:34:23+08:00,0,
+8,Localize sign out button,DONE,Logout button and failure toast use common translations,pnpm --filter hook_frontend lint,2026-05-19T00:37:25+08:00,0,
+9,Simplify system logo setting,DONE,System settings logo only supports upload plus preview and default logo uses favicon data URL,pnpm --filter hook_frontend lint,2026-05-19T00:39:59+08:00,0,

@@ -17,6 +17,8 @@ import { _socials } from 'src/_mock';
 import { Logo } from 'src/components/logo';
 import { Iconify } from 'src/components/iconify';
 
+import { HomeFooterCopy } from './home-footer-copy';
+
 // ----------------------------------------------------------------------
 
 const LINKS = [
@@ -175,11 +177,7 @@ export function HomeFooter({ sx, ...other }: FooterProps) {
     >
       <Container>
         <Logo />
-        <Box sx={{ mt: 1, typography: 'caption' }}>
-          © All rights reserved.
-          <br /> made by
-          <Link href="https://minimals.cc/"> minimals.cc </Link>
-        </Box>
+        <HomeFooterCopy />
       </Container>
     </FooterRoot>
   );

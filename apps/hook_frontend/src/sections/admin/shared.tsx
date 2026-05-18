@@ -165,6 +165,7 @@ export function TextFieldRow({
   onChange,
   required,
   type,
+  rows,
   select,
   children,
   helperText,
@@ -179,6 +180,7 @@ export function TextFieldRow({
   onChange: (value: string) => void;
   required?: boolean;
   type?: React.InputHTMLAttributes<unknown>['type'];
+  rows?: number;
   select?: boolean;
   children?: React.ReactNode;
   helperText?: React.ReactNode;
@@ -194,6 +196,8 @@ export function TextFieldRow({
       select={select}
       required={required}
       type={type}
+      rows={rows}
+      multiline={Boolean(rows)}
       label={label}
       value={value}
       error={error}

@@ -9,6 +9,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(string_len(SystemSettings::Id, 36).primary_key())
         .col(string_len(SystemSettings::SiteName, 100))
         .col(string_len(SystemSettings::SiteSubtitle, 200))
+        .col(text(SystemSettings::SiteLogoBase64).default(""))
         .col(boolean(SystemSettings::AllowRegistration))
         .col(boolean(SystemSettings::LoginCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::RegistrationCaptchaEnabled).default(false))

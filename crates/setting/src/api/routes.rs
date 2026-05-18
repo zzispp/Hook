@@ -5,11 +5,12 @@ use axum::{
 
 use crate::api::{
     SettingApiState,
-    handlers::{get_system_settings, test_smtp_connection, update_system_settings},
+    handlers::{get_public_site_info, get_system_settings, test_smtp_connection, update_system_settings},
 };
 
 pub fn create_router(state: SettingApiState) -> Router {
     Router::new()
+        .route("/site-info", get(get_public_site_info))
         .route("/admin/settings/system", get(get_system_settings).patch(update_system_settings))
         .route("/admin/settings/smtp/test", post(test_smtp_connection))
         .with_state(state)

@@ -2,5 +2,171 @@
   "demo": {
     "lang": "Chinese",
     "description": "您的下一个项目的起点基于 MUI。简单的定制可帮助您更快、更好地构建应用程序。"
+  },
+  "nav": {
+    "home": "首页",
+    "dashboard": "控制台",
+    "signIn": "登录",
+    "logout": "退出登录"
+  },
+  "auth": {
+    "logoutError": "退出登录失败"
+  },
+  "home": {
+    "hero": {
+      "headingSuffix": "Gateway",
+      "description": "统一 Claude、OpenAI、Gemini 与 CLI 工具调用入口，把用户令牌、模型路由、成本配额和健康监控放到同一个控制面。",
+      "signals": {
+        "tokenManagement": "用户令牌管理",
+        "loadBalancing": "智能负载均衡",
+        "costQuota": "成本配额控制",
+        "healthMonitoring": "健康监控"
+      },
+      "primaryAction": "进入控制台",
+      "secondaryAction": "查看模型目录",
+      "compatibilityCaption": "兼容主流 AI 服务",
+      "compatibleTargets": {
+        "openai": "OpenAI",
+        "claude": "Claude",
+        "gemini": "Gemini",
+        "cliTools": "CLI 工具"
+      }
+    },
+    "overview": {
+      "caption": "Gateway Control Plane",
+      "title": "把分散的 AI 调用",
+      "gradient": "收进一个网关",
+      "description": "Hook 的第一性目标很简单：调用入口统一，治理逻辑集中，供应商差异留在网关内处理。",
+      "flow": {
+        "client": "Client / CLI",
+        "gateway": "Hook Gateway",
+        "policy": "Routing Policy",
+        "provider": "AI Provider"
+      },
+      "capabilities": {
+        "unifiedEntry": {
+          "title": "一个入口接入多家 AI",
+          "description": "业务侧只维护统一 API 地址，Hook 在网关层映射 Claude、OpenAI、Gemini 与不同调用格式。"
+        },
+        "accessControl": {
+          "title": "用户、分组和令牌分层管理",
+          "description": "用户、分组、API Token 和权限在同一个控制台下收敛，避免密钥散落在脚本和环境变量里。"
+        },
+        "quotaControl": {
+          "title": "成本配额靠近真实调用",
+          "description": "按模型、分组和用户记录 token、费用和余额，把预算控制放在请求经过的地方。"
+        }
+      }
+    },
+    "providers": {
+      "caption": "Provider Mesh",
+      "title": "供应商差异留在",
+      "gradient": "网关内部",
+      "description": "统一入口不是简单代理。Hook 需要理解端点、模型、格式和健康状态，再把请求送到当前最合适的供应商。",
+      "signals": {
+        "health": "按健康状态剔除不可用端点",
+        "priority": "按优先级和权重分配请求",
+        "modelMapping": "按模型映射供应商真实模型",
+        "formatRewrite": "按调用格式改写请求与响应"
+      },
+      "items": {
+        "openai": {
+          "name": "OpenAI",
+          "note": "Chat Completions / Responses / CLI"
+        },
+        "claude": {
+          "name": "Claude",
+          "note": "Anthropic Messages / Claude Code"
+        },
+        "gemini": {
+          "name": "Gemini",
+          "note": "Gemini API / Google 兼容流程"
+        },
+        "custom": {
+          "name": "自定义",
+          "note": "自定义端点、Header 与 Body 规则"
+        }
+      }
+    },
+    "operations": {
+      "caption": "Operations",
+      "title": "治理能力贴着",
+      "gradient": "调用链路",
+      "description": "AI 网关不只负责转发。团队真正需要的是把配额、审计、健康和供应商策略放到同一个请求路径上。",
+      "metrics": {
+        "entry": "请求入口",
+        "access": "访问对象",
+        "budget": "预算口径",
+        "health": "健康维度"
+      },
+      "items": {
+        "loadBalancing": {
+          "title": "智能负载均衡",
+          "description": "把多个供应商端点放进同一组策略里，结合优先级、权重和健康状态路由请求。"
+        },
+        "quota": {
+          "title": "成本与额度控制",
+          "description": "从 API Token 到用户、分组和模型聚合用量，预算耗尽时明确阻断真实请求。"
+        },
+        "monitoring": {
+          "title": "健康监控与追踪",
+          "description": "记录请求成功率、延迟、错误和供应商返回，让排障从真实链路开始。"
+        },
+        "adminConfig": {
+          "title": "管理员可控配置",
+          "description": "模型、供应商、价格、菜单和权限都在后台管理，减少改代码才能调策略的成本。"
+        }
+      }
+    },
+    "useCases": {
+      "caption": "Use Cases",
+      "title": "从个人脚本到团队平台",
+      "gradient": "同一套入口",
+      "items": {
+        "individual": {
+          "title": "个人开发者",
+          "description": "用一个本地或私有部署入口管理所有 AI 服务密钥，CLI、脚本和项目不用反复切换供应商配置。"
+        },
+        "team": {
+          "title": "研发团队",
+          "description": "让不同项目共用统一模型目录和额度策略，新增供应商时优先在网关配置，不打断业务代码。"
+        },
+        "admin": {
+          "title": "平台管理员",
+          "description": "集中查看请求记录、供应商健康、用户余额和模型价格，把运营动作落到后台页面。"
+        }
+      }
+    },
+    "faqs": {
+      "caption": "FAQs",
+      "title": "先回答网关落地时",
+      "gradient": "最常见的问题",
+      "items": {
+        "sdk": {
+          "question": "Hook 需要业务系统改成新的 SDK 吗？",
+          "answer": "核心目标是不让业务侧感知供应商差异。已有 OpenAI 兼容调用、脚本和 CLI 工具可以指向统一网关入口，供应商路由与模型映射放在 Hook 里配置。"
+        },
+        "selfHosted": {
+          "question": "自托管的边界是什么？",
+          "answer": "网关、用户、令牌、价格、记录和策略数据由你自己部署和管理。真实模型能力仍来自你配置的 Claude、OpenAI、Gemini 或自定义供应商端点。"
+        },
+        "quota": {
+          "question": "成本配额是怎么落地的？",
+          "answer": "Hook 在请求链路上记录 token、模型价格和用户余额，并按用户、分组或令牌维度聚合。额度不足时请求会被明确拒绝，而不是静默降级。"
+        },
+        "monitoring": {
+          "question": "健康监控能解决什么问题？",
+          "answer": "它把供应商延迟、错误、成功率和请求记录集中在后台，帮助管理员判断是上游不可用、模型映射错误、令牌异常还是业务请求本身有问题。"
+        }
+      }
+    },
+    "cta": {
+      "title": "用 Hook 统一你的 AI 调用入口",
+      "description": "从第一个 API Token 开始，把供应商、模型、额度和监控放到可见、可控、可审计的网关里。",
+      "action": "进入控制台"
+    },
+    "footer": {
+      "copy": "© Hook. 自托管 AI API 网关。"
+    }
   }
 }

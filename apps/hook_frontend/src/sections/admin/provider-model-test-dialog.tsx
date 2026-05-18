@@ -199,7 +199,7 @@ function JsonEditor(props: {
         <Typography variant="subtitle2">{props.title}</Typography>
         <Stack direction="row" spacing={0.5}>
           <IconButton size="small" onClick={props.onFormat}>
-            <Iconify icon="solar:code-bold" width={16} />
+            <Iconify icon="solar:file-text-bold" width={16} />
           </IconButton>
           <IconButton size="small" onClick={props.onReset}>
             <Iconify icon="solar:restart-bold" width={16} />

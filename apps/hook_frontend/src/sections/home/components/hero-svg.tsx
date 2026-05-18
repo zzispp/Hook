@@ -185,7 +185,7 @@ export function PlusIcon() {
 
 // ----------------------------------------------------------------------
 
-const TEXT = 'Minimal Design System';
+const TEXT = 'Hook AI Gateway';
 
 export function Texts({ sx, ...other }: BoxProps & MotionProps) {
   return (

@@ -7,6 +7,7 @@ import type {
 export type SystemSettingsForm = {
   site_name: string;
   site_subtitle: string;
+  site_logo_base64: string;
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -106,6 +107,7 @@ const DEFAULT_PASSWORD_RESET_TEMPLATE_HTML = `<!DOCTYPE html>
 export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   site_name: '',
   site_subtitle: '',
+  site_logo_base64: '',
   allow_registration: true,
   login_captcha_enabled: false,
   registration_captcha_enabled: false,
@@ -151,6 +153,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
   return {
     site_name: settings.site_name,
     site_subtitle: settings.site_subtitle,
+    site_logo_base64: settings.site_logo_base64,
     allow_registration: settings.allow_registration,
     login_captcha_enabled: settings.login_captcha_enabled,
     registration_captcha_enabled: settings.registration_captcha_enabled,
@@ -202,6 +205,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
   const payload: SystemSettingsUpdate = {
     site_name: form.site_name,
     site_subtitle: form.site_subtitle,
+    site_logo_base64: form.site_logo_base64,
     allow_registration: form.allow_registration,
     login_captcha_enabled: form.login_captcha_enabled,
     registration_captcha_enabled: form.registration_captcha_enabled,

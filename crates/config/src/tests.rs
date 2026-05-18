@@ -1,6 +1,6 @@
 use super::{
-    AdminSettings, AdminWalletSettings, AuthSettings, DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, RedisSettings, SecuritySettings,
-    ServerSettings, Settings, SettingsError, TracingSettings, explicit_config_path,
+    AdminSettings, AdminWalletSettings, AuthSettings, AuthWhitelistRule, DatabaseSettings, JwtSettings, MODULE_CONFIG_PATH, ROOT_CONFIG_PATH, RedisSettings,
+    SecuritySettings, ServerSettings, Settings, SettingsError, TracingSettings, explicit_config_path,
 };
 use std::{ffi::OsString, path::PathBuf};
 
@@ -181,13 +181,26 @@ fn settings_with_database(database: DatabaseSettings) -> Settings {
         jwt: jwt_settings(),
         admin: admin_settings(),
         auth: AuthSettings {
-            whitelist: vec![],
+            whitelist: auth_whitelist(),
             authenticated: vec![],
         },
         security: security_settings(),
         redis: redis_settings(),
         tracing: tracing_settings(),
     }
+}
+
+fn auth_whitelist() -> Vec<AuthWhitelistRule> {
+    vec![
+        AuthWhitelistRule {
+            methods: vec!["GET".into()],
+            path_pattern: "/api/i18n/resources".into(),
+        },
+        AuthWhitelistRule {
+            methods: vec!["GET".into()],
+            path_pattern: "/api/site-info".into(),
+        },
+    ]
 }
 
 fn settings_with_jwt(jwt: JwtSettings) -> Settings {

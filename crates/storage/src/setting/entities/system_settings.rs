@@ -10,6 +10,7 @@ pub struct Model {
     pub id: String,
     pub site_name: String,
     pub site_subtitle: String,
+    pub site_logo_base64: String,
     pub allow_registration: bool,
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,
@@ -66,6 +67,7 @@ impl TryFrom<Model> for SystemSettings {
         Ok(Self {
             site_name: value.site_name,
             site_subtitle: value.site_subtitle,
+            site_logo_base64: value.site_logo_base64,
             allow_registration: value.allow_registration,
             login_captcha_enabled: value.login_captcha_enabled,
             registration_captcha_enabled: value.registration_captcha_enabled,

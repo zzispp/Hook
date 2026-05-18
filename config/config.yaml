@@ -34,6 +34,8 @@ auth:
       path_pattern: "/health"
     - methods: ["GET"]
       path_pattern: "/api/i18n/resources"
+    - methods: ["GET"]
+      path_pattern: "/api/site-info"
     - methods: ["POST"]
       path_pattern: "/api/auth/sign-in"
     - methods: ["POST"]

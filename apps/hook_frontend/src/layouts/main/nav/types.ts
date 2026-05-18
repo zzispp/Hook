@@ -20,11 +20,13 @@ export type NavItemOptionsProps = {
 export type NavItemDataProps = {
   path: string;
   title: string;
+  titleKey?: string;
   icon?: string | React.ReactNode;
   deepMatch?: boolean;
   children?: {
     subheader: string;
-    items: { title: string; path: string }[];
+    subheaderKey?: string;
+    items: { title: string; titleKey?: string; path: string }[];
   }[];
 };
 

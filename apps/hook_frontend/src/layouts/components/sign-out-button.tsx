@@ -6,6 +6,8 @@ import Button from '@mui/material/Button';
 
 import { useRouter } from 'src/routes/hooks';
 
+import { useTranslate } from 'src/locales';
+
 import { toast } from 'src/components/snackbar';
 
 import { useAuthContext } from 'src/auth/hooks';
@@ -19,6 +21,7 @@ type Props = ButtonProps & {
 
 export function SignOutButton({ onClose, sx, ...other }: Props) {
   const router = useRouter();
+  const { t } = useTranslate('common');
 
   const { checkUserSession } = useAuthContext();
 
@@ -31,9 +34,9 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
       router.refresh();
     } catch (error) {
       console.error(error);
-      toast.error('Unable to logout!');
+      toast.error(t('auth.logoutError'));
     }
-  }, [checkUserSession, onClose, router]);
+  }, [checkUserSession, onClose, router, t]);
 
   return (
     <Button
@@ -45,7 +48,7 @@ export function SignOutButton({ onClose, sx, ...other }: Props) {
       sx={sx}
       {...other}
     >
-      Logout
+      {t('nav.logout')}
     </Button>
   );
 }

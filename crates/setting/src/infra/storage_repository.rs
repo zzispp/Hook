@@ -52,6 +52,7 @@ fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<Str
     storage::setting::SystemSettingsRecordPatch {
         site_name: input.site_name,
         site_subtitle: input.site_subtitle,
+        site_logo_base64: input.site_logo_base64,
         allow_registration: input.allow_registration,
         login_captcha_enabled: input.login_captcha_enabled,
         registration_captcha_enabled: input.registration_captcha_enabled,

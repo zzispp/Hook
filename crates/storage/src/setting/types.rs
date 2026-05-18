@@ -6,6 +6,7 @@ use types::system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption}
 pub struct SystemSettingsRecordPatch {
     pub site_name: Option<String>,
     pub site_subtitle: Option<String>,
+    pub site_logo_base64: Option<String>,
     pub allow_registration: Option<bool>,
     pub login_captcha_enabled: Option<bool>,
     pub registration_captcha_enabled: Option<bool>,

@@ -1068,6 +1068,7 @@
     "fields": {
       "siteName": "站点名称",
       "siteSubtitle": "站点副标题",
+      "siteLogoUpload": "上传 Logo",
       "allowRegistration": "开放允许注册",
       "loginCaptchaEnabled": "启用登录验证码",
       "registrationCaptchaEnabled": "启用注册验证码",
@@ -1104,6 +1105,7 @@
     "helper": {
       "defaultUserGrant": "新用户注册成功后写入赠款余额，并生成钱包流水。",
       "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。",
+      "siteLogoUpload": "上传图片后会自动保存到数据库，前台导航、首页和登录页 Logo 会读取该字段。",
       "requestRecordCleanupEnabled": "开启后，后台按间隔清理请求记录。",
       "requestRecordCleanupIntervalHours": "请求记录清理任务的执行间隔；保存后下一轮循环会读取新设置。",
       "performanceMonitoringCleanupEnabled": "开启后，后台按间隔清理性能监控快照。",

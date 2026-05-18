@@ -25,6 +25,7 @@ pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
     SystemSettingsUpdate {
         site_name: input.site_name.map(|value| value.trim().to_owned()),
         site_subtitle: input.site_subtitle.map(|value| value.trim().to_owned()),
+        site_logo_base64: trim_optional(input.site_logo_base64),
         client_sensitive_request_headers: normalize_optional_headers(input.client_sensitive_request_headers),
         provider_sensitive_request_headers: normalize_optional_headers(input.provider_sensitive_request_headers),
         smtp_host: trim_optional(input.smtp_host),

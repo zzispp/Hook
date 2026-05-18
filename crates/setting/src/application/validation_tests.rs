@@ -42,6 +42,18 @@ fn sanitize_update_normalizes_email_suffixes() {
 }
 
 #[test]
+fn sanitize_update_trims_site_logo_base64() {
+    let input = SystemSettingsUpdate {
+        site_logo_base64: Some("  data:image/png;base64,AA==  ".into()),
+        ..Default::default()
+    };
+
+    let sanitized = sanitize_update(input);
+
+    assert_eq!(sanitized.site_logo_base64.as_deref(), Some("data:image/png;base64,AA=="));
+}
+
+#[test]
 fn validate_update_rejects_invalid_sensitive_request_header() {
     let input = SystemSettingsUpdate {
         client_sensitive_request_headers: Some("authorization, bad header".into()),

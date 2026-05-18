@@ -5,10 +5,13 @@ import Button from '@mui/material/Button';
 import { RouterLink } from 'src/routes/components';
 
 import { CONFIG } from 'src/global-config';
+import { useTranslate } from 'src/locales';
 
 // ----------------------------------------------------------------------
 
 export function SignInButton({ sx, ...other }: ButtonProps) {
+  const { t } = useTranslate('common');
+
   return (
     <Button
       component={RouterLink}
@@ -17,7 +20,7 @@ export function SignInButton({ sx, ...other }: ButtonProps) {
       sx={sx}
       {...other}
     >
-      Sign in
+      {t('nav.signIn')}
     </Button>
   );
 }

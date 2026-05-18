@@ -1,30 +1,25 @@
 'use client';
 
+import type { Theme, SxProps } from '@mui/material/styles';
 import type { IconButtonProps } from '@mui/material/IconButton';
+import type { NavSectionProps, NavItemDataProps } from 'src/components/nav-section';
 
-import { varAlpha } from 'minimal-shared/utils';
 import { useBoolean } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Avatar from '@mui/material/Avatar';
 import Drawer from '@mui/material/Drawer';
-import Tooltip from '@mui/material/Tooltip';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
+import ListSubheader from '@mui/material/ListSubheader';
 
-import { paths } from 'src/routes/paths';
-import { usePathname } from 'src/routes/hooks';
-import { RouterLink } from 'src/routes/components';
-
-import { _mock } from 'src/_mock';
-
-import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { AnimateBorder } from 'src/components/animate';
+import { navItemKey, navGroupKey, createNavItem } from 'src/components/nav-section';
 
 import { useMockedUser } from 'src/auth/hooks';
 
@@ -34,17 +29,10 @@ import { SignOutButton } from './sign-out-button';
 // ----------------------------------------------------------------------
 
 export type AccountDrawerProps = IconButtonProps & {
-  data?: {
-    label: string;
-    href: string;
-    icon?: React.ReactNode;
-    info?: React.ReactNode;
-  }[];
+  data?: NavSectionProps['data'];
 };
 
 export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
-  const pathname = usePathname();
-
   const { user } = useMockedUser();
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
@@ -63,56 +51,8 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
   );
 
   const renderList = () => (
-    <MenuList
-      disablePadding
-      sx={[
-        (theme) => ({
-          py: 3,
-          px: 2.5,
-          borderTop: `dashed 1px ${theme.vars.palette.divider}`,
-          borderBottom: `dashed 1px ${theme.vars.palette.divider}`,
-          '& li': { p: 0 },
-        }),
-      ]}
-    >
-      {data.map((option) => {
-        const rootLabel = pathname.includes('/dashboard') ? 'Home' : 'Dashboard';
-        const rootHref = pathname.includes('/dashboard') ? '/' : paths.dashboard.root;
-
-        return (
-          <MenuItem key={option.label}>
-            <Link
-              component={RouterLink}
-              href={option.label === 'Home' ? rootHref : option.href}
-              color="inherit"
-              underline="none"
-              onClick={onClose}
-              sx={{
-                p: 1,
-                width: 1,
-                display: 'flex',
-                typography: 'body2',
-                alignItems: 'center',
-                color: 'text.secondary',
-                '& svg': { width: 24, height: 24 },
-                '&:hover': { color: 'text.primary' },
-              }}
-            >
-              {option.icon}
-
-              <Box component="span" sx={{ ml: 2 }}>
-                {option.label === 'Home' ? rootLabel : option.label}
-              </Box>
-
-              {option.info && (
-                <Label color="error" sx={{ ml: 1 }}>
-                  {option.info}
-                </Label>
-              )}
-            </Link>
-          </MenuItem>
-        );
-      })}
+    <MenuList disablePadding sx={menuListStyles}>
+      {data.flatMap((group) => renderNavGroup(group, onClose))}
     </MenuList>
   );
 
@@ -167,42 +107,6 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
             </Typography>
           </Box>
 
-          <Box
-            sx={{
-              p: 3,
-              gap: 1,
-              flexWrap: 'wrap',
-              display: 'flex',
-              justifyContent: 'center',
-            }}
-          >
-            {Array.from({ length: 3 }, (_, index) => (
-              <Tooltip
-                key={_mock.fullName(index + 1)}
-                title={`Switch to: ${_mock.fullName(index + 1)}`}
-              >
-                <Avatar
-                  alt={_mock.fullName(index + 1)}
-                  src={_mock.image.avatar(index + 1)}
-                  onClick={() => {}}
-                />
-              </Tooltip>
-            ))}
-
-            <Tooltip title="Add account">
-              <IconButton
-                sx={[
-                  (theme) => ({
-                    bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
-                    border: `dashed 1px ${varAlpha(theme.vars.palette.grey['500Channel'], 0.32)}`,
-                  }),
-                ]}
-              >
-                <Iconify icon="mingcute:add-line" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-
           {renderList()}
         </Scrollbar>
 
@@ -213,3 +117,81 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
     </>
   );
 }
+
+function renderNavGroup(group: NavSectionProps['data'][number], onClose: () => void) {
+  const groupKey = navGroupKey(group);
+  const header = group.subheader ? (
+    <ListSubheader key={`${groupKey}-subheader`} disableSticky>
+      {group.subheader}
+    </ListSubheader>
+  ) : null;
+  const items = flattenNavItems(group.items).map((item) => (
+    <AccountDrawerNavItem key={navItemKey(item)} item={item} onClose={onClose} />
+  ));
+
+  return header ? [header, ...items] : items;
+}
+
+function AccountDrawerNavItem({
+  item,
+  onClose,
+}: {
+  item: NavItemDataProps;
+  onClose: () => void;
+}) {
+  const navItem = createNavItem({ path: item.path, icon: item.icon, info: item.info });
+
+  return (
+    <MenuItem>
+      <Link
+        color="inherit"
+        underline="none"
+        onClick={onClose}
+        sx={{
+          p: 1,
+          width: 1,
+          display: 'flex',
+          typography: 'body2',
+          alignItems: 'center',
+          color: 'text.secondary',
+          '& svg': { width: 24, height: 24 },
+          '&:hover': { color: 'text.primary' },
+        }}
+        {...navItem.baseProps}
+      >
+        {navItem.renderIcon}
+
+        <Box component="span" sx={{ ml: 2, minWidth: 0, flex: '1 1 auto' }}>
+          {item.title}
+        </Box>
+
+        {navItem.renderInfo && <Box sx={{ ml: 1 }}>{navItem.renderInfo}</Box>}
+      </Link>
+    </MenuItem>
+  );
+}
+
+function flattenNavItems(items: readonly NavItemDataProps[]): NavItemDataProps[] {
+  return items.flatMap((item) =>
+    item.children?.length ? [item, ...flattenNavItems(item.children)] : [item]
+  );
+}
+
+const menuListStyles: SxProps<Theme> = [
+  (theme) => ({
+    mt: 3,
+    py: 3,
+    px: 2.5,
+    borderTop: `dashed 1px ${theme.vars.palette.divider}`,
+    borderBottom: `dashed 1px ${theme.vars.palette.divider}`,
+    '& li': { p: 0 },
+    '& .MuiListSubheader-root': {
+      px: 1,
+      mb: 0.75,
+      color: 'text.disabled',
+      bgcolor: 'transparent',
+      typography: 'overline',
+      fontSize: theme.typography.pxToRem(11),
+    },
+  }),
+];

@@ -9,6 +9,8 @@ import Drawer from '@mui/material/Drawer';
 import { paths } from 'src/routes/paths';
 import { usePathname } from 'src/routes/hooks';
 
+import { useTranslate } from 'src/locales';
+
 import { Logo } from 'src/components/logo';
 import { Scrollbar } from 'src/components/scrollbar';
 
@@ -29,6 +31,7 @@ export type NavMobileProps = NavMainProps & {
 
 export function NavMobile({ data, open, onClose, slots, sx }: NavMobileProps) {
   const pathname = usePathname();
+  const { t } = useTranslate('common');
 
   useEffect(() => {
     if (open) {
@@ -96,7 +99,7 @@ export function NavMobile({ data, open, onClose, slots, sx }: NavMobileProps) {
           <SignInButton fullWidth />
 
           <Button fullWidth variant="contained" href={paths.dashboard.root}>
-            Dashboard
+            {t('nav.dashboard')}
           </Button>
         </Box>
       )}

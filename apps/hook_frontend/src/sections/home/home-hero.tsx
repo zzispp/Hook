@@ -1,46 +1,49 @@
 import type { BoxProps } from '@mui/material/Box';
-import type { Breakpoint } from '@mui/material/styles';
-import type { MotionProps, MotionValue, SpringOptions } from 'framer-motion';
+import type { MotionValue, SpringOptions } from 'framer-motion';
 
 import { useRef, useState } from 'react';
 import { m, useScroll, useSpring, useTransform, useMotionValueEvent } from 'framer-motion';
 
 import Box from '@mui/material/Box';
-import Link from '@mui/material/Link';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import AvatarGroup from '@mui/material/AvatarGroup';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import Avatar, { avatarClasses } from '@mui/material/Avatar';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
-import { _mock } from 'src/_mock';
-import { CONFIG } from 'src/global-config';
+import { useTranslate } from 'src/locales/use-locales';
+import { useSiteInfo } from 'src/actions/system-settings';
 
 import { Iconify } from 'src/components/iconify';
 import { varFade, MotionContainer } from 'src/components/animate';
 
 import { HeroBackground } from './components/hero-background';
+import {
+  mdKey,
+  textSx,
+  brandSx,
+  buttonsSx,
+  headingSx,
+  signalsSx,
+  motionProps,
+  containerSx,
+  signalItemSx,
+  compatibilitySx,
+  HERO_SIGNAL_KEYS,
+  gradientAnimation,
+  gradientTransition,
+  COMPATIBLE_TARGET_KEYS,
+} from './home-hero-styles';
 
 // ----------------------------------------------------------------------
 
-const smKey: Breakpoint = 'sm';
-const mdKey: Breakpoint = 'md';
-const lgKey: Breakpoint = 'lg';
-
-const motionProps: MotionProps = {
-  variants: varFade('inUp', { distance: 24 }),
-};
-
 export function HomeHero({ sx, ...other }: BoxProps) {
   const scrollProgress = useScrollPercent();
-
   const mdUp = useMediaQuery((theme) => theme.breakpoints.up(mdKey));
-
   const distance = mdUp ? scrollProgress.percent : 0;
 
   const y1 = useTransformY(scrollProgress.scrollY, distance * -7);
@@ -53,205 +56,6 @@ export function HomeHero({ sx, ...other }: BoxProps) {
     scrollProgress.scrollY,
     [0, 1],
     [1, mdUp ? Number((1 - scrollProgress.percent / 100).toFixed(1)) : 1]
-  );
-
-  const renderHeading = () => (
-    <m.div {...motionProps}>
-      <Box
-        component="h1"
-        sx={[
-          (theme) => ({
-            my: 0,
-            mx: 'auto',
-            maxWidth: 680,
-            display: 'flex',
-            flexWrap: 'wrap',
-            typography: 'h2',
-            justifyContent: 'center',
-            fontFamily: theme.typography.fontSecondaryFamily,
-            [theme.breakpoints.up(lgKey)]: {
-              fontSize: theme.typography.pxToRem(72),
-              lineHeight: '90px',
-            },
-          }),
-        ]}
-      >
-        <Box component="span" sx={{ width: 1, opacity: 0.24 }}>
-          Boost your building
-        </Box>
-        process with
-        <Box
-          component={m.span}
-          animate={{ backgroundPosition: '200% center' }}
-          transition={{
-            duration: 20,
-            ease: 'linear',
-            repeat: Infinity,
-            repeatType: 'reverse',
-          }}
-          sx={[
-            (theme) => ({
-              ...theme.mixins.textGradient(
-                `300deg, ${theme.vars.palette.primary.main} 0%, ${theme.vars.palette.warning.main} 25%, ${theme.vars.palette.primary.main} 50%, ${theme.vars.palette.warning.main} 75%, ${theme.vars.palette.primary.main} 100%`
-              ),
-              backgroundSize: '400%',
-              ml: { xs: 0.75, md: 1, xl: 1.5 },
-            }),
-          ]}
-        >
-          Minimal
-        </Box>
-      </Box>
-    </m.div>
-  );
-
-  const renderText = () => (
-    <m.div {...motionProps}>
-      <Typography
-        variant="body2"
-        sx={[
-          (theme) => ({
-            mx: 'auto',
-            [theme.breakpoints.up(smKey)]: { whiteSpace: 'pre' },
-            [theme.breakpoints.up(lgKey)]: { fontSize: 20, lineHeight: '36px' },
-          }),
-        ]}
-      >
-        {`The starting point for your next project is based on MUI. \nEasy customization helps you build apps faster and better.`}
-      </Typography>
-    </m.div>
-  );
-
-  const renderRatings = () => (
-    <m.div {...motionProps}>
-      <Box
-        sx={{
-          gap: 1.5,
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          typography: 'subtitle2',
-          justifyContent: 'center',
-        }}
-      >
-        <AvatarGroup
-          sx={{
-            [`& .${avatarClasses.root}`]: {
-              width: 32,
-              height: 32,
-            },
-          }}
-        >
-          {Array.from({ length: 3 }, (_, index) => (
-            <Avatar
-              key={_mock.fullName(index + 1)}
-              alt={_mock.fullName(index + 1)}
-              src={_mock.image.avatar(index + 1)}
-            />
-          ))}
-        </AvatarGroup>
-        160+ Happy customers
-      </Box>
-    </m.div>
-  );
-
-  const renderButtons = () => (
-    <Box
-      sx={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        gap: { xs: 1.5, sm: 2 },
-      }}
-    >
-      <m.div {...motionProps}>
-        <Stack spacing={2.5} sx={{ alignItems: 'center' }}>
-          <Button
-            component={RouterLink}
-            href={paths.dashboard.root}
-            color="inherit"
-            size="large"
-            variant="contained"
-            startIcon={<Iconify width={24} icon="custom:flash-outline" />}
-            sx={{ height: 52 }}
-          >
-            <span>
-              Live preview
-              <Box
-                component="small"
-                sx={[
-                  (theme) => ({
-                    mt: '-4px',
-                    opacity: 0.64,
-                    display: 'flex',
-                    lineHeight: '18px',
-                    fontSize: theme.typography.pxToRem(10),
-                    fontWeight: theme.typography.fontWeightMedium,
-                  }),
-                ]}
-              >
-                v{CONFIG.appVersion}
-              </Box>
-            </span>
-          </Button>
-
-          <Link
-            color="inherit"
-            variant="body2"
-            href={paths.dashboard.root}
-            underline="always"
-            sx={{ gap: 0.75, alignItems: 'center', display: 'inline-flex' }}
-          >
-            <Iconify width={16} icon="eva:external-link-fill" />
-            Open dashboard
-          </Link>
-        </Stack>
-      </m.div>
-
-      <m.div {...motionProps}>
-        <Button
-          color="inherit"
-          size="large"
-          variant="outlined"
-          href={paths.dashboard.root}
-          startIcon={<Iconify width={24} icon="solar:figma-outline" />}
-          sx={{ height: 52, borderColor: 'currentColor' }}
-        >
-          Open dashboard
-        </Button>
-      </m.div>
-    </Box>
-  );
-
-  const renderIcons = () => (
-    <Stack spacing={3} sx={{ textAlign: 'center' }}>
-      <m.div {...motionProps}>
-        <Typography variant="overline" sx={{ opacity: 0.4 }}>
-          Available For
-        </Typography>
-      </m.div>
-
-      <Box sx={{ gap: 2.5, display: 'flex' }}>
-        {['js', 'ts', 'nextjs', 'vite', 'figma'].map((platform) => (
-          <m.div {...motionProps} key={platform}>
-            <Box
-              component="img"
-              alt={platform}
-              src={`${CONFIG.assetsDir}/assets/icons/platforms/ic-${platform}.svg`}
-              sx={[
-                (theme) => ({
-                  width: 24,
-                  height: 24,
-                  ...theme.applyStyles('dark', {
-                    ...(platform === 'nextjs' && { filter: 'invert(1)' }),
-                  }),
-                }),
-              ]}
-            />
-          </m.div>
-        ))}
-      </Box>
-    </Stack>
   );
 
   return (
@@ -293,37 +97,132 @@ export function HomeHero({ sx, ...other }: BoxProps) {
           }),
         ]}
       >
-        <Container
-          component={MotionContainer}
-          sx={[
-            (theme) => ({
-              py: 3,
-              gap: 5,
-              zIndex: 9,
-              display: 'flex',
-              alignItems: 'center',
-              flexDirection: 'column',
-              [theme.breakpoints.up(mdKey)]: {
-                flex: '1 1 auto',
-                justifyContent: 'center',
-                py: 'var(--layout-header-desktop-height)',
-              },
-            }),
-          ]}
-        >
+        <Container component={MotionContainer} sx={containerSx}>
           <Stack spacing={3} sx={{ textAlign: 'center' }}>
-            <m.div style={{ y: y1 }}>{renderHeading()}</m.div>
-            <m.div style={{ y: y2 }}>{renderText()}</m.div>
+            <m.div style={{ y: y1 }}>
+              <HeroHeading />
+            </m.div>
+            <m.div style={{ y: y2 }}>
+              <HeroText />
+            </m.div>
           </Stack>
 
-          <m.div style={{ y: y3 }}>{renderRatings()}</m.div>
-          <m.div style={{ y: y4 }}>{renderButtons()}</m.div>
-          <m.div style={{ y: y5 }}>{renderIcons()}</m.div>
+          <m.div style={{ y: y3 }}>
+            <HeroSignals />
+          </m.div>
+          <m.div style={{ y: y4 }}>
+            <HeroButtons />
+          </m.div>
+          <m.div style={{ y: y5 }}>
+            <HeroCompatibility />
+          </m.div>
         </Container>
 
         <HeroBackground />
       </Box>
     </Box>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+function HeroHeading() {
+  const site = useSiteInfo();
+
+  if (site.error) {
+    throw site.error;
+  }
+
+  return (
+    <m.div {...motionProps}>
+      <Box component="h1" sx={headingSx}>
+        <Box component={m.span} animate={gradientAnimation} transition={gradientTransition} sx={brandSx}>
+          {site.data?.site_name}
+        </Box>
+        {site.data?.site_subtitle}
+      </Box>
+    </m.div>
+  );
+}
+
+function HeroText() {
+  const { t } = useTranslate('common');
+
+  return (
+    <m.div {...motionProps}>
+      <Typography variant="body2" sx={textSx}>{t('home.hero.description')}</Typography>
+    </m.div>
+  );
+}
+
+function HeroSignals() {
+  const { t } = useTranslate('common');
+
+  return (
+    <Box sx={signalsSx}>
+      {HERO_SIGNAL_KEYS.map((signal) => (
+        <Box key={signal} component={m.div} variants={varFade('in')} sx={signalItemSx}>
+          <Iconify width={16} icon="eva:checkmark-fill" />
+          {t(`home.hero.signals.${signal}`)}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function HeroButtons() {
+  const { t } = useTranslate('common');
+
+  return (
+    <Box sx={buttonsSx}>
+      <m.div {...motionProps}>
+        <Button
+          component={RouterLink}
+          href={paths.dashboard.root}
+          color="inherit"
+          size="large"
+          variant="contained"
+          startIcon={<Iconify width={24} icon="custom:flash-outline" />}
+          sx={{ height: 52 }}
+        >
+          {t('home.hero.primaryAction')}
+        </Button>
+      </m.div>
+
+      <m.div {...motionProps}>
+        <Button
+          component={RouterLink}
+          href={paths.dashboard.models}
+          color="inherit"
+          size="large"
+          variant="outlined"
+          startIcon={<Iconify width={22} icon="solar:box-minimalistic-bold" />}
+          sx={{ height: 52, borderColor: 'currentColor' }}
+        >
+          {t('home.hero.secondaryAction')}
+        </Button>
+      </m.div>
+    </Box>
+  );
+}
+
+function HeroCompatibility() {
+  const { t } = useTranslate('common');
+
+  return (
+    <Stack spacing={3} sx={{ textAlign: 'center', alignItems: 'center' }}>
+      <m.div {...motionProps}>
+        <Typography variant="overline" sx={{ opacity: 0.4 }}>
+          {t('home.hero.compatibilityCaption')}
+        </Typography>
+      </m.div>
+
+      <Box sx={compatibilitySx}>
+        {COMPATIBLE_TARGET_KEYS.map((target) => (
+          <Chip key={target} label={t(`home.hero.compatibleTargets.${target}`)} variant="outlined" size="small" />
+        ))}
+      </Box>
+    </Stack>
   );
 }
 
@@ -342,25 +241,14 @@ function useTransformY(value: MotionValue<number>, distance: number) {
 
 function useScrollPercent() {
   const elementRef = useRef<HTMLDivElement>(null);
-
   const { scrollY } = useScroll();
-
   const [percent, setPercent] = useState(0);
 
   useMotionValueEvent(scrollY, 'change', (scrollHeight) => {
-    let heroHeight = 0;
-
-    if (elementRef.current) {
-      heroHeight = elementRef.current.offsetHeight;
-    }
-
+    const heroHeight = elementRef.current?.offsetHeight ?? 1;
     const scrollPercent = Math.floor((scrollHeight / heroHeight) * 100);
 
-    if (scrollPercent >= 100) {
-      setPercent(100);
-    } else {
-      setPercent(Math.floor(scrollPercent));
-    }
+    setPercent(scrollPercent >= 100 ? 100 : scrollPercent);
   });
 
   return { elementRef, percent, scrollY };

@@ -4,6 +4,7 @@ import type { SystemSettingsForm } from './system-settings-utils';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 
@@ -15,6 +16,7 @@ import { useSystemSettings } from 'src/actions/system-settings';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { Iconify } from 'src/components/iconify';
+import { logoImageSource } from 'src/components/logo/logo-utils';
 
 import { SettingsSection } from './system-settings-section';
 import { emailConfigComplete } from './system-settings-utils';
@@ -91,8 +93,68 @@ function SiteSection({
           onChange={(value) => setForm((current) => ({ ...current, site_subtitle: value }))}
         />
       </Stack>
+      <LogoField form={form} setForm={setForm} />
     </SettingsSection>
   );
+}
+
+function LogoField({
+  form,
+  setForm,
+}: {
+  form: SystemSettingsForm;
+  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
+}) {
+  const { t } = useTranslate('admin');
+  const logoSrc = logoImageSource(form.site_logo_base64);
+
+  return (
+    <Stack
+      spacing={2}
+      direction={{ xs: 'column', md: 'row' }}
+      sx={{ mt: 2, alignItems: 'center' }}
+    >
+      <Avatar variant="rounded" src={logoSrc} sx={{ width: 64, height: 64 }} />
+      <Stack spacing={1} sx={{ flex: 1 }}>
+        <Stack spacing={1} direction="row">
+          <Button
+            component="label"
+            variant="outlined"
+            startIcon={<Iconify icon="solar:import-bold" />}
+          >
+            {t('systemSettings.fields.siteLogoUpload')}
+            <input
+              hidden
+              type="file"
+              accept="image/*"
+              onChange={(event) => readLogoFile(event, setForm)}
+            />
+          </Button>
+        </Stack>
+      </Stack>
+    </Stack>
+  );
+}
+
+function readLogoFile(
+  event: React.ChangeEvent<HTMLInputElement>,
+  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>
+) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = reader.result;
+    if (typeof result !== 'string') {
+      return;
+    }
+    setForm((current) => ({ ...current, site_logo_base64: result }));
+  };
+  reader.readAsDataURL(file);
 }
 
 function BaseSection({

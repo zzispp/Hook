@@ -2,6 +2,7 @@
 
 import type { ApiEnvelope } from 'src/types/rbac';
 import type {
+  PublicSiteInfo,
   SystemSettings,
   SystemSettingsUpdate,
   SystemSettingsSmtpTestRequest,
@@ -46,6 +47,28 @@ export function useSystemSettings(enabled = true) {
   }, [data, enabled, error, isLoading, isValidating, revalidate]);
 }
 
+export function useSiteInfo(enabled = true) {
+  const {
+    data,
+    isLoading,
+    error,
+    isValidating,
+    mutate: revalidate,
+  } = useSWR<ApiEnvelope<PublicSiteInfo>>(enabled ? endpoints.siteInfo : null, fetcher, swrOptions);
+
+  return useMemo(() => {
+    const apiError =
+      data && !data.success ? new Error(data.message || 'Request failed') : undefined;
+    return {
+      data: enabled && data?.success ? requireApiData(data) : undefined,
+      isLoading: enabled ? isLoading : false,
+      error: error ?? apiError,
+      isValidating: enabled ? isValidating : false,
+      refresh: revalidate,
+    };
+  }, [data, enabled, error, isLoading, isValidating, revalidate]);
+}
+
 export async function updateSystemSettings(payload: SystemSettingsUpdate) {
   const response = await axios.patch<ApiEnvelope<SystemSettings>>(
     endpoints.adminSettings.system,
@@ -53,6 +76,7 @@ export async function updateSystemSettings(payload: SystemSettingsUpdate) {
   );
   const settings = requireApiData(response.data);
   await mutate(endpoints.adminSettings.system);
+  await mutate(endpoints.siteInfo);
   return settings;
 }
 

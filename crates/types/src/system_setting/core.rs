@@ -8,6 +8,7 @@ use super::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 pub struct SystemSettings {
     pub site_name: String,
     pub site_subtitle: String,
+    pub site_logo_base64: String,
     pub allow_registration: bool,
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,

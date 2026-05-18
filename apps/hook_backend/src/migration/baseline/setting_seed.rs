@@ -59,6 +59,8 @@ const DEFAULT_PASSWORD_RESET_HTML: &str = r#"<!DOCTYPE html>
 </body>
 </html>"#;
 
+const DEFAULT_SITE_LOGO_BASE64: &str = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHN0eWxlPgogICAgcGF0aCB7IGZpbGw6ICMwMDAwMDA7IH0KICAgIEBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6IGRhcmspIHsKICAgICAgcGF0aCB7IGZpbGw6ICNGRkZGRkY7IH0KICAgIH0KICA8L3N0eWxlPgogIDxwYXRoIGQ9Ik0xMS4wNSA3LjAyNThIMTQuNTUyTDEzLjUxOTQgMTMuMjE4NkgxNi4zMTczTDIwLjEyMzQgMTguMjQxMUgxMi42ODE1TDExLjk2MzcgMjIuNTQ5OUg4LjQ2MTdMMTEuMDUgNy4wMjU4WiBNMjMuNDUgNy4wMjU4SDI2Ljk1MkwyNC4zNjM3IDIyLjU0OTlIMjAuODYxN0wyMS41Nzk1IDE4LjI0MTFIMjEuOTkyNkwxOC4xODY1IDEzLjIxODZIMjIuNDE3NEwyMy40NSA3LjAyNThaIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz4KPC9zdmc+Cg==";
+
 pub(super) async fn seed_system_settings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager
         .execute(
@@ -76,6 +78,7 @@ fn system_settings_columns() -> Vec<SystemSettings> {
         SystemSettings::Id,
         SystemSettings::SiteName,
         SystemSettings::SiteSubtitle,
+        SystemSettings::SiteLogoBase64,
         SystemSettings::AllowRegistration,
         SystemSettings::LoginCaptchaEnabled,
         SystemSettings::RegistrationCaptchaEnabled,
@@ -125,7 +128,8 @@ fn system_settings_values() -> Vec<Expr> {
     vec![
         SYSTEM_SETTINGS_ID.into(),
         "Hook".into(),
-        "AI API platform".into(),
+        "Gateway".into(),
+        DEFAULT_SITE_LOGO_BASE64.into(),
         true.into(),
         false.into(),
         false.into(),

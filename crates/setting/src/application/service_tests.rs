@@ -106,6 +106,7 @@ fn system_settings_response() -> SystemSettingsResponse {
     SystemSettingsResponse {
         site_name: "Hook".into(),
         site_subtitle: "AI API platform".into(),
+        site_logo_base64: String::new(),
         allow_registration: true,
         login_captcha_enabled: false,
         registration_captcha_enabled: false,

@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use types::system_setting::{SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate};
+use types::system_setting::{
+    PublicSiteInfoResponse, SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate,
+};
 
 use crate::application::{SettingRepository, SettingResult, SettingSecretCipher, SettingUseCase, SmtpConnectionTester};
 
@@ -39,6 +41,10 @@ where
 {
     async fn get_system_settings(&self) -> SettingResult<SystemSettingsResponse> {
         self.repository.get_system_settings().await
+    }
+
+    async fn get_public_site_info(&self) -> SettingResult<PublicSiteInfoResponse> {
+        self.repository.get_system_settings().await.map(Into::into)
     }
 
     async fn update_system_settings(&self, input: SystemSettingsUpdate) -> SettingResult<SystemSettingsResponse> {

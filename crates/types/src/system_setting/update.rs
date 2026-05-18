@@ -12,6 +12,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub site_subtitle: Option<String>,
     #[serde(default)]
+    pub site_logo_base64: Option<String>,
+    #[serde(default)]
     pub allow_registration: Option<bool>,
     #[serde(default)]
     pub login_captcha_enabled: Option<bool>,
@@ -100,6 +102,7 @@ impl SystemSettingsUpdate {
     fn general_fields_empty(&self) -> bool {
         self.site_name.is_none()
             && self.site_subtitle.is_none()
+            && self.site_logo_base64.is_none()
             && self.allow_registration.is_none()
             && self.login_captcha_enabled.is_none()
             && self.registration_captcha_enabled.is_none()

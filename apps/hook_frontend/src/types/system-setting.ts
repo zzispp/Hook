@@ -7,6 +7,7 @@ export type EmailSuffixMode = 'none' | 'whitelist' | 'blacklist';
 export type SystemSettings = {
   site_name: string;
   site_subtitle: string;
+  site_logo_base64: string;
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -54,6 +55,7 @@ export type SystemSettings = {
 export type SystemSettingsUpdate = Partial<{
   site_name: string;
   site_subtitle: string;
+  site_logo_base64: string;
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -95,6 +97,12 @@ export type SystemSettingsUpdate = Partial<{
   email_template_password_reset_subject: string;
   email_template_password_reset_html: string;
 }>;
+
+export type PublicSiteInfo = {
+  site_name: string;
+  site_subtitle: string;
+  site_logo_base64: string;
+};
 
 export type SystemSettingsSmtpTestRequest = Partial<{
   smtp_host: string;
