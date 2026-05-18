@@ -5,10 +5,10 @@ use types::model::PatchField;
 use crate::llm_proxy::{
     LlmProxyError,
     proxy::capture::{recorded_headers, recorded_request_body},
-    request_record_policy::RequestRecordPolicy,
+    request_record_policy::RequestRecordSidePolicy,
 };
 
-pub(super) fn header_patch(headers: PatchField<HeaderMap>, policy: &RequestRecordPolicy) -> Result<PatchField<Value>, LlmProxyError> {
+pub(super) fn header_patch(headers: PatchField<HeaderMap>, policy: &RequestRecordSidePolicy) -> Result<PatchField<Value>, LlmProxyError> {
     match headers {
         PatchField::Value(headers) => Ok(option_patch(recorded_headers(&headers, policy))),
         PatchField::Null => Ok(PatchField::Null),
@@ -16,14 +16,14 @@ pub(super) fn header_patch(headers: PatchField<HeaderMap>, policy: &RequestRecor
     }
 }
 
-pub(super) fn header_input(headers: PatchField<HeaderMap>, policy: &RequestRecordPolicy) -> Option<Value> {
+pub(super) fn header_input(headers: PatchField<HeaderMap>, policy: &RequestRecordSidePolicy) -> Option<Value> {
     match headers {
         PatchField::Value(headers) => recorded_headers(&headers, policy),
         PatchField::Null | PatchField::Missing => None,
     }
 }
 
-pub(super) fn request_body_patch(body: PatchField<Value>, policy: &RequestRecordPolicy) -> Result<PatchField<Value>, LlmProxyError> {
+pub(super) fn request_body_patch(body: PatchField<Value>, policy: &RequestRecordSidePolicy) -> Result<PatchField<Value>, LlmProxyError> {
     match body {
         PatchField::Value(body) => Ok(option_patch(recorded_request_body(&body, policy).map_err(infra_error)?)),
         PatchField::Null => Ok(PatchField::Null),
@@ -31,14 +31,14 @@ pub(super) fn request_body_patch(body: PatchField<Value>, policy: &RequestRecord
     }
 }
 
-pub(super) fn request_body_input(body: PatchField<Value>, policy: &RequestRecordPolicy) -> Result<Option<Value>, LlmProxyError> {
+pub(super) fn request_body_input(body: PatchField<Value>, policy: &RequestRecordSidePolicy) -> Result<Option<Value>, LlmProxyError> {
     match body {
         PatchField::Value(body) => recorded_request_body(&body, policy).map_err(infra_error),
         PatchField::Null | PatchField::Missing => Ok(None),
     }
 }
 
-pub(super) fn response_body_patch(body: PatchField<Value>, policy: &RequestRecordPolicy) -> Result<PatchField<Value>, LlmProxyError> {
+pub(super) fn response_body_patch(body: PatchField<Value>, policy: &RequestRecordSidePolicy) -> Result<PatchField<Value>, LlmProxyError> {
     match body {
         PatchField::Value(body) => Ok(option_patch(policy.response_body(Some(body)).map_err(infra_error)?)),
         PatchField::Null => Ok(PatchField::Null),
@@ -46,7 +46,7 @@ pub(super) fn response_body_patch(body: PatchField<Value>, policy: &RequestRecor
     }
 }
 
-pub(super) fn response_body_input(body: PatchField<Value>, policy: &RequestRecordPolicy) -> Result<Option<Value>, LlmProxyError> {
+pub(super) fn response_body_input(body: PatchField<Value>, policy: &RequestRecordSidePolicy) -> Result<Option<Value>, LlmProxyError> {
     match body {
         PatchField::Value(body) => policy.response_body(Some(body)).map_err(infra_error),
         PatchField::Null | PatchField::Missing => Ok(None),

@@ -4,12 +4,11 @@ import type { PerformanceMonitoringRange } from 'src/types/performance-monitorin
 
 import { useMemo, useState } from 'react';
 
-import Tab from '@mui/material/Tab';
 import Grid from '@mui/material/Grid';
-import Card from '@mui/material/Card';
-import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import ButtonGroup from '@mui/material/ButtonGroup';
 
 import { currencyDisplayFromResponse } from 'src/utils/currency-format';
 
@@ -54,9 +53,11 @@ export function PerformanceMonitoringView() {
       <AdminBreadcrumbs
         headingCode={DASHBOARD_MENU_CODES.performanceMonitoring}
         action={
-          <RefreshButton
+          <HeaderActions
+            range={range}
             loading={overview.isLoading || realtime.isLoading}
-            onClick={() => {
+            onRangeChange={setRange}
+            onRefresh={() => {
               void overview.refresh();
               if (isRealtime) {
                 void realtime.refresh();
@@ -67,7 +68,6 @@ export function PerformanceMonitoringView() {
       />
 
       <Stack spacing={3}>
-        <RangeTabs value={range} onChange={setRange} />
         <StatusAlerts
           overview={overview.data}
           error={overview.error ?? realtime.error ?? currency.error}
@@ -99,23 +99,34 @@ export function PerformanceMonitoringView() {
   );
 }
 
-function RangeTabs({
-  value,
-  onChange,
+function HeaderActions({
+  range,
+  loading,
+  onRefresh,
+  onRangeChange,
 }: {
-  value: PerformanceMonitoringRange;
-  onChange: (value: PerformanceMonitoringRange) => void;
+  range: PerformanceMonitoringRange;
+  loading: boolean;
+  onRefresh: VoidFunction;
+  onRangeChange: (value: PerformanceMonitoringRange) => void;
 }) {
   const { t } = useTranslate('admin');
 
   return (
-    <Card sx={{ px: 2 }}>
-      <Tabs value={value} onChange={(_, next) => onChange(next)}>
+    <Stack direction="row" spacing={1} alignItems="center">
+      <ButtonGroup variant="outlined" size="small">
         {RANGE_OPTIONS.map((item) => (
-          <Tab key={item} value={item} label={t(`performanceMonitoring.ranges.${item}`)} />
+          <Button
+            key={item}
+            variant={range === item ? 'contained' : 'outlined'}
+            onClick={() => onRangeChange(item)}
+          >
+            {t(`performanceMonitoring.ranges.${item}`)}
+          </Button>
         ))}
-      </Tabs>
-    </Card>
+      </ButtonGroup>
+      <RefreshButton loading={loading} onClick={onRefresh} />
+    </Stack>
   );
 }
 

@@ -12,15 +12,16 @@ use crate::llm_proxy::{
     LlmProxyError,
     candidate::{CandidateSelection, CandidateTrace},
     proxy::capture::RequestCapture,
-    request_record_policy::RequestRecordPolicy,
+    request_record_policy::RequestRecordPolicies,
 };
 
 pub(super) fn attempt_patch(
     request_id: &str,
     input: &AttemptRecordInput<'_>,
     billing: Option<&BillingAttempt>,
-    policy: &RequestRecordPolicy,
+    policies: &RequestRecordPolicies,
 ) -> Result<RequestCandidateRecordPatch, LlmProxyError> {
+    let policy = policies.provider();
     let mut patch = RequestCandidateRecordPatch {
         request_id: request_id.to_owned(),
         candidate_index: input.candidate.trace.candidate_index,
@@ -66,8 +67,9 @@ pub(super) fn attempt_input(
     request_id: &str,
     input: &AttemptRecordInput<'_>,
     billing: Option<&BillingAttempt>,
-    policy: &RequestRecordPolicy,
+    policies: &RequestRecordPolicies,
 ) -> Result<RequestCandidateRecordInput, LlmProxyError> {
+    let policy = policies.provider();
     let mut record = base_input(request_id, &input.candidate.trace, input.retry_index, input.status, true, input.finished);
     record.status_code = input.status_code;
     record.skip_reason = input.skip_reason.map(str::to_owned);
@@ -94,8 +96,9 @@ pub(super) fn scheduled_input(request_id: &str, trace: &CandidateTrace, retry_in
 pub(super) fn request_record_input(
     selection: &CandidateSelection,
     capture: &RequestCapture,
-    policy: &RequestRecordPolicy,
+    policies: &RequestRecordPolicies,
 ) -> Result<RequestRecordRecordInput, LlmProxyError> {
+    let policy = policies.client();
     let primary = selection
         .candidates
         .first()
@@ -139,8 +142,9 @@ pub(super) fn request_record_patch(
     request_id: &str,
     input: &AttemptRecordInput<'_>,
     billing: Option<&BillingAttempt>,
-    policy: &RequestRecordPolicy,
+    policies: &RequestRecordPolicies,
 ) -> Result<RequestRecordRecordPatch, LlmProxyError> {
+    let policy = policies.client();
     let mut patch = RequestRecordRecordPatch {
         request_id: request_id.to_owned(),
         provider_id: Some(input.candidate.trace.provider_id.clone()),

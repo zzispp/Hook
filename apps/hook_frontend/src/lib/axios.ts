@@ -181,6 +181,11 @@ export const endpoints = {
     overview: '/api/admin/performance-monitoring/overview',
     realtime: '/api/admin/performance-monitoring/realtime',
   },
+  dashboard: {
+    overview: '/api/dashboard/overview',
+    activity: '/api/dashboard/activity',
+    filterOptions: '/api/dashboard/filter-options',
+  },
   groups: {
     available: '/api/groups/available',
   },

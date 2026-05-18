@@ -26,25 +26,35 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub auto_delete_expired_tokens: Option<bool>,
     #[serde(default)]
+    pub request_record_cleanup_enabled: Option<bool>,
+    #[serde(default)]
+    pub request_record_cleanup_interval_hours: Option<i64>,
+    #[serde(default)]
+    pub performance_monitoring_cleanup_enabled: Option<bool>,
+    #[serde(default)]
+    pub performance_monitoring_cleanup_interval_hours: Option<i64>,
+    #[serde(default)]
     pub request_record_retention_days: Option<i64>,
     #[serde(default)]
     pub request_record_payload_retention_days: Option<i64>,
     #[serde(default)]
     pub performance_monitoring_retention_days: Option<i64>,
     #[serde(default)]
-    pub request_record_level: Option<RequestRecordLevel>,
+    pub client_request_record_level: Option<RequestRecordLevel>,
     #[serde(default)]
-    pub max_request_body_size_kb: Option<i64>,
+    pub client_max_request_body_size_kb: Option<i64>,
     #[serde(default)]
-    pub max_response_body_size_kb: Option<i64>,
+    pub client_max_response_body_size_kb: Option<i64>,
     #[serde(default)]
-    pub sensitive_request_headers: Option<String>,
+    pub client_sensitive_request_headers: Option<String>,
     #[serde(default)]
-    pub record_request_headers: Option<bool>,
+    pub provider_request_record_level: Option<RequestRecordLevel>,
     #[serde(default)]
-    pub record_request_body: Option<bool>,
+    pub provider_max_request_body_size_kb: Option<i64>,
     #[serde(default)]
-    pub record_response_body: Option<bool>,
+    pub provider_max_response_body_size_kb: Option<i64>,
+    #[serde(default)]
+    pub provider_sensitive_request_headers: Option<String>,
     #[serde(default, with = "rust_decimal::serde::float_option")]
     pub default_user_grant: Option<Decimal>,
     #[serde(default)]
@@ -101,19 +111,24 @@ impl SystemSettingsUpdate {
             && self.provider_cooldown_policy.is_none()
             && self.currency.is_none()
             && self.auto_delete_expired_tokens.is_none()
+            && self.request_record_cleanup_enabled.is_none()
+            && self.request_record_cleanup_interval_hours.is_none()
+            && self.performance_monitoring_cleanup_enabled.is_none()
+            && self.performance_monitoring_cleanup_interval_hours.is_none()
     }
 
     fn request_record_fields_empty(&self) -> bool {
         self.request_record_retention_days.is_none()
             && self.request_record_payload_retention_days.is_none()
             && self.performance_monitoring_retention_days.is_none()
-            && self.request_record_level.is_none()
-            && self.max_request_body_size_kb.is_none()
-            && self.max_response_body_size_kb.is_none()
-            && self.sensitive_request_headers.is_none()
-            && self.record_request_headers.is_none()
-            && self.record_request_body.is_none()
-            && self.record_response_body.is_none()
+            && self.client_request_record_level.is_none()
+            && self.client_max_request_body_size_kb.is_none()
+            && self.client_max_response_body_size_kb.is_none()
+            && self.client_sensitive_request_headers.is_none()
+            && self.provider_request_record_level.is_none()
+            && self.provider_max_request_body_size_kb.is_none()
+            && self.provider_max_response_body_size_kb.is_none()
+            && self.provider_sensitive_request_headers.is_none()
     }
 
     fn mail_fields_empty(&self) -> bool {

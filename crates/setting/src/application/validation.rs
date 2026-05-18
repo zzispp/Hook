@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use axum::http::HeaderName;
 use rust_decimal::Decimal;
 use types::provider::ProviderCooldownPolicy;
-use types::system_setting::{EmailSuffixMode, RequestRecordLevel, SystemSettingsUpdate};
+use types::system_setting::{EmailSuffixMode, SystemSettingsUpdate};
 
 use super::{SettingError, SettingResult};
 
@@ -22,11 +22,11 @@ const MIN_STATUS_CODE: i32 = 100;
 const MAX_STATUS_CODE: i32 = 599;
 
 pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
-    let defaults = input.request_record_level.map(request_record_level_defaults);
     SystemSettingsUpdate {
         site_name: input.site_name.map(|value| value.trim().to_owned()),
         site_subtitle: input.site_subtitle.map(|value| value.trim().to_owned()),
-        sensitive_request_headers: input.sensitive_request_headers.map(|value| normalize_sensitive_headers(&value)),
+        client_sensitive_request_headers: normalize_optional_headers(input.client_sensitive_request_headers),
+        provider_sensitive_request_headers: normalize_optional_headers(input.provider_sensitive_request_headers),
         smtp_host: trim_optional(input.smtp_host),
         smtp_username: trim_optional(input.smtp_username),
         smtp_password: trim_optional(input.smtp_password),
@@ -35,9 +35,6 @@ pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
         email_suffixes: input.email_suffixes.map(|value| normalize_email_suffixes(&value)),
         email_template_registration_subject: trim_optional(input.email_template_registration_subject),
         email_template_password_reset_subject: trim_optional(input.email_template_password_reset_subject),
-        record_request_headers: input.record_request_headers.or(defaults.map(|value| value.record_request_headers)),
-        record_request_body: input.record_request_body.or(defaults.map(|value| value.record_request_body)),
-        record_response_body: input.record_response_body.or(defaults.map(|value| value.record_response_body)),
         ..input
     }
 }
@@ -51,9 +48,17 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_positive_i64("request_record_retention_days", input.request_record_retention_days)?;
     validate_positive_i64("request_record_payload_retention_days", input.request_record_payload_retention_days)?;
     validate_positive_i64("performance_monitoring_retention_days", input.performance_monitoring_retention_days)?;
-    validate_positive_i64("max_request_body_size_kb", input.max_request_body_size_kb)?;
-    validate_positive_i64("max_response_body_size_kb", input.max_response_body_size_kb)?;
-    validate_sensitive_request_headers(input.sensitive_request_headers.as_deref())?;
+    validate_positive_i64("request_record_cleanup_interval_hours", input.request_record_cleanup_interval_hours)?;
+    validate_positive_i64(
+        "performance_monitoring_cleanup_interval_hours",
+        input.performance_monitoring_cleanup_interval_hours,
+    )?;
+    validate_positive_i64("client_max_request_body_size_kb", input.client_max_request_body_size_kb)?;
+    validate_positive_i64("client_max_response_body_size_kb", input.client_max_response_body_size_kb)?;
+    validate_positive_i64("provider_max_request_body_size_kb", input.provider_max_request_body_size_kb)?;
+    validate_positive_i64("provider_max_response_body_size_kb", input.provider_max_response_body_size_kb)?;
+    validate_sensitive_headers("client_sensitive_request_headers", input.client_sensitive_request_headers.as_deref())?;
+    validate_sensitive_headers("provider_sensitive_request_headers", input.provider_sensitive_request_headers.as_deref())?;
     validate_non_negative_decimal("default_user_grant", input.default_user_grant)?;
     validate_non_negative_i64("default_rate_limit_rpm", input.default_rate_limit_rpm)?;
     validate_provider_cooldown_policy(input.provider_cooldown_policy.as_ref())?;
@@ -62,6 +67,10 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
 
 fn trim_optional(value: Option<String>) -> Option<String> {
     value.map(|item| item.trim().to_owned())
+}
+
+fn normalize_optional_headers(value: Option<String>) -> Option<String> {
+    value.map(|item| normalize_sensitive_headers(&item))
 }
 
 fn normalize_sensitive_headers(value: &str) -> String {
@@ -80,31 +89,6 @@ fn normalize_email_suffixes(value: &str) -> String {
         .filter(|item| !item.is_empty())
         .collect::<Vec<_>>()
         .join(HEADER_SEPARATOR)
-}
-
-fn request_record_level_defaults(level: RequestRecordLevel) -> RequestRecordSwitchDefaults {
-    match level {
-        RequestRecordLevel::Basic => RequestRecordSwitchDefaults::new(false, false, false),
-        RequestRecordLevel::Headers => RequestRecordSwitchDefaults::new(true, false, false),
-        RequestRecordLevel::Full => RequestRecordSwitchDefaults::new(true, true, true),
-    }
-}
-
-#[derive(Clone, Copy)]
-struct RequestRecordSwitchDefaults {
-    record_request_headers: bool,
-    record_request_body: bool,
-    record_response_body: bool,
-}
-
-impl RequestRecordSwitchDefaults {
-    const fn new(record_request_headers: bool, record_request_body: bool, record_response_body: bool) -> Self {
-        Self {
-            record_request_headers,
-            record_request_body,
-            record_response_body,
-        }
-    }
 }
 
 fn validate_site_name(value: Option<&str>) -> SettingResult<()> {
@@ -188,15 +172,13 @@ fn validate_positive_i64(field: &str, value: Option<i64>) -> SettingResult<()> {
     Ok(())
 }
 
-fn validate_sensitive_request_headers(value: Option<&str>) -> SettingResult<()> {
+fn validate_sensitive_headers(field: &str, value: Option<&str>) -> SettingResult<()> {
     let Some(value) = value else {
         return Ok(());
     };
     for header in value.split(',').map(str::trim).filter(|item| !item.is_empty()) {
         if HeaderName::from_bytes(header.as_bytes()).is_err() {
-            return Err(SettingError::InvalidInput(format!(
-                "sensitive_request_headers contains invalid header name: {header}"
-            )));
+            return Err(SettingError::InvalidInput(format!("{field} contains invalid header name: {header}")));
         }
     }
     Ok(())

@@ -11,6 +11,7 @@ captcha.workspace = true
 card_code.workspace = true
 configuration.workspace = true
 constants.workspace = true
+dashboard.workspace = true
 futures-util.workspace = true
 group.workspace = true
 i18n.workspace = true

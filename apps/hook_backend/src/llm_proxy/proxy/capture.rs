@@ -1,7 +1,7 @@
 use axum::http::{HeaderMap, HeaderName, HeaderValue};
 use serde_json::{Map, Value};
 
-use crate::llm_proxy::request_record_policy::{RequestRecordPolicy, truncate_request_body};
+use crate::llm_proxy::request_record_policy::{RequestRecordSidePolicy, truncate_request_body};
 
 const MASKED_HEADER_VALUE: &str = "****";
 
@@ -19,11 +19,11 @@ impl RequestCapture {
         }
     }
 
-    pub(in crate::llm_proxy) fn request_headers(&self, policy: &RequestRecordPolicy) -> Option<Value> {
+    pub(in crate::llm_proxy) fn request_headers(&self, policy: &RequestRecordSidePolicy) -> Option<Value> {
         recorded_headers(&self.headers, policy)
     }
 
-    pub(in crate::llm_proxy) fn request_body(&self, policy: &RequestRecordPolicy) -> Result<Option<Value>, serde_json::Error> {
+    pub(in crate::llm_proxy) fn request_body(&self, policy: &RequestRecordSidePolicy) -> Result<Option<Value>, serde_json::Error> {
         recorded_request_body(&self.body, policy)
     }
 
@@ -37,15 +37,15 @@ impl RequestCapture {
     }
 }
 
-pub(in crate::llm_proxy) fn recorded_headers(headers: &HeaderMap, policy: &RequestRecordPolicy) -> Option<Value> {
+pub(in crate::llm_proxy) fn recorded_headers(headers: &HeaderMap, policy: &RequestRecordSidePolicy) -> Option<Value> {
     policy.should_record_request_headers().then(|| headers_value(headers, policy))
 }
 
-pub(in crate::llm_proxy) fn recorded_request_body(body: &Value, policy: &RequestRecordPolicy) -> Result<Option<Value>, serde_json::Error> {
+pub(in crate::llm_proxy) fn recorded_request_body(body: &Value, policy: &RequestRecordSidePolicy) -> Result<Option<Value>, serde_json::Error> {
     truncate_request_body(body, policy)
 }
 
-fn headers_value(headers: &HeaderMap, policy: &RequestRecordPolicy) -> Value {
+fn headers_value(headers: &HeaderMap, policy: &RequestRecordSidePolicy) -> Value {
     let mut output = Map::new();
     for (name, value) in headers {
         output.insert(name.as_str().to_owned(), header_value(name, value, policy));
@@ -53,7 +53,7 @@ fn headers_value(headers: &HeaderMap, policy: &RequestRecordPolicy) -> Value {
     Value::Object(output)
 }
 
-fn header_value(name: &HeaderName, value: &HeaderValue, policy: &RequestRecordPolicy) -> Value {
+fn header_value(name: &HeaderName, value: &HeaderValue, policy: &RequestRecordSidePolicy) -> Value {
     if sensitive_header(name, policy) {
         return Value::String(MASKED_HEADER_VALUE.to_owned());
     }
@@ -63,7 +63,7 @@ fn header_value(name: &HeaderName, value: &HeaderValue, policy: &RequestRecordPo
     }
 }
 
-fn sensitive_header(name: &HeaderName, policy: &RequestRecordPolicy) -> bool {
+fn sensitive_header(name: &HeaderName, policy: &RequestRecordSidePolicy) -> bool {
     policy
         .sensitive_request_headers
         .iter()

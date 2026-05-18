@@ -60,6 +60,10 @@ pub const ROLE_API_BINDINGS: &[RoleApiBindingDefinition] = &[];
 
 pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     MenuApiBindingDefinition {
+        menu_code: "dashboard_home",
+        api_codes: &["dashboard_overview_read", "dashboard_activity_read", "dashboard_filter_options_read"],
+    },
+    MenuApiBindingDefinition {
         menu_code: "announcements",
         api_codes: &["announcements_read", "announcements_detail"],
     },

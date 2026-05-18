@@ -14,16 +14,21 @@ export type SystemSettingsForm = {
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
   auto_delete_expired_tokens: boolean;
+  request_record_cleanup_enabled: boolean;
+  request_record_cleanup_interval_hours: string;
+  performance_monitoring_cleanup_enabled: boolean;
+  performance_monitoring_cleanup_interval_hours: string;
   request_record_retention_days: string;
   request_record_payload_retention_days: string;
   performance_monitoring_retention_days: string;
-  request_record_level: SystemSettings['request_record_level'];
-  max_request_body_size_kb: string;
-  max_response_body_size_kb: string;
-  sensitive_request_headers: string;
-  record_request_headers: boolean;
-  record_request_body: boolean;
-  record_response_body: boolean;
+  client_request_record_level: SystemSettings['client_request_record_level'];
+  client_max_request_body_size_kb: string;
+  client_max_response_body_size_kb: string;
+  client_sensitive_request_headers: string;
+  provider_request_record_level: SystemSettings['provider_request_record_level'];
+  provider_max_request_body_size_kb: string;
+  provider_max_response_body_size_kb: string;
+  provider_sensitive_request_headers: string;
   default_user_grant: string;
   default_rate_limit_rpm: string;
   currency: SystemSettings['currency'];
@@ -108,16 +113,21 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   email_config_enabled: false,
   support_ticket_email_notifications_enabled: false,
   auto_delete_expired_tokens: false,
+  request_record_cleanup_enabled: true,
+  request_record_cleanup_interval_hours: '24',
+  performance_monitoring_cleanup_enabled: true,
+  performance_monitoring_cleanup_interval_hours: '24',
   request_record_retention_days: '365',
   request_record_payload_retention_days: '30',
   performance_monitoring_retention_days: '30',
-  request_record_level: 'full',
-  max_request_body_size_kb: '5120',
-  max_response_body_size_kb: '5120',
-  sensitive_request_headers: 'authorization, x-api-key, api-key, cookie, set-cookie',
-  record_request_headers: true,
-  record_request_body: true,
-  record_response_body: true,
+  client_request_record_level: 'full',
+  client_max_request_body_size_kb: '5120',
+  client_max_response_body_size_kb: '5120',
+  client_sensitive_request_headers: 'authorization, x-api-key, api-key, cookie, set-cookie',
+  provider_request_record_level: 'full',
+  provider_max_request_body_size_kb: '5120',
+  provider_max_response_body_size_kb: '5120',
+  provider_sensitive_request_headers: 'authorization, x-api-key, api-key, cookie, set-cookie',
   default_user_grant: '0',
   default_rate_limit_rpm: '0',
   currency: 'USD',
@@ -149,18 +159,25 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     support_ticket_email_notifications_enabled:
       settings.support_ticket_email_notifications_enabled,
     auto_delete_expired_tokens: settings.auto_delete_expired_tokens,
+    request_record_cleanup_enabled: settings.request_record_cleanup_enabled,
+    request_record_cleanup_interval_hours: String(settings.request_record_cleanup_interval_hours),
+    performance_monitoring_cleanup_enabled: settings.performance_monitoring_cleanup_enabled,
+    performance_monitoring_cleanup_interval_hours: String(
+      settings.performance_monitoring_cleanup_interval_hours
+    ),
     request_record_retention_days: String(settings.request_record_retention_days),
     request_record_payload_retention_days: String(settings.request_record_payload_retention_days),
     performance_monitoring_retention_days: String(
       settings.performance_monitoring_retention_days
     ),
-    request_record_level: settings.request_record_level,
-    max_request_body_size_kb: String(settings.max_request_body_size_kb),
-    max_response_body_size_kb: String(settings.max_response_body_size_kb),
-    sensitive_request_headers: settings.sensitive_request_headers,
-    record_request_headers: settings.record_request_headers,
-    record_request_body: settings.record_request_body,
-    record_response_body: settings.record_response_body,
+    client_request_record_level: settings.client_request_record_level,
+    client_max_request_body_size_kb: String(settings.client_max_request_body_size_kb),
+    client_max_response_body_size_kb: String(settings.client_max_response_body_size_kb),
+    client_sensitive_request_headers: settings.client_sensitive_request_headers,
+    provider_request_record_level: settings.provider_request_record_level,
+    provider_max_request_body_size_kb: String(settings.provider_max_request_body_size_kb),
+    provider_max_response_body_size_kb: String(settings.provider_max_response_body_size_kb),
+    provider_sensitive_request_headers: settings.provider_sensitive_request_headers,
     default_user_grant: String(settings.default_user_grant),
     default_rate_limit_rpm: String(settings.default_rate_limit_rpm),
     currency: settings.currency,
@@ -193,18 +210,25 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     support_ticket_email_notifications_enabled:
       form.support_ticket_email_notifications_enabled,
     auto_delete_expired_tokens: form.auto_delete_expired_tokens,
+    request_record_cleanup_enabled: form.request_record_cleanup_enabled,
+    request_record_cleanup_interval_hours: Number(form.request_record_cleanup_interval_hours || 0),
+    performance_monitoring_cleanup_enabled: form.performance_monitoring_cleanup_enabled,
+    performance_monitoring_cleanup_interval_hours: Number(
+      form.performance_monitoring_cleanup_interval_hours || 0
+    ),
     request_record_retention_days: Number(form.request_record_retention_days || 0),
     request_record_payload_retention_days: Number(form.request_record_payload_retention_days || 0),
     performance_monitoring_retention_days: Number(
       form.performance_monitoring_retention_days || 0
     ),
-    request_record_level: form.request_record_level,
-    max_request_body_size_kb: Number(form.max_request_body_size_kb || 0),
-    max_response_body_size_kb: Number(form.max_response_body_size_kb || 0),
-    sensitive_request_headers: form.sensitive_request_headers,
-    record_request_headers: form.record_request_headers,
-    record_request_body: form.record_request_body,
-    record_response_body: form.record_response_body,
+    client_request_record_level: form.client_request_record_level,
+    client_max_request_body_size_kb: Number(form.client_max_request_body_size_kb || 0),
+    client_max_response_body_size_kb: Number(form.client_max_response_body_size_kb || 0),
+    client_sensitive_request_headers: form.client_sensitive_request_headers,
+    provider_request_record_level: form.provider_request_record_level,
+    provider_max_request_body_size_kb: Number(form.provider_max_request_body_size_kb || 0),
+    provider_max_response_body_size_kb: Number(form.provider_max_response_body_size_kb || 0),
+    provider_sensitive_request_headers: form.provider_sensitive_request_headers,
     default_user_grant: Number(form.default_user_grant || 0),
     default_rate_limit_rpm: Number(form.default_rate_limit_rpm || 0),
     currency: form.currency,

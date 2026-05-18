@@ -1,6 +1,7 @@
 mod admin_wallet;
 mod auth;
 mod card_code;
+mod dashboard;
 mod group;
 mod i18n;
 mod model;
@@ -23,6 +24,7 @@ pub struct ApiDefinition {
 const API_GROUPS: &[&[ApiDefinition]] = &[
     auth::AUTH_APIS,
     user::USER_APIS,
+    dashboard::DASHBOARD_APIS,
     rbac::RBAC_APIS,
     model::MODEL_APIS,
     operations::OPERATIONS_APIS,

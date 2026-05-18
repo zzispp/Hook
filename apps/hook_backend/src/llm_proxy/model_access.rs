@@ -103,6 +103,7 @@ mod tests {
         api_token::{ApiToken, ApiTokenType, ModelAccessMode},
         model::TieredPricingConfig,
         provider::{ProviderModelMapping, ProviderSchedulingMode},
+        system_setting::RequestRecordLevel,
     };
 
     use super::*;
@@ -171,12 +172,14 @@ mod tests {
         SchedulingSnapshot {
             default_rate_limit_rpm: 0,
             scheduling_mode: ProviderSchedulingMode::FixedOrder,
-            record_request_headers: false,
-            record_request_body: false,
-            record_response_body: false,
-            max_request_body_size_kb: 1024,
-            max_response_body_size_kb: 1024,
-            sensitive_request_headers: String::new(),
+            client_request_record_level: RequestRecordLevel::Basic,
+            client_max_request_body_size_kb: 1024,
+            client_max_response_body_size_kb: 1024,
+            client_sensitive_request_headers: String::new(),
+            provider_request_record_level: RequestRecordLevel::Basic,
+            provider_max_request_body_size_kb: 1024,
+            provider_max_response_body_size_kb: 1024,
+            provider_sensitive_request_headers: String::new(),
             provider_cooldown_policy: Default::default(),
             models: vec![
                 model("global-model-a", "model-a"),

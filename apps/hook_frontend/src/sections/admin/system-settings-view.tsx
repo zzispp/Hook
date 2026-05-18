@@ -21,6 +21,7 @@ import { SettingsSection } from './system-settings-section';
 import { emailConfigComplete } from './system-settings-utils';
 import { useSystemSettingsForm } from './system-settings-state';
 import { EmailSettingsSection } from './system-settings-email-section';
+import { CleanupSettingsSection } from './system-settings-cleanup-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { SwitchRow, TextFieldRow, RefreshButton, AdminBreadcrumbs } from './shared';
 
@@ -60,7 +61,7 @@ export function SystemSettingsView() {
           <Divider />
           <RequestRecordSection form={form.form} setForm={form.setForm} />
           <Divider />
-          <CleanupSection form={form.form} setForm={form.setForm} />
+          <CleanupSettingsSection form={form.form} setForm={form.setForm} />
         </Stack>
       </Card>
     </DashboardContent>
@@ -196,50 +197,6 @@ function TokenSection({
           helperText={t('systemSettings.helper.defaultRateLimitRpm')}
           onChange={(value) =>
             setForm((current) => ({ ...current, default_rate_limit_rpm: value }))
-          }
-        />
-      </Stack>
-    </SettingsSection>
-  );
-}
-
-function CleanupSection({
-  form,
-  setForm,
-}: {
-  form: SystemSettingsForm;
-  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <SettingsSection title={t('systemSettings.sections.cleanup')}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        <TextFieldRow
-          type="number"
-          label={t('systemSettings.fields.requestRecordRetentionDays')}
-          value={form.request_record_retention_days}
-          helperText={t('systemSettings.helper.requestRecordRetentionDays')}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, request_record_retention_days: value }))
-          }
-        />
-        <TextFieldRow
-          type="number"
-          label={t('systemSettings.fields.requestRecordPayloadRetentionDays')}
-          value={form.request_record_payload_retention_days}
-          helperText={t('systemSettings.helper.requestRecordPayloadRetentionDays')}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, request_record_payload_retention_days: value }))
-          }
-        />
-        <TextFieldRow
-          type="number"
-          label={t('systemSettings.fields.performanceMonitoringRetentionDays')}
-          value={form.performance_monitoring_retention_days}
-          helperText={t('systemSettings.helper.performanceMonitoringRetentionDays')}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, performance_monitoring_retention_days: value }))
           }
         />
       </Stack>

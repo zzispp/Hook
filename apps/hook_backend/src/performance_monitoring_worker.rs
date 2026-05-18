@@ -7,11 +7,13 @@ use storage::{
 };
 use time::OffsetDateTime;
 use types::performance_monitoring::SnapshotGranularity;
+use types::system_setting::SystemSettings;
 
 use crate::performance_monitoring_os::PerformanceOsCollector;
 
 const SNAPSHOT_INTERVAL: Duration = Duration::from_secs(60);
-const CLEANUP_INTERVAL: Duration = Duration::from_secs(86_400);
+const SECONDS_PER_HOUR: u64 = 3_600;
+const FALLBACK_RETRY_INTERVAL: Duration = Duration::from_secs(SECONDS_PER_HOUR);
 
 type WorkerResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -29,10 +31,15 @@ async fn snapshot_loop(database: Database, os_collector: Arc<PerformanceOsCollec
 }
 
 async fn cleanup_loop(database: Database) {
-    run_cleanup_and_log(database.clone()).await;
     loop {
-        tokio::time::sleep(CLEANUP_INTERVAL).await;
-        run_cleanup_and_log(database.clone()).await;
+        let interval = match run_cleanup_and_log(database.clone()).await {
+            Ok(value) => value,
+            Err(error) => {
+                hook_tracing::error("performance monitoring cleanup failed", error.as_ref());
+                FALLBACK_RETRY_INTERVAL
+            }
+        };
+        tokio::time::sleep(interval).await;
     }
 }
 
@@ -43,11 +50,16 @@ async fn run_snapshot_and_log(database: Database, os_collector: Arc<PerformanceO
     }
 }
 
-async fn run_cleanup_and_log(database: Database) {
-    match run_cleanup(database).await {
-        Ok(deleted) => hook_tracing::info_with_fields!("performance monitoring cleanup completed", deleted_snapshots = deleted),
-        Err(error) => hook_tracing::error("performance monitoring cleanup failed", error.as_ref()),
+async fn run_cleanup_and_log(database: Database) -> WorkerResult<Duration> {
+    let settings = SettingStore::new(database.clone()).get_system_settings().await?;
+    let interval = cleanup_interval(settings.performance_monitoring_cleanup_interval_hours);
+    if !settings.performance_monitoring_cleanup_enabled {
+        hook_tracing::info_with_fields!("performance monitoring cleanup skipped", reason = "auto cleanup disabled");
+        return Ok(interval);
     }
+    let deleted = run_cleanup(database, &settings).await?;
+    hook_tracing::info_with_fields!("performance monitoring cleanup completed", deleted_snapshots = deleted);
+    Ok(interval)
 }
 
 async fn run_snapshot(database: Database, os_collector: Arc<PerformanceOsCollector>) -> WorkerResult<usize> {
@@ -62,13 +74,16 @@ async fn run_snapshot(database: Database, os_collector: Arc<PerformanceOsCollect
     Ok(count)
 }
 
-async fn run_cleanup(database: Database) -> WorkerResult<u64> {
-    let settings = SettingStore::new(database.clone()).get_system_settings().await?;
+async fn run_cleanup(database: Database, settings: &SystemSettings) -> WorkerResult<u64> {
     let cutoff = OffsetDateTime::now_utc() - time::Duration::days(settings.performance_monitoring_retention_days);
     PerformanceMonitoringStore::new(database)
         .delete_snapshots_before(cutoff)
         .await
         .map_err(Into::into)
+}
+
+fn cleanup_interval(hours: i64) -> Duration {
+    Duration::from_secs(hours as u64 * SECONDS_PER_HOUR)
 }
 
 fn aggregation_windows(now: OffsetDateTime) -> Vec<SnapshotAggregationWindow> {

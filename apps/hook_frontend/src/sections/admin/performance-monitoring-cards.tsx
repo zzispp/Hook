@@ -1,5 +1,6 @@
 'use client';
 
+import type { Theme } from '@mui/material/styles';
 import type { ChartOptions } from 'src/components/chart';
 import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { MetricDimension, PerformanceSnapshotPoint } from 'src/types/performance-monitoring';
@@ -9,6 +10,7 @@ import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
+import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 
@@ -17,8 +19,7 @@ import { fData, fNumber, fPercent } from 'src/utils/format-number';
 
 import { useTranslate } from 'src/locales/use-locales';
 
-import { Label } from 'src/components/label';
-import { Chart, useChart } from 'src/components/chart';
+import { Chart, useChart, ChartLegends } from 'src/components/chart';
 
 export function SummaryGrid({
   snapshot,
@@ -94,30 +95,60 @@ export function LatencyChart({ title, series }: { title: string; series: Perform
 
 export function DistributionCard({ title, items }: { title: string; items: MetricDimension[] }) {
   const { t } = useTranslate('admin');
+  const theme = useTheme();
+  const colors = dimensionColors(theme).slice(0, items.length);
+  const options = useChart({
+    chart: { sparkline: { enabled: true } },
+    colors,
+    labels: items.map((item) => item.name),
+    stroke: { width: 0 },
+    dataLabels: { enabled: true, dropShadow: { enabled: false } },
+    tooltip: { y: { formatter: (value: number) => fNumber(value) } },
+    plotOptions: { pie: { donut: { labels: { show: false } } } },
+  } satisfies ChartOptions);
 
   return (
     <Card sx={{ height: '100%' }}>
       <CardHeader title={title} />
-      <Stack spacing={1.5} sx={{ p: 3 }}>
-        {items.length ? (
-          items.map((item) => (
-            <Stack key={item.name} direction="row" justifyContent="space-between">
-              <Typography variant="body2" noWrap sx={{ pr: 2 }}>
-                {item.name}
-              </Typography>
-              <Label color="info" variant="soft">
-                {fNumber(item.count)}
-              </Label>
-            </Stack>
-          ))
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            {t('performanceMonitoring.noDimensionData')}
-          </Typography>
-        )}
-      </Stack>
+      {!items.length ? (
+        <Typography variant="body2" color="text.secondary" sx={{ p: 3 }}>
+          {t('performanceMonitoring.noDimensionData')}
+        </Typography>
+      ) : null}
+      {items.length ? (
+        <>
+          <Chart
+            type="pie"
+            series={items.map((item) => item.count)}
+            options={options}
+            sx={{ my: 6, mx: 'auto', width: { xs: 240, xl: 260 }, height: { xs: 240, xl: 260 } }}
+          />
+          <Divider sx={{ borderStyle: 'dashed' }} />
+          <ChartLegends
+            labels={items.map((item) => item.name)}
+            colors={colors}
+            values={items.map((item) => fNumber(item.count))}
+            sx={{ p: 3, justifyContent: 'center' }}
+          />
+        </>
+      ) : null}
     </Card>
   );
+}
+
+function dimensionColors(theme: Theme) {
+  return [
+    theme.palette.primary.main,
+    theme.palette.warning.light,
+    theme.palette.info.dark,
+    theme.palette.error.main,
+    theme.palette.success.main,
+    theme.palette.secondary.main,
+    theme.palette.primary.dark,
+    theme.palette.warning.dark,
+    theme.palette.info.main,
+    theme.palette.error.dark,
+  ];
 }
 
 export function DetailCards({

@@ -1,0 +1,100 @@
+use std::collections::HashMap;
+
+use rust_decimal::Decimal;
+use sea_orm::{DbBackend, FromQueryResult, Statement};
+use types::dashboard::{DashboardActivityDay, DashboardActivityResponse};
+
+use crate::StorageResult;
+
+use super::{
+    DashboardStore, DashboardStoreActivityQuery,
+    scope::{SqlParams, scope_response, scoped_time_where},
+};
+
+pub(super) async fn activity(store: &DashboardStore, query: DashboardStoreActivityQuery) -> StorageResult<DashboardActivityResponse> {
+    let rows = activity_rows(store, &query).await?;
+    let days = fill_days(query.start_date, query.end_date, rows);
+    let max_request_count = days.iter().map(|day| day.request_count).max().unwrap_or_default();
+    Ok(DashboardActivityResponse {
+        scope: scope_response(&query.scope),
+        start_date: query.start_date.to_string(),
+        end_date: query.end_date.to_string(),
+        total_days: days.len(),
+        max_request_count,
+        days,
+    })
+}
+
+async fn activity_rows(store: &DashboardStore, query: &DashboardStoreActivityQuery) -> StorageResult<Vec<ActivityRow>> {
+    let mut params = SqlParams::new();
+    let offset = params.push(query.tz_offset_minutes);
+    let where_sql = scoped_time_where(&query.scope, query.started_at, query.ended_at, &mut params);
+    let sql = format!(
+        "SELECT ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))::date AS date, \
+        COUNT(*)::bigint AS request_count, \
+        COALESCE(SUM(COALESCE(r.total_tokens, COALESCE(r.prompt_tokens, 0) + COALESCE(r.completion_tokens, 0), 0)), 0)::bigint AS total_tokens, \
+        COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost \
+        FROM request_records r {where_sql} \
+        GROUP BY date \
+        ORDER BY date ASC"
+    );
+    ActivityRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
+        .all(store.database().connection())
+        .await
+        .map_err(Into::into)
+}
+
+pub(crate) fn fill_days(start_date: time::Date, end_date: time::Date, rows: Vec<ActivityRow>) -> Vec<DashboardActivityDay> {
+    let mapped = rows.into_iter().map(|row| (row.date, row)).collect::<HashMap<time::Date, ActivityRow>>();
+    let mut days = Vec::new();
+    let mut date = start_date;
+    while date <= end_date {
+        days.push(day_response(date, mapped.get(&date)));
+        date = date.next_day().expect("dashboard activity date should advance");
+    }
+    days
+}
+
+fn day_response(date: time::Date, row: Option<&ActivityRow>) -> DashboardActivityDay {
+    DashboardActivityDay {
+        date: date.to_string(),
+        request_count: row.and_then(|value| value.request_count).unwrap_or_default(),
+        total_tokens: row.and_then(|value| value.total_tokens).unwrap_or_default(),
+        total_cost: row.and_then(|value| value.total_cost).unwrap_or(Decimal::ZERO),
+    }
+}
+
+#[derive(Clone, Debug, FromQueryResult)]
+pub(crate) struct ActivityRow {
+    pub date: time::Date,
+    pub request_count: Option<i64>,
+    pub total_tokens: Option<i64>,
+    pub total_cost: Option<Decimal>,
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+
+    use super::{ActivityRow, fill_days};
+
+    #[test]
+    fn fill_days_adds_zero_rows_and_preserves_values() {
+        let start = time::Date::from_calendar_date(2026, time::Month::May, 16).unwrap();
+        let end = time::Date::from_calendar_date(2026, time::Month::May, 18).unwrap();
+        let rows = vec![ActivityRow {
+            date: time::Date::from_calendar_date(2026, time::Month::May, 17).unwrap(),
+            request_count: Some(3),
+            total_tokens: Some(42),
+            total_cost: Some(Decimal::new(12, 2)),
+        }];
+
+        let days = fill_days(start, end, rows);
+
+        assert_eq!(days.len(), 3);
+        assert_eq!(days[0].request_count, 0);
+        assert_eq!(days[1].request_count, 3);
+        assert_eq!(days[1].total_tokens, 42);
+        assert_eq!(days[2].total_cost, Decimal::ZERO);
+    }
+}

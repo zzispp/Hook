@@ -368,6 +368,60 @@
   },
   "dashboard": {
     "welcome": "你好，欢迎回来 👋",
+    "stats": {
+      "title": "仪表盘",
+      "subtitleAdmin": "全站请求、令牌、模型与提供商统计",
+      "subtitleUser": "你的请求、令牌和费用统计",
+      "presets": {
+        "today": "今日",
+        "7d": "7 天",
+        "30d": "30 天",
+        "90d": "90 天"
+      },
+      "kpi": {
+        "requests": "请求数",
+        "success": "成功",
+        "failed": "失败",
+        "active": "活跃中",
+        "successRate": "成功率",
+        "tokens": "Tokens",
+        "cost": "费用",
+        "latency": "平均响应",
+        "ttfb": "平均 TTFB",
+        "models": "使用模型"
+      },
+      "trend": {
+        "title": "请求趋势",
+        "requests": "请求",
+        "success": "成功",
+        "failed": "失败",
+        "latency": "平均响应"
+      },
+      "activity": {
+        "title": "活跃网格",
+        "subtitle": "最近 365 天请求活跃度",
+        "global": "全站",
+        "allUsers": "全部用户",
+        "allTokens": "全部令牌",
+        "user": "用户",
+        "token": "令牌",
+        "less": "少",
+        "more": "多"
+      },
+      "breakdowns": {
+        "models": "模型排行",
+        "apiFormats": "API 格式",
+        "tokens": "令牌排行",
+        "providers": "Provider 分布",
+        "users": "用户排行"
+      },
+      "columns": {
+        "requests": "请求",
+        "tokens": "Tokens",
+        "cost": "费用"
+      },
+      "empty": "暂无统计数据"
+    },
     "weeklySales": "本周销售额",
     "newUsers": "新增用户",
     "purchaseOrders": "采购订单",
@@ -1006,6 +1060,10 @@
       "emailConfigEnabled": "开启邮件配置",
       "supportTicketEmailNotificationsEnabled": "启用工单邮件通知",
       "autoDeleteExpiredTokens": "自动删除过期令牌",
+      "requestRecordCleanupEnabled": "启用请求记录定时清理",
+      "requestRecordCleanupIntervalHours": "请求记录清理间隔（小时）",
+      "performanceMonitoringCleanupEnabled": "启用性能监控定时清理",
+      "performanceMonitoringCleanupIntervalHours": "性能监控清理间隔（小时）",
       "requestRecordRetentionDays": "请求记录保留天数",
       "requestRecordPayloadRetentionDays": "请求 payload 保留天数",
       "performanceMonitoringRetentionDays": "性能监控快照保留天数",
@@ -1013,9 +1071,6 @@
       "maxRequestBodySizeKb": "最大请求体大小 (KB)",
       "maxResponseBodySizeKb": "最大响应体大小 (KB)",
       "sensitiveRequestHeaders": "敏感请求头",
-      "recordRequestHeaders": "记录请求/响应头",
-      "recordRequestBody": "记录请求体",
-      "recordResponseBody": "记录响应体",
       "defaultUserGrant": "默认用户初始赠款",
       "defaultRateLimitRpm": "默认速率限制",
       "currency": "显示货币",
@@ -1036,22 +1091,50 @@
     "helper": {
       "defaultUserGrant": "新用户注册成功后写入赠款余额，并生成钱包流水。",
       "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。",
+      "requestRecordCleanupEnabled": "开启后，后台按间隔清理请求记录。",
+      "requestRecordCleanupIntervalHours": "请求记录清理任务的执行间隔；保存后下一轮循环会读取新设置。",
+      "performanceMonitoringCleanupEnabled": "开启后，后台按间隔清理性能监控快照。",
+      "performanceMonitoringCleanupIntervalHours": "性能监控清理任务的执行间隔；保存后下一轮循环会读取新设置。",
       "requestRecordRetentionDays": "超过该天数后删除整条请求记录。",
       "requestRecordPayloadRetentionDays": "超过该天数后压缩客户端与 Provider 侧 payload，记录本身保留，直到总保留期到期再删除。",
       "performanceMonitoringRetentionDays": "超过该天数后删除监控快照；ALL 最多覆盖当前已保留的快照时间桶。",
-      "requestRecordLevel": "敏感信息会自动脱敏；要保留失败响应片段，请开启完整级别。",
-      "maxRequestBodySizeKb": "超过此大小的请求体将被截断记录。",
-      "maxResponseBodySizeKb": "超过此大小的响应体将被截断记录。",
-      "sensitiveRequestHeaders": "逗号分隔，这些请求/响应头会被脱敏处理。",
+      "clientRequestRecordLevel": "控制客户端请求头、请求体、响应头和响应体的记录详细程度。",
+      "clientMaxRequestBodySizeKb": "超过此大小的客户端请求体将被截断记录。",
+      "clientMaxResponseBodySizeKb": "超过此大小的客户端响应体将被截断记录。",
+      "clientSensitiveRequestHeaders": "逗号分隔；客户端请求头和响应头命中后会脱敏。",
+      "providerRequestRecordLevel": "控制 Hook 到 Provider 的请求头、请求体、响应头和响应体的记录详细程度。",
+      "providerMaxRequestBodySizeKb": "超过此大小的 Provider 请求体将被截断记录。",
+      "providerMaxResponseBodySizeKb": "超过此大小的 Provider 响应体将被截断记录。",
+      "providerSensitiveRequestHeaders": "逗号分隔；Provider 请求头和响应头命中后会脱敏。",
       "registrationEmailVerificationRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
       "supportTicketEmailNotificationsRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。"
     },
     "requestRecord": {
       "description": "控制客户端与 Provider 双视角 payload 的记录方式和保留粒度",
+      "panels": {
+        "client": {
+          "title": "客户端记录",
+          "description": "记录用户到 Hook 的请求和 Hook 返回给用户的响应。"
+        },
+        "provider": {
+          "title": "Provider 记录",
+          "description": "记录 Hook 发往 Provider 的请求和 Provider 返回给 Hook 的响应。"
+        }
+      },
       "levels": {
         "basic": "BASIC - 基本信息 (~1KB/条)",
         "headers": "HEADERS - 含双向头信息 (~2-3KB/条)",
         "full": "FULL - 含客户端/Provider 请求响应 (~50KB/条)"
+      }
+    },
+    "cleanup": {
+      "requestRecord": {
+        "title": "请求记录清理",
+        "description": "控制请求记录整表保留期，以及请求/响应 payload 的压缩清理周期。"
+      },
+      "performanceMonitoring": {
+        "title": "性能监控清理",
+        "description": "控制性能监控快照的保留期和定时清理周期。"
       }
     },
     "email": {

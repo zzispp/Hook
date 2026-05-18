@@ -1,11 +1,46 @@
 use serde_json::{Value, json};
+use types::system_setting::RequestRecordLevel;
 
 use crate::llm_proxy::cache::snapshot::SchedulingSnapshot;
 
 const BYTES_PER_KB: i64 = 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(in crate::llm_proxy) struct RequestRecordPolicy {
+pub(in crate::llm_proxy) struct RequestRecordPolicies {
+    client: RequestRecordSidePolicy,
+    provider: RequestRecordSidePolicy,
+}
+
+impl RequestRecordPolicies {
+    pub(in crate::llm_proxy) fn from_snapshot(snapshot: &SchedulingSnapshot) -> Result<Self, String> {
+        Ok(Self {
+            client: RequestRecordSidePolicy::new(
+                snapshot.client_request_record_level,
+                snapshot.client_max_request_body_size_kb,
+                snapshot.client_max_response_body_size_kb,
+                &snapshot.client_sensitive_request_headers,
+            )?,
+            provider: RequestRecordSidePolicy::new(
+                snapshot.provider_request_record_level,
+                snapshot.provider_max_request_body_size_kb,
+                snapshot.provider_max_response_body_size_kb,
+                &snapshot.provider_sensitive_request_headers,
+            )?,
+        })
+    }
+
+    pub(in crate::llm_proxy) const fn client(&self) -> &RequestRecordSidePolicy {
+        &self.client
+    }
+
+    pub(in crate::llm_proxy) const fn provider(&self) -> &RequestRecordSidePolicy {
+        &self.provider
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::llm_proxy) struct RequestRecordSidePolicy {
+    level: RequestRecordLevel,
     pub(in crate::llm_proxy) record_request_headers: bool,
     pub(in crate::llm_proxy) record_request_body: bool,
     pub(in crate::llm_proxy) record_response_body: bool,
@@ -14,15 +49,17 @@ pub(in crate::llm_proxy) struct RequestRecordPolicy {
     pub(in crate::llm_proxy) sensitive_request_headers: Vec<String>,
 }
 
-impl RequestRecordPolicy {
-    pub(in crate::llm_proxy) fn from_snapshot(snapshot: &SchedulingSnapshot) -> Result<Self, String> {
+impl RequestRecordSidePolicy {
+    fn new(level: RequestRecordLevel, max_request_body_size_kb: i64, max_response_body_size_kb: i64, sensitive_request_headers: &str) -> Result<Self, String> {
+        let switches = RequestRecordSwitches::from_level(level);
         Ok(Self {
-            record_request_headers: snapshot.record_request_headers,
-            record_request_body: snapshot.record_request_body,
-            record_response_body: snapshot.record_response_body,
-            max_request_body_size_bytes: size_kb_to_bytes(snapshot.max_request_body_size_kb, "max_request_body_size_kb")?,
-            max_response_body_size_bytes: size_kb_to_bytes(snapshot.max_response_body_size_kb, "max_response_body_size_kb")?,
-            sensitive_request_headers: sensitive_headers(&snapshot.sensitive_request_headers),
+            level,
+            record_request_headers: switches.headers,
+            record_request_body: switches.request_body,
+            record_response_body: switches.response_body,
+            max_request_body_size_bytes: size_kb_to_bytes(max_request_body_size_kb, "request record request body size")?,
+            max_response_body_size_bytes: size_kb_to_bytes(max_response_body_size_kb, "request record response body size")?,
+            sensitive_request_headers: sensitive_headers(sensitive_request_headers),
         })
     }
 
@@ -46,7 +83,32 @@ impl RequestRecordPolicy {
     }
 }
 
-pub(in crate::llm_proxy) fn truncate_request_body(body: &Value, policy: &RequestRecordPolicy) -> Result<Option<Value>, serde_json::Error> {
+#[derive(Clone, Copy)]
+struct RequestRecordSwitches {
+    headers: bool,
+    request_body: bool,
+    response_body: bool,
+}
+
+impl RequestRecordSwitches {
+    const fn from_level(level: RequestRecordLevel) -> Self {
+        match level {
+            RequestRecordLevel::Basic => Self::new(false, false, false),
+            RequestRecordLevel::Headers => Self::new(true, false, false),
+            RequestRecordLevel::Full => Self::new(true, true, true),
+        }
+    }
+
+    const fn new(headers: bool, request_body: bool, response_body: bool) -> Self {
+        Self {
+            headers,
+            request_body,
+            response_body,
+        }
+    }
+}
+
+pub(in crate::llm_proxy) fn truncate_request_body(body: &Value, policy: &RequestRecordSidePolicy) -> Result<Option<Value>, serde_json::Error> {
     if !policy.should_record_request_body() {
         return Ok(None);
     }
@@ -89,7 +151,6 @@ fn truncate_text(text: &str, max_size_bytes: usize) -> &str {
 
 #[cfg(test)]
 mod tests {
-    use crate::llm_proxy::cache::snapshot::SchedulingSnapshot;
     use types::provider::ProviderSchedulingMode;
 
     use super::*;
@@ -102,7 +163,8 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(header::AUTHORIZATION, "sk-test-secret".parse().unwrap());
         headers.insert("x-trace-id", "trace-1".parse().unwrap());
-        let policy = RequestRecordPolicy {
+        let policy = RequestRecordSidePolicy {
+            level: RequestRecordLevel::Headers,
             record_request_headers: true,
             record_request_body: false,
             record_response_body: false,
@@ -123,7 +185,8 @@ mod tests {
     #[test]
     fn request_capture_truncates_enabled_request_body() {
         let headers = HeaderMap::new();
-        let policy = RequestRecordPolicy {
+        let policy = RequestRecordSidePolicy {
+            level: RequestRecordLevel::Full,
             record_request_headers: false,
             record_request_body: true,
             record_response_body: true,
@@ -150,26 +213,41 @@ mod tests {
             groups: Vec::new(),
             users: Vec::new(),
             providers: Vec::new(),
-            record_request_headers: true,
-            record_request_body: false,
-            record_response_body: true,
-            max_request_body_size_kb: 12,
-            max_response_body_size_kb: 34,
-            sensitive_request_headers: "authorization, x-api-key".into(),
+            client_request_record_level: RequestRecordLevel::Headers,
+            client_max_request_body_size_kb: 12,
+            client_max_response_body_size_kb: 34,
+            client_sensitive_request_headers: "authorization, x-api-key".into(),
+            provider_request_record_level: RequestRecordLevel::Full,
+            provider_max_request_body_size_kb: 56,
+            provider_max_response_body_size_kb: 78,
+            provider_sensitive_request_headers: "x-provider-key".into(),
             provider_cooldown_policy: Default::default(),
         };
 
-        let policy = RequestRecordPolicy::from_snapshot(&snapshot).unwrap();
+        let policies = RequestRecordPolicies::from_snapshot(&snapshot).unwrap();
 
         assert_eq!(
-            policy,
-            RequestRecordPolicy {
+            policies.client,
+            RequestRecordSidePolicy {
+                level: RequestRecordLevel::Headers,
                 record_request_headers: true,
                 record_request_body: false,
-                record_response_body: true,
+                record_response_body: false,
                 max_request_body_size_bytes: 12 * 1024,
                 max_response_body_size_bytes: 34 * 1024,
                 sensitive_request_headers: vec!["authorization".into(), "x-api-key".into()],
+            }
+        );
+        assert_eq!(
+            policies.provider,
+            RequestRecordSidePolicy {
+                level: RequestRecordLevel::Full,
+                record_request_headers: true,
+                record_request_body: true,
+                record_response_body: true,
+                max_request_body_size_bytes: 56 * 1024,
+                max_response_body_size_bytes: 78 * 1024,
+                sensitive_request_headers: vec!["x-provider-key".into()],
             }
         );
     }

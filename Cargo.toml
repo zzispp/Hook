@@ -7,6 +7,7 @@ members = [
     "crates/config",
     "crates/constants",
     "crates/currency",
+    "crates/dashboard",
     "crates/group",
     "crates/i18n",
     "crates/model",
@@ -39,6 +40,7 @@ config_rs = { package = "config", version = "0.15.22", default-features = false,
 configuration = { path = "crates/config" }
 constants = { path = "crates/constants" }
 currency = { path = "crates/currency" }
+dashboard = { path = "crates/dashboard" }
 futures-util = "0.3.31"
 flate2 = "1.1.5"
 group = { path = "crates/group" }
@@ -82,6 +84,6 @@ rust_decimal = { version = "1.41.0", features = ["serde-with-float"] }
 sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "with-rust_decimal", "with-time", "with-json"] }
 sea-orm-migration = { version = "2.0.0-rc.38", features = ["runtime-tokio-rustls", "sqlx-postgres"] }
 netstat2 = "0.11.2"
-sysinfo = "0.39.1"
+sysinfo = "0.38.1"
 time = { version = "0.3.44", features = ["formatting", "parsing"] }
 tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }

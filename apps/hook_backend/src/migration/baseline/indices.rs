@@ -123,6 +123,18 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         ),
         index("index_request_records_by_created_at", RequestRecords::Table, RequestRecords::CreatedAt, false),
         compound_index(
+            "index_request_records_by_user_created",
+            RequestRecords::Table,
+            RequestRecords::UserIdSnapshot,
+            RequestRecords::CreatedAt,
+        ),
+        compound_index(
+            "index_request_records_by_token_created",
+            RequestRecords::Table,
+            RequestRecords::TokenId,
+            RequestRecords::CreatedAt,
+        ),
+        compound_index(
             "index_request_records_by_status_created",
             RequestRecords::Table,
             RequestRecords::Status,

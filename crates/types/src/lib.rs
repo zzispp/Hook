@@ -1,6 +1,7 @@
 pub mod api_token;
 pub mod captcha;
 pub mod card_code;
+pub mod dashboard;
 pub mod group;
 pub mod i18n;
 pub mod model;

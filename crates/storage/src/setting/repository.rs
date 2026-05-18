@@ -92,6 +92,18 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.auto_delete_expired_tokens {
         active.auto_delete_expired_tokens = Set(value);
     }
+    if let Some(value) = input.request_record_cleanup_enabled {
+        active.request_record_cleanup_enabled = Set(value);
+    }
+    if let Some(value) = input.request_record_cleanup_interval_hours {
+        active.request_record_cleanup_interval_hours = Set(value);
+    }
+    if let Some(value) = input.performance_monitoring_cleanup_enabled {
+        active.performance_monitoring_cleanup_enabled = Set(value);
+    }
+    if let Some(value) = input.performance_monitoring_cleanup_interval_hours {
+        active.performance_monitoring_cleanup_interval_hours = Set(value);
+    }
     if let Some(value) = input.default_user_grant {
         active.default_user_grant = Set(value);
     }
@@ -119,26 +131,29 @@ fn apply_request_record_patch(active: &mut SystemSettingsActiveModel, input: &Sy
     if let Some(value) = input.performance_monitoring_retention_days {
         active.performance_monitoring_retention_days = Set(value);
     }
-    if let Some(value) = input.request_record_level {
-        active.request_record_level = Set(value.as_str().to_owned());
+    if let Some(value) = input.client_request_record_level {
+        active.client_request_record_level = Set(value.as_str().to_owned());
     }
-    if let Some(value) = input.max_request_body_size_kb {
-        active.max_request_body_size_kb = Set(value);
+    if let Some(value) = input.client_max_request_body_size_kb {
+        active.client_max_request_body_size_kb = Set(value);
     }
-    if let Some(value) = input.max_response_body_size_kb {
-        active.max_response_body_size_kb = Set(value);
+    if let Some(value) = input.client_max_response_body_size_kb {
+        active.client_max_response_body_size_kb = Set(value);
     }
-    if let Some(value) = &input.sensitive_request_headers {
-        active.sensitive_request_headers = Set(value.clone());
+    if let Some(value) = &input.client_sensitive_request_headers {
+        active.client_sensitive_request_headers = Set(value.clone());
     }
-    if let Some(value) = input.record_request_headers {
-        active.record_request_headers = Set(value);
+    if let Some(value) = input.provider_request_record_level {
+        active.provider_request_record_level = Set(value.as_str().to_owned());
     }
-    if let Some(value) = input.record_request_body {
-        active.record_request_body = Set(value);
+    if let Some(value) = input.provider_max_request_body_size_kb {
+        active.provider_max_request_body_size_kb = Set(value);
     }
-    if let Some(value) = input.record_response_body {
-        active.record_response_body = Set(value);
+    if let Some(value) = input.provider_max_response_body_size_kb {
+        active.provider_max_response_body_size_kb = Set(value);
+    }
+    if let Some(value) = &input.provider_sensitive_request_headers {
+        active.provider_sensitive_request_headers = Set(value.clone());
     }
 }
 

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current capture and settings flow,DONE,Client and Provider request record fields are mapped,rg "record_request_headers|provider_request_headers|client_response_headers" apps crates,2026-05-18,0,
+2,Implement backend client/provider settings,DONE,System settings persist and policy applies independent client/provider capture policies,just check,2026-05-18,0,
+3,Implement frontend two-panel UI,DONE,Settings page exposes client/provider request record panels and request/performance cleanup panels using backend i18n seed,pnpm lint:frontend,2026-05-18,0,
+4,Run validation,DONE,Rust and frontend checks pass,pnpm lint:frontend && pnpm build:frontend && just check,2026-05-18,0,

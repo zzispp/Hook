@@ -1,0 +1,199 @@
+use async_trait::async_trait;
+use types::dashboard::{DashboardActivityRequest, DashboardFilterOptionsRequest, DashboardOverviewRequest, DashboardPreset, DashboardScopeParam};
+
+use crate::application::{
+    DashboardActivityQuery, DashboardActor, DashboardBucket, DashboardError, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardRepository,
+    DashboardResult, DashboardScope, DashboardUseCase, DashboardWindowBounds,
+};
+
+#[cfg(test)]
+#[path = "service_tests.rs"]
+mod service_tests;
+
+const ADMIN_ROLE: &str = "admin";
+const ACTIVITY_DAYS: i64 = 365;
+const ONE_DAY: i64 = 1;
+
+pub struct DashboardService<R> {
+    repository: R,
+}
+
+impl<R> DashboardService<R>
+where
+    R: DashboardRepository,
+{
+    pub const fn new(repository: R) -> Self {
+        Self { repository }
+    }
+}
+
+#[async_trait]
+impl<R> DashboardUseCase for DashboardService<R>
+where
+    R: DashboardRepository,
+{
+    async fn overview(&self, actor: DashboardActor, request: DashboardOverviewRequest) -> DashboardResult<types::dashboard::DashboardOverviewResponse> {
+        let scope = default_scope(&actor);
+        let window = overview_window(request.preset, request.tz_offset_minutes)?;
+        let bucket = overview_bucket(request.preset);
+        let query = DashboardOverviewQuery {
+            preset: request.preset,
+            scope,
+            window,
+            bucket,
+            admin: is_admin(&actor),
+            tz_offset_minutes: request.tz_offset_minutes,
+        };
+        self.repository.overview(query).await
+    }
+
+    async fn activity(&self, actor: DashboardActor, request: DashboardActivityRequest) -> DashboardResult<types::dashboard::DashboardActivityResponse> {
+        let scope = activity_scope(&actor, &request)?;
+        let window = activity_window(request.tz_offset_minutes)?;
+        self.repository
+            .activity(DashboardActivityQuery {
+                scope,
+                start_date: window.start_date,
+                end_date: window.end_date,
+                started_at: window.started_at,
+                ended_at: window.ended_at,
+                tz_offset_minutes: request.tz_offset_minutes,
+            })
+            .await
+    }
+
+    async fn filter_options(
+        &self,
+        actor: DashboardActor,
+        _request: DashboardFilterOptionsRequest,
+    ) -> DashboardResult<types::dashboard::DashboardFilterOptionsResponse> {
+        let scope = if is_admin(&actor) {
+            DashboardScope::Global
+        } else {
+            DashboardScope::Me {
+                user_id: actor.user_id.clone(),
+            }
+        };
+        self.repository.filter_options(DashboardFilterOptionsQuery { scope }).await
+    }
+}
+
+fn default_scope(actor: &DashboardActor) -> DashboardScope {
+    if is_admin(actor) {
+        return DashboardScope::Global;
+    }
+    DashboardScope::Me {
+        user_id: actor.user_id.clone(),
+    }
+}
+
+fn activity_scope(actor: &DashboardActor, request: &DashboardActivityRequest) -> DashboardResult<DashboardScope> {
+    let requested = request.scope.unwrap_or(DashboardScopeParam::Me);
+    if !is_admin(actor) && requested != DashboardScopeParam::Me {
+        return Err(DashboardError::Forbidden("only administrators can request dashboard scope filters".into()));
+    }
+    match requested {
+        DashboardScopeParam::Me => me_scope(actor, request),
+        DashboardScopeParam::Global => Ok(DashboardScope::Global),
+        DashboardScopeParam::User => required_user_scope(request),
+        DashboardScopeParam::Token => required_token_scope(request),
+    }
+}
+
+fn me_scope(actor: &DashboardActor, request: &DashboardActivityRequest) -> DashboardResult<DashboardScope> {
+    if !is_admin(actor) && request.user_id.as_deref().is_some_and(|id| id != actor.user_id) {
+        return Err(DashboardError::Forbidden("users can only request their own dashboard activity".into()));
+    }
+    Ok(DashboardScope::Me {
+        user_id: actor.user_id.clone(),
+    })
+}
+
+fn required_user_scope(request: &DashboardActivityRequest) -> DashboardResult<DashboardScope> {
+    let user_id = clean_required(request.user_id.as_deref(), "user_id")?;
+    Ok(DashboardScope::User { user_id })
+}
+
+fn required_token_scope(request: &DashboardActivityRequest) -> DashboardResult<DashboardScope> {
+    let token_id = clean_required(request.token_id.as_deref(), "token_id")?;
+    Ok(DashboardScope::Token { token_id })
+}
+
+fn overview_window(preset: DashboardPreset, offset_minutes: i32) -> DashboardResult<DashboardWindowBounds> {
+    let now = time::OffsetDateTime::now_utc();
+    let today_start = local_day_start_utc(now, offset_minutes)?;
+    let days = preset_days(preset);
+    Ok(DashboardWindowBounds {
+        started_at: today_start - time::Duration::days(days - ONE_DAY),
+        ended_at: today_start + time::Duration::days(ONE_DAY),
+    })
+}
+
+fn activity_window(offset_minutes: i32) -> DashboardResult<ActivityWindow> {
+    let now = time::OffsetDateTime::now_utc();
+    let end_day_start = local_day_start_utc(now, offset_minutes)?;
+    let started_at = end_day_start - time::Duration::days(ACTIVITY_DAYS - ONE_DAY);
+    let ended_at = end_day_start + time::Duration::days(ONE_DAY);
+    Ok(ActivityWindow {
+        start_date: local_date(started_at, offset_minutes)?,
+        end_date: local_date(end_day_start, offset_minutes)?,
+        started_at,
+        ended_at,
+    })
+}
+
+fn local_day_start_utc(now_utc: time::OffsetDateTime, offset_minutes: i32) -> DashboardResult<time::OffsetDateTime> {
+    let offset = utc_offset(offset_minutes)?;
+    let local = now_utc.to_offset(offset);
+    local
+        .date()
+        .with_hms(0, 0, 0)
+        .map(|value| value.assume_offset(offset).to_offset(time::UtcOffset::UTC))
+        .map_err(|error| DashboardError::InvalidInput(format!("invalid local day boundary: {error}")))
+}
+
+fn local_date(value: time::OffsetDateTime, offset_minutes: i32) -> DashboardResult<time::Date> {
+    Ok(value.to_offset(utc_offset(offset_minutes)?).date())
+}
+
+fn utc_offset(offset_minutes: i32) -> DashboardResult<time::UtcOffset> {
+    let seconds = offset_minutes
+        .checked_mul(60)
+        .ok_or_else(|| DashboardError::InvalidInput("tz_offset_minutes exceeds supported range".into()))?;
+    time::UtcOffset::from_whole_seconds(seconds).map_err(|_| DashboardError::InvalidInput("tz_offset_minutes must be between -1439 and 1439".into()))
+}
+
+fn preset_days(preset: DashboardPreset) -> i64 {
+    match preset {
+        DashboardPreset::Today => 1,
+        DashboardPreset::SevenDays => 7,
+        DashboardPreset::ThirtyDays => 30,
+        DashboardPreset::NinetyDays => 90,
+    }
+}
+
+fn overview_bucket(preset: DashboardPreset) -> DashboardBucket {
+    match preset {
+        DashboardPreset::Today => DashboardBucket::Hour,
+        DashboardPreset::SevenDays | DashboardPreset::ThirtyDays | DashboardPreset::NinetyDays => DashboardBucket::Day,
+    }
+}
+
+fn clean_required(value: Option<&str>, field: &str) -> DashboardResult<String> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| DashboardError::InvalidInput(format!("{field} is required")))
+}
+
+fn is_admin(actor: &DashboardActor) -> bool {
+    actor.role == ADMIN_ROLE
+}
+
+struct ActivityWindow {
+    start_date: time::Date,
+    end_date: time::Date,
+    started_at: time::OffsetDateTime,
+    ended_at: time::OffsetDateTime,
+}

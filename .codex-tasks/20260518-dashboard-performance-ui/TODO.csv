@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect dashboard and performance chart data contracts,DONE,Relevant component props and data shapes are identified,rg "export function" apps/hook_frontend/src/sections/overview/analytics apps/hook_frontend/src/sections/admin,2026-05-18T00:00:00+08:00,0,
+2,Implement dashboard chart template mapping,DONE,Trend/ranking/distribution cards render from existing dashboard API data,pnpm lint:frontend,2026-05-18T00:00:00+08:00,0,
+3,Implement performance monitoring visual updates,DONE,Distribution cards and range control use unified UI without mock data,pnpm lint:frontend,2026-05-18T00:00:00+08:00,0,
+4,Run frontend verification,DONE,Frontend lint and build pass,pnpm lint:frontend && pnpm build:frontend,2026-05-18T00:00:00+08:00,0,

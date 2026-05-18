@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Implement backend dashboard API,DONE,Dashboard routes return scoped stats and tests cover permissions/aggregation,cargo test -p dashboard,2026-05-18T02:18:50Z,0,
+2,Wire RBAC indexes and i18n,DONE,Default APIs/menu bindings/indexes/seeds include dashboard stats,just check,2026-05-18T02:35:37Z,0,just check blocked by rustc 1.94.0-nightly vs sysinfo 0.39.1 requiring rustc 1.95; cargo check -p dashboard and -p storage passed
+3,Implement frontend dashboard,DONE,/dashboard uses real stats and no mock analytics data,pnpm lint:frontend,2026-05-18T06:20:00Z,0,pnpm lint:frontend and pnpm build:frontend passed; activity user/token filters wait for required ids and controls keep readable widths
+4,Run full validation,DONE,Rust and frontend checks pass,just test && pnpm build:frontend,2026-05-18T06:35:00Z,0,just check just test cargo fmt --check pnpm lint:frontend and pnpm build:frontend passed

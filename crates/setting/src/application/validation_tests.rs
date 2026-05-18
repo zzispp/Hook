@@ -1,35 +1,32 @@
 use types::{
     provider::{ProviderCooldownPolicy, ProviderCooldownRule},
-    system_setting::{RequestRecordLevel, SystemSettingsUpdate},
+    system_setting::SystemSettingsUpdate,
 };
 
 use super::{sanitize_update, validate_update};
 
 #[test]
-fn sanitize_update_normalizes_sensitive_request_headers() {
+fn sanitize_update_normalizes_client_sensitive_request_headers() {
     let input = SystemSettingsUpdate {
-        sensitive_request_headers: Some(" Authorization, X-API-Key , cookie ".into()),
+        client_sensitive_request_headers: Some(" Authorization, X-API-Key , cookie ".into()),
         ..Default::default()
     };
 
     let sanitized = sanitize_update(input);
 
-    assert_eq!(sanitized.sensitive_request_headers.as_deref(), Some("authorization, x-api-key, cookie"));
+    assert_eq!(sanitized.client_sensitive_request_headers.as_deref(), Some("authorization, x-api-key, cookie"));
 }
 
 #[test]
-fn sanitize_update_applies_request_record_level_defaults_without_overriding_explicit_switches() {
+fn sanitize_update_normalizes_provider_sensitive_request_headers() {
     let input = SystemSettingsUpdate {
-        request_record_level: Some(RequestRecordLevel::Full),
-        record_response_body: Some(false),
+        provider_sensitive_request_headers: Some(" X-Provider-Key, Authorization ".into()),
         ..Default::default()
     };
 
     let sanitized = sanitize_update(input);
 
-    assert_eq!(sanitized.record_request_headers, Some(true));
-    assert_eq!(sanitized.record_request_body, Some(true));
-    assert_eq!(sanitized.record_response_body, Some(false));
+    assert_eq!(sanitized.provider_sensitive_request_headers.as_deref(), Some("x-provider-key, authorization"));
 }
 
 #[test]
@@ -47,7 +44,7 @@ fn sanitize_update_normalizes_email_suffixes() {
 #[test]
 fn validate_update_rejects_invalid_sensitive_request_header() {
     let input = SystemSettingsUpdate {
-        sensitive_request_headers: Some("authorization, bad header".into()),
+        client_sensitive_request_headers: Some("authorization, bad header".into()),
         ..Default::default()
     };
 
@@ -55,21 +52,21 @@ fn validate_update_rejects_invalid_sensitive_request_header() {
 
     assert_eq!(
         error.to_string(),
-        "invalid input: sensitive_request_headers contains invalid header name: bad header"
+        "invalid input: client_sensitive_request_headers contains invalid header name: bad header"
     );
 }
 
 #[test]
 fn validate_update_rejects_non_positive_request_record_body_limits() {
     let input = SystemSettingsUpdate {
-        max_request_body_size_kb: Some(0),
-        max_response_body_size_kb: Some(-1),
+        client_max_request_body_size_kb: Some(0),
+        provider_max_response_body_size_kb: Some(-1),
         ..Default::default()
     };
 
     let error = validate_update(&input).unwrap_err();
 
-    assert_eq!(error.to_string(), "invalid input: max_request_body_size_kb must be greater than 0");
+    assert_eq!(error.to_string(), "invalid input: client_max_request_body_size_kb must be greater than 0");
 }
 
 #[test]
@@ -82,6 +79,33 @@ fn validate_update_rejects_non_positive_performance_monitoring_retention_days() 
     let error = validate_update(&input).unwrap_err();
 
     assert_eq!(error.to_string(), "invalid input: performance_monitoring_retention_days must be greater than 0");
+}
+
+#[test]
+fn validate_update_rejects_non_positive_request_record_cleanup_interval_hours() {
+    let input = SystemSettingsUpdate {
+        request_record_cleanup_interval_hours: Some(0),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(error.to_string(), "invalid input: request_record_cleanup_interval_hours must be greater than 0");
+}
+
+#[test]
+fn validate_update_rejects_non_positive_performance_monitoring_cleanup_interval_hours() {
+    let input = SystemSettingsUpdate {
+        performance_monitoring_cleanup_interval_hours: Some(0),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "invalid input: performance_monitoring_cleanup_interval_hours must be greater than 0"
+    );
 }
 
 #[test]

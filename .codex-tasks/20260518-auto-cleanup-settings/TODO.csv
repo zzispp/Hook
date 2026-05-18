@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect settings and cleanup architecture,DONE,Existing fields APIs and cleanup jobs are identified,rg "retention|cleanup|system_settings|request_records" apps crates,2026-05-18T00:00:00+08:00,0,
+2,Implement backend cleanup settings and scheduler,DONE,Backend persists settings and executes scheduled cleanup using explicit retention rules,just check,2026-05-18T00:00:00+08:00,0,
+3,Implement system settings UI section,DONE,Admin settings page exposes cleanup controls and saves through existing settings API,pnpm lint:frontend,2026-05-18T00:00:00+08:00,0,
+4,Run full validation,DONE,Frontend and backend checks pass,pnpm lint:frontend && pnpm build:frontend && just check && just test,2026-05-18T12:03:32+08:00,0,

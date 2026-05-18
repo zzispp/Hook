@@ -33,6 +33,11 @@ use card_code::{
     infra::StorageCardCodeRepository,
 };
 use configuration::{AuthWhitelistRule as ConfigAuthRule, Settings};
+use dashboard::{
+    api::{DashboardApiState, create_router as create_dashboard_router},
+    application::DashboardService,
+    infra::StorageDashboardRepository,
+};
 use group::{
     api::{GroupApiState, create_router as create_group_router},
     application::GroupService,
@@ -126,6 +131,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         ReqwestUpstreamModelFetcher::new()?,
     ));
     let providers = Arc::new(ProxyCachedProviderUseCase::new(providers_inner, proxy_cache.clone()));
+    let dashboard = Arc::new(DashboardService::new(StorageDashboardRepository::new(database.clone())));
     let wallets = Arc::new(WalletService::with_system_wallet(
         StorageWalletRepository::new(database.clone()),
         system_wallet_provider.clone(),
@@ -190,6 +196,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         rbac,
         models,
         providers,
+        dashboard,
         wallets,
         card_codes,
         system_settings,
@@ -230,6 +237,7 @@ fn create_app(state: AppState) -> Router {
     let rbac_state = RbacApiState::new(state.authorization.clone(), state.rbac.clone(), state.rbac.clone());
     let model_state = ModelApiState::new(state.models);
     let provider_state = ProviderApiState::new(state.providers);
+    let dashboard_state = DashboardApiState::new(state.dashboard);
     let wallet_state = WalletApiState::new(state.wallets);
     let card_code_state = CardCodeApiState::new(state.card_codes);
     let setting_state = SettingApiState::new(state.system_settings, state.exchange_rates.clone());
@@ -252,6 +260,7 @@ fn create_app(state: AppState) -> Router {
         .merge(create_rbac_router(rbac_state))
         .merge(create_model_router(model_state))
         .merge(create_provider_router(provider_state))
+        .merge(create_dashboard_router(dashboard_state))
         .merge(create_wallet_router(wallet_state))
         .merge(create_card_code_router(card_code_state))
         .merge(create_setting_router(setting_state))
@@ -306,6 +315,7 @@ struct AppState {
     rbac: Arc<RbacService<StorageRbacRepository, RedisRbacCache>>,
     models: Arc<dyn model::application::ModelUseCase>,
     providers: Arc<dyn provider::application::ProviderUseCase>,
+    dashboard: Arc<dyn dashboard::application::DashboardUseCase>,
     wallets: Arc<dyn wallet::application::WalletUseCase>,
     card_codes: Arc<dyn card_code::application::CardCodeUseCase>,
     system_settings: Arc<dyn setting::application::SettingUseCase>,

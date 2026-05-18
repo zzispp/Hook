@@ -368,6 +368,60 @@
   },
   "dashboard": {
     "welcome": "Hi, Welcome back 👋",
+    "stats": {
+      "title": "Dashboard",
+      "subtitleAdmin": "Global requests, tokens, models, and provider stats",
+      "subtitleUser": "Your request, token, and cost stats",
+      "presets": {
+        "today": "Today",
+        "7d": "7 days",
+        "30d": "30 days",
+        "90d": "90 days"
+      },
+      "kpi": {
+        "requests": "Requests",
+        "success": "Success",
+        "failed": "Failed",
+        "active": "Active",
+        "successRate": "Success rate",
+        "tokens": "Tokens",
+        "cost": "Cost",
+        "latency": "Avg response",
+        "ttfb": "Avg TTFB",
+        "models": "Models used"
+      },
+      "trend": {
+        "title": "Request trend",
+        "requests": "Requests",
+        "success": "Success",
+        "failed": "Failed",
+        "latency": "Avg response"
+      },
+      "activity": {
+        "title": "Activity grid",
+        "subtitle": "Request activity over the last 365 days",
+        "global": "Global",
+        "allUsers": "All users",
+        "allTokens": "All tokens",
+        "user": "User",
+        "token": "Token",
+        "less": "Less",
+        "more": "More"
+      },
+      "breakdowns": {
+        "models": "Models",
+        "apiFormats": "API formats",
+        "tokens": "Tokens",
+        "providers": "Providers",
+        "users": "Users"
+      },
+      "columns": {
+        "requests": "Requests",
+        "tokens": "Tokens",
+        "cost": "Cost"
+      },
+      "empty": "No statistics yet"
+    },
     "weeklySales": "Weekly sales",
     "newUsers": "New users",
     "purchaseOrders": "Purchase orders",
@@ -1006,6 +1060,10 @@
       "emailConfigEnabled": "Enable email configuration",
       "supportTicketEmailNotificationsEnabled": "Enable ticket email notifications",
       "autoDeleteExpiredTokens": "Auto-delete expired tokens",
+      "requestRecordCleanupEnabled": "Enable request record cleanup",
+      "requestRecordCleanupIntervalHours": "Request record cleanup interval (hours)",
+      "performanceMonitoringCleanupEnabled": "Enable performance monitoring cleanup",
+      "performanceMonitoringCleanupIntervalHours": "Performance monitoring cleanup interval (hours)",
       "requestRecordRetentionDays": "Request record retention days",
       "requestRecordPayloadRetentionDays": "Request payload retention days",
       "performanceMonitoringRetentionDays": "Performance snapshot retention days",
@@ -1013,9 +1071,6 @@
       "maxRequestBodySizeKb": "Max request body size (KB)",
       "maxResponseBodySizeKb": "Max response body size (KB)",
       "sensitiveRequestHeaders": "Sensitive request headers",
-      "recordRequestHeaders": "Record request/response headers",
-      "recordRequestBody": "Record request body",
-      "recordResponseBody": "Record response body",
       "defaultUserGrant": "Default user initial grant",
       "defaultRateLimitRpm": "Default rate limit",
       "currency": "Display currency",
@@ -1036,22 +1091,50 @@
     "helper": {
       "defaultUserGrant": "Added to the gift balance after sign-up and recorded in the wallet ledger.",
       "defaultRateLimitRpm": "Requests per minute; 0 means unlimited by system default.",
+      "requestRecordCleanupEnabled": "When enabled, the background worker periodically cleans request records.",
+      "requestRecordCleanupIntervalHours": "Execution interval for the request record cleanup worker; saved changes are picked up by the next worker loop.",
+      "performanceMonitoringCleanupEnabled": "When enabled, the background worker periodically cleans performance monitoring snapshots.",
+      "performanceMonitoringCleanupIntervalHours": "Execution interval for the performance monitoring cleanup worker; saved changes are picked up by the next worker loop.",
       "requestRecordRetentionDays": "Deletes the whole request record after this many days.",
       "requestRecordPayloadRetentionDays": "Compresses client/provider payloads after this many days while keeping the record until the full retention window expires.",
       "performanceMonitoringRetentionDays": "Deletes monitoring snapshots after this many days; ALL covers only currently retained snapshot buckets.",
-      "requestRecordLevel": "Sensitive information is redacted automatically. Use full mode to keep failed response snippets.",
-      "maxRequestBodySizeKb": "Request bodies larger than this are truncated before recording.",
-      "maxResponseBodySizeKb": "Response bodies larger than this are truncated before recording.",
-      "sensitiveRequestHeaders": "Comma-separated request/response headers that will be redacted.",
+      "clientRequestRecordLevel": "Controls the detail level for client request headers, request bodies, response headers, and response bodies.",
+      "clientMaxRequestBodySizeKb": "Client request bodies larger than this are truncated before recording.",
+      "clientMaxResponseBodySizeKb": "Client response bodies larger than this are truncated before recording.",
+      "clientSensitiveRequestHeaders": "Comma-separated headers redacted from client request and response headers.",
+      "providerRequestRecordLevel": "Controls the detail level for Hook-to-Provider request headers, request bodies, response headers, and response bodies.",
+      "providerMaxRequestBodySizeKb": "Provider request bodies larger than this are truncated before recording.",
+      "providerMaxResponseBodySizeKb": "Provider response bodies larger than this are truncated before recording.",
+      "providerSensitiveRequestHeaders": "Comma-separated headers redacted from Provider request and response headers.",
       "registrationEmailVerificationRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first.",
       "supportTicketEmailNotificationsRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first."
     },
     "requestRecord": {
       "description": "Controls how client/provider payloads are recorded and retained.",
+      "panels": {
+        "client": {
+          "title": "Client records",
+          "description": "Records requests from users to Hook and responses returned from Hook to users."
+        },
+        "provider": {
+          "title": "Provider records",
+          "description": "Records requests from Hook to Providers and responses returned from Providers to Hook."
+        }
+      },
       "levels": {
         "basic": "BASIC - Basic information (~1KB/record)",
         "headers": "HEADERS - Includes bidirectional headers (~2-3KB/record)",
         "full": "FULL - Includes client/provider request and response payloads (~50KB/record)"
+      }
+    },
+    "cleanup": {
+      "requestRecord": {
+        "title": "Request record cleanup",
+        "description": "Controls full request record retention and payload compression cleanup."
+      },
+      "performanceMonitoring": {
+        "title": "Performance monitoring cleanup",
+        "description": "Controls performance monitoring snapshot retention and scheduled cleanup."
       }
     },
     "email": {

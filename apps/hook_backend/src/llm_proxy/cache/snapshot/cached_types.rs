@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use types::{
     model::TieredPricingConfig,
     provider::{ProviderCooldownPolicy, ProviderModelMapping, ProviderSchedulingMode},
+    system_setting::RequestRecordLevel,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -10,12 +11,14 @@ pub struct SchedulingSnapshot {
     #[serde(default)]
     pub default_rate_limit_rpm: i64,
     pub scheduling_mode: ProviderSchedulingMode,
-    pub record_request_headers: bool,
-    pub record_request_body: bool,
-    pub record_response_body: bool,
-    pub max_request_body_size_kb: i64,
-    pub max_response_body_size_kb: i64,
-    pub sensitive_request_headers: String,
+    pub client_request_record_level: RequestRecordLevel,
+    pub client_max_request_body_size_kb: i64,
+    pub client_max_response_body_size_kb: i64,
+    pub client_sensitive_request_headers: String,
+    pub provider_request_record_level: RequestRecordLevel,
+    pub provider_max_request_body_size_kb: i64,
+    pub provider_max_response_body_size_kb: i64,
+    pub provider_sensitive_request_headers: String,
     #[serde(default)]
     pub provider_cooldown_policy: ProviderCooldownPolicy,
     pub models: Vec<CachedGlobalModel>,

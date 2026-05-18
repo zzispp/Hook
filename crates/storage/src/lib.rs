@@ -1,5 +1,6 @@
 pub mod api_token;
 pub mod card_code;
+pub mod dashboard;
 pub mod database;
 pub mod error;
 pub mod group;
