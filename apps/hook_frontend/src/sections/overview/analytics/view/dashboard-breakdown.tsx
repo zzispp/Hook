@@ -1,7 +1,6 @@
 import type { TFunction } from 'i18next';
 import type { Theme } from '@mui/material/styles';
 import type { ChartOptions } from 'src/components/chart';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { DashboardBreakdownItem } from 'src/types/dashboard';
 
 import Card from '@mui/material/Card';
@@ -25,7 +24,6 @@ export function BreakdownCard({
   locale,
   loading,
   variant = 'ranking',
-  currencyDisplay,
 }: {
   t: TFunction<'admin'>;
   title: string;
@@ -33,7 +31,6 @@ export function BreakdownCard({
   loading: boolean;
   variant?: BreakdownVariant;
   items?: DashboardBreakdownItem[];
-  currencyDisplay?: CurrencyDisplay;
 }) {
   return (
     <Card sx={{ height: 1 }}>
@@ -44,7 +41,7 @@ export function BreakdownCard({
         variant === 'distribution' ? (
           <DistributionBreakdown items={items} locale={locale} />
         ) : (
-          <RankingBreakdown items={items} locale={locale} currencyDisplay={currencyDisplay} t={t} />
+          <RankingBreakdown items={items} locale={locale} t={t} />
         )
       ) : null}
     </Card>
@@ -55,12 +52,10 @@ function RankingBreakdown({
   items,
   locale,
   t,
-  currencyDisplay,
 }: {
   items: DashboardBreakdownItem[];
   locale: string;
   t: TFunction<'admin'>;
-  currencyDisplay?: CurrencyDisplay;
 }) {
   const theme = useTheme();
   const options = useChart({
@@ -93,7 +88,7 @@ function RankingBreakdown({
         sx={{ pl: 1, py: 2.5, pr: 2.5, height: Math.max(280, items.length * 44 + 112) }}
       />
       <Divider sx={{ borderStyle: 'dashed' }} />
-      <BreakdownDetails items={items} t={t} locale={locale} currencyDisplay={currencyDisplay} />
+      <BreakdownDetails items={items} t={t} locale={locale} />
     </>
   );
 }
@@ -167,12 +162,10 @@ function BreakdownDetails({
   t,
   items,
   locale,
-  currencyDisplay,
 }: {
   t: TFunction<'admin'>;
   items: DashboardBreakdownItem[];
   locale: string;
-  currencyDisplay?: CurrencyDisplay;
 }) {
   return (
     <Stack divider={<Divider flexItem />} sx={{ px: 3, pb: 3 }}>
@@ -183,7 +176,7 @@ function BreakdownDetails({
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {t('dashboard.stats.columns.tokens')}: {formatInteger(item.total_tokens, locale)} ·{' '}
-            {t('dashboard.stats.columns.cost')}: {formatDashboardCost(item.total_cost, currencyDisplay)}
+            {t('dashboard.stats.columns.cost')}: {formatDashboardCost(item.total_cost)}
           </Typography>
         </Stack>
       ))}

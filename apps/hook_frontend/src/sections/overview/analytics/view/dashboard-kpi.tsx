@@ -2,7 +2,6 @@ import type { TFunction } from 'i18next';
 import type { CardProps } from '@mui/material/Card';
 import type { PaletteColorKey } from 'src/theme/core';
 import type { ChartOptions } from 'src/components/chart';
-import type { CurrencyDisplay } from 'src/utils/currency-format';
 import type { DashboardOverviewResponse } from 'src/types/dashboard';
 
 import { varAlpha } from 'minimal-shared/utils';
@@ -33,15 +32,13 @@ export function KpiGrid({
   data,
   locale,
   loading,
-  currencyDisplay,
 }: {
   t: TFunction<'admin'>;
   locale: string;
   loading: boolean;
   data?: DashboardOverviewResponse;
-  currencyDisplay?: CurrencyDisplay;
 }) {
-  const cards = kpiCards(t, locale, currencyDisplay, data);
+  const cards = kpiCards(t, locale, data);
 
   return (
     <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -119,7 +116,6 @@ function KpiSkeleton() {
 function kpiCards(
   t: TFunction<'admin'>,
   locale: string,
-  currencyDisplay: CurrencyDisplay | undefined,
   data?: DashboardOverviewResponse
 ): KpiCardData[] {
   const summary = data?.summary;
@@ -128,7 +124,7 @@ function kpiCards(
     kpiCard(t('dashboard.stats.kpi.requests'), formatInteger(summary?.request_count, locale), 'primary', 'ic-glass-bag.svg', points.map((point) => point.request_count)),
     kpiCard(t('dashboard.stats.kpi.successRate'), `${((summary?.success_rate ?? 0) * 100).toFixed(1)}%`, 'success', 'ic-glass-users.svg', points.map((point) => ratioPercent(point.success_count, point.success_count + point.failed_count))),
     kpiCard(t('dashboard.stats.kpi.tokens'), formatInteger(summary?.total_tokens, locale), 'warning', 'ic-glass-buy.svg', points.map((point) => point.total_tokens)),
-    kpiCard(t('dashboard.stats.kpi.cost'), formatDashboardCost(summary?.total_cost, currencyDisplay), 'info', 'ic-glass-bag.svg', points.map((point) => point.total_cost)),
+    kpiCard(t('dashboard.stats.kpi.cost'), formatDashboardCost(summary?.total_cost), 'info', 'ic-glass-bag.svg', points.map((point) => point.total_cost)),
     kpiCard(t('dashboard.stats.kpi.active'), formatInteger(summary?.active_count, locale), 'secondary', 'ic-glass-message.svg', points.map((point) => point.request_count)),
     kpiCard(t('dashboard.stats.kpi.failed'), formatInteger(summary?.failed_count, locale), 'error', 'ic-glass-message.svg', points.map((point) => point.failed_count)),
     kpiCard(t('dashboard.stats.kpi.latency'), formatMs(summary?.avg_latency_ms), 'secondary', 'ic-glass-buy.svg', points.map((point) => point.avg_latency_ms ?? 0)),

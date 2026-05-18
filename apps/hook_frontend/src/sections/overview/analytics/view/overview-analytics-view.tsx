@@ -3,16 +3,13 @@
 import type { DashboardActivityFilters } from 'src/actions/dashboard';
 import type { DashboardPreset, DashboardOverviewResponse } from 'src/types/dashboard';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 
-import { currencyDisplayFromResponse } from 'src/utils/currency-format';
-
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useCurrencyDisplay } from 'src/actions/system-settings';
 import {
   useDashboardActivity,
   useDashboardOverview,
@@ -39,14 +36,9 @@ export function OverviewAnalyticsView() {
   );
   const activity = useDashboardActivity(activityFilters);
   const filterOptions = useDashboardFilterOptions(isAdmin);
-  const currency = useCurrencyDisplay();
-  const currencyDisplay = useMemo(
-    () => currencyDisplayFromResponse(currency.data, t('requestRecords.exchangeRateUnavailable')),
-    [currency.data, t]
-  );
   const locale = currentLang.numberFormat.code;
-  const error = overview.error ?? activity.error ?? filterOptions.error ?? currency.error;
-  const statsLoading = overview.isLoading || currency.isLoading;
+  const error = overview.error ?? activity.error ?? filterOptions.error;
+  const statsLoading = overview.isLoading;
 
   return (
     <DashboardContent maxWidth="xl">
@@ -60,7 +52,6 @@ export function OverviewAnalyticsView() {
           void overview.refresh();
           void activity.refresh();
           void filterOptions.refresh();
-          void currency.refresh();
         }}
       />
 
@@ -70,7 +61,6 @@ export function OverviewAnalyticsView() {
         locale={locale}
         loading={statsLoading}
         data={overview.data}
-        currencyDisplay={currencyDisplay}
       />
 
       <Grid container spacing={3}>
@@ -84,7 +74,6 @@ export function OverviewAnalyticsView() {
             title={t('dashboard.stats.breakdowns.models')}
             items={overview.data?.breakdowns.models}
             loading={statsLoading}
-            currencyDisplay={currencyDisplay}
           />
         </Grid>
         <Grid size={{ xs: 12 }}>
@@ -104,7 +93,6 @@ export function OverviewAnalyticsView() {
           loading={statsLoading}
           overview={overview.data}
           isAdmin={isAdmin}
-          currencyDisplay={currencyDisplay}
         />
       </Grid>
     </DashboardContent>
@@ -117,14 +105,12 @@ function SharedBreakdowns({
   loading,
   overview,
   isAdmin,
-  currencyDisplay,
 }: {
   t: ReturnType<typeof useTranslate>['t'];
   locale: string;
   loading: boolean;
   overview?: DashboardOverviewResponse;
   isAdmin: boolean;
-  currencyDisplay?: ReturnType<typeof currencyDisplayFromResponse>;
 }) {
   return (
     <>
@@ -136,7 +122,6 @@ function SharedBreakdowns({
           items={overview?.breakdowns.api_formats}
           loading={loading}
           variant="distribution"
-          currencyDisplay={currencyDisplay}
         />
       </Grid>
       <Grid size={{ xs: 12, md: 6, lg: isAdmin ? 3 : 4 }}>
@@ -146,7 +131,6 @@ function SharedBreakdowns({
           title={t('dashboard.stats.breakdowns.tokens')}
           items={overview?.breakdowns.tokens}
           loading={loading}
-          currencyDisplay={currencyDisplay}
         />
       </Grid>
       {isAdmin ? (
@@ -155,7 +139,6 @@ function SharedBreakdowns({
           locale={locale}
           loading={loading}
           overview={overview}
-          currencyDisplay={currencyDisplay}
         />
       ) : null}
     </>
@@ -167,13 +150,11 @@ function AdminBreakdowns({
   locale,
   loading,
   overview,
-  currencyDisplay,
 }: {
   t: ReturnType<typeof useTranslate>['t'];
   locale: string;
   loading: boolean;
   overview?: DashboardOverviewResponse;
-  currencyDisplay?: ReturnType<typeof currencyDisplayFromResponse>;
 }) {
   return (
     <>
@@ -185,7 +166,6 @@ function AdminBreakdowns({
           items={overview?.breakdowns.providers}
           loading={loading}
           variant="distribution"
-          currencyDisplay={currencyDisplay}
         />
       </Grid>
       <Grid size={{ xs: 12, md: 6, lg: 3 }}>
@@ -195,7 +175,6 @@ function AdminBreakdowns({
           title={t('dashboard.stats.breakdowns.users')}
           items={overview?.breakdowns.users}
           loading={loading}
-          currencyDisplay={currencyDisplay}
         />
       </Grid>
     </>
