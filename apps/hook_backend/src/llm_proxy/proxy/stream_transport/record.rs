@@ -8,7 +8,7 @@ use crate::llm_proxy::{
     proxy::transport,
 };
 
-use super::StreamAttemptContext;
+use super::{StreamAttemptContext, status::StreamStatus};
 
 pub(super) struct StreamAttemptRecord {
     pub(super) state: LlmProxyState,
@@ -74,8 +74,13 @@ pub(super) fn streaming_record(context: &StreamAttemptContext, first_byte_elapse
     }
 }
 
-pub(super) fn success_record(context: &StreamAttemptContext, usage: Option<TokenUsage>, first_byte_time_ms: Option<i64>) -> StreamAttemptRecord {
-    terminal_record(TerminalRecordInput {
+pub(super) fn success_record(
+    context: &StreamAttemptContext,
+    usage: Option<TokenUsage>,
+    first_byte_time_ms: Option<i64>,
+    status: &StreamStatus,
+) -> StreamAttemptRecord {
+    let mut record = terminal_record(TerminalRecordInput {
         context,
         status: "success",
         status_code: Some(context.status.as_u16() as i32),
@@ -83,7 +88,9 @@ pub(super) fn success_record(context: &StreamAttemptContext, usage: Option<Token
         first_byte_time_ms,
         error_type: None,
         error_message: None,
-    })
+    });
+    record.stream_end_reason = status.stream_end_reason_patch();
+    record
 }
 
 pub(super) fn failure_record(
@@ -91,8 +98,9 @@ pub(super) fn failure_record(
     first_byte_time_ms: Option<i64>,
     error_type: &'static str,
     error_message: &str,
+    status: &StreamStatus,
 ) -> StreamAttemptRecord {
-    terminal_record(TerminalRecordInput {
+    let mut record = terminal_record(TerminalRecordInput {
         context,
         status: "failed",
         status_code: Some(context.status.as_u16() as i32),
@@ -100,14 +108,21 @@ pub(super) fn failure_record(
         first_byte_time_ms,
         error_type: Some(error_type),
         error_message: Some(error_message.to_owned()),
-    })
+    });
+    record.stream_end_reason = status.stream_end_reason_patch();
+    record
 }
 
-pub(super) fn cancelled_record(context: &StreamAttemptContext, usage: Option<TokenUsage>, first_byte_time_ms: Option<i64>) -> StreamAttemptRecord {
+pub(super) fn cancelled_record(
+    context: &StreamAttemptContext,
+    usage: Option<TokenUsage>,
+    first_byte_time_ms: Option<i64>,
+    status: &StreamStatus,
+) -> StreamAttemptRecord {
     StreamAttemptRecord {
         termination_origin: PatchField::Value("client".into()),
         termination_reason: PatchField::Value("disconnected".into()),
-        stream_end_reason: PatchField::Value("client_disconnected".into()),
+        stream_end_reason: status.stream_end_reason_patch(),
         ..terminal_record(TerminalRecordInput {
             context,
             status: "cancelled",

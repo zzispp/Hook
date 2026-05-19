@@ -1,5 +1,4 @@
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
-use types::model::PatchField;
 
 use super::StreamRelay;
 use crate::llm_proxy::{
@@ -10,23 +9,26 @@ use crate::llm_proxy::{
             estimated_usage::ESTIMATED_USAGE_SOURCE,
             event::render_stream_event,
             record::{failure_record, record_stream_attempt, success_record},
+            status::StreamEndReason,
         },
     },
 };
-
-const EOF_WITH_ESTIMATED_USAGE_END_REASON: &str = "upstream_eof_without_completion";
 
 impl StreamRelay {
     pub(super) async fn finish_success(&mut self) -> Result<(), LlmProxyError> {
         if self.finished {
             return Ok(());
         }
-        let usage = self.usage_parser.finish()?;
-        self.merge_usage(usage.usage);
-        self.protocol_completed |= usage.completed;
-        self.estimate_missing_usage()?;
-        self.flush_output().await?;
-        self.record_success_with_stream_end_reason(self.finish_stream_end_reason()).await?;
+        if let Err(error) = self.finish_usage_parsers() {
+            self.record_scanner_error(&error).await?;
+            return Err(error);
+        }
+        if let Err(error) = self.flush_output().await {
+            self.record_handler_stop_error(&error).await?;
+            return Err(error);
+        }
+        self.stream_status.set_end_reason(self.finish_stream_end_reason(), None);
+        self.record_success().await?;
         self.finished = true;
         Ok(())
     }
@@ -43,25 +45,28 @@ impl StreamRelay {
         if self.finished {
             return Ok(());
         }
-        self.estimate_missing_usage()?;
-        self.flush_output().await?;
+        if let Err(error) = self.estimate_missing_usage() {
+            self.record_scanner_error(&error).await?;
+            return Err(error);
+        }
+        if let Err(error) = self.flush_output().await {
+            self.record_handler_stop_error(&error).await?;
+            return Err(error);
+        }
+        self.stream_status.set_end_reason(StreamEndReason::Done, None);
         self.record_success().await?;
         self.finished = true;
         Ok(())
     }
 
     pub(super) async fn record_success(&mut self) -> Result<(), LlmProxyError> {
-        self.record_success_with_stream_end_reason(PatchField::Null).await
-    }
-
-    async fn record_success_with_stream_end_reason(&mut self, stream_end_reason: PatchField<String>) -> Result<(), LlmProxyError> {
         if self.recorded_terminal {
             return Ok(());
         }
-        let mut record = success_record(&self.context, self.usage, self.first_byte_time_ms);
-        record.stream_end_reason = stream_end_reason;
+        let record = success_record(&self.context, self.usage, self.first_byte_time_ms, &self.stream_status);
         record_stream_attempt(record).await?;
         self.recorded_terminal = true;
+        self.log_stream_status();
         Ok(())
     }
 
@@ -69,8 +74,16 @@ impl StreamRelay {
         if self.recorded_terminal {
             return Ok(());
         }
-        record_stream_attempt(failure_record(&self.context, self.first_byte_time_ms, error_type, error_message)).await?;
+        record_stream_attempt(failure_record(
+            &self.context,
+            self.first_byte_time_ms,
+            error_type,
+            error_message,
+            &self.stream_status,
+        ))
+        .await?;
         self.recorded_terminal = true;
+        self.log_stream_status();
         Ok(())
     }
 
@@ -88,11 +101,7 @@ impl StreamRelay {
             return Ok(());
         }
         let line = String::from_utf8(std::mem::take(&mut self.buffer)).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
-        if let Err(error) = self.consume_converted_line(&line) {
-            let message = error.to_string();
-            self.record_failure("response_conversion_error", &message).await?;
-            return Err(error);
-        }
+        self.consume_converted_line(&line)?;
         Ok(())
     }
 
@@ -117,15 +126,22 @@ impl StreamRelay {
         }
     }
 
+    fn finish_usage_parsers(&mut self) -> Result<(), LlmProxyError> {
+        let usage = self.usage_parser.finish()?;
+        self.merge_usage(usage.usage);
+        self.protocol_completed |= usage.completed;
+        self.estimate_missing_usage()
+    }
+
     fn estimate_missing_usage(&mut self) -> Result<(), LlmProxyError> {
         self.usage_estimator.finish()?;
         self.usage = self.usage_estimator.apply_to_usage(self.usage, self.protocol_completed);
         Ok(())
     }
 
-    fn finish_stream_end_reason(&self) -> PatchField<String> {
+    fn finish_stream_end_reason(&self) -> StreamEndReason {
         if self.protocol_completed {
-            return PatchField::Null;
+            return StreamEndReason::Done;
         }
         if matches!(self.usage.and_then(|usage| usage.usage_source), Some(ESTIMATED_USAGE_SOURCE))
             && matches!(
@@ -133,9 +149,34 @@ impl StreamRelay {
                 ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
             )
         {
-            return PatchField::Value(EOF_WITH_ESTIMATED_USAGE_END_REASON.into());
+            return StreamEndReason::UpstreamEofWithoutCompletion;
         }
-        PatchField::Null
+        StreamEndReason::Eof
+    }
+
+    async fn record_handler_stop_error(&mut self, error: &LlmProxyError) -> Result<(), LlmProxyError> {
+        let message = error.to_string();
+        self.stream_status.record_error(message.clone());
+        self.stream_status.set_end_reason(StreamEndReason::HandlerStop, Some(message.clone()));
+        self.record_failure("response_conversion_error", &message).await
+    }
+
+    async fn record_scanner_error(&mut self, error: &LlmProxyError) -> Result<(), LlmProxyError> {
+        let message = error.to_string();
+        self.stream_status.record_error(message.clone());
+        self.stream_status.set_end_reason(StreamEndReason::ScannerError, Some(message.clone()));
+        self.record_failure("upstream_stream_parse_error", &message).await
+    }
+
+    fn log_stream_status(&self) {
+        let summary = self.stream_status.summary();
+        if self.stream_status.is_normal_end() && !self.stream_status.has_errors() {
+            hook_tracing::info_with_fields!("stream ended", summary = summary);
+            return;
+        }
+        let soft_errors = self.stream_status.total_error_count();
+        let received = self.stream_status.received_response_count();
+        hook_tracing::warn_with_fields!("stream ended abnormally", summary = summary, soft_errors = soft_errors, received = received);
     }
 }
 

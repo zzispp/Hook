@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,排查现有流结束状态和审计记录链路,DONE,明确 done eof timeout client_gone ping_fail scanner_error handler_stop 的 Hook 落点,rg -n "stream_end_reason|record_failure|record_success|Drop for StreamRelay|SSE_KEEPALIVE" apps/hook_backend/src/llm_proxy/proxy/stream_transport,2026-05-19T01:34:37Z,0,"现有 Hook 状态分散在 protocol_completed、record_failure、Drop、finish_stream_end_reason；DB 字段可复用，需新增内部 StreamStatus 单一状态源。"
+2,设计并实现 StreamStatus 内部结构,DONE,流结束原因和软错误集中在 StreamStatus 且只设置一次,cargo test -p backend stream_status,2026-05-19T01:48:28Z,0,"新增 stream_transport::status，保留 new-api 终态枚举和 once 语义，状态对象单测通过。"
+3,接入 relay 的 keepalive timeout eof conversion client disconnect 路径,DONE,成功/失败/取消记录使用 StreamStatus 结束原因,cargo test -p backend stream_transport,2026-05-19T01:57:15Z,0,"relay 已使用 StreamStatus 记录 done/eof/timeout/client_gone/scanner_error/handler_stop 和 received 计数；stream_transport 测试通过。"
+4,补齐测试并运行全量验证,DONE,cargo fmt 和 cargo test 通过,perl -e "alarm shift; exec @ARGV" 60 cargo test,2026-05-19T01:58:43Z,0,"cargo fmt、stream_transport 测试、60s 全量 cargo test 均通过。"

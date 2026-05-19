@@ -2,6 +2,7 @@ mod estimated_usage;
 mod event;
 mod record;
 mod relay;
+mod status;
 mod token_estimator;
 mod usage_parser;
 
