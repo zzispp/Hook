@@ -27,6 +27,7 @@ export function JwtSignUpView() {
       emailVerificationEnabled,
       captchaEnabled,
       captchaResetKey,
+      emailCodeCooldownSeconds,
       formUnavailable,
       configLoading,
       isRequestingEmailCode,
@@ -68,6 +69,7 @@ export function JwtSignUpView() {
           emailVerificationEnabled={emailVerificationEnabled}
           captchaEnabled={captchaEnabled}
           captchaResetKey={captchaResetKey}
+          emailCodeCooldownSeconds={emailCodeCooldownSeconds}
           formUnavailable={formUnavailable}
           configLoading={configLoading}
           isSubmitting={isSubmitting}

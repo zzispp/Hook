@@ -50,10 +50,7 @@ pub async fn auth_config(State(state): State<ApiState>) -> ApiResult<ApiJson<Aut
     Ok(ok(state.users.auth_config().await?))
 }
 
-pub async fn request_registration_email_code(
-    State(state): State<ApiState>,
-    Json(payload): Json<RegistrationEmailCodePayload>,
-) -> ApiResult<ApiJson<()>> {
+pub async fn request_registration_email_code(State(state): State<ApiState>, Json(payload): Json<RegistrationEmailCodePayload>) -> ApiResult<ApiJson<()>> {
     state.users.request_registration_email_code(payload.into()).await?;
     Ok(ok(()))
 }

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm Redis resend contract,DONE,"Frontend/backend resend and rate-limit behavior is specified from current code","rg -n \"registration_email|emailVerificationCode|requestRegistrationEmailCode\" apps crates -S",2026-05-19T00:00:00+08:00,0,"Use Redis code key with 10 minute TTL and Redis cooldown key with 60 second TTL."
+2,Implement backend Redis code store,DONE,"API rejects resend inside 60s and re-sends existing unexpired code after cooldown","cargo test -p user",2026-05-19T00:00:00+08:00,0,"Passed cargo test -p user."
+3,Implement frontend resend countdown,DONE,"Send-code button is disabled for 60s after successful request","pnpm --filter hook_frontend lint",2026-05-19T00:00:00+08:00,0,"Passed frontend lint and build."
+4,Remove obsolete DB verification storage,DONE,"Registration email code storage is no longer persisted in database schema or storage crate","cargo check -p backend",2026-05-19T00:00:00+08:00,0,"Storage entity/repository removed; obsolete table is dropped during baseline apply."
+5,Validate changed flow,DONE,"Frontend and backend checks pass","pnpm --filter hook_frontend lint && cargo test -p user",2026-05-19T00:00:00+08:00,0,"cargo test -p user; cargo check -p backend; pnpm --filter hook_frontend lint; pnpm --filter hook_frontend build."

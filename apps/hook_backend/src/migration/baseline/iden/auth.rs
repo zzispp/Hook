@@ -33,12 +33,7 @@ pub(in crate::migration::baseline) enum UserPasswordResetTokens {
 }
 
 #[derive(DeriveIden)]
-pub(in crate::migration::baseline) enum UserRegistrationEmailVerifications {
+#[sea_orm(iden = "user_registration_email_verifications")]
+pub(in crate::migration::baseline) enum ObsoleteUserRegistrationEmailVerifications {
     Table,
-    Id,
-    Email,
-    CodeHash,
-    ExpiresAt,
-    ConsumedAt,
-    CreatedAt,
 }

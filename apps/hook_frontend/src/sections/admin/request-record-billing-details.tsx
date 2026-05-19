@@ -7,16 +7,18 @@ import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 
-import { formatCost } from './request-records-utils';
+import { formatCost, formatTokenCount } from './request-records-utils';
 
 export function RequestRecordBillingDetails({ record }: { record: RequestRecord | null }) {
   const { t } = useTranslate('admin');
+  const tokenItems = billingTokenItems(record, t);
   const costItems = billingCostItems(record, t);
   const summaryItems = billingSummaryItems(record, t);
 
   return (
     <Stack spacing={1.5}>
       <Typography variant="subtitle2">{t('requestRecords.costDetails')}</Typography>
+      <DetailRow items={tokenItems} />
       <DetailRow items={costItems} />
       <DetailRow items={summaryItems} />
     </Stack>
@@ -36,6 +38,15 @@ function DetailRow({ items }: { items: string[][] }) {
       ))}
     </Stack>
   );
+}
+
+function billingTokenItems(record: RequestRecord | null, t: (key: string) => string) {
+  return [
+    [t('requestRecords.inputTokens'), formatTokenCount(record?.prompt_tokens)],
+    [t('requestRecords.outputTokens'), formatTokenCount(record?.completion_tokens)],
+    [t('requestRecords.cacheCreationTokens'), cacheToken(record?.cache_creation_input_tokens)],
+    [t('requestRecords.cacheReadTokens'), cacheToken(record?.cache_read_input_tokens)],
+  ];
 }
 
 function billingCostItems(record: RequestRecord | null, t: (key: string) => string) {
@@ -59,6 +70,10 @@ function billingSummaryItems(record: RequestRecord | null, t: (key: string) => s
 
 function tokenPrice(value: number | null | undefined) {
   return `${formatCost(value)} /1M Token`;
+}
+
+function cacheToken(value: number | null | undefined) {
+  return value ? formatTokenCount(value) : '-';
 }
 
 function formatMultiplier(value: number | null | undefined) {

@@ -14,6 +14,7 @@ jsonwebtoken.workspace = true
 lettre.workspace = true
 rand.workspace = true
 rand_core.workspace = true
+redis.workspace = true
 serde.workspace = true
 setting.workspace = true
 sha2.workspace = true

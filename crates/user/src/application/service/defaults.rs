@@ -6,8 +6,8 @@ use types::{system_setting::EmailSuffixMode, user::UserWalletSummaryResponse};
 
 use crate::application::{
     AppResult, InitialGrantLedger, PasswordResetConfig, PasswordResetEmail, PasswordResetMailer, PasswordResetTemplate, RegistrationEmail,
-    RegistrationEmailConfig, RegistrationEmailMailer, RegistrationEmailTemplate, RegistrationPolicy, RegistrationSettings, SystemUserProvider,
-    SystemUserRecord, UserWalletCatalog,
+    RegistrationEmailCodeStore, RegistrationEmailConfig, RegistrationEmailMailer, RegistrationEmailTemplate, RegistrationPolicy, RegistrationSettings,
+    SystemUserProvider, SystemUserRecord, UserWalletCatalog,
 };
 
 #[derive(Clone, Copy)]
@@ -33,6 +33,9 @@ pub struct NoRegistrationEmailConfig;
 
 #[derive(Clone, Copy)]
 pub struct NoRegistrationEmailMailer;
+
+#[derive(Clone, Copy)]
+pub struct NoRegistrationEmailCodeStore;
 
 impl SystemUserProvider for NoSystemUserProvider {
     fn system_user(&self) -> Option<SystemUserRecord> {
@@ -114,6 +117,33 @@ impl RegistrationEmailMailer for NoRegistrationEmailMailer {
     async fn send_registration_email(&self, _email: RegistrationEmail) -> AppResult<()> {
         Err(crate::application::AppError::Infrastructure(
             "registration email mailer is not available".into(),
+        ))
+    }
+}
+
+#[async_trait]
+impl RegistrationEmailCodeStore for NoRegistrationEmailCodeStore {
+    async fn active_registration_email_code(&self, _email: &str) -> AppResult<Option<String>> {
+        Err(crate::application::AppError::Infrastructure(
+            "registration email code store is not available".into(),
+        ))
+    }
+
+    async fn save_registration_email_code(&self, _email: &str, _code: &str, _ttl_seconds: u64) -> AppResult<()> {
+        Err(crate::application::AppError::Infrastructure(
+            "registration email code store is not available".into(),
+        ))
+    }
+
+    async fn begin_registration_email_code_cooldown(&self, _email: &str, _ttl_seconds: u64) -> AppResult<bool> {
+        Err(crate::application::AppError::Infrastructure(
+            "registration email code store is not available".into(),
+        ))
+    }
+
+    async fn consume_registration_email_code(&self, _email: &str, _code: &str) -> AppResult<bool> {
+        Err(crate::application::AppError::Infrastructure(
+            "registration email code store is not available".into(),
         ))
     }
 }

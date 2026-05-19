@@ -46,7 +46,6 @@ pub fn table_names() -> Vec<&'static str> {
     vec![
         "users",
         "user_password_reset_tokens",
-        "user_registration_email_verifications",
         "roles",
         "api_permissions",
         "menu_sections",

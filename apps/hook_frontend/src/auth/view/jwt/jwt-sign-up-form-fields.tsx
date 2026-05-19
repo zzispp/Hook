@@ -18,6 +18,7 @@ type JwtSignUpFormFieldsProps = {
   emailVerificationEnabled: boolean;
   captchaEnabled: boolean;
   captchaResetKey: number;
+  emailCodeCooldownSeconds: number;
   formUnavailable: boolean;
   configLoading: boolean;
   isSubmitting: boolean;
@@ -28,7 +29,11 @@ type JwtSignUpFormFieldsProps = {
 
 type EmailCodeProps = Pick<
   JwtSignUpFormFieldsProps,
-  'formUnavailable' | 'isSubmitting' | 'isRequestingEmailCode' | 'onRequestEmailCode'
+  | 'emailCodeCooldownSeconds'
+  | 'formUnavailable'
+  | 'isSubmitting'
+  | 'isRequestingEmailCode'
+  | 'onRequestEmailCode'
 >;
 
 type SubmitProps = Pick<JwtSignUpFormFieldsProps, 'formUnavailable' | 'isSubmitting'> & {
@@ -83,12 +88,17 @@ function EmailField() {
 }
 
 function EmailCodeField({
+  emailCodeCooldownSeconds,
   formUnavailable,
   isSubmitting,
   isRequestingEmailCode,
   onRequestEmailCode,
 }: EmailCodeProps) {
   const { t } = useTranslate('auth');
+  const actionText =
+    emailCodeCooldownSeconds > 0
+      ? `${t('actions.sendRegistrationCode')} (${emailCodeCooldownSeconds}s)`
+      : t('actions.sendRegistrationCode');
 
   return (
     <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
@@ -113,11 +123,11 @@ function EmailCodeField({
         type="button"
         variant="outlined"
         loading={isRequestingEmailCode}
-        disabled={formUnavailable || isSubmitting}
+        disabled={formUnavailable || isSubmitting || emailCodeCooldownSeconds > 0}
         loadingIndicator={t('actions.sendRegistrationCodeLoading')}
         onClick={onRequestEmailCode}
       >
-        {t('actions.sendRegistrationCode')}
+        {actionText}
       </Button>
     </Box>
   );

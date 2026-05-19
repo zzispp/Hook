@@ -1,6 +1,7 @@
 mod password;
 mod password_reset_config;
 mod password_reset_mailer;
+mod registration_email_code_store;
 mod registration_email_config;
 mod registration_email_mailer;
 mod smtp_mailer;
@@ -10,6 +11,7 @@ mod user_repository;
 pub use password::BcryptPasswordHasher;
 pub use password_reset_config::StoragePasswordResetConfig;
 pub use password_reset_mailer::SmtpPasswordResetMailer;
+pub use registration_email_code_store::RedisRegistrationEmailCodeStore;
 pub use registration_email_config::StorageRegistrationEmailConfig;
 pub use registration_email_mailer::SmtpRegistrationEmailMailer;
 pub use system_user::ConfigSystemUserProvider;

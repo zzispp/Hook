@@ -11,9 +11,8 @@ use types::{
 };
 
 use crate::application::{
-    AppError, AppResult, InitialGrantLedger, PasswordHasher, PasswordResetConfig, PasswordResetMailer, PasswordResetRepository, RegistrationEmailConfig,
-    RegistrationEmailMailer, RegistrationEmailRepository, RegistrationPolicy, SystemUserProvider, UserAuthRecord, UserRepository, UserUseCase,
-    UserWalletCatalog,
+    AppError, AppResult, InitialGrantLedger, PasswordHasher, PasswordResetConfig, PasswordResetMailer, PasswordResetRepository, RegistrationEmailCodeStore,
+    RegistrationEmailConfig, RegistrationEmailMailer, RegistrationPolicy, SystemUserProvider, UserAuthRecord, UserRepository, UserUseCase, UserWalletCatalog,
 };
 
 use super::{
@@ -22,16 +21,16 @@ use super::{
     registration::{reject_closed_registration, reject_disallowed_registration_email, request_registration_email_code, verify_registration_email_code},
     system_user::{find_auth_by_identifier, list_with_system_user, reject_system_user_id, system_user_by_id},
     validation::{
-        sanitize_credentials, sanitize_password_reset_confirm, sanitize_password_reset_request, sanitize_registration_email_code_request, sanitize_replace_user,
-        sanitize_sign_up_user, validate_credentials, validate_new_user, validate_page, validate_password_reset_confirm, validate_password_reset_request,
-        validate_registration_email_code_request, validate_replace_user,
+        sanitize_credentials, sanitize_password_reset_confirm, sanitize_password_reset_request, sanitize_registration_email_code_request,
+        sanitize_replace_user, sanitize_sign_up_user, validate_credentials, validate_new_user, validate_page, validate_password_reset_confirm,
+        validate_password_reset_request, validate_registration_email_code_request, validate_replace_user,
     },
 };
 
 #[async_trait]
-impl<R, H, S, P, G, W, C, M, E, N> UserUseCase for UserService<R, H, S, P, G, W, C, M, E, N>
+impl<R, H, S, P, G, W, C, M, E, N, K> UserUseCase for UserService<R, H, S, P, G, W, C, M, E, N, K>
 where
-    R: UserRepository + PasswordResetRepository + RegistrationEmailRepository,
+    R: UserRepository + PasswordResetRepository,
     H: PasswordHasher,
     S: SystemUserProvider,
     P: RegistrationPolicy,
@@ -41,6 +40,7 @@ where
     M: PasswordResetMailer,
     E: RegistrationEmailConfig,
     N: RegistrationEmailMailer,
+    K: RegistrationEmailCodeStore,
 {
     async fn auth_config(&self) -> AppResult<AuthConfigResponse> {
         self.registration_email_config.auth_config().await
@@ -50,7 +50,7 @@ where
         let input = sanitize_registration_email_code_request(input);
         validate_registration_email_code_request(&input)?;
         request_registration_email_code(
-            &self.repository,
+            &self.registration_email_code_store,
             &self.registration_email_config,
             &self.registration_email_mailer,
             input,
@@ -64,10 +64,8 @@ where
         let input = sanitize_sign_up_user(input);
         validate_new_user(&input.user)?;
         reject_disallowed_registration_email(&settings, &input.user.email)?;
-        verify_registration_email_code(&self.repository, &settings, &input).await?;
-        let user = self
-            .create_valid_user(input.user, settings.registration_email_verification_enabled)
-            .await?;
+        verify_registration_email_code(&self.registration_email_code_store, &settings, &input).await?;
+        let user = self.create_valid_user(input.user, settings.registration_email_verification_enabled).await?;
         grant_initial_balance(&self.initial_grants, &user, settings.default_user_grant).await?;
         Ok(user)
     }

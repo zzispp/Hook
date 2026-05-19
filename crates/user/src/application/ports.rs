@@ -50,13 +50,6 @@ pub struct PasswordResetRecord {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RegistrationEmailVerificationRecord {
-    pub email: String,
-    pub code_hash: String,
-    pub expires_at: time::OffsetDateTime,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SystemUserRecord {
     pub user: User,
     pub password_hash: String,
@@ -159,12 +152,6 @@ pub struct RegistrationEmail {
 }
 
 #[async_trait]
-pub trait RegistrationEmailRepository: Send + Sync + 'static {
-    async fn create_registration_email_verification(&self, record: RegistrationEmailVerificationRecord) -> AppResult<()>;
-    async fn consume_registration_email_verification(&self, email: &str, code_hash: &str, now: time::OffsetDateTime) -> AppResult<bool>;
-}
-
-#[async_trait]
 pub trait RegistrationEmailConfig: Send + Sync + 'static {
     async fn auth_config(&self) -> AppResult<AuthConfigResponse>;
     async fn registration_email_settings(&self) -> AppResult<EmailSettings>;
@@ -174,6 +161,14 @@ pub trait RegistrationEmailConfig: Send + Sync + 'static {
 #[async_trait]
 pub trait RegistrationEmailMailer: Send + Sync + 'static {
     async fn send_registration_email(&self, email: RegistrationEmail) -> AppResult<()>;
+}
+
+#[async_trait]
+pub trait RegistrationEmailCodeStore: Send + Sync + 'static {
+    async fn active_registration_email_code(&self, email: &str) -> AppResult<Option<String>>;
+    async fn save_registration_email_code(&self, email: &str, code: &str, ttl_seconds: u64) -> AppResult<()>;
+    async fn begin_registration_email_code_cooldown(&self, email: &str, ttl_seconds: u64) -> AppResult<bool>;
+    async fn consume_registration_email_code(&self, email: &str, code: &str) -> AppResult<bool>;
 }
 
 #[async_trait]

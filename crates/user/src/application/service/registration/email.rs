@@ -1,70 +1,77 @@
 use rand_core::{OsRng, RngCore};
-use sha2::{Digest, Sha256};
 use types::user::{RegistrationEmailCodeRequest, SignUpUser};
 
 use crate::application::{
-    AppError, AppResult, EmailSettings, RegistrationEmail, RegistrationEmailConfig, RegistrationEmailMailer, RegistrationEmailRepository,
-    RegistrationEmailTemplate, RegistrationEmailVerificationRecord, RegistrationSettings,
+    AppError, AppResult, EmailSettings, RegistrationEmail, RegistrationEmailCodeStore, RegistrationEmailConfig, RegistrationEmailMailer,
+    RegistrationEmailTemplate, RegistrationSettings,
 };
 
 use crate::application::service::validation::validate_email_verification_code;
 
 const REGISTRATION_CODE_BYTES: usize = 4;
 const REGISTRATION_CODE_MODULO: u32 = 1_000_000;
-const REGISTRATION_CODE_EXPIRE_MINUTES: i64 = 10;
+const REGISTRATION_CODE_TTL_SECONDS: u64 = 10 * 60;
+const REGISTRATION_CODE_EXPIRE_MINUTES: u64 = REGISTRATION_CODE_TTL_SECONDS / 60;
+const REGISTRATION_CODE_RESEND_COOLDOWN_SECONDS: u64 = 60;
 const REGISTRATION_EMAIL_DISABLED: &str = "registration email verification is disabled";
 const EMAIL_CONFIGURATION_DISABLED: &str = "email configuration is disabled";
 const SMTP_CONFIGURATION_INCOMPLETE: &str = "SMTP configuration is incomplete";
+const REGISTRATION_CODE_RATE_LIMITED: &str = "registration email code can only be requested once every 60 seconds";
 
-pub(in crate::application::service) async fn request_registration_email_code<R, C, M>(
-    repository: &R,
+pub(in crate::application::service) async fn request_registration_email_code<S, C, M>(
+    code_store: &S,
     config: &C,
     mailer: &M,
     input: RegistrationEmailCodeRequest,
 ) -> AppResult<()>
 where
-    R: RegistrationEmailRepository,
+    S: RegistrationEmailCodeStore,
     C: RegistrationEmailConfig,
     M: RegistrationEmailMailer,
 {
     let settings = config.registration_email_settings().await?;
     reject_unready_email_config(&settings)?;
     let template = config.registration_email_template(&input.lang).await?;
-    let code = random_code();
-    repository
-        .create_registration_email_verification(verification_record(&input.email, &code))
-        .await?;
+    let code = registration_code(code_store, &input.email).await?;
     mailer.send_registration_email(email(settings, template, input, code)).await
 }
 
-pub(in crate::application::service) async fn verify_registration_email_code<R>(
-    repository: &R,
+pub(in crate::application::service) async fn verify_registration_email_code<S>(
+    code_store: &S,
     settings: &RegistrationSettings,
     input: &SignUpUser,
 ) -> AppResult<()>
 where
-    R: RegistrationEmailRepository,
+    S: RegistrationEmailCodeStore,
 {
     if !settings.registration_email_verification_enabled {
         return Ok(());
     }
     let code = required_code(input)?;
     validate_email_verification_code(code)?;
-    let consumed = repository
-        .consume_registration_email_verification(&input.user.email, &code_hash(code), time::OffsetDateTime::now_utc())
-        .await?;
+    let consumed = code_store.consume_registration_email_code(&input.user.email.to_ascii_lowercase(), code).await?;
     if consumed {
         return Ok(());
     }
     Err(AppError::InvalidInput("email verification code is invalid or expired".into()))
 }
 
-fn verification_record(email: &str, code: &str) -> RegistrationEmailVerificationRecord {
-    RegistrationEmailVerificationRecord {
-        email: email.into(),
-        code_hash: code_hash(code),
-        expires_at: time::OffsetDateTime::now_utc() + time::Duration::minutes(REGISTRATION_CODE_EXPIRE_MINUTES),
+async fn registration_code<S>(code_store: &S, email: &str) -> AppResult<String>
+where
+    S: RegistrationEmailCodeStore,
+{
+    if !code_store
+        .begin_registration_email_code_cooldown(email, REGISTRATION_CODE_RESEND_COOLDOWN_SECONDS)
+        .await?
+    {
+        return Err(AppError::InvalidInput(REGISTRATION_CODE_RATE_LIMITED.into()));
     }
+    if let Some(code) = code_store.active_registration_email_code(email).await? {
+        return Ok(code);
+    }
+    let code = random_code();
+    code_store.save_registration_email_code(email, &code, REGISTRATION_CODE_TTL_SECONDS).await?;
+    Ok(code)
 }
 
 fn required_code(input: &SignUpUser) -> AppResult<&str> {
@@ -108,7 +115,7 @@ struct RegistrationEmailVariables<'a> {
     app_name: &'a str,
     email: &'a str,
     code: &'a str,
-    expire_minutes: i64,
+    expire_minutes: u64,
 }
 
 fn render_template(template: &str, variables: &RegistrationEmailVariables<'_>) -> String {
@@ -119,17 +126,9 @@ fn render_template(template: &str, variables: &RegistrationEmailVariables<'_>) -
         .replace("{{expire_minutes}}", &variables.expire_minutes.to_string())
 }
 
-fn code_hash(code: &str) -> String {
-    hex(Sha256::digest(code.as_bytes()).as_ref())
-}
-
 fn random_code() -> String {
     let mut bytes = [0_u8; REGISTRATION_CODE_BYTES];
     OsRng.fill_bytes(&mut bytes);
     let value = u32::from_be_bytes(bytes) % REGISTRATION_CODE_MODULO;
     format!("{value:06}")
-}
-
-fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }

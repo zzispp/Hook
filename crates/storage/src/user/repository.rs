@@ -8,12 +8,11 @@ use types::{
 };
 
 use crate::{
-    Database, StorageError, StorageResult,
-    json,
+    Database, StorageError, StorageResult, json,
     rbac::role_records,
+    user::UserColumn,
     user::password_reset_tokens::{self, ActiveModel as PasswordResetTokenActiveModel},
     user::record::ActiveModel as UserActiveModel,
-    user::UserColumn,
 };
 
 use super::{
@@ -242,7 +241,6 @@ impl UserStore {
             .map(|record| record.map(password_reset_token_record))
             .map_err(StorageError::from)
     }
-
 }
 
 async fn ensure_role_exists(db: &DatabaseConnection, role: &str) -> StorageResult<()> {

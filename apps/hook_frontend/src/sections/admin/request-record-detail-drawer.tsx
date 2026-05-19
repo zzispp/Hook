@@ -28,8 +28,8 @@ import {
   compactId,
   formatCost,
   userDisplay,
-  tokenDisplay,
   formatDuration,
+  formatTokenCount,
   formatRequestDate,
   billingStatusLabel,
   requestStatusColor,
@@ -158,7 +158,7 @@ function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string 
     formatRequestDate(record.created_at, locale),
     formatRequestApiFormat(record),
     `${t('requestRecords.user')}: ${userDisplay(record)}`,
-    tokenDisplay(record),
+    `${formatTokenCount(record.prompt_tokens)} / ${formatTokenCount(record.completion_tokens)}`,
   ];
 
   return (

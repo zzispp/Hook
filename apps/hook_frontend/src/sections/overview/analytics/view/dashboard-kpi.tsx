@@ -62,6 +62,8 @@ function DashboardKpiCard({ item, sx, ...other }: CardProps & { item: KpiCardDat
     chart: { sparkline: { enabled: true } },
     colors: [theme.palette[item.color].dark],
     grid: { padding: { top: 6, left: 6, right: 6, bottom: 6 } },
+    xaxis: { labels: { show: false } },
+    yaxis: { labels: { show: false } },
     tooltip: { y: { formatter: (value: number) => formatInteger(value, 'en-US'), title: { formatter: () => '' } } },
     markers: { strokeWidth: 0 },
   } satisfies ChartOptions);

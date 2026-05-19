@@ -36,20 +36,3 @@ pub struct PasswordResetTokenRecord {
     pub consumed_at: Option<time::OffsetDateTime>,
     pub created_at: time::OffsetDateTime,
 }
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RegistrationEmailVerificationRecordInput {
-    pub email: String,
-    pub code_hash: String,
-    pub expires_at: time::OffsetDateTime,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RegistrationEmailVerificationRecord {
-    pub id: String,
-    pub email: String,
-    pub code_hash: String,
-    pub expires_at: time::OffsetDateTime,
-    pub consumed_at: Option<time::OffsetDateTime>,
-    pub created_at: time::OffsetDateTime,
-}

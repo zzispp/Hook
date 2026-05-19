@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate KPI chart axis clipping,DONE,Root cause identified,rg -n "dashboard-kpi|useChart" apps/hook_frontend/src,,0,y-axis labels render outside 84px svg viewport
+2,Disable axis chrome for KPI sparkline,DONE,KPI chart no longer renders y-axis labels,pnpm --filter hook_frontend lint,2026-05-19,0,
+3,Run frontend validation,DONE,Relevant frontend checks pass,pnpm --filter hook_frontend lint,2026-05-19,0,passed

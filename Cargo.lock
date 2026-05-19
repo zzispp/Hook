@@ -4637,6 +4637,7 @@ dependencies = [
  "lettre",
  "rand 0.8.6",
  "rand_core 0.6.4",
+ "redis",
  "rust_decimal",
  "serde",
  "serde_json",

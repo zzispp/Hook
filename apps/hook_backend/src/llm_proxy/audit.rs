@@ -8,7 +8,7 @@ mod tests;
 use storage::{StorageError, api_token::ApiTokenUsageRecord, model::GlobalModelUsageRecord, provider::ProviderStore};
 use time::OffsetDateTime;
 
-pub(crate) use self::billing_runtime::{BillingAttempt, request_billing_status, total_tokens};
+pub(crate) use self::billing_runtime::{BillingAttempt, request_billing_status};
 use self::billing_runtime::{attempt_billing, model_usage_record, token_usage_record, wallet_settlement_input};
 use self::event::AuditEvent;
 pub use self::event::{AttemptRecordInput, TokenUsage};

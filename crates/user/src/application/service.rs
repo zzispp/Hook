@@ -15,8 +15,8 @@ mod use_cases;
 mod validation;
 
 pub use defaults::{
-    AllowRegistrationPolicy, NoInitialGrantLedger, NoPasswordResetConfig, NoPasswordResetMailer, NoRegistrationEmailConfig, NoRegistrationEmailMailer,
-    NoSystemUserProvider, NoUserWalletCatalog,
+    AllowRegistrationPolicy, NoInitialGrantLedger, NoPasswordResetConfig, NoPasswordResetMailer, NoRegistrationEmailCodeStore, NoRegistrationEmailConfig,
+    NoRegistrationEmailMailer, NoSystemUserProvider, NoUserWalletCatalog,
 };
 
 pub struct UserService<
@@ -30,6 +30,7 @@ pub struct UserService<
     M = NoPasswordResetMailer,
     E = NoRegistrationEmailConfig,
     N = NoRegistrationEmailMailer,
+    K = NoRegistrationEmailCodeStore,
 > {
     repository: R,
     password_hasher: H,
@@ -41,6 +42,7 @@ pub struct UserService<
     password_reset_mailer: M,
     registration_email_config: E,
     registration_email_mailer: N,
+    registration_email_code_store: K,
 }
 
 impl<R, H> UserService<R, H, NoSystemUserProvider, AllowRegistrationPolicy, NoInitialGrantLedger, NoUserWalletCatalog>
@@ -60,6 +62,7 @@ where
             password_reset_mailer: NoPasswordResetMailer,
             registration_email_config: NoRegistrationEmailConfig,
             registration_email_mailer: NoRegistrationEmailMailer,
+            registration_email_code_store: NoRegistrationEmailCodeStore,
         }
     }
 }
@@ -82,6 +85,7 @@ where
             password_reset_mailer: NoPasswordResetMailer,
             registration_email_config: NoRegistrationEmailConfig,
             registration_email_mailer: NoRegistrationEmailMailer,
+            registration_email_code_store: NoRegistrationEmailCodeStore,
         }
     }
 }
@@ -114,11 +118,12 @@ where
             password_reset_mailer: NoPasswordResetMailer,
             registration_email_config: NoRegistrationEmailConfig,
             registration_email_mailer: NoRegistrationEmailMailer,
+            registration_email_code_store: NoRegistrationEmailCodeStore,
         }
     }
 }
 
-impl<R, H, S, P, G, W, C, M, E, N> UserService<R, H, S, P, G, W, C, M, E, N>
+impl<R, H, S, P, G, W, C, M, E, N, K> UserService<R, H, S, P, G, W, C, M, E, N, K>
 where
     R: UserRepository,
     H: PasswordHasher,
@@ -127,7 +132,7 @@ where
     G: InitialGrantLedger,
     W: UserWalletCatalog,
 {
-    pub fn with_password_reset<NC, NM>(self, password_reset_config: NC, password_reset_mailer: NM) -> UserService<R, H, S, P, G, W, NC, NM, E, N> {
+    pub fn with_password_reset<NC, NM>(self, password_reset_config: NC, password_reset_mailer: NM) -> UserService<R, H, S, P, G, W, NC, NM, E, N, K> {
         UserService {
             repository: self.repository,
             password_hasher: self.password_hasher,
@@ -139,14 +144,16 @@ where
             password_reset_mailer,
             registration_email_config: self.registration_email_config,
             registration_email_mailer: self.registration_email_mailer,
+            registration_email_code_store: self.registration_email_code_store,
         }
     }
 
-    pub fn with_registration_email<NE, NN>(
+    pub fn with_registration_email<NE, NN, NK>(
         self,
         registration_email_config: NE,
         registration_email_mailer: NN,
-    ) -> UserService<R, H, S, P, G, W, C, M, NE, NN> {
+        registration_email_code_store: NK,
+    ) -> UserService<R, H, S, P, G, W, C, M, NE, NN, NK> {
         UserService {
             repository: self.repository,
             password_hasher: self.password_hasher,
@@ -158,6 +165,7 @@ where
             password_reset_mailer: self.password_reset_mailer,
             registration_email_config,
             registration_email_mailer,
+            registration_email_code_store,
         }
     }
 
@@ -233,6 +241,10 @@ fn reject_conflicting_user(id: UserId, current_id: Option<&UserId>, field: &str)
     Err(crate::application::AppError::Conflict(format!("{field} already exists")))
 }
 
+#[cfg(test)]
+mod registration_email_test_support;
+#[cfg(test)]
+mod registration_email_tests;
 #[cfg(test)]
 mod registration_tests;
 #[cfg(test)]

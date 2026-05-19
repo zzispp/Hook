@@ -16,9 +16,21 @@ mod translation_tables;
 mod wallet_tables;
 
 pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    drop_obsolete_tables(manager).await?;
     create_tables(manager).await?;
     create_indices(manager).await?;
     seed::seed_defaults(manager).await
+}
+
+async fn drop_obsolete_tables(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    manager
+        .drop_table(
+            Table::drop()
+                .table(iden::ObsoleteUserRegistrationEmailVerifications::Table)
+                .if_exists()
+                .to_owned(),
+        )
+        .await
 }
 
 async fn create_tables(manager: &SchemaManager<'_>) -> Result<(), DbErr> {

@@ -65,7 +65,6 @@ pub fn reversed_tables() -> Vec<DynIden> {
         MenuSections::Table.into_iden(),
         ApiPermissions::Table.into_iden(),
         Roles::Table.into_iden(),
-        UserRegistrationEmailVerifications::Table.into_iden(),
         UserPasswordResetTokens::Table.into_iden(),
         Users::Table.into_iden(),
     ]

@@ -11,12 +11,12 @@
 
 ## Context Recovery Block
 
-- **Current milestone**: #4 — Validate affected Rust checks
+- **Current milestone**: #7 — Audit other endpoint families
 - **Current status**: DONE
-- **Last completed**: #4 — Validate affected Rust checks
+- **Last completed**: #7 — Audit other endpoint families
 - **Current artifact**: `TODO.csv`
-- **Key context**: Hook default billing now normalizes OpenAI/Gemini billable input tokens by subtracting separately priced cache tokens while preserving `total_input_context` from raw context semantics. Claude and explicit custom billing rules keep raw `input_tokens`.
-- **Known issues**: `cargo fmt --check --all` still reports pre-existing unrelated formatting diffs under `crates/user`; provider package formatting passes.
+- **Key context**: Hook default billing and request-record persistence now use non-cache input tokens for OpenAI/Gemini-style usage. Request records preserve cache creation/read token fields separately. Claude/Anthropic input tokens are not reduced because upstream `input_tokens` already exclude cache creation/read. Rerank has no cache dimensions. GeminiVideo currently emits no `TokenUsage`.
+- **Known issues**: `cargo test -p backend usage_fields` is blocked by unrelated current `crates/user` compile errors in registration email code (`K` generic missing, trait method missing, record initializer fields missing). `cargo fmt --check -p backend`, `cargo fmt --check -p provider`, provider tests, frontend lint, and frontend typecheck pass.
 - **Next action**: Final response to user.
 
 ## Milestone 1: Read constraints and establish task context
@@ -75,3 +75,53 @@
 - **Notes**:
   - `timeout` and `gtimeout` are not available in this macOS shell, so validation used Perl `alarm 60`.
   - `cargo fmt --check --all` reports unrelated existing formatting differences in `crates/user/src/application/service.rs`; those files were not changed for this task.
+
+## Milestone 5: Align request-record usage writes
+
+- **Status**: DONE
+- **Started**: 13:30
+- **Completed**: 13:40
+- **What was done**:
+  - Updated audit request/candidate record mapping so persisted `prompt_tokens` is display/billable input for OpenAI/Gemini-style usage.
+  - Preserved `cache_creation_input_tokens` and `cache_read_input_tokens` as separate fields.
+  - Recomputed persisted `total_tokens` by subtracting cache tokens from raw total when raw total exists, preserving input-only endpoints such as embeddings.
+- **Endpoint audit**:
+  - OpenAI chat, responses/CLI, completion, embedding, image, audio, moderation, and realtime include cache tokens in prompt/input semantics when cache fields are present.
+  - Gemini chat and embedding include cached content in prompt semantics when `cachedContentTokenCount` is present.
+  - Claude/Anthropic is unchanged because `input_tokens` is already non-cache input while cache creation/read are separate fields.
+  - Rerank has no cache dimensions. GeminiVideo currently returns no usage.
+- **Files changed**:
+  - `apps/hook_backend/src/llm_proxy/audit/records/usage_fields.rs`
+- **Validation**:
+  - `cargo fmt --check -p backend` → passed
+  - `perl -e 'alarm 60; exec @ARGV' cargo test -p backend usage_fields` → blocked by unrelated `crates/user` compile errors.
+
+## Milestone 6: Add drawer token quantities
+
+- **Status**: DONE
+- **Started**: 13:40
+- **Completed**: 13:42
+- **What was done**:
+  - Request record table and drawer header display persisted `prompt_tokens / completion_tokens` directly.
+  - Billing detail drawer now shows input/output/cache-creation/cache-read token quantities above cost rows.
+  - Added backend i18n seed labels for the new token quantity fields.
+- **Files changed**:
+  - `apps/hook_frontend/src/sections/admin/request-record-billing-details.tsx`
+  - `apps/hook_frontend/src/sections/admin/request-record-detail-drawer.tsx`
+  - `apps/hook_backend/src/migration/defaults/i18n/admin.cn.json`
+  - `apps/hook_backend/src/migration/defaults/i18n/admin.en.json`
+- **Validation**:
+  - `pnpm --filter hook_frontend lint` → passed
+  - `pnpm --filter hook_frontend exec tsc --noEmit` → passed
+
+## Milestone 7: Validate endpoint coverage
+
+- **Status**: DONE
+- **Started**: 13:42
+- **Completed**: 13:45
+- **What was done**:
+  - Verified non-stream, stream, estimated stream, and websocket realtime success records converge through `AttemptRecordInput.usage` and `usage_fields`.
+  - Verified provider billing normalization is already in current baseline and provider tests cover OpenAI, Gemini, Claude, and explicit billing rule behavior.
+- **Validation**:
+  - `cargo fmt --check -p provider` → passed
+  - `perl -e 'alarm 60; exec @ARGV' cargo test -p provider` → passed, 40 tests

@@ -5,7 +5,7 @@ import type { SubmitHandler, UseFormReturn } from 'react-hook-form';
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import { useRouter } from 'src/routes/hooks';
 
@@ -31,6 +31,7 @@ const DEFAULT_SIGN_UP_VALUES: SignUpSchemaType = {
   password: '',
   emailVerificationCode: '',
 };
+const EMAIL_CODE_COOLDOWN_SECONDS = 60;
 
 export function useJwtSignUpState() {
   const router = useRouter();
@@ -69,6 +70,7 @@ export function useJwtSignUpState() {
     form: {
       ...flags,
       captchaResetKey,
+      emailCodeCooldownSeconds: emailCode.cooldownSeconds,
       isRequestingEmailCode: emailCode.isRequesting,
       onCaptchaTokenChange: setCaptchaToken,
       onRequestEmailCode: emailCode.request,
@@ -81,7 +83,20 @@ export function useJwtSignUpState() {
 
 function useRegistrationEmailCodeRequest(options: RegistrationEmailCodeRequestOptions) {
   const [isRequesting, setIsRequesting] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  useEffect(() => {
+    if (cooldownSeconds <= 0) {
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      setCooldownSeconds((value) => Math.max(0, value - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldownSeconds]);
   const request = useCallback(async () => {
+    if (cooldownSeconds > 0) {
+      return;
+    }
     options.setFeedback(emptyFeedback());
     const emailValid = await options.methods.trigger('email', { shouldFocus: true });
 
@@ -95,6 +110,7 @@ function useRegistrationEmailCodeRequest(options: RegistrationEmailCodeRequestOp
         email: options.methods.getValues('email'),
         lang: options.lang,
       });
+      setCooldownSeconds(EMAIL_CODE_COOLDOWN_SECONDS);
       options.setFeedback({ error: null, success: options.t('signUp.emailCodeSent') });
     } catch (error) {
       console.error(error);
@@ -102,9 +118,9 @@ function useRegistrationEmailCodeRequest(options: RegistrationEmailCodeRequestOp
     } finally {
       setIsRequesting(false);
     }
-  }, [options]);
+  }, [cooldownSeconds, options]);
 
-  return { isRequesting, request };
+  return { cooldownSeconds, isRequesting, request };
 }
 
 type RegistrationEmailCodeRequestOptions = {

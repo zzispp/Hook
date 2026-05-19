@@ -7,8 +7,8 @@ use types::{
 };
 
 use crate::application::{
-    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, RegistrationEmailRepository,
-    RegistrationEmailVerificationRecord, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository,
+    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord,
+    UserRepository,
 };
 
 pub(crate) const VALID_PASSWORD: &str = "secret123";
@@ -27,7 +27,6 @@ struct RepositoryState {
     deleted: Vec<UserId>,
     logins: Vec<UserId>,
     reset_tokens: Vec<StoredPasswordResetToken>,
-    registration_email_verifications: Vec<StoredRegistrationEmailVerification>,
 }
 
 #[derive(Clone)]
@@ -40,14 +39,6 @@ pub(crate) struct StoredUser {
 struct StoredPasswordResetToken {
     user_id: UserId,
     token_hash: String,
-    expires_at: time::OffsetDateTime,
-    consumed_at: Option<time::OffsetDateTime>,
-}
-
-#[derive(Clone)]
-struct StoredRegistrationEmailVerification {
-    email: String,
-    code_hash: String,
     expires_at: time::OffsetDateTime,
     consumed_at: Option<time::OffsetDateTime>,
 }
@@ -232,40 +223,6 @@ impl PasswordResetRepository for MemoryUserRepository {
         let user = stored.user.clone();
         state.reset_tokens[index].consumed_at = Some(now);
         Ok(Some(user))
-    }
-}
-
-#[async_trait]
-impl RegistrationEmailRepository for MemoryUserRepository {
-    async fn create_registration_email_verification(&self, record: RegistrationEmailVerificationRecord) -> AppResult<()> {
-        self.state
-            .lock()
-            .unwrap()
-            .registration_email_verifications
-            .push(StoredRegistrationEmailVerification {
-                email: record.email,
-                code_hash: record.code_hash,
-                expires_at: record.expires_at,
-                consumed_at: None,
-            });
-        Ok(())
-    }
-
-    async fn consume_registration_email_verification(&self, email: &str, code_hash: &str, now: time::OffsetDateTime) -> AppResult<bool> {
-        let mut state = self.state.lock().unwrap();
-        let Some(index) = state
-            .registration_email_verifications
-            .iter()
-            .rposition(|record| record.email == email && record.code_hash == code_hash)
-        else {
-            return Ok(false);
-        };
-        let record = &mut state.registration_email_verifications[index];
-        if record.consumed_at.is_some() || record.expires_at <= now {
-            return Ok(false);
-        }
-        record.consumed_at = Some(now);
-        Ok(true)
     }
 }
 
