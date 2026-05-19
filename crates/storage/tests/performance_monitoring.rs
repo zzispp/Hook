@@ -89,6 +89,33 @@ async fn range_all_appends_live_request_window_without_day_snapshots() {
 }
 
 #[tokio::test]
+async fn aggregate_point_calculates_cache_hit_rate_by_input_context_tokens() {
+    let mut summary = summary_row(4);
+    summary.insert("prompt_tokens".into(), Value::from(75_i64));
+    summary.insert("cache_read_input_tokens".into(), Value::from(25_i64));
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[summary]])
+        .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+        .into_connection();
+    let store = PerformanceMonitoringStore::new(Database::new(connection));
+
+    let point = store
+        .aggregate_point(
+            storage::performance_monitoring::SnapshotAggregationWindow {
+                granularity: SnapshotGranularity::Minute,
+                started_at: ts(0),
+                ended_at: ts(60),
+            },
+            Default::default(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(point.metrics.llm.cache_hit_rate, 0.25);
+}
+
+#[tokio::test]
 async fn thirty_day_range_uses_hour_buckets_at_point_cap() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([Vec::<snapshots::Model>::new()])
@@ -195,7 +222,7 @@ fn summary_row(request_count: i64) -> BTreeMap<String, Value> {
         ("completion_tokens".into(), Value::from(0_i64)),
         ("total_tokens".into(), Value::from(0_i64)),
         ("failover_count".into(), Value::from(0_i64)),
-        ("cache_hit_count".into(), Value::from(0_i64)),
+        ("cache_read_input_tokens".into(), Value::from(0_i64)),
         ("cost".into(), Value::from(rust_decimal::Decimal::ZERO)),
         ("quota_limited_count".into(), Value::from(0_i64)),
     ])

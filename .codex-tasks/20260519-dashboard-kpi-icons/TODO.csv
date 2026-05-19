@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate KPI card source,DONE,"dashboard-kpi.tsx current icon source identified","rg -n \"ic-glass\" apps/hook_frontend/src/sections/overview/analytics/view/dashboard-kpi.tsx",2026-05-19T00:00:00+08:00,0,"Glass icons reused from old template."
+2,Replace KPI icons,DONE,"KPI cards use semantic Iconify names and registered icons","rg -n \"solar:.*bold\" apps/hook_frontend/src/sections/overview/analytics/view/dashboard-kpi-config.ts",2026-05-19T00:00:00+08:00,0,"Replaced with registered Solar icons and split KPI config."
+3,Run frontend validation,DONE,"Frontend lint and type checks complete","pnpm --filter hook_frontend exec tsc --noEmit && pnpm --filter hook_frontend lint",2026-05-19T00:00:00+08:00,3,"Fixed import-order retries and explicit Theme typing; tsc and lint pass."

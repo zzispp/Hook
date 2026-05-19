@@ -24,6 +24,7 @@ pub async fn load(database: &Database, system_users: &[CachedUserAccess]) -> Res
     Ok(SchedulingSnapshot {
         default_rate_limit_rpm: settings.default_rate_limit_rpm,
         scheduling_mode: settings.scheduling_mode,
+        cache_affinity_ttl_minutes: settings.cache_affinity_ttl_minutes,
         client_request_record_level: settings.client_request_record_level,
         client_max_request_body_size_kb: settings.client_max_request_body_size_kb,
         client_max_response_body_size_kb: settings.client_max_response_body_size_kb,

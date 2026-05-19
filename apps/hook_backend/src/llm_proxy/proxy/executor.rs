@@ -177,7 +177,7 @@ async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Res
     .await
     {
         Ok(response) => {
-            affinity::remember(&input.state, input.candidate).await?;
+            affinity::remember(&input.state, input.candidate, input.prepared.cache_affinity_ttl_minutes).await?;
             Ok(AttemptOnceOutcome::Response(response))
         }
         Err(error) => {

@@ -35,6 +35,7 @@ pub struct SystemSettings {
     pub default_user_grant: Decimal,
     pub default_rate_limit_rpm: i64,
     pub scheduling_mode: ProviderSchedulingMode,
+    pub cache_affinity_ttl_minutes: i64,
     pub provider_cooldown_policy: ProviderCooldownPolicy,
     pub smtp_host: String,
     pub smtp_port: i64,

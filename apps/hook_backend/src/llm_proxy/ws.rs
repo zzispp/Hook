@@ -50,7 +50,7 @@ pub async fn realtime(
     let connected = connect_first_upstream(&state, &selection, &query).await?;
     let started = Instant::now();
     record_streaming_attempt(&state, &selection.request_id, &connected).await?;
-    remember_affinity(&state, &connected.candidate).await?;
+    remember_affinity(&state, &connected.candidate, selection.cache_affinity_ttl_minutes).await?;
     record_skipped_candidates(&state, &selection.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
     Ok(websocket.on_upgrade(move |client| relay(state, selection.request_id, connected, started, client)))
 }
@@ -80,14 +80,14 @@ async fn record_streaming_attempt(state: &LlmProxyState, request_id: &str, conne
     .await
 }
 
-async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {
-    let Some(input) = set_affinity_input(candidate) else {
+async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate, ttl_minutes: i64) -> Result<(), LlmProxyError> {
+    let Some(input) = set_affinity_input(candidate, ttl_minutes) else {
         return Ok(());
     };
     state.remember_affinity(input).await
 }
 
-fn set_affinity_input(candidate: &ProxyCandidate) -> Option<SetAffinityInput<'_>> {
+fn set_affinity_input(candidate: &ProxyCandidate, ttl_minutes: i64) -> Option<SetAffinityInput<'_>> {
     Some(SetAffinityInput {
         token_id: candidate.trace.token_id.as_deref()?,
         model_id: &candidate.trace.global_model_id,
@@ -95,6 +95,6 @@ fn set_affinity_input(candidate: &ProxyCandidate) -> Option<SetAffinityInput<'_>
         provider_id: &candidate.trace.provider_id,
         endpoint_id: &candidate.trace.endpoint_id,
         key_id: &candidate.trace.key_id,
-        ttl_minutes: candidate.cache_ttl_minutes,
+        ttl_minutes,
     })
 }

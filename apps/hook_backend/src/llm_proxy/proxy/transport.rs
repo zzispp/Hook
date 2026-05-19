@@ -14,7 +14,7 @@ use super::{
     response_model::rewrite_response_model_bytes,
     response_payload::{body_value, upstream_status_error_details},
     timeout::{non_stream_total_timeout, remaining_timeout},
-    transport_read::response_bytes,
+    transport_read::{ResponseBytesInput, response_bytes},
     usage,
 };
 use crate::llm_proxy::{
@@ -65,7 +65,17 @@ pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyE
     let content_type = response_content_type(&response);
     let upstream_headers = response.headers().clone();
     let read_timeout = request_timeout.map(|timeout| remaining_timeout(started, timeout));
-    let bytes = response_bytes(&state, &request_id, &candidate, retry_index, started, None, read_timeout, response).await?;
+    let bytes = response_bytes(ResponseBytesInput {
+        state: &state,
+        request_id: &request_id,
+        candidate: &candidate,
+        retry_index,
+        started,
+        first_byte_time_ms: None,
+        read_timeout,
+        response,
+    })
+    .await?;
     let elapsed = elapsed_ms(started);
     if status.is_success() {
         return full_success_response(FullResponseInput {
@@ -194,7 +204,17 @@ pub async fn record_upstream_failure(
     let upstream_headers = response.headers().clone();
     let request_timeout = non_stream_total_timeout(candidate, candidate.trace.is_stream);
     let read_timeout = request_timeout.map(|timeout| remaining_timeout(started, timeout));
-    let body = response_bytes(state, request_id, candidate, retry_index, started, None, read_timeout, response).await?;
+    let body = response_bytes(ResponseBytesInput {
+        state,
+        request_id,
+        candidate,
+        retry_index,
+        started,
+        first_byte_time_ms: None,
+        read_timeout,
+        response,
+    })
+    .await?;
     let error = upstream_status_error_details(status.as_u16(), &body);
     let error_type = "upstream_status";
     let client_error = client_error::upstream_failure(status);

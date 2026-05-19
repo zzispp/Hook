@@ -1,0 +1,9 @@
+active
+active
+active
+active
+active
+proxy_pass http://127.0.0.1:5557;
+baseline tables: 37/37 present
+17c627c39fd65a640e7b4b904cd073fc7d8d87cf40eb34227640bc4b380dd83e  /opt/hook/bin/backend
+17c627c39fd65a640e7b4b904cd073fc7d8d87cf40eb34227640bc4b380dd83e  /opt/hook/bin/backend-green

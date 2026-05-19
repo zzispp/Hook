@@ -209,6 +209,7 @@ mod tests {
         let snapshot = SchedulingSnapshot {
             default_rate_limit_rpm: 0,
             scheduling_mode: ProviderSchedulingMode::FixedOrder,
+            cache_affinity_ttl_minutes: 5,
             models: Vec::new(),
             groups: Vec::new(),
             users: Vec::new(),

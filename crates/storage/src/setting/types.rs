@@ -33,6 +33,7 @@ pub struct SystemSettingsRecordPatch {
     pub default_user_grant: Option<Decimal>,
     pub default_rate_limit_rpm: Option<i64>,
     pub scheduling_mode: Option<ProviderSchedulingMode>,
+    pub cache_affinity_ttl_minutes: Option<i64>,
     pub provider_cooldown_policy: Option<ProviderCooldownPolicy>,
     pub smtp_host: Option<String>,
     pub smtp_port: Option<i64>,

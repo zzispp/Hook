@@ -97,6 +97,7 @@ pub struct CandidateTrace {
 #[derive(Clone, Debug)]
 pub struct CandidateSelection {
     pub request_id: String,
+    pub cache_affinity_ttl_minutes: i64,
     pub candidates: Vec<ProxyCandidate>,
 }
 

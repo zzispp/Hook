@@ -119,6 +119,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.scheduling_mode {
         active.scheduling_mode = Set(value.as_str().to_owned());
     }
+    if let Some(value) = input.cache_affinity_ttl_minutes {
+        active.cache_affinity_ttl_minutes = Set(value);
+    }
     if let Some(value) = &input.provider_cooldown_policy {
         active.provider_cooldown_policy = Set(serde_json::to_string(&value).expect("provider cooldown policy must serialize"));
     }

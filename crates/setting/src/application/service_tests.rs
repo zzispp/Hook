@@ -133,6 +133,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         default_user_grant: Decimal::ZERO,
         default_rate_limit_rpm: 0,
         scheduling_mode: ProviderSchedulingMode::CacheAffinity,
+        cache_affinity_ttl_minutes: 5,
         provider_cooldown_policy: ProviderCooldownPolicy::default(),
         smtp_host: String::new(),
         smtp_port: 587,

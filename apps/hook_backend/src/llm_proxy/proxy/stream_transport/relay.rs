@@ -227,6 +227,22 @@ fn next_upstream_wait_timeout(last_upstream_item_at: Instant, idle_timeout: Opti
     }
 }
 
+impl Drop for StreamRelay {
+    fn drop(&mut self) {
+        if self.recorded_terminal || self.finished {
+            return;
+        }
+        self.stream_status
+            .set_end_reason(StreamEndReason::ClientGone, Some("client disconnected before stream completed".into()));
+        let record = cancelled_record(&self.context, self.usage, self.first_byte_time_ms, &self.stream_status);
+        tokio::spawn(async move {
+            if let Err(error) = record_stream_attempt(record).await {
+                hook_tracing::warn_with_fields!("failed to record cancelled streaming request candidate", error = error);
+            }
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{SSE_KEEPALIVE_INTERVAL_SECS, next_upstream_wait_timeout};
@@ -254,21 +270,5 @@ mod tests {
 
         assert_eq!(timeout.wait, Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS));
         assert!(!timeout.idle_deadline);
-    }
-}
-
-impl Drop for StreamRelay {
-    fn drop(&mut self) {
-        if self.recorded_terminal || self.finished {
-            return;
-        }
-        self.stream_status
-            .set_end_reason(StreamEndReason::ClientGone, Some("client disconnected before stream completed".into()));
-        let record = cancelled_record(&self.context, self.usage, self.first_byte_time_ms, &self.stream_status);
-        tokio::spawn(async move {
-            if let Err(error) = record_stream_attempt(record).await {
-                hook_tracing::warn_with_fields!("failed to record cancelled streaming request candidate", error = error);
-            }
-        });
     }
 }

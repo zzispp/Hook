@@ -1,4 +1,7 @@
-use std::{future::Future, time::Instant};
+use std::{
+    future::Future,
+    time::{Duration, Instant},
+};
 
 use super::{LlmProxyError, LlmProxyState};
 use crate::llm_proxy::{
@@ -6,26 +9,37 @@ use crate::llm_proxy::{
     candidate::ProxyCandidate,
 };
 
-pub(super) async fn response_bytes(
-    state: &LlmProxyState,
-    request_id: &str,
-    candidate: &ProxyCandidate,
-    retry_index: i32,
-    started: Instant,
-    first_byte_time_ms: Option<i64>,
-    read_timeout: Option<std::time::Duration>,
-    response: req::Response,
-) -> Result<Vec<u8>, LlmProxyError> {
-    match read_response_bytes(req::response_bytes(response), read_timeout).await {
+pub(super) struct ResponseBytesInput<'a> {
+    pub(super) state: &'a LlmProxyState,
+    pub(super) request_id: &'a str,
+    pub(super) candidate: &'a ProxyCandidate,
+    pub(super) retry_index: i32,
+    pub(super) started: Instant,
+    pub(super) first_byte_time_ms: Option<i64>,
+    pub(super) read_timeout: Option<Duration>,
+    pub(super) response: req::Response,
+}
+
+pub(super) async fn response_bytes(input: ResponseBytesInput<'_>) -> Result<Vec<u8>, LlmProxyError> {
+    match read_response_bytes(req::response_bytes(input.response), input.read_timeout).await {
         Ok(bytes) => Ok(bytes),
         Err(error) => {
-            record_response_read_error(state, request_id, candidate, retry_index, started, first_byte_time_ms, &error).await?;
+            record_response_read_error(
+                input.state,
+                input.request_id,
+                input.candidate,
+                input.retry_index,
+                input.started,
+                input.first_byte_time_ms,
+                &error,
+            )
+            .await?;
             Err(error.into())
         }
     }
 }
 
-async fn read_response_bytes<F>(read: F, read_timeout: Option<std::time::Duration>) -> Result<Vec<u8>, req::ClientError>
+async fn read_response_bytes<F>(read: F, read_timeout: Option<Duration>) -> Result<Vec<u8>, req::ClientError>
 where
     F: Future<Output = Result<Vec<u8>, req::ClientError>>,
 {

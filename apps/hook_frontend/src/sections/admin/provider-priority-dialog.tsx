@@ -1,15 +1,14 @@
 'use client';
 
-import type { PriorityItem } from './provider-priority-utils';
-import type { Provider, ProviderSchedulingMode } from 'src/types/provider';
-
-import { useState, useEffect, useCallback } from 'react';
+import type { ProviderSchedulingMode } from 'src/types/provider';
+import type { ProviderPriorityDialogProps } from './provider-priority-state';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -19,28 +18,11 @@ import DialogContent from '@mui/material/DialogContent';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { useTranslate } from 'src/locales/use-locales';
-import { updateSchedulingMode } from 'src/actions/system-settings';
 
-import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
 import { ProviderPriorityList } from './provider-priority-list';
-import {
-  orderProviders,
-  parsePriorities,
-  movePriorityItem,
-  changeItemPriority,
-  savePriorityChanges,
-} from './provider-priority-utils';
-
-type ProviderPriorityDialogProps = {
-  open: boolean;
-  providers: Provider[];
-  loading: boolean;
-  schedulingMode: ProviderSchedulingMode;
-  onClose: () => void;
-  onSaved: () => void;
-};
+import { usePriorityDialogState } from './provider-priority-state';
 
 export function ProviderPriorityDialog(props: ProviderPriorityDialogProps) {
   const state = usePriorityDialogState(props);
@@ -64,87 +46,14 @@ export function ProviderPriorityDialog(props: ProviderPriorityDialogProps) {
       <PriorityDialogActions
         mode={state.mode}
         submitting={state.submitting}
+        cacheAffinityTtlMinutes={state.cacheAffinityTtlMinutes}
         onModeChange={state.setMode}
+        onCacheAffinityTtlChange={state.setCacheAffinityTtlMinutes}
         onClose={props.onClose}
         onSave={state.save}
       />
     </Dialog>
   );
-}
-
-function usePriorityDialogState({
-  open,
-  providers,
-  schedulingMode,
-  onClose,
-  onSaved,
-}: ProviderPriorityDialogProps) {
-  const { t } = useTranslate('admin');
-  const [items, setItems] = useState(orderProviders(providers));
-  const [mode, setMode] = useState<ProviderSchedulingMode>(schedulingMode);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setItems(orderProviders(providers));
-    setMode(schedulingMode);
-    setEditingId(null);
-    setDraggingId(null);
-  }, [open, providers, schedulingMode]);
-
-  const changePriority = useCallback((id: string, value: string) => {
-    setItems((current) => changeItemPriority(current, id, value));
-  }, []);
-
-  const dropOn = useCallback(
-    (targetId: string) => {
-      if (!draggingId || draggingId === targetId) return;
-      setItems((current) => movePriorityItem(current, draggingId, targetId));
-      setDraggingId(null);
-    },
-    [draggingId]
-  );
-
-  const save = useCallback(async () => {
-    const priorities = parsePriorities(items);
-    if (!priorities) {
-      toast.error(t('messages.providerPriorityInvalid'));
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await savePriorityState({ items, mode, priorities, providers, schedulingMode });
-      toast.success(t('messages.providerPriorityUpdated'));
-      onSaved();
-      onClose();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
-    } finally {
-      setSubmitting(false);
-    }
-  }, [items, mode, onClose, onSaved, providers, schedulingMode, t]);
-
-  return { changePriority, draggingId, dropOn, editingId, items, mode, save, setDraggingId, setEditingId, setMode, submitting };
-}
-
-async function savePriorityState({
-  items,
-  mode,
-  providers,
-  priorities,
-  schedulingMode,
-}: {
-  items: PriorityItem[];
-  mode: ProviderSchedulingMode;
-  providers: Provider[];
-  priorities: Map<string, number>;
-  schedulingMode: ProviderSchedulingMode;
-}) {
-  await savePriorityChanges(items, providers, priorities);
-  if (mode !== schedulingMode) await updateSchedulingMode(mode);
 }
 
 function PriorityDialogTitle({ onClose }: { onClose: () => void }) {
@@ -173,13 +82,17 @@ function PriorityDialogTitle({ onClose }: { onClose: () => void }) {
 function PriorityDialogActions({
   mode,
   submitting,
+  cacheAffinityTtlMinutes,
   onModeChange,
+  onCacheAffinityTtlChange,
   onClose,
   onSave,
 }: {
   mode: ProviderSchedulingMode;
   submitting: boolean;
+  cacheAffinityTtlMinutes: string;
   onModeChange: (mode: ProviderSchedulingMode) => void;
+  onCacheAffinityTtlChange: (value: string) => void;
   onClose: () => void;
   onSave: () => void;
 }) {
@@ -190,10 +103,19 @@ function PriorityDialogActions({
       <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} justifyContent="space-between" spacing={2}>
         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} spacing={1.5}>
           <Typography variant="caption" color="text.secondary">
-            {t('providers.currentMode')}: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{t('providers.providerFirst')}</Box>
+            {t('providers.currentMode')}:{' '}
+            <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+              {schedulingModeLabel(mode, t)}
+            </Box>
           </Typography>
           <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', sm: 'block' } }} />
           <SchedulingModePicker value={mode} onChange={onModeChange} />
+          {mode === 'cache_affinity' && (
+            <CacheAffinityTtlField
+              value={cacheAffinityTtlMinutes}
+              onChange={onCacheAffinityTtlChange}
+            />
+          )}
         </Stack>
         <Stack direction="row" justifyContent="flex-end" spacing={1}>
           <Button variant="outlined" color="inherit" onClick={onClose}>
@@ -206,6 +128,38 @@ function PriorityDialogActions({
       </Stack>
     </DialogActions>
   );
+}
+
+function CacheAffinityTtlField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <TextField
+      type="number"
+      size="small"
+      label={t('providers.cacheAffinityTtlMinutes')}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      inputProps={{ min: 1, step: 1 }}
+      sx={{ width: { xs: 1, sm: 180 } }}
+    />
+  );
+}
+
+function schedulingModeLabel(mode: ProviderSchedulingMode, t: (key: string) => string) {
+  const labels: Record<ProviderSchedulingMode, string> = {
+    cache_affinity: t('providers.schedulingCacheAffinity'),
+    fixed_order: t('providers.schedulingFixedOrder'),
+    load_balance: t('providers.schedulingLoadBalance'),
+  };
+
+  return labels[mode];
 }
 
 function SchedulingModePicker({

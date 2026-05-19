@@ -31,6 +31,7 @@ import {
   formatRequestDate,
   requestStatusColor,
   requestStatusLabel,
+  formatCacheHitRate,
   formatRequestApiFormat,
   REQUEST_RECORD_ROWS_PER_PAGE_OPTIONS,
 } from './request-records-utils';
@@ -57,7 +58,7 @@ export function RequestRecordsTable({
   return (
     <>
       <Scrollbar>
-        <Table sx={{ minWidth: 1240 }}>
+        <Table sx={{ minWidth: 1360 }}>
           <ManagementTableHead head={head} />
           <TableBody>
             {loading ? <TableLoadingRows head={head} rows={table.rowsPerPage} /> : null}
@@ -133,6 +134,7 @@ function RequestRecordRow({
       <TableCell align="right">
         <RequestTokensCell record={row} />
       </TableCell>
+      <TableCell align="right">{formatCacheHitRate(row)}</TableCell>
       <TableCell>{formatCost(row.total_cost)}</TableCell>
       <TableCell>
         <RequestRecordDurationText record={row} metric="first_byte" now={durationNow} />
@@ -253,6 +255,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
     { id: 'api_format', label: t('requestRecords.apiFormat'), width: 240 },
     { id: 'type', label: t('requestRecords.type'), width: 180 },
     { id: 'tokens', label: t('requestRecords.tokens'), width: 140, align: 'right' },
+    { id: 'cache_hit_rate', label: t('requestRecords.cacheHitRate'), width: 120, align: 'right' },
     { id: 'cost', label: t('requestRecords.cost'), width: 120 },
     { id: 'first_byte', label: t('requestRecords.firstByte'), width: 110 },
     { id: 'latency', label: t('requestRecords.totalLatency'), width: 120 },

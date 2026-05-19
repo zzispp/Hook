@@ -1,8 +1,8 @@
 'use client';
 
 import type { ProviderCooldownPolicy } from 'src/types/provider';
+import type { RuleForm } from './provider-cooldown-policy-utils';
 import type { PolicyDialogState } from './provider-cooldown-policy-state';
-import type { RuleForm, CooldownDurationMode } from './provider-cooldown-policy-utils';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -11,12 +11,9 @@ import Dialog from '@mui/material/Dialog';
 import Tooltip from '@mui/material/Tooltip';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
-import ToggleButton from '@mui/material/ToggleButton';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -41,14 +38,8 @@ type RuleRowProps = {
   rule: RuleForm;
   index: number;
   canDelete: boolean;
-  durationMode: CooldownDurationMode;
   onChange: (index: number, patch: Partial<RuleForm>) => void;
   onDelete: (index: number) => void;
-};
-
-type DurationModePickerProps = {
-  value: CooldownDurationMode;
-  onChange: (mode: CooldownDurationMode) => void;
 };
 
 export function ProviderCooldownPolicyDialog({ open, policy, onClose, onSaved }: Props) {
@@ -75,7 +66,7 @@ function CooldownDialogContent({ state }: { state: PolicyDialogState }) {
   return (
     <DialogContent dividers>
       <Stack spacing={2.5}>
-        {state.rules.length > 0 && <PolicyFields state={state} />}
+        <WindowSecondsField value={state.windowSeconds} onChange={state.setWindowSeconds} />
         <Stack spacing={1.5}>
           {state.rules.map((rule, index) => (
             <RuleRow
@@ -83,7 +74,6 @@ function CooldownDialogContent({ state }: { state: PolicyDialogState }) {
               rule={rule}
               index={index}
               canDelete={state.rules.length > 0}
-              durationMode={state.durationMode}
               onChange={state.changeRule}
               onDelete={state.deleteRule}
             />
@@ -99,21 +89,7 @@ function CooldownDialogContent({ state }: { state: PolicyDialogState }) {
   );
 }
 
-function PolicyFields({ state }: { state: PolicyDialogState }) {
-  return (
-    <Stack spacing={2} sx={{ mt: 1 }}>
-      <DurationModePicker value={state.durationMode} onChange={state.changeDurationMode} />
-      {state.durationMode === 'fixed' && (
-        <FixedCooldownField
-          value={state.fixedCooldownSeconds}
-          onChange={state.setFixedCooldownSeconds}
-        />
-      )}
-    </Stack>
-  );
-}
-
-function FixedCooldownField({
+function WindowSecondsField({
   value,
   onChange,
 }: {
@@ -126,9 +102,16 @@ function FixedCooldownField({
     <TextField
       fullWidth
       type="number"
-      label={t('providers.cooldownFixedSeconds')}
+      label={t('providers.cooldownWindowSeconds')}
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      slotProps={{
+        inputLabel: {
+          shrink: true,
+          sx: { bgcolor: 'background.paper', px: 0.5, zIndex: 1 },
+        },
+      }}
+      sx={{ mt: 1 }}
     />
   );
 }
@@ -148,12 +131,8 @@ function CooldownDialogActions({ submitting, onClose, onSave }: DialogActionsPro
   );
 }
 
-function RuleRow({ rule, index, canDelete, durationMode, onChange, onDelete }: RuleRowProps) {
+function RuleRow({ rule, index, canDelete, onChange, onDelete }: RuleRowProps) {
   const { t } = useTranslate('admin');
-  const gridTemplateColumns =
-    durationMode === 'fixed'
-      ? { xs: '1fr', md: '1fr 1fr auto' }
-      : { xs: '1fr', md: '1fr 1fr 1fr auto' };
 
   return (
     <Box
@@ -161,7 +140,7 @@ function RuleRow({ rule, index, canDelete, durationMode, onChange, onDelete }: R
         gap: 1,
         display: 'grid',
         alignItems: 'center',
-        gridTemplateColumns,
+        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr auto' },
       }}
     >
       <NumberField
@@ -174,13 +153,11 @@ function RuleRow({ rule, index, canDelete, durationMode, onChange, onDelete }: R
         value={rule.failure_count}
         onChange={(failure_count) => onChange(index, { failure_count })}
       />
-      {durationMode === 'per_rule' && (
-        <NumberField
-          label={t('providers.cooldownSeconds')}
-          value={rule.cooldown_seconds}
-          onChange={(cooldown_seconds) => onChange(index, { cooldown_seconds })}
-        />
-      )}
+      <NumberField
+        label={t('providers.cooldownSeconds')}
+        value={rule.cooldown_seconds}
+        onChange={(cooldown_seconds) => onChange(index, { cooldown_seconds })}
+      />
       <Tooltip title={t('providers.deleteCooldownRule')}>
         <span>
           <IconButton color="error" disabled={!canDelete} onClick={() => onDelete(index)}>
@@ -189,29 +166,6 @@ function RuleRow({ rule, index, canDelete, durationMode, onChange, onDelete }: R
         </span>
       </Tooltip>
     </Box>
-  );
-}
-
-function DurationModePicker({ value, onChange }: DurationModePickerProps) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} spacing={1}>
-      <Typography variant="caption" color="text.secondary">
-        {t('providers.cooldownDurationMode')}:
-      </Typography>
-      <ToggleButtonGroup
-        exclusive
-        size="small"
-        value={value}
-        onChange={(_, nextValue: CooldownDurationMode | null) => {
-          if (nextValue) onChange(nextValue);
-        }}
-      >
-        <ToggleButton value="fixed">{t('providers.cooldownDurationFixed')}</ToggleButton>
-        <ToggleButton value="per_rule">{t('providers.cooldownDurationPerRule')}</ToggleButton>
-      </ToggleButtonGroup>
-    </Stack>
   );
 }
 

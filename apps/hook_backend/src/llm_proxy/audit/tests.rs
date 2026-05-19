@@ -60,7 +60,7 @@ fn estimated_stream_usage_can_settle_billing() {
 
     assert_eq!(request_billing_status(&input, Some(&billing)), "settled");
     assert_eq!(usage_record.expect("usage record").cost, Decimal::ONE);
-    assert_eq!(settlement.expect("settlement").usage.usage_source, Some("estimated_from_stream_delta"));
+    assert_eq!(settlement.expect("settlement").amount.total_cost, Decimal::ONE);
 }
 
 fn candidate() -> ProxyCandidate {

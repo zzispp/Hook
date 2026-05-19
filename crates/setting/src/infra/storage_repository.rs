@@ -79,6 +79,7 @@ fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<Str
         default_user_grant: input.default_user_grant,
         default_rate_limit_rpm: input.default_rate_limit_rpm,
         scheduling_mode: input.scheduling_mode,
+        cache_affinity_ttl_minutes: input.cache_affinity_ttl_minutes,
         provider_cooldown_policy: input.provider_cooldown_policy,
         smtp_host: input.smtp_host,
         smtp_port: input.smtp_port,

@@ -11,6 +11,7 @@ pub struct SchedulingSnapshot {
     #[serde(default)]
     pub default_rate_limit_rpm: i64,
     pub scheduling_mode: ProviderSchedulingMode,
+    pub cache_affinity_ttl_minutes: i64,
     pub client_request_record_level: RequestRecordLevel,
     pub client_max_request_body_size_kb: i64,
     pub client_max_response_body_size_kb: i64,

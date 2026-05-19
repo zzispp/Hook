@@ -61,6 +61,7 @@ impl TestRequest {
         let client_api_format = parts.client_api_format.clone();
         let selection = CandidateSelection {
             request_id: Uuid::now_v7().to_string(),
+            cache_affinity_ttl_minutes: snapshot.cache_affinity_ttl_minutes,
             candidates: vec![candidate::proxy_candidate(&state, parts.clone(), effective_stream)?],
         };
         let primary = primary_endpoint(&selection)?;

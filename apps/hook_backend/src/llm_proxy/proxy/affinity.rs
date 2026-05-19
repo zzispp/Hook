@@ -7,8 +7,8 @@ pub(super) fn attempt_range(candidate: &ProxyCandidate) -> RangeInclusive<i32> {
     0..=effective_max_retries(candidate)
 }
 
-pub(super) async fn remember(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {
-    let Some(input) = set_affinity_input(candidate) else {
+pub(super) async fn remember(state: &LlmProxyState, candidate: &ProxyCandidate, ttl_minutes: i64) -> Result<(), LlmProxyError> {
+    let Some(input) = set_affinity_input(candidate, ttl_minutes) else {
         return Ok(());
     };
     state.remember_affinity(input).await
@@ -35,7 +35,7 @@ fn effective_max_retries(candidate: &ProxyCandidate) -> i32 {
     0
 }
 
-fn set_affinity_input(candidate: &ProxyCandidate) -> Option<SetAffinityInput<'_>> {
+fn set_affinity_input(candidate: &ProxyCandidate, ttl_minutes: i64) -> Option<SetAffinityInput<'_>> {
     Some(SetAffinityInput {
         token_id: candidate.trace.token_id.as_deref()?,
         model_id: &candidate.trace.global_model_id,
@@ -43,7 +43,7 @@ fn set_affinity_input(candidate: &ProxyCandidate) -> Option<SetAffinityInput<'_>
         provider_id: &candidate.trace.provider_id,
         endpoint_id: &candidate.trace.endpoint_id,
         key_id: &candidate.trace.key_id,
-        ttl_minutes: candidate.cache_ttl_minutes,
+        ttl_minutes,
     })
 }
 

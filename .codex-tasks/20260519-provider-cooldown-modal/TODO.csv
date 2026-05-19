@@ -1,5 +1,4 @@
 id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
-1,Record scope and inspect existing modal,DONE,"SPEC/TODO exist and existing modal semantics are inspected","test -f .codex-tasks/20260519-provider-cooldown-modal/SPEC.md && rg -n \"cooldown_seconds\" apps/hook_frontend/src/sections/admin/provider-cooldown-policy-dialog.tsx",2026-05-19T16:03:42+08:00,0,"Backend uses window_seconds for failure window and rule.cooldown_seconds for duration."
-2,Implement mutually exclusive duration modes,DONE,"Modal offers fixed-all or per-rule duration, and payload uses window_seconds=60 when rules exist","pnpm lint:frontend",2026-05-19T16:15:11+08:00,0,
-3,Update admin i18n baseline,DONE,"Chinese and English admin seed keys match new modal labels","python -m json.tool apps/hook_backend/src/migration/defaults/i18n/admin.cn.json >/dev/null && python -m json.tool apps/hook_backend/src/migration/defaults/i18n/admin.en.json >/dev/null",2026-05-19T16:15:11+08:00,0,
-4,Run validation,DONE,"Frontend lint completes or any unrelated blocker is documented","pnpm lint:frontend",2026-05-19T16:15:11+08:00,0,
+1,Inspect existing cooldown policy flow,DONE,Dialog state utils and submit payload understood,rg -n "providerCooldown|cooldownDuration|window_seconds" apps/hook_frontend/src/sections/admin apps/hook_backend/src/migration/defaults/i18n,,0,
+2,Simplify form model and dialog UI,DONE,Modal only has window seconds plus dynamic rule rows,test -f apps/hook_frontend/src/sections/admin/provider-cooldown-policy-dialog.tsx,2026-05-19,0,
+3,Run frontend validation,DONE,Lint and TypeScript checks complete,pnpm lint:frontend && pnpm --filter hook_frontend exec tsc --noEmit,2026-05-19,0,

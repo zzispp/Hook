@@ -8,6 +8,7 @@ const THOUSAND_TOKENS = 1000;
 const MILLION_TOKENS = 1000000;
 const COMPACT_INTEGER_THRESHOLD = 100;
 const COMPACT_ONE_DECIMAL_THRESHOLD = 10;
+const PERCENTAGE_MULTIPLIER = 100;
 
 export const DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE = 20;
 export const REQUEST_RECORD_ROWS_PER_PAGE_OPTIONS = [10, DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE, 50];
@@ -90,6 +91,18 @@ export function formatTokenCount(value?: number | null) {
 
 export function hasTokenValue(value?: number | null) {
   return value !== null && value !== undefined && value > 0;
+}
+
+export function formatCacheHitRate(record: RequestRecord) {
+  const cacheReadTokens = Number(record.cache_read_input_tokens ?? 0);
+  if (!Number.isFinite(cacheReadTokens) || cacheReadTokens <= 0) return '-';
+
+  const rawInputTokens = Number(record.prompt_tokens ?? 0);
+  const inputTokens = Number.isFinite(rawInputTokens) ? Math.max(0, rawInputTokens) : 0;
+  const inputContextTokens = inputTokens + cacheReadTokens;
+  if (inputContextTokens <= 0) return '-';
+
+  return `${(cacheReadTokens / inputContextTokens * PERCENTAGE_MULTIPLIER).toFixed(1)}%`;
 }
 
 function compactTokenNumber(value: number, unit: string) {

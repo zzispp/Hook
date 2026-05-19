@@ -109,14 +109,10 @@ pub(crate) fn wallet_settlement_input<'a>(
     if !should_record_successful_usage(input) {
         return Ok(None);
     }
-    let usage = input
-        .usage
-        .ok_or_else(|| LlmProxyError::Infrastructure(format!("successful wallet settlement missing usage: {request_id}")))?;
     let amount = complete_amount(request_id, billing)?.clone();
     Ok(Some(WalletSettlementInput {
         request_id,
         candidate: input.candidate,
-        usage,
         amount,
     }))
 }

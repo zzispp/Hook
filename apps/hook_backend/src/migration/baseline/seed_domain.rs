@@ -200,4 +200,26 @@ mod tests {
         assert!(keys.contains(&("dashboard", "months.1", "Feb")));
         assert!(keys.contains(&("dashboard", "welcome", "Welcome")));
     }
+
+    #[test]
+    fn default_admin_translations_include_llm_wallet_labels() {
+        let entries = translation_seeds().unwrap();
+        let keys: Vec<_> = entries
+            .iter()
+            .map(|entry| {
+                (
+                    entry.namespace,
+                    entry.lang_code,
+                    entry.group_key.as_str(),
+                    entry.item_key.as_str(),
+                    entry.value.as_str(),
+                )
+            })
+            .collect();
+
+        assert!(keys.contains(&(ADMIN_NAMESPACE, "cn", "wallet", "reasonLabels.llm_model_usage", "模型调用消费")));
+        assert!(keys.contains(&(ADMIN_NAMESPACE, "en", "wallet", "reasonLabels.llm_model_usage", "Model usage")));
+        assert!(keys.contains(&(ADMIN_NAMESPACE, "cn", "wallet", "linkTypeLabels.llm_request_record", "模型调用记录")));
+        assert!(keys.contains(&(ADMIN_NAMESPACE, "en", "wallet", "linkTypeLabels.llm_request_record", "LLM request record")));
+    }
 }

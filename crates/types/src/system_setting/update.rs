@@ -66,6 +66,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub scheduling_mode: Option<ProviderSchedulingMode>,
     #[serde(default)]
+    pub cache_affinity_ttl_minutes: Option<i64>,
+    #[serde(default)]
     pub provider_cooldown_policy: Option<ProviderCooldownPolicy>,
     pub smtp_host: Option<String>,
     #[serde(default)]
@@ -111,6 +113,7 @@ impl SystemSettingsUpdate {
             && self.default_user_grant.is_none()
             && self.default_rate_limit_rpm.is_none()
             && self.scheduling_mode.is_none()
+            && self.cache_affinity_ttl_minutes.is_none()
             && self.provider_cooldown_policy.is_none()
             && self.auto_delete_expired_tokens.is_none()
             && self.request_record_cleanup_enabled.is_none()

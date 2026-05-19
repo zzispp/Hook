@@ -31,7 +31,7 @@ pub struct SetAffinityInput<'a> {
     pub provider_id: &'a str,
     pub endpoint_id: &'a str,
     pub key_id: &'a str,
-    pub ttl_minutes: i32,
+    pub ttl_minutes: i64,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -120,7 +120,7 @@ fn next_record(input: SetAffinityInput<'_>, existing: Option<&AffinityRecord>) -
         api_format: input.api_format.to_owned(),
         model_id: input.model_id.to_owned(),
         created_at,
-        expire_at: now + i64::from(input.ttl_minutes) * 60,
+        expire_at: now + input.ttl_minutes * 60,
         request_count,
     }
 }

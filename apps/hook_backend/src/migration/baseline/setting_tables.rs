@@ -2,6 +2,8 @@ use sea_orm_migration::{prelude::*, schema::*};
 
 use super::iden::SystemSettings;
 
+const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
+
 pub(super) fn system_settings_table() -> TableCreateStatement {
     Table::create()
         .table(SystemSettings::Table)
@@ -36,6 +38,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(decimal_len(SystemSettings::DefaultUserGrant, 20, 8))
         .col(big_integer(SystemSettings::DefaultRateLimitRpm))
         .col(string_len(SystemSettings::SchedulingMode, 30))
+        .col(big_integer(SystemSettings::CacheAffinityTtlMinutes).default(DEFAULT_CACHE_AFFINITY_TTL_MINUTES))
         .col(text(SystemSettings::ProviderCooldownPolicy).default(r#"{"window_seconds":0,"rules":[]}"#))
         .col(string_len(SystemSettings::SmtpHost, 255))
         .col(big_integer(SystemSettings::SmtpPort).default(587))

@@ -3,6 +3,7 @@ use sea_orm_migration::prelude::*;
 use super::iden::SystemSettings;
 
 const SYSTEM_SETTINGS_ID: &str = "global";
+const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
 const DEFAULT_REGISTRATION_SUBJECT: &str = "注册验证码";
 const DEFAULT_PASSWORD_RESET_SUBJECT: &str = "找回密码";
 const DEFAULT_REGISTRATION_HTML: &str = r#"<!DOCTYPE html>
@@ -105,6 +106,7 @@ fn system_settings_columns() -> Vec<SystemSettings> {
         SystemSettings::DefaultUserGrant,
         SystemSettings::DefaultRateLimitRpm,
         SystemSettings::SchedulingMode,
+        SystemSettings::CacheAffinityTtlMinutes,
         SystemSettings::ProviderCooldownPolicy,
         SystemSettings::SmtpHost,
         SystemSettings::SmtpPort,
@@ -156,6 +158,7 @@ fn system_settings_values() -> Vec<Expr> {
         0.into(),
         0.into(),
         "cache_affinity".into(),
+        DEFAULT_CACHE_AFFINITY_TTL_MINUTES.into(),
         r#"{"window_seconds":0,"rules":[]}"#.into(),
         "".into(),
         587.into(),

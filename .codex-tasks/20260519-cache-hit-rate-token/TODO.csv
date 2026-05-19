@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm current aggregation fields,DONE,Relevant SQL and request token semantics inspected,rg -n "cache_hit_rate|cache_read_input_tokens|prompt_tokens" crates/storage/src/performance_monitoring apps/hook_backend/src,2026-05-19T00:00:00+08:00,0,
+2,Implement token-based cache hit rate,DONE,cache_hit_rate uses cache_read_input_tokens over prompt_tokens plus cache_read_input_tokens,cargo test -p storage performance_monitoring --test performance_monitoring,2026-05-19T00:00:00+08:00,0,
+3,Run backend validation,DONE,Targeted storage test command completed,cargo test -p storage --test performance_monitoring,2026-05-19T00:00:00+08:00,0,
+4,Add request record cache hit rate column,DONE,Request records table shows cache hit rate after tokens and dash when no cache read,pnpm lint:frontend,2026-05-19T00:00:00+08:00,0,
+5,Run frontend validation and summarize,DONE,Frontend lint completes,pnpm lint:frontend,2026-05-19T00:00:00+08:00,0,

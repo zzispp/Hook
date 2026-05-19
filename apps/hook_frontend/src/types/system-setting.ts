@@ -34,6 +34,7 @@ export type SystemSettings = {
   default_user_grant: number;
   default_rate_limit_rpm: number;
   scheduling_mode: ProviderSchedulingMode;
+  cache_affinity_ttl_minutes: number;
   provider_cooldown_policy: ProviderCooldownPolicy;
   smtp_host: string;
   smtp_port: number;
@@ -82,6 +83,7 @@ export type SystemSettingsUpdate = Partial<{
   default_user_grant: number;
   default_rate_limit_rpm: number;
   scheduling_mode: ProviderSchedulingMode;
+  cache_affinity_ttl_minutes: number;
   provider_cooldown_policy: ProviderCooldownPolicy;
   smtp_host: string;
   smtp_port: number;

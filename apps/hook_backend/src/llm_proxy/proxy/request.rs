@@ -15,6 +15,7 @@ use super::{body_rules::apply_provider_body_rules, capture::RequestCapture};
 
 pub(super) struct PreparedProxyRequest {
     pub(super) request_id: String,
+    pub(super) cache_affinity_ttl_minutes: i64,
     pub(super) candidates: Vec<ProxyCandidate>,
     pub(super) body: Value,
     pub(super) service_tier: Option<String>,
@@ -56,6 +57,7 @@ pub(super) async fn prepare_proxy_request(
     let service_tier = capture.service_tier();
     Ok(PreparedProxyRequest {
         request_id: selection.request_id,
+        cache_affinity_ttl_minutes: selection.cache_affinity_ttl_minutes,
         candidates: selection.candidates,
         body,
         service_tier,
@@ -81,6 +83,7 @@ pub(super) async fn prepare_proxy_request_with_candidates(
     let service_tier = capture.service_tier();
     Ok(PreparedProxyRequest {
         request_id: selection.request_id,
+        cache_affinity_ttl_minutes: selection.cache_affinity_ttl_minutes,
         candidates: selection.candidates,
         body,
         service_tier,

@@ -1,5 +1,5 @@
 import type { ProviderCooldownPolicy } from 'src/types/provider';
-import type { RuleForm, CooldownDurationMode } from './provider-cooldown-policy-utils';
+import type { RuleForm } from './provider-cooldown-policy-utils';
 
 import { useState, useEffect, useCallback } from 'react';
 
@@ -8,12 +8,7 @@ import { updateSystemSettings } from 'src/actions/system-settings';
 
 import { toast } from 'src/components/snackbar';
 
-import {
-  emptyRule,
-  policyPayload,
-  fixedCooldownSeed,
-  initialPolicyForm,
-} from './provider-cooldown-policy-utils';
+import { emptyRule, policyPayload, initialPolicyForm } from './provider-cooldown-policy-utils';
 
 type Props = {
   open: boolean;
@@ -47,15 +42,13 @@ export function usePolicyDialogState({ open, policy, onClose, onSaved }: Props) 
 }
 
 function usePolicyFormState(open: boolean, policy?: ProviderCooldownPolicy) {
-  const [durationMode, setDurationMode] = useState<CooldownDurationMode>('fixed');
-  const [fixedCooldownSeconds, setFixedCooldownSeconds] = useState('');
+  const [windowSeconds, setWindowSeconds] = useState('');
   const [rules, setRules] = useState<RuleForm[]>([]);
 
   useEffect(() => {
     if (!open) return;
     const nextForm = initialPolicyForm(policy);
-    setDurationMode(nextForm.durationMode);
-    setFixedCooldownSeconds(nextForm.fixedCooldownSeconds);
+    setWindowSeconds(nextForm.windowSeconds);
     setRules(nextForm.rules);
   }, [open, policy]);
 
@@ -70,58 +63,17 @@ function usePolicyFormState(open: boolean, policy?: ProviderCooldownPolicy) {
   }, []);
 
   const addRule = useCallback(() => {
-    setRules((current) => [...current, emptyRule(durationMode, fixedCooldownSeconds)]);
-  }, [durationMode, fixedCooldownSeconds]);
-
-  const changeDurationMode = useDurationModeChanger({
-    fixedCooldownSeconds,
-    rules,
-    setFixedCooldownSeconds,
-    setRules,
-    setDurationMode,
-  });
+    setRules((current) => [...current, emptyRule()]);
+  }, []);
 
   return {
     addRule,
-    changeDurationMode,
     changeRule,
     deleteRule,
-    durationMode,
-    fixedCooldownSeconds,
     rules,
-    setFixedCooldownSeconds,
+    setWindowSeconds,
+    windowSeconds,
   };
-}
-
-function useDurationModeChanger({
-  fixedCooldownSeconds,
-  rules,
-  setDurationMode,
-  setFixedCooldownSeconds,
-  setRules,
-}: {
-  fixedCooldownSeconds: string;
-  rules: RuleForm[];
-  setDurationMode: (mode: CooldownDurationMode) => void;
-  setFixedCooldownSeconds: React.Dispatch<React.SetStateAction<string>>;
-  setRules: React.Dispatch<React.SetStateAction<RuleForm[]>>;
-}) {
-  return useCallback(
-    (nextMode: CooldownDurationMode) => {
-      setDurationMode(nextMode);
-      if (nextMode === 'fixed')
-        setFixedCooldownSeconds((current) => current || fixedCooldownSeed(rules));
-      if (nextMode === 'per_rule') {
-        setRules((current) =>
-          current.map((rule) => ({
-            ...rule,
-            cooldown_seconds: rule.cooldown_seconds || fixedCooldownSeconds,
-          }))
-        );
-      }
-    },
-    [fixedCooldownSeconds, rules, setDurationMode, setFixedCooldownSeconds, setRules]
-  );
 }
 
 async function savePolicy({
@@ -133,8 +85,7 @@ async function savePolicy({
 }) {
   await updateSystemSettings({
     provider_cooldown_policy: policyPayload({
-      durationMode: form.durationMode,
-      fixedCooldownSeconds: form.fixedCooldownSeconds,
+      windowSeconds: form.windowSeconds,
       rules: form.rules,
       t,
     }),

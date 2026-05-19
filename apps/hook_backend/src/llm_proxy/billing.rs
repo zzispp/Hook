@@ -15,7 +15,6 @@ mod snapshot;
 
 use super::{
     LlmProxyError, LlmProxyState,
-    audit::TokenUsage,
     cache::snapshot::{CachedUserAccess, SchedulingSnapshot},
     candidate::ProxyCandidate,
     client_error,
@@ -33,7 +32,6 @@ const WALLET_LIMIT_UNLIMITED: &str = "unlimited";
 pub(super) struct WalletSettlementInput<'a> {
     pub(super) request_id: &'a str,
     pub(super) candidate: &'a ProxyCandidate,
-    pub(super) usage: TokenUsage,
     pub(super) amount: RequestBillingAmount,
 }
 
@@ -132,12 +130,7 @@ async fn settle_user_wallet(state: &LlmProxyState, input: WalletSettlementInput<
         return Ok(());
     }
     ensure_wallet_available(&wallet)?;
-    let description = snapshot::settlement_description(snapshot::DescriptionInput {
-        input: &input,
-        token,
-        user,
-        wallet: &wallet,
-    })?;
+    let description = snapshot::settlement_description(snapshot::DescriptionInput { input: &input, token });
     let consume = consume_input(&user.id, input.amount.total_cost, input.request_id, description);
     WalletStore::new(state.database.clone())
         .consume_with_transaction(consume)
@@ -210,6 +203,7 @@ mod tests {
         SchedulingSnapshot {
             default_rate_limit_rpm: 0,
             scheduling_mode: ProviderSchedulingMode::FixedOrder,
+            cache_affinity_ttl_minutes: 5,
             client_request_record_level: RequestRecordLevel::Basic,
             client_max_request_body_size_kb: 1024,
             client_max_response_body_size_kb: 1024,

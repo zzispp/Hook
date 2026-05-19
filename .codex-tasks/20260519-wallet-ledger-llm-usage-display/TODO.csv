@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate current ledger display and settlement description paths,DONE,Frontend and backend source paths identified,rg/sed read-only inspection,2026-05-19T00:00:00+08:00,0,
+2,Add failing backend test for public settlement description,DONE,Test asserts concise text and absence of provider/key JSON internals,perl timeout wrapper cargo test -p backend settlement_description_describes_public_usage_without_internal_snapshot,2026-05-19T00:00:00+08:00,0,
+3,Implement backend description and admin i18n labels,DONE,Description includes model cost endpoint token and translations cover reason/link labels,perl timeout wrapper cargo test -p backend settlement_description_describes_public_usage_without_internal_snapshot,2026-05-19T00:00:00+08:00,0,
+4,Run validation and review diff,DONE,Focused checks pass and diff is scoped,cargo fmt --all && just test && cargo clippy -p backend --all-targets -- -D warnings && pnpm lint:frontend,2026-05-19T00:00:00+08:00,0,

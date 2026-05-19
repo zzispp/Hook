@@ -99,8 +99,10 @@ fn core_metrics(summary: &RequestSummaryRow, request_count: i64, success_count: 
 }
 
 fn llm_metrics(summary: RequestSummaryRow, dimensions: RequestDimensions, request_count: i64, total_tokens: i64, seconds: i64) -> LlmBusinessMetrics {
+    let prompt_tokens = summary.prompt_tokens.unwrap_or_default();
+    let cache_read_tokens = summary.cache_read_input_tokens.unwrap_or_default();
     LlmBusinessMetrics {
-        prompt_tokens: summary.prompt_tokens.unwrap_or_default(),
+        prompt_tokens,
         completion_tokens: summary.completion_tokens.unwrap_or_default(),
         total_tokens,
         tokens_per_request: ratio(total_tokens, request_count),
@@ -108,7 +110,7 @@ fn llm_metrics(summary: RequestSummaryRow, dimensions: RequestDimensions, reques
         model_distribution: dimensions.models,
         provider_distribution: dimensions.providers,
         failover_count: summary.failover_count.unwrap_or_default(),
-        cache_hit_rate: ratio(summary.cache_hit_count.unwrap_or_default(), request_count),
+        cache_hit_rate: ratio(cache_read_tokens, prompt_tokens + cache_read_tokens),
         cost: summary.cost.unwrap_or(Decimal::ZERO),
         quota_limited_count: summary.quota_limited_count.unwrap_or_default(),
     }
@@ -136,7 +138,7 @@ fn summary_sql() -> &'static str {
         COALESCE(SUM(completion_tokens), 0)::bigint AS completion_tokens, \
         COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens, \
         COUNT(*) FILTER (WHERE has_failover)::bigint AS failover_count, \
-        COUNT(*) FILTER (WHERE COALESCE(cache_read_input_tokens, 0) > 0)::bigint AS cache_hit_count, \
+        COALESCE(SUM(cache_read_input_tokens), 0)::bigint AS cache_read_input_tokens, \
         COALESCE(SUM(total_cost), 0) AS cost, \
         COUNT(*) FILTER (WHERE client_error_type = 'hook_api_error' OR client_error_message LIKE '%quota%')::bigint AS quota_limited_count \
         FROM request_records \
@@ -198,7 +200,7 @@ struct RequestSummaryRow {
     completion_tokens: Option<i64>,
     total_tokens: Option<i64>,
     failover_count: Option<i64>,
-    cache_hit_count: Option<i64>,
+    cache_read_input_tokens: Option<i64>,
     cost: Option<Decimal>,
     quota_limited_count: Option<i64>,
 }

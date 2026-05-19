@@ -39,6 +39,7 @@ fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
     SchedulingSnapshot {
         default_rate_limit_rpm: 0,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        cache_affinity_ttl_minutes: 5,
         client_request_record_level: RequestRecordLevel::Basic,
         client_max_request_body_size_kb: 1024,
         client_max_response_body_size_kb: 1024,

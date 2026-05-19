@@ -82,7 +82,11 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         parts: &ordered,
     })
     .await?;
-    Ok(CandidateSelection { request_id, candidates })
+    Ok(CandidateSelection {
+        request_id,
+        cache_affinity_ttl_minutes: snapshot.cache_affinity_ttl_minutes,
+        candidates,
+    })
 }
 
 #[derive(Clone)]
