@@ -73,4 +73,4 @@
 - Run `cargo clippy -p backend --all-targets -- -D warnings` for changes in this app; use the relevant crate name when backend behavior changes in `crates/*`.
 - If Rust dependencies change, include the generated `Cargo.lock` update and run `cargo check`.
 - Use `cargo check` for fast compile validation while iterating.
-- Run `just format` after Rust edits.
+- Run `cargo fmt --all` after Rust edits. This is a hard requirement.
