@@ -18,6 +18,7 @@
 - Prefer private modules with explicit public crate exports.
 - Newly added traits must have doc comments that explain their role and implementation expectations.
 - Keep modules focused and small. Extract helpers when validation, mapping, or routing code starts mixing responsibilities.
+- LLM proxy scheduling snapshot cache rebuilds belong in repository adapters under `apps/hook_backend/src/proxy_cache_hooks/`. When a CUD operation can change users, API tokens, groups, models, providers, provider keys/endpoints/bindings, or system settings used by `SchedulingSnapshot`, refresh or invalidate the proxy cache in the adapter immediately after the inner repository write succeeds. Do not scatter snapshot rebuild calls in handlers, services, or use-case wrappers; the repository adapter is the lowest shared write boundary and keeps future CUD paths covered.
 
 ## Logging Rules
 

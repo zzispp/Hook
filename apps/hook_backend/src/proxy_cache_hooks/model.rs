@@ -1,42 +1,40 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
-use model::application::{ModelError, ModelResult, ModelUseCase};
-use serde_json::Value;
+use model::application::{ModelError, ModelRepository, ModelResult};
 use types::model::{
-    BatchDeleteGlobalModelsResponse, GlobalModelCreate, GlobalModelListRequest, GlobalModelListResponse, GlobalModelProvidersResponse, GlobalModelResponse,
-    GlobalModelUpdate, GlobalModelWithStats, ModelCatalogResponse,
+    GlobalModelCreate, GlobalModelListRequest, GlobalModelListResponse, GlobalModelProvidersResponse, GlobalModelResponse, GlobalModelUpdate,
+    GlobalModelWithStats, ModelCatalogResponse,
 };
 
-use crate::llm_proxy::LlmProxyCache;
+use super::cache::ProxyCacheInvalidator;
 
-pub struct ProxyCachedModelUseCase {
-    inner: Arc<dyn ModelUseCase>,
-    cache: LlmProxyCache,
+#[derive(Clone)]
+pub struct CachedModelRepository<R, C> {
+    inner: R,
+    cache: C,
 }
 
-impl ProxyCachedModelUseCase {
-    pub fn new(inner: Arc<dyn ModelUseCase>, cache: LlmProxyCache) -> Self {
+impl<R, C> CachedModelRepository<R, C> {
+    pub const fn new(inner: R, cache: C) -> Self {
         Self { inner, cache }
-    }
-
-    async fn refresh_scheduling(&self) -> ModelResult<()> {
-        self.cache.refresh_scheduling_snapshot().await.map(|_| ()).map_err(cache_error)
     }
 }
 
 #[async_trait]
-impl ModelUseCase for ProxyCachedModelUseCase {
+impl<R, C> ModelRepository for CachedModelRepository<R, C>
+where
+    R: ModelRepository,
+    C: ProxyCacheInvalidator,
+{
     async fn create_global_model(&self, input: GlobalModelCreate) -> ModelResult<GlobalModelResponse> {
-        let value = self.inner.create_global_model(input).await?;
+        let model = self.inner.create_global_model(input).await?;
         self.refresh_scheduling().await?;
-        Ok(value)
+        Ok(model)
     }
 
     async fn update_global_model(&self, id: &str, input: GlobalModelUpdate) -> ModelResult<GlobalModelResponse> {
-        let value = self.inner.update_global_model(id, input).await?;
+        let model = self.inner.update_global_model(id, input).await?;
         self.refresh_scheduling().await?;
-        Ok(value)
+        Ok(model)
     }
 
     async fn delete_global_model(&self, id: &str) -> ModelResult<()> {
@@ -44,13 +42,11 @@ impl ModelUseCase for ProxyCachedModelUseCase {
         self.refresh_scheduling().await
     }
 
-    async fn batch_delete_global_models(&self, ids: Vec<String>) -> ModelResult<BatchDeleteGlobalModelsResponse> {
-        let value = self.inner.batch_delete_global_models(ids).await?;
-        self.refresh_scheduling().await?;
-        Ok(value)
+    async fn find_global_model_by_name(&self, name: &str) -> ModelResult<Option<GlobalModelResponse>> {
+        self.inner.find_global_model_by_name(name).await
     }
 
-    async fn get_global_model(&self, id: &str) -> ModelResult<GlobalModelWithStats> {
+    async fn get_global_model(&self, id: &str) -> ModelResult<Option<GlobalModelWithStats>> {
         self.inner.get_global_model(id).await
     }
 
@@ -65,9 +61,14 @@ impl ModelUseCase for ProxyCachedModelUseCase {
     async fn catalog(&self) -> ModelResult<ModelCatalogResponse> {
         self.inner.catalog().await
     }
+}
 
-    async fn external_models(&self) -> ModelResult<Value> {
-        self.inner.external_models().await
+impl<R, C> CachedModelRepository<R, C>
+where
+    C: ProxyCacheInvalidator,
+{
+    async fn refresh_scheduling(&self) -> ModelResult<()> {
+        self.cache.refresh_scheduling().await.map_err(cache_error)
     }
 }
 

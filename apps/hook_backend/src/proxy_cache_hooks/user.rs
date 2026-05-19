@@ -1,94 +1,110 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use types::{
-    pagination::{Page, PageRequest},
-    user::{
-        AuthConfigResponse, Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User,
-        UserId, UserListFilters, UserWalletSummaryResponse,
-    },
+    pagination::{Page, PageRequest, PageSliceRequest},
+    user::{User, UserId, UserListFilters},
 };
-use user::application::{AppError, AppResult, UserUseCase};
+use user::application::{AppError, AppResult, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, UserAuthRecord, UserRepository};
 
-use crate::llm_proxy::LlmProxyCache;
+use super::cache::{ProxyCacheInvalidator, combine_cache_results};
 
-pub struct ProxyCachedUserUseCase {
-    inner: Arc<dyn UserUseCase>,
-    cache: LlmProxyCache,
+#[derive(Clone)]
+pub struct CachedUserRepository<R, C> {
+    inner: R,
+    cache: C,
 }
 
-impl ProxyCachedUserUseCase {
-    pub fn new(inner: Arc<dyn UserUseCase>, cache: LlmProxyCache) -> Self {
+impl<R, C> CachedUserRepository<R, C> {
+    pub const fn new(inner: R, cache: C) -> Self {
         Self { inner, cache }
-    }
-
-    async fn refresh_proxy_snapshot(&self) -> AppResult<()> {
-        self.cache.refresh_scheduling_snapshot().await.map(|_| ()).map_err(cache_error)
-    }
-
-    async fn bump_proxy_auth(&self) -> AppResult<()> {
-        self.cache.bump_auth_version().await.map_err(cache_error)
     }
 }
 
 #[async_trait]
-impl UserUseCase for ProxyCachedUserUseCase {
-    async fn auth_config(&self) -> AppResult<AuthConfigResponse> {
-        self.inner.auth_config().await
-    }
-
-    async fn request_registration_email_code(&self, input: RegistrationEmailCodeRequest) -> AppResult<()> {
-        self.inner.request_registration_email_code(input).await
-    }
-
-    async fn sign_up(&self, input: SignUpUser) -> AppResult<User> {
-        self.inner.sign_up(input).await
-    }
-
-    async fn sign_in(&self, input: Credentials) -> AppResult<User> {
-        self.inner.sign_in(input).await
-    }
-
-    async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()> {
-        self.inner.request_password_reset(input).await
-    }
-
-    async fn reset_password(&self, input: PasswordResetConfirm) -> AppResult<()> {
-        self.inner.reset_password(input).await?;
-        self.bump_proxy_auth().await
-    }
-
-    async fn authenticated_user(&self, id: UserId) -> AppResult<User> {
-        self.inner.authenticated_user(id).await
-    }
-
-    async fn create_user(&self, input: NewUser) -> AppResult<User> {
-        let user = self.inner.create_user(input).await?;
-        self.refresh_proxy_snapshot().await?;
+impl<R, C> UserRepository for CachedUserRepository<R, C>
+where
+    R: UserRepository,
+    C: ProxyCacheInvalidator,
+{
+    async fn create(&self, user: ReplaceUserRecord) -> AppResult<User> {
+        let user = self.inner.create(user).await?;
+        self.refresh_scheduling().await?;
         Ok(user)
     }
 
-    async fn replace_user(&self, id: UserId, input: ReplaceUser) -> AppResult<User> {
-        let user = self.inner.replace_user(id, input).await?;
-        self.refresh_proxy_snapshot().await?;
+    async fn replace(&self, id: UserId, user: ReplaceUserRecord) -> AppResult<User> {
+        let user = self.inner.replace(id, user).await?;
+        self.refresh_scheduling().await?;
         Ok(user)
     }
 
-    async fn delete_user(&self, id: UserId) -> AppResult<()> {
-        self.inner.delete_user(id).await?;
-        self.bump_proxy_auth().await?;
-        self.refresh_proxy_snapshot().await
+    async fn delete(&self, id: UserId) -> AppResult<()> {
+        self.inner.delete(id).await?;
+        let auth_result = self.cache.bump_auth().await;
+        let scheduling_result = self.cache.refresh_scheduling().await;
+        combine_cache_results(auth_result, scheduling_result).map_err(cache_error)
     }
 
-    async fn list_users(&self, page: PageRequest, filters: UserListFilters) -> AppResult<Page<User>> {
-        self.inner.list_users(page, filters).await
+    async fn find_by_id(&self, id: UserId) -> AppResult<Option<User>> {
+        self.inner.find_by_id(id).await
     }
 
-    async fn wallet_summaries(&self, user_ids: &[String]) -> AppResult<std::collections::BTreeMap<String, UserWalletSummaryResponse>> {
-        self.inner.wallet_summaries(user_ids).await
+    async fn find_auth_by_id(&self, id: UserId) -> AppResult<Option<UserAuthRecord>> {
+        self.inner.find_auth_by_id(id).await
+    }
+
+    async fn find_by_email(&self, email: &str) -> AppResult<Option<User>> {
+        self.inner.find_by_email(email).await
+    }
+
+    async fn find_auth_by_username(&self, username: &str) -> AppResult<Option<UserAuthRecord>> {
+        self.inner.find_auth_by_username(username).await
+    }
+
+    async fn find_auth_by_email(&self, email: &str) -> AppResult<Option<UserAuthRecord>> {
+        self.inner.find_auth_by_email(email).await
+    }
+
+    async fn record_login(&self, id: UserId) -> AppResult<()> {
+        self.inner.record_login(id).await
+    }
+
+    async fn list(&self, page: PageRequest, filters: UserListFilters) -> AppResult<Page<User>> {
+        self.inner.list(page, filters).await
+    }
+
+    async fn list_slice(&self, request: PageSliceRequest, filters: UserListFilters) -> AppResult<Page<User>> {
+        self.inner.list_slice(request, filters).await
+    }
+}
+
+#[async_trait]
+impl<R, C> PasswordResetRepository for CachedUserRepository<R, C>
+where
+    R: PasswordResetRepository,
+    C: ProxyCacheInvalidator,
+{
+    async fn create_password_reset_token(&self, record: PasswordResetRecord) -> AppResult<()> {
+        self.inner.create_password_reset_token(record).await
+    }
+
+    async fn consume_password_reset_token(&self, token_hash: &str, password_hash: &str, now: time::OffsetDateTime) -> AppResult<Option<User>> {
+        self.inner.consume_password_reset_token(token_hash, password_hash, now).await
+    }
+}
+
+impl<R, C> CachedUserRepository<R, C>
+where
+    C: ProxyCacheInvalidator,
+{
+    async fn refresh_scheduling(&self) -> AppResult<()> {
+        self.cache.refresh_scheduling().await.map_err(cache_error)
     }
 }
 
 fn cache_error(error: crate::llm_proxy::LlmProxyError) -> AppError {
     AppError::Infrastructure(error.to_string())
 }
+
+#[cfg(test)]
+#[path = "user_tests.rs"]
+mod user_tests;

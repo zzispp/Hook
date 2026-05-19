@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm production root cause,DONE,"Token and user are active while Redis scheduling snapshot lacks the user","curl plus read-only DB and Redis checks",2026-05-19T09:16:00Z,0,"Live service still returns new_api_error because deployed binary predates local rename"
+2,Map Redis scheduling snapshot contents,DONE,"Every snapshot field has its load source and runtime use listed","rg -n \"SchedulingSnapshot|Cached.*\" apps/hook_backend/src/llm_proxy",2026-05-19T10:05:00Z,0,"Recorded in PROGRESS.md Snapshot Map"
+3,Audit CUD paths for snapshot-owned data,DONE,"Every create/update/delete path touching snapshot-owned tables is classified covered or missing","rg -n \"create_|update_|delete_|replace_|sign_up\" apps crates",2026-05-19T10:05:00Z,0,"Recorded in PROGRESS.md CUD Audit"
+4,Decide invalidation layer,DONE,"Repository-layer versus use-case-layer invalidation is evaluated against dependencies and failure modes","manual architecture review recorded in PROGRESS.md",2026-05-19T10:05:00Z,0,"Chose backend repository adapters rather than storage crate or use-case wrappers"
+5,Implement root fix,DONE,"Chosen invalidation design covers identified stale paths without silent fallback","cargo test targeted regression",2026-05-19T10:05:00Z,0,"Targeted regression and cargo check passed"
+6,Run verification,DONE,"Formatting, targeted tests, workspace check, and workspace tests pass","just format && targeted tests && just check && just test",2026-05-19T10:14:00Z,0,

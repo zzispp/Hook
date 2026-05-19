@@ -291,6 +291,7 @@ fn redis_settings() -> RedisSettings {
         database: None,
         protocol: Some("resp3".into()),
         key_prefix: "hook".into(),
+        scheduling_snapshot_ttl_seconds: 0,
     }
 }
 

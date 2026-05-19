@@ -27,8 +27,8 @@ use storage::Database;
 use types::wallet::Wallet;
 use user::application::SystemUserProvider;
 
-pub use cache::LlmProxyCache;
 pub(crate) use cache::snapshot::CachedUserAccess;
+pub use cache::{LlmProxyCache, LlmProxyCacheOptions};
 pub(crate) use cache_affinity::{AffinityRecord, AffinitySelection, InvalidateAffinityInput, SetAffinityInput};
 pub use error::LlmProxyError;
 pub(crate) use model_test::LlmProxyProviderModelTester;

@@ -1,0 +1,102 @@
+server:
+  host: 127.0.0.1
+  port: 5555
+database:
+  url: <redacted>
+  scheme: postgres
+  host: 127.0.0.1
+  port: 5432
+  username: hook
+  password: <redacted>
+  name: hook
+jwt:
+  secret: <redacted>
+  access_token_ttl_seconds: 86400
+  refresh_token_ttl_seconds: 604800
+admin:
+  id: 00000000-0000-7000-8000-000000000000
+  username: admin
+  email: admin@hook.rs
+  role: admin
+  is_active: true
+  password_hash: <redacted>
+  wallet:
+    id: 00000000-0000-7000-8000-000000000001
+    status: active
+    limit_mode: unlimited
+auth:
+  whitelist:
+  - methods:
+    - GET
+    path_pattern: /health
+  - methods:
+    - GET
+    path_pattern: /api/i18n/resources
+  - methods:
+    - GET
+    path_pattern: /api/site-info
+  - methods:
+    - POST
+    path_pattern: /api/auth/sign-in
+  - methods:
+    - POST
+    path_pattern: /api/auth/sign-up
+  - methods:
+    - POST
+    path_pattern: /api/auth/refresh
+  - methods:
+    - POST
+    path_pattern: /api/auth/password-reset/request
+  - methods:
+    - POST
+    path_pattern: /api/auth/password-reset/confirm
+  - methods:
+    - GET
+    path_pattern: /api/captcha/config
+  - methods:
+    - POST
+    path_pattern: /api/captcha/challenge
+  - methods:
+    - POST
+    path_pattern: /api/captcha/redeem
+  - methods:
+    - GET
+    - POST
+    path_pattern: /v1/*
+  - methods:
+    - POST
+    path_pattern: /v1beta/*
+  authenticated:
+  - methods:
+    - GET
+    path_pattern: /api/auth/me
+  - methods:
+    - GET
+    path_pattern: /api/navbar
+  - methods:
+    - GET
+    path_pattern: /api/notifications
+  - methods:
+    - PATCH
+    path_pattern: /api/notifications/read-all
+  - methods:
+    - PATCH
+    path_pattern: /api/notifications/{source_type}/{source_id}/read
+  - methods:
+    - DELETE
+    path_pattern: /api/notifications/{source_type}/{source_id}
+security:
+  provider_key_secret: <redacted>
+redis:
+  url: <redacted>
+  scheme: redis
+  host: 127.0.0.1
+  port: 6379
+  username: null
+  password: <redacted>
+  database: null
+  protocol: resp3
+  key_prefix: hook
+tracing:
+  log_level: info
+

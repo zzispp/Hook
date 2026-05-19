@@ -28,5 +28,5 @@ fn token_user_snapshot_rejects_orphaned_user_token() {
 
     let error = token_user_for_snapshot(&snapshot, &token).unwrap_err();
 
-    assert!(matches!(error, LlmProxyError::CodedForbidden { code: "new_api_error", .. }));
+    assert!(matches!(error, LlmProxyError::CodedForbidden { code: "hook_api_error", .. }));
 }

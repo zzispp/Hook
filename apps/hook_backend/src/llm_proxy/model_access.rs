@@ -3,6 +3,7 @@ use types::api_token::ApiToken;
 use super::{
     LlmProxyError,
     cache::snapshot::{CachedBillingGroup, CachedGlobalModel, CachedProvider, CachedUserAccess, SchedulingSnapshot},
+    client_error,
 };
 
 pub(crate) fn visible_models_for_token<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToken) -> Result<Vec<&'a CachedGlobalModel>, LlmProxyError> {
@@ -77,10 +78,16 @@ pub(crate) fn token_user_for_snapshot<'a>(snapshot: &'a SchedulingSnapshot, toke
     };
     let user = snapshot.users.iter().find(|user| user.id == *user_id);
     if token.token_type == types::api_token::ApiTokenType::User && user.is_none() {
-        return Err(LlmProxyError::new_api_forbidden("user is disabled or unavailable", "new_api_error"));
+        return Err(LlmProxyError::hook_api_forbidden(
+            "user is disabled or unavailable",
+            client_error::HOOK_API_ERROR_TYPE,
+        ));
     }
     if token.token_type == types::api_token::ApiTokenType::User && user.is_some_and(|user| !user.is_active) {
-        return Err(LlmProxyError::new_api_forbidden("user is disabled or unavailable", "new_api_error"));
+        return Err(LlmProxyError::hook_api_forbidden(
+            "user is disabled or unavailable",
+            client_error::HOOK_API_ERROR_TYPE,
+        ));
     }
     Ok(user)
 }

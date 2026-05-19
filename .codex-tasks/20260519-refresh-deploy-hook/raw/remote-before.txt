@@ -1,0 +1,6 @@
+active
+active
+active
+active
+baseline tables: 38/38 present
+c7296c4f38bf96055958dc73ba8b4d570e8aa5037d4fc0d1d8c6d9913d359b4e  /opt/hook/bin/backend

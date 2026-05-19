@@ -7,6 +7,7 @@ pub(super) const MODEL_REQUEST_INVALID_MESSAGE: &str = "The request could not be
 pub(super) const MODEL_SERVICE_UNAVAILABLE_CODE: &str = "model_service_unavailable";
 pub(super) const SERVICE_UNAVAILABLE_CODE: &str = "service_unavailable";
 pub(super) const MODEL_REQUEST_INVALID_CODE: &str = "model_request_invalid";
+pub(super) const HOOK_API_ERROR_TYPE: &str = "hook_api_error";
 pub(super) const SERVER_ERROR_TYPE: &str = "server_error";
 pub(super) const INVALID_REQUEST_ERROR_TYPE: &str = "invalid_request_error";
 

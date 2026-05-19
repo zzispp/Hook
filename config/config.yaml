@@ -87,6 +87,7 @@ redis:
   database:
   protocol: "resp3"
   key_prefix: "hook"
+  scheduling_snapshot_ttl_seconds: 3600
 
 tracing:
   log_level: "info"

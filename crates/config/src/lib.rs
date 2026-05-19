@@ -93,6 +93,8 @@ pub struct RedisSettings {
     pub database: Option<u16>,
     pub protocol: Option<String>,
     pub key_prefix: String,
+    #[serde(default)]
+    pub scheduling_snapshot_ttl_seconds: u64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -267,5 +269,7 @@ fn default_admin_wallet_settings() -> AdminWalletSettings {
     }
 }
 
+#[cfg(test)]
+mod redis_tests;
 #[cfg(test)]
 mod tests;

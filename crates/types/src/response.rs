@@ -43,7 +43,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn api_response_matches_new_api_success_shape() {
+    fn api_response_matches_success_shape() {
         let response = ApiResponse::new(json!({ "id": 1 }));
         let value = serde_json::to_value(response).unwrap();
 
@@ -58,7 +58,7 @@ mod tests {
     }
 
     #[test]
-    fn api_error_response_matches_new_api_error_shape() {
+    fn api_error_response_matches_error_shape() {
         let response = ApiErrorResponse::new("bad request".into());
         let value = serde_json::to_value(response).unwrap();
 

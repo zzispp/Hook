@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect config and cache boundaries,DONE,Relevant config and cache write paths identified,rg -n "scheduling_snapshot_ttl_seconds|write_fresh_scheduling_snapshot" crates/config apps/hook_backend/src,,0,
+2,Implement configurable snapshot TTL,DONE,Redis config reaches LlmProxyCache and snapshot write uses TTL only when positive,cargo test -p configuration redis_tests::scheduling_snapshot_ttl_defaults_to_disabled -- --nocapture,2026-05-19T00:00:00+08:00,0,
+3,Add focused tests,DONE,Tests cover default config TTL and Redis command selection,cargo test -p backend llm_proxy::cache::scheduling_snapshot_write::tests -- --nocapture,2026-05-19T00:00:00+08:00,0,
+4,Run validation,DONE,Formatting and Rust checks pass,just format && just check && just test,2026-05-19T18:00:18+08:00,0,

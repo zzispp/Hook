@@ -102,10 +102,10 @@ impl LlmProxyError {
         }
     }
 
-    pub fn new_api_forbidden(message: impl Into<String>, code: &'static str) -> Self {
+    pub fn hook_api_forbidden(message: impl Into<String>, code: &'static str) -> Self {
         Self::CodedForbidden {
             message: message.into(),
-            error_type: "new_api_error",
+            error_type: client_error::HOOK_API_ERROR_TYPE,
             code,
         }
     }

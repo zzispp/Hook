@@ -18,10 +18,11 @@ use super::{
     audit::TokenUsage,
     cache::snapshot::{CachedUserAccess, SchedulingSnapshot},
     candidate::ProxyCandidate,
+    client_error,
 };
 
 const CATEGORY_CONSUME: &str = "consume";
-const ERROR_CODE_DISABLED_USER: &str = "new_api_error";
+const ERROR_CODE_DISABLED_USER: &str = client_error::HOOK_API_ERROR_TYPE;
 const ERROR_CODE_TOKEN_QUOTA: &str = "pre_consume_token_quota_failed";
 const ERROR_CODE_WALLET_QUOTA: &str = "insufficient_user_quota";
 const LINK_LLM_REQUEST_RECORD: &str = "llm_request_record";
@@ -89,7 +90,7 @@ fn ensure_user_active(user: &CachedUserAccess) -> Result<(), LlmProxyError> {
 
 fn ensure_token_quota(token: &ApiToken) -> Result<(), LlmProxyError> {
     if token.quota_limit.is_some_and(|limit| token.used_quota >= limit) {
-        return Err(LlmProxyError::new_api_forbidden("pre-consume token quota failed", ERROR_CODE_TOKEN_QUOTA));
+        return Err(LlmProxyError::hook_api_forbidden("pre-consume token quota failed", ERROR_CODE_TOKEN_QUOTA));
     }
     Ok(())
 }
@@ -156,11 +157,11 @@ async fn wallet_for_user(state: &LlmProxyState, user_id: &str) -> Result<Wallet,
 }
 
 fn disabled_user_error() -> LlmProxyError {
-    LlmProxyError::new_api_forbidden("user is disabled or unavailable", ERROR_CODE_DISABLED_USER)
+    LlmProxyError::hook_api_forbidden("user is disabled or unavailable", ERROR_CODE_DISABLED_USER)
 }
 
 fn wallet_quota_error() -> LlmProxyError {
-    LlmProxyError::new_api_forbidden("insufficient user quota", ERROR_CODE_WALLET_QUOTA)
+    LlmProxyError::hook_api_forbidden("insufficient user quota", ERROR_CODE_WALLET_QUOTA)
 }
 
 fn wallet_settlement_error(error: StorageError) -> LlmProxyError {

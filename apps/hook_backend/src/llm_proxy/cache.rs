@@ -1,8 +1,11 @@
 mod auth;
+mod options;
 mod provider_cooldown;
+mod scheduling_snapshot_write;
 pub(super) mod snapshot;
 mod usage_flush;
 
+pub use options::LlmProxyCacheOptions;
 pub use provider_cooldown::ProviderCooldownFailureInput;
 
 use redis::AsyncCommands;
@@ -27,15 +30,17 @@ pub struct LlmProxyCache {
     connection: redis::aio::ConnectionManager,
     key_prefix: String,
     system_users: Vec<CachedUserAccess>,
+    scheduling_snapshot_ttl_seconds: u64,
 }
 
 impl LlmProxyCache {
-    pub fn new(database: Database, connection: redis::aio::ConnectionManager, key_prefix: String, system_users: Vec<CachedUserAccess>) -> Self {
+    pub fn new(options: LlmProxyCacheOptions) -> Self {
         let cache = Self {
-            database,
-            connection,
-            key_prefix,
-            system_users,
+            database: options.database,
+            connection: options.connection,
+            key_prefix: options.key_prefix,
+            system_users: options.system_users,
+            scheduling_snapshot_ttl_seconds: options.scheduling_snapshot_ttl_seconds,
         };
         usage_flush::spawn_usage_flush_task(cache.clone());
         cache
@@ -193,7 +198,7 @@ impl LlmProxyCache {
         let snapshot = snapshot::load(&self.database, &self.system_users).await?;
         let value = snapshot::encode(&snapshot)?;
         let mut connection = self.connection.clone();
-        let _: () = connection.set(self.scheduling_snapshot_key(), value).await.map_err(redis_error)?;
+        scheduling_snapshot_write::write(&mut connection, self.scheduling_snapshot_key(), value, self.scheduling_snapshot_ttl_seconds).await?;
         Ok(snapshot)
     }
 

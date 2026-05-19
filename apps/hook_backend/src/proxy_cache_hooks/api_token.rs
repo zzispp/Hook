@@ -1,41 +1,43 @@
-use std::sync::Arc;
-
-use api_token::application::{ApiTokenError, ApiTokenResult, ApiTokenUseCase};
+use api_token::application::{ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, ApiTokenUpdateRecord};
 use async_trait::async_trait;
-use types::api_token::{
-    AdminApiTokenCreate, ApiTokenCreate, ApiTokenCreateResponse, ApiTokenListRequest, ApiTokenListResponse, ApiTokenResponse, ApiTokenSecretResponse,
-    ApiTokenUpdate,
-};
+use types::api_token::{ApiToken, ApiTokenListRequest, ApiTokenListResponse};
 
-use crate::llm_proxy::LlmProxyCache;
+use super::cache::ProxyCacheInvalidator;
 
-pub struct ProxyCachedApiTokenUseCase {
-    inner: Arc<dyn ApiTokenUseCase>,
-    cache: LlmProxyCache,
+#[derive(Clone)]
+pub struct CachedApiTokenRepository<R, C> {
+    inner: R,
+    cache: C,
 }
 
-impl ProxyCachedApiTokenUseCase {
-    pub fn new(inner: Arc<dyn ApiTokenUseCase>, cache: LlmProxyCache) -> Self {
+impl<R, C> CachedApiTokenRepository<R, C> {
+    pub const fn new(inner: R, cache: C) -> Self {
         Self { inner, cache }
-    }
-
-    async fn bump_auth(&self) -> ApiTokenResult<()> {
-        self.cache.bump_auth_version().await.map_err(cache_error)
     }
 }
 
 #[async_trait]
-impl ApiTokenUseCase for ProxyCachedApiTokenUseCase {
-    async fn create_token(&self, user_id: &str, input: ApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
-        let value = self.inner.create_token(user_id, input).await?;
+impl<R, C> ApiTokenRepository for CachedApiTokenRepository<R, C>
+where
+    R: ApiTokenRepository,
+    C: ProxyCacheInvalidator,
+{
+    async fn create_token(&self, input: ApiTokenCreateRecord) -> ApiTokenResult<ApiToken> {
+        let token = self.inner.create_token(input).await?;
         self.bump_auth().await?;
-        Ok(value)
+        Ok(token)
     }
 
-    async fn update_token(&self, user_id: &str, id: &str, input: ApiTokenUpdate) -> ApiTokenResult<ApiTokenResponse> {
-        let value = self.inner.update_token(user_id, id, input).await?;
+    async fn update_token(&self, user_id: &str, id: &str, input: ApiTokenUpdateRecord) -> ApiTokenResult<ApiToken> {
+        let token = self.inner.update_token(user_id, id, input).await?;
         self.bump_auth().await?;
-        Ok(value)
+        Ok(token)
+    }
+
+    async fn update_any_token(&self, id: &str, input: ApiTokenUpdateRecord) -> ApiTokenResult<ApiToken> {
+        let token = self.inner.update_any_token(id, input).await?;
+        self.bump_auth().await?;
+        Ok(token)
     }
 
     async fn delete_token(&self, user_id: &str, id: &str) -> ApiTokenResult<()> {
@@ -43,53 +45,46 @@ impl ApiTokenUseCase for ProxyCachedApiTokenUseCase {
         self.bump_auth().await
     }
 
-    async fn get_token(&self, user_id: &str, id: &str) -> ApiTokenResult<ApiTokenResponse> {
-        self.inner.get_token(user_id, id).await
-    }
-
-    async fn token_secret(&self, user_id: &str, id: &str) -> ApiTokenResult<ApiTokenSecretResponse> {
-        self.inner.token_secret(user_id, id).await
-    }
-
-    async fn list_tokens(&self, user_id: &str, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
-        self.inner.list_tokens(user_id, request).await
-    }
-
-    async fn create_admin_token(&self, actor_id: &str, input: AdminApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
-        let value = self.inner.create_admin_token(actor_id, input).await?;
-        self.bump_auth().await?;
-        Ok(value)
-    }
-
-    async fn update_admin_token(&self, id: &str, input: ApiTokenUpdate) -> ApiTokenResult<ApiTokenResponse> {
-        let value = self.inner.update_admin_token(id, input).await?;
-        self.bump_auth().await?;
-        Ok(value)
-    }
-
-    async fn delete_admin_token(&self, id: &str) -> ApiTokenResult<()> {
-        self.inner.delete_admin_token(id).await?;
+    async fn delete_any_token(&self, id: &str) -> ApiTokenResult<()> {
+        self.inner.delete_any_token(id).await?;
         self.bump_auth().await
     }
 
-    async fn get_admin_token(&self, id: &str) -> ApiTokenResult<ApiTokenResponse> {
-        self.inner.get_admin_token(id).await
+    async fn find_user_token(&self, user_id: &str, id: &str) -> ApiTokenResult<Option<ApiToken>> {
+        self.inner.find_user_token(user_id, id).await
     }
 
-    async fn admin_token_secret(&self, id: &str) -> ApiTokenResult<ApiTokenSecretResponse> {
-        self.inner.admin_token_secret(id).await
+    async fn find_token(&self, id: &str) -> ApiTokenResult<Option<ApiToken>> {
+        self.inner.find_token(id).await
+    }
+
+    async fn find_by_hash(&self, token_hash: &str) -> ApiTokenResult<Option<ApiToken>> {
+        self.inner.find_by_hash(token_hash).await
+    }
+
+    async fn list_user_tokens(&self, user_id: &str, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
+        self.inner.list_user_tokens(user_id, request).await
     }
 
     async fn list_admin_tokens(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
         self.inner.list_admin_tokens(request).await
     }
 
-    async fn cleanup_expired_tokens(&self) -> ApiTokenResult<u64> {
-        let deleted = self.inner.cleanup_expired_tokens().await?;
+    async fn delete_expired_tokens(&self) -> ApiTokenResult<u64> {
+        let deleted = self.inner.delete_expired_tokens().await?;
         if deleted > 0 {
             self.bump_auth().await?;
         }
         Ok(deleted)
+    }
+}
+
+impl<R, C> CachedApiTokenRepository<R, C>
+where
+    C: ProxyCacheInvalidator,
+{
+    async fn bump_auth(&self) -> ApiTokenResult<()> {
+        self.cache.bump_auth().await.map_err(cache_error)
     }
 }
 

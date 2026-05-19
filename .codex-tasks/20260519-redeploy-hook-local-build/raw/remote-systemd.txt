@@ -1,0 +1,43 @@
+# /etc/systemd/system/hook-backend.service
+[Unit]
+Description=Hook backend
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+Requires=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/hook/source
+ExecStart=/opt/hook/bin/backend --config /etc/hook/config.yaml
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/hook
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
+
+--- config schema keys ---
+server dict
+database dict
+jwt dict
+admin dict
+auth dict
+security dict
+redis dict
+tracing dict
+
+--- versions ---
+x86_64
+ldd (Ubuntu GLIBC 2.43-2ubuntu2) 2.43
+baseline tables: 37/37 present
+  users
+  user_password_reset_tokens
+  roles
+  api_permissions

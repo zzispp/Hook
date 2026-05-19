@@ -128,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn normal_end_matches_new_api_semantics() {
+    fn normal_end_matches_stream_semantics() {
         for reason in [StreamEndReason::Done, StreamEndReason::Eof, StreamEndReason::HandlerStop] {
             let mut status = StreamStatus::default();
             status.set_end_reason(reason, None);
@@ -138,7 +138,7 @@ mod tests {
     }
 
     #[test]
-    fn abnormal_end_matches_new_api_semantics() {
+    fn abnormal_end_matches_stream_semantics() {
         for reason in [
             StreamEndReason::Timeout,
             StreamEndReason::ClientGone,
@@ -176,7 +176,7 @@ mod tests {
     }
 
     #[test]
-    fn maps_all_end_reasons_to_new_api_style_strings() {
+    fn maps_all_end_reasons_to_client_style_strings() {
         let cases = [
             (StreamEndReason::Done, "done"),
             (StreamEndReason::Timeout, "timeout"),

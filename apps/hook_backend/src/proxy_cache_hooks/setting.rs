@@ -1,46 +1,48 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
-use setting::application::{SettingError, SettingResult, SettingUseCase};
-use types::system_setting::{
-    PublicSiteInfoResponse, SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate,
-};
+use setting::application::{SettingError, SettingRepository, SettingResult, StoredSmtpSettings};
+use types::system_setting::{SystemSettingsResponse, SystemSettingsUpdate};
 
-use crate::llm_proxy::LlmProxyCache;
+use super::cache::ProxyCacheInvalidator;
 
-pub struct ProxyCachedSettingUseCase {
-    inner: Arc<dyn SettingUseCase>,
-    cache: LlmProxyCache,
+#[derive(Clone)]
+pub struct CachedSettingRepository<R, C> {
+    inner: R,
+    cache: C,
 }
 
-impl ProxyCachedSettingUseCase {
-    pub fn new(inner: Arc<dyn SettingUseCase>, cache: LlmProxyCache) -> Self {
+impl<R, C> CachedSettingRepository<R, C> {
+    pub const fn new(inner: R, cache: C) -> Self {
         Self { inner, cache }
-    }
-
-    async fn refresh_scheduling(&self) -> SettingResult<()> {
-        self.cache.refresh_scheduling_snapshot().await.map(|_| ()).map_err(cache_error)
     }
 }
 
 #[async_trait]
-impl SettingUseCase for ProxyCachedSettingUseCase {
+impl<R, C> SettingRepository for CachedSettingRepository<R, C>
+where
+    R: SettingRepository,
+    C: ProxyCacheInvalidator,
+{
     async fn get_system_settings(&self) -> SettingResult<SystemSettingsResponse> {
         self.inner.get_system_settings().await
     }
 
-    async fn get_public_site_info(&self) -> SettingResult<PublicSiteInfoResponse> {
-        self.inner.get_public_site_info().await
+    async fn get_smtp_settings(&self) -> SettingResult<StoredSmtpSettings> {
+        self.inner.get_smtp_settings().await
     }
 
-    async fn update_system_settings(&self, input: SystemSettingsUpdate) -> SettingResult<SystemSettingsResponse> {
-        let value = self.inner.update_system_settings(input).await?;
+    async fn update_system_settings(&self, input: SystemSettingsUpdate, encrypted_smtp_password: Option<String>) -> SettingResult<SystemSettingsResponse> {
+        let settings = self.inner.update_system_settings(input, encrypted_smtp_password).await?;
         self.refresh_scheduling().await?;
-        Ok(value)
+        Ok(settings)
     }
+}
 
-    async fn test_smtp_connection(&self, input: SystemSettingsSmtpTestRequest) -> SettingResult<SystemSettingsSmtpTestResponse> {
-        self.inner.test_smtp_connection(input).await
+impl<R, C> CachedSettingRepository<R, C>
+where
+    C: ProxyCacheInvalidator,
+{
+    async fn refresh_scheduling(&self) -> SettingResult<()> {
+        self.cache.refresh_scheduling().await.map_err(cache_error)
     }
 }
 

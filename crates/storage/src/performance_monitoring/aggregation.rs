@@ -138,7 +138,7 @@ fn summary_sql() -> &'static str {
         COUNT(*) FILTER (WHERE has_failover)::bigint AS failover_count, \
         COUNT(*) FILTER (WHERE COALESCE(cache_read_input_tokens, 0) > 0)::bigint AS cache_hit_count, \
         COALESCE(SUM(total_cost), 0) AS cost, \
-        COUNT(*) FILTER (WHERE client_error_type = 'new_api_error' OR client_error_message LIKE '%quota%')::bigint AS quota_limited_count \
+        COUNT(*) FILTER (WHERE client_error_type = 'hook_api_error' OR client_error_message LIKE '%quota%')::bigint AS quota_limited_count \
         FROM request_records \
         WHERE created_at >= $1 AND created_at < $2"
 }

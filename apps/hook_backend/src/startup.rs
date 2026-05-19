@@ -5,13 +5,13 @@ use crate::{
     frontend,
     http_config::{authorization_config, cors_layer, token_settings},
     llm_proxy::{
-        LlmProxyCache, LlmProxyProviderModelTester, LlmProxyState, cached_system_user_access, create_router as create_llm_proxy_router, create_v1beta_router,
+        LlmProxyCache, LlmProxyCacheOptions, LlmProxyProviderModelTester, LlmProxyState, cached_system_user_access, create_router as create_llm_proxy_router,
+        create_v1beta_router,
     },
     performance_monitoring_api::{PerformanceMonitoringApiState, create_router as create_performance_monitoring_router},
     performance_monitoring_os::PerformanceOsCollector,
     proxy_cache_hooks::{
-        ProxyCachedApiTokenUseCase, ProxyCachedGroupUseCase, ProxyCachedModelUseCase, ProxyCachedProviderUseCase, ProxyCachedSettingUseCase,
-        ProxyCachedUserUseCase,
+        CachedApiTokenRepository, CachedGroupRepository, CachedModelRepository, CachedProviderRepository, CachedSettingRepository, CachedUserRepository,
     },
     system,
 };
@@ -114,54 +114,53 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
     let system_user_provider = ConfigSystemUserProvider::from_settings(settings)?;
     let system_wallet_provider = ConfigSystemWalletProvider::from_settings(settings)?;
-    let proxy_cache = LlmProxyCache::new(
-        database.clone(),
-        redis_connection.clone(),
-        settings.redis.key_prefix.clone(),
-        cached_system_user_access(&system_user_provider),
-    );
+    let proxy_cache = LlmProxyCache::new(LlmProxyCacheOptions {
+        database: database.clone(),
+        connection: redis_connection.clone(),
+        key_prefix: settings.redis.key_prefix.clone(),
+        system_users: cached_system_user_access(&system_user_provider),
+        scheduling_snapshot_ttl_seconds: settings.redis.scheduling_snapshot_ttl_seconds,
+    });
     proxy_cache.refresh_scheduling_snapshot().await?;
     proxy_cache.restore_provider_cooldowns().await?;
-    let models_inner = Arc::new(ModelService::new(StorageModelRepository::new(database.clone()), ModelsDevClient::new()));
-    let models = Arc::new(ProxyCachedModelUseCase::new(models_inner, proxy_cache.clone()));
-    let providers_inner = Arc::new(ProviderService::new(
-        StorageProviderRepository::new(database.clone()),
+    let models = Arc::new(ModelService::new(
+        CachedModelRepository::new(StorageModelRepository::new(database.clone()), proxy_cache.clone()),
+        ModelsDevClient::new(),
+    ));
+    let providers = Arc::new(ProviderService::new(
+        CachedProviderRepository::new(StorageProviderRepository::new(database.clone()), proxy_cache.clone()),
         StorageGlobalModelCatalog::new(database.clone()),
         provider_key_cipher.clone(),
         ReqwestUpstreamModelFetcher::new()?,
     ));
-    let providers = Arc::new(ProxyCachedProviderUseCase::new(providers_inner, proxy_cache.clone()));
     let dashboard = Arc::new(DashboardService::new(StorageDashboardRepository::new(database.clone())));
     let wallets = Arc::new(WalletService::with_system_wallet(
         StorageWalletRepository::new(database.clone()),
         system_wallet_provider.clone(),
     ));
     let setting_secret_cipher = SettingAesSecretCipher::new(settings.provider_key_secret()?)?;
-    let settings_inner = Arc::new(SettingService::new(
-        StorageSettingRepository::new(database.clone()),
+    let system_settings = Arc::new(SettingService::new(
+        CachedSettingRepository::new(StorageSettingRepository::new(database.clone()), proxy_cache.clone()),
         setting_secret_cipher.clone(),
         LettreSmtpConnectionTester,
     ));
-    let system_settings = Arc::new(ProxyCachedSettingUseCase::new(settings_inner, proxy_cache.clone()));
     let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone())));
-    let groups_inner = Arc::new(GroupService::new(
-        StorageGroupRepository::new(database.clone()),
+    let groups = Arc::new(GroupService::new(
+        CachedGroupRepository::new(StorageGroupRepository::new(database.clone()), proxy_cache.clone()),
         StorageGroupModelCatalog::new(database.clone()),
         StorageGroupProviderCatalog::new(database.clone()),
     ));
-    let groups = Arc::new(ProxyCachedGroupUseCase::new(groups_inner, proxy_cache.clone()));
     let i18n = Arc::new(I18nService::new(StorageI18nRepository::new(database.clone())));
-    let api_tokens_inner = Arc::new(ApiTokenService::new(
-        StorageApiTokenRepository::new(database.clone()),
+    let api_tokens = Arc::new(ApiTokenService::new(
+        CachedApiTokenRepository::new(StorageApiTokenRepository::new(database.clone()), proxy_cache.clone()),
         StorageBillingGroupCatalog::new(database.clone()),
         StorageModelAccessCatalog::new(database.clone()),
         StorageUserCatalog::with_system_owner(database.clone(), api_token_system_owner(&system_user_provider)),
         StorageSystemTokenPolicy::new(database.clone()),
     ));
-    let api_tokens = Arc::new(ProxyCachedApiTokenUseCase::new(api_tokens_inner, proxy_cache.clone()));
-    let users_inner = Arc::new(
+    let users = Arc::new(
         UserService::with_system_user_and_registration(
-            StorageUserRepository::new(database.clone()),
+            CachedUserRepository::new(StorageUserRepository::new(database.clone()), proxy_cache.clone()),
             BcryptPasswordHasher,
             system_user_provider,
             StorageRegistrationPolicy::new(database.clone()),
@@ -178,7 +177,6 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
             RedisRegistrationEmailCodeStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
         ),
     );
-    let users = Arc::new(ProxyCachedUserUseCase::new(users_inner, proxy_cache.clone()));
     let operations = Arc::new(OperationsService::new(
         StorageOperationsRepository::new(database.clone()),
         SmtpTicketMailer::new(database.clone(), setting_secret_cipher),
