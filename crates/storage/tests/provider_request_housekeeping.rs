@@ -195,6 +195,7 @@ fn candidate_record(
         provider_api_format: Some("openai_chat".into()),
         needs_conversion: false,
         is_stream: false,
+        is_cached: false,
         provider_request_headers,
         provider_request_body,
         provider_response_headers,

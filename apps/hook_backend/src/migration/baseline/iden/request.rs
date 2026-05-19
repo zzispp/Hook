@@ -98,6 +98,7 @@ pub(in crate::migration::baseline) enum RequestCandidates {
     ProviderApiFormat,
     NeedsConversion,
     IsStream,
+    IsCached,
     ProviderRequestHeaders,
     ProviderRequestBody,
     ProviderResponseHeaders,

@@ -6,7 +6,7 @@ use crate::llm_proxy::{
     proxy::{
         response_model::rewrite_response_model_value,
         stream_transport::{
-            estimated_usage::ESTIMATED_USAGE_SOURCE,
+            estimated_usage::{ESTIMATED_REQUEST_USAGE_SOURCE, ESTIMATED_USAGE_SOURCE},
             event::render_stream_event,
             record::{failure_record, record_stream_attempt, success_record},
             status::StreamEndReason,
@@ -143,12 +143,13 @@ impl StreamRelay {
         if self.protocol_completed {
             return StreamEndReason::Done;
         }
-        if matches!(self.usage.and_then(|usage| usage.usage_source), Some(ESTIMATED_USAGE_SOURCE))
-            && matches!(
-                self.target_format,
-                ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
-            )
-        {
+        if matches!(
+            self.usage.and_then(|usage| usage.usage_source),
+            Some(ESTIMATED_USAGE_SOURCE | ESTIMATED_REQUEST_USAGE_SOURCE)
+        ) && matches!(
+            self.target_format,
+            ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
+        ) {
             return StreamEndReason::UpstreamEofWithoutCompletion;
         }
         StreamEndReason::Eof

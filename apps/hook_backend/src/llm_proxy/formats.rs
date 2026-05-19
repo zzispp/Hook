@@ -477,6 +477,6 @@ mod tests {
     fn non_chat_endpoints_never_convert_through_chat_normalizers() {
         assert!(!super::formats_compatible("openai_chat", "openai_image", false));
         assert!(!super::formats_compatible("openai_image", "openai_chat", false));
-        assert_eq!(super::needs_conversion("openai_image", "openai_images_edits", false).unwrap(), false);
+        assert!(!super::needs_conversion("openai_image", "openai_images_edits", false).unwrap());
     }
 }

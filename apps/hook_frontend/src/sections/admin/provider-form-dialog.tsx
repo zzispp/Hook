@@ -13,6 +13,7 @@ import {
   PROVIDER_TYPE_OPTIONS,
   DEFAULT_PROVIDER_MAX_RETRIES,
   DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
+  DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS,
   DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS,
 } from './provider-management-utils';
 
@@ -96,6 +97,16 @@ function ProviderRequestConfigFields({ dialog }: { dialog: ProviderDialogState }
         helperText={t('providers.defaultWhenBlank')}
         onChange={(value) =>
           dialog.setForm((form) => ({ ...form, stream_first_byte_timeout_seconds: value }))
+        }
+      />
+      <TextFieldRow
+        type="number"
+        label={t('providers.streamIdleTimeoutSeconds')}
+        value={dialog.form.stream_idle_timeout_seconds}
+        placeholder={String(DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS)}
+        helperText={t('providers.defaultWhenBlank')}
+        onChange={(value) =>
+          dialog.setForm((form) => ({ ...form, stream_idle_timeout_seconds: value }))
         }
       />
     </Stack>

@@ -160,6 +160,7 @@ pub struct RequestCandidateDetail {
     pub provider_api_format: Option<String>,
     pub needs_conversion: bool,
     pub is_stream: bool,
+    pub is_cached: bool,
     pub candidate_index: i32,
     pub retry_index: i32,
     pub status: String,

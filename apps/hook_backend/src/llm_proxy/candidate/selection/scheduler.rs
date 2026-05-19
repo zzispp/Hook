@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use proxy::scheduler::{Candidate, CandidateBuilder, ModelAccessPolicy, ProviderSnapshot, SchedulerInput, SchedulingMode};
+use proxy::scheduler::{AffinityCandidate, Candidate, CandidateBuilder, ModelAccessPolicy, ProviderSnapshot, SchedulerInput, SchedulingMode};
 use types::{
     api_token::{ApiToken, ModelAccessMode},
     provider::ProviderSchedulingMode,
@@ -8,7 +8,7 @@ use types::{
 
 use super::{CandidatePartKey, CandidateParts};
 use crate::llm_proxy::{
-    LlmProxyError,
+    AffinitySelection, LlmProxyError,
     cache::snapshot::{CachedBillingGroup, CachedProvider, CachedUserAccess},
     candidate::CandidateRequest,
     formats,
@@ -22,7 +22,7 @@ pub(super) struct OrderCandidatePartsInput<'a> {
     pub(super) request: CandidateRequest<'a>,
     pub(super) model_id: &'a str,
     pub(super) request_id: &'a str,
-    pub(super) affinity_key: Option<String>,
+    pub(super) affinity: Option<AffinitySelection>,
     pub(super) mode: ProviderSchedulingMode,
 }
 
@@ -35,7 +35,7 @@ pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Resu
         request,
         model_id,
         request_id,
-        affinity_key,
+        affinity,
         mode,
     } = input;
     let input = scheduler_input(SchedulerInputArgs {
@@ -46,16 +46,13 @@ pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Resu
         request,
         model_id,
         request_id,
-        affinity_key,
+        affinity: affinity.as_ref(),
         mode,
     })?;
     let mut by_key = parts.into_iter().map(|part| (part_key(&part), part)).collect::<HashMap<_, _>>();
     let mut candidates = by_key.values().map(scheduler_candidate).collect::<Result<Vec<_>, _>>()?;
     CandidateBuilder::order(&mut candidates, &input);
-    Ok(candidates
-        .into_iter()
-        .filter_map(|candidate| by_key.remove(&candidate_key(&candidate)))
-        .collect())
+    Ok(candidates.into_iter().filter_map(|candidate| ordered_part(&mut by_key, candidate)).collect())
 }
 
 fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmProxyError> {
@@ -71,7 +68,7 @@ fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmPr
         requested_model_id: args.model_id.to_owned(),
         client_format,
         is_stream: args.request.is_stream,
-        affinity_key: args.affinity_key,
+        affinity: args.affinity.map(proxy_affinity),
         load_balance_seed: Some(args.request_id.to_owned()),
         scheduling_mode: scheduler_mode(args.mode),
         global_keep_priority_on_conversion: false,
@@ -88,7 +85,7 @@ struct SchedulerInputArgs<'a> {
     request: CandidateRequest<'a>,
     model_id: &'a str,
     request_id: &'a str,
-    affinity_key: Option<String>,
+    affinity: Option<&'a AffinitySelection>,
     mode: ProviderSchedulingMode,
 }
 
@@ -106,7 +103,7 @@ fn scheduler_candidate(parts: &CandidateParts) -> Result<Candidate, LlmProxyErro
         provider_model_name: parts.model.provider_model_name.clone(),
         provider_api_format,
         needs_conversion,
-        is_cached: false,
+        is_cached: parts.is_cached,
         provider_priority: parts.provider.priority,
         key_priority: key.internal_priority,
     })
@@ -156,6 +153,20 @@ fn part_key(parts: &CandidateParts) -> CandidatePartKey {
 
 fn candidate_key(candidate: &Candidate) -> CandidatePartKey {
     (candidate.provider_id.clone(), candidate.global_model_id.clone())
+}
+
+fn ordered_part(by_key: &mut HashMap<CandidatePartKey, CandidateParts>, candidate: Candidate) -> Option<CandidateParts> {
+    let mut part = by_key.remove(&candidate_key(&candidate))?;
+    part.is_cached = candidate.is_cached;
+    Some(part)
+}
+
+fn proxy_affinity(affinity: &AffinitySelection) -> AffinityCandidate {
+    AffinityCandidate {
+        provider_id: affinity.provider_id.clone(),
+        endpoint_id: affinity.endpoint_id.clone(),
+        key_id: affinity.key_id.clone(),
+    }
 }
 
 fn primary_endpoint(parts: &CandidateParts) -> &crate::llm_proxy::cache::snapshot::CachedEndpoint {

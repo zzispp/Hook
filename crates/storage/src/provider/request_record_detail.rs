@@ -22,6 +22,7 @@ pub(super) fn candidate_detail(candidate: RequestCandidateRecord) -> StorageResu
         provider_api_format: candidate.provider_api_format,
         needs_conversion: candidate.needs_conversion,
         is_stream: candidate.is_stream,
+        is_cached: candidate.is_cached,
         candidate_index: candidate.candidate_index,
         retry_index: candidate.retry_index,
         status: candidate.status,

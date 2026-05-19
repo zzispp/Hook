@@ -201,6 +201,19 @@ fn empty_output_does_not_estimate_usage() {
 }
 
 #[test]
+fn empty_output_can_estimate_request_usage_for_billing() {
+    let request = json!({"model":"gpt-5.5","input":[{"role":"user","content":"hello"}]});
+    let estimator = StreamUsageEstimator::new(ApiFormat::OpenAiResponses, &request, "gpt-5.5");
+
+    let usage = estimator.apply_to_usage(None, false).expect("request usage should be estimated");
+
+    assert_eq!(usage.completion_tokens, Some(0));
+    assert_eq!(usage.total_tokens, usage.prompt_tokens);
+    assert_eq!(usage.usage_source, Some("estimated_from_request_body"));
+    assert_eq!(usage.usage_semantic, Some("responses"));
+}
+
+#[test]
 fn empty_claude_output_does_not_estimate_usage() {
     let request = json!({"model":"claude-sonnet-4","messages":[{"role":"user","content":"hello"}]});
     let estimator = StreamUsageEstimator::new(ApiFormat::ClaudeChat, &request, "claude-sonnet-4");

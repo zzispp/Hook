@@ -4,7 +4,7 @@ use axum::http::{HeaderMap, HeaderValue};
 use types::model::PatchField;
 
 use crate::llm_proxy::{
-    LlmProxyError, LlmProxyState, REALTIME_PATH,
+    InvalidateAffinityInput, LlmProxyError, LlmProxyState, REALTIME_PATH,
     audit::{AttemptRecordInput, SKIP_REASON_REQUEST_TERMINATED, record_attempt, record_skipped_candidates},
     candidate::{CandidateSelection, ProxyCandidate},
     rate_limit,
@@ -30,7 +30,7 @@ pub(super) async fn connect_first_upstream(
 ) -> Result<ConnectedUpstream, LlmProxyError> {
     let mut last_error = None;
     for candidate in &selection.candidates {
-        for retry_index in 0..=candidate.max_retries {
+        for retry_index in attempt_range(candidate) {
             let attempt = candidate.for_attempt(retry_index);
             if let Err(error @ LlmProxyError::RateLimited(_)) = rate_limit::claim_provider_key_limit(state, &attempt.trace.key_id, attempt.key_rpm_limit).await
             {
@@ -59,6 +59,7 @@ pub(super) async fn connect_first_upstream(
                 }
                 Err(error) => {
                     record_connect_error(state, selection, &attempt, retry_index, Some(request_headers), &error).await?;
+                    invalidate_connect_affinity(state, &attempt).await?;
                     last_error = Some(error);
                 }
             }
@@ -66,6 +67,28 @@ pub(super) async fn connect_first_upstream(
     }
     record_skipped_candidates(state, &selection.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
     Err(last_error.unwrap_or_else(|| LlmProxyError::Upstream("all realtime provider candidates failed".into())))
+}
+
+fn attempt_range(candidate: &ProxyCandidate) -> std::ops::RangeInclusive<i32> {
+    0..=if candidate.is_cached { candidate.max_retries } else { 0 }
+}
+
+async fn invalidate_connect_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {
+    let Some(input) = invalidate_affinity_input(candidate) else {
+        return Ok(());
+    };
+    state.invalidate_affinity(input).await
+}
+
+fn invalidate_affinity_input(candidate: &ProxyCandidate) -> Option<InvalidateAffinityInput<'_>> {
+    Some(InvalidateAffinityInput {
+        token_id: candidate.trace.token_id.as_deref()?,
+        model_id: &candidate.trace.global_model_id,
+        api_format: &candidate.trace.client_api_format,
+        provider_id: &candidate.trace.provider_id,
+        endpoint_id: &candidate.trace.endpoint_id,
+        key_id: &candidate.trace.key_id,
+    })
 }
 
 fn realtime_request(candidate: &ProxyCandidate, query: &HashMap<String, String>, api_key: String) -> Result<UpstreamRequest, LlmProxyError> {

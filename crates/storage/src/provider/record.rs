@@ -83,6 +83,7 @@ impl RequestCandidateRecord {
             provider_api_format: self.provider_api_format,
             needs_conversion: self.needs_conversion,
             is_stream: self.is_stream,
+            is_cached: self.is_cached,
             candidate_index: self.candidate_index,
             retry_index: self.retry_index,
             status: self.status,

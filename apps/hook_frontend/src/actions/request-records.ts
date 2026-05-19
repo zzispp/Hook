@@ -24,7 +24,12 @@ export type RequestRecordFilters = {
   type?: string;
 };
 
-const swrOptions = {
+const listSwrOptions = {
+  keepPreviousData: false,
+  revalidateOnFocus: false,
+};
+
+const detailSwrOptions = {
   keepPreviousData: true,
   revalidateOnFocus: false,
 };
@@ -40,7 +45,7 @@ export function useRequestRecords(
   ] as const;
   const { data, isLoading, error, isValidating, mutate } = useSWR<
     ApiEnvelope<RequestRecordListResponse>
-  >(key, fetcher, swrOptions);
+  >(key, fetcher, listSwrOptions);
   const refresh = useCallback(() => mutate(), [mutate]);
   const updateItems = useCallback(
     (updater: (items: RequestRecord[]) => RequestRecord[]) => {
@@ -89,7 +94,7 @@ export function useRequestRecordDetail(requestId?: string | null) {
   const { data, isLoading, error, isValidating, mutate } = useSWR<ApiEnvelope<RequestRecordDetail>>(
     key,
     fetcher,
-    swrOptions
+    detailSwrOptions
   );
   const refresh = useCallback(() => mutate(), [mutate]);
 

@@ -81,8 +81,10 @@ fn candidate() -> ProxyCandidate {
         max_retries: 0,
         request_timeout_seconds: Some(300.0),
         stream_first_byte_timeout_seconds: Some(30.0),
+        stream_idle_timeout_seconds: Some(30.0),
         cache_ttl_minutes: 5,
         key_rpm_limit: None,
+        is_cached: false,
         route: CandidateRoute { options: Vec::new() },
     }
 }
@@ -188,6 +190,7 @@ fn trace() -> CandidateTrace {
         provider_api_format: "openai_cli".into(),
         needs_conversion: false,
         is_stream: true,
+        is_cached: false,
         candidate_index: 0,
     }
 }

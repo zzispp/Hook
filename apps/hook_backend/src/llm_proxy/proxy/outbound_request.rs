@@ -2,7 +2,7 @@ use proxy::format_conversion::ApiFormat;
 use req::{HeaderMap, Request, RequestBuilder};
 use serde_json::Value;
 
-use super::{LlmProxyError, header_rules::apply_provider_header_rules, timeout::proxy_timeouts};
+use super::{LlmProxyError, header_rules::apply_provider_header_rules, timeout::non_stream_total_timeout};
 use crate::llm_proxy::{
     candidate::ProxyCandidate,
     formats::{self, AuthScheme},
@@ -54,12 +54,9 @@ fn apply_auth(builder: RequestBuilder, candidate: &ProxyCandidate, scheme: AuthS
 }
 
 fn apply_timeout(builder: RequestBuilder, candidate: &ProxyCandidate, is_stream: bool) -> RequestBuilder {
-    if is_stream {
-        return builder;
-    }
-    match proxy_timeouts(candidate).request {
+    match non_stream_total_timeout(candidate, is_stream) {
         Some(timeout) => builder.timeout(timeout),
-        None => builder.timeout(req::default_timeout()),
+        None => builder,
     }
 }
 
@@ -92,6 +89,18 @@ mod tests {
         assert_eq!(request.timeout(), Some(&expected));
     }
 
+    #[test]
+    fn non_stream_request_uses_provider_total_timeout() {
+        let client = req::ReqwestClient::from_builder(req::long_stream_builder()).unwrap();
+        let mut candidate = candidate();
+        candidate.request_timeout_seconds = Some(120.0);
+        let request = client
+            .build_request(apply_timeout(client.post("https://example.com".into()), &candidate, false))
+            .unwrap();
+
+        assert_eq!(request.timeout(), Some(&std::time::Duration::from_secs(120)));
+    }
+
     fn candidate() -> ProxyCandidate {
         ProxyCandidate {
             trace: trace(),
@@ -110,8 +119,10 @@ mod tests {
             max_retries: 0,
             request_timeout_seconds: None,
             stream_first_byte_timeout_seconds: Some(30.0),
+            stream_idle_timeout_seconds: None,
             cache_ttl_minutes: 5,
             key_rpm_limit: None,
+            is_cached: false,
             route: CandidateRoute { options: Vec::new() },
         }
     }
@@ -138,6 +149,7 @@ mod tests {
             provider_api_format: "openai_cli".into(),
             needs_conversion: false,
             is_stream: true,
+            is_cached: false,
             candidate_index: 0,
         }
     }

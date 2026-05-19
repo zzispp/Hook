@@ -13,13 +13,19 @@ export const DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE = 20;
 export const REQUEST_RECORD_ROWS_PER_PAGE_OPTIONS = [10, DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE, 50];
 export const REQUEST_RECORD_ALL_STATUS_FILTER = 'all';
 export const REQUEST_RECORD_ACTIVE_STATUS_FILTER = 'active';
+export const REQUEST_RECORD_FAILOVER_STATUS_FILTER = 'failover';
+export const REQUEST_RECORD_RETRY_STATUS_FILTER = 'retry';
 
 export type RequestRecordStatusFilter =
   | RequestRecordStatus
-  | typeof REQUEST_RECORD_ACTIVE_STATUS_FILTER;
+  | typeof REQUEST_RECORD_ACTIVE_STATUS_FILTER
+  | typeof REQUEST_RECORD_FAILOVER_STATUS_FILTER
+  | typeof REQUEST_RECORD_RETRY_STATUS_FILTER;
 
 export const REQUEST_RECORD_STATUS_OPTIONS: RequestRecordStatusFilter[] = [
   REQUEST_RECORD_ACTIVE_STATUS_FILTER,
+  REQUEST_RECORD_FAILOVER_STATUS_FILTER,
+  REQUEST_RECORD_RETRY_STATUS_FILTER,
   'pending',
   'streaming',
   'success',
@@ -29,6 +35,8 @@ export const REQUEST_RECORD_STATUS_OPTIONS: RequestRecordStatusFilter[] = [
 
 export function requestStatusLabel(status: string, t: (key: string) => string) {
   if (status === REQUEST_RECORD_ACTIVE_STATUS_FILTER) return t('requestRecords.inProgress');
+  if (status === REQUEST_RECORD_FAILOVER_STATUS_FILTER) return t('requestRecords.status.failover');
+  if (status === REQUEST_RECORD_RETRY_STATUS_FILTER) return t('requestRecords.status.retry');
   const key = `requestRecords.status.${status}`;
   return t(key);
 }
@@ -53,6 +61,8 @@ export function requestRecordMatchesStatusFilter(record: RequestRecord, statusFi
   if (!statusFilter || statusFilter === REQUEST_RECORD_ALL_STATUS_FILTER) return true;
   if (statusFilter === REQUEST_RECORD_ACTIVE_STATUS_FILTER)
     return isInProgressRequestRecord(record);
+  if (statusFilter === REQUEST_RECORD_FAILOVER_STATUS_FILTER) return record.has_failover;
+  if (statusFilter === REQUEST_RECORD_RETRY_STATUS_FILTER) return record.has_retry;
   return record.status === statusFilter;
 }
 

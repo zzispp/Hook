@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,梳理受影响结构,DONE,"明确 provider timeout 字段读写链路","rg -n \"stream_first_byte_timeout_seconds|request_timeout_seconds\" apps crates",2026-05-19T15:46:46+08:00,0,"字段贯穿 types/storage/provider/cache/candidate/proxy"
+2,实现显式 stream idle timeout,DONE,"流式首字节后 idle 超时记录 failed/timeout","cargo test -p backend upstream_wait --no-default-features",2026-05-19T15:57:00+08:00,0,"新增 provider 配置字段并接入 relay"
+3,验证 EOF missing usage 估算,DONE,"有输出 delta 的 EOF 会产生 estimated usage","cargo test -p hook-backend estimates_openai_responses_text_delta_usage",2026-05-19T15:46:46+08:00,0,"现有 StreamUsageEstimator 已覆盖有输出 delta 的估算；无输出不估算"
+4,运行后端验证,DONE,"后端测试通过或失败点明确","cargo test -p backend --no-default-features && just check && pnpm lint:frontend && just test",2026-05-19T16:02:00+08:00,0,

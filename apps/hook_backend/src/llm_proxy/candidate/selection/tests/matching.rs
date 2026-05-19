@@ -7,6 +7,7 @@ use super::helpers::{
     provider_with_keys, request, snapshot_with_provider, user_access,
 };
 use crate::llm_proxy::{
+    AffinitySelection,
     cache::snapshot::SchedulingSnapshot,
     candidate::{
         CandidateRequest,
@@ -25,7 +26,7 @@ fn matching_candidate_parts_compacts_endpoint_key_product_into_provider_route() 
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -44,6 +45,7 @@ fn matching_candidate_parts_compacts_endpoint_key_product_into_provider_route() 
 fn matching_candidate_parts_promotes_affinity_key_inside_route() {
     let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
     let group = &snapshot.groups[0];
+    let affinity = affinity("key-a-2");
 
     let parts = matching_candidate_parts(MatchingCandidatePartsInput {
         snapshot: &snapshot,
@@ -51,15 +53,24 @@ fn matching_candidate_parts_promotes_affinity_key_inside_route() {
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: Some("key-a-2"),
+        affinity: Some(&affinity),
         scheduling_mode: ProviderSchedulingMode::CacheAffinity,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
     });
 
     assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].endpoints[0].id, "endpoint-openai");
     assert_eq!(parts[0].keys[0].id, "key-a-2");
     assert_eq!(parts[0].keys[1].id, "key-a-1");
+}
+
+fn affinity(key_id: &str) -> AffinitySelection {
+    AffinitySelection {
+        provider_id: "provider-a".into(),
+        endpoint_id: "endpoint-openai".into(),
+        key_id: key_id.into(),
+    }
 }
 
 #[test]
@@ -76,7 +87,7 @@ fn matching_candidate_parts_keeps_all_provider_routes_without_silent_budget() {
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -98,7 +109,7 @@ fn matching_candidate_parts_prefers_highest_priority_mapped_provider_model_name(
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -131,7 +142,7 @@ fn matching_candidate_parts_filters_by_user_provider_access() {
         user_access: Some(&user_access),
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -156,7 +167,7 @@ fn matching_candidate_parts_filters_cooled_providers() {
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &cooled_provider_ids,
@@ -177,7 +188,7 @@ fn matching_candidate_parts_does_not_route_chat_request_to_non_chat_endpoint() {
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -205,7 +216,7 @@ fn matching_candidate_parts_does_not_route_stream_responses_to_compact_endpoint(
             model_name: "gpt-test",
             is_stream: true,
         },
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -232,7 +243,7 @@ fn matching_candidate_parts_does_not_treat_responses_compact_as_exact_route() {
             model_name: "gpt-test",
             is_stream: false,
         },
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -257,7 +268,7 @@ fn matching_candidate_parts_does_not_route_responses_request_to_chat_endpoint() 
             model_name: "gpt-test",
             is_stream: true,
         },
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -301,7 +312,7 @@ fn matching_candidate_parts_routes_non_chat_request_only_to_matching_data_format
             model_name: "gpt-test",
             is_stream: false,
         },
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -327,7 +338,7 @@ fn matching_candidate_parts_requires_key_to_support_endpoint_format() {
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -352,7 +363,7 @@ fn matching_candidate_parts_excludes_key_with_empty_api_formats() {
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -373,7 +384,7 @@ fn matching_candidate_parts_excludes_key_that_does_not_allow_requested_model() {
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -398,7 +409,7 @@ fn matching_candidate_parts_skips_key_outside_enabled_time_range() {
             user_access: None,
             model_id: "model-a",
             request: request(),
-            affinity_key: None,
+            affinity: None,
             scheduling_mode: ProviderSchedulingMode::FixedOrder,
             request_id: "request-1",
             cooled_provider_ids: &HashSet::new(),
@@ -423,7 +434,7 @@ fn matching_candidate_parts_treats_empty_key_allowed_models_as_all_models() {
         user_access: None,
         model_id: "model-a",
         request: request(),
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),

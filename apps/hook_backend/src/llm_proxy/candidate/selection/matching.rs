@@ -5,6 +5,7 @@ use types::provider::{ProviderSchedulingMode, provider_key_minute_of_day, provid
 
 use super::CandidateParts;
 use crate::llm_proxy::{
+    AffinitySelection,
     cache::snapshot::{CachedBillingGroup, CachedEndpoint, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot},
     candidate::CandidateRequest,
     formats,
@@ -20,7 +21,7 @@ pub(super) struct MatchingCandidatePartsInput<'a> {
     pub(super) user_access: Option<&'a CachedUserAccess>,
     pub(super) model_id: &'a str,
     pub(super) request: CandidateRequest<'a>,
-    pub(super) affinity_key: Option<&'a str>,
+    pub(super) affinity: Option<&'a AffinitySelection>,
     pub(super) scheduling_mode: ProviderSchedulingMode,
     pub(super) request_id: &'a str,
     pub(super) cooled_provider_ids: &'a HashSet<String>,
@@ -44,7 +45,7 @@ pub(super) fn matching_candidate_parts_at(input: MatchingCandidatePartsInput<'_>
                 provider,
                 model_id: input.model_id,
                 request: input.request,
-                affinity_key: input.affinity_key,
+                affinity: input.affinity,
                 scheduling_mode: input.scheduling_mode,
                 request_id: input.request_id,
                 current_minute,
@@ -59,20 +60,21 @@ struct AppendProviderCandidateInput<'a> {
     provider: &'a CachedProvider,
     model_id: &'a str,
     request: CandidateRequest<'a>,
-    affinity_key: Option<&'a str>,
+    affinity: Option<&'a AffinitySelection>,
     scheduling_mode: ProviderSchedulingMode,
     request_id: &'a str,
     current_minute: u16,
 }
 
 fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &mut Vec<CandidateParts>) {
-    let Some(model) = provider_model(input.provider, input.model_id, input.affinity_key) else {
+    let Some(model) = provider_model(input.provider, input.model_id) else {
         return;
     };
-    let endpoints = ordered_endpoints(input.provider, input.model_id, input.request, input.current_minute);
+    let affinity = matching_affinity(input.provider, input.affinity);
+    let endpoints = ordered_endpoints(input.provider, input.model_id, input.request, input.current_minute, affinity);
     let keys = ordered_keys(OrderedKeysInput {
         provider: input.provider,
-        affinity_key: input.affinity_key,
+        affinity,
         scheduling_mode: input.scheduling_mode,
         request_id: input.request_id,
         current_minute: input.current_minute,
@@ -86,18 +88,25 @@ fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &m
         keys,
         model,
         client_api_format: input.request.api_format.to_owned(),
+        is_cached: false,
     });
 }
 
 struct OrderedKeysInput<'a> {
     provider: &'a CachedProvider,
-    affinity_key: Option<&'a str>,
+    affinity: Option<&'a AffinitySelection>,
     scheduling_mode: ProviderSchedulingMode,
     request_id: &'a str,
     current_minute: u16,
 }
 
-fn ordered_endpoints(provider: &CachedProvider, model_id: &str, request: CandidateRequest<'_>, current_minute: u16) -> Vec<CachedEndpoint> {
+fn ordered_endpoints(
+    provider: &CachedProvider,
+    model_id: &str,
+    request: CandidateRequest<'_>,
+    current_minute: u16,
+    affinity: Option<&AffinitySelection>,
+) -> Vec<CachedEndpoint> {
     let (mut exact, converted): (Vec<_>, Vec<_>) = provider
         .endpoints
         .iter()
@@ -111,6 +120,7 @@ fn ordered_endpoints(provider: &CachedProvider, model_id: &str, request: Candida
         .cloned()
         .partition(|endpoint| endpoint_exact(endpoint, request));
     exact.extend(converted);
+    promote_affinity_endpoint(&mut exact, affinity);
     exact
 }
 
@@ -124,29 +134,37 @@ fn ordered_keys(input: OrderedKeysInput<'_>) -> Vec<CachedProviderKey> {
         .collect::<Vec<_>>();
     keys.sort_by(|left, right| (left.internal_priority, &left.id).cmp(&(right.internal_priority, &right.id)));
     match input.scheduling_mode {
-        ProviderSchedulingMode::CacheAffinity => order_keys_for_cache_affinity(&mut keys, input.affinity_key, input.request_id),
+        ProviderSchedulingMode::CacheAffinity => order_keys_for_cache_affinity(&mut keys, input.affinity, input.request_id),
         ProviderSchedulingMode::LoadBalance => order_keys_for_load_balance(&mut keys, input.request_id),
         ProviderSchedulingMode::FixedOrder => {}
     }
     keys
 }
-fn order_keys_for_cache_affinity(keys: &mut Vec<CachedProviderKey>, affinity_key: Option<&str>, request_id: &str) {
-    if affinity_key.is_some() {
-        promote_affinity_key(keys, affinity_key);
+fn order_keys_for_cache_affinity(keys: &mut Vec<CachedProviderKey>, affinity: Option<&AffinitySelection>, request_id: &str) {
+    if let Some(affinity) = affinity {
+        promote_affinity_key(keys, &affinity.key_id);
         return;
     }
     order_keys_for_load_balance(keys, request_id);
 }
 
-fn promote_affinity_key(keys: &mut Vec<CachedProviderKey>, affinity_key: Option<&str>) {
-    let Some(key_id) = affinity_key else {
-        return;
-    };
+fn promote_affinity_key(keys: &mut Vec<CachedProviderKey>, key_id: &str) {
     let Some(index) = keys.iter().position(|key| key.id == key_id) else {
         return;
     };
     let key = keys.remove(index);
     keys.insert(0, key);
+}
+
+fn promote_affinity_endpoint(endpoints: &mut Vec<CachedEndpoint>, affinity: Option<&AffinitySelection>) {
+    let Some(affinity) = affinity else {
+        return;
+    };
+    let Some(index) = endpoints.iter().position(|endpoint| endpoint.id == affinity.endpoint_id) else {
+        return;
+    };
+    let endpoint = endpoints.remove(index);
+    endpoints.insert(0, endpoint);
 }
 
 fn order_keys_for_load_balance(keys: &mut [CachedProviderKey], seed: &str) {
@@ -159,12 +177,12 @@ fn order_keys_for_load_balance(keys: &mut [CachedProviderKey], seed: &str) {
     });
 }
 
-fn provider_model(provider: &CachedProvider, model_id: &str, affinity_key: Option<&str>) -> Option<CachedModelBinding> {
+fn provider_model(provider: &CachedProvider, model_id: &str) -> Option<CachedModelBinding> {
     provider
         .models
         .iter()
         .find(|model| model.global_model_id == model_id && model.is_active)
-        .map(|model| selected_provider_model(model, affinity_key))
+        .map(selected_provider_model)
 }
 
 fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
@@ -212,10 +230,14 @@ fn key_allows_model(key: &CachedProviderKey, model_id: &str) -> bool {
     key.allowed_model_ids.is_empty() || key.allowed_model_ids.iter().any(|id| id == model_id)
 }
 
-fn selected_provider_model(model: &CachedModelBinding, _affinity_key: Option<&str>) -> CachedModelBinding {
+fn selected_provider_model(model: &CachedModelBinding) -> CachedModelBinding {
     let mut selected = model.clone();
     selected.provider_model_name = selected_provider_model_name(model);
     selected
+}
+
+fn matching_affinity<'a>(provider: &CachedProvider, affinity: Option<&'a AffinitySelection>) -> Option<&'a AffinitySelection> {
+    affinity.filter(|record| record.provider_id == provider.id)
 }
 
 fn selected_provider_model_name(model: &CachedModelBinding) -> String {

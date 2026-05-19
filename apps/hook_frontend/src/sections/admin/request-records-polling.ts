@@ -11,7 +11,7 @@ import {
   REQUEST_RECORD_ALL_STATUS_FILTER,
 } from './request-records-utils';
 
-const ACTIVE_REQUEST_REFRESH_INTERVAL_MS = 1000;
+const ACTIVE_REQUEST_REFRESH_INTERVAL_MS = 3000;
 const EMPTY_REQUEST_IDS: string[] = [];
 const REQUEST_STATUS_RANK: Record<string, number> = {
   pending: 0,

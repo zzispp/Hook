@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect timeout flow,DONE,Hook and aether timeout flow inspected,rg "request_timeout_seconds" apps/hook_backend/src/llm_proxy crates,,0,
+2,Implement total non-stream timeout,DONE,Non-stream send and full body read share request timeout budget,cargo test -p backend timeout --no-default-features,2026-05-19T00:00:00Z,0,
+3,Run validation,DONE,Focused timeout tests pass,cargo test -p backend timeout --no-default-features,2026-05-19T00:00:00Z,0,

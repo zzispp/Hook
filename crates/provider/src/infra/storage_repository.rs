@@ -19,6 +19,7 @@ use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
 const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
 const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS: f64 = 30.0;
+const DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS: f64 = 30.0;
 
 #[derive(Clone)]
 pub struct StorageProviderRepository {
@@ -197,6 +198,7 @@ fn provider_input(input: ProviderCreate) -> ProviderRecordInput {
                 .stream_first_byte_timeout_seconds
                 .unwrap_or(DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS),
         ),
+        stream_idle_timeout_seconds: Some(input.stream_idle_timeout_seconds.unwrap_or(DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS)),
         priority: input.priority.unwrap_or(100),
         keep_priority_on_conversion: input.keep_priority_on_conversion.unwrap_or(false),
         enable_format_conversion: input.enable_format_conversion.unwrap_or(false),
@@ -211,6 +213,7 @@ fn provider_patch(input: ProviderUpdate) -> ProviderRecordPatch {
         max_retries: input.max_retries,
         request_timeout_seconds: input.request_timeout_seconds,
         stream_first_byte_timeout_seconds: input.stream_first_byte_timeout_seconds,
+        stream_idle_timeout_seconds: input.stream_idle_timeout_seconds,
         priority: input.priority,
         keep_priority_on_conversion: input.keep_priority_on_conversion,
         enable_format_conversion: input.enable_format_conversion,

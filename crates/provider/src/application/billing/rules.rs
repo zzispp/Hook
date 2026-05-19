@@ -115,10 +115,10 @@ fn tier_json(key: &str, tier: &PricingTier, ttl_value_key: Option<&str>) -> Valu
         _ => Decimal::ZERO,
     };
     let mut item = json!({"up_to": tier.up_to, "value": value});
-    if ttl_value_key.is_some() {
-        if let Some(ttl) = &tier.cache_ttl_pricing {
-            item["cache_ttl_pricing"] = json!(ttl);
-        }
+    if ttl_value_key.is_some()
+        && let Some(ttl) = &tier.cache_ttl_pricing
+    {
+        item["cache_ttl_pricing"] = json!(ttl);
     }
     item
 }

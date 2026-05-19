@@ -17,7 +17,7 @@ pub fn base_input() -> SchedulerInput {
         requested_model_id: "gpt-4o-mini".into(),
         client_format: ApiFormat::OpenAiChat,
         is_stream: false,
-        affinity_key: None,
+        affinity: None,
         load_balance_seed: None,
         scheduling_mode: SchedulingMode::FixedOrder,
         global_keep_priority_on_conversion: false,

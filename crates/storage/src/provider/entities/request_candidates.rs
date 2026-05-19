@@ -21,6 +21,7 @@ pub struct Model {
     pub provider_api_format: Option<String>,
     pub needs_conversion: bool,
     pub is_stream: bool,
+    pub is_cached: bool,
     pub provider_request_headers: Option<String>,
     pub provider_request_body: Option<String>,
     pub provider_response_headers: Option<String>,

@@ -527,6 +527,7 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         provider_api_format: Some("claude_chat".into()),
         needs_conversion: true,
         is_stream: status == "streaming",
+        is_cached: false,
         provider_request_headers: request_headers(status),
         provider_request_body: request_body(status),
         provider_response_headers: response_headers(status),

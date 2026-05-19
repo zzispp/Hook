@@ -196,10 +196,10 @@ fn input_tokens_include_cache_dimensions(api_format: &str) -> bool {
 }
 
 fn alias(dimensions: &mut BTreeMap<String, Value>, target: &str, source: &str) {
-    if !dimensions.contains_key(target) {
-        if let Some(value) = dimensions.get(source).cloned() {
-            dimensions.insert(target.into(), value);
-        }
+    if !dimensions.contains_key(target)
+        && let Some(value) = dimensions.get(source).cloned()
+    {
+        dimensions.insert(target.into(), value);
     }
 }
 

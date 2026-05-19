@@ -15,6 +15,8 @@ use super::{
 };
 
 const STATUS_FILTER_ACTIVE: &str = "active";
+const STATUS_FILTER_FAILOVER: &str = "failover";
+const STATUS_FILTER_RETRY: &str = "retry";
 const STATUS_PENDING: &str = "pending";
 const STATUS_STREAMING: &str = "streaming";
 const ACTIVE_REQUEST_STATUSES: [&str; 2] = [STATUS_PENDING, STATUS_STREAMING];
@@ -227,6 +229,8 @@ fn add_eq_filter(filters: &mut Vec<String>, params: &mut SqlParams, column: &str
 fn add_status_filter(filters: &mut Vec<String>, params: &mut SqlParams, value: Option<&str>) {
     match non_empty(value) {
         Some(STATUS_FILTER_ACTIVE) => add_active_status_filter(filters, params),
+        Some(STATUS_FILTER_FAILOVER) => filters.push("r.has_failover = TRUE".into()),
+        Some(STATUS_FILTER_RETRY) => filters.push("r.has_retry = TRUE".into()),
         Some(status) => add_eq_filter(filters, params, "r.status", Some(status)),
         None => {}
     }

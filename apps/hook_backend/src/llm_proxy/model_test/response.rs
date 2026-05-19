@@ -57,8 +57,7 @@ async fn request_detail(state: &LlmProxyState, request_id: &str) -> Result<types
 fn last_attempt(candidates: &[RequestCandidateDetail]) -> Option<&RequestCandidateDetail> {
     candidates
         .iter()
-        .filter(|candidate| candidate.status != "scheduled" && candidate.status != "skipped")
-        .last()
+        .rfind(|candidate| candidate.status != "scheduled" && candidate.status != "skipped")
 }
 
 fn test_error(status: StatusCode, candidate: Option<&RequestCandidateDetail>, client_error: &Option<String>) -> Option<String> {

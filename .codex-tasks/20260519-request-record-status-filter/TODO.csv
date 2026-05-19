@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,定位请求记录状态与筛选链路,DONE,确认前端筛选字段与后端查询支持,rg -n "has_failover|has_retry|status" apps/hook_frontend/src/sections/admin apps/hook_frontend/src/actions crates/provider apps/hook_backend,2026-05-19T08:22:32Z,0,确认 status=active 是特殊筛选值且后端已有 has_failover/has_retry 字段
+2,实现筛选状态扩展,DONE,前后端使用真实 has_failover/has_retry 过滤并显示新选项,pnpm lint:frontend,2026-05-19T08:29:21Z,0,新增 status=failover/retry 并映射到 r.has_failover/r.has_retry
+3,补齐后台 i18n 种子,DONE,admin cn/en seed 含新增筛选文案,jq empty apps/hook_backend/src/migration/defaults/i18n/admin.cn.json apps/hook_backend/src/migration/defaults/i18n/admin.en.json,2026-05-19T08:29:21Z,0,新增 requestRecords.status.failover/retry
+4,运行验证并记录结果,DONE,相关 lint/check 通过或暴露真实失败,pnpm lint:frontend,2026-05-19T08:29:21Z,0,cargo fmt --all --check; pnpm lint:frontend; 60s provider/storage 定向测试均通过

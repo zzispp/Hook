@@ -8,4 +8,6 @@ pub use builder::CandidateBuilder;
 pub use error::SchedulerError;
 pub use failover::{AttemptOutcome, FailoverExecutor, UpstreamAttempt};
 pub use recorder::{CandidateAuditInput, CandidateAuditRecord, CandidateAuditRecorder};
-pub use types::{Candidate, EndpointSnapshot, KeySnapshot, ModelAccessPolicy, ModelBindingSnapshot, ProviderSnapshot, SchedulerInput, SchedulingMode};
+pub use types::{
+    AffinityCandidate, Candidate, EndpointSnapshot, KeySnapshot, ModelAccessPolicy, ModelBindingSnapshot, ProviderSnapshot, SchedulerInput, SchedulingMode,
+};

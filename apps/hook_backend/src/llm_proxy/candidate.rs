@@ -26,8 +26,10 @@ pub struct ProxyCandidate {
     pub max_retries: i32,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
+    pub stream_idle_timeout_seconds: Option<f64>,
     pub cache_ttl_minutes: i32,
     pub key_rpm_limit: Option<i32>,
+    pub is_cached: bool,
     pub route: CandidateRoute,
 }
 
@@ -88,6 +90,7 @@ pub struct CandidateTrace {
     pub provider_api_format: String,
     pub needs_conversion: bool,
     pub is_stream: bool,
+    pub is_cached: bool,
     pub candidate_index: i32,
 }
 
@@ -192,6 +195,7 @@ mod tests {
                 provider_api_format: "openai_chat".into(),
                 needs_conversion: false,
                 is_stream: false,
+                is_cached: false,
                 candidate_index: 0,
             },
             requested_model_name: "gpt-5.5".into(),
@@ -209,8 +213,10 @@ mod tests {
             max_retries: 3,
             request_timeout_seconds: None,
             stream_first_byte_timeout_seconds: None,
+            stream_idle_timeout_seconds: None,
             cache_ttl_minutes: 5,
             key_rpm_limit: None,
+            is_cached: false,
             route: CandidateRoute {
                 options: vec![
                     route_option(endpoint("endpoint-openai", "openai_chat", false), key("key-a-1", "key-1-secret")),

@@ -13,6 +13,7 @@ export const PROVIDER_TYPE_OPTIONS: ProviderType[] = ['custom'];
 export const DEFAULT_PROVIDER_MAX_RETRIES = 2;
 export const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS = 300;
 export const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS = 30;
+export const DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS = 30;
 
 export const API_FORMAT_OPTIONS = [
   'openai_chat',
@@ -36,6 +37,7 @@ export type ProviderForm = {
   max_retries: string;
   request_timeout_seconds: string;
   stream_first_byte_timeout_seconds: string;
+  stream_idle_timeout_seconds: string;
   priority: string;
   keep_priority_on_conversion: boolean;
   enable_format_conversion: boolean;
@@ -67,6 +69,7 @@ export const DEFAULT_PROVIDER_FORM: ProviderForm = {
   max_retries: '',
   request_timeout_seconds: '',
   stream_first_byte_timeout_seconds: '',
+  stream_idle_timeout_seconds: '',
   priority: '100',
   keep_priority_on_conversion: false,
   enable_format_conversion: true,
@@ -101,6 +104,7 @@ export function providerFormFromProvider(provider: Provider): ProviderForm {
     stream_first_byte_timeout_seconds: optionalNumberText(
       provider.stream_first_byte_timeout_seconds
     ),
+    stream_idle_timeout_seconds: optionalNumberText(provider.stream_idle_timeout_seconds),
     priority: String(provider.priority),
     keep_priority_on_conversion: provider.keep_priority_on_conversion,
     enable_format_conversion: provider.enable_format_conversion,
@@ -118,6 +122,8 @@ export function providerPayload(form: ProviderForm): ProviderCreate {
     stream_first_byte_timeout_seconds:
       optionalNumber(form.stream_first_byte_timeout_seconds) ??
       DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS,
+    stream_idle_timeout_seconds:
+      optionalNumber(form.stream_idle_timeout_seconds) ?? DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS,
     priority: requiredNumber(form.priority),
     keep_priority_on_conversion: form.keep_priority_on_conversion,
     enable_format_conversion: form.enable_format_conversion,

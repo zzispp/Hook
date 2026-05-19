@@ -66,6 +66,8 @@ pub struct CachedProvider {
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
+    #[serde(default)]
+    pub stream_idle_timeout_seconds: Option<f64>,
     pub priority: i32,
     pub keep_priority_on_conversion: bool,
     pub enable_format_conversion: bool,

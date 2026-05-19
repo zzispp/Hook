@@ -275,6 +275,7 @@ mod tests {
                 provider_api_format: provider_api_format.into(),
                 needs_conversion: false,
                 is_stream: false,
+                is_cached: false,
                 candidate_index: 0,
             },
             requested_model_name: "gpt-5.5".into(),
@@ -292,8 +293,10 @@ mod tests {
             max_retries: 0,
             request_timeout_seconds: None,
             stream_first_byte_timeout_seconds: None,
+            stream_idle_timeout_seconds: None,
             cache_ttl_minutes: 5,
             key_rpm_limit: None,
+            is_cached: false,
             route: CandidateRoute { options: Vec::new() },
         }
     }

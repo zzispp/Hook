@@ -13,6 +13,7 @@ use super::{
     LlmProxyError, LlmProxyState,
     response_model::rewrite_response_model_bytes,
     response_payload::{body_value, upstream_status_error_details},
+    timeout::{non_stream_total_timeout, remaining_timeout},
     transport_read::response_bytes,
     usage,
 };
@@ -44,6 +45,7 @@ pub struct FullResponseArgs {
     pub target_format: ApiFormat,
     pub started: Instant,
     pub retry_index: i32,
+    pub request_timeout: Option<std::time::Duration>,
 }
 
 pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyError> {
@@ -57,11 +59,13 @@ pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyE
         target_format,
         started,
         retry_index,
+        request_timeout,
     } = args;
     let status = status_code(response.status())?;
     let content_type = response_content_type(&response);
     let upstream_headers = response.headers().clone();
-    let bytes = response_bytes(&state, &request_id, &candidate, retry_index, started, None, response).await?;
+    let read_timeout = request_timeout.map(|timeout| remaining_timeout(started, timeout));
+    let bytes = response_bytes(&state, &request_id, &candidate, retry_index, started, None, read_timeout, response).await?;
     let elapsed = elapsed_ms(started);
     if status.is_success() {
         return full_success_response(FullResponseInput {
@@ -188,7 +192,9 @@ pub async fn record_upstream_failure(
 ) -> Result<UpstreamFailure, LlmProxyError> {
     let status = status_code(response.status())?;
     let upstream_headers = response.headers().clone();
-    let body = req::response_bytes(response).await?;
+    let request_timeout = non_stream_total_timeout(candidate, candidate.trace.is_stream);
+    let read_timeout = request_timeout.map(|timeout| remaining_timeout(started, timeout));
+    let body = response_bytes(state, request_id, candidate, retry_index, started, None, read_timeout, response).await?;
     let error = upstream_status_error_details(status.as_u16(), &body);
     let error_type = "upstream_status";
     let client_error = client_error::upstream_failure(status);

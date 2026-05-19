@@ -16,7 +16,7 @@ use self::{
     relay::relay,
 };
 use super::{
-    CurrentApiToken, LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT,
+    CurrentApiToken, LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT, SetAffinityInput,
     audit::{AttemptRecordInput, SKIP_REASON_REQUEST_TERMINATED, record_attempt, record_scheduled_candidates, record_skipped_candidates},
     billing::enforce_preflight_access,
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
@@ -81,16 +81,20 @@ async fn record_streaming_attempt(state: &LlmProxyState, request_id: &str, conne
 }
 
 async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {
-    let Some(token_id) = candidate.trace.token_id.as_deref() else {
+    let Some(input) = set_affinity_input(candidate) else {
         return Ok(());
     };
-    state
-        .remember_affinity_key(
-            token_id,
-            &candidate.trace.global_model_id,
-            &candidate.trace.client_api_format,
-            &candidate.trace.key_id,
-            candidate.cache_ttl_minutes,
-        )
-        .await
+    state.remember_affinity(input).await
+}
+
+fn set_affinity_input(candidate: &ProxyCandidate) -> Option<SetAffinityInput<'_>> {
+    Some(SetAffinityInput {
+        token_id: candidate.trace.token_id.as_deref()?,
+        model_id: &candidate.trace.global_model_id,
+        api_format: &candidate.trace.client_api_format,
+        provider_id: &candidate.trace.provider_id,
+        endpoint_id: &candidate.trace.endpoint_id,
+        key_id: &candidate.trace.key_id,
+        ttl_minutes: candidate.cache_ttl_minutes,
+    })
 }

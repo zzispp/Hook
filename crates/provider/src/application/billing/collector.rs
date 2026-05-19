@@ -73,10 +73,10 @@ impl DimensionCollectorRuntime {
                 .filter(|collector| collector.source_type == CollectorSource::Computed)
                 .cloned()
                 .collect::<Vec<_>>();
-            if !computed.is_empty() {
-                if let Some(value) = resolve_computed_dimension(&computed, &dimensions) {
-                    dimensions.insert(name, value);
-                }
+            if !computed.is_empty()
+                && let Some(value) = resolve_computed_dimension(&computed, &dimensions)
+            {
+                dimensions.insert(name, value);
             }
         }
         dimensions
@@ -172,10 +172,10 @@ fn numeric(value: &Value) -> Option<f64> {
 
 fn default_value(collectors: &[DimensionCollector]) -> Option<Value> {
     for collector in collectors {
-        if let Some(value) = collector.default_value.as_deref() {
-            if let Some(value) = cast_value(&Value::String(value.into()), &collector.value_type) {
-                return Some(value);
-            }
+        if let Some(value) = collector.default_value.as_deref()
+            && let Some(value) = cast_value(&Value::String(value.into()), &collector.value_type)
+        {
+            return Some(value);
         }
     }
     None
@@ -186,10 +186,10 @@ fn computed_order(grouped: &BTreeMap<String, Vec<DimensionCollector>>, computed_
     for name in computed_only {
         let mut names = BTreeSet::new();
         for collector in grouped.get(name).into_iter().flatten() {
-            if let Some(expression) = collector.transform_expression.as_deref() {
-                if let Ok(vars) = SafeExpressionEvaluator::variable_names(expression) {
-                    names.extend(vars.into_iter().filter(|var| computed_only.contains(var) && var != name));
-                }
+            if let Some(expression) = collector.transform_expression.as_deref()
+                && let Ok(vars) = SafeExpressionEvaluator::variable_names(expression)
+            {
+                names.extend(vars.into_iter().filter(|var| computed_only.contains(var) && var != name));
             }
         }
         deps.insert(name.clone(), names);

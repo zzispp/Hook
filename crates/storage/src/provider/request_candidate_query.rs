@@ -27,6 +27,7 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         provider_api_format: Set(input.provider_api_format),
         needs_conversion: Set(input.needs_conversion),
         is_stream: Set(input.is_stream),
+        is_cached: Set(input.is_cached),
         provider_request_headers: Set(json::encode_optional(&input.provider_request_headers)?),
         provider_request_body: Set(json::encode_optional(&input.provider_request_body)?),
         provider_response_headers: Set(json::encode_optional(&input.provider_response_headers)?),

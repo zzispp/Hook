@@ -12,6 +12,7 @@ use super::token_estimator::estimate_text_tokens;
 mod tests;
 
 pub(super) const ESTIMATED_USAGE_SOURCE: &str = "estimated_from_stream_delta";
+pub(super) const ESTIMATED_REQUEST_USAGE_SOURCE: &str = "estimated_from_request_body";
 
 pub(super) struct StreamUsageEstimator {
     format: ApiFormat,
@@ -76,7 +77,7 @@ impl StreamUsageEstimator {
 
     pub(super) fn apply_to_usage(&self, current: Option<TokenUsage>, protocol_completed: bool) -> Option<TokenUsage> {
         let Some(estimated) = self.estimated_usage() else {
-            return current;
+            return current.or_else(|| self.estimated_request_usage());
         };
         Some(match current {
             Some(current) => merge_estimated_usage(current, estimated, self.format, protocol_completed),
@@ -90,6 +91,20 @@ impl StreamUsageEstimator {
         }
         let line = std::mem::take(&mut self.buffer);
         self.consume_line(&line)
+    }
+
+    fn estimated_request_usage(&self) -> Option<TokenUsage> {
+        if self.prompt_tokens <= 0 {
+            return None;
+        }
+        Some(TokenUsage {
+            prompt_tokens: Some(self.prompt_tokens),
+            completion_tokens: Some(0),
+            total_tokens: Some(self.prompt_tokens),
+            usage_source: Some(ESTIMATED_REQUEST_USAGE_SOURCE),
+            usage_semantic: Some(usage_semantic(self.format)),
+            ..TokenUsage::default()
+        })
     }
 
     fn apply_output_delta(&mut self, delta: OutputDelta) {

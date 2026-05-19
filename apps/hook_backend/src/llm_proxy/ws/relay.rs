@@ -49,7 +49,7 @@ pub(super) async fn relay(state: LlmProxyState, request_id: String, connected: C
                 return RelayOutcome::Cancelled;
             }
         }
-        RelayOutcome::Success { usage: usage_seen }
+        RelayOutcome::Success { usage: Box::new(usage_seen) }
     };
     let outcome = tokio::select! {
         outcome = client_to_upstream => outcome,
@@ -72,7 +72,7 @@ async fn finish_relay(
     let input = match &outcome {
         RelayOutcome::Success { usage } => AttemptRecordInput {
             status_code: Some(101),
-            usage: *usage,
+            usage: *usage.as_ref(),
             latency_ms,
             termination_origin: PatchField::Null,
             termination_reason: PatchField::Null,
@@ -108,7 +108,7 @@ fn elapsed_ms(started: Instant) -> i64 {
 }
 
 enum RelayOutcome {
-    Success { usage: Option<TokenUsage> },
+    Success { usage: Box<Option<TokenUsage>> },
     Cancelled,
     Failed(String),
 }

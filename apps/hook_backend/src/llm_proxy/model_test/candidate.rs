@@ -30,8 +30,10 @@ pub(super) fn proxy_candidate(state: &LlmProxyState, parts: FixedParts, stream: 
         max_retries: route_retry_floor(&route)?,
         request_timeout_seconds: parts.provider.request_timeout_seconds,
         stream_first_byte_timeout_seconds: parts.provider.stream_first_byte_timeout_seconds,
+        stream_idle_timeout_seconds: parts.provider.stream_idle_timeout_seconds,
         cache_ttl_minutes: key.cache_ttl_minutes,
         key_rpm_limit: key.rpm_limit,
+        is_cached: false,
         route,
     })
 }
@@ -107,6 +109,7 @@ fn candidate_trace(parts: &FixedParts, key: &CandidateKeyOption, stream: bool) -
         provider_api_format: endpoint.api_format.clone(),
         needs_conversion: formats::needs_conversion(&parts.client_api_format, &endpoint.api_format, stream).unwrap_or(false),
         is_stream: stream,
+        is_cached: false,
         candidate_index: 0,
     }
 }

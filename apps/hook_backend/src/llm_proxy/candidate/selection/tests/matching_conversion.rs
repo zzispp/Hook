@@ -21,7 +21,7 @@ fn matching_candidate_parts_routes_gemini_request_to_openai_endpoint_key_when_co
             api_format: "gemini_chat",
             ..request()
         },
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),
@@ -47,7 +47,7 @@ fn matching_candidate_parts_routes_claude_request_to_openai_endpoint_key_when_co
             api_format: "claude_chat",
             ..request()
         },
-        affinity_key: None,
+        affinity: None,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
         request_id: "request-1",
         cooled_provider_ids: &HashSet::new(),

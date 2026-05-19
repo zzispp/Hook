@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::llm_proxy::candidate::ProxyCandidate;
 
@@ -6,13 +6,26 @@ use crate::llm_proxy::candidate::ProxyCandidate;
 pub(super) struct ProxyTimeouts {
     pub(super) request: Option<Duration>,
     pub(super) stream_first_byte: Option<Duration>,
+    pub(super) stream_idle: Option<Duration>,
 }
 
 pub(super) fn proxy_timeouts(candidate: &ProxyCandidate) -> ProxyTimeouts {
     ProxyTimeouts {
         request: candidate.request_timeout_seconds.and_then(timeout_duration),
         stream_first_byte: candidate.stream_first_byte_timeout_seconds.and_then(timeout_duration),
+        stream_idle: candidate.stream_idle_timeout_seconds.and_then(timeout_duration),
     }
+}
+
+pub(super) fn non_stream_total_timeout(candidate: &ProxyCandidate, is_stream: bool) -> Option<Duration> {
+    if is_stream {
+        return None;
+    }
+    Some(proxy_timeouts(candidate).request.unwrap_or_else(req::default_timeout))
+}
+
+pub(super) fn remaining_timeout(started: Instant, total_timeout: Duration) -> Duration {
+    total_timeout.saturating_sub(started.elapsed())
 }
 
 pub(super) fn timeout_duration(seconds: f64) -> Option<Duration> {
@@ -21,12 +34,12 @@ pub(super) fn timeout_duration(seconds: f64) -> Option<Duration> {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use rust_decimal::Decimal;
     use types::model::TieredPricingConfig;
 
-    use super::proxy_timeouts;
+    use super::{non_stream_total_timeout, proxy_timeouts, remaining_timeout};
     use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
     #[test]
@@ -37,6 +50,42 @@ mod tests {
 
         assert_eq!(timeouts.request, Some(Duration::from_secs(300)));
         assert_eq!(timeouts.stream_first_byte, Some(Duration::from_secs(30)));
+        assert_eq!(timeouts.stream_idle, Some(Duration::from_secs(30)));
+    }
+
+    #[test]
+    fn non_stream_uses_provider_request_timeout_as_total_timeout() {
+        let candidate = candidate();
+
+        let timeout = non_stream_total_timeout(&candidate, false);
+
+        assert_eq!(timeout, Some(Duration::from_secs(300)));
+    }
+
+    #[test]
+    fn non_stream_uses_default_total_timeout_when_provider_timeout_is_missing() {
+        let mut candidate = candidate();
+        candidate.request_timeout_seconds = None;
+
+        let timeout = non_stream_total_timeout(&candidate, false);
+
+        assert_eq!(timeout, Some(req::default_timeout()));
+    }
+
+    #[test]
+    fn stream_has_no_total_request_timeout() {
+        let candidate = candidate();
+
+        let timeout = non_stream_total_timeout(&candidate, true);
+
+        assert_eq!(timeout, None);
+    }
+
+    #[test]
+    fn remaining_timeout_never_underflows() {
+        let timeout = remaining_timeout(Instant::now() - Duration::from_secs(2), Duration::from_secs(1));
+
+        assert_eq!(timeout, Duration::ZERO);
     }
 
     fn candidate() -> ProxyCandidate {
@@ -57,8 +106,10 @@ mod tests {
             max_retries: 0,
             request_timeout_seconds: Some(300.0),
             stream_first_byte_timeout_seconds: Some(30.0),
+            stream_idle_timeout_seconds: Some(30.0),
             cache_ttl_minutes: 5,
             key_rpm_limit: None,
+            is_cached: false,
             route: CandidateRoute { options: Vec::new() },
         }
     }
@@ -85,6 +136,7 @@ mod tests {
             provider_api_format: "openai_cli".into(),
             needs_conversion: false,
             is_stream: true,
+            is_cached: false,
             candidate_index: 0,
         }
     }

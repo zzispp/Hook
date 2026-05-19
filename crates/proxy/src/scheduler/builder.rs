@@ -1,5 +1,6 @@
 use super::{
-    Candidate, EndpointSnapshot, KeySnapshot, ModelAccessPolicy, ModelBindingSnapshot, ProviderSnapshot, SchedulerError, SchedulerInput, SchedulingMode,
+    AffinityCandidate, Candidate, EndpointSnapshot, KeySnapshot, ModelAccessPolicy, ModelBindingSnapshot, ProviderSnapshot, SchedulerError, SchedulerInput,
+    SchedulingMode,
 };
 
 const FNV_OFFSET_BASIS: u64 = 14_695_981_039_346_656_037;
@@ -189,16 +190,20 @@ fn should_demote(candidate: &Candidate, input: &SchedulerInput) -> bool {
 }
 
 fn apply_cache_affinity(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
-    let Some(key_id) = input.affinity_key.as_deref() else {
+    let Some(affinity) = input.affinity.as_ref() else {
         apply_load_balance(candidates, input);
         return;
     };
-    let Some(index) = candidates.iter().position(|candidate| candidate.key_id == key_id) else {
+    let Some(index) = candidates.iter().position(|candidate| matches_affinity(candidate, affinity)) else {
         return;
     };
     let mut candidate = candidates.remove(index);
     candidate.is_cached = true;
     candidates.insert(0, candidate);
+}
+
+fn matches_affinity(candidate: &Candidate, affinity: &AffinityCandidate) -> bool {
+    candidate.provider_id == affinity.provider_id && candidate.endpoint_id == affinity.endpoint_id && candidate.key_id == affinity.key_id
 }
 
 fn apply_load_balance(candidates: &mut [Candidate], input: &SchedulerInput) {

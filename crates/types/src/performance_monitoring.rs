@@ -3,10 +3,11 @@ use serde::{Deserialize, Serialize};
 
 pub const MAX_SERIES_POINTS: usize = 720;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PerformanceMonitoringRange {
     Realtime,
+    #[default]
     Today,
     #[serde(rename = "7d")]
     SevenDays,
@@ -163,12 +164,6 @@ pub struct PerformanceSnapshotPoint {
 pub struct HostRealtimeMetrics {
     pub collected_at: String,
     pub metrics: HostResourceMetrics,
-}
-
-impl Default for PerformanceMonitoringRange {
-    fn default() -> Self {
-        Self::Today
-    }
 }
 
 impl SnapshotGranularity {

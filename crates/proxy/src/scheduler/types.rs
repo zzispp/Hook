@@ -25,12 +25,19 @@ pub struct SchedulerInput {
     pub requested_model_id: String,
     pub client_format: ApiFormat,
     pub is_stream: bool,
-    pub affinity_key: Option<String>,
+    pub affinity: Option<AffinityCandidate>,
     pub load_balance_seed: Option<String>,
     pub scheduling_mode: SchedulingMode,
     pub global_keep_priority_on_conversion: bool,
     pub global_format_conversion_enabled: bool,
     pub providers: Vec<ProviderSnapshot>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AffinityCandidate {
+    pub provider_id: String,
+    pub endpoint_id: String,
+    pub key_id: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

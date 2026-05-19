@@ -43,3 +43,6 @@ types.workspace = true
 user.workspace = true
 uuid.workspace = true
 wallet.workspace = true
+
+[dev-dependencies]
+tower.workspace = true

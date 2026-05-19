@@ -1,6 +1,6 @@
 use proxy::{
     format_conversion::ApiFormat,
-    scheduler::{AttemptOutcome, CandidateBuilder, FailoverExecutor, SchedulerError, SchedulerInput, SchedulingMode},
+    scheduler::{AffinityCandidate, AttemptOutcome, CandidateBuilder, FailoverExecutor, SchedulerError, SchedulerInput, SchedulingMode},
 };
 
 mod common;
@@ -85,7 +85,11 @@ fn scheduler_demotes_conversion_unless_provider_keeps_priority() {
 #[test]
 fn scheduler_cache_affinity_promotes_matching_key() {
     let input = SchedulerInput {
-        affinity_key: Some("key-a-2".into()),
+        affinity: Some(AffinityCandidate {
+            provider_id: "provider-a".into(),
+            endpoint_id: "endpoint-a-openai".into(),
+            key_id: "key-a-2".into(),
+        }),
         scheduling_mode: SchedulingMode::CacheAffinity,
         providers: vec![provider_with_two_keys()],
         ..base_input()
@@ -95,6 +99,24 @@ fn scheduler_cache_affinity_promotes_matching_key() {
 
     assert_eq!(candidates[0].key_id, "key-a-2");
     assert!(candidates[0].is_cached);
+}
+
+#[test]
+fn scheduler_cache_affinity_requires_provider_endpoint_and_key_match() {
+    let input = SchedulerInput {
+        affinity: Some(AffinityCandidate {
+            provider_id: "provider-b".into(),
+            endpoint_id: "endpoint-a-openai".into(),
+            key_id: "key-a-2".into(),
+        }),
+        scheduling_mode: SchedulingMode::CacheAffinity,
+        providers: vec![provider_with_two_keys()],
+        ..base_input()
+    };
+
+    let candidates = CandidateBuilder::build(&input).unwrap();
+
+    assert!(candidates.iter().all(|candidate| !candidate.is_cached));
 }
 
 #[test]

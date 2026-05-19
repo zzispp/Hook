@@ -40,7 +40,7 @@ impl IntoResponse for LlmProxyError {
 
 impl Display for LlmProxyError {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        f.write_str(&self.internal_message())
+        f.write_str(self.internal_message())
     }
 }
 

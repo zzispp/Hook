@@ -72,6 +72,7 @@ fn provider_with_keys_and_endpoints(endpoints: Vec<CachedEndpoint>, keys: Vec<Ca
         max_retries: Some(2),
         request_timeout_seconds: None,
         stream_first_byte_timeout_seconds: None,
+        stream_idle_timeout_seconds: None,
         priority: 10,
         keep_priority_on_conversion: false,
         enable_format_conversion: true,

@@ -101,6 +101,7 @@ pub(super) fn request_candidates_table() -> TableCreateStatement {
         .col(string_len_null(RequestCandidates::ProviderApiFormat, 50))
         .col(boolean(RequestCandidates::NeedsConversion))
         .col(boolean(RequestCandidates::IsStream))
+        .col(boolean(RequestCandidates::IsCached))
         .col(text_null(RequestCandidates::ProviderRequestHeaders))
         .col(text_null(RequestCandidates::ProviderRequestBody))
         .col(text_null(RequestCandidates::ProviderResponseHeaders))

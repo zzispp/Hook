@@ -25,6 +25,7 @@ pub(in crate::migration::baseline) enum Providers {
     MaxRetries,
     RequestTimeoutSeconds,
     StreamFirstByteTimeoutSeconds,
+    StreamIdleTimeoutSeconds,
     Priority,
     KeepPriorityOnConversion,
     EnableFormatConversion,

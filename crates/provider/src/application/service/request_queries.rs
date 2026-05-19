@@ -4,7 +4,7 @@ use crate::application::{ProviderError, ProviderResult};
 
 const MAX_REQUEST_RECORD_LIMIT: u64 = 100;
 const MAX_PROVIDER_COOLDOWN_LIMIT: u64 = 100;
-const REQUEST_RECORD_STATUSES: [&str; 6] = ["active", "pending", "streaming", "success", "failed", "cancelled"];
+const REQUEST_RECORD_STATUSES: [&str; 8] = ["active", "failover", "retry", "pending", "streaming", "success", "failed", "cancelled"];
 
 pub fn validate_request_record_list_request(request: &RequestRecordListRequest) -> ProviderResult<()> {
     if request.limit == 0 || request.limit > MAX_REQUEST_RECORD_LIMIT {
@@ -18,7 +18,7 @@ pub fn validate_request_record_list_request(request: &RequestRecordListRequest) 
     }
     if invalid_status_filter(request.status.as_deref()) {
         return Err(ProviderError::InvalidInput(
-            "status must be active, pending, streaming, success, failed, or cancelled".into(),
+            "status must be active, failover, retry, pending, streaming, success, failed, or cancelled".into(),
         ));
     }
     Ok(())
@@ -81,6 +81,18 @@ mod tests {
     }
 
     #[test]
+    fn validate_request_record_list_allows_execution_flag_statuses() {
+        for status in ["failover", "retry"] {
+            let request = RequestRecordListRequest {
+                status: Some(status.into()),
+                ..RequestRecordListRequest::default()
+            };
+
+            assert!(validate_request_record_list_request(&request).is_ok());
+        }
+    }
+
+    #[test]
     fn validate_request_record_list_rejects_unknown_status() {
         let request = RequestRecordListRequest {
             status: Some("unknown".into()),
@@ -90,7 +102,7 @@ mod tests {
         let error = validate_request_record_list_request(&request).unwrap_err();
         assert_eq!(
             error.to_string(),
-            "invalid input: status must be active, pending, streaming, success, failed, or cancelled"
+            "invalid input: status must be active, failover, retry, pending, streaming, success, failed, or cancelled"
         );
     }
 }

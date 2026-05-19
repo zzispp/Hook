@@ -1,5 +1,6 @@
 mod matching;
 mod proxy_candidate;
+mod route;
 mod scheduler;
 #[cfg(test)]
 mod tests;
@@ -14,6 +15,7 @@ use self::{
 };
 use super::{CandidateRequest, CandidateSelection, LlmProxyError, LlmProxyState};
 use crate::llm_proxy::{
+    AffinitySelection,
     cache::snapshot::{CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, SchedulingSnapshot},
     model_access::{active_group, ensure_group_allows_model, ensure_token_allows_model, ensure_user_allows_model},
 };
@@ -34,7 +36,15 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
     ensure_user_allows_model(user_access, &model.id)?;
     let group = active_group(&snapshot, token)?;
     ensure_group_allows_model(group, &model.id)?;
-    let affinity_key = state.cached_affinity_key(&token.id, &model.id, request.api_format).await?;
+    let affinity = if matches!(snapshot.scheduling_mode, types::provider::ProviderSchedulingMode::CacheAffinity) {
+        state
+            .cached_affinity(&token.id, &model.id, request.api_format)
+            .await?
+            .as_ref()
+            .map(AffinitySelection::from)
+    } else {
+        None
+    };
     let cooled_provider_ids = cooled_provider_ids(state, &snapshot).await?;
     let parts = matching_candidate_parts(MatchingCandidatePartsInput {
         snapshot: &snapshot,
@@ -42,7 +52,7 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         user_access,
         model_id: &model.id,
         request,
-        affinity_key: affinity_key.as_deref(),
+        affinity: affinity.as_ref(),
         scheduling_mode: snapshot.scheduling_mode,
         request_id: &request_id,
         cooled_provider_ids: &cooled_provider_ids,
@@ -59,7 +69,7 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         request,
         model_id: &model.id,
         request_id: &request_id,
-        affinity_key,
+        affinity,
         mode: snapshot.scheduling_mode,
     })?;
     let candidates = proxy_candidates(ProxyCandidateBuildInput {
@@ -90,6 +100,7 @@ pub(super) struct CandidateParts {
     pub(super) keys: Vec<CachedProviderKey>,
     pub(super) model: CachedModelBinding,
     pub(super) client_api_format: String,
+    pub(super) is_cached: bool,
 }
 
 fn resolve_global_model(snapshot: &SchedulingSnapshot, model_name: &str) -> Result<GlobalModelRef, LlmProxyError> {

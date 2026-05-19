@@ -1,15 +1,15 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use axum::response::Response;
 use req::Response as UpstreamResponse;
 
 use super::{
-    LlmProxyError, LlmProxyState,
+    LlmProxyError, LlmProxyState, affinity,
     attempt_log::{record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
     failure_classification::{FailureDecision, classify_status},
     outbound_request::upstream_request,
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
-    stream_transport, transport,
+    stream_transport, timeout, transport,
 };
 use crate::llm_proxy::{
     audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
@@ -53,7 +53,7 @@ async fn attempt_candidate(
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<AttemptCandidateOutcome, LlmProxyError> {
-    for retry_index in 0..=candidate.max_retries {
+    for retry_index in affinity::attempt_range(candidate) {
         let attempt = candidate.for_attempt(retry_index);
         match attempt_once(state, prepared, &attempt, retry_index, last_failure, last_error).await? {
             AttemptOnceOutcome::ContinueCandidate => {}
@@ -104,10 +104,12 @@ async fn attempt_once(
         }
     };
     record_started_attempt(state, &prepared.request_id, candidate, prepared.is_stream, retry_index, &request, &payload.body).await?;
-    let response = match state.http.execute(request).await {
+    let request_timeout = timeout::non_stream_total_timeout(candidate, prepared.is_stream);
+    let response = match execute_upstream_request(&state.http, request, request_timeout).await {
         Ok(response) => response,
         Err(error) => {
             let outcome = record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await?;
+            affinity::invalidate_matching(state, candidate).await?;
             return Ok(option_response_outcome(outcome));
         }
     };
@@ -119,9 +121,22 @@ async fn attempt_once(
         started,
         payload,
         response,
+        request_timeout,
         failures: (last_failure, last_error),
     })
     .await
+}
+
+async fn execute_upstream_request(
+    http: &req::ReqwestClient,
+    request: req::Request,
+    request_timeout: Option<Duration>,
+) -> Result<UpstreamResponse, req::ClientError> {
+    let execute = http.execute(request);
+    match request_timeout {
+        Some(timeout) => tokio::time::timeout(timeout, execute).await.unwrap_or(Err(req::ClientError::Timeout)),
+        None => execute.await,
+    }
 }
 
 struct HandleUpstreamResponseInput<'a> {
@@ -132,6 +147,7 @@ struct HandleUpstreamResponseInput<'a> {
     started: Instant,
     payload: AttemptPayload,
     response: UpstreamResponse,
+    request_timeout: Option<Duration>,
     failures: (&'a mut Option<transport::UpstreamFailure>, &'a mut Option<LlmProxyError>),
 }
 
@@ -156,11 +172,12 @@ async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Res
         started: input.started,
         payload: input.payload,
         response: input.response,
+        request_timeout: input.request_timeout,
     })
     .await
     {
         Ok(response) => {
-            remember_affinity(&input.state, input.candidate).await?;
+            affinity::remember(&input.state, input.candidate).await?;
             Ok(AttemptOnceOutcome::Response(response))
         }
         Err(error) => {
@@ -182,6 +199,7 @@ async fn handle_upstream_failure(
     let decision = classify_status(response.status());
     let record_cooldown = decision.records_provider_cooldown();
     let failure = transport::record_upstream_failure(state, &prepared.request_id, response, candidate, started, retry_index, record_cooldown).await?;
+    affinity::invalidate_retryable(state, candidate, decision).await?;
     match decision {
         FailureDecision::ReturnResponse => transport::failure_response(failure).map(AttemptOnceOutcome::Response),
         FailureDecision::NextCandidate => {
@@ -215,6 +233,7 @@ struct SuccessResponseInput<'a> {
     started: Instant,
     payload: AttemptPayload,
     response: UpstreamResponse,
+    request_timeout: Option<Duration>,
 }
 
 async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, LlmProxyError> {
@@ -242,21 +261,7 @@ async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, L
         target_format: input.payload.target_format,
         started: input.started,
         retry_index: input.retry_index,
+        request_timeout: input.request_timeout,
     })
     .await
-}
-
-async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {
-    let Some(token_id) = candidate.trace.token_id.as_deref() else {
-        return Ok(());
-    };
-    state
-        .remember_affinity_key(
-            token_id,
-            &candidate.trace.global_model_id,
-            &candidate.trace.client_api_format,
-            &candidate.trace.key_id,
-            candidate.cache_ttl_minutes,
-        )
-        .await
 }

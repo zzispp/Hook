@@ -2,6 +2,7 @@ mod audit;
 mod auth;
 mod billing;
 mod cache;
+mod cache_affinity;
 mod candidate;
 mod client_error;
 mod error;
@@ -15,11 +16,12 @@ mod request_record_policy;
 mod ws;
 
 use axum::{
-    Router, middleware,
+    Router,
+    extract::DefaultBodyLimit,
+    middleware,
     routing::{get, post},
 };
 use provider::infra::ProviderKeyCipher;
-use redis::AsyncCommands;
 use req::ReqwestClient;
 use storage::Database;
 use types::wallet::Wallet;
@@ -27,6 +29,7 @@ use user::application::SystemUserProvider;
 
 pub use cache::LlmProxyCache;
 pub(crate) use cache::snapshot::CachedUserAccess;
+pub(crate) use cache_affinity::{AffinityRecord, AffinitySelection, InvalidateAffinityInput, SetAffinityInput};
 pub use error::LlmProxyError;
 pub(crate) use model_test::LlmProxyProviderModelTester;
 
@@ -116,28 +119,20 @@ impl LlmProxyState {
         self.cache.record_provider_status_failure(input).await
     }
 
-    pub async fn cached_affinity_key(&self, token_id: &str, model_id: &str, api_format: &str) -> Result<Option<String>, LlmProxyError> {
-        let mut connection = self.affinity.clone();
-        connection
-            .get(self.affinity_cache_key(token_id, model_id, api_format))
-            .await
-            .map_err(redis_error)
+    pub async fn cached_affinity(&self, token_id: &str, model_id: &str, api_format: &str) -> Result<Option<AffinityRecord>, LlmProxyError> {
+        self.affinity_store().get(token_id, model_id, api_format).await
     }
 
-    pub async fn remember_affinity_key(&self, token_id: &str, model_id: &str, api_format: &str, key_id: &str, ttl_minutes: i32) -> Result<(), LlmProxyError> {
-        if ttl_minutes <= 0 {
-            return Ok(());
-        }
-        let mut connection = self.affinity.clone();
-        let seconds = ttl_minutes as u64 * 60;
-        connection
-            .set_ex(self.affinity_cache_key(token_id, model_id, api_format), key_id, seconds)
-            .await
-            .map_err(redis_error)
+    pub async fn remember_affinity(&self, input: SetAffinityInput<'_>) -> Result<(), LlmProxyError> {
+        self.affinity_store().set(input).await
     }
 
-    fn affinity_cache_key(&self, token_id: &str, model_id: &str, api_format: &str) -> String {
-        format!("{}:llm_proxy:affinity:{token_id}:{model_id}:{api_format}", self.key_prefix)
+    pub async fn invalidate_affinity(&self, input: InvalidateAffinityInput<'_>) -> Result<(), LlmProxyError> {
+        self.affinity_store().invalidate(input).await
+    }
+
+    fn affinity_store(&self) -> cache_affinity::CacheAffinityStore {
+        cache_affinity::CacheAffinityStore::new(self.affinity.clone(), &self.key_prefix)
     }
 }
 
@@ -145,61 +140,110 @@ fn llm_proxy_http_client() -> ReqwestClient {
     ReqwestClient::from_builder(req::long_stream_builder()).expect("LLM proxy req client builder should be valid")
 }
 
-fn redis_error(error: redis::RedisError) -> LlmProxyError {
-    LlmProxyError::Infrastructure(error.to_string())
-}
-
 pub fn create_router(state: LlmProxyState) -> Router {
-    Router::new()
-        .route("/models", get(handlers::list_models))
-        .route("/models/", get(handlers::list_models))
-        .route("/models/{model}", get(handlers::retrieve_model))
-        .route("/models/{model}/", get(handlers::retrieve_model))
-        .route("/completions", post(handlers::completions))
-        .route("/completions/", post(handlers::completions))
-        .route("/chat/completions", post(handlers::chat_completions))
-        .route("/chat/completions/", post(handlers::chat_completions))
-        .route("/responses", post(handlers::responses))
-        .route("/responses/", post(handlers::responses))
-        .route("/responses/compact", post(handlers::responses_compact))
-        .route("/responses/compact/", post(handlers::responses_compact))
-        .route("/images/generations", post(handlers::image_generations))
-        .route("/images/generations/", post(handlers::image_generations))
-        .route("/images/edits", post(handlers::image_edits))
-        .route("/images/edits/", post(handlers::image_edits))
-        .route("/edits", post(handlers::image_edits))
-        .route("/edits/", post(handlers::image_edits))
-        .route("/embeddings", post(handlers::embeddings))
-        .route("/embeddings/", post(handlers::embeddings))
-        .route("/audio/transcriptions", post(handlers::audio_transcriptions))
-        .route("/audio/transcriptions/", post(handlers::audio_transcriptions))
-        .route("/audio/translations", post(handlers::audio_translations))
-        .route("/audio/translations/", post(handlers::audio_translations))
-        .route("/audio/speech", post(handlers::audio_speech))
-        .route("/audio/speech/", post(handlers::audio_speech))
-        .route("/moderations", post(handlers::moderations))
-        .route("/moderations/", post(handlers::moderations))
-        .route("/rerank", post(handlers::rerank))
-        .route("/rerank/", post(handlers::rerank))
-        .route("/messages", post(handlers::claude_messages))
-        .route("/messages/", post(handlers::claude_messages))
-        .route("/realtime", get(ws::realtime))
-        .route("/realtime/", get(ws::realtime))
-        .with_state(state.clone())
-        .layer(middleware::from_fn_with_state(state, auth::token_middleware))
+    with_llm_proxy_body_limit(
+        Router::new()
+            .route("/models", get(handlers::list_models))
+            .route("/models/", get(handlers::list_models))
+            .route("/models/{model}", get(handlers::retrieve_model))
+            .route("/models/{model}/", get(handlers::retrieve_model))
+            .route("/completions", post(handlers::completions))
+            .route("/completions/", post(handlers::completions))
+            .route("/chat/completions", post(handlers::chat_completions))
+            .route("/chat/completions/", post(handlers::chat_completions))
+            .route("/responses", post(handlers::responses))
+            .route("/responses/", post(handlers::responses))
+            .route("/responses/compact", post(handlers::responses_compact))
+            .route("/responses/compact/", post(handlers::responses_compact))
+            .route("/images/generations", post(handlers::image_generations))
+            .route("/images/generations/", post(handlers::image_generations))
+            .route("/images/edits", post(handlers::image_edits))
+            .route("/images/edits/", post(handlers::image_edits))
+            .route("/edits", post(handlers::image_edits))
+            .route("/edits/", post(handlers::image_edits))
+            .route("/embeddings", post(handlers::embeddings))
+            .route("/embeddings/", post(handlers::embeddings))
+            .route("/audio/transcriptions", post(handlers::audio_transcriptions))
+            .route("/audio/transcriptions/", post(handlers::audio_transcriptions))
+            .route("/audio/translations", post(handlers::audio_translations))
+            .route("/audio/translations/", post(handlers::audio_translations))
+            .route("/audio/speech", post(handlers::audio_speech))
+            .route("/audio/speech/", post(handlers::audio_speech))
+            .route("/moderations", post(handlers::moderations))
+            .route("/moderations/", post(handlers::moderations))
+            .route("/rerank", post(handlers::rerank))
+            .route("/rerank/", post(handlers::rerank))
+            .route("/messages", post(handlers::claude_messages))
+            .route("/messages/", post(handlers::claude_messages))
+            .route("/realtime", get(ws::realtime))
+            .route("/realtime/", get(ws::realtime))
+            .with_state(state.clone())
+            .layer(middleware::from_fn_with_state(state, auth::token_middleware)),
+    )
 }
 
 pub fn create_v1beta_router(state: LlmProxyState) -> Router {
-    Router::new()
-        .route("/models/{model_action}", post(handlers::gemini_generate_content))
-        .route("/models/{model_action}/", post(handlers::gemini_generate_content))
-        .route("/models/{model}/embedContent", post(handlers::gemini_embed_content))
-        .route("/models/{model}/embedContent/", post(handlers::gemini_embed_content))
-        .route("/models/{model}/batchEmbedContents", post(handlers::gemini_batch_embed_contents))
-        .route("/models/{model}/batchEmbedContents/", post(handlers::gemini_batch_embed_contents))
-        .with_state(state.clone())
-        .layer(middleware::from_fn_with_state(state, auth::token_middleware))
+    with_llm_proxy_body_limit(
+        Router::new()
+            .route("/models/{model_action}", post(handlers::gemini_generate_content))
+            .route("/models/{model_action}/", post(handlers::gemini_generate_content))
+            .route("/models/{model}/embedContent", post(handlers::gemini_embed_content))
+            .route("/models/{model}/embedContent/", post(handlers::gemini_embed_content))
+            .route("/models/{model}/batchEmbedContents", post(handlers::gemini_batch_embed_contents))
+            .route("/models/{model}/batchEmbedContents/", post(handlers::gemini_batch_embed_contents))
+            .with_state(state.clone())
+            .layer(middleware::from_fn_with_state(state, auth::token_middleware)),
+    )
+}
+
+fn with_llm_proxy_body_limit(router: Router) -> Router {
+    router.layer(DefaultBodyLimit::disable())
 }
 
 #[derive(Clone)]
 pub struct CurrentApiToken(pub types::api_token::ApiToken);
+
+#[cfg(test)]
+mod tests {
+    use axum::{
+        Json, Router,
+        body::{Body, to_bytes},
+        http::{Method, Request, StatusCode, header},
+        routing::post,
+    };
+    use serde_json::{Value, json};
+    use tower::ServiceExt;
+
+    const OVERSIZED_JSON_BYTES: usize = 2_097_153;
+
+    #[tokio::test]
+    async fn llm_proxy_body_limit_allows_json_larger_than_axum_default() {
+        let app = super::with_llm_proxy_body_limit(Router::new().route("/chat/completions", post(echo_body_size)));
+        let response = app.oneshot(json_request("/chat/completions", oversized_json())).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response_json(response).await["size"], OVERSIZED_JSON_BYTES);
+    }
+
+    async fn echo_body_size(Json(body): Json<Value>) -> Json<Value> {
+        Json(json!({ "size": body.to_string().len() }))
+    }
+
+    fn oversized_json() -> Value {
+        json!({ "input": "x".repeat(OVERSIZED_JSON_BYTES - r#"{"input":""}"#.len()) })
+    }
+
+    fn json_request(uri: &str, body: Value) -> Request<Body> {
+        Request::builder()
+            .method(Method::POST)
+            .uri(uri)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap()
+    }
+
+    async fn response_json(response: axum::response::Response) -> Value {
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        serde_json::from_slice(&body).unwrap()
+    }
+}

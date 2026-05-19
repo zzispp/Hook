@@ -1,7 +1,10 @@
 mod consume;
 mod finalize;
 
-use std::{collections::VecDeque, time::Duration};
+use std::{
+    collections::VecDeque,
+    time::{Duration, Instant},
+};
 
 use proxy::format_conversion::{ApiFormat, StreamConversionState};
 
@@ -32,6 +35,8 @@ pub(super) struct StreamRelay {
     usage_estimator: StreamUsageEstimator,
     usage: Option<TokenUsage>,
     first_byte_time_ms: Option<i64>,
+    last_upstream_item_at: Instant,
+    stream_idle_timeout: Option<Duration>,
     yielded_any: bool,
     finished: bool,
     protocol_completed: bool,
@@ -50,6 +55,8 @@ impl StreamRelay {
         let needs_conversion = context.candidate.trace.needs_conversion;
         let rewrite_model = context.candidate.provider_model_name != context.candidate.requested_model_name;
         let usage_estimator = StreamUsageEstimator::new(target_format, &context.provider_request_body, &context.candidate.provider_model_name);
+        let stream_idle_timeout = super::super::timeout::proxy_timeouts(&context.candidate).stream_idle;
+        let last_upstream_item_at = context.started;
         Self {
             context,
             upstream,
@@ -64,6 +71,8 @@ impl StreamRelay {
             usage_estimator,
             usage: None,
             first_byte_time_ms: None,
+            last_upstream_item_at,
+            stream_idle_timeout,
             yielded_any: false,
             finished: false,
             protocol_completed: false,
@@ -107,6 +116,7 @@ impl StreamRelay {
                     }
                 }
                 NextUpstreamItem::Keepalive(bytes) => return Some(Ok(bytes)),
+                NextUpstreamItem::IdleTimeout => return Some(self.record_idle_timeout().await),
                 NextUpstreamItem::End => return self.finish_success_item().await,
             }
         }
@@ -114,24 +124,33 @@ impl StreamRelay {
 
     async fn handle_upstream_item(&mut self, item: Result<req::Bytes, req::ClientError>, fail_before_output: bool) -> Result<(), LlmProxyError> {
         match item {
-            Ok(bytes) => self.consume_bytes(bytes, fail_before_output).await,
+            Ok(bytes) => {
+                self.last_upstream_item_at = Instant::now();
+                self.consume_bytes(bytes, fail_before_output).await
+            }
             Err(error) => self.record_read_error(&error).await.and_then(|()| Err(error.into())),
         }
     }
 
     async fn next_upstream_item(&mut self) -> NextUpstreamItem {
-        loop {
-            match tokio::time::timeout(
-                Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS),
-                futures_util::StreamExt::next(&mut self.upstream),
-            )
-            .await
-            {
-                Ok(Some(item)) => return NextUpstreamItem::Chunk(item),
-                Ok(None) => return NextUpstreamItem::End,
-                Err(_) => return NextUpstreamItem::Keepalive(render_keepalive()),
-            }
+        let timeout = next_upstream_wait_timeout(self.last_upstream_item_at, self.stream_idle_timeout);
+        match tokio::time::timeout(timeout.wait, futures_util::StreamExt::next(&mut self.upstream)).await {
+            Ok(Some(item)) => NextUpstreamItem::Chunk(item),
+            Ok(None) => NextUpstreamItem::End,
+            Err(_) if timeout.idle_deadline => NextUpstreamItem::IdleTimeout,
+            Err(_) => NextUpstreamItem::Keepalive(render_keepalive()),
         }
+    }
+
+    async fn record_idle_timeout(&mut self) -> DownstreamItem {
+        let message = "stream idle timeout";
+        self.stream_status.record_error(message);
+        self.stream_status.set_end_reason(StreamEndReason::Timeout, Some(message.into()));
+        if let Err(error) = self.record_failure("upstream_timeout", message).await {
+            return Err(stream_error(error.to_string()));
+        }
+        self.finished = true;
+        Err(stream_error(message.into()))
     }
 
     async fn mark_first_byte(&mut self, bytes: req::Bytes) -> DownstreamItem {
@@ -145,10 +164,11 @@ impl StreamRelay {
         }
         self.first_byte_time_ms = Some(first_byte);
         self.yielded_any = true;
-        if self.protocol_completed && !self.finished {
-            if let Err(error) = self.finish_after_protocol_completion().await {
-                return Err(stream_error(error.to_string()));
-            }
+        if self.protocol_completed
+            && !self.finished
+            && let Err(error) = self.finish_after_protocol_completion().await
+        {
+            return Err(stream_error(error.to_string()));
         }
         Ok(bytes)
     }
@@ -176,7 +196,65 @@ impl StreamRelay {
 enum NextUpstreamItem {
     Chunk(Result<req::Bytes, req::ClientError>),
     Keepalive(req::Bytes),
+    IdleTimeout,
     End,
+}
+
+struct UpstreamWaitTimeout {
+    wait: Duration,
+    idle_deadline: bool,
+}
+
+fn next_upstream_wait_timeout(last_upstream_item_at: Instant, idle_timeout: Option<Duration>) -> UpstreamWaitTimeout {
+    let keepalive = Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS);
+    let Some(idle_timeout) = idle_timeout else {
+        return UpstreamWaitTimeout {
+            wait: keepalive,
+            idle_deadline: false,
+        };
+    };
+    let elapsed = last_upstream_item_at.elapsed();
+    if elapsed >= idle_timeout {
+        return UpstreamWaitTimeout {
+            wait: Duration::ZERO,
+            idle_deadline: true,
+        };
+    }
+    let remaining = idle_timeout - elapsed;
+    UpstreamWaitTimeout {
+        wait: remaining.min(keepalive),
+        idle_deadline: remaining <= keepalive,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{SSE_KEEPALIVE_INTERVAL_SECS, next_upstream_wait_timeout};
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn upstream_wait_uses_keepalive_when_idle_timeout_is_missing() {
+        let timeout = next_upstream_wait_timeout(Instant::now(), None);
+
+        assert_eq!(timeout.wait, Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS));
+        assert!(!timeout.idle_deadline);
+    }
+
+    #[test]
+    fn upstream_wait_marks_idle_deadline_before_next_keepalive() {
+        let timeout = next_upstream_wait_timeout(Instant::now() - Duration::from_secs(25), Some(Duration::from_secs(30)));
+
+        assert!(timeout.wait <= Duration::from_secs(5));
+        assert!(timeout.idle_deadline);
+    }
+
+    #[test]
+    fn upstream_wait_keeps_ping_before_later_idle_deadline() {
+        let timeout = next_upstream_wait_timeout(Instant::now(), Some(Duration::from_secs(30)));
+
+        assert_eq!(timeout.wait, Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS));
+        assert!(!timeout.idle_deadline);
+    }
 }
 
 impl Drop for StreamRelay {

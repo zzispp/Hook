@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add full affinity record storage and selection state,IN_PROGRESS,Redis affinity value stores provider endpoint key timestamps and request count; old bare key namespace is not used,cargo check -p hook_backend,,0,
+2,Promote cached candidate and persist is_cached in request candidates,TODO,Cached candidate is marked and request_candidates records expose is_cached,test targeted scheduler/audit tests,,0,
+3,Invalidate matching affinity on upstream failures,TODO,Failed cached provider endpoint key removes only matching affinity,test targeted executor/affinity tests,,0,
+4,Restrict retry expansion to cached candidates,TODO,Non-cached candidates do not consume provider max_retries; cached candidates still do,test targeted executor/selection tests,,0,
+5,Run final validation,TODO,Focused tests and cargo check pass,timeout 60s cargo test ... && cargo check -p hook_backend,,0,

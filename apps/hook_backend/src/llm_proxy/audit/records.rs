@@ -211,6 +211,7 @@ fn base_input(request_id: &str, trace: &CandidateTrace, retry_index: i32, status
         provider_api_format: Some(trace.provider_api_format.clone()),
         needs_conversion: trace.needs_conversion,
         is_stream: trace.is_stream,
+        is_cached: trace.is_cached,
         provider_request_headers: None,
         provider_request_body: None,
         provider_response_headers: None,
