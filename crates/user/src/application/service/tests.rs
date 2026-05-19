@@ -1,7 +1,7 @@
 use constants::pagination::MAX_PAGE_SIZE;
 use types::{
     pagination::PageRequest,
-    user::{Credentials, NewUser},
+    user::{Credentials, NewUser, SignUpUser},
 };
 
 use crate::{
@@ -14,7 +14,7 @@ async fn sign_up_hashes_password_and_persists_user() {
     let repository = MemoryUserRepository::default();
     let service = UserService::new(repository.clone(), TestPasswordHasher);
 
-    let user = service.sign_up(new_user("alice")).await.unwrap();
+    let user = service.sign_up(sign_up_user(new_user("alice"))).await.unwrap();
     let created = repository.created_records();
 
     assert_eq!(user.username, "alice");
@@ -27,7 +27,7 @@ async fn sign_up_trims_username_email_and_password_before_persisting() {
     let service = UserService::new(repository.clone(), TestPasswordHasher);
     let input = new_user("  alice  ").with_email("  alice@example.com  ").with_password("  secret123  ");
 
-    let user = service.sign_up(input).await.unwrap();
+    let user = service.sign_up(sign_up_user(input)).await.unwrap();
     let created = repository.created_records();
 
     assert_eq!(user.username, "alice");
@@ -90,7 +90,7 @@ async fn sign_up_rejects_invalid_username_constraints() {
         let repository = MemoryUserRepository::default();
         let service = UserService::new(repository, TestPasswordHasher);
 
-        let result = service.sign_up(new_user(username)).await;
+        let result = service.sign_up(sign_up_user(new_user(username))).await;
 
         assert!(matches!(result, Err(AppError::InvalidInput(_))));
     }
@@ -102,7 +102,7 @@ async fn sign_up_rejects_invalid_password_constraints() {
         let repository = MemoryUserRepository::default();
         let service = UserService::new(repository, TestPasswordHasher);
 
-        let result = service.sign_up(new_user("alice").with_password(password)).await;
+        let result = service.sign_up(sign_up_user(new_user("alice").with_password(password))).await;
 
         assert!(matches!(result, Err(AppError::InvalidInput(_))));
     }
@@ -228,5 +228,12 @@ impl WithPassword for NewUser {
 
     fn with_email(self, email: &str) -> Self {
         Self { email: email.into(), ..self }
+    }
+}
+
+fn sign_up_user(user: NewUser) -> SignUpUser {
+    SignUpUser {
+        user,
+        email_verification_code: None,
     }
 }

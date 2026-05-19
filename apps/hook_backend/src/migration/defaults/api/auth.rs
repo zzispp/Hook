@@ -14,6 +14,18 @@ pub const AUTH_APIS: &[ApiDefinition] = &[
         name: "导航菜单",
     },
     ApiDefinition {
+        code: "auth_config",
+        method: "GET",
+        path_pattern: "/api/auth/config",
+        name: "认证配置",
+    },
+    ApiDefinition {
+        code: "registration_email_code_request",
+        method: "POST",
+        path_pattern: "/api/auth/registration-email-code",
+        name: "请求注册邮件验证码",
+    },
+    ApiDefinition {
         code: "password_reset_request",
         method: "POST",
         path_pattern: "/api/auth/password-reset/request",

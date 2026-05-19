@@ -14,8 +14,8 @@ use types::{
 };
 
 use crate::application::{
-    AppError, AppResult, InitialGrantLedger, PasswordResetRecord, PasswordResetRepository, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord,
-    UserAuthRecord, UserRepository, UserWalletCatalog,
+    AppError, AppResult, InitialGrantLedger, PasswordResetRecord, PasswordResetRepository, RegistrationEmailRepository,
+    RegistrationEmailVerificationRecord, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, UserAuthRecord, UserRepository, UserWalletCatalog,
 };
 
 #[derive(Clone)]
@@ -148,11 +148,30 @@ impl PasswordResetRepository for StorageUserRepository {
 }
 
 #[async_trait]
+impl RegistrationEmailRepository for StorageUserRepository {
+    async fn create_registration_email_verification(&self, record: RegistrationEmailVerificationRecord) -> AppResult<()> {
+        self.store
+            .create_registration_email_verification(storage_registration_email_verification(record))
+            .await
+            .map(|_| ())
+            .map_err(storage_error)
+    }
+
+    async fn consume_registration_email_verification(&self, email: &str, code_hash: &str, now: time::OffsetDateTime) -> AppResult<bool> {
+        self.store
+            .consume_registration_email_verification(email, code_hash, now)
+            .await
+            .map_err(storage_error)
+    }
+}
+
+#[async_trait]
 impl RegistrationPolicy for StorageRegistrationPolicy {
     async fn registration_settings(&self) -> AppResult<RegistrationSettings> {
         let settings = self.store.get_system_settings().await.map_err(storage_error)?;
         Ok(RegistrationSettings {
             allow_registration: settings.allow_registration,
+            registration_email_verification_enabled: settings.registration_email_verification_enabled,
             default_user_grant: settings.default_user_grant,
             email_suffix_mode: settings.email_suffix_mode,
             email_suffixes: settings.email_suffixes,
@@ -183,12 +202,23 @@ fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
         username: record.username,
         password_hash: record.password_hash,
         email: record.email,
+        email_verified: record.email_verified,
         role: record.role,
         is_active: record.is_active,
         allowed_model_ids: record.allowed_model_ids,
         allowed_provider_ids: record.allowed_provider_ids,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode,
+    }
+}
+
+fn storage_registration_email_verification(
+    record: RegistrationEmailVerificationRecord,
+) -> storage::user::RegistrationEmailVerificationRecordInput {
+    storage::user::RegistrationEmailVerificationRecordInput {
+        email: record.email,
+        code_hash: record.code_hash,
+        expires_at: record.expires_at,
     }
 }
 

@@ -4,6 +4,7 @@ use crate::application::{ProviderError, ProviderResult};
 
 const MAX_REQUEST_RECORD_LIMIT: u64 = 100;
 const MAX_PROVIDER_COOLDOWN_LIMIT: u64 = 100;
+const REQUEST_RECORD_STATUSES: [&str; 6] = ["active", "pending", "streaming", "success", "failed", "cancelled"];
 
 pub fn validate_request_record_list_request(request: &RequestRecordListRequest) -> ProviderResult<()> {
     if request.limit == 0 || request.limit > MAX_REQUEST_RECORD_LIMIT {
@@ -14,6 +15,11 @@ pub fn validate_request_record_list_request(request: &RequestRecordListRequest) 
     }
     if invalid_type_filter(request.type_filter.as_deref()) {
         return Err(ProviderError::InvalidInput("type must be stream or non_stream".into()));
+    }
+    if invalid_status_filter(request.status.as_deref()) {
+        return Err(ProviderError::InvalidInput(
+            "status must be active, pending, streaming, success, failed, or cancelled".into(),
+        ));
     }
     Ok(())
 }
@@ -54,4 +60,37 @@ pub fn validate_provider_cooldown_request(request: &ProviderCooldownListRequest)
 
 fn invalid_type_filter(value: Option<&str>) -> bool {
     matches!(value.filter(|value| !value.is_empty()), Some(value) if !matches!(value, "stream" | "non_stream"))
+}
+
+fn invalid_status_filter(value: Option<&str>) -> bool {
+    matches!(value.filter(|value| !value.is_empty()), Some(value) if !REQUEST_RECORD_STATUSES.contains(&value))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_request_record_list_allows_active_status() {
+        let request = RequestRecordListRequest {
+            status: Some("active".into()),
+            ..RequestRecordListRequest::default()
+        };
+
+        assert!(validate_request_record_list_request(&request).is_ok());
+    }
+
+    #[test]
+    fn validate_request_record_list_rejects_unknown_status() {
+        let request = RequestRecordListRequest {
+            status: Some("unknown".into()),
+            ..RequestRecordListRequest::default()
+        };
+
+        let error = validate_request_record_list_request(&request).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "invalid input: status must be active, pending, streaming, success, failed, or cancelled"
+        );
+    }
 }

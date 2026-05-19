@@ -36,6 +36,10 @@ auth:
       path_pattern: "/api/i18n/resources"
     - methods: ["GET"]
       path_pattern: "/api/site-info"
+    - methods: ["GET"]
+      path_pattern: "/api/auth/config"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/registration-email-code"
     - methods: ["POST"]
       path_pattern: "/api/auth/sign-in"
     - methods: ["POST"]

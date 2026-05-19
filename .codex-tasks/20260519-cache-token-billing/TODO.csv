@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Read constraints and establish task context,DONE,"Task files exist and cross-repo constraints are read","test -f .codex-tasks/20260519-cache-token-billing/SPEC.md && test -f .codex-tasks/20260519-cache-token-billing/TODO.csv",2026-05-19T11:18:41+08:00,0,
+2,Compare aether and new-api cache-token billing semantics,DONE,"Evidence from both repositories is recorded","rg -n \"cached|cache_read|cache_creation|prompt_tokens|completion_tokens|倍率|quota\" /Users/bubu/ZwjProjects/aether /Users/bubu/ZwjProjects/new-api",2026-05-19T11:21:00+08:00,0,
+3,Implement Hook billing alignment,DONE,"Hook default billing charges non-cached input at input price and cached read at cache-read price","cargo test -p provider",2026-05-19T11:37:55+08:00,0,
+4,Validate affected Rust checks,DONE,"Relevant backend tests pass within 60 seconds","perl -e 'alarm 60; exec @ARGV' cargo test -p provider",2026-05-19T11:37:55+08:00,0,

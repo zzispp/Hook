@@ -12,8 +12,9 @@ use types::{
     pagination::PageRequest,
     response::ApiResponse,
     user::{
-        ListUsersQuery, NewUser, PasswordResetConfirmPayload, PasswordResetRequestPayload, RefreshTokenPayload, SignInPayload, SignUpPayload,
-        USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, UserPayload, UserResponse, UsersPageResponse,
+        AuthConfigResponse, ListUsersQuery, NewUser, PasswordResetConfirmPayload, PasswordResetRequestPayload, RefreshTokenPayload,
+        RegistrationEmailCodePayload, SignInPayload, SignUpPayload, SignUpUser, USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, UserPayload,
+        UserResponse, UsersPageResponse,
     },
 };
 
@@ -43,6 +44,18 @@ pub async fn sign_up(State(state): State<ApiState>, Json(payload): Json<SignUpPa
     let user = state.users.sign_up(new_sign_up_user(payload)).await?;
     let tokens = state.tokens.issue_pair(user.id.clone())?;
     Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
+}
+
+pub async fn auth_config(State(state): State<ApiState>) -> ApiResult<ApiJson<AuthConfigResponse>> {
+    Ok(ok(state.users.auth_config().await?))
+}
+
+pub async fn request_registration_email_code(
+    State(state): State<ApiState>,
+    Json(payload): Json<RegistrationEmailCodePayload>,
+) -> ApiResult<ApiJson<()>> {
+    state.users.request_registration_email_code(payload.into()).await?;
+    Ok(ok(()))
 }
 
 pub async fn sign_in(State(state): State<ApiState>, Json(payload): Json<SignInPayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
@@ -122,17 +135,20 @@ fn ok<T>(data: T) -> ApiJson<T> {
     Json(ApiResponse::new(data))
 }
 
-fn new_sign_up_user(payload: SignUpPayload) -> NewUser {
-    NewUser {
-        username: payload.username,
-        password: payload.password,
-        email: payload.email,
-        role: DEFAULT_USER_ROLE.into(),
-        is_active: DEFAULT_USER_IS_ACTIVE,
-        allowed_model_ids: Vec::new(),
-        allowed_provider_ids: Vec::new(),
-        rate_limit_rpm: None,
-        quota_mode: USER_QUOTA_MODE_WALLET.into(),
+fn new_sign_up_user(payload: SignUpPayload) -> SignUpUser {
+    SignUpUser {
+        user: NewUser {
+            username: payload.username,
+            password: payload.password,
+            email: payload.email,
+            role: DEFAULT_USER_ROLE.into(),
+            is_active: DEFAULT_USER_IS_ACTIVE,
+            allowed_model_ids: Vec::new(),
+            allowed_provider_ids: Vec::new(),
+            rate_limit_rpm: None,
+            quota_mode: USER_QUOTA_MODE_WALLET.into(),
+        },
+        email_verification_code: payload.email_verification_code,
     }
 }
 

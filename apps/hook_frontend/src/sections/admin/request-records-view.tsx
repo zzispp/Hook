@@ -2,7 +2,7 @@
 
 import type { RequestRecord } from 'src/types/provider';
 
-import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { useRef, useMemo, useState, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
 
@@ -10,8 +10,8 @@ import { useProviders } from 'src/actions/providers';
 import { useGlobalModels } from 'src/actions/models';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useRequestRecords } from 'src/actions/request-records';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
-import { useRequestRecords, fetchActiveRequestRecords } from 'src/actions/request-records';
 
 import { useTable } from 'src/components/table';
 
@@ -20,6 +20,13 @@ import { RequestRecordsTable } from './request-records-table';
 import { RequestRecordDetailDrawer } from './request-record-detail-drawer';
 import { DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE } from './request-records-utils';
 import {
+  usePageVisible,
+  useAutoRefresh,
+  usePollingRequestIds,
+  useActiveRequestPolling,
+  useRestoreScrollOnSelection,
+} from './request-records-polling';
+import {
   RequestRecordsToolbar,
   toRequestRecordQueryFilters,
   type RequestRecordFilterState,
@@ -27,26 +34,19 @@ import {
 } from './request-records-toolbar';
 
 const AUTO_REFRESH_INTERVAL_MS = 3000;
-const ACTIVE_REQUEST_REFRESH_INTERVAL_MS = 1000;
-const EMPTY_REQUEST_IDS: string[] = [];
-const REQUEST_STATUS_RANK: Record<string, number> = {
-  pending: 0,
-  streaming: 1,
-  success: 2,
-  failed: 2,
-  cancelled: 2,
-};
 
 export function RequestRecordsView() {
+  return <RequestRecordsContent {...useRequestRecordsViewProps()} />;
+}
+
+function useRequestRecordsViewProps() {
   const { currentLang } = useTranslate('admin');
   const table = useTable({
     defaultRowsPerPage: DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE,
     defaultOrderBy: 'created_at',
   });
-  const [filters, setFilters] = useState(DEFAULT_REQUEST_RECORD_FILTERS);
+  const { filters, handleFiltersChange } = useRequestRecordFilters(table.onResetPage);
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [manualRefreshing, setManualRefreshing] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<RequestRecord | null>(null);
   const models = useGlobalModels(0, 1000);
   const providers = useProviders(0, 1000);
   const records = useRequestRecords(
@@ -55,17 +55,53 @@ export function RequestRecordsView() {
     toRequestRecordQueryFilters(filters)
   );
   const locale = currentLang.numberFormat.code;
-  const refreshRecords = records.refresh;
-  const refreshInFlightRef = useRef<Promise<unknown> | null>(null);
-  const scrollSnapshotRef = useRef<number | null>(null);
   const pageVisible = usePageVisible();
-  const activeRequestIds = useMemo(() => activeRecordIds(records.items), [records.items]);
-  const pollingRequestIds = pageVisible ? activeRequestIds : EMPTY_REQUEST_IDS;
-  const displaySelectedRecord = useMemo(
-    () => latestSelectedRecord(selectedRecord, records.items),
-    [records.items, selectedRecord]
-  );
+  const pollingRequestIds = usePollingRequestIds(records.items, pageVisible);
+  const refresh = useRequestRecordRefresh(records.refresh);
+  const selection = useRequestRecordSelection(records.items);
 
+  useAutoRefresh(autoRefresh && pageVisible, refresh.backgroundRefresh, AUTO_REFRESH_INTERVAL_MS);
+  useActiveRequestPolling(
+    pollingRequestIds,
+    filters.status,
+    records.updateItems,
+    refresh.backgroundRefresh
+  );
+  useRestoreScrollOnSelection(selection.displaySelectedRecord, selection.scrollSnapshotRef);
+
+  return {
+    table,
+    filters,
+    models: models.items,
+    records,
+    providers: providers.items,
+    autoRefresh,
+    manualRefreshing: refresh.manualRefreshing,
+    displaySelectedRecord: selection.displaySelectedRecord,
+    locale,
+    onOpenRecord: selection.handleOpenRecord,
+    onFiltersChange: handleFiltersChange,
+    onAutoRefreshChange: setAutoRefresh,
+    onManualRefresh: refresh.handleManualRefresh,
+    onCloseRecord: selection.handleCloseRecord,
+  };
+}
+
+function useRequestRecordFilters(resetPage: () => void) {
+  const [filters, setFilters] = useState(DEFAULT_REQUEST_RECORD_FILTERS);
+  const handleFiltersChange = useCallback(
+    (nextFilters: RequestRecordFilterState) => {
+      resetPage();
+      setFilters(nextFilters);
+    },
+    [resetPage]
+  );
+  return { filters, handleFiltersChange };
+}
+
+function useRequestRecordRefresh(refreshRecords: () => Promise<unknown> | unknown) {
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const refreshInFlightRef = useRef<Promise<unknown> | null>(null);
   const backgroundRefresh = useCallback(() => {
     if (refreshInFlightRef.current) return refreshInFlightRef.current;
     const next = Promise.resolve(refreshRecords()).finally(() => {
@@ -74,7 +110,6 @@ export function RequestRecordsView() {
     refreshInFlightRef.current = next;
     return next;
   }, [refreshRecords]);
-
   const handleManualRefresh = useCallback(async () => {
     setManualRefreshing(true);
     try {
@@ -83,187 +118,64 @@ export function RequestRecordsView() {
       setManualRefreshing(false);
     }
   }, [backgroundRefresh]);
+  return { manualRefreshing, backgroundRefresh, handleManualRefresh };
+}
 
+function useRequestRecordSelection(items: RequestRecord[]) {
+  const [selectedRecord, setSelectedRecord] = useState<RequestRecord | null>(null);
+  const scrollSnapshotRef = useRef<number | null>(null);
+  const displaySelectedRecord = useMemo(
+    () => latestSelectedRecord(selectedRecord, items),
+    [items, selectedRecord]
+  );
   const handleOpenRecord = useCallback((record: RequestRecord) => {
     scrollSnapshotRef.current = window.scrollY;
     setSelectedRecord(record);
   }, []);
+  const handleCloseRecord = useCallback(() => setSelectedRecord(null), []);
+  return { displaySelectedRecord, scrollSnapshotRef, handleOpenRecord, handleCloseRecord };
+}
 
-  useAutoRefresh(autoRefresh && pageVisible, backgroundRefresh);
-  useActiveRequestPolling(pollingRequestIds, records.updateItems, backgroundRefresh);
-  useRestoreScrollOnSelection(displaySelectedRecord, scrollSnapshotRef);
+type RequestRecordsContentProps = ReturnType<typeof useRequestRecordsViewProps>;
 
-  const handleFiltersChange = useCallback(
-    (nextFilters: RequestRecordFilterState) => {
-      table.onResetPage();
-      setFilters(nextFilters);
-    },
-    [table]
-  );
-
+function RequestRecordsContent(props: RequestRecordsContentProps) {
   return (
     <DashboardContent maxWidth="xl">
       <AdminBreadcrumbs
         headingCode={DASHBOARD_MENU_CODES.requestRecords}
         action={
-          <RefreshButton loading={manualRefreshing} onClick={() => void handleManualRefresh()} />
+          <RefreshButton
+            loading={props.manualRefreshing}
+            onClick={() => void props.onManualRefresh()}
+          />
         }
       />
       <Card>
         <RequestRecordsToolbar
-          filters={filters}
-          models={models.items}
-          providers={providers.items}
-          autoRefresh={autoRefresh}
-          onChange={handleFiltersChange}
-          onAutoRefreshChange={setAutoRefresh}
+          filters={props.filters}
+          models={props.models}
+          providers={props.providers}
+          autoRefresh={props.autoRefresh}
+          onChange={props.onFiltersChange}
+          onAutoRefreshChange={props.onAutoRefreshChange}
         />
         <RequestRecordsTable
-          rows={records.items}
-          total={records.total}
-          table={table}
-          locale={locale}
-          loading={records.isLoading}
-          onOpen={handleOpenRecord}
+          rows={props.records.items}
+          total={props.records.total}
+          table={props.table}
+          locale={props.locale}
+          loading={props.records.isLoading}
+          onOpen={props.onOpenRecord}
         />
       </Card>
       <RequestRecordDetailDrawer
-        open={Boolean(displaySelectedRecord)}
-        record={displaySelectedRecord}
-        locale={locale}
-        onClose={() => setSelectedRecord(null)}
+        open={Boolean(props.displaySelectedRecord)}
+        record={props.displaySelectedRecord}
+        locale={props.locale}
+        onClose={props.onCloseRecord}
       />
     </DashboardContent>
   );
-}
-
-function useAutoRefresh(enabled: boolean, refresh: () => void) {
-  useEffect(() => {
-    if (!enabled) return undefined;
-    refresh();
-    const timer = window.setInterval(refresh, AUTO_REFRESH_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [enabled, refresh]);
-}
-
-function usePageVisible() {
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const update = () => setVisible(!document.hidden);
-    update();
-    document.addEventListener('visibilitychange', update);
-    return () => document.removeEventListener('visibilitychange', update);
-  }, []);
-
-  return visible;
-}
-
-function useRestoreScrollOnSelection(
-  selectedRecord: RequestRecord | null,
-  scrollSnapshotRef: React.RefObject<number | null>
-) {
-  useEffect(() => {
-    const scrollY = scrollSnapshotRef.current;
-    if (!selectedRecord || scrollY === null) return undefined;
-    const frame = window.requestAnimationFrame(() => {
-      window.scrollTo({ top: scrollY, left: window.scrollX, behavior: 'instant' });
-      scrollSnapshotRef.current = null;
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [scrollSnapshotRef, selectedRecord]);
-}
-
-function useActiveRequestPolling(
-  ids: string[],
-  updateItems: (updater: (items: RequestRecord[]) => RequestRecord[]) => void,
-  refresh: () => void
-) {
-  const idsKey = ids.join('\n');
-
-  useEffect(() => {
-    if (!ids.length) return undefined;
-    let inFlight = false;
-    const poll = async () => {
-      if (inFlight) return;
-      inFlight = true;
-      try {
-        const response = await fetchActiveRequestRecords(ids);
-        updateItems((items) => mergeRequestRecords(items, response.records));
-        if (shouldRefreshRecords(ids, response.records)) refresh();
-      } finally {
-        inFlight = false;
-      }
-    };
-    void poll();
-    const timer = window.setInterval(() => void poll(), ACTIVE_REQUEST_REFRESH_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [ids, idsKey, refresh, updateItems]);
-}
-
-function activeRecordIds(items: RequestRecord[]) {
-  return items.filter((record) => isActiveRecord(record)).map((record) => record.request_id);
-}
-
-function isActiveRecord(record: RequestRecord) {
-  return (
-    record.status === 'pending' ||
-    record.status === 'streaming' ||
-    record.billing_status === 'pending'
-  );
-}
-
-function mergeRequestRecords(items: RequestRecord[], updates: RequestRecord[]) {
-  if (!updates.length) return items;
-  const updatesById = new Map(updates.map((record) => [record.request_id, record]));
-  return items.map((item) => mergeRequestRecord(item, updatesById.get(item.request_id)));
-}
-
-function mergeRequestRecord(item: RequestRecord, update?: RequestRecord) {
-  if (!update) return item;
-  if (statusRank(update.status) < statusRank(item.status)) return item;
-  return {
-    ...item,
-    ...update,
-    provider_id: update.provider_id ?? item.provider_id,
-    provider_name: update.provider_name ?? item.provider_name,
-    provider_key_name: update.provider_key_name ?? item.provider_key_name,
-    provider_key_preview: update.provider_key_preview ?? item.provider_key_preview,
-    provider_api_format: update.provider_api_format ?? item.provider_api_format,
-    first_byte_time_ms: update.first_byte_time_ms ?? item.first_byte_time_ms,
-    total_latency_ms: update.total_latency_ms ?? item.total_latency_ms,
-    prompt_tokens: update.prompt_tokens ?? item.prompt_tokens,
-    completion_tokens: update.completion_tokens ?? item.completion_tokens,
-    total_tokens: update.total_tokens ?? item.total_tokens,
-    cache_creation_input_tokens:
-      update.cache_creation_input_tokens ?? item.cache_creation_input_tokens,
-    cache_read_input_tokens: update.cache_read_input_tokens ?? item.cache_read_input_tokens,
-    input_text_tokens: update.input_text_tokens ?? item.input_text_tokens,
-    input_audio_tokens: update.input_audio_tokens ?? item.input_audio_tokens,
-    input_image_tokens: update.input_image_tokens ?? item.input_image_tokens,
-    output_text_tokens: update.output_text_tokens ?? item.output_text_tokens,
-    output_audio_tokens: update.output_audio_tokens ?? item.output_audio_tokens,
-    output_image_tokens: update.output_image_tokens ?? item.output_image_tokens,
-    reasoning_tokens: update.reasoning_tokens ?? item.reasoning_tokens,
-    cache_creation_5m_input_tokens:
-      update.cache_creation_5m_input_tokens ?? item.cache_creation_5m_input_tokens,
-    cache_creation_1h_input_tokens:
-      update.cache_creation_1h_input_tokens ?? item.cache_creation_1h_input_tokens,
-    usage_source: update.usage_source ?? item.usage_source,
-    usage_semantic: update.usage_semantic ?? item.usage_semantic,
-    has_failover: item.has_failover || update.has_failover,
-    has_retry: item.has_retry || update.has_retry,
-    candidate_count: Math.max(item.candidate_count, update.candidate_count),
-  };
-}
-
-function shouldRefreshRecords(ids: string[], updates: RequestRecord[]) {
-  const updatedIds = new Set(updates.map((record) => record.request_id));
-  return updates.some((record) => !isActiveRecord(record)) || ids.some((id) => !updatedIds.has(id));
-}
-
-function statusRank(status: string) {
-  return REQUEST_STATUS_RANK[status] ?? 0;
 }
 
 function latestSelectedRecord(selectedRecord: RequestRecord | null, items: RequestRecord[]) {

@@ -1,3 +1,4 @@
+import { fTokenCount } from 'src/utils/format-number';
 import { formatMoneyCompact } from 'src/utils/currency-format';
 
 export function formatInteger(value: number | undefined, locale: string) {
@@ -6,6 +7,10 @@ export function formatInteger(value: number | undefined, locale: string) {
 
 export function formatDashboardCost(value: number | undefined) {
   return formatMoneyCompact(value);
+}
+
+export function formatDashboardTokens(value: number | undefined) {
+  return fTokenCount(value ?? 0);
 }
 
 export function formatMs(value?: number | null) {

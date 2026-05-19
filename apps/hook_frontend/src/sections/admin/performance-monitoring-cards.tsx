@@ -14,7 +14,7 @@ import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 
 import { formatMoneyCompact } from 'src/utils/currency-format';
-import { fData, fNumber, fPercent } from 'src/utils/format-number';
+import { fData, fNumber, fPercent, fTokenCount } from 'src/utils/format-number';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -39,9 +39,12 @@ export function SummaryGrid({
       <MetricCard label={t('performanceMonitoring.metrics.p95')} value={formatMs(core?.p95_latency_ms)} />
       <MetricCard
         label={t('performanceMonitoring.metrics.tokensPerSecond')}
-        value={formatRate(llm?.tokens_per_second)}
+        value={formatTokenRate(llm?.tokens_per_second)}
       />
-      <MetricCard label={t('performanceMonitoring.metrics.totalTokens')} value={fNumber(llm?.total_tokens ?? 0)} />
+      <MetricCard
+        label={t('performanceMonitoring.metrics.totalTokens')}
+        value={formatTokens(llm?.total_tokens)}
+      />
       <MetricCard
         label={t('performanceMonitoring.metrics.cost')}
         value={formatCost(llm?.cost)}
@@ -175,8 +178,8 @@ export function DetailCards({
       <DetailCard
         title={t('performanceMonitoring.groups.llm')}
         rows={[
-          [t('performanceMonitoring.rows.inputOutputTotalTokens'), `${fNumber(llm?.prompt_tokens ?? 0)} / ${fNumber(llm?.completion_tokens ?? 0)} / ${fNumber(llm?.total_tokens ?? 0)}`],
-          [t('performanceMonitoring.rows.tokensPerRequestPerSecond'), `${formatRate(llm?.tokens_per_request)} / ${formatRate(llm?.tokens_per_second)}`],
+          [t('performanceMonitoring.rows.inputOutputTotalTokens'), `${formatTokens(llm?.prompt_tokens)} / ${formatTokens(llm?.completion_tokens)} / ${formatTokens(llm?.total_tokens)}`],
+          [t('performanceMonitoring.rows.tokensPerRequestPerSecond'), `${formatTokens(llm?.tokens_per_request)} / ${formatTokenRate(llm?.tokens_per_second)}`],
           [t('performanceMonitoring.rows.failoverCacheHit'), `${fNumber(llm?.failover_count ?? 0)} / ${formatRatio(llm?.cache_hit_rate)}`],
           [t('performanceMonitoring.rows.quotaLimited'), fNumber(llm?.quota_limited_count ?? 0)],
         ]}
@@ -256,6 +259,14 @@ function formatMs(value?: number | null) {
 
 function formatRate(value?: number | null) {
   return fNumber(value ?? 0, { maximumFractionDigits: 2 });
+}
+
+function formatTokens(value?: number | null) {
+  return fTokenCount(value ?? 0);
+}
+
+function formatTokenRate(value?: number | null) {
+  return `${formatTokens(value)}/s`;
 }
 
 function formatRatio(value?: number | null) {

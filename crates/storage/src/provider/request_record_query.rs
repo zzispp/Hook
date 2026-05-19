@@ -14,6 +14,11 @@ use super::{
     request_record_summary::DEFAULT_COST_CURRENCY,
 };
 
+const STATUS_FILTER_ACTIVE: &str = "active";
+const STATUS_PENDING: &str = "pending";
+const STATUS_STREAMING: &str = "streaming";
+const ACTIVE_REQUEST_STATUSES: [&str; 2] = [STATUS_PENDING, STATUS_STREAMING];
+
 pub async fn list_request_records(store: &super::ProviderStore, request: RequestRecordListRequest) -> StorageResult<RequestRecordListResponse> {
     let total = count_summary_records(store, &request).await?;
     let summaries = list_summary_records(store, &request).await?;
@@ -57,7 +62,7 @@ pub async fn get_request_record(store: &super::ProviderStore, request_id: &str) 
 async fn active_summary_records(store: &super::ProviderStore, ids: &[String]) -> StorageResult<Vec<RequestRecordSummaryRecord>> {
     if ids.is_empty() {
         return request_records::Entity::find()
-            .filter(request_records::Column::Status.is_in(["pending", "streaming"]))
+            .filter(request_records::Column::Status.is_in(ACTIVE_REQUEST_STATUSES))
             .order_by_desc(request_records::Column::CreatedAt)
             .all(store.connection())
             .await
@@ -176,7 +181,7 @@ impl FilterSql {
     fn from_request(request: &RequestRecordListRequest) -> Self {
         let mut params = SqlParams::default();
         let mut filters = Vec::new();
-        add_eq_filter(&mut filters, &mut params, "r.status", request.status.as_deref());
+        add_status_filter(&mut filters, &mut params, request.status.as_deref());
         add_eq_filter(&mut filters, &mut params, "r.global_model_id", request.model_id.as_deref());
         add_eq_filter(&mut filters, &mut params, "r.provider_id", request.provider_id.as_deref());
         add_api_format_filter(&mut filters, &mut params, request.api_format.as_deref());
@@ -217,6 +222,20 @@ fn add_eq_filter(filters: &mut Vec<String>, params: &mut SqlParams, column: &str
         let placeholder = params.push(value.to_owned());
         filters.push(format!("{column} = {placeholder}"));
     }
+}
+
+fn add_status_filter(filters: &mut Vec<String>, params: &mut SqlParams, value: Option<&str>) {
+    match non_empty(value) {
+        Some(STATUS_FILTER_ACTIVE) => add_active_status_filter(filters, params),
+        Some(status) => add_eq_filter(filters, params, "r.status", Some(status)),
+        None => {}
+    }
+}
+
+fn add_active_status_filter(filters: &mut Vec<String>, params: &mut SqlParams) {
+    let pending = params.push(STATUS_PENDING.to_owned());
+    let streaming = params.push(STATUS_STREAMING.to_owned());
+    filters.push(format!("r.status IN ({pending}, {streaming})"));
 }
 
 fn add_api_format_filter(filters: &mut Vec<String>, params: &mut SqlParams, value: Option<&str>) {

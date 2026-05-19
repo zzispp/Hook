@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Compare aether request-record behavior,DONE,Relevant aether implementation is inspected and decision recorded,test -f .codex-tasks/20260519-request-record-active-filter/PROGRESS.md,2026-05-19,0,aether maps semantic status active to pending+streaming
+2,Implement Hook semantic filter and local removal,DONE,Active filter returns pending+streaming and completed rows leave filtered list immediately,pnpm --filter hook_frontend lint,2026-05-19,0,Implemented backend active filter plus frontend active option and local removal
+3,Validate backend and frontend checks,DONE,Targeted checks pass or failures are documented,just test,2026-05-19,0,Targeted frontend lint passed; full lint and backend checks are blocked by existing unrelated errors

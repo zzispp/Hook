@@ -11,8 +11,15 @@ const COMPACT_ONE_DECIMAL_THRESHOLD = 10;
 
 export const DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE = 20;
 export const REQUEST_RECORD_ROWS_PER_PAGE_OPTIONS = [10, DEFAULT_REQUEST_RECORD_ROWS_PER_PAGE, 50];
+export const REQUEST_RECORD_ALL_STATUS_FILTER = 'all';
+export const REQUEST_RECORD_ACTIVE_STATUS_FILTER = 'active';
 
-export const REQUEST_RECORD_STATUS_OPTIONS: RequestRecordStatus[] = [
+export type RequestRecordStatusFilter =
+  | RequestRecordStatus
+  | typeof REQUEST_RECORD_ACTIVE_STATUS_FILTER;
+
+export const REQUEST_RECORD_STATUS_OPTIONS: RequestRecordStatusFilter[] = [
+  REQUEST_RECORD_ACTIVE_STATUS_FILTER,
   'pending',
   'streaming',
   'success',
@@ -21,6 +28,7 @@ export const REQUEST_RECORD_STATUS_OPTIONS: RequestRecordStatus[] = [
 ];
 
 export function requestStatusLabel(status: string, t: (key: string) => string) {
+  if (status === REQUEST_RECORD_ACTIVE_STATUS_FILTER) return t('requestRecords.inProgress');
   const key = `requestRecords.status.${status}`;
   return t(key);
 }
@@ -29,8 +37,23 @@ export function requestStatusColor(status: string) {
   if (status === 'success') return 'success';
   if (status === 'cancelled') return 'warning';
   if (status === 'failed') return 'error';
-  if (status === 'streaming') return 'info';
+  if (status === 'streaming' || status === REQUEST_RECORD_ACTIVE_STATUS_FILTER) return 'info';
   return 'warning';
+}
+
+export function isInProgressRequestRecord(record: RequestRecord) {
+  return record.status === 'pending' || record.status === 'streaming';
+}
+
+export function shouldPollRequestRecord(record: RequestRecord) {
+  return isInProgressRequestRecord(record) || record.billing_status === 'pending';
+}
+
+export function requestRecordMatchesStatusFilter(record: RequestRecord, statusFilter?: string) {
+  if (!statusFilter || statusFilter === REQUEST_RECORD_ALL_STATUS_FILTER) return true;
+  if (statusFilter === REQUEST_RECORD_ACTIVE_STATUS_FILTER)
+    return isInProgressRequestRecord(record);
+  return record.status === statusFilter;
 }
 
 export function billingStatusLabel(status: string, t: (key: string) => string) {

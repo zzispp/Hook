@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect ticket data flow,DONE,Ticket list/detail fetch and mutation paths are identified,rg -n "useTickets|useTicketDetail|mutate" apps/hook_frontend/src/sections/operations apps/hook_frontend/src/actions/operations.ts,2026-05-19T11:43:00+08:00,0,SWR list and detail hooks both expose refresh
+2,Implement manual ticket refresh,DONE,Ticket workspace exposes a refresh control that refreshes list and selected detail,pnpm --filter hook_frontend lint,2026-05-19T11:46:00+08:00,0,Added RefreshButton to ticket workspace header
+3,Validate frontend checks,DONE,Frontend lint passes or failures are reported with evidence,pnpm --filter hook_frontend lint,2026-05-19T11:47:00+08:00,0,lint and build passed

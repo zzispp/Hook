@@ -19,6 +19,11 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { TextFieldRow, ManagementDialog } from '../admin/shared';
 
+const DATETIME_LOCAL_VALUE_LENGTH = 16;
+const MILLISECONDS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+const MILLISECONDS_PER_MINUTE = SECONDS_PER_MINUTE * MILLISECONDS_PER_SECOND;
+
 export function ApiTokenDialog({
   scope,
   dialog,
@@ -51,7 +56,9 @@ export function ApiTokenDialog({
         value={dialog.form.name}
         onChange={(value) => dialog.setForm((form) => ({ ...form, name: value }))}
       />
-      {creating && scope === 'admin' && !fixedUserId ? <AdminOwnerFields dialog={dialog} users={users} /> : null}
+      {creating && scope === 'admin' && !fixedUserId ? (
+        <AdminOwnerFields dialog={dialog} users={users} />
+      ) : null}
       {creating ? <CreateOnlyFields dialog={dialog} groups={groups} /> : null}
       <LimitFields dialog={dialog} />
       <ModelFields dialog={dialog} models={models} />
@@ -111,8 +118,15 @@ function UserSelect({ dialog, users }: { dialog: TokenDialogState; users: UserOp
   );
 }
 
-function CreateOnlyFields({ dialog, groups }: { dialog: TokenDialogState; groups: BillingGroupOption[] }) {
+function CreateOnlyFields({
+  dialog,
+  groups,
+}: {
+  dialog: TokenDialogState;
+  groups: BillingGroupOption[];
+}) {
   const { t } = useTranslate('admin');
+  const minExpiresAt = currentDatetimeLocalValue();
 
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -139,7 +153,7 @@ function CreateOnlyFields({ dialog, groups }: { dialog: TokenDialogState; groups
         label={t('fields.expiresAt')}
         value={dialog.form.expires_at}
         helperText={t('helper.unlimitedExpiresAt')}
-        slotProps={{ inputLabel: { shrink: true } }}
+        slotProps={{ htmlInput: { min: minExpiresAt }, inputLabel: { shrink: true } }}
         onChange={(value) => dialog.setForm((form) => ({ ...form, expires_at: value }))}
       />
     </Stack>
@@ -160,7 +174,17 @@ function groupForm(
 }
 
 function filterModelIds(selectedIds: string[], allowedIds: string[]) {
-  return allowedIds.length === 0 ? selectedIds : selectedIds.filter((id) => allowedIds.includes(id));
+  return allowedIds.length === 0
+    ? selectedIds
+    : selectedIds.filter((id) => allowedIds.includes(id));
+}
+
+function currentDatetimeLocalValue() {
+  const now = new Date();
+  const timezoneOffset = now.getTimezoneOffset() * MILLISECONDS_PER_MINUTE;
+  return new Date(now.getTime() + MILLISECONDS_PER_MINUTE - timezoneOffset)
+    .toISOString()
+    .slice(0, DATETIME_LOCAL_VALUE_LENGTH);
 }
 
 function LimitFields({ dialog }: { dialog: TokenDialogState }) {
@@ -186,13 +210,7 @@ function LimitFields({ dialog }: { dialog: TokenDialogState }) {
   );
 }
 
-function ModelFields({
-  dialog,
-  models,
-}: {
-  dialog: TokenDialogState;
-  models: TokenModelOption[];
-}) {
+function ModelFields({ dialog, models }: { dialog: TokenDialogState; models: TokenModelOption[] }) {
   const { t } = useTranslate('admin');
 
   return (
@@ -201,12 +219,16 @@ function ModelFields({
         select
         label={t('fields.modelAccessMode')}
         value={dialog.form.model_access_mode}
-        onChange={(value) => dialog.setForm((form) => ({ ...form, model_access_mode: value as ModelAccessMode }))}
+        onChange={(value) =>
+          dialog.setForm((form) => ({ ...form, model_access_mode: value as ModelAccessMode }))
+        }
       >
         <MenuItem value="all">{t('tokens.allModels')}</MenuItem>
         <MenuItem value="limited">{t('tokens.limitedModels')}</MenuItem>
       </TextFieldRow>
-      {dialog.form.model_access_mode === 'limited' ? <ModelSelect dialog={dialog} models={models} /> : null}
+      {dialog.form.model_access_mode === 'limited' ? (
+        <ModelSelect dialog={dialog} models={models} />
+      ) : null}
     </>
   );
 }
@@ -221,7 +243,12 @@ function ModelSelect({ dialog, models }: { dialog: TokenDialogState; models: Tok
       label={t('fields.allowedModels')}
       value={dialog.form.allowed_model_ids}
       SelectProps={{ multiple: true }}
-      onChange={(event) => dialog.setForm((form) => ({ ...form, allowed_model_ids: selectedModelIds(event.target.value) }))}
+      onChange={(event) =>
+        dialog.setForm((form) => ({
+          ...form,
+          allowed_model_ids: selectedModelIds(event.target.value),
+        }))
+      }
     >
       {models.length === 0 ? (
         <MenuItem disabled value="">

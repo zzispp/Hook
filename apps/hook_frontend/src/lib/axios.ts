@@ -109,10 +109,12 @@ export const endpoints = {
   kanban: '/api/kanban',
   calendar: '/api/calendar',
   auth: {
+    config: '/api/auth/config',
     me: '/api/auth/me',
     refresh: JWT_REFRESH_ENDPOINT,
     signIn: '/api/auth/sign-in',
     signUp: '/api/auth/sign-up',
+    registrationEmailCode: '/api/auth/registration-email-code',
     passwordResetRequest: '/api/auth/password-reset/request',
     passwordResetConfirm: '/api/auth/password-reset/confirm',
   },

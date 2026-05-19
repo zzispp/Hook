@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate token display sites,DONE,"Dashboard and performance monitoring token display sites are identified","rg -n \"total_tokens|prompt_tokens|completion_tokens|tokens_per_request|tokens_per_second\" apps/hook_frontend/src/sections apps/hook_frontend/src/types",2026-05-19T00:00:00+08:00,0,"Found dashboard-kpi.tsx, dashboard-breakdown.tsx, performance-monitoring-cards.tsx"
+2,Implement shared token formatter,DONE,"Formatter emits raw,K,M,B token units consistently","pnpm --filter hook_frontend lint",2026-05-19T00:00:00+08:00,0,"Added fTokenCount in utils/format-number.ts"
+3,Apply formatter to token displays,DONE,"Dashboard and performance monitoring use token formatter for token values","pnpm --filter hook_frontend lint",2026-05-19T00:00:00+08:00,0,"Updated dashboard KPI/detail token text and performance monitoring LLM token text"
+4,Run validation,DONE,"Frontend lint completes or failure is reported with evidence","pnpm --filter hook_frontend lint",2026-05-19T00:00:00+08:00,0,"Lint passed"

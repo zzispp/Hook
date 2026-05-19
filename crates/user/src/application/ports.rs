@@ -4,8 +4,11 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    system_setting::EmailSuffixMode,
-    user::{Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserId, UserListFilters, UserWalletSummaryResponse},
+    system_setting::{EmailSuffixMode, SmtpEncryption},
+    user::{
+        AuthConfigResponse, Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User,
+        UserId, UserListFilters, UserWalletSummaryResponse,
+    },
 };
 
 use super::AppResult;
@@ -15,6 +18,7 @@ pub struct ReplaceUserRecord {
     pub username: String,
     pub password_hash: Option<String>,
     pub email: String,
+    pub email_verified: Option<bool>,
     pub role: String,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
@@ -42,6 +46,13 @@ pub struct UserAuthRecord {
 pub struct PasswordResetRecord {
     pub user_id: UserId,
     pub token_hash: String,
+    pub expires_at: time::OffsetDateTime,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RegistrationEmailVerificationRecord {
+    pub email: String,
+    pub code_hash: String,
     pub expires_at: time::OffsetDateTime,
 }
 
@@ -83,22 +94,23 @@ pub trait RegistrationPolicy: Send + Sync + 'static {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RegistrationSettings {
     pub allow_registration: bool,
+    pub registration_email_verification_enabled: bool,
     pub default_user_grant: Decimal,
     pub email_suffix_mode: EmailSuffixMode,
     pub email_suffixes: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PasswordResetSettings {
+pub struct EmailSettings {
     pub site_name: String,
-    pub password_reset_enabled: bool,
+    pub feature_enabled: bool,
     pub email_config_enabled: bool,
     pub smtp_host: String,
     pub smtp_username: String,
     pub smtp_password_set: bool,
     pub smtp_from_email: String,
     pub smtp_from_name: String,
-    pub smtp_encryption: types::system_setting::SmtpEncryption,
+    pub smtp_encryption: SmtpEncryption,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -115,7 +127,7 @@ pub trait PasswordResetRepository: Send + Sync + 'static {
 
 #[async_trait]
 pub trait PasswordResetConfig: Send + Sync + 'static {
-    async fn password_reset_settings(&self) -> AppResult<PasswordResetSettings>;
+    async fn password_reset_settings(&self) -> AppResult<EmailSettings>;
     async fn password_reset_template(&self, lang: &str) -> AppResult<PasswordResetTemplate>;
 }
 
@@ -124,12 +136,44 @@ pub struct PasswordResetEmail {
     pub recipient_email: String,
     pub subject: String,
     pub html: String,
-    pub settings: PasswordResetSettings,
+    pub settings: EmailSettings,
 }
 
 #[async_trait]
 pub trait PasswordResetMailer: Send + Sync + 'static {
     async fn send_password_reset(&self, email: PasswordResetEmail) -> AppResult<()>;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RegistrationEmailTemplate {
+    pub subject: String,
+    pub html: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RegistrationEmail {
+    pub recipient_email: String,
+    pub subject: String,
+    pub html: String,
+    pub settings: EmailSettings,
+}
+
+#[async_trait]
+pub trait RegistrationEmailRepository: Send + Sync + 'static {
+    async fn create_registration_email_verification(&self, record: RegistrationEmailVerificationRecord) -> AppResult<()>;
+    async fn consume_registration_email_verification(&self, email: &str, code_hash: &str, now: time::OffsetDateTime) -> AppResult<bool>;
+}
+
+#[async_trait]
+pub trait RegistrationEmailConfig: Send + Sync + 'static {
+    async fn auth_config(&self) -> AppResult<AuthConfigResponse>;
+    async fn registration_email_settings(&self) -> AppResult<EmailSettings>;
+    async fn registration_email_template(&self, lang: &str) -> AppResult<RegistrationEmailTemplate>;
+}
+
+#[async_trait]
+pub trait RegistrationEmailMailer: Send + Sync + 'static {
+    async fn send_registration_email(&self, email: RegistrationEmail) -> AppResult<()>;
 }
 
 #[async_trait]
@@ -144,7 +188,9 @@ pub trait UserWalletCatalog: Send + Sync + 'static {
 
 #[async_trait]
 pub trait UserUseCase: Send + Sync + 'static {
-    async fn sign_up(&self, input: NewUser) -> AppResult<User>;
+    async fn auth_config(&self) -> AppResult<AuthConfigResponse>;
+    async fn request_registration_email_code(&self, input: RegistrationEmailCodeRequest) -> AppResult<()>;
+    async fn sign_up(&self, input: SignUpUser) -> AppResult<User>;
     async fn sign_in(&self, input: Credentials) -> AppResult<User>;
     async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()>;
     async fn reset_password(&self, input: PasswordResetConfirm) -> AppResult<()>;

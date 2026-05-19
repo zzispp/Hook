@@ -28,7 +28,21 @@ pub struct SignUpPayload {
     pub password: String,
     pub email: String,
     #[serde(default)]
+    pub email_verification_code: Option<String>,
+    #[serde(default)]
     pub captcha_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RegistrationEmailCodePayload {
+    pub email: String,
+    pub lang: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AuthConfigResponse {
+    pub allow_registration: bool,
+    pub registration_email_verification_enabled: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -167,6 +181,15 @@ impl From<PasswordResetConfirmPayload> for PasswordResetConfirm {
         Self {
             token: value.token,
             password: value.password,
+        }
+    }
+}
+
+impl From<RegistrationEmailCodePayload> for super::RegistrationEmailCodeRequest {
+    fn from(value: RegistrationEmailCodePayload) -> Self {
+        Self {
+            email: value.email,
+            lang: value.lang,
         }
     }
 }

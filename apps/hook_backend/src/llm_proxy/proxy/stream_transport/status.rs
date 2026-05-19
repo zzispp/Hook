@@ -11,8 +11,6 @@ pub(super) enum StreamEndReason {
     ScannerError,
     HandlerStop,
     Eof,
-    Panic,
-    PingFail,
     UpstreamEofWithoutCompletion,
 }
 
@@ -25,8 +23,6 @@ impl StreamEndReason {
             Self::ScannerError => "scanner_error",
             Self::HandlerStop => "handler_stop",
             Self::Eof => "eof",
-            Self::Panic => "panic",
-            Self::PingFail => "ping_fail",
             Self::UpstreamEofWithoutCompletion => "upstream_eof_without_completion",
         }
     }
@@ -147,8 +143,6 @@ mod tests {
             StreamEndReason::Timeout,
             StreamEndReason::ClientGone,
             StreamEndReason::ScannerError,
-            StreamEndReason::Panic,
-            StreamEndReason::PingFail,
             StreamEndReason::UpstreamEofWithoutCompletion,
         ] {
             let mut status = StreamStatus::default();
@@ -190,8 +184,6 @@ mod tests {
             (StreamEndReason::ScannerError, "scanner_error"),
             (StreamEndReason::HandlerStop, "handler_stop"),
             (StreamEndReason::Eof, "eof"),
-            (StreamEndReason::Panic, "panic"),
-            (StreamEndReason::PingFail, "ping_fail"),
             (StreamEndReason::UpstreamEofWithoutCompletion, "upstream_eof_without_completion"),
         ];
 

@@ -207,7 +207,16 @@ fn parse_time_patch(patch: &PatchField<String>) -> ApiTokenResult<PatchField<Off
 }
 
 fn parse_time(value: &str) -> ApiTokenResult<OffsetDateTime> {
-    OffsetDateTime::parse(value, &Rfc3339).map_err(|error| ApiTokenError::InvalidInput(format!("invalid RFC3339 time: {error}")))
+    let expires_at = OffsetDateTime::parse(value, &Rfc3339).map_err(|error| ApiTokenError::InvalidInput(format!("invalid RFC3339 time: {error}")))?;
+    validate_future_expires_at(expires_at)?;
+    Ok(expires_at)
+}
+
+fn validate_future_expires_at(value: OffsetDateTime) -> ApiTokenResult<()> {
+    if value <= OffsetDateTime::now_utc() {
+        return Err(ApiTokenError::InvalidInput("expires_at must be in the future".into()));
+    }
+    Ok(())
 }
 
 fn effective_model_ids(current: &ApiToken, input: &ApiTokenUpdate, mode: ModelAccessMode) -> ApiTokenResult<Vec<String>> {

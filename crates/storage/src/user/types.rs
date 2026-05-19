@@ -5,6 +5,7 @@ pub struct UserRecordInput {
     pub username: String,
     pub password_hash: Option<String>,
     pub email: String,
+    pub email_verified: Option<bool>,
     pub role: String,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
@@ -31,6 +32,23 @@ pub struct PasswordResetTokenRecord {
     pub id: String,
     pub user_id: String,
     pub token_hash: String,
+    pub expires_at: time::OffsetDateTime,
+    pub consumed_at: Option<time::OffsetDateTime>,
+    pub created_at: time::OffsetDateTime,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RegistrationEmailVerificationRecordInput {
+    pub email: String,
+    pub code_hash: String,
+    pub expires_at: time::OffsetDateTime,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RegistrationEmailVerificationRecord {
+    pub id: String,
+    pub email: String,
+    pub code_hash: String,
     pub expires_at: time::OffsetDateTime,
     pub consumed_at: Option<time::OffsetDateTime>,
     pub created_at: time::OffsetDateTime,

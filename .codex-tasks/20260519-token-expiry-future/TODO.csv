@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate token expiry validation path,DONE,Relevant create/update validation path identified,rg -n "parse_optional_time|parse_time_patch" crates/api_token/src/application,,0,validation.rs parses time only
+2,Add failing regression tests,DONE,Past expires_at create/update tests fail before fix,cargo test -p api_token validation_tests -- --nocapture,,0,
+3,Implement future-time validation,DONE,Past expires_at rejected on create/admin create/update,cargo test -p api_token validation_tests -- --nocapture,,0,
+4,Run targeted validation,DONE,Targeted Rust tests pass,cargo test -p api_token validation_tests -- --nocapture,,1,Passed after existing storage compile blocker was resolved

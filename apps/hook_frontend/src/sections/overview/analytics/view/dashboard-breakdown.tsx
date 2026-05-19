@@ -13,7 +13,11 @@ import { useTheme, alpha as hexAlpha } from '@mui/material/styles';
 
 import { Chart, useChart, ChartLegends } from 'src/components/chart';
 
-import { formatInteger, formatDashboardCost } from './dashboard-format';
+import {
+  formatInteger,
+  formatDashboardCost,
+  formatDashboardTokens,
+} from './dashboard-format';
 
 type BreakdownVariant = 'ranking' | 'distribution';
 
@@ -175,7 +179,7 @@ function BreakdownDetails({
             {item.name}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {t('dashboard.stats.columns.tokens')}: {formatInteger(item.total_tokens, locale)} ·{' '}
+            {t('dashboard.stats.columns.tokens')}: {formatDashboardTokens(item.total_tokens)} ·{' '}
             {t('dashboard.stats.columns.cost')}: {formatDashboardCost(item.total_cost)}
           </Typography>
         </Stack>

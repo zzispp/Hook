@@ -9,19 +9,23 @@
     "email": "Email address",
     "identifier": "Username or email",
     "password": "Password",
-    "newPassword": "New password"
+    "newPassword": "New password",
+    "emailVerificationCode": "Email verification code"
   },
   "placeholders": {
     "username": "username",
     "email": "name@example.com",
     "identifier": "username or name@example.com",
-    "password": "8+ characters"
+    "password": "8+ characters",
+    "emailVerificationCode": "6 digits"
   },
   "actions": {
     "signIn": "Sign in",
     "signInLoading": "Signing in...",
     "signUp": "Create account",
     "signUpLoading": "Creating account...",
+    "sendRegistrationCode": "Send code",
+    "sendRegistrationCodeLoading": "Sending...",
     "requestPasswordReset": "Send reset email",
     "requestPasswordResetLoading": "Sending...",
     "resetPassword": "Reset password",
@@ -37,7 +41,8 @@
   "signUp": {
     "title": "Create your account",
     "hasAccount": "Already have an account?",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "emailCodeSent": "Code sent. Please check your inbox."
   },
   "forgotPassword": {
     "title": "Forgot password",
@@ -70,6 +75,8 @@
     "passwordLength": "Password must be between {{min}} and {{max}} characters",
     "emailRequired": "Email is required",
     "emailInvalid": "Email must be a valid email address",
+    "emailVerificationCodeRequired": "Email verification code is required",
+    "emailVerificationCodeInvalid": "Email verification code must be 6 digits",
     "identifierRequired": "Username or email is required",
     "identifierInvalid": "Enter a valid username or email address"
   },

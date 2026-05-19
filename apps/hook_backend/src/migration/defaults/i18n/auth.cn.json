@@ -9,19 +9,23 @@
     "email": "邮箱地址",
     "identifier": "用户名或邮箱",
     "password": "密码",
-    "newPassword": "新密码"
+    "newPassword": "新密码",
+    "emailVerificationCode": "邮件验证码"
   },
   "placeholders": {
     "username": "username",
     "email": "name@example.com",
     "identifier": "username 或 name@example.com",
-    "password": "至少 8 个字符"
+    "password": "至少 8 个字符",
+    "emailVerificationCode": "6 位数字"
   },
   "actions": {
     "signIn": "登录",
     "signInLoading": "正在登录...",
     "signUp": "创建账户",
     "signUpLoading": "正在创建账户...",
+    "sendRegistrationCode": "发送验证码",
+    "sendRegistrationCodeLoading": "正在发送...",
     "requestPasswordReset": "发送重置邮件",
     "requestPasswordResetLoading": "正在发送...",
     "resetPassword": "重置密码",
@@ -37,7 +41,8 @@
   "signUp": {
     "title": "创建你的账户",
     "hasAccount": "已有账户？",
-    "signIn": "去登录"
+    "signIn": "去登录",
+    "emailCodeSent": "验证码已发送，请检查邮箱。"
   },
   "forgotPassword": {
     "title": "找回密码",
@@ -70,6 +75,8 @@
     "passwordLength": "密码必须为 {{min}} 到 {{max}} 个字符",
     "emailRequired": "请输入邮箱地址",
     "emailInvalid": "请输入有效的邮箱地址",
+    "emailVerificationCodeRequired": "请输入邮件验证码",
+    "emailVerificationCodeInvalid": "邮件验证码必须为 6 位数字",
     "identifierRequired": "请输入用户名或邮箱",
     "identifierInvalid": "请输入有效的用户名或邮箱地址"
   },

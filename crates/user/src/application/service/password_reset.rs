@@ -2,7 +2,7 @@ use rand_core::{OsRng, RngCore};
 use sha2::{Digest, Sha256};
 
 use crate::application::{
-    AppError, AppResult, PasswordResetConfig, PasswordResetEmail, PasswordResetRecord, PasswordResetRepository, PasswordResetRequest, PasswordResetSettings,
+    AppError, AppResult, EmailSettings, PasswordResetConfig, PasswordResetEmail, PasswordResetRecord, PasswordResetRepository, PasswordResetRequest,
     PasswordResetTemplate,
 };
 use types::user::User;
@@ -48,7 +48,7 @@ where
         .ok_or_else(|| AppError::InvalidInput("password reset token is invalid or expired".into()))
 }
 
-fn email(settings: PasswordResetSettings, template: PasswordResetTemplate, input: PasswordResetRequest, token: String) -> PasswordResetEmail {
+fn email(settings: EmailSettings, template: PasswordResetTemplate, input: PasswordResetRequest, token: String) -> PasswordResetEmail {
     let recipient_email = input.email.clone();
     let variables = PasswordResetVariables {
         app_name: &settings.site_name,
@@ -64,8 +64,8 @@ fn email(settings: PasswordResetSettings, template: PasswordResetTemplate, input
     }
 }
 
-fn reject_unready_email_config(settings: &PasswordResetSettings) -> AppResult<()> {
-    if !settings.password_reset_enabled {
+fn reject_unready_email_config(settings: &EmailSettings) -> AppResult<()> {
+    if !settings.feature_enabled {
         return Err(AppError::InvalidInput(PASSWORD_RESET_DISABLED.into()));
     }
     if !settings.email_config_enabled {

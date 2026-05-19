@@ -215,7 +215,7 @@
     "groupModelAccess": "Leave models unselected to allow all models in this group.",
     "groupProviderAccess": "Leave providers unselected to allow all providers in this group.",
     "systemRateLimit": "0 follows the system rate; non-zero will use min(system rate, this value).",
-    "unlimitedExpiresAt": "Leave empty for no time limit.",
+    "unlimitedExpiresAt": "Leave empty for no time limit; entered values must be in the future.",
     "unlimitedQuota": "Leave empty for unlimited quota.",
     "userQuotaMode": "Unlimited ignores wallet balance; wallet-limited charges against the wallet balance.",
     "userModelAccess": "Leave models unselected to allow all models for this user.",

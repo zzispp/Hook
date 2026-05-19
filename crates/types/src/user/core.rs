@@ -38,6 +38,18 @@ pub struct NewUser {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SignUpUser {
+    pub user: NewUser,
+    pub email_verification_code: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RegistrationEmailCodeRequest {
+    pub email: String,
+    pub lang: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReplaceUser {
     pub username: String,
     pub password: Option<String>,

@@ -79,11 +79,12 @@ export function signInSchema(t: AuthT) {
   });
 }
 
-export function signUpSchema(t: AuthT) {
+export function signUpSchema(t: AuthT, options: { emailVerificationRequired?: boolean } = {}) {
   return z.object({
     username: usernameSchemaFor(t),
     email: emailSchemaFor(t),
     password: passwordSchemaFor(t),
+    emailVerificationCode: emailVerificationCodeSchemaFor(t, options.emailVerificationRequired),
   });
 }
 
@@ -134,6 +135,25 @@ function emailSchemaFor(t: AuthT) {
           input ? t('validation.emailInvalid') : t('validation.emailRequired'),
       })
     );
+}
+
+function emailVerificationCodeSchemaFor(t: AuthT, required = false) {
+  return z
+    .string()
+    .transform(trimCredential)
+    .pipe(
+      z.string().refine((value) => validEmailVerificationCode(value, required), {
+        error: ({ input }) =>
+          input ? t('validation.emailVerificationCodeInvalid') : t('validation.emailVerificationCodeRequired'),
+      })
+    );
+}
+
+function validEmailVerificationCode(value: string, required: boolean) {
+  if (!value) {
+    return !required;
+  }
+  return /^\d{6}$/.test(value);
 }
 
 function identifierSchemaFor(t: AuthT) {

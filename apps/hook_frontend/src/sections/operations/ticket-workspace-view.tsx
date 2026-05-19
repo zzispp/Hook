@@ -17,7 +17,7 @@ import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-value
 import { Iconify } from 'src/components/iconify';
 import { TablePaginationCustom } from 'src/components/table';
 
-import { AddButton, AdminBreadcrumbs } from 'src/sections/admin/shared';
+import { AddButton, RefreshButton, AdminBreadcrumbs } from 'src/sections/admin/shared';
 
 import { TicketConversation } from './ticket-conversation';
 import { TicketCreateDialog } from './ticket-create-dialog';
@@ -75,11 +75,17 @@ export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
       <AdminBreadcrumbs
         headingCode={admin ? DASHBOARD_MENU_CODES.ticketManagement : DASHBOARD_MENU_CODES.tickets}
         action={
-          admin ? null : (
-            <AddButton onClick={() => state.setCreating(true)}>
-              {state.t('operations.ticket.create')}
-            </AddButton>
-          )
+          <Stack direction="row" spacing={1}>
+            <RefreshButton
+              loading={state.tickets.isValidating || state.detail.isValidating}
+              onClick={() => void state.refreshTickets()}
+            />
+            {admin ? null : (
+              <AddButton onClick={() => state.setCreating(true)}>
+                {state.t('operations.ticket.create')}
+              </AddButton>
+            )}
+          </Stack>
         }
       />
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ flex: '1 1 0', minHeight: 0 }}>

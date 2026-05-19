@@ -215,7 +215,7 @@
     "groupModelAccess": "不选择模型表示该分组允许所有模型。",
     "groupProviderAccess": "不选择提供商表示该分组允许所有提供商。",
     "systemRateLimit": "0 表示跟随系统；非 0 后续运行时取 min(系统速率, 此处速率)。",
-    "unlimitedExpiresAt": "不输入有效期表示无时间限制。",
+    "unlimitedExpiresAt": "不输入有效期表示无时间限制；填写时必须晚于当前时间。",
     "unlimitedQuota": "留空表示不限额度。",
     "userQuotaMode": "无限制不受钱包余额约束；按余额限制会使用钱包余额计费。",
     "userModelAccess": "不选择模型表示该用户允许所有模型。",

@@ -19,7 +19,13 @@ export type SignUpParams = {
   username: string;
   email: string;
   password: string;
+  emailVerificationCode?: string;
   captchaToken?: string;
+};
+
+export type RegistrationEmailCodeParams = {
+  email: string;
+  lang: string;
 };
 
 export type PasswordResetRequestParams = {
@@ -69,12 +75,14 @@ export const signUp = async ({
   username,
   email,
   password,
+  emailVerificationCode,
   captchaToken,
 }: SignUpParams): Promise<void> => {
   const params = {
     username: trimCredential(username),
     email: trimCredential(email),
     password: trimCredential(password),
+    ...(emailVerificationCode && { email_verification_code: emailVerificationCode.trim() }),
     ...(captchaToken && { captcha_token: captchaToken.trim() }),
   };
 
@@ -86,6 +94,16 @@ export const signUp = async ({
     console.error('Error during sign up:', error);
     throw error;
   }
+};
+
+export const requestRegistrationEmailCode = async ({
+  email,
+  lang,
+}: RegistrationEmailCodeParams): Promise<void> => {
+  await axios.post(endpoints.auth.registrationEmailCode, {
+    email: trimCredential(email),
+    lang: trimCredential(lang),
+  });
 };
 
 /** **************************************

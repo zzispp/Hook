@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use storage::{Database, i18n::I18nStore, setting::SettingStore};
 
-use crate::application::{AppError, AppResult, PasswordResetConfig, PasswordResetSettings, PasswordResetTemplate};
+use crate::application::{AppError, AppResult, EmailSettings, PasswordResetConfig, PasswordResetTemplate};
 
 const AUTH_NAMESPACE: &str = "auth";
 const TEMPLATE_GROUP: &str = "emailTemplates";
@@ -25,11 +25,11 @@ impl StoragePasswordResetConfig {
 
 #[async_trait]
 impl PasswordResetConfig for StoragePasswordResetConfig {
-    async fn password_reset_settings(&self) -> AppResult<PasswordResetSettings> {
+    async fn password_reset_settings(&self) -> AppResult<EmailSettings> {
         let settings = self.settings.get_system_settings().await.map_err(storage_error)?;
-        Ok(PasswordResetSettings {
+        Ok(EmailSettings {
             site_name: settings.site_name,
-            password_reset_enabled: settings.password_reset_enabled,
+            feature_enabled: settings.password_reset_enabled,
             email_config_enabled: settings.email_config_enabled,
             smtp_host: settings.smtp_host,
             smtp_username: settings.smtp_username,

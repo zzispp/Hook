@@ -17,7 +17,12 @@ import { CONFIG } from 'src/global-config';
 import { SvgColor } from 'src/components/svg-color';
 import { Chart, useChart } from 'src/components/chart';
 
-import { formatMs, formatInteger, formatDashboardCost } from './dashboard-format';
+import {
+  formatMs,
+  formatInteger,
+  formatDashboardCost,
+  formatDashboardTokens,
+} from './dashboard-format';
 
 type KpiCardData = {
   label: string;
@@ -123,7 +128,7 @@ function kpiCards(
   return [
     kpiCard(t('dashboard.stats.kpi.requests'), formatInteger(summary?.request_count, locale), 'primary', 'ic-glass-bag.svg', points.map((point) => point.request_count)),
     kpiCard(t('dashboard.stats.kpi.successRate'), `${((summary?.success_rate ?? 0) * 100).toFixed(1)}%`, 'success', 'ic-glass-users.svg', points.map((point) => ratioPercent(point.success_count, point.success_count + point.failed_count))),
-    kpiCard(t('dashboard.stats.kpi.tokens'), formatInteger(summary?.total_tokens, locale), 'warning', 'ic-glass-buy.svg', points.map((point) => point.total_tokens)),
+    kpiCard(t('dashboard.stats.kpi.tokens'), formatDashboardTokens(summary?.total_tokens), 'warning', 'ic-glass-buy.svg', points.map((point) => point.total_tokens)),
     kpiCard(t('dashboard.stats.kpi.cost'), formatDashboardCost(summary?.total_cost), 'info', 'ic-glass-bag.svg', points.map((point) => point.total_cost)),
     kpiCard(t('dashboard.stats.kpi.active'), formatInteger(summary?.active_count, locale), 'secondary', 'ic-glass-message.svg', points.map((point) => point.request_count)),
     kpiCard(t('dashboard.stats.kpi.failed'), formatInteger(summary?.failed_count, locale), 'error', 'ic-glass-message.svg', points.map((point) => point.failed_count)),

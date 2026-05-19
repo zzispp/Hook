@@ -4,7 +4,7 @@ use constants::auth::{PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, USERNAME_MAX_LEN
 use constants::pagination::{MAX_PAGE_SIZE, MIN_PAGE_NUMBER, MIN_PAGE_SIZE};
 use types::{
     pagination::PageRequest,
-    user::{Credentials, NewUser, ReplaceUser, USER_QUOTA_MODE_UNLIMITED, USER_QUOTA_MODE_WALLET},
+    user::{Credentials, NewUser, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, USER_QUOTA_MODE_UNLIMITED, USER_QUOTA_MODE_WALLET},
 };
 
 use crate::application::{AppError, AppResult, PasswordResetConfirm, PasswordResetRequest};
@@ -13,6 +13,7 @@ const MAX_LANG_LEN: usize = 32;
 const MAX_RESET_ORIGIN_LEN: usize = 512;
 const RESET_TOKEN_MIN_LENGTH: usize = 32;
 const RESET_TOKEN_MAX_LENGTH: usize = 512;
+const EMAIL_VERIFICATION_CODE_LENGTH: usize = 6;
 
 pub(super) fn validate_credentials(input: &Credentials) -> AppResult<()> {
     reject_blank("identifier", &input.identifier)?;
@@ -52,6 +53,11 @@ pub(super) fn validate_password_reset_request(input: &PasswordResetRequest) -> A
 pub(super) fn validate_password_reset_confirm(input: &PasswordResetConfirm) -> AppResult<()> {
     reject_length("reset token", &input.token, RESET_TOKEN_MIN_LENGTH, RESET_TOKEN_MAX_LENGTH)?;
     validate_password(&input.password)
+}
+
+pub(super) fn validate_registration_email_code_request(input: &RegistrationEmailCodeRequest) -> AppResult<()> {
+    validate_email(&input.email)?;
+    validate_lang(&input.lang)
 }
 
 pub(super) fn validate_page(page: PageRequest) -> AppResult<()> {
@@ -115,6 +121,27 @@ pub(super) fn sanitize_password_reset_confirm(input: PasswordResetConfirm) -> Pa
         token: input.token.trim().to_owned(),
         password: input.password.trim().to_owned(),
     }
+}
+
+pub(super) fn sanitize_registration_email_code_request(input: RegistrationEmailCodeRequest) -> RegistrationEmailCodeRequest {
+    RegistrationEmailCodeRequest {
+        email: input.email.trim().to_ascii_lowercase(),
+        lang: input.lang.trim().to_ascii_lowercase(),
+    }
+}
+
+pub(super) fn sanitize_sign_up_user(input: SignUpUser) -> SignUpUser {
+    SignUpUser {
+        user: sanitize_new_user(input.user),
+        email_verification_code: input.email_verification_code.map(|value| value.trim().to_owned()),
+    }
+}
+
+pub(super) fn validate_email_verification_code(code: &str) -> AppResult<()> {
+    if code.len() != EMAIL_VERIFICATION_CODE_LENGTH || !code.chars().all(|value| value.is_ascii_digit()) {
+        return Err(AppError::InvalidInput("email verification code must be 6 digits".into()));
+    }
+    Ok(())
 }
 
 fn validate_username(username: &str) -> AppResult<()> {

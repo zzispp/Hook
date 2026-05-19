@@ -36,6 +36,12 @@ export function useTicketWorkspaceState(admin: boolean) {
   const tickets = useTickets(table.page, table.rowsPerPage, { search }, admin);
   const detail = useTicketDetail(selection.selectedId, admin);
   const mutations = useTicketMutations({ admin, t, setCreating, ...selection });
+  const refreshTickets = useCallback(async () => {
+    await tickets.refresh();
+    if (selection.selectedId) {
+      await detail.refresh();
+    }
+  }, [detail, selection.selectedId, tickets]);
   const handleSearch = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       table.onResetPage();
@@ -53,6 +59,7 @@ export function useTicketWorkspaceState(admin: boolean) {
     creating,
     userEmail: user?.email ?? '',
     handleSearch,
+    refreshTickets,
     setCreating,
     ...selection,
     ...mutations,

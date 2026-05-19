@@ -7,8 +7,8 @@ use types::{
 };
 
 use crate::application::{
-    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord,
-    UserRepository,
+    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, RegistrationEmailRepository,
+    RegistrationEmailVerificationRecord, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository,
 };
 
 pub(crate) const VALID_PASSWORD: &str = "secret123";
@@ -27,6 +27,7 @@ struct RepositoryState {
     deleted: Vec<UserId>,
     logins: Vec<UserId>,
     reset_tokens: Vec<StoredPasswordResetToken>,
+    registration_email_verifications: Vec<StoredRegistrationEmailVerification>,
 }
 
 #[derive(Clone)]
@@ -39,6 +40,14 @@ pub(crate) struct StoredUser {
 struct StoredPasswordResetToken {
     user_id: UserId,
     token_hash: String,
+    expires_at: time::OffsetDateTime,
+    consumed_at: Option<time::OffsetDateTime>,
+}
+
+#[derive(Clone)]
+struct StoredRegistrationEmailVerification {
+    email: String,
+    code_hash: String,
     expires_at: time::OffsetDateTime,
     consumed_at: Option<time::OffsetDateTime>,
 }
@@ -226,6 +235,40 @@ impl PasswordResetRepository for MemoryUserRepository {
     }
 }
 
+#[async_trait]
+impl RegistrationEmailRepository for MemoryUserRepository {
+    async fn create_registration_email_verification(&self, record: RegistrationEmailVerificationRecord) -> AppResult<()> {
+        self.state
+            .lock()
+            .unwrap()
+            .registration_email_verifications
+            .push(StoredRegistrationEmailVerification {
+                email: record.email,
+                code_hash: record.code_hash,
+                expires_at: record.expires_at,
+                consumed_at: None,
+            });
+        Ok(())
+    }
+
+    async fn consume_registration_email_verification(&self, email: &str, code_hash: &str, now: time::OffsetDateTime) -> AppResult<bool> {
+        let mut state = self.state.lock().unwrap();
+        let Some(index) = state
+            .registration_email_verifications
+            .iter()
+            .rposition(|record| record.email == email && record.code_hash == code_hash)
+        else {
+            return Ok(false);
+        };
+        let record = &mut state.registration_email_verifications[index];
+        if record.consumed_at.is_some() || record.expires_at <= now {
+            return Ok(false);
+        }
+        record.consumed_at = Some(now);
+        Ok(true)
+    }
+}
+
 impl PasswordHasher for TestPasswordHasher {
     fn hash(&self, password: &str) -> AppResult<String> {
         Ok(format!("hashed:{password}"))
@@ -336,7 +379,7 @@ fn find_stored_user_mut<'a>(state: &'a mut RepositoryState, id: &UserId) -> AppR
 
 fn replace_stored_user(state: &mut RepositoryState, id: &UserId, record: &ReplaceUserRecord) -> AppResult<User> {
     let stored = find_stored_user_mut(state, id)?;
-    stored.user = user_from_record(id.clone(), record);
+    stored.user = updated_user(id.clone(), &stored.user, record);
     stored.password_hash = required_password_hash(record)?;
     Ok(stored.user.clone())
 }
@@ -351,12 +394,21 @@ fn user_from_record(id: UserId, record: &ReplaceUserRecord) -> User {
         allowed_model_ids: record.allowed_model_ids.clone(),
         allowed_provider_ids: record.allowed_provider_ids.clone(),
         auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
-        email_verified: false,
+        email_verified: record.email_verified.unwrap_or(false),
         system: false,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode.clone(),
         created_at: default_user_created_at(),
         last_login_at: None,
+    }
+}
+
+fn updated_user(id: UserId, current: &User, record: &ReplaceUserRecord) -> User {
+    User {
+        email_verified: record.email_verified.unwrap_or(current.email_verified),
+        created_at: current.created_at.clone(),
+        last_login_at: current.last_login_at.clone(),
+        ..user_from_record(id, record)
     }
 }
 

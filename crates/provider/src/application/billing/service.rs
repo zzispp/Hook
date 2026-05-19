@@ -35,7 +35,7 @@ pub struct BillingService;
 impl BillingService {
     pub fn calculate_from_response(input: BillingServiceInput) -> CostResult {
         let task_type = effective_rule_task_type(&input.task_type);
-        let dimensions = normalized_dimensions(DimensionCollectorRuntime::collect(
+        let collected_dimensions = DimensionCollectorRuntime::collect(
             &input.collectors,
             DimensionCollectInput {
                 request: input.request.clone(),
@@ -43,7 +43,7 @@ impl BillingService {
                 metadata: input.metadata.clone(),
                 base_dimensions: input.base_dimensions.clone(),
             },
-        ));
+        );
         let lookup = input.explicit_rule.clone().unwrap_or_else(|| {
             let rule = universal_rule(BuiltinRuleInput {
                 global_model_name: input.model_name.clone(),
@@ -57,6 +57,7 @@ impl BillingService {
                 effective_task_type: task_type.clone(),
             }
         });
+        let dimensions = normalized_dimensions(&input.api_format, collected_dimensions, lookup.scope == BillingRuleScope::Default);
         calculate_with_rule(input, lookup, dimensions)
     }
 }
@@ -141,15 +142,57 @@ impl From<CostResult> for RequestBillingAmount {
     }
 }
 
-fn normalized_dimensions(mut dimensions: BTreeMap<String, Value>) -> BTreeMap<String, Value> {
+fn normalized_dimensions(api_format: &str, mut dimensions: BTreeMap<String, Value>, normalize_cache_tokens: bool) -> BTreeMap<String, Value> {
     alias(&mut dimensions, "cache_creation_tokens", "cache_creation_input_tokens");
     alias(&mut dimensions, "cache_read_tokens", "cache_read_input_tokens");
     dimensions.entry("request_count".into()).or_insert(Value::from(1));
+    preserve_raw_input_tokens(&mut dimensions);
     if !dimensions.contains_key("total_input_context") {
-        let total = int_dim(&dimensions, "input_tokens") + int_dim(&dimensions, "cache_creation_tokens") + int_dim(&dimensions, "cache_read_tokens");
-        dimensions.insert("total_input_context".into(), Value::from(total));
+        dimensions.insert("total_input_context".into(), Value::from(total_input_context(api_format, &dimensions)));
+    }
+    if normalize_cache_tokens {
+        normalize_billable_input_tokens(api_format, &mut dimensions);
     }
     dimensions
+}
+
+fn preserve_raw_input_tokens(dimensions: &mut BTreeMap<String, Value>) {
+    if dimensions.contains_key("raw_input_tokens") {
+        return;
+    }
+    if let Some(value) = dimensions.get("input_tokens").cloned() {
+        dimensions.insert("raw_input_tokens".into(), value);
+    }
+}
+
+fn total_input_context(api_format: &str, dimensions: &BTreeMap<String, Value>) -> i64 {
+    let input_tokens = int_dim(dimensions, "input_tokens");
+    if input_tokens_include_cache_dimensions(api_format) {
+        return input_tokens;
+    }
+    input_tokens + int_dim(dimensions, "cache_creation_tokens") + int_dim(dimensions, "cache_read_tokens")
+}
+
+fn normalize_billable_input_tokens(api_format: &str, dimensions: &mut BTreeMap<String, Value>) {
+    if !input_tokens_include_cache_dimensions(api_format) {
+        return;
+    }
+    let input_tokens = int_dim(dimensions, "input_tokens");
+    let cache_tokens = int_dim(dimensions, "cache_creation_tokens").saturating_add(int_dim(dimensions, "cache_read_tokens"));
+    if input_tokens <= 0 || cache_tokens <= 0 {
+        return;
+    }
+    dimensions.insert("input_tokens".into(), Value::from((input_tokens - cache_tokens).max(0)));
+}
+
+fn input_tokens_include_cache_dimensions(api_format: &str) -> bool {
+    let api_format = api_format.trim().to_ascii_lowercase();
+    api_format == "openai"
+        || api_format == "gemini"
+        || api_format.starts_with("openai_")
+        || api_format.starts_with("openai:")
+        || api_format.starts_with("gemini_")
+        || api_format.starts_with("gemini:")
 }
 
 fn alias(dimensions: &mut BTreeMap<String, Value>, target: &str, source: &str) {

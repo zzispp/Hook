@@ -1,7 +1,6 @@
 use constants::pagination::PAGE_INDEX_OFFSET;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Select, Set,
-    TransactionTrait, sea_query::Expr,
+    ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, TransactionTrait,
 };
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
@@ -10,19 +9,23 @@ use types::{
 
 use crate::{
     Database, StorageError, StorageResult,
-    api_token::api_token_records,
     json,
     rbac::role_records,
     user::password_reset_tokens::{self, ActiveModel as PasswordResetTokenActiveModel},
     user::record::ActiveModel as UserActiveModel,
-    user::{UserColumn, UserEntity as Users},
+    user::UserColumn,
 };
 
-use super::{PasswordResetTokenRecord, PasswordResetTokenRecordInput, UserAuthRecord, UserRecord, UserRecordInput};
+use super::{
+    PasswordResetTokenRecord, PasswordResetTokenRecordInput, UserAuthRecord, UserRecord, UserRecordInput,
+    query::{active_users, filtered_users},
+    tokens::{password_reset_token_active_model, password_reset_token_record},
+    user_mutations::{delete_user_api_tokens, required_password_hash, set_wallet_limit_mode},
+};
 
 #[derive(Clone)]
 pub struct UserStore {
-    database: Database,
+    pub(super) database: Database,
 }
 
 impl UserStore {
@@ -45,7 +48,7 @@ impl UserStore {
             allowed_provider_ids: Set(json::encode_required(&user.allowed_provider_ids)?),
             last_login_at: Set(None),
             auth_source: Set(UserRecord::local_auth_source()),
-            email_verified: Set(false),
+            email_verified: Set(user.email_verified.unwrap_or(false)),
             rate_limit_rpm: Set(user.rate_limit_rpm),
             quota_mode: Set(user.quota_mode),
             created_at: Set(now),
@@ -239,31 +242,7 @@ impl UserStore {
             .map(|record| record.map(password_reset_token_record))
             .map_err(StorageError::from)
     }
-}
 
-fn active_users() -> Select<Users> {
-    Users::find().filter(UserColumn::IsDeleted.eq(false))
-}
-
-fn filtered_users(filters: UserListFilters) -> Select<Users> {
-    let mut query = active_users();
-    if let Some(is_active) = filters.is_active {
-        query = query.filter(UserColumn::IsActive.eq(is_active));
-    }
-    if let Some(role) = filters.role {
-        query = query.filter(UserColumn::Role.eq(role));
-    }
-    match filters.search {
-        Some(search) if !search.is_empty() => query.filter(user_search_condition(&search)),
-        _ => query,
-    }
-}
-
-fn user_search_condition(search: &str) -> Condition {
-    Condition::any()
-        .add(UserColumn::Username.contains(search))
-        .add(UserColumn::Email.contains(search))
-        .add(UserColumn::Role.contains(search))
 }
 
 async fn ensure_role_exists(db: &DatabaseConnection, role: &str) -> StorageResult<()> {
@@ -272,54 +251,4 @@ async fn ensure_role_exists(db: &DatabaseConnection, role: &str) -> StorageResul
         return Ok(());
     }
     Err(StorageError::Conflict(format!("role does not exist: {role}")))
-}
-
-async fn set_wallet_limit_mode(db: &sea_orm::DatabaseTransaction, user_id: &str, quota_mode: &str) -> StorageResult<()> {
-    crate::wallet::wallet_records::Entity::update_many()
-        .col_expr(crate::wallet::wallet_records::Column::LimitMode, Expr::value(wallet_limit_mode(quota_mode)))
-        .filter(crate::wallet::wallet_records::Column::UserId.eq(user_id))
-        .exec(db)
-        .await?;
-    Ok(())
-}
-
-async fn delete_user_api_tokens(db: &sea_orm::DatabaseTransaction, user_id: &str) -> StorageResult<()> {
-    api_token_records::Entity::delete_many()
-        .filter(api_token_records::Column::UserId.eq(user_id))
-        .exec(db)
-        .await?;
-    Ok(())
-}
-
-fn wallet_limit_mode(quota_mode: &str) -> &'static str {
-    match quota_mode {
-        types::user::USER_QUOTA_MODE_UNLIMITED => "unlimited",
-        _ => "finite",
-    }
-}
-
-fn required_password_hash(password_hash: Option<String>) -> StorageResult<String> {
-    password_hash.ok_or_else(|| StorageError::Conflict("password_hash is required".into()))
-}
-
-fn password_reset_token_record(record: password_reset_tokens::Model) -> PasswordResetTokenRecord {
-    PasswordResetTokenRecord {
-        id: record.id,
-        user_id: record.user_id,
-        token_hash: record.token_hash,
-        expires_at: record.expires_at,
-        consumed_at: record.consumed_at,
-        created_at: record.created_at,
-    }
-}
-
-fn password_reset_token_active_model(record: PasswordResetTokenRecord) -> PasswordResetTokenActiveModel {
-    PasswordResetTokenActiveModel {
-        id: Set(record.id),
-        user_id: Set(record.user_id),
-        token_hash: Set(record.token_hash),
-        expires_at: Set(record.expires_at),
-        consumed_at: Set(record.consumed_at),
-        created_at: Set(record.created_at),
-    }
 }
