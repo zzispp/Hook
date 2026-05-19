@@ -3,6 +3,8 @@ import type { ApiEnvelope } from 'src/types/rbac';
 import type { I18nResourceResponse } from 'src/types/i18n';
 
 import { cache } from 'react';
+import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 
 import { CONFIG } from 'src/global-config';
 import { detectLanguage } from 'src/locales/server';
@@ -14,6 +16,7 @@ import {
 const ADMIN_NAMESPACE = 'admin';
 const ADMIN_RESOURCE_PATH = '/api/i18n/resources';
 const STATIC_EXPORT_LANG = 'en';
+const STATIC_ADMIN_RESOURCE_PATH = '../hook_backend/src/migration/defaults/i18n/admin.en.json';
 
 export async function dashboardPageMetadata(code: DashboardMenuCode): Promise<Metadata> {
   const lang = CONFIG.isStaticExport ? STATIC_EXPORT_LANG : await detectLanguage();
@@ -26,6 +29,10 @@ export async function dashboardPageMetadata(code: DashboardMenuCode): Promise<Me
 }
 
 const getAdminResources = cache(async (lang: string) => {
+  if (CONFIG.isStaticExport) {
+    return staticAdminResources();
+  }
+
   const serverUrl = CONFIG.serverUrl.trim();
   if (!serverUrl) {
     throw new Error('NEXT_PUBLIC_SERVER_URL is required for dashboard metadata i18n.');
@@ -47,6 +54,12 @@ const getAdminResources = cache(async (lang: string) => {
 
   return payload.data.resources;
 });
+
+async function staticAdminResources() {
+  const content = await readFile(join(process.cwd(), STATIC_ADMIN_RESOURCE_PATH), 'utf8');
+
+  return JSON.parse(content) as Record<string, unknown>;
+}
 
 function resourceString(resources: Record<string, unknown>, path: string) {
   const value = path.split('.').reduce<unknown>(

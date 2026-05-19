@@ -13,10 +13,27 @@ import type { NextConfig } from 'next';
  *
  * NOTE: Remove all "generateStaticParams()" functions if not using static exports.
  */
-const isStaticExport = false;
+const isStaticExport = process.env.BUILD_STATIC_EXPORT === 'true';
 const backendUrl = process.env.HOOK_BACKEND_URL ?? 'http://127.0.0.1:5555';
 
 // ----------------------------------------------------------------------
+
+const backendRewrites = isStaticExport
+  ? {}
+  : {
+      async rewrites() {
+        return [
+          {
+            source: '/v1/:path*',
+            destination: `${backendUrl}/v1/:path*`,
+          },
+          {
+            source: '/v1beta/:path*',
+            destination: `${backendUrl}/v1beta/:path*`,
+          },
+        ];
+      },
+    };
 
 const nextConfig: NextConfig = {
   trailingSlash: true,
@@ -24,18 +41,7 @@ const nextConfig: NextConfig = {
   env: {
     BUILD_STATIC_EXPORT: JSON.stringify(isStaticExport),
   },
-  async rewrites() {
-    return [
-      {
-        source: '/v1/:path*',
-        destination: `${backendUrl}/v1/:path*`,
-      },
-      {
-        source: '/v1beta/:path*',
-        destination: `${backendUrl}/v1beta/:path*`,
-      },
-    ];
-  },
+  ...backendRewrites,
   // Without --turbopack (next dev)
   webpack(config) {
     config.module.rules.push({

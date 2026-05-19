@@ -150,4 +150,27 @@ mod tests {
         assert!(result.completed);
         assert!(result.usage.is_none());
     }
+
+    #[test]
+    fn detects_claude_message_stop_completion() {
+        let mut parser = StreamUsageParser::new(ApiFormat::ClaudeChat);
+        let result = parser.consume(b"data: {\"type\":\"message_stop\"}\n\n").unwrap();
+
+        assert!(result.completed);
+        assert!(result.usage.is_none());
+    }
+
+    #[test]
+    fn detects_gemini_finish_reason_completion() {
+        let mut parser = StreamUsageParser::new(ApiFormat::GeminiChat);
+        let result = parser
+            .consume(b"data: {\"candidates\":[{\"finishReason\":\"STOP\"}],\"usageMetadata\":{\"promptTokenCount\":3,\"candidatesTokenCount\":4,\"totalTokenCount\":7}}\n\n")
+            .unwrap();
+        let usage = result.usage.expect("usage should be extracted");
+
+        assert!(result.completed);
+        assert_eq!(usage.prompt_tokens, Some(3));
+        assert_eq!(usage.completion_tokens, Some(4));
+        assert_eq!(usage.total_tokens, Some(7));
+    }
 }

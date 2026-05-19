@@ -1,4 +1,5 @@
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
+use types::model::PatchField;
 
 use super::StreamRelay;
 use crate::llm_proxy::{
@@ -6,21 +7,26 @@ use crate::llm_proxy::{
     proxy::{
         response_model::rewrite_response_model_value,
         stream_transport::{
+            estimated_usage::ESTIMATED_USAGE_SOURCE,
             event::render_stream_event,
             record::{failure_record, record_stream_attempt, success_record},
         },
     },
 };
 
+const EOF_WITH_ESTIMATED_USAGE_END_REASON: &str = "upstream_eof_without_completion";
+
 impl StreamRelay {
     pub(super) async fn finish_success(&mut self) -> Result<(), LlmProxyError> {
         if self.finished {
             return Ok(());
         }
-        self.flush_output().await?;
         let usage = self.usage_parser.finish()?;
         self.merge_usage(usage.usage);
-        self.record_success().await?;
+        self.protocol_completed |= usage.completed;
+        self.estimate_missing_usage()?;
+        self.flush_output().await?;
+        self.record_success_with_stream_end_reason(self.finish_stream_end_reason()).await?;
         self.finished = true;
         Ok(())
     }
@@ -37,6 +43,7 @@ impl StreamRelay {
         if self.finished {
             return Ok(());
         }
+        self.estimate_missing_usage()?;
         self.flush_output().await?;
         self.record_success().await?;
         self.finished = true;
@@ -44,10 +51,16 @@ impl StreamRelay {
     }
 
     pub(super) async fn record_success(&mut self) -> Result<(), LlmProxyError> {
+        self.record_success_with_stream_end_reason(PatchField::Null).await
+    }
+
+    async fn record_success_with_stream_end_reason(&mut self, stream_end_reason: PatchField<String>) -> Result<(), LlmProxyError> {
         if self.recorded_terminal {
             return Ok(());
         }
-        record_stream_attempt(success_record(&self.context, self.usage, self.first_byte_time_ms)).await?;
+        let mut record = success_record(&self.context, self.usage, self.first_byte_time_ms);
+        record.stream_end_reason = stream_end_reason;
+        record_stream_attempt(record).await?;
         self.recorded_terminal = true;
         Ok(())
     }
@@ -102,5 +115,69 @@ impl StreamRelay {
             self.pending.push_back(req::Bytes::from_static(b"data: [DONE]\n\n"));
             self.openai_done_sent = true;
         }
+    }
+
+    fn estimate_missing_usage(&mut self) -> Result<(), LlmProxyError> {
+        self.usage_estimator.finish()?;
+        self.usage = self.usage_estimator.apply_to_usage(self.usage, self.protocol_completed);
+        Ok(())
+    }
+
+    fn finish_stream_end_reason(&self) -> PatchField<String> {
+        if self.protocol_completed {
+            return PatchField::Null;
+        }
+        if matches!(self.usage.and_then(|usage| usage.usage_source), Some(ESTIMATED_USAGE_SOURCE))
+            && matches!(
+                self.target_format,
+                ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
+            )
+        {
+            return PatchField::Value(EOF_WITH_ESTIMATED_USAGE_END_REASON.into());
+        }
+        PatchField::Null
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use proxy::format_conversion::ApiFormat;
+
+    use crate::llm_proxy::proxy::stream_transport::estimated_usage::StreamUsageEstimator;
+
+    #[test]
+    fn openai_responses_can_estimate_usage_before_completed_eof() {
+        let request = serde_json::json!({"input":[{"role":"user","content":"hello world"}]});
+        let mut estimator = StreamUsageEstimator::new(ApiFormat::OpenAiResponses, &request, "gpt-5.5");
+
+        estimator
+            .consume(br#"data: {"type":"response.output_text.delta","delta":"hello there"}"#)
+            .unwrap();
+        estimator.finish().unwrap();
+
+        let usage = estimator.estimated_usage().expect("usage should be estimated");
+
+        assert!(usage.prompt_tokens.expect("prompt tokens") > 0);
+        assert!(usage.completion_tokens.expect("completion tokens") > 0);
+        assert_eq!(usage.usage_source, Some("estimated_from_stream_delta"));
+        assert_eq!(usage.usage_semantic, Some("responses"));
+    }
+
+    #[test]
+    fn openai_chat_can_estimate_usage_before_usage_chunk_eof() {
+        let request = serde_json::json!({"messages":[{"role":"user","content":"hello"}]});
+        let mut estimator = StreamUsageEstimator::new(ApiFormat::OpenAiChat, &request, "gpt-5.5");
+
+        estimator
+            .consume(br#"data: {"choices":[{"delta":{"content":"world"},"finish_reason":null}]}"#)
+            .unwrap();
+        estimator.finish().unwrap();
+
+        let usage = estimator.estimated_usage().expect("usage should be estimated");
+
+        assert!(usage.prompt_tokens.expect("prompt tokens") > 0);
+        assert!(usage.completion_tokens.expect("completion tokens") > 0);
+        assert_eq!(usage.usage_source, Some("estimated_from_stream_delta"));
+        assert_eq!(usage.usage_semantic, Some("openai"));
     }
 }

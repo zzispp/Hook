@@ -95,6 +95,7 @@ async fn attempt_once(
         &payload.body,
         &payload.original_body,
         &prepared.provider_headers,
+        prepared.is_stream,
     ) {
         Ok(request) => request,
         Err(error) => {
@@ -225,6 +226,7 @@ async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, L
             candidate: input.candidate.clone(),
             source_format: input.payload.source_format,
             target_format: input.payload.target_format,
+            provider_request_body: input.payload.body,
             started: input.started,
             retry_index: input.retry_index,
         })

@@ -1,5 +1,8 @@
+mod app_state;
 mod auth;
 mod commands;
+mod frontend;
+mod http_config;
 mod llm_proxy;
 mod migration;
 mod performance_monitoring_api;

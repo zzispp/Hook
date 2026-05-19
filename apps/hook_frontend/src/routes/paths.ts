@@ -31,6 +31,7 @@ export const paths = {
     models: `${ROOTS.DASHBOARD}/models`,
     groups: `${ROOTS.DASHBOARD}/groups`,
     announcements: `${ROOTS.DASHBOARD}/announcements`,
+    announcementDetail: `${ROOTS.DASHBOARD}/announcements/detail`,
     tokens: `${ROOTS.DASHBOARD}/tokens`,
     tickets: `${ROOTS.DASHBOARD}/tickets`,
     wallet: `${ROOTS.DASHBOARD}/wallet`,

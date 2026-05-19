@@ -151,9 +151,7 @@ fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, clie
 }
 
 fn endpoint_exact(endpoint: &CachedEndpoint, client_api_format: &str, stream: bool) -> bool {
-    formats::needs_conversion(client_api_format, &endpoint.api_format, stream)
-        .map(|needs_conversion| !needs_conversion)
-        .unwrap_or(false)
+    formats::formats_exact(client_api_format, &endpoint.api_format, stream).unwrap_or(false)
 }
 
 fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {

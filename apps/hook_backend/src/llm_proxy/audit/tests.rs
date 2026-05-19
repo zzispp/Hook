@@ -39,6 +39,30 @@ fn incomplete_billing_sets_status_and_blocks_settlement() {
     assert!(settlement.is_err());
 }
 
+#[test]
+fn estimated_stream_usage_can_settle_billing() {
+    let candidate = candidate();
+    let input = AttemptRecordInput {
+        usage: Some(super::TokenUsage {
+            prompt_tokens: Some(10),
+            completion_tokens: Some(5),
+            total_tokens: Some(15),
+            usage_source: Some("estimated_from_stream_delta"),
+            usage_semantic: Some("responses"),
+            ..Default::default()
+        }),
+        ..AttemptRecordInput::new(&candidate, 0, "success", true)
+    };
+    let billing = complete_billing();
+
+    let usage_record = token_usage_record("request-1", &input, Some(&billing), time::OffsetDateTime::UNIX_EPOCH).unwrap();
+    let settlement = wallet_settlement_input("request-1", &input, Some(&billing)).unwrap();
+
+    assert_eq!(request_billing_status(&input, Some(&billing)), "settled");
+    assert_eq!(usage_record.expect("usage record").cost, Decimal::ONE);
+    assert_eq!(settlement.expect("settlement").usage.usage_source, Some("estimated_from_stream_delta"));
+}
+
 fn candidate() -> ProxyCandidate {
     ProxyCandidate {
         trace: trace(),
@@ -63,6 +87,30 @@ fn candidate() -> ProxyCandidate {
     }
 }
 
+fn complete_billing() -> BillingAttempt {
+    BillingAttempt {
+        amount: RequestBillingAmount {
+            input_cost: Decimal::ZERO,
+            output_cost: Decimal::ONE,
+            cache_creation_cost: Decimal::ZERO,
+            cache_read_cost: Decimal::ZERO,
+            request_cost: Decimal::ZERO,
+            token_cost: Decimal::ONE,
+            base_cost: Decimal::ONE,
+            total_cost: Decimal::ONE,
+            billing_multiplier: Decimal::ONE,
+            input_price_per_1m: None,
+            output_price_per_1m: None,
+            cache_creation_price_per_1m: None,
+            cache_read_price_per_1m: None,
+            currency: "USD".into(),
+            snapshot: complete_snapshot(),
+        },
+        snapshot: json!({"status": "complete"}),
+        status: BillingSnapshotStatus::Complete,
+    }
+}
+
 fn incomplete_billing() -> BillingAttempt {
     BillingAttempt {
         amount: RequestBillingAmount {
@@ -84,6 +132,14 @@ fn incomplete_billing() -> BillingAttempt {
         },
         snapshot: json!({"status": "incomplete"}),
         status: BillingSnapshotStatus::Incomplete,
+    }
+}
+
+fn complete_snapshot() -> BillingSnapshot {
+    BillingSnapshot {
+        missing_required: Vec::new(),
+        status: BillingSnapshotStatus::Complete,
+        ..incomplete_snapshot()
     }
 }
 

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,建立任务记录并锁定 new-api 对齐边界,DONE,明确 EOF 估算计费策略和 Hook 影响面,rg -n "response.completed|missing_usage" apps/hook_backend crates, ,0,
+2,实现 Responses EOF 估算 usage 并显式标记来源,DONE,Responses EOF 前有输出时不会 missing_usage 且 usage_source 标记估算,cargo test -p backend stream_estimated, ,0,
+3,检查其它流式 0 计费口子并补测试,DONE,确认 OpenAI Chat/Responses 流式缺上游 usage 的处理边界,cargo test -p backend stream_usage_parser, ,0,
+4,运行定向和全量 Rust 验证,DONE,相关测试和 cargo test 通过,perl -e "alarm shift; exec @ARGV" 60 cargo test, ,0,

@@ -6,7 +6,17 @@ import { cache } from 'react';
 import { endpoints } from 'src/lib/axios';
 import { CONFIG } from 'src/global-config';
 
+const STATIC_SITE_INFO = {
+  site_name: 'Hook',
+  site_subtitle: 'Gateway',
+  site_logo_base64: '',
+};
+
 export const getSiteInfo = cache(async (): Promise<PublicSiteInfo> => {
+  if (CONFIG.isStaticExport) {
+    return STATIC_SITE_INFO;
+  }
+
   const serverUrl = CONFIG.serverUrl.trim();
   if (!serverUrl) {
     throw new Error('NEXT_PUBLIC_SERVER_URL is required for site info.');

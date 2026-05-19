@@ -1,13 +1,14 @@
 mod finalize;
 
-use std::collections::VecDeque;
+use std::{collections::VecDeque, time::Duration};
 
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry, StreamChunkConversion, StreamConversionState};
 use serde_json::Value;
 
 use super::{
     StreamAttemptContext, UpstreamStream,
-    event::{render_stream_error, render_stream_event, stream_error},
+    estimated_usage::StreamUsageEstimator,
+    event::{render_keepalive, render_stream_error, render_stream_event, stream_error},
     record::{cancelled_record, record_stream_attempt, response_read_error_type, streaming_record},
     usage_parser::StreamUsageParser,
 };
@@ -18,6 +19,7 @@ use crate::llm_proxy::{
 };
 
 type DownstreamItem = Result<req::Bytes, std::io::Error>;
+const SSE_KEEPALIVE_INTERVAL_SECS: u64 = 10;
 
 pub(super) struct StreamRelay {
     context: StreamAttemptContext,
@@ -30,6 +32,7 @@ pub(super) struct StreamRelay {
     buffer: Vec<u8>,
     pending: VecDeque<req::Bytes>,
     usage_parser: StreamUsageParser,
+    usage_estimator: StreamUsageEstimator,
     usage: Option<TokenUsage>,
     first_byte_time_ms: Option<i64>,
     yielded_any: bool,
@@ -48,6 +51,7 @@ impl StreamRelay {
     pub(super) fn new(context: StreamAttemptContext, upstream: UpstreamStream, source_format: ApiFormat, target_format: ApiFormat) -> Self {
         let needs_conversion = context.candidate.trace.needs_conversion;
         let rewrite_model = context.candidate.provider_model_name != context.candidate.requested_model_name;
+        let usage_estimator = StreamUsageEstimator::new(target_format, &context.provider_request_body, &context.candidate.provider_model_name);
         Self {
             context,
             upstream,
@@ -59,6 +63,7 @@ impl StreamRelay {
             buffer: Vec::new(),
             pending: VecDeque::new(),
             usage_parser: StreamUsageParser::new(target_format),
+            usage_estimator,
             usage: None,
             first_byte_time_ms: None,
             yielded_any: false,
@@ -94,11 +99,14 @@ impl StreamRelay {
             if self.finished {
                 return None;
             }
-            let Some(item) = futures_util::StreamExt::next(&mut self.upstream).await else {
-                return self.finish_success_item().await;
-            };
-            if let Err(error) = self.handle_upstream_item(item, false).await {
-                return Some(Err(stream_error(error.to_string())));
+            match self.next_upstream_item().await {
+                NextUpstreamItem::Chunk(item) => {
+                    if let Err(error) = self.handle_upstream_item(item, false).await {
+                        return Some(Err(stream_error(error.to_string())));
+                    }
+                }
+                NextUpstreamItem::Keepalive(bytes) => return Some(Ok(bytes)),
+                NextUpstreamItem::End => return self.finish_success_item().await,
             }
         }
     }
@@ -110,8 +118,24 @@ impl StreamRelay {
         }
     }
 
+    async fn next_upstream_item(&mut self) -> NextUpstreamItem {
+        loop {
+            match tokio::time::timeout(
+                Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS),
+                futures_util::StreamExt::next(&mut self.upstream),
+            )
+            .await
+            {
+                Ok(Some(item)) => return NextUpstreamItem::Chunk(item),
+                Ok(None) => return NextUpstreamItem::End,
+                Err(_) => return NextUpstreamItem::Keepalive(render_keepalive()),
+            }
+        }
+    }
+
     async fn consume_bytes(&mut self, bytes: req::Bytes, fail_before_output: bool) -> Result<(), LlmProxyError> {
         let parsed = self.usage_parser.consume(&bytes)?;
+        self.usage_estimator.consume(&bytes)?;
         self.merge_usage(parsed.usage);
         if !self.needs_conversion && !self.rewrite_model {
             self.pending.push_back(bytes);
@@ -231,6 +255,12 @@ impl StreamRelay {
             self.openai_done_sent = true;
         }
     }
+}
+
+enum NextUpstreamItem {
+    Chunk(Result<req::Bytes, req::ClientError>),
+    Keepalive(req::Bytes),
+    End,
 }
 
 impl Drop for StreamRelay {

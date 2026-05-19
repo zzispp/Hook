@@ -9,9 +9,21 @@ import {
 export const OPENAI_COMPACT_API_FORMAT = 'openai_compact';
 
 const OPENAI_COMPACT_DEFAULT_BODY_RULES: BodyRule[] = [
-  { action: 'drop', path: 'max_output_tokens' },
-  { action: 'drop', path: 'temperature' },
-  { action: 'drop', path: 'top_p' },
+  {
+    action: 'drop',
+    path: 'max_output_tokens',
+    condition: { path: 'max_output_tokens', op: 'exists', source: 'current' },
+  },
+  {
+    action: 'drop',
+    path: 'temperature',
+    condition: { path: 'temperature', op: 'exists', source: 'current' },
+  },
+  {
+    action: 'drop',
+    path: 'top_p',
+    condition: { path: 'top_p', op: 'exists', source: 'current' },
+  },
   { action: 'set', path: 'store', value: false },
   {
     action: 'set',

@@ -81,6 +81,7 @@ proxy = { path = "crates/proxy" }
 req = { path = "crates/req" }
 reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls", "stream"] }
 rust_decimal = { version = "1.41.0", features = ["serde-with-float"] }
+rust-embed = { version = "8.11.0", features = ["mime-guess"] }
 sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "with-rust_decimal", "with-time", "with-json"] }
 sea-orm-migration = { version = "2.0.0-rc.38", features = ["runtime-tokio-rustls", "sqlx-postgres"] }
 netstat2 = "0.11.2"

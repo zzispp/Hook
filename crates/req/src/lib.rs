@@ -12,7 +12,7 @@ pub use axum::body::Bytes;
 pub use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderName, HeaderValue};
 pub use reqwest::{Request, RequestBuilder, Response, StatusCode, Url};
 
-pub use client_config::builder;
+pub use client_config::{builder, default_timeout, long_stream_builder};
 pub use content_type::{CONTENT_TYPE, ContentType};
 pub use query::build_path_with_query;
 pub use reqwest_client::ReqwestClient;

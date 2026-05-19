@@ -88,7 +88,7 @@ impl LlmProxyState {
         Self {
             database,
             cipher,
-            http: ReqwestClient::default(),
+            http: llm_proxy_http_client(),
             affinity,
             cache,
             key_prefix,
@@ -139,6 +139,10 @@ impl LlmProxyState {
     fn affinity_cache_key(&self, token_id: &str, model_id: &str, api_format: &str) -> String {
         format!("{}:llm_proxy:affinity:{token_id}:{model_id}:{api_format}", self.key_prefix)
     }
+}
+
+fn llm_proxy_http_client() -> ReqwestClient {
+    ReqwestClient::from_builder(req::long_stream_builder()).expect("LLM proxy req client builder should be valid")
 }
 
 fn redis_error(error: redis::RedisError) -> LlmProxyError {

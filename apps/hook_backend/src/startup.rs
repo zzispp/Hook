@@ -1,6 +1,9 @@
 use crate::{
     BackendResult,
+    app_state::AppState,
     auth::{AuthState, AuthStateParts, auth_middleware},
+    frontend,
+    http_config::{authorization_config, cors_layer, token_settings},
     llm_proxy::{
         LlmProxyCache, LlmProxyProviderModelTester, LlmProxyState, cached_system_user_access, create_router as create_llm_proxy_router, create_v1beta_router,
     },
@@ -17,11 +20,7 @@ use api_token::{
     application::ApiTokenService,
     infra::{StorageApiTokenRepository, StorageBillingGroupCatalog, StorageModelAccessCatalog, StorageSystemTokenPolicy, StorageUserCatalog},
 };
-use axum::{
-    Router,
-    http::{HeaderValue, Method, header},
-    middleware,
-};
+use axum::{Router, middleware};
 use captcha::{
     api::{CaptchaApiState, create_router as create_captcha_router},
     application::CaptchaService,
@@ -32,7 +31,7 @@ use card_code::{
     application::CardCodeService,
     infra::StorageCardCodeRepository,
 };
-use configuration::{AuthWhitelistRule as ConfigAuthRule, Settings};
+use configuration::Settings;
 use dashboard::{
     api::{DashboardApiState, create_router as create_dashboard_router},
     application::DashboardService,
@@ -65,7 +64,7 @@ use provider::{
 };
 use rbac::{
     api::{RbacApiState, create_router as create_rbac_router},
-    application::{AuthWhitelistRule, AuthorizationConfig, RbacService},
+    application::RbacService,
     infra::{RedisRbacCache, StorageRbacRepository},
 };
 use setting::{
@@ -76,10 +75,10 @@ use setting::{
 use std::{net::SocketAddr, sync::Arc};
 use storage::connect_database;
 use tokio::net::TcpListener;
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tower_http::trace::TraceLayer;
 use types::api_token::ApiTokenOwnerResponse;
 use user::{
-    api::{ApiState, TokenService, TokenSettings, create_router as create_user_router},
+    api::{ApiState, TokenService, create_router as create_user_router},
     application::{SystemUserProvider, UserService},
     infra::{
         BcryptPasswordHasher, ConfigSystemUserProvider, SmtpPasswordResetMailer, StorageInitialGrantLedger, StoragePasswordResetConfig,
@@ -92,6 +91,7 @@ use wallet::{
     infra::{ConfigSystemWalletProvider, StorageWalletRepository},
 };
 pub async fn serve(settings: Settings) -> BackendResult<()> {
+    frontend::ensure_assets()?;
     let bind_addr = settings.bind_addr();
     hook_tracing::info_with_fields!("backend starting", addr = bind_addr);
 
@@ -274,60 +274,14 @@ fn create_app(state: AppState) -> Router {
         .merge(create_captcha_router(captcha_state))
         .merge(create_performance_monitoring_router(performance_monitoring_state));
 
-    system::create_router()
+    let backend_router = system::create_router()
         .nest("/v1", llm_v1_router)
         .nest("/v1beta", gemini_router)
         .nest("/api", api_router)
-        .layer(middleware::from_fn_with_state(auth_state, auth_middleware))
+        .layer(middleware::from_fn_with_state(auth_state, auth_middleware));
+
+    backend_router
+        .merge(frontend::create_router())
         .layer(cors_layer())
         .layer(TraceLayer::new_for_http())
-}
-fn cors_layer() -> CorsLayer {
-    CorsLayer::new()
-        .allow_origin(HeaderValue::from_static("http://localhost:8082"))
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS])
-        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
-}
-fn authorization_config(settings: &Settings) -> AuthorizationConfig {
-    AuthorizationConfig {
-        whitelist: auth_rules(&settings.auth.whitelist),
-        authenticated: auth_rules(&settings.auth.authenticated),
-    }
-}
-fn auth_rules(rules: &[ConfigAuthRule]) -> Vec<AuthWhitelistRule> {
-    rules
-        .iter()
-        .map(|rule| AuthWhitelistRule {
-            methods: rule.methods.clone(),
-            path_pattern: rule.path_pattern.clone(),
-        })
-        .collect()
-}
-fn token_settings(settings: &Settings) -> BackendResult<TokenSettings> {
-    Ok(TokenSettings {
-        secret: settings.jwt_secret()?,
-        access_token_ttl_seconds: settings.jwt.access_token_ttl_seconds,
-        refresh_token_ttl_seconds: settings.jwt.refresh_token_ttl_seconds,
-    })
-}
-
-struct AppState {
-    database: storage::Database,
-    users: Arc<dyn user::application::UserUseCase>,
-    tokens: TokenService,
-    rbac: Arc<RbacService<StorageRbacRepository, RedisRbacCache>>,
-    models: Arc<dyn model::application::ModelUseCase>,
-    providers: Arc<dyn provider::application::ProviderUseCase>,
-    dashboard: Arc<dyn dashboard::application::DashboardUseCase>,
-    wallets: Arc<dyn wallet::application::WalletUseCase>,
-    card_codes: Arc<dyn card_code::application::CardCodeUseCase>,
-    system_settings: Arc<dyn setting::application::SettingUseCase>,
-    groups: Arc<dyn group::application::GroupUseCase>,
-    i18n: Arc<dyn i18n::application::I18nUseCase>,
-    api_tokens: Arc<dyn api_token::application::ApiTokenUseCase>,
-    operations: Arc<dyn operations::application::OperationsUseCase>,
-    captcha: Arc<dyn captcha::application::CaptchaUseCase>,
-    llm_proxy: LlmProxyState,
-    performance_os_collector: Arc<PerformanceOsCollector>,
-    authorization: AuthorizationConfig,
 }

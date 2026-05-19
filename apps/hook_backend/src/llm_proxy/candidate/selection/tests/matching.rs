@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use types::provider::ProviderSchedulingMode;
 
 use super::helpers::{
-    minute_of_day, provider_b, provider_key, provider_key_for_models, provider_key_with_time_range, provider_with_endpoints_and_keys, provider_with_keys,
-    request, snapshot_with_provider, user_access,
+    endpoint, minute_of_day, provider_b, provider_key, provider_key_for_models, provider_key_with_time_range, provider_with_endpoints_and_keys,
+    provider_with_keys, request, snapshot_with_provider, user_access,
 };
 use crate::llm_proxy::{
     cache::snapshot::SchedulingSnapshot,
@@ -33,7 +33,7 @@ fn matching_candidate_parts_compacts_endpoint_key_product_into_provider_route() 
 
     assert_eq!(parts.len(), 1);
     assert_eq!(parts[0].provider.id, "provider-a");
-    assert_eq!(parts[0].endpoints.len(), 3);
+    assert_eq!(parts[0].endpoints.len(), 2);
     assert_eq!(parts[0].keys.len(), 2);
     assert_eq!(parts[0].endpoints[0].api_format, "openai_chat");
     assert_eq!(parts[0].endpoints[1].api_format, "gemini_chat");
@@ -184,6 +184,106 @@ fn matching_candidate_parts_does_not_route_chat_request_to_non_chat_endpoint() {
     });
 
     assert!(parts[0].endpoints.iter().all(|endpoint| endpoint.api_format != "openai_image"));
+}
+
+#[test]
+fn matching_candidate_parts_does_not_route_stream_responses_to_compact_endpoint() {
+    let provider = provider_with_responses_and_compact_endpoints(vec![
+        provider_key("key-responses", 10, vec!["openai_cli"]),
+        provider_key("key-compact", 20, vec!["openai_compact"]),
+    ]);
+    let snapshot = snapshot_with_provider(provider);
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: CandidateRequest {
+            api_format: "openai_cli",
+            model_name: "gpt-test",
+            is_stream: true,
+        },
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
+    });
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].endpoints.len(), 1);
+    assert_eq!(parts[0].endpoints[0].api_format, "openai_cli");
+}
+
+#[test]
+fn matching_candidate_parts_does_not_treat_responses_compact_as_exact_route() {
+    let provider = provider_with_responses_and_compact_endpoints(vec![provider_key("key-compact", 10, vec!["openai_compact"])]);
+    let snapshot = snapshot_with_provider(provider);
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: CandidateRequest {
+            api_format: "openai_cli",
+            model_name: "gpt-test",
+            is_stream: false,
+        },
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
+    });
+
+    assert!(parts.is_empty());
+}
+
+#[test]
+fn matching_candidate_parts_does_not_route_responses_request_to_chat_endpoint() {
+    let provider = provider_with_responses_and_chat_endpoints(vec![provider_key("key-chat", 10, vec!["openai_chat"])]);
+    let snapshot = snapshot_with_provider(provider);
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: CandidateRequest {
+            api_format: "openai_cli",
+            model_name: "gpt-test",
+            is_stream: true,
+        },
+        affinity_key: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
+    });
+
+    assert!(parts.is_empty());
+}
+
+fn provider_with_responses_and_compact_endpoints(
+    keys: Vec<crate::llm_proxy::cache::snapshot::CachedProviderKey>,
+) -> crate::llm_proxy::cache::snapshot::CachedProvider {
+    crate::llm_proxy::cache::snapshot::CachedProvider {
+        endpoints: vec![endpoint("endpoint-responses", "openai_cli"), endpoint("endpoint-compact", "openai_compact")],
+        keys,
+        ..provider_with_endpoints_and_keys()
+    }
+}
+
+fn provider_with_responses_and_chat_endpoints(
+    keys: Vec<crate::llm_proxy::cache::snapshot::CachedProviderKey>,
+) -> crate::llm_proxy::cache::snapshot::CachedProvider {
+    crate::llm_proxy::cache::snapshot::CachedProvider {
+        endpoints: vec![endpoint("endpoint-responses", "openai_cli"), endpoint("endpoint-chat", "openai_chat")],
+        keys,
+        ..provider_with_endpoints_and_keys()
+    }
 }
 
 #[test]

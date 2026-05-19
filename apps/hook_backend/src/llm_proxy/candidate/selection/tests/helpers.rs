@@ -72,7 +72,6 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
             endpoint("endpoint-gemini", "gemini_chat"),
             endpoint("endpoint-openai", "openai_chat"),
             endpoint("endpoint-image", "openai_image"),
-            endpoint("endpoint-compact", "openai_compact"),
         ],
         keys: vec![key("key-a-2", 20), key("key-a-1", 10)],
         models: vec![CachedModelBinding {
@@ -181,7 +180,7 @@ pub(super) fn api_token(token_type: ApiTokenType, user_id: Option<&str>) -> ApiT
     }
 }
 
-fn endpoint(id: &str, api_format: &str) -> CachedEndpoint {
+pub(super) fn endpoint(id: &str, api_format: &str) -> CachedEndpoint {
     CachedEndpoint {
         id: id.into(),
         provider_id: "provider-a".into(),

@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm dashboard AVG type mismatch,DONE,"SQL AVG fields and Rust row types identified","rg -n \"AVG\\(|avg_latency_ms|avg_ttfb_ms\" crates/storage/src/dashboard crates/types/src/dashboard.rs","2026-05-19 01:24 CST",0,"Postgres AVG(i64) returns NUMERIC while rows decode Option<f64>."
+2,Cast latency AVG outputs to double precision,DONE,"All latency AVG expressions used by f64 rows produce FLOAT8","rg -n \"AVG\\(r\\.(total_latency_ms|first_byte_time_ms)::double precision\\)\" crates/storage/src/dashboard/overview.rs","2026-05-19 01:27 CST",0,
+3,Verify dashboard overview storage behavior,DONE,"Targeted storage tests and backend check pass","perl -e 'alarm 60; exec @ARGV' cargo test -p storage dashboard && pnpm check:backend","2026-05-19 01:28 CST",0,

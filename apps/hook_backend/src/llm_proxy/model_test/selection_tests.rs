@@ -19,6 +19,22 @@ fn fixed_parts_uses_selected_endpoint_as_client_format_and_routes_to_compatible_
     assert!(parts.effective_stream);
 }
 
+#[test]
+fn fixed_parts_excludes_compact_endpoint_from_stream_responses_test_route() {
+    let snapshot = snapshot(provider_with_keys_and_endpoints(
+        vec![endpoint("endpoint-responses", "openai_cli"), endpoint("endpoint-compact", "openai_compact")],
+        vec![key("key-responses", vec!["openai_cli"]), key("key-compact", vec!["openai_compact"])],
+    ));
+
+    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-responses", true).unwrap();
+
+    assert!(parts.effective_stream);
+    assert_eq!(parts.endpoints.len(), 1);
+    assert_eq!(parts.endpoints[0].api_format, "openai_cli");
+    assert_eq!(parts.keys.len(), 1);
+    assert_eq!(parts.keys[0].id, "key-responses");
+}
+
 fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
     SchedulingSnapshot {
         default_rate_limit_rpm: 0,
@@ -46,6 +62,10 @@ fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
 }
 
 fn provider(endpoints: Vec<CachedEndpoint>) -> CachedProvider {
+    provider_with_keys_and_endpoints(endpoints, vec![key("key-openai", vec!["openai_chat"])])
+}
+
+fn provider_with_keys_and_endpoints(endpoints: Vec<CachedEndpoint>, keys: Vec<CachedProviderKey>) -> CachedProvider {
     CachedProvider {
         id: "provider-a".into(),
         name: "Provider A".into(),
@@ -57,7 +77,7 @@ fn provider(endpoints: Vec<CachedEndpoint>) -> CachedProvider {
         enable_format_conversion: true,
         is_active: true,
         endpoints,
-        keys: vec![key("key-openai", vec!["openai_chat"])],
+        keys,
         models: vec![CachedModelBinding {
             id: "binding-a".into(),
             provider_id: "provider-a".into(),

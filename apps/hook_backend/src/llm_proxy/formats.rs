@@ -91,16 +91,28 @@ pub fn formats_compatible(client_format: &str, provider_format: &str, is_stream:
     let Ok(provider) = endpoint_metadata(provider_format, is_stream) else {
         return false;
     };
-    if is_stream && provider.upstream_stream_policy == UpstreamStreamPolicy::ForceNonStream {
+    if !stream_policy_compatible(provider, is_stream) {
         return false;
     }
-    if client.data_format == provider.data_format {
+    if endpoint_protocol_matches(client, provider) {
         return true;
+    }
+    if client.data_format == provider.data_format {
+        return false;
+    }
+    if !cross_protocol_conversion_allowed(client, provider) {
+        return false;
     }
     if !client.data_format.supports_chat_conversion() || !provider.data_format.supports_chat_conversion() {
         return false;
     }
     FormatConversionRegistry::default().can_convert(client.data_format, provider.data_format, is_stream)
+}
+
+pub fn formats_exact(client_format: &str, provider_format: &str, is_stream: bool) -> Result<bool, LlmProxyError> {
+    let client = endpoint_metadata(client_format, is_stream)?;
+    let provider = endpoint_metadata(provider_format, is_stream)?;
+    Ok(stream_policy_compatible(provider, is_stream) && endpoint_protocol_matches(client, provider))
 }
 
 pub fn needs_conversion(client_format: &str, provider_format: &str, is_stream: bool) -> Result<bool, LlmProxyError> {
@@ -133,6 +145,21 @@ fn endpoint_action(format: &str, is_stream: bool) -> &'static str {
         (EndpointFamily::Gemini, EndpointKind::Chat, false) => "generateContent",
         _ => "",
     }
+}
+
+fn stream_policy_compatible(provider: EndpointMetadata, is_stream: bool) -> bool {
+    !is_stream || provider.upstream_stream_policy != UpstreamStreamPolicy::ForceNonStream
+}
+
+fn endpoint_protocol_matches(client: EndpointMetadata, provider: EndpointMetadata) -> bool {
+    client.family == provider.family && client.kind == provider.kind && client.data_format == provider.data_format
+}
+
+fn cross_protocol_conversion_allowed(client: EndpointMetadata, provider: EndpointMetadata) -> bool {
+    !matches!(
+        (client.family, client.kind, provider.family, provider.kind),
+        (EndpointFamily::OpenAi, EndpointKind::Responses, EndpointFamily::OpenAi, EndpointKind::Chat)
+    )
 }
 
 fn openai_chat() -> EndpointMetadata {
@@ -421,14 +448,35 @@ mod tests {
     #[test]
     fn streaming_requests_do_not_route_to_force_non_stream_formats() {
         assert!(!super::formats_compatible("openai_chat", "openai_compact", true));
+        assert!(!super::formats_compatible("openai_cli", "openai_compact", true));
         assert!(super::formats_compatible("openai_chat", "openai_compact", false));
+    }
+
+    #[test]
+    fn same_data_format_different_endpoint_kind_is_not_exact_or_compatible() {
+        assert!(!super::formats_exact("openai_cli", "openai_compact", false).unwrap());
+        assert!(!super::formats_compatible("openai_cli", "openai_compact", false));
+        assert!(!super::formats_exact("openai_image", "openai_images_edits", false).unwrap());
+        assert!(!super::formats_compatible("openai_image", "openai_images_edits", false));
+    }
+
+    #[test]
+    fn aliases_with_same_endpoint_kind_remain_exact() {
+        assert!(super::formats_exact("openai_responses", "openai_cli", true).unwrap());
+        assert!(super::formats_compatible("claude_chat", "claude_cli", true));
+    }
+
+    #[test]
+    fn responses_requests_do_not_route_to_chat_endpoints() {
+        assert!(!super::formats_compatible("openai_cli", "openai_chat", true));
+        assert!(!super::formats_compatible("openai_cli", "openai_chat", false));
+        assert!(super::formats_compatible("openai_chat", "openai_cli", true));
     }
 
     #[test]
     fn non_chat_endpoints_never_convert_through_chat_normalizers() {
         assert!(!super::formats_compatible("openai_chat", "openai_image", false));
         assert!(!super::formats_compatible("openai_image", "openai_chat", false));
-        assert!(super::formats_compatible("openai_image", "openai_images_edits", false));
         assert_eq!(super::needs_conversion("openai_image", "openai_images_edits", false).unwrap(), false);
     }
 }

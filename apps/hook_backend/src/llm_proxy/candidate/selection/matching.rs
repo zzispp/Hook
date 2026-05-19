@@ -178,9 +178,7 @@ fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, requ
 }
 
 fn endpoint_exact(endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
-    formats::needs_conversion(request.api_format, &endpoint.api_format, request.is_stream)
-        .map(|needs_conversion| !needs_conversion)
-        .unwrap_or(false)
+    formats::formats_exact(request.api_format, &endpoint.api_format, request.is_stream).unwrap_or(false)
 }
 
 fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,定位 Responses 流式断流导致 usage 缺失的根因,DONE,明确记录链路和失败点,cargo test -p backend stream_usage_parser,2026-05-19T01:47:00+08:00,0,
+2,补失败用例并修复流式完成判定,DONE,Responses 流式在 response.completed 前断流不会按 success 结算,cargo test -p backend openai_responses,2026-05-19T01:49:00+08:00,0,
+3,定位 Codex Reconnecting 的触发源,DONE,明确 500/502 日志来源和 Hook 与 aether/new-api 差异,rg -n \"response failed classification\" apps crates,2026-05-19T02:26:00+08:00,0,DB 显示上游 429 后 retry 到 openai_compact/openai_chat；compact 为流式误路由，openai_chat 转换不支持 reasoning
+4,修复导致 Responses 流更易断开的代理行为,DONE,Hook 不再因本地代理行为提前关闭 Codex Responses 流,cargo test -p backend openai_responses,2026-05-19T03:19:00+08:00,0,流式上游不再套 total timeout；下游 SSE 空闲发送注释 keepalive；Responses 请求不再 retry 到 compact/chat
+5,运行后端验证,DONE,相关单测和检查通过,just test,2026-05-19T03:21:00+08:00,0,本机未安装 just；按 Justfile 等价 60s cargo test 验证通过

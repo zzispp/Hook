@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,排查 Hook 支持的流式端点 usage 缺失路径,DONE,列出需要估算和不应估算的端点边界,rg -n "ApiFormat::|missing_usage|usage_source" apps/hook_backend crates/proxy/src/format_conversion,2026-05-19,0,聊天类 SSE 覆盖 OpenAI Chat/Responses Claude Gemini；非文本/非流式端点不做估算
+2,扩展估算到 Claude/Gemini 流式输出,DONE,Claude/Gemini 流式有输出但缺 usage 时生成显式 estimated usage,cargo test -p backend estimated_usage,2026-05-19,0,estimated_usage 13 tests passed
+3,补测试覆盖端点差异和 billing 边界,DONE,OpenAI/Claude/Gemini 估算可结算且无输出仍 missing,cargo test -p backend usage_parser,2026-05-19,0,usage_parser 6 tests passed
+4,运行格式化和全量 Rust 验证,DONE,cargo fmt 和 cargo test 通过,perl -e "alarm shift; exec @ARGV" 60 cargo test,2026-05-19,0,cargo fmt 和 cargo test passed

@@ -1,6 +1,8 @@
+mod estimated_usage;
 mod event;
 mod record;
 mod relay;
+mod token_estimator;
 mod usage_parser;
 
 use std::{pin::Pin, time::Duration, time::Instant};
@@ -32,6 +34,7 @@ pub(super) struct StreamAttemptContext {
     state: LlmProxyState,
     request_id: String,
     candidate: ProxyCandidate,
+    provider_request_body: serde_json::Value,
     retry_index: i32,
     started: Instant,
     status: StatusCode,
@@ -44,6 +47,7 @@ pub struct StreamResponseArgs {
     pub candidate: ProxyCandidate,
     pub source_format: ApiFormat,
     pub target_format: ApiFormat,
+    pub provider_request_body: serde_json::Value,
     pub started: Instant,
     pub retry_index: i32,
 }
@@ -56,6 +60,7 @@ pub async fn stream_response(args: StreamResponseArgs) -> Result<Response, LlmPr
         candidate,
         source_format,
         target_format,
+        provider_request_body,
         started,
         retry_index,
     } = args;
@@ -66,6 +71,7 @@ pub async fn stream_response(args: StreamResponseArgs) -> Result<Response, LlmPr
         state,
         request_id,
         candidate,
+        provider_request_body,
         retry_index,
         started,
         status,

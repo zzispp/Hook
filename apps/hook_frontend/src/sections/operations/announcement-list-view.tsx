@@ -87,7 +87,7 @@ function AnnouncementCard({ item }: { item: Announcement }) {
         <Box>
           <Button
             component={RouterLink}
-            href={`${paths.dashboard.announcements}/${item.id}`}
+            href={`${paths.dashboard.announcementDetail}?id=${encodeURIComponent(item.id)}`}
             endIcon={<Iconify icon="eva:diagonal-arrow-right-up-fill" />}
           >
             {t('common.details')}

@@ -3,14 +3,18 @@
   "private": true,
   "packageManager": "pnpm@10.33.4",
   "scripts": {
+    "dev": "bash scripts/dev-full.sh",
     "dev:frontend": "pnpm --filter hook_frontend dev",
     "dev:mock-api": "pnpm --filter hook_mock_api dev",
     "build:frontend": "pnpm --filter hook_frontend build",
+    "build:frontend:embedded": "BUILD_STATIC_EXPORT=true pnpm --filter hook_frontend build",
     "build:mock-api": "pnpm --filter hook_mock_api build",
     "lint:frontend": "pnpm --filter hook_frontend lint",
     "lint:mock-api": "pnpm --filter hook_mock_api lint",
-    "dev:backend": "cargo run -p hook_backend",
-    "check:backend": "cargo check -p hook_backend",
-    "build:backend": "cargo build -p hook_backend"
+    "dev:backend": "cargo run -p backend",
+    "check:backend": "cargo check -p backend",
+    "build:backend": "cargo build -p backend",
+    "build:backend:embedded": "pnpm build:frontend:embedded && cargo build -p backend --release",
+    "start:embedded": "pnpm build:frontend:embedded && cargo run -p backend"
   }
 }
