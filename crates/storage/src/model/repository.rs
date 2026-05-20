@@ -1,10 +1,11 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
 use types::model::{GlobalModelListRequest, GlobalModelResponse, GlobalModelWithStats, ModelCatalogItem, ModelCatalogResponse};
 
 use crate::{Database, StorageError, StorageResult, json, usage_flush::UsageFlushApplyReport};
 
 use super::{
     GlobalModelRecord, GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord, ModelRecord,
+    cleanup::{delete_model_bindings, prune_model_references},
     record::{global_models, global_models::ActiveModel as GlobalModelActiveModel, provider_models},
     repository_helpers::{apply_global_model_patch, capabilities, description, record_matches, unique_provider_count},
     usage,
@@ -41,7 +42,10 @@ impl ModelStore {
     }
 
     pub async fn update_global_model(&self, id: &str, input: GlobalModelRecordPatch) -> StorageResult<GlobalModelResponse> {
-        let record = self.find_global_model_record(id).await?.ok_or(StorageError::NotFound)?;
+        let record = self
+            .find_global_model_record(self.database.connection(), id)
+            .await?
+            .ok_or(StorageError::NotFound)?;
         let mut active: GlobalModelActiveModel = record.into();
         apply_global_model_patch(&mut active, input)?;
         active.updated_at = Set(time::OffsetDateTime::now_utc());
@@ -50,32 +54,32 @@ impl ModelStore {
     }
 
     pub async fn delete_global_model(&self, id: &str) -> StorageResult<()> {
-        let record = self.find_global_model_record(id).await?.ok_or(StorageError::NotFound)?;
-        provider_models::Entity::delete_many()
-            .filter(provider_models::Column::GlobalModelId.eq(record.id.as_str()))
-            .exec(self.database.connection())
-            .await?;
+        let tx = self.database.connection().begin().await?;
+        let record = self.find_global_model_record(&tx, id).await?.ok_or(StorageError::NotFound)?;
+        delete_model_bindings(&tx, &record.id).await?;
+        prune_model_references(&tx, &record.id).await?;
         let active: GlobalModelActiveModel = record.into();
-        active.delete(self.database.connection()).await?;
+        active.delete(&tx).await?;
+        tx.commit().await?;
         Ok(())
     }
 
     pub async fn find_global_model_by_name(&self, name: &str) -> StorageResult<Option<GlobalModelResponse>> {
-        match self.find_global_model_record_by_name(name).await? {
+        match self.find_global_model_record_by_name(self.database.connection(), name).await? {
             Some(record) => self.to_response(record).await.map(Some),
             None => Ok(None),
         }
     }
 
     pub async fn get_global_model(&self, id: &str) -> StorageResult<Option<GlobalModelResponse>> {
-        match self.find_global_model_record(id).await? {
+        match self.find_global_model_record(self.database.connection(), id).await? {
             Some(record) => self.to_response(record).await.map(Some),
             None => Ok(None),
         }
     }
 
     pub async fn get_global_model_with_stats(&self, id: &str) -> StorageResult<Option<GlobalModelWithStats>> {
-        let Some(record) = self.find_global_model_record(id).await? else {
+        let Some(record) = self.find_global_model_record(self.database.connection(), id).await? else {
             return Ok(None);
         };
         let provider_count = self.provider_count(&record.id).await?;
@@ -102,7 +106,10 @@ impl ModelStore {
     }
 
     pub async fn global_model_providers(&self, id: &str) -> StorageResult<types::model::GlobalModelProvidersResponse> {
-        let global_model = self.find_global_model_record(id).await?.ok_or(StorageError::NotFound)?;
+        let global_model = self
+            .find_global_model_record(self.database.connection(), id)
+            .await?
+            .ok_or(StorageError::NotFound)?;
         let mut providers = Vec::new();
         for model in self.models_for_global_model(&global_model.id).await? {
             providers.push(model.provider_detail(&global_model)?);
@@ -218,18 +225,24 @@ impl ModelStore {
             .map_err(StorageError::from)
     }
 
-    async fn find_global_model_record(&self, id: &str) -> StorageResult<Option<GlobalModelRecord>> {
-        let record = global_models::Entity::find_by_id(id.to_owned()).one(self.database.connection()).await?;
+    async fn find_global_model_record<C>(&self, connection: &C, id: &str) -> StorageResult<Option<GlobalModelRecord>>
+    where
+        C: ConnectionTrait,
+    {
+        let record = global_models::Entity::find_by_id(id.to_owned()).one(connection).await?;
         match record {
             Some(record) => Ok(Some(record)),
-            None => self.find_global_model_record_by_name(id).await,
+            None => self.find_global_model_record_by_name(connection, id).await,
         }
     }
 
-    async fn find_global_model_record_by_name(&self, name: &str) -> StorageResult<Option<GlobalModelRecord>> {
+    async fn find_global_model_record_by_name<C>(&self, connection: &C, name: &str) -> StorageResult<Option<GlobalModelRecord>>
+    where
+        C: ConnectionTrait,
+    {
         global_models::Entity::find()
             .filter(global_models::Column::Name.eq(name))
-            .one(self.database.connection())
+            .one(connection)
             .await
             .map_err(StorageError::from)
     }
