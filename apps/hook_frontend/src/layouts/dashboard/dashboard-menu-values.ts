@@ -5,6 +5,7 @@ export const DASHBOARD_MENU_CODES = {
   announcements: 'announcements',
   billingGroupCatalog: 'dashboard_groups',
   billingGroups: 'admin_groups',
+  cacheMonitoring: 'admin_cache_monitoring',
   dashboard: 'dashboard_home',
   menuManagement: 'admin_menus',
   modelCatalog: 'dashboard_models',

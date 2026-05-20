@@ -1,4 +1,5 @@
-use redis::AsyncCommands;
+use futures_util::TryStreamExt;
+use redis::{AsyncCommands, AsyncIter};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
@@ -42,6 +43,27 @@ pub struct InvalidateAffinityInput<'a> {
     pub provider_id: &'a str,
     pub endpoint_id: &'a str,
     pub key_id: &'a str,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct ClearAffinityInput<'a> {
+    pub token_id: &'a str,
+    pub model_id: &'a str,
+    pub api_format: &'a str,
+    pub endpoint_id: &'a str,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AffinityEntry {
+    pub token_id: String,
+    pub record: AffinityRecord,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CacheKeyParts {
+    token_id: String,
+    api_format: String,
+    model_id: String,
 }
 
 pub struct CacheAffinityStore {
@@ -92,8 +114,37 @@ impl CacheAffinityStore {
             .map_err(redis_error)
     }
 
+    pub async fn list(&self) -> Result<Vec<AffinityEntry>, LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let keys = scan_keys(&mut connection, &self.cache_pattern()).await?;
+        let mut entries = Vec::with_capacity(keys.len());
+        for key in keys {
+            let value: String = connection.get(&key).await.map_err(redis_error)?;
+            let record = serde_json::from_str(&value).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?;
+            let parts = parse_cache_key(&self.key_prefix, &key)?;
+            entries.push(AffinityEntry {
+                token_id: parts.token_id,
+                record,
+            });
+        }
+        Ok(entries)
+    }
+
+    pub async fn clear_all(&self) -> Result<u64, LlmProxyError> {
+        let mut connection = self.connection.clone();
+        let keys = scan_keys(&mut connection, &self.cache_pattern()).await?;
+        if keys.is_empty() {
+            return Ok(0);
+        }
+        connection.del(keys).await.map_err(redis_error)
+    }
+
     fn cache_key(&self, token_id: &str, model_id: &str, api_format: &str) -> String {
         format!("{}:llm_proxy:cache_affinity:{token_id}:{api_format}:{model_id}", self.key_prefix)
+    }
+
+    fn cache_pattern(&self) -> String {
+        format!("{}:llm_proxy:cache_affinity:*", self.key_prefix)
     }
 }
 
@@ -133,6 +184,78 @@ fn matches_input(record: &AffinityRecord, input: &InvalidateAffinityInput<'_>) -
     record.provider_id == input.provider_id && record.endpoint_id == input.endpoint_id && record.key_id == input.key_id
 }
 
+async fn scan_keys(connection: &mut redis::aio::ConnectionManager, pattern: &str) -> Result<Vec<String>, LlmProxyError> {
+    let iter: AsyncIter<String> = connection.scan_match(pattern).await.map_err(redis_error)?;
+    iter.try_collect().await.map_err(redis_error)
+}
+
+fn parse_cache_key(key_prefix: &str, key: &str) -> Result<CacheKeyParts, LlmProxyError> {
+    let prefix = format!("{key_prefix}:llm_proxy:cache_affinity:");
+    let suffix = key
+        .strip_prefix(&prefix)
+        .ok_or_else(|| LlmProxyError::Infrastructure(format!("invalid cache affinity key: {key}")))?;
+    let mut parts = suffix.splitn(3, ':');
+    let token_id = required_cache_key_part(parts.next(), key)?;
+    let api_format = required_cache_key_part(parts.next(), key)?;
+    let model_id = required_cache_key_part(parts.next(), key)?;
+    Ok(CacheKeyParts {
+        token_id,
+        api_format,
+        model_id,
+    })
+}
+
+fn required_cache_key_part(value: Option<&str>, key: &str) -> Result<String, LlmProxyError> {
+    let part = value
+        .filter(|item| !item.is_empty())
+        .ok_or_else(|| LlmProxyError::Infrastructure(format!("invalid cache affinity key: {key}")))?;
+    Ok(part.to_owned())
+}
+
 fn redis_error(error: redis::RedisError) -> LlmProxyError {
     LlmProxyError::Infrastructure(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AffinityRecord, ClearAffinityInput, parse_cache_key};
+
+    #[test]
+    fn parse_cache_key_reads_affinity_segments() {
+        let parts = parse_cache_key("hook", "hook:llm_proxy:cache_affinity:token-1:openai_chat:model:demo").unwrap();
+
+        assert_eq!(parts.token_id, "token-1");
+        assert_eq!(parts.api_format, "openai_chat");
+        assert_eq!(parts.model_id, "model:demo");
+    }
+
+    #[test]
+    fn parse_cache_key_rejects_invalid_prefix() {
+        let error = parse_cache_key("hook", "bad:cache:key").unwrap_err();
+
+        assert!(error.to_string().contains("invalid cache affinity key"));
+    }
+
+    #[test]
+    fn affinity_delete_target_matches_endpoint_only() {
+        let record = AffinityRecord {
+            provider_id: "provider-1".into(),
+            endpoint_id: "endpoint-1".into(),
+            key_id: "key-1".into(),
+            api_format: "openai_chat".into(),
+            model_id: "model-1".into(),
+            created_at: 0,
+            expire_at: 60,
+            request_count: 3,
+        };
+        let target = ClearAffinityInput {
+            token_id: "token-1",
+            model_id: "model-1",
+            api_format: "openai_chat",
+            endpoint_id: "endpoint-1",
+        };
+
+        assert_eq!(record.endpoint_id, target.endpoint_id);
+        assert_ne!(record.endpoint_id, "endpoint-2");
+    }
 }

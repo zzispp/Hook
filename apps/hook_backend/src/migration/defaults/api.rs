@@ -1,5 +1,6 @@
 mod admin_wallet;
 mod auth;
+mod cache_monitoring;
 mod card_code;
 mod dashboard;
 mod group;
@@ -37,6 +38,7 @@ const API_GROUPS: &[&[ApiDefinition]] = &[
     card_code::CARD_CODE_APIS,
     setting::SETTING_APIS,
     performance_monitoring::PERFORMANCE_MONITORING_APIS,
+    cache_monitoring::CACHE_MONITORING_APIS,
 ];
 
 pub fn iter_definitions() -> impl Iterator<Item = &'static ApiDefinition> {

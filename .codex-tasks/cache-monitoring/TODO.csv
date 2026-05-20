@@ -1,0 +1,5 @@
+id,task,status,completed_at,notes
+1,实现后端缓存亲和监控接口,IN_PROGRESS,,
+2,实现前端缓存监控页面,TODO,,
+3,补齐菜单权限翻译与路由注册,TODO,,
+4,运行验证命令,TODO,,

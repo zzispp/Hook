@@ -188,6 +188,17 @@ export const endpoints = {
     overview: '/api/admin/performance-monitoring/overview',
     realtime: '/api/admin/performance-monitoring/realtime',
   },
+  cacheMonitoring: {
+    affinities: '/api/admin/monitoring/cache/affinities',
+    affinityById: (
+      affinityKey: string,
+      endpointId: string,
+      modelId: string,
+      apiFormat: string
+    ) =>
+      `/api/admin/monitoring/cache/affinities/${encodeURIComponent(affinityKey)}/${encodeURIComponent(endpointId)}/${encodeURIComponent(modelId)}/${encodeURIComponent(apiFormat)}`,
+    clearAll: '/api/admin/monitoring/cache',
+  },
   dashboard: {
     overview: '/api/dashboard/overview',
     activity: '/api/dashboard/activity',

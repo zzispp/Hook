@@ -4,6 +4,7 @@ use rbac::{
     application::{AuthorizationConfig, RbacService},
     infra::{RedisRbacCache, StorageRbacRepository},
 };
+use types::api_token::ApiTokenOwnerResponse;
 
 use crate::{llm_proxy::LlmProxyState, performance_monitoring_os::PerformanceOsCollector};
 
@@ -21,6 +22,7 @@ pub(crate) struct AppState {
     pub(crate) groups: Arc<dyn group::application::GroupUseCase>,
     pub(crate) i18n: Arc<dyn i18n::application::I18nUseCase>,
     pub(crate) api_tokens: Arc<dyn api_token::application::ApiTokenUseCase>,
+    pub(crate) cache_monitoring_system_owner: Option<(String, ApiTokenOwnerResponse)>,
     pub(crate) operations: Arc<dyn operations::application::OperationsUseCase>,
     pub(crate) captcha: Arc<dyn captcha::application::CaptchaUseCase>,
     pub(crate) llm_proxy: LlmProxyState,

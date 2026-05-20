@@ -1,5 +1,6 @@
 mod app_state;
 mod auth;
+mod cache_monitoring_api;
 mod commands;
 mod frontend;
 mod http_config;

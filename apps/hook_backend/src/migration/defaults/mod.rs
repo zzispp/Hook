@@ -32,6 +32,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_translations",
     "admin_models",
     "admin_providers",
+    "admin_cache_monitoring",
     "admin_request_records",
 ];
 
@@ -219,6 +220,14 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         ],
     },
     MenuApiBindingDefinition {
+        menu_code: "admin_cache_monitoring",
+        api_codes: &[
+            "cache_monitoring_affinities_read",
+            "cache_monitoring_affinity_delete",
+            "cache_monitoring_affinities_clear",
+        ],
+    },
+    MenuApiBindingDefinition {
         menu_code: "admin_request_records",
         api_codes: &["request_records_read", "request_records_active_read", "request_records_detail"],
     },
@@ -303,6 +312,7 @@ mod tests {
         assert!(ADMIN_MENU_CODES.contains(&"dashboard_home"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_models"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_providers"));
+        assert!(ADMIN_MENU_CODES.contains(&"admin_cache_monitoring"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_request_records"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_wallets"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_tokens"));

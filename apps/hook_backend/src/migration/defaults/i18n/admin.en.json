@@ -19,6 +19,7 @@
     "admin_translations": "Translation Management",
     "admin_models": "Model Management",
     "admin_providers": "Provider Management",
+    "admin_cache_monitoring": "Cache Monitoring",
     "admin_wallets": "Wallet Management",
     "admin_card_codes": "Card Code Management",
     "admin_groups": "Billing Groups",
@@ -279,6 +280,8 @@
     "providerModelCreated": "Model binding created",
     "providerModelDisabled": "Model binding disabled",
     "providerModelEnabled": "Model binding enabled",
+    "cacheAffinityDeleted": "Cache affinity deleted",
+    "cacheAffinitiesCleared": "Cache affinities cleared",
     "providerModelTestFailed": "Model test failed",
     "providerModelTestSucceeded": "Model test succeeded",
     "providerModelUpdated": "Model binding updated",
@@ -803,6 +806,27 @@
     "emptySnapshot": "No monitoring snapshots exist for this range. The query layer will not scan request details to backfill data.",
     "allRangeNotice": "ALL shows every retained snapshot bucket using {{granularity}}, capped at 720 points.",
     "noDimensionData": "No distribution data"
+  },
+  "cacheMonitoring": {
+    "searchPlaceholder": "Search user, email, token, provider, model, or API format...",
+    "actions": {
+      "clearAll": "Clear all"
+    },
+    "columns": {
+      "user": "User",
+      "key": "Affinity key",
+      "provider": "Provider",
+      "model": "Model",
+      "apiFormat": "API format",
+      "ttl": "Remaining TTL",
+      "requestCount": "Requests"
+    },
+    "dialogs": {
+      "deleteTitle": "Delete cache affinity",
+      "deleteContent": "Delete cache affinity {{key}}?",
+      "clearAllTitle": "Clear cache affinities",
+      "clearAllContent": "Clear all cache affinity records? This takes effect immediately for subsequent scheduling."
+    }
   },
   "userWallet": {
     "title": "User wallet",

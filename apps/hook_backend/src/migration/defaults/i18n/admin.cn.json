@@ -19,6 +19,7 @@
     "admin_translations": "翻译管理",
     "admin_models": "模型管理",
     "admin_providers": "提供商管理",
+    "admin_cache_monitoring": "缓存监控",
     "admin_wallets": "钱包管理",
     "admin_card_codes": "卡密管理",
     "admin_groups": "计费分组",
@@ -279,6 +280,8 @@
     "providerModelCreated": "模型绑定已创建",
     "providerModelDisabled": "模型绑定已停用",
     "providerModelEnabled": "模型绑定已启用",
+    "cacheAffinityDeleted": "缓存亲和已删除",
+    "cacheAffinitiesCleared": "缓存亲和已清空",
     "providerModelTestFailed": "模型测试失败",
     "providerModelTestSucceeded": "模型测试成功",
     "providerModelUpdated": "模型绑定已更新",
@@ -803,6 +806,27 @@
     "emptySnapshot": "当前范围没有监控快照。查询层不会临时扫描请求明细补数据。",
     "allRangeNotice": "ALL 当前展示保留期内全部快照，使用 {{granularity}}，最大 720 个点。",
     "noDimensionData": "暂无分布数据"
+  },
+  "cacheMonitoring": {
+    "searchPlaceholder": "搜索用户、邮箱、令牌、提供商、模型或 API 格式...",
+    "actions": {
+      "clearAll": "清空全部"
+    },
+    "columns": {
+      "user": "用户",
+      "key": "亲和 Key",
+      "provider": "提供商",
+      "model": "模型",
+      "apiFormat": "API 格式",
+      "ttl": "剩余 TTL",
+      "requestCount": "请求次数"
+    },
+    "dialogs": {
+      "deleteTitle": "删除缓存亲和",
+      "deleteContent": "确认删除缓存亲和 {{key}}？",
+      "clearAllTitle": "清空缓存亲和",
+      "clearAllContent": "确认清空全部缓存亲和记录？该操作会立即影响后续调度。"
+    }
   },
   "userWallet": {
     "title": "用户钱包",

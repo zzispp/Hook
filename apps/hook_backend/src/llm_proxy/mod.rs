@@ -29,7 +29,7 @@ use user::application::SystemUserProvider;
 
 pub(crate) use cache::snapshot::CachedUserAccess;
 pub use cache::{LlmProxyCache, LlmProxyCacheOptions};
-pub(crate) use cache_affinity::{AffinityRecord, AffinitySelection, InvalidateAffinityInput, SetAffinityInput};
+pub(crate) use cache_affinity::{AffinityEntry, AffinityRecord, AffinitySelection, ClearAffinityInput, InvalidateAffinityInput, SetAffinityInput};
 pub use error::LlmProxyError;
 pub(crate) use model_test::LlmProxyProviderModelTester;
 
@@ -131,9 +131,42 @@ impl LlmProxyState {
         self.affinity_store().invalidate(input).await
     }
 
+    pub async fn list_affinities(&self) -> Result<Vec<AffinityEntry>, LlmProxyError> {
+        self.affinity_store().list().await
+    }
+
+    pub async fn clear_single_affinity(&self, input: ClearAffinityInput<'_>) -> Result<bool, LlmProxyError> {
+        let Some(record) = self.cached_affinity(input.token_id, input.model_id, input.api_format).await? else {
+            return Ok(false);
+        };
+        let Some(invalidate_input) = exact_invalidate_input(&record, input) else {
+            return Ok(false);
+        };
+        self.invalidate_affinity(invalidate_input).await?;
+        Ok(true)
+    }
+
+    pub async fn clear_all_affinities(&self) -> Result<u64, LlmProxyError> {
+        self.affinity_store().clear_all().await
+    }
+
     fn affinity_store(&self) -> cache_affinity::CacheAffinityStore {
         cache_affinity::CacheAffinityStore::new(self.affinity.clone(), &self.key_prefix)
     }
+}
+
+fn exact_invalidate_input<'a>(record: &'a AffinityRecord, input: ClearAffinityInput<'a>) -> Option<InvalidateAffinityInput<'a>> {
+    if record.endpoint_id != input.endpoint_id {
+        return None;
+    }
+    Some(InvalidateAffinityInput {
+        token_id: input.token_id,
+        model_id: input.model_id,
+        api_format: input.api_format,
+        provider_id: record.provider_id.as_str(),
+        endpoint_id: record.endpoint_id.as_str(),
+        key_id: record.key_id.as_str(),
+    })
 }
 
 fn llm_proxy_http_client() -> ReqwestClient {
@@ -214,6 +247,8 @@ mod tests {
     use serde_json::{Value, json};
     use tower::ServiceExt;
 
+    use super::{AffinityRecord, ClearAffinityInput, exact_invalidate_input};
+
     const OVERSIZED_JSON_BYTES: usize = 2_097_153;
 
     #[tokio::test]
@@ -245,5 +280,42 @@ mod tests {
     async fn response_json(response: axum::response::Response) -> Value {
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         serde_json::from_slice(&body).unwrap()
+    }
+
+    #[test]
+    fn exact_invalidate_input_requires_same_endpoint() {
+        let record = AffinityRecord {
+            provider_id: "provider-1".into(),
+            endpoint_id: "endpoint-1".into(),
+            key_id: "key-1".into(),
+            api_format: "openai_chat".into(),
+            model_id: "model-1".into(),
+            created_at: 0,
+            expire_at: 60,
+            request_count: 1,
+        };
+
+        let matched = exact_invalidate_input(
+            &record,
+            ClearAffinityInput {
+                token_id: "token-1",
+                model_id: "model-1",
+                api_format: "openai_chat",
+                endpoint_id: "endpoint-1",
+            },
+        )
+        .unwrap();
+        assert_eq!(matched.key_id, "key-1");
+
+        let mismatched = exact_invalidate_input(
+            &record,
+            ClearAffinityInput {
+                token_id: "token-1",
+                model_id: "model-1",
+                api_format: "openai_chat",
+                endpoint_id: "endpoint-2",
+            },
+        );
+        assert!(mismatched.is_none());
     }
 }

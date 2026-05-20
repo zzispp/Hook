@@ -243,6 +243,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000225",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "admin_cache_monitoring",
+        title: "缓存监控",
+        path: "/dashboard/admin/cache-monitoring",
+        icon: "solar:database-bold",
+        sort_order: 58,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000216",
         section_id: OPERATIONS_SECTION_ID,
         code: "admin_request_records",

@@ -2,6 +2,7 @@ use crate::{
     BackendResult,
     app_state::AppState,
     auth::{AuthState, AuthStateParts, auth_middleware},
+    cache_monitoring_api::{CacheMonitoringApiState, create_router as create_cache_monitoring_router},
     frontend,
     http_config::{authorization_config, cors_layer, token_settings},
     llm_proxy::{
@@ -114,6 +115,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
     let system_user_provider = ConfigSystemUserProvider::from_settings(settings)?;
     let system_wallet_provider = ConfigSystemWalletProvider::from_settings(settings)?;
+    let api_token_system_owner = api_token_system_owner(&system_user_provider);
     let proxy_cache = LlmProxyCache::new(LlmProxyCacheOptions {
         database: database.clone(),
         connection: redis_connection.clone(),
@@ -155,7 +157,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         CachedApiTokenRepository::new(StorageApiTokenRepository::new(database.clone()), proxy_cache.clone()),
         StorageBillingGroupCatalog::new(database.clone()),
         StorageModelAccessCatalog::new(database.clone()),
-        StorageUserCatalog::with_system_owner(database.clone(), api_token_system_owner(&system_user_provider)),
+        StorageUserCatalog::with_system_owner(database.clone(), api_token_system_owner.clone()),
         StorageSystemTokenPolicy::new(database.clone()),
     ));
     let users = Arc::new(
@@ -211,6 +213,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         groups,
         i18n,
         api_tokens,
+        cache_monitoring_system_owner: api_token_system_owner,
         operations,
         captcha,
         llm_proxy,
@@ -254,6 +257,7 @@ fn create_app(state: AppState) -> Router {
     let operations_state = OperationsApiState::new(state.operations);
     let captcha_state = CaptchaApiState::new(state.captcha);
     let performance_monitoring_state = PerformanceMonitoringApiState::new(state.database.clone(), state.performance_os_collector.clone());
+    let cache_monitoring_state = CacheMonitoringApiState::new(state.database.clone(), state.llm_proxy.clone(), state.cache_monitoring_system_owner);
     let llm_v1_router = create_llm_proxy_router(state.llm_proxy.clone());
     let gemini_router = create_v1beta_router(state.llm_proxy);
     let auth_state = AuthState::new(AuthStateParts {
@@ -276,7 +280,8 @@ fn create_app(state: AppState) -> Router {
         .merge(create_api_token_router(api_token_state))
         .merge(create_operations_router(operations_state))
         .merge(create_captcha_router(captcha_state))
-        .merge(create_performance_monitoring_router(performance_monitoring_state));
+        .merge(create_performance_monitoring_router(performance_monitoring_state))
+        .merge(create_cache_monitoring_router(cache_monitoring_state));
 
     let backend_router = system::create_router()
         .nest("/v1", llm_v1_router)

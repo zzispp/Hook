@@ -93,7 +93,12 @@ export function hasTokenValue(value?: number | null) {
   return value !== null && value !== undefined && value > 0;
 }
 
-export function formatCacheHitRate(record: RequestRecord) {
+type CacheHitRateRecord = {
+  prompt_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+};
+
+export function formatCacheHitRate(record: CacheHitRateRecord) {
   const cacheReadTokens = Number(record.cache_read_input_tokens ?? 0);
   if (!Number.isFinite(cacheReadTokens) || cacheReadTokens <= 0) return '-';
 

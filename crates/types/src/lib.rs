@@ -1,4 +1,5 @@
 pub mod api_token;
+pub mod cache_monitoring;
 pub mod captcha;
 pub mod card_code;
 pub mod dashboard;
