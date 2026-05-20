@@ -213,7 +213,13 @@ function useModelDialogActions(
     try {
       await saveModelForm(state.form, state.editing);
       toast.success(state.editing ? t('messages.modelUpdated') : t('messages.modelCreated'));
-      closeDialog();
+      if (state.editing) {
+        closeDialog();
+        return;
+      }
+
+      state.setSelectedModel(null);
+      state.setForm({ ...DEFAULT_FORM });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
     } finally {

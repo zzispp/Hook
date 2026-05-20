@@ -75,7 +75,7 @@ export function ModelDevPicker({
   }
 
   return (
-    <Stack sx={{ height: 620, borderRight: { md: 1 }, borderColor: 'divider', pr: { md: 2 } }}>
+    <Stack sx={{ minHeight: 0, borderRight: { md: 1 }, borderColor: 'divider', pr: { md: 2 } }}>
       <TextField
         fullWidth
         size="small"
