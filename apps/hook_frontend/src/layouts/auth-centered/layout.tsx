@@ -6,15 +6,9 @@ import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '.
 
 import { merge } from 'es-toolkit';
 
-import Box from '@mui/material/Box';
-import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
 
-import { paths } from 'src/routes/paths';
-import { RouterLink } from 'src/routes/components';
-
 import { CONFIG } from 'src/global-config';
-import { useTranslate } from 'src/locales/use-locales';
 
 import { Logo } from 'src/components/logo';
 
@@ -42,8 +36,6 @@ export function AuthCenteredLayout({
   slotProps,
   layoutQuery = 'md',
 }: AuthCenteredLayoutProps) {
-  const { t } = useTranslate('auth');
-
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = { container: { maxWidth: false } };
 
@@ -59,22 +51,7 @@ export function AuthCenteredLayout({
           <Logo />
         </>
       ),
-      rightArea: (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
-          {/** @slot Help link */}
-          <Link
-            href={paths.faqs}
-            component={RouterLink}
-            color="inherit"
-            sx={{ typography: 'subtitle2' }}
-          >
-            {t('layout.help')}
-          </Link>
-
-          {/** @slot Settings button */}
-          <SettingsButton />
-        </Box>
-      ),
+      rightArea: <SettingsButton />,
     };
 
     return (

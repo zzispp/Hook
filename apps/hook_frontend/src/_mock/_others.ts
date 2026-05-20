@@ -11,15 +11,6 @@ export const _carouselsMembers = Array.from({ length: 6 }, (_, index) => ({
 
 // ----------------------------------------------------------------------
 
-export const _faqs = Array.from({ length: 8 }, (_, index) => ({
-  id: _mock.id(index),
-  value: `panel${index + 1}`,
-  title: `Questions ${index + 1}`,
-  content: _mock.description(index),
-}));
-
-// ----------------------------------------------------------------------
-
 export const _addressBooks = Array.from({ length: 24 }, (_, index) => ({
   id: _mock.id(index),
   primary: index === 0,
@@ -30,25 +21,6 @@ export const _addressBooks = Array.from({ length: 24 }, (_, index) => ({
   company: _mock.companyNames(index + 1),
   addressType: index === 0 ? 'Home' : 'Office',
 }));
-
-// ----------------------------------------------------------------------
-
-export const _contacts = Array.from({ length: 20 }, (_, index) => {
-  const status =
-    (index % 2 && 'online') || (index % 3 && 'offline') || (index % 4 && 'always') || 'busy';
-
-  return {
-    id: _mock.id(index),
-    status,
-    role: _mock.role(index),
-    email: _mock.email(index),
-    name: _mock.fullName(index),
-    phoneNumber: _mock.phoneNumber(index),
-    lastActivity: _mock.time(index),
-    avatarUrl: _mock.image.avatar(index),
-    address: _mock.fullAddress(index),
-  };
-});
 
 // ----------------------------------------------------------------------
 
@@ -98,13 +70,6 @@ export const _notifications = Array.from({ length: 9 }, (_, index) => ({
     (index === 8 && `<p>You have new mail`) ||
     '',
 }));
-
-// ----------------------------------------------------------------------
-
-export const _mapContact = [
-  { latlng: [33, 65], address: _mock.fullAddress(1), phoneNumber: _mock.phoneNumber(1) },
-  { latlng: [-12.5, 18.5], address: _mock.fullAddress(2), phoneNumber: _mock.phoneNumber(2) },
-];
 
 // ----------------------------------------------------------------------
 
