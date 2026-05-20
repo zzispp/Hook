@@ -12,6 +12,27 @@ cleanup() {
   done
 }
 
+is_pid_running() {
+  local status
+
+  status="$(ps -p "$1" -o stat= 2>/dev/null | tr -d '[:space:]')"
+  [[ -n "$status" && "$status" != Z* ]]
+}
+
+wait_for_first_exit() {
+  local pid
+
+  while true; do
+    for pid in "${PIDS[@]}"; do
+      if ! is_pid_running "$pid"; then
+        wait "$pid"
+        return $?
+      fi
+    done
+    sleep 1
+  done
+}
+
 trap cleanup EXIT INT TERM
 
 cd "$ROOT_DIR"
@@ -22,4 +43,4 @@ PIDS+=("$!")
 pnpm dev:frontend &
 PIDS+=("$!")
 
-wait -n "${PIDS[@]}"
+wait_for_first_exit

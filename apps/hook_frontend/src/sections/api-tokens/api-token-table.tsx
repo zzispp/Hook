@@ -32,6 +32,7 @@ type Props = {
   table: UseTableReturn;
   showOwner?: boolean;
   onCopy: (token: ApiToken) => void;
+  onImportCcSwitch: (token: ApiToken) => void | Promise<void>;
   onEdit: (token: ApiToken) => void;
   onToggle: (token: ApiToken) => void;
   onDelete: (token: ApiToken) => void;
@@ -97,6 +98,7 @@ function ApiTokenTableRow({ row, props }: { row: ApiToken; props: Props }) {
       <TableCell align="right">
         <RowActions
           row={row}
+          onImportCcSwitch={props.onImportCcSwitch}
           onEdit={props.onEdit}
           onToggle={props.onToggle}
           onDelete={props.onDelete}
@@ -152,11 +154,13 @@ function OwnerCell({ token }: { token: ApiToken }) {
 
 function RowActions({
   row,
+  onImportCcSwitch,
   onEdit,
   onToggle,
   onDelete,
 }: {
   row: ApiToken;
+  onImportCcSwitch: (token: ApiToken) => void | Promise<void>;
   onEdit: (token: ApiToken) => void;
   onToggle: (token: ApiToken) => void;
   onDelete: (token: ApiToken) => void;
@@ -173,6 +177,11 @@ function RowActions({
       <Tooltip title={row.is_active ? t('actions.disable') : t('actions.enable')}>
         <IconButton onClick={() => onToggle(row)}>
           <Iconify icon={row.is_active ? 'solar:stop-circle-bold' : 'solar:play-circle-bold'} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={t('actions.importCcSwitch')}>
+        <IconButton onClick={() => void onImportCcSwitch(row)}>
+          <Iconify icon="solar:import-bold" />
         </IconButton>
       </Tooltip>
       <Tooltip title={t('common.delete')}>
@@ -204,7 +213,7 @@ function tokenTableHead(
     { id: 'rate_limit_rpm', label: t('fields.rateLimitRpm'), width: 140 },
     { id: 'status', label: t('common.status'), width: 110 },
     { id: 'last_used_at', label: t('fields.lastUsedAt'), width: 180 },
-    { id: '', width: 136 },
+    { id: '', width: 180 },
   ];
 }
 

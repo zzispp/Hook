@@ -62,6 +62,18 @@ export type ApiTokenSecretResponse = {
   raw_token: string;
 };
 
+export type TokenAccessibleModel = {
+  id: string;
+  object: 'model';
+  created: number;
+  owned_by: string;
+};
+
+export type TokenAccessibleModelListResponse = {
+  object: 'list';
+  data: TokenAccessibleModel[];
+};
+
 export type ApiTokenListResponse = {
   tokens: ApiToken[];
   total: number;

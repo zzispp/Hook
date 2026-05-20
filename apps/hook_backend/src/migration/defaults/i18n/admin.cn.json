@@ -120,6 +120,7 @@
     "associateProviderModels": "关联模型",
     "copyApiKey": "复制密钥",
     "enable": "启用",
+    "importCcSwitch": "导入 CC Switch",
     "manageProviderEndpoints": "管理端点",
     "disable": "停用"
   },
@@ -260,6 +261,7 @@
     "apiTokenCreated": "请复制并保存密钥，后续也可以在列表中再次复制。",
     "apiTokenDeleted": "令牌已删除",
     "apiTokenUpdated": "令牌已更新",
+    "importCcSwitch": "导入 CC Switch",
     "billingGroupCreated": "计费分组已创建",
     "billingGroupDeleted": "计费分组已删除",
     "billingGroupUpdated": "计费分组已更新",
@@ -999,6 +1001,25 @@
   },
   "tokens": {
     "allModels": "所有模型",
+    "ccSwitch": {
+      "back": "返回格式选择",
+      "continue": "继续选择模型",
+      "formats": {
+        "claude": "Claude",
+        "openai": "OpenAI",
+        "gemini": "Gemini"
+      },
+      "incompleteSelection": "请先选择格式和模型。",
+      "loadFailed": "加载 CC Switch 导入信息失败。",
+      "modelCount": "{{count}} 个模型",
+      "noAvailableModels": "该令牌当前没有可导入到 CC Switch 的可用模型。",
+      "noModelsForFormat": "当前格式下没有可用模型，请切换其他格式。",
+      "openInCcSwitch": "打开 CC Switch",
+      "retry": "重试",
+      "selectFormat": "先选择导入格式，再继续选择模型。",
+      "selectModel": "选择该格式下要写入 CC Switch 的模型。",
+      "usageSummary": "将同步令牌的已用额度、总额度和剩余额度，并每 30 分钟自动刷新。"
+    },
     "deleteConfirm": "确认删除令牌 {{name}}？",
     "followSystem": "跟随系统",
     "independentToken": "独立令牌",

@@ -157,6 +157,16 @@ pub struct ApiTokenSecretResponse {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ApiTokenUsageResponse {
+    #[serde(with = "rust_decimal::serde::float")]
+    pub used_quota: Decimal,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub quota_limit: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub remaining_quota: Option<Decimal>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ApiTokenListResponse {
     pub tokens: Vec<ApiTokenResponse>,
     pub total: u64,

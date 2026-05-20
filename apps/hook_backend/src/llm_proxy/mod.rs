@@ -13,6 +13,7 @@ mod model_test;
 mod proxy;
 mod rate_limit;
 mod request_record_policy;
+mod token_usage;
 mod ws;
 
 use axum::{
@@ -180,6 +181,8 @@ pub fn create_router(state: LlmProxyState) -> Router {
             .route("/models/", get(handlers::list_models))
             .route("/models/{model}", get(handlers::retrieve_model))
             .route("/models/{model}/", get(handlers::retrieve_model))
+            .route("/usage", get(token_usage::usage))
+            .route("/usage/", get(token_usage::usage))
             .route("/completions", post(handlers::completions))
             .route("/completions/", post(handlers::completions))
             .route("/chat/completions", post(handlers::chat_completions))

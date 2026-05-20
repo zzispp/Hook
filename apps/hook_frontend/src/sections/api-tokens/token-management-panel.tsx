@@ -15,6 +15,7 @@ import Button from '@mui/material/Button';
 import { useUsers } from 'src/actions/rbac';
 import { useTranslate } from 'src/locales/use-locales';
 import { useUserModelCatalog } from 'src/actions/models';
+import { useSiteInfo } from 'src/actions/system-settings';
 import { useScopedApiTokens } from 'src/actions/api-tokens';
 import { useAvailableBillingGroups } from 'src/actions/groups';
 
@@ -24,6 +25,8 @@ import { ConfirmDialog } from 'src/components/custom-dialog';
 import { ApiTokenTable } from './api-token-table';
 import { ApiTokenDialog } from './api-token-dialog';
 import { ApiTokenCreatedDialog } from './api-token-created-dialog';
+import { ApiTokenCcSwitchDialog } from './api-token-cc-switch-dialog';
+import { useCcSwitchImportDialog } from './api-token-cc-switch-state';
 import {
   toApiTokenFilters,
   DEFAULT_TOKEN_FILTERS,
@@ -63,11 +66,18 @@ export function useTokenManagementPanelState({
   );
   const groups = useAvailableBillingGroups();
   const models = useUserModelCatalog();
+  const site = useSiteInfo();
   const users = useUsers(
     scope === 'admin' && !fixedUserId ? 0 : -1,
     scope === 'admin' && !fixedUserId ? 100 : 0
   );
   const dialog = useTokenDialog(scope, t, groups.items, fixedUserId ?? '');
+  const ccSwitchImport = useCcSwitchImportDialog({
+    scope,
+    t,
+    catalog: models.items,
+    siteName: site.data?.site_name,
+  });
   const deleteDialog = useDeleteDialog(scope, t);
   const copyToken = useCopyToken(scope, t);
   const handleFiltersChange = useCallback(
@@ -80,6 +90,7 @@ export function useTokenManagementPanelState({
 
   return {
     copyToken,
+    ccSwitchImport,
     deleteDialog,
     dialog,
     filters,
@@ -111,6 +122,7 @@ export function TokenManagementPanel({ state }: Props) {
         table={state.table}
         showOwner={state.scope === 'admin' && !state.fixedUserId}
         onCopy={state.copyToken}
+        onImportCcSwitch={state.ccSwitchImport.openImport}
         onEdit={state.dialog.openEdit}
         onToggle={(token) => void toggleTokenAndNotify(state.scope, token, t)}
         onDelete={state.deleteDialog.setDeleteTarget}
@@ -131,6 +143,7 @@ export function TokenManagementPanel({ state }: Props) {
         rawToken={state.dialog.createdToken}
         onClose={state.dialog.closeCreatedToken}
       />
+      <ApiTokenCcSwitchDialog state={state.ccSwitchImport} />
       <ConfirmDialog
         open={!!state.deleteDialog.deleteTarget}
         onClose={() => state.deleteDialog.setDeleteTarget(null)}

@@ -120,6 +120,7 @@
     "associateProviderModels": "Associate models",
     "copyApiKey": "Copy key",
     "enable": "Enable",
+    "importCcSwitch": "Import to CC Switch",
     "manageProviderEndpoints": "Manage endpoints",
     "disable": "Disable"
   },
@@ -260,6 +261,7 @@
     "apiTokenCreated": "Copy and save the key. It can also be copied later from the list.",
     "apiTokenDeleted": "Token deleted",
     "apiTokenUpdated": "Token updated",
+    "importCcSwitch": "Import to CC Switch",
     "billingGroupCreated": "Billing group created",
     "billingGroupDeleted": "Billing group deleted",
     "billingGroupUpdated": "Billing group updated",
@@ -999,6 +1001,25 @@
   },
   "tokens": {
     "allModels": "All models",
+    "ccSwitch": {
+      "back": "Back to format",
+      "continue": "Continue to models",
+      "formats": {
+        "claude": "Claude",
+        "openai": "OpenAI",
+        "gemini": "Gemini"
+      },
+      "incompleteSelection": "Select a format and model first.",
+      "loadFailed": "Failed to load the CC Switch import data.",
+      "modelCount": "{{count}} models",
+      "noAvailableModels": "This token currently has no models available for CC Switch import.",
+      "noModelsForFormat": "No models are available for this format. Switch to another format.",
+      "openInCcSwitch": "Open CC Switch",
+      "retry": "Retry",
+      "selectFormat": "Choose an import format first, then continue to model selection.",
+      "selectModel": "Choose the model to write into CC Switch for this format.",
+      "usageSummary": "The token's used, total, and remaining quota will sync automatically every 30 minutes."
+    },
     "deleteConfirm": "Delete token {{name}}?",
     "followSystem": "Follow system",
     "independentToken": "Independent token",

@@ -1,6 +1,6 @@
 'use client';
 
-import type { ModelCatalogItem } from 'src/types/model';
+import type { GlobalModelResponse } from 'src/types/model';
 import type { RequestRecordFilters } from 'src/actions/request-records';
 
 import { useMemo, useCallback } from 'react';
@@ -260,9 +260,9 @@ export type UsageRecordModelOption = {
   label: string;
 };
 
-export function catalogUsageRecordOptions(models: ModelCatalogItem[]) {
+export function catalogUsageRecordOptions(models: GlobalModelResponse[]) {
   return models.map((model) => ({
-    value: model.global_model_id,
-    label: model.display_name || model.global_model_name,
+    value: model.id,
+    label: model.display_name || model.name,
   }));
 }
