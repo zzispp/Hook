@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,实现图片请求入口与 multipart 透传,DONE,"/v1/images/generations 和 /v1/images/edits 可处理并透传","cargo check",2026-05-20,0,
+2,补图片链路单元测试,DONE,"生成/编辑/降级/校验覆盖齐全","cargo test image",2026-05-20,0,
+3,跑全量验证,DONE,"fmt/check/clippy/test 全通过","cargo fmt --all && cargo check && cargo clippy -p backend --all-targets -- -D warnings && just test",2026-05-20,0,

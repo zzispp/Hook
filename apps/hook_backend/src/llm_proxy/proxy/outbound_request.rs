@@ -10,30 +10,44 @@ use crate::llm_proxy::{
 
 const ANTHROPIC_VERSION: &str = "2023-06-01";
 
-pub(super) fn upstream_request(
-    client: &req::ReqwestClient,
-    candidate: &ProxyCandidate,
-    target_format: ApiFormat,
-    body: &Value,
-    original_body: &Value,
-    provider_headers: &HeaderMap,
-    is_stream: bool,
-) -> Result<Request, LlmProxyError> {
-    let builder = client.post(candidate.upstream_url.clone()).json(body);
+pub(super) enum UpstreamRequestBody<'a> {
+    Json(&'a Value),
+    Multipart(req::multipart::Form),
+}
+
+pub(super) struct UpstreamRequestInput<'a> {
+    pub(super) candidate: &'a ProxyCandidate,
+    pub(super) target_format: ApiFormat,
+    pub(super) body: UpstreamRequestBody<'a>,
+    pub(super) current_body: &'a Value,
+    pub(super) original_body: &'a Value,
+    pub(super) provider_headers: &'a HeaderMap,
+    pub(super) is_stream: bool,
+}
+
+pub(super) fn upstream_request(client: &req::ReqwestClient, input: UpstreamRequestInput<'_>) -> Result<Request, LlmProxyError> {
+    let builder = request_builder(client, input.candidate, input.body);
     let metadata = formats::endpoint_metadata(
-        &candidate.trace.provider_api_format,
-        body.get("stream").and_then(Value::as_bool).unwrap_or(false),
+        &input.candidate.trace.provider_api_format,
+        input.current_body.get("stream").and_then(Value::as_bool).unwrap_or(false),
     )?;
-    if target_format != metadata.data_format {
+    if input.target_format != metadata.data_format {
         return Err(LlmProxyError::InvalidRequest(format!(
             "provider format metadata mismatch: {}",
-            candidate.trace.provider_api_format
+            input.candidate.trace.provider_api_format
         )));
     }
-    let builder = apply_extra_headers(apply_auth(builder, candidate, metadata.auth_scheme), provider_headers);
-    let mut request = client.build_request(apply_timeout(builder, candidate, is_stream))?;
-    apply_provider_header_rules(request.headers_mut(), &candidate.header_rules, body, original_body)?;
+    let builder = apply_extra_headers(apply_auth(builder, input.candidate, metadata.auth_scheme), input.provider_headers);
+    let mut request = client.build_request(apply_timeout(builder, input.candidate, input.is_stream))?;
+    apply_provider_header_rules(request.headers_mut(), &input.candidate.header_rules, input.current_body, input.original_body)?;
     Ok(request)
+}
+
+fn request_builder(client: &req::ReqwestClient, candidate: &ProxyCandidate, body: UpstreamRequestBody<'_>) -> RequestBuilder {
+    match body {
+        UpstreamRequestBody::Json(body) => client.post(candidate.upstream_url.clone()).json(body),
+        UpstreamRequestBody::Multipart(form) => client.post(candidate.upstream_url.clone()).multipart(form),
+    }
 }
 
 fn apply_extra_headers(mut builder: RequestBuilder, headers: &HeaderMap) -> RequestBuilder {

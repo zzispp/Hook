@@ -17,7 +17,15 @@ use super::{
     proxy::{ProxyFixedJsonRequest, proxy_fixed_json},
 };
 
-const TESTABLE_FORMATS: &[&str] = &["openai_chat", "openai_cli", "openai_compact", "claude_chat", "gemini_cli"];
+const TESTABLE_FORMATS: &[&str] = &[
+    "openai_chat",
+    "openai_cli",
+    "openai_compact",
+    "openai_image",
+    "openai_image_edit",
+    "claude_chat",
+    "gemini_cli",
+];
 const TEST_GROUP_CODE: &str = "admin_model_test";
 
 pub(crate) struct LlmProxyProviderModelTester {

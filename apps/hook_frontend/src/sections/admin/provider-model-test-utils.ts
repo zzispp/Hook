@@ -1,6 +1,7 @@
 import type { ProviderModelBinding } from 'src/types/provider';
 
 const TEST_MESSAGE = 'Hello! This is a test message.';
+const TEST_IMAGE_PROMPT = 'A simple solid red image filling the entire frame, uniform bright red color, minimalistic.';
 const JSON_INDENT_SIZE = 2;
 const TEST_MAX_TOKENS = 30;
 const TEST_TEMPERATURE = 0.7;
@@ -53,6 +54,9 @@ function testBody(model: string, apiFormat: string) {
   if (apiFormat === 'openai_cli' || apiFormat === 'openai_compact') {
     return openAiResponsesBody(model, apiFormat !== 'openai_compact');
   }
+  if (apiFormat === 'openai_image') {
+    return openAiImageBody(model);
+  }
   return openAiChatBody(model);
 }
 
@@ -73,6 +77,13 @@ function openAiResponsesBody(model: string, stream: boolean) {
     max_output_tokens: TEST_MAX_TOKENS,
     temperature: TEST_TEMPERATURE,
     stream,
+  };
+}
+
+function openAiImageBody(model: string) {
+  return {
+    model,
+    prompt: TEST_IMAGE_PROMPT,
   };
 }
 

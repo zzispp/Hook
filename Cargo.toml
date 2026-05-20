@@ -31,8 +31,9 @@ edition = "2024"
 
 [workspace.dependencies]
 async-trait = "0.1.89"
-axum = { version = "0.8.9", features = ["ws"] }
+axum = { version = "0.8.9", features = ["multipart", "ws"] }
 bcrypt = "0.17.1"
+base64 = "0.22.1"
 api_token = { path = "crates/api_token" }
 captcha = { path = "crates/captcha" }
 card_code = { path = "crates/card_code" }
@@ -79,7 +80,7 @@ operations = { path = "crates/operations" }
 provider = { path = "crates/provider" }
 proxy = { path = "crates/proxy" }
 req = { path = "crates/req" }
-reqwest = { version = "0.12.24", default-features = false, features = ["json", "rustls-tls", "stream"] }
+reqwest = { version = "0.12.24", default-features = false, features = ["json", "multipart", "rustls-tls", "stream"] }
 rust_decimal = { version = "1.41.0", features = ["serde-with-float"] }
 rust-embed = { version = "8.11.0", features = ["mime-guess"] }
 sea-orm = { version = "2.0.0-rc.38", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "mock", "with-rust_decimal", "with-time", "with-json"] }

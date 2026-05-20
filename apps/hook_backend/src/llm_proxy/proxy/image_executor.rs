@@ -1,34 +1,72 @@
 use std::time::{Duration, Instant};
 
-use axum::response::Response;
-use req::Response as UpstreamResponse;
+use axum::{http::HeaderMap, response::Response};
+use proxy::format_conversion::ApiFormat;
+use types::api_token::ApiToken;
 
 use super::{
     LlmProxyError, LlmProxyState, affinity,
     attempt_log::{record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
+    capture::RequestCapture,
     failure_classification::{FailureDecision, classify_status},
+    image_form::MultipartImageRequest,
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
-    request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
-    stream_transport, timeout, transport,
+    timeout, transport,
 };
 use crate::llm_proxy::{
-    audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
-    candidate::ProxyCandidate,
+    CurrentApiToken, OPENAI_IMAGE_EDIT_FORMAT,
+    audit::{SKIP_REASON_REQUEST_TERMINATED, record_scheduled_candidates, record_skipped_candidates},
+    billing::enforce_preflight_access,
+    candidate::{CandidateRequest, ProxyCandidate, select_candidates},
     rate_limit,
 };
 
-enum AttemptCandidateOutcome {
-    Continue,
-    Response(Response),
+pub(super) async fn execute_image_edit_request(
+    state: LlmProxyState,
+    token: CurrentApiToken,
+    headers: HeaderMap,
+    request: MultipartImageRequest,
+) -> Result<Response, LlmProxyError> {
+    let capture = RequestCapture::new(&headers, request.record_body());
+    let prepared = prepare_image_edit_request(&state, &token.0, request, capture).await?;
+    execute_prepared_image_edit(state, prepared).await
 }
 
-enum AttemptOnceOutcome {
-    ContinueCandidate,
-    NextCandidate,
-    Response(Response),
+struct PreparedImageEditRequest {
+    request_id: String,
+    cache_affinity_ttl_minutes: i64,
+    candidates: Vec<ProxyCandidate>,
+    request: MultipartImageRequest,
 }
 
-pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: PreparedProxyRequest) -> Result<Response, LlmProxyError> {
+async fn prepare_image_edit_request(
+    state: &LlmProxyState,
+    token: &ApiToken,
+    request: MultipartImageRequest,
+    capture: RequestCapture,
+) -> Result<PreparedImageEditRequest, LlmProxyError> {
+    enforce_preflight_access(state, token).await?;
+    rate_limit::enforce_request_limits(state, token).await?;
+    let selection = select_candidates(
+        state,
+        token,
+        CandidateRequest {
+            api_format: OPENAI_IMAGE_EDIT_FORMAT,
+            model_name: request.model(),
+            is_stream: false,
+        },
+    )
+    .await?;
+    record_scheduled_candidates(state, &selection, &capture).await?;
+    Ok(PreparedImageEditRequest {
+        request_id: selection.request_id,
+        cache_affinity_ttl_minutes: selection.cache_affinity_ttl_minutes,
+        candidates: selection.candidates,
+        request,
+    })
+}
+
+async fn execute_prepared_image_edit(state: LlmProxyState, prepared: PreparedImageEditRequest) -> Result<Response, LlmProxyError> {
     let mut last_failure = None;
     let mut last_error = None;
     for candidate in &prepared.candidates {
@@ -46,9 +84,20 @@ pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: Prepar
     Err(last_error.unwrap_or_else(|| LlmProxyError::Upstream("all provider candidates failed".into())))
 }
 
+enum AttemptCandidateOutcome {
+    Continue,
+    Response(Response),
+}
+
+enum AttemptOnceOutcome {
+    ContinueCandidate,
+    NextCandidate,
+    Response(Response),
+}
+
 async fn attempt_candidate(
     state: &LlmProxyState,
-    prepared: &PreparedProxyRequest,
+    prepared: &PreparedImageEditRequest,
     candidate: &ProxyCandidate,
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
@@ -66,7 +115,7 @@ async fn attempt_candidate(
 
 async fn attempt_once(
     state: &LlmProxyState,
-    prepared: &PreparedProxyRequest,
+    prepared: &PreparedImageEditRequest,
     candidate: &ProxyCandidate,
     retry_index: i32,
     last_failure: &mut Option<transport::UpstreamFailure>,
@@ -80,34 +129,17 @@ async fn attempt_once(
         }
         Err(error) => return Err(error),
     }
-    let payload = match attempt_payload(prepared.body.clone(), candidate, prepared.force_non_stream) {
-        Ok(payload) => payload,
-        Err(error) => {
-            let outcome = record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;
-            return Ok(option_response_outcome(outcome));
-        }
-    };
-    let started = Instant::now();
-    let request = match upstream_request(
-        &state.http,
-        UpstreamRequestInput {
-            candidate,
-            target_format: payload.target_format,
-            body: UpstreamRequestBody::Json(&payload.body),
-            current_body: &payload.body,
-            original_body: &payload.original_body,
-            provider_headers: &prepared.provider_headers,
-            is_stream: prepared.is_stream,
-        },
-    ) {
+    let provider_body = prepared.request.provider_body(&candidate.provider_model_name);
+    let request = match build_upstream_request(state, prepared, candidate, &provider_body) {
         Ok(request) => request,
         Err(error) => {
             let outcome = record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;
             return Ok(option_response_outcome(outcome));
         }
     };
-    record_started_attempt(state, &prepared.request_id, candidate, prepared.is_stream, retry_index, &request, &payload.body).await?;
-    let request_timeout = timeout::non_stream_total_timeout(candidate, prepared.is_stream);
+    let started = Instant::now();
+    record_started_attempt(state, &prepared.request_id, candidate, false, retry_index, &request, &provider_body).await?;
+    let request_timeout = timeout::non_stream_total_timeout(candidate, false);
     let response = match execute_upstream_request(&state.http, request, request_timeout).await {
         Ok(response) => response,
         Err(error) => {
@@ -116,25 +148,47 @@ async fn attempt_once(
             return Ok(option_response_outcome(outcome));
         }
     };
-    handle_upstream_response(HandleUpstreamResponseInput {
-        state: state.clone(),
-        prepared,
-        candidate,
-        retry_index,
-        started,
-        payload,
+    handle_response(
+        HandleResponseInput {
+            state,
+            prepared,
+            candidate,
+            retry_index,
+            started,
+            request_timeout,
+            last_failure,
+        },
         response,
-        request_timeout,
-        failures: (last_failure, last_error),
-    })
+    )
     .await
+}
+
+fn build_upstream_request(
+    state: &LlmProxyState,
+    prepared: &PreparedImageEditRequest,
+    candidate: &ProxyCandidate,
+    provider_body: &serde_json::Value,
+) -> Result<req::Request, LlmProxyError> {
+    let provider_headers = HeaderMap::new();
+    upstream_request(
+        &state.http,
+        UpstreamRequestInput {
+            candidate,
+            target_format: ApiFormat::OpenAiImage,
+            body: UpstreamRequestBody::Multipart(prepared.request.build_form(&candidate.provider_model_name)?),
+            current_body: provider_body,
+            original_body: prepared.request.record_body(),
+            provider_headers: &provider_headers,
+            is_stream: false,
+        },
+    )
 }
 
 async fn execute_upstream_request(
     http: &req::ReqwestClient,
     request: req::Request,
     request_timeout: Option<Duration>,
-) -> Result<UpstreamResponse, req::ClientError> {
+) -> Result<req::Response, req::ClientError> {
     let execute = http.execute(request);
     match request_timeout {
         Some(timeout) => tokio::time::timeout(timeout, execute).await.unwrap_or(Err(req::ClientError::Timeout)),
@@ -142,67 +196,75 @@ async fn execute_upstream_request(
     }
 }
 
-struct HandleUpstreamResponseInput<'a> {
-    state: LlmProxyState,
-    prepared: &'a PreparedProxyRequest,
+struct HandleResponseInput<'a> {
+    state: &'a LlmProxyState,
+    prepared: &'a PreparedImageEditRequest,
     candidate: &'a ProxyCandidate,
     retry_index: i32,
     started: Instant,
-    payload: AttemptPayload,
-    response: UpstreamResponse,
     request_timeout: Option<Duration>,
-    failures: (&'a mut Option<transport::UpstreamFailure>, &'a mut Option<LlmProxyError>),
+    last_failure: &'a mut Option<transport::UpstreamFailure>,
 }
 
-async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Result<AttemptOnceOutcome, LlmProxyError> {
-    if !input.response.status().is_success() {
+async fn handle_response(input: HandleResponseInput<'_>, response: req::Response) -> Result<AttemptOnceOutcome, LlmProxyError> {
+    if !response.status().is_success() {
         return handle_upstream_failure(
-            &input.state,
+            input.state,
             input.prepared,
             input.candidate,
             input.retry_index,
             input.started,
-            input.response,
-            input.failures.0,
+            response,
+            input.last_failure,
         )
         .await;
     }
-    match success_response(SuccessResponseInput {
+    let response = transport::full_response(transport::FullResponseArgs {
         state: input.state.clone(),
-        prepared: input.prepared,
-        candidate: input.candidate,
-        retry_index: input.retry_index,
+        request_id: input.prepared.request_id.clone(),
+        response,
+        candidate: input.candidate.clone(),
+        service_tier: None,
+        source_format: ApiFormat::OpenAiImage,
+        target_format: ApiFormat::OpenAiImage,
         started: input.started,
-        payload: input.payload,
-        response: input.response,
+        retry_index: input.retry_index,
         request_timeout: input.request_timeout,
     })
-    .await
-    {
-        Ok(response) => {
-            affinity::remember(&input.state, input.candidate, input.prepared.cache_affinity_ttl_minutes).await?;
-            Ok(AttemptOnceOutcome::Response(response))
-        }
-        Err(error) => {
-            *input.failures.1 = Some(error);
-            Ok(AttemptOnceOutcome::ContinueCandidate)
-        }
-    }
+    .await?;
+    affinity::remember(input.state, input.candidate, input.prepared.cache_affinity_ttl_minutes).await?;
+    Ok(AttemptOnceOutcome::Response(response))
 }
 
 async fn handle_upstream_failure(
     state: &LlmProxyState,
-    prepared: &PreparedProxyRequest,
+    prepared: &PreparedImageEditRequest,
     candidate: &ProxyCandidate,
     retry_index: i32,
     started: Instant,
-    response: UpstreamResponse,
+    response: req::Response,
     last_failure: &mut Option<transport::UpstreamFailure>,
 ) -> Result<AttemptOnceOutcome, LlmProxyError> {
     let decision = classify_status(response.status());
-    let record_cooldown = decision.records_provider_cooldown();
-    let failure = transport::record_upstream_failure(state, &prepared.request_id, response, candidate, started, retry_index, record_cooldown).await?;
+    let failure = transport::record_upstream_failure(
+        state,
+        &prepared.request_id,
+        response,
+        candidate,
+        started,
+        retry_index,
+        decision.records_provider_cooldown(),
+    )
+    .await?;
     affinity::invalidate_retryable(state, candidate, decision).await?;
+    classify_failure_outcome(decision, failure, last_failure)
+}
+
+fn classify_failure_outcome(
+    decision: FailureDecision,
+    failure: transport::UpstreamFailure,
+    last_failure: &mut Option<transport::UpstreamFailure>,
+) -> Result<AttemptOnceOutcome, LlmProxyError> {
     match decision {
         FailureDecision::ReturnResponse => transport::failure_response(failure).map(AttemptOnceOutcome::Response),
         FailureDecision::NextCandidate => {
@@ -226,45 +288,4 @@ fn option_response_outcome(response: Option<Response>) -> AttemptOnceOutcome {
         Some(response) => AttemptOnceOutcome::Response(response),
         None => AttemptOnceOutcome::ContinueCandidate,
     }
-}
-
-struct SuccessResponseInput<'a> {
-    state: LlmProxyState,
-    prepared: &'a PreparedProxyRequest,
-    candidate: &'a ProxyCandidate,
-    retry_index: i32,
-    started: Instant,
-    payload: AttemptPayload,
-    response: UpstreamResponse,
-    request_timeout: Option<Duration>,
-}
-
-async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, LlmProxyError> {
-    if input.prepared.is_stream {
-        return stream_transport::stream_response(stream_transport::StreamResponseArgs {
-            state: input.state,
-            request_id: input.prepared.request_id.clone(),
-            response: input.response,
-            candidate: input.candidate.clone(),
-            source_format: input.payload.source_format,
-            target_format: input.payload.target_format,
-            provider_request_body: input.payload.body,
-            started: input.started,
-            retry_index: input.retry_index,
-        })
-        .await;
-    }
-    transport::full_response(transport::FullResponseArgs {
-        state: input.state,
-        request_id: input.prepared.request_id.clone(),
-        response: input.response,
-        candidate: input.candidate.clone(),
-        service_tier: input.prepared.service_tier.clone(),
-        source_format: input.payload.source_format,
-        target_format: input.payload.target_format,
-        started: input.started,
-        retry_index: input.retry_index,
-        request_timeout: input.request_timeout,
-    })
-    .await
 }

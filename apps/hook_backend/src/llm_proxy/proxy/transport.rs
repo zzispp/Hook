@@ -11,6 +11,7 @@ use types::model::PatchField;
 
 use super::{
     LlmProxyError, LlmProxyState,
+    image_response::normalize_image_response_bytes,
     response_model::rewrite_response_model_bytes,
     response_payload::{body_value, upstream_status_error_details},
     timeout::{non_stream_total_timeout, remaining_timeout},
@@ -136,7 +137,15 @@ struct FullResponseInput {
 }
 
 async fn full_success_response(input: FullResponseInput) -> Result<Response, LlmProxyError> {
-    let body = match response_body(&input.bytes, input.candidate.trace.needs_conversion, input.source_format, input.target_format) {
+    let body = match response_body(
+        &input.state.http,
+        &input.bytes,
+        input.candidate.trace.needs_conversion,
+        input.source_format,
+        input.target_format,
+    )
+    .await
+    {
         Ok(value) => value,
         Err(error) => {
             record_response_conversion_failure(&input, &error).await?;
@@ -274,15 +283,26 @@ pub fn failure_response(failure: UpstreamFailure) -> Result<Response, LlmProxyEr
         .map_err(response_error)
 }
 
-fn response_body(bytes: &[u8], needs_conversion: bool, source_format: ApiFormat, target_format: ApiFormat) -> Result<Vec<u8>, LlmProxyError> {
-    if !needs_conversion {
-        return Ok(bytes.to_vec());
+async fn response_body(
+    http: &req::ReqwestClient,
+    bytes: &[u8],
+    needs_conversion: bool,
+    source_format: ApiFormat,
+    target_format: ApiFormat,
+) -> Result<Vec<u8>, LlmProxyError> {
+    let body = if needs_conversion {
+        let value: Value = serde_json::from_slice(bytes).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+        let converted = FormatConversionRegistry::default()
+            .convert_response(&value, target_format, source_format)
+            .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+        serde_json::to_vec(&converted).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?
+    } else {
+        bytes.to_vec()
+    };
+    if target_format == ApiFormat::OpenAiImage {
+        return normalize_image_response_bytes(http, &body).await;
     }
-    let value: Value = serde_json::from_slice(bytes).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
-    let converted = FormatConversionRegistry::default()
-        .convert_response(&value, target_format, source_format)
-        .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
-    serde_json::to_vec(&converted).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))
+    Ok(body)
 }
 
 pub(super) fn content_type_headers(content_type: Option<&HeaderValue>) -> PatchField<HeaderMap> {

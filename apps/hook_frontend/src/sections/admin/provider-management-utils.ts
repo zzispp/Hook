@@ -19,6 +19,8 @@ export const API_FORMAT_OPTIONS = [
   'openai_chat',
   'openai_cli',
   'openai_compact',
+  'openai_image',
+  'openai_image_edit',
   'claude_chat',
   'gemini_cli',
 ];
@@ -27,6 +29,8 @@ const API_FORMAT_DEFAULT_PATHS: Record<string, string> = {
   openai_chat: '/v1/chat/completions',
   openai_cli: '/v1/responses',
   openai_compact: '/v1/responses/compact',
+  openai_image: '/v1/images/generations',
+  openai_image_edit: '/v1/images/edits',
   gemini_cli: '/v1beta/models/{model}:{action}',
   claude_chat: '/v1/messages',
 };

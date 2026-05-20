@@ -35,6 +35,22 @@ fn fixed_parts_excludes_compact_endpoint_from_stream_responses_test_route() {
     assert_eq!(parts.keys[0].id, "key-responses");
 }
 
+#[test]
+fn fixed_parts_supports_openai_image_edit_provider_tests() {
+    let snapshot = snapshot(provider_with_keys_and_endpoints(
+        vec![endpoint("endpoint-image-edit", "openai_image_edit")],
+        vec![key("key-image-edit", vec!["openai_image_edit"])],
+    ));
+
+    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-image-edit", false).unwrap();
+
+    assert_eq!(parts.client_api_format, "openai_image_edit");
+    assert_eq!(parts.endpoints.len(), 1);
+    assert_eq!(parts.endpoints[0].api_format, "openai_image_edit");
+    assert_eq!(parts.keys.len(), 1);
+    assert_eq!(parts.keys[0].id, "key-image-edit");
+}
+
 fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
     SchedulingSnapshot {
         default_rate_limit_rpm: 0,

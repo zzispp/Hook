@@ -32,7 +32,14 @@ import {
   defaultModelTestHeaders,
 } from './provider-model-test-utils';
 
-const TESTABLE_FORMATS = ['openai_chat', 'openai_cli', 'openai_compact', 'claude_chat', 'gemini_cli'];
+const TESTABLE_FORMATS = [
+  'openai_chat',
+  'openai_cli',
+  'openai_compact',
+  'openai_image',
+  'claude_chat',
+  'gemini_cli',
+];
 
 type Props = {
   providerId: string;

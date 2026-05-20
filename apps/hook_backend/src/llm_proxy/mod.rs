@@ -192,6 +192,8 @@ pub fn create_router(state: LlmProxyState) -> Router {
             .route("/images/generations/", post(handlers::image_generations))
             .route("/images/edits", post(handlers::image_edits))
             .route("/images/edits/", post(handlers::image_edits))
+            .route("/images/variations", post(handlers::image_variations))
+            .route("/images/variations/", post(handlers::image_variations))
             .route("/edits", post(handlers::image_edits))
             .route("/edits/", post(handlers::image_edits))
             .route("/embeddings", post(handlers::embeddings))

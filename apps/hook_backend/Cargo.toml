@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 async-trait.workspace = true
 axum.workspace = true
+base64.workspace = true
 api_token.workspace = true
 captcha.workspace = true
 card_code.workspace = true

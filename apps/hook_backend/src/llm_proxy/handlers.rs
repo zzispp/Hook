@@ -1,18 +1,18 @@
 use axum::{
     Json,
-    extract::{Extension, Path, State},
-    http::HeaderMap,
-    response::Response,
+    extract::{Extension, Multipart, Path, State},
+    http::{HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
 };
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use super::{
     CLAUDE_CHAT_FORMAT, CurrentApiToken, GEMINI_BATCH_EMBEDDING_FORMAT, GEMINI_CHAT_FORMAT, GEMINI_EMBEDDING_FORMAT, LlmProxyError, LlmProxyState,
     OPENAI_AUDIO_SPEECH_FORMAT, OPENAI_AUDIO_TRANSCRIPTION_FORMAT, OPENAI_AUDIO_TRANSLATION_FORMAT, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
-    OPENAI_COMPACT_FORMAT, OPENAI_COMPLETION_FORMAT, OPENAI_EMBEDDING_FORMAT, OPENAI_IMAGE_EDIT_FORMAT, OPENAI_IMAGE_FORMAT, OPENAI_MODERATION_FORMAT,
-    RERANK_FORMAT,
+    OPENAI_COMPACT_FORMAT, OPENAI_COMPLETION_FORMAT, OPENAI_EMBEDDING_FORMAT, OPENAI_MODERATION_FORMAT, RERANK_FORMAT,
     model_access::{visible_model_for_token, visible_models_for_token},
+    proxy::image::{proxy_image_edit, proxy_image_generation},
     proxy::{ProxyJsonRequest, proxy_json},
 };
 
@@ -60,16 +60,31 @@ pub async fn image_generations(
     headers: HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<Response, LlmProxyError> {
-    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_IMAGE_FORMAT, false)).await
+    proxy_image_generation(state, token, headers, body).await
 }
 
 pub async fn image_edits(
     State(state): State<LlmProxyState>,
     Extension(token): Extension<CurrentApiToken>,
     headers: HeaderMap,
-    Json(body): Json<Value>,
+    multipart: Multipart,
 ) -> Result<Response, LlmProxyError> {
-    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_IMAGE_EDIT_FORMAT, false)).await
+    proxy_image_edit(state, token, headers, multipart).await
+}
+
+pub async fn image_variations() -> Response {
+    (
+        StatusCode::NOT_IMPLEMENTED,
+        Json(json!({
+            "error": {
+                "message": "API not implemented",
+                "type": "new_api_error",
+                "param": "",
+                "code": "api_not_implemented"
+            }
+        })),
+    )
+        .into_response()
 }
 
 pub async fn embeddings(

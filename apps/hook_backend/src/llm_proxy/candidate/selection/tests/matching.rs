@@ -324,6 +324,36 @@ fn matching_candidate_parts_routes_non_chat_request_only_to_matching_data_format
 }
 
 #[test]
+fn matching_candidate_parts_routes_image_edit_only_to_exact_edit_endpoint() {
+    let provider = provider_with_keys(vec![provider_key("key-image-edit", 10, vec!["openai_image_edit"])]);
+    let snapshot = snapshot_with_provider(crate::llm_proxy::cache::snapshot::CachedProvider {
+        endpoints: vec![endpoint("endpoint-image", "openai_image"), endpoint("endpoint-image-edit", "openai_image_edit")],
+        ..provider
+    });
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: CandidateRequest {
+            api_format: "openai_image_edit",
+            model_name: "gpt-test",
+            is_stream: false,
+        },
+        affinity: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
+    });
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].endpoints.len(), 1);
+    assert_eq!(parts[0].endpoints[0].api_format, "openai_image_edit");
+}
+
+#[test]
 fn matching_candidate_parts_requires_key_to_support_endpoint_format() {
     let provider = provider_with_keys(vec![
         provider_key("key-openai", 10, vec!["openai_chat"]),

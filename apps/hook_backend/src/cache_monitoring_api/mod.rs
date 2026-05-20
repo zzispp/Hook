@@ -178,7 +178,7 @@ fn build_items(
                 provider_key_id: entry.record.key_id.clone(),
                 provider_key_name: key.map(|record| record.name.clone()),
                 model_id: entry.record.model_id.clone(),
-                model_name: model.map(|record| model_name(record)),
+                model_name: model.map(model_name),
                 api_format: entry.record.api_format.clone(),
                 ttl_seconds: (entry.record.expire_at - now).max(0),
                 request_count: entry.record.request_count,
@@ -283,7 +283,7 @@ fn ok<T>(data: T) -> ApiJson<T> {
 }
 
 async fn find_tokens(db: &sea_orm::DatabaseConnection, ids: HashSet<String>) -> Result<Vec<api_token_records::Model>, sea_orm::DbErr> {
-    find_by_ids(ids, || api_token_records::Entity::find(), api_token_records::Column::Id, db).await
+    find_by_ids(ids, api_token_records::Entity::find, api_token_records::Column::Id, db).await
 }
 async fn find_users(db: &sea_orm::DatabaseConnection, ids: HashSet<String>) -> Result<Vec<UserRecord>, sea_orm::DbErr> {
     find_by_ids(ids, UserEntity::find, UserColumn::Id, db).await
