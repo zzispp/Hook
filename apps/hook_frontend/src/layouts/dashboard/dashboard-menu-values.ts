@@ -18,6 +18,7 @@ export const DASHBOARD_MENU_CODES = {
   tokenManagement: 'admin_tokens',
   ticketManagement: 'admin_tickets',
   tickets: 'support_tickets',
+  usageRecords: 'usage_records',
   userManagement: 'admin_users',
   walletCenter: 'wallet_center',
   walletManagement: 'admin_wallets',

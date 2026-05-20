@@ -52,6 +52,7 @@ export type ModelCatalogProviderDetail = {
 };
 
 export type ModelCatalogItem = {
+  global_model_id: string;
   global_model_name: string;
   display_name: string;
   description?: string | null;

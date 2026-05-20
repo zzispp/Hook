@@ -60,7 +60,7 @@ impl OperationsStore {
         }
         let mut sources = self.announcement_sources().await?;
         sources.extend(self.user_ticket_sources(user_id).await?);
-        sources.sort_by(|left, right| right.event_at.cmp(&left.event_at));
+        sources.sort_by_key(|source| std::cmp::Reverse(source.event_at));
         Ok(sources)
     }
 

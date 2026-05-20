@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate provider skip_reason sources,DONE,All stable skip reason write sites are identified,rg -n "skip_reason|SKIP_REASON|mark_scheduled_request_candidates_skipped" apps crates,,0,"Found request_terminated_before_attempt stale_pending_request stale_streaming_request"
+2,Add translations and UI formatter,DONE,Trace UI renders known skip reasons through admin i18n resources,pnpm --filter hook_frontend lint,2026-05-20T02:00:00+08:00,0,
+3,Validate and inspect remaining gaps,DONE,Checks pass and untranslated known reason codes are accounted for,pnpm --filter hook_frontend lint,2026-05-20T02:00:00+08:00,0,"pnpm lint passed; backend seed test passed with 60s timeout; known skip reason scan missing=[]"

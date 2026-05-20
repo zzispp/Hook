@@ -1,7 +1,8 @@
 use rust_decimal::Decimal;
-use sea_orm::{ColumnTrait, ConnectionTrait, DbBackend, EntityTrait, FromQueryResult, QueryFilter, QueryOrder, Statement, Value};
+use sea_orm::{ColumnTrait, ConnectionTrait, DbBackend, EntityTrait, FromQueryResult, QueryFilter, QueryOrder, Statement};
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestRecord, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    UsageRecord, UsageRecordListResponse,
 };
 
 use crate::{
@@ -11,12 +12,10 @@ use crate::{
 
 use super::{
     request_record_detail::{candidate_detail, detail_payload, format_timestamp},
+    request_record_filter::{FilterSql, pagination_value},
     request_record_summary::DEFAULT_COST_CURRENCY,
 };
 
-const STATUS_FILTER_ACTIVE: &str = "active";
-const STATUS_FILTER_FAILOVER: &str = "failover";
-const STATUS_FILTER_RETRY: &str = "retry";
 const STATUS_PENDING: &str = "pending";
 const STATUS_STREAMING: &str = "streaming";
 const ACTIVE_REQUEST_STATUSES: [&str; 2] = [STATUS_PENDING, STATUS_STREAMING];
@@ -26,6 +25,13 @@ pub async fn list_request_records(store: &super::ProviderStore, request: Request
     let summaries = list_summary_records(store, &request).await?;
     let records = summaries.into_iter().map(summary_record).collect();
     Ok(RequestRecordListResponse { records, total })
+}
+
+pub async fn list_usage_records(store: &super::ProviderStore, user_id: &str, request: RequestRecordListRequest) -> StorageResult<UsageRecordListResponse> {
+    let total = count_user_summary_records(store, user_id, &request).await?;
+    let summaries = list_user_summary_records(store, user_id, &request).await?;
+    let records = summaries.into_iter().map(usage_record).collect();
+    Ok(UsageRecordListResponse { records, total })
 }
 
 pub async fn list_active_request_records(store: &super::ProviderStore, request: ActiveRequestRecordRequest) -> StorageResult<ActiveRequestRecordResponse> {
@@ -80,6 +86,15 @@ async fn active_summary_records(store: &super::ProviderStore, ids: &[String]) ->
 
 async fn count_summary_records(store: &super::ProviderStore, request: &RequestRecordListRequest) -> StorageResult<u64> {
     let filters = FilterSql::from_request(request);
+    count_summary_records_with_filters(store, filters).await
+}
+
+async fn count_user_summary_records(store: &super::ProviderStore, user_id: &str, request: &RequestRecordListRequest) -> StorageResult<u64> {
+    let filters = FilterSql::from_user_request(user_id, request);
+    count_summary_records_with_filters(store, filters).await
+}
+
+async fn count_summary_records_with_filters(store: &super::ProviderStore, filters: FilterSql) -> StorageResult<u64> {
     let sql = format!("SELECT COUNT(*) AS total FROM request_records r {}", filters.where_clause);
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, filters.values);
     let row = store
@@ -92,7 +107,22 @@ async fn count_summary_records(store: &super::ProviderStore, request: &RequestRe
 }
 
 async fn list_summary_records(store: &super::ProviderStore, request: &RequestRecordListRequest) -> StorageResult<Vec<RequestRecordSummaryRecord>> {
-    let mut filters = FilterSql::from_request(request);
+    list_summary_records_with_filters(store, FilterSql::from_request(request), request).await
+}
+
+async fn list_user_summary_records(
+    store: &super::ProviderStore,
+    user_id: &str,
+    request: &RequestRecordListRequest,
+) -> StorageResult<Vec<RequestRecordSummaryRecord>> {
+    list_summary_records_with_filters(store, FilterSql::from_user_request(user_id, request), request).await
+}
+
+async fn list_summary_records_with_filters(
+    store: &super::ProviderStore,
+    mut filters: FilterSql,
+    request: &RequestRecordListRequest,
+) -> StorageResult<Vec<RequestRecordSummaryRecord>> {
     let limit = filters.push(pagination_value("limit", request.limit)?);
     let offset = filters.push(pagination_value("skip", request.skip)?);
     let sql = format!(
@@ -104,6 +134,25 @@ async fn list_summary_records(store: &super::ProviderStore, request: &RequestRec
         .all(store.connection())
         .await
         .map_err(StorageError::from)
+}
+
+fn usage_record(record: RequestRecordSummaryRecord) -> UsageRecord {
+    UsageRecord {
+        created_at: format_timestamp(record.created_at),
+        model_name: record.model_name_snapshot.or(record.global_model_id),
+        client_api_format: record.client_api_format,
+        request_type: record.request_type,
+        is_stream: record.is_stream,
+        prompt_tokens: record.prompt_tokens,
+        completion_tokens: record.completion_tokens,
+        total_tokens: record.total_tokens,
+        cache_creation_input_tokens: record.cache_creation_input_tokens,
+        cache_read_input_tokens: record.cache_read_input_tokens,
+        total_cost: record.total_cost.unwrap_or(Decimal::ZERO),
+        cost_currency: record.cost_currency.unwrap_or_else(|| DEFAULT_COST_CURRENCY.into()),
+        first_byte_time_ms: record.first_byte_time_ms,
+        total_latency_ms: record.total_latency_ms,
+    }
 }
 
 fn summary_record(record: RequestRecordSummaryRecord) -> RequestRecord {
@@ -172,125 +221,4 @@ fn summary_record(record: RequestRecordSummaryRecord) -> RequestRecord {
         total_latency_ms: record.total_latency_ms,
         candidate_count: record.candidate_count.try_into().unwrap_or(0),
     }
-}
-
-struct FilterSql {
-    where_clause: String,
-    values: Vec<Value>,
-}
-
-impl FilterSql {
-    fn from_request(request: &RequestRecordListRequest) -> Self {
-        let mut params = SqlParams::default();
-        let mut filters = Vec::new();
-        add_status_filter(&mut filters, &mut params, request.status.as_deref());
-        add_eq_filter(&mut filters, &mut params, "r.global_model_id", request.model_id.as_deref());
-        add_eq_filter(&mut filters, &mut params, "r.provider_id", request.provider_id.as_deref());
-        add_api_format_filter(&mut filters, &mut params, request.api_format.as_deref());
-        add_type_filter(&mut filters, request.type_filter.as_deref());
-        add_search_filter(&mut filters, &mut params, request.search.as_deref());
-        Self {
-            where_clause: where_clause(filters),
-            values: params.values,
-        }
-    }
-
-    fn push<T>(&mut self, value: T) -> String
-    where
-        T: Into<Value>,
-    {
-        self.values.push(value.into());
-        format!("${}", self.values.len())
-    }
-}
-
-#[derive(Default)]
-struct SqlParams {
-    values: Vec<Value>,
-}
-
-impl SqlParams {
-    fn push<T>(&mut self, value: T) -> String
-    where
-        T: Into<Value>,
-    {
-        self.values.push(value.into());
-        format!("${}", self.values.len())
-    }
-}
-
-fn add_eq_filter(filters: &mut Vec<String>, params: &mut SqlParams, column: &str, value: Option<&str>) {
-    if let Some(value) = non_empty(value) {
-        let placeholder = params.push(value.to_owned());
-        filters.push(format!("{column} = {placeholder}"));
-    }
-}
-
-fn add_status_filter(filters: &mut Vec<String>, params: &mut SqlParams, value: Option<&str>) {
-    match non_empty(value) {
-        Some(STATUS_FILTER_ACTIVE) => add_active_status_filter(filters, params),
-        Some(STATUS_FILTER_FAILOVER) => filters.push("r.has_failover = TRUE".into()),
-        Some(STATUS_FILTER_RETRY) => filters.push("r.has_retry = TRUE".into()),
-        Some(status) => add_eq_filter(filters, params, "r.status", Some(status)),
-        None => {}
-    }
-}
-
-fn add_active_status_filter(filters: &mut Vec<String>, params: &mut SqlParams) {
-    let pending = params.push(STATUS_PENDING.to_owned());
-    let streaming = params.push(STATUS_STREAMING.to_owned());
-    filters.push(format!("r.status IN ({pending}, {streaming})"));
-}
-
-fn add_api_format_filter(filters: &mut Vec<String>, params: &mut SqlParams, value: Option<&str>) {
-    if let Some(value) = non_empty(value) {
-        let placeholder = params.push(value.to_owned());
-        filters.push(format!("(r.client_api_format = {placeholder} OR r.provider_api_format = {placeholder})"));
-    }
-}
-
-fn add_type_filter(filters: &mut Vec<String>, value: Option<&str>) {
-    match non_empty(value) {
-        Some("stream") => filters.push("r.is_stream = TRUE".into()),
-        Some("non_stream") => filters.push("r.is_stream = FALSE".into()),
-        _ => {}
-    }
-}
-
-fn add_search_filter(filters: &mut Vec<String>, params: &mut SqlParams, value: Option<&str>) {
-    if let Some(value) = non_empty(value) {
-        let placeholder = params.push(format!("%{}%", value.to_ascii_lowercase()));
-        filters.push(format!("({})", search_conditions(&placeholder).join(" OR ")));
-    }
-}
-
-fn search_conditions(placeholder: &str) -> Vec<String> {
-    [
-        "LOWER(r.request_id)",
-        "LOWER(COALESCE(r.user_id_snapshot, ''))",
-        "LOWER(COALESCE(r.username_snapshot, ''))",
-        "LOWER(COALESCE(r.token_name_snapshot, ''))",
-        "LOWER(COALESCE(r.token_prefix_snapshot, ''))",
-        "LOWER(COALESCE(r.model_name_snapshot, ''))",
-        "LOWER(COALESCE(r.provider_name_snapshot, ''))",
-        "LOWER(COALESCE(r.provider_key_name_snapshot, ''))",
-    ]
-    .into_iter()
-    .map(|column| format!("{column} LIKE {placeholder}"))
-    .collect()
-}
-
-fn where_clause(filters: Vec<String>) -> String {
-    if filters.is_empty() {
-        return String::new();
-    }
-    format!("WHERE {}", filters.join(" AND "))
-}
-
-fn non_empty(value: Option<&str>) -> Option<&str> {
-    value.map(str::trim).filter(|value| !value.is_empty())
-}
-
-fn pagination_value(field: &str, value: u64) -> StorageResult<i64> {
-    i64::try_from(value).map_err(|_| StorageError::Database(format!("request record {field} exceeds PostgreSQL integer range")))
 }

@@ -9,6 +9,7 @@
     "dashboard_groups": "Price Groups",
     "wallet_center": "Wallet Center",
     "api_tokens": "My Tokens",
+    "usage_records": "Usage Records",
     "admin_tokens": "Token Management",
     "admin_users": "User Management",
     "admin_roles": "Role Management",
@@ -92,7 +93,8 @@
     "searchGroups": "Search group code, name, or description...",
     "searchProviders": "Search providers...",
     "searchTokens": "Search key name, prefix, or group...",
-    "searchRequestRecords": "Search request ID, user, model, provider, or token..."
+    "searchRequestRecords": "Search request ID, user, model, provider, or token...",
+    "searchUsageRecords": "Search model, API format, or type..."
   },
   "actions": {
     "addApi": "Add API",
@@ -1249,6 +1251,7 @@
     "detailTitle": "Request detail",
     "stream": "Stream",
     "nonStream": "Non-stream",
+    "usageTitle": "Usage Records",
     "totalCost": "Total cost",
     "actualCost": "Cost",
     "profit": "Profit",
@@ -1297,6 +1300,11 @@
     "traceTimeRange": "Time range",
     "traceKey": "Key",
     "traceSkipReason": "Skip reason",
+    "traceSkipReasonLabels": {
+      "request_terminated_before_attempt": "Request terminated before an attempt",
+      "stale_pending_request": "Request stayed pending past the timeout",
+      "stale_streaming_request": "Request stayed streaming past the timeout"
+    },
     "traceErrorCode": "Error code",
     "traceErrorParam": "Error param",
     "traceNotStarted": "Not started",

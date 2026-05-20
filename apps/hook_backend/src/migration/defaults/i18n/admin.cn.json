@@ -9,6 +9,7 @@
     "dashboard_groups": "价格分组",
     "wallet_center": "钱包中心",
     "api_tokens": "我的令牌",
+    "usage_records": "使用记录",
     "admin_tokens": "令牌管理",
     "admin_users": "用户管理",
     "admin_roles": "角色管理",
@@ -92,7 +93,8 @@
     "searchGroups": "搜索分组编码、名称或描述...",
     "searchProviders": "搜索提供商...",
     "searchTokens": "搜索密钥名称、前缀或分组...",
-    "searchRequestRecords": "搜索请求 ID、用户、模型、提供商或令牌..."
+    "searchRequestRecords": "搜索请求 ID、用户、模型、提供商或令牌...",
+    "searchUsageRecords": "搜索模型、API 格式或类型..."
   },
   "actions": {
     "addApi": "新增 API",
@@ -1249,6 +1251,7 @@
     "detailTitle": "请求详情",
     "stream": "流式",
     "nonStream": "非流式",
+    "usageTitle": "使用记录",
     "totalCost": "总费用",
     "actualCost": "成本",
     "profit": "收益",
@@ -1297,6 +1300,11 @@
     "traceTimeRange": "时间范围",
     "traceKey": "密钥",
     "traceSkipReason": "跳过原因",
+    "traceSkipReasonLabels": {
+      "request_terminated_before_attempt": "请求在尝试前已终止",
+      "stale_pending_request": "请求等待超时，未再调度",
+      "stale_streaming_request": "请求流式传输超时，未再调度"
+    },
     "traceErrorCode": "错误代码",
     "traceErrorParam": "错误参数",
     "traceNotStarted": "未开始",

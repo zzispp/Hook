@@ -226,6 +226,51 @@ async fn request_record_storage_filters_summary_before_pagination() {
 }
 
 #[tokio::test]
+async fn request_record_storage_lists_user_usage_records_without_upstream_fields() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[count_row(1)]])
+        .append_query_results([vec![summary("req-success", "success", false, true, true, 2, 2)]])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    let response = store
+        .list_usage_records(
+            "user-1",
+            RequestRecordListRequest {
+                search: Some("openai".into()),
+                model_id: Some("gpt-5.5".into()),
+                provider_id: Some("provider-1".into()),
+                api_format: Some("openai_cli".into()),
+                type_filter: Some("non_stream".into()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    let record_json = serde_json::to_value(&response.records[0]).unwrap();
+
+    assert_eq!(response.total, 1);
+    assert_eq!(response.records[0].model_name.as_deref(), Some("gpt-5.5"));
+    assert_eq!(response.records[0].client_api_format, "openai_cli");
+    assert!(record_json.get("provider_id").is_none());
+    assert!(record_json.get("provider_name").is_none());
+    assert!(record_json.get("provider_key_name").is_none());
+    assert!(record_json.get("provider_api_format").is_none());
+    assert!(record_json.get("request_id").is_none());
+
+    let logs = connection.into_transaction_log();
+    let count_sql = &logs[0].statements()[0].sql;
+    assert!(count_sql.contains("r.user_id_snapshot = $"), "{count_sql}");
+    assert!(count_sql.contains("(r.global_model_id = $"), "{count_sql}");
+    assert!(count_sql.contains("r.model_name_snapshot = $"), "{count_sql}");
+    assert!(count_sql.contains("r.client_api_format = $"), "{count_sql}");
+    assert!(!count_sql.contains("r.provider_id = $"), "{count_sql}");
+    assert!(!count_sql.contains("r.provider_api_format = $"), "{count_sql}");
+    assert!(!count_sql.contains("provider_name_snapshot"), "{count_sql}");
+    assert!(!count_sql.contains("provider_key_name_snapshot"), "{count_sql}");
+}
+
+#[tokio::test]
 async fn request_record_storage_creates_main_record() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-created", "pending", false, false, false, 1, 6)]])

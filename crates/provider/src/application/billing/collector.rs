@@ -89,7 +89,7 @@ fn grouped_collectors(collectors: &[DimensionCollector]) -> BTreeMap<String, Vec
         grouped.entry(collector.dimension_name.clone()).or_default().push(collector.clone());
     }
     for collectors in grouped.values_mut() {
-        collectors.sort_by(|left, right| right.priority.cmp(&left.priority));
+        collectors.sort_by_key(|collector| std::cmp::Reverse(collector.priority));
     }
     grouped
 }

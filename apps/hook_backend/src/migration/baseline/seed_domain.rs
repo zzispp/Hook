@@ -221,5 +221,47 @@ mod tests {
         assert!(keys.contains(&(ADMIN_NAMESPACE, "en", "wallet", "reasonLabels.llm_model_usage", "Model usage")));
         assert!(keys.contains(&(ADMIN_NAMESPACE, "cn", "wallet", "linkTypeLabels.llm_request_record", "模型调用记录")));
         assert!(keys.contains(&(ADMIN_NAMESPACE, "en", "wallet", "linkTypeLabels.llm_request_record", "LLM request record")));
+        assert!(keys.contains(&(
+            ADMIN_NAMESPACE,
+            "cn",
+            "requestRecords",
+            "traceSkipReasonLabels.request_terminated_before_attempt",
+            "请求在尝试前已终止"
+        )));
+        assert!(keys.contains(&(
+            ADMIN_NAMESPACE,
+            "en",
+            "requestRecords",
+            "traceSkipReasonLabels.request_terminated_before_attempt",
+            "Request terminated before an attempt"
+        )));
+        assert!(keys.contains(&(
+            ADMIN_NAMESPACE,
+            "cn",
+            "requestRecords",
+            "traceSkipReasonLabels.stale_pending_request",
+            "请求等待超时，未再调度"
+        )));
+        assert!(keys.contains(&(
+            ADMIN_NAMESPACE,
+            "en",
+            "requestRecords",
+            "traceSkipReasonLabels.stale_pending_request",
+            "Request stayed pending past the timeout"
+        )));
+        assert!(keys.contains(&(
+            ADMIN_NAMESPACE,
+            "cn",
+            "requestRecords",
+            "traceSkipReasonLabels.stale_streaming_request",
+            "请求流式传输超时，未再调度"
+        )));
+        assert!(keys.contains(&(
+            ADMIN_NAMESPACE,
+            "en",
+            "requestRecords",
+            "traceSkipReasonLabels.stale_streaming_request",
+            "Request stayed streaming past the timeout"
+        )));
     }
 }

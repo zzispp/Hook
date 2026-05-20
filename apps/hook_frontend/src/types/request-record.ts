@@ -73,6 +73,28 @@ export type RequestRecordListResponse = {
   total: number;
 };
 
+export type UsageRecord = {
+  created_at: string;
+  model_name?: string | null;
+  client_api_format: string;
+  request_type: string;
+  is_stream: boolean;
+  prompt_tokens?: number | null;
+  completion_tokens?: number | null;
+  total_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  total_cost: number;
+  cost_currency: string;
+  first_byte_time_ms?: number | null;
+  total_latency_ms?: number | null;
+};
+
+export type UsageRecordListResponse = {
+  records: UsageRecord[];
+  total: number;
+};
+
 export type ActiveRequestRecordResponse = {
   records: RequestRecord[];
 };

@@ -1,4 +1,4 @@
-use types::provider::{ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestRecordListRequest};
+use types::provider::{ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestRecordListRequest, UsageRecordListResponse};
 
 use crate::StorageResult;
 
@@ -34,6 +34,10 @@ impl ProviderStore {
 
     pub async fn list_request_records(&self, request: RequestRecordListRequest) -> StorageResult<types::provider::RequestRecordListResponse> {
         super::request_record_query::list_request_records(self, request).await
+    }
+
+    pub async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> StorageResult<UsageRecordListResponse> {
+        super::request_record_query::list_usage_records(self, user_id, request).await
     }
 
     pub async fn list_active_request_records(&self, request: ActiveRequestRecordRequest) -> StorageResult<ActiveRequestRecordResponse> {

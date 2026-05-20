@@ -9,6 +9,7 @@ use types::{
         ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
         ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelTestRequest,
         ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+        UsageRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -151,6 +152,15 @@ pub async fn list_request_records(
 ) -> ApiResult<ApiJson<RequestRecordListResponse>> {
     let response = state.providers.list_request_records(query).await?;
     Ok(ok(response.with_current_user(&current_user.id, &current_user.username)))
+}
+
+pub async fn list_usage_records(
+    State(state): State<ProviderApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<RequestRecordListRequest>,
+) -> ApiResult<ApiJson<UsageRecordListResponse>> {
+    let response = state.providers.list_usage_records(&current_user.id, query).await?;
+    Ok(ok(response))
 }
 
 pub async fn list_active_request_records(

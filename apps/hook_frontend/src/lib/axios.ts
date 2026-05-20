@@ -181,6 +181,9 @@ export const endpoints = {
     active: '/api/admin/request-records/active',
     byId: (requestId: string) => `/api/admin/request-records/${requestId}`,
   },
+  usageRecords: {
+    list: '/api/request-records',
+  },
   performanceMonitoring: {
     overview: '/api/admin/performance-monitoring/overview',
     realtime: '/api/admin/performance-monitoring/realtime',

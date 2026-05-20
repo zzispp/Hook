@@ -33,6 +33,7 @@ export const paths = {
     announcements: `${ROOTS.DASHBOARD}/announcements`,
     announcementDetail: `${ROOTS.DASHBOARD}/announcements/detail`,
     tokens: `${ROOTS.DASHBOARD}/tokens`,
+    usageRecords: `${ROOTS.DASHBOARD}/usage-records`,
     tickets: `${ROOTS.DASHBOARD}/tickets`,
     wallet: `${ROOTS.DASHBOARD}/wallet`,
     admin: {

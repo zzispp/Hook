@@ -29,10 +29,7 @@ pub(super) async fn invalidate_retryable(state: &LlmProxyState, candidate: &Prox
 }
 
 fn effective_max_retries(candidate: &ProxyCandidate) -> i32 {
-    if candidate.is_cached {
-        return candidate.max_retries;
-    }
-    0
+    candidate.max_attempt_index()
 }
 
 fn set_affinity_input(candidate: &ProxyCandidate, ttl_minutes: i64) -> Option<SetAffinityInput<'_>> {

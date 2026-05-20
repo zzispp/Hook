@@ -1,25 +1,16 @@
 use async_trait::async_trait;
-use storage::{
-    Database, StorageError,
-    model::ModelStore,
-    provider::{
-        ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput,
-        ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, ProviderStore,
-    },
-};
+use storage::{Database, StorageError, model::ModelStore, provider::ProviderStore};
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
     ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
-    RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
-
-const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
-const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
-const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS: f64 = 30.0;
-const DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS: f64 = 30.0;
+use crate::infra::storage_mapping::{
+    api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_input, model_binding_patch, provider_input, provider_patch,
+};
 
 #[derive(Clone)]
 pub struct StorageProviderRepository {
@@ -163,6 +154,10 @@ impl ProviderRepository for StorageProviderRepository {
         self.store.list_request_records(request).await.map_err(storage_error)
     }
 
+    async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse> {
+        self.store.list_usage_records(user_id, request).await.map_err(storage_error)
+    }
+
     async fn list_active_request_records(&self, request: ActiveRequestRecordRequest) -> ProviderResult<ActiveRequestRecordResponse> {
         self.store.list_active_request_records(request).await.map_err(storage_error)
     }
@@ -184,126 +179,6 @@ impl ProviderRepository for StorageProviderRepository {
 impl GlobalModelCatalog for StorageGlobalModelCatalog {
     async fn global_model_exists(&self, id: &str) -> ProviderResult<bool> {
         self.store.get_global_model(id).await.map(|model| model.is_some()).map_err(storage_error)
-    }
-}
-
-fn provider_input(input: ProviderCreate) -> ProviderRecordInput {
-    ProviderRecordInput {
-        name: input.name,
-        provider_type: input.provider_type,
-        max_retries: Some(input.max_retries.unwrap_or(DEFAULT_PROVIDER_MAX_RETRIES)),
-        request_timeout_seconds: Some(input.request_timeout_seconds.unwrap_or(DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS)),
-        stream_first_byte_timeout_seconds: Some(
-            input
-                .stream_first_byte_timeout_seconds
-                .unwrap_or(DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS),
-        ),
-        stream_idle_timeout_seconds: Some(input.stream_idle_timeout_seconds.unwrap_or(DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS)),
-        priority: input.priority.unwrap_or(100),
-        keep_priority_on_conversion: input.keep_priority_on_conversion.unwrap_or(false),
-        enable_format_conversion: input.enable_format_conversion.unwrap_or(false),
-        is_active: input.is_active.unwrap_or(true),
-    }
-}
-
-fn provider_patch(input: ProviderUpdate) -> ProviderRecordPatch {
-    ProviderRecordPatch {
-        name: input.name,
-        provider_type: input.provider_type,
-        max_retries: input.max_retries,
-        request_timeout_seconds: input.request_timeout_seconds,
-        stream_first_byte_timeout_seconds: input.stream_first_byte_timeout_seconds,
-        stream_idle_timeout_seconds: input.stream_idle_timeout_seconds,
-        priority: input.priority,
-        keep_priority_on_conversion: input.keep_priority_on_conversion,
-        enable_format_conversion: input.enable_format_conversion,
-        is_active: input.is_active,
-    }
-}
-
-fn endpoint_input(provider_id: &str, input: ProviderEndpointCreate) -> ProviderEndpointRecordInput {
-    ProviderEndpointRecordInput {
-        provider_id: provider_id.to_owned(),
-        api_format: input.api_format,
-        base_url: input.base_url,
-        custom_path: input.custom_path,
-        max_retries: input.max_retries,
-        is_active: input.is_active.unwrap_or(true),
-        format_acceptance_config: input.format_acceptance_config,
-        header_rules: input.header_rules,
-        body_rules: input.body_rules,
-    }
-}
-
-fn endpoint_patch(input: ProviderEndpointUpdate) -> ProviderEndpointRecordPatch {
-    ProviderEndpointRecordPatch {
-        api_format: input.api_format,
-        base_url: input.base_url,
-        custom_path: input.custom_path,
-        max_retries: input.max_retries,
-        is_active: input.is_active,
-        format_acceptance_config: input.format_acceptance_config,
-        header_rules: input.header_rules,
-        body_rules: input.body_rules,
-    }
-}
-
-fn api_key_input(provider_id: &str, input: ProviderApiKeyCreate, encrypted_api_key: String) -> ProviderApiKeyRecordInput {
-    ProviderApiKeyRecordInput {
-        provider_id: provider_id.to_owned(),
-        name: input.name,
-        api_formats: input.api_formats,
-        allowed_model_ids: input.allowed_model_ids,
-        encrypted_api_key,
-        note: input.note,
-        internal_priority: input.internal_priority.unwrap_or(10),
-        rpm_limit: input.rpm_limit,
-        cache_ttl_minutes: input.cache_ttl_minutes.unwrap_or(5),
-        max_probe_interval_minutes: input.max_probe_interval_minutes.unwrap_or(32),
-        time_range_enabled: input.time_range_enabled.unwrap_or(false),
-        time_range_start: input.time_range_start,
-        time_range_end: input.time_range_end,
-        is_active: input.is_active.unwrap_or(true),
-    }
-}
-
-fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Option<String>) -> ProviderApiKeyRecordPatch {
-    ProviderApiKeyRecordPatch {
-        name: input.name,
-        api_formats: input.api_formats,
-        allowed_model_ids: input.allowed_model_ids,
-        encrypted_api_key,
-        note: input.note,
-        internal_priority: input.internal_priority,
-        rpm_limit: input.rpm_limit,
-        cache_ttl_minutes: input.cache_ttl_minutes,
-        max_probe_interval_minutes: input.max_probe_interval_minutes,
-        time_range_enabled: input.time_range_enabled,
-        time_range_start: input.time_range_start,
-        time_range_end: input.time_range_end,
-        is_active: input.is_active,
-    }
-}
-
-fn model_binding_input(provider_id: &str, input: ProviderModelBindingCreate) -> ProviderModelRecordInput {
-    ProviderModelRecordInput {
-        provider_id: provider_id.to_owned(),
-        global_model_id: input.global_model_id,
-        provider_model_name: input.provider_model_name,
-        provider_model_mapping: input.provider_model_mapping,
-        is_active: true,
-        price_per_request: None,
-        tiered_pricing: None,
-        config: input.config,
-    }
-}
-
-fn model_binding_patch(input: ProviderModelBindingUpdate) -> ProviderModelRecordPatch {
-    ProviderModelRecordPatch {
-        provider_model_name: input.provider_model_name,
-        is_active: input.is_active,
-        provider_model_mapping: input.provider_model_mapping,
-        config: input.config,
     }
 }
 

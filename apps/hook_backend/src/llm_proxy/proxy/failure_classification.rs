@@ -1,7 +1,7 @@
 use req::StatusCode;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum FailureDecision {
+pub(in crate::llm_proxy) enum FailureDecision {
     ReturnResponse,
     NextCandidate,
     RetryOrNextCandidate,
@@ -13,8 +13,8 @@ impl FailureDecision {
     }
 }
 
-pub(super) fn classify_status(status: StatusCode) -> FailureDecision {
-    if matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+pub(in crate::llm_proxy) fn classify_status(status: StatusCode) -> FailureDecision {
+    if matches!(status, StatusCode::UNAUTHORIZED | StatusCode::PAYMENT_REQUIRED | StatusCode::FORBIDDEN) {
         return FailureDecision::NextCandidate;
     }
     if status.is_server_error() || matches!(status, StatusCode::REQUEST_TIMEOUT | StatusCode::TOO_MANY_REQUESTS) {
@@ -32,6 +32,7 @@ mod tests {
     #[test]
     fn auth_failures_switch_candidate_without_cooldown_recording() {
         assert_eq!(classify_status(StatusCode::UNAUTHORIZED), FailureDecision::NextCandidate);
+        assert_eq!(classify_status(StatusCode::PAYMENT_REQUIRED), FailureDecision::NextCandidate);
         assert!(!classify_status(StatusCode::FORBIDDEN).records_provider_cooldown());
     }
 

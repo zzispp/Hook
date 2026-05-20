@@ -144,6 +144,7 @@ impl ModelStore {
         let capabilities = capabilities(&record)?;
         let description = description(record.config()?.as_ref());
         Ok(ModelCatalogItem {
+            global_model_id: record.id,
             global_model_name: record.name,
             display_name: record.display_name,
             description,

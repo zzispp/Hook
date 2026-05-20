@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect request record API and navigation patterns,DONE,Relevant backend/frontend patterns identified,rg -n "request-records|menu_code|DASHBOARD_MENU_CODES" apps crates,2026-05-19T17:57:41Z,0,
+2,Add backend user usage-record API and DTO,DONE,User endpoint filters by current user and omits provider-sensitive fields,perl -e 'alarm 60; exec @ARGV' cargo check -p provider -p storage -p types,2026-05-19T18:23:09Z,0,
+3,Add menu route i18n and frontend user page,DONE,Dashboard has usage-records route/menu and UI table hides provider/admin fields,pnpm --filter hook_frontend lint,2026-05-19T18:23:54Z,0,
+4,Add focused backend tests,DONE,Tests cover user filtering and sanitized response,perl -e 'alarm 60; exec @ARGV' cargo test -p storage --test provider_request_records,2026-05-19T18:23:54Z,0,
+5,Run validation and summarize,DONE,Relevant checks completed or failures documented,git diff --check && perl -e 'alarm 60; exec @ARGV' cargo test -p backend migration::defaults,2026-05-19T18:23:54Z,0,

@@ -44,6 +44,31 @@ pub struct RequestRecordListResponse {
     pub total: u64,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct UsageRecordListResponse {
+    pub records: Vec<UsageRecord>,
+    pub total: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct UsageRecord {
+    pub created_at: String,
+    pub model_name: Option<String>,
+    pub client_api_format: String,
+    pub request_type: String,
+    pub is_stream: bool,
+    pub prompt_tokens: Option<i64>,
+    pub completion_tokens: Option<i64>,
+    pub total_tokens: Option<i64>,
+    pub cache_creation_input_tokens: Option<i64>,
+    pub cache_read_input_tokens: Option<i64>,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_cost: Decimal,
+    pub cost_currency: String,
+    pub first_byte_time_ms: Option<i64>,
+    pub total_latency_ms: Option<i64>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct ActiveRequestRecordRequest {
     #[serde(default)]

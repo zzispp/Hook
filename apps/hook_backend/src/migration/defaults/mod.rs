@@ -43,6 +43,7 @@ pub const USER_MENU_CODES: &[&str] = &[
     "dashboard_groups",
     "wallet_center",
     "api_tokens",
+    "usage_records",
 ];
 
 pub struct MenuApiBindingDefinition {
@@ -94,6 +95,10 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "api_tokens_delete",
             "api_tokens_secret_read",
         ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "usage_records",
+        api_codes: &["usage_records_read", "models_public_catalog_read"],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_performance_monitoring",
@@ -291,7 +296,7 @@ mod tests {
 
     #[test]
     fn admin_defaults_exclude_user_only_menus() {
-        for user_only_code in ["dashboard_models", "wallet_center", "api_tokens"] {
+        for user_only_code in ["dashboard_models", "wallet_center", "api_tokens", "usage_records"] {
             assert!(!ADMIN_MENU_CODES.contains(&user_only_code));
         }
 

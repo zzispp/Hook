@@ -116,6 +116,12 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "请求记录列表",
     },
     ApiDefinition {
+        code: "usage_records_read",
+        method: "GET",
+        path_pattern: "/api/request-records",
+        name: "使用记录列表",
+    },
+    ApiDefinition {
         code: "request_records_active_read",
         method: "POST",
         path_pattern: "/api/admin/request-records/active",

@@ -49,6 +49,7 @@ pub struct ModelCatalogProviderDetail {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ModelCatalogItem {
+    pub global_model_id: String,
     pub global_model_name: String,
     pub display_name: String,
     pub description: Option<String>,

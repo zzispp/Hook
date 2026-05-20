@@ -1,10 +1,12 @@
 import type { TieredPricingConfig } from './model';
 
 export type {
+  UsageRecord,
   RequestRecord,
   RequestRecordDetail,
   RequestRecordStatus,
   RequestCandidateDetail,
+  UsageRecordListResponse,
   RequestRecordListResponse,
   ActiveRequestRecordResponse,
 } from './request-record';

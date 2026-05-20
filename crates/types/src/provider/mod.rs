@@ -20,6 +20,6 @@ pub use model_binding::{
 pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestCandidateDetail, RequestRecord, RequestRecordDetail, RequestRecordListRequest,
-    RequestRecordListResponse,
+    RequestRecordListResponse, UsageRecord, UsageRecordListResponse,
 };
 pub use time_range::{parse_provider_key_time_range_minute, provider_key_minute_of_day, provider_key_time_range_contains};

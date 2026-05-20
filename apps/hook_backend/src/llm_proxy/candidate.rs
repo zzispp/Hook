@@ -118,6 +118,19 @@ impl ProxyCandidate {
         self.with_route_option(&self.route.options[option_index])
     }
 
+    pub fn route_retry_floor(&self) -> i32 {
+        let option_count = i32::try_from(self.route.options.len()).expect("candidate route option count must fit retry index range");
+        option_count.saturating_sub(1)
+    }
+
+    pub fn max_attempt_index(&self) -> i32 {
+        let route_retry_floor = self.route_retry_floor();
+        if !self.is_cached {
+            return route_retry_floor;
+        }
+        self.max_retries.max(route_retry_floor)
+    }
+
     fn route_index(&self, retry_index: i32) -> usize {
         assert!(!self.route.options.is_empty(), "candidate route must contain options");
         let attempt_index = usize::try_from(retry_index).expect("retry index must be non-negative");
@@ -171,6 +184,32 @@ mod tests {
         assert_eq!(third.trace.key_id, "key-a-1");
         assert_eq!(cycled.trace.endpoint_id, "endpoint-openai");
         assert_eq!(cycled.trace.key_id, "key-a-2");
+    }
+
+    #[test]
+    fn route_retry_floor_covers_non_cached_provider_key_options() {
+        let candidate = route_candidate();
+
+        assert!(!candidate.is_cached);
+        assert_eq!(candidate.route_retry_floor(), 3);
+    }
+
+    #[test]
+    fn non_cached_candidate_attempts_each_route_option_once() {
+        let candidate = route_candidate();
+
+        assert_eq!(candidate.max_attempt_index(), 3);
+    }
+
+    #[test]
+    fn cached_candidate_keeps_configured_retries_after_route_floor() {
+        let candidate = ProxyCandidate {
+            is_cached: true,
+            max_retries: 5,
+            ..route_candidate()
+        };
+
+        assert_eq!(candidate.max_attempt_index(), 5);
     }
 
     fn route_candidate() -> ProxyCandidate {

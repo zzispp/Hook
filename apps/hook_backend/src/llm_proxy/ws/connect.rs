@@ -7,6 +7,7 @@ use crate::llm_proxy::{
     InvalidateAffinityInput, LlmProxyError, LlmProxyState, REALTIME_PATH,
     audit::{AttemptRecordInput, SKIP_REASON_REQUEST_TERMINATED, record_attempt, record_skipped_candidates},
     candidate::{CandidateSelection, ProxyCandidate},
+    proxy::failure_classification::{FailureDecision, classify_status},
     rate_limit,
 };
 
@@ -58,9 +59,14 @@ pub(super) async fn connect_first_upstream(
                     });
                 }
                 Err(error) => {
+                    let should_skip_provider = connect_error_skips_provider(&error);
+                    let error = LlmProxyError::from(error);
                     record_connect_error(state, selection, &attempt, retry_index, Some(request_headers), &error).await?;
                     invalidate_connect_affinity(state, &attempt).await?;
                     last_error = Some(error);
+                    if should_skip_provider {
+                        break;
+                    }
                 }
             }
         }
@@ -70,7 +76,17 @@ pub(super) async fn connect_first_upstream(
 }
 
 fn attempt_range(candidate: &ProxyCandidate) -> std::ops::RangeInclusive<i32> {
-    0..=if candidate.is_cached { candidate.max_retries } else { 0 }
+    0..=candidate.max_attempt_index()
+}
+
+fn connect_error_skips_provider(error: &req::ClientError) -> bool {
+    let req::ClientError::Http { status, .. } = error else {
+        return false;
+    };
+    let Ok(status) = req::StatusCode::from_u16(*status) else {
+        return false;
+    };
+    matches!(classify_status(status), FailureDecision::NextCandidate)
 }
 
 async fn invalidate_connect_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {
@@ -127,10 +143,8 @@ fn realtime_base_url(candidate: &ProxyCandidate) -> String {
     format!("{base}/{path}")
 }
 
-async fn connect_upstream(candidate: &ProxyCandidate, request: UpstreamRequest) -> Result<(UpstreamWs, HeaderMap), LlmProxyError> {
-    req::connect_websocket(request, candidate.stream_first_byte_timeout_seconds.and_then(timeout_duration))
-        .await
-        .map_err(LlmProxyError::from)
+async fn connect_upstream(candidate: &ProxyCandidate, request: UpstreamRequest) -> Result<(UpstreamWs, HeaderMap), req::ClientError> {
+    req::connect_websocket(request, candidate.stream_first_byte_timeout_seconds.and_then(timeout_duration)).await
 }
 
 fn timeout_duration(seconds: f64) -> Option<Duration> {
@@ -168,4 +182,27 @@ fn connect_error_type(error: &LlmProxyError) -> &'static str {
 
 fn header_error(error: axum::http::header::InvalidHeaderValue) -> LlmProxyError {
     LlmProxyError::Infrastructure(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::connect_error_skips_provider;
+
+    #[test]
+    fn websocket_auth_and_payment_statuses_skip_provider() {
+        assert!(connect_error_skips_provider(&http_error(401)));
+        assert!(connect_error_skips_provider(&http_error(402)));
+        assert!(connect_error_skips_provider(&http_error(403)));
+    }
+
+    #[test]
+    fn websocket_retryable_failures_keep_route_options_available() {
+        assert!(!connect_error_skips_provider(&http_error(429)));
+        assert!(!connect_error_skips_provider(&http_error(500)));
+        assert!(!connect_error_skips_provider(&req::ClientError::Timeout));
+    }
+
+    fn http_error(status: u16) -> req::ClientError {
+        req::ClientError::Http { status, body: String::new() }
+    }
 }

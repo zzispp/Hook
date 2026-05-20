@@ -4,6 +4,7 @@ import type { ApiEnvelope } from 'src/types/rbac';
 import type {
   RequestRecord,
   RequestRecordDetail,
+  UsageRecordListResponse,
   RequestRecordListResponse,
   ActiveRequestRecordResponse,
 } from 'src/types/provider';
@@ -79,6 +80,34 @@ export function useRequestRecords(
       updateItems,
     };
   }, [data, error, isLoading, isValidating, refresh, updateItems]);
+}
+
+export function useUsageRecords(
+  page: number,
+  pageSize: number,
+  filters: Omit<RequestRecordFilters, 'provider_id'> = {}
+) {
+  const key = [
+    endpoints.usageRecords.list,
+    { params: { skip: page * pageSize, limit: pageSize, ...filters } },
+  ] as const;
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<UsageRecordListResponse>
+  >(key, fetcher, listSwrOptions);
+  const refresh = useCallback(() => mutate(), [mutate]);
+
+  return useMemo(() => {
+    const pageData = data ? requireApiData(data) : undefined;
+    return {
+      data: pageData,
+      items: pageData?.records ?? [],
+      total: pageData?.total ?? 0,
+      isLoading,
+      error,
+      isValidating,
+      refresh,
+    };
+  }, [data, error, isLoading, isValidating, refresh]);
 }
 
 export async function fetchActiveRequestRecords(ids: string[]) {

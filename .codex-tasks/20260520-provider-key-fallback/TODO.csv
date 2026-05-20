@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,定位 Hook 调度/重试链路,DONE,确认是否按 provider 去重或错误终止,"rg -n \"provider|candidate|attempt|retry|cooldown\" apps/hook_backend/src/llm_proxy",2026-05-20,0,"route 有多 key，但 proxy/ws 非缓存 attempt_range 只跑 0"
+2,对比 Aether 实现,DONE,找到 Aether 同 provider 多 key 继续尝试的关键逻辑,"rg -n \"provider|candidate|attempt|retry|cooldown\" /Users/bubu/ZwjProjects/Aether",2026-05-20,0,"Aether 普通候选逐 key 展开，PoolCandidate 内部按 pool_keys 继续尝试"
+3,按 Aether 语义修改 Hook,DONE,同 provider 不同 key 失败后可继续尝试且不引入静默降级,"cargo fmt --all -- --check",2026-05-20,0,"非缓存候选覆盖 route options；401/402/403 直接跳 provider"
+4,补充或更新测试,DONE,失败先复现并修复为通过,"perl timeout 60 cargo test -p req && perl timeout 60 cargo test -p backend",2026-05-20,0,"req/backend 通过；workspace cargo test 60s 超时未完整结束；clippy 被既有 notification_query lint 阻塞"

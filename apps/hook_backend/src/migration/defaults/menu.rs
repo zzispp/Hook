@@ -103,6 +103,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000224",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "usage_records",
+        title: "使用记录",
+        path: "/dashboard/usage-records",
+        icon: "solar:history-bold",
+        sort_order: 21,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000218",
         section_id: OPERATIONS_SECTION_ID,
         code: "announcements",
