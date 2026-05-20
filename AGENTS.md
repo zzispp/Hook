@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This is a Rust and pnpm monorepo. Rust workspace members live in `apps/hook_backend` and `crates/*`; shared domain modules are split into `crates/config`, `crates/constants`, `crates/storage`, `crates/types`, and `crates/user`. Frontend packages are declared in `pnpm-workspace.yaml`: `apps/hook_frontend` contains the Next.js UI, while `apps/hook_mock_api` provides mock API routes and bundled assets. Static assets belong under each app's `public/` directory, and environment-style YAML configuration is stored in `config/`.
+This is a Rust and pnpm monorepo. Rust workspace members live in `apps/hook_backend` and `crates/*`; shared domain modules are split into `crates/config`, `crates/constants`, `crates/storage`, `crates/types`, and `crates/user`. Frontend packages are declared in `pnpm-workspace.yaml`: `apps/hook_frontend` contains the Next.js UI. Static assets belong under each app's `public/` directory, and environment-style YAML configuration is stored in `config/`.
 
 ## Build, Test, and Development Commands
 

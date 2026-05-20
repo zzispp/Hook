@@ -5,12 +5,9 @@
   "scripts": {
     "dev": "bash scripts/dev-full.sh",
     "dev:frontend": "pnpm --filter hook_frontend dev",
-    "dev:mock-api": "pnpm --filter hook_mock_api dev",
     "build:frontend": "pnpm --filter hook_frontend build",
     "build:frontend:embedded": "BUILD_STATIC_EXPORT=true pnpm --filter hook_frontend build",
-    "build:mock-api": "pnpm --filter hook_mock_api build",
     "lint:frontend": "pnpm --filter hook_frontend lint",
-    "lint:mock-api": "pnpm --filter hook_mock_api lint",
     "dev:backend": "cargo run -p backend",
     "check:backend": "cargo check -p backend",
     "build:backend": "cargo build -p backend",
