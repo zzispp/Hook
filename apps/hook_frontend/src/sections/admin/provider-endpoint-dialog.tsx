@@ -128,6 +128,12 @@ function useEndpointManager(
   const [addBodyRulesCustomized, setAddBodyRulesCustomized] = useState(false);
 
   useEffect(() => {
+    setAddForm(emptyAddEndpointForm());
+    setAddRulesOpen(false);
+    setAddBodyRulesCustomized(false);
+  }, [provider?.id]);
+
+  useEffect(() => {
     setEditStates(Object.fromEntries(endpoints.map((endpoint) => [endpoint.id, editStateFromEndpoint(endpoint)])));
     setExpandedState(Object.fromEntries(endpoints.map((endpoint) => [endpoint.id, Boolean((endpoint.header_rules?.length ?? 0) + (endpoint.body_rules?.length ?? 0))])));
   }, [endpoints]);
