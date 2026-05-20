@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate crash path,DONE,"Root cause in the frontend rule editor is identified",,"2026-05-20T15:50:20+08:00",0,"Editing state comparison and serialization were the crash path"
+2,Implement fix,DONE,"Intermediate edits no longer force invalid JSON parsing during render","pnpm --filter hook_frontend lint","2026-05-20T15:50:20+08:00",0,"Added a comparison helper that preserves draft edits without parsing them during render"
+3,Verify frontend,DONE,"Lint passes and the bug fix is validated","pnpm --filter hook_frontend lint","2026-05-20T15:50:20+08:00",0,"Lint passed"

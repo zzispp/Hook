@@ -1,9 +1,9 @@
 import type { BodyRule } from 'src/types/provider';
 import type { EditableBodyRule } from './provider-endpoint-rule-types';
 
+import { bodyRulesChanged } from './provider-endpoint-rule-comparison';
 import {
   bodyRulesToEditable,
-  editableBodyRulesToApi,
 } from './provider-endpoint-rule-types';
 
 export const OPENAI_COMPACT_API_FORMAT = 'openai_compact';
@@ -40,8 +40,5 @@ export function defaultOpenAiCompactBodyRules(): EditableBodyRule[] {
 export function isDefaultOpenAiCompactBodyRules(
   rules: EditableBodyRule[]
 ): boolean {
-  return (
-    JSON.stringify(editableBodyRulesToApi(rules)) ===
-    JSON.stringify(OPENAI_COMPACT_DEFAULT_BODY_RULES)
-  );
+  return !bodyRulesChanged(OPENAI_COMPACT_DEFAULT_BODY_RULES, rules);
 }

@@ -1,11 +1,7 @@
 'use client';
 
-import type { BodyRule, HeaderRule, ProviderEndpoint, ProviderEndpointUpdate } from 'src/types/provider';
-import type {
-  EditableBodyRule,
-  EndpointEditState,
-  EditableHeaderRule,
-} from './provider-endpoint-rule-types';
+import type { EndpointEditState } from './provider-endpoint-rule-types';
+import type { ProviderEndpoint, ProviderEndpointUpdate } from 'src/types/provider';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -23,11 +19,12 @@ import { Iconify } from 'src/components/iconify';
 
 import { ProviderEndpointRuleList } from './provider-endpoint-rule-list';
 import { validateEndpointUrlFields } from './provider-endpoint-validation';
+import { bodyRulesChanged, headerRulesChanged } from './provider-endpoint-rule-comparison';
 import { formatApiFormat, normalizeBaseUrl, defaultEndpointPath } from './provider-management-utils';
 import {
   validateBodyRules,
-  bodyRulesToEditable,
   validateHeaderRules,
+  bodyRulesToEditable,
   headerRulesToEditable,
   editableBodyRulesToApi,
   editableHeaderRulesToApi,
@@ -181,28 +178,4 @@ function buildPatch(endpoint: ProviderEndpoint, state: EndpointEditState): Provi
   if (headerRulesChanged(endpoint.header_rules, state.headerRules)) patch.header_rules = editableHeaderRulesToApi(state.headerRules);
   if (bodyRulesChanged(endpoint.body_rules, state.bodyRules)) patch.body_rules = editableBodyRulesToApi(state.bodyRules);
   return patch;
-}
-
-function headerRulesChanged(original?: HeaderRule[] | null, rules: EditableHeaderRule[] = []) {
-  return normalizeOriginalHeaderRules(original) !== normalizeCurrentHeaderRules(rules);
-}
-
-function bodyRulesChanged(original?: BodyRule[] | null, rules: EditableBodyRule[] = []) {
-  return normalizeOriginalBodyRules(original) !== normalizeCurrentBodyRules(rules);
-}
-
-function normalizeOriginalHeaderRules(rules?: HeaderRule[] | null) {
-  return JSON.stringify(editableHeaderRulesToApi(headerRulesToEditable(rules)));
-}
-
-function normalizeCurrentHeaderRules(rules: EditableHeaderRule[] = []) {
-  return JSON.stringify(editableHeaderRulesToApi(rules));
-}
-
-function normalizeOriginalBodyRules(rules?: BodyRule[] | null) {
-  return JSON.stringify(editableBodyRulesToApi(bodyRulesToEditable(rules)));
-}
-
-function normalizeCurrentBodyRules(rules: EditableBodyRule[] = []) {
-  return JSON.stringify(editableBodyRulesToApi(rules));
 }
