@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,确认并移除 usage 硬门槛,DONE,成功请求不再因 usage 为空而跳过计费,rg -n "input\\.usage\\.is_none\\(|missing_usage" apps/hook_backend/src/llm_proxy,2026-05-20T14:00:00+08:00,0,attempt_billing 现在允许无 usage 的成功请求进入统一计费引擎
+2,补充按次计费回归测试,DONE,无 usage 的成功请求也能结算 request_cost,cargo test -p provider billing::service -- --nocapture,2026-05-20T14:00:00+08:00,0,新增 `request_price_is_billed_without_token_usage`
+3,运行后端测试验证,DONE,相关测试通过,"cargo test -p backend success_without_usage_still_settles_request_only_billing -- --nocapture",2026-05-20T14:00:00+08:00,0,backend audit 回归通过

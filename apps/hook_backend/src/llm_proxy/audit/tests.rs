@@ -8,16 +8,17 @@ use super::{AttemptRecordInput, billing_runtime::BillingAttempt, request_billing
 use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
 #[test]
-fn success_without_usage_marks_billing_missing_usage_without_settlement() {
+fn success_without_usage_still_settles_request_only_billing() {
     let candidate = candidate();
     let input = AttemptRecordInput::new(&candidate, 0, "success", true);
+    let billing = request_only_billing();
 
-    let usage_record = token_usage_record("request-1", &input, None, time::OffsetDateTime::UNIX_EPOCH).unwrap();
-    let settlement = wallet_settlement_input("request-1", &input, None).unwrap();
+    let usage_record = token_usage_record("request-1", &input, Some(&billing), time::OffsetDateTime::UNIX_EPOCH).unwrap();
+    let settlement = wallet_settlement_input("request-1", &input, Some(&billing)).unwrap();
 
-    assert_eq!(request_billing_status(&input, None), "missing_usage");
-    assert!(usage_record.is_none());
-    assert!(settlement.is_none());
+    assert_eq!(request_billing_status(&input, Some(&billing)), "settled");
+    assert_eq!(usage_record.expect("usage record").cost, Decimal::new(5, 1));
+    assert_eq!(settlement.expect("settlement").amount.total_cost, Decimal::new(5, 1));
 }
 
 #[test]
@@ -113,6 +114,30 @@ fn complete_billing() -> BillingAttempt {
     }
 }
 
+fn request_only_billing() -> BillingAttempt {
+    BillingAttempt {
+        amount: RequestBillingAmount {
+            input_cost: Decimal::ZERO,
+            output_cost: Decimal::ZERO,
+            cache_creation_cost: Decimal::ZERO,
+            cache_read_cost: Decimal::ZERO,
+            request_cost: Decimal::new(5, 1),
+            token_cost: Decimal::ZERO,
+            base_cost: Decimal::new(5, 1),
+            total_cost: Decimal::new(5, 1),
+            billing_multiplier: Decimal::ONE,
+            input_price_per_1m: None,
+            output_price_per_1m: None,
+            cache_creation_price_per_1m: None,
+            cache_read_price_per_1m: None,
+            currency: "USD".into(),
+            snapshot: request_only_snapshot(),
+        },
+        snapshot: json!({"status": "complete"}),
+        status: BillingSnapshotStatus::Complete,
+    }
+}
+
 fn incomplete_billing() -> BillingAttempt {
     BillingAttempt {
         amount: RequestBillingAmount {
@@ -165,6 +190,19 @@ fn incomplete_snapshot() -> BillingSnapshot {
         status: BillingSnapshotStatus::Incomplete,
         calculated_at: "2026-05-17T00:00:00Z".into(),
         engine_version: "2.0".into(),
+    }
+}
+
+fn request_only_snapshot() -> BillingSnapshot {
+    BillingSnapshot {
+        cost_breakdown: BTreeMap::from([("request_cost".into(), Decimal::new(5, 1))]),
+        resolved_dimensions: BTreeMap::from([("request_count".into(), json!(1))]),
+        resolved_variables: BTreeMap::from([("price_per_request".into(), json!(Decimal::new(5, 1)))]),
+        base_total_cost: Decimal::new(5, 1),
+        total_cost: Decimal::new(5, 1),
+        missing_required: Vec::new(),
+        status: BillingSnapshotStatus::Complete,
+        ..incomplete_snapshot()
     }
 }
 

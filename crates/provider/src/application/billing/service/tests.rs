@@ -165,6 +165,32 @@ fn explicit_billing_rules_keep_raw_input_tokens() {
     assert_eq!(result.snapshot.total_cost, Decimal::new(10000, 2));
 }
 
+#[test]
+fn request_price_is_billed_without_token_usage() {
+    let result = BillingService::calculate_from_response(BillingServiceInput {
+        task_type: "image".into(),
+        model_name: "gpt-image-2".into(),
+        global_model_id: "global".into(),
+        provider_model_id: "model".into(),
+        provider_id: "provider".into(),
+        api_format: "openai_image".into(),
+        request: None,
+        response: None,
+        metadata: None,
+        base_dimensions: BTreeMap::new(),
+        group_code: None,
+        billing_multiplier: Decimal::ONE,
+        price_per_request: Some(Decimal::new(5, 1)),
+        tiered_pricing: pricing(0, 0),
+        explicit_rule: None,
+        collectors: Vec::new(),
+    });
+
+    assert_eq!(result.status, BillingSnapshotStatus::Complete);
+    assert_eq!(result.snapshot.cost_breakdown["request_cost"], Decimal::new(5, 1));
+    assert_eq!(result.snapshot.total_cost, Decimal::new(5, 1));
+}
+
 fn calculate_default(api_format: &str, base_dimensions: BTreeMap<String, Value>, tiered_pricing: TieredPricingConfig) -> CostResult {
     BillingService::calculate_from_response(BillingServiceInput {
         task_type: "chat".into(),

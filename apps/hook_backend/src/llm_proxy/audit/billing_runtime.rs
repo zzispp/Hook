@@ -36,7 +36,7 @@ impl BillingAttempt {
 }
 
 pub(crate) async fn attempt_billing(store: &ProviderStore, request_id: &str, input: &AttemptRecordInput<'_>) -> Result<Option<BillingAttempt>, LlmProxyError> {
-    if input.status != "success" || input.usage.is_none() {
+    if input.status != "success" {
         return Ok(None);
     }
     let task_type = effective_rule_task_type(&request_task_type(input));
@@ -50,7 +50,7 @@ pub(crate) async fn attempt_billing(store: &ProviderStore, request_id: &str, inp
         request: patch_value(&input.provider_request_body),
         response: patch_value(&input.provider_response_body),
         metadata: None,
-        base_dimensions: usage_dimensions(input.usage.expect("usage presence checked")),
+        base_dimensions: input.usage.map(usage_dimensions).unwrap_or_default(),
         group_code: input.candidate.trace.group_code.clone(),
         billing_multiplier: input.candidate.billing_multiplier,
         price_per_request: input.candidate.price_per_request,
@@ -63,7 +63,6 @@ pub(crate) async fn attempt_billing(store: &ProviderStore, request_id: &str, inp
 
 pub(crate) fn request_billing_status(input: &AttemptRecordInput<'_>, billing: Option<&BillingAttempt>) -> &'static str {
     match input.status {
-        "success" if input.finished && input.usage.is_none() => "missing_usage",
         "success" if billing.is_some_and(BillingAttempt::is_complete) => "settled",
         "success" => "billing_incomplete",
         status => billing_status(status),
@@ -76,7 +75,7 @@ pub(crate) fn token_usage_record(
     billing: Option<&BillingAttempt>,
     used_at: OffsetDateTime,
 ) -> Result<Option<ApiTokenUsageRecord>, LlmProxyError> {
-    if !should_record_successful_usage(input) {
+    if !should_record_successful_attempt(input) {
         return Ok(None);
     }
     let Some(token_id) = input.candidate.trace.token_id.clone() else {
@@ -92,7 +91,7 @@ pub(crate) fn token_usage_record(
 }
 
 pub(crate) fn model_usage_record(input: &AttemptRecordInput<'_>, billing: Option<&BillingAttempt>) -> Option<GlobalModelUsageRecord> {
-    if !should_record_successful_usage(input) || !billing.is_some_and(BillingAttempt::is_complete) {
+    if !should_record_successful_attempt(input) || !billing.is_some_and(BillingAttempt::is_complete) {
         return None;
     }
     Some(GlobalModelUsageRecord {
@@ -106,7 +105,7 @@ pub(crate) fn wallet_settlement_input<'a>(
     input: &'a AttemptRecordInput<'a>,
     billing: Option<&BillingAttempt>,
 ) -> Result<Option<WalletSettlementInput<'a>>, LlmProxyError> {
-    if !should_record_successful_usage(input) {
+    if !should_record_successful_attempt(input) {
         return Ok(None);
     }
     let amount = complete_amount(request_id, billing)?.clone();
@@ -182,8 +181,8 @@ fn complete_amount<'a>(request_id: &str, billing: Option<&'a BillingAttempt>) ->
     )))
 }
 
-fn should_record_successful_usage(input: &AttemptRecordInput<'_>) -> bool {
-    input.status == "success" && input.finished && input.usage.is_some()
+fn should_record_successful_attempt(input: &AttemptRecordInput<'_>) -> bool {
+    input.status == "success" && input.finished
 }
 
 fn billing_status(status: &str) -> &'static str {
