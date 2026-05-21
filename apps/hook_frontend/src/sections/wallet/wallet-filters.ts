@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
-import type { WalletTransaction } from 'src/types/wallet';
+import type { WalletLedgerEntryFilters } from 'src/actions/wallet';
+import type { WalletLedgerEntry, WalletTransaction } from 'src/types/wallet';
 
 import { ALL_FILTER_VALUE } from './wallet-constants';
 import {
@@ -52,11 +53,26 @@ export function filterWalletTransactions(
   return items.filter((transaction) => matchesWalletFilters(transaction, filters, t));
 }
 
+export function toWalletLedgerEntryFilters(filters: WalletLedgerFilterState): WalletLedgerEntryFilters {
+  return {
+    search: filters.search.trim() || undefined,
+    category: filterValue(filters.category),
+    reason_code: filterValue(filters.reason),
+    direction: filterValue(filters.direction),
+    balance_type: filterValue(filters.balanceType),
+    link_type: filterValue(filters.linkType),
+  };
+}
+
 export function walletFilterOptions(items: WalletTransaction[], t: TFunction<'admin'>) {
   return {
     reasons: buildOptions(items.map((item) => item.reason_code), (value) => walletTransactionReasonLabel(t, value)),
     linkTypes: buildOptions(items.map((item) => item.link_type).filter(Boolean), (value) => walletLinkTypeLabel(t, value)),
   };
+}
+
+export function walletEntryFilterOptions(items: WalletLedgerEntry[], t: TFunction<'admin'>) {
+  return walletFilterOptions(items, t);
 }
 
 export function walletStaticFilterOptions(t: TFunction<'admin'>) {
@@ -90,6 +106,10 @@ function matchesWalletFilters(
     matchesDirection(transaction.amount, filters.direction) &&
     matchesBalanceType(transaction, filters.balanceType)
   );
+}
+
+function filterValue(value: string) {
+  return value === ALL_FILTER_VALUE ? undefined : value;
 }
 
 function matchesSearch(transaction: WalletTransaction, search: string, t: TFunction<'admin'>) {

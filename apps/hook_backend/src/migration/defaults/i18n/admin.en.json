@@ -623,6 +623,10 @@
       "gift": "Gift balance"
     },
     "balanceBreakdown": "Recharge {{rechargeBefore}}→{{rechargeAfter}} · Gift {{giftBefore}}→{{giftAfter}}",
+    "dailyUsage": {
+      "description": "{{count}} model calls on {{date}}",
+      "emptyDetails": "No model usage details"
+    },
     "ledgerSummary": "Showing {{shown}} / loaded {{loaded}}, total {{total}}",
     "ownerSummary": "{{type}} · {{status}}",
     "ownerTypes": {

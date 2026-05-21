@@ -5,7 +5,10 @@ use storage::{
 };
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    wallet::{AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, Wallet, WalletTransaction},
+    wallet::{
+        AdminWalletLedgerEntryResponse, AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, Wallet,
+        WalletDailyUsageDetailRequest, WalletLedgerEntry, WalletLedgerEntryFilters, WalletTransaction,
+    },
 };
 
 use crate::application::{WalletError, WalletRepository, WalletResult};
@@ -48,6 +51,31 @@ impl WalletRepository for StorageWalletRepository {
         self.store.page_transactions(wallet_id, page_slice_request(page)).await.map_err(storage_error)
     }
 
+    async fn page_ledger_entries(
+        &self,
+        wallet_id: &str,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+        tz_offset_minutes: i32,
+    ) -> WalletResult<Page<WalletLedgerEntry>> {
+        self.store
+            .page_ledger_entries(wallet_id, page_slice_request(page), filters, tz_offset_minutes)
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn page_daily_usage_transactions(
+        &self,
+        wallet_id: &str,
+        page: PageRequest,
+        request: WalletDailyUsageDetailRequest,
+    ) -> WalletResult<Page<WalletTransaction>> {
+        self.store
+            .page_daily_usage_transactions(wallet_id, page_slice_request(page), request)
+            .await
+            .map_err(storage_error)
+    }
+
     async fn find_admin_wallet_by_id(&self, wallet_id: &str) -> WalletResult<Option<AdminWalletResponse>> {
         self.store.find_admin_wallet_by_id(wallet_id).await.map_err(storage_error)
     }
@@ -58,6 +86,18 @@ impl WalletRepository for StorageWalletRepository {
 
     async fn page_admin_ledger(&self, page: PageRequest, filters: AdminWalletLedgerFilters) -> WalletResult<Page<AdminWalletLedgerTransactionResponse>> {
         self.store.page_admin_ledger(page_slice_request(page), filters).await.map_err(storage_error)
+    }
+
+    async fn page_admin_ledger_entries(
+        &self,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+        tz_offset_minutes: i32,
+    ) -> WalletResult<Page<AdminWalletLedgerEntryResponse>> {
+        self.store
+            .page_admin_ledger_entries(page_slice_request(page), filters, tz_offset_minutes)
+            .await
+            .map_err(storage_error)
     }
 }
 

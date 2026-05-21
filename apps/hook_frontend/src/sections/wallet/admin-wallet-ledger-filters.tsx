@@ -1,7 +1,7 @@
 'use client';
 
 import type { TFunction } from 'i18next';
-import type { AdminWalletLedgerFilters } from 'src/actions/wallet';
+import type { WalletLedgerEntryFilters } from 'src/actions/wallet';
 
 import Stack from '@mui/material/Stack';
 import MenuItem from '@mui/material/MenuItem';
@@ -48,7 +48,7 @@ export function AdminWalletLedgerFiltersToolbar({ t, loading, filters, onChange,
         <FilterSelect
           label={t('wallet.filters.category')}
           value={filters.category}
-          options={walletStaticFilterOptions(t).categories.filter((item) => item.value !== 'consume')}
+          options={walletStaticFilterOptions(t).categories}
           onChange={(category) => patchFilters({ category, reason: ALL_FILTER_VALUE })}
         />
         <FilterSelect
@@ -69,7 +69,7 @@ export function AdminWalletLedgerFiltersToolbar({ t, loading, filters, onChange,
   );
 }
 
-export function toAdminLedgerFilters(filters: AdminWalletLedgerFilterState): AdminWalletLedgerFilters {
+export function toAdminLedgerFilters(filters: AdminWalletLedgerFilterState): WalletLedgerEntryFilters {
   return {
     category: filters.category === ALL_FILTER_VALUE ? undefined : filters.category,
     reason_code: filters.reason === ALL_FILTER_VALUE ? undefined : filters.reason,
@@ -94,6 +94,7 @@ function reasonValues(category: string) {
     'gift_referral_commission',
     'adjust_admin',
     'adjust_system',
+    'llm_model_usage',
     'refund_out',
     'refund_revert',
   ];

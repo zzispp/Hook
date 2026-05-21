@@ -623,6 +623,10 @@
       "gift": "赠款余额"
     },
     "balanceBreakdown": "充 {{rechargeBefore}}→{{rechargeAfter}} · 赠 {{giftBefore}}→{{giftAfter}}",
+    "dailyUsage": {
+      "description": "{{date}} 累计 {{count}} 次模型调用",
+      "emptyDetails": "暂无模型调用明细"
+    },
     "ledgerSummary": "显示 {{shown}} / 已加载 {{loaded}} 条，共 {{total}} 条",
     "ownerSummary": "{{type}} · {{status}}",
     "ownerTypes": {

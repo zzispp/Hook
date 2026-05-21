@@ -3,9 +3,11 @@ use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest},
     wallet::{
-        AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse,
-        AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType, WalletRecharge,
-        WalletSummaryResponse, WalletTransaction, WalletTransactionResponse, WalletTransactionsResponse,
+        AdminWalletDailyUsageDetailsResponse, AdminWalletLedgerEntriesForWalletResponse, AdminWalletLedgerEntriesResponse, AdminWalletLedgerFilters,
+        AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse, AdminWalletTransactionsResponse, Wallet,
+        WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType, WalletDailyUsageDetailRequest, WalletDailyUsageDetailsResponse,
+        WalletLedgerEntriesResponse, WalletLedgerEntry, WalletLedgerEntryFilters, WalletLedgerEntryResponse, WalletRecharge, WalletSummaryResponse,
+        WalletTransaction, WalletTransactionResponse, WalletTransactionsResponse,
     },
 };
 
@@ -101,6 +103,39 @@ where
         Ok(user_transactions_response(wallet_summary, transactions))
     }
 
+    async fn ledger_entries(
+        &self,
+        user_id: &str,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+        tz_offset_minutes: i32,
+    ) -> WalletResult<WalletLedgerEntriesResponse> {
+        validate_page(page)?;
+        validate_tz_offset(tz_offset_minutes)?;
+        let wallet = self.user_wallet(user_id).await?;
+        let entries = self
+            .repository
+            .page_ledger_entries(&wallet.id.0, page, filters, tz_offset_minutes)
+            .await?;
+        Ok(ledger_entries_response(WalletSummaryResponse::from(wallet), entries))
+    }
+
+    async fn daily_usage_transactions(
+        &self,
+        user_id: &str,
+        page: PageRequest,
+        request: WalletDailyUsageDetailRequest,
+    ) -> WalletResult<WalletDailyUsageDetailsResponse> {
+        validate_page(page)?;
+        validate_daily_usage_request(&request)?;
+        let wallet = self.user_wallet(user_id).await?;
+        let transactions = self
+            .repository
+            .page_daily_usage_transactions(&wallet.id.0, page, request)
+            .await?;
+        Ok(daily_usage_details_response(transactions))
+    }
+
     async fn admin_wallets(&self, page: PageRequest, filters: AdminWalletListFilters) -> WalletResult<AdminWalletListResponse> {
         validate_page(page)?;
         let system_wallet = self.system_admin_wallet(&filters);
@@ -126,6 +161,23 @@ where
         })
     }
 
+    async fn admin_ledger_entries(
+        &self,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+        tz_offset_minutes: i32,
+    ) -> WalletResult<AdminWalletLedgerEntriesResponse> {
+        validate_page(page)?;
+        validate_tz_offset(tz_offset_minutes)?;
+        let entries = self.repository.page_admin_ledger_entries(page, filters, tz_offset_minutes).await?;
+        Ok(AdminWalletLedgerEntriesResponse {
+            items: entries.items,
+            total: entries.total,
+            page: entries.page,
+            page_size: entries.page_size,
+        })
+    }
+
     async fn admin_transactions(&self, wallet_id: &str, page: PageRequest) -> WalletResult<AdminWalletTransactionsResponse> {
         validate_page(page)?;
         validate_wallet_id(wallet_id)?;
@@ -135,6 +187,41 @@ where
         let wallet = self.repository.find_admin_wallet_by_id(wallet_id).await?.ok_or(WalletError::NotFound)?;
         let transactions = self.repository.page_transactions(wallet_id, page).await?;
         Ok(admin_transactions_response(wallet, transactions))
+    }
+
+    async fn admin_ledger_entries_for_wallet(
+        &self,
+        wallet_id: &str,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+        tz_offset_minutes: i32,
+    ) -> WalletResult<AdminWalletLedgerEntriesForWalletResponse> {
+        validate_page(page)?;
+        validate_wallet_id(wallet_id)?;
+        validate_tz_offset(tz_offset_minutes)?;
+        let wallet = self.repository.find_admin_wallet_by_id(wallet_id).await?.ok_or(WalletError::NotFound)?;
+        let entries = self
+            .repository
+            .page_ledger_entries(wallet_id, page, filters, tz_offset_minutes)
+            .await?;
+        Ok(admin_ledger_entries_for_wallet_response(wallet, entries))
+    }
+
+    async fn admin_daily_usage_transactions(
+        &self,
+        wallet_id: &str,
+        page: PageRequest,
+        request: WalletDailyUsageDetailRequest,
+    ) -> WalletResult<AdminWalletDailyUsageDetailsResponse> {
+        validate_page(page)?;
+        validate_wallet_id(wallet_id)?;
+        validate_daily_usage_request(&request)?;
+        let wallet = self.repository.find_admin_wallet_by_id(wallet_id).await?.ok_or(WalletError::NotFound)?;
+        let transactions = self
+            .repository
+            .page_daily_usage_transactions(wallet_id, page, request)
+            .await?;
+        Ok(admin_daily_usage_details_response(wallet, transactions))
     }
 
     async fn adjust_wallet(&self, input: WalletAdjustment) -> WalletResult<WalletTransaction> {
@@ -162,6 +249,16 @@ fn user_transactions_response(wallet: WalletSummaryResponse, page: Page<WalletTr
     }
 }
 
+fn ledger_entries_response(wallet: WalletSummaryResponse, page: Page<WalletLedgerEntry>) -> WalletLedgerEntriesResponse {
+    WalletLedgerEntriesResponse {
+        wallet,
+        items: ledger_entry_responses(page.items),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+    }
+}
+
 fn admin_transactions_response(wallet: AdminWalletResponse, page: Page<WalletTransaction>) -> AdminWalletTransactionsResponse {
     AdminWalletTransactionsResponse {
         wallet,
@@ -172,8 +269,66 @@ fn admin_transactions_response(wallet: AdminWalletResponse, page: Page<WalletTra
     }
 }
 
+fn admin_ledger_entries_for_wallet_response(wallet: AdminWalletResponse, page: Page<WalletLedgerEntry>) -> AdminWalletLedgerEntriesForWalletResponse {
+    AdminWalletLedgerEntriesForWalletResponse {
+        wallet,
+        items: ledger_entry_responses(page.items),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+    }
+}
+
+fn daily_usage_details_response(page: Page<WalletTransaction>) -> WalletDailyUsageDetailsResponse {
+    WalletDailyUsageDetailsResponse {
+        items: transaction_responses(page.items),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+    }
+}
+
+fn admin_daily_usage_details_response(wallet: AdminWalletResponse, page: Page<WalletTransaction>) -> AdminWalletDailyUsageDetailsResponse {
+    AdminWalletDailyUsageDetailsResponse {
+        wallet,
+        items: transaction_responses(page.items),
+        total: page.total,
+        page: page.page,
+        page_size: page.page_size,
+    }
+}
+
+fn ledger_entry_responses(items: Vec<WalletLedgerEntry>) -> Vec<WalletLedgerEntryResponse> {
+    items.into_iter().map(WalletLedgerEntryResponse::from).collect()
+}
+
 fn transaction_responses(items: Vec<WalletTransaction>) -> Vec<WalletTransactionResponse> {
     items.into_iter().map(WalletTransactionResponse::from).collect()
+}
+
+fn validate_tz_offset(value: i32) -> WalletResult<()> {
+    if !(-1_080..=1_080).contains(&value) {
+        return Err(WalletError::InvalidInput("tz_offset_minutes must be between -1080 and 1080".into()));
+    }
+    Ok(())
+}
+
+fn validate_daily_usage_request(request: &WalletDailyUsageDetailRequest) -> WalletResult<()> {
+    validate_tz_offset(request.tz_offset_minutes)?;
+    if is_iso_date(&request.local_date) {
+        return Ok(());
+    }
+    Err(WalletError::InvalidInput("date must use YYYY-MM-DD".into()))
+}
+
+fn is_iso_date(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() == 10
+        && bytes[4] == b'-'
+        && bytes[7] == b'-'
+        && bytes[..4].iter().all(u8::is_ascii_digit)
+        && bytes[5..7].iter().all(u8::is_ascii_digit)
+        && bytes[8..].iter().all(u8::is_ascii_digit)
 }
 
 fn apply_adjustment(wallet: Wallet, input: WalletAdjustment) -> WalletResult<(Wallet, WalletTransaction)> {

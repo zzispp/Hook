@@ -5,8 +5,9 @@ use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     wallet::{
-        AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, Wallet, WalletAdjustment,
-        WalletAdjustmentType, WalletBalanceType, WalletId, WalletTransaction, WalletTransactionResponse,
+        AdminWalletLedgerEntryResponse, AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, Wallet,
+        WalletAdjustment, WalletAdjustmentType, WalletBalanceType, WalletDailyUsageDetailRequest, WalletId, WalletLedgerEntry, WalletLedgerEntryFilters,
+        WalletLedgerEntryKind, WalletTransaction, WalletTransactionResponse,
     },
 };
 
@@ -108,6 +109,65 @@ async fn admin_ledger_returns_all_wallet_transactions() {
 }
 
 #[tokio::test]
+async fn ledger_entries_return_wallet_summary_and_daily_rows() {
+    let repository = MemoryWalletRepository::default();
+    repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::new(20, 0), Decimal::new(5, 0)));
+    repository.insert_ledger_entry(ledger_entry("daily-1", "wallet-1", WalletLedgerEntryKind::DailyModelUsage, 3));
+    let service = WalletService::new(repository);
+
+    let response = service
+        .ledger_entries("user-1", PageRequest { page: 1, page_size: 20 }, WalletLedgerEntryFilters::default(), 480)
+        .await
+        .unwrap();
+
+    assert_eq!(response.total, 1);
+    assert_eq!(response.wallet.balance, Decimal::new(25, 0));
+    assert_eq!(response.items[0].entry_kind, WalletLedgerEntryKind::DailyModelUsage);
+    assert_eq!(response.items[0].transaction_count, 3);
+}
+
+#[tokio::test]
+async fn admin_ledger_entries_for_wallet_keep_page_metadata() {
+    let repository = MemoryWalletRepository::default();
+    repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::ZERO, Decimal::ZERO));
+    repository.insert_ledger_entry(ledger_entry("daily-1", "wallet-1", WalletLedgerEntryKind::DailyModelUsage, 2));
+    let service = WalletService::new(repository);
+
+    let response = service
+        .admin_ledger_entries_for_wallet("wallet-1", PageRequest { page: 2, page_size: 1 }, WalletLedgerEntryFilters::default(), 480)
+        .await
+        .unwrap();
+
+    assert_eq!(response.total, 1);
+    assert_eq!(response.page, 2);
+    assert_eq!(response.page_size, 1);
+    assert_eq!(response.wallet.id, "wallet-1");
+}
+
+#[tokio::test]
+async fn daily_usage_transactions_return_detail_page() {
+    let repository = MemoryWalletRepository::default();
+    repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::ZERO, Decimal::ZERO));
+    repository.insert_transaction(transaction("tx-1", "wallet-1", Decimal::new(-1, 0)));
+    let service = WalletService::new(repository);
+
+    let response = service
+        .daily_usage_transactions(
+            "user-1",
+            PageRequest { page: 1, page_size: 20 },
+            WalletDailyUsageDetailRequest {
+                local_date: "2026-05-21".into(),
+                tz_offset_minutes: 480,
+            },
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.total, 1);
+    assert_eq!(response.items[0].id, "tx-1");
+}
+
+#[tokio::test]
 async fn adjust_recharge_balance_records_snapshots() {
     let repository = MemoryWalletRepository::default();
     repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::new(10, 0), Decimal::new(2, 0)));
@@ -205,6 +265,7 @@ struct MemoryWalletRepository {
 struct MemoryState {
     wallets: Vec<Wallet>,
     transactions: Vec<WalletTransaction>,
+    ledger_entries: Vec<WalletLedgerEntry>,
 }
 
 #[derive(Clone)]
@@ -225,6 +286,10 @@ impl MemoryWalletRepository {
 
     fn insert_transaction(&self, transaction: WalletTransaction) {
         self.state.lock().unwrap().transactions.push(transaction);
+    }
+
+    fn insert_ledger_entry(&self, entry: WalletLedgerEntry) {
+        self.state.lock().unwrap().ledger_entries.push(entry);
     }
 
     fn wallets(&self) -> Vec<Wallet> {
@@ -283,6 +348,39 @@ impl WalletRepository for MemoryWalletRepository {
         })
     }
 
+    async fn page_ledger_entries(
+        &self,
+        wallet_id: &str,
+        page: PageRequest,
+        _filters: WalletLedgerEntryFilters,
+        _tz_offset_minutes: i32,
+    ) -> WalletResult<Page<WalletLedgerEntry>> {
+        let items: Vec<_> = self
+            .state
+            .lock()
+            .unwrap()
+            .ledger_entries
+            .iter()
+            .filter(|entry| entry.transaction.wallet_id == wallet_id)
+            .cloned()
+            .collect();
+        Ok(Page {
+            total: items.len() as u64,
+            items,
+            page: page.page,
+            page_size: page.page_size,
+        })
+    }
+
+    async fn page_daily_usage_transactions(
+        &self,
+        wallet_id: &str,
+        page: PageRequest,
+        _request: WalletDailyUsageDetailRequest,
+    ) -> WalletResult<Page<WalletTransaction>> {
+        self.page_transactions(wallet_id, page).await
+    }
+
     async fn find_admin_wallet_by_id(&self, wallet_id: &str) -> WalletResult<Option<AdminWalletResponse>> {
         Ok(self
             .state
@@ -307,6 +405,21 @@ impl WalletRepository for MemoryWalletRepository {
 
     async fn page_admin_ledger(&self, page: PageRequest, _filters: AdminWalletLedgerFilters) -> WalletResult<Page<AdminWalletLedgerTransactionResponse>> {
         let items: Vec<_> = self.state.lock().unwrap().transactions.iter().cloned().map(admin_ledger_transaction).collect();
+        Ok(Page {
+            total: items.len() as u64,
+            items,
+            page: page.page,
+            page_size: page.page_size,
+        })
+    }
+
+    async fn page_admin_ledger_entries(
+        &self,
+        page: PageRequest,
+        _filters: WalletLedgerEntryFilters,
+        _tz_offset_minutes: i32,
+    ) -> WalletResult<Page<AdminWalletLedgerEntryResponse>> {
+        let items: Vec<_> = self.state.lock().unwrap().ledger_entries.iter().cloned().map(admin_ledger_entry).collect();
         Ok(Page {
             total: items.len() as u64,
             items,
@@ -365,6 +478,17 @@ fn admin_ledger_transaction(transaction: WalletTransaction) -> AdminWalletLedger
     }
 }
 
+fn admin_ledger_entry(entry: WalletLedgerEntry) -> AdminWalletLedgerEntryResponse {
+    AdminWalletLedgerEntryResponse {
+        entry: entry.into(),
+        currency: currency::DEFAULT_WALLET_CURRENCY.into(),
+        owner_name: "test-user".into(),
+        owner_email: "test@example.com".into(),
+        owner_type: "user".into(),
+        wallet_status: "active".into(),
+    }
+}
+
 fn wallet(id: &str, user_id: &str, recharge_balance: Decimal, gift_balance: Decimal) -> Wallet {
     Wallet {
         id: WalletId(id.into()),
@@ -401,5 +525,16 @@ fn transaction(id: &str, wallet_id: &str, amount: Decimal) -> WalletTransaction 
         operator_id: None,
         description: None,
         created_at: "2026-05-08T00:00:00Z".into(),
+    }
+}
+
+fn ledger_entry(id: &str, wallet_id: &str, kind: WalletLedgerEntryKind, count: i64) -> WalletLedgerEntry {
+    WalletLedgerEntry {
+        entry_kind: kind,
+        transaction: transaction(id, wallet_id, Decimal::new(-count, 0)),
+        local_date: Some("2026-05-21".into()),
+        transaction_count: count,
+        first_created_at: "2026-05-21T00:00:00Z".into(),
+        last_created_at: "2026-05-21T00:01:00Z".into(),
     }
 }

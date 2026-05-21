@@ -8,9 +8,11 @@ use types::{
     pagination::PageRequest,
     response::ApiResponse,
     wallet::{
-        AdminWalletAdjustmentPayload, AdminWalletAdjustmentResponse, AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters,
-        AdminWalletListResponse, AdminWalletRechargePayload, AdminWalletRechargeResponse, AdminWalletTransactionsResponse, WalletAdjustment,
-        WalletBalanceResponse, WalletRecharge, WalletTransactionsResponse,
+        AdminWalletAdjustmentPayload, AdminWalletAdjustmentResponse, AdminWalletDailyUsageDetailsResponse, AdminWalletLedgerEntriesForWalletResponse,
+        AdminWalletLedgerEntriesResponse, AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse,
+        AdminWalletRechargePayload, AdminWalletRechargeResponse, AdminWalletTransactionsResponse, WalletAdjustment, WalletBalanceResponse,
+        WalletDailyUsageDetailRequest, WalletDailyUsageDetailsResponse, WalletLedgerEntriesResponse, WalletLedgerEntryFilters, WalletRecharge,
+        WalletTransactionsResponse,
     },
 };
 
@@ -45,6 +47,28 @@ pub struct AdminWalletLedgerQuery {
     pub owner_type: Option<String>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct WalletLedgerEntriesQuery {
+    pub page: u64,
+    pub page_size: u64,
+    pub tz_offset_minutes: i32,
+    pub search: Option<String>,
+    pub category: Option<String>,
+    pub reason_code: Option<String>,
+    pub direction: Option<String>,
+    pub balance_type: Option<String>,
+    pub link_type: Option<String>,
+    pub owner_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WalletDailyUsageQuery {
+    pub page: u64,
+    pub page_size: u64,
+    pub tz_offset_minutes: i32,
+    pub date: String,
+}
+
 pub async fn balance(State(state): State<WalletApiState>, Extension(current_user): Extension<CurrentUser>) -> ApiResult<ApiJson<WalletBalanceResponse>> {
     ensure_user_wallet_access(&current_user)?;
     Ok(ok(state.wallets.balance(&current_user.id).await?))
@@ -57,6 +81,24 @@ pub async fn transactions(
 ) -> ApiResult<ApiJson<WalletTransactionsResponse>> {
     ensure_user_wallet_access(&current_user)?;
     Ok(ok(state.wallets.transactions(&current_user.id, query.into()).await?))
+}
+
+pub async fn ledger_entries(
+    State(state): State<WalletApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<WalletLedgerEntriesQuery>,
+) -> ApiResult<ApiJson<WalletLedgerEntriesResponse>> {
+    ensure_user_wallet_access(&current_user)?;
+    Ok(ok(state.wallets.ledger_entries(&current_user.id, PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes).await?))
+}
+
+pub async fn daily_usage_transactions(
+    State(state): State<WalletApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<WalletDailyUsageQuery>,
+) -> ApiResult<ApiJson<WalletDailyUsageDetailsResponse>> {
+    ensure_user_wallet_access(&current_user)?;
+    Ok(ok(state.wallets.daily_usage_transactions(&current_user.id, PageRequest::from(&query), query.into()).await?))
 }
 
 pub async fn admin_wallets(State(state): State<WalletApiState>, Query(query): Query<AdminWalletListQuery>) -> ApiResult<ApiJson<AdminWalletListResponse>> {
@@ -73,12 +115,45 @@ pub async fn admin_ledger(State(state): State<WalletApiState>, Query(query): Que
     Ok(ok(state.wallets.admin_ledger(page, query.into()).await?))
 }
 
+pub async fn admin_ledger_entries(
+    State(state): State<WalletApiState>,
+    Query(query): Query<WalletLedgerEntriesQuery>,
+) -> ApiResult<ApiJson<AdminWalletLedgerEntriesResponse>> {
+    Ok(ok(state.wallets.admin_ledger_entries(PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes).await?))
+}
+
 pub async fn admin_transactions(
     State(state): State<WalletApiState>,
     Path(wallet_id): Path<String>,
     Query(query): Query<WalletListQuery>,
 ) -> ApiResult<ApiJson<AdminWalletTransactionsResponse>> {
     Ok(ok(state.wallets.admin_transactions(&wallet_id, query.into()).await?))
+}
+
+pub async fn admin_ledger_entries_for_wallet(
+    State(state): State<WalletApiState>,
+    Path(wallet_id): Path<String>,
+    Query(query): Query<WalletLedgerEntriesQuery>,
+) -> ApiResult<ApiJson<AdminWalletLedgerEntriesForWalletResponse>> {
+    Ok(ok(
+        state
+            .wallets
+            .admin_ledger_entries_for_wallet(&wallet_id, PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
+            .await?,
+    ))
+}
+
+pub async fn admin_daily_usage_transactions(
+    State(state): State<WalletApiState>,
+    Path(wallet_id): Path<String>,
+    Query(query): Query<WalletDailyUsageQuery>,
+) -> ApiResult<ApiJson<AdminWalletDailyUsageDetailsResponse>> {
+    Ok(ok(
+        state
+            .wallets
+            .admin_daily_usage_transactions(&wallet_id, PageRequest::from(&query), query.into())
+            .await?,
+    ))
 }
 
 pub async fn admin_adjust_wallet(
@@ -107,6 +182,24 @@ pub async fn admin_recharge_wallet(
 
 impl From<WalletListQuery> for PageRequest {
     fn from(value: WalletListQuery) -> Self {
+        Self {
+            page: value.page,
+            page_size: value.page_size,
+        }
+    }
+}
+
+impl From<&WalletLedgerEntriesQuery> for PageRequest {
+    fn from(value: &WalletLedgerEntriesQuery) -> Self {
+        Self {
+            page: value.page,
+            page_size: value.page_size,
+        }
+    }
+}
+
+impl From<&WalletDailyUsageQuery> for PageRequest {
+    fn from(value: &WalletDailyUsageQuery) -> Self {
         Self {
             page: value.page,
             page_size: value.page_size,
@@ -147,6 +240,29 @@ impl From<AdminWalletLedgerQuery> for AdminWalletLedgerFilters {
             category: value.category,
             reason_code: value.reason_code,
             owner_type: value.owner_type,
+        }
+    }
+}
+
+impl From<WalletLedgerEntriesQuery> for WalletLedgerEntryFilters {
+    fn from(value: WalletLedgerEntriesQuery) -> Self {
+        Self {
+            search: value.search,
+            category: value.category,
+            reason_code: value.reason_code,
+            direction: value.direction,
+            balance_type: value.balance_type,
+            link_type: value.link_type,
+            owner_type: value.owner_type,
+        }
+    }
+}
+
+impl From<WalletDailyUsageQuery> for WalletDailyUsageDetailRequest {
+    fn from(value: WalletDailyUsageQuery) -> Self {
+        Self {
+            local_date: value.date,
+            tz_offset_minutes: value.tz_offset_minutes,
         }
     }
 }

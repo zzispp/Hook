@@ -10,8 +10,13 @@ import type {
   AdminWalletAdjustmentInput,
   WalletTransactionsResponse,
   AdminWalletRechargeResponse,
+  WalletLedgerEntriesResponse,
   AdminWalletAdjustmentResponse,
   AdminWalletTransactionsResponse,
+  WalletDailyUsageDetailsResponse,
+  AdminWalletLedgerEntriesResponse,
+  AdminWalletDailyUsageDetailsResponse,
+  AdminWalletLedgerEntriesForWalletResponse,
 } from 'src/types/wallet';
 
 import useSWR from 'swr';
@@ -71,6 +76,18 @@ export function useWalletTransactions(page: number, pageSize: number) {
   }, [data, error, isLoading, isValidating, mutate]);
 }
 
+export function useWalletLedgerEntries(page: number, pageSize: number, filters: WalletLedgerEntryFilters = {}) {
+  const key = [endpoints.wallet.ledgerEntries, { params: ledgerParams(page, pageSize, filters) }] as const;
+  return useWalletResource<WalletLedgerEntriesResponse>(key);
+}
+
+export function useWalletDailyModelUsage(date: string | null, page: number, pageSize: number) {
+  const key = date
+    ? ([endpoints.wallet.dailyModelUsage, { params: dailyUsageParams(date, page, pageSize) }] as const)
+    : null;
+  return useWalletResource<WalletDailyUsageDetailsResponse>(key);
+}
+
 export type AdminWalletFilters = {
   search?: string;
   status?: string;
@@ -79,6 +96,16 @@ export type AdminWalletFilters = {
 export type AdminWalletLedgerFilters = {
   category?: string;
   reason_code?: string;
+  owner_type?: string;
+};
+
+export type WalletLedgerEntryFilters = {
+  search?: string;
+  category?: string;
+  reason_code?: string;
+  direction?: string;
+  balance_type?: string;
+  link_type?: string;
   owner_type?: string;
 };
 
@@ -92,11 +119,36 @@ export function useAdminWalletLedger(page: number, pageSize: number, filters: Ad
   return useWalletResource<AdminWalletLedgerResponse>(key);
 }
 
+export function useAdminWalletLedgerEntries(page: number, pageSize: number, filters: WalletLedgerEntryFilters = {}) {
+  const key = [endpoints.adminWallets.ledgerEntries, { params: ledgerParams(page, pageSize, filters) }] as const;
+  return useWalletResource<AdminWalletLedgerEntriesResponse>(key);
+}
+
 export function useAdminWalletTransactions(walletId: string | null, page: number, pageSize: number) {
   const key = walletId
     ? ([endpoints.adminWallets.transactions(walletId), { params: pageQuery(page, pageSize) }] as const)
     : null;
   return useWalletResource<AdminWalletTransactionsResponse>(key);
+}
+
+export function useAdminWalletLedgerEntriesForWallet(
+  walletId: string | null,
+  page: number,
+  pageSize: number,
+  filters: WalletLedgerEntryFilters = {}
+) {
+  const key = walletId
+    ? ([endpoints.adminWallets.ledgerEntriesForWallet(walletId), { params: ledgerParams(page, pageSize, filters) }] as const)
+    : null;
+  return useWalletResource<AdminWalletLedgerEntriesForWalletResponse>(key);
+}
+
+export function useAdminWalletDailyModelUsage(walletId: string | null, date: string | null, page: number, pageSize: number) {
+  const key =
+    walletId && date
+      ? ([endpoints.adminWallets.dailyModelUsageForWallet(walletId), { params: dailyUsageParams(date, page, pageSize) }] as const)
+      : null;
+  return useWalletResource<AdminWalletDailyUsageDetailsResponse>(key);
 }
 
 export function useAdminUserWalletBalance(userId: string | null) {
@@ -118,6 +170,26 @@ export async function rechargeAdminWallet(walletId: string, payload: AdminWallet
     payload
   );
   return requireApiData(response.data);
+}
+
+function ledgerParams(page: number, pageSize: number, filters: WalletLedgerEntryFilters) {
+  return {
+    ...pageQuery(page, pageSize),
+    tz_offset_minutes: timezoneOffsetMinutes(),
+    ...filters,
+  };
+}
+
+function dailyUsageParams(date: string, page: number, pageSize: number) {
+  return {
+    ...pageQuery(page, pageSize),
+    tz_offset_minutes: timezoneOffsetMinutes(),
+    date,
+  };
+}
+
+function timezoneOffsetMinutes() {
+  return -new Date().getTimezoneOffset();
 }
 
 function useWalletResource<T>(key: Key) {

@@ -71,6 +71,20 @@ export function formatWalletDateTime(value: string, locale: string) {
   }).format(date);
 }
 
+export function formatWalletDate(value: string, locale: string) {
+  const date = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
 export function walletStatusLabel(t: TFunction<'admin'>, status?: string | null) {
   return labelFrom(t, 'wallet.statusLabels', status, 'wallet.unknown');
 }

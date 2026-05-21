@@ -1,5 +1,6 @@
 mod admin_repository;
 mod consume;
+mod ledger_entries;
 pub mod record;
 mod repository;
 mod types;

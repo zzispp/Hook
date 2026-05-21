@@ -61,8 +61,39 @@ export type AdminWalletLedgerTransaction = WalletTransaction & {
   wallet_status: string;
 };
 
+export type WalletLedgerEntry = WalletTransaction & {
+  entry_kind: 'transaction' | 'daily_model_usage';
+  local_date: string | null;
+  transaction_count: number;
+  first_created_at: string;
+  last_created_at: string;
+};
+
+export type AdminWalletLedgerEntry = WalletLedgerEntry & {
+  currency: string;
+  owner_name: string;
+  owner_email: string;
+  owner_type: string;
+  wallet_status: string;
+};
+
 export type WalletTransactionsResponse = {
   wallet: WalletSummary;
+  items: WalletTransaction[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type WalletLedgerEntriesResponse = {
+  wallet: WalletSummary;
+  items: WalletLedgerEntry[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type WalletDailyUsageDetailsResponse = {
   items: WalletTransaction[];
   total: number;
   page: number;
@@ -76,6 +107,13 @@ export type AdminWalletLedgerResponse = {
   page_size: number;
 };
 
+export type AdminWalletLedgerEntriesResponse = {
+  items: AdminWalletLedgerEntry[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
 export type AdminWalletListResponse = {
   items: AdminWallet[];
   total: number;
@@ -84,6 +122,22 @@ export type AdminWalletListResponse = {
 };
 
 export type AdminWalletTransactionsResponse = {
+  wallet: AdminWallet;
+  items: WalletTransaction[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type AdminWalletLedgerEntriesForWalletResponse = {
+  wallet: AdminWallet;
+  items: WalletLedgerEntry[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type AdminWalletDailyUsageDetailsResponse = {
   wallet: AdminWallet;
   items: WalletTransaction[];
   total: number;

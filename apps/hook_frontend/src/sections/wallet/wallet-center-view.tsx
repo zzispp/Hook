@@ -14,6 +14,7 @@ import Typography from '@mui/material/Typography';
 import { useTranslate } from 'src/locales/use-locales';
 import { redeemCardCode } from 'src/actions/card-code';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useWalletDailyModelUsage } from 'src/actions/wallet';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import {
   DASHBOARD_MENU_CODES,
@@ -24,10 +25,11 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
-import { WalletLedgerTable } from './wallet-ledger-table';
 import { WalletSummaryCards } from './wallet-summary-cards';
 import { useWalletCenterState } from './wallet-center-state';
 import { WalletLedgerFilters } from './wallet-ledger-filters';
+import { useWalletLedgerExpansion } from './wallet-ledger-expansion';
+import { WalletLedgerEntriesTable } from './wallet-ledger-entries-table';
 import { WalletTransactionDetailDialog } from './wallet-transaction-detail-dialog';
 
 type WalletTab = 'ledger';
@@ -39,6 +41,8 @@ export function WalletCenterView() {
   const [redeeming, setRedeeming] = useState(false);
   const state = useWalletCenterState(t);
   const locale = currentLang.numberFormat.code;
+  const entryExpansion = useWalletLedgerExpansion();
+  const detail = useWalletDailyModelUsage(entryExpansion.date, entryExpansion.page, entryExpansion.pageSize);
   const submitRedeemCode = async () => {
     if (!redeemCode.trim()) return;
     setRedeeming(true);
@@ -99,17 +103,20 @@ export function WalletCenterView() {
           linkTypeOptions={state.filterOptions.linkTypes}
           onChange={state.changeFilters}
         />
-        <WalletLedgerTable
+        <WalletLedgerEntriesTable
           t={t}
           wallet={state.wallet}
           locale={locale}
           loading={state.loading}
           items={state.filteredItems}
-          total={state.transactions.total}
-          loadedCount={state.transactions.items.length}
+          total={state.entries.data?.total ?? 0}
+          loadedCount={state.entries.data?.items.length ?? 0}
           page={state.table.page}
           rowsPerPage={state.table.rowsPerPage}
+          expansion={entryExpansion.expansionState(detail)}
           onOpen={state.setCurrentTransaction}
+          onToggleDailyUsage={entryExpansion.toggle}
+          onDailyUsagePageChange={entryExpansion.changePage}
           onPageChange={state.table.onChangePage}
           onRowsPerPageChange={state.table.onChangeRowsPerPage}
         />

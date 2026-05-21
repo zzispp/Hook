@@ -258,12 +258,18 @@ export const endpoints = {
   wallet: {
     balance: '/api/wallet/balance',
     transactions: '/api/wallet/transactions',
+    ledgerEntries: '/api/wallet/ledger-entries',
+    dailyModelUsage: '/api/wallet/ledger-entries/daily-model-usage',
   },
   adminWallets: {
     list: '/api/admin/wallets',
     ledger: '/api/admin/wallets/ledger',
+    ledgerEntries: '/api/admin/wallets/ledger-entries',
     userBalance: (userId: string) => `/api/admin/wallets/users/${userId}/balance`,
     transactions: (id: string) => `/api/admin/wallets/${id}/transactions`,
+    ledgerEntriesForWallet: (id: string) => `/api/admin/wallets/${id}/ledger-entries`,
+    dailyModelUsageForWallet: (id: string) =>
+      `/api/admin/wallets/${id}/ledger-entries/daily-model-usage`,
     adjust: (id: string) => `/api/admin/wallets/${id}/adjust`,
     recharge: (id: string) => `/api/admin/wallets/${id}/recharge`,
   },

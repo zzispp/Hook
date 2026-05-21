@@ -12,14 +12,18 @@ import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 
-import { useAdminWalletTransactions } from 'src/actions/wallet';
+import {
+  useAdminWalletDailyModelUsage,
+  useAdminWalletLedgerEntriesForWallet,
+} from 'src/actions/wallet';
 
 import { useTable } from 'src/components/table';
 import { Iconify } from 'src/components/iconify';
 
 import { adminWalletOwner } from './wallet-display';
-import { WalletLedgerTable } from './wallet-ledger-table';
 import { DEFAULT_WALLET_ROWS_PER_PAGE } from './wallet-constants';
+import { useWalletLedgerExpansion } from './wallet-ledger-expansion';
+import { WalletLedgerEntriesTable } from './wallet-ledger-entries-table';
 import { WalletTransactionDetailDialog } from './wallet-transaction-detail-dialog';
 
 type Props = {
@@ -31,9 +35,11 @@ type Props = {
 
 export function AdminWalletLedgerDialog({ t, locale, wallet, onClose }: Props) {
   const table = useTable({ defaultRowsPerPage: DEFAULT_WALLET_ROWS_PER_PAGE, defaultOrderBy: 'created_at' });
-  const transactions = useAdminWalletTransactions(wallet?.id ?? null, table.page, table.rowsPerPage);
+  const entries = useAdminWalletLedgerEntriesForWallet(wallet?.id ?? null, table.page, table.rowsPerPage);
   const [currentTransaction, setCurrentTransaction] = useState<WalletTransaction | null>(null);
-  const currentWallet = transactions.data?.wallet ?? wallet ?? undefined;
+  const expansion = useWalletLedgerExpansion();
+  const detail = useAdminWalletDailyModelUsage(wallet?.id ?? null, expansion.date, expansion.page, expansion.pageSize);
+  const currentWallet = entries.data?.wallet ?? wallet ?? undefined;
 
   return (
     <>
@@ -52,17 +58,20 @@ export function AdminWalletLedgerDialog({ t, locale, wallet, onClose }: Props) {
           </Stack>
         </DialogTitle>
         <DialogContent sx={{ pb: 2 }}>
-          <WalletLedgerTable
+          <WalletLedgerEntriesTable
             t={t}
             wallet={currentWallet}
             locale={locale}
-            loading={transactions.isLoading}
-            items={transactions.data?.items ?? []}
-            total={transactions.data?.total ?? 0}
-            loadedCount={transactions.data?.items.length ?? 0}
+            loading={entries.isLoading}
+            items={entries.data?.items ?? []}
+            total={entries.data?.total ?? 0}
+            loadedCount={entries.data?.items.length ?? 0}
             page={table.page}
             rowsPerPage={table.rowsPerPage}
+            expansion={expansion.expansionState(detail)}
             onOpen={setCurrentTransaction}
+            onToggleDailyUsage={expansion.toggle}
+            onDailyUsagePageChange={expansion.changePage}
             onPageChange={table.onChangePage}
             onRowsPerPageChange={table.onChangeRowsPerPage}
           />
