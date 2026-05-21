@@ -232,7 +232,7 @@ mod tests {
                 endpoints: vec![CachedEndpoint {
                     id: "endpoint-a".into(),
                     provider_id: "provider-a".into(),
-                    api_format: "openai_chat".into(),
+                    api_format: "openai:chat".into(),
                     base_url: "https://example.com".into(),
                     custom_path: None,
                     max_retries: None,
@@ -245,7 +245,7 @@ mod tests {
                     id: "key-a".into(),
                     provider_id: "provider-a".into(),
                     name: "Key A".into(),
-                    api_formats: vec!["openai_chat".into()],
+                    api_formats: vec!["openai:chat".into()],
                     allowed_model_ids: Vec::new(),
                     key_preview: "sk-***".into(),
                     encrypted_api_key: "encrypted".into(),

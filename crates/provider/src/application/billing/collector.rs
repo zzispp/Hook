@@ -268,7 +268,7 @@ mod tests {
 
     fn collector(name: &str, path: &str, priority: i32) -> DimensionCollector {
         DimensionCollector {
-            api_format: "openai_chat".into(),
+            api_format: "openai:chat".into(),
             task_type: "chat".into(),
             dimension_name: name.into(),
             source_type: CollectorSource::Response,

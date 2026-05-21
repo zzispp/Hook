@@ -18,7 +18,7 @@ fn request_candidate_audit_records_scheduled_candidates() {
     assert_eq!(records[0].request_id, "req-1");
     assert_eq!(records[0].token_id.as_deref(), Some("token-1"));
     assert_eq!(records[0].provider_id.as_deref(), Some("provider-a"));
-    assert_eq!(records[0].client_api_format, "openai_chat");
+    assert_eq!(records[0].client_api_format, "openai:chat");
     assert!(!records[0].started);
     assert!(!records[0].finished);
 }
@@ -99,7 +99,7 @@ fn audit_input() -> CandidateAuditInput<'static> {
         token_id: Some("token-1"),
         group_code: Some("default"),
         global_model_id: Some("gpt-4o-mini"),
-        client_api_format: "openai_chat",
+        client_api_format: "openai:chat",
         is_stream: false,
     }
 }

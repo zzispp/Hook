@@ -79,8 +79,8 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
         enable_format_conversion: true,
         is_active: true,
         endpoints: vec![
-            endpoint("endpoint-gemini", "gemini_chat"),
-            endpoint("endpoint-openai", "openai_chat"),
+            endpoint("endpoint-gemini", "gemini:chat"),
+            endpoint("endpoint-openai", "openai:chat"),
             endpoint("endpoint-image", "openai_image"),
         ],
         keys: vec![key("key-a-2", 20), key("key-a-1", 10)],
@@ -113,7 +113,7 @@ pub(super) fn provider_key_for_models(id: &str, internal_priority: i32, api_form
 }
 
 pub(super) fn provider_key_with_time_range(id: &str, internal_priority: i32, start_minute: u16, end_minute: u16) -> CachedProviderKey {
-    let mut output = provider_key(id, internal_priority, vec!["openai_chat"]);
+    let mut output = provider_key(id, internal_priority, vec!["openai:chat"]);
     output.time_range_enabled = true;
     output.time_range_start_minute = Some(start_minute);
     output.time_range_end_minute = Some(end_minute);
@@ -134,7 +134,7 @@ pub(super) fn provider_b() -> CachedProvider {
         priority: 20,
         endpoints: vec![CachedEndpoint {
             provider_id: "provider-b".into(),
-            ..endpoint("endpoint-b-openai", "openai_chat")
+            ..endpoint("endpoint-b-openai", "openai:chat")
         }],
         keys: vec![CachedProviderKey {
             provider_id: "provider-b".into(),
@@ -156,7 +156,7 @@ pub(super) fn provider_b() -> CachedProvider {
 
 pub(super) fn request() -> CandidateRequest<'static> {
     CandidateRequest {
-        api_format: "openai_chat",
+        api_format: "openai:chat",
         model_name: "gpt-test",
         is_stream: false,
     }
@@ -211,11 +211,11 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         provider_id: "provider-a".into(),
         name: format!("{id}-name"),
         api_formats: vec![
-            "openai_chat".into(),
-            "gemini_chat".into(),
+            "openai:chat".into(),
+            "gemini:chat".into(),
             "openai_image".into(),
             "openai_image_edit".into(),
-            "openai_compact".into(),
+            "openai:compact".into(),
         ],
         allowed_model_ids: Vec::new(),
         key_preview: format!("{id}-name"),

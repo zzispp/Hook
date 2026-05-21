@@ -1,8 +1,8 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalStreamEvent, StreamConversionState};
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalStreamEvent, StreamConversionState};
 
-use super::common::{claude_stop_reason, claude_usage, map_claude_stop_reason, required_object, usage_from_claude};
+use super::common::{claude_stop_reason, claude_usage, empty_claude_usage, map_claude_stop_reason, required_object, usage_from_claude};
 
 pub fn to_internal(chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {
     let mut state = StreamConversionState::default();
@@ -43,7 +43,9 @@ pub fn event_from_internal(event: &InternalStreamEvent, state: &mut StreamConver
 fn parse_event(chunk: &Value, events: &mut Vec<InternalStreamEvent>) -> Result<(), FormatConversionError> {
     match chunk.get("type").and_then(Value::as_str).unwrap_or_default() {
         "message_start" => parse_message_start(chunk, events),
+        "content_block_start" => parse_content_start(chunk, events),
         "content_block_delta" => parse_content_delta(chunk, events),
+        "content_block_stop" => parse_content_stop(chunk, events),
         "message_delta" => parse_message_delta(chunk, events),
         _ => Ok(()),
     }
@@ -58,14 +60,88 @@ fn parse_message_start(chunk: &Value, events: &mut Vec<InternalStreamEvent>) -> 
     Ok(())
 }
 
+fn parse_content_start(chunk: &Value, events: &mut Vec<InternalStreamEvent>) -> Result<(), FormatConversionError> {
+    let Some(block) = chunk.get("content_block").and_then(Value::as_object) else {
+        return Ok(());
+    };
+    let index = chunk
+        .get("index")
+        .and_then(Value::as_u64)
+        .and_then(|value| u32::try_from(value).ok())
+        .unwrap_or(0);
+    match block.get("type").and_then(Value::as_str).unwrap_or_default() {
+        "tool_use" => events.push(InternalStreamEvent::ContentBlockStart {
+            index,
+            block: InternalContentBlock::ToolUse {
+                id: block.get("id").and_then(Value::as_str).unwrap_or_default().to_owned(),
+                name: block.get("name").and_then(Value::as_str).unwrap_or_default().to_owned(),
+                input: block.get("input").cloned().unwrap_or_else(|| json!({})),
+            },
+        }),
+        "thinking" => events.push(InternalStreamEvent::ContentBlockStart {
+            index,
+            block: InternalContentBlock::Thinking {
+                text: String::new(),
+                signature: None,
+            },
+        }),
+        _ => {}
+    }
+    Ok(())
+}
+
 fn parse_content_delta(chunk: &Value, events: &mut Vec<InternalStreamEvent>) -> Result<(), FormatConversionError> {
     let delta = required_object(chunk.get("delta"), "$.delta")?;
-    if delta.get("type").and_then(Value::as_str) == Some("text_delta") {
-        let text = delta.get("text").and_then(Value::as_str).unwrap_or_default();
-        if !text.is_empty() {
-            events.push(InternalStreamEvent::TextDelta(text.to_owned()));
+    match delta.get("type").and_then(Value::as_str).unwrap_or_default() {
+        "text_delta" => {
+            let text = delta.get("text").and_then(Value::as_str).unwrap_or_default();
+            if !text.is_empty() {
+                events.push(InternalStreamEvent::TextDelta(text.to_owned()));
+            }
         }
+        "thinking_delta" => {
+            let text = delta.get("thinking").and_then(Value::as_str).unwrap_or_default();
+            if !text.is_empty() {
+                events.push(InternalStreamEvent::ThinkingDelta {
+                    text: text.to_owned(),
+                    signature: None,
+                });
+            }
+        }
+        "signature_delta" => {
+            if let Some(signature) = delta.get("signature").and_then(Value::as_str) {
+                events.push(InternalStreamEvent::ThinkingDelta {
+                    text: String::new(),
+                    signature: Some(signature.to_owned()),
+                });
+            }
+        }
+        "input_json_delta" => {
+            if let Some(partial_json) = delta.get("partial_json").and_then(Value::as_str) {
+                events.push(InternalStreamEvent::ToolCallDelta {
+                    index: chunk
+                        .get("index")
+                        .and_then(Value::as_u64)
+                        .and_then(|value| u32::try_from(value).ok())
+                        .unwrap_or(0),
+                    id: None,
+                    name: None,
+                    arguments_delta: partial_json.to_owned(),
+                });
+            }
+        }
+        _ => {}
     }
+    Ok(())
+}
+
+fn parse_content_stop(chunk: &Value, events: &mut Vec<InternalStreamEvent>) -> Result<(), FormatConversionError> {
+    let index = chunk
+        .get("index")
+        .and_then(Value::as_u64)
+        .and_then(|value| u32::try_from(value).ok())
+        .unwrap_or(0);
+    events.push(InternalStreamEvent::ContentBlockStop { index });
     Ok(())
 }
 
@@ -90,7 +166,56 @@ fn push_event(event: &InternalStreamEvent, state: &mut StreamConversionState, ou
             "index": 0,
             "delta": { "type": "text_delta", "text": text },
         })),
+        InternalStreamEvent::ThinkingDelta { text, signature } => {
+            if !text.is_empty() {
+                output.push(json!({
+                    "type": "content_block_delta",
+                    "index": 0,
+                    "delta": { "type": "thinking_delta", "thinking": text },
+                }));
+            }
+            if let Some(signature) = signature {
+                output.push(json!({
+                    "type": "content_block_delta",
+                    "index": 0,
+                    "delta": { "type": "signature_delta", "signature": signature },
+                }));
+            }
+        }
+        InternalStreamEvent::ToolCallDelta { index, arguments_delta, .. } => output.push(json!({
+            "type": "content_block_delta",
+            "index": index,
+            "delta": { "type": "input_json_delta", "partial_json": arguments_delta },
+        })),
+        InternalStreamEvent::Usage(usage) => push_done(None, Some(usage), output),
+        InternalStreamEvent::ContentBlockStart { index, block } => push_content_block_start(*index, block, output),
+        InternalStreamEvent::ContentBlockStop { index } => output.push(json!({ "type": "content_block_stop", "index": index })),
+        InternalStreamEvent::Error(error) => output.push(json!({
+            "type": "error",
+            "error": { "message": error.message, "type": error.error_type },
+        })),
         InternalStreamEvent::Done { reason, usage } => push_done(reason.as_ref(), usage.as_ref(), output),
+    }
+}
+
+fn push_content_block_start(index: u32, block: &InternalContentBlock, output: &mut Vec<Value>) {
+    match block {
+        InternalContentBlock::Thinking { .. } => output.push(json!({
+            "type": "content_block_start",
+            "index": index,
+            "content_block": { "type": "thinking", "thinking": "" },
+        })),
+        InternalContentBlock::Text { .. } => output.push(json!({
+            "type": "content_block_start",
+            "index": index,
+            "content_block": { "type": "text", "text": "" },
+        })),
+        InternalContentBlock::ToolUse { id, name, .. } => output.push(json!({
+            "type": "content_block_start",
+            "index": index,
+            "content_block": { "type": "tool_use", "id": id, "name": name },
+        })),
+        _ => {}
     }
 }
 
@@ -107,9 +232,9 @@ fn push_start(event_id: &Option<String>, event_model: &Option<String>, state: &m
             "content": [],
             "stop_reason": null,
             "stop_sequence": null,
+            "usage": empty_claude_usage(),
         },
     }));
-    output.push(json!({ "type": "content_block_start", "index": 0, "content_block": { "type": "text", "text": "" } }));
 }
 
 fn push_done(reason: Option<&crate::format_conversion::StopReason>, usage: Option<&crate::format_conversion::InternalUsage>, output: &mut Vec<Value>) {

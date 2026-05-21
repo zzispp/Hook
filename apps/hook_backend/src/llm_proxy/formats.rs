@@ -60,10 +60,10 @@ pub struct EndpointMetadata {
 pub fn endpoint_metadata(format: &str, is_stream: bool) -> Result<EndpointMetadata, LlmProxyError> {
     let normalized = normalize_format_id(format);
     let metadata = match normalized.as_str() {
-        "openai_chat" | "openai:chat" => openai_chat(),
+        "openai:chat" => openai_chat(),
         "openai_completion" | "openai_completions" | "openai:completion" | "openai:completions" => openai_completion(),
-        "openai_cli" | "openai_responses" | "openai:responses" | "openai:cli" => openai_responses(),
-        "openai_compact" | "openai_responses_compact" | "openai:compact" => openai_compact(),
+        "openai:cli" => openai_responses(),
+        "openai:compact" => openai_compact(),
         "openai_image" | "openai_images" | "openai_images_generations" | "openai:image" | "openai:image_generation" => openai_image_generation(),
         "openai_image_edit" | "openai_images_edits" | "openai_edits" | "openai:image_edit" => openai_image_edit(),
         "openai_embedding" | "openai_embeddings" | "openai:embedding" | "openai:embeddings" => openai_embedding(),
@@ -72,9 +72,9 @@ pub fn endpoint_metadata(format: &str, is_stream: bool) -> Result<EndpointMetada
         "openai_audio_speech" | "openai:audio_speech" => openai_audio_speech(),
         "openai_moderation" | "openai_moderations" | "openai:moderation" | "openai:moderations" => openai_moderation(),
         "openai_realtime" | "openai:realtime" => openai_realtime(),
-        "claude_chat" | "claude_messages" | "claude:chat" => claude_chat(AuthScheme::Anthropic),
-        "claude_cli" | "claude:cli" => claude_chat(AuthScheme::Bearer),
-        "gemini_chat" | "gemini_cli" | "gemini:chat" | "gemini:cli" => gemini_chat(is_stream),
+        "claude:chat" => claude_chat(AuthScheme::Anthropic),
+        "claude:cli" => claude_chat(AuthScheme::Bearer),
+        "gemini:chat" | "gemini:cli" => gemini_chat(is_stream, normalized == "gemini:cli"),
         "gemini_embedding" | "gemini_embed_content" | "gemini:embedding" | "gemini:embed_content" => gemini_embedding(),
         "gemini_batch_embedding" | "gemini_batch_embed_contents" | "gemini:batch_embed_contents" => gemini_batch_embedding(),
         "gemini_video" | "gemini:video" | "veo" => gemini_video(),
@@ -155,15 +155,12 @@ fn endpoint_protocol_matches(client: EndpointMetadata, provider: EndpointMetadat
     client.family == provider.family && client.kind == provider.kind && client.data_format == provider.data_format
 }
 
-fn cross_protocol_conversion_allowed(client: EndpointMetadata, provider: EndpointMetadata) -> bool {
-    !matches!(
-        (client.family, client.kind, provider.family, provider.kind),
-        (EndpointFamily::OpenAi, EndpointKind::Responses, EndpointFamily::OpenAi, EndpointKind::Chat)
-    )
+fn cross_protocol_conversion_allowed(_client: EndpointMetadata, _provider: EndpointMetadata) -> bool {
+    true
 }
 
 fn openai_chat() -> EndpointMetadata {
-    openai_metadata("openai_chat", EndpointKind::Chat, ApiFormat::OpenAiChat, "/v1/chat/completions", true, true)
+    openai_metadata("openai:chat", EndpointKind::Chat, ApiFormat::OpenAiChat, "/v1/chat/completions", true, true)
 }
 
 fn openai_completion() -> EndpointMetadata {
@@ -178,12 +175,12 @@ fn openai_completion() -> EndpointMetadata {
 }
 
 fn openai_responses() -> EndpointMetadata {
-    openai_metadata("openai_cli", EndpointKind::Responses, ApiFormat::OpenAiResponses, "/v1/responses", true, true)
+    openai_metadata("openai:cli", EndpointKind::Responses, ApiFormat::OpenAiResponses, "/v1/responses", true, true)
 }
 
 fn openai_compact() -> EndpointMetadata {
     let mut metadata = openai_metadata(
-        "openai_compact",
+        "openai:compact",
         EndpointKind::Compact,
         ApiFormat::OpenAiResponses,
         "/v1/responses/compact",
@@ -306,7 +303,7 @@ fn openai_metadata(
 
 fn claude_chat(auth_scheme: AuthScheme) -> EndpointMetadata {
     EndpointMetadata {
-        endpoint_id: if auth_scheme == AuthScheme::Bearer { "claude_cli" } else { "claude_chat" },
+        endpoint_id: if auth_scheme == AuthScheme::Bearer { "claude:cli" } else { "claude:chat" },
         family: EndpointFamily::Claude,
         kind: EndpointKind::Chat,
         data_format: ApiFormat::ClaudeChat,
@@ -319,9 +316,9 @@ fn claude_chat(auth_scheme: AuthScheme) -> EndpointMetadata {
     }
 }
 
-fn gemini_chat(is_stream: bool) -> EndpointMetadata {
+fn gemini_chat(is_stream: bool, is_cli: bool) -> EndpointMetadata {
     EndpointMetadata {
-        endpoint_id: "gemini_chat",
+        endpoint_id: if is_cli { "gemini:cli" } else { "gemini:chat" },
         family: EndpointFamily::Gemini,
         kind: EndpointKind::Chat,
         data_format: ApiFormat::GeminiChat,
@@ -411,7 +408,7 @@ mod tests {
 
     #[test]
     fn endpoint_metadata_describes_openai_chat_stream_usage_policy() {
-        let metadata = endpoint_metadata("openai_chat", true).unwrap();
+        let metadata = endpoint_metadata("openai:chat", true).unwrap();
 
         assert_eq!(metadata.family, EndpointFamily::OpenAi);
         assert_eq!(metadata.kind, EndpointKind::Chat);
@@ -425,7 +422,7 @@ mod tests {
 
     #[test]
     fn endpoint_metadata_describes_gemini_path_and_body_policy() {
-        let metadata = endpoint_metadata("gemini_chat", true).unwrap();
+        let metadata = endpoint_metadata("gemini:chat", true).unwrap();
 
         assert_eq!(metadata.default_path, "/v1beta/models/{model}:{action}?alt=sse");
         assert_eq!(metadata.data_format, ApiFormat::GeminiChat);
@@ -447,36 +444,36 @@ mod tests {
 
     #[test]
     fn streaming_requests_do_not_route_to_force_non_stream_formats() {
-        assert!(!super::formats_compatible("openai_chat", "openai_compact", true));
-        assert!(!super::formats_compatible("openai_cli", "openai_compact", true));
-        assert!(super::formats_compatible("openai_chat", "openai_compact", false));
+        assert!(!super::formats_compatible("openai:chat", "openai:compact", true));
+        assert!(!super::formats_compatible("openai:cli", "openai:compact", true));
+        assert!(super::formats_compatible("openai:chat", "openai:compact", false));
     }
 
     #[test]
     fn same_data_format_different_endpoint_kind_is_not_exact_or_compatible() {
-        assert!(!super::formats_exact("openai_cli", "openai_compact", false).unwrap());
-        assert!(!super::formats_compatible("openai_cli", "openai_compact", false));
+        assert!(!super::formats_exact("openai:cli", "openai:compact", false).unwrap());
+        assert!(!super::formats_compatible("openai:cli", "openai:compact", false));
         assert!(!super::formats_exact("openai_image", "openai_images_edits", false).unwrap());
         assert!(!super::formats_compatible("openai_image", "openai_images_edits", false));
     }
 
     #[test]
-    fn aliases_with_same_endpoint_kind_remain_exact() {
-        assert!(super::formats_exact("openai_responses", "openai_cli", true).unwrap());
-        assert!(super::formats_compatible("claude_chat", "claude_cli", true));
+    fn cli_and_chat_same_data_format_remain_exact() {
+        assert!(super::formats_exact("claude:chat", "claude:cli", true).unwrap());
+        assert!(super::formats_compatible("claude:chat", "claude:cli", true));
     }
 
     #[test]
-    fn responses_requests_do_not_route_to_chat_endpoints() {
-        assert!(!super::formats_compatible("openai_cli", "openai_chat", true));
-        assert!(!super::formats_compatible("openai_cli", "openai_chat", false));
-        assert!(super::formats_compatible("openai_chat", "openai_cli", true));
+    fn responses_requests_route_to_chat_endpoints_through_internal() {
+        assert!(super::formats_compatible("openai:cli", "openai:chat", true));
+        assert!(super::formats_compatible("openai:cli", "openai:chat", false));
+        assert!(super::formats_compatible("openai:chat", "openai:cli", true));
     }
 
     #[test]
     fn non_chat_endpoints_never_convert_through_chat_normalizers() {
-        assert!(!super::formats_compatible("openai_chat", "openai_image", false));
-        assert!(!super::formats_compatible("openai_image", "openai_chat", false));
+        assert!(!super::formats_compatible("openai:chat", "openai_image", false));
+        assert!(!super::formats_compatible("openai_image", "openai:chat", false));
         assert!(!super::needs_conversion("openai_image", "openai_images_edits", false).unwrap());
     }
 }

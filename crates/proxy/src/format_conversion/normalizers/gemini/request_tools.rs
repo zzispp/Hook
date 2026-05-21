@@ -4,6 +4,8 @@ use crate::format_conversion::{FormatConversionError, InternalTool, InternalTool
 
 use super::common::{FORMAT, generation_config_value, required_object};
 
+const GEMINI_BUILTIN_TOOLS: &[&str] = &["googleSearch", "google_search", "codeExecution", "code_execution"];
+
 pub(super) fn parse_tools(value: Option<&Value>) -> Result<Vec<InternalTool>, FormatConversionError> {
     let Some(value) = value else {
         return Ok(Vec::new());
@@ -15,6 +17,10 @@ pub(super) fn parse_tools(value: Option<&Value>) -> Result<Vec<InternalTool>, Fo
         .iter()
         .enumerate()
     {
+        if let Some(tool) = parse_builtin_tool(group)? {
+            tools.push(tool);
+            continue;
+        }
         let declarations = group
             .get("functionDeclarations")
             .or_else(|| group.get("function_declarations"))
@@ -31,15 +37,14 @@ pub(super) fn parse_tool_choice(value: Option<&Value>) -> Result<Option<Internal
     let Some(value) = value else {
         return Ok(None);
     };
-    let config = value
-        .get("functionCallingConfig")
-        .or_else(|| value.get("function_calling_config"))
-        .ok_or_else(|| FormatConversionError::invalid_payload(FORMAT, "$.toolConfig.functionCallingConfig"))?;
+    let Some(config) = value.get("functionCallingConfig").or_else(|| value.get("function_calling_config")) else {
+        return Ok(Some(InternalToolChoice::Auto));
+    };
     let object = required_object(Some(config), "$.toolConfig.functionCallingConfig")?;
-    match object.get("mode").and_then(Value::as_str).unwrap_or("AUTO") {
+    match object.get("mode").and_then(Value::as_str).unwrap_or("AUTO").to_ascii_uppercase().as_str() {
         "AUTO" => Ok(Some(InternalToolChoice::Auto)),
         "NONE" => Ok(Some(InternalToolChoice::None)),
-        "ANY" => Ok(object
+        "ANY" | "REQUIRED" => Ok(object
             .get("allowedFunctionNames")
             .or_else(|| object.get("allowed_function_names"))
             .and_then(Value::as_array)
@@ -47,14 +52,26 @@ pub(super) fn parse_tool_choice(value: Option<&Value>) -> Result<Option<Internal
             .and_then(Value::as_str)
             .map(|name| InternalToolChoice::Tool(name.to_owned()))
             .or(Some(InternalToolChoice::Required))),
-        _ => Err(FormatConversionError::invalid_payload(FORMAT, "$.toolConfig.functionCallingConfig.mode")),
+        _ => Ok(Some(InternalToolChoice::Auto)),
     }
 }
 
 pub(super) fn tools_from_internal(tools: &[InternalTool]) -> Vec<Value> {
-    vec![json!({
-        "functionDeclarations": tools.iter().map(tool_from_internal).collect::<Vec<_>>(),
-    })]
+    let mut builtins = Vec::new();
+    let declarations = tools
+        .iter()
+        .filter_map(|tool| {
+            if let Some(builtin) = builtin_from_internal(tool) {
+                builtins.push(builtin);
+                return None;
+            }
+            Some(tool_from_internal(tool))
+        })
+        .collect::<Vec<_>>();
+    if !declarations.is_empty() {
+        builtins.insert(0, json!({ "functionDeclarations": declarations }));
+    }
+    builtins
 }
 
 pub(super) fn tool_choice_from_internal(choice: &InternalToolChoice) -> Value {
@@ -88,14 +105,44 @@ fn parse_tool_declaration(value: &Value, group_index: usize, index: usize) -> Re
         name: required_text(object, "functionDeclaration", "name")?.to_owned(),
         description: object.get("description").and_then(Value::as_str).map(str::to_owned),
         parameters: object.get("parameters").cloned(),
+        extra: Map::new(),
     })
+}
+
+fn parse_builtin_tool(value: &Value) -> Result<Option<InternalTool>, FormatConversionError> {
+    let object = required_object(Some(value), "$.tools[]")?;
+    let Some(key) = GEMINI_BUILTIN_TOOLS.iter().find(|key| object.contains_key(**key)) else {
+        return Ok(None);
+    };
+    let canonical = if key.contains("google") { "googleSearch" } else { "codeExecution" };
+    let mut extra = Map::new();
+    extra.insert("gemini_builtin_tool".into(), Value::String(canonical.into()));
+    if canonical == "googleSearch" {
+        extra.insert("web_search_options".into(), json!({}));
+    }
+    Ok(Some(InternalTool {
+        name: canonical.to_owned(),
+        description: None,
+        parameters: None,
+        extra,
+    }))
+}
+
+fn builtin_from_internal(tool: &InternalTool) -> Option<Value> {
+    if let Some(Value::String(name)) = tool.extra.get("gemini_builtin_tool") {
+        return Some(json!({ name: {} }));
+    }
+    if tool.extra.contains_key("web_search_options") || tool.name == "googleSearch" {
+        return Some(json!({ "googleSearch": {} }));
+    }
+    None
 }
 
 fn tool_from_internal(tool: &InternalTool) -> Value {
     json!({
         "name": tool.name,
         "description": tool.description,
-        "parameters": tool.parameters,
+        "parameters": tool.parameters.as_ref().map(crate::format_conversion::schema_utils::clean_gemini_schema),
     })
 }
 

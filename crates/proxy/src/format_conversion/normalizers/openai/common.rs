@@ -6,7 +6,7 @@ pub const FORMAT: &str = "openai";
 
 pub fn content_blocks(value: Option<&Value>, path: &str) -> Result<Vec<InternalContentBlock>, FormatConversionError> {
     match value {
-        Some(Value::String(text)) => Ok(vec![InternalContentBlock::Text(text.to_owned())]),
+        Some(Value::String(text)) => Ok(vec![InternalContentBlock::text(text.to_owned())]),
         Some(Value::Array(blocks)) => parse_blocks(blocks, path),
         Some(Value::Null) | None => Ok(Vec::new()),
         Some(_) => Err(FormatConversionError::invalid_payload(FORMAT, path)),
@@ -43,14 +43,30 @@ pub fn first_choice<'a>(value: &'a Value, path: &str) -> Result<&'a Map<String, 
 
 pub fn usage_from_openai(value: Option<&Value>) -> Option<InternalUsage> {
     let object = value?.as_object()?;
-    Some(
-        InternalUsage {
-            prompt_tokens: object.get("prompt_tokens").and_then(as_u32),
-            completion_tokens: object.get("completion_tokens").and_then(as_u32),
-            total_tokens: object.get("total_tokens").and_then(as_u32),
-        }
-        .with_total(),
-    )
+    let usage = InternalUsage {
+        prompt_tokens: object.get("prompt_tokens").and_then(as_u32),
+        completion_tokens: object.get("completion_tokens").and_then(as_u32),
+        total_tokens: object.get("total_tokens").and_then(as_u32),
+        cache_read_tokens: nested_u32(object, "prompt_tokens_details", "cached_tokens").or_else(|| nested_u32(object, "input_tokens_details", "cached_tokens")),
+        cache_creation_tokens: nested_u32(object, "prompt_tokens_details", "cache_creation_tokens"),
+        reasoning_tokens: nested_u32(object, "completion_tokens_details", "reasoning_tokens"),
+    }
+    .with_total();
+    has_non_zero_usage(&usage).then_some(usage)
+}
+
+fn has_non_zero_usage(usage: &InternalUsage) -> bool {
+    [
+        usage.prompt_tokens,
+        usage.completion_tokens,
+        usage.total_tokens,
+        usage.cache_read_tokens,
+        usage.cache_creation_tokens,
+        usage.reasoning_tokens,
+    ]
+    .into_iter()
+    .flatten()
+    .any(|value| value > 0)
 }
 
 pub fn map_openai_stop_reason(value: &str) -> StopReason {
@@ -156,7 +172,7 @@ fn parse_blocks(blocks: &[Value], path: &str) -> Result<Vec<InternalContentBlock
 fn parse_block(value: &Value, path: &str) -> Result<InternalContentBlock, FormatConversionError> {
     let object = required_object(Some(value), path)?;
     match optional_string_value(object.get("type")).unwrap_or_default().as_str() {
-        "text" | "input_text" => Ok(InternalContentBlock::Text(required_block_text(object, path)?.to_owned())),
+        "text" | "input_text" => Ok(InternalContentBlock::text(required_block_text(object, path)?.to_owned())),
         "image_url" => openai_image_block(object, path),
         "input_audio" => openai_audio_block(object, path),
         "file" => openai_file_block(object, path),
@@ -217,4 +233,8 @@ fn required_block_text<'a>(object: &'a Map<String, Value>, path: &str) -> Result
         .get("text")
         .and_then(Value::as_str)
         .ok_or_else(|| FormatConversionError::invalid_payload(FORMAT, format!("{path}.text")))
+}
+
+fn nested_u32(object: &Map<String, Value>, parent: &str, key: &str) -> Option<u32> {
+    object.get(parent).and_then(|value| value.get(key)).and_then(as_u32)
 }

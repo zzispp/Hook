@@ -3,14 +3,22 @@ use serde_json::{Map, Value, json};
 use crate::format_conversion::{FormatConversionError, InternalRequest};
 
 use super::{
-    request_codec::{input_messages, messages_from_internal, parse_tool_choice, parse_tools, tool_choice_from_internal, tools_from_internal},
+    request_codec::{input_messages, messages_from_internal},
     request_fields::{bool_field, insert_integer, insert_number, number_field, string_field, u32_field},
+    request_tools::{parse_tool_choice, parse_tools, tool_choice_from_internal, tools_from_internal},
 };
 
 pub fn to_internal(request: &Value) -> Result<InternalRequest, FormatConversionError> {
+    let mut messages = input_messages(request.get("input"))?;
+    if let Some(instructions) = request.get("instructions").and_then(Value::as_str).filter(|value| !value.is_empty()) {
+        messages.insert(
+            0,
+            crate::format_conversion::InternalMessage::text(crate::format_conversion::InternalRole::System, instructions),
+        );
+    }
     let mut internal = InternalRequest::new(
         string_field(request, "model", "$.model")?,
-        input_messages(request.get("input"))?,
+        messages,
         bool_field(request, "stream").unwrap_or(false),
     );
     internal.temperature = number_field(request, "temperature");
@@ -29,6 +37,7 @@ pub fn from_internal(internal: &InternalRequest) -> Result<Value, FormatConversi
     let mut output = Map::new();
     output.insert("model".into(), Value::String(internal.model.clone()));
     output.insert("input".into(), Value::Array(messages_from_internal(&internal.messages)?));
+    insert_instructions(&mut output, &internal.messages)?;
     insert_number(&mut output, "temperature", internal.temperature);
     insert_number(&mut output, "top_p", internal.top_p);
     insert_integer(&mut output, "max_output_tokens", internal.max_tokens);
@@ -39,6 +48,26 @@ pub fn from_internal(internal: &InternalRequest) -> Result<Value, FormatConversi
         output.insert("stream".into(), Value::Bool(true));
     }
     Ok(Value::Object(output))
+}
+
+fn insert_instructions(output: &mut Map<String, Value>, messages: &[crate::format_conversion::InternalMessage]) -> Result<(), FormatConversionError> {
+    let instructions = messages
+        .iter()
+        .filter(|message| {
+            matches!(
+                message.role,
+                crate::format_conversion::InternalRole::System | crate::format_conversion::InternalRole::Developer
+            )
+        })
+        .map(crate::format_conversion::InternalMessage::text_content)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .filter(|text| !text.is_empty())
+        .collect::<Vec<_>>();
+    if !instructions.is_empty() {
+        output.insert("instructions".into(), Value::String(instructions.join("\n\n")));
+    }
+    Ok(())
 }
 
 fn insert_optional(output: &mut Map<String, Value>, key: &str, value: Option<&Value>) {

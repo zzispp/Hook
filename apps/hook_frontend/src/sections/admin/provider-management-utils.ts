@@ -16,23 +16,23 @@ export const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS = 30;
 export const DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS = 30;
 
 export const API_FORMAT_OPTIONS = [
-  'openai_chat',
-  'openai_cli',
-  'openai_compact',
+  'openai:chat',
+  'openai:cli',
+  'openai:compact',
   'openai_image',
   'openai_image_edit',
-  'claude_chat',
-  'gemini_cli',
+  'claude:chat',
+  'gemini:cli',
 ];
 
 const API_FORMAT_DEFAULT_PATHS: Record<string, string> = {
-  openai_chat: '/v1/chat/completions',
-  openai_cli: '/v1/responses',
-  openai_compact: '/v1/responses/compact',
+  'openai:chat': '/v1/chat/completions',
+  'openai:cli': '/v1/responses',
+  'openai:compact': '/v1/responses/compact',
   openai_image: '/v1/images/generations',
   openai_image_edit: '/v1/images/edits',
-  gemini_cli: '/v1beta/models/{model}:{action}',
-  claude_chat: '/v1/messages',
+  'gemini:cli': '/v1beta/models/{model}:{action}',
+  'claude:chat': '/v1/messages',
 };
 
 export type ProviderForm = {

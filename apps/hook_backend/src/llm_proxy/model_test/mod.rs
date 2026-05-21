@@ -18,13 +18,13 @@ use super::{
 };
 
 const TESTABLE_FORMATS: &[&str] = &[
-    "openai_chat",
-    "openai_cli",
-    "openai_compact",
+    "openai:chat",
+    "openai:cli",
+    "openai:compact",
     "openai_image",
     "openai_image_edit",
-    "claude_chat",
-    "gemini_cli",
+    "claude:chat",
+    "gemini:cli",
 ];
 const TEST_GROUP_CODE: &str = "admin_model_test";
 

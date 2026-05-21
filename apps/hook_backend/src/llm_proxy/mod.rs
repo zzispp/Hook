@@ -34,10 +34,10 @@ pub(crate) use cache_affinity::{AffinityEntry, AffinityRecord, AffinitySelection
 pub use error::LlmProxyError;
 pub(crate) use model_test::LlmProxyProviderModelTester;
 
-pub const OPENAI_CHAT_FORMAT: &str = "openai_chat";
+pub const OPENAI_CHAT_FORMAT: &str = "openai:chat";
 pub const OPENAI_COMPLETION_FORMAT: &str = "openai_completion";
-pub const OPENAI_CLI_FORMAT: &str = "openai_cli";
-pub const OPENAI_COMPACT_FORMAT: &str = "openai_compact";
+pub const OPENAI_CLI_FORMAT: &str = "openai:cli";
+pub const OPENAI_COMPACT_FORMAT: &str = "openai:compact";
 pub const OPENAI_IMAGE_FORMAT: &str = "openai_image";
 pub const OPENAI_IMAGE_EDIT_FORMAT: &str = "openai_image_edit";
 pub const OPENAI_EMBEDDING_FORMAT: &str = "openai_embedding";
@@ -45,8 +45,8 @@ pub const OPENAI_AUDIO_TRANSCRIPTION_FORMAT: &str = "openai_audio_transcription"
 pub const OPENAI_AUDIO_TRANSLATION_FORMAT: &str = "openai_audio_translation";
 pub const OPENAI_AUDIO_SPEECH_FORMAT: &str = "openai_audio_speech";
 pub const OPENAI_MODERATION_FORMAT: &str = "openai_moderation";
-pub const CLAUDE_CHAT_FORMAT: &str = "claude_chat";
-pub const GEMINI_CHAT_FORMAT: &str = "gemini_chat";
+pub const CLAUDE_CHAT_FORMAT: &str = "claude:chat";
+pub const GEMINI_CHAT_FORMAT: &str = "gemini:chat";
 pub const GEMINI_EMBEDDING_FORMAT: &str = "gemini_embedding";
 pub const GEMINI_BATCH_EMBEDDING_FORMAT: &str = "gemini_batch_embedding";
 pub const RERANK_FORMAT: &str = "rerank";
@@ -293,7 +293,7 @@ mod tests {
             provider_id: "provider-1".into(),
             endpoint_id: "endpoint-1".into(),
             key_id: "key-1".into(),
-            api_format: "openai_chat".into(),
+            api_format: "openai:chat".into(),
             model_id: "model-1".into(),
             created_at: 0,
             expire_at: 60,
@@ -305,7 +305,7 @@ mod tests {
             ClearAffinityInput {
                 token_id: "token-1",
                 model_id: "model-1",
-                api_format: "openai_chat",
+                api_format: "openai:chat",
                 endpoint_id: "endpoint-1",
             },
         )
@@ -317,7 +317,7 @@ mod tests {
             ClearAffinityInput {
                 token_id: "token-1",
                 model_id: "model-1",
-                api_format: "openai_chat",
+                api_format: "openai:chat",
                 endpoint_id: "endpoint-2",
             },
         );

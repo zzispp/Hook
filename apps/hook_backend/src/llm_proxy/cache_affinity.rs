@@ -194,16 +194,39 @@ fn parse_cache_key(key_prefix: &str, key: &str) -> Result<CacheKeyParts, LlmProx
     let suffix = key
         .strip_prefix(&prefix)
         .ok_or_else(|| LlmProxyError::Infrastructure(format!("invalid cache affinity key: {key}")))?;
-    let mut parts = suffix.splitn(3, ':');
+    let mut parts = suffix.splitn(2, ':');
     let token_id = required_cache_key_part(parts.next(), key)?;
-    let api_format = required_cache_key_part(parts.next(), key)?;
-    let model_id = required_cache_key_part(parts.next(), key)?;
+    let tail = required_cache_key_part(parts.next(), key)?;
+    let (api_format, model_id) = parse_api_format_and_model(&tail, key)?;
     Ok(CacheKeyParts {
         token_id,
         api_format,
         model_id,
     })
 }
+
+fn parse_api_format_and_model(value: &str, key: &str) -> Result<(String, String), LlmProxyError> {
+    for format in CANONICAL_COLON_FORMATS {
+        let prefix = format!("{format}:");
+        if let Some(model_id) = value.strip_prefix(&prefix) {
+            return Ok(((*format).to_owned(), required_cache_key_part(Some(model_id), key)?));
+        }
+    }
+    let mut parts = value.splitn(2, ':');
+    let api_format = required_cache_key_part(parts.next(), key)?;
+    let model_id = required_cache_key_part(parts.next(), key)?;
+    Ok((api_format, model_id))
+}
+
+const CANONICAL_COLON_FORMATS: &[&str] = &[
+    "openai:chat",
+    "openai:cli",
+    "openai:compact",
+    "claude:chat",
+    "claude:cli",
+    "gemini:chat",
+    "gemini:cli",
+];
 
 fn required_cache_key_part(value: Option<&str>, key: &str) -> Result<String, LlmProxyError> {
     let part = value
@@ -222,10 +245,10 @@ mod tests {
 
     #[test]
     fn parse_cache_key_reads_affinity_segments() {
-        let parts = parse_cache_key("hook", "hook:llm_proxy:cache_affinity:token-1:openai_chat:model:demo").unwrap();
+        let parts = parse_cache_key("hook", "hook:llm_proxy:cache_affinity:token-1:openai:chat:model:demo").unwrap();
 
         assert_eq!(parts.token_id, "token-1");
-        assert_eq!(parts.api_format, "openai_chat");
+        assert_eq!(parts.api_format, "openai:chat");
         assert_eq!(parts.model_id, "model:demo");
     }
 
@@ -242,7 +265,7 @@ mod tests {
             provider_id: "provider-1".into(),
             endpoint_id: "endpoint-1".into(),
             key_id: "key-1".into(),
-            api_format: "openai_chat".into(),
+            api_format: "openai:chat".into(),
             model_id: "model-1".into(),
             created_at: 0,
             expire_at: 60,
@@ -251,7 +274,7 @@ mod tests {
         let target = ClearAffinityInput {
             token_id: "token-1",
             model_id: "model-1",
-            api_format: "openai_chat",
+            api_format: "openai:chat",
             endpoint_id: "endpoint-1",
         };
 

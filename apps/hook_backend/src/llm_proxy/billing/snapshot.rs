@@ -49,7 +49,7 @@ mod tests {
 
         assert_eq!(
             description,
-            "Model: gpt-5.5; Cost: 0.00270 USD; API endpoint: openai_chat; Token: free (sk-test)"
+            "Model: gpt-5.5; Cost: 0.00270 USD; API endpoint: openai:chat; Token: free (sk-test)"
         );
         assert!(!description.contains('{'));
         assert!(!description.contains("provider"));
@@ -100,7 +100,7 @@ mod tests {
             key_id: "key-1".into(),
             key_name_snapshot: "upstream-key".into(),
             key_preview_snapshot: "sk-upstream".into(),
-            client_api_format: "openai_chat".into(),
+            client_api_format: "openai:chat".into(),
             provider_api_format: "provider_chat".into(),
             needs_conversion: false,
             is_stream: false,

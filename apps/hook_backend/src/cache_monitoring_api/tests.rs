@@ -23,7 +23,7 @@ fn cache_item() -> CacheAffinityItem {
         provider_key_name: Some("primary".into()),
         model_id: "model-1".into(),
         model_name: Some("gpt-4.1".into()),
-        api_format: "openai_chat".into(),
+        api_format: "openai:chat".into(),
         ttl_seconds: 120,
         request_count: 4,
     }

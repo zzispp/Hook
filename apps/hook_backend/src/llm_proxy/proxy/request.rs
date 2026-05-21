@@ -228,7 +228,7 @@ mod tests {
     fn reasoning_effort_override_sets_openai_chat_field() {
         let mut body = json!({"model": "gpt-5.5"});
 
-        apply_reasoning_effort(&mut body, &candidate("openai_chat"), ApiFormat::OpenAiChat).unwrap();
+        apply_reasoning_effort(&mut body, &candidate("openai:chat"), ApiFormat::OpenAiChat).unwrap();
 
         assert_eq!(body["reasoning_effort"], "high");
     }
@@ -237,7 +237,7 @@ mod tests {
     fn reasoning_effort_override_sets_openai_responses_nested_field() {
         let mut body = json!({"model": "gpt-5.5"});
 
-        apply_reasoning_effort(&mut body, &candidate("openai_cli"), ApiFormat::OpenAiResponses).unwrap();
+        apply_reasoning_effort(&mut body, &candidate("openai:cli"), ApiFormat::OpenAiResponses).unwrap();
 
         assert_eq!(body["reasoning"]["effort"], "high");
     }
@@ -250,7 +250,7 @@ mod tests {
             "stream": true
         });
 
-        rewrite_upstream_body(&mut body, &candidate("openai_chat"), false, ApiFormat::OpenAiChat).unwrap();
+        rewrite_upstream_body(&mut body, &candidate("openai:chat"), false, ApiFormat::OpenAiChat).unwrap();
 
         assert_eq!(body["stream_options"]["include_usage"], true);
     }
@@ -274,7 +274,7 @@ mod tests {
                 key_id: "key-1".into(),
                 key_name_snapshot: "Key".into(),
                 key_preview_snapshot: "***test".into(),
-                client_api_format: "openai_chat".into(),
+                client_api_format: "openai:chat".into(),
                 provider_api_format: provider_api_format.into(),
                 needs_conversion: false,
                 is_stream: false,

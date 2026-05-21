@@ -1,6 +1,6 @@
 use serde_json::{Map, Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalUsage, StopReason};
+use crate::format_conversion::{FormatConversionError, GeminiToolStreamItem, InternalUsage, StopReason};
 
 pub const FORMAT: &str = "gemini";
 
@@ -55,13 +55,79 @@ pub fn content_chunk(text: &str, model: &str, finish_reason: Option<&StopReason>
     payload
 }
 
+pub fn terminal_chunk(model: &str, finish_reason: Option<&StopReason>, usage: Option<&InternalUsage>) -> Value {
+    let mut candidate = json!({ "index": 0 });
+    if let Some(reason) = finish_reason {
+        candidate["finishReason"] = Value::String(gemini_finish_reason(reason).to_owned());
+    }
+    let mut payload = json!({
+        "modelVersion": model,
+        "candidates": [candidate],
+    });
+    if let Some(usage_value) = usage_json(usage) {
+        payload["usageMetadata"] = usage_value;
+    }
+    payload
+}
+
+pub fn thought_chunk(text: &str, signature: Option<&str>, model: &str) -> Value {
+    let mut part = json!({
+        "text": text,
+        "thought": true,
+    });
+    if let Some(signature) = signature.filter(|value| !value.is_empty()) {
+        part["thoughtSignature"] = Value::String(signature.to_owned());
+    }
+    json!({
+        "modelVersion": model,
+        "candidates": [{
+            "index": 0,
+            "content": {
+                "role": "model",
+                "parts": [part],
+            },
+        }],
+    })
+}
+
+pub fn complete_function_call_chunk(tool: &GeminiToolStreamItem, model: &str) -> Value {
+    let mut function_call = json!({
+        "name": tool.name,
+        "args": parse_arguments(&tool.arguments),
+    });
+    if !tool.id.is_empty() {
+        function_call["id"] = Value::String(tool.id.clone());
+    }
+    json!({
+        "modelVersion": model,
+        "candidates": [{
+            "index": 0,
+            "content": {
+                "role": "model",
+                "parts": [{ "functionCall": function_call }],
+            },
+        }],
+    })
+}
+
 pub fn usage_from_gemini(value: Option<&Value>) -> Option<InternalUsage> {
     let object = value?.as_object()?;
+    let candidates = object.get("candidatesTokenCount").and_then(as_u32);
+    let thoughts = object.get("thoughtsTokenCount").and_then(as_u32);
+    let completion_tokens = match (candidates, thoughts) {
+        (Some(candidates), Some(thoughts)) => Some(candidates.saturating_add(thoughts)),
+        (Some(candidates), None) => Some(candidates),
+        (None, Some(thoughts)) => Some(thoughts),
+        (None, None) => None,
+    };
     Some(
         InternalUsage {
             prompt_tokens: object.get("promptTokenCount").and_then(as_u32),
-            completion_tokens: object.get("candidatesTokenCount").and_then(as_u32),
+            completion_tokens,
             total_tokens: object.get("totalTokenCount").and_then(as_u32),
+            cache_read_tokens: object.get("cachedContentTokenCount").and_then(as_u32),
+            cache_creation_tokens: None,
+            reasoning_tokens: thoughts,
         }
         .with_total(),
     )
@@ -131,16 +197,31 @@ fn gemini_finish_reason(reason: &StopReason) -> &'static str {
     match reason {
         StopReason::MaxTokens => "MAX_TOKENS",
         StopReason::ContentFiltered => "SAFETY",
-        StopReason::ToolUse => "MALFORMED_FUNCTION_CALL",
+        StopReason::ToolUse => "STOP",
         _ => "STOP",
     }
 }
 
 fn usage_json(usage: Option<&InternalUsage>) -> Option<Value> {
     let complete = usage.cloned()?.with_total();
-    Some(json!({
-        "promptTokenCount": complete.prompt_tokens,
-        "candidatesTokenCount": complete.completion_tokens,
-        "totalTokenCount": complete.total_tokens,
-    }))
+    let mut metadata = Map::new();
+    insert_optional_usage(&mut metadata, "promptTokenCount", complete.prompt_tokens);
+    insert_optional_usage(&mut metadata, "candidatesTokenCount", complete.completion_tokens);
+    insert_optional_usage(&mut metadata, "totalTokenCount", complete.total_tokens);
+    insert_optional_usage(&mut metadata, "cachedContentTokenCount", complete.cache_read_tokens);
+    insert_optional_usage(&mut metadata, "thoughtsTokenCount", complete.reasoning_tokens);
+    (!metadata.is_empty()).then_some(Value::Object(metadata))
+}
+
+fn insert_optional_usage(metadata: &mut Map<String, Value>, key: &str, value: Option<u32>) {
+    if let Some(value) = value {
+        metadata.insert(key.to_owned(), Value::Number(serde_json::Number::from(value)));
+    }
+}
+
+fn parse_arguments(arguments: &str) -> Value {
+    if arguments.is_empty() {
+        return json!({});
+    }
+    serde_json::from_str(arguments).unwrap_or_else(|_| json!({}))
 }

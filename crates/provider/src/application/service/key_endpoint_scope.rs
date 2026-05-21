@@ -44,8 +44,8 @@ mod tests {
 
     #[test]
     fn validate_api_formats_bound_accepts_endpoint_formats() {
-        let api_formats = vec!["openai_chat".to_owned(), "gemini_cli".to_owned()];
-        let endpoints = vec![endpoint("openai_chat"), endpoint("gemini_cli")];
+        let api_formats = vec!["openai:chat".to_owned(), "gemini:cli".to_owned()];
+        let endpoints = vec![endpoint("openai:chat"), endpoint("gemini:cli")];
 
         let result = validate_api_formats_bound(&api_formats, &endpoints);
 
@@ -54,12 +54,12 @@ mod tests {
 
     #[test]
     fn validate_api_formats_bound_rejects_unbound_formats() {
-        let api_formats = vec!["openai_chat".to_owned(), "claude_chat".to_owned()];
-        let endpoints = vec![endpoint("openai_chat")];
+        let api_formats = vec!["openai:chat".to_owned(), "claude:chat".to_owned()];
+        let endpoints = vec![endpoint("openai:chat")];
 
         let error = validate_api_formats_bound(&api_formats, &endpoints).unwrap_err();
 
-        assert_eq!(error.to_string(), "invalid input: api_formats must be bound to provider endpoints: claude_chat");
+        assert_eq!(error.to_string(), "invalid input: api_formats must be bound to provider endpoints: claude:chat");
     }
 
     fn endpoint(api_format: &str) -> ProviderEndpoint {

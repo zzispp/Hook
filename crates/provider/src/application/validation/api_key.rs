@@ -132,6 +132,19 @@ fn validate_api_formats(api_formats: &[String]) -> ProviderResult<()> {
     }
     for api_format in api_formats {
         validate_text("api_formats", api_format, MAX_API_FORMAT_LENGTH)?;
+        validate_canonical_chat_cli_format(api_format)?;
+    }
+    Ok(())
+}
+
+fn validate_canonical_chat_cli_format(value: &str) -> ProviderResult<()> {
+    if matches!(
+        value,
+        "openai_chat" | "openai_cli" | "openai_compact" | "claude_chat" | "claude_cli" | "gemini_chat" | "gemini_cli"
+    ) {
+        return Err(ProviderError::InvalidInput(format!(
+            "api_formats must use canonical family:kind format: {value}"
+        )));
     }
     Ok(())
 }
@@ -230,11 +243,24 @@ mod tests {
         validate_api_key_update(&input).unwrap();
     }
 
+    #[test]
+    fn validate_api_key_rejects_legacy_chat_cli_format() {
+        let mut input = api_key_create(false, None, None);
+        input.api_formats = vec!["openai_chat".to_owned()];
+
+        let error = validate_api_key(&input).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "invalid input: api_formats must use canonical family:kind format: openai_chat"
+        );
+    }
+
     fn api_key_create(enabled: bool, start: Option<&str>, end: Option<&str>) -> ProviderApiKeyCreate {
         ProviderApiKeyCreate {
             name: "key-a".to_owned(),
             api_key: "sk-test".to_owned(),
-            api_formats: vec!["openai_chat".to_owned()],
+            api_formats: vec!["openai:chat".to_owned()],
             allowed_model_ids: Vec::new(),
             note: None,
             internal_priority: None,

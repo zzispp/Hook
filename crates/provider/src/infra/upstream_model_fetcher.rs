@@ -36,12 +36,12 @@ impl UpstreamModelFetcher for ReqwestUpstreamModelFetcher {
 
 fn build_request(client: &ReqwestClient, endpoint: &ProviderEndpoint, api_key: &str) -> ProviderResult<Request> {
     let request = match endpoint.api_format.as_str() {
-        "openai_chat" | "openai_cli" | "openai_compact" => client.get(openai_models_url(&endpoint.base_url)?).bearer_auth(api_key),
-        "claude_chat" | "claude_messages" => client
+        "openai:chat" | "openai:cli" | "openai:compact" => client.get(openai_models_url(&endpoint.base_url)?).bearer_auth(api_key),
+        "claude:chat" => client
             .get(openai_models_url(&endpoint.base_url)?)
             .header("x-api-key", api_key)
             .header("anthropic-version", ANTHROPIC_VERSION),
-        "gemini_chat" | "gemini_cli" => client.get(gemini_models_url(&endpoint.base_url, api_key)?),
+        "gemini:chat" | "gemini:cli" => client.get(gemini_models_url(&endpoint.base_url, api_key)?),
         other => Err(ProviderError::InvalidInput(format!(
             "api_format does not support upstream model fetch: {other}"
         )))?,
@@ -93,7 +93,7 @@ mod tests {
             ]
         });
 
-        assert_eq!(extract_model_names(&value, "openai_chat"), vec!["gpt-5.4", "gpt-5.4-mini"]);
+        assert_eq!(extract_model_names(&value, "openai:chat"), vec!["gpt-5.4", "gpt-5.4-mini"]);
     }
 
     #[test]
@@ -105,6 +105,6 @@ mod tests {
             ]
         });
 
-        assert_eq!(extract_model_names(&value, "gemini_chat"), vec!["gemini-2.5-flash", "gemini-2.5-pro"]);
+        assert_eq!(extract_model_names(&value, "gemini:chat"), vec!["gemini-2.5-flash", "gemini-2.5-pro"]);
     }
 }

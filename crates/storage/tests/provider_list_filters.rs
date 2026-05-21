@@ -24,7 +24,7 @@ async fn provider_list_filters_by_status_search_format_and_model() {
         .list_providers(ProviderListRequest {
             is_active: Some(true),
             search: Some("alpha".into()),
-            api_format: Some("openai_chat".into()),
+            api_format: Some("openai:chat".into()),
             model_id: Some("gpt-5".into()),
             limit: 100,
             ..Default::default()
@@ -64,9 +64,9 @@ fn provider_record(id: &str, name: &str, is_active: bool, priority: i32) -> prov
 
 fn endpoint_records() -> Vec<provider_endpoints::Model> {
     vec![
-        endpoint_record("endpoint-alpha", "provider-alpha", "openai_chat"),
-        endpoint_record("endpoint-beta", "provider-beta", "gemini_chat"),
-        endpoint_record("endpoint-disabled", "provider-disabled", "openai_chat"),
+        endpoint_record("endpoint-alpha", "provider-alpha", "openai:chat"),
+        endpoint_record("endpoint-beta", "provider-beta", "gemini:chat"),
+        endpoint_record("endpoint-disabled", "provider-disabled", "openai:chat"),
     ]
 }
 

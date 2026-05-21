@@ -10,7 +10,7 @@ export function defaultModelTestHeaders() {
   return JSON.stringify({}, null, JSON_INDENT_SIZE);
 }
 
-export function defaultModelTestBody(binding: ProviderModelBinding, apiFormat = 'openai_chat') {
+export function defaultModelTestBody(binding: ProviderModelBinding, apiFormat = 'openai:chat') {
   return JSON.stringify(testBody(modelTestName(binding), apiFormat), null, JSON_INDENT_SIZE);
 }
 
@@ -45,14 +45,14 @@ function modelTestName(binding: ProviderModelBinding) {
 }
 
 function testBody(model: string, apiFormat: string) {
-  if (apiFormat.startsWith('gemini_')) {
+  if (apiFormat.startsWith('gemini:')) {
     return geminiBody(model);
   }
-  if (apiFormat.startsWith('claude_')) {
+  if (apiFormat.startsWith('claude:')) {
     return claudeBody(model);
   }
-  if (apiFormat === 'openai_cli' || apiFormat === 'openai_compact') {
-    return openAiResponsesBody(model, apiFormat !== 'openai_compact');
+  if (apiFormat === 'openai:cli' || apiFormat === 'openai:compact') {
+    return openAiResponsesBody(model, apiFormat !== 'openai:compact');
   }
   if (apiFormat === 'openai_image') {
     return openAiImageBody(model);

@@ -4,23 +4,6 @@ use crate::format_conversion::{FormatConversionError, InternalUsage, StopReason}
 
 pub const FORMAT: &str = "claude";
 
-pub fn content_text(value: Option<&Value>, path: &str) -> Result<String, FormatConversionError> {
-    match value {
-        Some(Value::String(text)) => Ok(text.to_owned()),
-        Some(Value::Array(blocks)) => text_blocks(blocks, path),
-        Some(_) => Err(FormatConversionError::invalid_payload(FORMAT, path)),
-        None => Ok(String::new()),
-    }
-}
-
-pub fn response_content(text: &str) -> Vec<Value> {
-    if text.is_empty() {
-        Vec::new()
-    } else {
-        vec![json!({ "type": "text", "text": text })]
-    }
-}
-
 pub fn usage_from_claude(value: Option<&Value>) -> Option<InternalUsage> {
     let object = value?.as_object()?;
     Some(
@@ -28,6 +11,9 @@ pub fn usage_from_claude(value: Option<&Value>) -> Option<InternalUsage> {
             prompt_tokens: object.get("input_tokens").and_then(as_u32),
             completion_tokens: object.get("output_tokens").and_then(as_u32),
             total_tokens: None,
+            cache_read_tokens: object.get("cache_read_input_tokens").and_then(as_u32),
+            cache_creation_tokens: object.get("cache_creation_input_tokens").and_then(as_u32),
+            reasoning_tokens: None,
         }
         .with_total(),
     )
@@ -38,6 +24,15 @@ pub fn claude_usage(usage: &InternalUsage) -> Value {
     json!({
         "input_tokens": complete.prompt_tokens,
         "output_tokens": complete.completion_tokens,
+        "cache_read_input_tokens": complete.cache_read_tokens,
+        "cache_creation_input_tokens": complete.cache_creation_tokens,
+    })
+}
+
+pub fn empty_claude_usage() -> Value {
+    json!({
+        "input_tokens": 0,
+        "output_tokens": 0,
     })
 }
 
@@ -102,22 +97,6 @@ pub fn insert_optional_integer(map: &mut Map<String, Value>, key: &str, value: O
     if let Some(number) = value {
         map.insert(key.to_owned(), Value::Number(serde_json::Number::from(number)));
     }
-}
-
-fn text_blocks(blocks: &[Value], path: &str) -> Result<String, FormatConversionError> {
-    let mut text = String::new();
-    for block in blocks {
-        let object = required_object(Some(block), path)?;
-        if object.get("type").and_then(Value::as_str) != Some("text") {
-            return Err(FormatConversionError::unsupported_content(FORMAT, format!("{path}: non-text block")));
-        }
-        let value = object
-            .get("text")
-            .and_then(Value::as_str)
-            .ok_or_else(|| FormatConversionError::invalid_payload(FORMAT, format!("{path}.text")))?;
-        text.push_str(value);
-    }
-    Ok(text)
 }
 
 fn as_u32(value: &Value) -> Option<u32> {

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Record failing replay evidence,DONE,"Real curl fails at $.tools[7].name and DB records request_conversion_error","test -s /tmp/hook-replay-019e4826-response-new.sse",2026-05-21T10:34:54+08:00,0,"HTTP 400 invalid payload for openai_responses: $.tools[7].name"
+2,Implement hosted tool conversion fix,DONE,"OpenAI Responses non-function hosted tools no longer require name and web_search maps to Claude built-in tool","perl -e 'alarm 60; exec @ARGV' cargo test -p proxy format_conversion_request_openai_responses_hosted_web_search_to_claude",2026-05-21T10:42:17+08:00,0,
+3,Run targeted Rust verification,DONE,"Proxy tests pass under 60s timeout","perl -e 'alarm 60; exec @ARGV' cargo test -p proxy",2026-05-21T10:42:49+08:00,0,
+4,Replay real curl successfully,DONE,"DB replay with provided key returns HTTP 2xx stream and records success for openai:cli -> claude:chat","curl replay against http://127.0.0.1:5555/v1/responses",2026-05-21T10:42:48+08:00,0,"HTTP 200; request_id 019e4869-f6af-7950-9dc9-cb380ca54ef0"

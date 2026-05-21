@@ -33,12 +33,12 @@ import {
 } from './provider-model-test-utils';
 
 const TESTABLE_FORMATS = [
-  'openai_chat',
-  'openai_cli',
-  'openai_compact',
+  'openai:chat',
+  'openai:cli',
+  'openai:compact',
   'openai_image',
-  'claude_chat',
-  'gemini_cli',
+  'claude:chat',
+  'gemini:cli',
 ];
 
 type Props = {

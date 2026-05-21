@@ -1,6 +1,9 @@
 mod common;
+mod content_compaction;
 mod request;
 mod request_codec;
+mod request_parts;
+mod request_tool_calls;
 mod request_tools;
 mod response;
 mod stream;
@@ -8,7 +11,7 @@ mod stream;
 use serde_json::Value;
 
 use crate::format_conversion::{
-    FormatConversionError, InternalRequest, InternalResponse, InternalStreamEvent, StreamConversionState, normalizer::FormatNormalizer,
+    FormatConversionError, InternalError, InternalRequest, InternalResponse, InternalStreamEvent, StreamConversionState, normalizer::FormatNormalizer,
 };
 
 #[derive(Default)]
@@ -29,6 +32,14 @@ impl FormatNormalizer for GeminiNormalizer {
 
     fn response_from_internal(&self, internal: &InternalResponse) -> Result<Value, FormatConversionError> {
         response::from_internal(internal)
+    }
+
+    fn error_to_internal(&self, error: &Value, status: Option<u16>) -> Result<InternalError, FormatConversionError> {
+        Ok(crate::format_conversion::error_codec::to_internal(error, status))
+    }
+
+    fn error_from_internal(&self, internal: &InternalError) -> Result<Value, FormatConversionError> {
+        Ok(crate::format_conversion::error_codec::gemini_error(internal))
     }
 
     fn stream_to_internal(&self, chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {

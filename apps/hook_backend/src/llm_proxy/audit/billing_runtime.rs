@@ -193,7 +193,7 @@ fn billing_status(status: &str) -> &'static str {
 }
 
 fn request_task_type(input: &AttemptRecordInput<'_>) -> String {
-    if input.candidate.trace.client_api_format == "openai_cli" {
+    if input.candidate.trace.client_api_format == "openai:cli" {
         return "cli".into();
     }
     "chat".into()

@@ -140,7 +140,7 @@ mod tests {
                 usage_semantic: Some("responses"),
                 ..Default::default()
             },
-            "openai_cli",
+            "openai:cli",
         );
 
         assert_eq!(usage.prompt_tokens, Some(471));
@@ -160,7 +160,7 @@ mod tests {
                 usage_semantic: Some("anthropic"),
                 ..Default::default()
             },
-            "claude_chat",
+            "claude:chat",
         );
 
         assert_eq!(usage.prompt_tokens, Some(471));
@@ -178,7 +178,7 @@ mod tests {
                 usage_semantic: Some("gemini"),
                 ..Default::default()
             },
-            "gemini_chat",
+            "gemini:chat",
         );
 
         assert_eq!(usage.prompt_tokens, Some(80));

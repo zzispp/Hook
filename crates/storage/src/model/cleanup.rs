@@ -223,7 +223,7 @@ mod tests {
             id: id.to_owned(),
             provider_id: "provider-a".to_owned(),
             name: "key-a".to_owned(),
-            api_formats: r#"["openai_chat"]"#.to_owned(),
+            api_formats: r#"["openai:chat"]"#.to_owned(),
             allowed_model_ids: allowed_model_ids.to_owned(),
             encrypted_api_key: "encrypted".to_owned(),
             note: None,

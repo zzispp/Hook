@@ -5,13 +5,13 @@ use super::*;
 #[test]
 fn fixed_parts_uses_selected_endpoint_as_client_format_and_routes_to_compatible_openai_key() {
     let snapshot = snapshot(provider(vec![
-        endpoint("endpoint-gemini", "gemini_cli"),
-        endpoint("endpoint-openai", "openai_chat"),
+        endpoint("endpoint-gemini", "gemini:cli"),
+        endpoint("endpoint-openai", "openai:chat"),
     ]));
 
     let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-gemini", true).unwrap();
 
-    assert_eq!(parts.client_api_format, "gemini_cli");
+    assert_eq!(parts.client_api_format, "gemini:cli");
     assert_eq!(parts.endpoints.len(), 1);
     assert_eq!(parts.endpoints[0].id, "endpoint-openai");
     assert_eq!(parts.keys.len(), 1);
@@ -22,15 +22,15 @@ fn fixed_parts_uses_selected_endpoint_as_client_format_and_routes_to_compatible_
 #[test]
 fn fixed_parts_excludes_compact_endpoint_from_stream_responses_test_route() {
     let snapshot = snapshot(provider_with_keys_and_endpoints(
-        vec![endpoint("endpoint-responses", "openai_cli"), endpoint("endpoint-compact", "openai_compact")],
-        vec![key("key-responses", vec!["openai_cli"]), key("key-compact", vec!["openai_compact"])],
+        vec![endpoint("endpoint-responses", "openai:cli"), endpoint("endpoint-compact", "openai:compact")],
+        vec![key("key-responses", vec!["openai:cli"]), key("key-compact", vec!["openai:compact"])],
     ));
 
     let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-responses", true).unwrap();
 
     assert!(parts.effective_stream);
     assert_eq!(parts.endpoints.len(), 1);
-    assert_eq!(parts.endpoints[0].api_format, "openai_cli");
+    assert_eq!(parts.endpoints[0].api_format, "openai:cli");
     assert_eq!(parts.keys.len(), 1);
     assert_eq!(parts.keys[0].id, "key-responses");
 }
@@ -87,7 +87,7 @@ fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
 }
 
 fn provider(endpoints: Vec<CachedEndpoint>) -> CachedProvider {
-    provider_with_keys_and_endpoints(endpoints, vec![key("key-openai", vec!["openai_chat"])])
+    provider_with_keys_and_endpoints(endpoints, vec![key("key-openai", vec!["openai:chat"])])
 }
 
 fn provider_with_keys_and_endpoints(endpoints: Vec<CachedEndpoint>, keys: Vec<CachedProviderKey>) -> CachedProvider {

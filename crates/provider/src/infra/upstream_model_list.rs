@@ -54,7 +54,7 @@ fn normalize_model_name(value: &str, api_format: &str) -> Option<String> {
         return None;
     }
     let normalized = match api_format {
-        "gemini_chat" | "gemini_cli" => trimmed.rsplit('/').next().unwrap_or(trimmed),
+        "gemini:chat" | "gemini:cli" => trimmed.rsplit('/').next().unwrap_or(trimmed),
         _ => trimmed,
     };
     Some(normalized.to_owned())

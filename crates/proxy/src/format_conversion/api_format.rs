@@ -21,9 +21,9 @@ impl ApiFormat {
     pub fn parse(value: &str) -> Result<Self, FormatConversionError> {
         let normalized = normalize_format_id(value);
         match normalized.as_str() {
-            "openai" | "openaichat" => Ok(Self::OpenAiChat),
+            "openai:chat" => Ok(Self::OpenAiChat),
             "openaicompletion" | "openaicompletions" | "completion" | "completions" => Ok(Self::OpenAiCompletion),
-            "openairesponses" | "openaicli" | "openaicompact" => Ok(Self::OpenAiResponses),
+            "openai:cli" | "openai:compact" => Ok(Self::OpenAiResponses),
             "openaiimage"
             | "openaiimages"
             | "openaiimagegeneration"
@@ -47,10 +47,10 @@ impl ApiFormat {
             | "audio" => Ok(Self::OpenAiAudio),
             "openaimoderation" | "openaimoderations" | "moderation" | "moderations" => Ok(Self::OpenAiModeration),
             "openairealtime" | "realtime" => Ok(Self::OpenAiRealtime),
-            "gemini" | "geminichat" | "geminicli" => Ok(Self::GeminiChat),
+            "gemini:chat" | "gemini:cli" => Ok(Self::GeminiChat),
             "geminiembedding" | "geminiembeddings" | "geminiembedcontent" | "geminibatchembedcontents" => Ok(Self::GeminiEmbedding),
             "geminivideo" | "veo" => Ok(Self::GeminiVideo),
-            "claude" | "claudechat" | "claudecli" | "claudemessages" => Ok(Self::ClaudeChat),
+            "claude:chat" | "claude:cli" => Ok(Self::ClaudeChat),
             "rerank" | "jinarerank" => Ok(Self::Rerank),
             _ => Err(FormatConversionError::InvalidFormat(value.to_owned())),
         }
@@ -62,10 +62,5 @@ impl ApiFormat {
 }
 
 fn normalize_format_id(value: &str) -> String {
-    value
-        .trim()
-        .to_ascii_lowercase()
-        .chars()
-        .filter(|ch| !matches!(ch, ':' | '_' | '-' | ' '))
-        .collect()
+    value.trim().to_ascii_lowercase().to_owned()
 }

@@ -37,6 +37,7 @@ pub fn sanitize_endpoint_update(input: ProviderEndpointUpdate) -> ProviderEndpoi
 
 pub fn validate_endpoint(input: &ProviderEndpointCreate) -> ProviderResult<()> {
     validate_text("api_format", &input.api_format, MAX_API_FORMAT_LENGTH)?;
+    validate_canonical_chat_cli_format(&input.api_format)?;
     validate_text("base_url", &input.base_url, MAX_URL_LENGTH)?;
     validate_base_url(&input.base_url)?;
     validate_custom_path(input.custom_path.as_deref())
@@ -48,6 +49,7 @@ pub fn validate_endpoint_update(input: &ProviderEndpointUpdate) -> ProviderResul
     }
     if let Some(api_format) = input.api_format.as_deref() {
         validate_text("api_format", api_format, MAX_API_FORMAT_LENGTH)?;
+        validate_canonical_chat_cli_format(api_format)?;
     }
     if let Some(base_url) = input.base_url.as_deref() {
         validate_text("base_url", base_url, MAX_URL_LENGTH)?;
@@ -55,6 +57,18 @@ pub fn validate_endpoint_update(input: &ProviderEndpointUpdate) -> ProviderResul
     }
     if let PatchField::Value(custom_path) = &input.custom_path {
         validate_custom_path(Some(custom_path))?;
+    }
+    Ok(())
+}
+
+fn validate_canonical_chat_cli_format(value: &str) -> ProviderResult<()> {
+    if matches!(
+        value,
+        "openai_chat" | "openai_cli" | "openai_compact" | "claude_chat" | "claude_cli" | "gemini_chat" | "gemini_cli"
+    ) {
+        return Err(ProviderError::InvalidInput(format!(
+            "api_format must use canonical family:kind format: {value}"
+        )));
     }
     Ok(())
 }
@@ -130,7 +144,7 @@ mod tests {
     #[test]
     fn sanitize_endpoint_removes_base_url_trailing_slashes() {
         let input = ProviderEndpointCreate {
-            api_format: " OpenAI_CHAT ".to_owned(),
+            api_format: " OpenAI:CHAT ".to_owned(),
             base_url: " https://api.example.com/// ".to_owned(),
             custom_path: None,
             max_retries: None,
@@ -142,8 +156,24 @@ mod tests {
 
         let output = sanitize_endpoint(input);
 
-        assert_eq!(output.api_format, "openai_chat");
+        assert_eq!(output.api_format, "openai:chat");
         assert_eq!(output.base_url, "https://api.example.com");
+    }
+
+    #[test]
+    fn validate_endpoint_rejects_legacy_chat_cli_format() {
+        let input = endpoint_create("https://api.example.com", None);
+        let input = ProviderEndpointCreate {
+            api_format: "openai_chat".to_owned(),
+            ..input
+        };
+
+        let error = validate_endpoint(&input).unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "invalid input: api_format must use canonical family:kind format: openai_chat"
+        );
     }
 
     #[test]
@@ -213,7 +243,7 @@ mod tests {
 
     fn endpoint_create(base_url: &str, custom_path: Option<&str>) -> ProviderEndpointCreate {
         ProviderEndpointCreate {
-            api_format: "openai_chat".to_owned(),
+            api_format: "openai:chat".to_owned(),
             base_url: base_url.to_owned(),
             custom_path: custom_path.map(str::to_owned),
             max_retries: None,

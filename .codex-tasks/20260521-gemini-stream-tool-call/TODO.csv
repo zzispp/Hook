@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Compare Aether stream tool-call conversion,DONE,Aether behavior recorded,test -f .codex-tasks/20260521-gemini-stream-tool-call/raw/aether-search.txt,2026-05-21T14:52:00+08:00,0,Aether maps Gemini internal tool_use finishReason to STOP
+2,Patch Hook conversion,DONE,Only non-aligned conversion changed,cargo fmt --check,2026-05-21T14:56:00+08:00,0,StopReason::ToolUse now maps to Gemini STOP
+3,Add regression test,DONE,Malformed/complete functionCall stream behavior covered,perl -e 'alarm 60; exec @ARGV' cargo test -p proxy format_conversion_stream,2026-05-21T14:56:00+08:00,0,Added claude_tool_use_stream_to_gemini_finishes_with_stop
+4,Run focused validation,DONE,Focused tests pass,perl -e 'alarm 60; exec @ARGV' cargo test -p proxy,2026-05-21T14:56:00+08:00,0,cargo fmt --check and cargo test -p proxy passed

@@ -1,4 +1,4 @@
-use proxy::format_conversion::{ApiFormat, FormatConversionRegistry, StreamChunkConversion, StreamConversionState};
+use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
 use serde_json::json;
 
 #[test]
@@ -61,6 +61,56 @@ fn format_conversion_request_openai_to_responses_and_back() {
 }
 
 #[test]
+fn format_conversion_request_openai_responses_hosted_web_search_to_claude() {
+    let registry = FormatConversionRegistry::default();
+    let input = json!({
+        "model": "gpt-5.5",
+        "input": [{ "role": "user", "content": [{ "type": "input_text", "text": "search it" }] }],
+        "stream": true,
+        "tools": [
+            { "type": "function", "name": "run", "description": "Run a command", "parameters": { "type": "object" } },
+            { "type": "web_search", "external_web_access": false }
+        ]
+    });
+
+    let claude = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap();
+
+    assert_eq!(claude["tools"][0]["name"], "run");
+    assert_eq!(claude["tools"][1]["type"], "web_search_20250305");
+    assert_eq!(claude["tools"][1]["name"], "web_search");
+    assert_eq!(claude["tools"][1]["max_uses"], 5);
+}
+
+#[test]
+fn format_conversion_request_openai_responses_groups_parallel_tool_turns_for_claude() {
+    let registry = FormatConversionRegistry::default();
+    let input = json!({
+        "model": "gpt-5.5",
+        "input": [
+            { "role": "user", "content": [{ "type": "input_text", "text": "find sdk" }] },
+            { "type": "function_call", "call_id": "call_1", "name": "search", "arguments": "{\"q\":\"ethers\"}" },
+            { "type": "function_call", "call_id": "call_2", "name": "search", "arguments": "{\"q\":\"wagmi\"}" },
+            { "type": "function_call_output", "call_id": "call_1", "output": "ethers result" },
+            { "type": "function_call_output", "call_id": "call_2", "output": "wagmi result" }
+        ],
+        "tools": [{ "type": "function", "name": "search", "parameters": { "type": "object" } }]
+    });
+
+    let claude = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap();
+
+    assert_eq!(claude["messages"][1]["role"], "assistant");
+    assert_eq!(claude["messages"][1]["content"].as_array().unwrap().len(), 2);
+    assert_eq!(claude["messages"][1]["content"][0]["type"], "tool_use");
+    assert_eq!(claude["messages"][1]["content"][1]["id"], "call_2");
+    assert_eq!(claude["messages"][2]["role"], "user");
+    assert_eq!(claude["messages"][2]["content"].as_array().unwrap().len(), 2);
+    assert_eq!(claude["messages"][2]["content"][0]["type"], "tool_result");
+    assert_eq!(claude["messages"][2]["content"][0]["content"], "ethers result");
+    assert_eq!(claude["messages"][2]["content"][1]["tool_use_id"], "call_2");
+    assert_eq!(claude["messages"][2]["content"][1]["content"], "wagmi result");
+}
+
+#[test]
 fn format_conversion_request_gemini_and_claude_to_openai() {
     let registry = FormatConversionRegistry::default();
     let gemini = json!({
@@ -120,178 +170,6 @@ fn format_conversion_response_maps_text_finish_and_usage() {
 }
 
 #[test]
-fn format_conversion_stream_maps_delta_and_done() {
-    let registry = FormatConversionRegistry::default();
-    let openai = vec![
-        json!({
-            "id": "chatcmpl_1",
-            "model": "gpt-4o-mini",
-            "object": "chat.completion.chunk",
-            "choices": [{ "index": 0, "delta": { "role": "assistant", "content": "He" }, "finish_reason": null }]
-        }),
-        json!({
-            "id": "chatcmpl_1",
-            "model": "gpt-4o-mini",
-            "object": "chat.completion.chunk",
-            "choices": [{ "index": 0, "delta": { "content": "llo" }, "finish_reason": "stop" }]
-        }),
-    ];
-
-    let claude = registry.convert_stream(&openai, ApiFormat::OpenAiChat, ApiFormat::ClaudeChat).unwrap();
-    assert_eq!(claude[0]["type"], "message_start");
-    assert_eq!(claude[2]["delta"]["text"], "He");
-    assert_eq!(claude[3]["delta"]["text"], "llo");
-    assert_eq!(claude[5]["delta"]["stop_reason"], "end_turn");
-
-    let gemini = registry.convert_stream(&claude, ApiFormat::ClaudeChat, ApiFormat::GeminiChat).unwrap();
-    assert_eq!(gemini[0]["candidates"][0]["content"]["parts"][0]["text"], "He");
-    assert_eq!(gemini[1]["candidates"][0]["content"]["parts"][0]["text"], "llo");
-    assert_eq!(gemini[2]["candidates"][0]["finishReason"], "STOP");
-}
-
-#[test]
-fn format_conversion_stream_openai_usage_only_chunk_completes_responses_usage() {
-    let registry = FormatConversionRegistry::default();
-    let openai = vec![
-        json!({
-            "id": "chatcmpl_1",
-            "model": "gpt-5.5",
-            "object": "chat.completion.chunk",
-            "choices": [{ "index": 0, "delta": { "role": "assistant", "content": "Hi" }, "finish_reason": null }]
-        }),
-        json!({
-            "id": "chatcmpl_1",
-            "model": "gpt-5.5",
-            "object": "chat.completion.chunk",
-            "choices": [{ "index": 0, "delta": {}, "finish_reason": "stop" }]
-        }),
-        json!({
-            "id": "chatcmpl_1",
-            "model": "gpt-5.5",
-            "object": "chat.completion.chunk",
-            "choices": [],
-            "usage": { "prompt_tokens": 11, "completion_tokens": 4, "total_tokens": 15 }
-        }),
-    ];
-
-    let responses = registry.convert_stream(&openai, ApiFormat::OpenAiChat, ApiFormat::OpenAiResponses).unwrap();
-
-    assert_eq!(responses[0]["type"], "response.created");
-    assert_eq!(responses[1]["delta"], "Hi");
-    assert_eq!(responses[2]["type"], "response.completed");
-    assert_eq!(responses[2]["response"]["usage"]["input_tokens"], 11);
-    assert_eq!(responses[2]["response"]["usage"]["output_tokens"], 4);
-    assert_eq!(responses[2]["response"]["usage"]["total_tokens"], 15);
-}
-
-#[test]
-fn format_conversion_stream_openai_finish_waits_for_usage_only_incremental_chunk() {
-    let registry = FormatConversionRegistry::default();
-    let mut state = StreamConversionState::default();
-    let finish = json!({
-        "id": "chatcmpl_1",
-        "model": "gpt-5.5",
-        "object": "chat.completion.chunk",
-        "choices": [{ "index": 0, "delta": {}, "finish_reason": "stop" }]
-    });
-    let usage = json!({
-        "id": "chatcmpl_1",
-        "model": "gpt-5.5",
-        "object": "chat.completion.chunk",
-        "choices": [],
-        "usage": { "prompt_tokens": 9, "completion_tokens": 3, "total_tokens": 12 }
-    });
-
-    let first = registry
-        .convert_stream_chunk(StreamChunkConversion {
-            chunk: &finish,
-            source: ApiFormat::OpenAiChat,
-            target: ApiFormat::ClaudeChat,
-            state: &mut state,
-        })
-        .unwrap();
-    let second = registry
-        .convert_stream_chunk(StreamChunkConversion {
-            chunk: &usage,
-            source: ApiFormat::OpenAiChat,
-            target: ApiFormat::ClaudeChat,
-            state: &mut state,
-        })
-        .unwrap();
-
-    assert!(first.is_empty());
-    assert_eq!(second[0]["type"], "content_block_stop");
-    assert_eq!(second[1]["usage"]["input_tokens"], 9);
-    assert_eq!(second[1]["usage"]["output_tokens"], 3);
-}
-
-#[test]
-fn format_conversion_stream_flushes_openai_done_when_usage_chunk_absent() {
-    let registry = FormatConversionRegistry::default();
-    let mut state = StreamConversionState::default();
-    let finish = json!({
-        "id": "chatcmpl_1",
-        "model": "gpt-5.5",
-        "object": "chat.completion.chunk",
-        "choices": [{ "index": 0, "delta": {}, "finish_reason": "stop" }]
-    });
-
-    let first = registry
-        .convert_stream_chunk(StreamChunkConversion {
-            chunk: &finish,
-            source: ApiFormat::OpenAiChat,
-            target: ApiFormat::OpenAiResponses,
-            state: &mut state,
-        })
-        .unwrap();
-    let flushed = registry.flush_stream(ApiFormat::OpenAiChat, ApiFormat::OpenAiResponses, &mut state).unwrap();
-
-    assert!(first.is_empty());
-    assert_eq!(flushed[0]["type"], "response.completed");
-    assert!(flushed[0]["response"].get("usage").is_none());
-}
-
-#[test]
-fn format_conversion_stream_chunk_matches_batch_for_cumulative_gemini_text() {
-    let registry = FormatConversionRegistry::default();
-    let gemini = vec![
-        json!({
-            "modelVersion": "gemini-1.5-flash",
-            "candidates": [{ "content": { "parts": [{ "text": "He" }] } }]
-        }),
-        json!({
-            "modelVersion": "gemini-1.5-flash",
-            "candidates": [{ "content": { "parts": [{ "text": "Hello" }] } }]
-        }),
-        json!({
-            "modelVersion": "gemini-1.5-flash",
-            "candidates": [{ "content": { "parts": [{ "text": "Hello" }] }, "finishReason": "STOP" }],
-            "usageMetadata": { "promptTokenCount": 2, "candidatesTokenCount": 1, "totalTokenCount": 3 }
-        }),
-    ];
-
-    let batch = registry.convert_stream(&gemini, ApiFormat::GeminiChat, ApiFormat::OpenAiChat).unwrap();
-    let mut state = StreamConversionState::default();
-    let mut incremental = Vec::new();
-    for chunk in &gemini {
-        incremental.extend(
-            registry
-                .convert_stream_chunk(StreamChunkConversion {
-                    chunk,
-                    source: ApiFormat::GeminiChat,
-                    target: ApiFormat::OpenAiChat,
-                    state: &mut state,
-                })
-                .unwrap(),
-        );
-    }
-
-    assert_eq!(incremental, batch);
-    assert_eq!(incremental[1]["choices"][0]["delta"]["content"], "He");
-    assert_eq!(incremental[2]["choices"][0]["delta"]["content"], "llo");
-}
-
-#[test]
 fn format_conversion_preserves_tools_results_and_multimodal_blocks() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
@@ -334,7 +212,7 @@ fn format_conversion_preserves_tools_results_and_multimodal_blocks() {
     assert_eq!(gemini["toolConfig"]["functionCallingConfig"]["allowedFunctionNames"][0], "lookup");
     assert_eq!(gemini["contents"][0]["parts"][1]["inlineData"]["mimeType"], "image/png");
     assert_eq!(gemini["contents"][1]["parts"][0]["functionCall"]["args"]["city"], "杭州");
-    assert_eq!(gemini["contents"][2]["parts"][0]["functionResponse"]["response"]["temp"], 21);
+    assert_eq!(gemini["contents"][2]["parts"][0]["functionResponse"]["response"]["result"]["temp"], 21);
 
     let claude = registry.convert_request(&input, ApiFormat::OpenAiChat, ApiFormat::ClaudeChat).unwrap();
     assert_eq!(claude["tools"][0]["name"], "lookup");
@@ -342,4 +220,76 @@ fn format_conversion_preserves_tools_results_and_multimodal_blocks() {
     assert_eq!(claude["messages"][0]["content"][1]["source"]["media_type"], "image/png");
     assert_eq!(claude["messages"][1]["content"][0]["type"], "tool_use");
     assert_eq!(claude["messages"][2]["content"][0]["type"], "tool_result");
+    assert_eq!(claude["messages"][2]["content"][0]["content"]["temp"], 21);
+}
+
+#[test]
+fn api_format_parse_requires_canonical_chat_cli_ids() {
+    assert_eq!(ApiFormat::parse("openai:chat").unwrap(), ApiFormat::OpenAiChat);
+    assert_eq!(ApiFormat::parse("openai:cli").unwrap(), ApiFormat::OpenAiResponses);
+    assert_eq!(ApiFormat::parse("claude:cli").unwrap(), ApiFormat::ClaudeChat);
+    assert!(ApiFormat::parse("openai_chat").is_err());
+}
+
+#[test]
+fn responses_instructions_and_developer_messages_round_trip_to_chat() {
+    let registry = FormatConversionRegistry::default();
+    let input = json!({
+        "model": "gpt-5.5",
+        "instructions": "system rules",
+        "input": [
+            { "type": "message", "role": "developer", "content": [{ "type": "input_text", "text": "dev rules" }] },
+            { "type": "message", "role": "user", "content": [{ "type": "input_text", "text": "hi" }] }
+        ],
+        "stream": true
+    });
+
+    let chat = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::OpenAiChat).unwrap();
+    assert_eq!(chat["messages"][0]["role"], "system");
+    assert_eq!(chat["messages"][0]["content"], "system rules");
+    assert_eq!(chat["messages"][1]["role"], "developer");
+    assert_eq!(chat["messages"][1]["content"], "dev rules");
+
+    let responses = registry.convert_request(&chat, ApiFormat::OpenAiChat, ApiFormat::OpenAiResponses).unwrap();
+    assert_eq!(responses["instructions"], "system rules\n\ndev rules");
+    assert_eq!(responses["input"][0]["role"], "user");
+}
+
+#[test]
+fn response_conversion_preserves_thinking_tool_calls_and_cache_usage() {
+    let registry = FormatConversionRegistry::default();
+    let openai = json!({
+        "id": "chatcmpl_1",
+        "model": "gpt-5.5",
+        "choices": [{
+            "message": {
+                "role": "assistant",
+                "reasoning_content": "think",
+                "content": "answer",
+                "tool_calls": [{
+                    "id": "call_1",
+                    "type": "function",
+                    "function": { "name": "lookup", "arguments": "{\"q\":\"x\"}" }
+                }]
+            },
+            "finish_reason": "tool_calls"
+        }],
+        "usage": {
+            "prompt_tokens": 10,
+            "completion_tokens": 5,
+            "prompt_tokens_details": { "cached_tokens": 7, "cache_creation_tokens": 3 },
+            "completion_tokens_details": { "reasoning_tokens": 2 }
+        }
+    });
+
+    let claude = registry.convert_response(&openai, ApiFormat::OpenAiChat, ApiFormat::ClaudeChat).unwrap();
+    assert_eq!(claude["content"][0]["type"], "thinking");
+    assert_eq!(claude["content"][1]["text"], "answer");
+    assert_eq!(claude["content"][2]["type"], "tool_use");
+    assert_eq!(claude["usage"]["cache_read_input_tokens"], 7);
+    assert_eq!(claude["usage"]["cache_creation_input_tokens"], 3);
+
+    let responses = registry.convert_response(&claude, ApiFormat::ClaudeChat, ApiFormat::OpenAiResponses).unwrap();
+    assert_eq!(responses["output_text"], "answer");
+    assert_eq!(responses["usage"]["input_tokens_details"]["cached_tokens"], 7);
 }

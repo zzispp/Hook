@@ -6,7 +6,7 @@ import {
   bodyRulesToEditable,
 } from './provider-endpoint-rule-types';
 
-export const OPENAI_COMPACT_API_FORMAT = 'openai_compact';
+export const OPENAI_COMPACT_API_FORMAT = 'openai:compact';
 
 const OPENAI_COMPACT_DEFAULT_BODY_RULES: BodyRule[] = [
   {

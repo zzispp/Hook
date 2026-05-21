@@ -106,12 +106,12 @@ mod tests {
     #[test]
     fn route_option_inputs_only_pairs_keys_with_supported_endpoint_formats() {
         let endpoints = vec![
-            cached_endpoint("endpoint-openai", "openai_chat"),
-            cached_endpoint("endpoint-gemini", "gemini_chat"),
+            cached_endpoint("endpoint-openai", "openai:chat"),
+            cached_endpoint("endpoint-gemini", "gemini:chat"),
         ];
         let keys = vec![
-            cached_key("key-openai", vec!["openai_chat"], Vec::new()),
-            cached_key("key-gemini", vec!["gemini_chat"], Vec::new()),
+            cached_key("key-openai", vec!["openai:chat"], Vec::new()),
+            cached_key("key-gemini", vec!["gemini:chat"], Vec::new()),
             cached_key("key-empty", Vec::new(), Vec::new()),
         ];
 
@@ -126,10 +126,10 @@ mod tests {
 
     #[test]
     fn route_option_inputs_filters_keys_by_allowed_models() {
-        let endpoints = vec![cached_endpoint("endpoint-openai", "openai_chat")];
+        let endpoints = vec![cached_endpoint("endpoint-openai", "openai:chat")];
         let keys = vec![
-            cached_key("key-model-a", vec!["openai_chat"], vec!["model-a"]),
-            cached_key("key-model-b", vec!["openai_chat"], vec!["model-b"]),
+            cached_key("key-model-a", vec!["openai:chat"], vec!["model-a"]),
+            cached_key("key-model-b", vec!["openai:chat"], vec!["model-b"]),
         ];
 
         let inputs = route_option_inputs(&endpoints, &keys, "model-a");
@@ -148,8 +148,8 @@ mod tests {
     fn endpoint(id: &str) -> CandidateEndpointOption {
         CandidateEndpointOption {
             id: id.into(),
-            name: "openai_chat".into(),
-            provider_api_format: "openai_chat".into(),
+            name: "openai:chat".into(),
+            provider_api_format: "openai:chat".into(),
             base_url: "https://example.com".into(),
             custom_path: None,
             upstream_url: "https://example.com/v1/chat/completions".into(),

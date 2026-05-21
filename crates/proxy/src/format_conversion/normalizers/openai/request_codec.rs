@@ -2,7 +2,8 @@ use serde_json::{Map, Value, json};
 
 use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalMessage, InternalRole, InternalTool, InternalToolChoice};
 
-use super::common::{FORMAT, content_blocks, required_array, required_object, required_string, text_from_blocks};
+use super::common::{FORMAT, content_blocks, required_array, required_object, required_string};
+pub(super) use super::request_messages::request_messages_from_internal;
 
 pub(super) fn parse_request_messages(request: &Value) -> Result<Vec<InternalMessage>, FormatConversionError> {
     let source = required_array(request, "messages", "$.messages")?;
@@ -11,26 +12,6 @@ pub(super) fn parse_request_messages(request: &Value) -> Result<Vec<InternalMess
         messages.push(parse_request_message(value, index)?);
     }
     Ok(messages)
-}
-
-pub(super) fn request_messages_from_internal(messages: &[InternalMessage]) -> Result<Vec<Value>, FormatConversionError> {
-    messages
-        .iter()
-        .map(|message| {
-            let mut output = json!({
-                "role": openai_role(&message.role),
-                "content": content_from_internal(&message.content, &message.role)?,
-            });
-            if let Some(tool_call_id) = tool_result_id(message) {
-                output["tool_call_id"] = Value::String(tool_call_id);
-            }
-            let tool_calls = tool_calls_from_blocks(&message.content)?;
-            if !tool_calls.is_empty() {
-                output["tool_calls"] = Value::Array(tool_calls);
-            }
-            Ok(output)
-        })
-        .collect()
 }
 
 pub(super) fn parse_tools(value: Option<&Value>) -> Result<Vec<InternalTool>, FormatConversionError> {
@@ -47,14 +28,21 @@ pub(super) fn parse_tool_choice(value: Option<&Value>) -> Result<Option<Internal
         Some(Value::String(text)) if text == "auto" => Ok(Some(InternalToolChoice::Auto)),
         Some(Value::String(text)) if text == "none" => Ok(Some(InternalToolChoice::None)),
         Some(Value::String(text)) if text == "required" => Ok(Some(InternalToolChoice::Required)),
+        Some(Value::String(_)) => Ok(Some(InternalToolChoice::Auto)),
         Some(Value::Object(object)) => {
-            let function = required_object(object.get("function"), "$.tool_choice.function")?;
-            Ok(function
-                .get("name")
-                .and_then(Value::as_str)
-                .map(|name| InternalToolChoice::Tool(name.to_owned())))
+            if object.get("type").and_then(Value::as_str) == Some("function") {
+                let function = required_object(object.get("function"), "$.tool_choice.function")?;
+                return Ok(function
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(|name| InternalToolChoice::Tool(name.to_owned())));
+            }
+            if object.get("type").and_then(Value::as_str) == Some("custom") {
+                return Ok(custom_tool_name(object).map(InternalToolChoice::Tool).or(Some(InternalToolChoice::Auto)));
+            }
+            Ok(Some(InternalToolChoice::Auto))
         }
-        Some(_) => Err(FormatConversionError::invalid_payload(FORMAT, "$.tool_choice")),
+        Some(_) => Ok(Some(InternalToolChoice::Auto)),
     }
 }
 
@@ -62,12 +50,20 @@ pub(super) fn tools_from_internal(tools: &[InternalTool]) -> Vec<Value> {
     tools
         .iter()
         .map(|tool| {
+            if let Some(raw) = tool.extra.get("openai_chat_raw_tool").and_then(Value::as_object) {
+                return Value::Object(raw.clone());
+            }
+            if let Some(raw) = tool.extra.get("openai_responses_raw_tool").and_then(Value::as_object) {
+                if let Some(tool) = responses_tool_to_chat_tool(raw) {
+                    return tool;
+                }
+            }
             json!({
                 "type": "function",
                 "function": {
                     "name": tool.name,
                     "description": tool.description,
-                    "parameters": tool.parameters,
+                    "parameters": tool.parameters.as_ref().map(crate::format_conversion::schema_utils::openai_schema_with_object_fixes),
                 },
             })
         })
@@ -88,6 +84,9 @@ fn parse_request_message(value: &Value, index: usize) -> Result<InternalMessage,
     if object.get("tool_calls").is_some() {
         return parse_assistant_tool_calls(object, index);
     }
+    if object.get("function_call").is_some() {
+        return parse_assistant_function_call(object, index);
+    }
     let role = required_string(value, "role", &format!("$.messages[{index}].role"))?;
     Ok(InternalMessage {
         role: map_openai_role(&role)?,
@@ -97,6 +96,9 @@ fn parse_request_message(value: &Value, index: usize) -> Result<InternalMessage,
 
 fn parse_assistant_tool_calls(object: &Map<String, Value>, index: usize) -> Result<InternalMessage, FormatConversionError> {
     let mut content = content_blocks(object.get("content"), &format!("$.messages[{index}].content"))?;
+    if let Some(reasoning) = reasoning_content(object) {
+        content.insert(0, reasoning);
+    }
     for (tool_index, tool_call) in required_array(&Value::Object(object.clone()), "tool_calls", &format!("$.messages[{index}].tool_calls"))?
         .iter()
         .enumerate()
@@ -109,13 +111,33 @@ fn parse_assistant_tool_calls(object: &Map<String, Value>, index: usize) -> Resu
     })
 }
 
+fn parse_assistant_function_call(object: &Map<String, Value>, index: usize) -> Result<InternalMessage, FormatConversionError> {
+    let mut content = content_blocks(object.get("content"), &format!("$.messages[{index}].content"))?;
+    if let Some(reasoning) = reasoning_content(object) {
+        content.insert(0, reasoning);
+    }
+    let function_call = required_object(object.get("function_call"), &format!("$.messages[{index}].function_call"))?;
+    if let Some(tool_call) = parse_legacy_function_call(function_call)? {
+        content.push(tool_call);
+    }
+    Ok(InternalMessage {
+        role: InternalRole::Assistant,
+        content,
+    })
+}
+
 fn openai_message_content(object: &Map<String, Value>, role: &str, index: usize) -> Result<Vec<InternalContentBlock>, FormatConversionError> {
     if role != "tool" {
-        return content_blocks(object.get("content"), &format!("$.messages[{index}].content"));
+        let mut blocks = content_blocks(object.get("content"), &format!("$.messages[{index}].content"))?;
+        if role == "assistant" {
+            if let Some(reasoning) = reasoning_content(object) {
+                blocks.insert(0, reasoning);
+            }
+        }
+        return Ok(blocks);
     }
-    let tool_use_id = required_string(&Value::Object(object.clone()), "tool_call_id", &format!("$.messages[{index}].tool_call_id"))?;
     Ok(vec![InternalContentBlock::ToolResult {
-        tool_use_id,
+        tool_use_id: object.get("tool_call_id").and_then(Value::as_str).unwrap_or_default().to_owned(),
         tool_name: None,
         content: content_blocks(object.get("content"), &format!("$.messages[{index}].content"))?,
         is_error: false,
@@ -128,13 +150,7 @@ fn parse_tool_call(value: &Value, message_index: usize, tool_index: usize) -> Re
         object.get("function"),
         &format!("$.messages[{message_index}].tool_calls[{tool_index}].function"),
     )?;
-    let arguments = function
-        .get("arguments")
-        .and_then(Value::as_str)
-        .filter(|text| !text.is_empty())
-        .map(|text| serde_json::from_str(text).map_err(|error| FormatConversionError::invalid_payload(FORMAT, error.to_string())))
-        .transpose()?
-        .unwrap_or_else(|| json!({}));
+    let arguments = function_arguments(function.get("arguments"))?;
     Ok(InternalContentBlock::ToolUse {
         id: object.get("id").and_then(Value::as_str).unwrap_or_default().to_owned(),
         name: function.get("name").and_then(Value::as_str).unwrap_or_default().to_owned(),
@@ -142,90 +158,126 @@ fn parse_tool_call(value: &Value, message_index: usize, tool_index: usize) -> Re
     })
 }
 
+fn parse_legacy_function_call(function: &Map<String, Value>) -> Result<Option<InternalContentBlock>, FormatConversionError> {
+    let Some(name) = function.get("name").and_then(Value::as_str).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    let input = function_arguments(function.get("arguments"))?;
+    Ok(Some(InternalContentBlock::ToolUse {
+        id: "call_0".to_owned(),
+        name: name.to_owned(),
+        input,
+    }))
+}
+
+fn function_arguments(value: Option<&Value>) -> Result<Value, FormatConversionError> {
+    value
+        .and_then(Value::as_str)
+        .filter(|text| !text.is_empty())
+        .map(|text| {
+            serde_json::from_str(text)
+                .map(|parsed| match parsed {
+                    Value::Object(_) => parsed,
+                    other => json!({ "raw": other }),
+                })
+                .or_else(|_| Ok(json!({ "raw": text })))
+        })
+        .transpose()
+        .map(|value| value.unwrap_or_else(|| json!({})))
+}
+
+fn reasoning_content(object: &Map<String, Value>) -> Option<InternalContentBlock> {
+    object
+        .get("reasoning_content")
+        .and_then(Value::as_str)
+        .filter(|text| !text.is_empty() && *text != "[undefined]")
+        .map(|text| InternalContentBlock::Thinking {
+            text: text.to_owned(),
+            signature: None,
+        })
+}
+
 fn parse_tool(value: (usize, &Value)) -> Result<InternalTool, FormatConversionError> {
     let (index, value) = value;
     let object = required_object(Some(value), &format!("$.tools[{index}]"))?;
+    if object.get("type").and_then(Value::as_str) == Some("custom") {
+        return parse_custom_tool(object, index);
+    }
+    if object.get("type").and_then(Value::as_str) != Some("function") {
+        return Err(FormatConversionError::invalid_payload(FORMAT, format!("$.tools[{index}].function")));
+    }
     let function = required_object(object.get("function"), &format!("$.tools[{index}].function"))?;
     Ok(InternalTool {
         name: function.get("name").and_then(Value::as_str).unwrap_or_default().to_owned(),
         description: function.get("description").and_then(Value::as_str).map(str::to_owned),
         parameters: function.get("parameters").cloned(),
+        extra: Map::new(),
     })
 }
 
-fn content_from_internal(blocks: &[InternalContentBlock], role: &InternalRole) -> Result<Value, FormatConversionError> {
-    if matches!(role, InternalRole::Tool) {
-        return Ok(Value::String(tool_result_text(blocks)?));
-    }
-    if blocks.iter().all(|block| matches!(block, InternalContentBlock::Text(_))) {
-        return text_from_blocks(blocks).map(Value::String);
-    }
-    let mut values = Vec::new();
-    for block in blocks {
-        if !matches!(block, InternalContentBlock::ToolUse { .. }) {
-            values.push(block_from_internal(block)?);
-        }
-    }
-    Ok(Value::Array(values))
+fn parse_custom_tool(object: &Map<String, Value>, index: usize) -> Result<InternalTool, FormatConversionError> {
+    let custom = required_object(object.get("custom"), &format!("$.tools[{index}].custom"))?;
+    let name = custom
+        .get("name")
+        .and_then(Value::as_str)
+        .ok_or_else(|| FormatConversionError::invalid_payload(FORMAT, format!("$.tools[{index}].custom.name")))?
+        .to_owned();
+    let mut extra = Map::new();
+    extra.insert("openai_chat_raw_tool".into(), Value::Object(object.clone()));
+    Ok(InternalTool {
+        name,
+        description: custom.get("description").and_then(Value::as_str).map(str::to_owned),
+        parameters: None,
+        extra,
+    })
 }
 
-fn block_from_internal(block: &InternalContentBlock) -> Result<Value, FormatConversionError> {
-    match block {
-        InternalContentBlock::Text(text) => Ok(json!({ "type": "text", "text": text })),
-        InternalContentBlock::Image { url: Some(url), .. } => Ok(json!({ "type": "image_url", "image_url": { "url": url } })),
-        InternalContentBlock::Image {
-            data: Some(data), media_type, ..
-        } => Ok(json!({
-            "type": "image_url",
-            "image_url": { "url": crate::format_conversion::data_url::format_base64_data_url(media_type.as_deref(), data, FORMAT)? },
-        })),
-        InternalContentBlock::Audio { data, format, .. } => Ok(json!({ "type": "input_audio", "input_audio": { "data": data, "format": format } })),
-        InternalContentBlock::File { file_id, data, filename, .. } => {
-            Ok(json!({ "type": "file", "file": { "file_id": file_id, "file_data": data, "filename": filename } }))
-        }
-        InternalContentBlock::ToolResult { content, .. } => Ok(Value::String(text_from_blocks(content)?)),
-        InternalContentBlock::Thinking { .. } | InternalContentBlock::Image { .. } => Err(FormatConversionError::unsupported_content(
-            FORMAT,
-            "content block cannot be represented in OpenAI Chat",
-        )),
-        InternalContentBlock::ToolUse { .. } => Err(FormatConversionError::unsupported_content(FORMAT, "tool_use must be encoded as tool_calls")),
-    }
+fn custom_tool_name(object: &Map<String, Value>) -> Option<String> {
+    object
+        .get("custom")
+        .and_then(Value::as_object)
+        .and_then(|custom| custom.get("name"))
+        .and_then(Value::as_str)
+        .map(str::to_owned)
 }
 
-fn tool_calls_from_blocks(blocks: &[InternalContentBlock]) -> Result<Vec<Value>, FormatConversionError> {
-    let mut calls = Vec::new();
-    for block in blocks {
-        if let InternalContentBlock::ToolUse { id, name, input } = block {
-            calls.push(json!({
-                "id": id,
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "arguments": serde_json::to_string(input).map_err(|error| FormatConversionError::invalid_payload(FORMAT, error.to_string()))?,
-                },
-            }));
-        }
-    }
-    Ok(calls)
-}
-
-fn tool_result_id(message: &InternalMessage) -> Option<String> {
-    message.content.iter().find_map(|block| match block {
-        InternalContentBlock::ToolResult { tool_use_id, .. } => Some(tool_use_id.clone()),
+fn responses_tool_to_chat_tool(tool: &Map<String, Value>) -> Option<Value> {
+    match tool.get("type").and_then(Value::as_str)? {
+        "function" => responses_function_tool_to_chat(tool),
+        "custom" => responses_custom_tool_to_chat(tool),
         _ => None,
-    })
+    }
 }
 
-fn tool_result_text(blocks: &[InternalContentBlock]) -> Result<String, FormatConversionError> {
-    let Some(InternalContentBlock::ToolResult { content, .. }) = blocks.first() else {
-        return text_from_blocks(blocks);
-    };
-    text_from_blocks(content)
+fn responses_function_tool_to_chat(tool: &Map<String, Value>) -> Option<Value> {
+    let name = tool.get("name").and_then(Value::as_str).filter(|value| !value.is_empty())?;
+    let mut function = Map::new();
+    function.insert("name".into(), Value::String(name.to_owned()));
+    insert_optional_clone(&mut function, tool, "description");
+    insert_optional_clone(&mut function, tool, "parameters");
+    insert_optional_clone(&mut function, tool, "strict");
+    Some(json!({ "type": "function", "function": function }))
+}
+
+fn responses_custom_tool_to_chat(tool: &Map<String, Value>) -> Option<Value> {
+    let name = tool.get("name").and_then(Value::as_str).filter(|value| !value.is_empty())?;
+    let mut custom = Map::new();
+    custom.insert("name".into(), Value::String(name.to_owned()));
+    insert_optional_clone(&mut custom, tool, "description");
+    insert_optional_clone(&mut custom, tool, "format");
+    Some(json!({ "type": "custom", "custom": custom }))
+}
+
+fn insert_optional_clone(output: &mut Map<String, Value>, source: &Map<String, Value>, key: &str) {
+    if let Some(value) = source.get(key) {
+        output.insert(key.to_owned(), value.clone());
+    }
 }
 
 fn map_openai_role(value: &str) -> Result<InternalRole, FormatConversionError> {
     match value {
-        "system" | "developer" => Ok(InternalRole::System),
+        "system" => Ok(InternalRole::System),
+        "developer" => Ok(InternalRole::Developer),
         "user" => Ok(InternalRole::User),
         "assistant" => Ok(InternalRole::Assistant),
         "tool" => Ok(InternalRole::Tool),
@@ -233,11 +285,13 @@ fn map_openai_role(value: &str) -> Result<InternalRole, FormatConversionError> {
     }
 }
 
-fn openai_role(role: &InternalRole) -> &'static str {
+pub(super) fn openai_role(role: &InternalRole) -> &'static str {
     match role {
         InternalRole::System => "system",
+        InternalRole::Developer => "developer",
         InternalRole::User => "user",
         InternalRole::Assistant => "assistant",
         InternalRole::Tool => "tool",
+        InternalRole::Unknown(_) => "user",
     }
 }

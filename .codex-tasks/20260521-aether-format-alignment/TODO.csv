@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Align canonical endpoint metadata and UI data,DONE,Chat and CLI provider formats use family:kind canonical IDs,rg "openai:chat|openai:cli|openai:compact|claude:chat|claude:cli|gemini:chat|gemini:cli" apps crates -g '!target',2026-05-21T00:00:00+08:00,0,
+2,Rebuild internal conversion model,DONE,Internal model supports content blocks instructions tools thinking usage stream lifecycle and errors,cargo test -p proxy --lib,2026-05-21T00:00:00+08:00,0,
+3,Implement request and response normalizers,DONE,OpenAI Chat Responses Claude and Gemini convert through the internal model,perl -e 'alarm 60; exec @ARGV' cargo test -p proxy,2026-05-21T00:00:00+08:00,0,
+4,Implement stream and error conversion,DONE,Stream chunks and provider errors convert without silent fallback,perl -e 'alarm 60; exec @ARGV' cargo test -p proxy,2026-05-21T00:00:00+08:00,0,
+5,Update tests and run validation,DONE,Targeted backend and frontend validation commands run or failures are recorded,perl -e 'alarm 60; exec @ARGV' cargo test -p proxy && perl -e 'alarm 60; exec @ARGV' cargo test -p backend llm_proxy && just test,2026-05-21T00:00:00+08:00,0,

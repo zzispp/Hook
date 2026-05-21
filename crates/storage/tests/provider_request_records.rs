@@ -201,7 +201,7 @@ async fn request_record_storage_filters_summary_before_pagination() {
             status: Some("success".into()),
             model_id: Some("model-1".into()),
             provider_id: Some("provider-1".into()),
-            api_format: Some("openai_chat".into()),
+            api_format: Some("openai:chat".into()),
             type_filter: Some("stream".into()),
             ..Default::default()
         })
@@ -240,7 +240,7 @@ async fn request_record_storage_lists_user_usage_records_without_upstream_fields
                 search: Some("openai".into()),
                 model_id: Some("gpt-5.5".into()),
                 provider_id: Some("provider-1".into()),
-                api_format: Some("openai_cli".into()),
+                api_format: Some("openai:cli".into()),
                 type_filter: Some("non_stream".into()),
                 ..Default::default()
             },
@@ -251,7 +251,7 @@ async fn request_record_storage_lists_user_usage_records_without_upstream_fields
 
     assert_eq!(response.total, 1);
     assert_eq!(response.records[0].model_name.as_deref(), Some("gpt-5.5"));
-    assert_eq!(response.records[0].client_api_format, "openai_cli");
+    assert_eq!(response.records[0].client_api_format, "openai:cli");
     assert!(record_json.get("provider_id").is_none());
     assert!(record_json.get("provider_name").is_none());
     assert!(record_json.get("provider_key_name").is_none());
@@ -354,8 +354,8 @@ fn main_record_input() -> RequestRecordRecordInput {
         key_id: Some("key-1".into()),
         provider_key_name_snapshot: Some("primary-key".into()),
         provider_key_preview_snapshot: Some("***abcd".into()),
-        client_api_format: "openai_cli".into(),
-        provider_api_format: Some("claude_chat".into()),
+        client_api_format: "openai:cli".into(),
+        provider_api_format: Some("claude:chat".into()),
         request_type: "chat".into(),
         is_stream: false,
         has_failover: false,
@@ -382,7 +382,7 @@ fn main_record_patch() -> RequestRecordRecordPatch {
         key_id: Some("key-1".into()),
         provider_key_name_snapshot: Some("primary-key".into()),
         provider_key_preview_snapshot: Some("***abcd".into()),
-        provider_api_format: Some("claude_chat".into()),
+        provider_api_format: Some("claude:chat".into()),
         is_stream: Some(false),
         has_failover: Some(true),
         has_retry: Some(true),
@@ -438,8 +438,8 @@ fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, 
         key_id: Some("key-1".into()),
         provider_key_name_snapshot: Some("primary-key".into()),
         provider_key_preview_snapshot: Some("***abcd".into()),
-        client_api_format: "openai_cli".into(),
-        provider_api_format: Some("claude_chat".into()),
+        client_api_format: "openai:cli".into(),
+        provider_api_format: Some("claude:chat".into()),
         request_type: "chat".into(),
         is_stream,
         has_failover,
@@ -564,12 +564,12 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         provider_id: Some("provider-1".into()),
         provider_name_snapshot: Some("paid-channel-86".into()),
         endpoint_id: Some("endpoint-1".into()),
-        endpoint_name_snapshot: Some("claude_chat".into()),
+        endpoint_name_snapshot: Some("claude:chat".into()),
         key_id: Some("key-1".into()),
         key_name_snapshot: Some("primary-key".into()),
         key_preview_snapshot: Some("***abcd".into()),
-        client_api_format: "openai_cli".into(),
-        provider_api_format: Some("claude_chat".into()),
+        client_api_format: "openai:cli".into(),
+        provider_api_format: Some("claude:chat".into()),
         needs_conversion: true,
         is_stream: status == "streaming",
         is_cached: false,

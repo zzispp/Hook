@@ -1,13 +1,19 @@
 mod request;
 mod request_codec;
 mod request_fields;
+mod request_tools;
 mod response;
 mod stream;
+mod stream_output;
+mod stream_output_common;
+mod stream_output_done;
+mod stream_output_reasoning;
+mod stream_output_tool;
 
 use serde_json::Value;
 
 use crate::format_conversion::{
-    FormatConversionError, InternalRequest, InternalResponse, InternalStreamEvent, StreamConversionState, normalizer::FormatNormalizer,
+    FormatConversionError, InternalError, InternalRequest, InternalResponse, InternalStreamEvent, StreamConversionState, normalizer::FormatNormalizer,
 };
 
 pub struct OpenAiResponsesNormalizer;
@@ -27,6 +33,14 @@ impl FormatNormalizer for OpenAiResponsesNormalizer {
 
     fn response_from_internal(&self, internal: &InternalResponse) -> Result<Value, FormatConversionError> {
         response::from_internal(internal)
+    }
+
+    fn error_to_internal(&self, error: &Value, status: Option<u16>) -> Result<InternalError, FormatConversionError> {
+        Ok(crate::format_conversion::error_codec::to_internal(error, status))
+    }
+
+    fn error_from_internal(&self, internal: &InternalError) -> Result<Value, FormatConversionError> {
+        Ok(crate::format_conversion::error_codec::openai_error(internal))
     }
 
     fn stream_to_internal(&self, chunks: &[Value]) -> Result<Vec<InternalStreamEvent>, FormatConversionError> {

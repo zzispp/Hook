@@ -16,7 +16,7 @@ fn grouped_total_is_applied_after_base_cost() {
         global_model_id: "global".into(),
         provider_model_id: "model".into(),
         provider_id: "provider".into(),
-        api_format: "openai_chat".into(),
+        api_format: "openai:chat".into(),
         request: None,
         response: None,
         metadata: None,
@@ -41,7 +41,7 @@ fn base_usage_dimensions_are_billed_when_collectors_have_no_value() {
         global_model_id: "global".into(),
         provider_model_id: "model".into(),
         provider_id: "provider".into(),
-        api_format: "openai_chat".into(),
+        api_format: "openai:chat".into(),
         request: None,
         response: Some(json!({"usage": {}})),
         metadata: None,
@@ -65,7 +65,7 @@ fn base_usage_dimensions_are_billed_when_collectors_have_no_value() {
 #[test]
 fn openai_cache_read_tokens_are_removed_from_billable_input() {
     let result = calculate_default(
-        "openai_cli",
+        "openai:cli",
         BTreeMap::from([
             ("input_tokens".into(), json!(146000)),
             ("output_tokens".into(), json!(92)),
@@ -86,7 +86,7 @@ fn openai_cache_read_tokens_are_removed_from_billable_input() {
 #[test]
 fn gemini_cache_read_tokens_are_removed_from_billable_input() {
     let result = calculate_default(
-        "gemini_chat",
+        "gemini:chat",
         BTreeMap::from([
             ("input_tokens".into(), json!(100)),
             ("output_tokens".into(), json!(10)),
@@ -103,7 +103,7 @@ fn gemini_cache_read_tokens_are_removed_from_billable_input() {
 #[test]
 fn openai_cache_creation_tokens_are_removed_from_billable_input() {
     let result = calculate_default(
-        "openai_chat",
+        "openai:chat",
         BTreeMap::from([
             ("input_tokens".into(), json!(1000)),
             ("output_tokens".into(), json!(100)),
@@ -123,7 +123,7 @@ fn openai_cache_creation_tokens_are_removed_from_billable_input() {
 #[test]
 fn claude_cache_read_tokens_are_not_removed_from_billable_input() {
     let result = calculate_default(
-        "claude_chat",
+        "claude:chat",
         BTreeMap::from([
             ("input_tokens".into(), json!(8000)),
             ("output_tokens".into(), json!(92)),
@@ -147,7 +147,7 @@ fn explicit_billing_rules_keep_raw_input_tokens() {
         global_model_id: "global".into(),
         provider_model_id: "model".into(),
         provider_id: "provider".into(),
-        api_format: "openai_chat".into(),
+        api_format: "openai:chat".into(),
         request: None,
         response: None,
         metadata: None,
@@ -245,7 +245,7 @@ fn pricing(input_price_per_1m: i64, output_price_per_1m: i64) -> TieredPricingCo
 
 fn response_collector(dimension_name: &str, source_path: &str) -> DimensionCollector {
     DimensionCollector {
-        api_format: "openai_chat".into(),
+        api_format: "openai:chat".into(),
         task_type: "chat".into(),
         dimension_name: dimension_name.into(),
         source_type: CollectorSource::Response,

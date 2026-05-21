@@ -35,9 +35,9 @@ fn collector_from_record(record: DimensionCollectorRecord) -> Result<DimensionCo
 
 fn builtin_collectors(api_format: &str, task_type: &str) -> Vec<DimensionCollector> {
     match api_format {
-        "openai_chat" | "openai_completion" | "openai_cli" | "openai_compact" => openai_collectors(api_format, task_type),
-        "claude_chat" => claude_collectors(api_format, task_type),
-        "gemini_chat" | "gemini_embedding" => gemini_collectors(api_format, task_type),
+        "openai:chat" | "openai_completion" | "openai:cli" | "openai:compact" => openai_collectors(api_format, task_type),
+        "claude:chat" => claude_collectors(api_format, task_type),
+        "gemini:chat" | "gemini_embedding" => gemini_collectors(api_format, task_type),
         _ => Vec::new(),
     }
 }

@@ -1,0 +1,1 @@
+Aether field_mappings.py maps GEMINI tool_use -> STOP. Hook previously mapped StopReason::ToolUse -> MALFORMED_FUNCTION_CALL in gemini_finish_reason.

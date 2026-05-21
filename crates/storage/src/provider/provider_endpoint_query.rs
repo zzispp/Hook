@@ -125,21 +125,21 @@ mod tests {
 
     #[test]
     fn retain_bound_formats_removes_formats_without_provider_endpoint() {
-        let endpoint_formats = HashSet::from(["openai_chat".to_owned(), "gemini_cli".to_owned()]);
+        let endpoint_formats = HashSet::from(["openai:chat".to_owned(), "gemini:cli".to_owned()]);
 
-        let output = retain_bound_formats(vec!["openai_chat".to_owned(), "claude_chat".to_owned()], &endpoint_formats);
+        let output = retain_bound_formats(vec!["openai:chat".to_owned(), "claude:chat".to_owned()], &endpoint_formats);
 
         assert!(output.changed);
-        assert_eq!(output.values, vec!["openai_chat"]);
+        assert_eq!(output.values, vec!["openai:chat"]);
     }
 
     #[test]
     fn retain_bound_formats_preserves_bound_formats() {
-        let endpoint_formats = HashSet::from(["openai_chat".to_owned()]);
+        let endpoint_formats = HashSet::from(["openai:chat".to_owned()]);
 
-        let output = retain_bound_formats(vec!["openai_chat".to_owned()], &endpoint_formats);
+        let output = retain_bound_formats(vec!["openai:chat".to_owned()], &endpoint_formats);
 
         assert!(!output.changed);
-        assert_eq!(output.values, vec!["openai_chat"]);
+        assert_eq!(output.values, vec!["openai:chat"]);
     }
 }
