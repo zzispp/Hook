@@ -83,6 +83,17 @@ pub(super) fn function_call_item(call_id: &str, item_id: &str, name: &str, argum
     })
 }
 
+pub(super) fn custom_tool_call_item(call_id: &str, item_id: &str, name: &str, input: &str, status: &str) -> Value {
+    json!({
+        "type": "custom_tool_call",
+        "call_id": call_id,
+        "id": item_id,
+        "name": name,
+        "input": input,
+        "status": status,
+    })
+}
+
 pub(super) fn allocate_output_index(state: &mut StreamConversionState) -> u32 {
     let index = state.target_openai_responses_next_output_index;
     state.target_openai_responses_next_output_index = state.target_openai_responses_next_output_index.saturating_add(1);

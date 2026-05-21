@@ -76,6 +76,7 @@ fn parse_content_start(chunk: &Value, events: &mut Vec<InternalStreamEvent>) -> 
                 id: block.get("id").and_then(Value::as_str).unwrap_or_default().to_owned(),
                 name: block.get("name").and_then(Value::as_str).unwrap_or_default().to_owned(),
                 input: block.get("input").cloned().unwrap_or_else(|| json!({})),
+                kind: crate::format_conversion::InternalToolKind::Function,
             },
         }),
         "thinking" => events.push(InternalStreamEvent::ContentBlockStart {
@@ -210,10 +211,10 @@ fn push_content_block_start(index: u32, block: &InternalContentBlock, output: &m
             "index": index,
             "content_block": { "type": "text", "text": "" },
         })),
-        InternalContentBlock::ToolUse { id, name, .. } => output.push(json!({
+        InternalContentBlock::ToolUse { id, name, input, .. } => output.push(json!({
             "type": "content_block_start",
             "index": index,
-            "content_block": { "type": "tool_use", "id": id, "name": name },
+            "content_block": { "type": "tool_use", "id": id, "name": name, "input": input },
         })),
         _ => {}
     }

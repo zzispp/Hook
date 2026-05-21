@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalResponse, InternalUsage};
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalResponse, InternalToolKind, InternalUsage};
 
 use super::common::{
     first_choice, map_openai_stop_reason, openai_finish_reason, optional_string, optional_string_value, parse_content, required_object, usage_from_openai,
@@ -110,7 +110,11 @@ fn tool_calls_from_blocks(blocks: &[InternalContentBlock]) -> Result<Vec<Value>,
     blocks
         .iter()
         .filter_map(|block| match block {
-            InternalContentBlock::ToolUse { id, name, input } => Some(tool_call_json(id, name, input)),
+            InternalContentBlock::ToolUse { id, name, input, kind } if *kind == InternalToolKind::Function => Some(tool_call_json(id, name, input)),
+            InternalContentBlock::ToolUse { .. } => Some(Err(FormatConversionError::unsupported_content(
+                super::common::FORMAT,
+                "OpenAI Chat response cannot represent custom tool calls",
+            ))),
             _ => None,
         })
         .collect()
@@ -175,6 +179,7 @@ fn tool_call_block(value: &Value) -> Result<InternalContentBlock, FormatConversi
         id: object.get("id").and_then(Value::as_str).unwrap_or_default().to_owned(),
         name: function.get("name").and_then(Value::as_str).unwrap_or_default().to_owned(),
         input,
+        kind: InternalToolKind::Function,
     })
 }
 

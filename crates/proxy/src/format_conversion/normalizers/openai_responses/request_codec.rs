@@ -1,8 +1,10 @@
 use serde_json::{Map, Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalMessage, InternalRole};
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalMessage, InternalRole, InternalToolKind};
 
+use super::request_content::{content_blocks, content_from_internal, tool_output_from_internal};
 use super::request_fields::FORMAT;
+use super::request_items::{arguments_json, custom_tool_input, custom_tool_input_text};
 
 pub(super) fn input_messages(value: Option<&Value>) -> Result<Vec<InternalMessage>, FormatConversionError> {
     match value {
@@ -30,7 +32,9 @@ fn input_item(value: &Value, index: usize) -> Result<InternalMessage, FormatConv
     match object.get("type").and_then(Value::as_str).unwrap_or("message") {
         "message" => message_item(object, index),
         "function_call" => function_call_item(object),
-        "function_call_output" => function_call_output_item(object),
+        "custom_tool_call" => custom_tool_call_item(object),
+        "function_call_output" => function_call_output_item(object, index),
+        "custom_tool_call_output" => custom_tool_call_output_item(object, index),
         "reasoning" => reasoning_item(object),
         other => Err(FormatConversionError::unsupported_content(
             FORMAT,
@@ -54,19 +58,44 @@ fn function_call_item(object: &Map<String, Value>) -> Result<InternalMessage, Fo
             id: object.get("call_id").and_then(Value::as_str).unwrap_or_default().to_owned(),
             name: object.get("name").and_then(Value::as_str).unwrap_or_default().to_owned(),
             input: arguments_json(object.get("arguments"))?,
+            kind: InternalToolKind::Function,
         }],
     })
 }
 
-fn function_call_output_item(object: &Map<String, Value>) -> Result<InternalMessage, FormatConversionError> {
+fn custom_tool_call_item(object: &Map<String, Value>) -> Result<InternalMessage, FormatConversionError> {
+    Ok(InternalMessage {
+        role: InternalRole::Assistant,
+        content: vec![InternalContentBlock::ToolUse {
+            id: object.get("call_id").and_then(Value::as_str).unwrap_or_default().to_owned(),
+            name: object.get("name").and_then(Value::as_str).unwrap_or_default().to_owned(),
+            input: custom_tool_input(object.get("input")),
+            kind: InternalToolKind::Custom,
+        }],
+    })
+}
+
+fn function_call_output_item(object: &Map<String, Value>, index: usize) -> Result<InternalMessage, FormatConversionError> {
     Ok(InternalMessage {
         role: InternalRole::User,
         content: vec![InternalContentBlock::ToolResult {
             tool_use_id: object.get("call_id").and_then(Value::as_str).unwrap_or_default().to_owned(),
             tool_name: None,
-            content: vec![InternalContentBlock::text(
-                object.get("output").and_then(Value::as_str).unwrap_or_default().to_owned(),
-            )],
+            tool_kind: InternalToolKind::Function,
+            content: content_blocks(object.get("output"), &format!("$.input[{index}].output"))?,
+            is_error: false,
+        }],
+    })
+}
+
+fn custom_tool_call_output_item(object: &Map<String, Value>, index: usize) -> Result<InternalMessage, FormatConversionError> {
+    Ok(InternalMessage {
+        role: InternalRole::User,
+        content: vec![InternalContentBlock::ToolResult {
+            tool_use_id: object.get("call_id").and_then(Value::as_str).unwrap_or_default().to_owned(),
+            tool_name: object.get("name").and_then(Value::as_str).map(str::to_owned),
+            tool_kind: InternalToolKind::Custom,
+            content: content_blocks(object.get("output"), &format!("$.input[{index}].output"))?,
             is_error: false,
         }],
     })
@@ -83,47 +112,18 @@ fn reasoning_item(object: &Map<String, Value>) -> Result<InternalMessage, Format
     })
 }
 
-fn content_blocks(value: Option<&Value>, path: &str) -> Result<Vec<InternalContentBlock>, FormatConversionError> {
-    match value {
-        Some(Value::String(text)) => Ok(vec![InternalContentBlock::text(text.clone())]),
-        Some(Value::Array(items)) => items
-            .iter()
-            .enumerate()
-            .map(|(index, item)| content_block(item, &format!("{path}[{index}]")))
-            .collect(),
-        Some(_) | None => Err(FormatConversionError::invalid_payload(FORMAT, path)),
-    }
-}
-
-fn content_block(value: &Value, path: &str) -> Result<InternalContentBlock, FormatConversionError> {
-    let object = value.as_object().ok_or_else(|| FormatConversionError::invalid_payload(FORMAT, path))?;
-    match object.get("type").and_then(Value::as_str).unwrap_or_default() {
-        "input_text" | "output_text" | "text" => Ok(InternalContentBlock::text(required_text(object, path, "text")?.to_owned())),
-        "input_image" => Ok(InternalContentBlock::Image {
-            url: object.get("image_url").and_then(Value::as_str).map(str::to_owned),
-            data: None,
-            media_type: None,
-        }),
-        "input_file" => Ok(InternalContentBlock::File {
-            file_id: object.get("file_id").and_then(Value::as_str).map(str::to_owned),
-            file_url: object.get("file_url").and_then(Value::as_str).map(str::to_owned),
-            data: object.get("file_data").and_then(Value::as_str).map(str::to_owned),
-            media_type: None,
-            filename: object.get("filename").and_then(Value::as_str).map(str::to_owned),
-        }),
-        other => Err(FormatConversionError::unsupported_content(
-            FORMAT,
-            format!("{path}: unsupported block type {other}"),
-        )),
-    }
-}
-
 fn message_from_internal(message: &InternalMessage) -> Result<Vec<Value>, FormatConversionError> {
     let mut output = Vec::new();
     for block in &message.content {
         match block {
-            InternalContentBlock::ToolUse { id, name, input } => output.push(function_call_from_block(id, name, input)?),
-            InternalContentBlock::ToolResult { tool_use_id, content, .. } => output.push(function_call_output_from_block(tool_use_id, content)?),
+            InternalContentBlock::ToolUse { id, name, input, kind } => output.push(tool_call_from_block(id, name, input, kind)?),
+            InternalContentBlock::ToolResult {
+                tool_use_id,
+                tool_name,
+                tool_kind,
+                content,
+                ..
+            } => output.push(tool_output_from_block(tool_use_id, tool_name, tool_kind, content)?),
             InternalContentBlock::Thinking { text, signature } => output.push(reasoning_from_block(text, signature)),
             _ => {}
         }
@@ -156,40 +156,11 @@ fn message_content_item(message: &InternalMessage) -> Result<Option<Value>, Form
     })))
 }
 
-fn content_from_internal(blocks: &[InternalContentBlock]) -> Result<Value, FormatConversionError> {
-    Ok(Value::Array(blocks.iter().map(block_from_internal).collect::<Result<Vec<_>, _>>()?))
-}
-
-fn block_from_internal(block: &InternalContentBlock) -> Result<Value, FormatConversionError> {
-    match block {
-        InternalContentBlock::Text { text, .. } => Ok(json!({ "type": "input_text", "text": text })),
-        InternalContentBlock::Image { url: Some(url), .. } => Ok(json!({ "type": "input_image", "image_url": url })),
-        InternalContentBlock::Image {
-            data: Some(data), media_type, ..
-        } => Ok(json!({
-            "type": "input_image",
-            "image_url": crate::format_conversion::data_url::format_base64_data_url(media_type.as_deref(), data, FORMAT)?,
-        })),
-        InternalContentBlock::File {
-            file_id,
-            file_url,
-            data,
-            filename,
-            ..
-        } => Ok(json!({ "type": "input_file", "file_id": file_id, "file_url": file_url, "file_data": data, "filename": filename })),
-        InternalContentBlock::ToolUse { .. } | InternalContentBlock::ToolResult { .. } => Err(FormatConversionError::unsupported_content(
-            FORMAT,
-            "tool blocks must be top-level Responses items",
-        )),
-        InternalContentBlock::Thinking { .. } => Err(FormatConversionError::unsupported_content(
-            FORMAT,
-            "thinking blocks must be top-level Responses reasoning items",
-        )),
-        InternalContentBlock::Audio { .. } | InternalContentBlock::Image { .. } => Err(FormatConversionError::unsupported_content(
-            FORMAT,
-            "content block cannot be represented in OpenAI Responses",
-        )),
+fn tool_call_from_block(id: &str, name: &str, input: &Value, kind: &InternalToolKind) -> Result<Value, FormatConversionError> {
+    if *kind == InternalToolKind::Custom {
+        return custom_tool_call_from_block(id, name, input);
     }
+    function_call_from_block(id, name, input)
 }
 
 fn function_call_from_block(id: &str, name: &str, input: &Value) -> Result<Value, FormatConversionError> {
@@ -201,12 +172,45 @@ fn function_call_from_block(id: &str, name: &str, input: &Value) -> Result<Value
     }))
 }
 
+fn custom_tool_call_from_block(id: &str, name: &str, input: &Value) -> Result<Value, FormatConversionError> {
+    Ok(json!({
+        "type": "custom_tool_call",
+        "call_id": id,
+        "name": name,
+        "input": custom_tool_input_text(input)?,
+    }))
+}
+
+fn tool_output_from_block(
+    tool_use_id: &str,
+    tool_name: &Option<String>,
+    tool_kind: &InternalToolKind,
+    content: &[InternalContentBlock],
+) -> Result<Value, FormatConversionError> {
+    if *tool_kind == InternalToolKind::Custom {
+        return custom_tool_call_output_from_block(tool_use_id, tool_name, content);
+    }
+    function_call_output_from_block(tool_use_id, content)
+}
+
 fn function_call_output_from_block(tool_use_id: &str, content: &[InternalContentBlock]) -> Result<Value, FormatConversionError> {
     Ok(json!({
         "type": "function_call_output",
         "call_id": tool_use_id,
-        "output": text_from_blocks(content)?,
+        "output": tool_output_from_internal(content)?,
     }))
+}
+
+fn custom_tool_call_output_from_block(tool_use_id: &str, tool_name: &Option<String>, content: &[InternalContentBlock]) -> Result<Value, FormatConversionError> {
+    let mut output = json!({
+        "type": "custom_tool_call_output",
+        "call_id": tool_use_id,
+        "output": tool_output_from_internal(content)?,
+    });
+    if let Some(tool_name) = tool_name {
+        output["name"] = Value::String(tool_name.clone());
+    }
+    Ok(output)
 }
 
 fn reasoning_from_block(text: &str, signature: &Option<String>) -> Value {
@@ -218,22 +222,6 @@ fn reasoning_from_block(text: &str, signature: &Option<String>) -> Value {
         item["encrypted_content"] = Value::String(signature.clone());
     }
     item
-}
-
-fn arguments_json(value: Option<&Value>) -> Result<Value, FormatConversionError> {
-    value
-        .and_then(Value::as_str)
-        .filter(|text| !text.is_empty())
-        .map(|text| {
-            serde_json::from_str(text)
-                .map(|parsed| match parsed {
-                    Value::Object(_) => parsed,
-                    other => json!({ "_raw": other }),
-                })
-                .or_else(|_| Ok(json!({ "_raw": text })))
-        })
-        .transpose()
-        .map(|value| value.unwrap_or_else(|| json!({})))
 }
 
 fn reasoning_summary(value: &str) -> Vec<Value> {
@@ -260,17 +248,6 @@ fn reasoning_summary_part_text(value: &Value) -> Option<&str> {
     }
 }
 
-fn text_from_blocks(blocks: &[InternalContentBlock]) -> Result<String, FormatConversionError> {
-    let mut output = String::new();
-    for block in blocks {
-        let Some(text) = block.plain_text() else {
-            return Err(FormatConversionError::unsupported_content(FORMAT, "non-text block cannot be flattened"));
-        };
-        output.push_str(text);
-    }
-    Ok(output)
-}
-
 fn role_from_str(value: &str) -> InternalRole {
     match value {
         "assistant" => InternalRole::Assistant,
@@ -290,11 +267,4 @@ fn role_as_str(role: &InternalRole) -> &'static str {
         InternalRole::Tool => "tool",
         InternalRole::Unknown(_) => "user",
     }
-}
-
-fn required_text<'a>(object: &'a Map<String, Value>, path: &str, key: &str) -> Result<&'a str, FormatConversionError> {
-    object
-        .get(key)
-        .and_then(Value::as_str)
-        .ok_or_else(|| FormatConversionError::invalid_payload(FORMAT, format!("{path}.{key}")))
 }

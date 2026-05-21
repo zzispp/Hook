@@ -2,8 +2,11 @@ mod common;
 mod request;
 mod request_codec;
 mod request_messages;
+mod request_tools;
 mod response;
 mod stream;
+mod stream_input;
+mod stream_output;
 
 use serde_json::Value;
 

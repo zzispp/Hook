@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalContentBlock};
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalToolKind};
 
 use super::common::FORMAT;
 
@@ -24,19 +24,22 @@ fn part_from_internal(block: &InternalContentBlock) -> Result<Value, FormatConve
             ..
         } => file_data_part(media_type.as_deref(), url),
         InternalContentBlock::Audio { data, media_type, .. } => Ok(json!({ "inlineData": { "mimeType": media_type, "data": data } })),
-        InternalContentBlock::ToolUse { id, name, input } => function_call_part(id, name, input),
+        InternalContentBlock::ToolUse { id, name, input, kind } if *kind == InternalToolKind::Function => function_call_part(id, name, input),
+        InternalContentBlock::ToolUse { .. } => Err(FormatConversionError::unsupported_content(
+            FORMAT,
+            "Gemini functionCall cannot represent custom tool calls",
+        )),
         InternalContentBlock::ToolResult {
             tool_use_id,
             tool_name,
+            tool_kind,
             content,
             ..
-        } => Ok(json!({
-            "functionResponse": {
-                "id": tool_use_id,
-                "name": tool_name.clone().unwrap_or_else(|| tool_use_id.clone()),
-                "response": tool_result_response(content)?,
-            }
-        })),
+        } if *tool_kind == InternalToolKind::Function => function_response_part(tool_use_id, tool_name, content),
+        InternalContentBlock::ToolResult { .. } => Err(FormatConversionError::unsupported_content(
+            FORMAT,
+            "Gemini functionResponse cannot represent custom tool results",
+        )),
         InternalContentBlock::File {
             data: Some(data), media_type, ..
         } => Ok(json!({ "inlineData": { "mimeType": media_type, "data": data } })),
@@ -45,6 +48,16 @@ fn part_from_internal(block: &InternalContentBlock) -> Result<Value, FormatConve
             "content block cannot be represented in Gemini",
         )),
     }
+}
+
+fn function_response_part(tool_use_id: &str, tool_name: &Option<String>, content: &[InternalContentBlock]) -> Result<Value, FormatConversionError> {
+    Ok(json!({
+        "functionResponse": {
+            "id": tool_use_id,
+            "name": tool_name.clone().unwrap_or_else(|| tool_use_id.to_owned()),
+            "response": tool_result_response(content)?,
+        }
+    }))
 }
 
 fn function_call_part(id: &str, name: &str, input: &Value) -> Result<Value, FormatConversionError> {

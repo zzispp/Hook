@@ -14,6 +14,12 @@ pub struct StreamConversionState {
     pub openai_responses_text_started: bool,
     pub openai_responses_text_stopped: bool,
     pub openai_responses_text_block_index: Option<u32>,
+    pub openai_responses_text: String,
+    pub openai_responses_reasoning_started: bool,
+    pub openai_responses_reasoning_stopped: bool,
+    pub openai_responses_reasoning_block_index: Option<u32>,
+    pub openai_responses_reasoning_text: String,
+    pub openai_responses_reasoning_signature: Option<String>,
     pub openai_responses_next_source_block_index: u32,
     pub openai_responses_source_tools: Vec<OpenAiResponsesSourceToolStreamItem>,
     pub gemini_started: bool,
@@ -53,6 +59,7 @@ pub struct OpenAiResponsesSourceToolStreamItem {
     pub block_index: u32,
     pub name: String,
     pub arguments: String,
+    pub kind: super::internal::InternalToolKind,
     pub stopped: bool,
 }
 
@@ -72,6 +79,7 @@ pub struct OpenAiResponsesToolStreamItem {
     pub item_id: String,
     pub name: String,
     pub arguments: String,
+    pub kind: super::internal::InternalToolKind,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

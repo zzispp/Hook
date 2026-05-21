@@ -1,6 +1,6 @@
 use serde_json::{Map, Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalMessage, InternalRole};
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalMessage, InternalRole, InternalToolKind};
 
 use super::common::{FORMAT, required_array, required_object};
 use super::content_compaction::compact_contents;
@@ -157,6 +157,7 @@ fn function_call_block(value: &Value, path: &str, tool_calls: &mut GeminiToolCal
         id,
         name,
         input: object.get("args").filter(|value| value.is_object()).cloned().unwrap_or_else(|| json!({})),
+        kind: InternalToolKind::Function,
     })
 }
 
@@ -172,6 +173,7 @@ fn function_response_block(value: &Value, path: &str, tool_calls: &mut GeminiToo
     Ok(InternalContentBlock::ToolResult {
         tool_use_id,
         tool_name: Some(name),
+        tool_kind: InternalToolKind::Function,
         content: gemini_function_response_content(object.get("response")),
         is_error: false,
     })

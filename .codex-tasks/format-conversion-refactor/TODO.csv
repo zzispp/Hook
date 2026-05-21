@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map current conversion implementation,DONE,"Current registry, internal model, normalizers, and tests are summarized in PROGRESS.md","test -f .codex-tasks/format-conversion-refactor/PROGRESS.md",2026-05-21,0,
+2,Extract official CLI format facts,DONE,"OpenAI/Codex, Claude, and Gemini request/tool/thinking patterns are summarized with source paths","test -f .codex-tasks/format-conversion-refactor/raw/cli-format-notes.md",2026-05-21,0,
+3,Design minimal explicit conversion model changes,DONE,"Implementation plan names concrete files and failure semantics before edits","rg -n \"Implementation Plan\" .codex-tasks/format-conversion-refactor/PROGRESS.md",2026-05-21,0,
+4,Implement conversion refactor,DONE,"Code compiles and conversion paths are implemented without silent fallback","cargo test -p proxy format_conversion -- --nocapture",2026-05-21,0,
+5,Validate and record outcome,DONE,"Targeted tests and relevant checks pass or failures are recorded","cargo test -p proxy -- --nocapture",2026-05-21,0,

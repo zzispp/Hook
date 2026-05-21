@@ -4,7 +4,7 @@ use crate::format_conversion::{FormatConversionError, InternalResponse};
 
 use super::{
     common::{claude_stop_reason, claude_usage, empty_claude_usage, map_claude_stop_reason, optional_string, usage_from_claude},
-    request_codec::{content_blocks_from_claude, content_from_internal},
+    request_content::{content_blocks_from_claude, content_from_internal},
 };
 
 pub fn to_internal(response: &Value) -> Result<InternalResponse, FormatConversionError> {

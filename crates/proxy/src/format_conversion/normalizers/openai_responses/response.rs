@@ -1,6 +1,7 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalResponse, InternalUsage};
+use super::response_output::output_items;
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalResponse, InternalToolKind, InternalUsage};
 
 const FORMAT: &str = "openai_responses";
 
@@ -15,21 +16,13 @@ pub fn to_internal(response: &Value) -> Result<InternalResponse, FormatConversio
 }
 
 pub fn from_internal(internal: &InternalResponse) -> Result<Value, FormatConversionError> {
-    let output_text = internal.text.clone();
     let mut payload = json!({
         "id": internal.id.clone().unwrap_or_else(|| "resp_unknown".to_owned()),
         "object": "response",
         "created_at": 0,
         "status": "completed",
         "model": internal.model,
-        "output": [{
-            "type": "message",
-            "role": "assistant",
-            "content": [{
-                "type": "output_text",
-                "text": output_text,
-            }],
-        }],
+        "output": output_items(&internal.content)?,
         "output_text": internal.text,
     });
     if let Some(usage) = internal.usage.clone().map(InternalUsage::with_total) {
@@ -39,6 +32,9 @@ pub fn from_internal(internal: &InternalResponse) -> Result<Value, FormatConvers
 }
 
 fn response_content(response: &Value) -> Result<Vec<InternalContentBlock>, FormatConversionError> {
+    if response.get("output").is_some() {
+        return output_blocks(response.get("output"));
+    }
     if let Some(text) = response.get("output_text").and_then(Value::as_str) {
         return Ok(vec![InternalContentBlock::text(text.to_owned())]);
     }
@@ -59,15 +55,18 @@ fn output_blocks(value: Option<&Value>) -> Result<Vec<InternalContentBlock>, For
 fn append_output_item_blocks(item: &Value, output: &mut Vec<InternalContentBlock>) -> Result<(), FormatConversionError> {
     match item.get("type").and_then(Value::as_str).unwrap_or_default() {
         "message" => append_message_content(item, output),
-        "function_call" => {
-            output.push(function_call_block(item)?);
+        "function_call" | "custom_tool_call" => {
+            output.push(tool_call_block(item)?);
             Ok(())
         }
         "reasoning" => {
             append_reasoning_content(item, output);
             Ok(())
         }
-        _ => Ok(()),
+        other => Err(FormatConversionError::unsupported_content(
+            FORMAT,
+            format!("unsupported output item type {other}"),
+        )),
     }
 }
 
@@ -96,13 +95,29 @@ fn output_content_block(block: &Value) -> Result<InternalContentBlock, FormatCon
     ))
 }
 
-fn function_call_block(item: &Value) -> Result<InternalContentBlock, FormatConversionError> {
-    let input = arguments_json(item.get("arguments"))?;
+fn tool_call_block(item: &Value) -> Result<InternalContentBlock, FormatConversionError> {
+    let kind = tool_kind(item);
+    let input = tool_input(item, &kind)?;
     Ok(InternalContentBlock::ToolUse {
         id: item.get("call_id").and_then(Value::as_str).unwrap_or_default().to_owned(),
         name: item.get("name").and_then(Value::as_str).unwrap_or_default().to_owned(),
         input,
+        kind,
     })
+}
+
+fn tool_kind(item: &Value) -> InternalToolKind {
+    if item.get("type").and_then(Value::as_str) == Some("custom_tool_call") {
+        return InternalToolKind::Custom;
+    }
+    InternalToolKind::Function
+}
+
+fn tool_input(item: &Value, kind: &InternalToolKind) -> Result<Value, FormatConversionError> {
+    if *kind == InternalToolKind::Custom {
+        return Ok(json!({ "_raw": item.get("input").and_then(Value::as_str).unwrap_or_default() }));
+    }
+    arguments_json(item.get("arguments"))
 }
 
 fn arguments_json(value: Option<&Value>) -> Result<Value, FormatConversionError> {

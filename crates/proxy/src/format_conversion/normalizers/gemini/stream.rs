@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalStreamEvent, StreamConversionState};
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalStreamEvent, InternalToolKind, StreamConversionState};
 
 use super::common::{
     complete_function_call_chunk, content_chunk, map_gemini_stop_reason, optional_string, parts_text, required_array, required_object, terminal_chunk,
@@ -35,6 +35,7 @@ pub fn event_from_internal(event: &InternalStreamEvent, state: &mut StreamConver
     if state.target_gemini_model.is_empty() {
         state.target_gemini_model = "gemini-unknown".to_owned();
     }
+    reject_custom_tool_event(event)?;
     let mut output = Vec::new();
     push_stream_event(event, state, &mut output);
     Ok(output)
@@ -160,6 +161,7 @@ fn emit_function_call(value: &Value, state: &mut StreamConversionState, events: 
             id: id.clone().unwrap_or_default(),
             name: name.clone(),
             input: json!({}),
+            kind: crate::format_conversion::InternalToolKind::Function,
         },
     });
     events.push(InternalStreamEvent::ToolCallDelta {
@@ -252,4 +254,23 @@ fn first_candidate(value: &Value) -> Result<&serde_json::Map<String, Value>, For
 fn candidate_text(candidate: &serde_json::Map<String, Value>) -> Result<String, FormatConversionError> {
     let content = required_object(candidate.get("content"), "$.candidates[0].content")?;
     parts_text(content.get("parts"), "$.candidates[0].content.parts")
+}
+
+fn reject_custom_tool_event(event: &InternalStreamEvent) -> Result<(), FormatConversionError> {
+    let InternalStreamEvent::ContentBlockStart { block, .. } = event else {
+        return Ok(());
+    };
+    if matches!(
+        block,
+        InternalContentBlock::ToolUse {
+            kind: InternalToolKind::Custom,
+            ..
+        }
+    ) {
+        return Err(FormatConversionError::unsupported_content(
+            super::common::FORMAT,
+            "Gemini stream cannot represent custom tool calls",
+        ));
+    }
+    Ok(())
 }

@@ -1,6 +1,6 @@
 use serde_json::{Value, json};
 
-use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalMessage, InternalRole};
+use crate::format_conversion::{FormatConversionError, InternalContentBlock, InternalMessage, InternalRole, InternalToolKind};
 
 use super::common::{FORMAT, text_from_blocks};
 use super::request_codec::openai_role;
@@ -41,9 +41,15 @@ fn user_and_tool_messages(message: &InternalMessage) -> Result<Vec<Value>, Forma
     let mut output = Vec::new();
     let mut pending = Vec::new();
     for block in &message.content {
-        if let InternalContentBlock::ToolResult { tool_use_id, content, .. } = block {
+        if let InternalContentBlock::ToolResult {
+            tool_use_id,
+            tool_kind,
+            content,
+            ..
+        } = block
+        {
             push_pending_user_message(&mut output, &mut pending)?;
-            output.push(tool_result_message(tool_use_id, content)?);
+            output.push(tool_result_message(tool_use_id, tool_kind, content)?);
             continue;
         }
         if !matches!(block, InternalContentBlock::ToolUse { .. }) {
@@ -107,7 +113,13 @@ fn block_from_internal(block: &InternalContentBlock) -> Result<Value, FormatConv
     }
 }
 
-fn tool_result_message(tool_use_id: &str, content: &[InternalContentBlock]) -> Result<Value, FormatConversionError> {
+fn tool_result_message(tool_use_id: &str, tool_kind: &InternalToolKind, content: &[InternalContentBlock]) -> Result<Value, FormatConversionError> {
+    if *tool_kind != InternalToolKind::Function {
+        return Err(FormatConversionError::unsupported_content(
+            FORMAT,
+            "OpenAI Chat messages cannot represent custom tool results",
+        ));
+    }
     Ok(json!({
         "role": "tool",
         "tool_call_id": tool_use_id,
@@ -122,18 +134,28 @@ fn has_tool_result(blocks: &[InternalContentBlock]) -> bool {
 fn tool_calls_from_blocks(blocks: &[InternalContentBlock]) -> Result<Vec<Value>, FormatConversionError> {
     let mut calls = Vec::new();
     for block in blocks {
-        if let InternalContentBlock::ToolUse { id, name, input } = block {
-            calls.push(json!({
-                "id": id,
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "arguments": serde_json::to_string(input).map_err(|error| FormatConversionError::invalid_payload(FORMAT, error.to_string()))?,
-                },
-            }));
+        if let InternalContentBlock::ToolUse { id, name, input, kind } = block {
+            if *kind != InternalToolKind::Function {
+                return Err(FormatConversionError::unsupported_content(
+                    FORMAT,
+                    "OpenAI Chat messages cannot represent custom tool calls",
+                ));
+            }
+            calls.push(tool_call_json(id, name, input)?);
         }
     }
     Ok(calls)
+}
+
+fn tool_call_json(id: &str, name: &str, input: &Value) -> Result<Value, FormatConversionError> {
+    Ok(json!({
+        "id": id,
+        "type": "function",
+        "function": {
+            "name": name,
+            "arguments": serde_json::to_string(input).map_err(|error| FormatConversionError::invalid_payload(FORMAT, error.to_string()))?,
+        },
+    }))
 }
 
 fn thinking_text(blocks: &[InternalContentBlock]) -> String {

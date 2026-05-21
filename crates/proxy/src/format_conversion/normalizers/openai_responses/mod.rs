@@ -1,9 +1,16 @@
 mod request;
 mod request_codec;
+mod request_content;
 mod request_fields;
+mod request_items;
 mod request_tools;
 mod response;
+mod response_output;
 mod stream;
+mod stream_input_common;
+mod stream_input_reasoning;
+mod stream_input_text;
+mod stream_input_tool;
 mod stream_output;
 mod stream_output_common;
 mod stream_output_done;

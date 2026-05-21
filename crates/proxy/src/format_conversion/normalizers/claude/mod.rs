@@ -2,6 +2,7 @@ mod common;
 mod message_grouping;
 mod request;
 mod request_codec;
+mod request_content;
 mod response;
 mod stream;
 
