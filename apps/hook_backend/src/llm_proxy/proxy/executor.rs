@@ -5,7 +5,7 @@ use req::Response as UpstreamResponse;
 
 use super::{
     LlmProxyError, LlmProxyState, affinity,
-    attempt_log::{record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
+    attempt_log::{StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
     failure_classification::{FailureDecision, classify_status},
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
@@ -106,11 +106,25 @@ async fn attempt_once(
             return Ok(option_response_outcome(outcome));
         }
     };
-    record_started_attempt(state, &prepared.request_id, candidate, prepared.is_stream, retry_index, &request, &payload.body).await?;
+    let attempt_cancel = record_started_attempt(StartedAttemptInput {
+        state,
+        request_id: &prepared.request_id,
+        candidate,
+        is_stream: prepared.is_stream,
+        retry_index,
+        started,
+        request: &request,
+        provider_body: &payload.body,
+    })
+    .await?;
     let request_timeout = timeout::non_stream_total_timeout(candidate, prepared.is_stream);
     let response = match execute_upstream_request(&state.http, request, request_timeout).await {
-        Ok(response) => response,
+        Ok(response) => {
+            attempt_cancel.disarm();
+            response
+        }
         Err(error) => {
+            attempt_cancel.disarm();
             let outcome = record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await?;
             affinity::invalidate_matching(state, candidate).await?;
             return Ok(option_response_outcome(outcome));

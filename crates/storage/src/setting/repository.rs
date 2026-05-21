@@ -140,6 +140,18 @@ fn apply_request_record_patch(active: &mut SystemSettingsActiveModel, input: &Sy
     if let Some(value) = input.client_request_record_level {
         active.client_request_record_level = Set(value.as_str().to_owned());
     }
+    if let Some(value) = input.client_record_request_headers {
+        active.client_record_request_headers = Set(value);
+    }
+    if let Some(value) = input.client_record_request_body {
+        active.client_record_request_body = Set(value);
+    }
+    if let Some(value) = input.client_record_response_headers {
+        active.client_record_response_headers = Set(value);
+    }
+    if let Some(value) = input.client_record_response_body {
+        active.client_record_response_body = Set(value);
+    }
     if let Some(value) = input.client_max_request_body_size_kb {
         active.client_max_request_body_size_kb = Set(value);
     }
@@ -151,6 +163,18 @@ fn apply_request_record_patch(active: &mut SystemSettingsActiveModel, input: &Sy
     }
     if let Some(value) = input.provider_request_record_level {
         active.provider_request_record_level = Set(value.as_str().to_owned());
+    }
+    if let Some(value) = input.provider_record_request_headers {
+        active.provider_record_request_headers = Set(value);
+    }
+    if let Some(value) = input.provider_record_request_body {
+        active.provider_record_request_body = Set(value);
+    }
+    if let Some(value) = input.provider_record_response_headers {
+        active.provider_record_response_headers = Set(value);
+    }
+    if let Some(value) = input.provider_record_response_body {
+        active.provider_record_response_body = Set(value);
     }
     if let Some(value) = input.provider_max_request_body_size_kb {
         active.provider_max_request_body_size_kb = Set(value);

@@ -4,7 +4,7 @@ use types::model::PatchField;
 
 use crate::llm_proxy::{
     LlmProxyError,
-    proxy::capture::{recorded_headers, recorded_request_body},
+    proxy::capture::{recorded_headers, recorded_request_body, recorded_response_headers},
     request_record_policy::RequestRecordSidePolicy,
 };
 
@@ -19,6 +19,21 @@ pub(super) fn header_patch(headers: PatchField<HeaderMap>, policy: &RequestRecor
 pub(super) fn header_input(headers: PatchField<HeaderMap>, policy: &RequestRecordSidePolicy) -> Option<Value> {
     match headers {
         PatchField::Value(headers) => recorded_headers(&headers, policy),
+        PatchField::Null | PatchField::Missing => None,
+    }
+}
+
+pub(super) fn response_header_patch(headers: PatchField<HeaderMap>, policy: &RequestRecordSidePolicy) -> Result<PatchField<Value>, LlmProxyError> {
+    match headers {
+        PatchField::Value(headers) => Ok(option_patch(recorded_response_headers(&headers, policy))),
+        PatchField::Null => Ok(PatchField::Null),
+        PatchField::Missing => Ok(PatchField::Missing),
+    }
+}
+
+pub(super) fn response_header_input(headers: PatchField<HeaderMap>, policy: &RequestRecordSidePolicy) -> Option<Value> {
+    match headers {
+        PatchField::Value(headers) => recorded_response_headers(&headers, policy),
         PatchField::Null | PatchField::Missing => None,
     }
 }

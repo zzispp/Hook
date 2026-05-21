@@ -41,6 +41,10 @@ pub(in crate::llm_proxy) fn recorded_headers(headers: &HeaderMap, policy: &Reque
     policy.should_record_request_headers().then(|| headers_value(headers, policy))
 }
 
+pub(in crate::llm_proxy) fn recorded_response_headers(headers: &HeaderMap, policy: &RequestRecordSidePolicy) -> Option<Value> {
+    policy.should_record_response_headers().then(|| headers_value(headers, policy))
+}
+
 pub(in crate::llm_proxy) fn recorded_request_body(body: &Value, policy: &RequestRecordSidePolicy) -> Result<Option<Value>, serde_json::Error> {
     truncate_request_body(body, policy)
 }

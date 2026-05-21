@@ -55,7 +55,7 @@ pub(super) fn attempt_patch(
         error_param: input.error_param.map(str::to_owned),
         provider_request_headers: payload::header_patch(input.provider_request_headers.clone(), policy)?,
         provider_request_body: payload::request_body_patch(input.provider_request_body.clone(), policy)?,
-        provider_response_headers: payload::header_patch(input.provider_response_headers.clone(), policy)?,
+        provider_response_headers: payload::response_header_patch(input.provider_response_headers.clone(), policy)?,
         provider_response_body: payload::response_body_patch(input.provider_response_body.clone(), policy)?,
         finished: input.finished,
     };
@@ -84,7 +84,7 @@ pub(super) fn attempt_input(
     record.error_param = input.error_param.map(str::to_owned);
     record.provider_request_headers = payload::header_input(input.provider_request_headers.clone(), policy);
     record.provider_request_body = payload::request_body_input(input.provider_request_body.clone(), policy)?;
-    record.provider_response_headers = payload::header_input(input.provider_response_headers.clone(), policy);
+    record.provider_response_headers = payload::response_header_input(input.provider_response_headers.clone(), policy);
     record.provider_response_body = payload::response_body_input(input.provider_response_body.clone(), policy)?;
     Ok(record)
 }
@@ -185,7 +185,7 @@ pub(super) fn request_record_patch(
         billing_snapshot: billing_snapshot_patch(billing),
         first_byte_time_ms: option_patch(input.first_byte_time_ms),
         total_latency_ms: option_patch(input.latency_ms),
-        client_response_headers: payload::header_patch(input.client_response_headers.clone(), policy)?,
+        client_response_headers: payload::response_header_patch(input.client_response_headers.clone(), policy)?,
         client_response_body: payload::response_body_patch(input.client_response_body.clone(), policy)?,
         started: true,
         finished: input.finished,

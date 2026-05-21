@@ -1189,6 +1189,12 @@
           "description": "Records requests from Hook to Providers and responses returned from Providers to Hook."
         }
       },
+      "payloadSwitches": {
+        "requestHeaders": "Request headers",
+        "requestBody": "Request body",
+        "responseHeaders": "Response headers",
+        "responseBody": "Response body"
+      },
       "levels": {
         "basic": "BASIC - Basic information (~1KB/record)",
         "headers": "HEADERS - Includes bidirectional headers (~2-3KB/record)",

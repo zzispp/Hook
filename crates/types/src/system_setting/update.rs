@@ -46,6 +46,14 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub client_request_record_level: Option<RequestRecordLevel>,
     #[serde(default)]
+    pub client_record_request_headers: Option<bool>,
+    #[serde(default)]
+    pub client_record_request_body: Option<bool>,
+    #[serde(default)]
+    pub client_record_response_headers: Option<bool>,
+    #[serde(default)]
+    pub client_record_response_body: Option<bool>,
+    #[serde(default)]
     pub client_max_request_body_size_kb: Option<i64>,
     #[serde(default)]
     pub client_max_response_body_size_kb: Option<i64>,
@@ -53,6 +61,14 @@ pub struct SystemSettingsUpdate {
     pub client_sensitive_request_headers: Option<String>,
     #[serde(default)]
     pub provider_request_record_level: Option<RequestRecordLevel>,
+    #[serde(default)]
+    pub provider_record_request_headers: Option<bool>,
+    #[serde(default)]
+    pub provider_record_request_body: Option<bool>,
+    #[serde(default)]
+    pub provider_record_response_headers: Option<bool>,
+    #[serde(default)]
+    pub provider_record_response_body: Option<bool>,
     #[serde(default)]
     pub provider_max_request_body_size_kb: Option<i64>,
     #[serde(default)]
@@ -127,10 +143,18 @@ impl SystemSettingsUpdate {
             && self.request_record_payload_retention_days.is_none()
             && self.performance_monitoring_retention_days.is_none()
             && self.client_request_record_level.is_none()
+            && self.client_record_request_headers.is_none()
+            && self.client_record_request_body.is_none()
+            && self.client_record_response_headers.is_none()
+            && self.client_record_response_body.is_none()
             && self.client_max_request_body_size_kb.is_none()
             && self.client_max_response_body_size_kb.is_none()
             && self.client_sensitive_request_headers.is_none()
             && self.provider_request_record_level.is_none()
+            && self.provider_record_request_headers.is_none()
+            && self.provider_record_request_body.is_none()
+            && self.provider_record_response_headers.is_none()
+            && self.provider_record_response_body.is_none()
             && self.provider_max_request_body_size_kb.is_none()
             && self.provider_max_response_body_size_kb.is_none()
             && self.provider_sensitive_request_headers.is_none()

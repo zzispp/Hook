@@ -1189,6 +1189,12 @@
           "description": "记录 Hook 发往 Provider 的请求和 Provider 返回给 Hook 的响应。"
         }
       },
+      "payloadSwitches": {
+        "requestHeaders": "请求头",
+        "requestBody": "请求体",
+        "responseHeaders": "响应头",
+        "responseBody": "响应体"
+      },
       "levels": {
         "basic": "BASIC - 基本信息 (~1KB/条)",
         "headers": "HEADERS - 含双向头信息 (~2-3KB/条)",

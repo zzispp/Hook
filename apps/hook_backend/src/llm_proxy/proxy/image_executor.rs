@@ -6,7 +6,7 @@ use types::api_token::ApiToken;
 
 use super::{
     LlmProxyError, LlmProxyState, affinity,
-    attempt_log::{record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
+    attempt_log::{StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
     capture::RequestCapture,
     failure_classification::{FailureDecision, classify_status},
     image_form::MultipartImageRequest,
@@ -138,11 +138,25 @@ async fn attempt_once(
         }
     };
     let started = Instant::now();
-    record_started_attempt(state, &prepared.request_id, candidate, false, retry_index, &request, &provider_body).await?;
+    let attempt_cancel = record_started_attempt(StartedAttemptInput {
+        state,
+        request_id: &prepared.request_id,
+        candidate,
+        is_stream: false,
+        retry_index,
+        started,
+        request: &request,
+        provider_body: &provider_body,
+    })
+    .await?;
     let request_timeout = timeout::non_stream_total_timeout(candidate, false);
     let response = match execute_upstream_request(&state.http, request, request_timeout).await {
-        Ok(response) => response,
+        Ok(response) => {
+            attempt_cancel.disarm();
+            response
+        }
         Err(error) => {
+            attempt_cancel.disarm();
             let outcome = record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await?;
             affinity::invalidate_matching(state, candidate).await?;
             return Ok(option_response_outcome(outcome));
