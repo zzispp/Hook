@@ -96,13 +96,15 @@ impl StreamRelay {
         let error_message = error.to_string();
         self.stream_status.record_error(error_message.clone());
         self.stream_status.set_end_reason(StreamEndReason::HandlerStop, Some(error_message.clone()));
-        self.record_failure("response_conversion_error", &error_message).await?;
-        self.finished = true;
         if fail_before_output && !self.yielded_any && self.pending.is_empty() {
+            self.record_failure("response_conversion_error", &error_message).await?;
+            self.finished = true;
             return Err(error);
         }
         self.pending.push_back(render_stream_error(self.source_format));
         self.queue_done();
+        self.record_failure("response_conversion_error", &error_message).await?;
+        self.finished = true;
         Ok(())
     }
 

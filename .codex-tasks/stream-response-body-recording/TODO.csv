@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map streaming response recording flow,DONE,Relevant streaming capture and terminal record paths are identified,test -f apps/hook_backend/src/llm_proxy/proxy/stream_transport/relay.rs,2026-05-21,0,
+2,Implement streaming provider and client response body capture,DONE,Streaming terminal records persist provider_response_body and client_response_body through existing record policies,cargo check -p backend,2026-05-21,0,
+3,Add focused tests for stream body recording,DONE,Tests prove success and cancellation records include captured stream body,cargo test -p backend stream_transport::body_capture,2026-05-21,0,
+4,Run backend validation,DONE,Backend checks pass with 60 second timeout,perl -e 'alarm shift; exec @ARGV' 60 cargo test -p backend llm_proxy::proxy::stream_transport,2026-05-21,0,

@@ -8,7 +8,7 @@ use crate::llm_proxy::{
         stream_transport::{
             estimated_usage::{ESTIMATED_REQUEST_USAGE_SOURCE, ESTIMATED_USAGE_SOURCE},
             event::render_stream_event,
-            record::{failure_record, record_stream_attempt, success_record},
+            record::{StreamFailureRecordInput, StreamSuccessRecordInput, failure_record, record_stream_attempt, success_record},
             status::StreamEndReason,
         },
     },
@@ -63,7 +63,13 @@ impl StreamRelay {
         if self.recorded_terminal {
             return Ok(());
         }
-        let record = success_record(&self.context, self.usage, self.first_byte_time_ms, &self.stream_status);
+        let record = success_record(StreamSuccessRecordInput {
+            context: &self.context,
+            usage: self.usage,
+            first_byte_time_ms: self.first_byte_time_ms,
+            status: &self.stream_status,
+            bodies: self.terminal_response_bodies(),
+        });
         record_stream_attempt(record).await?;
         self.recorded_terminal = true;
         self.log_stream_status();
@@ -74,13 +80,14 @@ impl StreamRelay {
         if self.recorded_terminal {
             return Ok(());
         }
-        record_stream_attempt(failure_record(
-            &self.context,
-            self.first_byte_time_ms,
+        record_stream_attempt(failure_record(StreamFailureRecordInput {
+            context: &self.context,
+            first_byte_time_ms: self.first_byte_time_ms,
             error_type,
             error_message,
-            &self.stream_status,
-        ))
+            status: &self.stream_status,
+            bodies: self.terminal_response_bodies(),
+        }))
         .await?;
         self.recorded_terminal = true;
         self.log_stream_status();

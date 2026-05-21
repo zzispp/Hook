@@ -1,3 +1,4 @@
+mod body;
 mod consume;
 mod finalize;
 
@@ -10,9 +11,10 @@ use proxy::format_conversion::{ApiFormat, StreamConversionState};
 
 use super::{
     StreamAttemptContext, UpstreamStream,
+    body_capture::StreamBodyCapture,
     estimated_usage::StreamUsageEstimator,
     event::{render_keepalive, stream_error},
-    record::{cancelled_record, record_stream_attempt, response_read_error_type, streaming_record},
+    record::{StreamCancelledRecordInput, cancelled_record, record_stream_attempt, response_read_error_type, streaming_record},
     status::{StreamEndReason, StreamStatus},
     usage_parser::StreamUsageParser,
 };
@@ -43,6 +45,7 @@ pub(super) struct StreamRelay {
     recorded_terminal: bool,
     openai_done_sent: bool,
     stream_status: StreamStatus,
+    body_capture: StreamBodyCapture,
 }
 
 pub(super) async fn next_body_item(mut relay: StreamRelay) -> Option<(DownstreamItem, StreamRelay)> {
@@ -79,6 +82,7 @@ impl StreamRelay {
             recorded_terminal: false,
             openai_done_sent: false,
             stream_status: StreamStatus::default(),
+            body_capture: StreamBodyCapture::default(),
         }
     }
 
@@ -115,7 +119,7 @@ impl StreamRelay {
                         return Some(Err(stream_error(error.to_string())));
                     }
                 }
-                NextUpstreamItem::Keepalive(bytes) => return Some(Ok(bytes)),
+                NextUpstreamItem::Keepalive(bytes) => return Some(self.client_item(bytes)),
                 NextUpstreamItem::IdleTimeout => return Some(self.record_idle_timeout().await),
                 NextUpstreamItem::End => return self.finish_success_item().await,
             }
@@ -126,6 +130,7 @@ impl StreamRelay {
         match item {
             Ok(bytes) => {
                 self.last_upstream_item_at = Instant::now();
+                self.record_provider_body(&bytes);
                 self.consume_bytes(bytes, fail_before_output).await
             }
             Err(error) => self.record_read_error(&error).await.and_then(|()| Err(error.into())),
@@ -155,7 +160,7 @@ impl StreamRelay {
 
     async fn mark_first_byte(&mut self, bytes: req::Bytes) -> DownstreamItem {
         if self.yielded_any {
-            return Ok(bytes);
+            return self.client_item(bytes);
         }
         let first_byte = self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX);
         let record = streaming_record(&self.context, first_byte);
@@ -164,6 +169,7 @@ impl StreamRelay {
         }
         self.first_byte_time_ms = Some(first_byte);
         self.yielded_any = true;
+        self.body_capture.record_client_sent(&bytes);
         if self.protocol_completed
             && !self.finished
             && let Err(error) = self.finish_after_protocol_completion().await
@@ -175,7 +181,7 @@ impl StreamRelay {
 
     async fn finish_success_item(&mut self) -> Option<DownstreamItem> {
         match self.finish_success().await {
-            Ok(()) => self.pending.pop_front().map(Ok),
+            Ok(()) => self.pop_client_item(),
             Err(error) => Some(Err(stream_error(error.to_string()))),
         }
     }
@@ -234,7 +240,13 @@ impl Drop for StreamRelay {
         }
         self.stream_status
             .set_end_reason(StreamEndReason::ClientGone, Some("client disconnected before stream completed".into()));
-        let record = cancelled_record(&self.context, self.usage, self.first_byte_time_ms, &self.stream_status);
+        let record = cancelled_record(StreamCancelledRecordInput {
+            context: &self.context,
+            usage: self.usage,
+            first_byte_time_ms: self.first_byte_time_ms,
+            status: &self.stream_status,
+            bodies: self.cancelled_response_bodies(),
+        });
         tokio::spawn(async move {
             if let Err(error) = record_stream_attempt(record).await {
                 hook_tracing::warn_with_fields!("failed to record cancelled streaming request candidate", error = error);
