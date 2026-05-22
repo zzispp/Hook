@@ -12,6 +12,7 @@ import { requireApiData } from './rbac';
 export type CaptchaConfig = {
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
+  support_ticket_captcha_enabled: boolean;
 };
 
 const swrOptions = {

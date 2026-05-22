@@ -8,7 +8,7 @@ use types::{
 };
 
 use crate::application::{
-    OperationsRepository, OperationsResult, OperationsUseCase, TicketEmail, TicketMailer,
+    OperationsRepository, OperationsResult, OperationsUseCase, TicketCaptchaVerifier, TicketEmail, TicketMailer,
     validation::{
         sanitize_announcement, sanitize_announcement_patch, sanitize_ticket, sanitize_ticket_message, sanitize_ticket_patch, validate_announcement,
         validate_announcement_patch, validate_email, validate_page, validate_source_type, validate_ticket, validate_ticket_filters, validate_ticket_message,
@@ -20,21 +20,24 @@ use super::OperationsError;
 
 const ADMIN_ROLE: &str = "admin";
 
-pub struct OperationsService<R, M> {
+pub struct OperationsService<R, M, C> {
     repository: R,
     mailer: M,
+    captcha: C,
     admin_email: String,
 }
 
-impl<R, M> OperationsService<R, M>
+impl<R, M, C> OperationsService<R, M, C>
 where
     R: OperationsRepository,
     M: TicketMailer,
+    C: TicketCaptchaVerifier,
 {
-    pub fn new(repository: R, mailer: M, admin_email: String) -> Self {
+    pub fn new(repository: R, mailer: M, captcha: C, admin_email: String) -> Self {
         Self {
             repository,
             mailer,
+            captcha,
             admin_email,
         }
     }
@@ -69,10 +72,11 @@ where
 }
 
 #[async_trait]
-impl<R, M> OperationsUseCase for OperationsService<R, M>
+impl<R, M, C> OperationsUseCase for OperationsService<R, M, C>
 where
     R: OperationsRepository,
     M: TicketMailer,
+    C: TicketCaptchaVerifier,
 {
     async fn create_announcement(&self, operator_id: &str, input: AnnouncementInput) -> OperationsResult<Announcement> {
         let input = sanitize_announcement(input);
@@ -109,6 +113,7 @@ where
     async fn create_ticket(&self, input: SupportTicketCreateInput) -> OperationsResult<SupportTicketMutationResponse> {
         let mut input = sanitize_ticket(input);
         validate_ticket(&input)?;
+        self.captcha.verify_support_ticket(input.captcha_token.as_deref()).await?;
         input.contact_email = Some(self.resolved_contact_email(&input).await?);
         let (ticket, message) = self.repository.create_ticket(input).await?;
         let email = admin_email(&self.admin_email, &ticket, &message.body_markdown);
@@ -215,3 +220,7 @@ fn user_email(ticket: &SupportTicket, body_markdown: &str) -> TicketEmail {
 pub fn is_admin_role(role: &str) -> bool {
     role == ADMIN_ROLE
 }
+
+#[cfg(test)]
+#[path = "service_tests.rs"]
+mod tests;

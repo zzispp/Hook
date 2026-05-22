@@ -22,6 +22,12 @@ pub trait TicketMailer: Send + Sync + 'static {
     async fn send_ticket_email(&self, email: TicketEmail) -> SupportTicketEmailDelivery;
 }
 
+/// Reads and consumes CAPTCHA verification for user-facing ticket submissions.
+#[async_trait]
+pub trait TicketCaptchaVerifier: Send + Sync + 'static {
+    async fn verify_support_ticket(&self, token: Option<&str>) -> OperationsResult<()>;
+}
+
 #[async_trait]
 pub trait OperationsRepository: Send + Sync + 'static {
     async fn create_announcement(&self, operator_id: &str, input: AnnouncementInput) -> OperationsResult<Announcement>;

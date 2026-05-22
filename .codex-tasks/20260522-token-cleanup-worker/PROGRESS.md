@@ -1,0 +1,25 @@
+# Progress
+
+- Created task tracking files.
+- Located backend scheduled cleanup patterns:
+  - `apps/hook_backend/src/request_record_cleanup.rs`
+  - `apps/hook_backend/src/performance_monitoring_worker.rs`
+- Existing pattern: spawn loop from startup, read settings each iteration, log skip/error/completion, sleep by latest configured interval.
+- Implemented `apps/hook_backend/src/api_token_cleanup.rs`.
+- Started the API token cleanup worker after `LlmProxyCache` initialization so expired-token deletion still bumps auth cache through `CachedApiTokenRepository`.
+- Removed expired token cleanup from user/admin token list handlers.
+- Removed expired-token cleanup from `ApiTokenUseCase`; worker now owns scheduled cleanup.
+- Updated admin i18n helper text from list-request semantics to cleanup-worker semantics.
+- Added focused tests:
+  - list handlers do not trigger expired cleanup.
+  - token cleanup worker interval uses minutes.
+- Validation passed:
+  - `cargo fmt --all`
+  - `cargo check -p api_token -p backend`
+  - `cargo test -p api_token list_tokens_does_not_trigger_expired_cleanup`
+  - `cargo test -p api_token list_admin_tokens_does_not_trigger_expired_cleanup`
+  - `cargo test -p backend api_token_cleanup`
+  - `just check`
+  - `pnpm lint:frontend`
+  - `pnpm build:frontend`
+  - `just test`

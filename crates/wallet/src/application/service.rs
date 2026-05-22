@@ -113,10 +113,7 @@ where
         validate_page(page)?;
         validate_tz_offset(tz_offset_minutes)?;
         let wallet = self.user_wallet(user_id).await?;
-        let entries = self
-            .repository
-            .page_ledger_entries(&wallet.id.0, page, filters, tz_offset_minutes)
-            .await?;
+        let entries = self.repository.page_ledger_entries(&wallet.id.0, page, filters, tz_offset_minutes).await?;
         Ok(ledger_entries_response(WalletSummaryResponse::from(wallet), entries))
     }
 
@@ -129,10 +126,7 @@ where
         validate_page(page)?;
         validate_daily_usage_request(&request)?;
         let wallet = self.user_wallet(user_id).await?;
-        let transactions = self
-            .repository
-            .page_daily_usage_transactions(&wallet.id.0, page, request)
-            .await?;
+        let transactions = self.repository.page_daily_usage_transactions(&wallet.id.0, page, request).await?;
         Ok(daily_usage_details_response(transactions))
     }
 
@@ -200,10 +194,7 @@ where
         validate_wallet_id(wallet_id)?;
         validate_tz_offset(tz_offset_minutes)?;
         let wallet = self.repository.find_admin_wallet_by_id(wallet_id).await?.ok_or(WalletError::NotFound)?;
-        let entries = self
-            .repository
-            .page_ledger_entries(wallet_id, page, filters, tz_offset_minutes)
-            .await?;
+        let entries = self.repository.page_ledger_entries(wallet_id, page, filters, tz_offset_minutes).await?;
         Ok(admin_ledger_entries_for_wallet_response(wallet, entries))
     }
 
@@ -217,10 +208,7 @@ where
         validate_wallet_id(wallet_id)?;
         validate_daily_usage_request(&request)?;
         let wallet = self.repository.find_admin_wallet_by_id(wallet_id).await?.ok_or(WalletError::NotFound)?;
-        let transactions = self
-            .repository
-            .page_daily_usage_transactions(wallet_id, page, request)
-            .await?;
+        let transactions = self.repository.page_daily_usage_transactions(wallet_id, page, request).await?;
         Ok(admin_daily_usage_details_response(wallet, transactions))
     }
 

@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set};
 use types::{
     api_token::{ApiToken, ApiTokenListRequest, ApiTokenType},
     model::PatchField,
@@ -115,6 +115,15 @@ impl ApiTokenStore {
             .exec(self.database.connection())
             .await?;
         Ok(result.rows_affected)
+    }
+
+    pub async fn count_owner_tokens(&self, user_id: &str, token_type: ApiTokenType) -> StorageResult<u64> {
+        api_tokens::Entity::find()
+            .filter(api_tokens::Column::UserId.eq(user_id))
+            .filter(api_tokens::Column::TokenType.eq(token_type_value(token_type)))
+            .count(self.database.connection())
+            .await
+            .map_err(StorageError::from)
     }
 
     async fn find_user_token_record(&self, user_id: &str, id: &str) -> StorageResult<Option<ApiTokenRecord>> {

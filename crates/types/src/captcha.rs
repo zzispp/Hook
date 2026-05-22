@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct CaptchaConfigResponse {
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,
+    pub support_ticket_captcha_enabled: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -20,6 +20,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub registration_captcha_enabled: Option<bool>,
     #[serde(default)]
+    pub support_ticket_captcha_enabled: Option<bool>,
+    #[serde(default)]
     pub registration_email_verification_enabled: Option<bool>,
     #[serde(default)]
     pub password_reset_enabled: Option<bool>,
@@ -29,6 +31,10 @@ pub struct SystemSettingsUpdate {
     pub support_ticket_email_notifications_enabled: Option<bool>,
     #[serde(default)]
     pub auto_delete_expired_tokens: Option<bool>,
+    #[serde(default)]
+    pub token_limit_per_user: Option<i64>,
+    #[serde(default)]
+    pub token_expiry_check_interval_minutes: Option<i64>,
     #[serde(default)]
     pub request_record_cleanup_enabled: Option<bool>,
     #[serde(default)]
@@ -124,6 +130,7 @@ impl SystemSettingsUpdate {
             && self.allow_registration.is_none()
             && self.login_captcha_enabled.is_none()
             && self.registration_captcha_enabled.is_none()
+            && self.support_ticket_captcha_enabled.is_none()
             && self.registration_email_verification_enabled.is_none()
             && self.password_reset_enabled.is_none()
             && self.default_user_grant.is_none()
@@ -132,6 +139,8 @@ impl SystemSettingsUpdate {
             && self.cache_affinity_ttl_minutes.is_none()
             && self.provider_cooldown_policy.is_none()
             && self.auto_delete_expired_tokens.is_none()
+            && self.token_limit_per_user.is_none()
+            && self.token_expiry_check_interval_minutes.is_none()
             && self.request_record_cleanup_enabled.is_none()
             && self.request_record_cleanup_interval_hours.is_none()
             && self.performance_monitoring_cleanup_enabled.is_none()

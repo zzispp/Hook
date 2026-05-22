@@ -1,6 +1,6 @@
 use api_token::application::{ApiTokenCreateRecord, ApiTokenError, ApiTokenRepository, ApiTokenResult, ApiTokenUpdateRecord};
 use async_trait::async_trait;
-use types::api_token::{ApiToken, ApiTokenListRequest, ApiTokenListResponse};
+use types::api_token::{ApiToken, ApiTokenListRequest, ApiTokenListResponse, ApiTokenType};
 
 use super::cache::ProxyCacheInvalidator;
 
@@ -76,6 +76,10 @@ where
             self.bump_auth().await?;
         }
         Ok(deleted)
+    }
+
+    async fn count_owner_tokens(&self, user_id: &str, token_type: ApiTokenType) -> ApiTokenResult<u64> {
+        self.inner.count_owner_tokens(user_id, token_type).await
     }
 }
 

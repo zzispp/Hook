@@ -134,13 +134,7 @@ fn transaction_row(id: &'static str) -> storage::wallet::record::wallet_transact
     }
 }
 
-fn base_entry_row(
-    kind: &'static str,
-    id: &'static str,
-    wallet_id: &'static str,
-    local_date: &'static str,
-    count: i64,
-) -> BTreeMap<&'static str, Value> {
+fn base_entry_row(kind: &'static str, id: &'static str, wallet_id: &'static str, local_date: &'static str, count: i64) -> BTreeMap<&'static str, Value> {
     BTreeMap::from([
         ("entry_kind", Value::from(kind)),
         ("id", Value::from(id)),

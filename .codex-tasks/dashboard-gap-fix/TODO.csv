@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm dashboard layout cause,DONE,"Trend, model ranking, and activity grid layout cause is identified","sed -n '1,260p' apps/hook_frontend/src/sections/overview/analytics/view/overview-analytics-view.tsx",2026-05-22T01:48:53Z,0,"Parent grid places activity after the tallest first-row card."
+2,Update dashboard section layout,DONE,"Activity grid starts below trend card on desktop without waiting for model ranking height","pnpm --filter hook_frontend lint",2026-05-22T01:52:44Z,0,
+3,Run frontend validation,DONE,"Frontend static validation passes and browser measurement confirms normal spacing","pnpm --filter hook_frontend lint && pnpm --filter hook_frontend build",2026-05-22T01:57:45Z,0,"Measured dashboard card positions in the local browser: trend bottom 1172, activity top 1196."

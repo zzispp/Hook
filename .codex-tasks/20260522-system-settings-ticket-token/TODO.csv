@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate current ticket captcha and token setting runtime,DONE,Relevant call sites identified,rg -n "captcha|token|ticket" apps crates,2026-05-22 09:40:38 +0800,0,Settings storage API captcha ticket and token cleanup/create call sites were identified
+2,Implement backend setting schema and runtime behavior,DONE,Rust code compiles for changed crates,timeout 60s cargo check -p setting -p storage -p operations -p api_token,2026-05-22 09:40:38 +0800,0,Added settings fields defaults captcha verifier injection token owner limit and expiry cleanup interval
+3,Implement frontend settings UI and types,DONE,Frontend lint/type check for changed app passes,pnpm lint:frontend,2026-05-22 09:40:38 +0800,0,Added admin settings controls types payload mapping and ticket captcha submission token
+4,Run focused validation and record result,DONE,Validation commands completed or failure captured,test -f .codex-tasks/20260522-system-settings-ticket-token/PROGRESS.md,2026-05-22 09:46:54 +0800,0,Validation completed and recorded in PROGRESS.md

@@ -1,12 +1,19 @@
 'use client';
 
 import type { DashboardActivityFilters } from 'src/actions/dashboard';
-import type { DashboardPreset, DashboardOverviewResponse } from 'src/types/dashboard';
+import type {
+  DashboardPreset,
+  DashboardOverviewResponse,
+  DashboardActivityResponse,
+  DashboardFilterOptionsResponse,
+} from 'src/types/dashboard';
 
 import { useState } from 'react';
 
+import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -63,41 +70,118 @@ export function OverviewAnalyticsView() {
         data={overview.data}
       />
 
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, lg: 8 }}>
-          <TrendCard t={t} loading={overview.isLoading} data={overview.data} />
-        </Grid>
-        <Grid size={{ xs: 12, lg: 4 }}>
+      <DashboardMainGrid
+        t={t}
+        locale={locale}
+        isAdmin={isAdmin}
+        statsLoading={statsLoading}
+        overview={overview.data}
+        trendLoading={overview.isLoading}
+        activity={activity.data}
+        activityLoading={activity.isLoading}
+        filterOptions={filterOptions.data}
+        activityFilters={activityFilters}
+        onActivityFiltersChange={setActivityFilters}
+      />
+    </DashboardContent>
+  );
+}
+
+type DashboardMainGridProps = {
+  t: ReturnType<typeof useTranslate>['t'];
+  locale: string;
+  isAdmin: boolean;
+  statsLoading: boolean;
+  trendLoading: boolean;
+  activityLoading: boolean;
+  overview?: DashboardOverviewResponse;
+  activity?: DashboardActivityResponse;
+  filterOptions?: DashboardFilterOptionsResponse;
+  activityFilters: DashboardActivityFilters;
+  onActivityFiltersChange: (filters: DashboardActivityFilters) => void;
+};
+
+function DashboardMainGrid({
+  t,
+  locale,
+  isAdmin,
+  overview,
+  activity,
+  statsLoading,
+  trendLoading,
+  filterOptions,
+  activityLoading,
+  activityFilters,
+  onActivityFiltersChange,
+}: DashboardMainGridProps) {
+  return (
+    <Stack spacing={3}>
+      <Box sx={DASHBOARD_TOP_GRID_SX}>
+        <Box sx={DASHBOARD_TREND_ACTIVITY_SX}>
+          <Box sx={DASHBOARD_TREND_AREA_SX}>
+            <TrendCard t={t} loading={trendLoading} data={overview} />
+          </Box>
+          <Box sx={DASHBOARD_ACTIVITY_AREA_SX}>
+            <ActivityGridCard
+              t={t}
+              isAdmin={isAdmin}
+              filters={activityFilters}
+              activity={activity}
+              filterOptions={filterOptions}
+              loading={activityLoading}
+              onFiltersChange={onActivityFiltersChange}
+            />
+          </Box>
+        </Box>
+        <Box sx={DASHBOARD_MODELS_AREA_SX}>
           <BreakdownCard
             t={t}
             locale={locale}
             title={t('dashboard.stats.breakdowns.models')}
-            items={overview.data?.breakdowns.models}
+            items={overview?.breakdowns.models}
             loading={statsLoading}
           />
-        </Grid>
-        <Grid size={{ xs: 12 }}>
-          <ActivityGridCard
-            t={t}
-            isAdmin={isAdmin}
-            filters={activityFilters}
-            activity={activity.data}
-            filterOptions={filterOptions.data}
-            loading={activity.isLoading}
-            onFiltersChange={setActivityFilters}
-          />
-        </Grid>
+        </Box>
+      </Box>
+      <Grid container spacing={3}>
         <SharedBreakdowns
           t={t}
           locale={locale}
           loading={statsLoading}
-          overview={overview.data}
+          overview={overview}
           isAdmin={isAdmin}
         />
       </Grid>
-    </DashboardContent>
+    </Stack>
   );
 }
+
+const DASHBOARD_TOP_GRID_SX = {
+  gap: 3,
+  display: 'grid',
+  alignItems: 'start',
+  gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 8fr) minmax(0, 4fr)' },
+  gridTemplateAreas: { xs: '"trend" "models" "activity"', lg: '"main models"' },
+} as const;
+
+const DASHBOARD_TREND_ACTIVITY_SX = {
+  gap: 3,
+  gridArea: { lg: 'main' },
+  display: { xs: 'contents', lg: 'flex' },
+  flexDirection: 'column',
+} as const;
+
+const DASHBOARD_TREND_AREA_SX = {
+  gridArea: { xs: 'trend', lg: 'auto' },
+} as const;
+
+const DASHBOARD_ACTIVITY_AREA_SX = {
+  gridArea: { xs: 'activity', lg: 'auto' },
+} as const;
+
+const DASHBOARD_MODELS_AREA_SX = {
+  gridArea: 'models',
+} as const;
 
 function SharedBreakdowns({
   t,

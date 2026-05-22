@@ -41,6 +41,7 @@ pub fn sanitize_ticket(input: SupportTicketCreateInput) -> SupportTicketCreateIn
         subject: input.subject.trim().into(),
         body_markdown: input.body_markdown.trim().into(),
         contact_email: input.contact_email.map(|value| value.trim().into()),
+        captcha_token: input.captcha_token.map(|value| value.trim().into()),
     }
 }
 

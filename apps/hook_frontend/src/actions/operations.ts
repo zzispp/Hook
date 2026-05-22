@@ -94,6 +94,7 @@ export async function createTicket(payload: {
   subject: string;
   body_markdown: string;
   contact_email?: string;
+  captcha_token?: string;
 }) {
   const value = await requestData<SupportTicketMutationResponse>(axios.post(endpoints.tickets.list, payload));
   await refreshTickets();

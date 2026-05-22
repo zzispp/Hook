@@ -44,6 +44,7 @@ where
         Ok(CaptchaConfigResponse {
             login_captcha_enabled: self.settings.login_captcha_enabled().await?,
             registration_captcha_enabled: self.settings.registration_captcha_enabled().await?,
+            support_ticket_captcha_enabled: self.settings.support_ticket_captcha_enabled().await?,
         })
     }
 
@@ -79,6 +80,10 @@ where
 
     async fn verify_registration(&self, token: Option<&str>) -> CaptchaResult<()> {
         self.verify_if_enabled(self.settings.registration_captcha_enabled().await?, token).await
+    }
+
+    async fn verify_support_ticket(&self, token: Option<&str>) -> CaptchaResult<()> {
+        self.verify_if_enabled(self.settings.support_ticket_captcha_enabled().await?, token).await
     }
 }
 

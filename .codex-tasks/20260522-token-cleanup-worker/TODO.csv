@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate existing scheduled worker pattern,DONE,Existing worker startup and interval semantics identified,rg -n "spawn|interval|cleanup_interval|worker" apps crates,2026-05-22 09:51:29 +0800,0,Matched request_record_cleanup and performance_monitoring_worker startup loop patterns
+2,Implement standalone token cleanup worker,DONE,Expired token cleanup no longer runs from list handlers and backend compiles,cargo check -p api_token -p backend,2026-05-22 09:59:11 +0800,0,Added backend api_token_cleanup worker and removed cleanup from list handlers/usecase
+3,Update focused tests,DONE,Token cleanup worker/list behavior covered by tests,cargo test -p api_token cleanup,2026-05-22 09:59:11 +0800,0,Added handler tests for no request-triggered cleanup and worker interval test
+4,Run validation and record result,DONE,Backend and frontend validation completed or failure captured,test -f .codex-tasks/20260522-token-cleanup-worker/PROGRESS.md,2026-05-22 10:05:30 +0800,0,Focused Rust checks passed; prior full validation recorded in PROGRESS.md

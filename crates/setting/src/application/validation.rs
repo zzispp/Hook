@@ -62,6 +62,8 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_sensitive_headers("provider_sensitive_request_headers", input.provider_sensitive_request_headers.as_deref())?;
     validate_non_negative_decimal("default_user_grant", input.default_user_grant)?;
     validate_non_negative_i64("default_rate_limit_rpm", input.default_rate_limit_rpm)?;
+    validate_positive_i64("token_limit_per_user", input.token_limit_per_user)?;
+    validate_positive_i64("token_expiry_check_interval_minutes", input.token_expiry_check_interval_minutes)?;
     validate_positive_i64("cache_affinity_ttl_minutes", input.cache_affinity_ttl_minutes)?;
     validate_provider_cooldown_policy(input.provider_cooldown_policy.as_ref())?;
     validate_mail_settings(input)

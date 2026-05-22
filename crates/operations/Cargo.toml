@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 async-trait.workspace = true
 axum.workspace = true
+captcha.workspace = true
 configuration.workspace = true
 constants.workspace = true
 lettre.workspace = true
@@ -16,3 +17,6 @@ thiserror.workspace = true
 time.workspace = true
 types.workspace = true
 setting.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

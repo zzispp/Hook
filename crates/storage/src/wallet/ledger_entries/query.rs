@@ -145,11 +145,7 @@ fn filtered_sql(clauses: Vec<String>, offset: String) -> String {
 }
 
 fn entries_sql() -> String {
-    format!(
-        "{} UNION ALL {}",
-        transaction_entries_sql(),
-        daily_model_usage_entries_sql()
-    )
+    format!("{} UNION ALL {}", transaction_entries_sql(), daily_model_usage_entries_sql())
 }
 
 fn transaction_entries_sql() -> &'static str {
@@ -217,7 +213,14 @@ fn add_search_filter(clauses: &mut Vec<String>, params: &mut SqlParams, value: O
     if include_owner {
         columns.extend(owner_searchable_columns());
     }
-    clauses.push(format!("({})", columns.into_iter().map(|column| format!("{column} LIKE {placeholder}")).collect::<Vec<_>>().join(" OR ")));
+    clauses.push(format!(
+        "({})",
+        columns
+            .into_iter()
+            .map(|column| format!("{column} LIKE {placeholder}"))
+            .collect::<Vec<_>>()
+            .join(" OR ")
+    ));
 }
 
 fn searchable_columns() -> Vec<&'static str> {
@@ -233,7 +236,12 @@ fn searchable_columns() -> Vec<&'static str> {
 }
 
 fn owner_searchable_columns() -> Vec<&'static str> {
-    vec!["LOWER(w.id)", "LOWER(w.user_id)", "LOWER(COALESCE(u.username, ''))", "LOWER(COALESCE(u.email, ''))"]
+    vec![
+        "LOWER(w.id)",
+        "LOWER(w.user_id)",
+        "LOWER(COALESCE(u.username, ''))",
+        "LOWER(COALESCE(u.email, ''))",
+    ]
 }
 
 fn add_owner_filter(clauses: &mut Vec<String>, value: Option<&str>) {

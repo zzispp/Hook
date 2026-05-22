@@ -19,6 +19,18 @@ import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 import { useTheme, alpha as hexAlpha } from '@mui/material/styles';
 
+const ACTIVITY_CELL_SIZE = 12;
+const ACTIVITY_CELL_GAP = 4;
+const ACTIVITY_CELL_TRACK = `${ACTIVITY_CELL_SIZE}px`;
+const ACTIVITY_CELL_GAP_VALUE = `${ACTIVITY_CELL_GAP}px`;
+const ACTIVITY_GRID_ROWS = {
+  xs: `repeat(22, ${ACTIVITY_CELL_TRACK})`,
+  sm: `repeat(14, ${ACTIVITY_CELL_TRACK})`,
+  md: `repeat(8, ${ACTIVITY_CELL_TRACK})`,
+  lg: `repeat(12, ${ACTIVITY_CELL_TRACK})`,
+  xl: `repeat(8, ${ACTIVITY_CELL_TRACK})`,
+};
+
 export function ActivityGridCard({
   t,
   loading,
@@ -67,7 +79,7 @@ export function ActivityGridCard({
           ) : null
         }
       />
-      <Box sx={{ p: 3, overflowX: 'auto' }}>
+      <Box sx={{ p: 3, minWidth: 0 }}>
         {loading ? <Skeleton variant="rectangular" height={126} /> : null}
         {!loading ? <ActivityCells theme={theme} days={activity?.days ?? []} max={max} /> : null}
         <ActivityLegend t={t} theme={theme} />
@@ -201,12 +213,11 @@ function ActivityCells({
   return (
     <Box
       sx={{
-        gap: '4px',
+        gap: ACTIVITY_CELL_GAP_VALUE,
         display: 'grid',
         gridAutoFlow: 'column',
-        gridTemplateRows: 'repeat(7, 12px)',
-        gridAutoColumns: '12px',
-        minWidth: 840,
+        gridAutoColumns: ACTIVITY_CELL_TRACK,
+        gridTemplateRows: ACTIVITY_GRID_ROWS,
       }}
     >
       {days.map((day) => (
@@ -214,8 +225,8 @@ function ActivityCells({
           key={day.date}
           title={`${day.date}: ${day.request_count}`}
           sx={{
-            width: 12,
-            height: 12,
+            width: ACTIVITY_CELL_SIZE,
+            height: ACTIVITY_CELL_SIZE,
             borderRadius: 0.5,
             bgcolor: activityColor(theme, day.request_count, max),
           }}
@@ -234,7 +245,12 @@ function ActivityLegend({ t, theme }: { t: TFunction<'admin'>; theme: Theme }) {
       {[0, 1, 2, 3, 4].map((level) => (
         <Box
           key={level}
-          sx={{ width: 12, height: 12, borderRadius: 0.5, bgcolor: activityColor(theme, level, 4) }}
+          sx={{
+            width: ACTIVITY_CELL_SIZE,
+            height: ACTIVITY_CELL_SIZE,
+            borderRadius: 0.5,
+            bgcolor: activityColor(theme, level, 4),
+          }}
         />
       ))}
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>

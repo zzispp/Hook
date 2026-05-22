@@ -2549,6 +2549,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "captcha",
  "configuration",
  "constants",
  "lettre",
@@ -2558,6 +2559,7 @@ dependencies = [
  "storage",
  "thiserror 2.0.18",
  "time",
+ "tokio",
  "types",
 ]
 

@@ -54,7 +54,6 @@ pub trait ApiTokenUseCase: Send + Sync + 'static {
     async fn get_admin_token(&self, id: &str) -> ApiTokenResult<ApiTokenResponse>;
     async fn admin_token_secret(&self, id: &str) -> ApiTokenResult<ApiTokenSecretResponse>;
     async fn list_admin_tokens(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse>;
-    async fn cleanup_expired_tokens(&self) -> ApiTokenResult<u64>;
 }
 
 #[async_trait]
@@ -70,6 +69,7 @@ where
         let input = sanitize_create(input);
         let validated = validate_create(&input)?;
         self.ensure_create_policy(&validated.group_code, &validated.allowed_model_ids).await?;
+        self.ensure_owner_token_limit(user_id, types::api_token::ApiTokenType::User).await?;
         let generated = generate_token();
         let record = user_create_record(user_id, input, validated, &generated);
         self.create_response(record, generated).await
@@ -117,6 +117,9 @@ where
         {
             self.ensure_user_exists(user_id).await?;
         }
+        if let Some(user_id) = owner_id.as_deref() {
+            self.ensure_owner_token_limit(user_id, input.token_type).await?;
+        }
         let generated = generate_token();
         let record = admin_create_record(owner_id, input, validated, &generated);
         self.create_response(record, generated).await
@@ -147,13 +150,6 @@ where
     async fn list_admin_tokens(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse> {
         validate_list_request(&request)?;
         self.admin_token_list_response(request).await
-    }
-
-    async fn cleanup_expired_tokens(&self) -> ApiTokenResult<u64> {
-        if !self.system_policy.auto_delete_expired_tokens().await? {
-            return Ok(0);
-        }
-        self.repository.delete_expired_tokens().await
     }
 }
 
@@ -237,6 +233,15 @@ where
             return Ok(());
         }
         Err(ApiTokenError::InvalidInput(format!("user does not exist: {id}")))
+    }
+
+    async fn ensure_owner_token_limit(&self, owner_id: &str, token_type: types::api_token::ApiTokenType) -> ApiTokenResult<()> {
+        let limit = self.system_policy.token_limit_per_user().await?;
+        let count = self.repository.count_owner_tokens(owner_id, token_type).await?;
+        if count >= u64::try_from(limit).map_err(|_| ApiTokenError::Infrastructure("token limit must fit u64".into()))? {
+            return Err(ApiTokenError::Conflict("token quantity limit reached".into()));
+        }
+        Ok(())
     }
 }
 

@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react';
 import { paths } from 'src/routes/paths';
 import { useRouter, useSearchParams } from 'src/routes/hooks';
 
+import { useCaptchaConfig } from 'src/actions/captcha';
 import { useTranslate } from 'src/locales/use-locales';
 import {
   useTickets,
@@ -33,6 +34,7 @@ export function useTicketWorkspaceState(admin: boolean) {
   const table = useTable({ defaultRowsPerPage: 10 });
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
+  const captcha = useCaptchaConfig();
   const tickets = useTickets(table.page, table.rowsPerPage, { search }, admin);
   const detail = useTicketDetail(selection.selectedId, admin);
   const mutations = useTicketMutations({ admin, t, setCreating, ...selection });
@@ -58,11 +60,20 @@ export function useTicketWorkspaceState(admin: boolean) {
     detail,
     creating,
     userEmail: user?.email ?? '',
+    ticketCaptchaConfig: ticketCaptchaConfig(captcha),
     handleSearch,
     refreshTickets,
     setCreating,
     ...selection,
     ...mutations,
+  };
+}
+
+function ticketCaptchaConfig(captcha: ReturnType<typeof useCaptchaConfig>) {
+  return {
+    enabled: captcha.data?.support_ticket_captcha_enabled,
+    loading: captcha.isLoading,
+    errorMessage: captcha.error?.message,
   };
 }
 

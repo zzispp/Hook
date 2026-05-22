@@ -80,6 +80,10 @@ impl ApiTokenRepository for ListRepository {
     async fn delete_expired_tokens(&self) -> ApiTokenResult<u64> {
         unimplemented!("not needed for list owner tests")
     }
+
+    async fn count_owner_tokens(&self, _user_id: &str, _token_type: ApiTokenType) -> ApiTokenResult<u64> {
+        unimplemented!("not needed for list owner tests")
+    }
 }
 
 struct OwnerUsers;
@@ -128,8 +132,8 @@ impl SystemTokenPolicy for StaticPolicy {
         Ok(0)
     }
 
-    async fn auto_delete_expired_tokens(&self) -> ApiTokenResult<bool> {
-        Ok(false)
+    async fn token_limit_per_user(&self) -> ApiTokenResult<i64> {
+        Ok(5)
     }
 }
 

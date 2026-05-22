@@ -22,6 +22,7 @@ pub trait CaptchaStore: Send + Sync + 'static {
 pub trait CaptchaSettingsReader: Send + Sync + 'static {
     async fn login_captcha_enabled(&self) -> CaptchaResult<bool>;
     async fn registration_captcha_enabled(&self) -> CaptchaResult<bool>;
+    async fn support_ticket_captcha_enabled(&self) -> CaptchaResult<bool>;
 }
 
 #[async_trait]
@@ -31,4 +32,5 @@ pub trait CaptchaUseCase: Send + Sync + 'static {
     async fn redeem(&self, payload: CaptchaRedeemPayload) -> CaptchaResult<CaptchaRedeemResponse>;
     async fn verify_login(&self, token: Option<&str>) -> CaptchaResult<()>;
     async fn verify_registration(&self, token: Option<&str>) -> CaptchaResult<()>;
+    async fn verify_support_ticket(&self, token: Option<&str>) -> CaptchaResult<()>;
 }

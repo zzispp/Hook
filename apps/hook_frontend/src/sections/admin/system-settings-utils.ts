@@ -16,11 +16,14 @@ export type SystemSettingsForm = {
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
+  support_ticket_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
   auto_delete_expired_tokens: boolean;
+  token_limit_per_user: string;
+  token_expiry_check_interval_minutes: string;
   request_record_cleanup_enabled: boolean;
   request_record_cleanup_interval_hours: string;
   performance_monitoring_cleanup_enabled: boolean;
@@ -69,11 +72,14 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   allow_registration: true,
   login_captcha_enabled: false,
   registration_captcha_enabled: false,
+  support_ticket_captcha_enabled: true,
   registration_email_verification_enabled: false,
   password_reset_enabled: false,
   email_config_enabled: false,
   support_ticket_email_notifications_enabled: false,
   auto_delete_expired_tokens: false,
+  token_limit_per_user: '5',
+  token_expiry_check_interval_minutes: '5',
   request_record_cleanup_enabled: true,
   request_record_cleanup_interval_hours: '24',
   performance_monitoring_cleanup_enabled: true,
@@ -123,12 +129,15 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     allow_registration: settings.allow_registration,
     login_captcha_enabled: settings.login_captcha_enabled,
     registration_captcha_enabled: settings.registration_captcha_enabled,
+    support_ticket_captcha_enabled: settings.support_ticket_captcha_enabled,
     registration_email_verification_enabled: settings.registration_email_verification_enabled,
     password_reset_enabled: settings.password_reset_enabled,
     email_config_enabled: settings.email_config_enabled,
     support_ticket_email_notifications_enabled:
       settings.support_ticket_email_notifications_enabled,
     auto_delete_expired_tokens: settings.auto_delete_expired_tokens,
+    token_limit_per_user: String(settings.token_limit_per_user),
+    token_expiry_check_interval_minutes: String(settings.token_expiry_check_interval_minutes),
     request_record_cleanup_enabled: settings.request_record_cleanup_enabled,
     request_record_cleanup_interval_hours: String(settings.request_record_cleanup_interval_hours),
     performance_monitoring_cleanup_enabled: settings.performance_monitoring_cleanup_enabled,
@@ -183,12 +192,15 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     allow_registration: form.allow_registration,
     login_captcha_enabled: form.login_captcha_enabled,
     registration_captcha_enabled: form.registration_captcha_enabled,
+    support_ticket_captcha_enabled: form.support_ticket_captcha_enabled,
     registration_email_verification_enabled: form.registration_email_verification_enabled,
     password_reset_enabled: form.password_reset_enabled,
     email_config_enabled: form.email_config_enabled,
     support_ticket_email_notifications_enabled:
       form.support_ticket_email_notifications_enabled,
     auto_delete_expired_tokens: form.auto_delete_expired_tokens,
+    token_limit_per_user: Number(form.token_limit_per_user || 0),
+    token_expiry_check_interval_minutes: Number(form.token_expiry_check_interval_minutes || 0),
     request_record_cleanup_enabled: form.request_record_cleanup_enabled,
     request_record_cleanup_interval_hours: Number(form.request_record_cleanup_interval_hours || 0),
     performance_monitoring_cleanup_enabled: form.performance_monitoring_cleanup_enabled,

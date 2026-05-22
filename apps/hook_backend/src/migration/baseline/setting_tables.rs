@@ -3,6 +3,8 @@ use sea_orm_migration::{prelude::*, schema::*};
 use super::iden::SystemSettings;
 
 const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
+const DEFAULT_TOKEN_EXPIRY_CHECK_INTERVAL_MINUTES: i64 = 5;
+const DEFAULT_TOKEN_LIMIT_PER_USER: i64 = 5;
 
 pub(super) fn system_settings_table() -> TableCreateStatement {
     Table::create()
@@ -15,11 +17,14 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(boolean(SystemSettings::AllowRegistration))
         .col(boolean(SystemSettings::LoginCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::RegistrationCaptchaEnabled).default(false))
+        .col(boolean(SystemSettings::SupportTicketCaptchaEnabled).default(true))
         .col(boolean(SystemSettings::RegistrationEmailVerificationEnabled).default(false))
         .col(boolean(SystemSettings::PasswordResetEnabled).default(false))
         .col(boolean(SystemSettings::EmailConfigEnabled).default(false))
         .col(boolean(SystemSettings::SupportTicketEmailNotificationsEnabled).default(false))
         .col(boolean(SystemSettings::AutoDeleteExpiredTokens))
+        .col(big_integer(SystemSettings::TokenLimitPerUser).default(DEFAULT_TOKEN_LIMIT_PER_USER))
+        .col(big_integer(SystemSettings::TokenExpiryCheckIntervalMinutes).default(DEFAULT_TOKEN_EXPIRY_CHECK_INTERVAL_MINUTES))
         .col(boolean(SystemSettings::RequestRecordCleanupEnabled).default(true))
         .col(big_integer(SystemSettings::RequestRecordCleanupIntervalHours).default(24))
         .col(boolean(SystemSettings::PerformanceMonitoringCleanupEnabled).default(true))

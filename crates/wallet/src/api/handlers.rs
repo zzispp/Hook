@@ -89,7 +89,10 @@ pub async fn ledger_entries(
     Query(query): Query<WalletLedgerEntriesQuery>,
 ) -> ApiResult<ApiJson<WalletLedgerEntriesResponse>> {
     ensure_user_wallet_access(&current_user)?;
-    Ok(ok(state.wallets.ledger_entries(&current_user.id, PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes).await?))
+    Ok(ok(state
+        .wallets
+        .ledger_entries(&current_user.id, PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
+        .await?))
 }
 
 pub async fn daily_usage_transactions(
@@ -98,7 +101,10 @@ pub async fn daily_usage_transactions(
     Query(query): Query<WalletDailyUsageQuery>,
 ) -> ApiResult<ApiJson<WalletDailyUsageDetailsResponse>> {
     ensure_user_wallet_access(&current_user)?;
-    Ok(ok(state.wallets.daily_usage_transactions(&current_user.id, PageRequest::from(&query), query.into()).await?))
+    Ok(ok(state
+        .wallets
+        .daily_usage_transactions(&current_user.id, PageRequest::from(&query), query.into())
+        .await?))
 }
 
 pub async fn admin_wallets(State(state): State<WalletApiState>, Query(query): Query<AdminWalletListQuery>) -> ApiResult<ApiJson<AdminWalletListResponse>> {
@@ -119,7 +125,10 @@ pub async fn admin_ledger_entries(
     State(state): State<WalletApiState>,
     Query(query): Query<WalletLedgerEntriesQuery>,
 ) -> ApiResult<ApiJson<AdminWalletLedgerEntriesResponse>> {
-    Ok(ok(state.wallets.admin_ledger_entries(PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes).await?))
+    Ok(ok(state
+        .wallets
+        .admin_ledger_entries(PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
+        .await?))
 }
 
 pub async fn admin_transactions(
@@ -135,12 +144,10 @@ pub async fn admin_ledger_entries_for_wallet(
     Path(wallet_id): Path<String>,
     Query(query): Query<WalletLedgerEntriesQuery>,
 ) -> ApiResult<ApiJson<AdminWalletLedgerEntriesForWalletResponse>> {
-    Ok(ok(
-        state
-            .wallets
-            .admin_ledger_entries_for_wallet(&wallet_id, PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
-            .await?,
-    ))
+    Ok(ok(state
+        .wallets
+        .admin_ledger_entries_for_wallet(&wallet_id, PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
+        .await?))
 }
 
 pub async fn admin_daily_usage_transactions(
@@ -148,12 +155,10 @@ pub async fn admin_daily_usage_transactions(
     Path(wallet_id): Path<String>,
     Query(query): Query<WalletDailyUsageQuery>,
 ) -> ApiResult<ApiJson<AdminWalletDailyUsageDetailsResponse>> {
-    Ok(ok(
-        state
-            .wallets
-            .admin_daily_usage_transactions(&wallet_id, PageRequest::from(&query), query.into())
-            .await?,
-    ))
+    Ok(ok(state
+        .wallets
+        .admin_daily_usage_transactions(&wallet_id, PageRequest::from(&query), query.into())
+        .await?))
 }
 
 pub async fn admin_adjust_wallet(

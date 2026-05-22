@@ -83,6 +83,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.registration_captcha_enabled {
         active.registration_captcha_enabled = Set(value);
     }
+    if let Some(value) = input.support_ticket_captcha_enabled {
+        active.support_ticket_captcha_enabled = Set(value);
+    }
     if let Some(value) = input.registration_email_verification_enabled {
         active.registration_email_verification_enabled = Set(value);
     }
@@ -97,6 +100,12 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     }
     if let Some(value) = input.auto_delete_expired_tokens {
         active.auto_delete_expired_tokens = Set(value);
+    }
+    if let Some(value) = input.token_limit_per_user {
+        active.token_limit_per_user = Set(value);
+    }
+    if let Some(value) = input.token_expiry_check_interval_minutes {
+        active.token_expiry_check_interval_minutes = Set(value);
     }
     if let Some(value) = input.request_record_cleanup_enabled {
         active.request_record_cleanup_enabled = Set(value);

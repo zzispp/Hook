@@ -195,6 +195,14 @@ function BaseSection({
           }
         />
         <SwitchRow
+          checked={form.support_ticket_captcha_enabled}
+          label={t('systemSettings.fields.supportTicketCaptchaEnabled')}
+          helperText={t('systemSettings.helper.supportTicketCaptchaEnabled')}
+          onChange={(checked) =>
+            setForm((current) => ({ ...current, support_ticket_captcha_enabled: checked }))
+          }
+        />
+        <SwitchRow
           checked={form.registration_email_verification_enabled}
           disabled={emailVerificationDisabled}
           label={t('systemSettings.fields.registrationEmailVerificationEnabled')}
@@ -255,6 +263,22 @@ function TokenSection({
           label={t('systemSettings.fields.autoDeleteExpiredTokens')}
           onChange={(checked) =>
             setForm((current) => ({ ...current, auto_delete_expired_tokens: checked }))
+          }
+        />
+        <TextFieldRow
+          type="number"
+          label={t('systemSettings.fields.tokenLimitPerUser')}
+          value={form.token_limit_per_user}
+          helperText={t('systemSettings.helper.tokenLimitPerUser')}
+          onChange={(value) => setForm((current) => ({ ...current, token_limit_per_user: value }))}
+        />
+        <TextFieldRow
+          type="number"
+          label={t('systemSettings.fields.tokenExpiryCheckIntervalMinutes')}
+          value={form.token_expiry_check_interval_minutes}
+          helperText={t('systemSettings.helper.tokenExpiryCheckIntervalMinutes')}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, token_expiry_check_interval_minutes: value }))
           }
         />
         <TextFieldRow

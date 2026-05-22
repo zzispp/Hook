@@ -56,7 +56,7 @@ use model::{
 use operations::{
     api::{OperationsApiState, create_router as create_operations_router},
     application::OperationsService,
-    infra::{SmtpTicketMailer, StorageOperationsRepository},
+    infra::{CaptchaTicketVerifier, SmtpTicketMailer, StorageOperationsRepository},
 };
 use provider::{
     api::{ProviderApiState, create_router as create_provider_router},
@@ -125,6 +125,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     });
     proxy_cache.refresh_scheduling_snapshot().await?;
     proxy_cache.restore_provider_cooldowns().await?;
+    crate::api_token_cleanup::spawn_api_token_cleanup(database.clone(), proxy_cache.clone());
     let models = Arc::new(ModelService::new(
         CachedModelRepository::new(StorageModelRepository::new(database.clone()), proxy_cache.clone()),
         ModelsDevClient::new(),
@@ -179,14 +180,15 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
             RedisRegistrationEmailCodeStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
         ),
     );
-    let operations = Arc::new(OperationsService::new(
-        StorageOperationsRepository::new(database.clone()),
-        SmtpTicketMailer::new(database.clone(), setting_secret_cipher),
-        settings.admin.email.clone(),
-    ));
     let captcha = Arc::new(CaptchaService::new(
         StorageCaptchaSettingsReader::new(database.clone()),
         RedisCaptchaStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
+    ));
+    let operations = Arc::new(OperationsService::new(
+        StorageOperationsRepository::new(database.clone()),
+        SmtpTicketMailer::new(database.clone(), setting_secret_cipher),
+        CaptchaTicketVerifier::new(captcha.clone()),
+        settings.admin.email.clone(),
     ));
     let llm_proxy = LlmProxyState::new(
         database.clone(),

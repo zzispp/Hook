@@ -103,6 +103,7 @@ export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
       <TicketCreateDialog
         open={state.creating}
         userEmail={state.userEmail}
+        captchaConfig={state.ticketCaptchaConfig}
         submitting={state.submitting}
         onClose={() => state.setCreating(false)}
         onSubmit={state.submitCreate}

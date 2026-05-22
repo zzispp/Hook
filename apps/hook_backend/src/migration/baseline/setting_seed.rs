@@ -4,6 +4,8 @@ use super::iden::SystemSettings;
 
 const SYSTEM_SETTINGS_ID: &str = "global";
 const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
+const DEFAULT_TOKEN_EXPIRY_CHECK_INTERVAL_MINUTES: i64 = 5;
+const DEFAULT_TOKEN_LIMIT_PER_USER: i64 = 5;
 const DEFAULT_REGISTRATION_SUBJECT: &str = "注册验证码";
 const DEFAULT_PASSWORD_RESET_SUBJECT: &str = "找回密码";
 const DEFAULT_REGISTRATION_HTML: &str = r#"<!DOCTYPE html>
@@ -83,11 +85,14 @@ fn system_settings_columns() -> Vec<SystemSettings> {
         SystemSettings::AllowRegistration,
         SystemSettings::LoginCaptchaEnabled,
         SystemSettings::RegistrationCaptchaEnabled,
+        SystemSettings::SupportTicketCaptchaEnabled,
         SystemSettings::RegistrationEmailVerificationEnabled,
         SystemSettings::PasswordResetEnabled,
         SystemSettings::EmailConfigEnabled,
         SystemSettings::SupportTicketEmailNotificationsEnabled,
         SystemSettings::AutoDeleteExpiredTokens,
+        SystemSettings::TokenLimitPerUser,
+        SystemSettings::TokenExpiryCheckIntervalMinutes,
         SystemSettings::RequestRecordCleanupEnabled,
         SystemSettings::RequestRecordCleanupIntervalHours,
         SystemSettings::PerformanceMonitoringCleanupEnabled,
@@ -143,11 +148,14 @@ fn system_settings_values() -> Vec<Expr> {
         true.into(),
         false.into(),
         false.into(),
+        true.into(),
         false.into(),
         false.into(),
         false.into(),
         false.into(),
         false.into(),
+        DEFAULT_TOKEN_LIMIT_PER_USER.into(),
+        DEFAULT_TOKEN_EXPIRY_CHECK_INTERVAL_MINUTES.into(),
         true.into(),
         24.into(),
         true.into(),

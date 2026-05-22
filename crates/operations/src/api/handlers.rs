@@ -244,6 +244,7 @@ fn create_input(user_id: String, payload: SupportTicketCreatePayload) -> Support
         subject: payload.subject,
         body_markdown: payload.body_markdown,
         contact_email: payload.contact_email,
+        captcha_token: payload.captcha_token,
     }
 }
 

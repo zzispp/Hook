@@ -166,6 +166,7 @@ impl CaptchaUseCase for TestCaptcha {
         Ok(CaptchaConfigResponse {
             login_captcha_enabled: false,
             registration_captcha_enabled: false,
+            support_ticket_captcha_enabled: false,
         })
     }
 
@@ -182,6 +183,10 @@ impl CaptchaUseCase for TestCaptcha {
     }
 
     async fn verify_registration(&self, _token: Option<&str>) -> CaptchaResult<()> {
+        Ok(())
+    }
+
+    async fn verify_support_ticket(&self, _token: Option<&str>) -> CaptchaResult<()> {
         Ok(())
     }
 }

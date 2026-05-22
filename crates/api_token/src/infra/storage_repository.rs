@@ -143,6 +143,10 @@ impl ApiTokenRepository for StorageApiTokenRepository {
     async fn delete_expired_tokens(&self) -> ApiTokenResult<u64> {
         self.store.delete_expired_tokens().await.map_err(storage_error)
     }
+
+    async fn count_owner_tokens(&self, user_id: &str, token_type: types::api_token::ApiTokenType) -> ApiTokenResult<u64> {
+        self.store.count_owner_tokens(user_id, token_type).await.map_err(storage_error)
+    }
 }
 
 #[async_trait]
@@ -223,11 +227,11 @@ impl SystemTokenPolicy for StorageSystemTokenPolicy {
             .map_err(storage_error)
     }
 
-    async fn auto_delete_expired_tokens(&self) -> ApiTokenResult<bool> {
+    async fn token_limit_per_user(&self) -> ApiTokenResult<i64> {
         self.store
             .get_system_settings()
             .await
-            .map(|settings| settings.auto_delete_expired_tokens)
+            .map(|settings| settings.token_limit_per_user)
             .map_err(storage_error)
     }
 }

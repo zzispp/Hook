@@ -4,9 +4,7 @@ mod rows;
 use sea_orm::{DbBackend, FromQueryResult, Statement};
 use types::{
     pagination::{Page, PageSliceRequest},
-    wallet::{
-        AdminWalletLedgerEntryResponse, WalletDailyUsageDetailRequest, WalletLedgerEntry, WalletLedgerEntryFilters, WalletTransaction,
-    },
+    wallet::{AdminWalletLedgerEntryResponse, WalletDailyUsageDetailRequest, WalletLedgerEntry, WalletLedgerEntryFilters, WalletTransaction},
 };
 
 use crate::StorageResult;

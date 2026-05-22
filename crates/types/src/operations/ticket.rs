@@ -45,6 +45,8 @@ pub struct SupportTicketCreatePayload {
     pub body_markdown: String,
     #[serde(default)]
     pub contact_email: Option<String>,
+    #[serde(default)]
+    pub captcha_token: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -92,6 +94,7 @@ pub struct SupportTicketCreateInput {
     pub subject: String,
     pub body_markdown: String,
     pub contact_email: Option<String>,
+    pub captcha_token: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
