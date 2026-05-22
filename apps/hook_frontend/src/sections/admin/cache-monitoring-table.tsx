@@ -90,7 +90,7 @@ function CacheMonitoringTableRow({
         <PrimarySecondaryText primary={row.model_name || row.model_id} secondary={row.model_id} monoSecondary />
       </TableCell>
       <TableCell>
-        <Chip label={row.api_format} size="small" variant="outlined" />
+        <Chip label={apiFormatLabel(row)} size="small" variant="outlined" />
       </TableCell>
       <TableCell>{formatRemainingSeconds(row.ttl_seconds)}</TableCell>
       <TableCell>{row.request_count}</TableCell>
@@ -139,7 +139,7 @@ function useCacheMonitoringTableHead() {
       { id: 'key', label: t('cacheMonitoring.columns.key'), width: 220 },
       { id: 'provider', label: t('cacheMonitoring.columns.provider'), width: 220 },
       { id: 'model', label: t('cacheMonitoring.columns.model'), width: 220 },
-      { id: 'api_format', label: t('cacheMonitoring.columns.apiFormat'), width: 140 },
+      { id: 'api_format', label: t('cacheMonitoring.columns.apiFormat'), width: 200 },
       { id: 'ttl', label: t('cacheMonitoring.columns.ttl'), width: 140 },
       { id: 'request_count', label: t('cacheMonitoring.columns.requestCount'), width: 120 },
       { id: '', width: 88 },
@@ -150,6 +150,14 @@ function useCacheMonitoringTableHead() {
 
 function cacheRowKey(row: CacheAffinityItem) {
   return `${row.affinity_key}:${row.endpoint_id}:${row.model_id}:${row.api_format}`;
+}
+
+function apiFormatLabel(row: CacheAffinityItem) {
+  const endpointFormat = row.endpoint_api_format;
+  if (!endpointFormat || endpointFormat === row.api_format) {
+    return row.api_format;
+  }
+  return `${row.api_format} -> ${endpointFormat}`;
 }
 
 function formatRemainingSeconds(totalSeconds: number) {

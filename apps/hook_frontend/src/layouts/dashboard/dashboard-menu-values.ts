@@ -14,6 +14,7 @@ export const DASHBOARD_MENU_CODES = {
   providerManagement: 'admin_providers',
   requestRecords: 'admin_request_records',
   roleManagement: 'admin_roles',
+  scheduledTaskManagement: 'admin_scheduled_tasks',
   systemSettings: 'admin_settings',
   translationManagement: 'admin_translations',
   tokenManagement: 'admin_tokens',

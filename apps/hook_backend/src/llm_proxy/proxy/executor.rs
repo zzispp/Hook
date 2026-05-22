@@ -118,7 +118,8 @@ async fn attempt_once(
     })
     .await?;
     let request_timeout = timeout::non_stream_total_timeout(candidate, prepared.is_stream);
-    let response = match execute_upstream_request(&state.http, request, request_timeout).await {
+    let response_start_timeout = timeout::response_start_timeout(candidate, prepared.is_stream);
+    let response = match execute_upstream_request(&state.http, request, response_start_timeout).await {
         Ok(response) => {
             attempt_cancel.disarm();
             response
@@ -147,10 +148,10 @@ async fn attempt_once(
 async fn execute_upstream_request(
     http: &req::ReqwestClient,
     request: req::Request,
-    request_timeout: Option<Duration>,
+    response_start_timeout: Option<Duration>,
 ) -> Result<UpstreamResponse, req::ClientError> {
     let execute = http.execute(request);
-    match request_timeout {
+    match response_start_timeout {
         Some(timeout) => tokio::time::timeout(timeout, execute).await.unwrap_or(Err(req::ClientError::Timeout)),
         None => execute.await,
     }

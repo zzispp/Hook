@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add endpoint API format to backend response,DONE,CacheAffinityItem includes endpoint_api_format and API builds it,cargo test -p backend cache_monitoring_api,2026-05-22T00:00:00Z,0,
+2,Render client to endpoint format in frontend,DONE,Cache monitoring table displays converted format with arrow,pnpm lint:frontend,2026-05-22T00:00:00Z,0,
+3,Run targeted validation,DONE,Relevant backend/frontend checks complete,cargo test -p backend cache_monitoring_api && pnpm lint:frontend,2026-05-22T00:00:00Z,0,

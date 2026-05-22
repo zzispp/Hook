@@ -3,6 +3,7 @@ import type { RequestRecord } from 'src/types/provider';
 
 import { useMemo, useState, useEffect } from 'react';
 
+import { isRequestCancelled } from 'src/lib/axios';
 import { fetchActiveRequestRecords } from 'src/actions/request-records';
 
 import {
@@ -73,21 +74,34 @@ export function useActiveRequestPolling(
 
   useEffect(() => {
     if (!ids.length) return undefined;
-    let inFlight = false;
+    let active = true;
+    let controller: AbortController | null = null;
     const poll = async () => {
-      if (inFlight) return;
-      inFlight = true;
+      if (controller) return;
+      const nextController = new AbortController();
+      controller = nextController;
       try {
-        const response = await fetchActiveRequestRecords(ids);
+        const response = await fetchActiveRequestRecords(ids, nextController.signal);
+        if (!active || nextController.signal.aborted) return;
         updateItems((items) => mergedVisibleRecords(items, response.records, statusFilter));
         if (shouldRefreshRecords(ids, response.records, statusFilter)) refresh();
+      } catch (error) {
+        if (!isRequestCancelled(error)) {
+          console.error('Failed to poll active request records:', error);
+        }
       } finally {
-        inFlight = false;
+        if (controller === nextController) {
+          controller = null;
+        }
       }
     };
     void poll();
     const timer = window.setInterval(() => void poll(), ACTIVE_REQUEST_REFRESH_INTERVAL_MS);
-    return () => window.clearInterval(timer);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      controller?.abort();
+    };
   }, [ids, idsKey, refresh, statusFilter, updateItems]);
 }
 

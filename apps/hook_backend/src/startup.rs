@@ -68,6 +68,10 @@ use rbac::{
     application::RbacService,
     infra::{RedisRbacCache, StorageRbacRepository},
 };
+use scheduler::{
+    api::{SchedulerApiState, create_router as create_scheduler_router},
+    runtime::{SchedulerRuntime, SchedulerService},
+};
 use setting::{
     api::{SettingApiState, create_router as create_setting_router},
     application::SettingService,
@@ -106,10 +110,7 @@ pub async fn serve(settings: Settings) -> BackendResult<()> {
 }
 async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let database = connect_database(&settings.database_url()?).await?;
-    crate::request_record_cleanup::spawn_request_record_cleanup(database.clone());
-    crate::request_record_sweep::spawn_request_record_sweep(database.clone());
     let performance_os_collector = Arc::new(PerformanceOsCollector::new()?);
-    crate::performance_monitoring_worker::spawn_performance_monitoring_workers(database.clone(), performance_os_collector.clone());
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let provider_key_cipher = ProviderKeyCipher::new(settings.provider_key_secret()?)?;
     let redis_connection = redis::Client::open(settings.redis_url()?)?.get_connection_manager().await?;
@@ -125,7 +126,16 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     });
     proxy_cache.refresh_scheduling_snapshot().await?;
     proxy_cache.restore_provider_cooldowns().await?;
-    crate::api_token_cleanup::spawn_api_token_cleanup(database.clone(), proxy_cache.clone());
+    let scheduler_registry = Arc::new(crate::scheduled_tasks::scheduler_registry(
+        proxy_cache.clone(),
+        performance_os_collector.clone(),
+    )?);
+    let scheduler_handle = SchedulerRuntime::spawn(database.clone(), scheduler_registry.clone())?;
+    let scheduler = Arc::new(SchedulerService::new(
+        storage::scheduler::SchedulerStore::new(database.clone()),
+        scheduler_registry,
+        scheduler_handle.clone(),
+    ));
     let models = Arc::new(ModelService::new(
         CachedModelRepository::new(StorageModelRepository::new(database.clone()), proxy_cache.clone()),
         ModelsDevClient::new(),
@@ -220,6 +230,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         captcha,
         llm_proxy,
         performance_os_collector,
+        scheduler,
         authorization,
     })
 }
@@ -260,6 +271,7 @@ fn create_app(state: AppState) -> Router {
     let captcha_state = CaptchaApiState::new(state.captcha);
     let performance_monitoring_state = PerformanceMonitoringApiState::new(state.database.clone(), state.performance_os_collector.clone());
     let cache_monitoring_state = CacheMonitoringApiState::new(state.database.clone(), state.llm_proxy.clone(), state.cache_monitoring_system_owner);
+    let scheduler_state = SchedulerApiState::new(state.scheduler);
     let llm_v1_router = create_llm_proxy_router(state.llm_proxy.clone());
     let gemini_router = create_v1beta_router(state.llm_proxy);
     let auth_state = AuthState::new(AuthStateParts {
@@ -283,7 +295,8 @@ fn create_app(state: AppState) -> Router {
         .merge(create_operations_router(operations_state))
         .merge(create_captcha_router(captcha_state))
         .merge(create_performance_monitoring_router(performance_monitoring_state))
-        .merge(create_cache_monitoring_router(cache_monitoring_state));
+        .merge(create_cache_monitoring_router(cache_monitoring_state))
+        .merge(create_scheduler_router(scheduler_state));
 
     let backend_router = system::create_router()
         .nest("/v1", llm_v1_router)

@@ -175,6 +175,7 @@ fn build_items(
                 provider_name: provider.map(|record| record.name.clone()),
                 endpoint_id: entry.record.endpoint_id.clone(),
                 endpoint_base_url: endpoint.map(|record| record.base_url.clone()),
+                endpoint_api_format: endpoint.map(|record| record.api_format.clone()),
                 provider_key_id: entry.record.key_id.clone(),
                 provider_key_name: key.map(|record| record.name.clone()),
                 model_id: entry.record.model_id.clone(),
@@ -206,7 +207,7 @@ fn item_matches_search(item: &CacheAffinityItem, search: &str) -> bool {
         .any(|value| value.to_ascii_lowercase().contains(search))
 }
 
-fn searchable_fields(item: &CacheAffinityItem) -> [Option<&str>; 13] {
+fn searchable_fields(item: &CacheAffinityItem) -> [Option<&str>; 14] {
     [
         Some(item.affinity_key.as_str()),
         item.user_id.as_deref(),
@@ -217,6 +218,7 @@ fn searchable_fields(item: &CacheAffinityItem) -> [Option<&str>; 13] {
         Some(item.provider_id.as_str()),
         item.provider_name.as_deref(),
         Some(item.endpoint_id.as_str()),
+        item.endpoint_api_format.as_deref(),
         item.provider_key_name.as_deref(),
         Some(item.model_id.as_str()),
         item.model_name.as_deref(),

@@ -10,6 +10,7 @@ mod operations;
 mod performance_monitoring;
 mod provider;
 mod rbac;
+mod scheduler;
 mod setting;
 mod token;
 mod user;
@@ -37,6 +38,7 @@ const API_GROUPS: &[&[ApiDefinition]] = &[
     admin_wallet::ADMIN_WALLET_APIS,
     card_code::CARD_CODE_APIS,
     setting::SETTING_APIS,
+    scheduler::SCHEDULER_APIS,
     performance_monitoring::PERFORMANCE_MONITORING_APIS,
     cache_monitoring::CACHE_MONITORING_APIS,
 ];

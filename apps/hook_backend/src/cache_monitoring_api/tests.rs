@@ -19,6 +19,7 @@ fn cache_item() -> CacheAffinityItem {
         provider_name: Some("OpenAI Proxy".into()),
         endpoint_id: "endpoint-1".into(),
         endpoint_base_url: Some("https://api.example.com".into()),
+        endpoint_api_format: Some("openai:chat".into()),
         provider_key_id: "key-1".into(),
         provider_key_name: Some("primary".into()),
         model_id: "model-1".into(),

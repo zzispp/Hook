@@ -98,26 +98,8 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.support_ticket_email_notifications_enabled {
         active.support_ticket_email_notifications_enabled = Set(value);
     }
-    if let Some(value) = input.auto_delete_expired_tokens {
-        active.auto_delete_expired_tokens = Set(value);
-    }
     if let Some(value) = input.token_limit_per_user {
         active.token_limit_per_user = Set(value);
-    }
-    if let Some(value) = input.token_expiry_check_interval_minutes {
-        active.token_expiry_check_interval_minutes = Set(value);
-    }
-    if let Some(value) = input.request_record_cleanup_enabled {
-        active.request_record_cleanup_enabled = Set(value);
-    }
-    if let Some(value) = input.request_record_cleanup_interval_hours {
-        active.request_record_cleanup_interval_hours = Set(value);
-    }
-    if let Some(value) = input.performance_monitoring_cleanup_enabled {
-        active.performance_monitoring_cleanup_enabled = Set(value);
-    }
-    if let Some(value) = input.performance_monitoring_cleanup_interval_hours {
-        active.performance_monitoring_cleanup_interval_hours = Set(value);
     }
     if let Some(value) = input.default_user_grant {
         active.default_user_grant = Set(value);
@@ -137,15 +119,6 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
 }
 
 fn apply_request_record_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettingsRecordPatch) {
-    if let Some(value) = input.request_record_retention_days {
-        active.request_record_retention_days = Set(value);
-    }
-    if let Some(value) = input.request_record_payload_retention_days {
-        active.request_record_payload_retention_days = Set(value);
-    }
-    if let Some(value) = input.performance_monitoring_retention_days {
-        active.performance_monitoring_retention_days = Set(value);
-    }
     if let Some(value) = input.client_request_record_level {
         active.client_request_record_level = Set(value.as_str().to_owned());
     }

@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,确认根因与超时语义,DONE,确认流式不设总请求超时且缺口在响应头等待,rg -n "stream_first_byte_timeout|execute_upstream_request|prefetch_with_timeout" apps/hook_backend/src/llm_proxy/proxy,2026-05-22T00:00:00Z,0,线上记录无 first_byte_time_ms 且候选停在 streaming；new-api 参考实现仅做首字节/空闲超时
+2,修复流式首字节预算覆盖响应头等待,IN_PROGRESS,流式响应头等待与首个 chunk 共用同一首字节预算,SKIP,,0,已修改 timeout/executor/stream_transport 三处代码
+3,验证与复核,DONE,说明验证结果与阻塞事实,SKIP,2026-05-22T00:00:00Z,0,当前工作区被 crates/scheduler 缺少 target 阻塞，cargo test 和 cargo fmt 均无法解析根工作区

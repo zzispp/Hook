@@ -9,7 +9,7 @@ import type {
   ActiveRequestRecordResponse,
 } from 'src/types/provider';
 
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { useMemo, useCallback } from 'react';
 
 import axios, { fetcher, endpoints } from 'src/lib/axios';
@@ -40,17 +40,23 @@ export function useRequestRecords(
   pageSize: number,
   filters: RequestRecordFilters = {}
 ) {
-  const key = [
-    endpoints.adminRequestRecords.list,
-    { params: { skip: page * pageSize, limit: pageSize, ...filters } },
-  ] as const;
-  const { data, isLoading, error, isValidating, mutate } = useSWR<
+  const { mutate: globalMutate } = useSWRConfig();
+  const key = useMemo(
+    () =>
+      [
+        endpoints.adminRequestRecords.list,
+        { params: { skip: page * pageSize, limit: pageSize, ...filters } },
+      ] as const,
+    [filters, page, pageSize]
+  );
+  const { data, isLoading, error, isValidating } = useSWR<
     ApiEnvelope<RequestRecordListResponse>
   >(key, fetcher, listSwrOptions);
-  const refresh = useCallback(() => mutate(), [mutate]);
+  const refresh = useCallback(() => globalMutate(key), [globalMutate, key]);
   const updateItems = useCallback(
     (updater: (items: RequestRecord[]) => RequestRecord[]) => {
-      void mutate(
+      void globalMutate(
+        key,
         (current) => {
           if (!current?.data) return current;
           return {
@@ -64,7 +70,7 @@ export function useRequestRecords(
         { revalidate: false }
       );
     },
-    [mutate]
+    [globalMutate, key]
   );
 
   return useMemo(() => {
@@ -110,10 +116,11 @@ export function useUsageRecords(
   }, [data, error, isLoading, isValidating, refresh]);
 }
 
-export async function fetchActiveRequestRecords(ids: string[]) {
+export async function fetchActiveRequestRecords(ids: string[], signal?: AbortSignal) {
   const response = await axios.post<ApiEnvelope<ActiveRequestRecordResponse>>(
     endpoints.adminRequestRecords.active,
-    { ids }
+    { ids },
+    { signal }
   );
   return requireApiData(response.data);
 }

@@ -29,6 +29,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_apis",
     "admin_menus",
     "admin_settings",
+    "admin_scheduled_tasks",
     "admin_translations",
     "admin_models",
     "admin_providers",
@@ -240,6 +241,10 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     MenuApiBindingDefinition {
         menu_code: "admin_settings",
         api_codes: &["system_settings_read", "system_settings_update", "system_settings_smtp_test"],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_scheduled_tasks",
+        api_codes: &["scheduled_tasks_read", "scheduled_tasks_update", "scheduled_task_runs_read"],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_translations",

@@ -80,9 +80,6 @@ export async function updateSystemSettings(payload: SystemSettingsUpdate) {
   return settings;
 }
 
-export async function updateSchedulingMode(schedulingMode: SystemSettings['scheduling_mode']) {
-  return updateSystemSettings({ scheduling_mode: schedulingMode });
-}
 
 export async function testSmtpConnection(payload: SystemSettingsSmtpTestRequest) {
   const response = await axios.post<ApiEnvelope<SystemSettingsSmtpTestResponse>>(

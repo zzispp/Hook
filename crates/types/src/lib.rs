@@ -12,6 +12,7 @@ pub mod performance_monitoring;
 pub mod provider;
 pub mod rbac;
 pub mod response;
+pub mod scheduler;
 pub mod system_setting;
 pub mod user;
 pub mod wallet;

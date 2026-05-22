@@ -22,7 +22,6 @@ import { SettingsSection } from './system-settings-section';
 import { emailConfigComplete } from './system-settings-utils';
 import { useSystemSettingsForm } from './system-settings-state';
 import { EmailSettingsSection } from './system-settings-email-section';
-import { CleanupSettingsSection } from './system-settings-cleanup-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { SwitchRow, TextFieldRow, RefreshButton, AdminBreadcrumbs } from './shared';
 
@@ -61,8 +60,6 @@ export function SystemSettingsView() {
           <TokenSection form={form.form} setForm={form.setForm} />
           <Divider />
           <RequestRecordSection form={form.form} setForm={form.setForm} />
-          <Divider />
-          <CleanupSettingsSection form={form.form} setForm={form.setForm} />
         </Stack>
       </Card>
     </DashboardContent>
@@ -258,28 +255,12 @@ function TokenSection({
   return (
     <SettingsSection title={t('systemSettings.sections.tokens')}>
       <Stack spacing={2}>
-        <SwitchRow
-          checked={form.auto_delete_expired_tokens}
-          label={t('systemSettings.fields.autoDeleteExpiredTokens')}
-          onChange={(checked) =>
-            setForm((current) => ({ ...current, auto_delete_expired_tokens: checked }))
-          }
-        />
         <TextFieldRow
           type="number"
           label={t('systemSettings.fields.tokenLimitPerUser')}
           value={form.token_limit_per_user}
           helperText={t('systemSettings.helper.tokenLimitPerUser')}
           onChange={(value) => setForm((current) => ({ ...current, token_limit_per_user: value }))}
-        />
-        <TextFieldRow
-          type="number"
-          label={t('systemSettings.fields.tokenExpiryCheckIntervalMinutes')}
-          value={form.token_expiry_check_interval_minutes}
-          helperText={t('systemSettings.helper.tokenExpiryCheckIntervalMinutes')}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, token_expiry_check_interval_minutes: value }))
-          }
         />
         <TextFieldRow
           type="number"

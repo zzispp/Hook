@@ -36,6 +36,10 @@ export function isApiRequestError(error: unknown): error is ApiRequestError {
   return error instanceof ApiRequestError;
 }
 
+export function isRequestCancelled(error: unknown) {
+  return axios.isCancel(error);
+}
+
 const axiosInstance = axios.create({
   baseURL: CONFIG.serverUrl,
   headers: {
@@ -48,6 +52,10 @@ installJwtInterceptors(axiosInstance);
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (isRequestCancelled(error)) {
+      return Promise.reject(error);
+    }
+
     const retried = await retryAfterUnauthorized(error);
 
     if (retried) {
@@ -74,6 +82,10 @@ export const fetcher = async <T = unknown>(
 
     return res.data;
   } catch (error) {
+    if (isRequestCancelled(error)) {
+      throw error;
+    }
+
     console.error('Fetcher failed:', error);
     throw error;
   }
@@ -220,6 +232,11 @@ export const endpoints = {
   adminSettings: {
     system: '/api/admin/settings/system',
     smtpTest: '/api/admin/settings/smtp/test',
+  },
+  adminScheduledTasks: {
+    list: '/api/admin/scheduled-tasks',
+    byCode: (code: string) => `/api/admin/scheduled-tasks/${code}`,
+    runs: '/api/admin/scheduled-task-runs',
   },
   adminI18n: {
     languages: '/api/admin/i18n/languages',

@@ -74,6 +74,8 @@ pub fn table_names() -> Vec<&'static str> {
         "billing_group_models",
         "request_records",
         "request_candidates",
+        "scheduled_tasks",
+        "scheduled_task_runs",
         "performance_monitoring_snapshots",
         "announcements",
         "support_tickets",

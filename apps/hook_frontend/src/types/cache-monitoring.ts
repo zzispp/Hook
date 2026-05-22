@@ -9,6 +9,7 @@ export type CacheAffinityItem = {
   provider_name?: string | null;
   endpoint_id: string;
   endpoint_base_url?: string | null;
+  endpoint_api_format?: string | null;
   provider_key_id: string;
   provider_key_name?: string | null;
   model_id: string;

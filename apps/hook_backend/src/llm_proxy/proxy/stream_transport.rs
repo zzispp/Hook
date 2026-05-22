@@ -21,8 +21,7 @@ use types::model::PatchField;
 use super::{
     LlmProxyError, LlmProxyState,
     response_payload::{body_value, upstream_status_error_details},
-    timeout::proxy_timeouts,
-    transport,
+    timeout, transport,
 };
 use crate::llm_proxy::{
     audit::{AttemptRecordInput, record_attempt},
@@ -84,7 +83,7 @@ pub async fn stream_response(args: StreamResponseArgs) -> Result<Response, LlmPr
 
     record_stream_headers(&context, upstream_headers, content_type.as_ref()).await?;
     let upstream = req::response_bytes_stream(response);
-    let first_byte_timeout = proxy_timeouts(&context.candidate).stream_first_byte;
+    let first_byte_timeout = timeout::remaining_stream_first_byte_timeout(started, &context.candidate);
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
     prefetch_with_timeout(&mut relay, first_byte_timeout).await?;
     let body = Body::from_stream(stream::unfold(relay, relay::next_body_item));

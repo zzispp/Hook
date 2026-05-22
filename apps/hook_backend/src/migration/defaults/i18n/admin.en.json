@@ -27,7 +27,8 @@
     "announcements": "Announcements",
     "support_tickets": "Tickets",
     "admin_announcements": "Announcement Management",
-    "admin_tickets": "Ticket Management"
+    "admin_tickets": "Ticket Management",
+    "admin_scheduled_tasks": "Scheduled Tasks"
   },
   "common": {
     "active": "Active",
@@ -448,7 +449,17 @@
     "viewAll": "View all",
     "markComplete": "Mark complete",
     "share": "Share",
-    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"],
+    "months": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep"
+    ],
     "regions": {
       "america": "America",
       "asia": "Asia",
@@ -1118,8 +1129,7 @@
       "base": "Base configuration",
       "email": "Email configuration",
       "tokens": "Token configuration",
-      "requestRecord": "Request records",
-      "cleanup": "Cleanup policy"
+      "requestRecord": "Request records"
     },
     "fields": {
       "siteName": "Site name",
@@ -1133,16 +1143,7 @@
       "passwordResetEnabled": "Enable password reset",
       "emailConfigEnabled": "Enable email configuration",
       "supportTicketEmailNotificationsEnabled": "Enable ticket email notifications",
-      "autoDeleteExpiredTokens": "Auto-delete expired tokens",
       "tokenLimitPerUser": "Token quantity limit",
-      "tokenExpiryCheckIntervalMinutes": "Token expiry check interval (minutes)",
-      "requestRecordCleanupEnabled": "Enable request record cleanup",
-      "requestRecordCleanupIntervalHours": "Request record cleanup interval (hours)",
-      "performanceMonitoringCleanupEnabled": "Enable performance monitoring cleanup",
-      "performanceMonitoringCleanupIntervalHours": "Performance monitoring cleanup interval (hours)",
-      "requestRecordRetentionDays": "Request record retention days",
-      "requestRecordPayloadRetentionDays": "Request payload retention days",
-      "performanceMonitoringRetentionDays": "Performance snapshot retention days",
       "requestRecordLevel": "Record detail level",
       "maxRequestBodySizeKb": "Max request body size (KB)",
       "maxResponseBodySizeKb": "Max response body size (KB)",
@@ -1166,15 +1167,7 @@
       "defaultRateLimitRpm": "Requests per minute; 0 means unlimited by system default.",
       "supportTicketCaptchaEnabled": "When enabled, users must complete CAPTCHA before submitting a ticket.",
       "tokenLimitPerUser": "Maximum number of tokens each user can create.",
-      "tokenExpiryCheckIntervalMinutes": "Check interval for auto-deleting expired tokens; saved changes are picked up by the next cleanup worker run.",
       "siteLogoUpload": "Uploaded images are saved to the database and used by the frontend navigation, homepage, and auth pages.",
-      "requestRecordCleanupEnabled": "When enabled, the background worker periodically cleans request records.",
-      "requestRecordCleanupIntervalHours": "Execution interval for the request record cleanup worker; saved changes are picked up by the next worker loop.",
-      "performanceMonitoringCleanupEnabled": "When enabled, the background worker periodically cleans performance monitoring snapshots.",
-      "performanceMonitoringCleanupIntervalHours": "Execution interval for the performance monitoring cleanup worker; saved changes are picked up by the next worker loop.",
-      "requestRecordRetentionDays": "Deletes the whole request record after this many days.",
-      "requestRecordPayloadRetentionDays": "Compresses client/provider payloads after this many days while keeping the record until the full retention window expires.",
-      "performanceMonitoringRetentionDays": "Deletes monitoring snapshots after this many days; ALL covers only currently retained snapshot buckets.",
       "clientRequestRecordLevel": "Controls the detail level for client request headers, request bodies, response headers, and response bodies.",
       "clientMaxRequestBodySizeKb": "Client request bodies larger than this are truncated before recording.",
       "clientMaxResponseBodySizeKb": "Client response bodies larger than this are truncated before recording.",
@@ -1209,16 +1202,6 @@
         "basic": "BASIC - Basic information (~1KB/record)",
         "headers": "HEADERS - Includes bidirectional headers (~2-3KB/record)",
         "full": "FULL - Includes client/provider request and response payloads (~50KB/record)"
-      }
-    },
-    "cleanup": {
-      "requestRecord": {
-        "title": "Request record cleanup",
-        "description": "Controls full request record retention and payload compression cleanup."
-      },
-      "performanceMonitoring": {
-        "title": "Performance monitoring cleanup",
-        "description": "Controls performance monitoring snapshot retention and scheduled cleanup."
       }
     },
     "email": {
@@ -1392,6 +1375,78 @@
       "settled": "Settled",
       "missing_usage": "Missing usage",
       "void": "Void"
+    }
+  },
+  "scheduledTasks": {
+    "tabs": {
+      "tasks": "Scheduled Tasks",
+      "runs": "Run Records"
+    },
+    "filters": {
+      "searchTasks": "Search task name, code, or description...",
+      "searchRuns": "Filter runs by status and task",
+      "allTasks": "All tasks"
+    },
+    "fields": {
+      "task": "Task",
+      "intervalSeconds": "Interval (seconds)",
+      "lastStartedAt": "Last started at",
+      "lastFinishedAt": "Last finished at",
+      "lastStatus": "Last status",
+      "lastDuration": "Last duration",
+      "config": "Task config",
+      "startedAt": "Started at",
+      "finishedAt": "Finished at",
+      "duration": "Duration",
+      "result": "Result",
+      "error": "Error"
+    },
+    "status": {
+      "running": "Running",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "skipped_running": "Skipped while running"
+    },
+    "messages": {
+      "taskUpdated": "Scheduled task updated",
+      "taskEnabled": "Scheduled task enabled",
+      "taskDisabled": "Scheduled task disabled"
+    },
+    "emptyConfig": "This task has no editable config.",
+    "definitions": {
+      "apiTokenCleanup": {
+        "name": "Expired token cleanup",
+        "description": "Delete expired API tokens on schedule."
+      },
+      "requestRecordCleanup": {
+        "name": "Request record cleanup",
+        "description": "Delete request records and compress payloads by retention policy."
+      },
+      "requestRecordStaleSweep": {
+        "name": "Request record stale sweep",
+        "description": "Sweep pending or streaming request records that have timed out."
+      },
+      "performanceMonitoringSnapshot": {
+        "name": "Performance monitoring snapshot",
+        "description": "Aggregate performance monitoring snapshots into time buckets."
+      },
+      "performanceMonitoringCleanup": {
+        "name": "Performance monitoring cleanup",
+        "description": "Delete performance monitoring snapshots by retention policy."
+      }
+    },
+    "config": {
+      "requestRecordCleanup": {
+        "recordRetentionDays": "Request record retention days",
+        "payloadRetentionDays": "Request payload retention days"
+      },
+      "requestRecordStaleSweep": {
+        "pendingTimeoutMinutes": "Pending timeout (minutes)",
+        "streamingTimeoutMinutes": "Streaming timeout (minutes)"
+      },
+      "performanceMonitoringCleanup": {
+        "retentionDays": "Performance monitoring retention days"
+      }
     }
   }
 }

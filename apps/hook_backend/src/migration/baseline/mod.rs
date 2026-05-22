@@ -7,6 +7,7 @@ mod indices;
 mod operations_tables;
 mod performance_monitoring_tables;
 mod request_candidate_tables;
+mod scheduler_tables;
 mod seed;
 pub mod seed_domain;
 mod setting_seed;

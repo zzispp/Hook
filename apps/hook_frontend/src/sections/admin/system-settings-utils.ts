@@ -21,16 +21,7 @@ export type SystemSettingsForm = {
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
-  auto_delete_expired_tokens: boolean;
   token_limit_per_user: string;
-  token_expiry_check_interval_minutes: string;
-  request_record_cleanup_enabled: boolean;
-  request_record_cleanup_interval_hours: string;
-  performance_monitoring_cleanup_enabled: boolean;
-  performance_monitoring_cleanup_interval_hours: string;
-  request_record_retention_days: string;
-  request_record_payload_retention_days: string;
-  performance_monitoring_retention_days: string;
   client_request_record_level: SystemSettings['client_request_record_level'];
   client_record_request_headers: boolean;
   client_record_request_body: boolean;
@@ -77,16 +68,7 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   password_reset_enabled: false,
   email_config_enabled: false,
   support_ticket_email_notifications_enabled: false,
-  auto_delete_expired_tokens: false,
   token_limit_per_user: '5',
-  token_expiry_check_interval_minutes: '5',
-  request_record_cleanup_enabled: true,
-  request_record_cleanup_interval_hours: '24',
-  performance_monitoring_cleanup_enabled: true,
-  performance_monitoring_cleanup_interval_hours: '24',
-  request_record_retention_days: '365',
-  request_record_payload_retention_days: '30',
-  performance_monitoring_retention_days: '30',
   client_request_record_level: 'full',
   client_record_request_headers: true,
   client_record_request_body: true,
@@ -135,20 +117,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     email_config_enabled: settings.email_config_enabled,
     support_ticket_email_notifications_enabled:
       settings.support_ticket_email_notifications_enabled,
-    auto_delete_expired_tokens: settings.auto_delete_expired_tokens,
     token_limit_per_user: String(settings.token_limit_per_user),
-    token_expiry_check_interval_minutes: String(settings.token_expiry_check_interval_minutes),
-    request_record_cleanup_enabled: settings.request_record_cleanup_enabled,
-    request_record_cleanup_interval_hours: String(settings.request_record_cleanup_interval_hours),
-    performance_monitoring_cleanup_enabled: settings.performance_monitoring_cleanup_enabled,
-    performance_monitoring_cleanup_interval_hours: String(
-      settings.performance_monitoring_cleanup_interval_hours
-    ),
-    request_record_retention_days: String(settings.request_record_retention_days),
-    request_record_payload_retention_days: String(settings.request_record_payload_retention_days),
-    performance_monitoring_retention_days: String(
-      settings.performance_monitoring_retention_days
-    ),
     client_request_record_level: settings.client_request_record_level,
     client_record_request_headers: settings.client_record_request_headers,
     client_record_request_body: settings.client_record_request_body,
@@ -198,20 +167,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     email_config_enabled: form.email_config_enabled,
     support_ticket_email_notifications_enabled:
       form.support_ticket_email_notifications_enabled,
-    auto_delete_expired_tokens: form.auto_delete_expired_tokens,
     token_limit_per_user: Number(form.token_limit_per_user || 0),
-    token_expiry_check_interval_minutes: Number(form.token_expiry_check_interval_minutes || 0),
-    request_record_cleanup_enabled: form.request_record_cleanup_enabled,
-    request_record_cleanup_interval_hours: Number(form.request_record_cleanup_interval_hours || 0),
-    performance_monitoring_cleanup_enabled: form.performance_monitoring_cleanup_enabled,
-    performance_monitoring_cleanup_interval_hours: Number(
-      form.performance_monitoring_cleanup_interval_hours || 0
-    ),
-    request_record_retention_days: Number(form.request_record_retention_days || 0),
-    request_record_payload_retention_days: Number(form.request_record_payload_retention_days || 0),
-    performance_monitoring_retention_days: Number(
-      form.performance_monitoring_retention_days || 0
-    ),
     client_request_record_level: form.client_request_record_level,
     client_record_request_headers: form.client_record_request_headers,
     client_record_request_body: form.client_record_request_body,

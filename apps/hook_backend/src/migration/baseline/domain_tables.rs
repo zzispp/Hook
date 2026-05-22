@@ -1,9 +1,9 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::{iden::*, performance_monitoring_tables, request_candidate_tables, setting_tables, translation_tables};
+use super::{iden::*, performance_monitoring_tables, request_candidate_tables, scheduler_tables, setting_tables, translation_tables};
 
 pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
-    vec![
+    let mut tables = vec![
         billing_groups_table(),
         providers_table(),
         provider_endpoints_table(),
@@ -21,10 +21,10 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         request_candidate_tables::request_records_table(),
         request_candidate_tables::request_candidates_table(),
         usage_flush_batches_table(),
-    ]
-    .into_iter()
-    .chain(performance_monitoring_tables::performance_monitoring_tables())
-    .collect()
+    ];
+    tables.extend(scheduler_tables::scheduler_tables());
+    tables.extend(performance_monitoring_tables::performance_monitoring_tables());
+    tables
 }
 
 fn billing_rules_table() -> TableCreateStatement {

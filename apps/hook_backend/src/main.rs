@@ -1,4 +1,3 @@
-mod api_token_cleanup;
 mod app_state;
 mod auth;
 mod cache_monitoring_api;
@@ -11,10 +10,8 @@ mod performance_monitoring_api;
 mod performance_monitoring_disk;
 mod performance_monitoring_os;
 mod performance_monitoring_tcp;
-mod performance_monitoring_worker;
 mod proxy_cache_hooks;
-mod request_record_cleanup;
-mod request_record_sweep;
+mod scheduled_tasks;
 mod startup;
 mod system;
 

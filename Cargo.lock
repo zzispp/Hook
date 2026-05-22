@@ -475,6 +475,7 @@ dependencies = [
  "req",
  "rust-embed",
  "rust_decimal",
+ "scheduler",
  "sea-orm",
  "sea-orm-migration",
  "serde",
@@ -3428,6 +3429,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "scheduler"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "futures-util",
+ "hook_tracing",
+ "serde",
+ "serde_json",
+ "storage",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tokio-util",
+ "types",
+]
+
+[[package]]
 name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4389,6 +4408,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "pin-project-lite",
+ "slab",
  "tokio",
 ]
 

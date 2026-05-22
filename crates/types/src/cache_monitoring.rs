@@ -35,6 +35,7 @@ pub struct CacheAffinityItem {
     pub provider_name: Option<String>,
     pub endpoint_id: String,
     pub endpoint_base_url: Option<String>,
+    pub endpoint_api_format: Option<String>,
     pub provider_key_id: String,
     pub provider_key_name: Option<String>,
     pub model_id: String,

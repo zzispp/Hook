@@ -27,5 +27,6 @@ pub(crate) struct AppState {
     pub(crate) captcha: Arc<dyn captcha::application::CaptchaUseCase>,
     pub(crate) llm_proxy: LlmProxyState,
     pub(crate) performance_os_collector: Arc<PerformanceOsCollector>,
+    pub(crate) scheduler: Arc<dyn scheduler::runtime::SchedulerUseCase>,
     pub(crate) authorization: AuthorizationConfig,
 }

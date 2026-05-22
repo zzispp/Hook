@@ -27,7 +27,8 @@
     "announcements": "公告",
     "support_tickets": "工单",
     "admin_announcements": "公告管理",
-    "admin_tickets": "工单管理"
+    "admin_tickets": "工单管理",
+    "admin_scheduled_tasks": "定时任务"
   },
   "common": {
     "active": "启用",
@@ -448,7 +449,17 @@
     "viewAll": "查看全部",
     "markComplete": "标记完成",
     "share": "分享",
-    "months": ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月"],
+    "months": [
+      "1月",
+      "2月",
+      "3月",
+      "4月",
+      "5月",
+      "6月",
+      "7月",
+      "8月",
+      "9月"
+    ],
     "regions": {
       "america": "美洲",
       "asia": "亚洲",
@@ -1118,8 +1129,7 @@
       "base": "基础配置",
       "email": "邮件配置",
       "tokens": "令牌配置",
-      "requestRecord": "请求记录",
-      "cleanup": "清理策略"
+      "requestRecord": "请求记录"
     },
     "fields": {
       "siteName": "站点名称",
@@ -1133,16 +1143,7 @@
       "passwordResetEnabled": "启用找回密码",
       "emailConfigEnabled": "开启邮件配置",
       "supportTicketEmailNotificationsEnabled": "启用工单邮件通知",
-      "autoDeleteExpiredTokens": "自动删除过期令牌",
       "tokenLimitPerUser": "令牌数量限制",
-      "tokenExpiryCheckIntervalMinutes": "令牌过期检查间隔（分钟）",
-      "requestRecordCleanupEnabled": "启用请求记录定时清理",
-      "requestRecordCleanupIntervalHours": "请求记录清理间隔（小时）",
-      "performanceMonitoringCleanupEnabled": "启用性能监控定时清理",
-      "performanceMonitoringCleanupIntervalHours": "性能监控清理间隔（小时）",
-      "requestRecordRetentionDays": "请求记录保留天数",
-      "requestRecordPayloadRetentionDays": "请求 payload 保留天数",
-      "performanceMonitoringRetentionDays": "性能监控快照保留天数",
       "requestRecordLevel": "记录详细程度",
       "maxRequestBodySizeKb": "最大请求体大小 (KB)",
       "maxResponseBodySizeKb": "最大响应体大小 (KB)",
@@ -1166,15 +1167,7 @@
       "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。",
       "supportTicketCaptchaEnabled": "开启后，用户提交工单前必须完成人机验证。",
       "tokenLimitPerUser": "每个用户可创建的令牌数量上限。",
-      "tokenExpiryCheckIntervalMinutes": "自动删除过期令牌的检查间隔；保存后下一轮清理任务会读取新设置。",
       "siteLogoUpload": "上传图片后会自动保存到数据库，前台导航、首页和登录页 Logo 会读取该字段。",
-      "requestRecordCleanupEnabled": "开启后，后台按间隔清理请求记录。",
-      "requestRecordCleanupIntervalHours": "请求记录清理任务的执行间隔；保存后下一轮循环会读取新设置。",
-      "performanceMonitoringCleanupEnabled": "开启后，后台按间隔清理性能监控快照。",
-      "performanceMonitoringCleanupIntervalHours": "性能监控清理任务的执行间隔；保存后下一轮循环会读取新设置。",
-      "requestRecordRetentionDays": "超过该天数后删除整条请求记录。",
-      "requestRecordPayloadRetentionDays": "超过该天数后压缩客户端与 Provider 侧 payload，记录本身保留，直到总保留期到期再删除。",
-      "performanceMonitoringRetentionDays": "超过该天数后删除监控快照；ALL 最多覆盖当前已保留的快照时间桶。",
       "clientRequestRecordLevel": "控制客户端请求头、请求体、响应头和响应体的记录详细程度。",
       "clientMaxRequestBodySizeKb": "超过此大小的客户端请求体将被截断记录。",
       "clientMaxResponseBodySizeKb": "超过此大小的客户端响应体将被截断记录。",
@@ -1209,16 +1202,6 @@
         "basic": "BASIC - 基本信息 (~1KB/条)",
         "headers": "HEADERS - 含双向头信息 (~2-3KB/条)",
         "full": "FULL - 含客户端/Provider 请求响应 (~50KB/条)"
-      }
-    },
-    "cleanup": {
-      "requestRecord": {
-        "title": "请求记录清理",
-        "description": "控制请求记录整表保留期，以及请求/响应 payload 的压缩清理周期。"
-      },
-      "performanceMonitoring": {
-        "title": "性能监控清理",
-        "description": "控制性能监控快照的保留期和定时清理周期。"
       }
     },
     "email": {
@@ -1392,6 +1375,78 @@
       "settled": "已计费",
       "missing_usage": "缺少用量",
       "void": "不计费"
+    }
+  },
+  "scheduledTasks": {
+    "tabs": {
+      "tasks": "定时任务列表",
+      "runs": "执行记录"
+    },
+    "filters": {
+      "searchTasks": "搜索任务名称、编码或描述...",
+      "searchRuns": "按状态和任务筛选执行记录",
+      "allTasks": "全部任务"
+    },
+    "fields": {
+      "task": "任务",
+      "intervalSeconds": "执行间隔（秒）",
+      "lastStartedAt": "上次开始时间",
+      "lastFinishedAt": "上次结束时间",
+      "lastStatus": "上次状态",
+      "lastDuration": "上次耗时",
+      "config": "任务参数",
+      "startedAt": "开始时间",
+      "finishedAt": "结束时间",
+      "duration": "耗时",
+      "result": "执行结果",
+      "error": "错误信息"
+    },
+    "status": {
+      "running": "运行中",
+      "succeeded": "成功",
+      "failed": "失败",
+      "skipped_running": "运行中跳过"
+    },
+    "messages": {
+      "taskUpdated": "定时任务已更新",
+      "taskEnabled": "定时任务已启用",
+      "taskDisabled": "定时任务已禁用"
+    },
+    "emptyConfig": "该任务没有可编辑参数。",
+    "definitions": {
+      "apiTokenCleanup": {
+        "name": "过期令牌清理",
+        "description": "定时删除已过期的 API 令牌。"
+      },
+      "requestRecordCleanup": {
+        "name": "请求记录清理",
+        "description": "按保留策略删除请求记录并压缩 payload。"
+      },
+      "requestRecordStaleSweep": {
+        "name": "请求记录超时回收",
+        "description": "回收长时间未结束的 pending 或 streaming 请求记录。"
+      },
+      "performanceMonitoringSnapshot": {
+        "name": "性能监控快照",
+        "description": "按时间桶聚合系统性能监控快照。"
+      },
+      "performanceMonitoringCleanup": {
+        "name": "性能监控清理",
+        "description": "按保留策略清理性能监控快照。"
+      }
+    },
+    "config": {
+      "requestRecordCleanup": {
+        "recordRetentionDays": "请求记录保留天数",
+        "payloadRetentionDays": "请求 payload 保留天数"
+      },
+      "requestRecordStaleSweep": {
+        "pendingTimeoutMinutes": "Pending 超时（分钟）",
+        "streamingTimeoutMinutes": "Streaming 超时（分钟）"
+      },
+      "performanceMonitoringCleanup": {
+        "retentionDays": "性能监控保留天数"
+      }
     }
   }
 }

@@ -82,30 +82,6 @@ fn validate_update_rejects_non_positive_request_record_body_limits() {
 }
 
 #[test]
-fn validate_update_rejects_non_positive_performance_monitoring_retention_days() {
-    let input = SystemSettingsUpdate {
-        performance_monitoring_retention_days: Some(0),
-        ..Default::default()
-    };
-
-    let error = validate_update(&input).unwrap_err();
-
-    assert_eq!(error.to_string(), "invalid input: performance_monitoring_retention_days must be greater than 0");
-}
-
-#[test]
-fn validate_update_rejects_non_positive_request_record_cleanup_interval_hours() {
-    let input = SystemSettingsUpdate {
-        request_record_cleanup_interval_hours: Some(0),
-        ..Default::default()
-    };
-
-    let error = validate_update(&input).unwrap_err();
-
-    assert_eq!(error.to_string(), "invalid input: request_record_cleanup_interval_hours must be greater than 0");
-}
-
-#[test]
 fn validate_update_rejects_non_positive_cache_affinity_ttl_minutes() {
     let input = SystemSettingsUpdate {
         cache_affinity_ttl_minutes: Some(0),
@@ -115,21 +91,6 @@ fn validate_update_rejects_non_positive_cache_affinity_ttl_minutes() {
     let error = validate_update(&input).unwrap_err();
 
     assert_eq!(error.to_string(), "invalid input: cache_affinity_ttl_minutes must be greater than 0");
-}
-
-#[test]
-fn validate_update_rejects_non_positive_performance_monitoring_cleanup_interval_hours() {
-    let input = SystemSettingsUpdate {
-        performance_monitoring_cleanup_interval_hours: Some(0),
-        ..Default::default()
-    };
-
-    let error = validate_update(&input).unwrap_err();
-
-    assert_eq!(
-        error.to_string(),
-        "invalid input: performance_monitoring_cleanup_interval_hours must be greater than 0"
-    );
 }
 
 #[test]

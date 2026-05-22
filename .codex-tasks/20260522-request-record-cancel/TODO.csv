@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,定位请求记录列表请求链路,DONE,找到状态切换和请求更新入口,rg -n "useRequestRecords|request-records" apps/hook_frontend/src/actions apps/hook_frontend/src/sections/admin,2026-05-22T02:43:04Z,0,列表请求走 useSWR/fetcher；active 轮询未取消 in-flight POST 且旧闭包可调用 mutate/refresh
+2,修复状态切换竞态,DONE,快速切换状态时旧响应不能覆盖新筛选结果,pnpm --filter hook_frontend lint,2026-05-22T02:53:15Z,0,active 轮询请求支持 AbortSignal；effect 清理时 abort；列表 mutate 绑定当前 key
+3,验证类型与相关行为,DONE,前端静态检查通过,pnpm --filter hook_frontend lint,2026-05-22T02:53:15Z,0,lint passed

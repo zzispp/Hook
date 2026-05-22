@@ -3,7 +3,6 @@ use sea_orm_migration::{prelude::*, schema::*};
 use super::iden::SystemSettings;
 
 const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
-const DEFAULT_TOKEN_EXPIRY_CHECK_INTERVAL_MINUTES: i64 = 5;
 const DEFAULT_TOKEN_LIMIT_PER_USER: i64 = 5;
 
 pub(super) fn system_settings_table() -> TableCreateStatement {
@@ -22,16 +21,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(boolean(SystemSettings::PasswordResetEnabled).default(false))
         .col(boolean(SystemSettings::EmailConfigEnabled).default(false))
         .col(boolean(SystemSettings::SupportTicketEmailNotificationsEnabled).default(false))
-        .col(boolean(SystemSettings::AutoDeleteExpiredTokens))
         .col(big_integer(SystemSettings::TokenLimitPerUser).default(DEFAULT_TOKEN_LIMIT_PER_USER))
-        .col(big_integer(SystemSettings::TokenExpiryCheckIntervalMinutes).default(DEFAULT_TOKEN_EXPIRY_CHECK_INTERVAL_MINUTES))
-        .col(boolean(SystemSettings::RequestRecordCleanupEnabled).default(true))
-        .col(big_integer(SystemSettings::RequestRecordCleanupIntervalHours).default(24))
-        .col(boolean(SystemSettings::PerformanceMonitoringCleanupEnabled).default(true))
-        .col(big_integer(SystemSettings::PerformanceMonitoringCleanupIntervalHours).default(24))
-        .col(big_integer(SystemSettings::RequestRecordRetentionDays))
-        .col(big_integer(SystemSettings::RequestRecordPayloadRetentionDays))
-        .col(big_integer(SystemSettings::PerformanceMonitoringRetentionDays).default(30))
         .col(string_len(SystemSettings::ClientRequestRecordLevel, 20).default("basic"))
         .col(boolean(SystemSettings::ClientRecordRequestHeaders).default(true))
         .col(boolean(SystemSettings::ClientRecordRequestBody).default(true))

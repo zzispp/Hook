@@ -30,25 +30,7 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub support_ticket_email_notifications_enabled: Option<bool>,
     #[serde(default)]
-    pub auto_delete_expired_tokens: Option<bool>,
-    #[serde(default)]
     pub token_limit_per_user: Option<i64>,
-    #[serde(default)]
-    pub token_expiry_check_interval_minutes: Option<i64>,
-    #[serde(default)]
-    pub request_record_cleanup_enabled: Option<bool>,
-    #[serde(default)]
-    pub request_record_cleanup_interval_hours: Option<i64>,
-    #[serde(default)]
-    pub performance_monitoring_cleanup_enabled: Option<bool>,
-    #[serde(default)]
-    pub performance_monitoring_cleanup_interval_hours: Option<i64>,
-    #[serde(default)]
-    pub request_record_retention_days: Option<i64>,
-    #[serde(default)]
-    pub request_record_payload_retention_days: Option<i64>,
-    #[serde(default)]
-    pub performance_monitoring_retention_days: Option<i64>,
     #[serde(default)]
     pub client_request_record_level: Option<RequestRecordLevel>,
     #[serde(default)]
@@ -138,20 +120,11 @@ impl SystemSettingsUpdate {
             && self.scheduling_mode.is_none()
             && self.cache_affinity_ttl_minutes.is_none()
             && self.provider_cooldown_policy.is_none()
-            && self.auto_delete_expired_tokens.is_none()
             && self.token_limit_per_user.is_none()
-            && self.token_expiry_check_interval_minutes.is_none()
-            && self.request_record_cleanup_enabled.is_none()
-            && self.request_record_cleanup_interval_hours.is_none()
-            && self.performance_monitoring_cleanup_enabled.is_none()
-            && self.performance_monitoring_cleanup_interval_hours.is_none()
     }
 
     fn request_record_fields_empty(&self) -> bool {
-        self.request_record_retention_days.is_none()
-            && self.request_record_payload_retention_days.is_none()
-            && self.performance_monitoring_retention_days.is_none()
-            && self.client_request_record_level.is_none()
+        self.client_request_record_level.is_none()
             && self.client_record_request_headers.is_none()
             && self.client_record_request_body.is_none()
             && self.client_record_response_headers.is_none()

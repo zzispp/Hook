@@ -8,6 +8,7 @@ mod performance_monitoring;
 mod provider;
 mod rbac;
 mod request;
+mod scheduler;
 mod settings;
 mod token;
 mod translation;
@@ -22,6 +23,7 @@ pub(super) use performance_monitoring::*;
 pub(super) use provider::*;
 pub(super) use rbac::*;
 pub(super) use request::*;
+pub(super) use scheduler::*;
 pub(super) use settings::*;
 pub(super) use token::*;
 pub(super) use translation::*;
@@ -33,6 +35,8 @@ pub fn reversed_tables() -> Vec<DynIden> {
         UsageFlushBatches::Table.into_iden(),
         PerformanceMonitoringSnapshots::Table.into_iden(),
         NotificationStates::Table.into_iden(),
+        ScheduledTaskRuns::Table.into_iden(),
+        ScheduledTasks::Table.into_iden(),
         SupportTicketEmailEvents::Table.into_iden(),
         SupportTicketMessages::Table.into_iden(),
         SupportTickets::Table.into_iden(),

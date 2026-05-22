@@ -194,6 +194,18 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RequestCandidates::CreatedAt,
             false,
         ),
+        compound_index(
+            "index_scheduled_task_runs_by_task_started",
+            ScheduledTaskRuns::Table,
+            ScheduledTaskRuns::TaskCode,
+            ScheduledTaskRuns::StartedAt,
+        ),
+        compound_index(
+            "index_scheduled_task_runs_by_status_started",
+            ScheduledTaskRuns::Table,
+            ScheduledTaskRuns::Status,
+            ScheduledTaskRuns::StartedAt,
+        ),
         index(
             "index_translation_entries_by_lang",
             TranslationEntries::Table,

@@ -223,6 +223,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000226",
+        section_id: SYSTEM_SECTION_ID,
+        code: "admin_scheduled_tasks",
+        title: "定时任务",
+        path: "/dashboard/admin/scheduled-tasks",
+        icon: "solar:clock-circle-bold",
+        sort_order: 45,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000207",
         section_id: OPERATIONS_SECTION_ID,
         code: "admin_models",
