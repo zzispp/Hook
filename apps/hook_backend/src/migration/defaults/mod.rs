@@ -82,7 +82,13 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     },
     MenuApiBindingDefinition {
         menu_code: "wallet_center",
-        api_codes: &["wallet_balance_read", "wallet_transactions_read", "card_codes_redeem"],
+        api_codes: &[
+            "wallet_balance_read",
+            "wallet_transactions_read",
+            "wallet_ledger_entries_read",
+            "wallet_daily_model_usage_read",
+            "card_codes_redeem",
+        ],
     },
     MenuApiBindingDefinition {
         menu_code: "api_tokens",
@@ -254,8 +260,11 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         api_codes: &[
             "admin_wallets_read",
             "admin_wallet_ledger_read",
+            "admin_wallet_ledger_entries_global_read",
             "admin_wallet_user_balance_read",
             "admin_wallet_transactions_read",
+            "admin_wallet_ledger_entries_read",
+            "admin_wallet_daily_model_usage_read",
             "admin_wallet_adjust",
             "admin_wallet_recharge",
         ],
