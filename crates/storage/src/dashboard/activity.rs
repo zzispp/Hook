@@ -33,7 +33,8 @@ async fn activity_rows(store: &DashboardStore, query: &DashboardStoreActivityQue
         "SELECT ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))::date AS date, \
         COUNT(*)::bigint AS request_count, \
         COALESCE(SUM(COALESCE(r.total_tokens, COALESCE(r.prompt_tokens, 0) + COALESCE(r.completion_tokens, 0), 0)), 0)::bigint AS total_tokens, \
-        COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost \
+        COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
+        COALESCE(SUM(COALESCE(r.base_cost, 0)), 0) AS base_cost \
         FROM request_records r {where_sql} \
         GROUP BY date \
         ORDER BY date ASC"
@@ -61,6 +62,7 @@ fn day_response(date: time::Date, row: Option<&ActivityRow>) -> DashboardActivit
         request_count: row.and_then(|value| value.request_count).unwrap_or_default(),
         total_tokens: row.and_then(|value| value.total_tokens).unwrap_or_default(),
         total_cost: row.and_then(|value| value.total_cost).unwrap_or(Decimal::ZERO),
+        base_cost: row.and_then(|value| value.base_cost).unwrap_or(Decimal::ZERO),
     }
 }
 
@@ -70,6 +72,7 @@ pub(crate) struct ActivityRow {
     pub request_count: Option<i64>,
     pub total_tokens: Option<i64>,
     pub total_cost: Option<Decimal>,
+    pub base_cost: Option<Decimal>,
 }
 
 #[cfg(test)]
@@ -87,6 +90,7 @@ mod tests {
             request_count: Some(3),
             total_tokens: Some(42),
             total_cost: Some(Decimal::new(12, 2)),
+            base_cost: Some(Decimal::new(7, 2)),
         }];
 
         let days = fill_days(start, end, rows);
@@ -95,6 +99,8 @@ mod tests {
         assert_eq!(days[0].request_count, 0);
         assert_eq!(days[1].request_count, 3);
         assert_eq!(days[1].total_tokens, 42);
+        assert_eq!(days[1].base_cost, Decimal::new(7, 2));
         assert_eq!(days[2].total_cost, Decimal::ZERO);
+        assert_eq!(days[2].base_cost, Decimal::ZERO);
     }
 }

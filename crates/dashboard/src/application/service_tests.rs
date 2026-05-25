@@ -53,6 +53,9 @@ async fn user_overview_uses_me_scope() {
             user_actor(),
             DashboardOverviewRequest {
                 preset: DashboardPreset::Today,
+                scope: None,
+                user_id: None,
+                token_id: None,
                 tz_offset_minutes: 480,
             },
         )
@@ -61,6 +64,27 @@ async fn user_overview_uses_me_scope() {
 
     assert_eq!(response.scope.scope, "me");
     assert_eq!(response.scope.user_id.as_deref(), Some("user-1"));
+}
+
+#[tokio::test]
+async fn admin_overview_accepts_user_filter() {
+    let service = DashboardService::new(RecordingRepository);
+    let response = service
+        .overview(
+            admin_actor(),
+            DashboardOverviewRequest {
+                preset: DashboardPreset::Today,
+                scope: Some(DashboardScopeParam::User),
+                user_id: Some("target-user".into()),
+                token_id: None,
+                tz_offset_minutes: 480,
+            },
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.scope.scope, "user");
+    assert_eq!(response.scope.user_id.as_deref(), Some("target-user"));
 }
 
 #[test]
@@ -129,6 +153,7 @@ fn empty_summary() -> DashboardSummary {
         failed_count: 0,
         active_count: 0,
         success_rate: 0.0,
+        cache_hit_rate: 0.0,
         total_tokens: 0,
         total_cost: rust_decimal::Decimal::ZERO,
         avg_latency_ms: None,

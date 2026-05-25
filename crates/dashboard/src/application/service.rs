@@ -33,7 +33,12 @@ where
     R: DashboardRepository,
 {
     async fn overview(&self, actor: DashboardActor, request: DashboardOverviewRequest) -> DashboardResult<types::dashboard::DashboardOverviewResponse> {
-        let scope = default_scope(&actor);
+        let scope = request_scope(
+            &actor,
+            request.scope,
+            request.user_id.as_deref(),
+            request.token_id.as_deref(),
+        )?;
         let window = overview_window(request.preset, request.tz_offset_minutes)?;
         let bucket = overview_bucket(request.preset);
         let query = DashboardOverviewQuery {
@@ -48,7 +53,12 @@ where
     }
 
     async fn activity(&self, actor: DashboardActor, request: DashboardActivityRequest) -> DashboardResult<types::dashboard::DashboardActivityResponse> {
-        let scope = activity_scope(&actor, &request)?;
+        let scope = request_scope(
+            &actor,
+            request.scope,
+            request.user_id.as_deref(),
+            request.token_id.as_deref(),
+        )?;
         let window = activity_window(request.tz_offset_minutes)?;
         self.repository
             .activity(DashboardActivityQuery {
@@ -87,21 +97,28 @@ fn default_scope(actor: &DashboardActor) -> DashboardScope {
     }
 }
 
-fn activity_scope(actor: &DashboardActor, request: &DashboardActivityRequest) -> DashboardResult<DashboardScope> {
-    let requested = request.scope.unwrap_or(DashboardScopeParam::Me);
+fn request_scope(
+    actor: &DashboardActor,
+    scope: Option<DashboardScopeParam>,
+    user_id: Option<&str>,
+    token_id: Option<&str>,
+) -> DashboardResult<DashboardScope> {
+    let Some(requested) = scope else {
+        return Ok(default_scope(actor));
+    };
     if !is_admin(actor) && requested != DashboardScopeParam::Me {
         return Err(DashboardError::Forbidden("only administrators can request dashboard scope filters".into()));
     }
     match requested {
-        DashboardScopeParam::Me => me_scope(actor, request),
+        DashboardScopeParam::Me => me_scope(actor, user_id),
         DashboardScopeParam::Global => Ok(DashboardScope::Global),
-        DashboardScopeParam::User => required_user_scope(request),
-        DashboardScopeParam::Token => required_token_scope(request),
+        DashboardScopeParam::User => required_user_scope(user_id),
+        DashboardScopeParam::Token => required_token_scope(token_id),
     }
 }
 
-fn me_scope(actor: &DashboardActor, request: &DashboardActivityRequest) -> DashboardResult<DashboardScope> {
-    if !is_admin(actor) && request.user_id.as_deref().is_some_and(|id| id != actor.user_id) {
+fn me_scope(actor: &DashboardActor, user_id: Option<&str>) -> DashboardResult<DashboardScope> {
+    if !is_admin(actor) && user_id.is_some_and(|id| id != actor.user_id) {
         return Err(DashboardError::Forbidden("users can only request their own dashboard activity".into()));
     }
     Ok(DashboardScope::Me {
@@ -109,13 +126,13 @@ fn me_scope(actor: &DashboardActor, request: &DashboardActivityRequest) -> Dashb
     })
 }
 
-fn required_user_scope(request: &DashboardActivityRequest) -> DashboardResult<DashboardScope> {
-    let user_id = clean_required(request.user_id.as_deref(), "user_id")?;
+fn required_user_scope(user_id: Option<&str>) -> DashboardResult<DashboardScope> {
+    let user_id = clean_required(user_id, "user_id")?;
     Ok(DashboardScope::User { user_id })
 }
 
-fn required_token_scope(request: &DashboardActivityRequest) -> DashboardResult<DashboardScope> {
-    let token_id = clean_required(request.token_id.as_deref(), "token_id")?;
+fn required_token_scope(token_id: Option<&str>) -> DashboardResult<DashboardScope> {
+    let token_id = clean_required(token_id, "token_id")?;
     Ok(DashboardScope::Token { token_id })
 }
 

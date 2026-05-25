@@ -21,11 +21,14 @@ const swrOptions = {
   revalidateOnFocus: false,
 };
 
-export function useDashboardOverview(preset: DashboardPreset) {
-  const url = dashboardUrl(endpoints.dashboard.overview, {
-    preset,
-    tz_offset_minutes: timezoneOffsetMinutes(),
-  });
+export function useDashboardOverview(preset: DashboardPreset, filters: DashboardScopeFilters) {
+  const url = dashboardRequestReady(filters)
+    ? dashboardUrl(endpoints.dashboard.overview, {
+        ...compactParams(filters),
+        preset,
+        tz_offset_minutes: timezoneOffsetMinutes(),
+      })
+    : null;
   const { data, isLoading, error, isValidating, mutate } = useSWR<
     ApiEnvelope<DashboardOverviewResponse>
   >(url, fetcher, swrOptions);
@@ -33,14 +36,16 @@ export function useDashboardOverview(preset: DashboardPreset) {
   return useDashboardData(data, isLoading, error, isValidating, mutate);
 }
 
-export type DashboardActivityFilters = {
+export type DashboardScopeFilters = {
   scope: DashboardScope['scope'];
   user_id?: string;
   token_id?: string;
 };
 
+export type DashboardActivityFilters = DashboardScopeFilters;
+
 export function useDashboardActivity(filters: DashboardActivityFilters) {
-  const url = activityRequestReady(filters)
+  const url = dashboardRequestReady(filters)
     ? dashboardUrl(endpoints.dashboard.activity, {
         ...compactParams(filters),
         tz_offset_minutes: timezoneOffsetMinutes(),
@@ -90,13 +95,13 @@ function dashboardUrl(endpoint: string, params: Record<string, string | number>)
   return `${endpoint}?${new URLSearchParams(stringParams(params)).toString()}`;
 }
 
-function compactParams(params: DashboardActivityFilters): Record<string, string> {
+function compactParams(params: DashboardScopeFilters): Record<string, string> {
   return Object.fromEntries(
     Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1]))
   );
 }
 
-function activityRequestReady(filters: DashboardActivityFilters) {
+function dashboardRequestReady(filters: DashboardScopeFilters) {
   if (filters.scope === 'user') return Boolean(filters.user_id);
   if (filters.scope === 'token') return Boolean(filters.token_id);
   return true;

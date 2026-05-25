@@ -14,6 +14,7 @@ import { useTheme, alpha as hexAlpha } from '@mui/material/styles';
 import { Chart, useChart, ChartLegends } from 'src/components/chart';
 
 import {
+  formatMs,
   formatInteger,
   formatDashboardCost,
   formatDashboardTokens,
@@ -43,7 +44,7 @@ export function BreakdownCard({
       {!loading && !items?.length ? <BreakdownEmpty t={t} /> : null}
       {!loading && items?.length ? (
         variant === 'distribution' ? (
-          <DistributionBreakdown items={items} locale={locale} />
+          <DistributionBreakdown items={items} locale={locale} t={t} />
         ) : (
           <RankingBreakdown items={items} locale={locale} t={t} />
         )
@@ -97,7 +98,15 @@ function RankingBreakdown({
   );
 }
 
-function DistributionBreakdown({ items, locale }: { items: DashboardBreakdownItem[]; locale: string }) {
+function DistributionBreakdown({
+  items,
+  locale,
+  t,
+}: {
+  items: DashboardBreakdownItem[];
+  locale: string;
+  t: TFunction<'admin'>;
+}) {
   const theme = useTheme();
   const labels = items.map((item) => item.name);
   const colors = paletteColors(theme).slice(0, items.length);
@@ -126,6 +135,8 @@ function DistributionBreakdown({ items, locale }: { items: DashboardBreakdownIte
         values={items.map((item) => formatInteger(item.request_count, locale))}
         sx={{ p: 3, justifyContent: 'center' }}
       />
+      <Divider sx={{ borderStyle: 'dashed' }} />
+      <BreakdownDetails items={items} t={t} locale={locale} showLatency />
     </>
   );
 }
@@ -166,10 +177,12 @@ function BreakdownDetails({
   t,
   items,
   locale,
+  showLatency = false,
 }: {
   t: TFunction<'admin'>;
   items: DashboardBreakdownItem[];
   locale: string;
+  showLatency?: boolean;
 }) {
   return (
     <Stack divider={<Divider flexItem />} sx={{ px: 3, pb: 3 }}>
@@ -179,11 +192,27 @@ function BreakdownDetails({
             {item.name}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {t('dashboard.stats.columns.tokens')}: {formatDashboardTokens(item.total_tokens)} ·{' '}
-            {t('dashboard.stats.columns.cost')}: {formatDashboardCost(item.total_cost)}
+            {detailText(item, t, locale, showLatency)}
           </Typography>
         </Stack>
       ))}
     </Stack>
   );
+}
+
+function detailText(
+  item: DashboardBreakdownItem,
+  t: TFunction<'admin'>,
+  locale: string,
+  showLatency: boolean
+) {
+  const parts = [
+    `${t('dashboard.stats.columns.requests')}: ${formatInteger(item.request_count, locale)}`,
+    `${t('dashboard.stats.columns.tokens')}: ${formatDashboardTokens(item.total_tokens)}`,
+  ];
+  if (showLatency) {
+    parts.push(`${t('dashboard.stats.columns.avgLatency')}: ${formatMs(item.avg_latency_ms)}`);
+  }
+  parts.push(`${t('dashboard.stats.columns.cost')}: ${formatDashboardCost(item.total_cost)}`);
+  return parts.join(' · ');
 }

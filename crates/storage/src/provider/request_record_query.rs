@@ -145,6 +145,7 @@ fn usage_record(record: RequestRecordSummaryRecord) -> UsageRecord {
         client_api_format: record.client_api_format,
         request_type: record.request_type,
         is_stream: record.is_stream,
+        status: record.status,
         prompt_tokens: record.prompt_tokens,
         completion_tokens: record.completion_tokens,
         total_tokens: record.total_tokens,

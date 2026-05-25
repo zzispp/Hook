@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect admin and user record table implementations,DONE,Relevant render paths and reusable helpers are identified,rg -n "RequestRecordDurationText|UsageRecordsTable" apps/hook_frontend/src/sections,2026-05-25T00:00:00+08:00,0,Admin duration rendering is isolated in request-record-duration-text; user list lacks status needed for live display.
+2,Implement user-side duration display,DONE,Usage table renders first byte and total latency with admin duration text behavior,pnpm --filter hook_frontend lint,2026-05-25T16:31:04+08:00,0,Added status to user usage records and reused the shared duration text component.
+3,Run verification and record result,DONE,Checks are executed or failures are visible,pnpm --filter hook_frontend lint,2026-05-25T16:31:04+08:00,0,Frontend lint, frontend tsc, storage targeted test, and cargo check passed.

@@ -397,10 +397,11 @@
         "failed": "Failed",
         "active": "Active",
         "successRate": "Success rate",
+        "cacheHitRate": "Cache hit rate",
         "tokens": "Tokens",
         "cost": "Cost",
         "latency": "Avg response",
-        "ttfb": "Avg TTFB",
+        "ttfb": "TTFB",
         "models": "Models used"
       },
       "trend": {
@@ -418,6 +419,9 @@
         "allTokens": "All tokens",
         "user": "User",
         "token": "Token",
+        "requestCount": "{{count}} requests",
+        "cost": "Cost",
+        "baseCost": "Base cost",
         "less": "Less",
         "more": "More"
       },
@@ -431,6 +435,7 @@
       "columns": {
         "requests": "Requests",
         "tokens": "Tokens",
+        "avgLatency": "Avg response",
         "cost": "Cost"
       },
       "empty": "No statistics yet"

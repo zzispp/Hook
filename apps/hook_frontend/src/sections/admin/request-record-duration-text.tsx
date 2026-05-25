@@ -1,6 +1,6 @@
 'use client';
 
-import type { RequestRecord } from 'src/types/provider';
+import type { RequestRecordStatus } from 'src/types/provider';
 
 import { useMemo, useState, useEffect } from 'react';
 
@@ -10,7 +10,14 @@ import { formatDuration } from './request-records-utils';
 
 type DurationMetric = 'first_byte' | 'total_latency';
 
-export function useRequestRecordDurationNow(records: RequestRecord[]) {
+type DurationRecord = Readonly<{
+  created_at: string;
+  status: RequestRecordStatus;
+  first_byte_time_ms?: number | null;
+  total_latency_ms?: number | null;
+}>;
+
+export function useRequestRecordDurationNow(records: DurationRecord[]) {
   const shouldTick = useMemo(() => records.some(recordNeedsLiveDuration), [records]);
   const [now, setNow] = useState(0);
 
@@ -37,7 +44,7 @@ export function RequestRecordDurationText({
   metric,
   now,
 }: {
-  record: RequestRecord;
+  record: DurationRecord;
   metric: DurationMetric;
   now: number;
 }) {
@@ -52,21 +59,21 @@ export function RequestRecordDurationText({
   );
 }
 
-function recordNeedsLiveDuration(record: RequestRecord) {
+function recordNeedsLiveDuration(record: DurationRecord) {
   return isLiveDuration(record, 'first_byte') || isLiveDuration(record, 'total_latency');
 }
 
-function isLiveDuration(record: RequestRecord, metric: DurationMetric) {
+function isLiveDuration(record: DurationRecord, metric: DurationMetric) {
   if (!isActiveStatus(record.status)) return false;
   if (metric === 'total_latency') return true;
   return record.first_byte_time_ms === null || record.first_byte_time_ms === undefined;
 }
 
-function isActiveStatus(status: RequestRecord['status']) {
+function isActiveStatus(status: RequestRecordStatus) {
   return status === 'pending' || status === 'streaming';
 }
 
-function durationValue(record: RequestRecord, metric: DurationMetric) {
+function durationValue(record: DurationRecord, metric: DurationMetric) {
   return metric === 'first_byte' ? record.first_byte_time_ms : record.total_latency_ms;
 }
 

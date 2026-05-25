@@ -15,6 +15,7 @@ coverage
 
 # production
 .next
+next-env.d.ts
 .swc
 _static
 out

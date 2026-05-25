@@ -5,10 +5,9 @@ import type {
   DashboardPreset,
   DashboardOverviewResponse,
   DashboardActivityResponse,
-  DashboardFilterOptionsResponse,
 } from 'src/types/dashboard';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
@@ -36,16 +35,22 @@ export function OverviewAnalyticsView() {
   const { t, currentLang } = useTranslate('admin');
   const { user } = useAuthContext();
   const [preset, setPreset] = useState<DashboardPreset>('today');
-  const overview = useDashboardOverview(preset);
   const isAdmin = user?.role === 'admin';
   const [activityFilters, setActivityFilters] = useState<DashboardActivityFilters>(
     isAdmin ? { scope: 'global' } : { scope: 'me' }
   );
+  const overview = useDashboardOverview(preset, activityFilters);
   const activity = useDashboardActivity(activityFilters);
   const filterOptions = useDashboardFilterOptions(isAdmin);
   const locale = currentLang.numberFormat.code;
   const error = overview.error ?? activity.error ?? filterOptions.error;
   const statsLoading = overview.isLoading;
+
+  useEffect(() => {
+    if (user === undefined) return;
+    if (!isAdmin && activityFilters.scope !== 'me') setActivityFilters({ scope: 'me' });
+    if (isAdmin && activityFilters.scope === 'me') setActivityFilters({ scope: 'global' });
+  }, [activityFilters.scope, isAdmin, user]);
 
   return (
     <DashboardContent maxWidth="xl">
@@ -54,7 +59,10 @@ export function OverviewAnalyticsView() {
         isAdmin={isAdmin}
         preset={preset}
         loading={overview.isValidating || activity.isValidating}
+        filters={activityFilters}
+        filterOptions={filterOptions.data}
         onPresetChange={setPreset}
+        onFiltersChange={setActivityFilters}
         onRefresh={() => {
           void overview.refresh();
           void activity.refresh();
@@ -79,9 +87,6 @@ export function OverviewAnalyticsView() {
         trendLoading={overview.isLoading}
         activity={activity.data}
         activityLoading={activity.isLoading}
-        filterOptions={filterOptions.data}
-        activityFilters={activityFilters}
-        onActivityFiltersChange={setActivityFilters}
       />
     </DashboardContent>
   );
@@ -96,9 +101,6 @@ type DashboardMainGridProps = {
   activityLoading: boolean;
   overview?: DashboardOverviewResponse;
   activity?: DashboardActivityResponse;
-  filterOptions?: DashboardFilterOptionsResponse;
-  activityFilters: DashboardActivityFilters;
-  onActivityFiltersChange: (filters: DashboardActivityFilters) => void;
 };
 
 function DashboardMainGrid({
@@ -109,10 +111,7 @@ function DashboardMainGrid({
   activity,
   statsLoading,
   trendLoading,
-  filterOptions,
   activityLoading,
-  activityFilters,
-  onActivityFiltersChange,
 }: DashboardMainGridProps) {
   return (
     <Stack spacing={3}>
@@ -124,12 +123,8 @@ function DashboardMainGrid({
           <Box sx={DASHBOARD_ACTIVITY_AREA_SX}>
             <ActivityGridCard
               t={t}
-              isAdmin={isAdmin}
-              filters={activityFilters}
               activity={activity}
-              filterOptions={filterOptions}
               loading={activityLoading}
-              onFiltersChange={onActivityFiltersChange}
             />
           </Box>
         </Box>
@@ -198,17 +193,7 @@ function SharedBreakdowns({
 }) {
   return (
     <>
-      <Grid size={{ xs: 12, md: 6, lg: isAdmin ? 3 : 4 }}>
-        <BreakdownCard
-          t={t}
-          locale={locale}
-          title={t('dashboard.stats.breakdowns.apiFormats')}
-          items={overview?.breakdowns.api_formats}
-          loading={loading}
-          variant="distribution"
-        />
-      </Grid>
-      <Grid size={{ xs: 12, md: 6, lg: isAdmin ? 3 : 4 }}>
+      <Grid size={{ xs: 12, md: 6, lg: isAdmin ? 4 : 6 }}>
         <BreakdownCard
           t={t}
           locale={locale}
@@ -242,7 +227,7 @@ function AdminBreakdowns({
 }) {
   return (
     <>
-      <Grid size={{ xs: 12, md: 6, lg: 3 }}>
+      <Grid size={{ xs: 12, md: 6, lg: 4 }}>
         <BreakdownCard
           t={t}
           locale={locale}
@@ -252,7 +237,7 @@ function AdminBreakdowns({
           variant="distribution"
         />
       </Grid>
-      <Grid size={{ xs: 12, md: 6, lg: 3 }}>
+      <Grid size={{ xs: 12, md: 6, lg: 4 }}>
         <BreakdownCard
           t={t}
           locale={locale}

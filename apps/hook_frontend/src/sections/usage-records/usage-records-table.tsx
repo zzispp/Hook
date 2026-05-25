@@ -19,10 +19,13 @@ import { TableNoData, TablePaginationCustom } from 'src/components/table';
 import { formatApiFormat } from 'src/sections/admin/provider-management-utils';
 import { TableLoadingRows, ManagementTableHead } from 'src/sections/admin/shared';
 import {
+  RequestRecordDurationText,
+  useRequestRecordDurationNow,
+} from 'src/sections/admin/request-record-duration-text';
+import {
   formatCost,
   tokenDisplay,
   hasTokenValue,
-  formatDuration,
   formatTokenCount,
   formatRequestDate,
   formatCacheHitRate,
@@ -44,6 +47,7 @@ export function UsageRecordsTable({
 }) {
   const { t } = useTranslate('admin');
   const head = tableHead(t);
+  const durationNow = useRequestRecordDurationNow(rows);
 
   return (
     <>
@@ -54,7 +58,12 @@ export function UsageRecordsTable({
             {loading ? <TableLoadingRows head={head} rows={table.rowsPerPage} /> : null}
             {!loading
               ? rows.map((row, index) => (
-                  <UsageRecordRow key={usageRecordKey(row, index)} row={row} locale={locale} />
+                  <UsageRecordRow
+                    key={usageRecordKey(row, index)}
+                    row={row}
+                    locale={locale}
+                    durationNow={durationNow}
+                  />
                 ))
               : null}
             <TableNoData title={t('common.noData')} notFound={!loading && rows.length === 0} />
@@ -73,7 +82,15 @@ export function UsageRecordsTable({
   );
 }
 
-function UsageRecordRow({ row, locale }: { row: UsageRecord; locale: string }) {
+function UsageRecordRow({
+  row,
+  locale,
+  durationNow,
+}: {
+  row: UsageRecord;
+  locale: string;
+  durationNow: number;
+}) {
   const { t } = useTranslate('admin');
 
   return (
@@ -108,8 +125,12 @@ function UsageRecordRow({ row, locale }: { row: UsageRecord; locale: string }) {
       </TableCell>
       <TableCell align="right">{formatCacheHitRate(row)}</TableCell>
       <TableCell>{formatCost(row.total_cost)}</TableCell>
-      <TableCell>{formatDuration(row.first_byte_time_ms)}</TableCell>
-      <TableCell>{formatDuration(row.total_latency_ms)}</TableCell>
+      <TableCell>
+        <RequestRecordDurationText record={row} metric="first_byte" now={durationNow} />
+      </TableCell>
+      <TableCell>
+        <RequestRecordDurationText record={row} metric="total_latency" now={durationNow} />
+      </TableCell>
     </TableRow>
   );
 }

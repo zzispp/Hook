@@ -3,10 +3,7 @@ use types::scheduler::{ScheduledTask, ScheduledTaskConfigField, ScheduledTaskDef
 
 use crate::{StorageError, StorageResult, json};
 
-#[path = "entities/mod.rs"]
-pub mod entities;
-
-pub use entities::{scheduled_task_runs, scheduled_tasks};
+pub use super::entities::{scheduled_task_runs, scheduled_tasks};
 
 pub type ScheduledTaskRecord = scheduled_tasks::Model;
 pub type ScheduledTaskRunRecord = scheduled_task_runs::Model;

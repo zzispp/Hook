@@ -81,6 +81,7 @@ export type UsageRecord = {
   client_api_format: string;
   request_type: string;
   is_stream: boolean;
+  status: RequestRecordStatus;
   prompt_tokens?: number | null;
   completion_tokens?: number | null;
   total_tokens?: number | null;

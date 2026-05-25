@@ -116,6 +116,8 @@ fn summary_sql() -> &'static str {
         COUNT(*) FILTER (WHERE r.status = 'success')::bigint AS success_count, \
         COUNT(*) FILTER (WHERE r.status IN ('failed', 'cancelled'))::bigint AS failed_count, \
         COUNT(*) FILTER (WHERE r.status IN ('pending', 'streaming'))::bigint AS active_count, \
+        COALESCE(SUM(COALESCE(r.prompt_tokens, 0)), 0)::bigint AS prompt_tokens, \
+        COALESCE(SUM(COALESCE(r.cache_read_input_tokens, 0)), 0)::bigint AS cache_read_input_tokens, \
         COALESCE(SUM(COALESCE(r.total_tokens, COALESCE(r.prompt_tokens, 0) + COALESCE(r.completion_tokens, 0), 0)), 0)::bigint AS total_tokens, \
         COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
         AVG(r.total_latency_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL) AS avg_latency_ms, \
@@ -132,9 +134,12 @@ fn timeseries_select(bucket: DashboardBucketFilter, offset: &str) -> String {
             COUNT(*)::bigint AS request_count, \
             COUNT(*) FILTER (WHERE r.status = 'success')::bigint AS success_count, \
             COUNT(*) FILTER (WHERE r.status IN ('failed', 'cancelled'))::bigint AS failed_count, \
+            COALESCE(SUM(COALESCE(r.prompt_tokens, 0)), 0)::bigint AS prompt_tokens, \
+            COALESCE(SUM(COALESCE(r.cache_read_input_tokens, 0)), 0)::bigint AS cache_read_input_tokens, \
             COALESCE(SUM(COALESCE(r.total_tokens, COALESCE(r.prompt_tokens, 0) + COALESCE(r.completion_tokens, 0), 0)), 0)::bigint AS total_tokens, \
             COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
-            AVG(r.total_latency_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL) AS avg_latency_ms \
+            AVG(r.total_latency_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL) AS avg_latency_ms, \
+            AVG(r.first_byte_time_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.first_byte_time_ms IS NOT NULL) AS avg_ttfb_ms \
             FROM request_records r"
             )
         }
@@ -144,9 +149,12 @@ fn timeseries_select(bucket: DashboardBucketFilter, offset: &str) -> String {
             COUNT(*)::bigint AS request_count, \
             COUNT(*) FILTER (WHERE r.status = 'success')::bigint AS success_count, \
             COUNT(*) FILTER (WHERE r.status IN ('failed', 'cancelled'))::bigint AS failed_count, \
+            COALESCE(SUM(COALESCE(r.prompt_tokens, 0)), 0)::bigint AS prompt_tokens, \
+            COALESCE(SUM(COALESCE(r.cache_read_input_tokens, 0)), 0)::bigint AS cache_read_input_tokens, \
             COALESCE(SUM(COALESCE(r.total_tokens, COALESCE(r.prompt_tokens, 0) + COALESCE(r.completion_tokens, 0), 0)), 0)::bigint AS total_tokens, \
             COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
-            AVG(r.total_latency_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL) AS avg_latency_ms \
+            AVG(r.total_latency_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL) AS avg_latency_ms, \
+            AVG(r.first_byte_time_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.first_byte_time_ms IS NOT NULL) AS avg_ttfb_ms \
             FROM request_records r"
             )
         }
@@ -162,7 +170,8 @@ fn breakdown_sql(id_expression: &str, name_expression: &str, where_sql: &str, li
         "SELECT {id_expression} AS id, {name_expression} AS name, \
         COUNT(*)::bigint AS request_count, \
         COALESCE(SUM(COALESCE(r.total_tokens, COALESCE(r.prompt_tokens, 0) + COALESCE(r.completion_tokens, 0), 0)), 0)::bigint AS total_tokens, \
-        COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost \
+        COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
+        AVG(r.total_latency_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL) AS avg_latency_ms \
         FROM request_records r {where_sql} \
         GROUP BY id, name \
         ORDER BY request_count DESC, total_tokens DESC, name ASC \
@@ -179,6 +188,10 @@ fn summary_response(row: SummaryRow) -> DashboardSummary {
         failed_count,
         active_count: row.active_count.unwrap_or_default(),
         success_rate: success_rate(success_count, failed_count),
+        cache_hit_rate: cache_hit_rate(
+            row.cache_read_input_tokens.unwrap_or_default(),
+            row.prompt_tokens.unwrap_or_default(),
+        ),
         total_tokens: row.total_tokens.unwrap_or_default(),
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
         avg_latency_ms: row.avg_latency_ms,
@@ -196,6 +209,11 @@ fn timeseries_response(row: TimeseriesRow) -> DashboardTimeseriesPoint {
         total_tokens: row.total_tokens.unwrap_or_default(),
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
         avg_latency_ms: row.avg_latency_ms,
+        avg_ttfb_ms: row.avg_ttfb_ms,
+        cache_hit_rate: cache_hit_rate(
+            row.cache_read_input_tokens.unwrap_or_default(),
+            row.prompt_tokens.unwrap_or_default(),
+        ),
     }
 }
 
@@ -206,6 +224,7 @@ fn breakdown_response(row: BreakdownRow) -> DashboardBreakdownItem {
         request_count: row.request_count.unwrap_or_default(),
         total_tokens: row.total_tokens.unwrap_or_default(),
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
+        avg_latency_ms: row.avg_latency_ms,
     }
 }
 
@@ -215,6 +234,14 @@ fn success_rate(success_count: i64, failed_count: i64) -> f64 {
         return 0.0;
     }
     success_count as f64 / denominator as f64
+}
+
+fn cache_hit_rate(cache_read_tokens: i64, prompt_tokens: i64) -> f64 {
+    let denominator = prompt_tokens + cache_read_tokens;
+    if denominator <= 0 {
+        return 0.0;
+    }
+    cache_read_tokens as f64 / denominator as f64
 }
 
 fn window_response(query: &DashboardStoreOverviewQuery) -> DashboardWindow {
@@ -248,6 +275,8 @@ struct SummaryRow {
     success_count: Option<i64>,
     failed_count: Option<i64>,
     active_count: Option<i64>,
+    prompt_tokens: Option<i64>,
+    cache_read_input_tokens: Option<i64>,
     total_tokens: Option<i64>,
     total_cost: Option<Decimal>,
     avg_latency_ms: Option<f64>,
@@ -261,9 +290,12 @@ struct TimeseriesRow {
     request_count: Option<i64>,
     success_count: Option<i64>,
     failed_count: Option<i64>,
+    prompt_tokens: Option<i64>,
+    cache_read_input_tokens: Option<i64>,
     total_tokens: Option<i64>,
     total_cost: Option<Decimal>,
     avg_latency_ms: Option<f64>,
+    avg_ttfb_ms: Option<f64>,
 }
 
 #[derive(Debug, FromQueryResult)]
@@ -273,4 +305,65 @@ struct BreakdownRow {
     request_count: Option<i64>,
     total_tokens: Option<i64>,
     total_cost: Option<Decimal>,
+    avg_latency_ms: Option<f64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+
+    use super::{BreakdownRow, SummaryRow, TimeseriesRow, breakdown_response, summary_response, timeseries_response};
+
+    #[test]
+    fn summary_response_calculates_cache_hit_rate() {
+        let response = summary_response(SummaryRow {
+            request_count: Some(2),
+            success_count: Some(1),
+            failed_count: Some(1),
+            active_count: Some(0),
+            prompt_tokens: Some(75),
+            cache_read_input_tokens: Some(25),
+            total_tokens: Some(300),
+            total_cost: Some(Decimal::new(12, 2)),
+            avg_latency_ms: Some(120.0),
+            avg_ttfb_ms: Some(45.0),
+            model_count: Some(2),
+        });
+
+        assert_eq!(response.cache_hit_rate, 0.25);
+        assert_eq!(response.avg_ttfb_ms, Some(45.0));
+    }
+
+    #[test]
+    fn timeseries_response_preserves_ttfb_and_cache_hit_rate() {
+        let response = timeseries_response(TimeseriesRow {
+            bucket: "2026-04-28".into(),
+            request_count: Some(4),
+            success_count: Some(3),
+            failed_count: Some(1),
+            prompt_tokens: Some(90),
+            cache_read_input_tokens: Some(10),
+            total_tokens: Some(250),
+            total_cost: Some(Decimal::new(55, 2)),
+            avg_latency_ms: Some(250.0),
+            avg_ttfb_ms: Some(80.0),
+        });
+
+        assert_eq!(response.cache_hit_rate, 0.1);
+        assert_eq!(response.avg_ttfb_ms, Some(80.0));
+    }
+
+    #[test]
+    fn breakdown_response_preserves_average_latency() {
+        let response = breakdown_response(BreakdownRow {
+            id: Some("provider-1".into()),
+            name: "kedaya".into(),
+            request_count: Some(255),
+            total_tokens: Some(635_000_000),
+            total_cost: Some(Decimal::new(18988, 2)),
+            avg_latency_ms: Some(950.0),
+        });
+
+        assert_eq!(response.avg_latency_ms, Some(950.0));
+    }
 }

@@ -1,4 +1,4 @@
-mod entities;
+pub mod entities;
 mod record;
 mod repository;
 mod types;

@@ -397,10 +397,11 @@
         "failed": "失败",
         "active": "活跃中",
         "successRate": "成功率",
+        "cacheHitRate": "缓存命中率",
         "tokens": "Tokens",
         "cost": "费用",
         "latency": "平均响应",
-        "ttfb": "平均 TTFB",
+        "ttfb": "TTFB",
         "models": "使用模型"
       },
       "trend": {
@@ -418,6 +419,9 @@
         "allTokens": "全部令牌",
         "user": "用户",
         "token": "令牌",
+        "requestCount": "{{count}}次请求",
+        "cost": "费用",
+        "baseCost": "成本",
         "less": "少",
         "more": "多"
       },
@@ -431,6 +435,7 @@
       "columns": {
         "requests": "请求",
         "tokens": "Tokens",
+        "avgLatency": "平均响应",
         "cost": "费用"
       },
       "empty": "暂无统计数据"

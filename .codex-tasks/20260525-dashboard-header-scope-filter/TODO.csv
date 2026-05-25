@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current dashboard filter flow,DONE,Existing overview/activity request paths and UI ownership are understood,rg -n "useDashboardOverview|ActivityFilters|DashboardOverviewRequest" apps crates,2026-05-25T00:00:00+08:00,0,
+2,Implement shared scope filter across API and UI,DONE,Header selector controls overview and activity data without duplicate activity-card selector,pnpm lint:frontend,2026-05-25T00:00:00+08:00,0,
+3,Validate changed behavior,DONE,Automated checks pass and build noise is cleaned,pnpm build:frontend,2026-05-25T00:00:00+08:00,0,

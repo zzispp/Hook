@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Update task record and inspect dashboard surface,DONE,"Task artifacts reflect the requested dashboard metric change","test -f .codex-tasks/20260525-dashboard-metrics/SPEC.md && test -f .codex-tasks/20260525-dashboard-metrics/TODO.csv",2026-05-25T15:42:00+08:00,0,
+2,Implement backend dashboard aggregates,DONE,"Dashboard API exposes cache hit rate, TTFB series, breakdown latency, and activity base cost","timeout 60 cargo test -p storage dashboard -- --nocapture",2026-05-25T15:43:00+08:00,0,
+3,Implement frontend dashboard presentation,DONE,"Admin/user dashboard KPI cards, activity hover, and Provider distribution match the requested display","pnpm lint:frontend",2026-05-25T15:44:00+08:00,0,
+4,Update admin i18n seed copy,DONE,"Backend admin seed contains required dashboard labels without frontend admin locale JSON","rg -n 'cacheHitRate|avgLatency|baseCost|ttfb' apps/hook_backend/src/migration/defaults/i18n/admin.cn.json apps/hook_backend/src/migration/defaults/i18n/admin.en.json",2026-05-25T15:45:00+08:00,0,
+5,Run final validation,DONE,"Rust tests and frontend lint/build pass or failures are reported with concrete errors","just test && pnpm lint:frontend && pnpm build:frontend",2026-05-25T15:46:00+08:00,0,

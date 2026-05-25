@@ -76,6 +76,7 @@ export function i18nOptions(lang = fallbackLng, namespace = defaultNS): InitOpti
     fallbackNS: defaultNS,
     defaultNS,
     ns: namespace,
+    interpolation: { escapeValue: false },
   };
 }
 

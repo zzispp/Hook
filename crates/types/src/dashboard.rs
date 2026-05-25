@@ -31,6 +31,12 @@ pub struct DashboardOverviewRequest {
     #[serde(default)]
     pub preset: DashboardPreset,
     #[serde(default)]
+    pub scope: Option<DashboardScopeParam>,
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub token_id: Option<String>,
+    #[serde(default)]
     pub tz_offset_minutes: i32,
 }
 
@@ -83,6 +89,7 @@ pub struct DashboardSummary {
     pub failed_count: i64,
     pub active_count: i64,
     pub success_rate: f64,
+    pub cache_hit_rate: f64,
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
@@ -101,6 +108,8 @@ pub struct DashboardTimeseriesPoint {
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
     pub avg_latency_ms: Option<f64>,
+    pub avg_ttfb_ms: Option<f64>,
+    pub cache_hit_rate: f64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
@@ -120,6 +129,7 @@ pub struct DashboardBreakdownItem {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    pub avg_latency_ms: Option<f64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -139,6 +149,8 @@ pub struct DashboardActivityDay {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub base_cost: Decimal,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

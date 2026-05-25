@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Identify scheduler dead code warning source,DONE,Warning source and actual usage are verified,cargo check -p storage,2026-05-25T00:00:00+08:00,0,The warned SeaORM entities are used by SchedulerStore and cannot be deleted.
+2,Make required scheduler entities warning-clean,DONE,cargo check no longer reports scheduler entity dead_code warnings,cargo check -p storage,2026-05-25T16:34:39+08:00,0,Moved scheduler entities to the scheduler module surface and imported them from record.rs.
+3,Run final Rust validation,DONE,Rust validation completes cleanly,timeout 60 cargo check -p storage,2026-05-25T16:34:39+08:00,0,Command completed without warnings.

@@ -59,6 +59,7 @@ pub struct UsageRecord {
     pub client_api_format: String,
     pub request_type: String,
     pub is_stream: bool,
+    pub status: String,
     pub prompt_tokens: Option<i64>,
     pub completion_tokens: Option<i64>,
     pub total_tokens: Option<i64>,

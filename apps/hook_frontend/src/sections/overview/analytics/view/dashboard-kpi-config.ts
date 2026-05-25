@@ -58,13 +58,6 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     series: (points) => points.map((point) => point.total_cost),
   },
   {
-    labelKey: 'dashboard.stats.kpi.active',
-    color: 'secondary',
-    icon: 'solar:play-circle-bold',
-    value: (summary, locale) => formatInteger(summary?.active_count, locale),
-    series: (points) => points.map((point) => point.request_count),
-  },
-  {
     labelKey: 'dashboard.stats.kpi.failed',
     color: 'error',
     icon: 'solar:danger-triangle-bold',
@@ -79,11 +72,18 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     series: (points) => points.map((point) => point.avg_latency_ms ?? 0),
   },
   {
-    labelKey: 'dashboard.stats.kpi.models',
+    labelKey: 'dashboard.stats.kpi.cacheHitRate',
+    color: 'success',
+    icon: 'solar:chart-square-outline',
+    value: (summary) => formatPercent(summary?.cache_hit_rate ?? 0),
+    series: (points) => points.map((point) => ratioValuePercent(point.cache_hit_rate)),
+  },
+  {
+    labelKey: 'dashboard.stats.kpi.ttfb',
     color: 'primary',
-    icon: 'solar:atom-bold-duotone',
-    value: (summary, locale) => formatInteger(summary?.model_count, locale),
-    series: (points) => points.map((point) => point.request_count),
+    icon: 'solar:clock-circle-outline',
+    value: (summary) => formatMs(summary?.avg_ttfb_ms),
+    series: (points) => points.map((point) => point.avg_ttfb_ms ?? 0),
   },
 ];
 
@@ -95,7 +95,11 @@ function successRateSeries(points: DashboardOverviewResponse['timeseries']) {
 
 function ratioPercent(value: number, total: number) {
   if (total <= 0) return 0;
-  return Number(((value / total) * PERCENT_MULTIPLIER).toFixed(RATIO_PRECISION));
+  return ratioValuePercent(value / total);
+}
+
+function ratioValuePercent(value: number) {
+  return Number((value * PERCENT_MULTIPLIER).toFixed(RATIO_PRECISION));
 }
 
 function formatPercent(value: number) {
