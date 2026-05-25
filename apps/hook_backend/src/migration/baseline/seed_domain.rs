@@ -221,6 +221,8 @@ mod tests {
         assert!(keys.contains(&(ADMIN_NAMESPACE, "en", "wallet", "reasonLabels.llm_model_usage", "Model usage")));
         assert!(keys.contains(&(ADMIN_NAMESPACE, "cn", "wallet", "linkTypeLabels.llm_request_record", "模型调用记录")));
         assert!(keys.contains(&(ADMIN_NAMESPACE, "en", "wallet", "linkTypeLabels.llm_request_record", "LLM request record")));
+        assert!(keys.contains(&(ADMIN_NAMESPACE, "cn", "requestRecords", "token", "令牌")));
+        assert!(keys.contains(&(ADMIN_NAMESPACE, "en", "requestRecords", "token", "Token")));
         assert!(keys.contains(&(
             ADMIN_NAMESPACE,
             "cn",

@@ -63,12 +63,12 @@ export function usePaymentChannels() {
   return useRechargeResource<PaymentChannel[]>(endpoints.adminRecharges.paymentChannels);
 }
 
-export function useUserRechargePackages(page = 1, pageSize = 50) {
+export function useUserRechargePackages(page = 0, pageSize = 50) {
   const key = [endpoints.recharges.packages, { params: pageQuery(page, pageSize) }] as const;
   return useRechargeResource<UserRechargePackageListResponse>(key);
 }
 
-export function useUserRechargeOrders(page = 1, pageSize = 5) {
+export function useUserRechargeOrders(page = 0, pageSize = 5) {
   const key = [endpoints.recharges.orders, { params: pageQuery(page, pageSize) }] as const;
   return useRechargeResource<RechargeOrderListResponse>(key);
 }

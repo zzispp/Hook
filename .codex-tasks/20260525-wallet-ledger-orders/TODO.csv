@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Move recharge order UI into ledger section,DONE,Recharge orders render under a tab in ledger card,pnpm --filter hook_frontend lint,2026-05-25 22:11:12 CST,0,
+2,Remove order props from recharge card path,DONE,Recharge card no longer receives or renders orders,pnpm --filter hook_frontend lint,2026-05-25 22:11:12 CST,0,
+3,Adjust ledger title toolbar spacing,DONE,Ledger label and toolbar have visible spacing,pnpm --filter hook_frontend lint,2026-05-25 22:11:12 CST,0,
+4,Run validation,DONE,Frontend lint/build pass,pnpm --filter hook_frontend lint && pnpm --filter hook_frontend build,2026-05-25 22:11:12 CST,0,

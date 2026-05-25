@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map existing wallet component boundaries,DONE,Current layout and file size risks are identified,wc/sed source inspection,2026-05-25T13:44:16Z,0,Main wallet view is 241 lines and should be split.
+2,Refactor wallet center into summary deposit and ledger sections,DONE,Card-code area is separate and ledger is full-width below deposit section,pnpm --filter hook_frontend lint,2026-05-25T13:52:23Z,0,Created deposit/card-code/ledger section components.
+3,Restructure recharge panel with amount and package modes,DONE,Panel exposes arbitrary amount placeholder and package grid without fake success,pnpm --filter hook_frontend lint,2026-05-25T13:52:23Z,0,Custom amount mode is disabled and explicitly marked unavailable.
+4,Update i18n seeds and validate,DONE,New labels exist in cn/en and JSON/lint pass,node JSON parse plus frontend lint,2026-05-25T13:59:20Z,0,JSON parse lint build and backend seed tests passed; browser route hit permission page.

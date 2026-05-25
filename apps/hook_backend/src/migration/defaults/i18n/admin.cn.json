@@ -537,18 +537,25 @@
       "ledger": "资金流水"
     },
     "cardCode": {
+      "title": "卡密兑换",
       "code": "卡密",
       "redeem": "兑换",
       "redeemed": "卡密兑换成功"
     },
     "recharge": {
+      "title": "充值",
+      "amountMode": "任意金额充值",
+      "packageMode": "套餐充值",
       "packagesTitle": "充值套餐",
       "ordersTitle": "充值订单",
-      "description": "购买套餐会创建待支付订单，支付接入前不会自动到账。",
+      "customAmount": "充值金额",
+      "customAmountPlaceholder": "输入任意充值金额",
+      "customRechargeUnavailable": "任意金额充值入口已预留，支付渠道接入后开放。",
       "rechargeAmount": "充值额度",
       "giftAmount": "赠送额度",
       "totalArrival": "合计到账",
       "estimatedPayable": "预计实付",
+      "paymentUnavailableAction": "支付渠道暂未接入",
       "buy": "购买",
       "refresh": "刷新套餐",
       "disabled": "充值入口未开启",
@@ -560,7 +567,7 @@
       "expiresAt": "过期时间",
       "status": "状态",
       "latestOrder": "最近订单",
-      "ratio": "1USD = {{ratio}}CNY"
+      "ratio": "充值比例：{{ratio}} CNY = 1 USD"
     },
     "metrics": {
       "availableBalance": "可用余额",
@@ -1280,7 +1287,7 @@
     },
     "recharge": {
       "description": "控制用户充值入口、金额换算和已注册支付渠道启禁用。",
-      "preview": "1USD = {{ratio}}CNY",
+      "preview": "充值比例：{{ratio}} CNY = 1 USD",
       "paymentChannels": "支付渠道",
       "noPaymentChannels": "暂无已注册支付渠道"
     },
@@ -1382,6 +1389,7 @@
   "requestRecords": {
     "time": "时间",
     "user": "用户",
+    "token": "令牌",
     "model": "模型",
     "provider": "提供商",
     "apiFormat": "API格式",

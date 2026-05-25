@@ -537,18 +537,25 @@
       "ledger": "Ledger"
     },
     "cardCode": {
+      "title": "Card code redemption",
       "code": "Card code",
       "redeem": "Redeem",
       "redeemed": "Card code redeemed"
     },
     "recharge": {
+      "title": "Recharge",
+      "amountMode": "Custom amount",
+      "packageMode": "Packages",
       "packagesTitle": "Recharge packages",
       "ordersTitle": "Recharge orders",
-      "description": "Buying a package creates a pending order. Balance is not credited until payment is integrated.",
+      "customAmount": "Recharge amount",
+      "customAmountPlaceholder": "Enter any recharge amount",
+      "customRechargeUnavailable": "Custom amount recharge is reserved and will open after payment channels are integrated.",
       "rechargeAmount": "Recharge amount",
       "giftAmount": "Gift amount",
       "totalArrival": "Total arrival",
       "estimatedPayable": "Estimated payable",
+      "paymentUnavailableAction": "Payment channel unavailable",
       "buy": "Buy",
       "refresh": "Refresh packages",
       "disabled": "Recharge is disabled",
@@ -560,7 +567,7 @@
       "expiresAt": "Expires at",
       "status": "Status",
       "latestOrder": "Latest order",
-      "ratio": "1USD = {{ratio}}CNY"
+      "ratio": "Recharge ratio: {{ratio}} CNY = 1 USD"
     },
     "metrics": {
       "availableBalance": "Available balance",
@@ -1280,7 +1287,7 @@
     },
     "recharge": {
       "description": "Controls the user recharge entry, amount conversion, and enabled state for registered payment channels.",
-      "preview": "1USD = {{ratio}}CNY",
+      "preview": "Recharge ratio: {{ratio}} CNY = 1 USD",
       "paymentChannels": "Payment channels",
       "noPaymentChannels": "No registered payment channels"
     },
@@ -1382,6 +1389,7 @@
   "requestRecords": {
     "time": "Time",
     "user": "User",
+    "token": "Token",
     "model": "Model",
     "provider": "Provider",
     "apiFormat": "API format",

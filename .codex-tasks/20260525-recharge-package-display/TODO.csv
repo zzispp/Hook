@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Trace recharge UI and API data flow,DONE,Root cause for empty user packages is identified,rg and source inspection,2026-05-25T13:37:04Z,0,User hook passed page=1 into pageQuery so backend received page=2.
+2,Implement copy and ratio warning changes,DONE,Pending-order sentence removed and ratio warning uses backend setting,rg plus frontend lint,2026-05-25T13:37:04Z,0,Ratio uses response arrival_ratio and warning Alert.
+3,Fix user package visibility,DONE,Active admin-created packages are returned or requested correctly,pnpm --filter hook_frontend lint,2026-05-25T13:37:04Z,0,User recharge hooks now default to frontend 0-based page.
+4,Run validation and record result,DONE,Relevant checks pass or failures are explicit,lint/build/cargo checks,2026-05-25T13:39:27Z,0,Frontend lint and backend seed tests passed.

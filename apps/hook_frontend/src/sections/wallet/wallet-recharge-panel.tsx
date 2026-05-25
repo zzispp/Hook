@@ -1,71 +1,121 @@
 'use client';
 
 import type { TFunction } from 'i18next';
-import type { RechargeOrder, UserRechargePackage } from 'src/types/recharge';
+import type { UserRechargePackage } from 'src/types/recharge';
 
+import { useState } from 'react';
+
+import Tab from '@mui/material/Tab';
 import Grid from '@mui/material/Grid';
-import Chip from '@mui/material/Chip';
+import Tabs from '@mui/material/Tabs';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { EmptyContent } from 'src/components/empty-content';
 
-import {
-  formatCny,
-  formatUsd,
-  orderStatusColor,
-  formatRechargeDate,
-  rechargeOrderStatusLabel,
-} from 'src/sections/recharge/recharge-display';
+import { formatCny, formatUsd } from 'src/sections/recharge/recharge-display';
 
 type Props = {
   t: TFunction<'admin'>;
-  locale: string;
   loading: boolean;
   enabled: boolean;
   ratio: number;
   packages: UserRechargePackage[];
-  orders: RechargeOrder[];
   purchasingId: string | null;
   onPurchase: (item: UserRechargePackage) => void;
   onRefresh: VoidFunction;
 };
 
+type RechargeMode = 'amount' | 'package';
+
 export function WalletRechargePanel(props: Props) {
-  const hasPackages = props.packages.length > 0;
+  const [mode, setMode] = useState<RechargeMode>('amount');
 
   return (
-    <Stack spacing={3} sx={{ px: 2.5, pb: 2.5 }}>
-      <RechargeNotice {...props} />
-      {hasPackages ? <PackageGrid {...props} /> : <PackageEmpty loading={props.loading} t={props.t} />}
-      <OrderPreview t={props.t} locale={props.locale} orders={props.orders} />
+    <Stack spacing={3} sx={{ p: 2.5 }}>
+      <RechargeHeader t={props.t} mode={mode} onModeChange={setMode} />
+      <RechargeRatioWarning t={props.t} ratio={props.ratio} onRefresh={props.onRefresh} />
+      {!props.enabled ? <RechargeDisabledNotice t={props.t} /> : null}
+      {mode === 'amount' ? <AmountRechargePanel {...props} /> : <PackageRechargePanel {...props} />}
     </Stack>
   );
 }
 
-function RechargeNotice({ t, enabled, ratio, onRefresh }: Pick<Props, 't' | 'enabled' | 'ratio' | 'onRefresh'>) {
+function RechargeHeader({
+  t,
+  mode,
+  onModeChange,
+}: {
+  t: TFunction<'admin'>;
+  mode: RechargeMode;
+  onModeChange: (mode: RechargeMode) => void;
+}) {
+  return (
+    <Stack spacing={1.5}>
+      <Typography variant="h6">{t('wallet.recharge.title')}</Typography>
+      <Tabs value={mode} onChange={(_, value: RechargeMode) => onModeChange(value)}>
+        <Tab value="amount" label={t('wallet.recharge.amountMode')} />
+        <Tab value="package" label={t('wallet.recharge.packageMode')} />
+      </Tabs>
+    </Stack>
+  );
+}
+
+function RechargeRatioWarning({ t, ratio, onRefresh }: Pick<Props, 't' | 'ratio' | 'onRefresh'>) {
   return (
     <Alert
-      severity={enabled ? 'info' : 'warning'}
+      severity="warning"
       action={
         <Button color="inherit" size="small" startIcon={<Iconify icon="solar:restart-bold" />} onClick={onRefresh}>
           {t('wallet.recharge.refresh')}
         </Button>
       }
     >
-      <Stack spacing={0.5}>
-        <Typography variant="body2">{enabled ? t('wallet.recharge.description') : t('wallet.recharge.disabled')}</Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {t('wallet.recharge.ratio', { ratio })}
-        </Typography>
-      </Stack>
+      {t('wallet.recharge.ratio', { ratio })}
     </Alert>
   );
+}
+
+function RechargeDisabledNotice({ t }: Pick<Props, 't'>) {
+  return <Alert severity="warning">{t('wallet.recharge.disabled')}</Alert>;
+}
+
+function AmountRechargePanel({ t, enabled, ratio }: Pick<Props, 't' | 'enabled' | 'ratio'>) {
+  return (
+    <Stack spacing={2}>
+      <Alert severity="info">{t('wallet.recharge.customRechargeUnavailable')}</Alert>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <TextField
+          fullWidth
+          disabled
+          type="number"
+          label={t('wallet.recharge.customAmount')}
+          value=""
+          placeholder={t('wallet.recharge.customAmountPlaceholder')}
+        />
+        <TextField fullWidth disabled label={t('wallet.recharge.estimatedPayable')} value={formatCny(0 * ratio)} />
+      </Stack>
+      <Button
+        variant="contained"
+        disabled
+        startIcon={<Iconify icon="solar:wad-of-money-bold" />}
+        sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}
+      >
+        {enabled ? t('wallet.recharge.paymentUnavailableAction') : t('wallet.recharge.disabled')}
+      </Button>
+    </Stack>
+  );
+}
+
+function PackageRechargePanel(props: Props) {
+  const hasPackages = props.packages.length > 0;
+
+  return hasPackages ? <PackageGrid {...props} /> : <PackageEmpty loading={props.loading} t={props.t} />;
 }
 
 function PackageGrid(props: Props) {
@@ -139,35 +189,4 @@ function PackageEmpty({ t, loading }: { t: TFunction<'admin'>; loading: boolean 
   }
 
   return <EmptyContent filled title={t('wallet.recharge.emptyPackages')} sx={{ py: 6 }} />;
-}
-
-function OrderPreview({ t, locale, orders }: { t: TFunction<'admin'>; locale: string; orders: RechargeOrder[] }) {
-  return (
-    <Stack spacing={2}>
-      <Typography variant="h6">{t('wallet.recharge.ordersTitle')}</Typography>
-      {orders.length === 0 ? <Typography color="text.secondary">{t('wallet.recharge.emptyOrders')}</Typography> : null}
-      {orders.map((order) => (
-        <OrderRow key={order.id} t={t} locale={locale} order={order} />
-      ))}
-    </Stack>
-  );
-}
-
-function OrderRow({ t, locale, order }: { t: TFunction<'admin'>; locale: string; order: RechargeOrder }) {
-  return (
-    <Stack spacing={1.5} sx={{ p: 2, border: (theme) => `1px solid ${theme.palette.divider}`, borderRadius: 1 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1}>
-        <Typography variant="subtitle2">{order.package_name}</Typography>
-        <Label color={orderStatusColor(order.status)} variant="soft">
-          {rechargeOrderStatusLabel(t, order.status)}
-        </Label>
-      </Stack>
-      <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-        <Chip size="small" label={`${t('wallet.recharge.orderNo')}: ${order.order_no}`} />
-        <Chip size="small" label={`${t('wallet.recharge.estimatedPayable')}: ${formatCny(order.payable_amount)}`} />
-        <Chip size="small" label={`${t('wallet.recharge.expiresAt')}: ${formatRechargeDate(order.expires_at, locale)}`} />
-      </Stack>
-      {order.status === 'pending' ? <Alert severity="warning">{t('wallet.recharge.paymentUnavailable')}</Alert> : null}
-    </Stack>
-  );
 }
