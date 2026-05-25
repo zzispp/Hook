@@ -14,6 +14,14 @@ const CONFIG_CAPABILITY_KEYS = [
   'image_generation',
 ] as const;
 
+export const MODEL_BILLING_BADGE_KEYS = [
+  'billingMetered',
+  'billingTiered',
+  'billingPerRequest',
+] as const;
+
+export type ModelBillingBadgeKey = (typeof MODEL_BILLING_BADGE_KEYS)[number];
+
 export const MODEL_DETAIL_CAPABILITIES = [
   {
     key: 'streaming',
@@ -59,6 +67,17 @@ export function hasCapability(item: GlobalModelResponse, key: string) {
 
 export function priceSummary(item: GlobalModelResponse) {
   return `${formatPrice(firstTier(item)?.input_price_per_1m)} / ${formatPrice(firstTier(item)?.output_price_per_1m)}`;
+}
+
+export function billingBadges(item: GlobalModelResponse): ModelBillingBadgeKey[] {
+  const tierTotal = tierCount(item.default_tiered_pricing);
+  const badges: ModelBillingBadgeKey[] = [];
+
+  if (tierTotal >= 1) badges.push('billingMetered');
+  if (tierTotal > 1) badges.push('billingTiered');
+  if (hasPositiveRequestPrice(item.default_price_per_request)) badges.push('billingPerRequest');
+
+  return badges;
 }
 
 export function tierCount(pricing?: TieredPricingConfig | null) {
@@ -112,6 +131,10 @@ function description(item: GlobalModelResponse) {
 
 function firstTier(item: GlobalModelResponse) {
   return item.default_tiered_pricing?.tiers?.[0];
+}
+
+function hasPositiveRequestPrice(value?: number | null) {
+  return typeof value === 'number' && value > 0;
 }
 
 function configBool(item: GlobalModelResponse, key: string, defaultValue: boolean) {

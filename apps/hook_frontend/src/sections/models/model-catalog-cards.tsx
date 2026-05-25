@@ -3,7 +3,6 @@
 import type { GlobalModelResponse } from 'src/types/model';
 
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -13,7 +12,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Label } from 'src/components/label';
 
 import { ModelCopyButton } from './model-copy-button';
-import { priceSummary, formatUsageCount } from './model-catalog-utils';
+import { priceSummary, billingBadges, formatUsageCount } from './model-catalog-utils';
 
 // ----------------------------------------------------------------------
 
@@ -44,6 +43,7 @@ function CatalogCard({
   onSelectRow: (row: GlobalModelResponse) => void;
 }) {
   const { t } = useTranslate('admin');
+  const badges = billingBadges(row);
 
   return (
     <Paper
@@ -70,16 +70,25 @@ function CatalogCard({
         </Stack>
 
         <Stack direction="row" flexWrap="wrap" sx={{ gap: 1 }}>
-          <Chip
-            size="small"
-            label={`${t('models.pricing')}: ${priceSummary(row)}`}
-          />
-          <Chip
-            size="small"
-            label={`${t('models.usageCount')}: ${formatUsageCount(row.usage_count)}`}
-          />
+          {badges.map((badge) => (
+            <Label key={badge} color={billingBadgeColor(badge)} variant="soft">
+              {t(`models.${badge}`)}
+            </Label>
+          ))}
+          <Typography variant="caption" color="text.secondary">
+            {t('models.pricing')}: {priceSummary(row)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('models.usageCount')}: {formatUsageCount(row.usage_count)}
+          </Typography>
         </Stack>
       </Stack>
     </Paper>
   );
+}
+
+function billingBadgeColor(badge: ReturnType<typeof billingBadges>[number]) {
+  if (badge === 'billingMetered') return 'info';
+  if (badge === 'billingTiered') return 'warning';
+  return 'secondary';
 }

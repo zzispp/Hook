@@ -17,7 +17,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TableHeadCustom } from 'src/components/table';
 
 import { ModelCopyButton } from './model-copy-button';
-import { priceSummary, formatUsageCount } from './model-catalog-utils';
+import { priceSummary, billingBadges, formatUsageCount } from './model-catalog-utils';
 
 // ----------------------------------------------------------------------
 
@@ -67,6 +67,7 @@ function CatalogRow({
   onSelectRow: (row: GlobalModelResponse) => void;
 }) {
   const { t } = useTranslate('admin');
+  const badges = billingBadges(row);
 
   return (
     <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => onSelectRow(row)}>
@@ -81,6 +82,13 @@ function CatalogRow({
       </TableCell>
       <TableCell>
         <Typography variant="body2">{priceSummary(row)}</Typography>
+        <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.5, my: 0.5 }}>
+          {badges.map((badge) => (
+            <Label key={badge} color={billingBadgeColor(badge)} variant="soft">
+              {t(`models.${badge}`)}
+            </Label>
+          ))}
+        </Stack>
         <Typography variant="caption" color="text.secondary">
           {t('models.inputOutputPrice')}
         </Typography>
@@ -111,4 +119,10 @@ function LoadingRows({ head }: { head: TableHeadCellProps[] }) {
       ))}
     </TableRow>
   ));
+}
+
+function billingBadgeColor(badge: ReturnType<typeof billingBadges>[number]) {
+  if (badge === 'billingMetered') return 'info';
+  if (badge === 'billingTiered') return 'warning';
+  return 'secondary';
 }
