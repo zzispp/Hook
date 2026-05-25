@@ -6,6 +6,7 @@ pub mod iden;
 mod indices;
 mod operations_tables;
 mod performance_monitoring_tables;
+mod recharge_tables;
 mod request_candidate_tables;
 mod scheduler_tables;
 mod seed;

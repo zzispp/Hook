@@ -38,6 +38,14 @@ pub struct SystemSettingsResponse {
     #[serde(with = "rust_decimal::serde::float")]
     pub default_user_grant: Decimal,
     pub default_rate_limit_rpm: i64,
+    pub recharge_enabled: bool,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub recharge_arrival_ratio: Decimal,
+    pub recharge_order_expire_minutes: i64,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub recharge_min_amount: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub recharge_max_amount: Decimal,
     pub scheduling_mode: ProviderSchedulingMode,
     pub cache_affinity_ttl_minutes: i64,
     pub provider_cooldown_policy: ProviderCooldownPolicy,
@@ -91,6 +99,11 @@ impl From<SystemSettings> for SystemSettingsResponse {
             provider_sensitive_request_headers: value.provider_sensitive_request_headers,
             default_user_grant: value.default_user_grant,
             default_rate_limit_rpm: value.default_rate_limit_rpm,
+            recharge_enabled: value.recharge_enabled,
+            recharge_arrival_ratio: value.recharge_arrival_ratio,
+            recharge_order_expire_minutes: value.recharge_order_expire_minutes,
+            recharge_min_amount: value.recharge_min_amount,
+            recharge_max_amount: value.recharge_max_amount,
             scheduling_mode: value.scheduling_mode,
             cache_affinity_ttl_minutes: value.cache_affinity_ttl_minutes,
             provider_cooldown_policy: value.provider_cooldown_policy,

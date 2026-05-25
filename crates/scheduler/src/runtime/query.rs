@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use storage::{scheduler::SchedulerStore, StorageResult};
+use storage::{StorageResult, scheduler::SchedulerStore};
 use types::{
     pagination::{Page, PageSliceRequest},
     scheduler::{ScheduledTask, ScheduledTaskDefinition, ScheduledTaskRun, ScheduledTaskRunListRequest},
@@ -50,10 +50,7 @@ pub fn slice_request(page: u64, page_size: u64) -> SchedulerResult<PageSliceRequ
     })
 }
 
-pub fn next_runtime_config(
-    current: &storage::scheduler::ScheduledTaskRecord,
-    update_config: Option<serde_json::Value>,
-) -> StorageResult<serde_json::Value> {
+pub fn next_runtime_config(current: &storage::scheduler::ScheduledTaskRecord, update_config: Option<serde_json::Value>) -> StorageResult<serde_json::Value> {
     match update_config {
         Some(value) => Ok(value),
         None => current.runtime_config(),

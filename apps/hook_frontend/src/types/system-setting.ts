@@ -35,6 +35,11 @@ export type SystemSettings = {
   provider_sensitive_request_headers: string;
   default_user_grant: number;
   default_rate_limit_rpm: number;
+  recharge_enabled: boolean;
+  recharge_arrival_ratio: number;
+  recharge_order_expire_minutes: number;
+  recharge_min_amount: number;
+  recharge_max_amount: number;
   scheduling_mode: ProviderSchedulingMode;
   cache_affinity_ttl_minutes: number;
   provider_cooldown_policy: ProviderCooldownPolicy;
@@ -86,6 +91,11 @@ export type SystemSettingsUpdate = Partial<{
   provider_sensitive_request_headers: string;
   default_user_grant: number;
   default_rate_limit_rpm: number;
+  recharge_enabled: boolean;
+  recharge_arrival_ratio: number;
+  recharge_order_expire_minutes: number;
+  recharge_min_amount: number;
+  recharge_max_amount: number;
   scheduling_mode: ProviderSchedulingMode;
   cache_affinity_ttl_minutes: number;
   provider_cooldown_policy: ProviderCooldownPolicy;

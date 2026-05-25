@@ -107,6 +107,21 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.default_rate_limit_rpm {
         active.default_rate_limit_rpm = Set(value);
     }
+    if let Some(value) = input.recharge_enabled {
+        active.recharge_enabled = Set(value);
+    }
+    if let Some(value) = input.recharge_arrival_ratio {
+        active.recharge_arrival_ratio = Set(value);
+    }
+    if let Some(value) = input.recharge_order_expire_minutes {
+        active.recharge_order_expire_minutes = Set(value);
+    }
+    if let Some(value) = input.recharge_min_amount {
+        active.recharge_min_amount = Set(value);
+    }
+    if let Some(value) = input.recharge_max_amount {
+        active.recharge_max_amount = Set(value);
+    }
     if let Some(value) = input.scheduling_mode {
         active.scheduling_mode = Set(value.as_str().to_owned());
     }

@@ -8,8 +8,7 @@ use crate::runtime::SchedulerResult;
 
 pub type TaskResult = SchedulerResult<Option<String>>;
 pub type TaskConfigValue = serde_json::Value;
-pub type ScheduledTaskExecution =
-    Pin<Box<dyn Future<Output = TaskResult> + Send + 'static>>;
+pub type ScheduledTaskExecution = Pin<Box<dyn Future<Output = TaskResult> + Send + 'static>>;
 
 #[derive(Clone)]
 pub struct ScheduleTaskContext {

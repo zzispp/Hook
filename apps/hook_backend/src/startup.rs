@@ -68,6 +68,11 @@ use rbac::{
     application::RbacService,
     infra::{RedisRbacCache, StorageRbacRepository},
 };
+use recharge::{
+    api::{RechargeApiState, create_router as create_recharge_router},
+    application::{PaymentChannelRegistry, RechargeService},
+    infra::StorageRechargeRepository,
+};
 use scheduler::{
     api::{SchedulerApiState, create_router as create_scheduler_router},
     runtime::{SchedulerRuntime, SchedulerService},
@@ -158,6 +163,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         LettreSmtpConnectionTester,
     ));
     let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone())));
+    let recharges = Arc::new(RechargeService::new(StorageRechargeRepository::new(database.clone()), PaymentChannelRegistry::empty()).await?);
     let groups = Arc::new(GroupService::new(
         CachedGroupRepository::new(StorageGroupRepository::new(database.clone()), proxy_cache.clone()),
         StorageGroupModelCatalog::new(database.clone()),
@@ -221,6 +227,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         dashboard,
         wallets,
         card_codes,
+        recharges,
         system_settings,
         groups,
         i18n,
@@ -263,6 +270,7 @@ fn create_app(state: AppState) -> Router {
     let dashboard_state = DashboardApiState::new(state.dashboard);
     let wallet_state = WalletApiState::new(state.wallets);
     let card_code_state = CardCodeApiState::new(state.card_codes);
+    let recharge_state = RechargeApiState::new(state.recharges);
     let setting_state = SettingApiState::new(state.system_settings);
     let group_state = GroupApiState::new(state.groups);
     let i18n_state = I18nApiState::new(state.i18n);
@@ -288,6 +296,7 @@ fn create_app(state: AppState) -> Router {
         .merge(create_dashboard_router(dashboard_state))
         .merge(create_wallet_router(wallet_state))
         .merge(create_card_code_router(card_code_state))
+        .merge(create_recharge_router(recharge_state))
         .merge(create_setting_router(setting_state))
         .merge(create_group_router(group_state))
         .merge(create_i18n_router(i18n_state))

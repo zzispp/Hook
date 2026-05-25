@@ -43,11 +43,7 @@ impl SchedulerStore {
         records.into_iter().map(|record| task_response(record, definitions)).collect()
     }
 
-    pub async fn update_task(
-        &self,
-        definition: &ScheduledTaskDefinition,
-        patch: ScheduledTaskRecordPatch,
-    ) -> StorageResult<ScheduledTaskRecord> {
+    pub async fn update_task(&self, definition: &ScheduledTaskDefinition, patch: ScheduledTaskRecordPatch) -> StorageResult<ScheduledTaskRecord> {
         let record = self.task_record(&definition.code).await?.ok_or(StorageError::NotFound)?;
         let mut active: scheduled_tasks::ActiveModel = record.into();
         apply_task_patch(&mut active, patch)?;
@@ -107,12 +103,7 @@ impl SchedulerStore {
         Ok(())
     }
 
-    pub async fn page_runs(
-        &self,
-        request: PageSliceRequest,
-        task_code: Option<&str>,
-        status: Option<&str>,
-    ) -> StorageResult<Page<ScheduledTaskRun>> {
+    pub async fn page_runs(&self, request: PageSliceRequest, task_code: Option<&str>, status: Option<&str>) -> StorageResult<Page<ScheduledTaskRun>> {
         let query = run_filters(scheduled_task_runs::Entity::find(), task_code, status);
         let total = query.clone().count(self.database.connection()).await?;
         let records = query

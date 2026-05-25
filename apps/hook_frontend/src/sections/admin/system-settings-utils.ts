@@ -40,6 +40,11 @@ export type SystemSettingsForm = {
   provider_sensitive_request_headers: string;
   default_user_grant: string;
   default_rate_limit_rpm: string;
+  recharge_enabled: boolean;
+  recharge_arrival_ratio: string;
+  recharge_order_expire_minutes: string;
+  recharge_min_amount: string;
+  recharge_max_amount: string;
   smtp_host: string;
   smtp_port: string;
   smtp_username: string;
@@ -87,6 +92,11 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   provider_sensitive_request_headers: 'authorization, x-api-key, api-key, cookie, set-cookie',
   default_user_grant: '0',
   default_rate_limit_rpm: '0',
+  recharge_enabled: false,
+  recharge_arrival_ratio: '1',
+  recharge_order_expire_minutes: '15',
+  recharge_min_amount: '0.01',
+  recharge_max_amount: '3000',
   smtp_host: '',
   smtp_port: '587',
   smtp_username: '',
@@ -136,6 +146,11 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     provider_sensitive_request_headers: settings.provider_sensitive_request_headers,
     default_user_grant: String(settings.default_user_grant),
     default_rate_limit_rpm: String(settings.default_rate_limit_rpm),
+    recharge_enabled: settings.recharge_enabled,
+    recharge_arrival_ratio: String(settings.recharge_arrival_ratio),
+    recharge_order_expire_minutes: String(settings.recharge_order_expire_minutes),
+    recharge_min_amount: String(settings.recharge_min_amount),
+    recharge_max_amount: String(settings.recharge_max_amount),
     smtp_host: settings.smtp_host,
     smtp_port: String(settings.smtp_port),
     smtp_username: settings.smtp_username,
@@ -186,6 +201,11 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     provider_sensitive_request_headers: form.provider_sensitive_request_headers,
     default_user_grant: Number(form.default_user_grant || 0),
     default_rate_limit_rpm: Number(form.default_rate_limit_rpm || 0),
+    recharge_enabled: form.recharge_enabled,
+    recharge_arrival_ratio: Number(form.recharge_arrival_ratio || 0),
+    recharge_order_expire_minutes: Number(form.recharge_order_expire_minutes || 0),
+    recharge_min_amount: Number(form.recharge_min_amount || 0),
+    recharge_max_amount: Number(form.recharge_max_amount || 0),
     smtp_host: form.smtp_host,
     smtp_port: Number(form.smtp_port || 0),
     smtp_username: form.smtp_username,

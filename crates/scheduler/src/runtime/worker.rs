@@ -1,8 +1,4 @@
-use std::{
-    collections::HashSet,
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use storage::{
     Database,
@@ -29,8 +25,7 @@ pub async fn dispatch_task(
 }
 
 pub fn interval_delay(interval_seconds: i64) -> SchedulerResult<Duration> {
-    let seconds = u64::try_from(interval_seconds)
-        .map_err(|_| SchedulerError::InvalidInput("interval_seconds must be greater than 0".into()))?;
+    let seconds = u64::try_from(interval_seconds).map_err(|_| SchedulerError::InvalidInput("interval_seconds must be greater than 0".into()))?;
     Ok(Duration::from_secs(seconds))
 }
 

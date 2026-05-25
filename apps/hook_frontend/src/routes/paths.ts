@@ -51,6 +51,7 @@ export const paths = {
       groups: `${ROOTS.DASHBOARD}/admin/groups`,
       wallets: `${ROOTS.DASHBOARD}/admin/wallets`,
       cardCodes: `${ROOTS.DASHBOARD}/admin/card-codes`,
+      recharges: `${ROOTS.DASHBOARD}/admin/recharges`,
       settings: `${ROOTS.DASHBOARD}/admin/settings`,
       translations: `${ROOTS.DASHBOARD}/admin/translations`,
     },

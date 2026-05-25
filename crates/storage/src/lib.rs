@@ -11,6 +11,7 @@ pub mod operations;
 pub mod performance_monitoring;
 pub mod provider;
 pub mod rbac;
+pub mod recharge;
 pub mod scheduler;
 pub mod setting;
 pub mod usage_flush;

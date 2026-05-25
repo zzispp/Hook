@@ -1,0 +1,19 @@
+[package]
+name = "recharge"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+axum.workspace = true
+constants.workspace = true
+rbac.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+storage.workspace = true
+thiserror.workspace = true
+time.workspace = true
+types.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

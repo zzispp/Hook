@@ -470,6 +470,7 @@ dependencies = [
  "provider",
  "proxy",
  "rbac",
+ "recharge",
  "redis",
  "regex",
  "req",
@@ -3100,6 +3101,23 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tower",
+ "types",
+]
+
+[[package]]
+name = "recharge"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "constants",
+ "rbac",
+ "rust_decimal",
+ "serde",
+ "storage",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
  "types",
 ]
 

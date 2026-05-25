@@ -188,10 +188,7 @@ fn summary_response(row: SummaryRow) -> DashboardSummary {
         failed_count,
         active_count: row.active_count.unwrap_or_default(),
         success_rate: success_rate(success_count, failed_count),
-        cache_hit_rate: cache_hit_rate(
-            row.cache_read_input_tokens.unwrap_or_default(),
-            row.prompt_tokens.unwrap_or_default(),
-        ),
+        cache_hit_rate: cache_hit_rate(row.cache_read_input_tokens.unwrap_or_default(), row.prompt_tokens.unwrap_or_default()),
         total_tokens: row.total_tokens.unwrap_or_default(),
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
         avg_latency_ms: row.avg_latency_ms,
@@ -210,10 +207,7 @@ fn timeseries_response(row: TimeseriesRow) -> DashboardTimeseriesPoint {
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
         avg_latency_ms: row.avg_latency_ms,
         avg_ttfb_ms: row.avg_ttfb_ms,
-        cache_hit_rate: cache_hit_rate(
-            row.cache_read_input_tokens.unwrap_or_default(),
-            row.prompt_tokens.unwrap_or_default(),
-        ),
+        cache_hit_rate: cache_hit_rate(row.cache_read_input_tokens.unwrap_or_default(), row.prompt_tokens.unwrap_or_default()),
     }
 }
 

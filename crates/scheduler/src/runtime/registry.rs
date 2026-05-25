@@ -31,10 +31,7 @@ impl SchedulerRegistry {
     }
 
     pub fn definitions(&self) -> Vec<types::scheduler::ScheduledTaskDefinition> {
-        self.tasks
-            .values()
-            .map(|registered| registered.task.definition())
-            .collect()
+        self.tasks.values().map(|registered| registered.task.definition()).collect()
     }
 
     pub fn task(&self, code: &str) -> Option<Arc<dyn ScheduledTaskLifecycle>> {

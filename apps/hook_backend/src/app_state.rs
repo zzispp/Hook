@@ -18,6 +18,7 @@ pub(crate) struct AppState {
     pub(crate) dashboard: Arc<dyn dashboard::application::DashboardUseCase>,
     pub(crate) wallets: Arc<dyn wallet::application::WalletUseCase>,
     pub(crate) card_codes: Arc<dyn card_code::application::CardCodeUseCase>,
+    pub(crate) recharges: Arc<dyn recharge::application::RechargeUseCase>,
     pub(crate) system_settings: Arc<dyn setting::application::SettingUseCase>,
     pub(crate) groups: Arc<dyn group::application::GroupUseCase>,
     pub(crate) i18n: Arc<dyn i18n::application::I18nUseCase>,

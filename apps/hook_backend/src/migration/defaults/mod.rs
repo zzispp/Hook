@@ -20,6 +20,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_performance_monitoring",
     "admin_wallets",
     "admin_card_codes",
+    "admin_recharges",
     "admin_tokens",
     "admin_announcements",
     "admin_tickets",
@@ -89,6 +90,9 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "wallet_ledger_entries_read",
             "wallet_daily_model_usage_read",
             "card_codes_redeem",
+            "recharge_packages_read",
+            "recharge_orders_read",
+            "recharge_orders_create",
         ],
     },
     MenuApiBindingDefinition {
@@ -283,6 +287,19 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "admin_card_code_types_read",
             "admin_card_code_types_create",
             "admin_card_code_types_update",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_recharges",
+        api_codes: &[
+            "admin_recharge_packages_read",
+            "admin_recharge_packages_create",
+            "admin_recharge_packages_update",
+            "admin_recharge_orders_read",
+            "admin_payment_channels_read",
+            "admin_payment_channels_update",
+            "system_settings_read",
+            "system_settings_update",
         ],
     },
     MenuApiBindingDefinition {

@@ -25,6 +25,7 @@ export const DASHBOARD_MENU_CODES = {
   walletCenter: 'wallet_center',
   walletManagement: 'admin_wallets',
   cardCodeManagement: 'admin_card_codes',
+  rechargeManagement: 'admin_recharges',
 } as const;
 
 export const DASHBOARD_SECTION_CODES = {

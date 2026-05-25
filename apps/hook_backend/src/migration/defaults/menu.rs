@@ -293,6 +293,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000227",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "admin_recharges",
+        title: "充值管理",
+        path: "/dashboard/admin/recharges",
+        icon: "solar:wallet-money-bold",
+        sort_order: 4,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000211",
         section_id: OPERATIONS_SECTION_ID,
         code: "admin_groups",

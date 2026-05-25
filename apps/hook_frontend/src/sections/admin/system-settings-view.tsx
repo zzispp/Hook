@@ -22,6 +22,7 @@ import { SettingsSection } from './system-settings-section';
 import { emailConfigComplete } from './system-settings-utils';
 import { useSystemSettingsForm } from './system-settings-state';
 import { EmailSettingsSection } from './system-settings-email-section';
+import { RechargeSettingsSection } from './system-settings-recharge-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { SwitchRow, TextFieldRow, RefreshButton, AdminBreadcrumbs } from './shared';
 
@@ -58,6 +59,8 @@ export function SystemSettingsView() {
           <EmailSettingsSection form={form.form} setForm={form.setForm} />
           <Divider />
           <TokenSection form={form.form} setForm={form.setForm} />
+          <Divider />
+          <RechargeSettingsSection form={form.form} setForm={form.setForm} />
           <Divider />
           <RequestRecordSection form={form.form} setForm={form.setForm} />
         </Stack>

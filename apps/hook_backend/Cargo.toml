@@ -20,6 +20,7 @@ model.workspace = true
 operations.workspace = true
 provider.workspace = true
 proxy.workspace = true
+recharge.workspace = true
 rbac.workspace = true
 redis.workspace = true
 regex.workspace = true

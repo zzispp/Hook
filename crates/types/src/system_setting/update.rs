@@ -68,6 +68,16 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub default_rate_limit_rpm: Option<i64>,
     #[serde(default)]
+    pub recharge_enabled: Option<bool>,
+    #[serde(default, with = "rust_decimal::serde::float_option")]
+    pub recharge_arrival_ratio: Option<Decimal>,
+    #[serde(default)]
+    pub recharge_order_expire_minutes: Option<i64>,
+    #[serde(default, with = "rust_decimal::serde::float_option")]
+    pub recharge_min_amount: Option<Decimal>,
+    #[serde(default, with = "rust_decimal::serde::float_option")]
+    pub recharge_max_amount: Option<Decimal>,
+    #[serde(default)]
     pub scheduling_mode: Option<ProviderSchedulingMode>,
     #[serde(default)]
     pub cache_affinity_ttl_minutes: Option<i64>,
@@ -117,6 +127,11 @@ impl SystemSettingsUpdate {
             && self.password_reset_enabled.is_none()
             && self.default_user_grant.is_none()
             && self.default_rate_limit_rpm.is_none()
+            && self.recharge_enabled.is_none()
+            && self.recharge_arrival_ratio.is_none()
+            && self.recharge_order_expire_minutes.is_none()
+            && self.recharge_min_amount.is_none()
+            && self.recharge_max_amount.is_none()
             && self.scheduling_mode.is_none()
             && self.cache_affinity_ttl_minutes.is_none()
             && self.provider_cooldown_policy.is_none()

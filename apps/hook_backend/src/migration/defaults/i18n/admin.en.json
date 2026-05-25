@@ -22,6 +22,7 @@
     "admin_cache_monitoring": "Cache Monitoring",
     "admin_wallets": "Wallet Management",
     "admin_card_codes": "Card Code Management",
+    "admin_recharges": "Recharge Management",
     "admin_groups": "Billing Groups",
     "admin_request_records": "Request Records",
     "announcements": "Announcements",
@@ -532,12 +533,34 @@
   "wallet": {
     "title": "Wallet Management",
     "tabs": {
+      "recharge": "Recharge",
       "ledger": "Ledger"
     },
     "cardCode": {
       "code": "Card code",
       "redeem": "Redeem",
       "redeemed": "Card code redeemed"
+    },
+    "recharge": {
+      "packagesTitle": "Recharge packages",
+      "ordersTitle": "Recharge orders",
+      "description": "Buying a package creates a pending order. Balance is not credited until payment is integrated.",
+      "rechargeAmount": "Recharge amount",
+      "giftAmount": "Gift amount",
+      "totalArrival": "Total arrival",
+      "estimatedPayable": "Estimated payable",
+      "buy": "Buy",
+      "refresh": "Refresh packages",
+      "disabled": "Recharge is disabled",
+      "paymentUnavailable": "Payment is not integrated yet, so the order remains pending.",
+      "emptyPackages": "No packages available",
+      "emptyOrders": "No recharge orders",
+      "orderCreated": "Recharge order created",
+      "orderNo": "Order no.",
+      "expiresAt": "Expires at",
+      "status": "Status",
+      "latestOrder": "Latest order",
+      "ratio": "1USD = {{ratio}}CNY"
     },
     "metrics": {
       "availableBalance": "Available balance",
@@ -762,6 +785,67 @@
       "batchUpdated": "Updated {{count}} card codes",
       "exported": "Exported {{count}} card codes",
       "codeCopied": "Card code copied"
+    }
+  },
+  "adminRecharges": {
+    "tabs": {
+      "orders": "Orders",
+      "packages": "Recharge Packages",
+      "callbacks": "Callback Records"
+    },
+    "filters": {
+      "searchOrders": "Search order no., package, username, or email...",
+      "searchPackages": "Search package name or description..."
+    },
+    "fields": {
+      "orderNo": "Order No.",
+      "packageName": "Package Name",
+      "description": "Package Description",
+      "rechargeAmount": "Recharge Amount",
+      "giftAmount": "Gift Amount",
+      "totalArrival": "Total Arrival",
+      "estimatedPayable": "Estimated Payable",
+      "payableAmount": "Payable Amount",
+      "paymentChannel": "Payment Channel",
+      "expiresAt": "Expires At",
+      "updatedAt": "Updated At"
+    },
+    "actions": {
+      "createPackage": "Create Package",
+      "enablePackage": "Enable Package",
+      "disablePackage": "Disable Package"
+    },
+    "dialogs": {
+      "createPackageTitle": "Create Recharge Package",
+      "editPackageTitle": "Edit Recharge Package"
+    },
+    "status": {
+      "package": {
+        "active": "Enabled",
+        "disabled": "Disabled"
+      },
+      "order": {
+        "pending": "Pending",
+        "expired": "Expired",
+        "paid": "Paid",
+        "cancelled": "Cancelled",
+        "failed": "Failed"
+      }
+    },
+    "summary": {
+      "orders": "Showing {{shown}} of {{total}} recharge orders",
+      "packages": "Showing {{shown}} of {{total}} recharge packages"
+    },
+    "empty": {
+      "orders": "No recharge orders",
+      "packages": "No recharge packages",
+      "callbacks": "Callback records are not implemented yet",
+      "callbacksDescription": "This version does not integrate payment channels, receive callbacks, or simulate payment callbacks."
+    },
+    "messages": {
+      "packageSaved": "Recharge package saved",
+      "packageStatusUpdated": "Package status updated",
+      "paymentChannelUpdated": "Payment channel status updated"
     }
   },
   "users": {
@@ -1137,6 +1221,7 @@
       "base": "Base configuration",
       "email": "Email configuration",
       "tokens": "Token configuration",
+      "recharge": "Recharge configuration",
       "requestRecord": "Request records"
     },
     "fields": {
@@ -1158,6 +1243,11 @@
       "sensitiveRequestHeaders": "Sensitive request headers",
       "defaultUserGrant": "Default user initial grant",
       "defaultRateLimitRpm": "Default rate limit",
+      "rechargeEnabled": "Enable recharge",
+      "rechargeArrivalRatio": "Recharge arrival ratio",
+      "rechargeOrderExpireMinutes": "Order expiry time (minutes)",
+      "rechargeMinAmount": "Minimum single recharge amount",
+      "rechargeMaxAmount": "Maximum single recharge amount",
       "smtpHost": "SMTP server host",
       "smtpPort": "SMTP port",
       "smtpUsername": "SMTP username",
@@ -1187,6 +1277,12 @@
       "registrationEmailVerificationRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first.",
       "passwordResetRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first.",
       "supportTicketEmailNotificationsRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first."
+    },
+    "recharge": {
+      "description": "Controls the user recharge entry, amount conversion, and enabled state for registered payment channels.",
+      "preview": "1USD = {{ratio}}CNY",
+      "paymentChannels": "Payment channels",
+      "noPaymentChannels": "No registered payment channels"
     },
     "requestRecord": {
       "description": "Controls how client/provider payloads are recorded and retained.",

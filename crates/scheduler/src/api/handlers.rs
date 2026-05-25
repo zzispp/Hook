@@ -25,10 +25,7 @@ pub async fn update_task(
     Ok(ok(state.scheduler.update_task(&code, payload).await?))
 }
 
-pub async fn list_runs(
-    State(state): State<SchedulerApiState>,
-    Query(query): Query<ScheduledTaskRunListRequest>,
-) -> ApiResult<ApiJson<Page<ScheduledTaskRun>>> {
+pub async fn list_runs(State(state): State<SchedulerApiState>, Query(query): Query<ScheduledTaskRunListRequest>) -> ApiResult<ApiJson<Page<ScheduledTaskRun>>> {
     Ok(ok(state.scheduler.list_runs(query).await?))
 }
 

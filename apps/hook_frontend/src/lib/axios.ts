@@ -298,6 +298,17 @@ export const endpoints = {
     types: '/api/admin/card-code-types',
     type: (id: string) => `/api/admin/card-code-types/${id}`,
   },
+  adminRecharges: {
+    packages: '/api/admin/recharge-packages',
+    package: (id: string) => `/api/admin/recharge-packages/${id}`,
+    orders: '/api/admin/recharge-orders',
+    paymentChannels: '/api/admin/payment-channels',
+    paymentChannel: (code: string) => `/api/admin/payment-channels/${code}`,
+  },
+  recharges: {
+    packages: '/api/recharge-packages',
+    orders: '/api/recharge-orders',
+  },
   mail: {
     list: '/api/mail/list',
     details: '/api/mail/details',

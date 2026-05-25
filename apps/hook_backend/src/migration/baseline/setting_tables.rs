@@ -4,6 +4,7 @@ use super::iden::SystemSettings;
 
 const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
 const DEFAULT_TOKEN_LIMIT_PER_USER: i64 = 5;
+const DEFAULT_RECHARGE_EXPIRE_MINUTES: i64 = 15;
 
 pub(super) fn system_settings_table() -> TableCreateStatement {
     Table::create()
@@ -40,6 +41,11 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(text(SystemSettings::ProviderSensitiveRequestHeaders).default("authorization, x-api-key, api-key, cookie, set-cookie"))
         .col(decimal_len(SystemSettings::DefaultUserGrant, 20, 8))
         .col(big_integer(SystemSettings::DefaultRateLimitRpm))
+        .col(boolean(SystemSettings::RechargeEnabled).default(false))
+        .col(decimal_len(SystemSettings::RechargeArrivalRatio, 20, 8).default(1))
+        .col(big_integer(SystemSettings::RechargeOrderExpireMinutes).default(DEFAULT_RECHARGE_EXPIRE_MINUTES))
+        .col(decimal_len(SystemSettings::RechargeMinAmount, 20, 8).default(Expr::cust("0.01")))
+        .col(decimal_len(SystemSettings::RechargeMaxAmount, 20, 8).default(3000))
         .col(string_len(SystemSettings::SchedulingMode, 30))
         .col(big_integer(SystemSettings::CacheAffinityTtlMinutes).default(DEFAULT_CACHE_AFFINITY_TTL_MINUTES))
         .col(text(SystemSettings::ProviderCooldownPolicy).default(r#"{"window_seconds":0,"rules":[]}"#))

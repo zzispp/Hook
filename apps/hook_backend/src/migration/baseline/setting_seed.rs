@@ -5,6 +5,7 @@ use super::iden::SystemSettings;
 const SYSTEM_SETTINGS_ID: &str = "global";
 const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
 const DEFAULT_TOKEN_LIMIT_PER_USER: i64 = 5;
+const DEFAULT_RECHARGE_EXPIRE_MINUTES: i64 = 15;
 const DEFAULT_REGISTRATION_SUBJECT: &str = "注册验证码";
 const DEFAULT_PASSWORD_RESET_SUBJECT: &str = "找回密码";
 const DEFAULT_REGISTRATION_HTML: &str = r#"<!DOCTYPE html>
@@ -108,6 +109,11 @@ fn system_settings_columns() -> Vec<SystemSettings> {
         SystemSettings::ProviderSensitiveRequestHeaders,
         SystemSettings::DefaultUserGrant,
         SystemSettings::DefaultRateLimitRpm,
+        SystemSettings::RechargeEnabled,
+        SystemSettings::RechargeArrivalRatio,
+        SystemSettings::RechargeOrderExpireMinutes,
+        SystemSettings::RechargeMinAmount,
+        SystemSettings::RechargeMaxAmount,
         SystemSettings::SchedulingMode,
         SystemSettings::CacheAffinityTtlMinutes,
         SystemSettings::ProviderCooldownPolicy,
@@ -162,6 +168,11 @@ fn system_settings_values() -> Vec<Expr> {
         "authorization, x-api-key, api-key, cookie, set-cookie".into(),
         0.into(),
         0.into(),
+        false.into(),
+        1.into(),
+        DEFAULT_RECHARGE_EXPIRE_MINUTES.into(),
+        Expr::cust("0.01"),
+        3000.into(),
         "cache_affinity".into(),
         DEFAULT_CACHE_AFFINITY_TTL_MINUTES.into(),
         r#"{"window_seconds":0,"rules":[]}"#.into(),

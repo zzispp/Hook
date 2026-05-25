@@ -54,11 +54,7 @@ pub struct SchedulerService {
 
 impl SchedulerService {
     pub fn new(store: SchedulerStore, registry: Arc<SchedulerRegistry>, handle: SchedulerHandle) -> Self {
-        Self {
-            store,
-            registry,
-            handle,
-        }
+        Self { store, registry, handle }
     }
 }
 
@@ -71,11 +67,7 @@ impl SchedulerUseCase for SchedulerService {
     async fn update_task(&self, code: &str, input: ScheduledTaskUpdate) -> SchedulerResult<ScheduledTask> {
         let definition = task_definition(&self.registry, code)?;
         validate_update(&input)?;
-        let current = self
-            .store
-            .task_record(code)
-            .await?
-            .ok_or_else(|| SchedulerError::NotFound(code.to_owned()))?;
+        let current = self.store.task_record(code).await?.ok_or_else(|| SchedulerError::NotFound(code.to_owned()))?;
         let next_config = next_runtime_config(&current, input.config.clone())?;
         let task = task_runner(&self.registry, code)?;
         task.validate_config(&next_config)?;
@@ -195,15 +187,7 @@ impl SchedulerRuntime {
         }
         let task = task_runner(&self.registry, &code)?;
         let config = record.runtime_config()?;
-        dispatch_task(
-            &self.store,
-            self.running.clone(),
-            &code,
-            task,
-            self.database.clone(),
-            config,
-        )
-        .await?;
+        dispatch_task(&self.store, self.running.clone(), &code, task, self.database.clone(), config).await?;
         self.reschedule(&code).await?;
         Ok(())
     }

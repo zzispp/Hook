@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect recharge and wallet structure,DONE,Current backend/frontend extension points are identified,rg and file reads complete,2026-05-25T18:12:00+08:00,0,
+2,Add backend user recharge APIs,DONE,User can list active packages and create pending orders with real validation,cargo test -q -p recharge,2026-05-25T18:24:00+08:00,0,
+3,Add RBAC seed and i18n copy,DONE,Fresh seed contains user recharge API permissions and wallet UI copy,just check,2026-05-25T18:28:00+08:00,0,
+4,Add wallet UI purchase flow,DONE,Wallet center has recharge tab and creates pending orders,pnpm lint:frontend && pnpm build:frontend,2026-05-25T18:35:00+08:00,0,
+5,Run final validation,DONE,Relevant backend and frontend checks pass,just check && cargo test -q -p recharge && pnpm lint:frontend && pnpm build:frontend,2026-05-25T18:39:00+08:00,0,

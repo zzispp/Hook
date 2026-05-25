@@ -10,23 +10,16 @@ use storage::{
     provider::ProviderStore,
     scheduler::task_definition,
 };
-use types::scheduler::ScheduledTaskConfigValueType;
 use types::performance_monitoring::SnapshotGranularity;
+use types::scheduler::ScheduledTaskConfigValueType;
 
-use crate::{
-    llm_proxy::LlmProxyCache,
-    performance_monitoring_os::PerformanceOsCollector,
-    proxy_cache_hooks::CachedApiTokenRepository,
-};
+use crate::{llm_proxy::LlmProxyCache, performance_monitoring_os::PerformanceOsCollector, proxy_cache_hooks::CachedApiTokenRepository};
 
 const REQUEST_RECORD_STALE_SWEEP_INTERVAL_SECONDS: i64 = 300;
 const REQUEST_RECORD_STALE_PENDING_TIMEOUT_MINUTES: i64 = 15;
 const REQUEST_RECORD_STALE_STREAMING_TIMEOUT_MINUTES: i64 = 120;
 
-pub fn scheduler_registry(
-    cache: LlmProxyCache,
-    performance_os_collector: Arc<PerformanceOsCollector>,
-) -> SchedulerResult<SchedulerRegistry> {
+pub fn scheduler_registry(cache: LlmProxyCache, performance_os_collector: Arc<PerformanceOsCollector>) -> SchedulerResult<SchedulerRegistry> {
     let mut registry = SchedulerRegistry::new();
     registry.register(ApiTokenCleanupTask { cache })?;
     registry.register(RequestRecordCleanupTask)?;
@@ -96,16 +89,8 @@ impl ScheduledTaskLifecycle for RequestRecordCleanupTask {
                 "payload_retention_days": 30
             }),
             integer_fields(&[
-                (
-                    "record_retention_days",
-                    "scheduledTasks.config.requestRecordCleanup.recordRetentionDays",
-                    1,
-                ),
-                (
-                    "payload_retention_days",
-                    "scheduledTasks.config.requestRecordCleanup.payloadRetentionDays",
-                    1,
-                ),
+                ("record_retention_days", "scheduledTasks.config.requestRecordCleanup.recordRetentionDays", 1),
+                ("payload_retention_days", "scheduledTasks.config.requestRecordCleanup.payloadRetentionDays", 1),
             ]),
         )
     }
@@ -128,9 +113,7 @@ impl ScheduledTaskLifecycle for RequestRecordCleanupTask {
             .compress_request_record_payloads_before(now - time::Duration::days(payload_retention_days))
             .await
             .map_err(storage_error)?;
-        Ok(Some(format!(
-            "deleted_records={deleted_records}, compressed_payloads={compressed_payloads}"
-        )))
+        Ok(Some(format!("deleted_records={deleted_records}, compressed_payloads={compressed_payloads}")))
     }
 }
 
@@ -171,10 +154,7 @@ impl ScheduledTaskLifecycle for RequestRecordStaleSweepTask {
         let pending_timeout = integer_config(&config, "stale_pending_timeout_minutes")?;
         let streaming_timeout = integer_config(&config, "stale_streaming_timeout_minutes")?;
         let report = ProviderStore::new(ctx.database)
-            .sweep_stale_request_records(
-                now - time::Duration::minutes(pending_timeout),
-                now - time::Duration::minutes(streaming_timeout),
-            )
+            .sweep_stale_request_records(now - time::Duration::minutes(pending_timeout), now - time::Duration::minutes(streaming_timeout))
             .await
             .map_err(storage_error)?;
         Ok(Some(format!(
@@ -205,18 +185,10 @@ impl ScheduledTaskLifecycle for PerformanceMonitoringSnapshotTask {
         let now = time::OffsetDateTime::now_utc();
         let windows = aggregation_windows(now);
         let count = windows.len();
-        let system = self
-            .os_collector
-            .clone()
-            .snapshot()
-            .await
-            .map_err(performance_collector_error)?;
+        let system = self.os_collector.clone().snapshot().await.map_err(performance_collector_error)?;
         let store = PerformanceMonitoringStore::new(ctx.database);
         for window in windows {
-            store
-                .aggregate_window_with_system(window, system.clone())
-                .await
-                .map_err(storage_error)?;
+            store.aggregate_window_with_system(window, system.clone()).await.map_err(storage_error)?;
         }
         Ok(Some(format!("buckets={count}")))
     }
@@ -233,11 +205,7 @@ impl ScheduledTaskLifecycle for PerformanceMonitoringCleanupTask {
             serde_json::json!({
                 "retention_days": 30
             }),
-            integer_fields(&[(
-                "retention_days",
-                "scheduledTasks.config.performanceMonitoringCleanup.retentionDays",
-                1,
-            )]),
+            integer_fields(&[("retention_days", "scheduledTasks.config.performanceMonitoringCleanup.retentionDays", 1)]),
         )
     }
 
@@ -280,9 +248,7 @@ fn validate_empty_config(config: &TaskConfigValue) -> SchedulerResult<()> {
 fn validate_positive_integer(config: &TaskConfigValue, key: &str, min: i64) -> SchedulerResult<()> {
     let value = integer_config(config, key)?;
     if value < min {
-        return Err(SchedulerError::InvalidInput(format!(
-            "{key} must be greater than or equal to {min}"
-        )));
+        return Err(SchedulerError::InvalidInput(format!("{key} must be greater than or equal to {min}")));
     }
     Ok(())
 }
@@ -298,16 +264,10 @@ fn aggregation_windows(now: time::OffsetDateTime) -> Vec<SnapshotAggregationWind
     let minute_start = floor_minute(now) - time::Duration::minutes(1);
     let mut windows = vec![window(SnapshotGranularity::Minute, minute_start)];
     if minute_start.minute() == 59 {
-        windows.push(window(
-            SnapshotGranularity::Hour,
-            floor_hour(now) - time::Duration::hours(1),
-        ));
+        windows.push(window(SnapshotGranularity::Hour, floor_hour(now) - time::Duration::hours(1)));
     }
     if minute_start.hour() == 23 && minute_start.minute() == 59 {
-        windows.push(window(
-            SnapshotGranularity::Day,
-            floor_day(now) - time::Duration::days(1),
-        ));
+        windows.push(window(SnapshotGranularity::Day, floor_day(now) - time::Duration::days(1)));
     }
     windows
 }
@@ -340,8 +300,6 @@ fn storage_error(error: storage::StorageError) -> SchedulerError {
     SchedulerError::Infrastructure(error.to_string())
 }
 
-fn performance_collector_error(
-    error: crate::performance_monitoring_os::PerformanceOsCollectorError,
-) -> SchedulerError {
+fn performance_collector_error(error: crate::performance_monitoring_os::PerformanceOsCollectorError) -> SchedulerError {
     SchedulerError::Infrastructure(error.to_string())
 }

@@ -1,9 +1,10 @@
+use rust_decimal::Decimal;
 use types::{
     provider::{ProviderCooldownPolicy, ProviderCooldownRule},
-    system_setting::SystemSettingsUpdate,
+    system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettingsResponse, SystemSettingsUpdate},
 };
 
-use super::{sanitize_update, validate_update};
+use super::{sanitize_update, validate_recharge_bounds, validate_update};
 
 #[test]
 fn sanitize_update_normalizes_client_sensitive_request_headers() {
@@ -91,6 +92,33 @@ fn validate_update_rejects_non_positive_cache_affinity_ttl_minutes() {
     let error = validate_update(&input).unwrap_err();
 
     assert_eq!(error.to_string(), "invalid input: cache_affinity_ttl_minutes must be greater than 0");
+}
+
+#[test]
+fn validate_update_rejects_non_positive_recharge_values() {
+    let input = SystemSettingsUpdate {
+        recharge_arrival_ratio: Some(Decimal::ZERO),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(error.to_string(), "invalid input: recharge_arrival_ratio must be greater than 0");
+}
+
+#[test]
+fn validate_recharge_bounds_rejects_min_greater_than_max() {
+    let input = SystemSettingsUpdate {
+        recharge_min_amount: Some(Decimal::new(4000, 0)),
+        ..Default::default()
+    };
+
+    let error = validate_recharge_bounds(&input, &system_settings_response()).unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "invalid input: recharge_min_amount must be less than or equal to recharge_max_amount"
+    );
 }
 
 #[test]
@@ -187,5 +215,63 @@ fn cooldown_rule(status_code: i32, failure_count: i64, cooldown_seconds: i64) ->
         status_code,
         failure_count,
         cooldown_seconds,
+    }
+}
+
+fn system_settings_response() -> SystemSettingsResponse {
+    SystemSettingsResponse {
+        site_name: "Hook".into(),
+        site_subtitle: String::new(),
+        site_logo_base64: String::new(),
+        allow_registration: true,
+        login_captcha_enabled: false,
+        registration_captcha_enabled: false,
+        support_ticket_captcha_enabled: true,
+        registration_email_verification_enabled: false,
+        password_reset_enabled: false,
+        email_config_enabled: false,
+        support_ticket_email_notifications_enabled: false,
+        token_limit_per_user: 5,
+        client_request_record_level: RequestRecordLevel::Basic,
+        client_record_request_headers: true,
+        client_record_request_body: true,
+        client_record_response_headers: true,
+        client_record_response_body: true,
+        client_max_request_body_size_kb: 5120,
+        client_max_response_body_size_kb: 5120,
+        client_sensitive_request_headers: String::new(),
+        provider_request_record_level: RequestRecordLevel::Basic,
+        provider_record_request_headers: true,
+        provider_record_request_body: true,
+        provider_record_response_headers: true,
+        provider_record_response_body: true,
+        provider_max_request_body_size_kb: 5120,
+        provider_max_response_body_size_kb: 5120,
+        provider_sensitive_request_headers: String::new(),
+        default_user_grant: Decimal::ZERO,
+        default_rate_limit_rpm: 0,
+        recharge_enabled: false,
+        recharge_arrival_ratio: Decimal::ONE,
+        recharge_order_expire_minutes: 15,
+        recharge_min_amount: Decimal::new(1, 2),
+        recharge_max_amount: Decimal::new(3000, 0),
+        scheduling_mode: types::provider::ProviderSchedulingMode::CacheAffinity,
+        cache_affinity_ttl_minutes: 5,
+        provider_cooldown_policy: ProviderCooldownPolicy::default(),
+        smtp_host: String::new(),
+        smtp_port: 587,
+        smtp_username: String::new(),
+        smtp_password_set: false,
+        smtp_from_email: String::new(),
+        smtp_from_name: "Hook".into(),
+        smtp_encryption: SmtpEncryption::Tls,
+        email_suffix_mode: EmailSuffixMode::None,
+        email_suffixes: String::new(),
+        email_template_registration_subject: "注册验证码".into(),
+        email_template_registration_html: "<p>{{code}}</p>".into(),
+        email_template_password_reset_subject: "找回密码".into(),
+        email_template_password_reset_html: "<p>{{reset_link}}</p>".into(),
+        created_at: "2026-05-25T00:00:00Z".into(),
+        updated_at: "2026-05-25T00:00:00Z".into(),
     }
 }

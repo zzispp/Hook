@@ -8,7 +8,7 @@ use crate::application::{SettingRepository, SettingResult, SettingSecretCipher, 
 use super::{
     email_config::validate_email_feature_prerequisites,
     smtp::{failure_response, sanitize_smtp_test_request, smtp_connection_config, success_response},
-    validation::{sanitize_update, validate_update},
+    validation::{sanitize_update, validate_recharge_bounds, validate_update},
 };
 
 pub struct SettingService<R, C, T> {
@@ -51,6 +51,7 @@ where
         let input = sanitize_update(input);
         validate_update(&input)?;
         let current = self.repository.get_system_settings().await?;
+        validate_recharge_bounds(&input, &current)?;
         validate_email_feature_prerequisites(&input, &current)?;
         let encrypted_smtp_password = input
             .smtp_password

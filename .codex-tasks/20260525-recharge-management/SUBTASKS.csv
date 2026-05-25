@@ -1,0 +1,5 @@
+id,task_type,task,depends_on,status,task_dir,validation_command,notes
+1,single-full,Backend recharge domain and database,,DONE,.codex-tasks/20260525-recharge-management/tasks/backend,just check,Implemented recharge crate/storage/migrations/routes and passed just check
+2,single-full,System settings recharge config,1,DONE,.codex-tasks/20260525-recharge-management/tasks/settings,just check,Added recharge settings fields/defaults/validation and passed just check
+3,single-full,Frontend recharge management and settings UI,1;2,DONE,.codex-tasks/20260525-recharge-management/tasks/frontend,pnpm lint:frontend,Implemented recharge management page/settings UI and passed lint/build
+4,single-full,End-to-end validation,1;2;3,DONE,.codex-tasks/20260525-recharge-management/tasks/validation,just test,Full just test passed after warm cache run

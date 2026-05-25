@@ -33,12 +33,7 @@ where
     R: DashboardRepository,
 {
     async fn overview(&self, actor: DashboardActor, request: DashboardOverviewRequest) -> DashboardResult<types::dashboard::DashboardOverviewResponse> {
-        let scope = request_scope(
-            &actor,
-            request.scope,
-            request.user_id.as_deref(),
-            request.token_id.as_deref(),
-        )?;
+        let scope = request_scope(&actor, request.scope, request.user_id.as_deref(), request.token_id.as_deref())?;
         let window = overview_window(request.preset, request.tz_offset_minutes)?;
         let bucket = overview_bucket(request.preset);
         let query = DashboardOverviewQuery {
@@ -53,12 +48,7 @@ where
     }
 
     async fn activity(&self, actor: DashboardActor, request: DashboardActivityRequest) -> DashboardResult<types::dashboard::DashboardActivityResponse> {
-        let scope = request_scope(
-            &actor,
-            request.scope,
-            request.user_id.as_deref(),
-            request.token_id.as_deref(),
-        )?;
+        let scope = request_scope(&actor, request.scope, request.user_id.as_deref(), request.token_id.as_deref())?;
         let window = activity_window(request.tz_offset_minutes)?;
         self.repository
             .activity(DashboardActivityQuery {
@@ -97,12 +87,7 @@ fn default_scope(actor: &DashboardActor) -> DashboardScope {
     }
 }
 
-fn request_scope(
-    actor: &DashboardActor,
-    scope: Option<DashboardScopeParam>,
-    user_id: Option<&str>,
-    token_id: Option<&str>,
-) -> DashboardResult<DashboardScope> {
+fn request_scope(actor: &DashboardActor, scope: Option<DashboardScopeParam>, user_id: Option<&str>, token_id: Option<&str>) -> DashboardResult<DashboardScope> {
     let Some(requested) = scope else {
         return Ok(default_scope(actor));
     };

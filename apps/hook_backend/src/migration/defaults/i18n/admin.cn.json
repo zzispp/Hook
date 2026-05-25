@@ -22,6 +22,7 @@
     "admin_cache_monitoring": "缓存监控",
     "admin_wallets": "钱包管理",
     "admin_card_codes": "卡密管理",
+    "admin_recharges": "充值管理",
     "admin_groups": "计费分组",
     "admin_request_records": "请求记录",
     "announcements": "公告",
@@ -532,12 +533,34 @@
   "wallet": {
     "title": "钱包管理",
     "tabs": {
+      "recharge": "充值",
       "ledger": "资金流水"
     },
     "cardCode": {
       "code": "卡密",
       "redeem": "兑换",
       "redeemed": "卡密兑换成功"
+    },
+    "recharge": {
+      "packagesTitle": "充值套餐",
+      "ordersTitle": "充值订单",
+      "description": "购买套餐会创建待支付订单，支付接入前不会自动到账。",
+      "rechargeAmount": "充值额度",
+      "giftAmount": "赠送额度",
+      "totalArrival": "合计到账",
+      "estimatedPayable": "预计实付",
+      "buy": "购买",
+      "refresh": "刷新套餐",
+      "disabled": "充值入口未开启",
+      "paymentUnavailable": "支付暂未接入，订单保持待支付状态。",
+      "emptyPackages": "暂无可购买套餐",
+      "emptyOrders": "暂无充值订单",
+      "orderCreated": "充值订单已创建",
+      "orderNo": "订单号",
+      "expiresAt": "过期时间",
+      "status": "状态",
+      "latestOrder": "最近订单",
+      "ratio": "1USD = {{ratio}}CNY"
     },
     "metrics": {
       "availableBalance": "可用余额",
@@ -762,6 +785,67 @@
       "batchUpdated": "已更新 {{count}} 个卡密",
       "exported": "已导出 {{count}} 个卡密",
       "codeCopied": "卡密已复制"
+    }
+  },
+  "adminRecharges": {
+    "tabs": {
+      "orders": "订单管理",
+      "packages": "充值套餐",
+      "callbacks": "回调记录"
+    },
+    "filters": {
+      "searchOrders": "搜索订单号、套餐名、用户名或邮箱...",
+      "searchPackages": "搜索套餐名或描述..."
+    },
+    "fields": {
+      "orderNo": "订单号",
+      "packageName": "套餐名",
+      "description": "套餐描述",
+      "rechargeAmount": "充值额度",
+      "giftAmount": "赠送额度",
+      "totalArrival": "合计到账",
+      "estimatedPayable": "预计实付",
+      "payableAmount": "实付金额",
+      "paymentChannel": "支付渠道",
+      "expiresAt": "过期时间",
+      "updatedAt": "更新时间"
+    },
+    "actions": {
+      "createPackage": "创建套餐",
+      "enablePackage": "启用套餐",
+      "disablePackage": "禁用套餐"
+    },
+    "dialogs": {
+      "createPackageTitle": "创建充值套餐",
+      "editPackageTitle": "编辑充值套餐"
+    },
+    "status": {
+      "package": {
+        "active": "启用",
+        "disabled": "禁用"
+      },
+      "order": {
+        "pending": "待支付",
+        "expired": "已过期",
+        "paid": "已支付",
+        "cancelled": "已取消",
+        "failed": "支付失败"
+      }
+    },
+    "summary": {
+      "orders": "显示 {{shown}} 条，共 {{total}} 个充值订单",
+      "packages": "显示 {{shown}} 条，共 {{total}} 个充值套餐"
+    },
+    "empty": {
+      "orders": "暂无充值订单",
+      "packages": "暂无充值套餐",
+      "callbacks": "回调记录暂未实现",
+      "callbacksDescription": "当前版本未接入支付渠道，也不会接收或模拟支付回调。"
+    },
+    "messages": {
+      "packageSaved": "充值套餐已保存",
+      "packageStatusUpdated": "套餐状态已更新",
+      "paymentChannelUpdated": "支付渠道状态已更新"
     }
   },
   "users": {
@@ -1137,6 +1221,7 @@
       "base": "基础配置",
       "email": "邮件配置",
       "tokens": "令牌配置",
+      "recharge": "充值配置",
       "requestRecord": "请求记录"
     },
     "fields": {
@@ -1158,6 +1243,11 @@
       "sensitiveRequestHeaders": "敏感请求头",
       "defaultUserGrant": "默认用户初始赠款",
       "defaultRateLimitRpm": "默认速率限制",
+      "rechargeEnabled": "开启充值",
+      "rechargeArrivalRatio": "充值到账比例",
+      "rechargeOrderExpireMinutes": "订单过期时间(分钟)",
+      "rechargeMinAmount": "单笔最小充值金额",
+      "rechargeMaxAmount": "单笔最大充值金额",
       "smtpHost": "SMTP 服务器地址",
       "smtpPort": "SMTP 端口",
       "smtpUsername": "SMTP 用户名",
@@ -1187,6 +1277,12 @@
       "registrationEmailVerificationRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
       "passwordResetRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
       "supportTicketEmailNotificationsRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。"
+    },
+    "recharge": {
+      "description": "控制用户充值入口、金额换算和已注册支付渠道启禁用。",
+      "preview": "1USD = {{ratio}}CNY",
+      "paymentChannels": "支付渠道",
+      "noPaymentChannels": "暂无已注册支付渠道"
     },
     "requestRecord": {
       "description": "控制客户端与 Provider 双视角 payload 的记录方式和保留粒度",
