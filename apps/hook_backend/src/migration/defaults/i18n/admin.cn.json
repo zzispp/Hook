@@ -96,7 +96,7 @@
     "searchProviders": "搜索提供商...",
     "searchTokens": "搜索密钥名称、前缀或分组...",
     "searchRequestRecords": "搜索请求 ID、用户、模型、提供商或令牌...",
-    "searchUsageRecords": "搜索模型、API 格式或类型..."
+    "searchUsageRecords": "搜索令牌、模型、API 格式或类型..."
   },
   "actions": {
     "addApi": "新增 API",

@@ -250,6 +250,8 @@ async fn request_record_storage_lists_user_usage_records_without_upstream_fields
     let record_json = serde_json::to_value(&response.records[0]).unwrap();
 
     assert_eq!(response.total, 1);
+    assert_eq!(response.records[0].token_name.as_deref(), Some("pro池"));
+    assert_eq!(response.records[0].token_prefix.as_deref(), Some("sk-a0JNVPA"));
     assert_eq!(response.records[0].model_name.as_deref(), Some("gpt-5.5"));
     assert_eq!(response.records[0].client_api_format, "openai:cli");
     assert!(record_json.get("provider_id").is_none());

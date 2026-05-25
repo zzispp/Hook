@@ -139,6 +139,8 @@ async fn list_summary_records_with_filters(
 fn usage_record(record: RequestRecordSummaryRecord) -> UsageRecord {
     UsageRecord {
         created_at: format_timestamp(record.created_at),
+        token_name: record.token_name_snapshot,
+        token_prefix: record.token_prefix_snapshot,
         model_name: record.model_name_snapshot.or(record.global_model_id),
         client_api_format: record.client_api_format,
         request_type: record.request_type,

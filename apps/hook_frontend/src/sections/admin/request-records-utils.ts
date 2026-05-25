@@ -98,6 +98,11 @@ type CacheHitRateRecord = {
   cache_read_input_tokens?: number | null;
 };
 
+type TokenDisplayRecord = {
+  token_name?: string | null;
+  token_prefix?: string | null;
+};
+
 export function formatCacheHitRate(record: CacheHitRateRecord) {
   const cacheReadTokens = Number(record.cache_read_input_tokens ?? 0);
   if (!Number.isFinite(cacheReadTokens) || cacheReadTokens <= 0) return '-';
@@ -142,7 +147,7 @@ export function compactId(value: string) {
   return value.length <= 8 ? value : value.slice(0, 8);
 }
 
-export function tokenDisplay(record: RequestRecord) {
+export function tokenDisplay(record: TokenDisplayRecord) {
   if (record.token_prefix) return `${record.token_prefix}...`;
   return record.token_name || '-';
 }

@@ -20,6 +20,7 @@ import { formatApiFormat } from 'src/sections/admin/provider-management-utils';
 import { TableLoadingRows, ManagementTableHead } from 'src/sections/admin/shared';
 import {
   formatCost,
+  tokenDisplay,
   hasTokenValue,
   formatDuration,
   formatTokenCount,
@@ -47,7 +48,7 @@ export function UsageRecordsTable({
   return (
     <>
       <Scrollbar>
-        <Table sx={{ minWidth: 1060 }}>
+        <Table sx={{ minWidth: 1180 }}>
           <ManagementTableHead head={head} />
           <TableBody>
             {loading ? <TableLoadingRows head={head} rows={table.rowsPerPage} /> : null}
@@ -81,6 +82,11 @@ function UsageRecordRow({ row, locale }: { row: UsageRecord; locale: string }) {
         {formatRequestDate(row.created_at, locale)}
       </TableCell>
       <TableCell>
+        <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+          {tokenDisplay(row)}
+        </Typography>
+      </TableCell>
+      <TableCell>
         <Typography variant="body2" noWrap sx={{ maxWidth: 220 }}>
           {row.model_name || '-'}
         </Typography>
@@ -111,6 +117,7 @@ function UsageRecordRow({ row, locale }: { row: UsageRecord; locale: string }) {
 function usageRecordKey(row: UsageRecord, index: number) {
   return [
     row.created_at,
+    row.token_prefix ?? row.token_name ?? '',
     row.model_name ?? '',
     row.client_api_format,
     row.request_type,
@@ -157,6 +164,7 @@ function UsageTokensCell({ record }: { record: UsageRecord }) {
 function tableHead(t: (key: string) => string): TableHeadCellProps[] {
   return [
     { id: 'time', label: t('requestRecords.time'), width: 190 },
+    { id: 'token', label: t('requestRecords.token'), width: 150 },
     { id: 'model', label: t('requestRecords.model'), width: 220 },
     { id: 'api_format', label: t('requestRecords.apiFormat'), width: 180 },
     { id: 'type', label: t('requestRecords.type'), width: 150 },

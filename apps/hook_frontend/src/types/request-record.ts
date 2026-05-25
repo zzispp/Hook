@@ -75,6 +75,8 @@ export type RequestRecordListResponse = {
 
 export type UsageRecord = {
   created_at: string;
+  token_name?: string | null;
+  token_prefix?: string | null;
   model_name?: string | null;
   client_api_format: string;
   request_type: string;

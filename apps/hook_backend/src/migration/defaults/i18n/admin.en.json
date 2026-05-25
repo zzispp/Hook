@@ -96,7 +96,7 @@
     "searchProviders": "Search providers...",
     "searchTokens": "Search key name, prefix, or group...",
     "searchRequestRecords": "Search request ID, user, model, provider, or token...",
-    "searchUsageRecords": "Search model, API format, or type..."
+    "searchUsageRecords": "Search token, model, API format, or type..."
   },
   "actions": {
     "addApi": "Add API",

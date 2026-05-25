@@ -32,11 +32,21 @@ pub(super) fn response_start_timeout(candidate: &ProxyCandidate, is_stream: bool
 }
 
 pub(super) fn remaining_stream_first_byte_timeout(started: Instant, candidate: &ProxyCandidate) -> Option<Duration> {
-    proxy_timeouts(candidate).stream_first_byte.map(|timeout| remaining_timeout(started, timeout))
+    remaining_stream_first_byte_timeout_after(started.elapsed(), candidate)
+}
+
+pub(super) fn remaining_stream_first_byte_timeout_after(elapsed: Duration, candidate: &ProxyCandidate) -> Option<Duration> {
+    proxy_timeouts(candidate)
+        .stream_first_byte
+        .map(|timeout| remaining_timeout_after(elapsed, timeout))
 }
 
 pub(super) fn remaining_timeout(started: Instant, total_timeout: Duration) -> Duration {
-    total_timeout.saturating_sub(started.elapsed())
+    remaining_timeout_after(started.elapsed(), total_timeout)
+}
+
+pub(super) fn remaining_timeout_after(elapsed: Duration, total_timeout: Duration) -> Duration {
+    total_timeout.saturating_sub(elapsed)
 }
 
 pub(super) fn timeout_duration(seconds: f64) -> Option<Duration> {
@@ -45,12 +55,12 @@ pub(super) fn timeout_duration(seconds: f64) -> Option<Duration> {
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, Instant};
+    use std::time::Duration;
 
     use rust_decimal::Decimal;
     use types::model::TieredPricingConfig;
 
-    use super::{non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout, remaining_timeout, response_start_timeout};
+    use super::{non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout_after, remaining_timeout_after, response_start_timeout};
     use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
     #[test]
@@ -114,7 +124,7 @@ mod tests {
     fn stream_prefetch_timeout_uses_remaining_first_byte_budget() {
         let candidate = candidate();
 
-        let timeout = remaining_stream_first_byte_timeout(Instant::now() - Duration::from_secs(2), &candidate);
+        let timeout = remaining_stream_first_byte_timeout_after(Duration::from_secs(2), &candidate);
 
         assert_eq!(timeout, Some(Duration::from_secs(28)));
     }
@@ -123,14 +133,14 @@ mod tests {
     fn stream_prefetch_timeout_saturates_when_budget_is_spent() {
         let candidate = candidate();
 
-        let timeout = remaining_stream_first_byte_timeout(Instant::now() - Duration::from_secs(31), &candidate);
+        let timeout = remaining_stream_first_byte_timeout_after(Duration::from_secs(31), &candidate);
 
         assert_eq!(timeout, Some(Duration::ZERO));
     }
 
     #[test]
     fn remaining_timeout_never_underflows() {
-        let timeout = remaining_timeout(Instant::now() - Duration::from_secs(2), Duration::from_secs(1));
+        let timeout = remaining_timeout_after(Duration::from_secs(2), Duration::from_secs(1));
 
         assert_eq!(timeout, Duration::ZERO);
     }

@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate request and usage record data path,DONE,Backend and frontend record fields identified,rg -n "UsageRecord|token_name" crates apps,2026-05-25T00:00:00Z,0,Existing request_records snapshots already store token name and prefix.
+2,Add token field to usage response and UI tables,DONE,Admin request records and user usage records show token column,pnpm lint:frontend,2026-05-25T00:00:00Z,0,Added token columns and usage response fields.
+3,Run validation,DONE,Checks complete,cargo test -p storage --test provider_request_records request_record_storage_lists_user_usage_records_without_upstream_fields -- --exact && pnpm lint:frontend,2026-05-25T00:00:00Z,0,Relevant checks pass; full just test has unrelated timeout precision failure.

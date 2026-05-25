@@ -26,6 +26,7 @@ import {
 import {
   formatCost,
   userDisplay,
+  tokenDisplay,
   hasTokenValue,
   formatTokenCount,
   formatRequestDate,
@@ -58,7 +59,7 @@ export function RequestRecordsTable({
   return (
     <>
       <Scrollbar>
-        <Table sx={{ minWidth: 1360 }}>
+        <Table sx={{ minWidth: 1480 }}>
           <ManagementTableHead head={head} />
           <TableBody>
             {loading ? <TableLoadingRows head={head} rows={table.rowsPerPage} /> : null}
@@ -108,6 +109,11 @@ function RequestRecordRow({
         {formatRequestDate(row.created_at, locale)}
       </TableCell>
       <TableCell>{userDisplay(row)}</TableCell>
+      <TableCell>
+        <Typography variant="body2" noWrap sx={{ maxWidth: 150 }}>
+          {tokenDisplay(row)}
+        </Typography>
+      </TableCell>
       <TableCell>
         <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>
           {row.model_name || row.global_model_id || '-'}
@@ -250,6 +256,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
   return [
     { id: 'time', label: t('requestRecords.time'), width: 190 },
     { id: 'user', label: t('requestRecords.user'), width: 140 },
+    { id: 'token', label: t('requestRecords.token'), width: 150 },
     { id: 'model', label: t('requestRecords.model'), width: 180 },
     { id: 'provider', label: t('requestRecords.provider'), width: 190 },
     { id: 'api_format', label: t('requestRecords.apiFormat'), width: 240 },

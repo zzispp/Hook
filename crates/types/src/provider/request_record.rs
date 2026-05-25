@@ -53,6 +53,8 @@ pub struct UsageRecordListResponse {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct UsageRecord {
     pub created_at: String,
+    pub token_name: Option<String>,
+    pub token_prefix: Option<String>,
     pub model_name: Option<String>,
     pub client_api_format: String,
     pub request_type: String,
