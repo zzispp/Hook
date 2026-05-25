@@ -1,4 +1,5 @@
 mod body_capture;
+mod completion;
 mod estimated_usage;
 mod event;
 mod record;

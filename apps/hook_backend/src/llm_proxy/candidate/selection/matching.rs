@@ -5,7 +5,7 @@ use types::provider::{ProviderSchedulingMode, provider_key_minute_of_day, provid
 
 use super::CandidateParts;
 use crate::llm_proxy::{
-    AffinitySelection,
+    AffinitySelection, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
     cache::snapshot::{CachedBillingGroup, CachedEndpoint, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot},
     candidate::CandidateRequest,
     formats,
@@ -107,7 +107,7 @@ fn ordered_endpoints(
     current_minute: u16,
     affinity: Option<&AffinitySelection>,
 ) -> Vec<CachedEndpoint> {
-    let (mut exact, converted): (Vec<_>, Vec<_>) = provider
+    let (mut exact, mut converted): (Vec<_>, Vec<_>) = provider
         .endpoints
         .iter()
         .filter(|endpoint| endpoint_allowed(provider, endpoint, request))
@@ -119,9 +119,18 @@ fn ordered_endpoints(
         })
         .cloned()
         .partition(|endpoint| endpoint_exact(endpoint, request));
+    converted.sort_by_key(converted_endpoint_rank);
     exact.extend(converted);
     promote_affinity_endpoint(&mut exact, affinity);
     exact
+}
+
+fn converted_endpoint_rank(endpoint: &CachedEndpoint) -> u8 {
+    match endpoint.api_format.as_str() {
+        OPENAI_CLI_FORMAT => 0,
+        OPENAI_CHAT_FORMAT => 1,
+        _ => 2,
+    }
 }
 
 fn ordered_keys(input: OrderedKeysInput<'_>) -> Vec<CachedProviderKey> {

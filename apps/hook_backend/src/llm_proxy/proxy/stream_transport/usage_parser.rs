@@ -1,11 +1,16 @@
 use proxy::format_conversion::ApiFormat;
 use serde_json::Value;
 
-use crate::llm_proxy::{LlmProxyError, audit::TokenUsage, proxy::usage};
+use crate::llm_proxy::{
+    LlmProxyError,
+    audit::TokenUsage,
+    proxy::{stream_transport::completion::response_id_from_chunk, usage},
+};
 
 #[derive(Default)]
 pub(super) struct StreamParseResult {
     pub(super) usage: Option<TokenUsage>,
+    pub(super) response_id: Option<String>,
     pub(super) completed: bool,
 }
 
@@ -59,6 +64,7 @@ impl StreamUsageParser {
         let chunk = serde_json::from_str::<Value>(payload).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         Ok(StreamParseResult {
             usage: usage::from_stream_chunk(&chunk, self.format),
+            response_id: response_id_from_chunk(&chunk, self.format),
             completed: is_completion_chunk(&chunk, self.format),
         })
     }
@@ -69,6 +75,7 @@ impl StreamParseResult {
         if let Some(usage) = incoming.usage {
             self.usage = usage::merge(self.usage, usage);
         }
+        self.response_id = incoming.response_id.or_else(|| self.response_id.take());
         self.completed |= incoming.completed;
     }
 }

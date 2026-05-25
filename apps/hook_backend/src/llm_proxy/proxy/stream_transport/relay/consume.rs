@@ -25,6 +25,7 @@ impl StreamRelay {
             return self.handle_scanner_error(error).await;
         }
         self.merge_usage(parsed.usage);
+        self.merge_openai_response_id(parsed.response_id);
         if !self.needs_conversion && !self.rewrite_model {
             self.pending.push_back(bytes);
             if parsed.completed {
@@ -62,6 +63,10 @@ impl StreamRelay {
         let mut chunk = serde_json::from_str::<Value>(payload).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         self.stream_status.record_response();
         self.merge_usage(usage::from_stream_chunk(&chunk, self.target_format));
+        self.merge_openai_response_id(crate::llm_proxy::proxy::stream_transport::completion::response_id_from_chunk(
+            &chunk,
+            self.target_format,
+        ));
         if !self.needs_conversion {
             rewrite_response_model_value(&mut chunk, &self.context.candidate.requested_model_name);
             self.pending.push_back(render_stream_event(&chunk, self.source_format));
@@ -73,6 +78,12 @@ impl StreamRelay {
     pub(super) fn merge_usage(&mut self, incoming: Option<TokenUsage>) {
         if let Some(usage) = incoming {
             self.usage = usage::merge(self.usage, usage);
+        }
+    }
+
+    pub(super) fn merge_openai_response_id(&mut self, incoming: Option<String>) {
+        if incoming.is_some() {
+            self.openai_response_id = incoming;
         }
     }
 
