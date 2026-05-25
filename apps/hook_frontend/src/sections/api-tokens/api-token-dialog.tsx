@@ -59,7 +59,8 @@ export function ApiTokenDialog({
       {creating && scope === 'admin' && !fixedUserId ? (
         <AdminOwnerFields dialog={dialog} users={users} />
       ) : null}
-      {creating ? <CreateOnlyFields dialog={dialog} groups={groups} /> : null}
+      <GroupField dialog={dialog} groups={groups} />
+      {creating ? <CreateOnlyFields dialog={dialog} /> : null}
       <LimitFields dialog={dialog} />
       <ModelFields dialog={dialog} models={models} />
     </ManagementDialog>
@@ -118,36 +119,37 @@ function UserSelect({ dialog, users }: { dialog: TokenDialogState; users: UserOp
   );
 }
 
-function CreateOnlyFields({
-  dialog,
-  groups,
-}: {
-  dialog: TokenDialogState;
-  groups: BillingGroupOption[];
-}) {
+function GroupField({ dialog, groups }: { dialog: TokenDialogState; groups: BillingGroupOption[] }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <TextFieldRow
+      select
+      required
+      label={t('common.group')}
+      value={dialog.form.group_code}
+      onChange={(value) => dialog.setForm((form) => groupForm(form, value, groups))}
+    >
+      {groups.length === 0 ? (
+        <MenuItem disabled value="">
+          {t('tokens.noGroups')}
+        </MenuItem>
+      ) : null}
+      {groups.map((group) => (
+        <MenuItem key={group.code} value={group.code}>
+          {group.name}
+        </MenuItem>
+      ))}
+    </TextFieldRow>
+  );
+}
+
+function CreateOnlyFields({ dialog }: { dialog: TokenDialogState }) {
   const { t } = useTranslate('admin');
   const minExpiresAt = currentDatetimeLocalValue();
 
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-      <TextFieldRow
-        select
-        required
-        label={t('common.group')}
-        value={dialog.form.group_code}
-        onChange={(value) => dialog.setForm((form) => groupForm(form, value, groups))}
-      >
-        {groups.length === 0 ? (
-          <MenuItem disabled value="">
-            {t('tokens.noGroups')}
-          </MenuItem>
-        ) : null}
-        {groups.map((group) => (
-          <MenuItem key={group.code} value={group.code}>
-            {group.name}
-          </MenuItem>
-        ))}
-      </TextFieldRow>
       <TextFieldRow
         type="datetime-local"
         label={t('fields.expiresAt')}

@@ -39,6 +39,7 @@ export function adminTokenCreatePayload(form: TokenForm): AdminApiTokenCreate {
 export function tokenUpdatePayload(form: TokenForm): ApiTokenUpdate {
   return {
     name: form.name,
+    group_code: form.group_code,
     model_access_mode: form.model_access_mode,
     allowed_model_ids: allowedModelIds(form),
     rate_limit_rpm: rateLimitValue(form.rate_limit_rpm),
