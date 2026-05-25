@@ -148,6 +148,5 @@ export function compactId(value: string) {
 }
 
 export function tokenDisplay(record: TokenDisplayRecord) {
-  if (record.token_prefix) return `${record.token_prefix}...`;
-  return record.token_name || '-';
+  return record.token_name || record.token_prefix || '-';
 }
