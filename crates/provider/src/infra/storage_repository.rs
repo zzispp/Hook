@@ -3,13 +3,14 @@ use storage::{Database, StorageError, model::ModelStore, provider::ProviderStore
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
-    RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
+    ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
 use crate::infra::storage_mapping::{
-    api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_input, model_binding_patch, provider_input, provider_patch,
+    api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_input, model_binding_patch, model_cost_inputs, provider_input,
+    provider_patch,
 };
 
 #[derive(Clone)]
@@ -148,6 +149,34 @@ impl ProviderRepository for StorageProviderRepository {
 
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()> {
         self.store.delete_model_binding(provider_id, model_id).await.map_err(storage_error)
+    }
+
+    async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse> {
+        self.store
+            .list_model_costs(provider_id)
+            .await
+            .map(|costs| ProviderModelCostListResponse { costs })
+            .map_err(storage_error)
+    }
+
+    async fn upsert_model_costs(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderModelCostBatchUpsert,
+    ) -> ProviderResult<ProviderModelCostListResponse> {
+        self.store
+            .upsert_model_costs(model_cost_inputs(provider_id, key_id, input))
+            .await
+            .map(|costs| ProviderModelCostListResponse { costs })
+            .map_err(storage_error)
+    }
+
+    async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {
+        self.store
+            .delete_model_cost(provider_id, key_id, provider_model_id)
+            .await
+            .map_err(storage_error)
     }
 
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse> {

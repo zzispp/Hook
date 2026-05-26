@@ -62,6 +62,10 @@ impl BillingService {
     }
 }
 
+pub fn normalized_default_dimensions(api_format: &str, dimensions: BTreeMap<String, Value>) -> BTreeMap<String, Value> {
+    normalized_dimensions(api_format, dimensions, true)
+}
+
 fn calculate_with_rule(input: BillingServiceInput, lookup: BillingRuleLookup, dimensions: BTreeMap<String, Value>) -> CostResult {
     let variables = object_map(lookup.rule.variables.clone());
     let mappings = object_map(lookup.rule.dimension_mappings.clone());

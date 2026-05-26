@@ -1,6 +1,10 @@
+use rust_decimal::Decimal;
 use types::{
     model::PatchField,
-    provider::{ProviderCreate, ProviderListRequest, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping, ProviderUpdate},
+    provider::{
+        ProviderCreate, ProviderListRequest, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostMode,
+        ProviderModelCostUpsert, ProviderModelMapping, ProviderUpdate,
+    },
 };
 
 use super::{ProviderError, ProviderResult};
@@ -63,6 +67,12 @@ pub fn sanitize_model_binding_update(input: ProviderModelBindingUpdate) -> Provi
     }
 }
 
+pub fn sanitize_model_cost_batch(input: ProviderModelCostBatchUpsert) -> ProviderModelCostBatchUpsert {
+    ProviderModelCostBatchUpsert {
+        costs: input.costs.into_iter().map(sanitize_model_cost).collect(),
+    }
+}
+
 pub fn validate_create(input: &ProviderCreate) -> ProviderResult<()> {
     validate_text("name", &input.name, MAX_NAME_LENGTH)?;
     validate_provider_type(&input.provider_type)
@@ -107,9 +117,70 @@ pub fn validate_model_binding_update(input: &ProviderModelBindingUpdate) -> Prov
     Ok(())
 }
 
+pub fn validate_model_cost_batch(input: &ProviderModelCostBatchUpsert) -> ProviderResult<()> {
+    if input.costs.is_empty() {
+        return Err(ProviderError::InvalidInput("model costs cannot be empty".into()));
+    }
+    for cost in &input.costs {
+        validate_model_cost(cost)?;
+    }
+    Ok(())
+}
+
 pub(super) fn validate_text(field: &str, value: &str, max_length: usize) -> ProviderResult<()> {
     if value.is_empty() || value.len() > max_length {
         return Err(ProviderError::InvalidInput(format!("{field} length must be between 1 and {max_length}")));
+    }
+    Ok(())
+}
+
+fn sanitize_model_cost(input: ProviderModelCostUpsert) -> ProviderModelCostUpsert {
+    ProviderModelCostUpsert {
+        provider_model_id: input.provider_model_id.trim().to_owned(),
+        ..input
+    }
+}
+
+fn validate_model_cost(input: &ProviderModelCostUpsert) -> ProviderResult<()> {
+    validate_text("provider_model_id", &input.provider_model_id, MAX_MODEL_ID_LENGTH)?;
+    match input.cost_mode {
+        ProviderModelCostMode::PerRequest => validate_per_request_cost(input),
+        ProviderModelCostMode::PerToken => validate_per_token_cost(input),
+    }
+}
+
+fn validate_per_request_cost(input: &ProviderModelCostUpsert) -> ProviderResult<()> {
+    validate_required_price("price_per_request", input.price_per_request)?;
+    reject_token_prices(input)
+}
+
+fn validate_per_token_cost(input: &ProviderModelCostUpsert) -> ProviderResult<()> {
+    if input.price_per_request.is_some() {
+        return Err(ProviderError::InvalidInput("price_per_request must be empty for per_token costs".into()));
+    }
+    validate_required_price("input_price_per_million", input.input_price_per_million)?;
+    validate_required_price("output_price_per_million", input.output_price_per_million)?;
+    validate_required_price("cache_creation_price_per_million", input.cache_creation_price_per_million)?;
+    validate_required_price("cache_read_price_per_million", input.cache_read_price_per_million)
+}
+
+fn reject_token_prices(input: &ProviderModelCostUpsert) -> ProviderResult<()> {
+    let has_token_price = input.input_price_per_million.is_some()
+        || input.output_price_per_million.is_some()
+        || input.cache_creation_price_per_million.is_some()
+        || input.cache_read_price_per_million.is_some();
+    if has_token_price {
+        return Err(ProviderError::InvalidInput("token prices must be empty for per_request costs".into()));
+    }
+    Ok(())
+}
+
+fn validate_required_price(field: &str, value: Option<Decimal>) -> ProviderResult<()> {
+    let Some(value) = value else {
+        return Err(ProviderError::InvalidInput(format!("{field} is required")));
+    };
+    if value < Decimal::ZERO {
+        return Err(ProviderError::InvalidInput(format!("{field} cannot be negative")));
     }
     Ok(())
 }

@@ -18,7 +18,9 @@ import type {
   ProviderModelTestResponse,
   ProviderModelBindingCreate,
   ProviderModelBindingUpdate,
+  ProviderModelCostBatchUpsert,
   ProviderCooldownListResponse,
+  ProviderModelCostListResponse,
   ProviderUpstreamModelsResponse,
 } from 'src/types/provider';
 
@@ -82,6 +84,24 @@ export function useProviderApiKeys(providerId?: string | null) {
 
 export function useProviderModels(providerId?: string | null) {
   return useProviderChildResource<ProviderModelBinding>(providerId, endpoints.adminProviders.models);
+}
+
+export function useProviderModelCosts(providerId?: string | null) {
+  const key = providerId ? endpoints.adminProviders.modelCosts(providerId) : null;
+  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
+    ApiEnvelope<ProviderModelCostListResponse>
+  >(key, fetcher, swrOptions);
+
+  return useMemo(() => {
+    const pageData = data ? requireApiData(data) : undefined;
+    return {
+      items: pageData?.costs ?? [],
+      isLoading: providerId ? isLoading : false,
+      error,
+      isValidating: providerId ? isValidating : false,
+      refresh: revalidate,
+    };
+  }, [data, error, isLoading, isValidating, providerId, revalidate]);
 }
 
 export function useProviderCooldowns(
@@ -220,6 +240,29 @@ export async function updateProviderModel(
 
 export async function deleteProviderModel(providerId: string, modelId: string) {
   await requestSuccess(axios.delete(endpoints.adminProviders.modelById(providerId, modelId)));
+  await mutateProviderChildren(providerId);
+}
+
+export async function upsertProviderModelCosts(
+  providerId: string,
+  keyId: string,
+  payload: ProviderModelCostBatchUpsert
+) {
+  const response = await requestData<ProviderModelCostListResponse>(
+    axios.put(endpoints.adminProviders.keyModelCosts(providerId, keyId), payload)
+  );
+  await mutateProviderChildren(providerId);
+  return response.costs;
+}
+
+export async function deleteProviderModelCost(
+  providerId: string,
+  keyId: string,
+  providerModelId: string
+) {
+  await requestSuccess(
+    axios.delete(endpoints.adminProviders.keyModelCostByModel(providerId, keyId, providerModelId))
+  );
   await mutateProviderChildren(providerId);
 }
 

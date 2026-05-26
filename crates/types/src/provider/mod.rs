@@ -4,6 +4,7 @@ mod endpoint;
 mod enums;
 mod key;
 mod model_binding;
+mod model_cost;
 mod request_candidate;
 mod request_record;
 mod time_range;
@@ -16,6 +17,10 @@ pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate};
 pub use model_binding::{
     ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping, ProviderModelTestEndpoint, ProviderModelTestRequest,
     ProviderModelTestResponse, ProviderUpstreamModelsResponse,
+};
+pub use model_cost::{
+    ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostMode, ProviderModelCostSource, RequestUpstreamCost,
+    ProviderModelCostUpsert,
 };
 pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{

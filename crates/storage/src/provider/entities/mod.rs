@@ -4,6 +4,7 @@ pub mod dimension_collectors;
 pub mod provider_api_keys;
 pub mod provider_cooldowns;
 pub mod provider_endpoints;
+pub mod provider_model_costs;
 pub mod providers;
 pub mod request_candidates;
 pub mod request_records;

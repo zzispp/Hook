@@ -1,7 +1,6 @@
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::model::{PatchField, TieredPricingConfig, deserialize_patch_value};
+use crate::model::{PatchField, deserialize_patch_value};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProviderModelMapping {
@@ -18,8 +17,6 @@ pub struct ProviderModelBinding {
     pub provider_model_name: String,
     pub provider_model_mapping: Option<ProviderModelMapping>,
     pub is_active: bool,
-    pub price_per_request: Option<Decimal>,
-    pub tiered_pricing: Option<TieredPricingConfig>,
     pub config: Option<serde_json::Value>,
     pub created_at: String,
     pub updated_at: String,

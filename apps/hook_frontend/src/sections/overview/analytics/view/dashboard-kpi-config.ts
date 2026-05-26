@@ -7,6 +7,7 @@ import {
   formatInteger,
   formatDashboardCost,
   formatDashboardTokens,
+  formatDashboardPercent,
 } from './dashboard-format';
 
 const PERCENT_MULTIPLIER = 100;
@@ -26,6 +27,7 @@ export type KpiCardConfig = {
   icon: IconifyName;
   value: (summary: DashboardOverviewResponse['summary'] | undefined, locale: string) => string;
   series: (points: DashboardOverviewResponse['timeseries']) => number[];
+  adminOnly?: boolean;
 };
 
 export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
@@ -56,6 +58,22 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     icon: 'solar:bill-list-bold',
     value: (summary) => formatDashboardCost(summary?.total_cost),
     series: (points) => points.map((point) => point.total_cost),
+  },
+  {
+    labelKey: 'dashboard.stats.kpi.upstreamCost',
+    color: 'warning',
+    icon: 'solar:cart-3-bold',
+    value: (summary) => formatDashboardCost(summary?.upstream_total_cost),
+    series: (points) => points.map((point) => point.upstream_total_cost),
+    adminOnly: true,
+  },
+  {
+    labelKey: 'dashboard.stats.kpi.profitRate',
+    color: 'success',
+    icon: 'solar:double-alt-arrow-up-bold-duotone',
+    value: (summary) => formatDashboardPercent(summary?.profit_rate),
+    series: (points) => points.map((point) => ratioValuePercent(point.profit_rate)),
+    adminOnly: true,
   },
   {
     labelKey: 'dashboard.stats.kpi.failed',
@@ -103,5 +121,5 @@ function ratioValuePercent(value: number) {
 }
 
 function formatPercent(value: number) {
-  return `${(value * PERCENT_MULTIPLIER).toFixed(RATIO_PRECISION)}%`;
+  return formatDashboardPercent(value);
 }

@@ -111,8 +111,6 @@ fn provider_with_keys_and_endpoints(endpoints: Vec<CachedEndpoint>, keys: Vec<Ca
             provider_model_name: "upstream-model".into(),
             provider_model_mapping: None,
             is_active: true,
-            price_per_request: None,
-            tiered_pricing: None,
         }],
     }
 }

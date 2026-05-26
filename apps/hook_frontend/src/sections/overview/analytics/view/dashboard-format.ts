@@ -3,6 +3,7 @@ import { formatMoneyCompact } from 'src/utils/currency-format';
 
 const DETAILED_COST_MAX_FRACTION_DIGITS = 6;
 const MONEY_SYMBOL = '$';
+const PERCENT_MULTIPLIER = 100;
 
 export function formatInteger(value: number | undefined, locale: string) {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value ?? 0);
@@ -29,6 +30,10 @@ export function formatDashboardCostDetail(value: number | undefined) {
 
 export function formatDashboardTokens(value: number | undefined) {
   return fTokenCount(value ?? 0);
+}
+
+export function formatDashboardPercent(value: number | undefined) {
+  return `${((value ?? 0) * PERCENT_MULTIPLIER).toFixed(1)}%`;
 }
 
 export function formatMs(value?: number | null) {

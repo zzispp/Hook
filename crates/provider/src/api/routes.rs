@@ -7,9 +7,9 @@ use crate::api::{
     ProviderApiState,
     handlers::{
         create_api_key, create_endpoint, create_model_binding, create_provider, delete_api_key, delete_endpoint, delete_model_binding, delete_provider,
-        fetch_upstream_models, get_provider, get_request_record, list_active_request_records, list_api_keys, list_endpoints, list_model_bindings,
-        list_provider_cooldowns, list_providers, list_request_records, list_usage_records, release_provider_cooldown, test_model_binding, update_api_key,
-        update_endpoint, update_model_binding, update_provider,
+        delete_model_cost, fetch_upstream_models, get_provider, get_request_record, list_active_request_records, list_api_keys, list_endpoints,
+        list_model_bindings, list_model_costs, list_provider_cooldowns, list_providers, list_request_records, list_usage_records, release_provider_cooldown,
+        test_model_binding, update_api_key, update_endpoint, update_model_binding, update_provider, upsert_model_costs,
     },
 };
 
@@ -31,6 +31,12 @@ pub fn create_router(state: ProviderApiState) -> Router {
             patch(update_model_binding).delete(delete_model_binding),
         )
         .route("/admin/providers/{provider_id}/models/{model_id}/test", post(test_model_binding))
+        .route("/admin/providers/{provider_id}/model-costs", get(list_model_costs))
+        .route("/admin/providers/{provider_id}/keys/{key_id}/model-costs", axum::routing::put(upsert_model_costs))
+        .route(
+            "/admin/providers/{provider_id}/keys/{key_id}/model-costs/{provider_model_id}",
+            axum::routing::delete(delete_model_cost),
+        )
         .route("/admin/provider-cooldowns", get(list_provider_cooldowns))
         .route("/admin/provider-cooldowns/{provider_id}/release", post(release_provider_cooldown))
         .route("/request-records", get(list_usage_records))

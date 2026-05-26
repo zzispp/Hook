@@ -1,5 +1,9 @@
 export type RequestRecordStatus = 'pending' | 'streaming' | 'success' | 'failed' | 'cancelled';
 
+export type RequestUpstreamCostMode = 'per_request' | 'per_token';
+
+export type RequestUpstreamCostSource = 'configured' | 'global_default';
+
 type RequestBillingFields = {
   service_tier?: string | null;
   input_cost?: number | null;
@@ -13,7 +17,23 @@ type RequestBillingFields = {
   cache_read_price_per_million?: number | null;
 };
 
-export type RequestRecord = RequestBillingFields & {
+type RequestUpstreamCostFields = {
+  upstream_cost_mode?: RequestUpstreamCostMode | null;
+  upstream_cost_source?: RequestUpstreamCostSource | null;
+  upstream_price_per_request?: number | null;
+  upstream_input_price_per_million?: number | null;
+  upstream_output_price_per_million?: number | null;
+  upstream_cache_creation_price_per_million?: number | null;
+  upstream_cache_read_price_per_million?: number | null;
+  upstream_request_cost?: number | null;
+  upstream_input_cost?: number | null;
+  upstream_output_cost?: number | null;
+  upstream_cache_creation_cost?: number | null;
+  upstream_cache_read_cost?: number | null;
+  upstream_total_cost?: number | null;
+};
+
+export type RequestRecord = RequestBillingFields & RequestUpstreamCostFields & {
   request_id: string;
   created_at: string;
   user_id?: string | null;
@@ -102,7 +122,7 @@ export type ActiveRequestRecordResponse = {
   records: RequestRecord[];
 };
 
-export type RequestCandidateDetail = RequestBillingFields & {
+export type RequestCandidateDetail = RequestBillingFields & RequestUpstreamCostFields & {
   id: string;
   request_id: string;
   provider_id?: string | null;

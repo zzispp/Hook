@@ -130,7 +130,4 @@ pub struct CachedModelBinding {
     pub provider_model_name: String,
     pub provider_model_mapping: Option<ProviderModelMapping>,
     pub is_active: bool,
-    #[serde(with = "rust_decimal::serde::float_option")]
-    pub price_per_request: Option<Decimal>,
-    pub tiered_pricing: Option<TieredPricingConfig>,
 }

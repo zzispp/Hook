@@ -18,6 +18,7 @@ import {
   formatInteger,
   formatDashboardCost,
   formatDashboardTokens,
+  formatDashboardPercent,
 } from './dashboard-format';
 
 type BreakdownVariant = 'ranking' | 'distribution';
@@ -28,11 +29,13 @@ export function BreakdownCard({
   items,
   locale,
   loading,
+  isAdmin,
   variant = 'ranking',
 }: {
   t: TFunction<'admin'>;
   title: string;
   locale: string;
+  isAdmin: boolean;
   loading: boolean;
   variant?: BreakdownVariant;
   items?: DashboardBreakdownItem[];
@@ -44,9 +47,9 @@ export function BreakdownCard({
       {!loading && !items?.length ? <BreakdownEmpty t={t} /> : null}
       {!loading && items?.length ? (
         variant === 'distribution' ? (
-          <DistributionBreakdown items={items} locale={locale} t={t} />
+          <DistributionBreakdown items={items} locale={locale} t={t} isAdmin={isAdmin} />
         ) : (
-          <RankingBreakdown items={items} locale={locale} t={t} />
+          <RankingBreakdown items={items} locale={locale} t={t} isAdmin={isAdmin} />
         )
       ) : null}
     </Card>
@@ -57,10 +60,12 @@ function RankingBreakdown({
   items,
   locale,
   t,
+  isAdmin,
 }: {
   items: DashboardBreakdownItem[];
   locale: string;
   t: TFunction<'admin'>;
+  isAdmin: boolean;
 }) {
   const theme = useTheme();
   const options = useChart({
@@ -93,7 +98,7 @@ function RankingBreakdown({
         sx={{ pl: 1, py: 2.5, pr: 2.5, height: Math.max(280, items.length * 44 + 112) }}
       />
       <Divider sx={{ borderStyle: 'dashed' }} />
-      <BreakdownDetails items={items} t={t} locale={locale} />
+      <BreakdownDetails items={items} t={t} locale={locale} isAdmin={isAdmin} />
     </>
   );
 }
@@ -102,10 +107,12 @@ function DistributionBreakdown({
   items,
   locale,
   t,
+  isAdmin,
 }: {
   items: DashboardBreakdownItem[];
   locale: string;
   t: TFunction<'admin'>;
+  isAdmin: boolean;
 }) {
   const theme = useTheme();
   const labels = items.map((item) => item.name);
@@ -136,7 +143,7 @@ function DistributionBreakdown({
         sx={{ p: 3, justifyContent: 'center' }}
       />
       <Divider sx={{ borderStyle: 'dashed' }} />
-      <BreakdownDetails items={items} t={t} locale={locale} showLatency />
+      <BreakdownDetails items={items} t={t} locale={locale} isAdmin={isAdmin} showLatency />
     </>
   );
 }
@@ -177,11 +184,13 @@ function BreakdownDetails({
   t,
   items,
   locale,
+  isAdmin,
   showLatency = false,
 }: {
   t: TFunction<'admin'>;
   items: DashboardBreakdownItem[];
   locale: string;
+  isAdmin: boolean;
   showLatency?: boolean;
 }) {
   return (
@@ -192,7 +201,7 @@ function BreakdownDetails({
             {item.name}
           </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {detailText(item, t, locale, showLatency)}
+            {detailText(item, t, locale, showLatency, isAdmin)}
           </Typography>
         </Stack>
       ))}
@@ -204,7 +213,8 @@ function detailText(
   item: DashboardBreakdownItem,
   t: TFunction<'admin'>,
   locale: string,
-  showLatency: boolean
+  showLatency: boolean,
+  isAdmin: boolean
 ) {
   const parts = [
     `${t('dashboard.stats.columns.requests')}: ${formatInteger(item.request_count, locale)}`,
@@ -214,5 +224,9 @@ function detailText(
     parts.push(`${t('dashboard.stats.columns.avgLatency')}: ${formatMs(item.avg_latency_ms)}`);
   }
   parts.push(`${t('dashboard.stats.columns.cost')}: ${formatDashboardCost(item.total_cost)}`);
+  if (isAdmin) {
+    parts.push(`${t('dashboard.stats.columns.upstreamCost')}: ${formatDashboardCost(item.upstream_total_cost)}`);
+    parts.push(`${t('dashboard.stats.columns.profitRate')}: ${formatDashboardPercent(item.profit_rate)}`);
+  }
   return parts.join(' · ');
 }

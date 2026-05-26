@@ -23,13 +23,18 @@ async fn dashboard_overview_casts_latency_averages_to_double_precision() {
 
     assert_eq!(response.summary.avg_latency_ms, Some(125.5));
     assert_eq!(response.summary.avg_ttfb_ms, Some(42.25));
+    assert_eq!(response.summary.upstream_total_cost, Decimal::new(3, 2));
+    assert_eq!(response.summary.profit, Decimal::new(9, 2));
     assert_eq!(response.timeseries[0].avg_latency_ms, Some(130.0));
+    assert_eq!(response.timeseries[0].upstream_total_cost, Decimal::new(3, 2));
     let logs = connection.into_transaction_log();
     let summary_sql = &logs[0].statements()[0].sql;
     let timeseries_sql = &logs[1].statements()[0].sql;
     assert!(summary_sql.contains("AVG(r.total_latency_ms::double precision)"), "{summary_sql}");
     assert!(summary_sql.contains("AVG(r.first_byte_time_ms::double precision)"), "{summary_sql}");
+    assert!(summary_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{summary_sql}");
     assert!(timeseries_sql.contains("AVG(r.total_latency_ms::double precision)"), "{timeseries_sql}");
+    assert!(timeseries_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{timeseries_sql}");
 }
 
 fn overview_query() -> DashboardStoreOverviewQuery {
@@ -40,6 +45,7 @@ fn overview_query() -> DashboardStoreOverviewQuery {
         ended_at: ts(3_600),
         bucket: DashboardBucketFilter::Hour,
         include_admin_breakdowns: false,
+        include_admin_costs: true,
         tz_offset_minutes: 0,
     }
 }
@@ -52,6 +58,7 @@ fn summary_row() -> BTreeMap<&'static str, Value> {
         ("active_count", Value::from(0_i64)),
         ("total_tokens", Value::from(24_i64)),
         ("total_cost", Value::from(Decimal::new(12, 2))),
+        ("upstream_total_cost", Value::from(Decimal::new(3, 2))),
         ("avg_latency_ms", Value::from(125.5_f64)),
         ("avg_ttfb_ms", Value::from(42.25_f64)),
         ("model_count", Value::from(1_i64)),
@@ -66,6 +73,7 @@ fn timeseries_row() -> BTreeMap<&'static str, Value> {
         ("failed_count", Value::from(1_i64)),
         ("total_tokens", Value::from(24_i64)),
         ("total_cost", Value::from(Decimal::new(12, 2))),
+        ("upstream_total_cost", Value::from(Decimal::new(3, 2))),
         ("avg_latency_ms", Value::from(130.0_f64)),
     ])
 }

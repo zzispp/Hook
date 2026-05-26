@@ -4,8 +4,10 @@ mod usage_fields;
 use serde_json::Value;
 use storage::provider::{
     RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch,
+    RequestUpstreamCostRecordPatch,
 };
 use types::model::PatchField;
+use types::provider::RequestUpstreamCost;
 
 use super::{AttemptRecordInput, BillingAttempt, record_billing, request_billing_status};
 use crate::llm_proxy::{
@@ -19,6 +21,7 @@ pub(super) fn attempt_patch(
     request_id: &str,
     input: &AttemptRecordInput<'_>,
     billing: Option<&BillingAttempt>,
+    upstream_cost: &RequestUpstreamCost,
     policies: &RequestRecordPolicies,
 ) -> Result<RequestCandidateRecordPatch, LlmProxyError> {
     let policy = policies.provider();
@@ -45,6 +48,7 @@ pub(super) fn attempt_patch(
         cache_creation_1h_input_tokens: None,
         usage_source: None,
         usage_semantic: None,
+        upstream_cost: upstream_cost_patch(upstream_cost),
         billing: record_billing::billing_values(input.service_tier.clone(), billing.map(|item| &item.amount)),
         billing_snapshot: billing_snapshot_patch(billing),
         latency_ms: input.latency_ms,
@@ -67,6 +71,7 @@ pub(super) fn attempt_input(
     request_id: &str,
     input: &AttemptRecordInput<'_>,
     billing: Option<&BillingAttempt>,
+    upstream_cost: &RequestUpstreamCost,
     policies: &RequestRecordPolicies,
 ) -> Result<RequestCandidateRecordInput, LlmProxyError> {
     let policy = policies.provider();
@@ -74,6 +79,7 @@ pub(super) fn attempt_input(
     record.status_code = input.status_code;
     record.skip_reason = input.skip_reason.map(str::to_owned);
     usage_fields::candidate_input(input, &mut record);
+    record.upstream_cost = upstream_cost.clone();
     record.billing = record_billing::billing_values(input.service_tier.clone(), billing.map(|item| &item.amount));
     record.billing_snapshot = billing.map(|item| item.snapshot.clone());
     record.latency_ms = input.latency_ms;
@@ -127,6 +133,7 @@ pub(super) fn request_record_input(
         has_retry: false,
         status: "pending".into(),
         billing_status: "pending".into(),
+        upstream_cost: RequestUpstreamCost::default(),
         billing: RequestBillingRecordValues {
             service_tier: capture.service_tier(),
             ..RequestBillingRecordValues::default()
@@ -142,6 +149,7 @@ pub(super) fn request_record_patch(
     request_id: &str,
     input: &AttemptRecordInput<'_>,
     billing: Option<&BillingAttempt>,
+    upstream_cost: &RequestUpstreamCost,
     policies: &RequestRecordPolicies,
 ) -> Result<RequestRecordRecordPatch, LlmProxyError> {
     let policy = policies.client();
@@ -181,6 +189,7 @@ pub(super) fn request_record_patch(
         cache_creation_1h_input_tokens: PatchField::Missing,
         usage_source: PatchField::Missing,
         usage_semantic: PatchField::Missing,
+        upstream_cost: upstream_cost_patch(upstream_cost),
         billing: record_billing::billing_patch(billing.map(|item| &item.amount)),
         billing_snapshot: billing_snapshot_patch(billing),
         first_byte_time_ms: option_patch(input.first_byte_time_ms),
@@ -237,6 +246,7 @@ fn base_input(request_id: &str, trace: &CandidateTrace, retry_index: i32, status
         cache_creation_1h_input_tokens: None,
         usage_source: None,
         usage_semantic: None,
+        upstream_cost: RequestUpstreamCost::default(),
         billing: RequestBillingRecordValues::default(),
         billing_snapshot: None,
         latency_ms: None,
@@ -265,5 +275,23 @@ fn billing_snapshot_patch(billing: Option<&BillingAttempt>) -> PatchField<Value>
     match billing {
         Some(billing) => PatchField::Value(billing.snapshot.clone()),
         None => PatchField::Missing,
+    }
+}
+
+fn upstream_cost_patch(cost: &RequestUpstreamCost) -> RequestUpstreamCostRecordPatch {
+    RequestUpstreamCostRecordPatch {
+        upstream_cost_mode: option_patch(cost.upstream_cost_mode.clone()),
+        upstream_cost_source: option_patch(cost.upstream_cost_source.clone()),
+        upstream_price_per_request: option_patch(cost.upstream_price_per_request),
+        upstream_input_price_per_million: option_patch(cost.upstream_input_price_per_million),
+        upstream_output_price_per_million: option_patch(cost.upstream_output_price_per_million),
+        upstream_cache_creation_price_per_million: option_patch(cost.upstream_cache_creation_price_per_million),
+        upstream_cache_read_price_per_million: option_patch(cost.upstream_cache_read_price_per_million),
+        upstream_request_cost: option_patch(cost.upstream_request_cost),
+        upstream_input_cost: option_patch(cost.upstream_input_cost),
+        upstream_output_cost: option_patch(cost.upstream_output_cost),
+        upstream_cache_creation_cost: option_patch(cost.upstream_cache_creation_cost),
+        upstream_cache_read_cost: option_patch(cost.upstream_cache_read_cost),
+        upstream_total_cost: option_patch(cost.upstream_total_cost),
     }
 }

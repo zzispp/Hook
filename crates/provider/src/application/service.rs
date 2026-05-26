@@ -2,26 +2,29 @@ use async_trait::async_trait;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
-    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
+    ProviderModelCostListResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    UsageRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
 
 mod key_endpoint_scope;
 mod key_permissions;
+mod model_costs;
 mod request_queries;
 
 use key_endpoint_scope::ensure_api_formats_bound;
 use key_permissions::ensure_allowed_models_bound;
+use model_costs::{ensure_model_cost_delete_scope, ensure_model_cost_scope};
 use request_queries::{
     sanitize_active_request_record_request, sanitize_provider_cooldown_request, validate_provider_cooldown_request, validate_request_record_list_request,
 };
 
 use super::validation::{
     sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request, sanitize_model_binding,
-    sanitize_model_binding_update, sanitize_update, validate_api_key, validate_api_key_update, validate_create, validate_endpoint, validate_endpoint_update,
-    validate_list_request, validate_model_binding, validate_model_binding_update, validate_update,
+    sanitize_model_binding_update, sanitize_model_cost_batch, sanitize_update, validate_api_key, validate_api_key_update, validate_create, validate_endpoint,
+    validate_endpoint_update, validate_list_request, validate_model_binding, validate_model_binding_update, validate_model_cost_batch, validate_update,
 };
 
 pub struct ProviderService<R, M, C, F> {
@@ -191,6 +194,30 @@ where
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()> {
         self.ensure_provider(provider_id).await?;
         self.repository.delete_model_binding(provider_id, model_id).await
+    }
+
+    async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse> {
+        self.ensure_provider(provider_id).await?;
+        self.repository.list_model_costs(provider_id).await
+    }
+
+    async fn upsert_model_costs(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderModelCostBatchUpsert,
+    ) -> ProviderResult<ProviderModelCostListResponse> {
+        self.ensure_provider(provider_id).await?;
+        let input = sanitize_model_cost_batch(input);
+        validate_model_cost_batch(&input)?;
+        ensure_model_cost_scope(&self.repository, provider_id, key_id, &input).await?;
+        self.repository.upsert_model_costs(provider_id, key_id, input).await
+    }
+
+    async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {
+        self.ensure_provider(provider_id).await?;
+        ensure_model_cost_delete_scope(&self.repository, provider_id, key_id, provider_model_id).await?;
+        self.repository.delete_model_cost(provider_id, key_id, provider_model_id).await
     }
 
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse> {

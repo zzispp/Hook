@@ -50,12 +50,8 @@ async fn proxy_candidate(input: &ProxyCandidateBuildInput<'_>, parts: &Candidate
         reasoning_effort: parts.model.provider_model_mapping.as_ref().and_then(|mapping| mapping.reasoning_effort.clone()),
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
-        price_per_request: parts.model.price_per_request.or(input.global_model.default_price_per_request),
-        tiered_pricing: parts
-            .model
-            .tiered_pricing
-            .clone()
-            .unwrap_or_else(|| input.global_model.default_tiered_pricing.clone()),
+        price_per_request: input.global_model.default_price_per_request,
+        tiered_pricing: input.global_model.default_tiered_pricing.clone(),
         billing_multiplier: input.group.billing_multiplier,
         max_retries: max_retries(parts, &route)?,
         request_timeout_seconds: parts.provider.request_timeout_seconds,

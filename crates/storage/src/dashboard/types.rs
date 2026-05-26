@@ -22,6 +22,7 @@ pub struct DashboardStoreOverviewQuery {
     pub ended_at: time::OffsetDateTime,
     pub bucket: DashboardBucketFilter,
     pub include_admin_breakdowns: bool,
+    pub include_admin_costs: bool,
     pub tz_offset_minutes: i32,
 }
 
@@ -32,6 +33,7 @@ pub struct DashboardStoreActivityQuery {
     pub end_date: time::Date,
     pub started_at: time::OffsetDateTime,
     pub ended_at: time::OffsetDateTime,
+    pub include_admin_costs: bool,
     pub tz_offset_minutes: i32,
 }
 

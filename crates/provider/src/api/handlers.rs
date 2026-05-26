@@ -7,9 +7,9 @@ use types::{
     provider::{
         ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
         ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-        ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelTestRequest,
-        ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-        UsageRecordListResponse,
+        ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
+        ProviderModelCostListResponse, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse,
+        RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -134,6 +134,32 @@ pub async fn update_model_binding(
 
 pub async fn delete_model_binding(State(state): State<ProviderApiState>, Path((provider_id, model_id)): Path<(String, String)>) -> ApiResult<ApiJson<()>> {
     state.providers.delete_model_binding(&provider_id, &model_id).await?;
+    Ok(ok(()))
+}
+
+pub async fn list_model_costs(
+    State(state): State<ProviderApiState>,
+    Path(provider_id): Path<String>,
+) -> ApiResult<ApiJson<ProviderModelCostListResponse>> {
+    Ok(ok(state.providers.list_model_costs(&provider_id).await?))
+}
+
+pub async fn upsert_model_costs(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, key_id)): Path<(String, String)>,
+    Json(payload): Json<ProviderModelCostBatchUpsert>,
+) -> ApiResult<ApiJson<ProviderModelCostListResponse>> {
+    Ok(ok(state.providers.upsert_model_costs(&provider_id, &key_id, payload).await?))
+}
+
+pub async fn delete_model_cost(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, key_id, provider_model_id)): Path<(String, String, String)>,
+) -> ApiResult<ApiJson<()>> {
+    state
+        .providers
+        .delete_model_cost(&provider_id, &key_id, &provider_model_id)
+        .await?;
     Ok(ok(()))
 }
 

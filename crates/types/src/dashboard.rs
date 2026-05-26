@@ -93,6 +93,11 @@ pub struct DashboardSummary {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub upstream_total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub profit: Decimal,
+    pub profit_rate: f64,
     pub avg_latency_ms: Option<f64>,
     pub avg_ttfb_ms: Option<f64>,
     pub model_count: i64,
@@ -107,6 +112,11 @@ pub struct DashboardTimeseriesPoint {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub upstream_total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub profit: Decimal,
+    pub profit_rate: f64,
     pub avg_latency_ms: Option<f64>,
     pub avg_ttfb_ms: Option<f64>,
     pub cache_hit_rate: f64,
@@ -129,6 +139,11 @@ pub struct DashboardBreakdownItem {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub upstream_total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub profit: Decimal,
+    pub profit_rate: f64,
     pub avg_latency_ms: Option<f64>,
 }
 
@@ -151,6 +166,11 @@ pub struct DashboardActivityDay {
     pub total_cost: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
     pub base_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub upstream_total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub profit: Decimal,
+    pub profit_rate: f64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

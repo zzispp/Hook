@@ -9,6 +9,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         provider_endpoints_table(),
         provider_api_keys_table(),
         provider_models_table(),
+        provider_model_costs_table(),
         billing_rules_table(),
         dimension_collectors_table(),
         provider_cooldowns_table(),
@@ -176,13 +177,37 @@ fn provider_models_table() -> TableCreateStatement {
         .col(string_len(ProviderModels::ProviderModelName, 200))
         .col(text_null(ProviderModels::ProviderModelMappings))
         .col(boolean(ProviderModels::IsActive))
-        .col(decimal_len_null(ProviderModels::PricePerRequest, 20, 8))
-        .col(text_null(ProviderModels::TieredPricing))
         .col(text_null(ProviderModels::Config))
         .col(timestamp_tz(ProviderModels::CreatedAt))
         .col(timestamp_tz(ProviderModels::UpdatedAt))
         .foreign_key(&mut provider_fk)
         .foreign_key(&mut global_model_fk)
+        .to_owned()
+}
+
+fn provider_model_costs_table() -> TableCreateStatement {
+    let mut provider_fk = provider_fk("fk_provider_model_costs_provider", ProviderModelCosts::Table, ProviderModelCosts::ProviderId);
+    let mut key_fk = provider_model_cost_key_fk();
+    let mut model_fk = provider_model_cost_model_fk();
+    Table::create()
+        .table(ProviderModelCosts::Table)
+        .if_not_exists()
+        .col(string_len(ProviderModelCosts::Id, 36).primary_key())
+        .col(string_len(ProviderModelCosts::ProviderId, 36))
+        .col(string_len(ProviderModelCosts::KeyId, 36))
+        .col(string_len(ProviderModelCosts::ProviderModelId, 36))
+        .col(string_len(ProviderModelCosts::CostMode, 20))
+        .col(decimal_len_null(ProviderModelCosts::PricePerRequest, 20, 8))
+        .col(decimal_len_null(ProviderModelCosts::InputPricePerMillion, 20, 8))
+        .col(decimal_len_null(ProviderModelCosts::OutputPricePerMillion, 20, 8))
+        .col(decimal_len_null(ProviderModelCosts::CacheCreationPricePerMillion, 20, 8))
+        .col(decimal_len_null(ProviderModelCosts::CacheReadPricePerMillion, 20, 8))
+        .col(timestamp_tz(ProviderModelCosts::CreatedAt))
+        .col(timestamp_tz(ProviderModelCosts::UpdatedAt))
+        .check(provider_model_cost_mode_check())
+        .foreign_key(&mut provider_fk)
+        .foreign_key(&mut key_fk)
+        .foreign_key(&mut model_fk)
         .to_owned()
 }
 
@@ -333,6 +358,37 @@ fn provider_model_global_model_fk() -> ForeignKeyCreateStatement {
         .to(GlobalModels::Table, GlobalModels::Id)
         .on_delete(ForeignKeyAction::Cascade);
     foreign_key
+}
+
+fn provider_model_cost_key_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_model_costs_key")
+        .from(ProviderModelCosts::Table, ProviderModelCosts::KeyId)
+        .to(ProviderApiKeys::Table, ProviderApiKeys::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn provider_model_cost_model_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_model_costs_model")
+        .from(ProviderModelCosts::Table, ProviderModelCosts::ProviderModelId)
+        .to(ProviderModels::Table, ProviderModels::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn provider_model_cost_mode_check() -> SimpleExpr {
+    Expr::cust(
+        "(cost_mode = 'per_request' AND price_per_request IS NOT NULL \
+         AND input_price_per_million IS NULL AND output_price_per_million IS NULL \
+         AND cache_creation_price_per_million IS NULL AND cache_read_price_per_million IS NULL) \
+         OR (cost_mode = 'per_token' AND price_per_request IS NULL \
+         AND input_price_per_million IS NOT NULL AND output_price_per_million IS NOT NULL \
+         AND cache_creation_price_per_million IS NOT NULL AND cache_read_price_per_million IS NOT NULL)",
+    )
 }
 
 fn billing_rule_global_model_fk() -> ForeignKeyCreateStatement {

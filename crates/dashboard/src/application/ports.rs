@@ -40,6 +40,7 @@ pub struct DashboardActivityQuery {
     pub end_date: time::Date,
     pub started_at: time::OffsetDateTime,
     pub ended_at: time::OffsetDateTime,
+    pub admin: bool,
     pub tz_offset_minutes: i32,
 }
 

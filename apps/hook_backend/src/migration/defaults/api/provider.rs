@@ -98,6 +98,24 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "测试提供商模型",
     },
     ApiDefinition {
+        code: "provider_model_costs_read",
+        method: "GET",
+        path_pattern: "/api/admin/providers/{provider_id}/model-costs",
+        name: "提供商模型成本列表",
+    },
+    ApiDefinition {
+        code: "provider_model_costs_upsert",
+        method: "PUT",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/model-costs",
+        name: "保存提供商模型成本",
+    },
+    ApiDefinition {
+        code: "provider_model_costs_delete",
+        method: "DELETE",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/model-costs/{provider_model_id}",
+        name: "删除提供商模型成本",
+    },
+    ApiDefinition {
         code: "provider_cooldowns_read",
         method: "GET",
         path_pattern: "/api/admin/provider-cooldowns",

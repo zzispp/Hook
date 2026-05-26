@@ -2,6 +2,7 @@ mod billing_runtime;
 mod event;
 mod record_billing;
 mod records;
+mod upstream_cost;
 #[cfg(test)]
 mod tests;
 
@@ -66,17 +67,18 @@ async fn persist_scheduled_candidates(state: &LlmProxyState, selection: &Candida
 async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
     let store = ProviderStore::new(state.database.clone());
     let billing = attempt_billing(&store, request_id, &input).await?;
+    let upstream_cost = upstream_cost::request_upstream_cost(&store, &input).await?;
     let policies = request_record_policies(state).await?;
     match store
-        .update_request_candidate(records::attempt_patch(request_id, &input, billing.as_ref(), &policies)?)
+        .update_request_candidate(records::attempt_patch(request_id, &input, billing.as_ref(), &upstream_cost, &policies)?)
         .await
     {
         Ok(_) => {}
-        Err(StorageError::NotFound) => create_missing_attempt(&store, request_id, &input, billing.as_ref(), &policies).await?,
+        Err(StorageError::NotFound) => create_missing_attempt(&store, request_id, &input, billing.as_ref(), &upstream_cost, &policies).await?,
         Err(error) => return Err(error.into()),
     }
     store
-        .update_request_record(records::request_record_patch(request_id, &input, billing.as_ref(), &policies)?)
+        .update_request_record(records::request_record_patch(request_id, &input, billing.as_ref(), &upstream_cost, &policies)?)
         .await?;
     let model_usage_record = model_usage_record(&input, billing.as_ref());
     let usage_record = token_usage_record(request_id, &input, billing.as_ref(), OffsetDateTime::now_utc())?;
@@ -96,10 +98,11 @@ async fn create_missing_attempt(
     request_id: &str,
     input: &AttemptRecordInput<'_>,
     billing: Option<&BillingAttempt>,
+    upstream_cost: &types::provider::RequestUpstreamCost,
     policies: &RequestRecordPolicies,
 ) -> Result<(), LlmProxyError> {
     store
-        .create_request_candidate(records::attempt_input(request_id, input, billing, policies)?)
+        .create_request_candidate(records::attempt_input(request_id, input, billing, upstream_cost, policies)?)
         .await?;
     Ok(())
 }

@@ -172,7 +172,7 @@ function CostSummary({ record }: { record: RequestRecord | null }) {
   const { t } = useTranslate('admin');
   const metrics = [
     [t('requestRecords.totalCost'), formatCost(record?.total_cost)],
-    [t('requestRecords.actualCost'), formatCost(record?.base_cost)],
+    [t('requestRecords.actualCost'), formatCost(record?.upstream_total_cost)],
     [t('requestRecords.profit'), formatCost(profit(record))],
     [t('requestRecords.profitRate'), profitRate(record)],
     [t('requestRecords.responseTime'), formatDuration(record?.total_latency_ms)],
@@ -197,7 +197,7 @@ function CostSummary({ record }: { record: RequestRecord | null }) {
 }
 
 function profit(record: RequestRecord | null) {
-  return Number(record?.total_cost ?? 0) - Number(record?.base_cost ?? 0);
+  return Number(record?.total_cost ?? 0) - Number(record?.upstream_total_cost ?? 0);
 }
 
 function profitRate(record: RequestRecord | null) {

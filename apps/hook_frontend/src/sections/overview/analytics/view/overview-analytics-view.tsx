@@ -74,6 +74,7 @@ export function OverviewAnalyticsView() {
       <KpiGrid
         t={t}
         locale={locale}
+        isAdmin={isAdmin}
         loading={statsLoading}
         data={overview.data}
       />
@@ -118,11 +119,12 @@ function DashboardMainGrid({
       <Box sx={DASHBOARD_TOP_GRID_SX}>
         <Box sx={DASHBOARD_TREND_ACTIVITY_SX}>
           <Box sx={DASHBOARD_TREND_AREA_SX}>
-            <TrendCard t={t} loading={trendLoading} data={overview} />
+            <TrendCard t={t} isAdmin={isAdmin} loading={trendLoading} data={overview} />
           </Box>
           <Box sx={DASHBOARD_ACTIVITY_AREA_SX}>
             <ActivityGridCard
               t={t}
+              isAdmin={isAdmin}
               activity={activity}
               loading={activityLoading}
             />
@@ -132,6 +134,7 @@ function DashboardMainGrid({
           <BreakdownCard
             t={t}
             locale={locale}
+            isAdmin={isAdmin}
             title={t('dashboard.stats.breakdowns.models')}
             items={overview?.breakdowns.models}
             loading={statsLoading}
@@ -197,6 +200,7 @@ function SharedBreakdowns({
         <BreakdownCard
           t={t}
           locale={locale}
+          isAdmin={isAdmin}
           title={t('dashboard.stats.breakdowns.tokens')}
           items={overview?.breakdowns.tokens}
           loading={loading}
@@ -231,6 +235,7 @@ function AdminBreakdowns({
         <BreakdownCard
           t={t}
           locale={locale}
+          isAdmin
           title={t('dashboard.stats.breakdowns.providers')}
           items={overview?.breakdowns.providers}
           loading={loading}
@@ -241,6 +246,7 @@ function AdminBreakdowns({
         <BreakdownCard
           t={t}
           locale={locale}
+          isAdmin
           title={t('dashboard.stats.breakdowns.users')}
           items={overview?.breakdowns.users}
           loading={loading}

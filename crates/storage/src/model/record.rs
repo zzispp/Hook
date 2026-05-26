@@ -53,7 +53,7 @@ impl GlobalModelRecord {
 
 impl ModelRecord {
     pub fn provider_detail(self, global_model: &GlobalModelRecord) -> StorageResult<ModelCatalogProviderDetail> {
-        let tiered = self.tiered_pricing()?.unwrap_or(global_model.default_tiered_pricing()?);
+        let tiered = global_model.default_tiered_pricing()?;
         let tier = tiered.tiers.first();
         Ok(ModelCatalogProviderDetail {
             provider_id: self.provider_id.clone(),
@@ -65,17 +65,13 @@ impl ModelRecord {
             cache_creation_price_per_1m: tier.and_then(|item| item.cache_creation_price_per_1m),
             cache_read_price_per_1m: tier.and_then(|item| item.cache_read_price_per_1m),
             cache_1h_creation_price_per_1m: tier.and_then(cache_1h_creation_price),
-            price_per_request: self.price_per_request.or(global_model.default_price_per_request),
+            price_per_request: global_model.default_price_per_request,
             effective_tiered_pricing: Some(tiered.clone()),
             tier_count: tiered.tiers.len() as u64,
             supports_vision: Some(global_model.config_bool("vision")?),
             supports_function_calling: Some(global_model.config_bool("function_calling")?),
             supports_streaming: Some(global_model.config_bool_with_default("streaming", true)?),
         })
-    }
-
-    pub fn tiered_pricing(&self) -> StorageResult<Option<TieredPricingConfig>> {
-        json::decode_optional(self.tiered_pricing.clone())
     }
 }
 

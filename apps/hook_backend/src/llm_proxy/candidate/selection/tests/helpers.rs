@@ -94,8 +94,6 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
                 reasoning_effort: Some("high".into()),
             }),
             is_active: true,
-            price_per_request: None,
-            tiered_pricing: None,
         }],
     }
 }
@@ -147,8 +145,6 @@ pub(super) fn provider_b() -> CachedProvider {
             provider_model_name: "provider-b-model".into(),
             provider_model_mapping: None,
             is_active: true,
-            price_per_request: None,
-            tiered_pricing: None,
         }],
         ..provider_with_endpoints_and_keys()
     }

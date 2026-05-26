@@ -104,8 +104,6 @@ fn provider_model_record(id: &str, provider_id: &str, model_id: &str) -> provide
         provider_model_name: model_id.into(),
         provider_model_mappings: None,
         is_active: true,
-        price_per_request: None,
-        tiered_pricing: None,
         config: None,
         created_at: now(),
         updated_at: now(),

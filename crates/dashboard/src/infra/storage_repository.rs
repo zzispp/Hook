@@ -45,6 +45,7 @@ fn store_overview_query(query: DashboardOverviewQuery) -> DashboardStoreOverview
         ended_at: query.window.ended_at,
         bucket: store_bucket(query.bucket),
         include_admin_breakdowns: query.admin,
+        include_admin_costs: query.admin,
         tz_offset_minutes: query.tz_offset_minutes,
     }
 }
@@ -56,6 +57,7 @@ fn store_activity_query(query: DashboardActivityQuery) -> DashboardStoreActivity
         end_date: query.end_date,
         started_at: query.started_at,
         ended_at: query.ended_at,
+        include_admin_costs: query.admin,
         tz_offset_minutes: query.tz_offset_minutes,
     }
 }

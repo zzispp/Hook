@@ -85,9 +85,24 @@ pub(in crate::migration::baseline) enum ProviderModels {
     ProviderModelName,
     ProviderModelMappings,
     IsActive,
-    PricePerRequest,
-    TieredPricing,
     Config,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum ProviderModelCosts {
+    Table,
+    Id,
+    ProviderId,
+    KeyId,
+    ProviderModelId,
+    CostMode,
+    PricePerRequest,
+    InputPricePerMillion,
+    OutputPricePerMillion,
+    CacheCreationPricePerMillion,
+    CacheReadPricePerMillion,
     CreatedAt,
     UpdatedAt,
 }

@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use serde_json::Value;
-use types::model::{PatchField, TieredPricingConfig};
-use types::provider::ProviderModelMapping;
+use types::model::PatchField;
+use types::provider::{ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, RequestUpstreamCost};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderRecordInput {
@@ -109,8 +109,6 @@ pub struct ProviderModelRecordInput {
     pub provider_model_name: String,
     pub provider_model_mapping: Option<ProviderModelMapping>,
     pub is_active: bool,
-    pub price_per_request: Option<rust_decimal::Decimal>,
-    pub tiered_pricing: Option<TieredPricingConfig>,
     pub config: Option<serde_json::Value>,
 }
 
@@ -144,6 +142,19 @@ pub struct ProviderCooldownRecordInput {
     pub error_message: Option<String>,
     pub error_code: Option<String>,
     pub error_param: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderModelCostRecordInput {
+    pub provider_id: String,
+    pub key_id: String,
+    pub provider_model_id: String,
+    pub cost_mode: ProviderModelCostMode,
+    pub price_per_request: Option<Decimal>,
+    pub input_price_per_million: Option<Decimal>,
+    pub output_price_per_million: Option<Decimal>,
+    pub cache_creation_price_per_million: Option<Decimal>,
+    pub cache_read_price_per_million: Option<Decimal>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -215,6 +226,7 @@ pub struct RequestCandidateRecordInput {
     pub cache_creation_1h_input_tokens: Option<i64>,
     pub usage_source: Option<String>,
     pub usage_semantic: Option<String>,
+    pub upstream_cost: RequestUpstreamCost,
     pub billing: RequestBillingRecordValues,
     pub billing_snapshot: Option<Value>,
     pub latency_ms: Option<i64>,
@@ -251,6 +263,7 @@ pub struct RequestCandidateRecordPatch {
     pub cache_creation_1h_input_tokens: Option<i64>,
     pub usage_source: Option<String>,
     pub usage_semantic: Option<String>,
+    pub upstream_cost: RequestUpstreamCostRecordPatch,
     pub billing: RequestBillingRecordValues,
     pub billing_snapshot: PatchField<Value>,
     pub latency_ms: Option<i64>,
@@ -291,6 +304,7 @@ pub struct RequestRecordRecordInput {
     pub has_retry: bool,
     pub status: String,
     pub billing_status: String,
+    pub upstream_cost: RequestUpstreamCost,
     pub billing: RequestBillingRecordValues,
     pub billing_snapshot: Option<Value>,
     pub candidate_count: i64,
@@ -335,6 +349,7 @@ pub struct RequestRecordRecordPatch {
     pub cache_creation_1h_input_tokens: PatchField<i64>,
     pub usage_source: PatchField<String>,
     pub usage_semantic: PatchField<String>,
+    pub upstream_cost: RequestUpstreamCostRecordPatch,
     pub billing: RequestBillingRecordPatch,
     pub billing_snapshot: PatchField<Value>,
     pub first_byte_time_ms: PatchField<i64>,
@@ -381,6 +396,23 @@ pub struct RequestBillingRecordPatch {
     pub output_price_per_million: PatchField<Decimal>,
     pub cache_creation_price_per_million: PatchField<Decimal>,
     pub cache_read_price_per_million: PatchField<Decimal>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct RequestUpstreamCostRecordPatch {
+    pub upstream_cost_mode: PatchField<ProviderModelCostMode>,
+    pub upstream_cost_source: PatchField<ProviderModelCostSource>,
+    pub upstream_price_per_request: PatchField<Decimal>,
+    pub upstream_input_price_per_million: PatchField<Decimal>,
+    pub upstream_output_price_per_million: PatchField<Decimal>,
+    pub upstream_cache_creation_price_per_million: PatchField<Decimal>,
+    pub upstream_cache_read_price_per_million: PatchField<Decimal>,
+    pub upstream_request_cost: PatchField<Decimal>,
+    pub upstream_input_cost: PatchField<Decimal>,
+    pub upstream_output_cost: PatchField<Decimal>,
+    pub upstream_cache_creation_cost: PatchField<Decimal>,
+    pub upstream_cache_read_cost: PatchField<Decimal>,
+    pub upstream_total_cost: PatchField<Decimal>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

@@ -107,6 +107,19 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         provider_models_unique_index(),
+        provider_model_costs_unique_index(),
+        index(
+            "index_provider_model_costs_by_provider",
+            ProviderModelCosts::Table,
+            ProviderModelCosts::ProviderId,
+            false,
+        ),
+        index(
+            "index_provider_model_costs_by_key",
+            ProviderModelCosts::Table,
+            ProviderModelCosts::KeyId,
+            false,
+        ),
         billing_rules_global_model_unique_index(),
         billing_rules_model_unique_index(),
         dimension_collectors_enabled_unique_index(),
@@ -270,6 +283,17 @@ fn provider_models_unique_index() -> IndexCreateStatement {
         .table(ProviderModels::Table)
         .col(ProviderModels::ProviderId)
         .col(ProviderModels::GlobalModelId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn provider_model_costs_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_provider_model_costs_unique")
+        .table(ProviderModelCosts::Table)
+        .col(ProviderModelCosts::KeyId)
+        .col(ProviderModelCosts::ProviderModelId)
         .unique()
         .if_not_exists()
         .to_owned()

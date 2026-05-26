@@ -4,10 +4,15 @@ use types::provider::RequestCandidateDetail;
 
 use crate::StorageResult;
 
-use super::{record::RequestCandidateRecord, request_record_payload_codec};
+use super::{
+    record::RequestCandidateRecord,
+    request_record_payload_codec,
+    request_upstream_cost::{self, StoredUpstreamCost},
+};
 
 pub(super) fn candidate_detail(candidate: RequestCandidateRecord) -> StorageResult<RequestCandidateDetail> {
     let total_tokens = total_tokens(&candidate);
+    let upstream_cost = request_upstream_cost::response(StoredUpstreamCost::from_candidate_record(&candidate))?;
     Ok(RequestCandidateDetail {
         id: candidate.id,
         request_id: candidate.request_id,
@@ -45,6 +50,7 @@ pub(super) fn candidate_detail(candidate: RequestCandidateRecord) -> StorageResu
         usage_source: candidate.usage_source,
         usage_semantic: candidate.usage_semantic,
         service_tier: candidate.service_tier,
+        upstream_cost,
         input_cost: candidate.input_cost,
         output_cost: candidate.output_cost,
         cache_creation_cost: candidate.cache_creation_cost,

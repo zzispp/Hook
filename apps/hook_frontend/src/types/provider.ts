@@ -1,5 +1,3 @@
-import type { TieredPricingConfig } from './model';
-
 export type {
   UsageRecord,
   RequestRecord,
@@ -237,8 +235,6 @@ export type ProviderModelBinding = {
   provider_model_name: string;
   provider_model_mapping?: ProviderModelMapping | null;
   is_active: boolean;
-  price_per_request?: number | null;
-  tiered_pricing?: TieredPricingConfig | null;
   config?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -256,6 +252,43 @@ export type ProviderModelBindingUpdate = {
   is_active?: boolean;
   provider_model_mapping?: ProviderModelMapping | null;
   config?: Record<string, unknown> | null;
+};
+
+export type ProviderModelCostMode = 'per_request' | 'per_token';
+
+export type ProviderModelCostSource = 'configured' | 'global_default';
+
+export type ProviderModelCost = {
+  id: string;
+  provider_id: string;
+  key_id: string;
+  provider_model_id: string;
+  cost_mode: ProviderModelCostMode;
+  price_per_request?: number | null;
+  input_price_per_million?: number | null;
+  output_price_per_million?: number | null;
+  cache_creation_price_per_million?: number | null;
+  cache_read_price_per_million?: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProviderModelCostUpsert = {
+  provider_model_id: string;
+  cost_mode: ProviderModelCostMode;
+  price_per_request?: number | null;
+  input_price_per_million?: number | null;
+  output_price_per_million?: number | null;
+  cache_creation_price_per_million?: number | null;
+  cache_read_price_per_million?: number | null;
+};
+
+export type ProviderModelCostBatchUpsert = {
+  costs: ProviderModelCostUpsert[];
+};
+
+export type ProviderModelCostListResponse = {
+  costs: ProviderModelCost[];
 };
 
 export type ProviderUpstreamModelsResponse = {

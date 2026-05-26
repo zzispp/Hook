@@ -1,6 +1,7 @@
 mod billing_config_query;
 mod provider_cooldown_query;
 mod provider_endpoint_query;
+mod provider_model_cost_query;
 mod provider_model_query;
 pub mod record;
 mod repository;
@@ -15,14 +16,15 @@ mod request_record_repository;
 mod request_record_summary;
 mod request_record_sweep;
 mod request_record_write;
+mod request_upstream_cost;
 mod types;
 
 pub use repository::ProviderStore;
 pub use types::{
     BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord,
-    ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderModelRecordPatch,
-    ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch, RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch,
-    RequestRecordRecordInput, RequestRecordRecordPatch, StaleRequestSweepReport,
+    ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
+    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch, RequestBillingRecordValues, RequestCandidateRecordInput,
+    RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch, RequestUpstreamCostRecordPatch, StaleRequestSweepReport,
 };
 
 pub(super) use record::{ProviderEndpointRecord, ProviderModelRecord, ProviderRecord};

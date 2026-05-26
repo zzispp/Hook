@@ -18,8 +18,6 @@ pub async fn create_model_binding(store: &ProviderStore, input: ProviderModelRec
         provider_model_name: Set(input.provider_model_name),
         provider_model_mappings: Set(json::encode_optional(&input.provider_model_mapping)?),
         is_active: Set(input.is_active),
-        price_per_request: Set(input.price_per_request),
-        tiered_pricing: Set(json::encode_optional(&input.tiered_pricing)?),
         config: Set(json::encode_optional(&input.config)?),
         created_at: Set(now),
         updated_at: Set(now),

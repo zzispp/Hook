@@ -1,6 +1,8 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+use super::RequestUpstreamCost;
+
 const DEFAULT_REQUEST_RECORD_LIMIT: u64 = 20;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -130,6 +132,8 @@ pub struct RequestRecord {
     pub usage_source: Option<String>,
     pub usage_semantic: Option<String>,
     pub service_tier: Option<String>,
+    #[serde(flatten)]
+    pub upstream_cost: RequestUpstreamCost,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub input_cost: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::float_option")]
@@ -211,6 +215,8 @@ pub struct RequestCandidateDetail {
     pub usage_source: Option<String>,
     pub usage_semantic: Option<String>,
     pub service_tier: Option<String>,
+    #[serde(flatten)]
+    pub upstream_cost: RequestUpstreamCost,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub input_cost: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::float_option")]

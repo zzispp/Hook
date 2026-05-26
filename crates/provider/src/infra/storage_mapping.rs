@@ -1,10 +1,10 @@
 use storage::provider::{
     ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput,
-    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    ProviderModelCostRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
 };
 use types::provider::{
     ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderModelBindingCreate,
-    ProviderModelBindingUpdate, ProviderUpdate,
+    ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderUpdate,
 };
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
@@ -121,8 +121,6 @@ pub(super) fn model_binding_input(provider_id: &str, input: ProviderModelBinding
         provider_model_name: input.provider_model_name,
         provider_model_mapping: input.provider_model_mapping,
         is_active: true,
-        price_per_request: None,
-        tiered_pricing: None,
         config: input.config,
     }
 }
@@ -134,4 +132,22 @@ pub(super) fn model_binding_patch(input: ProviderModelBindingUpdate) -> Provider
         provider_model_mapping: input.provider_model_mapping,
         config: input.config,
     }
+}
+
+pub(super) fn model_cost_inputs(provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> Vec<ProviderModelCostRecordInput> {
+    input
+        .costs
+        .into_iter()
+        .map(|cost| ProviderModelCostRecordInput {
+            provider_id: provider_id.to_owned(),
+            key_id: key_id.to_owned(),
+            provider_model_id: cost.provider_model_id,
+            cost_mode: cost.cost_mode,
+            price_per_request: cost.price_per_request,
+            input_price_per_million: cost.input_price_per_million,
+            output_price_per_million: cost.output_price_per_million,
+            cache_creation_price_per_million: cost.cache_creation_price_per_million,
+            cache_read_price_per_million: cost.cache_read_price_per_million,
+        })
+        .collect()
 }

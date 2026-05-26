@@ -1,4 +1,3 @@
-use rust_decimal::Decimal;
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -11,8 +10,6 @@ pub struct Model {
     pub provider_model_name: String,
     pub provider_model_mappings: Option<String>,
     pub is_active: bool,
-    pub price_per_request: Option<Decimal>,
-    pub tiered_pricing: Option<String>,
     pub config: Option<String>,
     pub created_at: TimeDateTimeWithTimeZone,
     pub updated_at: TimeDateTimeWithTimeZone,

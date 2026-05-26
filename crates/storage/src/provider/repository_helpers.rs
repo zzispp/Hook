@@ -95,8 +95,6 @@ pub fn provider_model_response(record: ProviderModelRecord) -> StorageResult<Pro
         provider_model_name: record.provider_model_name,
         provider_model_mapping: json::decode_optional(record.provider_model_mappings)?,
         is_active: record.is_active,
-        price_per_request: record.price_per_request,
-        tiered_pricing: json::decode_optional(record.tiered_pricing)?,
         config: json::decode_optional(record.config)?,
         created_at: record.created_at.to_string(),
         updated_at: record.updated_at.to_string(),

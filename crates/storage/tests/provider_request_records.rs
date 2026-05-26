@@ -6,11 +6,12 @@ use storage::{
     Database, StorageError,
     provider::{
         ProviderStore, RequestBillingRecordPatch, RequestBillingRecordValues, RequestRecordRecordInput, RequestRecordRecordPatch,
+        RequestUpstreamCostRecordPatch,
         record::{request_candidates, request_records},
     },
 };
 use types::model::PatchField;
-use types::provider::{ActiveRequestRecordRequest, RequestRecordListRequest};
+use types::provider::{ActiveRequestRecordRequest, RequestRecordListRequest, RequestUpstreamCost};
 
 #[tokio::test]
 async fn request_record_storage_lists_aggregated_records() {
@@ -365,6 +366,7 @@ fn main_record_input() -> RequestRecordRecordInput {
         has_retry: false,
         status: "pending".into(),
         billing_status: "pending".into(),
+        upstream_cost: RequestUpstreamCost::default(),
         billing: RequestBillingRecordValues {
             service_tier: Some("standard".into()),
             ..RequestBillingRecordValues::default()
@@ -413,6 +415,7 @@ fn main_record_patch() -> RequestRecordRecordPatch {
         cache_creation_1h_input_tokens: PatchField::Value(2),
         usage_source: PatchField::Value("openai".into()),
         usage_semantic: PatchField::Value("openai".into()),
+        upstream_cost: RequestUpstreamCostRecordPatch::default(),
         billing: success_billing_patch(),
         billing_snapshot: PatchField::Missing,
         first_byte_time_ms: PatchField::Value(110),
@@ -472,6 +475,19 @@ fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, 
         usage_source: (status == "success").then(|| "openai".into()),
         usage_semantic: (status == "success").then(|| "openai".into()),
         service_tier: (status == "success").then(|| "standard".into()),
+        upstream_cost_mode: None,
+        upstream_cost_source: None,
+        upstream_price_per_request: None,
+        upstream_input_price_per_million: None,
+        upstream_output_price_per_million: None,
+        upstream_cache_creation_price_per_million: None,
+        upstream_cache_read_price_per_million: None,
+        upstream_request_cost: None,
+        upstream_input_cost: None,
+        upstream_output_cost: None,
+        upstream_cache_creation_cost: None,
+        upstream_cache_read_cost: None,
+        upstream_total_cost: None,
         input_cost: (status == "success").then_some(Decimal::new(25, 4)),
         output_cost: (status == "success").then_some(Decimal::new(30, 4)),
         cache_creation_cost: (status == "success").then_some(Decimal::new(125, 5)),
@@ -602,6 +618,19 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         usage_source: (status == "success").then(|| "openai".into()),
         usage_semantic: (status == "success").then(|| "openai".into()),
         service_tier: (status == "success").then(|| "standard".into()),
+        upstream_cost_mode: None,
+        upstream_cost_source: None,
+        upstream_price_per_request: None,
+        upstream_input_price_per_million: None,
+        upstream_output_price_per_million: None,
+        upstream_cache_creation_price_per_million: None,
+        upstream_cache_read_price_per_million: None,
+        upstream_request_cost: None,
+        upstream_input_cost: None,
+        upstream_output_cost: None,
+        upstream_cache_creation_cost: None,
+        upstream_cache_read_cost: None,
+        upstream_total_cost: None,
         input_cost: (status == "success").then_some(Decimal::new(25, 4)),
         output_cost: (status == "success").then_some(Decimal::new(30, 4)),
         cache_creation_cost: (status == "success").then_some(Decimal::new(125, 5)),

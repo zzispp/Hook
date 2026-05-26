@@ -10,7 +10,6 @@ import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Grid from '@mui/material/Grid';
 import Skeleton from '@mui/material/Skeleton';
 import { useTheme } from '@mui/material/styles';
 
@@ -40,6 +39,16 @@ const KPI_SKELETON_VALUE_HEIGHT = 40;
 const SPARKLINE_PADDING = 6;
 const SPARKLINE_STROKE_WIDTH = 0;
 const DEFAULT_SPARKLINE_SERIES = [0, 0, 0, 0, 0, 0, 0];
+const KPI_GRID_SX = {
+  mb: KPI_GRID_SPACING,
+  gap: KPI_GRID_SPACING,
+  display: 'grid',
+  gridTemplateColumns: {
+    xs: '1fr',
+    sm: 'repeat(2, minmax(0, 1fr))',
+    lg: 'repeat(5, minmax(0, 1fr))',
+  },
+} as const;
 
 type KpiCardInput = KpiCardData;
 
@@ -55,23 +64,25 @@ export function KpiGrid({
   t,
   data,
   locale,
+  isAdmin,
   loading,
 }: {
   t: TFunction<'admin'>;
   locale: string;
+  isAdmin: boolean;
   loading: boolean;
   data?: DashboardOverviewResponse;
 }) {
-  const cards = kpiCards(t, locale, data);
+  const cards = kpiCards(t, locale, isAdmin, data);
 
   return (
-    <Grid container spacing={KPI_GRID_SPACING} sx={{ mb: KPI_GRID_SPACING }}>
+    <Box sx={KPI_GRID_SX}>
       {cards.map((item) => (
-        <Grid key={item.label} size={{ xs: 12, sm: 6, md: 3 }}>
+        <Box key={item.label} sx={{ minWidth: 0 }}>
           {loading ? <KpiSkeleton /> : <DashboardKpiCard item={item} />}
-        </Grid>
+        </Box>
       ))}
-    </Grid>
+    </Box>
   );
 }
 
@@ -181,11 +192,14 @@ function KpiSkeleton() {
 function kpiCards(
   t: TFunction<'admin'>,
   locale: string,
+  isAdmin: boolean,
   data?: DashboardOverviewResponse
 ): KpiCardData[] {
   const summary = data?.summary;
   const points = data?.timeseries ?? [];
-  return KPI_CARD_CONFIGS.map((config) => cardFromConfig({ t, locale, summary, points, config }));
+  return KPI_CARD_CONFIGS
+    .filter((config) => isAdmin || !config.adminOnly)
+    .map((config) => cardFromConfig({ t, locale, summary, points, config }));
 }
 
 function kpiCard({ label, value, color, icon, series }: KpiCardInput): KpiCardData {

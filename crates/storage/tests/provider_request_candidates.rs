@@ -2,10 +2,13 @@ use rust_decimal::Decimal;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database, StorageError,
-    provider::{ProviderStore, RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_records},
+    provider::{
+        ProviderStore, RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestUpstreamCostRecordPatch,
+        record::request_records,
+    },
 };
 use types::model::PatchField;
-use types::provider::RequestCandidateListRequest;
+use types::provider::{RequestCandidateListRequest, RequestUpstreamCost};
 
 #[tokio::test]
 async fn request_candidate_storage_creates_success_record() {
@@ -167,6 +170,7 @@ fn success_input() -> RequestCandidateRecordInput {
         cache_creation_1h_input_tokens: Some(2),
         usage_source: Some("openai".into()),
         usage_semantic: Some("openai".into()),
+        upstream_cost: RequestUpstreamCost::default(),
         billing: success_billing_values(),
         billing_snapshot: None,
         latency_ms: Some(42),
@@ -204,6 +208,7 @@ fn success_patch() -> RequestCandidateRecordPatch {
         cache_creation_1h_input_tokens: Some(2),
         usage_source: Some("openai".into()),
         usage_semantic: Some("openai".into()),
+        upstream_cost: RequestUpstreamCostRecordPatch::default(),
         billing: success_billing_values(),
         billing_snapshot: PatchField::Missing,
         latency_ms: Some(42),
@@ -265,6 +270,19 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         usage_source: Some("openai".into()),
         usage_semantic: Some("openai".into()),
         service_tier: Some("standard".into()),
+        upstream_cost_mode: None,
+        upstream_cost_source: None,
+        upstream_price_per_request: None,
+        upstream_input_price_per_million: None,
+        upstream_output_price_per_million: None,
+        upstream_cache_creation_price_per_million: None,
+        upstream_cache_read_price_per_million: None,
+        upstream_request_cost: None,
+        upstream_input_cost: None,
+        upstream_output_cost: None,
+        upstream_cache_creation_cost: None,
+        upstream_cache_read_cost: None,
+        upstream_total_cost: None,
         input_cost: Some(Decimal::new(25, 4)),
         output_cost: Some(Decimal::new(30, 4)),
         cache_creation_cost: Some(Decimal::new(125, 5)),
@@ -373,6 +391,19 @@ fn summary_record(status: &str) -> request_records::Model {
         usage_source: Some("openai".into()),
         usage_semantic: Some("openai".into()),
         service_tier: Some("standard".into()),
+        upstream_cost_mode: None,
+        upstream_cost_source: None,
+        upstream_price_per_request: None,
+        upstream_input_price_per_million: None,
+        upstream_output_price_per_million: None,
+        upstream_cache_creation_price_per_million: None,
+        upstream_cache_read_price_per_million: None,
+        upstream_request_cost: None,
+        upstream_input_cost: None,
+        upstream_output_cost: None,
+        upstream_cache_creation_cost: None,
+        upstream_cache_read_cost: None,
+        upstream_total_cost: None,
         input_cost: Some(Decimal::new(25, 4)),
         output_cost: Some(Decimal::new(30, 4)),
         cache_creation_cost: Some(Decimal::new(125, 5)),

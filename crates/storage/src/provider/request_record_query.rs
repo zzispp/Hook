@@ -14,6 +14,7 @@ use super::{
     request_record_detail::{candidate_detail, detail_payload, format_timestamp},
     request_record_filter::{FilterSql, pagination_value},
     request_record_summary::DEFAULT_COST_CURRENCY,
+    request_upstream_cost::{self, StoredUpstreamCost},
 };
 
 const STATUS_PENDING: &str = "pending";
@@ -23,7 +24,7 @@ const ACTIVE_REQUEST_STATUSES: [&str; 2] = [STATUS_PENDING, STATUS_STREAMING];
 pub async fn list_request_records(store: &super::ProviderStore, request: RequestRecordListRequest) -> StorageResult<RequestRecordListResponse> {
     let total = count_summary_records(store, &request).await?;
     let summaries = list_summary_records(store, &request).await?;
-    let records = summaries.into_iter().map(summary_record).collect();
+    let records = summaries.into_iter().map(summary_record).collect::<StorageResult<Vec<_>>>()?;
     Ok(RequestRecordListResponse { records, total })
 }
 
@@ -36,7 +37,7 @@ pub async fn list_usage_records(store: &super::ProviderStore, user_id: &str, req
 
 pub async fn list_active_request_records(store: &super::ProviderStore, request: ActiveRequestRecordRequest) -> StorageResult<ActiveRequestRecordResponse> {
     let summaries = active_summary_records(store, &request.ids).await?;
-    let records = summaries.into_iter().map(summary_record).collect();
+    let records = summaries.into_iter().map(summary_record).collect::<StorageResult<Vec<_>>>()?;
     Ok(ActiveRequestRecordResponse { records })
 }
 
@@ -51,7 +52,7 @@ pub async fn get_request_record(store: &super::ProviderStore, request_id: &str) 
         .order_by_asc(request_candidates::Column::RetryIndex)
         .all(store.connection())
         .await?;
-    let record = summary_record(summary.clone());
+    let record = summary_record(summary.clone())?;
     let request_headers = detail_payload(summary.request_headers)?;
     let request_body = detail_payload(summary.request_body)?;
     let client_response_headers = detail_payload(summary.client_response_headers)?;
@@ -158,8 +159,9 @@ fn usage_record(record: RequestRecordSummaryRecord) -> UsageRecord {
     }
 }
 
-fn summary_record(record: RequestRecordSummaryRecord) -> RequestRecord {
-    RequestRecord {
+fn summary_record(record: RequestRecordSummaryRecord) -> StorageResult<RequestRecord> {
+    let upstream_cost = request_upstream_cost::response(StoredUpstreamCost::from_request_record(&record))?;
+    Ok(RequestRecord {
         request_id: record.request_id,
         created_at: format_timestamp(record.created_at),
         user_id: record.user_id_snapshot,
@@ -205,6 +207,7 @@ fn summary_record(record: RequestRecordSummaryRecord) -> RequestRecord {
         usage_source: record.usage_source,
         usage_semantic: record.usage_semantic,
         service_tier: record.service_tier,
+        upstream_cost,
         input_cost: record.input_cost,
         output_cost: record.output_cost,
         cache_creation_cost: record.cache_creation_cost,
@@ -223,5 +226,5 @@ fn summary_record(record: RequestRecordSummaryRecord) -> RequestRecord {
         first_byte_time_ms: record.first_byte_time_ms,
         total_latency_ms: record.total_latency_ms,
         candidate_count: record.candidate_count.try_into().unwrap_or(0),
-    }
+    })
 }

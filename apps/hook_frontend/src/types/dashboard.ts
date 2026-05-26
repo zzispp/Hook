@@ -21,6 +21,9 @@ export type DashboardSummary = {
   cache_hit_rate: number;
   total_tokens: number;
   total_cost: number;
+  upstream_total_cost: number;
+  profit: number;
+  profit_rate: number;
   avg_latency_ms?: number | null;
   avg_ttfb_ms?: number | null;
   model_count: number;
@@ -33,6 +36,9 @@ export type DashboardTimeseriesPoint = {
   failed_count: number;
   total_tokens: number;
   total_cost: number;
+  upstream_total_cost: number;
+  profit: number;
+  profit_rate: number;
   avg_latency_ms?: number | null;
   avg_ttfb_ms?: number | null;
   cache_hit_rate: number;
@@ -44,6 +50,9 @@ export type DashboardBreakdownItem = {
   request_count: number;
   total_tokens: number;
   total_cost: number;
+  upstream_total_cost: number;
+  profit: number;
+  profit_rate: number;
   avg_latency_ms?: number | null;
 };
 
@@ -70,6 +79,9 @@ export type DashboardActivityDay = {
   total_tokens: number;
   total_cost: number;
   base_cost: number;
+  upstream_total_cost: number;
+  profit: number;
+  profit_rate: number;
 };
 
 export type DashboardActivityResponse = {

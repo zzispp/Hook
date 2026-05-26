@@ -3,13 +3,15 @@ use types::provider::{ProviderApiKey, ProviderEndpoint, RequestCandidate};
 
 use crate::{StorageResult, json};
 
+use super::request_upstream_cost::{self, StoredUpstreamCost};
+
 #[path = "entities/mod.rs"]
 pub mod entities;
 
 pub(crate) use crate::model::provider_models;
 pub use entities::{
-    billing_group_providers, billing_rules, dimension_collectors, provider_api_keys, provider_cooldowns, provider_endpoints, providers, request_candidates,
-    request_records,
+    billing_group_providers, billing_rules, dimension_collectors, provider_api_keys, provider_cooldowns, provider_endpoints, provider_model_costs, providers,
+    request_candidates, request_records,
 };
 
 pub type ProviderRecord = providers::Model;
@@ -17,6 +19,7 @@ pub type ProviderEndpointRecord = provider_endpoints::Model;
 pub type ProviderApiKeyRecord = provider_api_keys::Model;
 pub type ProviderCooldownRecord = provider_cooldowns::Model;
 pub type ProviderModelRecord = provider_models::Model;
+pub type ProviderModelCostRecord = provider_model_costs::Model;
 pub type BillingRuleRecord = billing_rules::Model;
 pub type DimensionCollectorRecord = dimension_collectors::Model;
 pub type RequestCandidateRecord = request_candidates::Model;
@@ -69,8 +72,9 @@ impl ProviderApiKeyRecord {
 }
 
 impl RequestCandidateRecord {
-    pub fn response(self) -> RequestCandidate {
-        RequestCandidate {
+    pub fn response(self) -> StorageResult<RequestCandidate> {
+        let upstream_cost = request_upstream_cost::response(StoredUpstreamCost::from_candidate_record(&self))?;
+        Ok(RequestCandidate {
             id: self.id,
             request_id: self.request_id,
             token_id: self.token_id,
@@ -106,6 +110,7 @@ impl RequestCandidateRecord {
             usage_source: self.usage_source,
             usage_semantic: self.usage_semantic,
             service_tier: self.service_tier,
+            upstream_cost,
             input_cost: self.input_cost,
             output_cost: self.output_cost,
             cache_creation_cost: self.cache_creation_cost,
@@ -130,7 +135,7 @@ impl RequestCandidateRecord {
             created_at: format_timestamp(self.created_at),
             started_at: self.started_at.map(format_timestamp),
             finished_at: self.finished_at.map(format_timestamp),
-        }
+        })
     }
 }
 

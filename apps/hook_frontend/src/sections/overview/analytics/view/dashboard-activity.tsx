@@ -14,6 +14,7 @@ import { useTheme, alpha as hexAlpha } from '@mui/material/styles';
 import {
   formatPlainInteger,
   formatDashboardTokens,
+  formatDashboardPercent,
   formatDashboardCostDetail,
 } from './dashboard-format';
 
@@ -32,10 +33,12 @@ const ACTIVITY_GRID_ROWS = {
 export function ActivityGridCard({
   t,
   loading,
+  isAdmin,
   activity,
 }: {
   t: TFunction<'admin'>;
   loading: boolean;
+  isAdmin: boolean;
   activity?: DashboardActivityResponse;
 }) {
   const theme = useTheme();
@@ -50,7 +53,7 @@ export function ActivityGridCard({
       />
       <Box sx={{ p: 3, minWidth: 0 }}>
         {loading ? <Skeleton variant="rectangular" height={126} /> : null}
-        {!loading ? <ActivityCells t={t} theme={theme} days={activity?.days ?? []} max={max} /> : null}
+        {!loading ? <ActivityCells t={t} theme={theme} days={activity?.days ?? []} max={max} isAdmin={isAdmin} /> : null}
         <ActivityLegend t={t} theme={theme} />
       </Box>
     </Card>
@@ -62,11 +65,13 @@ function ActivityCells({
   theme,
   days,
   max,
+  isAdmin,
 }: {
   t: TFunction<'admin'>;
   theme: Theme;
   days: DashboardActivityResponse['days'];
   max: number;
+  isAdmin: boolean;
 }) {
   return (
     <Box
@@ -79,7 +84,7 @@ function ActivityCells({
       }}
     >
       {days.map((day) => (
-        <Tooltip key={day.date} arrow title={<ActivityTooltip t={t} day={day} />}>
+        <Tooltip key={day.date} arrow title={<ActivityTooltip t={t} day={day} isAdmin={isAdmin} />}>
           <Box
             sx={{
               width: ACTIVITY_CELL_SIZE,
@@ -97,9 +102,11 @@ function ActivityCells({
 function ActivityTooltip({
   t,
   day,
+  isAdmin,
 }: {
   t: TFunction<'admin'>;
   day: DashboardActivityResponse['days'][number];
+  isAdmin: boolean;
 }) {
   return (
     <Stack spacing={0.5}>
@@ -113,10 +120,30 @@ function ActivityTooltip({
         · {formatDashboardTokens(day.total_tokens)}
       </Typography>
       <Typography variant="caption" sx={{ color: 'common.white' }}>
-        {t('dashboard.stats.activity.cost')}{formatDashboardCostDetail(day.total_cost)} ·{' '}
-        {t('dashboard.stats.activity.baseCost')}{formatDashboardCostDetail(day.base_cost)}
+        {t('dashboard.stats.activity.cost')}{formatDashboardCostDetail(day.total_cost)}
       </Typography>
+      {isAdmin ? <AdminCostRows t={t} day={day} /> : null}
     </Stack>
+  );
+}
+
+function AdminCostRows({
+  t,
+  day,
+}: {
+  t: TFunction<'admin'>;
+  day: DashboardActivityResponse['days'][number];
+}) {
+  return (
+    <>
+      <Typography variant="caption" sx={{ color: 'common.white' }}>
+        {t('dashboard.stats.activity.upstreamCost')}{formatDashboardCostDetail(day.upstream_total_cost)}
+      </Typography>
+      <Typography variant="caption" sx={{ color: 'common.white' }}>
+        {t('dashboard.stats.activity.profit')}{formatDashboardCostDetail(day.profit)} ·{' '}
+        {t('dashboard.stats.activity.profitRate')}{formatDashboardPercent(day.profit_rate)}
+      </Typography>
+    </>
   );
 }
 

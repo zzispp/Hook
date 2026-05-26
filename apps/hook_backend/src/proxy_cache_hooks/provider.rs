@@ -3,8 +3,8 @@ use provider::application::{ProviderApiKeySecret, ProviderError, ProviderReposit
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderUpdate,
-    RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
+    ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::cache::{ProxyCacheInvalidator, combine_cache_results};
@@ -124,6 +124,26 @@ where
 
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()> {
         self.inner.delete_model_binding(provider_id, model_id).await?;
+        self.refresh_scheduling().await
+    }
+
+    async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse> {
+        self.inner.list_model_costs(provider_id).await
+    }
+
+    async fn upsert_model_costs(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderModelCostBatchUpsert,
+    ) -> ProviderResult<ProviderModelCostListResponse> {
+        let response = self.inner.upsert_model_costs(provider_id, key_id, input).await?;
+        self.refresh_scheduling().await?;
+        Ok(response)
+    }
+
+    async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {
+        self.inner.delete_model_cost(provider_id, key_id, provider_model_id).await?;
         self.refresh_scheduling().await
     }
 

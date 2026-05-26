@@ -267,8 +267,6 @@ mod tests {
                         reasoning_effort: None,
                     }),
                     is_active: true,
-                    price_per_request: None,
-                    tiered_pricing: None,
                 }],
             }],
         }

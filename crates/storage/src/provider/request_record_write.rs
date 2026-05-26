@@ -7,7 +7,7 @@ use crate::{StorageError, StorageResult, json};
 
 use super::{
     RequestBillingRecordPatch, RequestBillingRecordValues, RequestRecordRecordInput, RequestRecordRecordPatch, record::request_records,
-    repository::ProviderStore,
+    repository::ProviderStore, request_upstream_cost,
 };
 
 pub async fn create_request_record(store: &ProviderStore, input: RequestRecordRecordInput) -> StorageResult<()> {
@@ -79,6 +79,19 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         usage_source: Set(None),
         usage_semantic: Set(None),
         service_tier: Set(None),
+        upstream_cost_mode: Set(None),
+        upstream_cost_source: Set(None),
+        upstream_price_per_request: Set(None),
+        upstream_input_price_per_million: Set(None),
+        upstream_output_price_per_million: Set(None),
+        upstream_cache_creation_price_per_million: Set(None),
+        upstream_cache_read_price_per_million: Set(None),
+        upstream_request_cost: Set(None),
+        upstream_input_cost: Set(None),
+        upstream_output_cost: Set(None),
+        upstream_cache_creation_cost: Set(None),
+        upstream_cache_read_cost: Set(None),
+        upstream_total_cost: Set(None),
         input_cost: Set(None),
         output_cost: Set(None),
         cache_creation_cost: Set(None),
@@ -106,6 +119,7 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         finished_at: Set(None),
         updated_at: Set(now),
     };
+    request_upstream_cost::apply_request_values(&mut record, input.upstream_cost);
     apply_billing_values(&mut record, input.billing)?;
     Ok(record)
 }
@@ -172,6 +186,7 @@ fn apply_request_record_patch(
     apply_i64_patch(&mut active.cache_creation_1h_input_tokens, input.cache_creation_1h_input_tokens);
     apply_string_patch(&mut active.usage_source, input.usage_source);
     apply_string_patch(&mut active.usage_semantic, input.usage_semantic);
+    request_upstream_cost::apply_request_patch(active, input.upstream_cost);
     apply_billing_patch(active, input.billing)?;
     apply_json_patch(&mut active.billing_snapshot, input.billing_snapshot)?;
     apply_i64_patch(&mut active.first_byte_time_ms, input.first_byte_time_ms);

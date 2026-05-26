@@ -153,8 +153,6 @@ async fn load_model_bindings(store: &ProviderStore, provider_id: &str) -> Result
             provider_model_name: model.provider_model_name,
             provider_model_mapping: model.provider_model_mapping,
             is_active: model.is_active,
-            price_per_request: model.price_per_request,
-            tiered_pricing: model.tiered_pricing,
         })
         .collect())
 }

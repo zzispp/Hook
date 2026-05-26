@@ -5,7 +5,7 @@ use crate::{StorageError, StorageResult, json};
 
 use super::{
     RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, record::request_candidates, repository::ProviderStore,
-    request_record_write::ensure_accounting_cost_currency,
+    request_record_write::ensure_accounting_cost_currency, request_upstream_cost,
 };
 
 pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandidateRecordInput) -> StorageResult<types::provider::RequestCandidate> {
@@ -54,6 +54,19 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         usage_source: Set(input.usage_source),
         usage_semantic: Set(input.usage_semantic),
         service_tier: Set(None),
+        upstream_cost_mode: Set(None),
+        upstream_cost_source: Set(None),
+        upstream_price_per_request: Set(None),
+        upstream_input_price_per_million: Set(None),
+        upstream_output_price_per_million: Set(None),
+        upstream_cache_creation_price_per_million: Set(None),
+        upstream_cache_read_price_per_million: Set(None),
+        upstream_request_cost: Set(None),
+        upstream_input_cost: Set(None),
+        upstream_output_cost: Set(None),
+        upstream_cache_creation_cost: Set(None),
+        upstream_cache_read_cost: Set(None),
+        upstream_total_cost: Set(None),
         cost_currency: Set(None),
         input_cost: Set(None),
         output_cost: Set(None),
@@ -79,9 +92,10 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         started_at: Set(input.started.then_some(now)),
         finished_at: Set(input.finished.then_some(now)),
     };
+    request_upstream_cost::apply_candidate_values(&mut record, input.upstream_cost);
     apply_billing_values(&mut record, input.billing)?;
     let record = record.insert(store.connection()).await?;
-    Ok(record.response())
+    record.response()
 }
 
 pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandidateRecordPatch) -> StorageResult<types::provider::RequestCandidate> {
@@ -116,6 +130,7 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     record.cache_creation_1h_input_tokens = Set(input.cache_creation_1h_input_tokens);
     record.usage_source = Set(input.usage_source);
     record.usage_semantic = Set(input.usage_semantic);
+    request_upstream_cost::apply_candidate_patch(&mut record, input.upstream_cost);
     apply_billing_values(&mut record, input.billing)?;
     apply_json_patch(&mut record.billing_snapshot, input.billing_snapshot)?;
     record.latency_ms = Set(input.latency_ms);
@@ -135,7 +150,7 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
         record.finished_at = Set(Some(now));
     }
     let record = record.update(store.connection()).await?;
-    Ok(record.response())
+    record.response()
 }
 
 fn apply_billing_values(record: &mut request_candidates::ActiveModel, billing: RequestBillingRecordValues) -> StorageResult<()> {
@@ -180,7 +195,7 @@ pub async fn list_request_candidates(store: &ProviderStore, request: RequestCand
         query = query.filter(request_candidates::Column::RequestId.eq(request_id));
     }
     let records = query.offset(request.skip).limit(request.limit).all(store.connection()).await?;
-    Ok(records.into_iter().map(|record| record.response()).collect())
+    records.into_iter().map(|record| record.response()).collect()
 }
 
 fn apply_json_patch(active: &mut sea_orm::ActiveValue<Option<String>>, patch: types::model::PatchField<serde_json::Value>) -> StorageResult<()> {

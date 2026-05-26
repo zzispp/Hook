@@ -19,7 +19,12 @@ import Typography from '@mui/material/Typography';
 import ListItemText from '@mui/material/ListItemText';
 
 import { useTranslate } from 'src/locales/use-locales';
-import { useProviderModels, useProviderApiKeys, useProviderEndpoints } from 'src/actions/providers';
+import {
+  useProviderModels,
+  useProviderApiKeys,
+  useProviderEndpoints,
+  useProviderModelCosts,
+} from 'src/actions/providers';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
@@ -27,6 +32,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { EnabledLabel } from './shared';
 import { EmptyList } from './provider-bindings-shared';
 import { ProviderApiKeysSection } from './provider-api-keys-section';
+import { ProviderModelCostsSection } from './provider-model-costs-section';
 import { ProviderModelBindingsSection } from './provider-model-bindings-section';
 import { ProviderModelMappingsSection } from './provider-model-mappings-section';
 import { formatApiFormat, defaultEndpointPath } from './provider-management-utils';
@@ -48,6 +54,7 @@ export function ProviderBindingsPanel({
   const endpoints = useProviderEndpoints(provider?.id);
   const apiKeys = useProviderApiKeys(provider?.id);
   const providerModels = useProviderModels(provider?.id);
+  const providerModelCosts = useProviderModelCosts(provider?.id);
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose} slotProps={drawerSlotProps}>
@@ -62,6 +69,8 @@ export function ProviderBindingsPanel({
             apiKeyLoading={apiKeys.isLoading}
             providerModelItems={providerModels.items}
             providerModelLoading={providerModels.isLoading}
+            providerModelCostItems={providerModelCosts.items}
+            providerModelCostLoading={providerModelCosts.isLoading}
             models={models}
             dialogs={dialogs}
           />
@@ -92,6 +101,8 @@ type ProviderBindingsContentProps = {
   apiKeyLoading: boolean;
   providerModelItems: ReturnType<typeof useProviderModels>['items'];
   providerModelLoading: boolean;
+  providerModelCostItems: ReturnType<typeof useProviderModelCosts>['items'];
+  providerModelCostLoading: boolean;
   models: GlobalModelResponse[];
   dialogs: ReturnType<typeof useProviderChildDialogs>;
 };
@@ -121,6 +132,14 @@ function ProviderBindingsContent(props: ProviderBindingsContentProps) {
         providerId={props.providerId}
         items={props.providerModelItems}
         loading={props.providerModelLoading}
+        models={props.models}
+      />
+      <ProviderModelCostsSection
+        providerId={props.providerId}
+        apiKeys={props.apiKeyItems}
+        bindings={props.providerModelItems}
+        costs={props.providerModelCostItems}
+        loading={props.providerModelCostLoading}
         models={props.models}
       />
     </Stack>

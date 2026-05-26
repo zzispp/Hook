@@ -7,8 +7,8 @@ use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
     BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord,
-    ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelRecordInput, ProviderModelRecordPatch,
-    ProviderRecordInput, ProviderRecordPatch,
+    ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
+    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
     record::{
         provider_api_keys, provider_endpoints, provider_models,
         providers::{self, ActiveModel as ProviderActiveModel},
@@ -191,6 +191,22 @@ impl ProviderStore {
 
     pub async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> StorageResult<()> {
         super::provider_model_query::delete_model_binding(self, provider_id, model_id).await
+    }
+
+    pub async fn list_model_costs(&self, provider_id: &str) -> StorageResult<Vec<types::provider::ProviderModelCost>> {
+        super::provider_model_cost_query::list_model_costs(self, provider_id).await
+    }
+
+    pub async fn upsert_model_costs(&self, inputs: Vec<ProviderModelCostRecordInput>) -> StorageResult<Vec<types::provider::ProviderModelCost>> {
+        super::provider_model_cost_query::upsert_model_costs(self, inputs).await
+    }
+
+    pub async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> StorageResult<()> {
+        super::provider_model_cost_query::delete_model_cost(self, provider_id, key_id, provider_model_id).await
+    }
+
+    pub async fn find_model_cost(&self, key_id: &str, provider_model_id: &str) -> StorageResult<Option<types::provider::ProviderModelCost>> {
+        super::provider_model_cost_query::find_model_cost(self, key_id, provider_model_id).await
     }
 
     pub async fn upsert_provider_cooldown(&self, input: ProviderCooldownRecordInput) -> StorageResult<types::provider::ProviderCooldown> {

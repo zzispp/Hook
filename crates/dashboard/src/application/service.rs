@@ -57,6 +57,7 @@ where
                 end_date: window.end_date,
                 started_at: window.started_at,
                 ended_at: window.ended_at,
+                admin: is_admin(&actor),
                 tz_offset_minutes: request.tz_offset_minutes,
             })
             .await

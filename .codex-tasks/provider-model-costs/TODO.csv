@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Implement backend schema and API,DONE,Provider model cost data types repository routes and permissions compile,cargo check -q,2026-05-26,0,
+2,Wire upstream cost snapshots into request records,IN_PROGRESS,Successful requests store independent upstream cost fields without affecting wallet billing,cargo test -q provider --lib,,0,
+3,Build frontend model cost UI and request billing split,DONE,Provider drawer can manage costs and request drawer renders readable cost sections,pnpm lint:frontend,2026-05-26,0,
+4,Run validation,TODO,Rust tests and frontend checks complete,just test && pnpm lint:frontend && pnpm build:frontend,,0,
