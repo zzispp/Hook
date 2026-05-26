@@ -1,12 +1,14 @@
 mod body;
 mod consume;
 mod finalize;
+mod timing;
 
 use std::{
     collections::VecDeque,
     time::{Duration, Instant},
 };
 
+use axum::http::{HeaderMap, HeaderValue};
 use proxy::format_conversion::{ApiFormat, StreamConversionState};
 
 use super::{
@@ -14,14 +16,16 @@ use super::{
     body_capture::StreamBodyCapture,
     estimated_usage::StreamUsageEstimator,
     event::{render_keepalive, stream_error},
-    record::{StreamCancelledRecordInput, cancelled_record, record_stream_attempt, response_read_error_type, streaming_record},
+    preflight::inspect_provider_error,
+    record::{StreamCancelledRecordInput, cancelled_record, record_stream_attempt, response_read_error_type},
     status::{StreamEndReason, StreamStatus},
+    terminal::StreamClientFailure,
     usage_parser::StreamUsageParser,
 };
 use crate::llm_proxy::{LlmProxyError, audit::TokenUsage};
+use timing::next_upstream_wait_timeout;
 
 type DownstreamItem = Result<req::Bytes, std::io::Error>;
-const SSE_KEEPALIVE_INTERVAL_SECS: u64 = 10;
 
 pub(super) struct StreamRelay {
     context: StreamAttemptContext,
@@ -46,6 +50,7 @@ pub(super) struct StreamRelay {
     openai_done_sent: bool,
     stream_status: StreamStatus,
     body_capture: StreamBodyCapture,
+    client_failure: Option<StreamClientFailure>,
 }
 
 pub(super) async fn next_body_item(mut relay: StreamRelay) -> Option<(DownstreamItem, StreamRelay)> {
@@ -83,6 +88,7 @@ impl StreamRelay {
             openai_done_sent: false,
             stream_status: StreamStatus::default(),
             body_capture: StreamBodyCapture::default(),
+            client_failure: None,
         }
     }
 
@@ -100,9 +106,31 @@ impl StreamRelay {
     pub(super) async fn record_first_byte_timeout(&mut self) -> Result<(), LlmProxyError> {
         self.stream_status
             .set_end_reason(StreamEndReason::Timeout, Some("stream first byte timeout".into()));
-        self.record_failure("upstream_timeout", "stream first byte timeout").await?;
+        self.record_failure("first_byte_timeout", "stream first byte timeout").await?;
         self.finished = true;
         Ok(())
+    }
+
+    pub(super) async fn record_streaming_started(&mut self, upstream_headers: HeaderMap, content_type: Option<&HeaderValue>) -> Result<(), LlmProxyError> {
+        super::record_stream_headers(&self.context, upstream_headers, content_type, self.first_byte_time_ms).await
+    }
+
+    pub(super) fn prefetch_failure_response(&self) -> Result<Option<axum::response::Response>, LlmProxyError> {
+        if self.finished && self.client_failure.is_some() && !self.yielded_any {
+            return self.failure_response().map(Some);
+        }
+        Ok(None)
+    }
+
+    pub(super) fn failure_response(&self) -> Result<axum::response::Response, LlmProxyError> {
+        let Some(failure) = &self.client_failure else {
+            return Err(LlmProxyError::Upstream("stream preflight failed without terminal client response".into()));
+        };
+        super::super::transport::response_builder(failure.status, Some(crate::llm_proxy::client_error::json_content_type()))
+            .body(axum::body::Body::from(
+                failure.body().map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?,
+            ))
+            .map_err(super::super::transport::response_error)
     }
 
     async fn next_item(&mut self) -> Option<DownstreamItem> {
@@ -130,7 +158,14 @@ impl StreamRelay {
         match item {
             Ok(bytes) => {
                 self.last_upstream_item_at = Instant::now();
+                self.record_provider_first_byte();
                 self.record_provider_body(&bytes);
+                if fail_before_output && let Some(error) = inspect_provider_error(&bytes) {
+                    self.stream_status.set_end_reason(StreamEndReason::ScannerError, Some(error.message.clone()));
+                    self.record_failure(error.error_type, &error.message).await?;
+                    self.finished = true;
+                    return Err(LlmProxyError::Upstream(error.message));
+                }
                 self.consume_bytes(bytes, fail_before_output).await
             }
             Err(error) => self.record_read_error(&error).await.and_then(|()| Err(error.into())),
@@ -151,7 +186,7 @@ impl StreamRelay {
         let message = "stream idle timeout";
         self.stream_status.record_error(message);
         self.stream_status.set_end_reason(StreamEndReason::Timeout, Some(message.into()));
-        if let Err(error) = self.record_failure("upstream_timeout", message).await {
+        if let Err(error) = self.record_failure("stream_idle_timeout", message).await {
             return Err(stream_error(error.to_string()));
         }
         self.finished = true;
@@ -162,12 +197,6 @@ impl StreamRelay {
         if self.yielded_any {
             return self.client_item(bytes);
         }
-        let first_byte = self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX);
-        let record = streaming_record(&self.context, first_byte);
-        if let Err(error) = record_stream_attempt(record).await {
-            return Err(stream_error(error.to_string()));
-        }
-        self.first_byte_time_ms = Some(first_byte);
         self.yielded_any = true;
         self.body_capture.record_client_sent(&bytes);
         if self.protocol_completed
@@ -197,6 +226,13 @@ impl StreamRelay {
         self.stream_status.set_end_reason(reason, Some(error_message.clone()));
         self.record_failure(response_read_error_type(error), &error_message).await
     }
+
+    fn record_provider_first_byte(&mut self) {
+        if self.first_byte_time_ms.is_some() {
+            return;
+        }
+        self.first_byte_time_ms = Some(self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
+    }
 }
 
 enum NextUpstreamItem {
@@ -211,28 +247,6 @@ struct UpstreamWaitTimeout {
     idle_deadline: bool,
 }
 
-fn next_upstream_wait_timeout(last_upstream_item_at: Instant, idle_timeout: Option<Duration>) -> UpstreamWaitTimeout {
-    let keepalive = Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS);
-    let Some(idle_timeout) = idle_timeout else {
-        return UpstreamWaitTimeout {
-            wait: keepalive,
-            idle_deadline: false,
-        };
-    };
-    let elapsed = last_upstream_item_at.elapsed();
-    if elapsed >= idle_timeout {
-        return UpstreamWaitTimeout {
-            wait: Duration::ZERO,
-            idle_deadline: true,
-        };
-    }
-    let remaining = idle_timeout - elapsed;
-    UpstreamWaitTimeout {
-        wait: remaining.min(keepalive),
-        idle_deadline: remaining <= keepalive,
-    }
-}
-
 impl Drop for StreamRelay {
     fn drop(&mut self) {
         if self.recorded_terminal || self.finished {
@@ -243,44 +257,13 @@ impl Drop for StreamRelay {
         let record = cancelled_record(StreamCancelledRecordInput {
             context: &self.context,
             usage: self.usage,
-            first_byte_time_ms: self.first_byte_time_ms,
             status: &self.stream_status,
-            bodies: self.cancelled_response_bodies(),
+            observability: self.cancelled_observability(),
         });
         tokio::spawn(async move {
             if let Err(error) = record_stream_attempt(record).await {
                 hook_tracing::warn_with_fields!("failed to record cancelled streaming request candidate", error = error);
             }
         });
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{SSE_KEEPALIVE_INTERVAL_SECS, next_upstream_wait_timeout};
-    use std::time::{Duration, Instant};
-
-    #[test]
-    fn upstream_wait_uses_keepalive_when_idle_timeout_is_missing() {
-        let timeout = next_upstream_wait_timeout(Instant::now(), None);
-
-        assert_eq!(timeout.wait, Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS));
-        assert!(!timeout.idle_deadline);
-    }
-
-    #[test]
-    fn upstream_wait_marks_idle_deadline_before_next_keepalive() {
-        let timeout = next_upstream_wait_timeout(Instant::now() - Duration::from_secs(25), Some(Duration::from_secs(30)));
-
-        assert!(timeout.wait <= Duration::from_secs(5));
-        assert!(timeout.idle_deadline);
-    }
-
-    #[test]
-    fn upstream_wait_keeps_ping_before_later_idle_deadline() {
-        let timeout = next_upstream_wait_timeout(Instant::now(), Some(Duration::from_secs(30)));
-
-        assert_eq!(timeout.wait, Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS));
-        assert!(!timeout.idle_deadline);
     }
 }

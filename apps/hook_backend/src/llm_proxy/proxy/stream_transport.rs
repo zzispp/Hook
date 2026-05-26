@@ -1,9 +1,11 @@
 mod body_capture;
 mod estimated_usage;
 mod event;
+mod preflight;
 mod record;
 mod relay;
 mod status;
+mod terminal;
 mod token_estimator;
 mod usage_parser;
 
@@ -81,25 +83,31 @@ pub async fn stream_response(args: StreamResponseArgs) -> Result<Response, LlmPr
         return stream_status_failure(context, response, upstream_headers, content_type).await;
     }
 
-    record_stream_headers(&context, upstream_headers, content_type.as_ref()).await?;
     let upstream = req::response_bytes_stream(response);
     let first_byte_timeout = timeout::remaining_stream_first_byte_timeout(started, &context.candidate);
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
-    prefetch_with_timeout(&mut relay, first_byte_timeout).await?;
+    if let Some(response) = prefetch_with_timeout(&mut relay, first_byte_timeout).await? {
+        return Ok(response);
+    }
+    relay.record_streaming_started(upstream_headers, content_type.as_ref()).await?;
     let body = Body::from_stream(stream::unfold(relay, relay::next_body_item));
     transport::response_builder(status, content_type).body(body).map_err(transport::response_error)
 }
 
-async fn prefetch_with_timeout(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<(), LlmProxyError> {
+async fn prefetch_with_timeout(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<Option<Response>, LlmProxyError> {
     match timeout {
         Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch()).await {
-            Ok(result) => result,
+            Ok(Ok(())) => relay.prefetch_failure_response(),
+            Ok(Err(error)) => relay.failure_response().map(Some).or(Err(error)),
             Err(_) => {
                 relay.record_first_byte_timeout().await?;
-                Err(LlmProxyError::Upstream("stream first byte timeout".into()))
+                relay.failure_response().map(Some)
             }
         },
-        None => relay.prefetch().await,
+        None => match relay.prefetch().await {
+            Ok(()) => relay.prefetch_failure_response(),
+            Err(error) => relay.failure_response().map(Some).or(Err(error)),
+        },
     }
 }
 
@@ -135,12 +143,18 @@ async fn stream_status_failure(
         .map_err(transport::response_error)
 }
 
-async fn record_stream_headers(context: &StreamAttemptContext, upstream_headers: HeaderMap, content_type: Option<&HeaderValue>) -> Result<(), LlmProxyError> {
+async fn record_stream_headers(
+    context: &StreamAttemptContext,
+    upstream_headers: HeaderMap,
+    content_type: Option<&HeaderValue>,
+    first_byte_time_ms: Option<i64>,
+) -> Result<(), LlmProxyError> {
     record_attempt(
         &context.state,
         &context.request_id,
         AttemptRecordInput {
             status_code: Some(context.status.as_u16() as i32),
+            first_byte_time_ms,
             provider_response_headers: PatchField::Value(upstream_headers),
             client_response_headers: transport::content_type_headers(content_type),
             client_response_body: PatchField::Null,

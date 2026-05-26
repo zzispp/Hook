@@ -56,7 +56,6 @@ pub(super) struct StartedAttemptInput<'a> {
     pub(super) state: &'a LlmProxyState,
     pub(super) request_id: &'a str,
     pub(super) candidate: &'a ProxyCandidate,
-    pub(super) is_stream: bool,
     pub(super) retry_index: i32,
     pub(super) started: Instant,
     pub(super) request: &'a req::Request,
@@ -115,7 +114,7 @@ pub(super) async fn record_started_attempt(input: StartedAttemptInput<'_>) -> Re
         input.state,
         input.request_id,
         AttemptRecordInput {
-            status: if input.is_stream { "streaming" } else { "pending" },
+            status: "pending",
             provider_request_headers: PatchField::Value(input.request.headers().clone()),
             provider_request_body: PatchField::Value(input.provider_body.clone()),
             client_response_headers: PatchField::Null,

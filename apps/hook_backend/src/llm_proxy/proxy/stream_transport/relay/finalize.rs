@@ -6,10 +6,10 @@ use crate::llm_proxy::{
     proxy::{
         response_model::rewrite_response_model_value,
         stream_transport::{
-            estimated_usage::{ESTIMATED_REQUEST_USAGE_SOURCE, ESTIMATED_USAGE_SOURCE},
             event::render_stream_event,
-            record::{StreamFailureRecordInput, StreamSuccessRecordInput, failure_record, record_stream_attempt, success_record},
+            record::{StreamTerminalRecordInput, record_stream_attempt, record_stream_cooldown, terminal_stream_record},
             status::StreamEndReason,
+            terminal::StreamTerminalSummary,
         },
     },
 };
@@ -28,7 +28,7 @@ impl StreamRelay {
             return Err(error);
         }
         self.stream_status.set_end_reason(self.finish_stream_end_reason(), None);
-        self.record_success().await?;
+        self.record_finished().await?;
         self.finished = true;
         Ok(())
     }
@@ -54,23 +54,18 @@ impl StreamRelay {
             return Err(error);
         }
         self.stream_status.set_end_reason(StreamEndReason::Done, None);
-        self.record_success().await?;
+        self.record_finished().await?;
         self.finished = true;
         Ok(())
     }
 
-    pub(super) async fn record_success(&mut self) -> Result<(), LlmProxyError> {
+    pub(super) async fn record_finished(&mut self) -> Result<(), LlmProxyError> {
         if self.recorded_terminal {
             return Ok(());
         }
-        let record = success_record(StreamSuccessRecordInput {
-            context: &self.context,
-            usage: self.usage,
-            first_byte_time_ms: self.first_byte_time_ms,
-            status: &self.stream_status,
-            bodies: self.terminal_response_bodies(),
-        });
-        record_stream_attempt(record).await?;
+        let summary = self.terminal_summary();
+        self.client_failure = summary.client_failure();
+        self.record_terminal(summary).await?;
         self.recorded_terminal = true;
         self.log_stream_status();
         Ok(())
@@ -80,15 +75,9 @@ impl StreamRelay {
         if self.recorded_terminal {
             return Ok(());
         }
-        record_stream_attempt(failure_record(StreamFailureRecordInput {
-            context: &self.context,
-            first_byte_time_ms: self.first_byte_time_ms,
-            error_type,
-            error_message,
-            status: &self.stream_status,
-            bodies: self.terminal_response_bodies(),
-        }))
-        .await?;
+        let summary = StreamTerminalSummary::provider_failure(error_type, error_message, &self.stream_status);
+        self.client_failure = summary.client_failure();
+        self.record_terminal(summary).await?;
         self.recorded_terminal = true;
         self.log_stream_status();
         Ok(())
@@ -150,16 +139,37 @@ impl StreamRelay {
         if self.protocol_completed {
             return StreamEndReason::Done;
         }
-        if matches!(
-            self.usage.and_then(|usage| usage.usage_source),
-            Some(ESTIMATED_USAGE_SOURCE | ESTIMATED_REQUEST_USAGE_SOURCE)
-        ) && matches!(
-            self.target_format,
-            ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
-        ) {
+        if requires_protocol_completion(self.target_format) {
             return StreamEndReason::UpstreamEofWithoutCompletion;
         }
         StreamEndReason::Eof
+    }
+
+    async fn record_terminal(&mut self, summary: StreamTerminalSummary) -> Result<(), LlmProxyError> {
+        let summary = summary.with_observability(self.terminal_observability());
+        let cooldown = summary.cooldown.clone();
+        let message = summary.error_message.clone();
+        record_stream_attempt(terminal_stream_record(StreamTerminalRecordInput {
+            context: &self.context,
+            usage: self.terminal_usage(&summary),
+            summary,
+        }))
+        .await?;
+        if let Some(message) = message {
+            record_stream_cooldown(&self.context, cooldown, &message).await?;
+        }
+        Ok(())
+    }
+
+    fn terminal_summary(&self) -> StreamTerminalSummary {
+        if matches!(self.stream_status.end_reason(), Some(StreamEndReason::UpstreamEofWithoutCompletion)) {
+            return StreamTerminalSummary::incomplete(&self.stream_status);
+        }
+        StreamTerminalSummary::success(self.context.status, &self.stream_status)
+    }
+
+    fn terminal_usage(&self, summary: &StreamTerminalSummary) -> Option<crate::llm_proxy::audit::TokenUsage> {
+        (summary.record_status == "success").then_some(self.usage).flatten()
     }
 
     async fn record_handler_stop_error(&mut self, error: &LlmProxyError) -> Result<(), LlmProxyError> {
@@ -188,10 +198,23 @@ impl StreamRelay {
     }
 }
 
+fn requires_protocol_completion(format: ApiFormat) -> bool {
+    matches!(
+        format,
+        ApiFormat::OpenAiChat
+            | ApiFormat::OpenAiCompletion
+            | ApiFormat::OpenAiResponses
+            | ApiFormat::OpenAiResponsesCompact
+            | ApiFormat::ClaudeChat
+            | ApiFormat::GeminiChat
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use proxy::format_conversion::ApiFormat;
 
+    use super::requires_protocol_completion;
     use crate::llm_proxy::proxy::stream_transport::estimated_usage::StreamUsageEstimator;
 
     #[test]
@@ -228,5 +251,26 @@ mod tests {
         assert!(usage.completion_tokens.expect("completion tokens") > 0);
         assert_eq!(usage.usage_source, Some("estimated_from_stream_delta"));
         assert_eq!(usage.usage_semantic, Some("openai"));
+    }
+
+    #[test]
+    fn chat_stream_formats_require_protocol_completion() {
+        for format in [
+            ApiFormat::OpenAiChat,
+            ApiFormat::OpenAiCompletion,
+            ApiFormat::OpenAiResponses,
+            ApiFormat::OpenAiResponsesCompact,
+            ApiFormat::ClaudeChat,
+            ApiFormat::GeminiChat,
+        ] {
+            assert!(requires_protocol_completion(format), "{format:?} should require terminal event");
+        }
+    }
+
+    #[test]
+    fn non_chat_stream_formats_can_end_with_plain_eof() {
+        for format in [ApiFormat::OpenAiEmbedding, ApiFormat::OpenAiImage, ApiFormat::Rerank] {
+            assert!(!requires_protocol_completion(format), "{format:?} should allow plain eof");
+        }
     }
 }

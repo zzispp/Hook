@@ -90,6 +90,10 @@ impl StreamStatus {
         }
     }
 
+    pub(super) fn end_reason(&self) -> Option<StreamEndReason> {
+        self.end_reason
+    }
+
     pub(super) fn stream_end_reason_patch(&self) -> PatchField<String> {
         match self.end_reason {
             Some(reason) => PatchField::Value(reason.as_str().into()),

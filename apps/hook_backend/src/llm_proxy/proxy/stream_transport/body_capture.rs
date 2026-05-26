@@ -15,15 +15,27 @@ pub(super) struct StreamResponseBodyPatches {
 pub(super) struct StreamBodyCapture {
     provider: Vec<u8>,
     client_sent: Vec<u8>,
+    provider_frame_count: usize,
+    client_sent_frame_count: usize,
 }
 
 impl StreamBodyCapture {
     pub(super) fn record_provider(&mut self, bytes: &[u8]) {
+        self.provider_frame_count += 1;
         self.provider.extend_from_slice(bytes);
     }
 
     pub(super) fn record_client_sent(&mut self, bytes: &[u8]) {
+        self.client_sent_frame_count += 1;
         self.client_sent.extend_from_slice(bytes);
+    }
+
+    pub(super) fn provider_frame_count(&self) -> usize {
+        self.provider_frame_count
+    }
+
+    pub(super) fn client_sent_frame_count(&self) -> usize {
+        self.client_sent_frame_count
     }
 
     pub(super) fn terminal_bodies(&self, pending: &VecDeque<req::Bytes>) -> StreamResponseBodyPatches {

@@ -5,10 +5,13 @@ use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
     audit::{AttemptRecordInput, TokenUsage, record_attempt},
     candidate::ProxyCandidate,
-    proxy::transport,
 };
 
-use super::{StreamAttemptContext, body_capture::StreamResponseBodyPatches, status::StreamStatus};
+use super::{
+    StreamAttemptContext,
+    status::StreamStatus,
+    terminal::{StreamCooldownFailure, StreamTerminalObservability, StreamTerminalSummary},
+};
 
 pub(super) struct StreamAttemptRecord {
     pub(super) state: LlmProxyState,
@@ -55,81 +58,34 @@ pub(super) async fn record_stream_attempt(input: StreamAttemptRecord) -> Result<
     .await
 }
 
-pub(super) fn streaming_record(context: &StreamAttemptContext, first_byte_elapsed: i64) -> StreamAttemptRecord {
-    StreamAttemptRecord {
-        state: context.state.clone(),
-        request_id: context.request_id.clone(),
-        candidate: context.candidate.clone(),
-        retry_index: context.retry_index,
-        status: "streaming",
-        status_code: Some(context.status.as_u16() as i32),
-        usage: None,
-        latency_ms: None,
-        first_byte_time_ms: Some(first_byte_elapsed),
-        error_type: None,
-        error_message: None,
-        provider_response_body: PatchField::Missing,
-        client_response_body: PatchField::Missing,
-        termination_origin: PatchField::Missing,
-        termination_reason: PatchField::Missing,
-        stream_end_reason: PatchField::Missing,
-        finished: false,
-    }
-}
-
-pub(super) struct StreamSuccessRecordInput<'a> {
+pub(super) struct StreamTerminalRecordInput<'a> {
     pub(super) context: &'a StreamAttemptContext,
     pub(super) usage: Option<TokenUsage>,
-    pub(super) first_byte_time_ms: Option<i64>,
-    pub(super) status: &'a StreamStatus,
-    pub(super) bodies: StreamResponseBodyPatches,
+    pub(super) summary: StreamTerminalSummary,
 }
 
-pub(super) fn success_record(input: StreamSuccessRecordInput<'_>) -> StreamAttemptRecord {
+pub(super) fn terminal_stream_record(input: StreamTerminalRecordInput<'_>) -> StreamAttemptRecord {
+    let summary = input.summary;
     let mut record = terminal_record(TerminalRecordInput {
         context: input.context,
-        status: "success",
-        status_code: Some(input.context.status.as_u16() as i32),
+        status: summary.record_status,
+        status_code: Some(summary.status_code),
         usage: input.usage,
-        first_byte_time_ms: input.first_byte_time_ms,
-        error_type: None,
-        error_message: None,
-        bodies: input.bodies,
+        observability: summary.observability.clone(),
+        error_type: summary.error_type,
+        error_message: summary.error_message,
     });
-    record.stream_end_reason = input.status.stream_end_reason_patch();
-    record
-}
-
-pub(super) struct StreamFailureRecordInput<'a> {
-    pub(super) context: &'a StreamAttemptContext,
-    pub(super) first_byte_time_ms: Option<i64>,
-    pub(super) error_type: &'static str,
-    pub(super) error_message: &'a str,
-    pub(super) status: &'a StreamStatus,
-    pub(super) bodies: StreamResponseBodyPatches,
-}
-
-pub(super) fn failure_record(input: StreamFailureRecordInput<'_>) -> StreamAttemptRecord {
-    let mut record = terminal_record(TerminalRecordInput {
-        context: input.context,
-        status: "failed",
-        status_code: Some(input.context.status.as_u16() as i32),
-        usage: None,
-        first_byte_time_ms: input.first_byte_time_ms,
-        error_type: Some(input.error_type),
-        error_message: Some(input.error_message.to_owned()),
-        bodies: input.bodies,
-    });
-    record.stream_end_reason = input.status.stream_end_reason_patch();
+    record.termination_origin = summary.termination_origin;
+    record.termination_reason = summary.termination_reason;
+    record.stream_end_reason = summary.stream_end_reason;
     record
 }
 
 pub(super) struct StreamCancelledRecordInput<'a> {
     pub(super) context: &'a StreamAttemptContext,
     pub(super) usage: Option<TokenUsage>,
-    pub(super) first_byte_time_ms: Option<i64>,
     pub(super) status: &'a StreamStatus,
-    pub(super) bodies: StreamResponseBodyPatches,
+    pub(super) observability: StreamTerminalObservability,
 }
 
 pub(super) fn cancelled_record(input: StreamCancelledRecordInput<'_>) -> StreamAttemptRecord {
@@ -142,10 +98,9 @@ pub(super) fn cancelled_record(input: StreamCancelledRecordInput<'_>) -> StreamA
             status: "cancelled",
             status_code: Some(499),
             usage: input.usage,
-            first_byte_time_ms: input.first_byte_time_ms,
+            observability: input.observability,
             error_type: Some("client_disconnected"),
             error_message: Some("client disconnected before stream completed".into()),
-            bodies: input.bodies,
         })
     }
 }
@@ -155,10 +110,9 @@ struct TerminalRecordInput<'a> {
     status: &'static str,
     status_code: Option<i32>,
     usage: Option<TokenUsage>,
-    first_byte_time_ms: Option<i64>,
+    observability: StreamTerminalObservability,
     error_type: Option<&'static str>,
     error_message: Option<String>,
-    bodies: StreamResponseBodyPatches,
 }
 
 fn terminal_record(input: TerminalRecordInput<'_>) -> StreamAttemptRecord {
@@ -170,12 +124,12 @@ fn terminal_record(input: TerminalRecordInput<'_>) -> StreamAttemptRecord {
         status: input.status,
         status_code: input.status_code,
         usage: input.usage,
-        latency_ms: Some(transport::elapsed_ms(input.context.started)),
-        first_byte_time_ms: input.first_byte_time_ms,
+        latency_ms: Some(input.observability.latency_ms),
+        first_byte_time_ms: input.observability.first_byte_time_ms,
         error_type: input.error_type,
         error_message: input.error_message,
-        provider_response_body: input.bodies.provider_response_body,
-        client_response_body: input.bodies.client_response_body,
+        provider_response_body: input.observability.bodies.provider_response_body,
+        client_response_body: input.observability.bodies.client_response_body,
         termination_origin: PatchField::Null,
         termination_reason: PatchField::Null,
         stream_end_reason: PatchField::Null,
@@ -185,7 +139,31 @@ fn terminal_record(input: TerminalRecordInput<'_>) -> StreamAttemptRecord {
 
 pub(super) fn response_read_error_type(error: &req::ClientError) -> &'static str {
     if matches!(error, req::ClientError::Timeout) {
-        return "upstream_timeout";
+        return "stream_idle_timeout";
     }
     "upstream_response_read_error"
+}
+
+pub(super) async fn record_stream_cooldown(
+    context: &StreamAttemptContext,
+    cooldown: Option<StreamCooldownFailure>,
+    message: &str,
+) -> Result<(), LlmProxyError> {
+    let Some(cooldown) = cooldown else {
+        return Ok(());
+    };
+    context
+        .state
+        .record_provider_status_failure(crate::llm_proxy::cache::ProviderCooldownFailureInput {
+            request_id: &context.request_id,
+            candidate: &context.candidate,
+            retry_index: context.retry_index,
+            status_code: cooldown.status_code,
+            error_type: cooldown.error_type,
+            error_message: message,
+            error_code: None,
+            error_param: None,
+        })
+        .await?;
+    Ok(())
 }

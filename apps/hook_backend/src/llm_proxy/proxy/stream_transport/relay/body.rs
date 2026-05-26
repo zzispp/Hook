@@ -1,5 +1,8 @@
 use super::{DownstreamItem, StreamRelay};
-use crate::llm_proxy::proxy::stream_transport::body_capture::StreamResponseBodyPatches;
+use crate::llm_proxy::proxy::{
+    stream_transport::{body_capture::StreamResponseBodyPatches, terminal::StreamTerminalObservability},
+    transport,
+};
 
 impl StreamRelay {
     pub(super) fn record_provider_body(&mut self, bytes: &[u8]) {
@@ -21,5 +24,27 @@ impl StreamRelay {
 
     pub(super) fn cancelled_response_bodies(&self) -> StreamResponseBodyPatches {
         self.body_capture.cancelled_bodies()
+    }
+
+    pub(super) fn terminal_observability(&self) -> StreamTerminalObservability {
+        StreamTerminalObservability {
+            first_byte_time_ms: self.first_byte_time_ms,
+            latency_ms: transport::elapsed_ms(self.context.started),
+            bodies: self.terminal_response_bodies(),
+            provider_frame_count: self.body_capture.provider_frame_count(),
+            client_frame_count: self.body_capture.client_sent_frame_count() + self.pending.len(),
+            received_response_count: self.stream_status.received_response_count(),
+        }
+    }
+
+    pub(super) fn cancelled_observability(&self) -> StreamTerminalObservability {
+        StreamTerminalObservability {
+            first_byte_time_ms: self.first_byte_time_ms,
+            latency_ms: transport::elapsed_ms(self.context.started),
+            bodies: self.cancelled_response_bodies(),
+            provider_frame_count: self.body_capture.provider_frame_count(),
+            client_frame_count: self.body_capture.client_sent_frame_count(),
+            received_response_count: self.stream_status.received_response_count(),
+        }
     }
 }

@@ -70,8 +70,6 @@ mod tests {
             provider_model_name: global_model_id.to_owned(),
             provider_model_mapping: None,
             is_active: true,
-            price_per_request: None,
-            tiered_pricing: None,
             config: None,
             created_at: "2026-05-17T00:00:00Z".to_owned(),
             updated_at: "2026-05-17T00:00:00Z".to_owned(),

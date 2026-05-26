@@ -142,7 +142,6 @@ async fn attempt_once(
         state,
         request_id: &prepared.request_id,
         candidate,
-        is_stream: false,
         retry_index,
         started,
         request: &request,
