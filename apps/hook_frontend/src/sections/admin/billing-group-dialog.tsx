@@ -1,6 +1,7 @@
 'use client';
 
 import type { Provider } from 'src/types/provider';
+import type { UserGroup } from 'src/types/user-group';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { useGroupDialog } from './billing-group-management-state';
 
@@ -12,6 +13,7 @@ import ListItemText from '@mui/material/ListItemText';
 
 import { useTranslate } from 'src/locales/use-locales';
 
+import { userGroupSelectionLabel } from './user-group-utils';
 import { providerTypeLabel } from './provider-management-utils';
 import { SwitchRow, TextFieldRow, ManagementDialog } from './shared';
 
@@ -19,10 +21,12 @@ export function BillingGroupDialog({
   dialog,
   models,
   providers,
+  userGroups,
 }: {
   dialog: ReturnType<typeof useGroupDialog>;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
   providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
+  userGroups: UserGroup[];
 }) {
   const { t } = useTranslate('admin');
 
@@ -74,12 +78,55 @@ export function BillingGroupDialog({
       </Stack>
       <ModelSelect dialog={dialog} models={models} />
       <ProviderSelect dialog={dialog} providers={providers} />
+      <UserGroupSelect dialog={dialog} userGroups={userGroups} />
       <SwitchRow
         checked={dialog.form.is_active}
         label={t('common.enabled')}
         onChange={(checked) => dialog.setForm((form) => ({ ...form, is_active: checked }))}
       />
     </ManagementDialog>
+  );
+}
+
+function UserGroupSelect({
+  dialog,
+  userGroups,
+}: {
+  dialog: ReturnType<typeof useGroupDialog>;
+  userGroups: UserGroup[];
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <TextField
+      select
+      fullWidth
+      label={t('fields.visibleUserGroups')}
+      value={dialog.form.visible_user_group_codes}
+      helperText={t('helper.groupUserGroupVisibility')}
+      SelectProps={{
+        multiple: true,
+        renderValue: (selected) => userGroupSelectionLabel(selected as string[], userGroups, t),
+      }}
+      onChange={(event) =>
+        dialog.setForm((form) => ({
+          ...form,
+          visible_user_group_codes: selectedValues(event.target.value),
+        }))
+      }
+    >
+      {userGroups.length === 0 ? (
+        <MenuItem disabled value="">
+          {t('userGroups.noActiveGroups')}
+        </MenuItem>
+      ) : null}
+      {userGroups.map((group) => (
+        <MenuItem key={group.code} value={group.code}>
+          <Checkbox checked={dialog.form.visible_user_group_codes.includes(group.code)} />
+          <ListItemText primary={group.name} secondary={group.code} />
+        </MenuItem>
+      ))}
+    </TextField>
   );
 }
 

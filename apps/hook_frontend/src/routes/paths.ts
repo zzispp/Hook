@@ -37,6 +37,7 @@ export const paths = {
     admin: {
       root: `${ROOTS.DASHBOARD}/admin`,
       users: `${ROOTS.DASHBOARD}/admin/users`,
+      userGroups: `${ROOTS.DASHBOARD}/admin/user-groups`,
       roles: `${ROOTS.DASHBOARD}/admin/roles`,
       apis: `${ROOTS.DASHBOARD}/admin/apis`,
       announcements: `${ROOTS.DASHBOARD}/admin/announcements`,

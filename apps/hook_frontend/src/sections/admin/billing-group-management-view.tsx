@@ -12,6 +12,7 @@ import { useGlobalModels } from 'src/actions/models';
 import { useProviders } from 'src/actions/providers';
 import { useBillingGroups } from 'src/actions/groups';
 import { useTranslate } from 'src/locales/use-locales';
+import { useUserGroups } from 'src/actions/user-groups';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
@@ -22,6 +23,7 @@ import { BillingGroupTable } from './billing-group-table';
 import { BillingGroupDialog } from './billing-group-dialog';
 import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
 import { BillingGroupDetailDialog } from './billing-group-detail-dialog';
+import { enabledUserGroupOptions, USER_GROUP_MAX_PAGE_SIZE } from './user-group-utils';
 import { useGroupDialog, useDeleteGroupDialog } from './billing-group-management-state';
 import { toModelFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
 
@@ -48,6 +50,7 @@ export function BillingGroupManagementView() {
         />
         <BillingGroupTable
           rows={state.groups.items}
+          userGroups={state.userGroups.items}
           total={state.groups.total}
           loading={state.groups.isLoading}
           table={state.table}
@@ -69,8 +72,10 @@ function useBillingGroupManagementPage() {
   const groups = useBillingGroups(table.page, table.rowsPerPage, toModelFilters(filters));
   const models = useGlobalModels(0, 1000);
   const providers = useProviders(0, 1000);
+  const userGroups = useUserGroups(0, USER_GROUP_MAX_PAGE_SIZE);
   const dialog = useGroupDialog(t);
   const deleteDialog = useDeleteGroupDialog(t);
+  const userGroupOptions = enabledUserGroupOptions(userGroups.items);
   const handleFiltersChange = useCallback(
     (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
       table.onResetPage();
@@ -86,6 +91,8 @@ function useBillingGroupManagementPage() {
     groups,
     models,
     providers,
+    userGroups,
+    userGroupOptions,
     dialog,
     deleteDialog,
     detailTarget,
@@ -101,6 +108,7 @@ function BillingGroupDialogs({ state }: { state: ReturnType<typeof useBillingGro
         group={state.detailTarget}
         models={state.models.items}
         providers={state.providers.items}
+        userGroups={state.userGroups.items}
         open={!!state.detailTarget}
         onClose={() => state.setDetailTarget(null)}
       />
@@ -108,6 +116,7 @@ function BillingGroupDialogs({ state }: { state: ReturnType<typeof useBillingGro
         dialog={state.dialog}
         models={state.models.items}
         providers={state.providers.items}
+        userGroups={state.userGroupOptions}
       />
       <DeleteBillingGroupDialog
         open={!!state.deleteDialog.deleteTarget}

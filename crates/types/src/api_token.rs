@@ -143,6 +143,7 @@ pub struct ApiTokenResponse {
 pub struct ApiTokenOwnerResponse {
     pub username: String,
     pub email: String,
+    pub group_code: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

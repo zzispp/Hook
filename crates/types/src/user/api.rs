@@ -11,6 +11,8 @@ pub struct UserPayload {
     pub password: String,
     pub email: String,
     pub role: String,
+    #[serde(default)]
+    pub group_code: Option<String>,
     pub is_active: bool,
     #[serde(default)]
     pub allowed_model_ids: Vec<String>,
@@ -80,6 +82,8 @@ pub struct ListUsersQuery {
     #[serde(default)]
     pub role: Option<String>,
     #[serde(default)]
+    pub group_code: Option<String>,
+    #[serde(default)]
     pub is_active: Option<bool>,
 }
 
@@ -89,6 +93,7 @@ pub struct UserResponse {
     pub username: String,
     pub email: String,
     pub role: String,
+    pub group_code: String,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
@@ -132,6 +137,7 @@ impl From<UserPayload> for NewUser {
             password: value.password,
             email: value.email,
             role: value.role,
+            group_code: value.group_code,
             is_active: value.is_active,
             allowed_model_ids: value.allowed_model_ids,
             allowed_provider_ids: value.allowed_provider_ids,
@@ -148,6 +154,7 @@ impl From<UserPayload> for ReplaceUser {
             password: Some(value.password),
             email: value.email,
             role: value.role,
+            group_code: value.group_code.unwrap_or_default(),
             is_active: value.is_active,
             allowed_model_ids: value.allowed_model_ids,
             allowed_provider_ids: value.allowed_provider_ids,
@@ -208,6 +215,7 @@ impl From<ListUsersQuery> for UserListFilters {
         Self {
             search: value.search,
             role: value.role,
+            group_code: value.group_code,
             is_active: value.is_active,
         }
     }
@@ -220,6 +228,7 @@ impl From<User> for UserResponse {
             username: value.username,
             email: value.email,
             role: value.role,
+            group_code: value.group_code,
             is_active: value.is_active,
             allowed_model_ids: value.allowed_model_ids,
             allowed_provider_ids: value.allowed_provider_ids,

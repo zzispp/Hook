@@ -34,7 +34,7 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
     let token_user = token_user_for_snapshot(&snapshot, token)?;
     let user_access = user_access_for_token(token, token_user);
     ensure_user_allows_model(user_access, &model.id)?;
-    let group = active_group(&snapshot, token)?;
+    let group = active_group(&snapshot, token, token_user)?;
     ensure_group_allows_model(group, &model.id)?;
     let affinity = if matches!(snapshot.scheduling_mode, types::provider::ProviderSchedulingMode::CacheAffinity) {
         state

@@ -7,7 +7,7 @@ use storage::{
     group::GroupStore,
     model::ModelStore,
     setting::SettingStore,
-    user::UserStore,
+    user::{UserGroupStore, UserStore},
 };
 use types::{
     api_token::{ApiToken, ApiTokenListRequest, ApiTokenListResponse, ApiTokenOwnerResponse},
@@ -38,6 +38,7 @@ pub struct StorageModelAccessCatalog {
 #[derive(Clone)]
 pub struct StorageUserCatalog {
     store: UserStore,
+    user_groups: UserGroupStore,
     system_owner: Option<(String, ApiTokenOwnerResponse)>,
 }
 
@@ -77,14 +78,16 @@ impl StorageModelAccessCatalog {
 impl StorageUserCatalog {
     pub fn new(database: Database) -> Self {
         Self {
-            store: UserStore::new(database),
+            store: UserStore::new(database.clone()),
+            user_groups: UserGroupStore::new(database),
             system_owner: None,
         }
     }
 
     pub fn with_system_owner(database: Database, system_owner: Option<(String, ApiTokenOwnerResponse)>) -> Self {
         Self {
-            store: UserStore::new(database),
+            store: UserStore::new(database.clone()),
+            user_groups: UserGroupStore::new(database),
             system_owner,
         }
     }
@@ -177,6 +180,19 @@ impl UserCatalog for StorageUserCatalog {
             .map_err(storage_error)
     }
 
+    async fn user_group_code(&self, id: &str) -> ApiTokenResult<Option<String>> {
+        if system_owner_id_matches(&self.system_owner, id) {
+            return Ok(Some(constants::user_group::DEFAULT_USER_GROUP_CODE.into()));
+        }
+        let Some(user) = self.store.find_by_id(UserId(id.to_owned())).await.map_err(storage_error)? else {
+            return Ok(None);
+        };
+        if !self.user_groups.active_group_exists(&user.group_code).await.map_err(storage_error)? {
+            return Err(ApiTokenError::InvalidInput(format!("active user group does not exist: {}", user.group_code)));
+        }
+        Ok(Some(user.group_code))
+    }
+
     async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {
         let (mut owners, database_ids) = split_owner_ids(ids, &self.system_owner);
         if database_ids.is_empty() {
@@ -188,6 +204,7 @@ impl UserCatalog for StorageUserCatalog {
                 ApiTokenOwnerResponse {
                     username: user.username,
                     email: user.email,
+                    group_code: user.group_code,
                 },
             )
         }));
@@ -285,6 +302,7 @@ mod tests {
             ApiTokenOwnerResponse {
                 username: "admin".into(),
                 email: "admin@example.test".into(),
+                group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
             },
         ));
 
@@ -296,6 +314,7 @@ mod tests {
             Some(&ApiTokenOwnerResponse {
                 username: "admin".into(),
                 email: "admin@example.test".into(),
+                group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
             })
         );
     }

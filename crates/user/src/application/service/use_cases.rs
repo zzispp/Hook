@@ -61,7 +61,10 @@ where
     async fn sign_up(&self, input: SignUpUser) -> AppResult<User> {
         let settings = self.registration_policy.registration_settings().await?;
         reject_closed_registration(&settings)?;
-        let input = sanitize_sign_up_user(input);
+        let input = sanitize_sign_up_user(SignUpUser {
+            user: super::with_default_user_group(input.user, &settings.default_user_group_code),
+            email_verification_code: input.email_verification_code,
+        });
         validate_new_user(&input.user)?;
         reject_disallowed_registration_email(&settings, &input.user.email)?;
         verify_registration_email_code(&self.registration_email_code_store, &settings, &input).await?;

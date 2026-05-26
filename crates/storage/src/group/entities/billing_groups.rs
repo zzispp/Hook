@@ -34,6 +34,7 @@ impl From<Model> for BillingGroup {
             billing_multiplier: value.billing_multiplier,
             allowed_model_ids: Vec::new(),
             allowed_provider_ids: Vec::new(),
+            visible_user_group_codes: Vec::new(),
             is_active: value.is_active,
             is_system: value.is_system,
             sort_order: value.sort_order,

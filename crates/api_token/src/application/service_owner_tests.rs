@@ -12,6 +12,7 @@ use super::{
 const OWNER_ID: &str = "user-1";
 const OWNER_USERNAME: &str = "alice";
 const OWNER_EMAIL: &str = "alice@example.test";
+const OWNER_GROUP_CODE: &str = constants::user_group::DEFAULT_USER_GROUP_CODE;
 
 #[tokio::test]
 async fn admin_token_list_includes_owner_identity() {
@@ -26,6 +27,7 @@ async fn admin_token_list_includes_owner_identity() {
         Some(ApiTokenOwnerResponse {
             username: OWNER_USERNAME.into(),
             email: OWNER_EMAIL.into(),
+            group_code: OWNER_GROUP_CODE.into(),
         })
     );
 }
@@ -94,6 +96,10 @@ impl UserCatalog for OwnerUsers {
         unimplemented!("not needed for list owner tests")
     }
 
+    async fn user_group_code(&self, _id: &str) -> ApiTokenResult<Option<String>> {
+        unimplemented!("not needed for list owner tests")
+    }
+
     async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {
         assert_eq!(ids, &[OWNER_ID.to_owned()]);
         Ok(BTreeMap::from([(
@@ -101,6 +107,7 @@ impl UserCatalog for OwnerUsers {
             ApiTokenOwnerResponse {
                 username: OWNER_USERNAME.into(),
                 email: OWNER_EMAIL.into(),
+                group_code: OWNER_GROUP_CODE.into(),
             },
         )]))
     }

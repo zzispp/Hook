@@ -3,7 +3,7 @@ use types::system_setting::{
     PublicSiteInfoResponse, SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate,
 };
 
-use crate::application::{SettingRepository, SettingResult, SettingSecretCipher, SettingUseCase, SmtpConnectionTester};
+use crate::application::{SettingError, SettingRepository, SettingResult, SettingSecretCipher, SettingUseCase, SettingUserGroupCatalog, SmtpConnectionTester};
 
 use super::{
     email_config::validate_email_feature_prerequisites,
@@ -11,13 +11,14 @@ use super::{
     validation::{sanitize_update, validate_recharge_bounds, validate_update},
 };
 
-pub struct SettingService<R, C, T> {
+pub struct SettingService<R, C, T, U = NoSettingUserGroupCatalog> {
     repository: R,
     cipher: C,
     smtp_tester: T,
+    user_groups: U,
 }
 
-impl<R, C, T> SettingService<R, C, T>
+impl<R, C, T> SettingService<R, C, T, NoSettingUserGroupCatalog>
 where
     R: SettingRepository,
     C: SettingSecretCipher,
@@ -28,16 +29,18 @@ where
             repository,
             cipher,
             smtp_tester,
+            user_groups: NoSettingUserGroupCatalog,
         }
     }
 }
 
 #[async_trait]
-impl<R, C, T> SettingUseCase for SettingService<R, C, T>
+impl<R, C, T, U> SettingUseCase for SettingService<R, C, T, U>
 where
     R: SettingRepository,
     C: SettingSecretCipher,
     T: SmtpConnectionTester,
+    U: SettingUserGroupCatalog,
 {
     async fn get_system_settings(&self) -> SettingResult<SystemSettingsResponse> {
         self.repository.get_system_settings().await
@@ -53,6 +56,7 @@ where
         let current = self.repository.get_system_settings().await?;
         validate_recharge_bounds(&input, &current)?;
         validate_email_feature_prerequisites(&input, &current)?;
+        validate_default_user_group(&self.user_groups, input.default_user_group_code.as_deref()).await?;
         let encrypted_smtp_password = input
             .smtp_password
             .as_deref()
@@ -73,6 +77,40 @@ where
             Err(message) => Ok(failure_response(message)),
         }
     }
+}
+
+impl<R, C, T, U> SettingService<R, C, T, U> {
+    pub fn with_user_group_catalog<NU>(self, user_groups: NU) -> SettingService<R, C, T, NU> {
+        SettingService {
+            repository: self.repository,
+            cipher: self.cipher,
+            smtp_tester: self.smtp_tester,
+            user_groups,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct NoSettingUserGroupCatalog;
+
+#[async_trait]
+impl SettingUserGroupCatalog for NoSettingUserGroupCatalog {
+    async fn active_user_group_exists(&self, _code: &str) -> SettingResult<bool> {
+        Err(SettingError::Infrastructure("setting user group catalog is not available".into()))
+    }
+}
+
+async fn validate_default_user_group<U>(user_groups: &U, code: Option<&str>) -> SettingResult<()>
+where
+    U: SettingUserGroupCatalog,
+{
+    let Some(code) = code else {
+        return Ok(());
+    };
+    if user_groups.active_user_group_exists(code).await? {
+        return Ok(());
+    }
+    Err(SettingError::InvalidInput(format!("active user group does not exist: {code}")))
 }
 
 #[cfg(test)]

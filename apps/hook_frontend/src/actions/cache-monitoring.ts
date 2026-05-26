@@ -57,13 +57,20 @@ export async function deleteCacheAffinity(item: CacheAffinityIdentity) {
 }
 
 export async function clearCacheAffinities() {
-  await requestData<void>(axios.delete(endpoints.cacheMonitoring.clearAll));
+  await requestSuccess(axios.delete(endpoints.cacheMonitoring.clearAll));
   await mutate(isCacheMonitoringKey);
 }
 
 async function requestData<T>(request: Promise<{ data: ApiEnvelope<T> }>) {
   const response = await request;
   return requireApiData(response.data);
+}
+
+async function requestSuccess(request: Promise<{ data: ApiEnvelope<unknown> }>) {
+  const response = await request;
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Request failed');
+  }
 }
 
 function isCacheMonitoringKey(key: unknown) {

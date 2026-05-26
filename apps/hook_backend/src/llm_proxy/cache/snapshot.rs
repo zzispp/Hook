@@ -7,9 +7,15 @@ use storage::{
     model::global_models,
     provider::{ProviderStore, record::provider_api_keys},
     setting::SettingStore,
-    user::UserStore,
+    user::{UserGroupStore, UserStore},
 };
-use types::{group::BillingGroupListRequest, pagination::PageSliceRequest, provider::parse_provider_key_time_range_minute, user::UserListFilters};
+use types::{
+    group::BillingGroupListRequest,
+    pagination::{PageRequest, PageSliceRequest},
+    provider::parse_provider_key_time_range_minute,
+    user::UserListFilters,
+    user_group::{UserGroupFilters, UserGroupListRequest},
+};
 
 pub use cached_types::{
     CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
@@ -44,6 +50,7 @@ pub async fn load(database: &Database, system_users: &[CachedUserAccess]) -> Res
         provider_cooldown_policy: settings.provider_cooldown_policy,
         models: load_models(database).await?,
         groups: load_groups(database).await?,
+        active_user_group_codes: load_active_user_group_codes(database).await?,
         users: load_users(database, system_users).await?,
         providers: load_providers(database).await?,
     })
@@ -82,6 +89,7 @@ async fn load_groups(database: &Database) -> Result<Vec<CachedBillingGroup>, Llm
             billing_multiplier: group.billing_multiplier,
             allowed_model_ids: group.allowed_model_ids,
             allowed_provider_ids: group.allowed_provider_ids,
+            visible_user_group_codes: group.visible_user_group_codes,
             is_active: group.is_active,
         })
         .collect())
@@ -107,6 +115,7 @@ async fn load_users(database: &Database, system_users: &[CachedUserAccess]) -> R
             .map(|user| CachedUserAccess {
                 id: user.id.0,
                 username: user.username,
+                group_code: user.group_code,
                 is_active: user.is_active,
                 allowed_model_ids: user.allowed_model_ids,
                 allowed_provider_ids: user.allowed_provider_ids,
@@ -116,6 +125,22 @@ async fn load_users(database: &Database, system_users: &[CachedUserAccess]) -> R
             .collect::<Vec<_>>(),
     );
     Ok(users)
+}
+
+async fn load_active_user_group_codes(database: &Database) -> Result<Vec<String>, LlmProxyError> {
+    let response = UserGroupStore::new(database.clone())
+        .list_groups(UserGroupListRequest {
+            page: PageRequest {
+                page: 1,
+                page_size: SNAPSHOT_FULL_PAGE_LIMIT,
+            },
+            filters: UserGroupFilters {
+                search: None,
+                is_active: Some(true),
+            },
+        })
+        .await?;
+    Ok(response.items.into_iter().map(|group| group.code).collect())
 }
 
 async fn load_providers(database: &Database) -> Result<Vec<CachedProvider>, LlmProxyError> {

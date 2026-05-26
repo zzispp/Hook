@@ -29,6 +29,7 @@ type MeResponse = {
     username: string;
     email: string;
     role: string;
+    group_code: string;
     is_active: boolean;
     auth_source: string;
     email_verified: boolean;

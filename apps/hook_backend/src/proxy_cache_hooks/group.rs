@@ -51,8 +51,16 @@ where
         self.inner.active_groups().await
     }
 
+    async fn active_groups_for_user_group(&self, user_group_code: &str) -> GroupResult<Vec<BillingGroupResponse>> {
+        self.inner.active_groups_for_user_group(user_group_code).await
+    }
+
     async fn group_has_tokens(&self, code: &str) -> GroupResult<bool> {
         self.inner.group_has_tokens(code).await
+    }
+
+    async fn user_group_has_billing_groups(&self, user_group_code: &str) -> GroupResult<bool> {
+        self.inner.user_group_has_billing_groups(user_group_code).await
     }
 }
 

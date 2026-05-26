@@ -21,6 +21,7 @@ export type SystemSettingsForm = {
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
+  default_user_group_code: string;
   token_limit_per_user: string;
   client_request_record_level: SystemSettings['client_request_record_level'];
   client_record_request_headers: boolean;
@@ -73,6 +74,7 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   password_reset_enabled: false,
   email_config_enabled: false,
   support_ticket_email_notifications_enabled: false,
+  default_user_group_code: 'default',
   token_limit_per_user: '5',
   client_request_record_level: 'full',
   client_record_request_headers: true,
@@ -127,6 +129,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     email_config_enabled: settings.email_config_enabled,
     support_ticket_email_notifications_enabled:
       settings.support_ticket_email_notifications_enabled,
+    default_user_group_code: settings.default_user_group_code,
     token_limit_per_user: String(settings.token_limit_per_user),
     client_request_record_level: settings.client_request_record_level,
     client_record_request_headers: settings.client_record_request_headers,
@@ -182,6 +185,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     email_config_enabled: form.email_config_enabled,
     support_ticket_email_notifications_enabled:
       form.support_ticket_email_notifications_enabled,
+    default_user_group_code: form.default_user_group_code,
     token_limit_per_user: Number(form.token_limit_per_user || 0),
     client_request_record_level: form.client_request_record_level,
     client_record_request_headers: form.client_record_request_headers,

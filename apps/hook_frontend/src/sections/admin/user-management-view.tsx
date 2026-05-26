@@ -10,6 +10,7 @@ import Button from '@mui/material/Button';
 import { useGlobalModels } from 'src/actions/models';
 import { useProviders } from 'src/actions/providers';
 import { useTranslate } from 'src/locales/use-locales';
+import { useUserGroups } from 'src/actions/user-groups';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useRoles, useUsers, createUser, deleteUser, updateUser } from 'src/actions/rbac';
@@ -25,6 +26,11 @@ import { UserTokenDialog } from './user-token-dialog';
 import { UserWalletDialog } from './user-wallet-dialog';
 import { RefreshAddActions } from './admin-page-actions';
 import { toUserFilters, AdminFiltersToolbar, DEFAULT_ADMIN_FILTERS } from './admin-filters-toolbar';
+import {
+  defaultUserGroupCode,
+  enabledUserGroupOptions,
+  USER_GROUP_MAX_PAGE_SIZE,
+} from './user-group-utils';
 import {
   formFromUser,
   formToPayload,
@@ -53,11 +59,13 @@ function useUserManagementState() {
   const roles = useRoles(0, 100);
   const models = useGlobalModels(0, 1000);
   const providers = useProviders(0, 1000);
+  const userGroups = useUserGroups(0, USER_GROUP_MAX_PAGE_SIZE, { is_active: true });
   const dialog = useUserDialog(t, () => void users.refresh());
   const [deleteTarget, setDeleteTarget] = useState<SystemUser | null>(null);
   const [walletUser, setWalletUser] = useState<SystemUser | null>(null);
   const [tokenUser, setTokenUser] = useState<SystemUser | null>(null);
   const roleOptions = enabledRoleOptions(roles.items);
+  const userGroupOptions = enabledUserGroupOptions(userGroups.items);
 
   const handleFiltersChange = useCallback(
     (nextFilters: typeof DEFAULT_ADMIN_FILTERS) => {
@@ -87,9 +95,11 @@ function useUserManagementState() {
     dialog,
     filters,
     providers,
+    userGroups,
     tokenUser,
     walletUser,
     roleOptions,
+    userGroupOptions,
     deleteTarget,
     confirmDelete,
     setTokenUser,
@@ -107,7 +117,12 @@ function UserManagementHeader({ state }: { state: ReturnType<typeof useUserManag
         <RefreshAddActions
           loading={state.users.isLoading}
           addLabel={state.t('actions.addUser')}
-          onAdd={() => state.dialog.openCreate(state.roleOptions[0]?.code)}
+          onAdd={() =>
+            state.dialog.openCreate(
+              state.roleOptions[0]?.code,
+              defaultUserGroupCode(state.userGroupOptions)
+            )
+          }
           onRefresh={() => void state.users.refresh()}
         />
       }
@@ -129,6 +144,7 @@ function UserManagementTableCard({ state }: { state: ReturnType<typeof useUserMa
       <UserTable
         rows={state.users.items}
         roles={state.roles.items}
+        userGroups={state.userGroups.items}
         total={state.users.total}
         loading={state.users.isLoading}
         table={state.table}
@@ -149,6 +165,7 @@ function UserManagementDialogs({ state }: { state: ReturnType<typeof useUserMana
       <UserFormDialog
         dialog={state.dialog}
         roles={state.roleOptions}
+        userGroups={state.userGroupOptions}
         models={state.models.items}
         providers={state.providers.items}
       />
@@ -186,10 +203,10 @@ function useUserDialog(t: ReturnType<typeof useTranslate>['t'], refresh: VoidFun
     setForm(DEFAULT_USER_FORM);
   }, []);
 
-  const openCreate = useCallback((defaultRole = '') => {
+  const openCreate = useCallback((defaultRole = '', defaultGroupCode = 'default') => {
     setEditing(null);
     setCreating(true);
-    setForm({ ...DEFAULT_USER_FORM, role: defaultRole });
+    setForm({ ...DEFAULT_USER_FORM, role: defaultRole, group_code: defaultGroupCode });
   }, []);
 
   const openEdit = useCallback((user: SystemUser) => {

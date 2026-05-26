@@ -5,6 +5,7 @@ use sea_orm::{
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     user::{User, UserId, UserListFilters},
+    user_group::{UserGroup, UserGroupListRequest, UserGroupPageResponse, UserGroupResponse},
 };
 
 use crate::{
@@ -13,18 +14,26 @@ use crate::{
     user::UserColumn,
     user::password_reset_tokens::{self, ActiveModel as PasswordResetTokenActiveModel},
     user::record::ActiveModel as UserActiveModel,
+    user::user_groups::ActiveModel as UserGroupActiveModel,
 };
 
 use super::{
-    PasswordResetTokenRecord, PasswordResetTokenRecordInput, UserAuthRecord, UserRecord, UserRecordInput,
+    PasswordResetTokenRecord, PasswordResetTokenRecordInput, UserAuthRecord, UserGroupRecord, UserGroupRecordInput, UserGroupRecordPatch, UserRecord,
+    UserRecordInput,
     query::{active_users, filtered_users},
     tokens::{password_reset_token_active_model, password_reset_token_record},
+    user_groups,
     user_mutations::{delete_user_api_tokens, required_password_hash, set_wallet_limit_mode},
 };
 
 #[derive(Clone)]
 pub struct UserStore {
     pub(super) database: Database,
+}
+
+#[derive(Clone)]
+pub struct UserGroupStore {
+    database: Database,
 }
 
 impl UserStore {
@@ -34,6 +43,7 @@ impl UserStore {
 
     pub async fn create(&self, user: UserRecordInput) -> StorageResult<User> {
         ensure_role_exists(self.database.connection(), &user.role).await?;
+        ensure_active_user_group_exists(self.database.connection(), &user.group_code).await?;
         let now = time::OffsetDateTime::now_utc();
         UserActiveModel {
             id: Set(self.database.next_id()),
@@ -41,6 +51,7 @@ impl UserStore {
             password_hash: Set(required_password_hash(user.password_hash)?),
             email: Set(user.email),
             role: Set(user.role),
+            group_code: Set(user.group_code),
             is_active: Set(user.is_active),
             is_deleted: Set(false),
             allowed_model_ids: Set(json::encode_required(&user.allowed_model_ids)?),
@@ -61,6 +72,7 @@ impl UserStore {
 
     pub async fn replace(&self, id: UserId, user: UserRecordInput) -> StorageResult<User> {
         ensure_role_exists(self.database.connection(), &user.role).await?;
+        ensure_active_user_group_exists(self.database.connection(), &user.group_code).await?;
         let tx = self.database.connection().begin().await?;
         let record = self.find_record_by_id_in_tx(&id, &tx).await?.ok_or(StorageError::NotFound)?;
         let mut active: UserActiveModel = record.into();
@@ -71,6 +83,7 @@ impl UserStore {
         }
         active.email = Set(user.email);
         active.role = Set(user.role);
+        active.group_code = Set(user.group_code);
         active.is_active = Set(user.is_active);
         active.allowed_model_ids = Set(json::encode_required(&user.allowed_model_ids)?);
         active.allowed_provider_ids = Set(json::encode_required(&user.allowed_provider_ids)?);
@@ -243,10 +256,150 @@ impl UserStore {
     }
 }
 
+impl UserGroupStore {
+    pub fn new(database: Database) -> Self {
+        Self { database }
+    }
+
+    pub async fn create_group(&self, input: UserGroupRecordInput) -> StorageResult<UserGroup> {
+        let now = time::OffsetDateTime::now_utc();
+        UserGroupActiveModel {
+            id: Set(self.database.next_id()),
+            code: Set(input.code),
+            name: Set(input.name),
+            description: Set(input.description),
+            is_active: Set(input.is_active),
+            is_system: Set(input.is_system),
+            sort_order: Set(input.sort_order),
+            created_at: Set(now),
+            updated_at: Set(now),
+        }
+        .insert(self.database.connection())
+        .await
+        .map(Into::into)
+        .map_err(StorageError::from)
+    }
+
+    pub async fn update_group(&self, code: &str, input: UserGroupRecordPatch) -> StorageResult<UserGroup> {
+        let record = self.find_group_record(code).await?.ok_or(StorageError::NotFound)?;
+        let mut active: UserGroupActiveModel = record.into();
+        apply_user_group_patch(&mut active, input);
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
+        active.update(self.database.connection()).await.map(Into::into).map_err(StorageError::from)
+    }
+
+    pub async fn delete_group(&self, code: &str) -> StorageResult<()> {
+        let record = self.find_group_record(code).await?.ok_or(StorageError::NotFound)?;
+        let active: UserGroupActiveModel = record.into();
+        active.delete(self.database.connection()).await?;
+        Ok(())
+    }
+
+    pub async fn find_group(&self, code: &str) -> StorageResult<Option<UserGroup>> {
+        self.find_group_record(code).await.map(|record| record.map(Into::into))
+    }
+
+    pub async fn list_groups(&self, request: UserGroupListRequest) -> StorageResult<UserGroupPageResponse> {
+        let query = filtered_user_groups(request.filters);
+        let total = query.clone().count(self.database.connection()).await?;
+        let records = query
+            .order_by_asc(user_groups::Column::SortOrder)
+            .order_by_asc(user_groups::Column::Code)
+            .limit(request.page.page_size)
+            .offset((request.page.page - PAGE_INDEX_OFFSET) * request.page.page_size)
+            .all(self.database.connection())
+            .await?;
+        Ok(UserGroupPageResponse {
+            items: records.into_iter().map(UserGroup::from).map(UserGroupResponse::from).collect(),
+            total,
+            page: request.page.page,
+            page_size: request.page.page_size,
+        })
+    }
+
+    pub async fn group_has_users(&self, code: &str) -> StorageResult<bool> {
+        active_users()
+            .filter(UserColumn::GroupCode.eq(code))
+            .one(self.database.connection())
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
+    }
+
+    pub async fn active_group_exists(&self, code: &str) -> StorageResult<bool> {
+        user_groups::Entity::find()
+            .filter(user_groups::Column::Code.eq(code))
+            .filter(user_groups::Column::IsActive.eq(true))
+            .one(self.database.connection())
+            .await
+            .map(|record| record.is_some())
+            .map_err(StorageError::from)
+    }
+
+    async fn find_group_record(&self, code: &str) -> StorageResult<Option<UserGroupRecord>> {
+        user_groups::Entity::find()
+            .filter(user_groups::Column::Code.eq(code))
+            .one(self.database.connection())
+            .await
+            .map_err(StorageError::from)
+    }
+}
+
 async fn ensure_role_exists(db: &DatabaseConnection, role: &str) -> StorageResult<()> {
     let exists = role_records::Entity::find_by_id(role.to_owned()).one(db).await?.is_some();
     if exists {
         return Ok(());
     }
     Err(StorageError::Conflict(format!("role does not exist: {role}")))
+}
+
+async fn ensure_active_user_group_exists(db: &DatabaseConnection, code: &str) -> StorageResult<()> {
+    let exists = user_groups::Entity::find()
+        .filter(user_groups::Column::Code.eq(code))
+        .filter(user_groups::Column::IsActive.eq(true))
+        .one(db)
+        .await?
+        .is_some();
+    if exists {
+        return Ok(());
+    }
+    Err(StorageError::Conflict(format!("active user group does not exist: {code}")))
+}
+
+fn filtered_user_groups(filters: types::user_group::UserGroupFilters) -> sea_orm::Select<user_groups::Entity> {
+    let mut query = user_groups::Entity::find();
+    if let Some(is_active) = filters.is_active {
+        query = query.filter(user_groups::Column::IsActive.eq(is_active));
+    }
+    match filters.search {
+        Some(search) if !search.is_empty() => query.filter(user_group_search_condition(&search)),
+        _ => query,
+    }
+}
+
+fn user_group_search_condition(search: &str) -> Condition {
+    Condition::any()
+        .add(user_groups::Column::Code.contains(search))
+        .add(user_groups::Column::Name.contains(search))
+        .add(user_groups::Column::Description.contains(search))
+}
+
+fn apply_user_group_patch(active: &mut UserGroupActiveModel, input: UserGroupRecordPatch) {
+    if let Some(name) = input.name {
+        active.name = Set(name);
+    }
+    if let Some(description) = input.description {
+        active.description = Set(nonempty_optional(description));
+    }
+    if let Some(is_active) = input.is_active {
+        active.is_active = Set(is_active);
+    }
+    if let Some(sort_order) = input.sort_order {
+        active.sort_order = Set(sort_order);
+    }
+}
+
+fn nonempty_optional(value: String) -> Option<String> {
+    let value = value.trim().to_owned();
+    if value.is_empty() { None } else { Some(value) }
 }

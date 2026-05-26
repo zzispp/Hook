@@ -1,3 +1,4 @@
+use constants::user_group::DEFAULT_USER_GROUP_CODE;
 use rust_decimal::Decimal;
 use types::system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
 
@@ -14,6 +15,7 @@ pub(super) fn system_settings() -> SystemSettings {
         password_reset_enabled: false,
         email_config_enabled: false,
         support_ticket_email_notifications_enabled: false,
+        default_user_group_code: DEFAULT_USER_GROUP_CODE.into(),
         token_limit_per_user: 10,
         client_request_record_level: RequestRecordLevel::Basic,
         client_record_request_headers: false,

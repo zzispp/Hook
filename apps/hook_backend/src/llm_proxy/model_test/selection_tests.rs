@@ -6,7 +6,7 @@ use super::*;
 fn fixed_parts_uses_selected_endpoint_as_client_format_and_routes_to_compatible_openai_key() {
     let snapshot = snapshot(provider(vec![
         endpoint("endpoint-gemini", "gemini:cli"),
-        endpoint("endpoint-openai", "openai:chat"),
+        endpoint("endpoint-openai", "openai:cli"),
     ]));
 
     let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-gemini", true).unwrap();
@@ -81,13 +81,14 @@ fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
             default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
         }],
         groups: Vec::new(),
+        active_user_group_codes: Vec::new(),
         users: Vec::new(),
         providers: vec![provider],
     }
 }
 
 fn provider(endpoints: Vec<CachedEndpoint>) -> CachedProvider {
-    provider_with_keys_and_endpoints(endpoints, vec![key("key-openai", vec!["openai:chat"])])
+    provider_with_keys_and_endpoints(endpoints, vec![key("key-openai", vec!["openai:cli"])])
 }
 
 fn provider_with_keys_and_endpoints(endpoints: Vec<CachedEndpoint>, keys: Vec<CachedProviderKey>) -> CachedProvider {

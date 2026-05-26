@@ -108,6 +108,7 @@ pub async fn list_users(State(state): State<ApiState>, Query(query): Query<ListU
     let filters = UserListFilters {
         search: query.search,
         role: query.role,
+        group_code: query.group_code,
         is_active: query.is_active,
     };
     let page = state.users.list_users(page, filters).await?;
@@ -139,6 +140,7 @@ fn new_sign_up_user(payload: SignUpPayload) -> SignUpUser {
             password: payload.password,
             email: payload.email,
             role: DEFAULT_USER_ROLE.into(),
+            group_code: None,
             is_active: DEFAULT_USER_IS_ACTIVE,
             allowed_model_ids: Vec::new(),
             allowed_provider_ids: Vec::new(),

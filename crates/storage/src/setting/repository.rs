@@ -98,6 +98,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.support_ticket_email_notifications_enabled {
         active.support_ticket_email_notifications_enabled = Set(value);
     }
+    if let Some(value) = &input.default_user_group_code {
+        active.default_user_group_code = Set(value.clone());
+    }
     if let Some(value) = input.token_limit_per_user {
         active.token_limit_per_user = Set(value);
     }

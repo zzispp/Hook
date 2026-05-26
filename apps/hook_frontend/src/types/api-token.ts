@@ -25,6 +25,7 @@ export type ApiToken = {
 export type ApiTokenOwner = {
   username: string;
   email: string;
+  group_code: string;
 };
 
 export type ApiTokenCreate = {

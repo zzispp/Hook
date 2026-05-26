@@ -43,6 +43,7 @@ export const pageQuery = (page: number, pageSize: number) => ({
 export type RbacListFilters = {
   enabled?: boolean;
   is_active?: boolean;
+  group_code?: string;
   role?: string;
   search?: string;
 };

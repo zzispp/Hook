@@ -1,5 +1,6 @@
 'use client';
 
+import type { UserGroup } from 'src/types/user-group';
 import type { Role, SystemUser } from 'src/types/rbac';
 import type { IconifyProps } from 'src/components/iconify';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
@@ -16,10 +17,12 @@ import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 
+import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
+import { displayUserGroup } from './user-group-utils';
 import {
   EnabledLabel,
   BooleanLabel,
@@ -37,6 +40,7 @@ import {
 type Props = {
   rows: SystemUser[];
   roles: Role[];
+  userGroups: UserGroup[];
   total: number;
   loading: boolean;
   table: UseTableReturn;
@@ -53,7 +57,7 @@ export function UserTable(props: Props) {
   return (
     <>
       <Scrollbar>
-        <Table sx={{ minWidth: 1500 }}>
+        <Table sx={{ minWidth: 1620 }}>
           <ManagementTableHead head={head} />
           <TableBody>
             {props.loading ? (
@@ -87,6 +91,9 @@ function UserTableRow({ row, props }: { row: SystemUser; props: Props }) {
       <TableCell>{row.email}</TableCell>
       <TableCell>{displayRole(row.role, props.roles)}</TableCell>
       <TableCell>
+        <UserGroupBadge user={row} groups={props.userGroups} />
+      </TableCell>
+      <TableCell>
         <WalletCell user={row} />
       </TableCell>
       <TableCell>{userRateLimitText(row, t)}</TableCell>
@@ -106,6 +113,14 @@ function UserTableRow({ row, props }: { row: SystemUser; props: Props }) {
         <RowActions row={row} props={props} />
       </TableCell>
     </TableRow>
+  );
+}
+
+function UserGroupBadge({ user, groups }: { user: SystemUser; groups: UserGroup[] }) {
+  return (
+    <Label color="info" variant="soft">
+      {displayUserGroup(user.group_code, groups)}
+    </Label>
   );
 }
 
@@ -175,6 +190,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
     { id: 'username', label: t('common.username'), width: 240 },
     { id: 'email', label: t('common.email'), width: 220 },
     { id: 'role', label: t('common.role'), width: 150 },
+    { id: 'group_code', label: t('fields.userGroup'), width: 150 },
     { id: 'wallet', label: t('fields.wallet'), width: 190 },
     { id: 'statistics', label: t('fields.statistics'), width: 150 },
     { id: 'is_active', label: t('common.status'), width: 110 },

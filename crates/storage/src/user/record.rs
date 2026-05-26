@@ -16,6 +16,7 @@ pub struct Model {
     #[sea_orm(unique)]
     pub email: String,
     pub role: String,
+    pub group_code: String,
     pub is_active: bool,
     pub is_deleted: bool,
     pub allowed_model_ids: String,
@@ -45,6 +46,7 @@ impl UserRecord {
             username: self.username,
             email: self.email,
             role: self.role,
+            group_code: self.group_code,
             is_active: self.is_active,
             allowed_model_ids,
             allowed_provider_ids,

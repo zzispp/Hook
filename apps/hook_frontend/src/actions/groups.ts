@@ -26,13 +26,14 @@ const swrOptions = {
 };
 
 export function useBillingGroups(page: number, pageSize: number, filters: BillingGroupFilters = {}) {
+  const disabled = page < 0 || pageSize <= 0;
   const key = [
     endpoints.adminGroups.list,
     { params: { skip: page * pageSize, limit: pageSize, ...filters } },
   ] as const;
   const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
     ApiEnvelope<BillingGroupListResponse>
-  >(key, fetcher, swrOptions);
+  >(disabled ? null : key, fetcher, swrOptions);
 
   return useMemo(() => {
     const pageData = data ? requireApiData(data) : undefined;
@@ -40,12 +41,12 @@ export function useBillingGroups(page: number, pageSize: number, filters: Billin
       data: pageData,
       items: pageData?.groups ?? [],
       total: pageData?.total ?? 0,
-      isLoading,
+      isLoading: disabled ? false : isLoading,
       error,
-      isValidating,
+      isValidating: disabled ? false : isValidating,
       refresh: revalidate,
     };
-  }, [data, error, isLoading, isValidating, revalidate]);
+  }, [data, disabled, error, isLoading, isValidating, revalidate]);
 }
 
 export function useAvailableBillingGroups(enabled = true) {

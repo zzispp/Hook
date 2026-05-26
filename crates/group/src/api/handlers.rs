@@ -1,7 +1,8 @@
 use axum::{
-    Json,
+    Extension, Json,
     extract::{Path, Query, State},
 };
+use rbac::api::CurrentUser;
 use types::{
     group::{BillingGroupCreate, BillingGroupListRequest, BillingGroupListResponse, BillingGroupResponse, BillingGroupUpdate},
     response::ApiResponse,
@@ -16,8 +17,11 @@ pub async fn list_groups(State(state): State<GroupApiState>, Query(query): Query
     Ok(ok(state.groups.list_groups(query).await?))
 }
 
-pub async fn available_groups(State(state): State<GroupApiState>) -> ApiResult<ApiJson<Vec<BillingGroupResponse>>> {
-    Ok(ok(state.groups.available_groups().await?))
+pub async fn available_groups(
+    State(state): State<GroupApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+) -> ApiResult<ApiJson<Vec<BillingGroupResponse>>> {
+    Ok(ok(state.groups.available_groups(&current_user.group_code).await?))
 }
 
 pub async fn get_group(State(state): State<GroupApiState>, Path(id): Path<String>) -> ApiResult<ApiJson<BillingGroupResponse>> {

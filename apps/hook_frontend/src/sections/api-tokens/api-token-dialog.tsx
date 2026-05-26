@@ -128,6 +128,8 @@ function GroupField({ dialog, groups }: { dialog: TokenDialogState; groups: Bill
       required
       label={t('common.group')}
       value={dialog.form.group_code}
+      error={Boolean(dialog.errors.group_code)}
+      helperText={dialog.errors.group_code ? t(dialog.errors.group_code) : undefined}
       onChange={(value) => dialog.setForm((form) => groupForm(form, value, groups))}
     >
       {groups.length === 0 ? (

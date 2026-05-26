@@ -24,7 +24,7 @@ const EMPTY_OWNER_TOKEN_COUNT: u64 = 0;
 pub(super) type TestApiTokenService = ApiTokenService<MemoryTokenRepository, StaticGroups, StaticModels, ExistingUsers, StaticPolicy>;
 
 pub(super) fn service(repository: MemoryTokenRepository, users: ExistingUsers) -> TestApiTokenService {
-    service_with_policy(repository, users, StaticPolicy::default())
+    service_with_policy(repository, users, StaticPolicy)
 }
 
 pub(super) fn service_with_policy(repository: MemoryTokenRepository, users: ExistingUsers, policy: StaticPolicy) -> TestApiTokenService {
@@ -183,6 +183,7 @@ impl BillingGroupCatalog for StaticGroups {
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: Vec::new(),
             allowed_provider_ids: Vec::new(),
+            visible_user_group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
             is_active: true,
             is_system: true,
             sort_order: 0,
@@ -224,6 +225,13 @@ impl UserCatalog for ExistingUsers {
         Ok(self.ids.iter().any(|existing| existing == id))
     }
 
+    async fn user_group_code(&self, id: &str) -> ApiTokenResult<Option<String>> {
+        if id == SYSTEM_ACTOR_ID || self.ids.iter().any(|existing| existing == id) {
+            return Ok(Some(constants::user_group::DEFAULT_USER_GROUP_CODE.into()));
+        }
+        Ok(None)
+    }
+
     async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {
         Ok(ids
             .iter()
@@ -234,6 +242,7 @@ impl UserCatalog for ExistingUsers {
                     ApiTokenOwnerResponse {
                         username: id.clone(),
                         email: format!("{id}@example.test"),
+                        group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
                     },
                 )
             })
@@ -243,12 +252,6 @@ impl UserCatalog for ExistingUsers {
 
 #[derive(Clone, Copy)]
 pub(super) struct StaticPolicy;
-
-impl Default for StaticPolicy {
-    fn default() -> Self {
-        Self
-    }
-}
 
 #[async_trait]
 impl SystemTokenPolicy for StaticPolicy {

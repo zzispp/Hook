@@ -16,6 +16,7 @@ export type SystemSettings = {
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
+  default_user_group_code: string;
   token_limit_per_user: number;
   client_request_record_level: RequestRecordLevel;
   client_record_request_headers: boolean;
@@ -72,6 +73,7 @@ export type SystemSettingsUpdate = Partial<{
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
+  default_user_group_code: string;
   token_limit_per_user: number;
   client_request_record_level: RequestRecordLevel;
   client_record_request_headers: boolean;

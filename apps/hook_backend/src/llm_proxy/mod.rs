@@ -61,6 +61,7 @@ fn cached_user_access(user: types::user::User) -> CachedUserAccess {
     CachedUserAccess {
         id: user.id.0,
         username: user.username,
+        group_code: user.group_code,
         is_active: user.is_active,
         allowed_model_ids: user.allowed_model_ids,
         allowed_provider_ids: user.allowed_provider_ids,

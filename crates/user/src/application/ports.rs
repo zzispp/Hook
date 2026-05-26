@@ -9,6 +9,7 @@ use types::{
         AuthConfigResponse, Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User,
         UserId, UserListFilters, UserWalletSummaryResponse,
     },
+    user_group::{UserGroupCreate, UserGroupListRequest, UserGroupPageResponse, UserGroupResponse, UserGroupUpdate},
 };
 
 use super::AppResult;
@@ -20,6 +21,7 @@ pub struct ReplaceUserRecord {
     pub email: String,
     pub email_verified: Option<bool>,
     pub role: String,
+    pub group_code: String,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
@@ -89,6 +91,7 @@ pub struct RegistrationSettings {
     pub allow_registration: bool,
     pub registration_email_verification_enabled: bool,
     pub default_user_grant: Decimal,
+    pub default_user_group_code: String,
     pub email_suffix_mode: EmailSuffixMode,
     pub email_suffixes: String,
 }
@@ -179,6 +182,55 @@ pub trait InitialGrantLedger: Send + Sync + 'static {
 #[async_trait]
 pub trait UserWalletCatalog: Send + Sync + 'static {
     async fn wallet_summaries(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, UserWalletSummaryResponse>>;
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UserGroupCreateRecord {
+    pub code: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub is_system: bool,
+    pub sort_order: i64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UserGroupUpdateRecord {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub is_active: Option<bool>,
+    pub sort_order: Option<i64>,
+}
+
+#[async_trait]
+pub trait UserGroupRepository: Send + Sync + 'static {
+    async fn create_group(&self, input: UserGroupCreateRecord) -> AppResult<UserGroupResponse>;
+    async fn update_group(&self, code: &str, input: UserGroupUpdateRecord) -> AppResult<UserGroupResponse>;
+    async fn delete_group(&self, code: &str) -> AppResult<()>;
+    async fn find_group(&self, code: &str) -> AppResult<Option<UserGroupResponse>>;
+    async fn list_groups(&self, request: UserGroupListRequest) -> AppResult<UserGroupPageResponse>;
+    async fn group_has_users(&self, code: &str) -> AppResult<bool>;
+    async fn list_group_users(&self, request: PageRequest, filters: UserListFilters) -> AppResult<Page<User>>;
+}
+
+#[async_trait]
+pub trait UserGroupBillingCatalog: Send + Sync + 'static {
+    async fn user_group_has_billing_groups(&self, code: &str) -> AppResult<bool>;
+}
+
+#[async_trait]
+pub trait UserGroupSettingCatalog: Send + Sync + 'static {
+    async fn default_user_group_code(&self) -> AppResult<String>;
+}
+
+#[async_trait]
+pub trait UserGroupUseCase: Send + Sync + 'static {
+    async fn create_user_group(&self, input: UserGroupCreate) -> AppResult<UserGroupResponse>;
+    async fn update_user_group(&self, code: &str, input: UserGroupUpdate) -> AppResult<UserGroupResponse>;
+    async fn delete_user_group(&self, code: &str) -> AppResult<()>;
+    async fn get_user_group(&self, code: &str) -> AppResult<UserGroupResponse>;
+    async fn list_user_groups(&self, request: UserGroupListRequest) -> AppResult<UserGroupPageResponse>;
+    async fn list_user_group_members(&self, code: &str, request: PageRequest, filters: UserListFilters) -> AppResult<Page<User>>;
 }
 
 #[async_trait]

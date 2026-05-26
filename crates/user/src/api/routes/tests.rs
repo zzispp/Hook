@@ -155,7 +155,51 @@ struct SessionTokens {
 fn test_router() -> Router {
     let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
     let users = UserService::new(repository, TestPasswordHasher);
-    Router::new().nest("/api", create_router(ApiState::new(Arc::new(users), token_service(), Arc::new(TestCaptcha))))
+    Router::new().nest(
+        "/api",
+        create_router(ApiState::new(Arc::new(users), Arc::new(TestUserGroups), token_service(), Arc::new(TestCaptcha))),
+    )
+}
+
+struct TestUserGroups;
+
+#[async_trait::async_trait]
+impl crate::application::UserGroupUseCase for TestUserGroups {
+    async fn create_user_group(&self, _input: types::user_group::UserGroupCreate) -> crate::application::AppResult<types::user_group::UserGroupResponse> {
+        unimplemented!("auth route tests do not call user group routes")
+    }
+
+    async fn update_user_group(
+        &self,
+        _code: &str,
+        _input: types::user_group::UserGroupUpdate,
+    ) -> crate::application::AppResult<types::user_group::UserGroupResponse> {
+        unimplemented!("auth route tests do not call user group routes")
+    }
+
+    async fn delete_user_group(&self, _code: &str) -> crate::application::AppResult<()> {
+        unimplemented!("auth route tests do not call user group routes")
+    }
+
+    async fn get_user_group(&self, _code: &str) -> crate::application::AppResult<types::user_group::UserGroupResponse> {
+        unimplemented!("auth route tests do not call user group routes")
+    }
+
+    async fn list_user_groups(
+        &self,
+        _request: types::user_group::UserGroupListRequest,
+    ) -> crate::application::AppResult<types::user_group::UserGroupPageResponse> {
+        unimplemented!("auth route tests do not call user group routes")
+    }
+
+    async fn list_user_group_members(
+        &self,
+        _code: &str,
+        _request: types::pagination::PageRequest,
+        _filters: types::user::UserListFilters,
+    ) -> crate::application::AppResult<types::pagination::Page<types::user::User>> {
+        unimplemented!("auth route tests do not call user group routes")
+    }
 }
 
 struct TestCaptcha;

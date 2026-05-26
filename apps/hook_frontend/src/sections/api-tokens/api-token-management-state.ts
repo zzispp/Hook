@@ -1,12 +1,7 @@
 'use client';
 
 import type { ApiToken } from 'src/types/api-token';
-import type {
-  TokenForm,
-  TokenScope,
-  TokenFormErrors,
-  BillingGroupOption,
-} from './api-token-management-types';
+import type { TokenForm, TokenScope, TokenFormErrors } from './api-token-management-types';
 
 import { useState, useCallback } from 'react';
 import { useCopyToClipboard } from 'minimal-shared/hooks';
@@ -26,7 +21,6 @@ import { toast } from 'src/components/snackbar';
 
 import {
   formFromToken,
-  defaultGroupCode,
   defaultCreateForm,
   tokenUpdatePayload,
   userTokenCreatePayload,
@@ -34,11 +28,11 @@ import {
 } from './api-token-management-utils';
 
 const USER_REQUIRED_ERROR = 'validation.userRequired';
+const GROUP_REQUIRED_ERROR = 'validation.groupRequired';
 
 export function useTokenDialog(
   scope: TokenScope,
   t: (key: string, options?: Record<string, unknown>) => string,
-  groups: BillingGroupOption[],
   defaultUserId = ''
 ) {
   const [form, setForm] = useState(defaultCreateForm('', defaultUserId));
@@ -59,8 +53,8 @@ export function useTokenDialog(
     setEditing(null);
     setCreating(true);
     setErrors({});
-    setForm(defaultCreateForm(defaultGroup || defaultGroupCode(groups), defaultUserId));
-  }, [defaultUserId, groups]);
+    setForm(defaultCreateForm(defaultGroup, defaultUserId));
+  }, [defaultUserId]);
 
   const openEdit = useCallback((token: ApiToken) => {
     setCreating(false);
@@ -121,11 +115,17 @@ function validateTokenForm(
   form: TokenForm,
   editing: ApiToken | null
 ): TokenFormErrors {
-  if (editing || scope !== 'admin' || form.token_type !== 'user') {
-    return {};
+  const errors: TokenFormErrors = {};
+
+  if (!form.group_code.trim()) {
+    errors.group_code = GROUP_REQUIRED_ERROR;
   }
 
-  return form.user_id.trim() ? {} : { user_id: USER_REQUIRED_ERROR };
+  if (!editing && scope === 'admin' && form.token_type === 'user' && !form.user_id.trim()) {
+    errors.user_id = USER_REQUIRED_ERROR;
+  }
+
+  return errors;
 }
 
 function hasFormErrors(errors: TokenFormErrors) {

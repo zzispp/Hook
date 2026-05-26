@@ -16,4 +16,5 @@ pub mod response;
 pub mod scheduler;
 pub mod system_setting;
 pub mod user;
+pub mod user_group;
 pub mod wallet;

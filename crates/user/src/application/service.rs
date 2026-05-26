@@ -12,12 +12,14 @@ mod password_reset;
 mod registration;
 mod system_user;
 mod use_cases;
+mod user_group;
 mod validation;
 
 pub use defaults::{
     AllowRegistrationPolicy, NoInitialGrantLedger, NoPasswordResetConfig, NoPasswordResetMailer, NoRegistrationEmailCodeStore, NoRegistrationEmailConfig,
     NoRegistrationEmailMailer, NoSystemUserProvider, NoUserWalletCatalog,
 };
+pub use user_group::UserGroupService;
 
 pub struct UserService<
     R,
@@ -170,7 +172,7 @@ where
     }
 
     async fn create_unique_user(&self, input: NewUser, settings: &RegistrationSettings) -> AppResult<User> {
-        let input = sanitize_new_user(input);
+        let input = sanitize_new_user(with_default_user_group(input, &settings.default_user_group_code));
         validate_new_user(&input)?;
         reject_disallowed_registration_email(settings, &input.email)?;
         self.create_valid_user(input, false).await
@@ -205,6 +207,7 @@ where
             email: input.email,
             email_verified,
             role: input.role,
+            group_code: input.group_code.unwrap_or_default(),
             is_active: input.is_active,
             allowed_model_ids: input.allowed_model_ids,
             allowed_provider_ids: input.allowed_provider_ids,
@@ -220,6 +223,7 @@ where
             email: input.email,
             email_verified: None,
             role: input.role,
+            group_code: input.group_code,
             is_active: input.is_active,
             allowed_model_ids: input.allowed_model_ids,
             allowed_provider_ids: input.allowed_provider_ids,
@@ -231,6 +235,13 @@ where
     fn optional_password_hash(&self, password: Option<String>) -> AppResult<Option<String>> {
         password.map(|value| self.password_hasher.hash(&value)).transpose()
     }
+}
+
+fn with_default_user_group(mut input: NewUser, default_user_group_code: &str) -> NewUser {
+    if input.group_code.is_none() {
+        input.group_code = Some(default_user_group_code.to_owned());
+    }
+    input
 }
 
 fn reject_conflicting_user(id: UserId, current_id: Option<&UserId>, field: &str) -> AppResult<()> {

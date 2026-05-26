@@ -39,9 +39,10 @@ export type BillingGroupOption = {
   code: string;
   name: string;
   allowed_model_ids: string[];
+  visible_user_group_codes: string[];
   is_system: boolean;
 };
 
 export type TokenModelOption = Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>;
 
-export type UserOption = Pick<SystemUser, 'id' | 'username' | 'email' | 'system'>;
+export type UserOption = Pick<SystemUser, 'id' | 'username' | 'email' | 'group_code' | 'system'>;

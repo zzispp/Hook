@@ -303,6 +303,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000228",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "admin_user_groups",
+        title: "用户分组",
+        path: "/dashboard/admin/user-groups",
+        icon: "solar:users-group-rounded-bold",
+        sort_order: 6,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000211",
         section_id: OPERATIONS_SECTION_ID,
         code: "admin_groups",

@@ -22,6 +22,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(boolean(SystemSettings::PasswordResetEnabled).default(false))
         .col(boolean(SystemSettings::EmailConfigEnabled).default(false))
         .col(boolean(SystemSettings::SupportTicketEmailNotificationsEnabled).default(false))
+        .col(string_len(SystemSettings::DefaultUserGroupCode, 64).default("default"))
         .col(big_integer(SystemSettings::TokenLimitPerUser).default(DEFAULT_TOKEN_LIMIT_PER_USER))
         .col(string_len(SystemSettings::ClientRequestRecordLevel, 20).default("basic"))
         .col(boolean(SystemSettings::ClientRecordRequestHeaders).default(true))

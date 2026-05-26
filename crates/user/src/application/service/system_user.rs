@@ -93,11 +93,14 @@ fn user_matches_filters(user: &User, filters: &UserListFilters) -> bool {
     if filters.role.as_ref().is_some_and(|role| user.role != *role) {
         return false;
     }
+    if filters.group_code.as_ref().is_some_and(|group_code| user.group_code != *group_code) {
+        return false;
+    }
     filters.search.as_ref().is_none_or(|search| system_user_matches_search(user, search))
 }
 
 fn system_user_matches_search(user: &User, search: &str) -> bool {
-    user.username.contains(search) || user.email.contains(search) || user.role.contains(search)
+    user.username.contains(search) || user.email.contains(search) || user.role.contains(search) || user.group_code.contains(search)
 }
 
 fn reject_conflicting_field(conflicting: bool, field: &str) -> AppResult<()> {

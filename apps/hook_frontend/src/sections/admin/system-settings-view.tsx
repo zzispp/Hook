@@ -8,9 +8,8 @@ import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 
-import { labelWithAccountingCurrency } from 'src/utils/money-boundary';
-
 import { useTranslate } from 'src/locales/use-locales';
+import { useUserGroups } from 'src/actions/user-groups';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useSystemSettings } from 'src/actions/system-settings';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
@@ -19,17 +18,20 @@ import { Iconify } from 'src/components/iconify';
 import { logoImageSource } from 'src/components/logo/logo-utils';
 
 import { SettingsSection } from './system-settings-section';
-import { emailConfigComplete } from './system-settings-utils';
 import { useSystemSettingsForm } from './system-settings-state';
 import { EmailSettingsSection } from './system-settings-email-section';
+import { TextFieldRow, RefreshButton, AdminBreadcrumbs } from './shared';
+import { SystemSettingsBaseSection } from './system-settings-base-section';
 import { RechargeSettingsSection } from './system-settings-recharge-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
-import { SwitchRow, TextFieldRow, RefreshButton, AdminBreadcrumbs } from './shared';
+import { enabledUserGroupOptions, USER_GROUP_MAX_PAGE_SIZE } from './user-group-utils';
 
 export function SystemSettingsView() {
   const { t } = useTranslate('admin');
   const settings = useSystemSettings();
+  const userGroups = useUserGroups(0, USER_GROUP_MAX_PAGE_SIZE, { is_active: true });
   const form = useSystemSettingsForm(settings.data, t);
+  const userGroupOptions = enabledUserGroupOptions(userGroups.items);
 
   return (
     <DashboardContent maxWidth="xl">
@@ -54,7 +56,11 @@ export function SystemSettingsView() {
         <Stack spacing={3}>
           <SiteSection form={form.form} setForm={form.setForm} />
           <Divider />
-          <BaseSection form={form.form} setForm={form.setForm} />
+          <SystemSettingsBaseSection
+            form={form.form}
+            setForm={form.setForm}
+            userGroups={userGroupOptions}
+          />
           <Divider />
           <EmailSettingsSection form={form.form} setForm={form.setForm} />
           <Divider />
@@ -155,95 +161,6 @@ function readLogoFile(
     setForm((current) => ({ ...current, site_logo_base64: result }));
   };
   reader.readAsDataURL(file);
-}
-
-function BaseSection({
-  form,
-  setForm,
-}: {
-  form: SystemSettingsForm;
-  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
-}) {
-  const { t } = useTranslate('admin');
-  const emailVerificationReady = form.email_config_enabled && emailConfigComplete(form);
-  const emailVerificationDisabled =
-    !emailVerificationReady && !form.registration_email_verification_enabled;
-  const passwordResetDisabled = !emailVerificationReady && !form.password_reset_enabled;
-
-  return (
-    <SettingsSection title={t('systemSettings.sections.base')}>
-      <Stack spacing={2}>
-        <SwitchRow
-          checked={form.allow_registration}
-          label={t('systemSettings.fields.allowRegistration')}
-          onChange={(checked) =>
-            setForm((current) => ({ ...current, allow_registration: checked }))
-          }
-        />
-        <SwitchRow
-          checked={form.login_captcha_enabled}
-          label={t('systemSettings.fields.loginCaptchaEnabled')}
-          onChange={(checked) =>
-            setForm((current) => ({ ...current, login_captcha_enabled: checked }))
-          }
-        />
-        <SwitchRow
-          checked={form.registration_captcha_enabled}
-          label={t('systemSettings.fields.registrationCaptchaEnabled')}
-          onChange={(checked) =>
-            setForm((current) => ({ ...current, registration_captcha_enabled: checked }))
-          }
-        />
-        <SwitchRow
-          checked={form.support_ticket_captcha_enabled}
-          label={t('systemSettings.fields.supportTicketCaptchaEnabled')}
-          helperText={t('systemSettings.helper.supportTicketCaptchaEnabled')}
-          onChange={(checked) =>
-            setForm((current) => ({ ...current, support_ticket_captcha_enabled: checked }))
-          }
-        />
-        <SwitchRow
-          checked={form.registration_email_verification_enabled}
-          disabled={emailVerificationDisabled}
-          label={t('systemSettings.fields.registrationEmailVerificationEnabled')}
-          helperText={
-            emailVerificationReady
-              ? undefined
-              : t('systemSettings.helper.registrationEmailVerificationRequiresEmailConfig')
-          }
-          onChange={(checked) =>
-            setForm((current) => ({
-              ...current,
-              registration_email_verification_enabled: checked,
-            }))
-          }
-        />
-        <SwitchRow
-          checked={form.password_reset_enabled}
-          disabled={passwordResetDisabled}
-          label={t('systemSettings.fields.passwordResetEnabled')}
-          helperText={
-            emailVerificationReady
-              ? undefined
-              : t('systemSettings.helper.passwordResetRequiresEmailConfig')
-          }
-          onChange={(checked) =>
-            setForm((current) => ({
-              ...current,
-              password_reset_enabled: checked,
-            }))
-          }
-        />
-        <TextFieldRow
-          type="number"
-          label={labelWithAccountingCurrency(t('systemSettings.fields.defaultUserGrant'))}
-          value={form.default_user_grant}
-          helperText={t('systemSettings.helper.defaultUserGrant')}
-          onChange={(value) => setForm((current) => ({ ...current, default_user_grant: value }))}
-        />
-      </Stack>
-    </SettingsSection>
-  );
 }
 
 function TokenSection({

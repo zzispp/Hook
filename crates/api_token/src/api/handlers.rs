@@ -227,6 +227,7 @@ mod tests {
             id: USER_ID.into(),
             username: "alice".into(),
             role: "user".into(),
+            group_code: "default".into(),
             system: false,
         }
     }

@@ -15,6 +15,7 @@ pub(in crate::migration::baseline) enum SystemSettings {
     PasswordResetEnabled,
     EmailConfigEnabled,
     SupportTicketEmailNotificationsEnabled,
+    DefaultUserGroupCode,
     TokenLimitPerUser,
     ClientRequestRecordLevel,
     ClientRecordRequestHeaders,

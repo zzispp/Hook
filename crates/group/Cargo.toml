@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 async-trait.workspace = true
 axum.workspace = true
+rbac.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
 storage.workspace = true

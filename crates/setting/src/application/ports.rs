@@ -18,6 +18,11 @@ pub trait SettingSecretCipher: Send + Sync + 'static {
 }
 
 #[async_trait]
+pub trait SettingUserGroupCatalog: Send + Sync + 'static {
+    async fn active_user_group_exists(&self, code: &str) -> SettingResult<bool>;
+}
+
+#[async_trait]
 pub trait SmtpConnectionTester: Send + Sync + 'static {
     async fn test_connection(&self, config: &SmtpConnectionConfig) -> Result<(), String>;
 }

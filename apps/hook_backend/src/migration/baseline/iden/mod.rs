@@ -49,6 +49,7 @@ pub fn reversed_tables() -> Vec<DynIden> {
         RequestCandidates::Table.into_iden(),
         RequestRecords::Table.into_iden(),
         ApiTokens::Table.into_iden(),
+        BillingGroupUserGroups::Table.into_iden(),
         DimensionCollectors::Table.into_iden(),
         BillingRules::Table.into_iden(),
         BillingGroupProviders::Table.into_iden(),
@@ -77,5 +78,6 @@ pub fn reversed_tables() -> Vec<DynIden> {
         Roles::Table.into_iden(),
         UserPasswordResetTokens::Table.into_iden(),
         Users::Table.into_iden(),
+        UserGroups::Table.into_iden(),
     ]
 }

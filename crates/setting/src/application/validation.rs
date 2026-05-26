@@ -26,6 +26,7 @@ pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
         site_name: input.site_name.map(|value| value.trim().to_owned()),
         site_subtitle: input.site_subtitle.map(|value| value.trim().to_owned()),
         site_logo_base64: trim_optional(input.site_logo_base64),
+        default_user_group_code: trim_optional(input.default_user_group_code),
         client_sensitive_request_headers: normalize_optional_headers(input.client_sensitive_request_headers),
         provider_sensitive_request_headers: normalize_optional_headers(input.provider_sensitive_request_headers),
         smtp_host: trim_optional(input.smtp_host),
@@ -46,6 +47,7 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     }
     validate_site_name(input.site_name.as_deref())?;
     validate_site_subtitle(input.site_subtitle.as_deref())?;
+    validate_optional_code("default_user_group_code", input.default_user_group_code.as_deref())?;
     validate_positive_i64("client_max_request_body_size_kb", input.client_max_request_body_size_kb)?;
     validate_positive_i64("client_max_response_body_size_kb", input.client_max_response_body_size_kb)?;
     validate_positive_i64("provider_max_request_body_size_kb", input.provider_max_request_body_size_kb)?;
@@ -59,6 +61,19 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_positive_i64("cache_affinity_ttl_minutes", input.cache_affinity_ttl_minutes)?;
     validate_provider_cooldown_policy(input.provider_cooldown_policy.as_ref())?;
     validate_mail_settings(input)
+}
+
+fn validate_optional_code(field: &str, value: Option<&str>) -> SettingResult<()> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    if value.is_empty() || value.len() > 64 {
+        return Err(SettingError::InvalidInput(format!("{field} length must be between 1 and 64")));
+    }
+    if !value.chars().all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-')) {
+        return Err(SettingError::InvalidInput(format!("{field} contains invalid characters")));
+    }
+    Ok(())
 }
 
 pub fn validate_recharge_bounds(input: &SystemSettingsUpdate, current: &types::system_setting::SystemSettingsResponse) -> SettingResult<()> {

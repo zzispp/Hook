@@ -15,6 +15,7 @@ pub struct SystemSettingsRecordPatch {
     pub password_reset_enabled: Option<bool>,
     pub email_config_enabled: Option<bool>,
     pub support_ticket_email_notifications_enabled: Option<bool>,
+    pub default_user_group_code: Option<String>,
     pub token_limit_per_user: Option<i64>,
     pub client_request_record_level: Option<RequestRecordLevel>,
     pub client_record_request_headers: Option<bool>,

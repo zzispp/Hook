@@ -17,6 +17,9 @@ struct FakeRepository {
     update: Arc<Mutex<Option<UpdateRecord>>>,
 }
 
+type TestSettingService = SettingService<FakeRepository, FakeCipher, RecordingTester>;
+type UpdateLog = Arc<Mutex<Option<UpdateRecord>>>;
+
 #[derive(Clone, Debug, PartialEq)]
 struct UpdateRecord {
     input: SystemSettingsUpdate,
@@ -72,7 +75,7 @@ mod smtp;
 #[path = "service_tests/update.rs"]
 mod update;
 
-fn test_service(tester: RecordingTester, stored: StoredSmtpSettings) -> SettingService<FakeRepository, FakeCipher, RecordingTester> {
+fn test_service(tester: RecordingTester, stored: StoredSmtpSettings) -> TestSettingService {
     SettingService::new(
         fake_repository(stored, system_settings_response(), Arc::new(Mutex::new(None))),
         FakeCipher,
@@ -80,13 +83,13 @@ fn test_service(tester: RecordingTester, stored: StoredSmtpSettings) -> SettingS
     )
 }
 
-fn test_update_service(settings: SystemSettingsResponse) -> (SettingService<FakeRepository, FakeCipher, RecordingTester>, Arc<Mutex<Option<UpdateRecord>>>) {
+fn test_update_service(settings: SystemSettingsResponse) -> (TestSettingService, UpdateLog) {
     let update = Arc::new(Mutex::new(None));
     let repository = fake_repository(stored_smtp_settings("encrypted:saved-password"), settings, update.clone());
     (SettingService::new(repository, FakeCipher, RecordingTester::default()), update)
 }
 
-fn fake_repository(stored: StoredSmtpSettings, settings: SystemSettingsResponse, update: Arc<Mutex<Option<UpdateRecord>>>) -> FakeRepository {
+fn fake_repository(stored: StoredSmtpSettings, settings: SystemSettingsResponse, update: UpdateLog) -> FakeRepository {
     FakeRepository { stored, settings, update }
 }
 
@@ -115,6 +118,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         password_reset_enabled: false,
         email_config_enabled: false,
         support_ticket_email_notifications_enabled: false,
+        default_user_group_code: "default".into(),
         token_limit_per_user: 5,
         client_request_record_level: RequestRecordLevel::Basic,
         client_record_request_headers: true,

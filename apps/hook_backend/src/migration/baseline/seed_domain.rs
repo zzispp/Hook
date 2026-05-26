@@ -4,6 +4,8 @@ use serde_json::Value;
 use super::iden::*;
 
 const DEFAULT_GROUP_ID: &str = "00000000-0000-7000-8000-000000000401";
+const DEFAULT_USER_GROUP_ID: &str = "00000000-0000-7000-8000-000000000402";
+const DEFAULT_BILLING_GROUP_USER_GROUP_ID: &str = "00000000-0000-7000-8000-000000000403";
 pub(in crate::migration) const ADMIN_NAMESPACE: &str = "admin";
 pub(in crate::migration) const AUTH_NAMESPACE: &str = "auth";
 pub(in crate::migration) const CN_ADMIN_TRANSLATIONS: &str = include_str!("../defaults/i18n/admin.cn.json");
@@ -12,10 +14,44 @@ pub(in crate::migration) const CN_AUTH_TRANSLATIONS: &str = include_str!("../def
 pub(in crate::migration) const EN_AUTH_TRANSLATIONS: &str = include_str!("../defaults/i18n/auth.en.json");
 
 pub(super) async fn seed_domain_defaults(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    seed_default_user_group(manager).await?;
     seed_default_group(manager).await?;
+    seed_default_billing_group_user_group(manager).await?;
     super::setting_seed::seed_system_settings(manager).await?;
     seed_translation_languages(manager).await?;
     seed_admin_translations(manager).await
+}
+
+async fn seed_default_user_group(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    manager
+        .execute(
+            Query::insert()
+                .into_table(UserGroups::Table)
+                .columns([
+                    UserGroups::Id,
+                    UserGroups::Code,
+                    UserGroups::Name,
+                    UserGroups::Description,
+                    UserGroups::IsActive,
+                    UserGroups::IsSystem,
+                    UserGroups::SortOrder,
+                    UserGroups::CreatedAt,
+                    UserGroups::UpdatedAt,
+                ])
+                .values_panic([
+                    DEFAULT_USER_GROUP_ID.into(),
+                    constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+                    "Default".into(),
+                    Some("Built-in default user group").into(),
+                    true.into(),
+                    true.into(),
+                    0.into(),
+                    Expr::current_timestamp(),
+                    Expr::current_timestamp(),
+                ])
+                .to_owned(),
+        )
+        .await
 }
 
 async fn seed_default_group(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
@@ -44,6 +80,30 @@ async fn seed_default_group(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
                     true.into(),
                     true.into(),
                     0.into(),
+                    Expr::current_timestamp(),
+                    Expr::current_timestamp(),
+                ])
+                .to_owned(),
+        )
+        .await
+}
+
+async fn seed_default_billing_group_user_group(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    manager
+        .execute(
+            Query::insert()
+                .into_table(BillingGroupUserGroups::Table)
+                .columns([
+                    BillingGroupUserGroups::Id,
+                    BillingGroupUserGroups::BillingGroupCode,
+                    BillingGroupUserGroups::UserGroupCode,
+                    BillingGroupUserGroups::CreatedAt,
+                    BillingGroupUserGroups::UpdatedAt,
+                ])
+                .values_panic([
+                    DEFAULT_BILLING_GROUP_USER_GROUP_ID.into(),
+                    constants::billing::DEFAULT_SYSTEM_GROUP_CODE.into(),
+                    constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
                     Expr::current_timestamp(),
                     Expr::current_timestamp(),
                 ])

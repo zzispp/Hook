@@ -12,6 +12,7 @@ pub struct User {
     pub username: String,
     pub email: String,
     pub role: String,
+    pub group_code: String,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
@@ -30,6 +31,7 @@ pub struct NewUser {
     pub password: String,
     pub email: String,
     pub role: String,
+    pub group_code: Option<String>,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
@@ -55,6 +57,7 @@ pub struct ReplaceUser {
     pub password: Option<String>,
     pub email: String,
     pub role: String,
+    pub group_code: String,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
@@ -85,6 +88,7 @@ pub struct PasswordResetConfirm {
 pub struct UserListFilters {
     pub search: Option<String>,
     pub role: Option<String>,
+    pub group_code: Option<String>,
     pub is_active: Option<bool>,
 }
 

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm current user update flow,DONE,Existing API can update group_code without password change,rg "replace_user_keeps_existing_password" crates/user/src/application/service/tests.rs,,0,Backend already keeps password when blank on update.
+2,Add user-group assignment dialog,DONE,User group table has assignment action and dialog supports searchable user select target group select and preview,pnpm lint:frontend,2026-05-26T14:28:00+0800,0,Added assignment action plus searchable dialog; lint passed.
+3,Update admin i18n seed,DONE,Chinese and English backend admin seed include new labels,jq empty apps/hook_backend/src/migration/defaults/i18n/admin.cn.json apps/hook_backend/src/migration/defaults/i18n/admin.en.json,2026-05-26T14:28:00+0800,0,jq validation passed.
+4,Run validation,DONE,Frontend lint/build and diff check pass,pnpm lint:frontend && pnpm build:frontend && git diff --check,2026-05-26T14:28:00+0800,0,lint build jq and diff check passed.

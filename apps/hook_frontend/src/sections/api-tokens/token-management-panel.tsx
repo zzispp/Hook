@@ -2,11 +2,7 @@
 
 import type { ApiTokenFilters } from 'src/actions/api-tokens';
 import type { TokenFilterState } from './api-token-filters-toolbar';
-import type {
-  TokenScope,
-  TokenModelOption,
-  BillingGroupOption,
-} from './api-token-management-types';
+import type { TokenScope, TokenModelOption, BillingGroupOption } from './api-token-management-types';
 
 import { useState, useCallback } from 'react';
 
@@ -17,7 +13,6 @@ import { useTranslate } from 'src/locales/use-locales';
 import { useUserModelCatalog } from 'src/actions/models';
 import { useSiteInfo } from 'src/actions/system-settings';
 import { useScopedApiTokens } from 'src/actions/api-tokens';
-import { useAvailableBillingGroups } from 'src/actions/groups';
 
 import { useTable } from 'src/components/table';
 import { ConfirmDialog } from 'src/components/custom-dialog';
@@ -27,6 +22,7 @@ import { ApiTokenDialog } from './api-token-dialog';
 import { ApiTokenCreatedDialog } from './api-token-created-dialog';
 import { ApiTokenCcSwitchDialog } from './api-token-cc-switch-dialog';
 import { useCcSwitchImportDialog } from './api-token-cc-switch-state';
+import { useTokenOwnerBillingGroups } from './api-token-group-visibility';
 import {
   toApiTokenFilters,
   DEFAULT_TOKEN_FILTERS,
@@ -48,10 +44,12 @@ export type TokenManagementPanelState = ReturnType<typeof useTokenManagementPane
 export function useTokenManagementPanelState({
   scope,
   fixedUserId,
+  fixedUserGroupCode,
   disabled = false,
 }: {
   scope: TokenScope;
   fixedUserId?: string;
+  fixedUserGroupCode?: string;
   disabled?: boolean;
 }) {
   const { t } = useTranslate('admin');
@@ -64,14 +62,20 @@ export function useTokenManagementPanelState({
     table.rowsPerPage,
     requestFilters
   );
-  const groups = useAvailableBillingGroups();
   const models = useUserModelCatalog();
   const site = useSiteInfo();
   const users = useUsers(
     scope === 'admin' && !fixedUserId ? 0 : -1,
     scope === 'admin' && !fixedUserId ? 100 : 0
   );
-  const dialog = useTokenDialog(scope, t, groups.items, fixedUserId ?? '');
+  const dialog = useTokenDialog(scope, t, fixedUserId ?? '');
+  const groups = useTokenOwnerBillingGroups({
+    dialog,
+    disabled,
+    fixedUserGroupCode,
+    scope,
+    users: users.items,
+  });
   const ccSwitchImport = useCcSwitchImportDialog({
     scope,
     t,
@@ -95,6 +99,7 @@ export function useTokenManagementPanelState({
     dialog,
     filters,
     fixedUserId,
+    fixedUserGroupCode,
     groups,
     handleFiltersChange,
     models,

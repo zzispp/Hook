@@ -4,10 +4,11 @@ use storage::{
     group::{BillingGroupRecordInput, BillingGroupRecordPatch, GroupStore},
     model::ModelStore,
     provider::ProviderStore,
+    user::UserGroupStore,
 };
 use types::group::{BillingGroupCreate, BillingGroupListRequest, BillingGroupListResponse, BillingGroupResponse, BillingGroupUpdate};
 
-use crate::application::{GroupError, GroupModelCatalog, GroupProviderCatalog, GroupRepository, GroupResult};
+use crate::application::{GroupError, GroupModelCatalog, GroupProviderCatalog, GroupRepository, GroupResult, GroupUserGroupCatalog};
 
 #[derive(Clone)]
 pub struct StorageGroupRepository {
@@ -22,6 +23,11 @@ pub struct StorageGroupModelCatalog {
 #[derive(Clone)]
 pub struct StorageGroupProviderCatalog {
     store: ProviderStore,
+}
+
+#[derive(Clone)]
+pub struct StorageGroupUserGroupCatalog {
+    store: UserGroupStore,
 }
 
 impl StorageGroupRepository {
@@ -44,6 +50,14 @@ impl StorageGroupProviderCatalog {
     pub fn new(database: Database) -> Self {
         Self {
             store: ProviderStore::new(database),
+        }
+    }
+}
+
+impl StorageGroupUserGroupCatalog {
+    pub fn new(database: Database) -> Self {
+        Self {
+            store: UserGroupStore::new(database),
         }
     }
 }
@@ -82,8 +96,20 @@ impl GroupRepository for StorageGroupRepository {
             .map_err(storage_error)
     }
 
+    async fn active_groups_for_user_group(&self, user_group_code: &str) -> GroupResult<Vec<BillingGroupResponse>> {
+        self.store
+            .active_groups_for_user_group(user_group_code)
+            .await
+            .map(|groups| groups.into_iter().map(Into::into).collect())
+            .map_err(storage_error)
+    }
+
     async fn group_has_tokens(&self, code: &str) -> GroupResult<bool> {
         self.store.group_has_tokens(code).await.map_err(storage_error)
+    }
+
+    async fn user_group_has_billing_groups(&self, user_group_code: &str) -> GroupResult<bool> {
+        self.store.user_group_has_billing_groups(user_group_code).await.map_err(storage_error)
     }
 }
 
@@ -101,6 +127,13 @@ impl GroupProviderCatalog for StorageGroupProviderCatalog {
     }
 }
 
+#[async_trait]
+impl GroupUserGroupCatalog for StorageGroupUserGroupCatalog {
+    async fn active_user_group_exists(&self, code: &str) -> GroupResult<bool> {
+        self.store.active_group_exists(code).await.map_err(storage_error)
+    }
+}
+
 fn record_input(input: BillingGroupCreate, is_system: bool) -> BillingGroupRecordInput {
     BillingGroupRecordInput {
         code: input.code,
@@ -109,6 +142,7 @@ fn record_input(input: BillingGroupCreate, is_system: bool) -> BillingGroupRecor
         billing_multiplier: input.billing_multiplier,
         allowed_model_ids: input.allowed_model_ids,
         allowed_provider_ids: input.allowed_provider_ids,
+        visible_user_group_codes: input.visible_user_group_codes,
         is_active: input.is_active.unwrap_or(true),
         is_system,
         sort_order: input.sort_order.unwrap_or(0),
@@ -122,6 +156,7 @@ fn record_patch(input: BillingGroupUpdate) -> BillingGroupRecordPatch {
         billing_multiplier: input.billing_multiplier,
         allowed_model_ids: input.allowed_model_ids,
         allowed_provider_ids: input.allowed_provider_ids,
+        visible_user_group_codes: input.visible_user_group_codes,
         is_active: input.is_active,
         sort_order: input.sort_order,
     }

@@ -9,6 +9,7 @@ pub struct BillingGroupRecordInput {
     pub billing_multiplier: Decimal,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
+    pub visible_user_group_codes: Vec<String>,
     pub is_active: bool,
     pub is_system: bool,
     pub sort_order: i64,
@@ -21,6 +22,7 @@ pub struct BillingGroupRecordPatch {
     pub billing_multiplier: Option<Decimal>,
     pub allowed_model_ids: PatchField<Vec<String>>,
     pub allowed_provider_ids: PatchField<Vec<String>>,
+    pub visible_user_group_codes: PatchField<Vec<String>>,
     pub is_active: Option<bool>,
     pub sort_order: Option<i64>,
 }

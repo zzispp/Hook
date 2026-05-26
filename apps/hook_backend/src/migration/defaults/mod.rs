@@ -24,6 +24,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_tokens",
     "admin_announcements",
     "admin_tickets",
+    "admin_user_groups",
     "admin_groups",
     "admin_users",
     "admin_roles",
@@ -137,6 +138,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "users_create",
             "users_update",
             "users_delete",
+            "user_groups_read",
             "roles_read",
             "admin_wallet_user_balance_read",
             "admin_wallet_transactions_read",
@@ -148,6 +150,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "admin_api_tokens_update",
             "admin_api_tokens_delete",
             "admin_api_tokens_secret_read",
+            "groups_read",
             "groups_available_read",
             "models_public_catalog_read",
         ],
@@ -247,7 +250,12 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     },
     MenuApiBindingDefinition {
         menu_code: "admin_settings",
-        api_codes: &["system_settings_read", "system_settings_update", "system_settings_smtp_test"],
+        api_codes: &[
+            "system_settings_read",
+            "system_settings_update",
+            "system_settings_smtp_test",
+            "user_groups_read",
+        ],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_scheduled_tasks",
@@ -308,6 +316,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     MenuApiBindingDefinition {
         menu_code: "admin_tokens",
         api_codes: &[
+            "groups_read",
             "groups_available_read",
             "models_public_catalog_read",
             "users_read",
@@ -327,8 +336,20 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "groups_detail",
             "groups_update",
             "groups_delete",
+            "user_groups_read",
             "models_global_read",
             "providers_read",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_user_groups",
+        api_codes: &[
+            "user_groups_read",
+            "user_groups_create",
+            "user_groups_detail",
+            "user_groups_update",
+            "user_groups_delete",
+            "user_groups_members_read",
         ],
     },
 ];

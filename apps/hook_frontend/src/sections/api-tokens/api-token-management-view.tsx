@@ -6,7 +6,6 @@ import Card from '@mui/material/Card';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
-import { useAvailableBillingGroups } from 'src/actions/groups';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
 import {
   DASHBOARD_MENU_CODES,
@@ -28,7 +27,6 @@ export function AdminApiTokenManagementView() {
 }
 
 function TokenManagementView({ scope }: { scope: TokenScope }) {
-  const groups = useAvailableBillingGroups();
   const panel = useTokenManagementPanelState({ scope });
 
   return (
@@ -36,7 +34,7 @@ function TokenManagementView({ scope }: { scope: TokenScope }) {
       <TokenBreadcrumbs
         scope={scope}
         loading={panel.tokens.isLoading}
-        onAdd={() => panel.dialog.openCreate(defaultGroupCode(groups.items))}
+        onAdd={() => panel.dialog.openCreate(defaultGroupCode(panel.groups.items))}
         onRefresh={() => void panel.tokens.refresh()}
       />
       <Card>

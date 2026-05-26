@@ -4,6 +4,7 @@ use super::{card_code_tables, domain_tables, iden::*, operations_tables, recharg
 
 pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
     let mut tables = vec![
+        user_groups_table(),
         users_table(),
         user_password_reset_tokens_table(),
         roles_table(),
@@ -26,6 +27,7 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
 }
 
 fn users_table() -> TableCreateStatement {
+    let mut user_group_fk = user_group_fk();
     Table::create()
         .table(Users::Table)
         .if_not_exists()
@@ -34,6 +36,7 @@ fn users_table() -> TableCreateStatement {
         .col(string_len(Users::PasswordHash, 255))
         .col(string_len(Users::Email, 255))
         .col(string_len(Users::Role, 100))
+        .col(string_len(Users::GroupCode, 64))
         .col(boolean(Users::IsActive))
         .col(boolean(Users::IsDeleted))
         .col(text(Users::AllowedModelIds).default("[]"))
@@ -45,7 +48,34 @@ fn users_table() -> TableCreateStatement {
         .col(boolean(Users::EmailVerified))
         .col(big_integer_null(Users::RateLimitRpm))
         .col(string_len(Users::QuotaMode, 20).default("wallet"))
+        .foreign_key(&mut user_group_fk)
         .to_owned()
+}
+
+fn user_groups_table() -> TableCreateStatement {
+    Table::create()
+        .table(UserGroups::Table)
+        .if_not_exists()
+        .col(string_len(UserGroups::Id, 36).primary_key())
+        .col(string_len(UserGroups::Code, 64))
+        .col(string_len(UserGroups::Name, 100))
+        .col(text_null(UserGroups::Description))
+        .col(boolean(UserGroups::IsActive))
+        .col(boolean(UserGroups::IsSystem))
+        .col(big_integer(UserGroups::SortOrder))
+        .col(timestamp_tz(UserGroups::CreatedAt))
+        .col(timestamp_tz(UserGroups::UpdatedAt))
+        .index(Index::create().name("index_user_groups_by_code").col(UserGroups::Code).unique())
+        .to_owned()
+}
+
+fn user_group_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_users_user_group")
+        .from(Users::Table, Users::GroupCode)
+        .to(UserGroups::Table, UserGroups::Code);
+    foreign_key
 }
 
 fn user_password_reset_tokens_table() -> TableCreateStatement {

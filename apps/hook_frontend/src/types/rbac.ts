@@ -131,6 +131,7 @@ export type SystemUser = {
   username: string;
   email: string;
   role: string;
+  group_code: string;
   is_active: boolean;
   allowed_model_ids: string[];
   allowed_provider_ids: string[];
@@ -149,6 +150,7 @@ export type UserInput = {
   password: string;
   email: string;
   role: string;
+  group_code: string;
   is_active: boolean;
   allowed_model_ids: string[];
   allowed_provider_ids: string[];

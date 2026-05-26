@@ -41,7 +41,7 @@ use dashboard::{
 use group::{
     api::{GroupApiState, create_router as create_group_router},
     application::GroupService,
-    infra::{StorageGroupModelCatalog, StorageGroupProviderCatalog, StorageGroupRepository},
+    infra::{StorageGroupModelCatalog, StorageGroupProviderCatalog, StorageGroupRepository, StorageGroupUserGroupCatalog},
 };
 use i18n::{
     api::{I18nApiState, create_router as create_i18n_router},
@@ -80,7 +80,7 @@ use scheduler::{
 use setting::{
     api::{SettingApiState, create_router as create_setting_router},
     application::SettingService,
-    infra::{LettreSmtpConnectionTester, SettingAesSecretCipher, StorageSettingRepository},
+    infra::{LettreSmtpConnectionTester, SettingAesSecretCipher, StorageSettingRepository, StorageSettingUserGroupCatalog},
 };
 use std::{net::SocketAddr, sync::Arc};
 use storage::connect_database;
@@ -92,8 +92,8 @@ use user::{
     application::{SystemUserProvider, UserService},
     infra::{
         BcryptPasswordHasher, ConfigSystemUserProvider, RedisRegistrationEmailCodeStore, SmtpPasswordResetMailer, SmtpRegistrationEmailMailer,
-        StorageInitialGrantLedger, StoragePasswordResetConfig, StorageRegistrationEmailConfig, StorageRegistrationPolicy, StorageUserRepository,
-        StorageUserWalletCatalog,
+        StorageInitialGrantLedger, StoragePasswordResetConfig, StorageRegistrationEmailConfig, StorageRegistrationPolicy, StorageUserGroupBillingCatalog,
+        StorageUserGroupRepository, StorageUserGroupSettingCatalog, StorageUserRepository, StorageUserWalletCatalog,
     },
 };
 use wallet::{
@@ -157,17 +157,21 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         system_wallet_provider.clone(),
     ));
     let setting_secret_cipher = SettingAesSecretCipher::new(settings.provider_key_secret()?)?;
-    let system_settings = Arc::new(SettingService::new(
-        CachedSettingRepository::new(StorageSettingRepository::new(database.clone()), proxy_cache.clone()),
-        setting_secret_cipher.clone(),
-        LettreSmtpConnectionTester,
-    ));
+    let system_settings = Arc::new(
+        SettingService::new(
+            CachedSettingRepository::new(StorageSettingRepository::new(database.clone()), proxy_cache.clone()),
+            setting_secret_cipher.clone(),
+            LettreSmtpConnectionTester,
+        )
+        .with_user_group_catalog(StorageSettingUserGroupCatalog::new(database.clone())),
+    );
     let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone())));
     let recharges = Arc::new(RechargeService::new(StorageRechargeRepository::new(database.clone()), PaymentChannelRegistry::empty()).await?);
     let groups = Arc::new(GroupService::new(
         CachedGroupRepository::new(StorageGroupRepository::new(database.clone()), proxy_cache.clone()),
         StorageGroupModelCatalog::new(database.clone()),
         StorageGroupProviderCatalog::new(database.clone()),
+        StorageGroupUserGroupCatalog::new(database.clone()),
     ));
     let i18n = Arc::new(I18nService::new(StorageI18nRepository::new(database.clone())));
     let api_tokens = Arc::new(ApiTokenService::new(
@@ -196,6 +200,11 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
             RedisRegistrationEmailCodeStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
         ),
     );
+    let user_groups = Arc::new(user::application::UserGroupService::new(
+        CachedUserRepository::new(StorageUserGroupRepository::new(database.clone()), proxy_cache.clone()),
+        StorageUserGroupBillingCatalog::new(database.clone()),
+        StorageUserGroupSettingCatalog::new(database.clone()),
+    ));
     let captcha = Arc::new(CaptchaService::new(
         StorageCaptchaSettingsReader::new(database.clone()),
         RedisCaptchaStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
@@ -220,6 +229,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     Ok(AppState {
         database,
         users,
+        user_groups,
         tokens,
         rbac,
         models,
@@ -249,6 +259,7 @@ fn api_token_system_owner(provider: &impl SystemUserProvider) -> Option<(String,
         ApiTokenOwnerResponse {
             username: user.username,
             email: user.email,
+            group_code: user.group_code,
         },
     ))
 }
@@ -263,7 +274,7 @@ async fn build_rbac_service(settings: &Settings, database: storage::Database) ->
 }
 
 fn create_app(state: AppState) -> Router {
-    let user_state = ApiState::new(state.users.clone(), state.tokens.clone(), state.captcha.clone());
+    let user_state = ApiState::new(state.users.clone(), state.user_groups.clone(), state.tokens.clone(), state.captcha.clone());
     let rbac_state = RbacApiState::new(state.authorization.clone(), state.rbac.clone(), state.rbac.clone());
     let model_state = ModelApiState::new(state.models);
     let provider_state = ProviderApiState::new(state.providers, Arc::new(LlmProxyProviderModelTester::new(state.llm_proxy.clone())));

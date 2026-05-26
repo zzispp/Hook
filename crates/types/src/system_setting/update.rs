@@ -30,6 +30,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub support_ticket_email_notifications_enabled: Option<bool>,
     #[serde(default)]
+    pub default_user_group_code: Option<String>,
+    #[serde(default)]
     pub token_limit_per_user: Option<i64>,
     #[serde(default)]
     pub client_request_record_level: Option<RequestRecordLevel>,
@@ -125,6 +127,7 @@ impl SystemSettingsUpdate {
             && self.support_ticket_captcha_enabled.is_none()
             && self.registration_email_verification_enabled.is_none()
             && self.password_reset_enabled.is_none()
+            && self.default_user_group_code.is_none()
             && self.default_user_grant.is_none()
             && self.default_rate_limit_rpm.is_none()
             && self.recharge_enabled.is_none()

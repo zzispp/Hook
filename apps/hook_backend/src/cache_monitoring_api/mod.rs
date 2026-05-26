@@ -277,6 +277,7 @@ fn resolve_owner(
     users.get(user_id).map(|record| ApiTokenOwnerResponse {
         username: record.username.clone(),
         email: record.email.clone(),
+        group_code: record.group_code.clone(),
     })
 }
 

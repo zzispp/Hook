@@ -6,6 +6,8 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
     vec![
         index("index_users_by_username", Users::Table, Users::Username, true),
         index("index_users_by_email", Users::Table, Users::Email, true),
+        index("index_users_by_group_code", Users::Table, Users::GroupCode, false),
+        index("index_user_groups_by_active", UserGroups::Table, UserGroups::IsActive, false),
         index(
             "index_user_password_reset_tokens_by_hash",
             UserPasswordResetTokens::Table,
@@ -158,6 +160,19 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             "index_billing_group_providers_by_group",
             BillingGroupProviders::Table,
             BillingGroupProviders::GroupCode,
+            false,
+        ),
+        billing_group_user_groups_unique_index(),
+        index(
+            "index_billing_group_user_groups_by_billing_group",
+            BillingGroupUserGroups::Table,
+            BillingGroupUserGroups::BillingGroupCode,
+            false,
+        ),
+        index(
+            "index_billing_group_user_groups_by_user_group",
+            BillingGroupUserGroups::Table,
+            BillingGroupUserGroups::UserGroupCode,
             false,
         ),
         index("index_request_records_by_created_at", RequestRecords::Table, RequestRecords::CreatedAt, false),
@@ -357,6 +372,17 @@ fn billing_group_providers_unique_index() -> IndexCreateStatement {
         .table(BillingGroupProviders::Table)
         .col(BillingGroupProviders::GroupCode)
         .col(BillingGroupProviders::ProviderId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn billing_group_user_groups_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_billing_group_user_groups_unique")
+        .table(BillingGroupUserGroups::Table)
+        .col(BillingGroupUserGroups::BillingGroupCode)
+        .col(BillingGroupUserGroups::UserGroupCode)
         .unique()
         .if_not_exists()
         .to_owned()

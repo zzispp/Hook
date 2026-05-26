@@ -7,6 +7,7 @@ pub struct UserRecordInput {
     pub email: String,
     pub email_verified: Option<bool>,
     pub role: String,
+    pub group_code: String,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
@@ -18,6 +19,24 @@ pub struct UserRecordInput {
 pub struct UserAuthRecord {
     pub user: User,
     pub password_hash: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UserGroupRecordInput {
+    pub code: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub is_active: bool,
+    pub is_system: bool,
+    pub sort_order: i64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UserGroupRecordPatch {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub is_active: Option<bool>,
+    pub sort_order: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

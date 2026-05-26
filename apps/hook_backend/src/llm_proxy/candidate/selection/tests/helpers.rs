@@ -47,8 +47,10 @@ pub(super) fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnap
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: Vec::new(),
             allowed_provider_ids: Vec::new(),
+            visible_user_group_codes: vec!["default".into()],
             is_active: true,
         }],
+        active_user_group_codes: vec!["default".into()],
         users: Vec::new(),
         providers: vec![provider],
     }
@@ -58,6 +60,7 @@ pub(super) fn user_access(id: &str, username: &str, allowed_provider_ids: Vec<St
     CachedUserAccess {
         id: id.into(),
         username: username.into(),
+        group_code: "default".into(),
         is_active: true,
         allowed_model_ids: Vec::new(),
         allowed_provider_ids,

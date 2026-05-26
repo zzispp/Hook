@@ -7,7 +7,8 @@ pub use ports::{
     EmailSettings, InitialGrantLedger, PasswordHasher, PasswordResetConfig, PasswordResetEmail, PasswordResetMailer, PasswordResetRecord,
     PasswordResetRepository, PasswordResetTemplate, RegistrationEmail, RegistrationEmailCodeStore, RegistrationEmailConfig, RegistrationEmailMailer,
     RegistrationEmailTemplate, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord,
-    UserRepository, UserUseCase, UserWalletCatalog,
+    UserGroupBillingCatalog, UserGroupCreateRecord, UserGroupRepository, UserGroupSettingCatalog, UserGroupUpdateRecord, UserGroupUseCase, UserRepository,
+    UserUseCase, UserWalletCatalog,
 };
-pub use service::UserService;
+pub use service::{UserGroupService, UserService};
 pub use types::user::{PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, SignUpUser};

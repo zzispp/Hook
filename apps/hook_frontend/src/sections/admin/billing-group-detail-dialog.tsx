@@ -3,6 +3,7 @@
 import type { Theme } from '@mui/material/styles';
 import type { Provider } from 'src/types/provider';
 import type { BillingGroup } from 'src/types/group';
+import type { UserGroup } from 'src/types/user-group';
 import type { GlobalModelResponse } from 'src/types/model';
 
 import Box from '@mui/material/Box';
@@ -23,12 +24,15 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 
+import { displayUserGroup } from './user-group-utils';
+
 const MAX_VISIBLE_ITEMS = 20;
 
 type Props = {
   group: BillingGroup | null;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
   providers: Pick<Provider, 'id' | 'name'>[];
+  userGroups: UserGroup[];
   open: boolean;
   onClose: () => void;
 };
@@ -37,6 +41,7 @@ export function BillingGroupDetailDialog({
   group,
   models,
   providers,
+  userGroups,
   open,
   onClose,
 }: Props) {
@@ -52,6 +57,7 @@ export function BillingGroupDetailDialog({
           <Divider />
           <ModelSelectionSection group={group} models={models} />
           <ProviderSelectionSection group={group} providers={providers} />
+          <UserGroupSelectionSection group={group} userGroups={userGroups} />
         </Stack>
       </DialogContent>
     </Dialog>
@@ -123,14 +129,12 @@ function SummaryGrid({ group }: { group: BillingGroup }) {
 
 function SelectionSection({
   title,
-  allLabel,
+  summaryLabel,
   items,
-  unrestricted,
 }: {
   title: string;
-  allLabel: string;
+  summaryLabel?: string;
   items: string[];
-  unrestricted: boolean;
 }) {
   const visibleItems = items.slice(0, MAX_VISIBLE_ITEMS);
   const hiddenCount = items.length - visibleItems.length;
@@ -138,9 +142,9 @@ function SelectionSection({
   return (
     <Stack spacing={1}>
       <Typography variant="subtitle2">{title}</Typography>
-      {unrestricted ? (
+      {summaryLabel ? (
         <Typography variant="body2" color="text.secondary">
-          {allLabel}
+          {summaryLabel}
         </Typography>
       ) : null}
       <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75 }}>
@@ -148,7 +152,7 @@ function SelectionSection({
           <Chip key={`${title}-${item}`} size="small" label={item} />
         ))}
         {hiddenCount > 0 ? <Chip size="small" label={`+${hiddenCount}`} /> : null}
-        {!unrestricted && visibleItems.length === 0 ? (
+        {!summaryLabel && visibleItems.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
             -
           </Typography>
@@ -170,9 +174,8 @@ function ModelSelectionSection({
   return (
     <SelectionSection
       title={t('fields.allowedModels')}
-      allLabel={t('billingGroups.allModels')}
+      summaryLabel={group.allowed_model_ids.length === 0 ? t('billingGroups.allModels') : undefined}
       items={namedModels(group, models)}
-      unrestricted={group.allowed_model_ids.length === 0}
     />
   );
 }
@@ -189,9 +192,32 @@ function ProviderSelectionSection({
   return (
     <SelectionSection
       title={t('fields.allowedProviders')}
-      allLabel={t('billingGroups.allProviders')}
+      summaryLabel={
+        group.allowed_provider_ids.length === 0 ? t('billingGroups.allProviders') : undefined
+      }
       items={namedProviders(group, providers)}
-      unrestricted={group.allowed_provider_ids.length === 0}
+    />
+  );
+}
+
+function UserGroupSelectionSection({
+  group,
+  userGroups,
+}: {
+  group: BillingGroup;
+  userGroups: UserGroup[];
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <SelectionSection
+      title={t('fields.visibleUserGroups')}
+      summaryLabel={
+        group.visible_user_group_codes.length === 0
+          ? t('billingGroups.noVisibleUserGroups')
+          : undefined
+      }
+      items={namedUserGroups(group, userGroups)}
     />
   );
 }
@@ -213,6 +239,10 @@ function namedProviders(group: BillingGroup, providers: Pick<Provider, 'id' | 'n
     return providers.map((provider) => provider.name);
   }
   return group.allowed_provider_ids.map((id) => labels.get(id) ?? id);
+}
+
+function namedUserGroups(group: BillingGroup, userGroups: UserGroup[]) {
+  return group.visible_user_group_codes.map((code) => displayUserGroup(code, userGroups));
 }
 
 function formatMultiplier(value: number) {

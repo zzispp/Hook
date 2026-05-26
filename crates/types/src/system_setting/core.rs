@@ -17,6 +17,7 @@ pub struct SystemSettings {
     pub password_reset_enabled: bool,
     pub email_config_enabled: bool,
     pub support_ticket_email_notifications_enabled: bool,
+    pub default_user_group_code: String,
     pub token_limit_per_user: i64,
     pub client_request_record_level: RequestRecordLevel,
     pub client_record_request_headers: bool,

@@ -68,7 +68,7 @@ where
     async fn create_token(&self, user_id: &str, input: ApiTokenCreate) -> ApiTokenResult<ApiTokenCreateResponse> {
         let input = sanitize_create(input);
         let validated = validate_create(&input)?;
-        self.ensure_create_policy(&validated.group_code, &validated.allowed_model_ids).await?;
+        self.ensure_create_policy(user_id, &validated.group_code, &validated.allowed_model_ids).await?;
         self.ensure_owner_token_limit(user_id, types::api_token::ApiTokenType::User).await?;
         let generated = generate_token();
         let record = user_create_record(user_id, input, validated, &generated);
@@ -111,12 +111,9 @@ where
         let input = assign_independent_owner(actor_id, input);
         let validated = validate_admin_create(&input)?;
         let owner_id = admin_owner_id(&input)?;
-        self.ensure_create_policy(&validated.group_code, &validated.allowed_model_ids).await?;
-        if input.token_type == types::api_token::ApiTokenType::User
-            && let Some(user_id) = owner_id.as_deref()
-        {
-            self.ensure_user_exists(user_id).await?;
-        }
+        let required_owner_id = required_owner_id(owner_id.as_deref())?;
+        self.ensure_create_policy(required_owner_id, &validated.group_code, &validated.allowed_model_ids)
+            .await?;
         if let Some(user_id) = owner_id.as_deref() {
             self.ensure_owner_token_limit(user_id, input.token_type).await?;
         }
@@ -199,16 +196,24 @@ where
         })
     }
 
-    async fn ensure_create_policy(&self, group_code: &str, model_ids: &[String]) -> ApiTokenResult<()> {
+    async fn ensure_create_policy(&self, owner_id: &str, group_code: &str, model_ids: &[String]) -> ApiTokenResult<()> {
+        let owner_group_code = self.owner_group_code(owner_id).await?;
         let group = self.active_group(group_code).await?;
         self.ensure_models_exist(model_ids).await?;
+        ensure_group_visible_to_owner(&group, &owner_group_code)?;
         ensure_group_allows_models(&group, model_ids)
     }
 
     async fn ensure_update_policy(&self, current: &types::api_token::ApiToken, input: &ApiTokenUpdate, model_ids: &[String]) -> ApiTokenResult<()> {
+        let owner_id = current
+            .user_id
+            .as_deref()
+            .ok_or_else(|| ApiTokenError::InvalidInput("token owner is required".into()))?;
+        let owner_group_code = self.owner_group_code(owner_id).await?;
         let group_code = input.group_code.as_deref().unwrap_or(&current.group_code);
         let group = self.active_group(group_code).await?;
         self.ensure_models_exist(model_ids).await?;
+        ensure_group_visible_to_owner(&group, &owner_group_code)?;
         ensure_group_allows_models(&group, model_ids)
     }
 
@@ -228,11 +233,11 @@ where
         Ok(())
     }
 
-    async fn ensure_user_exists(&self, id: &str) -> ApiTokenResult<()> {
-        if self.users.user_exists(id).await? {
-            return Ok(());
-        }
-        Err(ApiTokenError::InvalidInput(format!("user does not exist: {id}")))
+    async fn owner_group_code(&self, owner_id: &str) -> ApiTokenResult<String> {
+        self.users
+            .user_group_code(owner_id)
+            .await?
+            .ok_or_else(|| ApiTokenError::InvalidInput(format!("user does not exist: {owner_id}")))
     }
 
     async fn ensure_owner_token_limit(&self, owner_id: &str, token_type: types::api_token::ApiTokenType) -> ApiTokenResult<()> {
@@ -281,4 +286,18 @@ fn ensure_group_allows_models(group: &types::group::BillingGroupResponse, model_
         }
     }
     Ok(())
+}
+
+fn ensure_group_visible_to_owner(group: &types::group::BillingGroupResponse, owner_group_code: &str) -> ApiTokenResult<()> {
+    if group.visible_user_group_codes.iter().any(|code| code == owner_group_code) {
+        return Ok(());
+    }
+    Err(ApiTokenError::InvalidInput(format!(
+        "billing group is not visible to user group {owner_group_code}: {}",
+        group.code
+    )))
+}
+
+fn required_owner_id(owner_id: Option<&str>) -> ApiTokenResult<&str> {
+    owner_id.ok_or_else(|| ApiTokenError::InvalidInput("token owner is required".into()))
 }

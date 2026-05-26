@@ -170,6 +170,11 @@ export const endpoints = {
     list: '/api/admin/groups',
     byId: (id: string) => `/api/admin/groups/${id}`,
   },
+  adminUserGroups: {
+    list: '/api/admin/user-groups',
+    byCode: (code: string) => `/api/admin/user-groups/${encodeURIComponent(code)}`,
+    users: (code: string) => `/api/admin/user-groups/${encodeURIComponent(code)}/users`,
+  },
   adminProviders: {
     list: '/api/admin/providers',
     byId: (id: string) => `/api/admin/providers/${id}`,

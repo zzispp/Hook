@@ -1,6 +1,7 @@
 'use client';
 
 import type { BillingGroup } from 'src/types/group';
+import type { UserGroup } from 'src/types/user-group';
 import type { UseTableReturn } from 'src/components/table';
 
 import Box from '@mui/material/Box';
@@ -19,6 +20,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
+import { userGroupSelectionLabel } from './user-group-utils';
 import {
   EnabledLabel,
   TableLoadingRows,
@@ -27,6 +29,7 @@ import {
 
 export function BillingGroupTable({
   rows,
+  userGroups,
   total,
   loading,
   table,
@@ -35,6 +38,7 @@ export function BillingGroupTable({
   onDelete,
 }: {
   rows: BillingGroup[];
+  userGroups: UserGroup[];
   total: number;
   loading: boolean;
   table: UseTableReturn;
@@ -49,7 +53,7 @@ export function BillingGroupTable({
     <>
       <TableContainer>
         <Scrollbar>
-          <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 1040 }}>
+          <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 1180 }}>
             <ManagementTableHead head={tableHead} />
             <TableBody>
               {loading ? (
@@ -59,6 +63,7 @@ export function BillingGroupTable({
                   <BillingGroupTableRow
                     key={row.id}
                     row={row}
+                    userGroups={userGroups}
                     onView={onView}
                     onEdit={onEdit}
                     onDelete={onDelete}
@@ -85,11 +90,13 @@ export function BillingGroupTable({
 
 function BillingGroupTableRow({
   row,
+  userGroups,
   onView,
   onEdit,
   onDelete,
 }: {
   row: BillingGroup;
+  userGroups: UserGroup[];
   onView: (group: BillingGroup) => void;
   onEdit: (group: BillingGroup) => void;
   onDelete: (group: BillingGroup) => void;
@@ -108,6 +115,7 @@ function BillingGroupTableRow({
       <TableCell>{row.billing_multiplier}</TableCell>
       <TableCell>{modelAccessText(row, t)}</TableCell>
       <TableCell>{providerAccessText(row, t)}</TableCell>
+      <TableCell>{userGroupSelectionLabel(row.visible_user_group_codes, userGroups, t)}</TableCell>
       <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
       <TableCell>{row.is_system ? t('common.system') : t('common.custom')}</TableCell>
       <TableCell>{row.sort_order}</TableCell>
@@ -181,6 +189,7 @@ function groupTableHead(t: (key: string, options?: Record<string, unknown>) => s
     { id: 'billing_multiplier', label: t('fields.billingMultiplier') },
     { id: 'allowed_model_ids', label: t('fields.allowedModels') },
     { id: 'allowed_provider_ids', label: t('fields.allowedProviders') },
+    { id: 'visible_user_group_codes', label: t('fields.visibleUserGroups') },
     { id: 'status', label: t('common.status') },
     { id: 'system', label: t('common.system') },
     { id: 'sort_order', label: t('common.sortOrder') },

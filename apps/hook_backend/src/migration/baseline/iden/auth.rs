@@ -8,6 +8,7 @@ pub(in crate::migration::baseline) enum Users {
     PasswordHash,
     Email,
     Role,
+    GroupCode,
     IsActive,
     IsDeleted,
     AllowedModelIds,
@@ -19,6 +20,20 @@ pub(in crate::migration::baseline) enum Users {
     EmailVerified,
     RateLimitRpm,
     QuotaMode,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum UserGroups {
+    Table,
+    Id,
+    Code,
+    Name,
+    Description,
+    IsActive,
+    IsSystem,
+    SortOrder,
+    CreatedAt,
+    UpdatedAt,
 }
 
 #[derive(DeriveIden)]

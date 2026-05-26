@@ -273,7 +273,7 @@ impl LlmProxyCache {
     }
 
     fn scheduling_snapshot_key(&self) -> String {
-        format!("{}:llm_proxy:scheduling:snapshot:v3", self.key_prefix)
+        format!("{}:llm_proxy:scheduling:snapshot:v4", self.key_prefix)
     }
 
     fn scheduling_rebuild_lock_key(&self) -> String {

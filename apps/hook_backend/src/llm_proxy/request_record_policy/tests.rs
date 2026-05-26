@@ -147,6 +147,7 @@ fn snapshot() -> SchedulingSnapshot {
         provider_cooldown_policy: Default::default(),
         models: Vec::new(),
         groups: Vec::new(),
+        active_user_group_codes: Vec::new(),
         users: Vec::new(),
         providers: Vec::new(),
     }

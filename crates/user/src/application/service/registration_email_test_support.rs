@@ -122,6 +122,7 @@ fn test_registration_policy() -> TestRegistrationPolicy {
             allow_registration: true,
             registration_email_verification_enabled: true,
             default_user_grant: Decimal::ZERO,
+            default_user_group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
             email_suffix_mode: EmailSuffixMode::None,
             email_suffixes: String::new(),
         },

@@ -155,6 +155,7 @@ impl RegistrationPolicy for StorageRegistrationPolicy {
             allow_registration: settings.allow_registration,
             registration_email_verification_enabled: settings.registration_email_verification_enabled,
             default_user_grant: settings.default_user_grant,
+            default_user_group_code: settings.default_user_group_code,
             email_suffix_mode: settings.email_suffix_mode,
             email_suffixes: settings.email_suffixes,
         })
@@ -186,6 +187,7 @@ fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
         email: record.email,
         email_verified: record.email_verified,
         role: record.role,
+        group_code: record.group_code,
         is_active: record.is_active,
         allowed_model_ids: record.allowed_model_ids,
         allowed_provider_ids: record.allowed_provider_ids,

@@ -1,18 +1,31 @@
 use async_trait::async_trait;
-use storage::{Database, StorageError, setting::SettingStore};
+use storage::{Database, StorageError, setting::SettingStore, user::UserGroupStore};
 use types::system_setting::{SystemSettingsResponse, SystemSettingsUpdate};
 
-use crate::application::{SettingError, SettingRepository, SettingResult, StoredSmtpSettings};
+use crate::application::{SettingError, SettingRepository, SettingResult, SettingUserGroupCatalog, StoredSmtpSettings};
 
 #[derive(Clone)]
 pub struct StorageSettingRepository {
     store: SettingStore,
 }
 
+#[derive(Clone)]
+pub struct StorageSettingUserGroupCatalog {
+    store: UserGroupStore,
+}
+
 impl StorageSettingRepository {
     pub fn new(database: Database) -> Self {
         Self {
             store: SettingStore::new(database),
+        }
+    }
+}
+
+impl StorageSettingUserGroupCatalog {
+    pub fn new(database: Database) -> Self {
+        Self {
+            store: UserGroupStore::new(database),
         }
     }
 }
@@ -33,6 +46,13 @@ impl SettingRepository for StorageSettingRepository {
             .await
             .map(Into::into)
             .map_err(storage_error)
+    }
+}
+
+#[async_trait]
+impl SettingUserGroupCatalog for StorageSettingUserGroupCatalog {
+    async fn active_user_group_exists(&self, code: &str) -> SettingResult<bool> {
+        self.store.active_group_exists(code).await.map_err(storage_error)
     }
 }
 
@@ -61,6 +81,7 @@ fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<Str
         password_reset_enabled: input.password_reset_enabled,
         email_config_enabled: input.email_config_enabled,
         support_ticket_email_notifications_enabled: input.support_ticket_email_notifications_enabled,
+        default_user_group_code: input.default_user_group_code,
         token_limit_per_user: input.token_limit_per_user,
         client_request_record_level: input.client_request_record_level,
         client_record_request_headers: input.client_record_request_headers,

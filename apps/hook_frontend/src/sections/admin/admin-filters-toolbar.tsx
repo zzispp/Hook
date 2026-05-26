@@ -3,6 +3,7 @@
 import type { RbacListFilters } from 'src/actions/rbac';
 import type { GlobalModelFilters } from 'src/actions/models';
 import type { ProviderFilters } from 'src/actions/providers';
+import type { UserGroupFilters } from 'src/types/user-group';
 
 import { useMemo, useCallback } from 'react';
 
@@ -142,6 +143,13 @@ export function toModelFilters(filters: AdminFilterState): GlobalModelFilters {
 }
 
 export function toProviderFilters(filters: AdminFilterState): ProviderFilters {
+  return {
+    search: normalizedSearch(filters.search),
+    is_active: statusValue(filters.status),
+  };
+}
+
+export function toUserGroupFilters(filters: AdminFilterState): UserGroupFilters {
   return {
     search: normalizedSearch(filters.search),
     is_active: statusValue(filters.status),

@@ -231,6 +231,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         password_reset_enabled: false,
         email_config_enabled: false,
         support_ticket_email_notifications_enabled: false,
+        default_user_group_code: "default".into(),
         token_limit_per_user: 5,
         client_request_record_level: RequestRecordLevel::Basic,
         client_record_request_headers: true,

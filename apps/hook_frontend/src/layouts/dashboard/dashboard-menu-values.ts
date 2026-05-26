@@ -22,6 +22,7 @@ export const DASHBOARD_MENU_CODES = {
   tickets: 'support_tickets',
   usageRecords: 'usage_records',
   userManagement: 'admin_users',
+  userGroups: 'admin_user_groups',
   walletCenter: 'wallet_center',
   walletManagement: 'admin_wallets',
   cardCodeManagement: 'admin_card_codes',

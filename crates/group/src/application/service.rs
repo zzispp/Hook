@@ -1,39 +1,48 @@
 use async_trait::async_trait;
 use types::group::{BillingGroupCreate, BillingGroupListRequest, BillingGroupListResponse, BillingGroupResponse, BillingGroupUpdate};
 
-use crate::application::{GroupError, GroupModelCatalog, GroupProviderCatalog, GroupRepository, GroupResult, GroupUseCase};
+use crate::application::{GroupError, GroupModelCatalog, GroupProviderCatalog, GroupRepository, GroupResult, GroupUseCase, GroupUserGroupCatalog};
 
 use super::validation::{sanitize_create, sanitize_update, validate_create, validate_list_request, validate_update};
 
-pub struct GroupService<R, M, P> {
+pub struct GroupService<R, M, P, U> {
     repository: R,
     models: M,
     providers: P,
+    user_groups: U,
 }
 
-impl<R, M, P> GroupService<R, M, P>
+impl<R, M, P, U> GroupService<R, M, P, U>
 where
     R: GroupRepository,
     M: GroupModelCatalog,
     P: GroupProviderCatalog,
+    U: GroupUserGroupCatalog,
 {
-    pub const fn new(repository: R, models: M, providers: P) -> Self {
-        Self { repository, models, providers }
+    pub const fn new(repository: R, models: M, providers: P, user_groups: U) -> Self {
+        Self {
+            repository,
+            models,
+            providers,
+            user_groups,
+        }
     }
 }
 
 #[async_trait]
-impl<R, M, P> GroupUseCase for GroupService<R, M, P>
+impl<R, M, P, U> GroupUseCase for GroupService<R, M, P, U>
 where
     R: GroupRepository,
     M: GroupModelCatalog,
     P: GroupProviderCatalog,
+    U: GroupUserGroupCatalog,
 {
     async fn create_group(&self, input: BillingGroupCreate) -> GroupResult<BillingGroupResponse> {
         let input = sanitize_create(input);
         validate_create(&input)?;
         ensure_models_exist(&self.models, &input.allowed_model_ids).await?;
         ensure_providers_exist(&self.providers, &input.allowed_provider_ids).await?;
+        ensure_user_groups_exist(&self.user_groups, &input.visible_user_group_codes).await?;
         reject_duplicate_code(&self.repository, &input.code).await?;
         self.repository.create_group(input).await
     }
@@ -43,6 +52,7 @@ where
         validate_update(&input)?;
         ensure_patch_models_exist(&self.models, &input.allowed_model_ids).await?;
         ensure_patch_providers_exist(&self.providers, &input.allowed_provider_ids).await?;
+        ensure_patch_user_groups_exist(&self.user_groups, &input.visible_user_group_codes).await?;
         self.repository.update_group(id, input).await
     }
 
@@ -62,8 +72,14 @@ where
         self.repository.list_groups(request).await
     }
 
-    async fn available_groups(&self) -> GroupResult<Vec<BillingGroupResponse>> {
-        self.repository.active_groups().await.map(sanitize_available_groups)
+    async fn available_groups(&self, user_group_code: &str) -> GroupResult<Vec<BillingGroupResponse>> {
+        if !self.user_groups.active_user_group_exists(user_group_code).await? {
+            return Ok(Vec::new());
+        }
+        self.repository
+            .active_groups_for_user_group(user_group_code)
+            .await
+            .map(sanitize_available_groups)
     }
 }
 
@@ -130,6 +146,28 @@ where
     Ok(())
 }
 
+async fn ensure_patch_user_groups_exist<U>(user_groups: &U, patch: &types::model::PatchField<Vec<String>>) -> GroupResult<()>
+where
+    U: GroupUserGroupCatalog,
+{
+    match patch {
+        types::model::PatchField::Value(value) => ensure_user_groups_exist(user_groups, value).await,
+        types::model::PatchField::Null | types::model::PatchField::Missing => Ok(()),
+    }
+}
+
+async fn ensure_user_groups_exist<U>(user_groups: &U, codes: &[String]) -> GroupResult<()>
+where
+    U: GroupUserGroupCatalog,
+{
+    for code in codes {
+        if !user_groups.active_user_group_exists(code).await? {
+            return Err(GroupError::InvalidInput(format!("active user group does not exist: {code}")));
+        }
+    }
+    Ok(())
+}
+
 fn reject_system_group(group: &BillingGroupResponse) -> GroupResult<()> {
     if group.is_system {
         return Err(GroupError::Conflict("system billing group cannot be deleted".into()));
@@ -164,6 +202,7 @@ mod tests {
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: vec!["model-1".into()],
             allowed_provider_ids: vec!["provider-1".into(), "provider-2".into()],
+            visible_user_group_codes: vec!["default".into()],
             is_active: true,
             is_system: true,
             sort_order: 0,

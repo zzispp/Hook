@@ -2,6 +2,7 @@
 
 import type { AdminT } from './shared';
 import type { Provider } from 'src/types/provider';
+import type { UserGroup } from 'src/types/user-group';
 import type { UserForm } from './user-management-utils';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { Role, SystemUser, UserQuotaMode } from 'src/types/rbac';
@@ -32,11 +33,12 @@ type UserDialogState = {
 type Props = {
   dialog: UserDialogState;
   roles: Role[];
+  userGroups: UserGroup[];
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
   providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
 };
 
-export function UserFormDialog({ dialog, roles, models, providers }: Props) {
+export function UserFormDialog({ dialog, roles, userGroups, models, providers }: Props) {
   const { t } = useTranslate('admin');
 
   return (
@@ -47,7 +49,7 @@ export function UserFormDialog({ dialog, roles, models, providers }: Props) {
       onClose={dialog.close}
       onSubmit={dialog.submit}
     >
-      <IdentityFields dialog={dialog} roles={roles} />
+      <IdentityFields dialog={dialog} roles={roles} userGroups={userGroups} />
       <AccessFields dialog={dialog} />
       <RestrictionFields dialog={dialog} models={models} providers={providers} />
       <SwitchRow
@@ -59,7 +61,7 @@ export function UserFormDialog({ dialog, roles, models, providers }: Props) {
   );
 }
 
-function IdentityFields({ dialog, roles }: Pick<Props, 'dialog' | 'roles'>) {
+function IdentityFields({ dialog, roles, userGroups }: Pick<Props, 'dialog' | 'roles' | 'userGroups'>) {
   const { t } = useTranslate('admin');
 
   return (
@@ -86,6 +88,19 @@ function IdentityFields({ dialog, roles }: Pick<Props, 'dialog' | 'roles'>) {
         {roles.map((role) => (
           <MenuItem key={role.code} value={role.code}>
             {role.name} ({role.code})
+          </MenuItem>
+        ))}
+      </TextFieldRow>
+      <TextFieldRow
+        required
+        select
+        label={t('fields.userGroup')}
+        value={dialog.form.group_code}
+        onChange={(value) => dialog.setForm((form) => ({ ...form, group_code: value }))}
+      >
+        {userGroups.map((group) => (
+          <MenuItem key={group.code} value={group.code}>
+            {group.name} ({group.code})
           </MenuItem>
         ))}
       </TextFieldRow>

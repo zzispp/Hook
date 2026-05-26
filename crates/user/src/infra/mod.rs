@@ -6,6 +6,7 @@ mod registration_email_config;
 mod registration_email_mailer;
 mod smtp_mailer;
 mod system_user;
+mod user_group_repository;
 mod user_repository;
 
 pub use password::BcryptPasswordHasher;
@@ -15,4 +16,5 @@ pub use registration_email_code_store::RedisRegistrationEmailCodeStore;
 pub use registration_email_config::StorageRegistrationEmailConfig;
 pub use registration_email_mailer::SmtpRegistrationEmailMailer;
 pub use system_user::ConfigSystemUserProvider;
+pub use user_group_repository::{StorageUserGroupBillingCatalog, StorageUserGroupRepository, StorageUserGroupSettingCatalog};
 pub use user_repository::{StorageInitialGrantLedger, StorageRegistrationPolicy, StorageUserRepository, StorageUserWalletCatalog};

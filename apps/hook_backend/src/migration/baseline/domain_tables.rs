@@ -14,6 +14,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         dimension_collectors_table(),
         provider_cooldowns_table(),
         billing_group_providers_table(),
+        billing_group_user_groups_table(),
         setting_tables::system_settings_table(),
         translation_tables::translation_languages_table(),
         translation_tables::translation_entries_table(),
@@ -26,6 +27,41 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
     tables.extend(scheduler_tables::scheduler_tables());
     tables.extend(performance_monitoring_tables::performance_monitoring_tables());
     tables
+}
+
+fn billing_group_user_groups_table() -> TableCreateStatement {
+    let mut billing_group_fk = billing_group_user_group_billing_group_fk();
+    let mut user_group_fk = billing_group_user_group_user_group_fk();
+    Table::create()
+        .table(BillingGroupUserGroups::Table)
+        .if_not_exists()
+        .col(string_len(BillingGroupUserGroups::Id, 36).primary_key())
+        .col(string_len(BillingGroupUserGroups::BillingGroupCode, 64))
+        .col(string_len(BillingGroupUserGroups::UserGroupCode, 64))
+        .col(timestamp_tz(BillingGroupUserGroups::CreatedAt))
+        .col(timestamp_tz(BillingGroupUserGroups::UpdatedAt))
+        .foreign_key(&mut billing_group_fk)
+        .foreign_key(&mut user_group_fk)
+        .to_owned()
+}
+
+fn billing_group_user_group_billing_group_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_billing_group_user_groups_billing_group")
+        .from(BillingGroupUserGroups::Table, BillingGroupUserGroups::BillingGroupCode)
+        .to(BillingGroups::Table, BillingGroups::Code)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn billing_group_user_group_user_group_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_billing_group_user_groups_user_group")
+        .from(BillingGroupUserGroups::Table, BillingGroupUserGroups::UserGroupCode)
+        .to(UserGroups::Table, UserGroups::Code);
+    foreign_key
 }
 
 fn billing_rules_table() -> TableCreateStatement {
