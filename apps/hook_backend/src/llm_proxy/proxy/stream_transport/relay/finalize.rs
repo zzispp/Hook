@@ -6,7 +6,6 @@ use crate::llm_proxy::{
     proxy::{
         response_model::rewrite_response_model_value,
         stream_transport::{
-            completion::{response_id_from_chunk, synthetic_openai_responses_completion},
             estimated_usage::{ESTIMATED_REQUEST_USAGE_SOURCE, ESTIMATED_USAGE_SOURCE},
             event::render_stream_event,
             record::{StreamFailureRecordInput, StreamSuccessRecordInput, failure_record, record_stream_attempt, success_record},
@@ -28,9 +27,7 @@ impl StreamRelay {
             self.record_handler_stop_error(&error).await?;
             return Err(error);
         }
-        let end_reason = self.finish_stream_end_reason();
-        self.queue_synthetic_completion(end_reason);
-        self.stream_status.set_end_reason(end_reason, None);
+        self.stream_status.set_end_reason(self.finish_stream_end_reason(), None);
         self.record_success().await?;
         self.finished = true;
         Ok(())
@@ -123,7 +120,6 @@ impl StreamRelay {
             .flush_stream(self.target_format, self.source_format, &mut self.conversion)
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         for mut event in converted {
-            self.merge_openai_response_id(response_id_from_chunk(&event, self.source_format));
             rewrite_response_model_value(&mut event, &self.context.candidate.requested_model_name);
             self.pending.push_back(render_stream_event(&event, self.source_format));
         }
@@ -140,20 +136,8 @@ impl StreamRelay {
     fn finish_usage_parsers(&mut self) -> Result<(), LlmProxyError> {
         let usage = self.usage_parser.finish()?;
         self.merge_usage(usage.usage);
-        self.merge_openai_response_id(usage.response_id);
         self.protocol_completed |= usage.completed;
         self.estimate_missing_usage()
-    }
-
-    fn queue_synthetic_completion(&mut self, end_reason: StreamEndReason) {
-        if !matches!(end_reason, StreamEndReason::UpstreamEofWithoutCompletion) {
-            return;
-        }
-        if !matches!(self.source_format, ApiFormat::OpenAiResponses) {
-            return;
-        }
-        self.pending
-            .push_back(synthetic_openai_responses_completion(self.openai_response_id.as_deref(), self.usage));
     }
 
     fn estimate_missing_usage(&mut self) -> Result<(), LlmProxyError> {
