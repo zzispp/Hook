@@ -1304,6 +1304,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "formats"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "http",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha1",
+ "sha2 0.10.9",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2899,6 +2914,7 @@ dependencies = [
 name = "proxy"
 version = "0.1.0"
 dependencies = [
+ "formats",
  "serde_json",
  "thiserror 2.0.18",
 ]

@@ -5,6 +5,7 @@ pub enum ApiFormat {
     OpenAiChat,
     OpenAiCompletion,
     OpenAiResponses,
+    OpenAiResponsesCompact,
     OpenAiImage,
     OpenAiEmbedding,
     OpenAiAudio,
@@ -23,7 +24,8 @@ impl ApiFormat {
         match normalized.as_str() {
             "openai:chat" => Ok(Self::OpenAiChat),
             "openaicompletion" | "openaicompletions" | "completion" | "completions" => Ok(Self::OpenAiCompletion),
-            "openai:cli" | "openai:compact" => Ok(Self::OpenAiResponses),
+            "openai:cli" | "openai:responses" => Ok(Self::OpenAiResponses),
+            "openai:compact" | "openai:responses:compact" => Ok(Self::OpenAiResponsesCompact),
             "openaiimage"
             | "openaiimages"
             | "openaiimagegeneration"
@@ -47,17 +49,44 @@ impl ApiFormat {
             | "audio" => Ok(Self::OpenAiAudio),
             "openaimoderation" | "openaimoderations" | "moderation" | "moderations" => Ok(Self::OpenAiModeration),
             "openairealtime" | "realtime" => Ok(Self::OpenAiRealtime),
-            "gemini:chat" | "gemini:cli" => Ok(Self::GeminiChat),
+            "gemini:chat" | "gemini:cli" | "gemini:generate_content" => Ok(Self::GeminiChat),
             "geminiembedding" | "geminiembeddings" | "geminiembedcontent" | "geminibatchembedcontents" => Ok(Self::GeminiEmbedding),
             "geminivideo" | "veo" => Ok(Self::GeminiVideo),
-            "claude:chat" | "claude:cli" => Ok(Self::ClaudeChat),
+            "claude:chat" | "claude:cli" | "claude:messages" => Ok(Self::ClaudeChat),
             "rerank" | "jinarerank" => Ok(Self::Rerank),
             _ => Err(FormatConversionError::InvalidFormat(value.to_owned())),
         }
     }
 
     pub fn supports_chat_conversion(self) -> bool {
-        matches!(self, Self::OpenAiChat | Self::OpenAiResponses | Self::GeminiChat | Self::ClaudeChat)
+        matches!(
+            self,
+            Self::OpenAiChat | Self::OpenAiResponses | Self::OpenAiResponsesCompact | Self::GeminiChat | Self::ClaudeChat
+        )
+    }
+
+    pub fn as_format_id(self) -> Result<&'static str, FormatConversionError> {
+        match self {
+            Self::OpenAiChat => Ok("openai:chat"),
+            Self::OpenAiResponses => Ok("openai:responses"),
+            Self::OpenAiResponsesCompact => Ok("openai:responses:compact"),
+            Self::OpenAiEmbedding => Ok("openai:embedding"),
+            Self::GeminiChat => Ok("gemini:generate_content"),
+            Self::GeminiEmbedding => Ok("gemini:embedding"),
+            Self::ClaudeChat => Ok("claude:messages"),
+            Self::Rerank => Ok("openai:rerank"),
+            _ => Err(FormatConversionError::unsupported_feature(
+                "format_conversion",
+                format!("format {self:?} is not supported by formats crate conversion"),
+            )),
+        }
+    }
+
+    pub fn is_stream_convertible(self) -> bool {
+        matches!(
+            self,
+            Self::OpenAiChat | Self::OpenAiResponses | Self::OpenAiResponsesCompact | Self::GeminiChat | Self::ClaudeChat
+        )
     }
 }
 

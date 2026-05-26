@@ -21,12 +21,12 @@ pub(super) fn summary_sql() -> &'static str {
 
 pub(super) fn timeseries_select(bucket: DashboardBucketFilter, offset: &str) -> String {
     let time_expression = match bucket {
-        DashboardBucketFilter::Hour => format!(
-            "to_char(date_trunc('hour', ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))), 'YYYY-MM-DD\"T\"HH24:MI:SS')"
-        ),
-        DashboardBucketFilter::Day => format!(
-            "to_char(date_trunc('day', ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))), 'YYYY-MM-DD')"
-        ),
+        DashboardBucketFilter::Hour => {
+            format!("to_char(date_trunc('hour', ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))), 'YYYY-MM-DD\"T\"HH24:MI:SS')")
+        }
+        DashboardBucketFilter::Day => {
+            format!("to_char(date_trunc('day', ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))), 'YYYY-MM-DD')")
+        }
     };
     format!("SELECT {time_expression} AS bucket, {} FROM request_records r", timeseries_columns())
 }

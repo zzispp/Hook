@@ -1,4 +1,4 @@
-use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
+use proxy::format_conversion::{ApiFormat, FormatConversionError, FormatConversionRegistry};
 use serde_json::json;
 
 #[test]
@@ -23,37 +23,29 @@ fn error_conversion_maps_provider_error_shape() {
 }
 
 #[test]
-fn responses_request_keeps_claude_assistant_thinking_text_and_tools_together() {
+fn responses_request_rejects_reasoning_input_item_for_cross_format() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
         "model": "gpt-5.5",
         "input": [
             { "type": "message", "role": "user", "content": [{ "type": "input_text", "text": "find sdk" }] },
-            { "type": "function_call", "call_id": "call_1", "name": "search", "arguments": "{\"q\":\"ethers\"}" },
-            { "type": "function_call", "call_id": "call_2", "name": "search", "arguments": "{\"q\":\"wagmi\"}" },
             {
                 "type": "reasoning",
                 "summary": [{ "type": "summary_text", "text": "plan" }],
                 "encrypted_content": "sig_1"
-            },
-            { "type": "message", "role": "assistant", "content": [{ "type": "output_text", "text": "checking" }] },
-            { "type": "function_call_output", "call_id": "call_1", "output": "ethers result" },
-            { "type": "function_call_output", "call_id": "call_2", "output": "wagmi result" }
+            }
         ]
     });
 
-    let claude = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap();
+    let error = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap_err();
 
-    assert_eq!(claude["messages"][1]["role"], "assistant");
-    assert_eq!(claude["messages"][1]["content"].as_array().unwrap().len(), 4);
-    assert_eq!(claude["messages"][1]["content"][0]["type"], "thinking");
-    assert_eq!(claude["messages"][1]["content"][0]["signature"], "sig_1");
-    assert_eq!(claude["messages"][1]["content"][1]["type"], "text");
-    assert_eq!(claude["messages"][1]["content"][2]["type"], "tool_use");
-    assert_eq!(claude["messages"][1]["content"][3]["id"], "call_2");
-    assert_eq!(claude["messages"][2]["role"], "user");
-    assert_eq!(claude["messages"][2]["content"][0]["type"], "tool_result");
-    assert_eq!(claude["messages"][2]["content"][0]["content"], "ethers result");
+    assert_eq!(
+        error,
+        FormatConversionError::UnsupportedFeature {
+            format: "openai:responses",
+            feature: "unsupported input item type reasoning".to_string(),
+        }
+    );
 }
 
 #[test]
@@ -114,7 +106,7 @@ fn claude_tool_stream_outputs_complete_gemini_function_call_on_block_stop() {
 }
 
 #[test]
-fn gemini_request_preserves_parallel_function_call_ids_for_claude() {
+fn gemini_request_maps_parallel_function_calls_to_claude_tool_uses() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
         "model": "gemini-pro",
@@ -139,14 +131,22 @@ fn gemini_request_preserves_parallel_function_call_ids_for_claude() {
 
     let claude = registry.convert_request(&input, ApiFormat::GeminiChat, ApiFormat::ClaudeChat).unwrap();
 
+    assert_eq!(claude["messages"][1]["content"][0]["type"], "tool_use");
     assert_eq!(claude["messages"][1]["content"][0]["id"], "call_1");
+    assert_eq!(claude["messages"][1]["content"][0]["name"], "read_file");
+    assert_eq!(claude["messages"][1]["content"][0]["input"]["file_path"], "a");
+    assert_eq!(claude["messages"][1]["content"][1]["type"], "tool_use");
     assert_eq!(claude["messages"][1]["content"][1]["id"], "call_2");
-    assert_eq!(claude["messages"][2]["content"][0]["tool_use_id"], "call_1");
-    assert_eq!(claude["messages"][2]["content"][1]["tool_use_id"], "call_2");
+    assert_eq!(claude["messages"][1]["content"][1]["input"]["file_path"], "b");
+    assert_eq!(claude["messages"][2]["content"][0]["type"], "tool_result");
+    assert_eq!(claude["messages"][2]["content"][0]["tool_use_id"], "toolu_read_file");
+    assert_eq!(claude["messages"][2]["content"][0]["content"], "A");
+    assert_eq!(claude["messages"][2]["content"][1]["tool_use_id"], "toolu_read_file");
+    assert_eq!(claude["messages"][2]["content"][1]["content"], "B");
 }
 
 #[test]
-fn gemini_request_restores_function_call_thought_signature_for_claude() {
+fn gemini_request_maps_explicit_thought_part_to_claude_thinking() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
         "model": "gemini-pro",
@@ -155,11 +155,8 @@ fn gemini_request_restores_function_call_thought_signature_for_claude() {
             {
                 "role": "model",
                 "parts": [
-                    { "text": "Let me inspect the project." },
-                    {
-                        "thoughtSignature": "skip_thought_signature_validator",
-                        "functionCall": { "id": "call_1", "name": "read_file", "args": { "file_path": "README.md" } }
-                    },
+                    { "text": "Let me inspect the project.", "thought": true, "thoughtSignature": "skip_thought_signature_validator" },
+                    { "functionCall": { "id": "call_1", "name": "read_file", "args": { "file_path": "README.md" } } },
                     { "functionCall": { "id": "call_2", "name": "read_file", "args": { "file_path": "package.json" } } }
                 ]
             },
@@ -179,14 +176,13 @@ fn gemini_request_restores_function_call_thought_signature_for_claude() {
     assert_eq!(content[0]["type"], "thinking");
     assert_eq!(content[0]["thinking"], "Let me inspect the project.");
     assert_eq!(content[0]["signature"], "skip_thought_signature_validator");
-    assert_eq!(content[1]["type"], "text");
-    assert_eq!(content[2]["type"], "tool_use");
-    assert_eq!(content[2]["id"], "call_1");
-    assert_eq!(content[3]["id"], "call_2");
+    assert_eq!(content[1]["type"], "tool_use");
+    assert_eq!(content[1]["id"], "call_1");
+    assert_eq!(content[2]["id"], "call_2");
 }
 
 #[test]
-fn gemini_request_uses_dummy_thinking_when_signature_has_no_text() {
+fn gemini_request_preserves_function_call_with_thought_signature_as_tool_use() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
         "model": "gemini-pro",
@@ -215,16 +211,17 @@ fn gemini_request_uses_dummy_thinking_when_signature_has_no_text() {
     let claude = registry.convert_request(&input, ApiFormat::GeminiChat, ApiFormat::ClaudeChat).unwrap();
     let content = claude["messages"][1]["content"].as_array().unwrap();
 
-    assert_eq!(content[0]["type"], "thinking");
-    assert_eq!(content[0]["thinking"], "Thinking...");
-    assert_eq!(content[0]["signature"], "skip_thought_signature_validator");
+    assert_eq!(content[0]["type"], "tool_use");
+    assert_eq!(content[0]["id"], "call_1");
+    assert_eq!(content[0]["name"], "read_file");
+    assert_eq!(content[0]["input"]["file_path"], "README.md");
+    assert!(content[0].get("thoughtSignature").is_none());
     assert_eq!(content[1]["type"], "tool_use");
-    assert_eq!(content[1]["id"], "call_1");
-    assert_eq!(content[2]["id"], "call_2");
+    assert_eq!(content[1]["id"], "call_2");
 }
 
 #[test]
-fn gemini_to_claude_removes_orphaned_history_tool_use() {
+fn gemini_to_claude_keeps_orphaned_history_tool_use_visible() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
         "model": "gemini-pro",
@@ -251,13 +248,14 @@ fn gemini_to_claude_removes_orphaned_history_tool_use() {
 
     assert_eq!(messages[1]["role"], "assistant");
     assert_eq!(messages[1]["content"][0]["text"], "Let me inspect first.");
+    assert_eq!(messages[1]["content"][1]["type"], "tool_use");
+    assert_eq!(messages[1]["content"][1]["id"], "call_00_MRnT5ExfRUvx7WmI7oUj4977");
     assert_eq!(messages[2]["role"], "user");
-    assert_eq!(messages[2]["content"][0]["text"], "next prompt");
-    assert!(serde_json::to_string(&claude).unwrap().find("call_00_MRnT5ExfRUvx7WmI7oUj4977").is_none());
+    assert_eq!(messages[2]["content"], "next prompt");
 }
 
 #[test]
-fn gemini_to_claude_places_tool_results_before_user_text() {
+fn gemini_to_claude_preserves_mixed_user_part_order() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
         "model": "gemini-pro",
@@ -282,7 +280,8 @@ fn gemini_to_claude_places_tool_results_before_user_text() {
     let claude = registry.convert_request(&input, ApiFormat::GeminiChat, ApiFormat::ClaudeChat).unwrap();
     let content = claude["messages"][2]["content"].as_array().unwrap();
 
-    assert_eq!(content[0]["type"], "tool_result");
-    assert_eq!(content[0]["tool_use_id"], "call_1");
-    assert_eq!(content[1]["type"], "text");
+    assert_eq!(content[0]["type"], "text");
+    assert_eq!(content[0]["text"], "also answer this");
+    assert_eq!(content[1]["type"], "tool_result");
+    assert_eq!(content[1]["tool_use_id"], "call_1");
 }

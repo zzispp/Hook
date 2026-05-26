@@ -121,7 +121,10 @@ pub(super) fn apply_request_patch(active: &mut request_records::ActiveModel, pat
     apply_decimal_patch(&mut active.upstream_price_per_request, patch.upstream_price_per_request);
     apply_decimal_patch(&mut active.upstream_input_price_per_million, patch.upstream_input_price_per_million);
     apply_decimal_patch(&mut active.upstream_output_price_per_million, patch.upstream_output_price_per_million);
-    apply_decimal_patch(&mut active.upstream_cache_creation_price_per_million, patch.upstream_cache_creation_price_per_million);
+    apply_decimal_patch(
+        &mut active.upstream_cache_creation_price_per_million,
+        patch.upstream_cache_creation_price_per_million,
+    );
     apply_decimal_patch(&mut active.upstream_cache_read_price_per_million, patch.upstream_cache_read_price_per_million);
     apply_decimal_patch(&mut active.upstream_request_cost, patch.upstream_request_cost);
     apply_decimal_patch(&mut active.upstream_input_cost, patch.upstream_input_cost);
@@ -137,7 +140,10 @@ pub(super) fn apply_candidate_patch(active: &mut request_candidates::ActiveModel
     apply_decimal_patch(&mut active.upstream_price_per_request, patch.upstream_price_per_request);
     apply_decimal_patch(&mut active.upstream_input_price_per_million, patch.upstream_input_price_per_million);
     apply_decimal_patch(&mut active.upstream_output_price_per_million, patch.upstream_output_price_per_million);
-    apply_decimal_patch(&mut active.upstream_cache_creation_price_per_million, patch.upstream_cache_creation_price_per_million);
+    apply_decimal_patch(
+        &mut active.upstream_cache_creation_price_per_million,
+        patch.upstream_cache_creation_price_per_million,
+    );
     apply_decimal_patch(&mut active.upstream_cache_read_price_per_million, patch.upstream_cache_read_price_per_million);
     apply_decimal_patch(&mut active.upstream_request_cost, patch.upstream_request_cost);
     apply_decimal_patch(&mut active.upstream_input_cost, patch.upstream_input_cost);

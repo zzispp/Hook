@@ -60,7 +60,7 @@ fn responses_function_call_stream_to_claude_emits_tool_block() {
 }
 
 #[test]
-fn responses_custom_tool_stream_to_claude_emits_raw_tool_block() {
+fn responses_custom_tool_stream_to_claude_errors_visibly() {
     let registry = FormatConversionRegistry::default();
     let responses = vec![
         json!({ "type": "response.created", "response": { "id": "resp_1", "model": "gpt-5.5" } }),
@@ -101,26 +101,12 @@ fn responses_custom_tool_stream_to_claude_emits_raw_tool_block() {
         json!({ "type": "response.completed", "response": { "id": "resp_1", "model": "gpt-5.5" } }),
     ];
 
-    let claude = registry.convert_stream(&responses, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap();
-    let tool_start = claude
-        .iter()
-        .find(|event| event["type"] == "content_block_start" && event["content_block"]["type"] == "tool_use")
-        .expect("tool_use block should start");
-    let deltas = claude
-        .iter()
-        .filter(|event| event["type"] == "content_block_delta" && event["delta"]["type"] == "input_json_delta")
-        .collect::<Vec<_>>();
+    let error = registry
+        .convert_stream(&responses, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat)
+        .unwrap_err()
+        .to_string();
 
-    assert_eq!(tool_start["content_block"]["id"], "call_1");
-    assert_eq!(tool_start["content_block"]["name"], "apply_patch");
-    assert_eq!(tool_start["content_block"]["input"]["_raw"], "");
-    let partial_json = deltas.iter().filter_map(|event| event["delta"]["partial_json"].as_str()).collect::<String>();
-    let parsed: serde_json::Value = serde_json::from_str(&partial_json).unwrap();
-
-    assert_eq!(deltas[0]["delta"]["partial_json"], "{\"_raw\":\"*** Begin");
-    assert_eq!(deltas[1]["delta"]["partial_json"], " Patch");
-    assert_eq!(parsed["_raw"], "*** Begin Patch");
-    assert!(claude.iter().any(|event| event["type"] == "content_block_stop" && event["index"] == 0));
+    assert!(error.contains("unsupported output item type custom_tool_call"));
 }
 
 #[test]

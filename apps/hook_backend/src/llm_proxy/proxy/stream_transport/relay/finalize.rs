@@ -155,7 +155,7 @@ impl StreamRelay {
             Some(ESTIMATED_USAGE_SOURCE | ESTIMATED_REQUEST_USAGE_SOURCE)
         ) && matches!(
             self.target_format,
-            ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
+            ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
         ) {
             return StreamEndReason::UpstreamEofWithoutCompletion;
         }

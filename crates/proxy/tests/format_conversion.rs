@@ -24,8 +24,8 @@ fn format_conversion_request_openai_to_gemini_and_claude() {
     let claude = registry.convert_request(&input, ApiFormat::OpenAiChat, ApiFormat::ClaudeChat).unwrap();
     assert_eq!(claude["system"], "sys");
     assert_eq!(claude["messages"][0]["role"], "user");
-    assert_eq!(claude["messages"][0]["content"][0]["text"], "hi");
-    assert_eq!(claude["stream"], true);
+    assert_eq!(claude["messages"][0]["content"], "hi");
+    assert!(claude.get("stream").is_none());
 }
 
 #[test]
@@ -45,12 +45,16 @@ fn format_conversion_request_openai_to_responses_and_back() {
     assert_eq!(responses["input"][0]["content"][0]["type"], "input_text");
     assert_eq!(responses["input"][0]["content"][0]["text"], "hello");
     assert_eq!(responses["max_output_tokens"], 16);
-    assert_eq!(responses["stream"], true);
+    assert!(responses.get("stream").is_none());
 
     let response_payload = json!({
         "id": "resp_1",
         "model": "gpt-5.5",
-        "output_text": "hello",
+        "output": [{
+            "type": "message",
+            "role": "assistant",
+            "content": [{ "type": "output_text", "text": "hello" }]
+        }],
         "usage": { "input_tokens": 2, "output_tokens": 1, "total_tokens": 3 }
     });
     let openai = registry
@@ -76,9 +80,8 @@ fn format_conversion_request_openai_responses_hosted_web_search_to_claude() {
     let claude = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap();
 
     assert_eq!(claude["tools"][0]["name"], "run");
-    assert_eq!(claude["tools"][1]["type"], "web_search_20250305");
     assert_eq!(claude["tools"][1]["name"], "web_search");
-    assert_eq!(claude["tools"][1]["max_uses"], 5);
+    assert_eq!(claude["tools"][1]["input_schema"]["type"], "object");
 }
 
 #[test]
@@ -125,8 +128,8 @@ fn format_conversion_request_gemini_and_claude_to_openai() {
     assert_eq!(openai["messages"][0]["role"], "system");
     assert_eq!(openai["messages"][0]["content"], "sys");
     assert_eq!(openai["messages"][1]["content"], "hi");
-    assert_eq!(openai["max_tokens"], 12);
-    assert_eq!(openai["stream"], true);
+    assert_eq!(openai["max_completion_tokens"], 12);
+    assert!(openai.get("stream").is_none());
 
     let claude = json!({
         "model": "claude-3-5-sonnet-latest",
@@ -138,7 +141,7 @@ fn format_conversion_request_gemini_and_claude_to_openai() {
     let openai_from_claude = registry.convert_request(&claude, ApiFormat::ClaudeChat, ApiFormat::OpenAiChat).unwrap();
     assert_eq!(openai_from_claude["messages"][0]["role"], "system");
     assert_eq!(openai_from_claude["messages"][1]["role"], "user");
-    assert_eq!(openai_from_claude["stream_options"]["include_usage"], true);
+    assert!(openai_from_claude.get("stream_options").is_none());
 }
 
 #[test]
@@ -157,7 +160,7 @@ fn format_conversion_response_maps_text_finish_and_usage() {
     });
 
     let gemini = registry.convert_response(&openai, ApiFormat::OpenAiChat, ApiFormat::GeminiChat).unwrap();
-    assert_eq!(gemini["id"], "chatcmpl_1");
+    assert_eq!(gemini["responseId"], "chatcmpl_1");
     assert_eq!(gemini["candidates"][0]["content"]["parts"][0]["text"], "hello");
     assert_eq!(gemini["candidates"][0]["finishReason"], "STOP");
     assert_eq!(gemini["usageMetadata"]["totalTokenCount"], 12);
@@ -220,7 +223,7 @@ fn format_conversion_preserves_tools_results_and_multimodal_blocks() {
     assert_eq!(claude["messages"][0]["content"][1]["source"]["media_type"], "image/png");
     assert_eq!(claude["messages"][1]["content"][0]["type"], "tool_use");
     assert_eq!(claude["messages"][2]["content"][0]["type"], "tool_result");
-    assert_eq!(claude["messages"][2]["content"][0]["content"]["temp"], 21);
+    assert_eq!(claude["messages"][2]["content"][0]["content"], "{\"temp\":21}");
 }
 
 #[test]
@@ -290,6 +293,6 @@ fn response_conversion_preserves_thinking_tool_calls_and_cache_usage() {
     assert_eq!(claude["usage"]["cache_creation_input_tokens"], 3);
 
     let responses = registry.convert_response(&claude, ApiFormat::ClaudeChat, ApiFormat::OpenAiResponses).unwrap();
-    assert_eq!(responses["output_text"], "answer");
+    assert_eq!(responses["output"][1]["content"][0]["text"], "answer");
     assert_eq!(responses["usage"]["input_tokens_details"]["cached_tokens"], 7);
 }

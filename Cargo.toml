@@ -8,6 +8,7 @@ members = [
     "crates/constants",
     "crates/currency",
     "crates/dashboard",
+    "crates/formats",
     "crates/group",
     "crates/i18n",
     "crates/model",
@@ -46,10 +47,12 @@ currency = { path = "crates/currency" }
 dashboard = { path = "crates/dashboard" }
 futures-util = "0.3.31"
 flate2 = "1.1.5"
+formats = { path = "crates/formats" }
 group = { path = "crates/group" }
 i18n = { path = "crates/i18n" }
 hex = "0.4.3"
 hook_tracing = { path = "crates/tracing" }
+http = "1.3.1"
 jsonwebtoken = "9.3.1"
 lettre = { version = "0.11.21", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "hostname"] }
 matchit = "0.8.4"
@@ -64,6 +67,7 @@ ring = "0.17.14"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 serde_urlencoded = "0.7"
+sha1 = "0.10.6"
 sha2 = "0.10.9"
 storage = { path = "crates/storage" }
 thiserror = "2.0.17"
@@ -77,7 +81,8 @@ tracing-subscriber = "0.3.20"
 types = { path = "crates/types" }
 user = { path = "crates/user" }
 wallet = { path = "crates/wallet" }
-uuid = { version = "1.23.1", features = ["v7", "fast-rng"] }
+uuid = { version = "1.23.1", features = ["v4", "v7", "fast-rng"] }
+url = "2.5.7"
 jiff = "0.2.23"
 model = { path = "crates/model" }
 operations = { path = "crates/operations" }

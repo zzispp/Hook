@@ -1,8 +1,9 @@
 use types::api_token::ApiToken;
 
 use super::{
+    LlmProxyError,
     cache::snapshot::{CachedBillingGroup, CachedGlobalModel, CachedProvider, CachedUserAccess, SchedulingSnapshot},
-    client_error, LlmProxyError,
+    client_error,
 };
 
 pub(crate) fn visible_models_for_token<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToken) -> Result<Vec<&'a CachedGlobalModel>, LlmProxyError> {

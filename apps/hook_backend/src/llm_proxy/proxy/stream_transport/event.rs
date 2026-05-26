@@ -26,7 +26,10 @@ pub(super) fn render_stream_event(event: &Value, source_format: ApiFormat) -> By
 }
 
 pub(super) fn render_stream_error(source_format: ApiFormat) -> Bytes {
-    let payload = if matches!(source_format, ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses) {
+    let payload = if matches!(
+        source_format,
+        ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact
+    ) {
         json!({"error": {"message": "response format conversion failed", "type": "format_conversion_error"}})
     } else {
         json!({"type": "error", "error": {"type": "format_conversion_error", "message": "response format conversion failed"}})

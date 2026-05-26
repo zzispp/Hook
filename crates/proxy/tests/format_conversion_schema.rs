@@ -2,7 +2,7 @@ use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
 use serde_json::json;
 
 #[test]
-fn openai_target_adds_properties_to_object_tool_schema() {
+fn openai_target_preserves_tool_schema_from_formats_crate() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
         "model": "claude-sonnet",
@@ -20,14 +20,16 @@ fn openai_target_adds_properties_to_object_tool_schema() {
     });
 
     let openai = registry.convert_request(&input, ApiFormat::ClaudeChat, ApiFormat::OpenAiChat).unwrap();
-    let filter = &openai["tools"][0]["function"]["parameters"]["properties"]["filter"];
+    let parameters = &openai["tools"][0]["function"]["parameters"];
+    let filter = &parameters["properties"]["filter"];
 
+    assert_eq!(parameters["additionalProperties"], false);
     assert_eq!(filter["type"], "object");
-    assert_eq!(filter["properties"], json!({}));
+    assert!(filter.get("properties").is_none());
 }
 
 #[test]
-fn gemini_target_cleans_tool_and_response_schemas_like_aether() {
+fn gemini_target_recursively_adds_missing_object_properties() {
     let registry = FormatConversionRegistry::default();
     let schema = json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -60,18 +62,14 @@ fn gemini_target_cleans_tool_and_response_schemas_like_aether() {
     let parameters = &gemini["tools"][0]["functionDeclarations"][0]["parameters"];
     let response_schema = &gemini["generationConfig"]["responseSchema"];
 
-    assert!(parameters.get("$schema").is_none());
-    assert!(parameters.get("$defs").is_none());
-    assert!(parameters.get("additionalProperties").is_none());
-    assert_eq!(parameters["required"], json!(["mode"]));
-    assert_eq!(parameters["properties"]["query"]["type"], "string");
-    assert_eq!(
-        parameters["properties"]["query"]["description"],
-        "[Constraint: minLen: 2, format: \"uri\"] (nullable)"
-    );
-    assert_eq!(parameters["properties"]["mode"]["enum"], json!(["1", "null", "auto"]));
-    assert_eq!(parameters["properties"]["target"]["type"], "object");
-    assert_eq!(parameters["properties"]["target"]["required"], json!(["id"]));
-    assert_eq!(parameters["properties"]["target"]["description"], "Accepts: string | array | object");
+    assert_eq!(parameters["$schema"], "https://json-schema.org/draft/2020-12/schema");
+    assert_eq!(parameters["additionalProperties"], false);
+    assert_eq!(parameters["required"], json!(["query", "mode", "missing"]));
+    assert_eq!(parameters["properties"]["query"]["type"], json!(["string", "null"]));
+    assert_eq!(parameters["properties"]["query"]["minLength"], 2);
+    assert_eq!(parameters["properties"]["query"]["format"], "uri");
+    assert_eq!(parameters["properties"]["mode"]["enum"], json!([1, null, "auto"]));
+    assert_eq!(parameters["properties"]["target"]["anyOf"][2]["properties"]["id"]["type"], "string");
+    assert_eq!(parameters["$defs"]["Item"]["properties"]["name"]["type"], "string");
     assert_eq!(response_schema, parameters);
 }

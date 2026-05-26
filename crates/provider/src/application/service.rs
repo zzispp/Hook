@@ -201,12 +201,7 @@ where
         self.repository.list_model_costs(provider_id).await
     }
 
-    async fn upsert_model_costs(
-        &self,
-        provider_id: &str,
-        key_id: &str,
-        input: ProviderModelCostBatchUpsert,
-    ) -> ProviderResult<ProviderModelCostListResponse> {
+    async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse> {
         self.ensure_provider(provider_id).await?;
         let input = sanitize_model_cost_batch(input);
         validate_model_cost_batch(&input)?;

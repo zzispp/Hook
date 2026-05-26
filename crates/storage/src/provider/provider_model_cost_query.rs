@@ -55,19 +55,11 @@ async fn upsert_model_cost(store: &ProviderStore, input: ProviderModelCostRecord
     model_cost_response(record)
 }
 
-fn create_model_cost(
-    store: &ProviderStore,
-    input: ProviderModelCostRecordInput,
-    now: time::OffsetDateTime,
-) -> provider_model_costs::ActiveModel {
+fn create_model_cost(store: &ProviderStore, input: ProviderModelCostRecordInput, now: time::OffsetDateTime) -> provider_model_costs::ActiveModel {
     provider_model_cost_active_model(store.next_id(), input, now, now)
 }
 
-fn update_model_cost(
-    record: provider_model_costs::Model,
-    input: ProviderModelCostRecordInput,
-    now: time::OffsetDateTime,
-) -> provider_model_costs::ActiveModel {
+fn update_model_cost(record: provider_model_costs::Model, input: ProviderModelCostRecordInput, now: time::OffsetDateTime) -> provider_model_costs::ActiveModel {
     provider_model_cost_active_model(record.id, input, record.created_at, now)
 }
 

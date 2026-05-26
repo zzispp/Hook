@@ -131,12 +131,7 @@ where
         self.inner.list_model_costs(provider_id).await
     }
 
-    async fn upsert_model_costs(
-        &self,
-        provider_id: &str,
-        key_id: &str,
-        input: ProviderModelCostBatchUpsert,
-    ) -> ProviderResult<ProviderModelCostListResponse> {
+    async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse> {
         let response = self.inner.upsert_model_costs(provider_id, key_id, input).await?;
         self.refresh_scheduling().await?;
         Ok(response)

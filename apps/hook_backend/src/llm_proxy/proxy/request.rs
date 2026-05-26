@@ -196,7 +196,7 @@ fn apply_reasoning_effort(body: &mut Value, candidate: &ProxyCandidate, target: 
             object.insert("reasoning_effort".into(), Value::String(reasoning_effort.to_owned()));
             Ok(())
         }
-        ApiFormat::OpenAiResponses => {
+        ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact => {
             reasoning_object(object)?.insert("effort".into(), Value::String(reasoning_effort.to_owned()));
             Ok(())
         }

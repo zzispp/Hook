@@ -48,10 +48,7 @@ async fn timeseries(store: &DashboardStore, query: &DashboardStoreOverviewQuery)
     let rows = TimeseriesRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())
         .await?;
-    Ok(rows
-        .into_iter()
-        .map(|row| timeseries_response(row, query.include_admin_costs))
-        .collect())
+    Ok(rows.into_iter().map(|row| timeseries_response(row, query.include_admin_costs)).collect())
 }
 
 async fn breakdowns(store: &DashboardStore, query: &DashboardStoreOverviewQuery) -> StorageResult<DashboardBreakdowns> {
@@ -112,10 +109,7 @@ async fn breakdown_rows(
     let rows = BreakdownRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())
         .await?;
-    Ok(rows
-        .into_iter()
-        .map(|row| breakdown_response(row, query.include_admin_costs))
-        .collect())
+    Ok(rows.into_iter().map(|row| breakdown_response(row, query.include_admin_costs)).collect())
 }
 
 pub(super) fn summary_response(row: SummaryRow, include_admin_costs: bool) -> DashboardSummary {

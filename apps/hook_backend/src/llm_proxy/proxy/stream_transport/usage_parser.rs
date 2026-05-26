@@ -75,7 +75,7 @@ impl StreamParseResult {
 
 fn is_completion_chunk(chunk: &Value, format: ApiFormat) -> bool {
     match format {
-        ApiFormat::OpenAiResponses => chunk.get("type").and_then(Value::as_str) == Some("response.completed"),
+        ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact => chunk.get("type").and_then(Value::as_str) == Some("response.completed"),
         ApiFormat::ClaudeChat => chunk.get("type").and_then(Value::as_str) == Some("message_stop"),
         ApiFormat::GeminiChat => gemini_completed(chunk),
         _ => false,

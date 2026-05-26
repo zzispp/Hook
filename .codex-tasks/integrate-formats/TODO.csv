@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Copy Aether formats crate into crates/formats,DONE,crates/formats exists and Cargo metadata is renamed,test -f crates/formats/Cargo.toml,2026-05-26,0,
+2,Resolve workspace dependencies and compile formats crate,DONE,cargo check -p formats succeeds,timeout 60 cargo check -p formats,2026-05-26,1,Added uuid v4 feature after first compile failure
+3,Expose formats crate to existing proxy crate,DONE,proxy depends on formats and exports integration facade,timeout 60 cargo check -p proxy,2026-05-26,0,
+4,Run targeted workspace validation,DONE,relevant Rust checks pass,timeout 60 just check,2026-05-26,0,

@@ -24,7 +24,10 @@ fn format_conversion_openai_responses_tool_output_content_items_to_claude() {
 
     assert_eq!(claude["messages"][2]["content"][0]["type"], "tool_result");
     assert_eq!(claude["messages"][2]["content"][0]["tool_use_id"], "call_1");
-    assert_eq!(claude["messages"][2]["content"][0]["content"], "line 1\n\nline 2");
+    assert_eq!(
+        claude["messages"][2]["content"][0]["content"],
+        "[{\"text\":\"line 1\",\"type\":\"input_text\"},{\"text\":\"line 2\",\"type\":\"input_text\"}]"
+    );
 }
 
 #[test]
@@ -48,12 +51,10 @@ fn format_conversion_openai_responses_tool_output_image_items_to_claude() {
 
     let claude = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap();
 
-    let content = &claude["messages"][2]["content"][0]["content"];
-    assert_eq!(content[0]["text"], "screenshot");
-    assert_eq!(content[1]["type"], "image");
-    assert_eq!(content[1]["source"]["type"], "base64");
-    assert_eq!(content[1]["source"]["media_type"], "image/png");
-    assert_eq!(content[1]["source"]["data"], "aW1n");
+    assert_eq!(
+        claude["messages"][2]["content"][0]["content"],
+        "[{\"text\":\"screenshot\",\"type\":\"input_text\"},{\"image_url\":\"data:image/png;base64,aW1n\",\"type\":\"input_image\"}]"
+    );
 }
 
 #[test]
@@ -79,7 +80,7 @@ fn format_conversion_openai_responses_custom_tool_round_trips() {
         .convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::OpenAiChat)
         .unwrap_err()
         .to_string();
-    assert!(openai_error.contains("custom tool calls"));
+    assert!(openai_error.contains("unsupported input item type custom_tool_call"));
 }
 
 #[test]
@@ -102,9 +103,11 @@ fn format_conversion_openai_responses_response_custom_tool_round_trips_to_respon
     assert_eq!(responses["output"][0]["type"], "custom_tool_call");
     assert_eq!(responses["output"][0]["input"], "*** Begin Patch");
 
-    let claude = registry.convert_response(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap();
-    assert_eq!(claude["content"][0]["type"], "tool_use");
-    assert_eq!(claude["content"][0]["input"]["_raw"], "*** Begin Patch");
+    let claude_error = registry
+        .convert_response(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat)
+        .unwrap_err()
+        .to_string();
+    assert!(claude_error.contains("unsupported output item type custom_tool_call"));
 }
 
 #[test]
@@ -154,14 +157,14 @@ fn format_conversion_openai_responses_response_from_claude_preserves_items() {
     let responses = registry.convert_response(&input, ApiFormat::ClaudeChat, ApiFormat::OpenAiResponses).unwrap();
 
     assert_eq!(responses["output"][0]["type"], "reasoning");
-    assert_eq!(responses["output"][0]["encrypted_content"], "sig_1");
+    assert_eq!(responses["output"][0]["summary"][0]["text"], "plan");
     assert_eq!(responses["output"][1]["type"], "message");
     assert_eq!(responses["output"][1]["content"][0]["type"], "output_text");
     assert_eq!(responses["output"][1]["content"][0]["text"], "checking");
     assert_eq!(responses["output"][2]["type"], "function_call");
     assert_eq!(responses["output"][2]["call_id"], "call_1");
     assert_eq!(responses["output"][2]["arguments"], "{\"q\":\"x\"}");
-    assert_eq!(responses["output_text"], "checking");
+    assert!(responses.get("output_text").is_none());
 }
 
 #[test]
@@ -196,6 +199,6 @@ fn format_conversion_openai_responses_unsupported_official_items_error() {
         .unwrap_err()
         .to_string();
 
-    assert!(request_error.contains("unsupported item type tool_search_call"));
+    assert!(request_error.contains("unsupported input item type tool_search_call"));
     assert!(response_error.contains("unsupported output item type tool_search_call"));
 }

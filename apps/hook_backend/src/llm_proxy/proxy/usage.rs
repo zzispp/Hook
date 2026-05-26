@@ -44,7 +44,7 @@ fn from_response(response: &Value, format: ApiFormat) -> Option<TokenUsage> {
     match format {
         ApiFormat::OpenAiChat => openai::usage(response.get("usage"), "openai"),
         ApiFormat::OpenAiCompletion => openai::usage(response.get("usage"), "completion"),
-        ApiFormat::OpenAiResponses => openai::responses_usage(response),
+        ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact => openai::responses_usage(response),
         ApiFormat::OpenAiEmbedding => openai::usage(response.get("usage"), "embedding"),
         ApiFormat::OpenAiImage => openai::usage(response.get("usage"), "image"),
         ApiFormat::OpenAiAudio => openai::usage(response.get("usage"), "audio"),

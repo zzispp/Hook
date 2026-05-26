@@ -28,3 +28,15 @@ impl FormatConversionError {
         }
     }
 }
+
+impl From<formats::FormatError> for FormatConversionError {
+    fn from(error: formats::FormatError) -> Self {
+        match error {
+            formats::FormatError::UnsupportedFormat(format) => Self::InvalidFormat(format),
+            formats::FormatError::RequestParseFailed { format } => Self::unsupported_content("request", format),
+            formats::FormatError::RequestEmitFailed { format } => Self::unsupported_content("request", format),
+            formats::FormatError::ResponseParseFailed { format } => Self::unsupported_content("response", format),
+            formats::FormatError::ResponseEmitFailed { format } => Self::unsupported_content("response", format),
+        }
+    }
+}

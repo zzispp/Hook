@@ -2,9 +2,9 @@ mod billing_runtime;
 mod event;
 mod record_billing;
 mod records;
-mod upstream_cost;
 #[cfg(test)]
 mod tests;
+mod upstream_cost;
 
 use storage::{StorageError, api_token::ApiTokenUsageRecord, model::GlobalModelUsageRecord, provider::ProviderStore};
 use time::OffsetDateTime;

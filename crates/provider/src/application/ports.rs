@@ -47,12 +47,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding>;
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse>;
-    async fn upsert_model_costs(
-        &self,
-        provider_id: &str,
-        key_id: &str,
-        input: ProviderModelCostBatchUpsert,
-    ) -> ProviderResult<ProviderModelCostListResponse>;
+    async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;
@@ -103,12 +98,7 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding>;
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse>;
-    async fn upsert_model_costs(
-        &self,
-        provider_id: &str,
-        key_id: &str,
-        input: ProviderModelCostBatchUpsert,
-    ) -> ProviderResult<ProviderModelCostListResponse>;
+    async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;

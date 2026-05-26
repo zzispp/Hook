@@ -14,13 +14,13 @@ pub(super) struct OutputDelta {
 pub(super) fn supports_estimation(format: ApiFormat) -> bool {
     matches!(
         format,
-        ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
+        ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact | ApiFormat::ClaudeChat | ApiFormat::GeminiChat
     )
 }
 
 pub(super) fn usage_semantic(format: ApiFormat) -> &'static str {
     match format {
-        ApiFormat::OpenAiResponses => "responses",
+        ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact => "responses",
         ApiFormat::ClaudeChat => "anthropic",
         ApiFormat::GeminiChat => "gemini",
         _ => "openai",
@@ -29,7 +29,7 @@ pub(super) fn usage_semantic(format: ApiFormat) -> &'static str {
 
 pub(super) fn output_delta(format: ApiFormat, chunk: &Value, gemini_previous_output: &mut String) -> Option<OutputDelta> {
     match format {
-        ApiFormat::OpenAiResponses => responses_delta(chunk),
+        ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact => responses_delta(chunk),
         ApiFormat::OpenAiChat => chat_delta(chunk),
         ApiFormat::ClaudeChat => claude_delta(chunk),
         ApiFormat::GeminiChat => gemini_delta(chunk, gemini_previous_output),
@@ -40,7 +40,7 @@ pub(super) fn output_delta(format: ApiFormat, chunk: &Value, gemini_previous_out
 pub(super) fn estimate_request_tokens(format: ApiFormat, request: &Value, model: &str) -> i64 {
     let mut text = String::new();
     match format {
-        ApiFormat::OpenAiResponses => collect_request_fields(
+        ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact => collect_request_fields(
             request,
             &["input", "instructions", "metadata", "text", "tool_choice", "prompt", "tools"],
             &mut text,

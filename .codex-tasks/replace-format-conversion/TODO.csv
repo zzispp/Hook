@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current format APIs and new formats streaming APIs,DONE,Relevant APIs and call sites are identified,rg -n "FormatConversionRegistry|StreamConversionState|StreamingStandardFormatMatrix" crates apps,2026-05-26T00:00:00+08:00,0,
+2,Replace proxy format_conversion facade with formats-backed implementation,DONE,proxy::format_conversion no longer references legacy normalizers,cargo check -p proxy,2026-05-26T00:00:00+08:00,0,
+3,Update stream conversion integration if needed,DONE,Streaming call sites compile against the new state model,cargo test -p proxy format_conversion_stream,2026-05-26T00:00:00+08:00,0,
+4,Remove obsolete legacy normalizer modules from compilation,DONE,Old normalizer modules are deleted or unreachable and not referenced,rg -n "normalizer|InternalRequest|InternalStreamEvent" crates/proxy/src/format_conversion,2026-05-26T16:57:01+08:00,0,
+5,Run workspace validation,DONE,Proxy/backend/workspace checks pass,just check,2026-05-26T16:57:01+08:00,0,

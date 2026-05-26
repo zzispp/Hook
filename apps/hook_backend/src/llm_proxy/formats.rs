@@ -191,7 +191,7 @@ fn openai_compact() -> EndpointMetadata {
     let mut metadata = openai_metadata(
         "openai:compact",
         EndpointKind::Compact,
-        ApiFormat::OpenAiResponses,
+        ApiFormat::OpenAiResponsesCompact,
         "/v1/responses/compact",
         true,
         false,
@@ -306,7 +306,10 @@ fn openai_metadata(
         stream_in_body,
         auth_scheme: AuthScheme::Bearer,
         upstream_stream_policy: UpstreamStreamPolicy::MirrorClient,
-        include_usage_for_stream: matches!(data_format, ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses),
+        include_usage_for_stream: matches!(
+            data_format,
+            ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact
+        ),
     }
 }
 
@@ -498,7 +501,7 @@ mod tests {
     }
 
     #[test]
-    fn non_chat_endpoints_never_convert_through_chat_normalizers() {
+    fn non_chat_endpoints_never_convert_through_standard_formats() {
         assert!(!super::formats_compatible("openai:chat", "openai_image", false));
         assert!(!super::formats_compatible("openai_image", "openai:chat", false));
         assert!(!super::needs_conversion("openai_image", "openai_images_edits", false).unwrap());

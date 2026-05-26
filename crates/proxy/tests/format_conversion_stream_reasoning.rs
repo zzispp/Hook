@@ -1,4 +1,4 @@
-use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
+use proxy::format_conversion::{ApiFormat, FormatConversionError, FormatConversionRegistry};
 use serde_json::json;
 
 #[test]
@@ -16,8 +16,8 @@ fn stream_conversion_maps_thinking_signature_tool_delta_and_usage() {
     assert_eq!(openai[1]["choices"][0]["delta"]["reasoning_content"], "why");
     let tool_delta = openai
         .iter()
-        .find(|event| event["choices"][0]["delta"].get("tool_calls").is_some())
-        .expect("tool delta should exist");
+        .find(|event| event["choices"][0]["delta"]["tool_calls"][0]["function"]["arguments"] == "{\"q\"")
+        .expect("tool argument delta should exist");
     assert_eq!(tool_delta["choices"][0]["delta"]["tool_calls"][0]["function"]["arguments"], "{\"q\"");
     let usage = openai.iter().find(|event| event.get("usage").is_some()).expect("usage chunk should exist");
     assert_eq!(usage["usage"]["prompt_tokens_details"]["cached_tokens"], 2);
@@ -44,7 +44,7 @@ fn gemini_stream_output_omits_null_signature_and_usage_fields() {
 }
 
 #[test]
-fn responses_stream_reasoning_preserves_claude_thinking_signature_for_next_request() {
+fn responses_stream_reasoning_emits_summary_without_signature_roundtrip() {
     let registry = FormatConversionRegistry::default();
     let claude = vec![
         json!({ "type": "message_start", "message": { "id": "msg_1", "model": "claude-sonnet" } }),
@@ -61,7 +61,7 @@ fn responses_stream_reasoning_preserves_claude_thinking_signature_for_next_reque
         .find(|event| event["type"] == "response.output_item.done" && event["item"]["type"] == "reasoning")
         .expect("reasoning item should be completed");
     assert_eq!(reasoning_done["item"]["summary"][0]["text"], "plan");
-    assert_eq!(reasoning_done["item"]["encrypted_content"], "sig_1");
+    assert!(reasoning_done["item"].get("encrypted_content").is_none());
 
     let next_request = json!({
         "model": "gpt-5.5",
@@ -74,10 +74,14 @@ fn responses_stream_reasoning_preserves_claude_thinking_signature_for_next_reque
             { "type": "message", "role": "user", "content": [{ "type": "input_text", "text": "continue" }] }
         ]
     });
-    let claude_request = registry
+    let error = registry
         .convert_request(&next_request, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat)
-        .unwrap();
-    assert_eq!(claude_request["messages"][1]["content"][0]["type"], "thinking");
-    assert_eq!(claude_request["messages"][1]["content"][0]["thinking"], "plan");
-    assert_eq!(claude_request["messages"][1]["content"][0]["signature"], "sig_1");
+        .unwrap_err();
+    assert_eq!(
+        error,
+        FormatConversionError::UnsupportedFeature {
+            format: "openai:responses",
+            feature: "unsupported input item type reasoning".to_string(),
+        }
+    );
 }

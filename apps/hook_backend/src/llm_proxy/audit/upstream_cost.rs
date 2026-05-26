@@ -166,7 +166,13 @@ fn cache_creation_price(tier: &PricingTier) -> Decimal {
 
 fn cache_read_price(tier: &PricingTier) -> Decimal {
     tier.cache_read_price_per_1m
-        .or_else(|| tier.cache_ttl_pricing.as_ref()?.iter().find(|item| item.ttl_minutes == 5).and_then(|item| item.cache_read_price_per_1m))
+        .or_else(|| {
+            tier.cache_ttl_pricing
+                .as_ref()?
+                .iter()
+                .find(|item| item.ttl_minutes == 5)
+                .and_then(|item| item.cache_read_price_per_1m)
+        })
         .unwrap_or(tier.input_price_per_1m * Decimal::new(1, 1))
 }
 
@@ -210,10 +216,7 @@ mod tests {
             }],
         });
         let input = attempt_input(&candidate, 1_000, 100, Some(300), Some(200));
-        let upstream = per_token_cost(
-            token_prices(ProviderModelCostSource::GlobalDefault, &candidate.tiered_pricing.tiers[0]),
-            &input,
-        );
+        let upstream = per_token_cost(token_prices(ProviderModelCostSource::GlobalDefault, &candidate.tiered_pricing.tiers[0]), &input);
 
         assert_eq!(upstream.upstream_cost_mode, Some(ProviderModelCostMode::PerToken));
         assert_eq!(upstream.upstream_cost_source, Some(ProviderModelCostSource::GlobalDefault));
@@ -251,7 +254,13 @@ mod tests {
         assert_eq!(tier.input_price_per_1m, Decimal::new(2, 0));
     }
 
-    fn attempt_input(candidate: &ProxyCandidate, input_tokens: i64, output_tokens: i64, cache_creation_tokens: Option<i64>, cache_read_tokens: Option<i64>) -> AttemptRecordInput<'_> {
+    fn attempt_input(
+        candidate: &ProxyCandidate,
+        input_tokens: i64,
+        output_tokens: i64,
+        cache_creation_tokens: Option<i64>,
+        cache_read_tokens: Option<i64>,
+    ) -> AttemptRecordInput<'_> {
         AttemptRecordInput {
             usage: Some(TokenUsage {
                 prompt_tokens: Some(input_tokens),

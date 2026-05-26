@@ -116,12 +116,7 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             ProviderModelCosts::ProviderId,
             false,
         ),
-        index(
-            "index_provider_model_costs_by_key",
-            ProviderModelCosts::Table,
-            ProviderModelCosts::KeyId,
-            false,
-        ),
+        index("index_provider_model_costs_by_key", ProviderModelCosts::Table, ProviderModelCosts::KeyId, false),
         billing_rules_global_model_unique_index(),
         billing_rules_model_unique_index(),
         dimension_collectors_enabled_unique_index(),

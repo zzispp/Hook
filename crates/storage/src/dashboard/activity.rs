@@ -47,12 +47,7 @@ async fn activity_rows(store: &DashboardStore, query: &DashboardStoreActivityQue
         .map_err(Into::into)
 }
 
-pub(crate) fn fill_days(
-    start_date: time::Date,
-    end_date: time::Date,
-    rows: Vec<ActivityRow>,
-    include_admin_costs: bool,
-) -> Vec<DashboardActivityDay> {
+pub(crate) fn fill_days(start_date: time::Date, end_date: time::Date, rows: Vec<ActivityRow>, include_admin_costs: bool) -> Vec<DashboardActivityDay> {
     let mapped = rows.into_iter().map(|row| (row.date, row)).collect::<HashMap<time::Date, ActivityRow>>();
     let mut days = Vec::new();
     let mut date = start_date;

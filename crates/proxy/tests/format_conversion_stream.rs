@@ -80,9 +80,13 @@ fn format_conversion_stream_openai_finish_waits_for_usage_only_incremental_chunk
         .unwrap();
 
     assert!(first.is_empty());
-    assert_eq!(second[0]["type"], "content_block_stop");
-    assert_eq!(second[1]["usage"]["input_tokens"], 9);
-    assert_eq!(second[1]["usage"]["output_tokens"], 3);
+    let delta = second
+        .iter()
+        .find(|event| event["type"] == "message_delta")
+        .expect("message_delta should carry usage");
+    assert_eq!(delta["usage"]["input_tokens"], 9);
+    assert_eq!(delta["usage"]["output_tokens"], 3);
+    assert!(second.iter().any(|event| event["type"] == "message_stop"));
 }
 
 #[test]
@@ -107,8 +111,12 @@ fn format_conversion_stream_flushes_openai_done_when_usage_chunk_absent() {
     let flushed = registry.flush_stream(ApiFormat::OpenAiChat, ApiFormat::OpenAiResponses, &mut state).unwrap();
 
     assert!(first.is_empty());
-    assert_eq!(flushed[0]["type"], "response.completed");
-    assert!(flushed[0]["response"].get("usage").is_none());
+    let completed = flushed
+        .iter()
+        .find(|event| event["type"] == "response.completed")
+        .expect("response.completed should be emitted");
+    assert_eq!(completed["response"]["usage"]["input_tokens"], 0);
+    assert_eq!(completed["response"]["usage"]["output_tokens"], 0);
 }
 
 #[test]

@@ -137,10 +137,7 @@ pub async fn delete_model_binding(State(state): State<ProviderApiState>, Path((p
     Ok(ok(()))
 }
 
-pub async fn list_model_costs(
-    State(state): State<ProviderApiState>,
-    Path(provider_id): Path<String>,
-) -> ApiResult<ApiJson<ProviderModelCostListResponse>> {
+pub async fn list_model_costs(State(state): State<ProviderApiState>, Path(provider_id): Path<String>) -> ApiResult<ApiJson<ProviderModelCostListResponse>> {
     Ok(ok(state.providers.list_model_costs(&provider_id).await?))
 }
 
@@ -156,10 +153,7 @@ pub async fn delete_model_cost(
     State(state): State<ProviderApiState>,
     Path((provider_id, key_id, provider_model_id)): Path<(String, String, String)>,
 ) -> ApiResult<ApiJson<()>> {
-    state
-        .providers
-        .delete_model_cost(&provider_id, &key_id, &provider_model_id)
-        .await?;
+    state.providers.delete_model_cost(&provider_id, &key_id, &provider_model_id).await?;
     Ok(ok(()))
 }
 

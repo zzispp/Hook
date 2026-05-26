@@ -9,8 +9,7 @@ use types::provider::{
 
 use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
 use crate::infra::storage_mapping::{
-    api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_input, model_binding_patch, model_cost_inputs, provider_input,
-    provider_patch,
+    api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_input, model_binding_patch, model_cost_inputs, provider_input, provider_patch,
 };
 
 #[derive(Clone)]
@@ -159,12 +158,7 @@ impl ProviderRepository for StorageProviderRepository {
             .map_err(storage_error)
     }
 
-    async fn upsert_model_costs(
-        &self,
-        provider_id: &str,
-        key_id: &str,
-        input: ProviderModelCostBatchUpsert,
-    ) -> ProviderResult<ProviderModelCostListResponse> {
+    async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse> {
         self.store
             .upsert_model_costs(model_cost_inputs(provider_id, key_id, input))
             .await
