@@ -122,9 +122,11 @@ pub fn needs_conversion(client_format: &str, provider_format: &str, is_stream: b
 }
 
 pub fn conversion_formats(client_format: &str, provider_format: &str, is_stream: bool) -> Result<(ApiFormat, ApiFormat), LlmProxyError> {
-    let source = endpoint_metadata(client_format, is_stream)?.data_format;
-    let target = endpoint_metadata(provider_format, is_stream)?.data_format;
-    if source == target || FormatConversionRegistry::default().can_convert(source, target, is_stream) {
+    let client = endpoint_metadata(client_format, is_stream)?;
+    let provider = endpoint_metadata(provider_format, is_stream)?;
+    let source = client.data_format;
+    let target = provider.data_format;
+    if source == target || (cross_protocol_conversion_allowed(client, provider) && FormatConversionRegistry::default().can_convert(source, target, is_stream)) {
         return Ok((source, target));
     }
     Err(LlmProxyError::InvalidRequest(format!(
@@ -155,8 +157,15 @@ fn endpoint_protocol_matches(client: EndpointMetadata, provider: EndpointMetadat
     client.family == provider.family && client.kind == provider.kind && client.data_format == provider.data_format
 }
 
-fn cross_protocol_conversion_allowed(_client: EndpointMetadata, _provider: EndpointMetadata) -> bool {
+fn cross_protocol_conversion_allowed(client: EndpointMetadata, provider: EndpointMetadata) -> bool {
+    if openai_conversion_requires_cli(client) && provider.family == EndpointFamily::OpenAi {
+        return provider.endpoint_id == "openai:cli";
+    }
     true
+}
+
+fn openai_conversion_requires_cli(client: EndpointMetadata) -> bool {
+    matches!(client.endpoint_id, "claude:chat" | "gemini:chat" | "gemini:cli")
 }
 
 fn openai_chat() -> EndpointMetadata {
@@ -468,6 +477,24 @@ mod tests {
         assert!(super::formats_compatible("openai:cli", "openai:chat", true));
         assert!(super::formats_compatible("openai:cli", "openai:chat", false));
         assert!(super::formats_compatible("openai:chat", "openai:cli", true));
+    }
+
+    #[test]
+    fn claude_and_gemini_chat_convert_only_to_openai_cli() {
+        assert!(super::formats_compatible("claude:chat", "openai:cli", true));
+        assert!(!super::formats_compatible("claude:chat", "openai:chat", true));
+        assert!(super::conversion_formats("claude:chat", "openai:cli", true).is_ok());
+        assert!(super::conversion_formats("claude:chat", "openai:chat", true).is_err());
+
+        assert!(super::formats_compatible("gemini:chat", "openai:cli", true));
+        assert!(!super::formats_compatible("gemini:chat", "openai:chat", true));
+        assert!(super::conversion_formats("gemini:chat", "openai:cli", true).is_ok());
+        assert!(super::conversion_formats("gemini:chat", "openai:chat", true).is_err());
+
+        assert!(super::formats_compatible("gemini:cli", "openai:cli", true));
+        assert!(!super::formats_compatible("gemini:cli", "openai:chat", true));
+        assert!(super::conversion_formats("gemini:cli", "openai:cli", true).is_ok());
+        assert!(super::conversion_formats("gemini:cli", "openai:chat", true).is_err());
     }
 
     #[test]
