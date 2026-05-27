@@ -29,8 +29,8 @@ const ticketPanelSx = {
   width: { xs: 1, md: 360 },
   flexShrink: 0,
   display: 'flex',
-  overflow: 'hidden',
-  minHeight: { xs: 560, md: 0 },
+  overflow: { xs: 'visible', md: 'hidden' },
+  minHeight: { md: 0 },
 };
 
 const ticketListSx = {
@@ -88,9 +88,13 @@ export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
           </Stack>
         }
       />
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} sx={{ flex: '1 1 0', minHeight: 0 }}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={3}
+        sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minHeight: { xs: 'auto', md: 0 } }}
+      >
         <TicketListPanel state={state} />
-        <Stack sx={{ flex: '1 1 auto', minWidth: 0, minHeight: 0 }}>
+        <Stack sx={{ flex: '1 1 auto', minWidth: 0, minHeight: { xs: 'auto', md: 0 } }}>
           <TicketConversation
             admin={admin}
             detail={state.detail.data}
@@ -115,7 +119,7 @@ export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
 function TicketListPanel({ state }: { state: ReturnType<typeof useTicketWorkspaceState> }) {
   return (
     <Card sx={ticketPanelSx}>
-      <Stack spacing={2} sx={{ width: 1, minHeight: 0 }}>
+      <Stack spacing={2} sx={{ width: 1, minHeight: { xs: 'auto', md: 0 } }}>
         <TextField
           value={state.search}
           onChange={state.handleSearch}

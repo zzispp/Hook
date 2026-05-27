@@ -26,22 +26,23 @@ const PRIORITIES: TicketPriority[] = ['normal', 'high', 'urgent'];
 const ticketConversationSx = {
   p: 3,
   display: 'flex',
-  overflow: 'hidden',
-  flex: '1 1 auto',
-  minHeight: { xs: 560, md: 0 },
+  overflow: { xs: 'visible', md: 'hidden' },
+  flex: { xs: '0 0 auto', md: '1 1 auto' },
+  minHeight: { md: 0 },
 };
 
 const ticketConversationBodySx = {
   width: 1,
-  minHeight: 0,
+  flex: '1 1 auto',
+  minHeight: { xs: 'auto', md: 0 },
 };
 
 const ticketMessagesSx = {
-  flex: '1 1 auto',
-  minHeight: 0,
-  overflowY: 'auto',
+  flex: { xs: '0 0 auto', md: '1 1 auto' },
+  minHeight: { xs: 'auto', md: 0 },
+  overflowY: { xs: 'visible', md: 'auto' },
   overflowX: 'hidden',
-  pr: 1,
+  pr: { xs: 0, md: 1 },
 };
 
 const ticketReplySx = {
