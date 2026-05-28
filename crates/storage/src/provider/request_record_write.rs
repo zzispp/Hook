@@ -29,6 +29,7 @@ pub async fn update_request_record(store: &ProviderStore, input: RequestRecordRe
     active.updated_at = Set(now);
     let updated = active.update(store.connection()).await?;
     crate::dashboard::sync_user_usage_buckets(store.connection(), &old_record, &updated).await?;
+    crate::dashboard::sync_cost_analysis_buckets(store.connection(), &old_record, &updated).await?;
     Ok(())
 }
 

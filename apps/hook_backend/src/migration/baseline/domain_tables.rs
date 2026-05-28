@@ -21,6 +21,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         api_tokens_table(),
         billing_group_models_table(),
         request_candidate_tables::request_records_table(),
+        request_candidate_tables::dashboard_cost_analysis_buckets_table(),
         request_candidate_tables::request_candidates_table(),
         usage_flush_batches_table(),
     ];

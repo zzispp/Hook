@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::iden::{DashboardUserUsageBuckets, RequestCandidates, RequestRecords};
+use super::iden::{DashboardCostAnalysisBuckets, DashboardUserUsageBuckets, RequestCandidates, RequestRecords};
 
 pub(super) fn request_records_table() -> TableCreateStatement {
     Table::create()
@@ -118,6 +118,46 @@ pub(super) fn dashboard_user_usage_buckets_table() -> TableCreateStatement {
                 .col(DashboardUserUsageBuckets::BucketGranularity)
                 .col(DashboardUserUsageBuckets::BucketStartedAt)
                 .col(DashboardUserUsageBuckets::UserId)
+                .unique(),
+        )
+        .to_owned()
+}
+
+pub(super) fn dashboard_cost_analysis_buckets_table() -> TableCreateStatement {
+    Table::create()
+        .table(DashboardCostAnalysisBuckets::Table)
+        .if_not_exists()
+        .col(string_len(DashboardCostAnalysisBuckets::Id, 36).primary_key())
+        .col(timestamp_tz(DashboardCostAnalysisBuckets::BucketStartedAt))
+        .col(timestamp_tz(DashboardCostAnalysisBuckets::BucketEndedAt))
+        .col(string_len(DashboardCostAnalysisBuckets::DimensionKind, 24))
+        .col(string_len(DashboardCostAnalysisBuckets::DimensionId, 100))
+        .col(string_len_null(DashboardCostAnalysisBuckets::DimensionName, 120))
+        .col(integer(DashboardCostAnalysisBuckets::Shard))
+        .col(big_integer(DashboardCostAnalysisBuckets::RequestCount))
+        .col(big_integer(DashboardCostAnalysisBuckets::SuccessCount))
+        .col(big_integer(DashboardCostAnalysisBuckets::FailedCount))
+        .col(big_integer(DashboardCostAnalysisBuckets::InputTokens))
+        .col(big_integer(DashboardCostAnalysisBuckets::OutputTokens))
+        .col(big_integer(DashboardCostAnalysisBuckets::CacheCreationTokens))
+        .col(big_integer(DashboardCostAnalysisBuckets::CacheReadTokens))
+        .col(big_integer(DashboardCostAnalysisBuckets::TotalTokens))
+        .col(decimal_len(DashboardCostAnalysisBuckets::TotalCost, 20, 8))
+        .col(decimal_len(DashboardCostAnalysisBuckets::UpstreamTotalCost, 20, 8))
+        .col(decimal_len(DashboardCostAnalysisBuckets::CacheReadCost, 20, 8))
+        .col(decimal_len(DashboardCostAnalysisBuckets::CacheCreationCost, 20, 8))
+        .col(decimal_len(DashboardCostAnalysisBuckets::EstimatedFullCost, 20, 8))
+        .col(big_integer(DashboardCostAnalysisBuckets::TotalLatencyMs))
+        .col(big_integer(DashboardCostAnalysisBuckets::LatencySampleCount))
+        .col(timestamp_tz(DashboardCostAnalysisBuckets::CreatedAt))
+        .col(timestamp_tz(DashboardCostAnalysisBuckets::UpdatedAt))
+        .index(
+            Index::create()
+                .name("index_dashboard_cost_analysis_buckets_unique")
+                .col(DashboardCostAnalysisBuckets::BucketStartedAt)
+                .col(DashboardCostAnalysisBuckets::DimensionKind)
+                .col(DashboardCostAnalysisBuckets::DimensionId)
+                .col(DashboardCostAnalysisBuckets::Shard)
                 .unique(),
         )
         .to_owned()

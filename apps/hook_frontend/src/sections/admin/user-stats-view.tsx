@@ -2,17 +2,14 @@
 
 import type { TFunction } from 'i18next';
 import type { SystemUser } from 'src/types/rbac';
-import type { DashboardPreset } from 'src/types/dashboard';
 import type { DashboardUserStatsFilters } from 'src/actions/dashboard';
+import type { DashboardPreset, DashboardCostAnalysisPreset } from 'src/types/dashboard';
 
+import dayjs from 'dayjs';
 import { useState } from 'react';
 
 import Stack from '@mui/material/Stack';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import InputLabel from '@mui/material/InputLabel';
-import FormControl from '@mui/material/FormControl';
 import Autocomplete from '@mui/material/Autocomplete';
 
 import { useUsers } from 'src/actions/rbac';
@@ -22,20 +19,28 @@ import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-value
 
 import { AdminBreadcrumbs } from './shared';
 import { DashboardUserStats } from '../overview/analytics/view/dashboard-user-stats';
+import {
+  DashboardDateRangePicker,
+  type AdminDashboardRangeFilters,
+} from './dashboard-date-range-picker';
 
-const PRESETS: DashboardPreset[] = ['today', '7d', '30d', '90d'];
 const USER_PAGE_SIZE = 100;
 
 export function UserStatsView() {
   const { t, currentLang } = useTranslate('admin');
   const users = useUsers(0, USER_PAGE_SIZE);
-  const [preset, setPreset] = useState<DashboardPreset>('today');
+  const [range, setRange] = useState<AdminDashboardRangeFilters>(defaultRange());
   const [filters, setFilters] = useState<DashboardUserStatsFilters>({
     preset: 'today',
     metric: 'requests',
     leaderboardPage: 0,
     leaderboardPageSize: 5,
   });
+
+  function updateRange(next: AdminDashboardRangeFilters) {
+    setRange(next);
+    setFilters((value) => ({ ...value, ...userStatsRangeParams(next), leaderboardPage: 0 }));
+  }
 
   return (
     <DashboardContent maxWidth="xl">
@@ -45,10 +50,10 @@ export function UserStatsView() {
           <UserStatsFilters
             t={t}
             users={users.items}
-            preset={preset}
+            range={range}
             filters={filters}
             loading={users.isLoading}
-            onPresetChange={setPreset}
+            onRangeChange={updateRange}
             onChange={(next) => setFilters({ ...filters, ...next })}
           />
         }
@@ -57,7 +62,6 @@ export function UserStatsView() {
         <DashboardUserStats
           t={t}
           locale={currentLang.numberFormat.code}
-          preset={preset}
           filters={filters}
           onChange={setFilters}
         />
@@ -69,43 +73,35 @@ export function UserStatsView() {
 function UserStatsFilters({
   t,
   users,
-  preset,
+  range,
   filters,
   loading,
   onChange,
-  onPresetChange,
+  onRangeChange,
 }: {
   t: TFunction<'admin'>;
   users: SystemUser[];
-  preset: DashboardPreset;
+  range: AdminDashboardRangeFilters;
   filters: DashboardUserStatsFilters;
   loading: boolean;
   onChange: (filters: Partial<DashboardUserStatsFilters>) => void;
-  onPresetChange: (preset: DashboardPreset) => void;
+  onRangeChange: (range: AdminDashboardRangeFilters) => void;
 }) {
+  const isCustom = range.preset === 'custom';
   return (
     <Stack
       spacing={1}
       sx={{
         width: { xs: 1, md: 'auto' },
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))', lg: '150px 220px 220px' },
+        gridTemplateColumns: {
+          xs: '1fr',
+          sm: isCustom ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))',
+          lg: isCustom ? '180px 160px 160px 220px 220px' : '180px 220px 220px',
+        },
       }}
     >
-      <FormControl size="small" sx={{ minWidth: 0 }}>
-        <InputLabel>{t('dashboard.stats.userStats.interval')}</InputLabel>
-        <Select
-          label={t('dashboard.stats.userStats.interval')}
-          value={preset}
-          onChange={(event) => onPresetChange(event.target.value as DashboardPreset)}
-        >
-          {PRESETS.map((item) => (
-            <MenuItem key={item} value={item}>
-              {t(`dashboard.stats.presets.${item}`)}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <DashboardDateRangePicker inline t={t} filters={range} onChange={onRangeChange} />
       <UserSelect
         label={t('dashboard.stats.userStats.user')}
         users={users}
@@ -122,6 +118,28 @@ function UserStatsFilters({
       />
     </Stack>
   );
+}
+
+function defaultRange(): AdminDashboardRangeFilters {
+  return { preset: 'today' as DashboardCostAnalysisPreset };
+}
+
+function userStatsRangeParams(range: AdminDashboardRangeFilters) {
+  if (range.preset === 'custom') {
+    return { start_date: range.start_date, end_date: range.end_date, preset: undefined };
+  }
+  if (range.preset === 'yesterday') {
+    const date = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+    return { start_date: date, end_date: date, preset: undefined };
+  }
+  return { preset: userStatsPreset(range.preset), start_date: undefined, end_date: undefined };
+}
+
+function userStatsPreset(preset: DashboardCostAnalysisPreset): DashboardPreset {
+  if (preset === 'last7days') return '7d';
+  if (preset === 'last30days') return '30d';
+  if (preset === 'last90days') return '90d';
+  return 'today';
 }
 
 function UserSelect({

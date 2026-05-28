@@ -35,10 +35,7 @@ pub async fn sync_user_usage_buckets(
     Ok(())
 }
 
-pub(super) async fn leaderboard(
-    store: &DashboardStore,
-    query: DashboardUserStatsLeaderboardQuery,
-) -> StorageResult<DashboardUserStatsLeaderboardResponse> {
+pub(super) async fn leaderboard(store: &DashboardStore, query: DashboardUserStatsLeaderboardQuery) -> StorageResult<DashboardUserStatsLeaderboardResponse> {
     let total = leaderboard_total(store, &query).await?;
     let rows = leaderboard_rows(store, &query).await?;
     let items = rows.into_iter().map(leaderboard_item).collect();
@@ -69,10 +66,7 @@ pub(super) async fn summary(store: &DashboardStore, query: DashboardUserUsageSta
     Ok(summary_response(row))
 }
 
-pub(super) async fn time_series(
-    store: &DashboardStore,
-    query: DashboardUserStatsTimeSeriesQuery,
-) -> StorageResult<Vec<DashboardUserStatsTimeSeriesPoint>> {
+pub(super) async fn time_series(store: &DashboardStore, query: DashboardUserStatsTimeSeriesQuery) -> StorageResult<Vec<DashboardUserStatsTimeSeriesPoint>> {
     let mut params = SqlParams::new();
     let where_sql = bucket_where(&query.window, bucket_granularity(query.bucket), query.user_id.as_deref(), &mut params);
     let sql = format!(
@@ -260,7 +254,11 @@ fn total_tokens(record: &request_records::Model) -> i64 {
 }
 
 fn hour_bounds(value: time::OffsetDateTime) -> BucketBounds {
-    let started_at = value.replace_minute(0).and_then(|v| v.replace_second(0)).and_then(|v| v.replace_nanosecond(0)).unwrap_or(value);
+    let started_at = value
+        .replace_minute(0)
+        .and_then(|v| v.replace_second(0))
+        .and_then(|v| v.replace_nanosecond(0))
+        .unwrap_or(value);
     BucketBounds {
         started_at,
         ended_at: started_at + time::Duration::hours(1),

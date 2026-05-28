@@ -73,6 +73,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000230",
+        section_id: OVERVIEW_SECTION_ID,
+        code: "admin_cost_analysis",
+        title: "成本分析",
+        path: "/dashboard/admin/cost-analysis",
+        icon: "solar:graph-up-bold",
+        sort_order: 3,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000202",
         section_id: OPERATIONS_SECTION_ID,
         code: "dashboard_models",

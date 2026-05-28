@@ -1,1 +1,2 @@
+pub mod dashboard_cost_analysis_buckets;
 pub mod dashboard_user_usage_buckets;

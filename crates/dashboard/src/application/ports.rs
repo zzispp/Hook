@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use types::{
     dashboard::{
-        DashboardActivityResponse, DashboardFilterOptionsResponse, DashboardOverviewResponse, DashboardPreset, DashboardUserStatsLeaderboardResponse,
+        DashboardActivityResponse, DashboardApiKeyLeaderboardResponse, DashboardCostForecastResponse, DashboardCostSavingsResponse,
+        DashboardFilterOptionsResponse, DashboardOverviewResponse, DashboardPreset, DashboardProviderAggregationItem, DashboardUserStatsLeaderboardResponse,
         DashboardUserStatsMetric, DashboardUserStatsTimeSeriesPoint, DashboardUserUsageStatsResponse,
     },
     pagination::PageRequest,
@@ -94,6 +95,43 @@ pub struct DashboardUserStatsTimeSeriesQuery {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardCostAnalysisWindow {
+    pub start_date: time::Date,
+    pub end_date: time::Date,
+    pub started_at: time::OffsetDateTime,
+    pub ended_at: time::OffsetDateTime,
+    pub tz_offset_minutes: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardCostForecastQuery {
+    pub window: DashboardCostAnalysisWindow,
+    pub forecast_days: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardCostSavingsQuery {
+    pub window: DashboardCostAnalysisWindow,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardApiKeyLeaderboardQuery {
+    pub window: DashboardCostAnalysisWindow,
+    pub metric: DashboardUserStatsMetric,
+    pub order: types::dashboard::DashboardSortOrder,
+    pub limit: u64,
+    pub offset: u64,
+    pub include_inactive: bool,
+    pub exclude_admin: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardProviderAggregationQuery {
+    pub window: DashboardCostAnalysisWindow,
+    pub limit: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DashboardWindowBounds {
     pub started_at: time::OffsetDateTime,
     pub ended_at: time::OffsetDateTime,
@@ -108,6 +146,10 @@ pub trait DashboardRepository: Send + Sync + 'static {
     async fn user_stats_leaderboard(&self, query: DashboardUserStatsLeaderboardQuery) -> DashboardResult<DashboardUserStatsLeaderboardResponse>;
     async fn user_usage_stats(&self, query: DashboardUserUsageStatsQuery) -> DashboardResult<DashboardUserUsageStatsResponse>;
     async fn user_stats_time_series(&self, query: DashboardUserStatsTimeSeriesQuery) -> DashboardResult<Vec<DashboardUserStatsTimeSeriesPoint>>;
+    async fn cost_forecast(&self, query: DashboardCostForecastQuery) -> DashboardResult<DashboardCostForecastResponse>;
+    async fn cost_savings(&self, query: DashboardCostSavingsQuery) -> DashboardResult<DashboardCostSavingsResponse>;
+    async fn api_key_leaderboard(&self, query: DashboardApiKeyLeaderboardQuery) -> DashboardResult<DashboardApiKeyLeaderboardResponse>;
+    async fn provider_aggregation(&self, query: DashboardProviderAggregationQuery) -> DashboardResult<Vec<DashboardProviderAggregationItem>>;
 }
 
 #[async_trait]
@@ -134,4 +176,24 @@ pub trait DashboardUseCase: Send + Sync + 'static {
         actor: DashboardActor,
         request: types::dashboard::DashboardUserStatsTimeSeriesRequest,
     ) -> DashboardResult<Vec<DashboardUserStatsTimeSeriesPoint>>;
+    async fn cost_forecast(
+        &self,
+        actor: DashboardActor,
+        request: types::dashboard::DashboardCostForecastRequest,
+    ) -> DashboardResult<DashboardCostForecastResponse>;
+    async fn cost_savings(
+        &self,
+        actor: DashboardActor,
+        request: types::dashboard::DashboardCostSavingsRequest,
+    ) -> DashboardResult<DashboardCostSavingsResponse>;
+    async fn api_key_leaderboard(
+        &self,
+        actor: DashboardActor,
+        request: types::dashboard::DashboardApiKeyLeaderboardRequest,
+    ) -> DashboardResult<DashboardApiKeyLeaderboardResponse>;
+    async fn provider_aggregation(
+        &self,
+        actor: DashboardActor,
+        request: types::dashboard::DashboardProviderAggregationRequest,
+    ) -> DashboardResult<Vec<DashboardProviderAggregationItem>>;
 }

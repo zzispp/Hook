@@ -186,6 +186,38 @@ impl DashboardRepository for RecordingRepository {
     ) -> DashboardResult<Vec<types::dashboard::DashboardUserStatsTimeSeriesPoint>> {
         Ok(Vec::new())
     }
+
+    async fn cost_forecast(&self, query: DashboardCostForecastQuery) -> DashboardResult<types::dashboard::DashboardCostForecastResponse> {
+        Ok(types::dashboard::DashboardCostForecastResponse {
+            history: Vec::new(),
+            forecast: Vec::new(),
+            slope: 0.0,
+            intercept: 0.0,
+            start_date: query.window.start_date.to_string(),
+            end_date: query.window.end_date.to_string(),
+        })
+    }
+
+    async fn cost_savings(&self, _query: DashboardCostSavingsQuery) -> DashboardResult<types::dashboard::DashboardCostSavingsResponse> {
+        Ok(types::dashboard::DashboardCostSavingsResponse::default())
+    }
+
+    async fn api_key_leaderboard(&self, query: DashboardApiKeyLeaderboardQuery) -> DashboardResult<types::dashboard::DashboardApiKeyLeaderboardResponse> {
+        Ok(types::dashboard::DashboardApiKeyLeaderboardResponse {
+            items: Vec::new(),
+            total: 0,
+            metric: query.metric,
+            start_date: query.window.start_date.to_string(),
+            end_date: query.window.end_date.to_string(),
+        })
+    }
+
+    async fn provider_aggregation(
+        &self,
+        _query: DashboardProviderAggregationQuery,
+    ) -> DashboardResult<Vec<types::dashboard::DashboardProviderAggregationItem>> {
+        Ok(Vec::new())
+    }
 }
 
 fn daily_stats(page: PageRequest) -> DashboardDailyStats {

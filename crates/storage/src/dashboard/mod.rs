@@ -1,4 +1,5 @@
 mod activity;
+mod cost_analysis;
 mod daily;
 pub mod entities;
 mod filters;
@@ -12,9 +13,11 @@ mod scope;
 mod types;
 mod user_stats;
 
+pub use cost_analysis::sync_cost_analysis_buckets;
 pub use repository::DashboardStore;
 pub use types::{
-    DashboardBucketFilter, DashboardScopeFilter, DashboardStoreActivityQuery, DashboardStoreFilterOptionsQuery, DashboardStoreOverviewQuery,
+    DashboardApiKeyLeaderboardQuery, DashboardBucketFilter, DashboardCostAnalysisWindow, DashboardCostForecastQuery, DashboardCostSavingsQuery,
+    DashboardProviderAggregationQuery, DashboardScopeFilter, DashboardStoreActivityQuery, DashboardStoreFilterOptionsQuery, DashboardStoreOverviewQuery,
     DashboardUserStatsBucket, DashboardUserStatsLeaderboardQuery, DashboardUserStatsStoreWindow, DashboardUserStatsTimeSeriesQuery,
     DashboardUserUsageStatsQuery,
 };

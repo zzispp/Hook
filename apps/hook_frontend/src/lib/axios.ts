@@ -226,8 +226,12 @@ export const endpoints = {
     activity: '/api/dashboard/activity',
     filterOptions: '/api/dashboard/filter-options',
     userStatsLeaderboard: '/api/admin/stats/leaderboard/users',
+    apiKeyLeaderboard: '/api/admin/stats/leaderboard/api-keys',
     userUsageStats: '/api/admin/usage/stats',
     userStatsTimeSeries: '/api/admin/stats/time-series',
+    costForecast: '/api/admin/stats/cost/forecast',
+    costSavings: '/api/admin/stats/cost/savings',
+    providerAggregation: '/api/admin/usage/aggregation/stats',
   },
   groups: {
     available: '/api/groups/available',

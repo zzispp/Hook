@@ -4,12 +4,18 @@ import type { ApiEnvelope } from 'src/types/rbac';
 import type {
   DashboardScope,
   DashboardPreset,
+  DashboardSortOrder,
   DashboardUserStatsMetric,
   DashboardActivityResponse,
   DashboardOverviewResponse,
+  DashboardCostAnalysisPreset,
+  DashboardCostSavingsResponse,
+  DashboardCostForecastResponse,
   DashboardFilterOptionsResponse,
   DashboardUserUsageStatsResponse,
+  DashboardProviderAggregationItem,
   DashboardUserStatsTimeSeriesPoint,
+  DashboardApiKeyLeaderboardResponse,
   DashboardUserStatsLeaderboardResponse,
 } from 'src/types/dashboard';
 
@@ -55,12 +61,27 @@ export type DashboardScopeFilters = {
 export type DashboardActivityFilters = DashboardScopeFilters;
 
 export type DashboardUserStatsFilters = {
-  preset: DashboardPreset;
+  preset?: DashboardPreset;
+  start_date?: string;
+  end_date?: string;
   userId?: string;
   compareUserId?: string;
   metric: DashboardUserStatsMetric;
   leaderboardPage: number;
   leaderboardPageSize: number;
+};
+
+export type DashboardCostAnalysisFilters = {
+  preset: DashboardCostAnalysisPreset;
+  start_date?: string;
+  end_date?: string;
+};
+
+export type DashboardApiKeyLeaderboardFilters = DashboardCostAnalysisFilters & {
+  metric: DashboardUserStatsMetric;
+  order: DashboardSortOrder;
+  page: number;
+  pageSize: number;
 };
 
 export function useDashboardActivity(filters: DashboardActivityFilters) {
@@ -93,11 +114,10 @@ export function useDashboardFilterOptions(enabled: boolean) {
 export function useDashboardUserStatsLeaderboard(enabled: boolean, filters: DashboardUserStatsFilters) {
   const url = enabled
     ? dashboardUrl(endpoints.dashboard.userStatsLeaderboard, {
-        preset: filters.preset,
+        ...userStatsRangeParams(filters),
         metric: filters.metric,
         limit: filters.leaderboardPageSize,
         offset: filters.leaderboardPage * filters.leaderboardPageSize,
-        tz_offset_minutes: timezoneOffsetMinutes(),
       })
     : null;
   const { data, isLoading, error, isValidating, mutate } = useSWR<
@@ -109,9 +129,8 @@ export function useDashboardUserStatsLeaderboard(enabled: boolean, filters: Dash
 
 export function useDashboardUserUsageStats(enabled: boolean, filters: DashboardUserStatsFilters) {
   const params = compactUserStatsParams({
-    preset: filters.preset,
+    ...userStatsRangeParams(filters),
     user_id: filters.userId,
-    tz_offset_minutes: timezoneOffsetMinutes(),
   });
   const url = enabled ? dashboardUrl(endpoints.dashboard.userUsageStats, params) : null;
   const { data, isLoading, error, isValidating, mutate } = useSWR<
@@ -123,9 +142,8 @@ export function useDashboardUserUsageStats(enabled: boolean, filters: DashboardU
 
 export function useDashboardUserStatsTimeSeries(enabled: boolean, filters: DashboardUserStatsFilters) {
   const params = compactUserStatsParams({
-    preset: filters.preset,
+    ...userStatsRangeParams(filters),
     user_id: filters.userId,
-    tz_offset_minutes: timezoneOffsetMinutes(),
   });
   const url = enabled ? dashboardUrl(endpoints.dashboard.userStatsTimeSeries, params) : null;
   const { data, isLoading, error, isValidating, mutate } = useSWR<
@@ -140,9 +158,8 @@ export function useDashboardCompareUserStatsTimeSeries(
   filters: DashboardUserStatsFilters
 ) {
   const params = compactUserStatsParams({
-    preset: filters.preset,
+    ...userStatsRangeParams(filters),
     user_id: filters.compareUserId,
-    tz_offset_minutes: timezoneOffsetMinutes(),
   });
   const url =
     enabled && filters.compareUserId
@@ -150,6 +167,54 @@ export function useDashboardCompareUserStatsTimeSeries(
       : null;
   const { data, isLoading, error, isValidating, mutate } = useSWR<
     ApiEnvelope<DashboardUserStatsTimeSeriesPoint[]>
+  >(url, fetcher, swrOptions);
+
+  return useDashboardData(data, isLoading, error, isValidating, mutate);
+}
+
+export function useDashboardCostForecast(filters: DashboardCostAnalysisFilters) {
+  const url = dashboardUrl(endpoints.dashboard.costForecast, costAnalysisParams(filters));
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<DashboardCostForecastResponse>
+  >(url, fetcher, swrOptions);
+
+  return useDashboardData(data, isLoading, error, isValidating, mutate);
+}
+
+export function useDashboardCostSavings(filters: DashboardCostAnalysisFilters) {
+  const url = dashboardUrl(endpoints.dashboard.costSavings, costAnalysisParams(filters));
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<DashboardCostSavingsResponse>
+  >(url, fetcher, swrOptions);
+
+  return useDashboardData(data, isLoading, error, isValidating, mutate);
+}
+
+export function useDashboardApiKeyLeaderboard(filters: DashboardApiKeyLeaderboardFilters) {
+  const url = dashboardUrl(endpoints.dashboard.apiKeyLeaderboard, {
+    ...costAnalysisParams(filters),
+    metric: filters.metric,
+    order: filters.order,
+    limit: filters.pageSize,
+    offset: filters.page * filters.pageSize,
+    include_inactive: 'false',
+    exclude_admin: 'false',
+  });
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<DashboardApiKeyLeaderboardResponse>
+  >(url, fetcher, swrOptions);
+
+  return useDashboardData(data, isLoading, error, isValidating, mutate);
+}
+
+export function useDashboardProviderAggregation(filters: DashboardCostAnalysisFilters) {
+  const url = dashboardUrl(endpoints.dashboard.providerAggregation, {
+    ...costAnalysisParams(filters),
+    group_by: 'provider',
+    limit: 8,
+  });
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<DashboardProviderAggregationItem[]>
   >(url, fetcher, swrOptions);
 
   return useDashboardData(data, isLoading, error, isValidating, mutate);
@@ -192,6 +257,24 @@ function compactUserStatsParams(params: Record<string, string | number | undefin
       return value !== undefined && value !== '';
     })
   );
+}
+
+function costAnalysisParams(filters: DashboardCostAnalysisFilters) {
+  return compactUserStatsParams({
+    preset: filters.preset,
+    start_date: filters.start_date,
+    end_date: filters.end_date,
+    tz_offset_minutes: timezoneOffsetMinutes(),
+  });
+}
+
+function userStatsRangeParams(filters: DashboardUserStatsFilters) {
+  return compactUserStatsParams({
+    preset: filters.preset,
+    start_date: filters.start_date,
+    end_date: filters.end_date,
+    tz_offset_minutes: timezoneOffsetMinutes(),
+  });
 }
 
 function dashboardRequestReady(filters: DashboardScopeFilters) {

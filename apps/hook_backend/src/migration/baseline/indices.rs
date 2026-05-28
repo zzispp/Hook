@@ -239,6 +239,12 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             DashboardUserUsageBuckets::BucketStartedAt,
         ),
         dashboard_user_usage_buckets_user_bucket_index(),
+        compound_index(
+            "index_dashboard_cost_analysis_buckets_by_dimension",
+            DashboardCostAnalysisBuckets::Table,
+            DashboardCostAnalysisBuckets::DimensionKind,
+            DashboardCostAnalysisBuckets::BucketStartedAt,
+        ),
         index(
             "index_request_candidates_by_request",
             RequestCandidates::Table,

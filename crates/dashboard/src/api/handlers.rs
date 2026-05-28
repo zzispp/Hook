@@ -5,8 +5,10 @@ use axum::{
 use rbac::api::CurrentUser;
 use types::{
     dashboard::{
-        DashboardActivityRequest, DashboardActivityResponse, DashboardFilterOptionsRequest, DashboardFilterOptionsResponse, DashboardOverviewRequest,
-        DashboardOverviewResponse, DashboardUserStatsLeaderboardRequest, DashboardUserStatsLeaderboardResponse, DashboardUserStatsTimeSeriesPoint,
+        DashboardActivityRequest, DashboardActivityResponse, DashboardApiKeyLeaderboardRequest, DashboardApiKeyLeaderboardResponse,
+        DashboardCostForecastRequest, DashboardCostForecastResponse, DashboardCostSavingsRequest, DashboardCostSavingsResponse, DashboardFilterOptionsRequest,
+        DashboardFilterOptionsResponse, DashboardOverviewRequest, DashboardOverviewResponse, DashboardProviderAggregationItem,
+        DashboardProviderAggregationRequest, DashboardUserStatsLeaderboardRequest, DashboardUserStatsLeaderboardResponse, DashboardUserStatsTimeSeriesPoint,
         DashboardUserStatsTimeSeriesRequest, DashboardUserUsageStatsRequest, DashboardUserUsageStatsResponse,
     },
     response::ApiResponse,
@@ -66,6 +68,38 @@ pub async fn user_stats_time_series(
     Query(query): Query<DashboardUserStatsTimeSeriesRequest>,
 ) -> ApiResult<ApiJson<Vec<DashboardUserStatsTimeSeriesPoint>>> {
     Ok(ok(state.dashboard.user_stats_time_series(actor(current_user), query).await?))
+}
+
+pub async fn cost_forecast(
+    State(state): State<DashboardApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<DashboardCostForecastRequest>,
+) -> ApiResult<ApiJson<DashboardCostForecastResponse>> {
+    Ok(ok(state.dashboard.cost_forecast(actor(current_user), query).await?))
+}
+
+pub async fn cost_savings(
+    State(state): State<DashboardApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<DashboardCostSavingsRequest>,
+) -> ApiResult<ApiJson<DashboardCostSavingsResponse>> {
+    Ok(ok(state.dashboard.cost_savings(actor(current_user), query).await?))
+}
+
+pub async fn api_key_leaderboard(
+    State(state): State<DashboardApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<DashboardApiKeyLeaderboardRequest>,
+) -> ApiResult<ApiJson<DashboardApiKeyLeaderboardResponse>> {
+    Ok(ok(state.dashboard.api_key_leaderboard(actor(current_user), query).await?))
+}
+
+pub async fn provider_aggregation(
+    State(state): State<DashboardApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<DashboardProviderAggregationRequest>,
+) -> ApiResult<ApiJson<Vec<DashboardProviderAggregationItem>>> {
+    Ok(ok(state.dashboard.provider_aggregation(actor(current_user), query).await?))
 }
 
 fn ok<T>(data: T) -> ApiJson<T> {

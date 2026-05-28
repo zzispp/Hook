@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add backend aggregate table and sync,DONE,Cost buckets exist and request record updates sync reversible deltas,test -f crates/storage/src/dashboard/cost_analysis.rs,,0,
+2,Add backend API and permissions,DONE,Cost analysis endpoints are routed and menu-bound,rg "admin_cost_analysis|cost/forecast|leaderboard/api-keys" apps/hook_backend crates apps/hook_frontend,,0,
+3,Add frontend cost analysis page,DONE,Admin page renders Aether-equivalent sections without quota progress,test -f apps/hook_frontend/src/sections/admin/cost-analysis-view.tsx,,0,
+4,Run validation,DONE,Rust and frontend checks attempted,just test && pnpm lint:frontend && pnpm build:frontend,,0,"cargo check -p backend; cargo test -p dashboard -p storage -p types; pnpm lint:frontend; pnpm build:frontend passed. just test has unrelated backend llm_proxy::formats failing assertion."
+5,Align cost formulas with Aether,DONE,Cache savings fallback tokens metric and rounding match Aether,cargo test -p storage dashboard::cost_analysis,,0,
+6,Validate Aether formula alignment,DONE,Relevant Rust and frontend checks pass,cargo check -p backend && cargo test -p dashboard -p storage -p types && pnpm lint:frontend && pnpm build:frontend,,0,

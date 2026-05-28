@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use rust_decimal::Decimal;
-use sea_orm::{DatabaseBackend, MockDatabase, Value};
+use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Value};
 use storage::{
     Database, StorageError,
     provider::{
@@ -293,6 +293,13 @@ async fn request_record_storage_updates_main_record() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
         .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
+        .append_exec_results([
+            mock_exec_result(),
+            mock_exec_result(),
+            mock_exec_result(),
+            mock_exec_result(),
+            mock_exec_result(),
+        ])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -304,6 +311,13 @@ async fn request_record_storage_updates_main_record() {
     assert!(sql.contains("\"status\" = $"), "{sql}");
     assert!(sql.contains("\"client_status_code\" = $"), "{sql}");
     assert!(sql.contains("\"client_response_body\" = $"), "{sql}");
+}
+
+fn mock_exec_result() -> MockExecResult {
+    MockExecResult {
+        last_insert_id: 0,
+        rows_affected: 1,
+    }
 }
 
 #[tokio::test]

@@ -8,7 +8,8 @@ use storage::{
 use types::dashboard::{DashboardActivityResponse, DashboardFilterOptionsResponse, DashboardOverviewResponse};
 
 use crate::application::{
-    DashboardActivityQuery, DashboardError, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardRepository, DashboardResult,
+    DashboardActivityQuery, DashboardApiKeyLeaderboardQuery, DashboardCostForecastQuery, DashboardCostSavingsQuery, DashboardError,
+    DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardProviderAggregationQuery, DashboardRepository, DashboardResult,
     DashboardUserStatsLeaderboardQuery, DashboardUserStatsTimeSeriesQuery, DashboardUserUsageStatsQuery,
 };
 
@@ -43,13 +44,13 @@ impl DashboardRepository for StorageDashboardRepository {
         &self,
         query: DashboardUserStatsLeaderboardQuery,
     ) -> DashboardResult<types::dashboard::DashboardUserStatsLeaderboardResponse> {
-        self.store.user_stats_leaderboard(store_user_stats_leaderboard_query(query)).await.map_err(storage_error)
+        self.store
+            .user_stats_leaderboard(store_user_stats_leaderboard_query(query))
+            .await
+            .map_err(storage_error)
     }
 
-    async fn user_usage_stats(
-        &self,
-        query: DashboardUserUsageStatsQuery,
-    ) -> DashboardResult<types::dashboard::DashboardUserUsageStatsResponse> {
+    async fn user_usage_stats(&self, query: DashboardUserUsageStatsQuery) -> DashboardResult<types::dashboard::DashboardUserUsageStatsResponse> {
         self.store.user_usage_stats(store_user_usage_stats_query(query)).await.map_err(storage_error)
     }
 
@@ -57,7 +58,32 @@ impl DashboardRepository for StorageDashboardRepository {
         &self,
         query: DashboardUserStatsTimeSeriesQuery,
     ) -> DashboardResult<Vec<types::dashboard::DashboardUserStatsTimeSeriesPoint>> {
-        self.store.user_stats_time_series(store_user_stats_time_series_query(query)).await.map_err(storage_error)
+        self.store
+            .user_stats_time_series(store_user_stats_time_series_query(query))
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn cost_forecast(&self, query: DashboardCostForecastQuery) -> DashboardResult<types::dashboard::DashboardCostForecastResponse> {
+        self.store.cost_forecast(store_cost_forecast_query(query)).await.map_err(storage_error)
+    }
+
+    async fn cost_savings(&self, query: DashboardCostSavingsQuery) -> DashboardResult<types::dashboard::DashboardCostSavingsResponse> {
+        self.store.cost_savings(store_cost_savings_query(query)).await.map_err(storage_error)
+    }
+
+    async fn api_key_leaderboard(&self, query: DashboardApiKeyLeaderboardQuery) -> DashboardResult<types::dashboard::DashboardApiKeyLeaderboardResponse> {
+        self.store
+            .api_key_leaderboard(store_api_key_leaderboard_query(query))
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn provider_aggregation(&self, query: DashboardProviderAggregationQuery) -> DashboardResult<Vec<types::dashboard::DashboardProviderAggregationItem>> {
+        self.store
+            .provider_aggregation(store_provider_aggregation_query(query))
+            .await
+            .map_err(storage_error)
     }
 }
 
@@ -118,6 +144,48 @@ fn store_user_stats_time_series_query(query: DashboardUserStatsTimeSeriesQuery) 
         window: store_user_stats_window(query.window),
         bucket: store_user_stats_bucket(query.bucket),
         user_id: query.user_id,
+    }
+}
+
+fn store_cost_forecast_query(query: DashboardCostForecastQuery) -> storage::dashboard::DashboardCostForecastQuery {
+    storage::dashboard::DashboardCostForecastQuery {
+        window: store_cost_analysis_window(query.window),
+        forecast_days: query.forecast_days,
+    }
+}
+
+fn store_cost_savings_query(query: DashboardCostSavingsQuery) -> storage::dashboard::DashboardCostSavingsQuery {
+    storage::dashboard::DashboardCostSavingsQuery {
+        window: store_cost_analysis_window(query.window),
+    }
+}
+
+fn store_api_key_leaderboard_query(query: DashboardApiKeyLeaderboardQuery) -> storage::dashboard::DashboardApiKeyLeaderboardQuery {
+    storage::dashboard::DashboardApiKeyLeaderboardQuery {
+        window: store_cost_analysis_window(query.window),
+        metric: query.metric,
+        order: query.order,
+        limit: query.limit,
+        offset: query.offset,
+        include_inactive: query.include_inactive,
+        exclude_admin: query.exclude_admin,
+    }
+}
+
+fn store_provider_aggregation_query(query: DashboardProviderAggregationQuery) -> storage::dashboard::DashboardProviderAggregationQuery {
+    storage::dashboard::DashboardProviderAggregationQuery {
+        window: store_cost_analysis_window(query.window),
+        limit: query.limit,
+    }
+}
+
+fn store_cost_analysis_window(window: crate::application::DashboardCostAnalysisWindow) -> storage::dashboard::DashboardCostAnalysisWindow {
+    storage::dashboard::DashboardCostAnalysisWindow {
+        start_date: window.start_date,
+        end_date: window.end_date,
+        started_at: window.started_at,
+        ended_at: window.ended_at,
+        tz_offset_minutes: window.tz_offset_minutes,
     }
 }
 

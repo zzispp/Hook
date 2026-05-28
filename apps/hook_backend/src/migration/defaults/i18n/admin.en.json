@@ -5,6 +5,7 @@
     "system_management": "System Management",
     "dashboard_home": "Dashboard",
     "admin_user_stats": "User Statistics",
+    "admin_cost_analysis": "Cost Analysis",
     "admin_performance_monitoring": "Performance Monitoring",
     "dashboard_models": "Model Catalog",
     "dashboard_groups": "Price Groups",
@@ -538,6 +539,38 @@
           "title": "User summary"
         },
         "interval": "Interval"
+      },
+      "costAnalysis": {
+        "title": "Cost Analysis",
+        "subtitle": "Cost trends, forecasts, and savings statistics",
+        "range": "Date range",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "presets": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "last7days": "Last 7 days",
+          "last30days": "Last 30 days",
+          "last90days": "Last 90 days",
+          "custom": "Custom"
+        },
+        "cacheSavings": "Cache savings",
+        "cacheReadCost": "Read cost {{value}}",
+        "cacheReadTokens": "Cache read tokens",
+        "estimatedFullCost": "Estimated full cost {{value}}",
+        "cacheCreationCost": "Cache creation cost",
+        "currentRange": "Based on the current date range",
+        "forecast": "Cost trend forecast",
+        "actualCost": "Actual cost",
+        "forecastCost": "Forecast cost",
+        "apiKeyLeaderboard": "API Key usage leaderboard",
+        "providerAnalysis": "Provider analysis",
+        "rank": "Rank",
+        "name": "Name",
+        "provider": "Provider",
+        "inputOutputCache": "Input/output/cache",
+        "cacheHitRate": "Cache hit rate",
+        "successRate": "Success rate"
       }
     },
     "weeklySales": "Weekly sales",

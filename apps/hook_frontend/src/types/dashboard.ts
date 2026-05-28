@@ -169,8 +169,16 @@ export type DashboardFilterOptionsResponse = {
 };
 
 export type DashboardUserStatsMetric = 'requests' | 'tokens' | 'cost';
+export type DashboardSortOrder = 'asc' | 'desc';
 
 export type DashboardUserStatsGranularity = 'day' | 'hour';
+export type DashboardCostAnalysisPreset =
+  | 'today'
+  | 'yesterday'
+  | 'last7days'
+  | 'last30days'
+  | 'last90days'
+  | 'custom';
 
 export type DashboardUserStatsLeaderboardItem = {
   rank: number;
@@ -202,4 +210,48 @@ export type DashboardUserStatsTimeSeriesPoint = {
   total_cost: number;
   total_requests: number;
   total_tokens: number;
+};
+
+export type DashboardCostForecastPoint = {
+  date: string;
+  total_cost: number;
+};
+
+export type DashboardCostForecastResponse = {
+  history: DashboardCostForecastPoint[];
+  forecast: DashboardCostForecastPoint[];
+  slope: number;
+  intercept: number;
+  start_date: string;
+  end_date: string;
+};
+
+export type DashboardCostSavingsResponse = {
+  cache_read_tokens: number;
+  cache_read_cost: number;
+  cache_creation_cost: number;
+  estimated_full_cost: number;
+  cache_savings: number;
+};
+
+export type DashboardApiKeyLeaderboardResponse = DashboardUserStatsLeaderboardResponse;
+
+export type DashboardProviderAggregationItem = {
+  provider_id?: string | null;
+  provider_key: string;
+  provider_identity_source: string;
+  provider: string;
+  request_count: number;
+  total_tokens: number;
+  effective_input_tokens: number;
+  total_input_context: number;
+  output_tokens: number;
+  total_cost: number;
+  actual_cost: number;
+  avg_response_time_ms: number;
+  success_rate: number;
+  error_count: number;
+  cache_creation_tokens: number;
+  cache_read_tokens: number;
+  cache_hit_rate: number;
 };

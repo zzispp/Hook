@@ -4,7 +4,8 @@ mod service;
 
 pub use error::{DashboardError, DashboardResult};
 pub use ports::{
-    DashboardActivityQuery, DashboardActor, DashboardBucket, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardRepository, DashboardScope,
+    DashboardActivityQuery, DashboardActor, DashboardApiKeyLeaderboardQuery, DashboardBucket, DashboardCostAnalysisWindow, DashboardCostForecastQuery,
+    DashboardCostSavingsQuery, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardProviderAggregationQuery, DashboardRepository, DashboardScope,
     DashboardUseCase, DashboardUserStatsBucket, DashboardUserStatsLeaderboardQuery, DashboardUserStatsTimeSeriesQuery, DashboardUserStatsWindow,
     DashboardUserUsageStatsQuery, DashboardWindowBounds,
 };

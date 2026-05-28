@@ -19,6 +19,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "dashboard_home",
     "admin_performance_monitoring",
     "admin_user_stats",
+    "admin_cost_analysis",
     "admin_wallets",
     "admin_card_codes",
     "admin_recharges",
@@ -75,6 +76,15 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "admin_user_usage_stats_read",
             "admin_user_stats_time_series_read",
             "users_read",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_cost_analysis",
+        api_codes: &[
+            "admin_cost_forecast_read",
+            "admin_cost_savings_read",
+            "admin_api_key_leaderboard_read",
+            "admin_provider_usage_aggregation_read",
         ],
     },
     MenuApiBindingDefinition {

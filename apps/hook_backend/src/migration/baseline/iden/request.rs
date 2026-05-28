@@ -112,6 +112,35 @@ pub(in crate::migration::baseline) enum DashboardUserUsageBuckets {
 }
 
 #[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum DashboardCostAnalysisBuckets {
+    Table,
+    Id,
+    BucketStartedAt,
+    BucketEndedAt,
+    DimensionKind,
+    DimensionId,
+    DimensionName,
+    Shard,
+    RequestCount,
+    SuccessCount,
+    FailedCount,
+    InputTokens,
+    OutputTokens,
+    CacheCreationTokens,
+    CacheReadTokens,
+    TotalTokens,
+    TotalCost,
+    UpstreamTotalCost,
+    CacheReadCost,
+    CacheCreationCost,
+    EstimatedFullCost,
+    TotalLatencyMs,
+    LatencySampleCount,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
 pub(in crate::migration::baseline) enum RequestCandidates {
     Table,
     Id,

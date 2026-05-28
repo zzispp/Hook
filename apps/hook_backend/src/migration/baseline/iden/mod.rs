@@ -47,6 +47,7 @@ pub fn reversed_tables() -> Vec<DynIden> {
         SupportTicketMessages::Table.into_iden(),
         SupportTickets::Table.into_iden(),
         Announcements::Table.into_iden(),
+        DashboardCostAnalysisBuckets::Table.into_iden(),
         DashboardUserUsageBuckets::Table.into_iden(),
         RequestCandidates::Table.into_iden(),
         RequestRecords::Table.into_iden(),

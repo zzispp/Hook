@@ -2,14 +2,16 @@ use async_trait::async_trait;
 use constants::pagination::{MAX_PAGE_SIZE, MIN_PAGE_NUMBER, MIN_PAGE_SIZE};
 use types::{
     dashboard::{
-        DashboardActivityRequest, DashboardFilterOptionsRequest, DashboardOverviewRequest, DashboardPreset, DashboardScopeParam,
+        DashboardActivityRequest, DashboardApiKeyLeaderboardRequest, DashboardCostAnalysisPreset, DashboardCostForecastRequest, DashboardCostSavingsRequest,
+        DashboardFilterOptionsRequest, DashboardOverviewRequest, DashboardPreset, DashboardProviderAggregationRequest, DashboardScopeParam,
         DashboardUserStatsGranularity, DashboardUserStatsLeaderboardRequest, DashboardUserStatsTimeSeriesRequest, DashboardUserUsageStatsRequest,
     },
     pagination::PageRequest,
 };
 
 use crate::application::{
-    DashboardActivityQuery, DashboardActor, DashboardBucket, DashboardError, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardRepository,
+    DashboardActivityQuery, DashboardActor, DashboardApiKeyLeaderboardQuery, DashboardBucket, DashboardCostAnalysisWindow, DashboardCostForecastQuery,
+    DashboardCostSavingsQuery, DashboardError, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardProviderAggregationQuery, DashboardRepository,
     DashboardResult, DashboardScope, DashboardUseCase, DashboardUserStatsBucket, DashboardUserStatsLeaderboardQuery, DashboardUserStatsTimeSeriesQuery,
     DashboardUserStatsWindow, DashboardUserUsageStatsQuery, DashboardWindowBounds,
 };
@@ -22,6 +24,7 @@ const ADMIN_ROLE: &str = "admin";
 const ACTIVITY_DAYS: i64 = 365;
 const ONE_DAY: i64 = 1;
 const DEFAULT_USER_STATS_PRESET: DashboardPreset = DashboardPreset::SevenDays;
+const MAX_FORECAST_DAYS: u32 = 90;
 
 pub struct DashboardService<R> {
     repository: R,
@@ -97,7 +100,12 @@ where
         request: DashboardUserStatsLeaderboardRequest,
     ) -> DashboardResult<types::dashboard::DashboardUserStatsLeaderboardResponse> {
         ensure_admin(&actor)?;
-        let window = user_stats_window(request.start_date.as_deref(), request.end_date.as_deref(), request.preset, request.tz_offset_minutes)?;
+        let window = user_stats_window(
+            request.start_date.as_deref(),
+            request.end_date.as_deref(),
+            request.preset,
+            request.tz_offset_minutes,
+        )?;
         self.repository
             .user_stats_leaderboard(DashboardUserStatsLeaderboardQuery {
                 window,
@@ -114,7 +122,12 @@ where
         request: DashboardUserUsageStatsRequest,
     ) -> DashboardResult<types::dashboard::DashboardUserUsageStatsResponse> {
         ensure_admin(&actor)?;
-        let window = user_stats_window(request.start_date.as_deref(), request.end_date.as_deref(), request.preset, request.tz_offset_minutes)?;
+        let window = user_stats_window(
+            request.start_date.as_deref(),
+            request.end_date.as_deref(),
+            request.preset,
+            request.tz_offset_minutes,
+        )?;
         self.repository
             .user_usage_stats(DashboardUserUsageStatsQuery {
                 window,
@@ -129,12 +142,81 @@ where
         request: DashboardUserStatsTimeSeriesRequest,
     ) -> DashboardResult<Vec<types::dashboard::DashboardUserStatsTimeSeriesPoint>> {
         ensure_admin(&actor)?;
-        let window = user_stats_window(request.start_date.as_deref(), request.end_date.as_deref(), request.preset, request.tz_offset_minutes)?;
+        let window = user_stats_window(
+            request.start_date.as_deref(),
+            request.end_date.as_deref(),
+            request.preset,
+            request.tz_offset_minutes,
+        )?;
         self.repository
             .user_stats_time_series(DashboardUserStatsTimeSeriesQuery {
                 window,
                 bucket: user_stats_bucket(request.granularity),
                 user_id: clean_optional(request.user_id),
+            })
+            .await
+    }
+
+    async fn cost_forecast(
+        &self,
+        actor: DashboardActor,
+        request: DashboardCostForecastRequest,
+    ) -> DashboardResult<types::dashboard::DashboardCostForecastResponse> {
+        ensure_admin(&actor)?;
+        let window = cost_analysis_window(&request.range)?;
+        self.repository
+            .cost_forecast(DashboardCostForecastQuery {
+                window,
+                forecast_days: validated_forecast_days(request.forecast_days)?,
+            })
+            .await
+    }
+
+    async fn cost_savings(
+        &self,
+        actor: DashboardActor,
+        request: DashboardCostSavingsRequest,
+    ) -> DashboardResult<types::dashboard::DashboardCostSavingsResponse> {
+        ensure_admin(&actor)?;
+        self.repository
+            .cost_savings(DashboardCostSavingsQuery {
+                window: cost_analysis_window(&request.range)?,
+            })
+            .await
+    }
+
+    async fn api_key_leaderboard(
+        &self,
+        actor: DashboardActor,
+        request: DashboardApiKeyLeaderboardRequest,
+    ) -> DashboardResult<types::dashboard::DashboardApiKeyLeaderboardResponse> {
+        ensure_admin(&actor)?;
+        self.repository
+            .api_key_leaderboard(DashboardApiKeyLeaderboardQuery {
+                window: cost_analysis_window(&request.range)?,
+                metric: request.metric,
+                order: request.order,
+                limit: validated_limit(request.limit)?,
+                offset: request.offset,
+                include_inactive: request.include_inactive,
+                exclude_admin: request.exclude_admin,
+            })
+            .await
+    }
+
+    async fn provider_aggregation(
+        &self,
+        actor: DashboardActor,
+        request: DashboardProviderAggregationRequest,
+    ) -> DashboardResult<Vec<types::dashboard::DashboardProviderAggregationItem>> {
+        ensure_admin(&actor)?;
+        if request.group_by != "provider" {
+            return Err(DashboardError::InvalidInput("group_by must be provider".into()));
+        }
+        self.repository
+            .provider_aggregation(DashboardProviderAggregationQuery {
+                window: cost_analysis_window(&request.range)?,
+                limit: validated_limit(request.limit)?,
             })
             .await
     }
@@ -216,6 +298,64 @@ fn user_stats_window(
     }
 }
 
+fn cost_analysis_window(request: &types::dashboard::DashboardCostAnalysisRequest) -> DashboardResult<DashboardCostAnalysisWindow> {
+    let now = time::OffsetDateTime::now_utc();
+    let offset = utc_offset(request.tz_offset_minutes)?;
+    let today = now.to_offset(offset).date();
+    let (start_date, end_date) = match request.preset {
+        DashboardCostAnalysisPreset::Today => (today, today),
+        DashboardCostAnalysisPreset::Yesterday => {
+            let yesterday = today
+                .previous_day()
+                .ok_or_else(|| DashboardError::InvalidInput("yesterday is out of range".into()))?;
+            (yesterday, yesterday)
+        }
+        DashboardCostAnalysisPreset::Last7Days => preset_date_range(today, 7)?,
+        DashboardCostAnalysisPreset::Last30Days => preset_date_range(today, 30)?,
+        DashboardCostAnalysisPreset::Last90Days => preset_date_range(today, 90)?,
+        DashboardCostAnalysisPreset::Custom => custom_cost_date_range(request.start_date.as_deref(), request.end_date.as_deref())?,
+    };
+    Ok(DashboardCostAnalysisWindow {
+        start_date,
+        end_date,
+        started_at: local_date_start_utc(start_date, request.tz_offset_minutes)?,
+        ended_at: local_date_start_utc(
+            end_date
+                .next_day()
+                .ok_or_else(|| DashboardError::InvalidInput("end_date is out of range".into()))?,
+            request.tz_offset_minutes,
+        )?,
+        tz_offset_minutes: request.tz_offset_minutes,
+    })
+}
+
+fn preset_date_range(today: time::Date, days: i64) -> DashboardResult<(time::Date, time::Date)> {
+    let start = today - time::Duration::days(days - ONE_DAY);
+    Ok((start, today))
+}
+
+fn custom_cost_date_range(start_date: Option<&str>, end_date: Option<&str>) -> DashboardResult<(time::Date, time::Date)> {
+    let start_date = parse_date(
+        start_date.ok_or_else(|| DashboardError::InvalidInput("start_date is required for custom range".into()))?,
+        "start_date",
+    )?;
+    let end_date = parse_date(
+        end_date.ok_or_else(|| DashboardError::InvalidInput("end_date is required for custom range".into()))?,
+        "end_date",
+    )?;
+    if start_date > end_date {
+        return Err(DashboardError::InvalidInput("start_date must be before or equal to end_date".into()));
+    }
+    Ok((start_date, end_date))
+}
+
+fn validated_forecast_days(value: u32) -> DashboardResult<u32> {
+    if value == 0 || value > MAX_FORECAST_DAYS {
+        return Err(DashboardError::InvalidInput(format!("forecast_days must be between 1 and {MAX_FORECAST_DAYS}")));
+    }
+    Ok(value)
+}
+
 fn explicit_user_stats_window(start_date: &str, end_date: &str, offset_minutes: i32) -> DashboardResult<DashboardUserStatsWindow> {
     let start_date = parse_date(start_date, "start_date")?;
     let end_date = parse_date(end_date, "end_date")?;
@@ -223,7 +363,12 @@ fn explicit_user_stats_window(start_date: &str, end_date: &str, offset_minutes: 
         return Err(DashboardError::InvalidInput("start_date must be before or equal to end_date".into()));
     }
     let started_at = local_date_start_utc(start_date, offset_minutes)?;
-    let ended_at = local_date_start_utc(end_date.next_day().ok_or_else(|| DashboardError::InvalidInput("end_date is out of range".into()))?, offset_minutes)?;
+    let ended_at = local_date_start_utc(
+        end_date
+            .next_day()
+            .ok_or_else(|| DashboardError::InvalidInput("end_date is out of range".into()))?,
+        offset_minutes,
+    )?;
     Ok(DashboardUserStatsWindow {
         start_date,
         end_date,
@@ -325,7 +470,9 @@ fn validated_page(page: u64, page_size: u64) -> DashboardResult<PageRequest> {
 
 fn validated_limit(limit: u64) -> DashboardResult<u64> {
     if limit < MIN_PAGE_SIZE || limit > MAX_PAGE_SIZE {
-        return Err(DashboardError::InvalidInput(format!("limit must be between {MIN_PAGE_SIZE} and {MAX_PAGE_SIZE}")));
+        return Err(DashboardError::InvalidInput(format!(
+            "limit must be between {MIN_PAGE_SIZE} and {MAX_PAGE_SIZE}"
+        )));
     }
     Ok(limit)
 }

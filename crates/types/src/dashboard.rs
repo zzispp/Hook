@@ -143,6 +143,107 @@ pub struct DashboardUserStatsTimeSeriesRequest {
     pub metric: Option<DashboardUserStatsMetric>,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
+pub enum DashboardCostAnalysisPreset {
+    #[default]
+    #[serde(rename = "last30days")]
+    Last30Days,
+    #[serde(rename = "today")]
+    Today,
+    #[serde(rename = "yesterday")]
+    Yesterday,
+    #[serde(rename = "last7days")]
+    Last7Days,
+    #[serde(rename = "last90days")]
+    Last90Days,
+    #[serde(rename = "custom")]
+    Custom,
+}
+
+impl<'de> Deserialize<'de> for DashboardCostAnalysisPreset {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        match value.as_str() {
+            "last30days" | "last30d" => Ok(Self::Last30Days),
+            "today" => Ok(Self::Today),
+            "yesterday" => Ok(Self::Yesterday),
+            "last7days" | "last7d" => Ok(Self::Last7Days),
+            "last90days" | "last90d" => Ok(Self::Last90Days),
+            "custom" => Ok(Self::Custom),
+            _ => Err(serde::de::Error::unknown_variant(
+                value.as_str(),
+                &["today", "yesterday", "last7days", "last30days", "last90days", "custom"],
+            )),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct DashboardCostAnalysisRequest {
+    #[serde(default)]
+    pub preset: DashboardCostAnalysisPreset,
+    #[serde(default)]
+    pub start_date: Option<String>,
+    #[serde(default)]
+    pub end_date: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_i32_query")]
+    pub tz_offset_minutes: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct DashboardCostForecastRequest {
+    #[serde(flatten)]
+    pub range: DashboardCostAnalysisRequest,
+    #[serde(default = "default_forecast_days", deserialize_with = "deserialize_u32_query")]
+    pub forecast_days: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct DashboardCostSavingsRequest {
+    #[serde(flatten)]
+    pub range: DashboardCostAnalysisRequest,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct DashboardApiKeyLeaderboardRequest {
+    #[serde(flatten)]
+    pub range: DashboardCostAnalysisRequest,
+    #[serde(default)]
+    pub metric: DashboardUserStatsMetric,
+    #[serde(default)]
+    pub order: DashboardSortOrder,
+    #[serde(default = "default_user_stats_limit", deserialize_with = "deserialize_u64_query")]
+    pub limit: u64,
+    #[serde(default, deserialize_with = "deserialize_u64_query")]
+    pub offset: u64,
+    #[serde(default, deserialize_with = "deserialize_bool_query")]
+    pub include_inactive: bool,
+    #[serde(default, deserialize_with = "deserialize_bool_query")]
+    pub exclude_admin: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct DashboardProviderAggregationRequest {
+    #[serde(flatten)]
+    pub range: DashboardCostAnalysisRequest,
+    #[serde(default = "default_provider_group_by")]
+    pub group_by: String,
+    #[serde(default = "default_provider_aggregation_limit", deserialize_with = "deserialize_u64_query")]
+    pub limit: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub enum DashboardSortOrder {
+    #[default]
+    #[serde(rename = "desc")]
+    Desc,
+    #[serde(rename = "asc")]
+    Asc,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct DashboardScopeResponse {
     pub scope: String,
@@ -403,6 +504,68 @@ pub struct DashboardUserStatsTimeSeriesPoint {
     pub total_tokens: i64,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct DashboardCostForecastResponse {
+    pub history: Vec<DashboardCostForecastPoint>,
+    pub forecast: Vec<DashboardCostForecastPoint>,
+    pub slope: f64,
+    pub intercept: f64,
+    pub start_date: String,
+    pub end_date: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct DashboardCostForecastPoint {
+    pub date: String,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_cost: Decimal,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+pub struct DashboardCostSavingsResponse {
+    pub cache_read_tokens: i64,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub cache_read_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub cache_creation_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub estimated_full_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub cache_savings: Decimal,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct DashboardApiKeyLeaderboardResponse {
+    pub items: Vec<DashboardUserStatsLeaderboardItem>,
+    pub total: u64,
+    pub metric: DashboardUserStatsMetric,
+    pub start_date: String,
+    pub end_date: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct DashboardProviderAggregationItem {
+    pub provider_id: Option<String>,
+    pub provider_key: String,
+    pub provider_identity_source: String,
+    pub provider: String,
+    pub request_count: i64,
+    pub total_tokens: i64,
+    pub effective_input_tokens: i64,
+    pub total_input_context: i64,
+    pub output_tokens: i64,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub actual_cost: Decimal,
+    pub avg_response_time_ms: f64,
+    pub success_rate: f64,
+    pub error_count: i64,
+    pub cache_creation_tokens: i64,
+    pub cache_read_tokens: i64,
+    pub cache_hit_rate: f64,
+}
+
 const fn default_daily_page() -> u64 {
     DEFAULT_DAILY_PAGE
 }
@@ -413,4 +576,59 @@ const fn default_daily_page_size() -> u64 {
 
 const fn default_user_stats_limit() -> u64 {
     10
+}
+
+const fn default_forecast_days() -> u32 {
+    7
+}
+
+const fn default_provider_aggregation_limit() -> u64 {
+    8
+}
+
+fn default_provider_group_by() -> String {
+    "provider".into()
+}
+
+fn deserialize_i32_query<'de, D>(deserializer: D) -> Result<i32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserialize_query_number(deserializer)
+}
+
+fn deserialize_u32_query<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserialize_query_number(deserializer)
+}
+
+fn deserialize_u64_query<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserialize_query_number(deserializer)
+}
+
+fn deserialize_query_number<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    let value = String::deserialize(deserializer)?;
+    value.parse::<T>().map_err(serde::de::Error::custom)
+}
+
+fn deserialize_bool_query<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    match value.as_str() {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Err(serde::de::Error::unknown_variant(value.as_str(), &["true", "false"])),
+    }
 }

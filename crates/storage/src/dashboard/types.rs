@@ -81,3 +81,40 @@ pub struct DashboardUserStatsTimeSeriesQuery {
     pub bucket: DashboardUserStatsBucket,
     pub user_id: Option<String>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardCostAnalysisWindow {
+    pub start_date: time::Date,
+    pub end_date: time::Date,
+    pub started_at: time::OffsetDateTime,
+    pub ended_at: time::OffsetDateTime,
+    pub tz_offset_minutes: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardCostForecastQuery {
+    pub window: DashboardCostAnalysisWindow,
+    pub forecast_days: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardCostSavingsQuery {
+    pub window: DashboardCostAnalysisWindow,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardApiKeyLeaderboardQuery {
+    pub window: DashboardCostAnalysisWindow,
+    pub metric: types::dashboard::DashboardUserStatsMetric,
+    pub order: types::dashboard::DashboardSortOrder,
+    pub limit: u64,
+    pub offset: u64,
+    pub include_inactive: bool,
+    pub exclude_admin: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardProviderAggregationQuery {
+    pub window: DashboardCostAnalysisWindow,
+    pub limit: u64,
+}

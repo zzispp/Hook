@@ -47,6 +47,7 @@ export const paths = {
       cacheMonitoring: `${ROOTS.DASHBOARD}/admin/cache-monitoring`,
       performanceMonitoring: `${ROOTS.DASHBOARD}/admin/performance-monitoring`,
       userStats: `${ROOTS.DASHBOARD}/admin/user-stats`,
+      costAnalysis: `${ROOTS.DASHBOARD}/admin/cost-analysis`,
       requestRecords: `${ROOTS.DASHBOARD}/admin/request-records`,
       tickets: `${ROOTS.DASHBOARD}/admin/tickets`,
       tokens: `${ROOTS.DASHBOARD}/admin/tokens`,

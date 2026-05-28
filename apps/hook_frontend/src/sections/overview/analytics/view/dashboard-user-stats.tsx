@@ -1,8 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { DashboardPreset } from 'src/types/dashboard';
 import type { DashboardUserStatsFilters } from 'src/actions/dashboard';
-
-import { useMemo } from 'react';
 
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
@@ -24,17 +21,15 @@ import {
 type Props = {
   t: TFunction<'admin'>;
   locale: string;
-  preset: DashboardPreset;
   filters: DashboardUserStatsFilters;
   onChange: (filters: DashboardUserStatsFilters) => void;
 };
 
-export function DashboardUserStats({ t, locale, preset, filters, onChange }: Props) {
-  const requestFilters = useMemo(() => ({ ...filters, preset }), [filters, preset]);
-  const leaderboard = useDashboardUserStatsLeaderboard(true, requestFilters);
-  const summary = useDashboardUserUsageStats(true, requestFilters);
-  const mainTrend = useDashboardUserStatsTimeSeries(true, requestFilters);
-  const compareTrend = useDashboardCompareUserStatsTimeSeries(true, requestFilters);
+export function DashboardUserStats({ t, locale, filters, onChange }: Props) {
+  const leaderboard = useDashboardUserStatsLeaderboard(true, filters);
+  const summary = useDashboardUserUsageStats(true, filters);
+  const mainTrend = useDashboardUserStatsTimeSeries(true, filters);
+  const compareTrend = useDashboardCompareUserStatsTimeSeries(true, filters);
 
   function patch(next: Partial<DashboardUserStatsFilters>) {
     onChange({ ...filters, ...next });

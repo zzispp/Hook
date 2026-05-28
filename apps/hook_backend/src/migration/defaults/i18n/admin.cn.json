@@ -5,6 +5,7 @@
     "system_management": "系统管理",
     "dashboard_home": "仪表盘",
     "admin_user_stats": "用户统计",
+    "admin_cost_analysis": "成本分析",
     "admin_performance_monitoring": "性能监控",
     "dashboard_models": "模型目录",
     "dashboard_groups": "价格分组",
@@ -538,6 +539,38 @@
           "title": "用户摘要"
         },
         "interval": "日期范围"
+      },
+      "costAnalysis": {
+        "title": "成本分析",
+        "subtitle": "成本趋势、预测与节省统计",
+        "range": "日期范围",
+        "startDate": "开始日期",
+        "endDate": "结束日期",
+        "presets": {
+          "today": "今天",
+          "yesterday": "昨天",
+          "last7days": "最近 7 天",
+          "last30days": "最近 30 天",
+          "last90days": "最近 90 天",
+          "custom": "自定义"
+        },
+        "cacheSavings": "缓存节省",
+        "cacheReadCost": "读取成本 {{value}}",
+        "cacheReadTokens": "缓存读取 Tokens",
+        "estimatedFullCost": "预计全额成本 {{value}}",
+        "cacheCreationCost": "缓存创建成本",
+        "currentRange": "基于当前时间范围",
+        "forecast": "成本趋势预测",
+        "actualCost": "实际成本",
+        "forecastCost": "预测成本",
+        "apiKeyLeaderboard": "API Key 用量排行",
+        "providerAnalysis": "按提供商分析",
+        "rank": "排名",
+        "name": "名称",
+        "provider": "提供商",
+        "inputOutputCache": "输入/输出/缓存",
+        "cacheHitRate": "缓存命中率",
+        "successRate": "成功率"
       }
     },
     "weeklySales": "本周销售额",
