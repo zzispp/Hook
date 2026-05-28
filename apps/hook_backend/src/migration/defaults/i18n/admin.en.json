@@ -1322,6 +1322,7 @@
     "sections": {
       "site": "Site information",
       "base": "Base configuration",
+      "registration": "Registration",
       "email": "Email configuration",
       "tokens": "Token configuration",
       "recharge": "Recharge configuration",
@@ -1461,9 +1462,10 @@
       }
     },
     "email": {
-      "description": "Configure SMTP, registration email suffix restrictions, and system email templates.",
+      "description": "Configure SMTP, ticket email notifications, password reset, and system email templates.",
       "smtpTitle": "SMTP service",
       "testConnection": "Test connection",
+      "featuresTitle": "Email features",
       "suffixTitle": "Registration email restrictions",
       "smtpPortHelper": "Common ports: 587/TLS, 465/SSL, 25/no encryption",
       "smtpPasswordStored": "Already set. Leave empty to keep the current password.",

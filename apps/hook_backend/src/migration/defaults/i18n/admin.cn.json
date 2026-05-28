@@ -1322,6 +1322,7 @@
     "sections": {
       "site": "站点信息",
       "base": "基础配置",
+      "registration": "注册相关",
       "email": "邮件配置",
       "tokens": "令牌配置",
       "recharge": "充值配置",
@@ -1461,9 +1462,10 @@
       }
     },
     "email": {
-      "description": "配置 SMTP、注册邮箱后缀限制和系统邮件模板",
+      "description": "配置 SMTP、工单邮件通知、找回密码和系统邮件模板",
       "smtpTitle": "SMTP 服务",
       "testConnection": "测试连接",
+      "featuresTitle": "邮件相关功能",
       "suffixTitle": "注册邮箱限制",
       "smtpPortHelper": "常用端口：587/TLS，465/SSL，25/无加密",
       "smtpPasswordStored": "已设置；留空保存时保持原密码。",

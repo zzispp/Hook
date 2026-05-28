@@ -8,6 +8,7 @@ import Chip from '@mui/material/Chip';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -25,7 +26,10 @@ type EmailTemplateEditorProps = {
   setForm: Dispatch<SetStateAction<SystemSettingsForm>>;
   templateType: EmailTemplateType;
   setTemplateType: (value: EmailTemplateType) => void;
+  availableTypes?: readonly EmailTemplateType[];
 };
+
+const DEFAULT_TEMPLATE_TYPES = ['registration', 'password_reset'] as const;
 
 const TEMPLATE_VARIABLES: Record<EmailTemplateType, string[]> = {
   registration: ['app_name', 'code', 'expire_minutes', 'email'],
@@ -37,17 +41,24 @@ export function EmailTemplateEditor({
   setForm,
   templateType,
   setTemplateType,
+  availableTypes = DEFAULT_TEMPLATE_TYPES,
 }: EmailTemplateEditorProps) {
   const { t } = useTranslate('admin');
   const values = templateValues(form, templateType);
+  const showTabs = availableTypes.length > 1;
 
   return (
     <Stack spacing={2}>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
-        <Tabs value={templateType} onChange={(_, value) => setTemplateType(value)}>
-          <Tab value="registration" label={t('systemSettings.email.templates.registration')} />
-          <Tab value="password_reset" label={t('systemSettings.email.templates.passwordReset')} />
-        </Tabs>
+        {showTabs ? (
+          <Tabs value={templateType} onChange={(_, value) => setTemplateType(value)}>
+            {availableTypes.map((type) => (
+              <Tab key={type} value={type} label={templateLabel(t, type)} />
+            ))}
+          </Tabs>
+        ) : (
+          <Typography variant="subtitle2">{templateLabel(t, templateType)}</Typography>
+        )}
         <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
           {TEMPLATE_VARIABLES[templateType].map((variable) => (
             <Chip key={variable} size="small" variant="soft" label={`{{${variable}}}`} />
@@ -70,6 +81,11 @@ export function EmailTemplateEditor({
       />
     </Stack>
   );
+}
+
+function templateLabel(t: ReturnType<typeof useTranslate>['t'], type: EmailTemplateType) {
+  const key = type === 'registration' ? 'registration' : 'passwordReset';
+  return t(`systemSettings.email.templates.${key}`);
 }
 
 function templateValues(form: SystemSettingsForm, type: EmailTemplateType) {

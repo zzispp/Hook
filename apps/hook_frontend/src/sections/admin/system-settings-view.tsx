@@ -2,13 +2,13 @@
 
 import type { SystemSettingsForm } from './system-settings-utils';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
+import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { useUserGroups } from 'src/actions/user-groups';
@@ -18,24 +18,70 @@ import { useSystemSettings } from 'src/actions/system-settings';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { Iconify } from 'src/components/iconify';
-import { logoImageSource } from 'src/components/logo/logo-utils';
 
-import { SettingsSection } from './system-settings-section';
+import { RefreshButton, AdminBreadcrumbs } from './shared';
 import { useSystemSettingsForm } from './system-settings-state';
 import { EmailSettingsSection } from './system-settings-email-section';
-import { TextFieldRow, RefreshButton, AdminBreadcrumbs } from './shared';
-import { SystemSettingsBaseSection } from './system-settings-base-section';
+import { SystemSettingsSiteSection } from './system-settings-site-section';
+import { SystemSettingsTokenSection } from './system-settings-token-section';
 import { RechargeSettingsSection } from './system-settings-recharge-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { enabledUserGroupOptions, USER_GROUP_MAX_PAGE_SIZE } from './user-group-utils';
+import { SystemSettingsRegistrationSection } from './system-settings-registration-section';
 import {
   usePaymentChannelForms,
   paymentChannelsWithForms,
   saveSystemSettingsAndPaymentChannels,
 } from './system-settings-payment-channel-state';
 
+type SystemSettingsTab =
+  | 'site'
+  | 'registration'
+  | 'email'
+  | 'tokens'
+  | 'recharge'
+  | 'requestRecord';
+
+const SYSTEM_SETTINGS_TABS: ReadonlyArray<{
+  value: SystemSettingsTab;
+  labelKey: string;
+}> = [
+  { value: 'site', labelKey: 'systemSettings.sections.site' },
+  { value: 'registration', labelKey: 'systemSettings.sections.registration' },
+  { value: 'email', labelKey: 'systemSettings.sections.email' },
+  { value: 'tokens', labelKey: 'systemSettings.sections.tokens' },
+  { value: 'recharge', labelKey: 'systemSettings.sections.recharge' },
+  { value: 'requestRecord', labelKey: 'systemSettings.sections.requestRecord' },
+];
+
 export function SystemSettingsView() {
   const { t } = useTranslate('admin');
+  const [tab, setTab] = useState<SystemSettingsTab>('site');
+  const state = useSystemSettingsPageState(t);
+
+  return (
+    <DashboardContent maxWidth="xl">
+      <AdminBreadcrumbs
+        headingCode={DASHBOARD_MENU_CODES.systemSettings}
+        action={
+          <HeaderActions
+            loading={state.settings.isLoading}
+            submitting={state.form.submitting}
+            onRefresh={state.settings.refresh}
+            onSubmit={state.form.submit}
+          />
+        }
+      />
+
+      <SettingsTabs tab={tab} setTab={setTab} />
+      <Card sx={{ p: 3 }}>
+        <SettingsTabPanel tab={tab} {...panelProps(state)} />
+      </Card>
+    </DashboardContent>
+  );
+}
+
+function useSystemSettingsPageState(t: ReturnType<typeof useTranslate>['t']) {
   const settings = useSystemSettings();
   const paymentChannels = usePaymentChannels();
   const userGroups = useUserGroups(0, USER_GROUP_MAX_PAGE_SIZE, { is_active: true });
@@ -71,179 +117,117 @@ export function SystemSettingsView() {
   });
   const userGroupOptions = enabledUserGroupOptions(userGroups.items);
 
-  return (
-    <DashboardContent maxWidth="xl">
-      <AdminBreadcrumbs
-        headingCode={DASHBOARD_MENU_CODES.systemSettings}
-        action={
-          <Stack direction="row" spacing={1}>
-            <RefreshButton loading={settings.isLoading} onClick={() => void settings.refresh()} />
-            <Button
-              variant="contained"
-              loading={form.submitting}
-              startIcon={<Iconify icon="solar:check-circle-bold" />}
-              onClick={form.submit}
-            >
-              {t('common.save')}
-            </Button>
-          </Stack>
-        }
-      />
-
-      <Card sx={{ p: 3 }}>
-        <Stack spacing={3}>
-          <SiteSection form={form.form} setForm={form.setForm} />
-          <Divider />
-          <SystemSettingsBaseSection
-            form={form.form}
-            setForm={form.setForm}
-            userGroups={userGroupOptions}
-          />
-          <Divider />
-          <EmailSettingsSection form={form.form} setForm={form.setForm} />
-          <Divider />
-          <TokenSection form={form.form} setForm={form.setForm} />
-          <Divider />
-          <RechargeSettingsSection
-            form={form.form}
-            setForm={form.setForm}
-            channels={paymentChannels.data ?? []}
-            channelForms={channelForms.forms}
-            channelsLoading={paymentChannels.isLoading}
-            channelsErrorMessage={paymentChannels.error?.message}
-            setChannelForm={channelForms.setForm}
-          />
-          <Divider />
-          <RequestRecordSection form={form.form} setForm={form.setForm} />
-        </Stack>
-      </Card>
-    </DashboardContent>
-  );
+  return { settings, paymentChannels, channelForms, form, userGroupOptions };
 }
 
-function SiteSection({
-  form,
-  setForm,
+function HeaderActions({
+  loading,
+  submitting,
+  onRefresh,
+  onSubmit,
 }: {
-  form: SystemSettingsForm;
-  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
+  loading: boolean;
+  submitting: boolean;
+  onRefresh: () => unknown;
+  onSubmit: () => void;
 }) {
   const { t } = useTranslate('admin');
 
   return (
-    <SettingsSection title={t('systemSettings.sections.site')}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        <TextFieldRow
-          required
-          label={t('systemSettings.fields.siteName')}
-          value={form.site_name}
-          onChange={(value) => setForm((current) => ({ ...current, site_name: value }))}
-        />
-        <TextFieldRow
-          label={t('systemSettings.fields.siteSubtitle')}
-          value={form.site_subtitle}
-          onChange={(value) => setForm((current) => ({ ...current, site_subtitle: value }))}
-        />
-      </Stack>
-      <TextFieldRow
-        label={t('systemSettings.fields.publicBaseUrl')}
-        value={form.public_base_url}
-        onChange={(value) => setForm((current) => ({ ...current, public_base_url: value }))}
-        sx={{ mt: 2 }}
-      />
-      <LogoField form={form} setForm={setForm} />
-    </SettingsSection>
-  );
-}
-
-function LogoField({
-  form,
-  setForm,
-}: {
-  form: SystemSettingsForm;
-  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
-}) {
-  const { t } = useTranslate('admin');
-  const logoSrc = logoImageSource(form.site_logo_base64);
-
-  return (
-    <Stack
-      spacing={2}
-      direction={{ xs: 'column', md: 'row' }}
-      sx={{ mt: 2, alignItems: 'center' }}
-    >
-      <Avatar variant="rounded" src={logoSrc} sx={{ width: 64, height: 64 }} />
-      <Stack spacing={1} sx={{ flex: 1 }}>
-        <Stack spacing={1} direction="row">
-          <Button
-            component="label"
-            variant="outlined"
-            startIcon={<Iconify icon="solar:import-bold" />}
-          >
-            {t('systemSettings.fields.siteLogoUpload')}
-            <input
-              hidden
-              type="file"
-              accept="image/*"
-              onChange={(event) => readLogoFile(event, setForm)}
-            />
-          </Button>
-        </Stack>
-      </Stack>
+    <Stack direction="row" spacing={1}>
+      <RefreshButton loading={loading} onClick={() => void onRefresh()} />
+      <Button
+        variant="contained"
+        loading={submitting}
+        startIcon={<Iconify icon="solar:check-circle-bold" />}
+        onClick={onSubmit}
+      >
+        {t('common.save')}
+      </Button>
     </Stack>
   );
 }
 
-function readLogoFile(
-  event: React.ChangeEvent<HTMLInputElement>,
-  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>
-) {
-  const file = event.target.files?.[0];
-  event.target.value = '';
-  if (!file) {
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    const result = reader.result;
-    if (typeof result !== 'string') {
-      return;
-    }
-    setForm((current) => ({ ...current, site_logo_base64: result }));
+function panelProps(state: ReturnType<typeof useSystemSettingsPageState>) {
+  return {
+    form: state.form.form,
+    setForm: state.form.setForm,
+    userGroups: state.userGroupOptions,
+    channels: state.paymentChannels.data ?? [],
+    channelForms: state.channelForms.forms,
+    channelsLoading: state.paymentChannels.isLoading,
+    channelsErrorMessage: state.paymentChannels.error?.message,
+    setChannelForm: state.channelForms.setForm,
   };
-  reader.readAsDataURL(file);
 }
 
-function TokenSection({
-  form,
-  setForm,
+function SettingsTabs({
+  tab,
+  setTab,
 }: {
-  form: SystemSettingsForm;
-  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
+  tab: SystemSettingsTab;
+  setTab: (value: SystemSettingsTab) => void;
 }) {
   const { t } = useTranslate('admin');
 
   return (
-    <SettingsSection title={t('systemSettings.sections.tokens')}>
-      <Stack spacing={2}>
-        <TextFieldRow
-          type="number"
-          label={t('systemSettings.fields.tokenLimitPerUser')}
-          value={form.token_limit_per_user}
-          helperText={t('systemSettings.helper.tokenLimitPerUser')}
-          onChange={(value) => setForm((current) => ({ ...current, token_limit_per_user: value }))}
-        />
-        <TextFieldRow
-          type="number"
-          label={t('systemSettings.fields.defaultRateLimitRpm')}
-          value={form.default_rate_limit_rpm}
-          helperText={t('systemSettings.helper.defaultRateLimitRpm')}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, default_rate_limit_rpm: value }))
-          }
-        />
-      </Stack>
-    </SettingsSection>
+    <Tabs
+      value={tab}
+      variant="scrollable"
+      allowScrollButtonsMobile
+      onChange={(_, value: SystemSettingsTab) => setTab(value)}
+      sx={{ mb: 3 }}
+    >
+      {SYSTEM_SETTINGS_TABS.map((item) => (
+        <Tab key={item.value} value={item.value} label={t(item.labelKey)} />
+      ))}
+    </Tabs>
   );
+}
+
+function SettingsTabPanel(props: {
+  tab: SystemSettingsTab;
+  form: SystemSettingsForm;
+  setForm: React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
+  userGroups: ReturnType<typeof enabledUserGroupOptions>;
+  channels: Parameters<typeof RechargeSettingsSection>[0]['channels'];
+  channelForms: Parameters<typeof RechargeSettingsSection>[0]['channelForms'];
+  channelsLoading: boolean;
+  channelsErrorMessage?: string;
+  setChannelForm: Parameters<typeof RechargeSettingsSection>[0]['setChannelForm'];
+}) {
+  if (props.tab === 'site') {
+    return <SystemSettingsSiteSection form={props.form} setForm={props.setForm} />;
+  }
+  if (props.tab === 'registration') {
+    return (
+      <SystemSettingsRegistrationSection
+        form={props.form}
+        setForm={props.setForm}
+        userGroups={props.userGroups}
+      />
+    );
+  }
+  if (props.tab === 'email') {
+    return <EmailSettingsSection form={props.form} setForm={props.setForm} />;
+  }
+  if (props.tab === 'tokens') {
+    return <SystemSettingsTokenSection form={props.form} setForm={props.setForm} />;
+  }
+  if (props.tab === 'recharge') {
+    return <RechargeSettingsSection {...rechargeProps(props)} />;
+  }
+  return <RequestRecordSection form={props.form} setForm={props.setForm} />;
+}
+
+function rechargeProps(props: Parameters<typeof SettingsTabPanel>[0]) {
+  return {
+    form: props.form,
+    setForm: props.setForm,
+    channels: props.channels,
+    channelForms: props.channelForms,
+    channelsLoading: props.channelsLoading,
+    channelsErrorMessage: props.channelsErrorMessage,
+    setChannelForm: props.setChannelForm,
+  };
 }

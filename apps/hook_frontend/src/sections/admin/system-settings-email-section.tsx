@@ -1,7 +1,6 @@
 'use client';
 
 import type { SystemSettingsForm } from './system-settings-utils';
-import type { EmailTemplateType } from './system-settings-email-template-editor';
 
 import { useState } from 'react';
 
@@ -29,7 +28,6 @@ type SystemSettingsFormProps = {
 
 export function EmailSettingsSection({ form, setForm }: SystemSettingsFormProps) {
   const { t } = useTranslate('admin');
-  const [templateType, setTemplateType] = useState<EmailTemplateType>('registration');
   const [testingSmtp, setTestingSmtp] = useState(false);
 
   const handleTestSmtp = async () => {
@@ -63,13 +61,14 @@ export function EmailSettingsSection({ form, setForm }: SystemSettingsFormProps)
           onTestSmtp={handleTestSmtp}
         />
         <Divider />
-        <EmailRestrictionFields form={form} setForm={setForm} />
+        <EmailFeatureFields form={form} setForm={setForm} />
         <Divider />
         <EmailTemplateEditor
           form={form}
           setForm={setForm}
-          templateType={templateType}
-          setTemplateType={setTemplateType}
+          templateType="password_reset"
+          setTemplateType={() => undefined}
+          availableTypes={['password_reset']}
         />
       </Stack>
     </SettingsSection>
@@ -86,9 +85,6 @@ function SmtpServerFields({
   onTestSmtp: () => void;
 }) {
   const { t } = useTranslate('admin');
-  const ticketEmailReady = form.email_config_enabled && emailConfigComplete(form);
-  const ticketEmailDisabled =
-    !ticketEmailReady && !form.support_ticket_email_notifications_enabled;
   const handleEmailConfigEnabledChange = (checked: boolean) => {
     setForm((current) => ({
       ...current,
@@ -99,6 +95,7 @@ function SmtpServerFields({
       support_ticket_email_notifications_enabled: checked
         ? current.support_ticket_email_notifications_enabled
         : false,
+      password_reset_enabled: checked ? current.password_reset_enabled : false,
     }));
   };
 
@@ -109,22 +106,6 @@ function SmtpServerFields({
         label={t('systemSettings.fields.emailConfigEnabled')}
         helperText={t('systemSettings.email.emailConfigEnabledHelper')}
         onChange={handleEmailConfigEnabledChange}
-      />
-      <SwitchRow
-        checked={form.support_ticket_email_notifications_enabled}
-        disabled={ticketEmailDisabled}
-        label={t('systemSettings.fields.supportTicketEmailNotificationsEnabled')}
-        helperText={
-          ticketEmailReady
-            ? t('systemSettings.email.supportTicketEmailNotificationsHelper')
-            : t('systemSettings.helper.supportTicketEmailNotificationsRequiresEmailConfig')
-        }
-        onChange={(checked) =>
-          setForm((current) => ({
-            ...current,
-            support_ticket_email_notifications_enabled: checked,
-          }))
-        }
       />
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
         <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
@@ -229,38 +210,48 @@ function SmtpSenderFields({ form, setForm }: SystemSettingsFormProps) {
   );
 }
 
-function EmailRestrictionFields({ form, setForm }: SystemSettingsFormProps) {
+function EmailFeatureFields({ form, setForm }: SystemSettingsFormProps) {
   const { t } = useTranslate('admin');
-  const suffixEnabled = form.email_suffix_mode !== 'none';
+  const emailReady = form.email_config_enabled && emailConfigComplete(form);
+  const ticketEmailDisabled = !emailReady && !form.support_ticket_email_notifications_enabled;
+  const passwordResetDisabled = !emailReady && !form.password_reset_enabled;
 
   return (
     <Stack spacing={2}>
-      <Typography variant="subtitle2">{t('systemSettings.email.suffixTitle')}</Typography>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        <TextFieldRow
-          select
-          label={t('systemSettings.fields.emailSuffixMode')}
-          value={form.email_suffix_mode}
-          onChange={(value) =>
-            setForm((current) => ({
-              ...current,
-              email_suffix_mode: value as typeof current.email_suffix_mode,
-            }))
-          }
-        >
-          <MenuItem value="none">{t('systemSettings.email.suffixMode.none')}</MenuItem>
-          <MenuItem value="whitelist">{t('systemSettings.email.suffixMode.whitelist')}</MenuItem>
-          <MenuItem value="blacklist">{t('systemSettings.email.suffixMode.blacklist')}</MenuItem>
-        </TextFieldRow>
-        <TextFieldRow
-          disabled={!suffixEnabled}
-          label={t('systemSettings.fields.emailSuffixes')}
-          value={form.email_suffixes}
-          placeholder="example.com, company.com"
-          helperText={t('systemSettings.email.emailSuffixesHelper')}
-          onChange={(value) => setForm((current) => ({ ...current, email_suffixes: value }))}
-        />
-      </Stack>
+      <Typography variant="subtitle2">{t('systemSettings.email.featuresTitle')}</Typography>
+      <SwitchRow
+        checked={form.support_ticket_captcha_enabled}
+        label={t('systemSettings.fields.supportTicketCaptchaEnabled')}
+        helperText={t('systemSettings.helper.supportTicketCaptchaEnabled')}
+        onChange={(checked) =>
+          setForm((current) => ({ ...current, support_ticket_captcha_enabled: checked }))
+        }
+      />
+      <SwitchRow
+        checked={form.support_ticket_email_notifications_enabled}
+        disabled={ticketEmailDisabled}
+        label={t('systemSettings.fields.supportTicketEmailNotificationsEnabled')}
+        helperText={
+          emailReady
+            ? t('systemSettings.email.supportTicketEmailNotificationsHelper')
+            : t('systemSettings.helper.supportTicketEmailNotificationsRequiresEmailConfig')
+        }
+        onChange={(checked) =>
+          setForm((current) => ({
+            ...current,
+            support_ticket_email_notifications_enabled: checked,
+          }))
+        }
+      />
+      <SwitchRow
+        checked={form.password_reset_enabled}
+        disabled={passwordResetDisabled}
+        label={t('systemSettings.fields.passwordResetEnabled')}
+        helperText={emailReady ? undefined : t('systemSettings.helper.passwordResetRequiresEmailConfig')}
+        onChange={(checked) =>
+          setForm((current) => ({ ...current, password_reset_enabled: checked }))
+        }
+      />
     </Stack>
   );
 }

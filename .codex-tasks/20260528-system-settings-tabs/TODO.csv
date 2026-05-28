@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current settings and tab patterns,DONE,Relevant settings and recharge tab implementations are understood,rg -n "SystemSettingsView|AdminRechargeManagementView" apps/hook_frontend/src/sections,2026-05-28T09:31:00+08:00,0,
+2,Implement tab layout and regroup fields,DONE,System settings page uses tabs and preserves form state across tab switches,pnpm lint:frontend,2026-05-28T09:40:00+08:00,0,
+3,Update admin i18n seed keys,DONE,New registration tab label exists in backend admin seed JSON,rg -n "\"registration\"" apps/hook_backend/src/migration/defaults/i18n/admin.*.json,2026-05-28T09:40:00+08:00,0,
+4,Run frontend validation,DONE,Lint and frontend build complete,pnpm lint:frontend && pnpm build:frontend,2026-05-28T09:42:00+08:00,0,
