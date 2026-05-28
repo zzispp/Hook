@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm request-record drawer pattern and callback fields,DONE,"Existing request-record row drawer pattern and callback fields are identified","sed -n '1,260p' apps/hook_frontend/src/sections/admin/request-record-detail-drawer.tsx && sed -n '1,240p' apps/hook_frontend/src/sections/recharge/recharge-callback-table.tsx",2026-05-28T00:00:00+08:00,0,
+2,Implement callback row drawer UI,DONE,"Callback rows open a drawer that displays raw params and error message","pnpm lint:frontend",2026-05-28T00:00:00+08:00,0,
+3,Validate frontend changes,DONE,"Frontend lint succeeds or failure is reported with evidence","pnpm lint:frontend && pnpm build:frontend",2026-05-28T00:00:00+08:00,0,

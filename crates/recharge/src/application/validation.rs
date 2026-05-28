@@ -2,7 +2,8 @@ use rust_decimal::Decimal;
 use types::{
     pagination::PageRequest,
     recharge::{
-        RECHARGE_ORDER_STATUS_CANCELLED, RECHARGE_ORDER_STATUS_EXPIRED, RECHARGE_ORDER_STATUS_FAILED, RECHARGE_ORDER_STATUS_PAID,
+        PAYMENT_CALLBACK_STATUS_FAILED, PAYMENT_CALLBACK_STATUS_IGNORED, PAYMENT_CALLBACK_STATUS_PROCESSED, PAYMENT_CALLBACK_STATUS_RECEIVED,
+        PaymentCallbackListFilters, RECHARGE_ORDER_STATUS_CANCELLED, RECHARGE_ORDER_STATUS_EXPIRED, RECHARGE_ORDER_STATUS_FAILED, RECHARGE_ORDER_STATUS_PAID,
         RECHARGE_ORDER_STATUS_PENDING, RECHARGE_PACKAGE_STATUS_ACTIVE, RECHARGE_PACKAGE_STATUS_DISABLED, RechargeOrderListFilters,
         RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageUpdatePayload,
     },
@@ -54,6 +55,10 @@ pub fn validate_package_filters(filters: &RechargePackageListFilters) -> Recharg
 
 pub fn validate_order_filters(filters: &RechargeOrderListFilters) -> RechargeResult<()> {
     validate_optional_order_status(filters.status.as_deref())
+}
+
+pub fn validate_callback_filters(filters: &PaymentCallbackListFilters) -> RechargeResult<()> {
+    validate_optional_callback_status(filters.status.as_deref())
 }
 
 pub fn validate_page(page: PageRequest) -> RechargeResult<()> {
@@ -133,4 +138,21 @@ fn validate_order_status(value: &str) -> RechargeResult<()> {
         return Ok(());
     }
     Err(RechargeError::InvalidInput("order status is unsupported".into()))
+}
+
+fn validate_optional_callback_status(value: Option<&str>) -> RechargeResult<()> {
+    match value.filter(|item| !item.is_empty()) {
+        Some(status) => validate_callback_status(status),
+        None => Ok(()),
+    }
+}
+
+fn validate_callback_status(value: &str) -> RechargeResult<()> {
+    if matches!(
+        value,
+        PAYMENT_CALLBACK_STATUS_RECEIVED | PAYMENT_CALLBACK_STATUS_PROCESSED | PAYMENT_CALLBACK_STATUS_IGNORED | PAYMENT_CALLBACK_STATUS_FAILED
+    ) {
+        return Ok(());
+    }
+    Err(RechargeError::InvalidInput("payment callback status is unsupported".into()))
 }

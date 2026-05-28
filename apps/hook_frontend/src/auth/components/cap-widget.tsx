@@ -14,6 +14,13 @@ import { endpoints } from 'src/lib/axios';
 import { CONFIG } from 'src/global-config';
 import { useTranslate } from 'src/locales/use-locales';
 
+type CaptchaLabels = {
+  initial: string;
+  verifying: string;
+  solved: string;
+  error: string;
+};
+
 type CapElement = HTMLElement & {
   reset?: () => void;
   token?: string | null;
@@ -25,11 +32,13 @@ type CapWidgetProps = {
   enabled: boolean;
   resetKey: number;
   onTokenChange: (token: string | null) => void;
+  labels?: CaptchaLabels;
 };
 
-export function AuthCaptcha({ enabled, resetKey, onTokenChange }: CapWidgetProps) {
+export function AuthCaptcha({ enabled, resetKey, onTokenChange, labels }: CapWidgetProps) {
   const theme = useTheme();
   const { t } = useTranslate('auth');
+  const captchaLabels = labels ?? authCaptchaLabels(t);
   const widgetRef = useRef<CapElement | null>(null);
   const apiEndpoint = useMemo(() => captchaApiEndpoint(), []);
   const widgetStyle = useMemo(() => capWidgetStyle(theme), [theme]);
@@ -81,13 +90,22 @@ export function AuthCaptcha({ enabled, resetKey, onTokenChange }: CapWidgetProps
         style: widgetStyle,
         'data-cap-api-endpoint': apiEndpoint,
         'data-cap-hidden-field-name': 'captcha_token',
-        'data-cap-i18n-initial-state': t('captcha.initial'),
-        'data-cap-i18n-verifying-label': t('captcha.verifying'),
-        'data-cap-i18n-solved-label': t('captcha.solved'),
-        'data-cap-i18n-error-label': t('captcha.error'),
+        'data-cap-i18n-initial-state': captchaLabels.initial,
+        'data-cap-i18n-verifying-label': captchaLabels.verifying,
+        'data-cap-i18n-solved-label': captchaLabels.solved,
+        'data-cap-i18n-error-label': captchaLabels.error,
       })}
     </Box>
   );
+}
+
+function authCaptchaLabels(t: ReturnType<typeof useTranslate>['t']): CaptchaLabels {
+  return {
+    initial: t('captcha.initial'),
+    verifying: t('captcha.verifying'),
+    solved: t('captcha.solved'),
+    error: t('captcha.error'),
+  };
 }
 
 function captchaApiEndpoint() {

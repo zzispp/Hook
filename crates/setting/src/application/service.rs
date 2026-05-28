@@ -3,7 +3,10 @@ use types::system_setting::{
     PublicSiteInfoResponse, SystemSettingsResponse, SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse, SystemSettingsUpdate,
 };
 
-use crate::application::{SettingError, SettingRepository, SettingResult, SettingSecretCipher, SettingUseCase, SettingUserGroupCatalog, SmtpConnectionTester};
+use crate::application::{
+    SettingError, SettingPaymentChannelCatalog, SettingRepository, SettingResult, SettingSecretCipher, SettingUseCase, SettingUserGroupCatalog,
+    SmtpConnectionTester,
+};
 
 use super::{
     email_config::validate_email_feature_prerequisites,
@@ -11,14 +14,15 @@ use super::{
     validation::{sanitize_update, validate_recharge_bounds, validate_update},
 };
 
-pub struct SettingService<R, C, T, U = NoSettingUserGroupCatalog> {
+pub struct SettingService<R, C, T, U = NoSettingUserGroupCatalog, P = NoSettingPaymentChannelCatalog> {
     repository: R,
     cipher: C,
     smtp_tester: T,
     user_groups: U,
+    payment_channels: P,
 }
 
-impl<R, C, T> SettingService<R, C, T, NoSettingUserGroupCatalog>
+impl<R, C, T> SettingService<R, C, T, NoSettingUserGroupCatalog, NoSettingPaymentChannelCatalog>
 where
     R: SettingRepository,
     C: SettingSecretCipher,
@@ -30,17 +34,19 @@ where
             cipher,
             smtp_tester,
             user_groups: NoSettingUserGroupCatalog,
+            payment_channels: NoSettingPaymentChannelCatalog,
         }
     }
 }
 
 #[async_trait]
-impl<R, C, T, U> SettingUseCase for SettingService<R, C, T, U>
+impl<R, C, T, U, P> SettingUseCase for SettingService<R, C, T, U, P>
 where
     R: SettingRepository,
     C: SettingSecretCipher,
     T: SmtpConnectionTester,
     U: SettingUserGroupCatalog,
+    P: SettingPaymentChannelCatalog,
 {
     async fn get_system_settings(&self) -> SettingResult<SystemSettingsResponse> {
         self.repository.get_system_settings().await
@@ -55,6 +61,7 @@ where
         validate_update(&input)?;
         let current = self.repository.get_system_settings().await?;
         validate_recharge_bounds(&input, &current)?;
+        validate_recharge_payment_channels(&self.payment_channels, &input, &current).await?;
         validate_email_feature_prerequisites(&input, &current)?;
         validate_default_user_group(&self.user_groups, input.default_user_group_code.as_deref()).await?;
         let encrypted_smtp_password = input
@@ -79,13 +86,24 @@ where
     }
 }
 
-impl<R, C, T, U> SettingService<R, C, T, U> {
-    pub fn with_user_group_catalog<NU>(self, user_groups: NU) -> SettingService<R, C, T, NU> {
+impl<R, C, T, U, P> SettingService<R, C, T, U, P> {
+    pub fn with_user_group_catalog<NU>(self, user_groups: NU) -> SettingService<R, C, T, NU, P> {
         SettingService {
             repository: self.repository,
             cipher: self.cipher,
             smtp_tester: self.smtp_tester,
             user_groups,
+            payment_channels: self.payment_channels,
+        }
+    }
+
+    pub fn with_payment_channel_catalog<NP>(self, payment_channels: NP) -> SettingService<R, C, T, U, NP> {
+        SettingService {
+            repository: self.repository,
+            cipher: self.cipher,
+            smtp_tester: self.smtp_tester,
+            user_groups: self.user_groups,
+            payment_channels,
         }
     }
 }
@@ -98,6 +116,32 @@ impl SettingUserGroupCatalog for NoSettingUserGroupCatalog {
     async fn active_user_group_exists(&self, _code: &str) -> SettingResult<bool> {
         Err(SettingError::Infrastructure("setting user group catalog is not available".into()))
     }
+}
+
+#[derive(Clone, Copy)]
+pub struct NoSettingPaymentChannelCatalog;
+
+#[async_trait]
+impl SettingPaymentChannelCatalog for NoSettingPaymentChannelCatalog {
+    async fn has_ready_payment_channel(&self) -> SettingResult<bool> {
+        Err(SettingError::Infrastructure("setting payment channel catalog is not available".into()))
+    }
+}
+
+async fn validate_recharge_payment_channels<P>(payment_channels: &P, input: &SystemSettingsUpdate, current: &SystemSettingsResponse) -> SettingResult<()>
+where
+    P: SettingPaymentChannelCatalog,
+{
+    let recharge_enabled = input.recharge_enabled.unwrap_or(current.recharge_enabled);
+    if !recharge_enabled {
+        return Ok(());
+    }
+    if payment_channels.has_ready_payment_channel().await? {
+        return Ok(());
+    }
+    Err(SettingError::InvalidInput(
+        "at least one enabled payment channel with saved configuration is required before enabling recharge".into(),
+    ))
 }
 
 async fn validate_default_user_group<U>(user_groups: &U, code: Option<&str>) -> SettingResult<()>

@@ -8,7 +8,8 @@ use types::{
 };
 
 use crate::application::{
-    SettingRepository, SettingResult, SettingSecretCipher, SettingService, SmtpConnectionConfig, SmtpConnectionTester, StoredSmtpSettings,
+    SettingPaymentChannelCatalog, SettingRepository, SettingResult, SettingSecretCipher, SettingService, SmtpConnectionConfig, SmtpConnectionTester,
+    StoredSmtpSettings,
 };
 
 struct FakeRepository {
@@ -17,7 +18,7 @@ struct FakeRepository {
     update: Arc<Mutex<Option<UpdateRecord>>>,
 }
 
-type TestSettingService = SettingService<FakeRepository, FakeCipher, RecordingTester>;
+type TestSettingService = SettingService<FakeRepository, FakeCipher, RecordingTester, super::NoSettingUserGroupCatalog, FakePaymentChannels>;
 type UpdateLog = Arc<Mutex<Option<UpdateRecord>>>;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -70,6 +71,26 @@ impl SmtpConnectionTester for RecordingTester {
     }
 }
 
+#[derive(Clone, Copy)]
+struct FakePaymentChannels {
+    has_ready_payment_channel: bool,
+}
+
+impl FakePaymentChannels {
+    const fn ready() -> Self {
+        Self {
+            has_ready_payment_channel: true,
+        }
+    }
+}
+
+#[async_trait]
+impl SettingPaymentChannelCatalog for FakePaymentChannels {
+    async fn has_ready_payment_channel(&self) -> SettingResult<bool> {
+        Ok(self.has_ready_payment_channel)
+    }
+}
+
 #[path = "service_tests/smtp.rs"]
 mod smtp;
 #[path = "service_tests/update.rs"]
@@ -81,12 +102,20 @@ fn test_service(tester: RecordingTester, stored: StoredSmtpSettings) -> TestSett
         FakeCipher,
         tester,
     )
+    .with_payment_channel_catalog(FakePaymentChannels::ready())
 }
 
 fn test_update_service(settings: SystemSettingsResponse) -> (TestSettingService, UpdateLog) {
+    test_update_service_with_payment_channels(settings, true)
+}
+
+fn test_update_service_with_payment_channels(settings: SystemSettingsResponse, has_ready_payment_channel: bool) -> (TestSettingService, UpdateLog) {
     let update = Arc::new(Mutex::new(None));
     let repository = fake_repository(stored_smtp_settings("encrypted:saved-password"), settings, update.clone());
-    (SettingService::new(repository, FakeCipher, RecordingTester::default()), update)
+    (
+        SettingService::new(repository, FakeCipher, RecordingTester::default()).with_payment_channel_catalog(FakePaymentChannels { has_ready_payment_channel }),
+        update,
+    )
 }
 
 fn fake_repository(stored: StoredSmtpSettings, settings: SystemSettingsResponse, update: UpdateLog) -> FakeRepository {
@@ -109,11 +138,13 @@ fn system_settings_response() -> SystemSettingsResponse {
     SystemSettingsResponse {
         site_name: "Hook".into(),
         site_subtitle: "AI API platform".into(),
+        public_base_url: "https://hook.test".into(),
         site_logo_base64: String::new(),
         allow_registration: true,
         login_captcha_enabled: false,
         registration_captcha_enabled: false,
         support_ticket_captcha_enabled: true,
+        recharge_captcha_enabled: false,
         registration_email_verification_enabled: false,
         password_reset_enabled: false,
         email_config_enabled: false,
@@ -141,6 +172,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         recharge_enabled: false,
         recharge_arrival_ratio: Decimal::ONE,
         recharge_order_expire_minutes: 15,
+        recharge_max_unpaid_orders: 5,
         recharge_min_amount: Decimal::new(1, 2),
         recharge_max_amount: Decimal::new(3000, 0),
         scheduling_mode: ProviderSchedulingMode::CacheAffinity,

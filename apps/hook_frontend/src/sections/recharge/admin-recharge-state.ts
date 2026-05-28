@@ -7,6 +7,7 @@ import { useMemo, useState, useCallback } from 'react';
 
 import {
   useRechargeOrders,
+  usePaymentCallbacks,
   useRechargePackages,
   createRechargePackage,
   updateRechargePackage,
@@ -17,8 +18,10 @@ import { useTable } from 'src/components/table';
 
 import {
   toRechargeOrderFilters,
+  toPaymentCallbackFilters,
   toRechargePackageFilters,
   DEFAULT_RECHARGE_ORDER_FILTERS,
+  DEFAULT_PAYMENT_CALLBACK_FILTERS,
   DEFAULT_RECHARGE_PACKAGE_FILTERS,
 } from './recharge-filters';
 
@@ -27,8 +30,10 @@ export type RechargeTab = 'orders' | 'packages' | 'callbacks';
 export function useRechargeManagementState(t: ReturnType<typeof useTranslate>['t']) {
   const orderTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'created_at' });
   const packageTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'sort_order' });
+  const callbackTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'received_at' });
   const [orderFilters, setOrderFilters] = useState(DEFAULT_RECHARGE_ORDER_FILTERS);
   const [packageFilters, setPackageFilters] = useState(DEFAULT_RECHARGE_PACKAGE_FILTERS);
+  const [callbackFilters, setCallbackFilters] = useState(DEFAULT_PAYMENT_CALLBACK_FILTERS);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<RechargePackage | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -37,35 +42,49 @@ export function useRechargeManagementState(t: ReturnType<typeof useTranslate>['t
     () => toRechargePackageFilters(packageFilters),
     [packageFilters]
   );
+  const callbackQueryFilters = useMemo(
+    () => toPaymentCallbackFilters(callbackFilters),
+    [callbackFilters]
+  );
   const orders = useRechargeOrders(orderTable.page, orderTable.rowsPerPage, orderQueryFilters);
   const packages = useRechargePackages(
     packageTable.page,
     packageTable.rowsPerPage,
     packageQueryFilters
   );
+  const callbacks = usePaymentCallbacks(
+    callbackTable.page,
+    callbackTable.rowsPerPage,
+    callbackQueryFilters
+  );
 
   const refresh = useCallback(
     (tab: RechargeTab) => {
       if (tab === 'orders') void orders.refresh();
       if (tab === 'packages') void packages.refresh();
+      if (tab === 'callbacks') void callbacks.refresh();
     },
-    [orders, packages]
+    [callbacks, orders, packages]
   );
 
   return {
     orders,
     packages,
+    callbacks,
     orderTable,
     packageTable,
+    callbackTable,
     orderFilters,
     packageFilters,
+    callbackFilters,
     submitting,
     dialogOpen,
     editingPackage,
-    errorMessage: orders.error?.message ?? packages.error?.message,
+    errorMessage: orders.error?.message ?? packages.error?.message ?? callbacks.error?.message,
     refresh,
     changeOrderFilters: filterHandler(orderTable, setOrderFilters),
     changePackageFilters: filterHandler(packageTable, setPackageFilters),
+    changeCallbackFilters: filterHandler(callbackTable, setCallbackFilters),
     openCreatePackage: () => {
       setEditingPackage(null);
       setDialogOpen(true);

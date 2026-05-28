@@ -6,11 +6,14 @@ import type {
   PaymentChannel,
   RechargePackage,
   RechargePackageInput,
+  PublicPaymentChannel,
   RechargeOrderCreateInput,
-  RechargeOrderListResponse,
   PaymentChannelUpdateInput,
+  RechargeOrderListResponse,
+  RechargeOrderCreateResponse,
   RechargePackageListResponse,
   UserRechargePackageListResponse,
+  PaymentCallbackRecordListResponse,
 } from 'src/types/recharge';
 
 import useSWR from 'swr';
@@ -31,6 +34,11 @@ export type RechargePackageFilters = {
 };
 
 export type RechargeOrderFilters = {
+  search?: string;
+  status?: string;
+};
+
+export type PaymentCallbackFilters = {
   search?: string;
   status?: string;
 };
@@ -59,8 +67,24 @@ export function useRechargeOrders(
   return useRechargeResource<RechargeOrderListResponse>(key);
 }
 
+export function usePaymentCallbacks(
+  page: number,
+  pageSize: number,
+  filters: PaymentCallbackFilters = {}
+) {
+  const key = [
+    endpoints.adminRecharges.paymentCallbacks,
+    { params: { ...pageQuery(page, pageSize), ...filters } },
+  ] as const;
+  return useRechargeResource<PaymentCallbackRecordListResponse>(key);
+}
+
 export function usePaymentChannels() {
   return useRechargeResource<PaymentChannel[]>(endpoints.adminRecharges.paymentChannels);
+}
+
+export function useUserPaymentChannels() {
+  return useRechargeResource<PublicPaymentChannel[]>(endpoints.recharges.paymentChannels);
 }
 
 export function useUserRechargePackages(page = 0, pageSize = 50) {
@@ -98,7 +122,7 @@ export async function updatePaymentChannel(code: string, payload: PaymentChannel
 }
 
 export async function createUserRechargeOrder(payload: RechargeOrderCreateInput) {
-  const response = await axios.post<ApiEnvelope<RechargeOrderListResponse['items'][number]>>(
+  const response = await axios.post<ApiEnvelope<RechargeOrderCreateResponse>>(
     endpoints.recharges.orders,
     payload
   );

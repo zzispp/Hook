@@ -31,6 +31,10 @@ const backendRewrites = isStaticExport
             source: '/v1beta/:path*',
             destination: `${backendUrl}/v1beta/:path*`,
           },
+          {
+            source: '/api/:path*',
+            destination: `${backendUrl}/api/:path*`,
+          },
         ];
       },
     };

@@ -3,12 +3,13 @@ use std::collections::HashSet;
 use axum::http::HeaderName;
 use rust_decimal::Decimal;
 use types::provider::ProviderCooldownPolicy;
-use types::system_setting::{EmailSuffixMode, SystemSettingsUpdate};
+use types::system_setting::{EmailSuffixMode, SystemSettingsUpdate, public_base_url_is_valid};
 
 use super::{SettingError, SettingResult};
 
 const MAX_SITE_NAME_LENGTH: usize = 100;
 const MAX_SITE_SUBTITLE_LENGTH: usize = 200;
+const MAX_PUBLIC_BASE_URL_LENGTH: usize = 255;
 const MAX_SMTP_HOST_LENGTH: usize = 255;
 const MAX_SMTP_USERNAME_LENGTH: usize = 255;
 const MAX_SMTP_PASSWORD_LENGTH: usize = 1024;
@@ -25,6 +26,7 @@ pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
     SystemSettingsUpdate {
         site_name: input.site_name.map(|value| value.trim().to_owned()),
         site_subtitle: input.site_subtitle.map(|value| value.trim().to_owned()),
+        public_base_url: trim_optional(input.public_base_url),
         site_logo_base64: trim_optional(input.site_logo_base64),
         default_user_group_code: trim_optional(input.default_user_group_code),
         client_sensitive_request_headers: normalize_optional_headers(input.client_sensitive_request_headers),
@@ -47,6 +49,7 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     }
     validate_site_name(input.site_name.as_deref())?;
     validate_site_subtitle(input.site_subtitle.as_deref())?;
+    validate_public_base_url(input.public_base_url.as_deref())?;
     validate_optional_code("default_user_group_code", input.default_user_group_code.as_deref())?;
     validate_positive_i64("client_max_request_body_size_kb", input.client_max_request_body_size_kb)?;
     validate_positive_i64("client_max_response_body_size_kb", input.client_max_response_body_size_kb)?;
@@ -134,6 +137,26 @@ fn validate_site_subtitle(value: Option<&str>) -> SettingResult<()> {
     Ok(())
 }
 
+fn validate_public_base_url(value: Option<&str>) -> SettingResult<()> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    if value.is_empty() {
+        return Ok(());
+    }
+    if value.len() > MAX_PUBLIC_BASE_URL_LENGTH {
+        return Err(SettingError::InvalidInput(format!(
+            "public_base_url length must be at most {MAX_PUBLIC_BASE_URL_LENGTH}"
+        )));
+    }
+    let is_valid =
+        public_base_url_is_valid(value).map_err(|error| SettingError::Infrastructure(format!("invalid public_base_url validation regex: {error}")))?;
+    if !is_valid {
+        return Err(SettingError::InvalidInput("public_base_url must be a valid HTTP or HTTPS URL".into()));
+    }
+    Ok(())
+}
+
 fn validate_non_negative_decimal(field: &str, value: Option<Decimal>) -> SettingResult<()> {
     if value.is_some_and(|item| item < Decimal::ZERO) {
         return Err(SettingError::InvalidInput(format!("{field} must be greater than or equal to 0")));
@@ -204,6 +227,7 @@ fn validate_positive_decimal(field: &str, value: Option<Decimal>) -> SettingResu
 fn validate_recharge_settings(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_positive_decimal("recharge_arrival_ratio", input.recharge_arrival_ratio)?;
     validate_positive_i64("recharge_order_expire_minutes", input.recharge_order_expire_minutes)?;
+    validate_positive_i64("recharge_max_unpaid_orders", input.recharge_max_unpaid_orders)?;
     validate_positive_decimal("recharge_min_amount", input.recharge_min_amount)?;
     validate_positive_decimal("recharge_max_amount", input.recharge_max_amount)?;
     Ok(())

@@ -174,6 +174,7 @@ export function TextFieldRow({
   disabled,
   SelectProps,
   slotProps,
+  sx,
 }: {
   label: string;
   value: string | number | string[];
@@ -189,6 +190,7 @@ export function TextFieldRow({
   disabled?: boolean;
   SelectProps?: TextFieldProps['SelectProps'];
   slotProps?: TextFieldProps['slotProps'];
+  sx?: TextFieldProps['sx'];
 }) {
   return (
     <TextField
@@ -206,6 +208,7 @@ export function TextFieldRow({
       placeholder={placeholder}
       SelectProps={SelectProps}
       slotProps={slotProps}
+      sx={sx}
       onChange={(event) =>
         onChange(
           Array.isArray(event.target.value) ? event.target.value.join(',') : event.target.value

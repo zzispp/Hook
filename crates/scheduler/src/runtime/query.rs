@@ -14,6 +14,7 @@ const MAX_PAGE_SIZE: u64 = 100;
 
 pub async fn list_tasks(store: &SchedulerStore, registry: &Arc<SchedulerRegistry>) -> SchedulerResult<Vec<ScheduledTask>> {
     let definitions = registry.definitions();
+    store.ensure_registered_tasks(&definitions).await?;
     store.list_tasks(&definitions).await.map_err(Into::into)
 }
 
@@ -54,5 +55,92 @@ pub fn next_runtime_config(current: &storage::scheduler::ScheduledTaskRecord, up
     match update_config {
         Some(value) => Ok(value),
         None => current.runtime_config(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use async_trait::async_trait;
+    use sea_orm::{DatabaseBackend, MockDatabase};
+    use storage::{Database, scheduler::SchedulerStore};
+    use types::scheduler::ScheduledTaskDefinition;
+
+    use crate::runtime::{ScheduleTaskContext, ScheduledTaskLifecycle, SchedulerRegistry, SchedulerResult, TaskConfigValue, TaskResult, query::list_tasks};
+
+    #[tokio::test]
+    async fn list_tasks_registers_missing_registry_tasks() {
+        let connection = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([Vec::<storage::scheduler::entities::scheduled_tasks::Model>::new()])
+            .append_query_results([[task_record("recharge_payment_poll")]])
+            .append_query_results([vec![task_record("recharge_payment_poll")]])
+            .into_connection();
+        let store = SchedulerStore::new(Database::new(connection.clone()));
+        let registry = Arc::new(test_registry());
+
+        let tasks = list_tasks(&store, &registry).await.unwrap();
+
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].code, "recharge_payment_poll");
+        let statements = logged_sql(connection);
+        assert!(statements.iter().any(|sql| sql.contains("INSERT INTO \"scheduled_tasks\"")), "{statements:?}");
+    }
+
+    fn test_registry() -> SchedulerRegistry {
+        let mut registry = SchedulerRegistry::new();
+        registry.register(TestTask).unwrap();
+        registry
+    }
+
+    #[derive(Clone, Copy)]
+    struct TestTask;
+
+    #[async_trait]
+    impl ScheduledTaskLifecycle for TestTask {
+        fn definition(&self) -> ScheduledTaskDefinition {
+            storage::scheduler::task_definition(
+                "recharge_payment_poll",
+                "scheduledTasks.definitions.rechargePaymentPoll.name",
+                "scheduledTasks.definitions.rechargePaymentPoll.description",
+                60,
+                serde_json::json!({"limit": 50}),
+                Vec::new(),
+            )
+        }
+
+        fn validate_config(&self, _config: &TaskConfigValue) -> SchedulerResult<()> {
+            Ok(())
+        }
+
+        async fn run(&self, _ctx: ScheduleTaskContext, _config: TaskConfigValue) -> TaskResult {
+            Ok(None)
+        }
+    }
+
+    fn task_record(code: &str) -> storage::scheduler::entities::scheduled_tasks::Model {
+        let now = time::OffsetDateTime::UNIX_EPOCH;
+        storage::scheduler::entities::scheduled_tasks::Model {
+            code: code.into(),
+            enabled: true,
+            interval_seconds: 60,
+            config: serde_json::json!({"limit": 50}).to_string(),
+            last_started_at: None,
+            last_finished_at: None,
+            last_status: None,
+            last_duration_ms: None,
+            last_error: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    fn logged_sql(connection: sea_orm::DatabaseConnection) -> Vec<String> {
+        connection
+            .into_transaction_log()
+            .iter()
+            .flat_map(|entry| entry.statements())
+            .map(|statement| statement.sql.clone())
+            .collect()
     }
 }

@@ -5,6 +5,7 @@ use super::iden::SystemSettings;
 const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
 const DEFAULT_TOKEN_LIMIT_PER_USER: i64 = 5;
 const DEFAULT_RECHARGE_EXPIRE_MINUTES: i64 = 15;
+const DEFAULT_RECHARGE_MAX_UNPAID_ORDERS: i64 = 5;
 
 pub(super) fn system_settings_table() -> TableCreateStatement {
     Table::create()
@@ -13,11 +14,13 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(string_len(SystemSettings::Id, 36).primary_key())
         .col(string_len(SystemSettings::SiteName, 100))
         .col(string_len(SystemSettings::SiteSubtitle, 200))
+        .col(string_len(SystemSettings::PublicBaseUrl, 255).default(""))
         .col(text(SystemSettings::SiteLogoBase64).default(""))
         .col(boolean(SystemSettings::AllowRegistration))
         .col(boolean(SystemSettings::LoginCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::RegistrationCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::SupportTicketCaptchaEnabled).default(true))
+        .col(boolean(SystemSettings::RechargeCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::RegistrationEmailVerificationEnabled).default(false))
         .col(boolean(SystemSettings::PasswordResetEnabled).default(false))
         .col(boolean(SystemSettings::EmailConfigEnabled).default(false))
@@ -45,6 +48,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(boolean(SystemSettings::RechargeEnabled).default(false))
         .col(decimal_len(SystemSettings::RechargeArrivalRatio, 20, 8).default(1))
         .col(big_integer(SystemSettings::RechargeOrderExpireMinutes).default(DEFAULT_RECHARGE_EXPIRE_MINUTES))
+        .col(big_integer(SystemSettings::RechargeMaxUnpaidOrders).default(DEFAULT_RECHARGE_MAX_UNPAID_ORDERS))
         .col(decimal_len(SystemSettings::RechargeMinAmount, 20, 8).default(Expr::cust("0.01")))
         .col(decimal_len(SystemSettings::RechargeMaxAmount, 20, 8).default(3000))
         .col(string_len(SystemSettings::SchedulingMode, 30))

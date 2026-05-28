@@ -467,6 +467,7 @@ dependencies = [
  "model",
  "netstat2",
  "operations",
+ "payment",
  "provider",
  "proxy",
  "rbac",
@@ -2656,6 +2657,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 
 [[package]]
+name = "payment"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "md-5 0.10.6",
+ "reqwest",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
 name = "pem"
 version = "3.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3127,15 +3142,20 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "captcha",
  "constants",
+ "payment",
  "rbac",
  "rust_decimal",
  "serde",
+ "serde_json",
  "storage",
  "thiserror 2.0.18",
  "time",
  "tokio",
+ "tower",
  "types",
+ "uuid",
 ]
 
 [[package]]
@@ -3471,6 +3491,7 @@ dependencies = [
  "axum",
  "futures-util",
  "hook_tracing",
+ "sea-orm",
  "serde",
  "serde_json",
  "storage",
@@ -4638,6 +4659,8 @@ name = "types"
 version = "0.1.0"
 dependencies = [
  "jiff",
+ "payment",
+ "regex",
  "rust_decimal",
  "serde",
  "serde_json",

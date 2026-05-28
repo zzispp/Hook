@@ -79,6 +79,19 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RechargeOrders::UserId,
             RechargeOrders::CreatedAt,
         ),
+        recharge_orders_provider_trade_unique_index(),
+        compound_index(
+            "index_payment_callback_records_by_received",
+            PaymentCallbackRecords::Table,
+            PaymentCallbackRecords::PaymentChannelCode,
+            PaymentCallbackRecords::ReceivedAt,
+        ),
+        compound_index(
+            "index_payment_callback_records_by_order",
+            PaymentCallbackRecords::Table,
+            PaymentCallbackRecords::OrderNo,
+            PaymentCallbackRecords::ReceivedAt,
+        ),
         index("index_global_models_by_name", GlobalModels::Table, GlobalModels::Name, true),
         index("index_global_models_by_usage_count", GlobalModels::Table, GlobalModels::UsageCount, false),
         index("index_providers_by_name", Providers::Table, Providers::Name, true),
@@ -319,6 +332,19 @@ fn billing_rules_global_model_unique_index() -> IndexCreateStatement {
         .unique()
         .if_not_exists()
         .cond_where(Expr::cust("is_enabled = TRUE AND global_model_id IS NOT NULL"));
+    index.to_owned()
+}
+
+fn recharge_orders_provider_trade_unique_index() -> IndexCreateStatement {
+    let mut index = Index::create();
+    index
+        .name("index_recharge_orders_unique_provider_trade")
+        .table(RechargeOrders::Table)
+        .col(RechargeOrders::PaymentChannelCode)
+        .col(RechargeOrders::ProviderTradeNo)
+        .unique()
+        .if_not_exists()
+        .cond_where(Expr::cust("provider_trade_no IS NOT NULL"));
     index.to_owned()
 }
 

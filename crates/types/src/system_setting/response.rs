@@ -9,11 +9,13 @@ use super::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings}
 pub struct SystemSettingsResponse {
     pub site_name: String,
     pub site_subtitle: String,
+    pub public_base_url: String,
     pub site_logo_base64: String,
     pub allow_registration: bool,
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,
     pub support_ticket_captcha_enabled: bool,
+    pub recharge_captcha_enabled: bool,
     pub registration_email_verification_enabled: bool,
     pub password_reset_enabled: bool,
     pub email_config_enabled: bool,
@@ -43,6 +45,7 @@ pub struct SystemSettingsResponse {
     #[serde(with = "rust_decimal::serde::float")]
     pub recharge_arrival_ratio: Decimal,
     pub recharge_order_expire_minutes: i64,
+    pub recharge_max_unpaid_orders: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub recharge_min_amount: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
@@ -72,11 +75,13 @@ impl From<SystemSettings> for SystemSettingsResponse {
         Self {
             site_name: value.site_name,
             site_subtitle: value.site_subtitle,
+            public_base_url: value.public_base_url,
             site_logo_base64: value.site_logo_base64,
             allow_registration: value.allow_registration,
             login_captcha_enabled: value.login_captcha_enabled,
             registration_captcha_enabled: value.registration_captcha_enabled,
             support_ticket_captcha_enabled: value.support_ticket_captcha_enabled,
+            recharge_captcha_enabled: value.recharge_captcha_enabled,
             registration_email_verification_enabled: value.registration_email_verification_enabled,
             password_reset_enabled: value.password_reset_enabled,
             email_config_enabled: value.email_config_enabled,
@@ -104,6 +109,7 @@ impl From<SystemSettings> for SystemSettingsResponse {
             recharge_enabled: value.recharge_enabled,
             recharge_arrival_ratio: value.recharge_arrival_ratio,
             recharge_order_expire_minutes: value.recharge_order_expire_minutes,
+            recharge_max_unpaid_orders: value.recharge_max_unpaid_orders,
             recharge_min_amount: value.recharge_min_amount,
             recharge_max_amount: value.recharge_max_amount,
             scheduling_mode: value.scheduling_mode,

@@ -5,6 +5,8 @@ edition.workspace = true
 
 [dependencies]
 jiff.workspace = true
+payment.workspace = true
+regex.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
 serde_json.workspace = true

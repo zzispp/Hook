@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use storage::{Database, StorageError, setting::SettingStore, user::UserGroupStore};
+use storage::{Database, StorageError, recharge::RechargeStore, setting::SettingStore, user::UserGroupStore};
 use types::system_setting::{SystemSettingsResponse, SystemSettingsUpdate};
 
-use crate::application::{SettingError, SettingRepository, SettingResult, SettingUserGroupCatalog, StoredSmtpSettings};
+use crate::application::{SettingError, SettingPaymentChannelCatalog, SettingRepository, SettingResult, SettingUserGroupCatalog, StoredSmtpSettings};
 
 #[derive(Clone)]
 pub struct StorageSettingRepository {
@@ -12,6 +12,11 @@ pub struct StorageSettingRepository {
 #[derive(Clone)]
 pub struct StorageSettingUserGroupCatalog {
     store: UserGroupStore,
+}
+
+#[derive(Clone)]
+pub struct StorageSettingPaymentChannelCatalog {
+    store: RechargeStore,
 }
 
 impl StorageSettingRepository {
@@ -26,6 +31,14 @@ impl StorageSettingUserGroupCatalog {
     pub fn new(database: Database) -> Self {
         Self {
             store: UserGroupStore::new(database),
+        }
+    }
+}
+
+impl StorageSettingPaymentChannelCatalog {
+    pub fn new(database: Database) -> Self {
+        Self {
+            store: RechargeStore::new(database),
         }
     }
 }
@@ -56,6 +69,17 @@ impl SettingUserGroupCatalog for StorageSettingUserGroupCatalog {
     }
 }
 
+#[async_trait]
+impl SettingPaymentChannelCatalog for StorageSettingPaymentChannelCatalog {
+    async fn has_ready_payment_channel(&self) -> SettingResult<bool> {
+        self.store
+            .list_payment_channels()
+            .await
+            .map(|channels| channels.into_iter().any(|channel| channel.enabled && channel.secret_set))
+            .map_err(storage_error)
+    }
+}
+
 fn stored_smtp_settings(value: storage::setting::SystemSettingsSmtpRecord) -> StoredSmtpSettings {
     StoredSmtpSettings {
         smtp_host: value.smtp_host,
@@ -72,11 +96,13 @@ fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<Str
     storage::setting::SystemSettingsRecordPatch {
         site_name: input.site_name,
         site_subtitle: input.site_subtitle,
+        public_base_url: input.public_base_url,
         site_logo_base64: input.site_logo_base64,
         allow_registration: input.allow_registration,
         login_captcha_enabled: input.login_captcha_enabled,
         registration_captcha_enabled: input.registration_captcha_enabled,
         support_ticket_captcha_enabled: input.support_ticket_captcha_enabled,
+        recharge_captcha_enabled: input.recharge_captcha_enabled,
         registration_email_verification_enabled: input.registration_email_verification_enabled,
         password_reset_enabled: input.password_reset_enabled,
         email_config_enabled: input.email_config_enabled,
@@ -104,6 +130,7 @@ fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<Str
         recharge_enabled: input.recharge_enabled,
         recharge_arrival_ratio: input.recharge_arrival_ratio,
         recharge_order_expire_minutes: input.recharge_order_expire_minutes,
+        recharge_max_unpaid_orders: input.recharge_max_unpaid_orders,
         recharge_min_amount: input.recharge_min_amount,
         recharge_max_amount: input.recharge_max_amount,
         scheduling_mode: input.scheduling_mode,

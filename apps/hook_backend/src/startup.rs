@@ -14,6 +14,7 @@ use crate::{
     proxy_cache_hooks::{
         CachedApiTokenRepository, CachedGroupRepository, CachedModelRepository, CachedProviderRepository, CachedSettingRepository, CachedUserRepository,
     },
+    recharge_secret_cipher::RechargeAesSecretCipher,
     system,
 };
 use api_token::{
@@ -58,6 +59,7 @@ use operations::{
     application::OperationsService,
     infra::{CaptchaTicketVerifier, SmtpTicketMailer, StorageOperationsRepository},
 };
+use payment::channels::EpayChannel;
 use provider::{
     api::{ProviderApiState, create_router as create_provider_router},
     application::ProviderService,
@@ -80,7 +82,9 @@ use scheduler::{
 use setting::{
     api::{SettingApiState, create_router as create_setting_router},
     application::SettingService,
-    infra::{LettreSmtpConnectionTester, SettingAesSecretCipher, StorageSettingRepository, StorageSettingUserGroupCatalog},
+    infra::{
+        LettreSmtpConnectionTester, SettingAesSecretCipher, StorageSettingPaymentChannelCatalog, StorageSettingRepository, StorageSettingUserGroupCatalog,
+    },
 };
 use std::{net::SocketAddr, sync::Arc};
 use storage::connect_database;
@@ -131,16 +135,6 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     });
     proxy_cache.refresh_scheduling_snapshot().await?;
     proxy_cache.restore_provider_cooldowns().await?;
-    let scheduler_registry = Arc::new(crate::scheduled_tasks::scheduler_registry(
-        proxy_cache.clone(),
-        performance_os_collector.clone(),
-    )?);
-    let scheduler_handle = SchedulerRuntime::spawn(database.clone(), scheduler_registry.clone())?;
-    let scheduler = Arc::new(SchedulerService::new(
-        storage::scheduler::SchedulerStore::new(database.clone()),
-        scheduler_registry,
-        scheduler_handle.clone(),
-    ));
     let models = Arc::new(ModelService::new(
         CachedModelRepository::new(StorageModelRepository::new(database.clone()), proxy_cache.clone()),
         ModelsDevClient::new(),
@@ -163,10 +157,31 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
             setting_secret_cipher.clone(),
             LettreSmtpConnectionTester,
         )
-        .with_user_group_catalog(StorageSettingUserGroupCatalog::new(database.clone())),
+        .with_user_group_catalog(StorageSettingUserGroupCatalog::new(database.clone()))
+        .with_payment_channel_catalog(StorageSettingPaymentChannelCatalog::new(database.clone())),
     );
     let card_codes = Arc::new(CardCodeService::new(StorageCardCodeRepository::new(database.clone())));
-    let recharges = Arc::new(RechargeService::new(StorageRechargeRepository::new(database.clone()), PaymentChannelRegistry::empty()).await?);
+    let payment_registry = PaymentChannelRegistry::with_providers(vec![Arc::new(EpayChannel)]);
+    let payment_callback_endpoints = payment_registry.registered_callback_endpoints();
+    let recharges = Arc::new(
+        RechargeService::with_secret_cipher(
+            StorageRechargeRepository::new(database.clone()),
+            payment_registry.clone(),
+            RechargeAesSecretCipher::new(setting_secret_cipher.clone()),
+        )
+        .await?,
+    );
+    let scheduler_registry = Arc::new(crate::scheduled_tasks::scheduler_registry(
+        proxy_cache.clone(),
+        performance_os_collector.clone(),
+        recharges.clone(),
+    )?);
+    let scheduler_handle = SchedulerRuntime::spawn(database.clone(), scheduler_registry.clone())?;
+    let scheduler = Arc::new(SchedulerService::new(
+        storage::scheduler::SchedulerStore::new(database.clone()),
+        scheduler_registry,
+        scheduler_handle.clone(),
+    ));
     let groups = Arc::new(GroupService::new(
         CachedGroupRepository::new(StorageGroupRepository::new(database.clone()), proxy_cache.clone()),
         StorageGroupModelCatalog::new(database.clone()),
@@ -224,7 +239,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         system_wallet_provider.system_wallet().map(|record| record.wallet),
     );
     let tokens = TokenService::new(token_settings(settings)?);
-    let authorization = authorization_config(settings);
+    let authorization = authorization_config(settings, &payment_callback_endpoints);
 
     Ok(AppState {
         database,
@@ -281,7 +296,7 @@ fn create_app(state: AppState) -> Router {
     let dashboard_state = DashboardApiState::new(state.dashboard);
     let wallet_state = WalletApiState::new(state.wallets);
     let card_code_state = CardCodeApiState::new(state.card_codes);
-    let recharge_state = RechargeApiState::new(state.recharges);
+    let recharge_state = RechargeApiState::new(state.recharges, state.captcha.clone());
     let setting_state = SettingApiState::new(state.system_settings);
     let group_state = GroupApiState::new(state.groups);
     let i18n_state = I18nApiState::new(state.i18n);

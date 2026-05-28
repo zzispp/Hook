@@ -3,13 +3,14 @@ use axum::{
     extract::{Path, Query, State},
 };
 use rbac::api::CurrentUser;
+
 use serde::Deserialize;
 use types::{
     pagination::PageRequest,
     recharge::{
-        PaymentChannelResponse, PaymentChannelUpdatePayload, RechargeOrderCreatePayload, RechargeOrderListFilters, RechargeOrderListResponse,
-        RechargeOrderResponse, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageListResponse, RechargePackageResponse,
-        RechargePackageUpdatePayload, UserRechargePackageListResponse,
+        PaymentChannelResponse, PaymentChannelUpdatePayload, PublicPaymentChannelResponse, RechargeOrderCreatePayload, RechargeOrderCreateResponse,
+        RechargeOrderListFilters, RechargeOrderListResponse, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageListResponse,
+        RechargePackageResponse, RechargePackageUpdatePayload, UserRechargePackageListResponse,
     },
     response::ApiResponse,
 };
@@ -86,13 +87,22 @@ pub async fn create_user_order(
     State(state): State<RechargeApiState>,
     Extension(current_user): Extension<CurrentUser>,
     Json(payload): Json<RechargeOrderCreatePayload>,
-) -> ApiResult<ApiJson<RechargeOrderResponse>> {
+) -> ApiResult<ApiJson<RechargeOrderCreateResponse>> {
     ensure_user_access(&current_user)?;
-    Ok(ok(state.recharge.create_user_order(&current_user.id, payload).await?.into()))
+    verify_recharge_captcha(&state, payload.captcha_token.as_deref()).await?;
+    Ok(ok(state.recharge.create_user_order(&current_user.id, payload).await?))
 }
 
 pub async fn list_payment_channels(State(state): State<RechargeApiState>) -> ApiResult<ApiJson<Vec<PaymentChannelResponse>>> {
     Ok(ok(state.recharge.list_payment_channels().await?.into_iter().map(Into::into).collect()))
+}
+
+pub async fn list_user_payment_channels(
+    State(state): State<RechargeApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+) -> ApiResult<ApiJson<Vec<PublicPaymentChannelResponse>>> {
+    ensure_user_access(&current_user)?;
+    Ok(ok(state.recharge.list_user_payment_channels().await?))
 }
 
 pub async fn update_payment_channel(
@@ -178,4 +188,15 @@ fn ensure_user_access(current_user: &CurrentUser) -> ApiResult<()> {
         return Err(RechargeError::Forbidden.into());
     }
     Ok(())
+}
+
+async fn verify_recharge_captcha(state: &RechargeApiState, token: Option<&str>) -> ApiResult<()> {
+    state.captcha.verify_recharge(token).await.map_err(captcha_error)
+}
+
+fn captcha_error(error: captcha::application::CaptchaError) -> RechargeApiError {
+    match error {
+        captcha::application::CaptchaError::InvalidInput(message) => RechargeError::InvalidInput(message).into(),
+        captcha::application::CaptchaError::Infrastructure(message) => RechargeError::Infrastructure(message).into(),
+    }
 }

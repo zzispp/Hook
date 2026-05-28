@@ -12,11 +12,13 @@ import {
 export type SystemSettingsForm = {
   site_name: string;
   site_subtitle: string;
+  public_base_url: string;
   site_logo_base64: string;
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   support_ticket_captcha_enabled: boolean;
+  recharge_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
@@ -44,6 +46,7 @@ export type SystemSettingsForm = {
   recharge_enabled: boolean;
   recharge_arrival_ratio: string;
   recharge_order_expire_minutes: string;
+  recharge_max_unpaid_orders: string;
   recharge_min_amount: string;
   recharge_max_amount: string;
   smtp_host: string;
@@ -65,11 +68,13 @@ export type SystemSettingsForm = {
 export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   site_name: '',
   site_subtitle: '',
+  public_base_url: '',
   site_logo_base64: '',
   allow_registration: true,
   login_captcha_enabled: false,
   registration_captcha_enabled: false,
   support_ticket_captcha_enabled: true,
+  recharge_captcha_enabled: false,
   registration_email_verification_enabled: false,
   password_reset_enabled: false,
   email_config_enabled: false,
@@ -97,6 +102,7 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   recharge_enabled: false,
   recharge_arrival_ratio: '1',
   recharge_order_expire_minutes: '15',
+  recharge_max_unpaid_orders: '5',
   recharge_min_amount: '0.01',
   recharge_max_amount: '3000',
   smtp_host: '',
@@ -119,11 +125,13 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
   return {
     site_name: settings.site_name,
     site_subtitle: settings.site_subtitle,
+    public_base_url: settings.public_base_url,
     site_logo_base64: settings.site_logo_base64,
     allow_registration: settings.allow_registration,
     login_captcha_enabled: settings.login_captcha_enabled,
     registration_captcha_enabled: settings.registration_captcha_enabled,
     support_ticket_captcha_enabled: settings.support_ticket_captcha_enabled,
+    recharge_captcha_enabled: settings.recharge_captcha_enabled,
     registration_email_verification_enabled: settings.registration_email_verification_enabled,
     password_reset_enabled: settings.password_reset_enabled,
     email_config_enabled: settings.email_config_enabled,
@@ -152,6 +160,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     recharge_enabled: settings.recharge_enabled,
     recharge_arrival_ratio: String(settings.recharge_arrival_ratio),
     recharge_order_expire_minutes: String(settings.recharge_order_expire_minutes),
+    recharge_max_unpaid_orders: String(settings.recharge_max_unpaid_orders),
     recharge_min_amount: String(settings.recharge_min_amount),
     recharge_max_amount: String(settings.recharge_max_amount),
     smtp_host: settings.smtp_host,
@@ -175,11 +184,13 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
   const payload: SystemSettingsUpdate = {
     site_name: form.site_name,
     site_subtitle: form.site_subtitle,
+    public_base_url: form.public_base_url,
     site_logo_base64: form.site_logo_base64,
     allow_registration: form.allow_registration,
     login_captcha_enabled: form.login_captcha_enabled,
     registration_captcha_enabled: form.registration_captcha_enabled,
     support_ticket_captcha_enabled: form.support_ticket_captcha_enabled,
+    recharge_captcha_enabled: form.recharge_captcha_enabled,
     registration_email_verification_enabled: form.registration_email_verification_enabled,
     password_reset_enabled: form.password_reset_enabled,
     email_config_enabled: form.email_config_enabled,
@@ -208,6 +219,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     recharge_enabled: form.recharge_enabled,
     recharge_arrival_ratio: Number(form.recharge_arrival_ratio || 0),
     recharge_order_expire_minutes: Number(form.recharge_order_expire_minutes || 0),
+    recharge_max_unpaid_orders: Number(form.recharge_max_unpaid_orders || 0),
     recharge_min_amount: Number(form.recharge_min_amount || 0),
     recharge_max_amount: Number(form.recharge_max_amount || 0),
     smtp_host: form.smtp_host,

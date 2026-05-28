@@ -6,6 +6,7 @@ const SYSTEM_SETTINGS_ID: &str = "global";
 const DEFAULT_CACHE_AFFINITY_TTL_MINUTES: i64 = 5;
 const DEFAULT_TOKEN_LIMIT_PER_USER: i64 = 5;
 const DEFAULT_RECHARGE_EXPIRE_MINUTES: i64 = 15;
+const DEFAULT_RECHARGE_MAX_UNPAID_ORDERS: i64 = 5;
 const DEFAULT_REGISTRATION_SUBJECT: &str = "注册验证码";
 const DEFAULT_PASSWORD_RESET_SUBJECT: &str = "找回密码";
 const DEFAULT_REGISTRATION_HTML: &str = r#"<!DOCTYPE html>
@@ -81,11 +82,13 @@ fn system_settings_columns() -> Vec<SystemSettings> {
         SystemSettings::Id,
         SystemSettings::SiteName,
         SystemSettings::SiteSubtitle,
+        SystemSettings::PublicBaseUrl,
         SystemSettings::SiteLogoBase64,
         SystemSettings::AllowRegistration,
         SystemSettings::LoginCaptchaEnabled,
         SystemSettings::RegistrationCaptchaEnabled,
         SystemSettings::SupportTicketCaptchaEnabled,
+        SystemSettings::RechargeCaptchaEnabled,
         SystemSettings::RegistrationEmailVerificationEnabled,
         SystemSettings::PasswordResetEnabled,
         SystemSettings::EmailConfigEnabled,
@@ -113,6 +116,7 @@ fn system_settings_columns() -> Vec<SystemSettings> {
         SystemSettings::RechargeEnabled,
         SystemSettings::RechargeArrivalRatio,
         SystemSettings::RechargeOrderExpireMinutes,
+        SystemSettings::RechargeMaxUnpaidOrders,
         SystemSettings::RechargeMinAmount,
         SystemSettings::RechargeMaxAmount,
         SystemSettings::SchedulingMode,
@@ -141,11 +145,13 @@ fn system_settings_values() -> Vec<Expr> {
         SYSTEM_SETTINGS_ID.into(),
         "Hook".into(),
         "Gateway".into(),
+        "".into(),
         DEFAULT_SITE_LOGO_BASE64.into(),
         true.into(),
         false.into(),
         false.into(),
         true.into(),
+        false.into(),
         false.into(),
         false.into(),
         false.into(),
@@ -173,6 +179,7 @@ fn system_settings_values() -> Vec<Expr> {
         false.into(),
         1.into(),
         DEFAULT_RECHARGE_EXPIRE_MINUTES.into(),
+        DEFAULT_RECHARGE_MAX_UNPAID_ORDERS.into(),
         Expr::cust("0.01"),
         3000.into(),
         "cache_affinity".into(),

@@ -83,6 +83,12 @@
     "username": "用户名",
     "user": "用户"
   },
+  "captcha": {
+    "initial": "验证你是真人",
+    "verifying": "正在验证...",
+    "solved": "已验证",
+    "error": "验证失败，请重试。"
+  },
   "filters": {
     "allRoles": "全部角色",
     "allStatuses": "全部状态",
@@ -575,13 +581,10 @@
     },
     "recharge": {
       "title": "充值",
-      "amountMode": "任意金额充值",
-      "packageMode": "套餐充值",
+      "entry": "充值",
       "packagesTitle": "充值套餐",
       "ordersTitle": "充值订单",
       "customAmount": "充值金额",
-      "customAmountPlaceholder": "输入任意充值金额",
-      "customRechargeUnavailable": "任意金额充值入口已预留，支付渠道接入后开放。",
       "rechargeAmount": "充值额度",
       "giftAmount": "赠送额度",
       "totalArrival": "合计到账",
@@ -598,7 +601,22 @@
       "expiresAt": "过期时间",
       "status": "状态",
       "latestOrder": "最近订单",
-      "ratio": "充值比例：{{ratio}} CNY = 1 USD"
+      "ratio": "充值比例：{{ratio}} CNY = 1 USD",
+      "paymentChannel": "支付渠道",
+      "paymentMethod": "支付方式",
+      "selectPaymentFirst": "请选择支付方式",
+      "completeCaptchaFirst": "请先完成人机验证",
+      "invalidAmount": "请输入有效充值金额",
+      "paymentPendingTitle": "请在新标签页完成支付",
+      "paymentPendingDescription": "支付完成后点击下方按钮检查到账状态。",
+      "confirmPaid": "我已支付",
+      "paymentReceived": "支付已确认，余额已刷新",
+      "paymentStillPending": "订单仍未支付，请完成支付后再检查",
+      "unpaidOrderLimitReached": "未支付充值订单数量已达上限，请先完成或等待前面的订单过期。",
+      "paymentWindowBlocked": "支付窗口被浏览器拦截，请允许弹出窗口后重试。",
+      "paymentWindowCreating": "正在创建支付订单，请稍候...",
+      "paymentWindowRedirecting": "正在跳转支付页面，请稍候...",
+      "submitPayment": "提交支付"
     },
     "metrics": {
       "availableBalance": "可用余额",
@@ -833,7 +851,8 @@
     },
     "filters": {
       "searchOrders": "搜索订单号、套餐名、用户名或邮箱...",
-      "searchPackages": "搜索套餐名或描述..."
+      "searchPackages": "搜索套餐名或描述...",
+      "searchCallbacks": "搜索订单号、渠道编码或网关流水号..."
     },
     "fields": {
       "orderNo": "订单号",
@@ -846,7 +865,16 @@
       "payableAmount": "实付金额",
       "paymentChannel": "支付渠道",
       "expiresAt": "过期时间",
-      "updatedAt": "更新时间"
+      "updatedAt": "更新时间",
+      "callbackKind": "回调类型",
+      "httpMethod": "请求方法",
+      "settled": "入账状态",
+      "providerTradeNo": "网关流水号",
+      "paymentMethod": "支付方式",
+      "tradeStatus": "交易状态",
+      "processedAt": "处理时间",
+      "errorMessage": "错误信息",
+      "rawParams": "原始参数"
     },
     "actions": {
       "createPackage": "创建套餐",
@@ -868,17 +896,31 @@
         "paid": "已支付",
         "cancelled": "已取消",
         "failed": "支付失败"
+      },
+      "callback": {
+        "received": "已接收",
+        "processed": "已处理",
+        "ignored": "已忽略",
+        "failed": "处理失败"
       }
+    },
+    "callbackKind": {
+      "notify": "异步通知",
+      "return": "同步返回"
+    },
+    "settlement": {
+      "settled": "已入账",
+      "unsettled": "未入账"
     },
     "summary": {
       "orders": "显示 {{shown}} 条，共 {{total}} 个充值订单",
-      "packages": "显示 {{shown}} 条，共 {{total}} 个充值套餐"
+      "packages": "显示 {{shown}} 条，共 {{total}} 个充值套餐",
+      "callbacks": "显示 {{shown}} 条，共 {{total}} 条回调记录"
     },
     "empty": {
       "orders": "暂无充值订单",
       "packages": "暂无充值套餐",
-      "callbacks": "回调记录暂未实现",
-      "callbacksDescription": "当前版本未接入支付渠道，也不会接收或模拟支付回调。"
+      "callbacks": "暂无支付回调记录"
     },
     "messages": {
       "packageSaved": "充值套餐已保存",
@@ -1293,6 +1335,7 @@
       "loginCaptchaEnabled": "启用登录验证码",
       "registrationCaptchaEnabled": "启用注册验证码",
       "supportTicketCaptchaEnabled": "启用工单提交验证码",
+      "rechargeCaptchaEnabled": "启用充值验证码",
       "registrationEmailVerificationEnabled": "启用注册邮件验证",
       "passwordResetEnabled": "启用找回密码",
       "emailConfigEnabled": "开启邮件配置",
@@ -1308,6 +1351,7 @@
       "rechargeEnabled": "开启充值",
       "rechargeArrivalRatio": "充值到账比例",
       "rechargeOrderExpireMinutes": "订单过期时间(分钟)",
+      "rechargeMaxUnpaidOrders": "用户最多未支付订单数",
       "rechargeMinAmount": "单笔最小充值金额",
       "rechargeMaxAmount": "单笔最大充值金额",
       "smtpHost": "SMTP 服务器地址",
@@ -1320,13 +1364,15 @@
       "emailSuffixMode": "后缀限制模式",
       "emailSuffixes": "邮箱后缀列表",
       "emailTemplateSubject": "邮件主题",
-      "emailTemplateHtml": "HTML 模板"
+      "emailTemplateHtml": "HTML 模板",
+      "publicBaseUrl": "公网访问地址"
     },
     "helper": {
       "defaultUserGrant": "新用户注册成功后写入赠款余额，并生成钱包流水。",
       "defaultUserGroupCode": "新用户注册时会自动归入该用户分组。",
       "defaultRateLimitRpm": "请求/分钟；0 表示系统默认不限速。",
       "supportTicketCaptchaEnabled": "开启后，用户提交工单前必须完成人机验证。",
+      "rechargeCaptchaEnabled": "开启后，用户创建充值订单前必须完成人机验证。",
       "tokenLimitPerUser": "每个用户可创建的令牌数量上限。",
       "siteLogoUpload": "上传图片后会自动保存到数据库，前台导航、首页和登录页 Logo 会读取该字段。",
       "clientRequestRecordLevel": "控制客户端请求头、请求体、响应头和响应体的记录详细程度。",
@@ -1341,11 +1387,54 @@
       "passwordResetRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
       "supportTicketEmailNotificationsRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。"
     },
+    "validation": {
+      "siteNameLength": "站点名称不能为空，且不能超过 {{max}} 个字符。",
+      "siteSubtitleLength": "站点副标题不能超过 {{max}} 个字符。",
+      "publicBaseUrlLength": "公网访问地址不能超过 {{max}} 个字符。",
+      "publicBaseUrlInvalid": "公网访问地址必须是有效的 HTTP/HTTPS 公网 URL。",
+      "defaultUserGroupCodeInvalid": "用户注册默认分组必须是 1-64 位字母、数字、下划线或短横线。",
+      "userGroupsLoadingBeforeSave": "用户组仍在加载，请稍后再保存系统设置。",
+      "userGroupsUnavailableBeforeSave": "用户组列表读取失败，请先确认默认用户组状态后再保存。",
+      "defaultUserGroupNotActive": "请选择一个已启用的用户注册默认分组。",
+      "defaultUserGrantNonNegative": "默认用户初始赠款必须大于或等于 0。",
+      "defaultRateLimitRpmNonNegative": "默认速率限制必须大于或等于 0。",
+      "tokenLimitPerUserPositive": "令牌数量限制必须大于 0。",
+      "requestRecordBodyLimitPositive": "请求记录的请求体和响应体大小限制必须大于 0。",
+      "sensitiveRequestHeaderInvalid": "敏感请求头包含非法名称：{{header}}。",
+      "rechargeArrivalRatioPositive": "充值到账比例必须大于 0。",
+      "rechargeOrderExpireMinutesPositive": "订单过期时间必须大于 0。",
+      "rechargeMaxUnpaidOrdersPositive": "用户最多未支付订单数必须大于 0。",
+      "rechargeAmountPositive": "单笔充值最小金额和最大金额都必须大于 0。",
+      "rechargeMinAmountNotGreaterThanMax": "单笔最小充值金额不能大于单笔最大充值金额。",
+      "smtpHostLength": "SMTP 服务器地址不能超过 {{max}} 个字符。",
+      "smtpUsernameLength": "SMTP 用户名不能超过 {{max}} 个字符。",
+      "smtpPasswordLength": "SMTP 密码不能超过 {{max}} 个字符。",
+      "smtpFromEmailLength": "发件人邮箱不能超过 {{max}} 个字符。",
+      "smtpFromNameLength": "发件人名称不能超过 {{max}} 个字符。",
+      "smtpPortRange": "SMTP 端口必须在 {{min}}-{{max}} 之间。",
+      "smtpFromEmailInvalid": "发件人邮箱必须是有效邮箱地址。",
+      "emailSuffixesRequired": "开启邮箱后缀限制时，邮箱后缀列表不能为空。",
+      "emailSuffixInvalid": "邮箱后缀格式无效：{{suffix}}。",
+      "emailTemplateRegistrationSubjectLength": "注册邮件主题不能为空，且不能超过 {{max}} 个字符。",
+      "emailTemplateRegistrationHtmlRequired": "注册邮件 HTML 模板不能为空。",
+      "emailTemplatePasswordResetSubjectLength": "找回密码邮件主题不能为空，且不能超过 {{max}} 个字符。",
+      "emailTemplatePasswordResetHtmlRequired": "找回密码邮件 HTML 模板不能为空。"
+    },
     "recharge": {
       "description": "控制用户充值入口、金额换算和已注册支付渠道启禁用。",
       "preview": "充值比例：{{ratio}} CNY = 1 USD",
       "paymentChannels": "支付渠道",
-      "noPaymentChannels": "暂无已注册支付渠道"
+      "noPaymentChannels": "暂无已注册支付渠道",
+      "epayConfig": "易支付配置",
+      "merchantId": "商户 ID",
+      "apiBaseUrl": "接口地址",
+      "apiKey": "API 密钥",
+      "apiKeySet": "API 密钥已设置",
+      "publicBaseUrlRequiredBeforeEnablingChannel": "启用支付渠道前，请先保存公网访问地址。",
+      "publicBaseUrlInvalidBeforeEnablingChannel": "启用支付渠道前，请先保存有效的 HTTP/HTTPS 公网访问地址。",
+      "readyPaymentChannelRequiredBeforeEnablingRecharge": "启用充值前，请先保存并启用至少一个支付渠道。",
+      "paymentChannelsLoadingBeforeEnablingRecharge": "支付渠道仍在加载，请稍后再启用充值。",
+      "paymentChannelsUnavailableBeforeEnablingRecharge": "支付渠道列表读取失败，请先确认支付渠道状态后再启用充值。"
     },
     "requestRecord": {
       "description": "控制客户端与 Provider 双视角 payload 的记录方式和保留粒度",
@@ -1610,6 +1699,10 @@
         "name": "请求记录超时回收",
         "description": "回收长时间未结束的 pending 或 streaming 请求记录。"
       },
+      "rechargePaymentPoll": {
+        "name": "充值支付轮询",
+        "description": "定期查询未过期待支付充值订单，并在通道返回已支付时入账。"
+      },
       "performanceMonitoringSnapshot": {
         "name": "性能监控快照",
         "description": "按时间桶聚合系统性能监控快照。"
@@ -1627,6 +1720,9 @@
       "requestRecordStaleSweep": {
         "pendingTimeoutMinutes": "Pending 超时（分钟）",
         "streamingTimeoutMinutes": "Streaming 超时（分钟）"
+      },
+      "rechargePaymentPoll": {
+        "limit": "单次扫描订单数"
       },
       "performanceMonitoringCleanup": {
         "retentionDays": "性能监控保留天数"

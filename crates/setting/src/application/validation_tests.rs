@@ -107,6 +107,30 @@ fn validate_update_rejects_non_positive_recharge_values() {
 }
 
 #[test]
+fn validate_update_rejects_non_positive_recharge_max_unpaid_orders() {
+    let input = SystemSettingsUpdate {
+        recharge_max_unpaid_orders: Some(0),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(error.to_string(), "invalid input: recharge_max_unpaid_orders must be greater than 0");
+}
+
+#[test]
+fn validate_update_rejects_invalid_public_base_url() {
+    let input = SystemSettingsUpdate {
+        public_base_url: Some("https://".into()),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(error.to_string(), "invalid input: public_base_url must be a valid HTTP or HTTPS URL");
+}
+
+#[test]
 fn validate_recharge_bounds_rejects_min_greater_than_max() {
     let input = SystemSettingsUpdate {
         recharge_min_amount: Some(Decimal::new(4000, 0)),
@@ -222,11 +246,13 @@ fn system_settings_response() -> SystemSettingsResponse {
     SystemSettingsResponse {
         site_name: "Hook".into(),
         site_subtitle: String::new(),
+        public_base_url: "https://hook.test".into(),
         site_logo_base64: String::new(),
         allow_registration: true,
         login_captcha_enabled: false,
         registration_captcha_enabled: false,
         support_ticket_captcha_enabled: true,
+        recharge_captcha_enabled: false,
         registration_email_verification_enabled: false,
         password_reset_enabled: false,
         email_config_enabled: false,
@@ -254,6 +280,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         recharge_enabled: false,
         recharge_arrival_ratio: Decimal::ONE,
         recharge_order_expire_minutes: 15,
+        recharge_max_unpaid_orders: 5,
         recharge_min_amount: Decimal::new(1, 2),
         recharge_max_amount: Decimal::new(3000, 0),
         scheduling_mode: types::provider::ProviderSchedulingMode::CacheAffinity,

@@ -16,3 +16,6 @@ time.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 types.workspace = true
+
+[dev-dependencies]
+sea-orm.workspace = true

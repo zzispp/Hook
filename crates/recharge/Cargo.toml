@@ -6,14 +6,19 @@ edition.workspace = true
 [dependencies]
 async-trait.workspace = true
 axum.workspace = true
+captcha.workspace = true
 constants.workspace = true
+payment.workspace = true
 rbac.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 storage.workspace = true
 thiserror.workspace = true
 time.workspace = true
 types.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true
+tower.workspace = true

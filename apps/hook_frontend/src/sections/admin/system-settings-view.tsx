@@ -2,6 +2,8 @@
 
 import type { SystemSettingsForm } from './system-settings-utils';
 
+import { useMemo, useCallback } from 'react';
+
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
@@ -11,6 +13,7 @@ import Divider from '@mui/material/Divider';
 import { useTranslate } from 'src/locales/use-locales';
 import { useUserGroups } from 'src/actions/user-groups';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { usePaymentChannels } from 'src/actions/recharge';
 import { useSystemSettings } from 'src/actions/system-settings';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
@@ -25,12 +28,47 @@ import { SystemSettingsBaseSection } from './system-settings-base-section';
 import { RechargeSettingsSection } from './system-settings-recharge-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { enabledUserGroupOptions, USER_GROUP_MAX_PAGE_SIZE } from './user-group-utils';
+import {
+  usePaymentChannelForms,
+  paymentChannelsWithForms,
+  saveSystemSettingsAndPaymentChannels,
+} from './system-settings-payment-channel-state';
 
 export function SystemSettingsView() {
   const { t } = useTranslate('admin');
   const settings = useSystemSettings();
+  const paymentChannels = usePaymentChannels();
   const userGroups = useUserGroups(0, USER_GROUP_MAX_PAGE_SIZE, { is_active: true });
-  const form = useSystemSettingsForm(settings.data, t);
+  const channelForms = usePaymentChannelForms(paymentChannels.data ?? []);
+  const effectivePaymentChannels = useMemo(
+    () => paymentChannelsWithForms(paymentChannels.data ?? [], channelForms.forms),
+    [channelForms.forms, paymentChannels.data]
+  );
+  const saveAllSettings = useCallback(
+    (formToSave: SystemSettingsForm) =>
+      saveSystemSettingsAndPaymentChannels({
+        form: formToSave,
+        channels: paymentChannels.data ?? [],
+        channelForms: channelForms.forms,
+        t,
+      }),
+    [channelForms.forms, paymentChannels.data, t]
+  );
+  const validationContext = {
+    paymentChannels: effectivePaymentChannels,
+    paymentChannelsLoading: paymentChannels.isLoading,
+    paymentChannelsError: paymentChannels.error,
+    userGroups: userGroups.items,
+    userGroupsTotal: userGroups.total,
+    userGroupsLoading: userGroups.isLoading,
+    userGroupsError: userGroups.error,
+  };
+  const form = useSystemSettingsForm(settings.data, t, validationContext, {
+    save: saveAllSettings,
+    afterSave: async () => {
+      await paymentChannels.refresh();
+    },
+  });
   const userGroupOptions = enabledUserGroupOptions(userGroups.items);
 
   return (
@@ -66,7 +104,15 @@ export function SystemSettingsView() {
           <Divider />
           <TokenSection form={form.form} setForm={form.setForm} />
           <Divider />
-          <RechargeSettingsSection form={form.form} setForm={form.setForm} />
+          <RechargeSettingsSection
+            form={form.form}
+            setForm={form.setForm}
+            channels={paymentChannels.data ?? []}
+            channelForms={channelForms.forms}
+            channelsLoading={paymentChannels.isLoading}
+            channelsErrorMessage={paymentChannels.error?.message}
+            setChannelForm={channelForms.setForm}
+          />
           <Divider />
           <RequestRecordSection form={form.form} setForm={form.setForm} />
         </Stack>
@@ -99,6 +145,12 @@ function SiteSection({
           onChange={(value) => setForm((current) => ({ ...current, site_subtitle: value }))}
         />
       </Stack>
+      <TextFieldRow
+        label={t('systemSettings.fields.publicBaseUrl')}
+        value={form.public_base_url}
+        onChange={(value) => setForm((current) => ({ ...current, public_base_url: value }))}
+        sx={{ mt: 2 }}
+      />
       <LogoField form={form} setForm={setForm} />
     </SettingsSection>
   );

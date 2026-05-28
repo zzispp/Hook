@@ -2,41 +2,49 @@
 
 import type { TFunction } from 'i18next';
 
-import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
 
 import { Iconify } from 'src/components/iconify';
 
 type Props = {
   t: TFunction<'admin'>;
+  open: boolean;
   code: string;
   redeeming: boolean;
+  onClose: VoidFunction;
   onCodeChange: (value: string) => void;
   onRedeem: VoidFunction;
 };
 
-export function WalletCardCodePanel({ t, code, redeeming, onCodeChange, onRedeem }: Props) {
+export function WalletCardCodeDialog({ t, open, code, redeeming, onClose, onCodeChange, onRedeem }: Props) {
   return (
-    <Card sx={{ height: 1, p: 2.5 }}>
-      <Stack spacing={2}>
-        <Typography variant="h6">{t('wallet.cardCode.title')}</Typography>
-        <TextField
-          fullWidth
-          label={t('wallet.cardCode.code')}
-          value={code}
-          onChange={(event) => onCodeChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              onRedeem();
-            }
-          }}
-        />
+    <Dialog fullWidth maxWidth="xs" open={open} onClose={onClose}>
+      <DialogTitle>{t('wallet.cardCode.title')}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          <TextField
+            fullWidth
+            label={t('wallet.cardCode.code')}
+            value={code}
+            onChange={(event) => onCodeChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                onRedeem();
+              }
+            }}
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
         <Button
-          fullWidth
           variant="contained"
           loading={redeeming}
           disabled={!code.trim()}
@@ -45,7 +53,7 @@ export function WalletCardCodePanel({ t, code, redeeming, onCodeChange, onRedeem
         >
           {t('wallet.cardCode.redeem')}
         </Button>
-      </Stack>
-    </Card>
+      </DialogActions>
+    </Dialog>
   );
 }

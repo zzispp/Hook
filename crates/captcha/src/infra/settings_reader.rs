@@ -41,6 +41,14 @@ impl CaptchaSettingsReader for StorageCaptchaSettingsReader {
             .map(|settings| settings.support_ticket_captcha_enabled)
             .map_err(storage_error)
     }
+
+    async fn recharge_captcha_enabled(&self) -> CaptchaResult<bool> {
+        self.store
+            .get_system_settings()
+            .await
+            .map(|settings| settings.recharge_captcha_enabled)
+            .map_err(storage_error)
+    }
 }
 
 fn storage_error(error: StorageError) -> CaptchaError {

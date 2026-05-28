@@ -35,6 +35,7 @@ pub(super) use wallet::*;
 pub fn reversed_tables() -> Vec<DynIden> {
     vec![
         UsageFlushBatches::Table.into_iden(),
+        PaymentCallbackRecords::Table.into_iden(),
         RechargeOrders::Table.into_iden(),
         RechargePackages::Table.into_iden(),
         PaymentChannels::Table.into_iden(),

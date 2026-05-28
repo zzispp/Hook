@@ -7,11 +7,13 @@ export type EmailSuffixMode = 'none' | 'whitelist' | 'blacklist';
 export type SystemSettings = {
   site_name: string;
   site_subtitle: string;
+  public_base_url: string;
   site_logo_base64: string;
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   support_ticket_captcha_enabled: boolean;
+  recharge_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
@@ -39,6 +41,7 @@ export type SystemSettings = {
   recharge_enabled: boolean;
   recharge_arrival_ratio: number;
   recharge_order_expire_minutes: number;
+  recharge_max_unpaid_orders: number;
   recharge_min_amount: number;
   recharge_max_amount: number;
   scheduling_mode: ProviderSchedulingMode;
@@ -64,11 +67,13 @@ export type SystemSettings = {
 export type SystemSettingsUpdate = Partial<{
   site_name: string;
   site_subtitle: string;
+  public_base_url: string;
   site_logo_base64: string;
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
   support_ticket_captcha_enabled: boolean;
+  recharge_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
@@ -96,6 +101,7 @@ export type SystemSettingsUpdate = Partial<{
   recharge_enabled: boolean;
   recharge_arrival_ratio: number;
   recharge_order_expire_minutes: number;
+  recharge_max_unpaid_orders: number;
   recharge_min_amount: number;
   recharge_max_amount: number;
   scheduling_mode: ProviderSchedulingMode;

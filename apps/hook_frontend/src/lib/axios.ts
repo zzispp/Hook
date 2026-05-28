@@ -312,12 +312,14 @@ export const endpoints = {
     packages: '/api/admin/recharge-packages',
     package: (id: string) => `/api/admin/recharge-packages/${id}`,
     orders: '/api/admin/recharge-orders',
+    paymentCallbacks: '/api/admin/payment-callbacks',
     paymentChannels: '/api/admin/payment-channels',
     paymentChannel: (code: string) => `/api/admin/payment-channels/${code}`,
   },
   recharges: {
     packages: '/api/recharge-packages',
     orders: '/api/recharge-orders',
+    paymentChannels: '/api/payment-channels',
   },
   mail: {
     list: '/api/mail/list',

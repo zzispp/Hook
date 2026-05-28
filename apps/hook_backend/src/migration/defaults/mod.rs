@@ -94,6 +94,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "recharge_packages_read",
             "recharge_orders_read",
             "recharge_orders_create",
+            "payment_channels_read",
         ],
     },
     MenuApiBindingDefinition {

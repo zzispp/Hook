@@ -2,7 +2,11 @@
 
 import type { TFunction } from 'i18next';
 import type { TextFieldProps } from '@mui/material/TextField';
-import type { RechargeOrderFilters, RechargePackageFilters } from 'src/actions/recharge';
+import type {
+  RechargeOrderFilters,
+  PaymentCallbackFilters,
+  RechargePackageFilters,
+} from 'src/actions/recharge';
 
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
@@ -30,12 +34,22 @@ export type RechargeOrderFilterState = {
   status: string;
 };
 
+export type PaymentCallbackFilterState = {
+  search: string;
+  status: string;
+};
+
 export const DEFAULT_RECHARGE_PACKAGE_FILTERS: RechargePackageFilterState = {
   search: '',
   status: EMPTY_STATUS_FILTER,
 };
 
 export const DEFAULT_RECHARGE_ORDER_FILTERS: RechargeOrderFilterState = {
+  search: '',
+  status: EMPTY_STATUS_FILTER,
+};
+
+export const DEFAULT_PAYMENT_CALLBACK_FILTERS: PaymentCallbackFilterState = {
   search: '',
   status: EMPTY_STATUS_FILTER,
 };
@@ -121,6 +135,40 @@ export function RechargeOrderToolbar({
   );
 }
 
+export function PaymentCallbackToolbar({
+  t,
+  filters,
+  onChange,
+}: {
+  t: TFunction<'admin'>;
+  filters: PaymentCallbackFilterState;
+  onChange: (filters: PaymentCallbackFilterState) => void;
+}) {
+  const patchFilters = (patch: Partial<PaymentCallbackFilterState>) =>
+    onChange({ ...filters, ...patch });
+
+  return (
+    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ p: 2.5 }}>
+      <SearchField
+        value={filters.search}
+        placeholder={t('adminRecharges.filters.searchCallbacks')}
+        onChange={(search) => patchFilters({ search })}
+      />
+      <TextField
+        select
+        label={t('common.status')}
+        value={filters.status}
+        sx={{ minWidth: 180 }}
+        InputLabelProps={{ shrink: true }}
+        SelectProps={callbackStatusSelectProps(t)}
+        onChange={(event) => patchFilters({ status: event.target.value })}
+      >
+        <CallbackStatusOptions t={t} />
+      </TextField>
+    </Stack>
+  );
+}
+
 export function toRechargePackageFilters(
   filters: RechargePackageFilterState
 ): RechargePackageFilters {
@@ -131,6 +179,15 @@ export function toRechargePackageFilters(
 }
 
 export function toRechargeOrderFilters(filters: RechargeOrderFilterState): RechargeOrderFilters {
+  return {
+    search: filters.search.trim() || undefined,
+    status: filters.status || undefined,
+  };
+}
+
+export function toPaymentCallbackFilters(
+  filters: PaymentCallbackFilterState
+): PaymentCallbackFilters {
   return {
     search: filters.search.trim() || undefined,
     status: filters.status || undefined,
@@ -188,6 +245,18 @@ function OrderStatusOptions({ t }: { t: TFunction<'admin'> }) {
   );
 }
 
+function CallbackStatusOptions({ t }: { t: TFunction<'admin'> }) {
+  return (
+    <>
+      <MenuItem value={EMPTY_STATUS_FILTER}>{t('filters.allStatuses')}</MenuItem>
+      <MenuItem value="received">{t('adminRecharges.status.callback.received')}</MenuItem>
+      <MenuItem value="processed">{t('adminRecharges.status.callback.processed')}</MenuItem>
+      <MenuItem value="ignored">{t('adminRecharges.status.callback.ignored')}</MenuItem>
+      <MenuItem value="failed">{t('adminRecharges.status.callback.failed')}</MenuItem>
+    </>
+  );
+}
+
 function packageStatusSelectProps(t: TFunction<'admin'>): TextFieldProps['SelectProps'] {
   return {
     displayEmpty: true,
@@ -206,3 +275,12 @@ function orderStatusSelectProps(t: TFunction<'admin'>): TextFieldProps['SelectPr
   };
 }
 
+function callbackStatusSelectProps(t: TFunction<'admin'>): TextFieldProps['SelectProps'] {
+  return {
+    displayEmpty: true,
+    renderValue: (selected) =>
+      selected
+        ? t(`adminRecharges.status.callback.${String(selected)}`)
+        : t('filters.allStatuses'),
+  };
+}

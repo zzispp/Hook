@@ -71,6 +71,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = &input.site_subtitle {
         active.site_subtitle = Set(value.clone());
     }
+    if let Some(value) = &input.public_base_url {
+        active.public_base_url = Set(value.clone());
+    }
     if let Some(value) = &input.site_logo_base64 {
         active.site_logo_base64 = Set(value.clone());
     }
@@ -85,6 +88,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     }
     if let Some(value) = input.support_ticket_captcha_enabled {
         active.support_ticket_captcha_enabled = Set(value);
+    }
+    if let Some(value) = input.recharge_captcha_enabled {
+        active.recharge_captcha_enabled = Set(value);
     }
     if let Some(value) = input.registration_email_verification_enabled {
         active.registration_email_verification_enabled = Set(value);
@@ -118,6 +124,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     }
     if let Some(value) = input.recharge_order_expire_minutes {
         active.recharge_order_expire_minutes = Set(value);
+    }
+    if let Some(value) = input.recharge_max_unpaid_orders {
+        active.recharge_max_unpaid_orders = Set(value);
     }
     if let Some(value) = input.recharge_min_amount {
         active.recharge_min_amount = Set(value);

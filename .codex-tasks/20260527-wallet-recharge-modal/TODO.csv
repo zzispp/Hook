@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm custom amount order path,DONE,"Current backend only supports package_id and UI modal needs real amount order support","rg -n \"RechargeOrderCreatePayload|create_user_order|customAmount\" crates apps",2026-05-27 12:50:13 CST,0,
+2,Support package or custom amount order creation,DONE,"Create recharge order accepts package_id or recharge_amount with validation and payment request snapshot","timeout 60 cargo test -p recharge",2026-05-27 12:59:27 CST,0,
+3,Move wallet recharge to modal,DONE,"Wallet breadcrumb recharge button opens modal with amount input ratio payment selector captcha and optional packages","pnpm lint:frontend && pnpm build:frontend",2026-05-27 12:59:27 CST,0,
+4,Move card code redeem to modal,DONE,"Wallet center has card code button and redemption form only appears in dialog","pnpm lint:frontend && pnpm build:frontend",2026-05-27 12:59:27 CST,0,
+5,Run validation and record notes,DONE,"Relevant Rust/frontend checks pass and progress log is updated","cargo fmt --all && timeout 60 cargo check -p backend && git diff --check",2026-05-27 12:59:27 CST,0,

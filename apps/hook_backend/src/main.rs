@@ -11,6 +11,7 @@ mod performance_monitoring_disk;
 mod performance_monitoring_os;
 mod performance_monitoring_tcp;
 mod proxy_cache_hooks;
+mod recharge_secret_cipher;
 mod scheduled_tasks;
 mod startup;
 mod system;

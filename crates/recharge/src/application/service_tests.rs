@@ -1,37 +1,44 @@
 use rust_decimal::Decimal;
+use std::sync::Arc;
 use types::{
     pagination::PageRequest,
-    recharge::{
-        PaymentChannel, RECHARGE_PACKAGE_STATUS_DISABLED, RechargeOrderCreatePayload, RechargeOrderListFilters, RechargePackageListFilters,
-        RechargePackageUpdatePayload,
-    },
+    recharge::{PaymentChannel, RECHARGE_PACKAGE_STATUS_DISABLED, RechargeOrderListFilters, RechargePackageListFilters, RechargePackageUpdatePayload},
 };
 
 use crate::application::{PaymentChannelRegistration, PaymentChannelRegistry, RechargeService, RechargeUseCase};
 
 use self::settings_support::system_settings;
-use self::support::{MemoryRechargeRepository, create_payload, order, package, page_request};
+use self::support::MemoryRechargeRepository;
+use self::support_fixtures::{create_payload, disabled_payment_channel, order, package, page_request, payment_channel};
+use self::support_payment::{PlainCipher, TestPaymentProvider};
 
+#[path = "service_tests/order_creation.rs"]
+mod order_creation;
+#[path = "service_tests/payment_callbacks.rs"]
+mod payment_callbacks;
+#[path = "service_tests/payment_polling.rs"]
+mod payment_polling;
 #[path = "service_tests/settings_support.rs"]
 mod settings_support;
 #[path = "service_tests/support.rs"]
 mod support;
+#[path = "service_tests/support_fixtures.rs"]
+mod support_fixtures;
+#[path = "service_tests/support_payment.rs"]
+mod support_payment;
 
 #[tokio::test]
 async fn new_syncs_registered_payment_channels() {
     let repository = MemoryRechargeRepository::default();
-    let registry = PaymentChannelRegistry::with_channels(vec![PaymentChannelRegistration {
-        code: "stripe".into(),
-        name: "Stripe".into(),
-    }]);
+    let registry = test_registry();
 
     RechargeService::new(repository.clone(), registry).await.unwrap();
 
     assert_eq!(
         repository.synced_channels(),
         vec![PaymentChannelRegistration {
-            code: "stripe".into(),
-            name: "Stripe".into(),
+            code: "testpay".into(),
+            name: "Test Pay".into(),
         }]
     );
 }
@@ -44,6 +51,20 @@ async fn new_with_empty_registry_exposes_empty_channels() {
     let channels = service.list_payment_channels().await.unwrap();
 
     assert_eq!(channels, Vec::<PaymentChannel>::new());
+}
+
+#[tokio::test]
+async fn list_user_payment_channels_returns_enabled_public_methods_only() {
+    let repository = MemoryRechargeRepository::default();
+    repository.insert_channel(payment_channel(true));
+    repository.insert_channel(disabled_payment_channel("disabledpay"));
+    let service = RechargeService::with_secret_cipher(repository, test_registry(), PlainCipher).await.unwrap();
+
+    let channels = service.list_user_payment_channels().await.unwrap();
+
+    assert_eq!(channels.len(), 1);
+    assert_eq!(channels[0].code, "testpay");
+    assert_eq!(channels[0].methods[0].code, "test");
 }
 
 #[tokio::test]
@@ -158,90 +179,58 @@ async fn list_user_packages_returns_active_packages_with_payable_preview() {
 }
 
 #[tokio::test]
-async fn create_user_order_writes_pending_snapshot_without_wallet_effects() {
+async fn update_payment_channel_rejects_enabled_channel_without_public_base_url() {
     let repository = MemoryRechargeRepository::default();
-    repository.insert_package(package("package-1", "Starter", Decimal::new(10, 0), Decimal::new(2, 0)));
-    let service = RechargeService::new(repository.clone(), PaymentChannelRegistry::empty()).await.unwrap();
-
-    let order = service
-        .create_user_order(
-            "user-1",
-            RechargeOrderCreatePayload {
-                package_id: "package-1".into(),
-            },
-        )
-        .await
-        .unwrap();
-
-    assert_eq!(order.status, "pending");
-    assert_eq!(order.user_id, "user-1");
-    assert_eq!(order.package_name, "Starter");
-    assert_eq!(order.recharge_amount, Decimal::new(10, 0));
-    assert_eq!(order.gift_amount, Decimal::new(2, 0));
-    assert_eq!(order.total_arrival_amount, Decimal::new(12, 0));
-    assert_eq!(order.payable_amount, Decimal::new(70, 0));
-    assert_eq!(order.payment_channel_code, None);
-    assert_eq!(repository.orders().len(), 1);
-}
-
-#[tokio::test]
-async fn create_user_order_rejects_disabled_recharge() {
-    let repository = MemoryRechargeRepository::default();
-    repository.insert_package(package("package-1", "Starter", Decimal::new(10, 0), Decimal::ZERO));
     let mut settings = system_settings();
-    settings.recharge_enabled = false;
+    settings.public_base_url = String::new();
     repository.set_settings(settings);
-    let service = RechargeService::new(repository, PaymentChannelRegistry::empty()).await.unwrap();
+    let service = RechargeService::with_secret_cipher(repository, test_registry(), PlainCipher).await.unwrap();
 
-    let result = service
-        .create_user_order(
-            "user-1",
-            RechargeOrderCreatePayload {
-                package_id: "package-1".into(),
-            },
-        )
-        .await;
+    let result = service.update_payment_channel("testpay", payment_channel_update(true)).await;
 
-    assert_eq!(result.unwrap_err().to_string(), "invalid input: recharge is disabled");
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "invalid input: public_base_url is required before enabling payment channel"
+    );
 }
 
 #[tokio::test]
-async fn create_user_order_rejects_disabled_package() {
+async fn update_payment_channel_rejects_enabled_channel_with_invalid_public_base_url() {
     let repository = MemoryRechargeRepository::default();
-    let mut disabled = package("package-1", "Starter", Decimal::new(10, 0), Decimal::ZERO);
-    disabled.status = RECHARGE_PACKAGE_STATUS_DISABLED.into();
-    repository.insert_package(disabled);
-    let service = RechargeService::new(repository, PaymentChannelRegistry::empty()).await.unwrap();
-
-    let result = service
-        .create_user_order(
-            "user-1",
-            RechargeOrderCreatePayload {
-                package_id: "package-1".into(),
-            },
-        )
-        .await;
-
-    assert_eq!(result.unwrap_err().to_string(), "invalid input: recharge package is disabled");
-}
-
-#[tokio::test]
-async fn create_user_order_rejects_amount_outside_system_limits() {
-    let repository = MemoryRechargeRepository::default();
-    repository.insert_package(package("package-1", "Starter", Decimal::new(10, 0), Decimal::ZERO));
     let mut settings = system_settings();
-    settings.recharge_max_amount = Decimal::new(5, 0);
+    settings.public_base_url = "https://".into();
     repository.set_settings(settings);
-    let service = RechargeService::new(repository, PaymentChannelRegistry::empty()).await.unwrap();
+    let service = RechargeService::with_secret_cipher(repository, test_registry(), PlainCipher).await.unwrap();
 
-    let result = service
-        .create_user_order(
-            "user-1",
-            RechargeOrderCreatePayload {
-                package_id: "package-1".into(),
-            },
-        )
-        .await;
+    let result = service.update_payment_channel("testpay", payment_channel_update(true)).await;
 
-    assert_eq!(result.unwrap_err().to_string(), "invalid input: recharge amount exceeds maximum");
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "invalid input: public_base_url must be a valid HTTP or HTTPS URL"
+    );
+}
+
+#[tokio::test]
+async fn update_payment_channel_allows_disabled_channel_without_public_base_url() {
+    let repository = MemoryRechargeRepository::default();
+    let mut settings = system_settings();
+    settings.public_base_url = String::new();
+    repository.set_settings(settings);
+    let service = RechargeService::with_secret_cipher(repository, test_registry(), PlainCipher).await.unwrap();
+
+    let channel = service.update_payment_channel("testpay", payment_channel_update(false)).await.unwrap();
+
+    assert!(!channel.enabled);
+}
+
+fn test_registry() -> PaymentChannelRegistry {
+    PaymentChannelRegistry::with_providers(vec![Arc::new(TestPaymentProvider)])
+}
+
+fn payment_channel_update(enabled: bool) -> types::recharge::PaymentChannelUpdatePayload {
+    types::recharge::PaymentChannelUpdatePayload {
+        enabled,
+        config: Some(serde_json::json!({})),
+        api_key: Some("secret".into()),
+    }
 }

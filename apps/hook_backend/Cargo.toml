@@ -18,6 +18,7 @@ group.workspace = true
 i18n.workspace = true
 model.workspace = true
 operations.workspace = true
+payment.workspace = true
 provider.workspace = true
 proxy.workspace = true
 recharge.workspace = true

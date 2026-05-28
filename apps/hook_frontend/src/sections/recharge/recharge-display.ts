@@ -32,6 +32,10 @@ export function rechargeOrderStatusLabel(t: TFunction<'admin'>, status: string) 
   return t(`adminRecharges.status.order.${status}`);
 }
 
+export function paymentCallbackStatusLabel(t: TFunction<'admin'>, status: string) {
+  return t(`adminRecharges.status.callback.${status}`);
+}
+
 export function packageStatusColor(status: string): LabelColor {
   return status === 'active' ? 'success' : 'default';
 }
@@ -43,7 +47,13 @@ export function orderStatusColor(status: string): LabelColor {
   return 'default';
 }
 
+export function callbackStatusColor(status: string): LabelColor {
+  if (status === 'processed') return 'success';
+  if (status === 'received') return 'info';
+  if (status === 'failed') return 'error';
+  return 'warning';
+}
+
 export function estimatedPayableAmount(rechargeAmount: number, ratio: number) {
   return rechargeAmount * ratio;
 }
-

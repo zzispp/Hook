@@ -6,6 +6,6 @@ mod smtp;
 mod validation;
 
 pub use error::{SettingError, SettingResult};
-pub use ports::{SettingRepository, SettingSecretCipher, SettingUseCase, SettingUserGroupCatalog, SmtpConnectionTester};
+pub use ports::{SettingPaymentChannelCatalog, SettingRepository, SettingSecretCipher, SettingUseCase, SettingUserGroupCatalog, SmtpConnectionTester};
 pub use service::SettingService;
 pub use smtp::{SmtpConnectionConfig, StoredSmtpSettings};

@@ -9,6 +9,8 @@ pub struct Model {
     pub code: String,
     pub name: String,
     pub enabled: bool,
+    pub config_json: String,
+    pub encrypted_secret: String,
     pub registered_at: TimeDateTimeWithTimeZone,
     pub updated_at: TimeDateTimeWithTimeZone,
 }
@@ -24,6 +26,9 @@ impl From<Model> for PaymentChannel {
             code: value.code,
             name: value.name,
             enabled: value.enabled,
+            config: serde_json::from_str(&value.config_json).unwrap_or_else(|_| serde_json::json!({})),
+            secret_set: !value.encrypted_secret.is_empty(),
+            config_schema: None,
             registered_at: format_timestamp(value.registered_at),
             updated_at: format_timestamp(value.updated_at),
         }

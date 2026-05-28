@@ -23,6 +23,11 @@ pub trait SettingUserGroupCatalog: Send + Sync + 'static {
 }
 
 #[async_trait]
+pub trait SettingPaymentChannelCatalog: Send + Sync + 'static {
+    async fn has_ready_payment_channel(&self) -> SettingResult<bool>;
+}
+
+#[async_trait]
 pub trait SmtpConnectionTester: Send + Sync + 'static {
     async fn test_connection(&self, config: &SmtpConnectionConfig) -> Result<(), String>;
 }

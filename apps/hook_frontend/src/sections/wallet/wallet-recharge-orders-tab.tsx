@@ -4,7 +4,6 @@ import type { TFunction } from 'i18next';
 import type { RechargeOrder } from 'src/types/recharge';
 
 import Chip from '@mui/material/Chip';
-import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
@@ -46,9 +45,9 @@ function OrderRow({ t, locale, order }: { t: TFunction<'admin'>; locale: string;
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
         <Chip size="small" label={`${t('wallet.recharge.orderNo')}: ${order.order_no}`} />
         <Chip size="small" label={`${t('wallet.recharge.estimatedPayable')}: ${formatCny(order.payable_amount)}`} />
+        <Chip size="small" label={`${t('wallet.recharge.paymentMethod')}: ${order.payment_method || '-'}`} />
         <Chip size="small" label={`${t('wallet.recharge.expiresAt')}: ${formatRechargeDate(order.expires_at, locale)}`} />
       </Stack>
-      {order.status === 'pending' ? <Alert severity="warning">{t('wallet.recharge.paymentUnavailable')}</Alert> : null}
     </Stack>
   );
 }

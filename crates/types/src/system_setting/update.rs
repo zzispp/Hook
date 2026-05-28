@@ -12,6 +12,8 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub site_subtitle: Option<String>,
     #[serde(default)]
+    pub public_base_url: Option<String>,
+    #[serde(default)]
     pub site_logo_base64: Option<String>,
     #[serde(default)]
     pub allow_registration: Option<bool>,
@@ -21,6 +23,8 @@ pub struct SystemSettingsUpdate {
     pub registration_captcha_enabled: Option<bool>,
     #[serde(default)]
     pub support_ticket_captcha_enabled: Option<bool>,
+    #[serde(default)]
+    pub recharge_captcha_enabled: Option<bool>,
     #[serde(default)]
     pub registration_email_verification_enabled: Option<bool>,
     #[serde(default)]
@@ -75,6 +79,8 @@ pub struct SystemSettingsUpdate {
     pub recharge_arrival_ratio: Option<Decimal>,
     #[serde(default)]
     pub recharge_order_expire_minutes: Option<i64>,
+    #[serde(default)]
+    pub recharge_max_unpaid_orders: Option<i64>,
     #[serde(default, with = "rust_decimal::serde::float_option")]
     pub recharge_min_amount: Option<Decimal>,
     #[serde(default, with = "rust_decimal::serde::float_option")]
@@ -120,11 +126,13 @@ impl SystemSettingsUpdate {
     fn general_fields_empty(&self) -> bool {
         self.site_name.is_none()
             && self.site_subtitle.is_none()
+            && self.public_base_url.is_none()
             && self.site_logo_base64.is_none()
             && self.allow_registration.is_none()
             && self.login_captcha_enabled.is_none()
             && self.registration_captcha_enabled.is_none()
             && self.support_ticket_captcha_enabled.is_none()
+            && self.recharge_captcha_enabled.is_none()
             && self.registration_email_verification_enabled.is_none()
             && self.password_reset_enabled.is_none()
             && self.default_user_group_code.is_none()
@@ -133,6 +141,7 @@ impl SystemSettingsUpdate {
             && self.recharge_enabled.is_none()
             && self.recharge_arrival_ratio.is_none()
             && self.recharge_order_expire_minutes.is_none()
+            && self.recharge_max_unpaid_orders.is_none()
             && self.recharge_min_amount.is_none()
             && self.recharge_max_amount.is_none()
             && self.scheduling_mode.is_none()

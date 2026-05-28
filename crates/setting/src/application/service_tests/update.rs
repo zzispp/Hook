@@ -2,7 +2,10 @@ use types::system_setting::SystemSettingsUpdate;
 
 use crate::application::SettingUseCase;
 
-use super::{complete_email_settings, complete_email_verification_update, complete_ticket_email_update, system_settings_response, test_update_service};
+use super::{
+    complete_email_settings, complete_email_verification_update, complete_ticket_email_update, system_settings_response, test_update_service,
+    test_update_service_with_payment_channels,
+};
 
 #[tokio::test]
 async fn update_rejects_email_verification_without_enabled_email_config() {
@@ -225,4 +228,35 @@ async fn update_rejects_disabling_email_config_while_ticket_email_notifications_
         "invalid input: support_ticket_email_notifications_enabled requires email_config_enabled and complete SMTP configuration"
     );
     assert!(update.lock().unwrap().is_none());
+}
+
+#[tokio::test]
+async fn update_rejects_enabling_recharge_without_ready_payment_channel() {
+    let (service, update) = test_update_service_with_payment_channels(system_settings_response(), false);
+
+    let result = service
+        .update_system_settings(SystemSettingsUpdate {
+            recharge_enabled: Some(true),
+            ..Default::default()
+        })
+        .await;
+
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "invalid input: at least one enabled payment channel with saved configuration is required before enabling recharge"
+    );
+    assert!(update.lock().unwrap().is_none());
+}
+
+#[tokio::test]
+async fn update_allows_enabling_recharge_with_ready_payment_channel() {
+    let (service, update) = test_update_service(system_settings_response());
+    let input = SystemSettingsUpdate {
+        recharge_enabled: Some(true),
+        ..Default::default()
+    };
+
+    service.update_system_settings(input.clone()).await.unwrap();
+
+    assert_eq!(update.lock().unwrap().clone().unwrap().input, input);
 }

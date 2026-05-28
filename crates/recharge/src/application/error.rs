@@ -12,6 +12,8 @@ pub enum RechargeError {
     Forbidden,
     #[error("recharge conflict: {0}")]
     Conflict(String),
+    #[error("payment error: {0}")]
+    Payment(String),
     #[error("infrastructure error: {0}")]
     Infrastructure(String),
 }
