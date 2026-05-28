@@ -40,20 +40,8 @@ export function WalletRechargeFormContent({
         onMethodChange={selector.setMethodCode}
       />
       <WalletRechargeCaptcha t={t} config={captchaConfig} captcha={captcha} />
-      <AmountRechargeForm
-        {...props}
-        t={t}
-        enabled={enabled}
-        channels={channels}
-        captchaConfig={captchaConfig}
-        amount={amount}
-        selector={selector}
-        captcha={captcha}
-        onAmountChange={onAmountChange}
-      />
       {packages.length > 0 ? (
         <>
-          <Divider />
           <PackageRechargePanel
             {...props}
             t={t}
@@ -65,8 +53,20 @@ export function WalletRechargeFormContent({
             selector={selector}
             captcha={captcha}
           />
+          <Divider />
         </>
       ) : null}
+      <AmountRechargeForm
+        {...props}
+        t={t}
+        enabled={enabled}
+        channels={channels}
+        captchaConfig={captchaConfig}
+        amount={amount}
+        selector={selector}
+        captcha={captcha}
+        onAmountChange={onAmountChange}
+      />
     </>
   );
 }
