@@ -7,7 +7,10 @@ use storage::{
 };
 use types::dashboard::{DashboardActivityResponse, DashboardFilterOptionsResponse, DashboardOverviewResponse};
 
-use crate::application::{DashboardActivityQuery, DashboardError, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardRepository, DashboardResult};
+use crate::application::{
+    DashboardActivityQuery, DashboardError, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardRepository, DashboardResult,
+    DashboardUserStatsLeaderboardQuery, DashboardUserStatsTimeSeriesQuery, DashboardUserUsageStatsQuery,
+};
 
 #[derive(Clone)]
 pub struct StorageDashboardRepository {
@@ -34,6 +37,27 @@ impl DashboardRepository for StorageDashboardRepository {
 
     async fn filter_options(&self, query: DashboardFilterOptionsQuery) -> DashboardResult<DashboardFilterOptionsResponse> {
         self.store.filter_options(store_filter_query(query)).await.map_err(storage_error)
+    }
+
+    async fn user_stats_leaderboard(
+        &self,
+        query: DashboardUserStatsLeaderboardQuery,
+    ) -> DashboardResult<types::dashboard::DashboardUserStatsLeaderboardResponse> {
+        self.store.user_stats_leaderboard(store_user_stats_leaderboard_query(query)).await.map_err(storage_error)
+    }
+
+    async fn user_usage_stats(
+        &self,
+        query: DashboardUserUsageStatsQuery,
+    ) -> DashboardResult<types::dashboard::DashboardUserUsageStatsResponse> {
+        self.store.user_usage_stats(store_user_usage_stats_query(query)).await.map_err(storage_error)
+    }
+
+    async fn user_stats_time_series(
+        &self,
+        query: DashboardUserStatsTimeSeriesQuery,
+    ) -> DashboardResult<Vec<types::dashboard::DashboardUserStatsTimeSeriesPoint>> {
+        self.store.user_stats_time_series(store_user_stats_time_series_query(query)).await.map_err(storage_error)
     }
 }
 
@@ -73,6 +97,39 @@ fn store_filter_query(query: DashboardFilterOptionsQuery) -> DashboardStoreFilte
     }
 }
 
+fn store_user_stats_leaderboard_query(query: DashboardUserStatsLeaderboardQuery) -> storage::dashboard::DashboardUserStatsLeaderboardQuery {
+    storage::dashboard::DashboardUserStatsLeaderboardQuery {
+        window: store_user_stats_window(query.window),
+        metric: query.metric,
+        limit: query.limit,
+        offset: query.offset,
+    }
+}
+
+fn store_user_usage_stats_query(query: DashboardUserUsageStatsQuery) -> storage::dashboard::DashboardUserUsageStatsQuery {
+    storage::dashboard::DashboardUserUsageStatsQuery {
+        window: store_user_stats_window(query.window),
+        user_id: query.user_id,
+    }
+}
+
+fn store_user_stats_time_series_query(query: DashboardUserStatsTimeSeriesQuery) -> storage::dashboard::DashboardUserStatsTimeSeriesQuery {
+    storage::dashboard::DashboardUserStatsTimeSeriesQuery {
+        window: store_user_stats_window(query.window),
+        bucket: store_user_stats_bucket(query.bucket),
+        user_id: query.user_id,
+    }
+}
+
+fn store_user_stats_window(window: crate::application::DashboardUserStatsWindow) -> storage::dashboard::DashboardUserStatsStoreWindow {
+    storage::dashboard::DashboardUserStatsStoreWindow {
+        start_date: window.start_date,
+        end_date: window.end_date,
+        started_at: window.started_at,
+        ended_at: window.ended_at,
+    }
+}
+
 fn store_scope(scope: crate::application::DashboardScope) -> DashboardScopeFilter {
     match scope {
         crate::application::DashboardScope::Me { user_id } => DashboardScopeFilter::Me { user_id },
@@ -86,6 +143,13 @@ fn store_bucket(bucket: crate::application::DashboardBucket) -> DashboardBucketF
     match bucket {
         crate::application::DashboardBucket::Hour => DashboardBucketFilter::Hour,
         crate::application::DashboardBucket::Day => DashboardBucketFilter::Day,
+    }
+}
+
+fn store_user_stats_bucket(bucket: crate::application::DashboardUserStatsBucket) -> storage::dashboard::DashboardUserStatsBucket {
+    match bucket {
+        crate::application::DashboardUserStatsBucket::Hour => storage::dashboard::DashboardUserStatsBucket::Hour,
+        crate::application::DashboardUserStatsBucket::Day => storage::dashboard::DashboardUserStatsBucket::Day,
     }
 }
 

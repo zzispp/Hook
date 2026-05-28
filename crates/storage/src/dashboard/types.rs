@@ -46,3 +46,38 @@ pub struct DashboardStoreActivityQuery {
 pub struct DashboardStoreFilterOptionsQuery {
     pub scope: DashboardScopeFilter,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DashboardUserStatsBucket {
+    Hour,
+    Day,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardUserStatsStoreWindow {
+    pub start_date: time::Date,
+    pub end_date: time::Date,
+    pub started_at: time::OffsetDateTime,
+    pub ended_at: time::OffsetDateTime,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardUserStatsLeaderboardQuery {
+    pub window: DashboardUserStatsStoreWindow,
+    pub metric: types::dashboard::DashboardUserStatsMetric,
+    pub limit: u64,
+    pub offset: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardUserUsageStatsQuery {
+    pub window: DashboardUserStatsStoreWindow,
+    pub user_id: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DashboardUserStatsTimeSeriesQuery {
+    pub window: DashboardUserStatsStoreWindow,
+    pub bucket: DashboardUserStatsBucket,
+    pub user_id: Option<String>,
+}

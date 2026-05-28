@@ -4,9 +4,13 @@ import type { ApiEnvelope } from 'src/types/rbac';
 import type {
   DashboardScope,
   DashboardPreset,
+  DashboardUserStatsMetric,
   DashboardActivityResponse,
   DashboardOverviewResponse,
   DashboardFilterOptionsResponse,
+  DashboardUserUsageStatsResponse,
+  DashboardUserStatsTimeSeriesPoint,
+  DashboardUserStatsLeaderboardResponse,
 } from 'src/types/dashboard';
 
 import useSWR from 'swr';
@@ -50,6 +54,15 @@ export type DashboardScopeFilters = {
 
 export type DashboardActivityFilters = DashboardScopeFilters;
 
+export type DashboardUserStatsFilters = {
+  preset: DashboardPreset;
+  userId?: string;
+  compareUserId?: string;
+  metric: DashboardUserStatsMetric;
+  leaderboardPage: number;
+  leaderboardPageSize: number;
+};
+
 export function useDashboardActivity(filters: DashboardActivityFilters) {
   const url = dashboardRequestReady(filters)
     ? dashboardUrl(endpoints.dashboard.activity, {
@@ -72,6 +85,71 @@ export function useDashboardFilterOptions(enabled: boolean) {
     : null;
   const { data, isLoading, error, isValidating, mutate } = useSWR<
     ApiEnvelope<DashboardFilterOptionsResponse>
+  >(url, fetcher, swrOptions);
+
+  return useDashboardData(data, isLoading, error, isValidating, mutate);
+}
+
+export function useDashboardUserStatsLeaderboard(enabled: boolean, filters: DashboardUserStatsFilters) {
+  const url = enabled
+    ? dashboardUrl(endpoints.dashboard.userStatsLeaderboard, {
+        preset: filters.preset,
+        metric: filters.metric,
+        limit: filters.leaderboardPageSize,
+        offset: filters.leaderboardPage * filters.leaderboardPageSize,
+        tz_offset_minutes: timezoneOffsetMinutes(),
+      })
+    : null;
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<DashboardUserStatsLeaderboardResponse>
+  >(url, fetcher, swrOptions);
+
+  return useDashboardData(data, isLoading, error, isValidating, mutate);
+}
+
+export function useDashboardUserUsageStats(enabled: boolean, filters: DashboardUserStatsFilters) {
+  const params = compactUserStatsParams({
+    preset: filters.preset,
+    user_id: filters.userId,
+    tz_offset_minutes: timezoneOffsetMinutes(),
+  });
+  const url = enabled ? dashboardUrl(endpoints.dashboard.userUsageStats, params) : null;
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<DashboardUserUsageStatsResponse>
+  >(url, fetcher, swrOptions);
+
+  return useDashboardData(data, isLoading, error, isValidating, mutate);
+}
+
+export function useDashboardUserStatsTimeSeries(enabled: boolean, filters: DashboardUserStatsFilters) {
+  const params = compactUserStatsParams({
+    preset: filters.preset,
+    user_id: filters.userId,
+    tz_offset_minutes: timezoneOffsetMinutes(),
+  });
+  const url = enabled ? dashboardUrl(endpoints.dashboard.userStatsTimeSeries, params) : null;
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<DashboardUserStatsTimeSeriesPoint[]>
+  >(url, fetcher, swrOptions);
+
+  return useDashboardData(data, isLoading, error, isValidating, mutate);
+}
+
+export function useDashboardCompareUserStatsTimeSeries(
+  enabled: boolean,
+  filters: DashboardUserStatsFilters
+) {
+  const params = compactUserStatsParams({
+    preset: filters.preset,
+    user_id: filters.compareUserId,
+    tz_offset_minutes: timezoneOffsetMinutes(),
+  });
+  const url =
+    enabled && filters.compareUserId
+      ? dashboardUrl(endpoints.dashboard.userStatsTimeSeries, params)
+      : null;
+  const { data, isLoading, error, isValidating, mutate } = useSWR<
+    ApiEnvelope<DashboardUserStatsTimeSeriesPoint[]>
   >(url, fetcher, swrOptions);
 
   return useDashboardData(data, isLoading, error, isValidating, mutate);
@@ -104,6 +182,15 @@ function dashboardUrl(endpoint: string, params: Record<string, string | number>)
 function compactParams(params: DashboardScopeFilters): Record<string, string> {
   return Object.fromEntries(
     Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1]))
+  );
+}
+
+function compactUserStatsParams(params: Record<string, string | number | undefined>) {
+  return Object.fromEntries(
+    Object.entries(params).filter((entry): entry is [string, string | number] => {
+      const value = entry[1];
+      return value !== undefined && value !== '';
+    })
   );
 }
 

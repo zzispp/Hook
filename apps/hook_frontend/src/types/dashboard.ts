@@ -167,3 +167,39 @@ export type DashboardFilterOptionsResponse = {
   users: DashboardFilterOption[];
   tokens: DashboardFilterOption[];
 };
+
+export type DashboardUserStatsMetric = 'requests' | 'tokens' | 'cost';
+
+export type DashboardUserStatsGranularity = 'day' | 'hour';
+
+export type DashboardUserStatsLeaderboardItem = {
+  rank: number;
+  id: string;
+  name: string;
+  value: number;
+  requests: number;
+  tokens: number;
+  cost: number;
+};
+
+export type DashboardUserStatsLeaderboardResponse = {
+  items: DashboardUserStatsLeaderboardItem[];
+  total: number;
+  metric: DashboardUserStatsMetric;
+  start_date: string;
+  end_date: string;
+};
+
+export type DashboardUserUsageStatsResponse = {
+  total_requests: number;
+  total_tokens: number;
+  total_cost: number;
+  error_rate: number;
+};
+
+export type DashboardUserStatsTimeSeriesPoint = {
+  date: string;
+  total_cost: number;
+  total_requests: number;
+  total_tokens: number;
+};

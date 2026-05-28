@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm write path and schema touchpoints,DONE,"Request-record write path and baseline schema targets are identified","rg -n \"create_request_record|update_request_record|request_records\" crates/storage/src/provider apps/hook_backend/src",2026-05-28,0,
+2,Implement backend aggregation and APIs,DONE,"Admin user stats endpoints return Aether-shaped data from aggregate buckets","cargo test -p dashboard",2026-05-28,0,
+3,Wire request writes into bucket upsert,DONE,"Completed request records update day/hour user aggregate buckets","cargo test -p storage dashboard_user_stats",2026-05-28,0,
+4,Implement frontend user stats module,DONE,"Admin user stats renders as a standalone overview dashboard section with controls, leaderboard, summary, and trends","pnpm lint:frontend",2026-05-28,0,
+5,Run final validation,DONE,"Rust tests and frontend checks pass or failures are documented","just test && pnpm lint:frontend && pnpm build:frontend",2026-05-28,0,"lint/build/check pass; just test has unrelated existing backend format test failure"

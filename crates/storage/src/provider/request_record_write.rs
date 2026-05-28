@@ -23,10 +23,12 @@ pub async fn update_request_record(store: &ProviderStore, input: RequestRecordRe
     let was_started = record.started_at.is_some();
     let has_failover = record.has_failover;
     let has_retry = record.has_retry;
+    let old_record = record.clone();
     let mut active: request_records::ActiveModel = record.into();
     apply_request_record_patch(&mut active, input, now, was_started, has_failover, has_retry)?;
     active.updated_at = Set(now);
-    active.update(store.connection()).await?;
+    let updated = active.update(store.connection()).await?;
+    crate::dashboard::sync_user_usage_buckets(store.connection(), &old_record, &updated).await?;
     Ok(())
 }
 

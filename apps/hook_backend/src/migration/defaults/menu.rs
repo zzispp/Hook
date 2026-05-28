@@ -63,6 +63,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000229",
+        section_id: OVERVIEW_SECTION_ID,
+        code: "admin_user_stats",
+        title: "用户统计",
+        path: "/dashboard/admin/user-stats",
+        icon: "solar:chart-square-outline",
+        sort_order: 2,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000202",
         section_id: OPERATIONS_SECTION_ID,
         code: "dashboard_models",

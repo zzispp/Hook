@@ -45,8 +45,8 @@ export function DailyStatsTable({ t, locale, isAdmin, loading, table, data }: Da
 
   return (
     <Card>
-      <CardHeader title={t('dashboard.stats.daily.tableTitle')} />
-      <Scrollbar>
+      <CardHeader title={t('dashboard.stats.daily.tableTitle')} sx={{ pb: 2 }} />
+      <Scrollbar sx={{ pt: 1 }}>
         <Table sx={{ minWidth: DAILY_TABLE_MIN_WIDTH }}>
           <TableHeadCustom headCells={head} />
           <TableBody>

@@ -93,6 +93,25 @@ pub(in crate::migration::baseline) enum RequestRecords {
 }
 
 #[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum DashboardUserUsageBuckets {
+    Table,
+    Id,
+    BucketGranularity,
+    BucketStartedAt,
+    BucketEndedAt,
+    UserId,
+    Username,
+    RequestCount,
+    SuccessCount,
+    FailedCount,
+    TotalTokens,
+    TotalCost,
+    TotalLatencyMs,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
 pub(in crate::migration::baseline) enum RequestCandidates {
     Table,
     Id,

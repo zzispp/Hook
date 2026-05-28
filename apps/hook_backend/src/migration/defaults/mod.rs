@@ -18,6 +18,7 @@ pub const AUTHENTICATED_API_CODES: &[&str] = &[
 pub const ADMIN_MENU_CODES: &[&str] = &[
     "dashboard_home",
     "admin_performance_monitoring",
+    "admin_user_stats",
     "admin_wallets",
     "admin_card_codes",
     "admin_recharges",
@@ -66,6 +67,15 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     MenuApiBindingDefinition {
         menu_code: "dashboard_home",
         api_codes: &["dashboard_overview_read", "dashboard_activity_read", "dashboard_filter_options_read"],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_user_stats",
+        api_codes: &[
+            "admin_user_stats_leaderboard_read",
+            "admin_user_usage_stats_read",
+            "admin_user_stats_time_series_read",
+            "users_read",
+        ],
     },
     MenuApiBindingDefinition {
         menu_code: "announcements",

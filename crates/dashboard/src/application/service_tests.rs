@@ -162,6 +162,30 @@ impl DashboardRepository for RecordingRepository {
             tokens: Vec::new(),
         })
     }
+
+    async fn user_stats_leaderboard(
+        &self,
+        query: DashboardUserStatsLeaderboardQuery,
+    ) -> DashboardResult<types::dashboard::DashboardUserStatsLeaderboardResponse> {
+        Ok(types::dashboard::DashboardUserStatsLeaderboardResponse {
+            items: Vec::new(),
+            total: 0,
+            metric: query.metric,
+            start_date: query.window.start_date.to_string(),
+            end_date: query.window.end_date.to_string(),
+        })
+    }
+
+    async fn user_usage_stats(&self, _query: DashboardUserUsageStatsQuery) -> DashboardResult<types::dashboard::DashboardUserUsageStatsResponse> {
+        Ok(types::dashboard::DashboardUserUsageStatsResponse::default())
+    }
+
+    async fn user_stats_time_series(
+        &self,
+        _query: DashboardUserStatsTimeSeriesQuery,
+    ) -> DashboardResult<Vec<types::dashboard::DashboardUserStatsTimeSeriesPoint>> {
+        Ok(Vec::new())
+    }
 }
 
 fn daily_stats(page: PageRequest) -> DashboardDailyStats {

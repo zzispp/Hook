@@ -225,6 +225,9 @@ export const endpoints = {
     overview: '/api/dashboard/overview',
     activity: '/api/dashboard/activity',
     filterOptions: '/api/dashboard/filter-options',
+    userStatsLeaderboard: '/api/admin/stats/leaderboard/users',
+    userUsageStats: '/api/admin/usage/stats',
+    userStatsTimeSeries: '/api/admin/stats/time-series',
   },
   groups: {
     available: '/api/groups/available',

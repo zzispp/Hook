@@ -232,6 +232,13 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RequestRecords::IsStream,
             RequestRecords::CreatedAt,
         ),
+        compound_index(
+            "index_dashboard_user_usage_buckets_by_bucket",
+            DashboardUserUsageBuckets::Table,
+            DashboardUserUsageBuckets::BucketGranularity,
+            DashboardUserUsageBuckets::BucketStartedAt,
+        ),
+        dashboard_user_usage_buckets_user_bucket_index(),
         index(
             "index_request_candidates_by_request",
             RequestCandidates::Table,
@@ -441,6 +448,17 @@ fn performance_monitoring_bucket_unique_index() -> IndexCreateStatement {
         .col(PerformanceMonitoringSnapshots::BucketGranularity)
         .col(PerformanceMonitoringSnapshots::BucketStartedAt)
         .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn dashboard_user_usage_buckets_user_bucket_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_dashboard_user_usage_buckets_by_user_bucket")
+        .table(DashboardUserUsageBuckets::Table)
+        .col(DashboardUserUsageBuckets::UserId)
+        .col(DashboardUserUsageBuckets::BucketGranularity)
+        .col(DashboardUserUsageBuckets::BucketStartedAt)
         .if_not_exists()
         .to_owned()
 }

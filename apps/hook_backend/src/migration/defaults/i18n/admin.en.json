@@ -4,6 +4,7 @@
     "operations": "Operations",
     "system_management": "System Management",
     "dashboard_home": "Dashboard",
+    "admin_user_stats": "User Statistics",
     "admin_performance_monitoring": "Performance Monitoring",
     "dashboard_models": "Model Catalog",
     "dashboard_groups": "Price Groups",
@@ -511,7 +512,33 @@
         "upstreamCost": "Upstream cost",
         "profitRate": "Profit rate"
       },
-      "empty": "No statistics yet"
+      "empty": "No statistics yet",
+      "userStats": {
+        "title": "User statistics",
+        "subtitle": "Requests, tokens, cost, and error rate aggregated by user",
+        "user": "User",
+        "compareUser": "Compare user",
+        "granularity": "Granularity",
+        "day": "Day",
+        "hour": "Hour",
+        "leaderboard": "User leaderboard",
+        "trend": "User usage trend",
+        "compareTrend": "User comparison trend",
+        "totalCost": "Total cost",
+        "metrics": {
+          "requests": "Requests",
+          "tokens": "Tokens",
+          "cost": "Cost"
+        },
+        "summary": {
+          "totalRequests": "Total requests",
+          "totalTokens": "Total tokens",
+          "totalCost": "Total cost",
+          "errorRate": "Error rate",
+          "title": "User summary"
+        },
+        "interval": "Interval"
+      }
     },
     "weeklySales": "Weekly sales",
     "newUsers": "New users",

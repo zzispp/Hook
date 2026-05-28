@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::iden::{RequestCandidates, RequestRecords};
+use super::iden::{DashboardUserUsageBuckets, RequestCandidates, RequestRecords};
 
 pub(super) fn request_records_table() -> TableCreateStatement {
     Table::create()
@@ -91,6 +91,35 @@ pub(super) fn request_records_table() -> TableCreateStatement {
         .col(timestamp_tz_null(RequestRecords::StartedAt))
         .col(timestamp_tz_null(RequestRecords::FinishedAt))
         .col(timestamp_tz(RequestRecords::UpdatedAt))
+        .to_owned()
+}
+
+pub(super) fn dashboard_user_usage_buckets_table() -> TableCreateStatement {
+    Table::create()
+        .table(DashboardUserUsageBuckets::Table)
+        .if_not_exists()
+        .col(string_len(DashboardUserUsageBuckets::Id, 36).primary_key())
+        .col(string_len(DashboardUserUsageBuckets::BucketGranularity, 16))
+        .col(timestamp_tz(DashboardUserUsageBuckets::BucketStartedAt))
+        .col(timestamp_tz(DashboardUserUsageBuckets::BucketEndedAt))
+        .col(string_len(DashboardUserUsageBuckets::UserId, 36))
+        .col(string_len_null(DashboardUserUsageBuckets::Username, 100))
+        .col(big_integer(DashboardUserUsageBuckets::RequestCount))
+        .col(big_integer(DashboardUserUsageBuckets::SuccessCount))
+        .col(big_integer(DashboardUserUsageBuckets::FailedCount))
+        .col(big_integer(DashboardUserUsageBuckets::TotalTokens))
+        .col(decimal_len(DashboardUserUsageBuckets::TotalCost, 20, 8))
+        .col(big_integer(DashboardUserUsageBuckets::TotalLatencyMs))
+        .col(timestamp_tz(DashboardUserUsageBuckets::CreatedAt))
+        .col(timestamp_tz(DashboardUserUsageBuckets::UpdatedAt))
+        .index(
+            Index::create()
+                .name("index_dashboard_user_usage_buckets_unique")
+                .col(DashboardUserUsageBuckets::BucketGranularity)
+                .col(DashboardUserUsageBuckets::BucketStartedAt)
+                .col(DashboardUserUsageBuckets::UserId)
+                .unique(),
+        )
         .to_owned()
 }
 

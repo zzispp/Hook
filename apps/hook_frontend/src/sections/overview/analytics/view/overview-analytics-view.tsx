@@ -98,7 +98,6 @@ export function OverviewAnalyticsView() {
         preset={preset}
         summary={overview.data?.summary}
       />
-
       <DashboardMainGrid
         t={t}
         locale={locale}

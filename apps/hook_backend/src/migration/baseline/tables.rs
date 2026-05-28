@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::{card_code_tables, domain_tables, iden::*, operations_tables, recharge_tables, wallet_tables};
+use super::{card_code_tables, domain_tables, iden::*, operations_tables, recharge_tables, request_candidate_tables, wallet_tables};
 
 pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
     let mut tables = vec![
@@ -22,6 +22,7 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
     ];
     tables.extend(recharge_tables::recharge_tables());
     tables.extend(domain_tables::domain_tables());
+    tables.push(request_candidate_tables::dashboard_user_usage_buckets_table());
     tables.extend(operations_tables::operations_tables());
     tables
 }

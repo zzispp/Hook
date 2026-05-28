@@ -67,6 +67,82 @@ pub struct DashboardFilterOptionsRequest {
     pub tz_offset_minutes: i32,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub enum DashboardUserStatsMetric {
+    #[default]
+    #[serde(rename = "requests")]
+    Requests,
+    #[serde(rename = "tokens")]
+    Tokens,
+    #[serde(rename = "cost")]
+    Cost,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub enum DashboardUserStatsGranularity {
+    #[default]
+    #[serde(rename = "day")]
+    Day,
+    #[serde(rename = "hour")]
+    Hour,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct DashboardUserStatsLeaderboardRequest {
+    #[serde(default)]
+    pub start_date: Option<String>,
+    #[serde(default)]
+    pub end_date: Option<String>,
+    #[serde(default)]
+    pub preset: Option<DashboardPreset>,
+    #[serde(default)]
+    pub timezone: Option<String>,
+    #[serde(default)]
+    pub tz_offset_minutes: i32,
+    #[serde(default)]
+    pub metric: DashboardUserStatsMetric,
+    #[serde(default = "default_user_stats_limit")]
+    pub limit: u64,
+    #[serde(default)]
+    pub offset: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct DashboardUserUsageStatsRequest {
+    #[serde(default)]
+    pub start_date: Option<String>,
+    #[serde(default)]
+    pub end_date: Option<String>,
+    #[serde(default)]
+    pub preset: Option<DashboardPreset>,
+    #[serde(default)]
+    pub timezone: Option<String>,
+    #[serde(default)]
+    pub tz_offset_minutes: i32,
+    #[serde(default)]
+    pub user_id: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct DashboardUserStatsTimeSeriesRequest {
+    #[serde(default)]
+    pub start_date: Option<String>,
+    #[serde(default)]
+    pub end_date: Option<String>,
+    #[serde(default)]
+    pub preset: Option<DashboardPreset>,
+    #[serde(default)]
+    pub timezone: Option<String>,
+    #[serde(default)]
+    pub tz_offset_minutes: i32,
+    #[serde(default)]
+    pub granularity: DashboardUserStatsGranularity,
+    #[serde(default)]
+    pub user_id: Option<String>,
+    #[serde(default)]
+    pub metric: Option<DashboardUserStatsMetric>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct DashboardScopeResponse {
     pub scope: String,
@@ -287,10 +363,54 @@ pub struct DashboardFilterOption {
     pub name: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct DashboardUserStatsLeaderboardResponse {
+    pub items: Vec<DashboardUserStatsLeaderboardItem>,
+    pub total: u64,
+    pub metric: DashboardUserStatsMetric,
+    pub start_date: String,
+    pub end_date: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct DashboardUserStatsLeaderboardItem {
+    pub rank: u64,
+    pub id: String,
+    pub name: String,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub value: Decimal,
+    pub requests: i64,
+    pub tokens: i64,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub cost: Decimal,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+pub struct DashboardUserUsageStatsResponse {
+    pub total_requests: i64,
+    pub total_tokens: i64,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_cost: Decimal,
+    pub error_rate: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct DashboardUserStatsTimeSeriesPoint {
+    pub date: String,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub total_cost: Decimal,
+    pub total_requests: i64,
+    pub total_tokens: i64,
+}
+
 const fn default_daily_page() -> u64 {
     DEFAULT_DAILY_PAGE
 }
 
 const fn default_daily_page_size() -> u64 {
     DEFAULT_DAILY_PAGE_SIZE
+}
+
+const fn default_user_stats_limit() -> u64 {
+    10
 }

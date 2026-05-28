@@ -6,7 +6,8 @@ use rbac::api::CurrentUser;
 use types::{
     dashboard::{
         DashboardActivityRequest, DashboardActivityResponse, DashboardFilterOptionsRequest, DashboardFilterOptionsResponse, DashboardOverviewRequest,
-        DashboardOverviewResponse,
+        DashboardOverviewResponse, DashboardUserStatsLeaderboardRequest, DashboardUserStatsLeaderboardResponse, DashboardUserStatsTimeSeriesPoint,
+        DashboardUserStatsTimeSeriesRequest, DashboardUserUsageStatsRequest, DashboardUserUsageStatsResponse,
     },
     response::ApiResponse,
 };
@@ -41,6 +42,30 @@ pub async fn filter_options(
     Query(query): Query<DashboardFilterOptionsRequest>,
 ) -> ApiResult<ApiJson<DashboardFilterOptionsResponse>> {
     Ok(ok(state.dashboard.filter_options(actor(current_user), query).await?))
+}
+
+pub async fn user_stats_leaderboard(
+    State(state): State<DashboardApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<DashboardUserStatsLeaderboardRequest>,
+) -> ApiResult<ApiJson<DashboardUserStatsLeaderboardResponse>> {
+    Ok(ok(state.dashboard.user_stats_leaderboard(actor(current_user), query).await?))
+}
+
+pub async fn user_usage_stats(
+    State(state): State<DashboardApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<DashboardUserUsageStatsRequest>,
+) -> ApiResult<ApiJson<DashboardUserUsageStatsResponse>> {
+    Ok(ok(state.dashboard.user_usage_stats(actor(current_user), query).await?))
+}
+
+pub async fn user_stats_time_series(
+    State(state): State<DashboardApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<DashboardUserStatsTimeSeriesRequest>,
+) -> ApiResult<ApiJson<Vec<DashboardUserStatsTimeSeriesPoint>>> {
+    Ok(ok(state.dashboard.user_stats_time_series(actor(current_user), query).await?))
 }
 
 fn ok<T>(data: T) -> ApiJson<T> {

@@ -4,6 +4,7 @@
     "operations": "运营管理",
     "system_management": "系统管理",
     "dashboard_home": "仪表盘",
+    "admin_user_stats": "用户统计",
     "admin_performance_monitoring": "性能监控",
     "dashboard_models": "模型目录",
     "dashboard_groups": "价格分组",
@@ -511,7 +512,33 @@
         "upstreamCost": "上游成本",
         "profitRate": "收益率"
       },
-      "empty": "暂无统计数据"
+      "empty": "暂无统计数据",
+      "userStats": {
+        "title": "用户统计",
+        "subtitle": "按用户聚合请求、Token、费用与错误率",
+        "user": "用户",
+        "compareUser": "对比用户",
+        "granularity": "粒度",
+        "day": "日",
+        "hour": "小时",
+        "leaderboard": "用户排行榜",
+        "trend": "用户使用趋势",
+        "compareTrend": "用户对比趋势",
+        "totalCost": "总费用",
+        "metrics": {
+          "requests": "请求",
+          "tokens": "Tokens",
+          "cost": "费用"
+        },
+        "summary": {
+          "totalRequests": "总请求",
+          "totalTokens": "总 Tokens",
+          "totalCost": "总费用",
+          "errorRate": "错误率",
+          "title": "用户摘要"
+        },
+        "interval": "日期范围"
+      }
     },
     "weeklySales": "本周销售额",
     "newUsers": "新增用户",

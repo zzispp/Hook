@@ -1,13 +1,17 @@
 use async_trait::async_trait;
 use constants::pagination::{MAX_PAGE_SIZE, MIN_PAGE_NUMBER, MIN_PAGE_SIZE};
 use types::{
-    dashboard::{DashboardActivityRequest, DashboardFilterOptionsRequest, DashboardOverviewRequest, DashboardPreset, DashboardScopeParam},
+    dashboard::{
+        DashboardActivityRequest, DashboardFilterOptionsRequest, DashboardOverviewRequest, DashboardPreset, DashboardScopeParam,
+        DashboardUserStatsGranularity, DashboardUserStatsLeaderboardRequest, DashboardUserStatsTimeSeriesRequest, DashboardUserUsageStatsRequest,
+    },
     pagination::PageRequest,
 };
 
 use crate::application::{
     DashboardActivityQuery, DashboardActor, DashboardBucket, DashboardError, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardRepository,
-    DashboardResult, DashboardScope, DashboardUseCase, DashboardWindowBounds,
+    DashboardResult, DashboardScope, DashboardUseCase, DashboardUserStatsBucket, DashboardUserStatsLeaderboardQuery, DashboardUserStatsTimeSeriesQuery,
+    DashboardUserStatsWindow, DashboardUserUsageStatsQuery, DashboardWindowBounds,
 };
 
 #[cfg(test)]
@@ -17,6 +21,7 @@ mod service_tests;
 const ADMIN_ROLE: &str = "admin";
 const ACTIVITY_DAYS: i64 = 365;
 const ONE_DAY: i64 = 1;
+const DEFAULT_USER_STATS_PRESET: DashboardPreset = DashboardPreset::SevenDays;
 
 pub struct DashboardService<R> {
     repository: R,
@@ -85,6 +90,54 @@ where
         };
         self.repository.filter_options(DashboardFilterOptionsQuery { scope }).await
     }
+
+    async fn user_stats_leaderboard(
+        &self,
+        actor: DashboardActor,
+        request: DashboardUserStatsLeaderboardRequest,
+    ) -> DashboardResult<types::dashboard::DashboardUserStatsLeaderboardResponse> {
+        ensure_admin(&actor)?;
+        let window = user_stats_window(request.start_date.as_deref(), request.end_date.as_deref(), request.preset, request.tz_offset_minutes)?;
+        self.repository
+            .user_stats_leaderboard(DashboardUserStatsLeaderboardQuery {
+                window,
+                metric: request.metric,
+                limit: validated_limit(request.limit)?,
+                offset: request.offset,
+            })
+            .await
+    }
+
+    async fn user_usage_stats(
+        &self,
+        actor: DashboardActor,
+        request: DashboardUserUsageStatsRequest,
+    ) -> DashboardResult<types::dashboard::DashboardUserUsageStatsResponse> {
+        ensure_admin(&actor)?;
+        let window = user_stats_window(request.start_date.as_deref(), request.end_date.as_deref(), request.preset, request.tz_offset_minutes)?;
+        self.repository
+            .user_usage_stats(DashboardUserUsageStatsQuery {
+                window,
+                user_id: clean_optional(request.user_id),
+            })
+            .await
+    }
+
+    async fn user_stats_time_series(
+        &self,
+        actor: DashboardActor,
+        request: DashboardUserStatsTimeSeriesRequest,
+    ) -> DashboardResult<Vec<types::dashboard::DashboardUserStatsTimeSeriesPoint>> {
+        ensure_admin(&actor)?;
+        let window = user_stats_window(request.start_date.as_deref(), request.end_date.as_deref(), request.preset, request.tz_offset_minutes)?;
+        self.repository
+            .user_stats_time_series(DashboardUserStatsTimeSeriesQuery {
+                window,
+                bucket: user_stats_bucket(request.granularity),
+                user_id: clean_optional(request.user_id),
+            })
+            .await
+    }
 }
 
 fn default_scope(actor: &DashboardActor) -> DashboardScope {
@@ -150,6 +203,45 @@ fn overview_windows(preset: DashboardPreset, offset_minutes: i32) -> DashboardRe
     })
 }
 
+fn user_stats_window(
+    start_date: Option<&str>,
+    end_date: Option<&str>,
+    preset: Option<DashboardPreset>,
+    offset_minutes: i32,
+) -> DashboardResult<DashboardUserStatsWindow> {
+    match (start_date, end_date) {
+        (Some(start), Some(end)) => explicit_user_stats_window(start, end, offset_minutes),
+        (None, None) => preset_user_stats_window(preset.unwrap_or(DEFAULT_USER_STATS_PRESET), offset_minutes),
+        _ => Err(DashboardError::InvalidInput("start_date and end_date must be provided together".into())),
+    }
+}
+
+fn explicit_user_stats_window(start_date: &str, end_date: &str, offset_minutes: i32) -> DashboardResult<DashboardUserStatsWindow> {
+    let start_date = parse_date(start_date, "start_date")?;
+    let end_date = parse_date(end_date, "end_date")?;
+    if start_date > end_date {
+        return Err(DashboardError::InvalidInput("start_date must be before or equal to end_date".into()));
+    }
+    let started_at = local_date_start_utc(start_date, offset_minutes)?;
+    let ended_at = local_date_start_utc(end_date.next_day().ok_or_else(|| DashboardError::InvalidInput("end_date is out of range".into()))?, offset_minutes)?;
+    Ok(DashboardUserStatsWindow {
+        start_date,
+        end_date,
+        started_at,
+        ended_at,
+    })
+}
+
+fn preset_user_stats_window(preset: DashboardPreset, offset_minutes: i32) -> DashboardResult<DashboardUserStatsWindow> {
+    let overview = overview_windows(preset, offset_minutes)?;
+    Ok(DashboardUserStatsWindow {
+        start_date: local_date(overview.selected.started_at, offset_minutes)?,
+        end_date: local_date(overview.selected.ended_at - time::Duration::days(ONE_DAY), offset_minutes)?,
+        started_at: overview.selected.started_at,
+        ended_at: overview.selected.ended_at,
+    })
+}
+
 fn local_month_start_utc(now_utc: time::OffsetDateTime, offset_minutes: i32) -> DashboardResult<time::OffsetDateTime> {
     let offset = utc_offset(offset_minutes)?;
     let local = now_utc.to_offset(offset);
@@ -183,6 +275,13 @@ fn local_day_start_utc(now_utc: time::OffsetDateTime, offset_minutes: i32) -> Da
         .with_hms(0, 0, 0)
         .map(|value| value.assume_offset(offset).to_offset(time::UtcOffset::UTC))
         .map_err(|error| DashboardError::InvalidInput(format!("invalid local day boundary: {error}")))
+}
+
+fn local_date_start_utc(date: time::Date, offset_minutes: i32) -> DashboardResult<time::OffsetDateTime> {
+    let offset = utc_offset(offset_minutes)?;
+    date.with_hms(0, 0, 0)
+        .map(|value| value.assume_offset(offset).to_offset(time::UtcOffset::UTC))
+        .map_err(|error| DashboardError::InvalidInput(format!("invalid local date boundary: {error}")))
 }
 
 fn local_date(value: time::OffsetDateTime, offset_minutes: i32) -> DashboardResult<time::Date> {
@@ -224,6 +323,13 @@ fn validated_page(page: u64, page_size: u64) -> DashboardResult<PageRequest> {
     Ok(PageRequest { page, page_size })
 }
 
+fn validated_limit(limit: u64) -> DashboardResult<u64> {
+    if limit < MIN_PAGE_SIZE || limit > MAX_PAGE_SIZE {
+        return Err(DashboardError::InvalidInput(format!("limit must be between {MIN_PAGE_SIZE} and {MAX_PAGE_SIZE}")));
+    }
+    Ok(limit)
+}
+
 fn clean_required(value: Option<&str>, field: &str) -> DashboardResult<String> {
     value
         .map(str::trim)
@@ -232,8 +338,31 @@ fn clean_required(value: Option<&str>, field: &str) -> DashboardResult<String> {
         .ok_or_else(|| DashboardError::InvalidInput(format!("{field} is required")))
 }
 
+fn clean_optional(value: Option<String>) -> Option<String> {
+    value.map(|value| value.trim().to_owned()).filter(|value| !value.is_empty())
+}
+
+fn parse_date(value: &str, field: &str) -> DashboardResult<time::Date> {
+    time::Date::parse(value, &time::format_description::well_known::Iso8601::DEFAULT)
+        .map_err(|error| DashboardError::InvalidInput(format!("{field} must use YYYY-MM-DD: {error}")))
+}
+
 fn is_admin(actor: &DashboardActor) -> bool {
     actor.role == ADMIN_ROLE
+}
+
+fn ensure_admin(actor: &DashboardActor) -> DashboardResult<()> {
+    if !is_admin(actor) {
+        return Err(DashboardError::Forbidden("only administrators can request user statistics".into()));
+    }
+    Ok(())
+}
+
+fn user_stats_bucket(granularity: DashboardUserStatsGranularity) -> DashboardUserStatsBucket {
+    match granularity {
+        DashboardUserStatsGranularity::Hour => DashboardUserStatsBucket::Hour,
+        DashboardUserStatsGranularity::Day => DashboardUserStatsBucket::Day,
+    }
 }
 
 struct ActivityWindow {
