@@ -9,13 +9,21 @@ pub(super) fn summary_sql() -> &'static str {
         COUNT(*) FILTER (WHERE r.status IN ('failed', 'cancelled'))::bigint AS failed_count, \
         COUNT(*) FILTER (WHERE r.status IN ('pending', 'streaming'))::bigint AS active_count, \
         COALESCE(SUM(COALESCE(r.prompt_tokens, 0)), 0)::bigint AS prompt_tokens, \
+        COALESCE(SUM(COALESCE(r.completion_tokens, 0)), 0)::bigint AS completion_tokens, \
+        COALESCE(SUM(COALESCE(r.cache_creation_input_tokens, 0)), 0)::bigint AS cache_creation_input_tokens, \
         COALESCE(SUM(COALESCE(r.cache_read_input_tokens, 0)), 0)::bigint AS cache_read_input_tokens, \
         COALESCE(SUM(COALESCE(r.total_tokens, COALESCE(r.prompt_tokens, 0) + COALESCE(r.completion_tokens, 0), 0)), 0)::bigint AS total_tokens, \
+        COALESCE(SUM(COALESCE(r.cache_creation_cost, 0)), 0) AS cache_creation_cost, \
+        COALESCE(SUM(COALESCE(r.cache_read_cost, 0)), 0) AS cache_read_cost, \
         COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
         COALESCE(SUM(COALESCE(r.upstream_total_cost, 0)), 0) AS upstream_total_cost, \
         AVG(r.total_latency_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL) AS avg_latency_ms, \
         AVG(r.first_byte_time_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.first_byte_time_ms IS NOT NULL) AS avg_ttfb_ms, \
-        COUNT(DISTINCT r.global_model_id) FILTER (WHERE r.global_model_id IS NOT NULL)::bigint AS model_count \
+        COUNT(DISTINCT r.global_model_id) FILTER (WHERE r.global_model_id IS NOT NULL)::bigint AS model_count, \
+        COUNT(DISTINCT r.provider_id) FILTER (WHERE r.provider_id IS NOT NULL)::bigint AS provider_count, \
+        COUNT(DISTINCT r.user_id_snapshot) FILTER (WHERE r.user_id_snapshot IS NOT NULL)::bigint AS user_count, \
+        COUNT(DISTINCT r.token_id) FILTER (WHERE r.token_id IS NOT NULL)::bigint AS token_count, \
+        COUNT(*) FILTER (WHERE r.has_failover)::bigint AS failover_count \
         FROM request_records r"
 }
 

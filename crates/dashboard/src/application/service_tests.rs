@@ -1,8 +1,11 @@
 use async_trait::async_trait;
 use constants::auth::DEFAULT_USER_ROLE;
-use types::dashboard::{
-    DashboardActivityRequest, DashboardActivityResponse, DashboardBreakdowns, DashboardFilterOptionsResponse, DashboardOverviewRequest,
-    DashboardOverviewResponse, DashboardPreset, DashboardScopeParam, DashboardScopeResponse, DashboardSummary, DashboardWindow,
+use types::{
+    dashboard::{
+        DashboardActivityRequest, DashboardActivityResponse, DashboardBreakdowns, DashboardDailyStats, DashboardFilterOptionsResponse,
+        DashboardOverviewRequest, DashboardOverviewResponse, DashboardPreset, DashboardScopeParam, DashboardScopeResponse, DashboardSummary, DashboardWindow,
+    },
+    pagination::{Page, PageRequest},
 };
 
 use super::*;
@@ -57,6 +60,8 @@ async fn user_overview_uses_me_scope() {
                 user_id: None,
                 token_id: None,
                 tz_offset_minutes: 480,
+                page: 1,
+                page_size: 10,
             },
         )
         .await
@@ -78,6 +83,8 @@ async fn admin_overview_accepts_user_filter() {
                 user_id: Some("target-user".into()),
                 token_id: None,
                 tz_offset_minutes: 480,
+                page: 2,
+                page_size: 10,
             },
         )
         .await
@@ -85,6 +92,28 @@ async fn admin_overview_accepts_user_filter() {
 
     assert_eq!(response.scope.scope, "user");
     assert_eq!(response.scope.user_id.as_deref(), Some("target-user"));
+    assert_eq!(response.daily.day_page.page, 2);
+}
+
+#[tokio::test]
+async fn overview_rejects_invalid_page_size() {
+    let service = DashboardService::new(RecordingRepository);
+    let result = service
+        .overview(
+            admin_actor(),
+            DashboardOverviewRequest {
+                preset: DashboardPreset::Today,
+                scope: Some(DashboardScopeParam::Global),
+                user_id: None,
+                token_id: None,
+                tz_offset_minutes: 480,
+                page: 1,
+                page_size: 0,
+            },
+        )
+        .await;
+
+    assert!(matches!(result, Err(DashboardError::InvalidInput(_))));
 }
 
 #[test]
@@ -107,7 +136,10 @@ impl DashboardRepository for RecordingRepository {
             preset: query.preset,
             window: test_window(),
             summary: empty_summary(),
+            today: empty_summary(),
+            monthly: empty_summary(),
             timeseries: Vec::new(),
+            daily: daily_stats(query.daily_page),
             breakdowns: DashboardBreakdowns::default(),
         })
     }
@@ -132,6 +164,18 @@ impl DashboardRepository for RecordingRepository {
     }
 }
 
+fn daily_stats(page: PageRequest) -> DashboardDailyStats {
+    DashboardDailyStats {
+        day_page: Page {
+            items: Vec::new(),
+            total: 0,
+            page: page.page,
+            page_size: page.page_size,
+        },
+        ..DashboardDailyStats::default()
+    }
+}
+
 fn user_actor() -> DashboardActor {
     DashboardActor {
         user_id: "user-1".into(),
@@ -153,8 +197,15 @@ fn empty_summary() -> DashboardSummary {
         failed_count: 0,
         active_count: 0,
         success_rate: 0.0,
+        error_rate: 0.0,
         cache_hit_rate: 0.0,
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        cache_creation_input_tokens: 0,
+        cache_read_input_tokens: 0,
         total_tokens: 0,
+        cache_creation_cost: rust_decimal::Decimal::ZERO,
+        cache_read_cost: rust_decimal::Decimal::ZERO,
         total_cost: rust_decimal::Decimal::ZERO,
         upstream_total_cost: rust_decimal::Decimal::ZERO,
         profit: rust_decimal::Decimal::ZERO,
@@ -162,6 +213,10 @@ fn empty_summary() -> DashboardSummary {
         avg_latency_ms: None,
         avg_ttfb_ms: None,
         model_count: 0,
+        provider_count: 0,
+        user_count: 0,
+        token_count: 0,
+        failover_count: 0,
     }
 }
 

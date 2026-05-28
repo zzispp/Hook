@@ -6,28 +6,40 @@ use crate::{StorageError, StorageResult, database::Database};
 
 use super::{
     DashboardBucketFilter, DashboardStore, DashboardStoreOverviewQuery,
+    daily::daily_stats,
     money::admin_cost_metrics,
     overview_sql::{BREAKDOWN_LIMIT, breakdown_sql, summary_sql, timeseries_group, timeseries_select},
     scope::{SqlParams, scope_response, scoped_time_where},
 };
 
 pub(super) async fn overview(store: &DashboardStore, query: DashboardStoreOverviewQuery) -> StorageResult<DashboardOverviewResponse> {
-    let summary = summary(store, &query).await?;
+    let summary = load_summary(store, &query, query.started_at, query.ended_at).await?;
+    let today = load_summary(store, &query, query.today_started_at, query.today_ended_at).await?;
+    let monthly = load_summary(store, &query, query.monthly_started_at, query.monthly_ended_at).await?;
     let timeseries = timeseries(store, &query).await?;
+    let daily = daily_stats(store, &query).await?;
     let breakdowns = breakdowns(store, &query).await?;
     Ok(DashboardOverviewResponse {
         scope: scope_response(&query.scope),
         preset: query.preset,
         window: window_response(&query),
         summary,
+        today,
+        monthly,
         timeseries,
+        daily,
         breakdowns,
     })
 }
 
-async fn summary(store: &DashboardStore, query: &DashboardStoreOverviewQuery) -> StorageResult<DashboardSummary> {
+async fn load_summary(
+    store: &DashboardStore,
+    query: &DashboardStoreOverviewQuery,
+    started_at: time::OffsetDateTime,
+    ended_at: time::OffsetDateTime,
+) -> StorageResult<DashboardSummary> {
     let mut params = SqlParams::new();
-    let where_sql = scoped_time_where(&query.scope, query.started_at, query.ended_at, &mut params);
+    let where_sql = scoped_time_where(&query.scope, started_at, ended_at, &mut params);
     let sql = format!("{} {}", summary_sql(), where_sql);
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values);
     let row = database(store)
@@ -115,6 +127,8 @@ async fn breakdown_rows(
 pub(super) fn summary_response(row: SummaryRow, include_admin_costs: bool) -> DashboardSummary {
     let success_count = row.success_count.unwrap_or_default();
     let failed_count = row.failed_count.unwrap_or_default();
+    let prompt_tokens = row.prompt_tokens.unwrap_or_default();
+    let cache_read_tokens = row.cache_read_input_tokens.unwrap_or_default();
     let total_cost = row.total_cost.unwrap_or(Decimal::ZERO);
     let metrics = admin_cost_metrics(total_cost, row.upstream_total_cost.unwrap_or(Decimal::ZERO), include_admin_costs);
     DashboardSummary {
@@ -123,8 +137,15 @@ pub(super) fn summary_response(row: SummaryRow, include_admin_costs: bool) -> Da
         failed_count,
         active_count: row.active_count.unwrap_or_default(),
         success_rate: success_rate(success_count, failed_count),
-        cache_hit_rate: cache_hit_rate(row.cache_read_input_tokens.unwrap_or_default(), row.prompt_tokens.unwrap_or_default()),
+        error_rate: error_rate(success_count, failed_count),
+        cache_hit_rate: cache_hit_rate(cache_read_tokens, prompt_tokens),
+        prompt_tokens,
+        completion_tokens: row.completion_tokens.unwrap_or_default(),
+        cache_creation_input_tokens: row.cache_creation_input_tokens.unwrap_or_default(),
+        cache_read_input_tokens: cache_read_tokens,
         total_tokens: row.total_tokens.unwrap_or_default(),
+        cache_creation_cost: row.cache_creation_cost.unwrap_or(Decimal::ZERO),
+        cache_read_cost: row.cache_read_cost.unwrap_or(Decimal::ZERO),
         total_cost,
         upstream_total_cost: metrics.upstream_total_cost,
         profit: metrics.profit,
@@ -132,6 +153,10 @@ pub(super) fn summary_response(row: SummaryRow, include_admin_costs: bool) -> Da
         avg_latency_ms: row.avg_latency_ms,
         avg_ttfb_ms: row.avg_ttfb_ms,
         model_count: row.model_count.unwrap_or_default(),
+        provider_count: row.provider_count.unwrap_or_default(),
+        user_count: row.user_count.unwrap_or_default(),
+        token_count: row.token_count.unwrap_or_default(),
+        failover_count: row.failover_count.unwrap_or_default(),
     }
 }
 
@@ -178,6 +203,14 @@ fn success_rate(success_count: i64, failed_count: i64) -> f64 {
     success_count as f64 / denominator as f64
 }
 
+fn error_rate(success_count: i64, failed_count: i64) -> f64 {
+    let denominator = success_count + failed_count;
+    if denominator <= 0 {
+        return 0.0;
+    }
+    failed_count as f64 / denominator as f64
+}
+
 fn cache_hit_rate(cache_read_tokens: i64, prompt_tokens: i64) -> f64 {
     let denominator = prompt_tokens + cache_read_tokens;
     if denominator <= 0 {
@@ -218,13 +251,21 @@ pub(super) struct SummaryRow {
     pub(super) failed_count: Option<i64>,
     pub(super) active_count: Option<i64>,
     pub(super) prompt_tokens: Option<i64>,
+    pub(super) completion_tokens: Option<i64>,
+    pub(super) cache_creation_input_tokens: Option<i64>,
     pub(super) cache_read_input_tokens: Option<i64>,
     pub(super) total_tokens: Option<i64>,
+    pub(super) cache_creation_cost: Option<Decimal>,
+    pub(super) cache_read_cost: Option<Decimal>,
     pub(super) total_cost: Option<Decimal>,
     pub(super) upstream_total_cost: Option<Decimal>,
     pub(super) avg_latency_ms: Option<f64>,
     pub(super) avg_ttfb_ms: Option<f64>,
     pub(super) model_count: Option<i64>,
+    pub(super) provider_count: Option<i64>,
+    pub(super) user_count: Option<i64>,
+    pub(super) token_count: Option<i64>,
+    pub(super) failover_count: Option<i64>,
 }
 
 #[derive(Debug, FromQueryResult)]

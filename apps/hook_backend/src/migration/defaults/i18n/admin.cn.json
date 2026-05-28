@@ -435,6 +435,41 @@
         "ttfb": "TTFB",
         "models": "使用模型"
       },
+      "today": {
+        "requests": "今日请求",
+        "tokens": "今日 Tokens",
+        "activeUsers": "活跃用户",
+        "apiKeys": "API Keys",
+        "cost": "今日费用"
+      },
+      "period": {
+        "labels": {
+          "today": "今日",
+          "sevenDays": "7 天",
+          "thirtyDays": "30 天",
+          "ninetyDays": "90 天"
+        },
+        "avgResponse": "{{period}}平均响应",
+        "errorRate": "{{period}}错误率",
+        "failovers": "{{period}}转移次数",
+        "cost": "{{period}}费用",
+        "upstreamCost": "上游 {{value}}",
+        "cacheHitRate": "{{period}}缓存命中率",
+        "cacheRead": "{{period}}缓存读取",
+        "cacheCreate": "{{period}}缓存创建",
+        "requests": "{{period}}请求",
+        "tokens": "{{period}} Tokens",
+        "modelCost": "{{period}}模型成本"
+      },
+      "daily": {
+        "usageTrend": "每日使用趋势",
+        "providerCost": "Provider 成本分布",
+        "tableTitle": "每日统计",
+        "date": "日期",
+        "models": "使用模型",
+        "providers": "Providers",
+        "modelCount": "{{first}} 等 {{count}} 个模型"
+      },
       "trend": {
         "title": "请求趋势",
         "requests": "请求",

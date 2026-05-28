@@ -14,17 +14,23 @@ import { useMemo } from 'react';
 
 import { fetcher, endpoints } from 'src/lib/axios';
 
-import { requireApiData } from './rbac';
+import { pageQuery, requireApiData } from './rbac';
 
 const swrOptions = {
   keepPreviousData: true,
   revalidateOnFocus: false,
 };
 
-export function useDashboardOverview(preset: DashboardPreset, filters: DashboardScopeFilters) {
+export function useDashboardOverview(
+  preset: DashboardPreset,
+  filters: DashboardScopeFilters,
+  page: number,
+  pageSize: number
+) {
   const url = dashboardRequestReady(filters)
     ? dashboardUrl(endpoints.dashboard.overview, {
         ...compactParams(filters),
+        ...pageQuery(page, pageSize),
         preset,
         tz_offset_minutes: timezoneOffsetMinutes(),
       })

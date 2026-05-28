@@ -3,6 +3,47 @@ use rust_decimal::Decimal;
 use super::overview::{BreakdownRow, SummaryRow, TimeseriesRow, breakdown_response, summary_response, timeseries_response};
 
 #[test]
+fn summary_response_exposes_aether_dashboard_metrics() {
+    let response = summary_response(
+        SummaryRow {
+            request_count: Some(10),
+            success_count: Some(7),
+            failed_count: Some(2),
+            active_count: Some(1),
+            prompt_tokens: Some(100),
+            completion_tokens: Some(50),
+            cache_creation_input_tokens: Some(30),
+            cache_read_input_tokens: Some(20),
+            total_tokens: Some(200),
+            cache_creation_cost: Some(Decimal::new(3, 2)),
+            cache_read_cost: Some(Decimal::new(1, 2)),
+            total_cost: Some(Decimal::new(80, 2)),
+            upstream_total_cost: Some(Decimal::new(30, 2)),
+            avg_latency_ms: Some(200.0),
+            avg_ttfb_ms: Some(75.0),
+            model_count: Some(4),
+            provider_count: Some(3),
+            user_count: Some(6),
+            token_count: Some(5),
+            failover_count: Some(2),
+        },
+        true,
+    );
+
+    assert_eq!(response.prompt_tokens, 100);
+    assert_eq!(response.completion_tokens, 50);
+    assert_eq!(response.cache_creation_input_tokens, 30);
+    assert_eq!(response.cache_read_input_tokens, 20);
+    assert_eq!(response.cache_creation_cost, Decimal::new(3, 2));
+    assert_eq!(response.cache_read_cost, Decimal::new(1, 2));
+    assert_eq!(response.error_rate, 2.0 / 9.0);
+    assert_eq!(response.provider_count, 3);
+    assert_eq!(response.user_count, 6);
+    assert_eq!(response.token_count, 5);
+    assert_eq!(response.failover_count, 2);
+}
+
+#[test]
 fn summary_response_calculates_cache_hit_rate_and_profit() {
     let response = summary_response(
         SummaryRow {
@@ -11,13 +52,21 @@ fn summary_response_calculates_cache_hit_rate_and_profit() {
             failed_count: Some(1),
             active_count: Some(0),
             prompt_tokens: Some(75),
+            completion_tokens: Some(125),
+            cache_creation_input_tokens: Some(0),
             cache_read_input_tokens: Some(25),
             total_tokens: Some(300),
+            cache_creation_cost: Some(Decimal::ZERO),
+            cache_read_cost: Some(Decimal::ZERO),
             total_cost: Some(Decimal::new(12, 2)),
             upstream_total_cost: Some(Decimal::new(3, 2)),
             avg_latency_ms: Some(120.0),
             avg_ttfb_ms: Some(45.0),
             model_count: Some(2),
+            provider_count: Some(1),
+            user_count: Some(1),
+            token_count: Some(1),
+            failover_count: Some(0),
         },
         true,
     );
@@ -81,13 +130,21 @@ fn summary_response_hides_admin_costs_when_requested() {
             failed_count: Some(0),
             active_count: Some(0),
             prompt_tokens: Some(10),
+            completion_tokens: Some(10),
+            cache_creation_input_tokens: Some(0),
             cache_read_input_tokens: Some(0),
             total_tokens: Some(20),
+            cache_creation_cost: Some(Decimal::ZERO),
+            cache_read_cost: Some(Decimal::ZERO),
             total_cost: Some(Decimal::new(12, 2)),
             upstream_total_cost: Some(Decimal::new(3, 2)),
             avg_latency_ms: None,
             avg_ttfb_ms: None,
             model_count: Some(1),
+            provider_count: Some(1),
+            user_count: Some(1),
+            token_count: Some(1),
+            failover_count: Some(0),
         },
         false,
     );

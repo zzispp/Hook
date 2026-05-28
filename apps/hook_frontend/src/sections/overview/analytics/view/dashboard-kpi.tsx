@@ -38,7 +38,6 @@ const KPI_SHAPE_OPACITY = 0.24;
 const KPI_SKELETON_VALUE_HEIGHT = 40;
 const SPARKLINE_PADDING = 6;
 const SPARKLINE_STROKE_WIDTH = 0;
-const DEFAULT_SPARKLINE_SERIES = [0, 0, 0, 0, 0, 0, 0];
 const KPI_GRID_SX = {
   mb: KPI_GRID_SPACING,
   gap: KPI_GRID_SPACING,
@@ -46,7 +45,7 @@ const KPI_GRID_SX = {
   gridTemplateColumns: {
     xs: '1fr',
     sm: 'repeat(2, minmax(0, 1fr))',
-    lg: 'repeat(5, minmax(0, 1fr))',
+    lg: 'repeat(4, minmax(0, 1fr))',
   },
 } as const;
 
@@ -146,12 +145,14 @@ function KpiContent({ item, chartOptions }: { item: KpiCardData; chartOptions: C
         <Box sx={{ mb: 1, typography: 'subtitle2' }}>{item.label}</Box>
         <Box sx={{ typography: 'h4' }}>{item.value}</Box>
       </Box>
-      <Chart
-        type="line"
-        series={[{ data: item.series }]}
-        options={chartOptions}
-        sx={{ width: KPI_CHART_WIDTH, height: KPI_CHART_HEIGHT }}
-      />
+      {item.series.length ? (
+        <Chart
+          type="line"
+          series={[{ data: item.series }]}
+          options={chartOptions}
+          sx={{ width: KPI_CHART_WIDTH, height: KPI_CHART_HEIGHT }}
+        />
+      ) : null}
     </Box>
   );
 }
@@ -196,10 +197,17 @@ function kpiCards(
   data?: DashboardOverviewResponse
 ): KpiCardData[] {
   const summary = data?.summary;
-  const points = data?.timeseries ?? [];
+  const today = data?.today ?? summary;
+  const points: DashboardOverviewResponse['timeseries'] = [];
   return KPI_CARD_CONFIGS
-    .filter((config) => isAdmin || !config.adminOnly)
-    .map((config) => cardFromConfig({ t, locale, summary, points, config }));
+    .filter((config) => kpiVisible(config, isAdmin))
+    .map((config) => cardFromConfig({ t, locale, summary: today, points, config }));
+}
+
+function kpiVisible(config: KpiCardConfig, isAdmin: boolean) {
+  if (config.adminOnly) return isAdmin;
+  if (config.userOnly) return !isAdmin;
+  return true;
 }
 
 function kpiCard({ label, value, color, icon, series }: KpiCardInput): KpiCardData {
@@ -208,7 +216,7 @@ function kpiCard({ label, value, color, icon, series }: KpiCardInput): KpiCardDa
     value,
     color,
     icon,
-    series: series.length ? series : DEFAULT_SPARKLINE_SERIES,
+    series,
   };
 }
 

@@ -43,10 +43,15 @@ fn store_overview_query(query: DashboardOverviewQuery) -> DashboardStoreOverview
         scope: store_scope(query.scope),
         started_at: query.window.started_at,
         ended_at: query.window.ended_at,
+        today_started_at: query.today_window.started_at,
+        today_ended_at: query.today_window.ended_at,
+        monthly_started_at: query.monthly_window.started_at,
+        monthly_ended_at: query.monthly_window.ended_at,
         bucket: store_bucket(query.bucket),
         include_admin_breakdowns: query.admin,
         include_admin_costs: query.admin,
         tz_offset_minutes: query.tz_offset_minutes,
+        daily_page: query.daily_page,
     }
 }
 

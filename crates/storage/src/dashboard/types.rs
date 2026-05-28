@@ -1,4 +1,4 @@
-use types::dashboard::DashboardPreset;
+use types::{dashboard::DashboardPreset, pagination::PageRequest};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DashboardScopeFilter {
@@ -20,10 +20,15 @@ pub struct DashboardStoreOverviewQuery {
     pub scope: DashboardScopeFilter,
     pub started_at: time::OffsetDateTime,
     pub ended_at: time::OffsetDateTime,
+    pub today_started_at: time::OffsetDateTime,
+    pub today_ended_at: time::OffsetDateTime,
+    pub monthly_started_at: time::OffsetDateTime,
+    pub monthly_ended_at: time::OffsetDateTime,
     pub bucket: DashboardBucketFilter,
     pub include_admin_breakdowns: bool,
     pub include_admin_costs: bool,
     pub tz_offset_minutes: i32,
+    pub daily_page: PageRequest,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

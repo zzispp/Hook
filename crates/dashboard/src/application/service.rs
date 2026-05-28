@@ -1,5 +1,9 @@
 use async_trait::async_trait;
-use types::dashboard::{DashboardActivityRequest, DashboardFilterOptionsRequest, DashboardOverviewRequest, DashboardPreset, DashboardScopeParam};
+use constants::pagination::{MAX_PAGE_SIZE, MIN_PAGE_NUMBER, MIN_PAGE_SIZE};
+use types::{
+    dashboard::{DashboardActivityRequest, DashboardFilterOptionsRequest, DashboardOverviewRequest, DashboardPreset, DashboardScopeParam},
+    pagination::PageRequest,
+};
 
 use crate::application::{
     DashboardActivityQuery, DashboardActor, DashboardBucket, DashboardError, DashboardFilterOptionsQuery, DashboardOverviewQuery, DashboardRepository,
@@ -34,15 +38,19 @@ where
 {
     async fn overview(&self, actor: DashboardActor, request: DashboardOverviewRequest) -> DashboardResult<types::dashboard::DashboardOverviewResponse> {
         let scope = request_scope(&actor, request.scope, request.user_id.as_deref(), request.token_id.as_deref())?;
-        let window = overview_window(request.preset, request.tz_offset_minutes)?;
+        let window = overview_windows(request.preset, request.tz_offset_minutes)?;
         let bucket = overview_bucket(request.preset);
+        let daily_page = validated_page(request.page, request.page_size)?;
         let query = DashboardOverviewQuery {
             preset: request.preset,
             scope,
-            window,
+            window: window.selected,
+            today_window: window.today,
+            monthly_window: window.monthly,
             bucket,
             admin: is_admin(&actor),
             tz_offset_minutes: request.tz_offset_minutes,
+            daily_page,
         };
         self.repository.overview(query).await
     }
@@ -122,14 +130,36 @@ fn required_token_scope(token_id: Option<&str>) -> DashboardResult<DashboardScop
     Ok(DashboardScope::Token { token_id })
 }
 
-fn overview_window(preset: DashboardPreset, offset_minutes: i32) -> DashboardResult<DashboardWindowBounds> {
+fn overview_windows(preset: DashboardPreset, offset_minutes: i32) -> DashboardResult<OverviewWindows> {
     let now = time::OffsetDateTime::now_utc();
     let today_start = local_day_start_utc(now, offset_minutes)?;
     let days = preset_days(preset);
-    Ok(DashboardWindowBounds {
-        started_at: today_start - time::Duration::days(days - ONE_DAY),
-        ended_at: today_start + time::Duration::days(ONE_DAY),
+    Ok(OverviewWindows {
+        selected: DashboardWindowBounds {
+            started_at: today_start - time::Duration::days(days - ONE_DAY),
+            ended_at: today_start + time::Duration::days(ONE_DAY),
+        },
+        today: DashboardWindowBounds {
+            started_at: today_start,
+            ended_at: today_start + time::Duration::days(ONE_DAY),
+        },
+        monthly: DashboardWindowBounds {
+            started_at: local_month_start_utc(now, offset_minutes)?,
+            ended_at: today_start + time::Duration::days(ONE_DAY),
+        },
     })
+}
+
+fn local_month_start_utc(now_utc: time::OffsetDateTime, offset_minutes: i32) -> DashboardResult<time::OffsetDateTime> {
+    let offset = utc_offset(offset_minutes)?;
+    let local = now_utc.to_offset(offset);
+    local
+        .date()
+        .replace_day(1)
+        .map_err(|error| DashboardError::InvalidInput(format!("invalid local month boundary: {error}")))?
+        .with_hms(0, 0, 0)
+        .map(|value| value.assume_offset(offset).to_offset(time::UtcOffset::UTC))
+        .map_err(|error| DashboardError::InvalidInput(format!("invalid local month boundary: {error}")))
 }
 
 fn activity_window(offset_minutes: i32) -> DashboardResult<ActivityWindow> {
@@ -182,6 +212,18 @@ fn overview_bucket(preset: DashboardPreset) -> DashboardBucket {
     }
 }
 
+fn validated_page(page: u64, page_size: u64) -> DashboardResult<PageRequest> {
+    if page < MIN_PAGE_NUMBER {
+        return Err(DashboardError::InvalidInput("page must be greater than 0".into()));
+    }
+    if page_size < MIN_PAGE_SIZE || page_size > MAX_PAGE_SIZE {
+        return Err(DashboardError::InvalidInput(format!(
+            "page_size must be between {MIN_PAGE_SIZE} and {MAX_PAGE_SIZE}"
+        )));
+    }
+    Ok(PageRequest { page, page_size })
+}
+
 fn clean_required(value: Option<&str>, field: &str) -> DashboardResult<String> {
     value
         .map(str::trim)
@@ -199,4 +241,10 @@ struct ActivityWindow {
     end_date: time::Date,
     started_at: time::OffsetDateTime,
     ended_at: time::OffsetDateTime,
+}
+
+struct OverviewWindows {
+    selected: DashboardWindowBounds,
+    today: DashboardWindowBounds,
+    monthly: DashboardWindowBounds,
 }

@@ -1,5 +1,8 @@
 use async_trait::async_trait;
-use types::dashboard::{DashboardActivityResponse, DashboardFilterOptionsResponse, DashboardOverviewResponse, DashboardPreset};
+use types::{
+    dashboard::{DashboardActivityResponse, DashboardFilterOptionsResponse, DashboardOverviewResponse, DashboardPreset},
+    pagination::PageRequest,
+};
 
 use super::DashboardResult;
 
@@ -28,9 +31,12 @@ pub struct DashboardOverviewQuery {
     pub preset: DashboardPreset,
     pub scope: DashboardScope,
     pub window: DashboardWindowBounds,
+    pub today_window: DashboardWindowBounds,
+    pub monthly_window: DashboardWindowBounds,
     pub bucket: DashboardBucket,
     pub admin: bool,
     pub tz_offset_minutes: i32,
+    pub daily_page: PageRequest,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

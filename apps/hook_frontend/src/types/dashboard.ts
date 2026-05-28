@@ -1,3 +1,5 @@
+import type { PageResponse } from './rbac';
+
 export type DashboardPreset = 'today' | '7d' | '30d' | '90d';
 
 export type DashboardScope = {
@@ -18,8 +20,15 @@ export type DashboardSummary = {
   failed_count: number;
   active_count: number;
   success_rate: number;
+  error_rate: number;
   cache_hit_rate: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  cache_creation_input_tokens: number;
+  cache_read_input_tokens: number;
   total_tokens: number;
+  cache_creation_cost: number;
+  cache_read_cost: number;
   total_cost: number;
   upstream_total_cost: number;
   profit: number;
@@ -27,6 +36,10 @@ export type DashboardSummary = {
   avg_latency_ms?: number | null;
   avg_ttfb_ms?: number | null;
   model_count: number;
+  provider_count: number;
+  user_count: number;
+  token_count: number;
+  failover_count: number;
 };
 
 export type DashboardTimeseriesPoint = {
@@ -64,12 +77,64 @@ export type DashboardBreakdowns = {
   users: DashboardBreakdownItem[];
 };
 
+export type DashboardDailyPeriod = {
+  start_date: string;
+  end_date: string;
+  days: number;
+};
+
+export type DashboardDailyBreakdownItem = {
+  name: string;
+  request_count: number;
+  total_tokens: number;
+  total_cost: number;
+};
+
+export type DashboardDailyStat = {
+  date: string;
+  request_count: number;
+  total_tokens: number;
+  total_cost: number;
+  avg_latency_ms?: number | null;
+  unique_models: number;
+  unique_providers: number;
+  model_breakdown: DashboardDailyBreakdownItem[];
+};
+
+export type DashboardDailyModelSummary = {
+  name: string;
+  request_count: number;
+  total_tokens: number;
+  total_cost: number;
+  avg_latency_ms?: number | null;
+  cost_per_request: number;
+  tokens_per_request: number;
+};
+
+export type DashboardDailyProviderSummary = {
+  name: string;
+  request_count: number;
+  total_tokens: number;
+  total_cost: number;
+};
+
+export type DashboardDailyStats = {
+  period: DashboardDailyPeriod;
+  days: DashboardDailyStat[];
+  day_page: PageResponse<DashboardDailyStat>;
+  model_summary: DashboardDailyModelSummary[];
+  provider_summary: DashboardDailyProviderSummary[];
+};
+
 export type DashboardOverviewResponse = {
   scope: DashboardScope;
   preset: DashboardPreset;
   window: DashboardWindow;
   summary: DashboardSummary;
+  today: DashboardSummary;
+  monthly: DashboardSummary;
   timeseries: DashboardTimeseriesPoint[];
+  daily: DashboardDailyStats;
   breakdowns: DashboardBreakdowns;
 };
 

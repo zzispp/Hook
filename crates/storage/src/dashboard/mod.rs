@@ -1,4 +1,5 @@
 mod activity;
+mod daily;
 mod filters;
 mod money;
 mod overview;

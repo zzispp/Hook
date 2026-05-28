@@ -6,13 +6,16 @@ use storage::{
     Database,
     dashboard::{DashboardBucketFilter, DashboardScopeFilter, DashboardStore, DashboardStoreOverviewQuery},
 };
-use types::dashboard::DashboardPreset;
+use types::{dashboard::DashboardPreset, pagination::PageRequest};
 
 #[tokio::test]
 async fn dashboard_overview_casts_latency_averages_to_double_precision() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary_row()]])
+        .append_query_results([[summary_row()]])
+        .append_query_results([[summary_row()]])
         .append_query_results([vec![timeseries_row()]])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
@@ -27,9 +30,11 @@ async fn dashboard_overview_casts_latency_averages_to_double_precision() {
     assert_eq!(response.summary.profit, Decimal::new(9, 2));
     assert_eq!(response.timeseries[0].avg_latency_ms, Some(130.0));
     assert_eq!(response.timeseries[0].upstream_total_cost, Decimal::new(3, 2));
+    assert_eq!(response.daily.day_page.total, 1);
+    assert_eq!(response.daily.day_page.items.len(), 1);
     let logs = connection.into_transaction_log();
     let summary_sql = &logs[0].statements()[0].sql;
-    let timeseries_sql = &logs[1].statements()[0].sql;
+    let timeseries_sql = &logs[3].statements()[0].sql;
     assert!(summary_sql.contains("AVG(r.total_latency_ms::double precision)"), "{summary_sql}");
     assert!(summary_sql.contains("AVG(r.first_byte_time_ms::double precision)"), "{summary_sql}");
     assert!(summary_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{summary_sql}");
@@ -43,10 +48,15 @@ fn overview_query() -> DashboardStoreOverviewQuery {
         scope: DashboardScopeFilter::Me { user_id: "user-1".into() },
         started_at: ts(0),
         ended_at: ts(3_600),
+        today_started_at: ts(0),
+        today_ended_at: ts(3_600),
+        monthly_started_at: ts(0),
+        monthly_ended_at: ts(3_600),
         bucket: DashboardBucketFilter::Hour,
         include_admin_breakdowns: false,
         include_admin_costs: true,
         tz_offset_minutes: 0,
+        daily_page: PageRequest { page: 1, page_size: 10 },
     }
 }
 
@@ -56,12 +66,22 @@ fn summary_row() -> BTreeMap<&'static str, Value> {
         ("success_count", Value::from(1_i64)),
         ("failed_count", Value::from(1_i64)),
         ("active_count", Value::from(0_i64)),
+        ("prompt_tokens", Value::from(12_i64)),
+        ("completion_tokens", Value::from(12_i64)),
+        ("cache_creation_input_tokens", Value::from(0_i64)),
+        ("cache_read_input_tokens", Value::from(0_i64)),
         ("total_tokens", Value::from(24_i64)),
+        ("cache_creation_cost", Value::from(Decimal::ZERO)),
+        ("cache_read_cost", Value::from(Decimal::ZERO)),
         ("total_cost", Value::from(Decimal::new(12, 2))),
         ("upstream_total_cost", Value::from(Decimal::new(3, 2))),
         ("avg_latency_ms", Value::from(125.5_f64)),
         ("avg_ttfb_ms", Value::from(42.25_f64)),
         ("model_count", Value::from(1_i64)),
+        ("provider_count", Value::from(1_i64)),
+        ("user_count", Value::from(1_i64)),
+        ("token_count", Value::from(1_i64)),
+        ("failover_count", Value::from(0_i64)),
     ])
 }
 
@@ -71,10 +91,13 @@ fn timeseries_row() -> BTreeMap<&'static str, Value> {
         ("request_count", Value::from(2_i64)),
         ("success_count", Value::from(1_i64)),
         ("failed_count", Value::from(1_i64)),
+        ("prompt_tokens", Value::from(12_i64)),
+        ("cache_read_input_tokens", Value::from(0_i64)),
         ("total_tokens", Value::from(24_i64)),
         ("total_cost", Value::from(Decimal::new(12, 2))),
         ("upstream_total_cost", Value::from(Decimal::new(3, 2))),
         ("avg_latency_ms", Value::from(130.0_f64)),
+        ("avg_ttfb_ms", Value::from(40.0_f64)),
     ])
 }
 
