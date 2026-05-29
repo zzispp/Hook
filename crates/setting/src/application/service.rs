@@ -69,7 +69,19 @@ where
             .as_deref()
             .map(|password| self.cipher.encrypt_secret(password))
             .transpose()?;
-        self.repository.update_system_settings(input, encrypted_smtp_password).await
+        let encrypted_github_secret = input
+            .auth_github_client_secret
+            .as_deref()
+            .map(|secret| self.cipher.encrypt_secret(secret))
+            .transpose()?;
+        let encrypted_google_secret = input
+            .auth_google_client_secret
+            .as_deref()
+            .map(|secret| self.cipher.encrypt_secret(secret))
+            .transpose()?;
+        self.repository
+            .update_system_settings(input, encrypted_smtp_password, encrypted_github_secret, encrypted_google_secret)
+            .await
     }
 
     async fn test_smtp_connection(&self, input: SystemSettingsSmtpTestRequest) -> SettingResult<SystemSettingsSmtpTestResponse> {

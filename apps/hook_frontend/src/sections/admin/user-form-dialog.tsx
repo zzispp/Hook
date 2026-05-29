@@ -8,16 +8,21 @@ import type { GlobalModelResponse } from 'src/types/model';
 import type { Role, SystemUser, UserQuotaMode } from 'src/types/rbac';
 
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
 import ListItemText from '@mui/material/ListItemText';
 
 import { useTranslate } from 'src/locales/use-locales';
 
+import { Label } from 'src/components/label';
+
 import { providerTypeLabel } from './provider-management-utils';
 import { SwitchRow, TextFieldRow, ManagementDialog } from './shared';
+import { providerColor, providerLabel } from '../profile/provider-utils';
 
 type UserDialogState = {
   open: boolean;
@@ -27,6 +32,8 @@ type UserDialogState = {
   submitting: boolean;
   close: VoidFunction;
   submit: VoidFunction;
+  unlinkIdentity: (identityId: string) => void;
+  unlinkingIdentityId: string | null;
   setForm: React.Dispatch<React.SetStateAction<UserForm>>;
 };
 
@@ -50,6 +57,7 @@ export function UserFormDialog({ dialog, roles, userGroups, models, providers }:
       onSubmit={dialog.submit}
     >
       <IdentityFields dialog={dialog} roles={roles} userGroups={userGroups} />
+      <IdentityProviderDetails dialog={dialog} />
       <AccessFields dialog={dialog} />
       <RestrictionFields dialog={dialog} models={models} providers={providers} />
       <SwitchRow
@@ -58,6 +66,55 @@ export function UserFormDialog({ dialog, roles, userGroups, models, providers }:
         onChange={(isActive) => dialog.setForm((form) => ({ ...form, is_active: isActive }))}
       />
     </ManagementDialog>
+  );
+}
+
+function IdentityProviderDetails({ dialog }: { dialog: UserDialogState }) {
+  const { t } = useTranslate('admin');
+  const identities = dialog.editing?.identities ?? [];
+
+  if (!dialog.editing) {
+    return null;
+  }
+
+  return (
+    <Stack spacing={1}>
+      <Typography variant="subtitle2">{t('users.providers')}</Typography>
+      {identities.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          {t('common.none')}
+        </Typography>
+      ) : (
+        identities.map((identity) => (
+          <Stack
+            key={identity.id}
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={1}
+            alignItems={{ sm: 'center' }}
+          >
+            <Label color={providerColor(identity.provider)} variant="soft">
+              {providerLabel(identity.provider)}
+            </Label>
+            <Stack sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="body2" noWrap>
+                {identity.display_name || identity.email || identity.provider_subject}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {identity.provider_subject}
+              </Typography>
+            </Stack>
+            <Button
+              color="error"
+              variant="text"
+              loading={dialog.unlinkingIdentityId === identity.id}
+              onClick={() => dialog.unlinkIdentity(identity.id)}
+            >
+              {t('users.unlinkProvider')}
+            </Button>
+          </Stack>
+        ))
+      )}
+    </Stack>
   );
 }
 

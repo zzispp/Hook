@@ -12,6 +12,24 @@ import { requireApiData } from './rbac';
 export type AuthConfig = {
   allow_registration: boolean;
   registration_email_verification_enabled: boolean;
+  providers: {
+    github: OAuthProviderPublicConfig;
+    google: OAuthProviderPublicConfig;
+    evm: WalletProviderPublicConfig;
+    solana: WalletProviderPublicConfig;
+  };
+};
+
+export type OAuthProviderPublicConfig = {
+  enabled: boolean;
+};
+
+export type WalletProviderPublicConfig = {
+  enabled: boolean;
+  domain: string;
+  statement: string;
+  evm_chain_ids: number[];
+  solana_network: string;
 };
 
 const swrOptions = {

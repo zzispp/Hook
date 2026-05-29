@@ -12,6 +12,31 @@
   "auth": {
     "logoutError": "退出登录失败"
   },
+  "profile": {
+    "title": "个人资料",
+    "menu": "个人资料",
+    "accountTitle": "账户信息",
+    "passwordTitle": "本地密码",
+    "providersTitle": "已绑定 Provider",
+    "username": "用户名",
+    "email": "邮箱",
+    "emailVerified": "邮箱已验证",
+    "emailUnverified": "邮箱未验证",
+    "passwordSet": "已设置本地密码",
+    "passwordNotSet": "未设置本地密码",
+    "sendCode": "发送邮箱验证码",
+    "emailCode": "邮箱验证码",
+    "newPassword": "新密码",
+    "changePassword": "修改密码",
+    "noProviders": "暂无已绑定 Provider",
+    "unlink": "解绑",
+    "messages": {
+      "codeSent": "验证码已发送，请检查邮箱。",
+      "passwordChanged": "密码已修改。",
+      "providerUnlinked": "Provider 已解绑。",
+      "saveFailed": "操作失败"
+    }
+  },
   "home": {
     "hero": {
       "headingSuffix": "Gateway",

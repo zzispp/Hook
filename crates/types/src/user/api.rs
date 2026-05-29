@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::pagination::{Page, PageRequest};
 
-use super::{Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserListFilters};
+use super::{Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, ReplaceUser, User, UserIdentitySummary, UserListFilters};
 
 #[derive(Debug, Deserialize)]
 pub struct UserPayload {
@@ -39,12 +39,6 @@ pub struct SignUpPayload {
 pub struct RegistrationEmailCodePayload {
     pub email: String,
     pub lang: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct AuthConfigResponse {
-    pub allow_registration: bool,
-    pub registration_email_verification_enabled: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -99,12 +93,14 @@ pub struct UserResponse {
     pub allowed_provider_ids: Vec<String>,
     pub auth_source: String,
     pub email_verified: bool,
+    pub password_set: bool,
     pub system: bool,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,
     pub created_at: String,
     pub last_login_at: Option<String>,
     pub wallet: Option<UserWalletSummaryResponse>,
+    pub identities: Vec<UserIdentitySummary>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -234,12 +230,14 @@ impl From<User> for UserResponse {
             allowed_provider_ids: value.allowed_provider_ids,
             auth_source: value.auth_source,
             email_verified: value.email_verified,
+            password_set: value.password_set,
             system: value.system,
             rate_limit_rpm: value.rate_limit_rpm,
             quota_mode: value.quota_mode,
             created_at: value.created_at,
             last_login_at: value.last_login_at,
             wallet: None,
+            identities: Vec::new(),
         }
     }
 }
@@ -247,6 +245,11 @@ impl From<User> for UserResponse {
 impl UserResponse {
     pub fn with_wallet(mut self, wallet: Option<UserWalletSummaryResponse>) -> Self {
         self.wallet = wallet;
+        self
+    }
+
+    pub fn with_identities(mut self, identities: Vec<UserIdentitySummary>) -> Self {
+        self.identities = identities;
         self
     }
 }

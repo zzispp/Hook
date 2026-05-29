@@ -5,20 +5,24 @@ use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest},
     user::{
-        AuthConfigResponse, Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User,
-        UserId, UserListFilters, UserWalletSummaryResponse,
+        AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AuthConfigResponse, Credentials, IdentityProvider, NewUser, PasswordResetConfirm,
+        PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId, UserIdentitySummary, UserListFilters,
+        UserWalletSummaryResponse,
     },
 };
 
 use crate::application::{
-    AppError, AppResult, InitialGrantLedger, PasswordHasher, PasswordResetConfig, PasswordResetMailer, PasswordResetRepository, RegistrationEmailCodeStore,
-    RegistrationEmailConfig, RegistrationEmailMailer, RegistrationPolicy, SystemUserProvider, UserAuthRecord, UserRepository, UserUseCase, UserWalletCatalog,
+    AppError, AppResult, AuthProviderConfig, AuthTicketStore, InitialGrantLedger, OAuthClient, OAuthSignInResult, PasswordHasher, PasswordResetConfig,
+    PasswordResetMailer, PasswordResetRepository, PurposeEmailCodeStore, RegistrationEmailCodeStore, RegistrationEmailConfig, RegistrationEmailMailer,
+    RegistrationPolicy, SystemUserProvider, UserAuthRecord, UserRepository, UserUseCase, UserWalletCatalog, WalletChallenge, WalletNonceInput,
+    WalletSignInInput, WalletSignInResult,
 };
 
 use super::{
     UserService,
     password_reset::{request_password_reset, reset_password},
     registration::{reject_closed_registration, reject_disallowed_registration_email, request_registration_email_code, verify_registration_email_code},
+    social_auth::{self, ACCOUNT_PASSWORD_EMAIL_PURPOSE},
     system_user::{find_auth_by_identifier, list_with_system_user, reject_system_user_id, system_user_by_id},
     validation::{
         sanitize_credentials, sanitize_password_reset_confirm, sanitize_password_reset_request, sanitize_registration_email_code_request,
@@ -28,7 +32,7 @@ use super::{
 };
 
 #[async_trait]
-impl<R, H, S, P, G, W, C, M, E, N, K> UserUseCase for UserService<R, H, S, P, G, W, C, M, E, N, K>
+impl<R, H, S, P, G, W, C, M, E, N, K, A, O, T, Y> UserUseCase for UserService<R, H, S, P, G, W, C, M, E, N, K, A, O, T, Y>
 where
     R: UserRepository + PasswordResetRepository,
     H: PasswordHasher,
@@ -41,6 +45,10 @@ where
     E: RegistrationEmailConfig,
     N: RegistrationEmailMailer,
     K: RegistrationEmailCodeStore,
+    A: AuthProviderConfig,
+    O: OAuthClient,
+    T: AuthTicketStore,
+    Y: PurposeEmailCodeStore,
 {
     async fn auth_config(&self) -> AppResult<AuthConfigResponse> {
         self.registration_email_config.auth_config().await
@@ -84,6 +92,82 @@ where
             self.repository.record_login(found.user.id.clone()).await?;
         }
         Ok(found.user)
+    }
+
+    async fn oauth_start(&self, provider: IdentityProvider, redirect_uri: String) -> AppResult<String> {
+        social_auth::oauth_start(&self.auth_provider_config, &self.auth_ticket_store, provider, redirect_uri).await
+    }
+
+    async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String, redirect_uri: String) -> AppResult<OAuthSignInResult> {
+        let settings = self.auth_provider_config.oauth_provider_settings(provider).await?;
+        let profile = self.oauth_client.fetch_profile(provider, settings, &code, &redirect_uri).await?;
+        social_auth::oauth_callback(
+            &self.repository,
+            &self.auth_provider_config,
+            &self.auth_ticket_store,
+            provider,
+            &state,
+            &redirect_uri,
+            profile,
+        )
+        .await
+    }
+
+    async fn bind_oauth_existing(&self, provider: IdentityProvider, ticket: String) -> AppResult<User> {
+        social_auth::bind_oauth_ticket(&self.repository, &self.auth_ticket_store, provider, &ticket).await
+    }
+
+    async fn wallet_nonce(&self, input: WalletNonceInput) -> AppResult<WalletChallenge> {
+        social_auth::wallet_nonce(
+            &self.auth_provider_config,
+            &self.auth_ticket_store,
+            input.provider,
+            input.address,
+            input.chain_id,
+            input.network,
+        )
+        .await
+    }
+
+    async fn wallet_sign_in(&self, input: WalletSignInInput) -> AppResult<WalletSignInResult> {
+        social_auth::wallet_sign_in(
+            &self.repository,
+            &self.auth_provider_config,
+            &self.auth_ticket_store,
+            input.provider,
+            input.address,
+            input.message,
+            input.signature,
+            input.chain_id,
+            input.network,
+        )
+        .await
+    }
+
+    async fn request_wallet_email_code(&self, ticket: String, email: String, lang: String) -> AppResult<()> {
+        self.auth_ticket_store.get_wallet_binding(&ticket).await?.ok_or(AppError::Unauthorized)?;
+        social_auth::request_purpose_email_code(
+            &self.purpose_email_code_store,
+            &self.registration_email_config,
+            &self.registration_email_mailer,
+            social_auth::WALLET_EMAIL_PURPOSE,
+            RegistrationEmailCodeRequest { email, lang },
+        )
+        .await
+    }
+
+    async fn complete_wallet(&self, ticket: String, email: String, code: String) -> AppResult<User> {
+        let settings = self.registration_policy.registration_settings().await?;
+        social_auth::complete_wallet_binding(
+            &self.repository,
+            &self.auth_ticket_store,
+            &self.purpose_email_code_store,
+            &ticket,
+            &email,
+            &code,
+            &settings.default_user_group_code,
+        )
+        .await
     }
 
     async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()> {
@@ -140,6 +224,65 @@ where
     async fn wallet_summaries(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, UserWalletSummaryResponse>> {
         self.wallets.wallet_summaries(user_ids).await
     }
+
+    async fn identity_summaries(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, Vec<UserIdentitySummary>>> {
+        let identities = self.repository.list_identities_by_user_ids(user_ids).await?;
+        Ok(identities
+            .into_iter()
+            .map(|(user_id, items)| (user_id, items.into_iter().map(UserIdentitySummary::from).collect()))
+            .collect())
+    }
+
+    async fn profile(&self, id: UserId) -> AppResult<User> {
+        self.authenticated_user(id).await
+    }
+
+    async fn identities(&self, id: UserId) -> AppResult<Vec<UserIdentitySummary>> {
+        let user = self.authenticated_user(id).await?;
+        identity_summaries(self.repository.list_identities_by_user_id(&user.id.0).await?)
+    }
+
+    async fn request_account_password_email_code(&self, id: UserId, input: AccountPasswordEmailCodePayload) -> AppResult<()> {
+        let user = self.authenticated_user(id).await?;
+        social_auth::request_purpose_email_code(
+            &self.purpose_email_code_store,
+            &self.registration_email_config,
+            &self.registration_email_mailer,
+            ACCOUNT_PASSWORD_EMAIL_PURPOSE,
+            RegistrationEmailCodeRequest {
+                email: user.email,
+                lang: input.lang,
+            },
+        )
+        .await
+    }
+
+    async fn change_account_password(&self, id: UserId, input: AccountPasswordChangePayload) -> AppResult<User> {
+        let user = self.authenticated_user(id).await?;
+        social_auth::change_password_with_email_code(
+            &self.repository,
+            &self.purpose_email_code_store,
+            &self.password_hasher,
+            user,
+            &input.email_verification_code,
+            &input.password,
+        )
+        .await
+    }
+
+    async fn unlink_identity(&self, id: UserId, identity_id: String) -> AppResult<()> {
+        let user = self.authenticated_user(id).await?;
+        unlink_identity(&self.repository, &user, &identity_id).await
+    }
+
+    async fn admin_user(&self, id: UserId) -> AppResult<User> {
+        self.repository.find_by_id(id).await?.ok_or(AppError::NotFound)
+    }
+
+    async fn admin_unlink_identity(&self, user_id: UserId, identity_id: String) -> AppResult<()> {
+        let user = self.repository.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
+        unlink_identity(&self.repository, &user, &identity_id).await
+    }
 }
 
 async fn grant_initial_balance<G>(ledger: &G, user: &User, amount: Decimal) -> AppResult<()>
@@ -153,8 +296,29 @@ where
 }
 
 fn verify_password<H: PasswordHasher>(hasher: &H, password: &str, found: &UserAuthRecord) -> AppResult<()> {
-    if hasher.verify(password, &found.password_hash)? {
+    let Some(password_hash) = found.password_hash.as_deref() else {
+        return Err(AppError::PasswordNotSet);
+    };
+    if hasher.verify(password, password_hash)? {
         return Ok(());
     }
     Err(AppError::InvalidCredentials)
+}
+
+async fn unlink_identity<R>(repository: &R, user: &User, identity_id: &str) -> AppResult<()>
+where
+    R: UserRepository,
+{
+    let identities = repository.list_identities_by_user_id(&user.id.0).await?;
+    if !identities.iter().any(|identity| identity.id == identity_id) {
+        return Err(AppError::NotFound);
+    }
+    if !user.password_set && identities.len() <= 1 {
+        return Err(AppError::InvalidInput("at least one login method must remain".into()));
+    }
+    repository.delete_identity(identity_id).await
+}
+
+fn identity_summaries(identities: Vec<types::user::UserIdentity>) -> AppResult<Vec<UserIdentitySummary>> {
+    Ok(identities.into_iter().map(UserIdentitySummary::from).collect())
 }

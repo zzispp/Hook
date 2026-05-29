@@ -78,7 +78,7 @@ fn user_record() -> UserRecord {
     UserRecord {
         id: "user-1".into(),
         username: "alice".into(),
-        password_hash: "hash".into(),
+        password_hash: Some("hash".into()),
         email: "alice@example.com".into(),
         role: "user".into(),
         group_code: "default".into(),

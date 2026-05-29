@@ -23,6 +23,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
 import { displayUserGroup } from './user-group-utils';
+import { providerColor, providerLabel } from '../profile/provider-utils';
 import {
   EnabledLabel,
   BooleanLabel,
@@ -89,6 +90,9 @@ function UserTableRow({ row, props }: { row: SystemUser; props: Props }) {
         <UserCell user={row} />
       </TableCell>
       <TableCell>{row.email}</TableCell>
+      <TableCell>
+        <ProviderBadges user={row} />
+      </TableCell>
       <TableCell>{displayRole(row.role, props.roles)}</TableCell>
       <TableCell>
         <UserGroupBadge user={row} groups={props.userGroups} />
@@ -125,12 +129,41 @@ function UserGroupBadge({ user, groups }: { user: SystemUser; groups: UserGroup[
 }
 
 function UserCell({ user }: { user: SystemUser }) {
+  const { t } = useTranslate('admin');
+
   return (
     <Stack spacing={0.25}>
       <Typography variant="subtitle2">{user.username}</Typography>
+      {!user.password_set && (
+        <Label color="warning" variant="soft">
+          {t('users.passwordNotSet')}
+        </Label>
+      )}
       <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
         {user.id}
       </Typography>
+    </Stack>
+  );
+}
+
+function ProviderBadges({ user }: { user: SystemUser }) {
+  const { t } = useTranslate('admin');
+
+  if (user.identities.length === 0) {
+    return (
+      <Typography variant="caption" color="text.secondary">
+        {t('common.none')}
+      </Typography>
+    );
+  }
+
+  return (
+    <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+      {user.identities.map((identity) => (
+        <Label key={identity.id} color={providerColor(identity.provider)} variant="soft">
+          {providerLabel(identity.provider)}
+        </Label>
+      ))}
     </Stack>
   );
 }
@@ -189,6 +222,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
   return [
     { id: 'username', label: t('common.username'), width: 240 },
     { id: 'email', label: t('common.email'), width: 220 },
+    { id: 'providers', label: t('users.providers'), width: 190 },
     { id: 'role', label: t('common.role'), width: 150 },
     { id: 'group_code', label: t('fields.userGroup'), width: 150 },
     { id: 'wallet', label: t('fields.wallet'), width: 190 },

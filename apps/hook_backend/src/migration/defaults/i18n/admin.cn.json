@@ -371,6 +371,7 @@
     "saveFailed": "保存失败",
     "userCreated": "用户已创建",
     "userDeleted": "用户已删除",
+    "userIdentityDeleted": "Provider 已解绑",
     "userGroupAssignmentUpdated": "用户分组关联已更新",
     "userGroupCreated": "用户分组已创建",
     "userGroupDeleted": "用户分组已删除",
@@ -1118,6 +1119,9 @@
     "followSystem": "跟随系统",
     "manageTokens": "令牌",
     "manageWallet": "钱包",
+    "providers": "Provider",
+    "passwordNotSet": "未设置本地密码",
+    "unlinkProvider": "解绑",
     "unlimited": "无限制",
     "walletLimited": "按余额限制"
   },
@@ -1603,7 +1607,38 @@
       "emailTemplateRegistrationSubjectLength": "注册邮件主题不能为空，且不能超过 {{max}} 个字符。",
       "emailTemplateRegistrationHtmlRequired": "注册邮件 HTML 模板不能为空。",
       "emailTemplatePasswordResetSubjectLength": "找回密码邮件主题不能为空，且不能超过 {{max}} 个字符。",
-      "emailTemplatePasswordResetHtmlRequired": "找回密码邮件 HTML 模板不能为空。"
+      "emailTemplatePasswordResetHtmlRequired": "找回密码邮件 HTML 模板不能为空。",
+      "authClientIdLength": "OAuth Client ID 不能超过 {{max}} 个字符。",
+      "authClientSecretLength": "OAuth Client Secret 不能超过 {{max}} 个字符。",
+      "oauthProviderIncomplete": "启用 OAuth Provider 时必须填写 Client ID，并设置 Client Secret。",
+      "walletDomainLength": "钱包签名 domain 不能超过 {{max}} 个字符。",
+      "walletStatementLength": "钱包签名 statement 不能超过 {{max}} 个字符。",
+      "evmChainIdsRequired": "启用 EVM 钱包登录时必须填写至少一个 chain id。",
+      "solanaNetworkRequired": "启用 Solana 钱包登录时必须填写 network。",
+      "walletDomainRequired": "启用钱包登录时必须填写签名 domain。",
+      "walletStatementRequired": "启用钱包登录时必须填写签名 statement。"
+    },
+    "authProviders": {
+      "title": "快捷登录 Provider",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "secretSet": "已设置；留空保存时保持原 Secret。",
+      "evmChainIds": "EVM Chain IDs",
+      "solanaNetwork": "Solana Network",
+      "walletDomain": "钱包签名 Domain",
+      "walletStatement": "钱包签名 Statement",
+      "github": {
+        "enabled": "启用 GitHub 登录"
+      },
+      "google": {
+        "enabled": "启用 Google 登录"
+      },
+      "evm": {
+        "enabled": "启用 EVM 钱包"
+      },
+      "solana": {
+        "enabled": "启用 Solana 钱包"
+      }
     },
     "recharge": {
       "description": "控制用户充值入口、金额换算和已注册支付渠道启禁用。",

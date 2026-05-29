@@ -4,7 +4,7 @@ use types::system_setting::SystemSettings;
 use crate::{Database, StorageError, StorageResult};
 
 use super::{
-    SystemSettingsRecordPatch, SystemSettingsSmtpRecord,
+    SystemSettingsAuthProviderRecord, SystemSettingsRecordPatch, SystemSettingsSmtpRecord,
     record::{system_settings, system_settings::ActiveModel as SystemSettingsActiveModel},
 };
 
@@ -35,6 +35,24 @@ impl SettingStore {
             smtp_from_email: record.smtp_from_email,
             smtp_from_name: record.smtp_from_name,
             smtp_encryption: record.smtp_encryption.as_str().try_into().map_err(StorageError::Database)?,
+        })
+    }
+
+    pub async fn get_auth_provider_settings(&self) -> StorageResult<SystemSettingsAuthProviderRecord> {
+        let record = self.get_system_settings_record().await?;
+        Ok(SystemSettingsAuthProviderRecord {
+            auth_github_enabled: record.auth_github_enabled,
+            auth_github_client_id: record.auth_github_client_id,
+            encrypted_auth_github_client_secret: record.encrypted_auth_github_client_secret,
+            auth_google_enabled: record.auth_google_enabled,
+            auth_google_client_id: record.auth_google_client_id,
+            encrypted_auth_google_client_secret: record.encrypted_auth_google_client_secret,
+            auth_evm_enabled: record.auth_evm_enabled,
+            auth_evm_chain_ids: record.auth_evm_chain_ids,
+            auth_solana_enabled: record.auth_solana_enabled,
+            auth_solana_network: record.auth_solana_network,
+            auth_wallet_domain: record.auth_wallet_domain,
+            auth_wallet_statement: record.auth_wallet_statement,
         })
     }
 
@@ -94,6 +112,42 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     }
     if let Some(value) = input.registration_email_verification_enabled {
         active.registration_email_verification_enabled = Set(value);
+    }
+    if let Some(value) = input.auth_github_enabled {
+        active.auth_github_enabled = Set(value);
+    }
+    if let Some(value) = &input.auth_github_client_id {
+        active.auth_github_client_id = Set(value.clone());
+    }
+    if let Some(value) = &input.encrypted_auth_github_client_secret {
+        active.encrypted_auth_github_client_secret = Set(value.clone());
+    }
+    if let Some(value) = input.auth_google_enabled {
+        active.auth_google_enabled = Set(value);
+    }
+    if let Some(value) = &input.auth_google_client_id {
+        active.auth_google_client_id = Set(value.clone());
+    }
+    if let Some(value) = &input.encrypted_auth_google_client_secret {
+        active.encrypted_auth_google_client_secret = Set(value.clone());
+    }
+    if let Some(value) = input.auth_evm_enabled {
+        active.auth_evm_enabled = Set(value);
+    }
+    if let Some(value) = &input.auth_evm_chain_ids {
+        active.auth_evm_chain_ids = Set(value.clone());
+    }
+    if let Some(value) = input.auth_solana_enabled {
+        active.auth_solana_enabled = Set(value);
+    }
+    if let Some(value) = &input.auth_solana_network {
+        active.auth_solana_network = Set(value.clone());
+    }
+    if let Some(value) = &input.auth_wallet_domain {
+        active.auth_wallet_domain = Set(value.clone());
+    }
+    if let Some(value) = &input.auth_wallet_statement {
+        active.auth_wallet_statement = Set(value.clone());
     }
     if let Some(value) = input.password_reset_enabled {
         active.password_reset_enabled = Set(value);

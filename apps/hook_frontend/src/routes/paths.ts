@@ -35,6 +35,7 @@ export const paths = {
     modelStatus: `${ROOTS.DASHBOARD}/model-status`,
     tickets: `${ROOTS.DASHBOARD}/tickets`,
     wallet: `${ROOTS.DASHBOARD}/wallet`,
+    profile: `${ROOTS.DASHBOARD}/profile`,
     admin: {
       root: `${ROOTS.DASHBOARD}/admin`,
       users: `${ROOTS.DASHBOARD}/admin/users`,

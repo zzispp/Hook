@@ -99,8 +99,11 @@ fn bearer_token(headers: &HeaderMap) -> Result<&str, RbacError> {
 fn user_error(error: AppError) -> RbacError {
     match error {
         AppError::Infrastructure(message) => RbacError::Infrastructure(message),
-        AppError::InvalidCredentials | AppError::InvalidInput(_) | AppError::Unauthorized | AppError::Conflict(_) | AppError::NotFound => {
-            RbacError::Unauthorized
-        }
+        AppError::InvalidCredentials
+        | AppError::PasswordNotSet
+        | AppError::InvalidInput(_)
+        | AppError::Unauthorized
+        | AppError::Conflict(_)
+        | AppError::NotFound => RbacError::Unauthorized,
     }
 }

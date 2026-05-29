@@ -18,6 +18,7 @@ pub struct User {
     pub allowed_provider_ids: Vec<String>,
     pub auth_source: String,
     pub email_verified: bool,
+    pub password_set: bool,
     pub system: bool,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,

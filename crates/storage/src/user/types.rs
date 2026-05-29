@@ -18,7 +18,7 @@ pub struct UserRecordInput {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserAuthRecord {
     pub user: User,
-    pub password_hash: String,
+    pub password_hash: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

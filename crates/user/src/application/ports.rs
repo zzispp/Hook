@@ -6,13 +6,15 @@ use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     system_setting::{EmailSuffixMode, SmtpEncryption},
     user::{
-        AuthConfigResponse, Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User,
-        UserId, UserListFilters, UserWalletSummaryResponse,
+        AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AuthConfigResponse, Credentials, IdentityProvider, NewUser, PasswordResetConfirm,
+        PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId, UserIdentity, UserIdentityInput, UserIdentitySummary,
+        UserListFilters, UserWalletSummaryResponse,
     },
     user_group::{UserGroupCreate, UserGroupListRequest, UserGroupPageResponse, UserGroupResponse, UserGroupUpdate},
 };
 
 use super::AppResult;
+use super::{OAuthSignInResult, WalletChallenge, WalletNonceInput, WalletSignInInput, WalletSignInResult};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReplaceUserRecord {
@@ -30,9 +32,9 @@ pub struct ReplaceUserRecord {
 }
 
 impl ReplaceUserRecord {
-    pub fn with_current_password_hash(self, current_password_hash: String) -> Self {
+    pub fn with_current_password_hash(self, current_password_hash: Option<String>) -> Self {
         Self {
-            password_hash: Some(self.password_hash.unwrap_or(current_password_hash)),
+            password_hash: self.password_hash.or(current_password_hash),
             ..self
         }
     }
@@ -41,7 +43,7 @@ impl ReplaceUserRecord {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserAuthRecord {
     pub user: User,
-    pub password_hash: String,
+    pub password_hash: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -74,6 +76,12 @@ pub trait UserRepository: Send + Sync + 'static {
     async fn record_login(&self, id: UserId) -> AppResult<()>;
     async fn list(&self, page: PageRequest, filters: UserListFilters) -> AppResult<Page<User>>;
     async fn list_slice(&self, request: PageSliceRequest, filters: UserListFilters) -> AppResult<Page<User>>;
+    async fn create_identity(&self, input: UserIdentityInput) -> AppResult<UserIdentity>;
+    async fn find_identity(&self, provider: IdentityProvider, subject: &str) -> AppResult<Option<UserIdentity>>;
+    async fn list_identities_by_user_id(&self, user_id: &str) -> AppResult<Vec<UserIdentity>>;
+    async fn list_identities_by_user_ids(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, Vec<UserIdentity>>>;
+    async fn touch_identity_login(&self, identity_id: &str) -> AppResult<()>;
+    async fn delete_identity(&self, identity_id: &str) -> AppResult<()>;
 }
 
 pub trait PasswordHasher: Send + Sync + 'static {
@@ -239,6 +247,13 @@ pub trait UserUseCase: Send + Sync + 'static {
     async fn request_registration_email_code(&self, input: RegistrationEmailCodeRequest) -> AppResult<()>;
     async fn sign_up(&self, input: SignUpUser) -> AppResult<User>;
     async fn sign_in(&self, input: Credentials) -> AppResult<User>;
+    async fn oauth_start(&self, provider: IdentityProvider, redirect_uri: String) -> AppResult<String>;
+    async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String, redirect_uri: String) -> AppResult<OAuthSignInResult>;
+    async fn bind_oauth_existing(&self, provider: IdentityProvider, ticket: String) -> AppResult<User>;
+    async fn wallet_nonce(&self, input: WalletNonceInput) -> AppResult<WalletChallenge>;
+    async fn wallet_sign_in(&self, input: WalletSignInInput) -> AppResult<WalletSignInResult>;
+    async fn request_wallet_email_code(&self, ticket: String, email: String, lang: String) -> AppResult<()>;
+    async fn complete_wallet(&self, ticket: String, email: String, code: String) -> AppResult<User>;
     async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()>;
     async fn reset_password(&self, input: PasswordResetConfirm) -> AppResult<()>;
     async fn authenticated_user(&self, id: UserId) -> AppResult<User>;
@@ -247,4 +262,12 @@ pub trait UserUseCase: Send + Sync + 'static {
     async fn delete_user(&self, id: UserId) -> AppResult<()>;
     async fn list_users(&self, page: PageRequest, filters: UserListFilters) -> AppResult<Page<User>>;
     async fn wallet_summaries(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, UserWalletSummaryResponse>>;
+    async fn identity_summaries(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, Vec<UserIdentitySummary>>>;
+    async fn profile(&self, id: UserId) -> AppResult<User>;
+    async fn identities(&self, id: UserId) -> AppResult<Vec<UserIdentitySummary>>;
+    async fn request_account_password_email_code(&self, id: UserId, input: AccountPasswordEmailCodePayload) -> AppResult<()>;
+    async fn change_account_password(&self, id: UserId, input: AccountPasswordChangePayload) -> AppResult<User>;
+    async fn unlink_identity(&self, id: UserId, identity_id: String) -> AppResult<()>;
+    async fn admin_user(&self, id: UserId) -> AppResult<User>;
+    async fn admin_unlink_identity(&self, user_id: UserId, identity_id: String) -> AppResult<()>;
 }

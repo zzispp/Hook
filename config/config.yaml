@@ -46,6 +46,20 @@ auth:
       path_pattern: "/api/auth/sign-up"
     - methods: ["POST"]
       path_pattern: "/api/auth/refresh"
+    - methods: ["GET"]
+      path_pattern: "/api/auth/oauth/{provider}/start"
+    - methods: ["GET"]
+      path_pattern: "/api/auth/oauth/{provider}/callback"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/oauth/{provider}/bind-existing"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/wallet/nonce"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/wallet/sign-in"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/wallet/email-code"
+    - methods: ["POST"]
+      path_pattern: "/api/auth/wallet/complete"
     - methods: ["POST"]
       path_pattern: "/api/auth/password-reset/request"
     - methods: ["POST"]
@@ -63,6 +77,16 @@ auth:
   authenticated:
     - methods: ["GET"]
       path_pattern: "/api/auth/me"
+    - methods: ["GET"]
+      path_pattern: "/api/account/profile"
+    - methods: ["POST"]
+      path_pattern: "/api/account/password/email-code"
+    - methods: ["POST"]
+      path_pattern: "/api/account/password/change"
+    - methods: ["GET"]
+      path_pattern: "/api/account/identities"
+    - methods: ["DELETE"]
+      path_pattern: "/api/account/identities/{identity_id}"
     - methods: ["GET"]
       path_pattern: "/api/navbar"
     - methods: ["GET"]

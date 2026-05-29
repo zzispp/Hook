@@ -1,6 +1,6 @@
 use crate::application::{
-    AppResult, InitialGrantLedger, PasswordHasher, RegistrationPolicy, RegistrationSettings, ReplaceUserRecord, SystemUserProvider, UserRepository,
-    UserWalletCatalog,
+    AppResult, AuthProviderConfig, AuthTicketStore, InitialGrantLedger, OAuthClient, PasswordHasher, PurposeEmailCodeStore, RegistrationPolicy,
+    RegistrationSettings, ReplaceUserRecord, SystemUserProvider, UserRepository, UserWalletCatalog,
 };
 use registration::reject_disallowed_registration_email;
 use system_user::reject_conflicting_system_user;
@@ -10,14 +10,15 @@ use validation::{sanitize_new_user, validate_new_user};
 mod defaults;
 mod password_reset;
 mod registration;
+mod social_auth;
 mod system_user;
 mod use_cases;
 mod user_group;
 mod validation;
 
 pub use defaults::{
-    AllowRegistrationPolicy, NoInitialGrantLedger, NoPasswordResetConfig, NoPasswordResetMailer, NoRegistrationEmailCodeStore, NoRegistrationEmailConfig,
-    NoRegistrationEmailMailer, NoSystemUserProvider, NoUserWalletCatalog,
+    AllowRegistrationPolicy, NoAuthProviderConfig, NoAuthTicketStore, NoInitialGrantLedger, NoOAuthClient, NoPasswordResetConfig, NoPasswordResetMailer,
+    NoPurposeEmailCodeStore, NoRegistrationEmailCodeStore, NoRegistrationEmailConfig, NoRegistrationEmailMailer, NoSystemUserProvider, NoUserWalletCatalog,
 };
 pub use user_group::UserGroupService;
 
@@ -33,6 +34,10 @@ pub struct UserService<
     E = NoRegistrationEmailConfig,
     N = NoRegistrationEmailMailer,
     K = NoRegistrationEmailCodeStore,
+    A = NoAuthProviderConfig,
+    O = NoOAuthClient,
+    T = NoAuthTicketStore,
+    Y = NoPurposeEmailCodeStore,
 > {
     repository: R,
     password_hasher: H,
@@ -45,6 +50,10 @@ pub struct UserService<
     registration_email_config: E,
     registration_email_mailer: N,
     registration_email_code_store: K,
+    auth_provider_config: A,
+    oauth_client: O,
+    auth_ticket_store: T,
+    purpose_email_code_store: Y,
 }
 
 impl<R, H> UserService<R, H, NoSystemUserProvider, AllowRegistrationPolicy, NoInitialGrantLedger, NoUserWalletCatalog>
@@ -65,6 +74,10 @@ where
             registration_email_config: NoRegistrationEmailConfig,
             registration_email_mailer: NoRegistrationEmailMailer,
             registration_email_code_store: NoRegistrationEmailCodeStore,
+            auth_provider_config: NoAuthProviderConfig,
+            oauth_client: NoOAuthClient,
+            auth_ticket_store: NoAuthTicketStore,
+            purpose_email_code_store: NoPurposeEmailCodeStore,
         }
     }
 }
@@ -88,6 +101,10 @@ where
             registration_email_config: NoRegistrationEmailConfig,
             registration_email_mailer: NoRegistrationEmailMailer,
             registration_email_code_store: NoRegistrationEmailCodeStore,
+            auth_provider_config: NoAuthProviderConfig,
+            oauth_client: NoOAuthClient,
+            auth_ticket_store: NoAuthTicketStore,
+            purpose_email_code_store: NoPurposeEmailCodeStore,
         }
     }
 }
@@ -121,11 +138,15 @@ where
             registration_email_config: NoRegistrationEmailConfig,
             registration_email_mailer: NoRegistrationEmailMailer,
             registration_email_code_store: NoRegistrationEmailCodeStore,
+            auth_provider_config: NoAuthProviderConfig,
+            oauth_client: NoOAuthClient,
+            auth_ticket_store: NoAuthTicketStore,
+            purpose_email_code_store: NoPurposeEmailCodeStore,
         }
     }
 }
 
-impl<R, H, S, P, G, W, C, M, E, N, K> UserService<R, H, S, P, G, W, C, M, E, N, K>
+impl<R, H, S, P, G, W, C, M, E, N, K, A, O, T, Y> UserService<R, H, S, P, G, W, C, M, E, N, K, A, O, T, Y>
 where
     R: UserRepository,
     H: PasswordHasher,
@@ -134,7 +155,11 @@ where
     G: InitialGrantLedger,
     W: UserWalletCatalog,
 {
-    pub fn with_password_reset<NC, NM>(self, password_reset_config: NC, password_reset_mailer: NM) -> UserService<R, H, S, P, G, W, NC, NM, E, N, K> {
+    pub fn with_password_reset<NC, NM>(
+        self,
+        password_reset_config: NC,
+        password_reset_mailer: NM,
+    ) -> UserService<R, H, S, P, G, W, NC, NM, E, N, K, A, O, T, Y> {
         UserService {
             repository: self.repository,
             password_hasher: self.password_hasher,
@@ -147,6 +172,10 @@ where
             registration_email_config: self.registration_email_config,
             registration_email_mailer: self.registration_email_mailer,
             registration_email_code_store: self.registration_email_code_store,
+            auth_provider_config: self.auth_provider_config,
+            oauth_client: self.oauth_client,
+            auth_ticket_store: self.auth_ticket_store,
+            purpose_email_code_store: self.purpose_email_code_store,
         }
     }
 
@@ -155,7 +184,7 @@ where
         registration_email_config: NE,
         registration_email_mailer: NN,
         registration_email_code_store: NK,
-    ) -> UserService<R, H, S, P, G, W, C, M, NE, NN, NK> {
+    ) -> UserService<R, H, S, P, G, W, C, M, NE, NN, NK, A, O, T, Y> {
         UserService {
             repository: self.repository,
             password_hasher: self.password_hasher,
@@ -168,6 +197,42 @@ where
             registration_email_config,
             registration_email_mailer,
             registration_email_code_store,
+            auth_provider_config: self.auth_provider_config,
+            oauth_client: self.oauth_client,
+            auth_ticket_store: self.auth_ticket_store,
+            purpose_email_code_store: self.purpose_email_code_store,
+        }
+    }
+
+    pub fn with_social_auth<NA, NO, NT, NY>(
+        self,
+        auth_provider_config: NA,
+        oauth_client: NO,
+        auth_ticket_store: NT,
+        purpose_email_code_store: NY,
+    ) -> UserService<R, H, S, P, G, W, C, M, E, N, K, NA, NO, NT, NY>
+    where
+        NA: AuthProviderConfig,
+        NO: OAuthClient,
+        NT: AuthTicketStore,
+        NY: PurposeEmailCodeStore,
+    {
+        UserService {
+            repository: self.repository,
+            password_hasher: self.password_hasher,
+            system_users: self.system_users,
+            registration_policy: self.registration_policy,
+            initial_grants: self.initial_grants,
+            wallets: self.wallets,
+            password_reset_config: self.password_reset_config,
+            password_reset_mailer: self.password_reset_mailer,
+            registration_email_config: self.registration_email_config,
+            registration_email_mailer: self.registration_email_mailer,
+            registration_email_code_store: self.registration_email_code_store,
+            auth_provider_config,
+            oauth_client,
+            auth_ticket_store,
+            purpose_email_code_store,
         }
     }
 
@@ -244,6 +309,22 @@ fn with_default_user_group(mut input: NewUser, default_user_group_code: &str) ->
     input
 }
 
+fn provider_user_record(input: NewUser, email_verified: Option<bool>) -> ReplaceUserRecord {
+    ReplaceUserRecord {
+        username: input.username,
+        password_hash: None,
+        email: input.email,
+        email_verified,
+        role: input.role,
+        group_code: input.group_code.unwrap_or_default(),
+        is_active: input.is_active,
+        allowed_model_ids: input.allowed_model_ids,
+        allowed_provider_ids: input.allowed_provider_ids,
+        rate_limit_rpm: input.rate_limit_rpm,
+        quota_mode: input.quota_mode,
+    }
+}
+
 fn reject_conflicting_user(id: UserId, current_id: Option<&UserId>, field: &str) -> AppResult<()> {
     if current_id == Some(&id) {
         return Ok(());
@@ -258,6 +339,12 @@ mod registration_email_test_support;
 mod registration_email_tests;
 #[cfg(test)]
 mod registration_tests;
+#[cfg(test)]
+mod social_auth_email_test_support;
+#[cfg(test)]
+mod social_auth_test_support;
+#[cfg(test)]
+mod social_auth_tests;
 #[cfg(test)]
 mod system_tests;
 #[cfg(test)]

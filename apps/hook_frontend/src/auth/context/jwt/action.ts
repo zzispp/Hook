@@ -1,6 +1,7 @@
 'use client';
 
 import type { ApiEnvelope } from './utils';
+import type { SystemUser, IdentityProvider } from 'src/types/rbac';
 
 import axios, { endpoints } from 'src/lib/axios';
 
@@ -40,8 +41,40 @@ export type PasswordResetConfirmParams = {
 };
 
 type AuthSessionResponse = {
+  user?: SystemUser;
   access_token: string;
   refresh_token: string;
+};
+
+export type OAuthCallbackResponse =
+  | ({ status: 'authenticated' } & AuthSessionResponse)
+  | {
+      status: 'binding_required';
+      binding_ticket: string;
+      provider: IdentityProvider;
+      email: string;
+      username: string;
+    };
+
+export type WalletSignInResponse =
+  | ({ status: 'authenticated' } & AuthSessionResponse)
+  | {
+      status: 'email_required';
+      wallet_ticket: string;
+      provider: IdentityProvider;
+      address: string;
+    };
+
+export type WalletNonceParams = {
+  provider: IdentityProvider;
+  address: string;
+  chainId?: number;
+  network?: string;
+};
+
+export type WalletSignInParams = WalletNonceParams & {
+  message: string;
+  signature: string;
 };
 
 /** **************************************
@@ -106,6 +139,109 @@ export const requestRegistrationEmailCode = async ({
   });
 };
 
+export async function startOAuth(provider: Extract<IdentityProvider, 'github' | 'google'>) {
+  const redirectUri = `${window.location.origin}/auth/oauth/callback/${provider}`;
+  const res = await axios.get(endpoints.auth.oauthStart(provider), {
+    params: { redirect_uri: redirectUri },
+  });
+  return requireApiData<{ authorization_url: string }>(res.data);
+}
+
+export async function completeOAuthCallback({
+  provider,
+  code,
+  state,
+}: {
+  provider: Extract<IdentityProvider, 'github' | 'google'>;
+  code: string;
+  state: string;
+}) {
+  const redirectUri = `${window.location.origin}/auth/oauth/callback/${provider}`;
+  const res = await axios.get(endpoints.auth.oauthCallback(provider), {
+    params: { code, state, redirect_uri: redirectUri },
+  });
+  return requireApiData<OAuthCallbackResponse>(res.data);
+}
+
+export async function bindOAuthExisting({
+  provider,
+  bindingTicket,
+}: {
+  provider: Extract<IdentityProvider, 'github' | 'google'>;
+  bindingTicket: string;
+}) {
+  const res = await axios.post(endpoints.auth.oauthBindExisting(provider), {
+    binding_ticket: trimCredential(bindingTicket),
+  });
+  await setSession(requireAuthSession(res.data));
+}
+
+export async function walletNonce({ provider, address, chainId, network }: WalletNonceParams) {
+  const res = await axios.post(endpoints.auth.walletNonce, {
+    provider,
+    address: trimCredential(address),
+    chain_id: chainId,
+    network,
+  });
+  return requireApiData<{ message: string; nonce: string }>(res.data);
+}
+
+export async function walletSignIn({
+  provider,
+  address,
+  chainId,
+  network,
+  message,
+  signature,
+}: WalletSignInParams) {
+  const res = await axios.post(endpoints.auth.walletSignIn, {
+    provider,
+    address: trimCredential(address),
+    chain_id: chainId,
+    network,
+    message,
+    signature,
+  });
+  return requireApiData<WalletSignInResponse>(res.data);
+}
+
+export async function requestWalletEmailCode({
+  walletTicket,
+  email,
+  lang,
+}: {
+  walletTicket: string;
+  email: string;
+  lang: string;
+}) {
+  await axios.post(endpoints.auth.walletEmailCode, {
+    wallet_ticket: trimCredential(walletTicket),
+    email: trimCredential(email),
+    lang: trimCredential(lang),
+  });
+}
+
+export async function completeWallet({
+  walletTicket,
+  email,
+  emailVerificationCode,
+}: {
+  walletTicket: string;
+  email: string;
+  emailVerificationCode: string;
+}) {
+  const res = await axios.post(endpoints.auth.walletComplete, {
+    wallet_ticket: trimCredential(walletTicket),
+    email: trimCredential(email),
+    email_verification_code: trimCredential(emailVerificationCode),
+  });
+  await setSession(requireAuthSession(res.data));
+}
+
+export async function applyAuthenticatedSession(response: AuthSessionResponse) {
+  await setSession(assertAuthSession(response));
+}
+
 /** **************************************
  * Password reset
  *************************************** */
@@ -145,7 +281,10 @@ export const signOut = async (): Promise<void> => {
 
 function requireAuthSession(payload: ApiEnvelope<AuthSessionResponse>): AuthSessionResponse {
   const session = requireApiData<AuthSessionResponse>(payload);
+  return assertAuthSession(session);
+}
 
+function assertAuthSession(session: AuthSessionResponse): AuthSessionResponse {
   if (!session.access_token || !session.refresh_token) {
     throw new Error('Auth tokens not found in response');
   }

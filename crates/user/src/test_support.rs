@@ -1,9 +1,14 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{NewUser, ReplaceUser, USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, default_user_created_at},
+    user::{
+        IdentityProvider, NewUser, ReplaceUser, USER_QUOTA_MODE_WALLET, User, UserId, UserIdentity, UserIdentityInput, UserListFilters, default_user_created_at,
+    },
 };
 
 use crate::application::{
@@ -27,12 +32,13 @@ struct RepositoryState {
     deleted: Vec<UserId>,
     logins: Vec<UserId>,
     reset_tokens: Vec<StoredPasswordResetToken>,
+    identities: Vec<UserIdentity>,
 }
 
 #[derive(Clone)]
 pub(crate) struct StoredUser {
     user: User,
-    password_hash: String,
+    password_hash: Option<String>,
 }
 
 #[derive(Clone)]
@@ -79,6 +85,17 @@ impl MemoryUserRepository {
     pub(crate) fn login_records(&self) -> Vec<UserId> {
         self.state.lock().unwrap().logins.clone()
     }
+
+    pub(crate) fn seed_identity(&self, input: UserIdentityInput) -> UserIdentity {
+        let mut state = self.state.lock().unwrap();
+        let identity = identity_from_input(format!("identity-{}", state.identities.len() + 1), input);
+        state.identities.push(identity.clone());
+        identity
+    }
+
+    pub(crate) fn identities(&self) -> Vec<UserIdentity> {
+        self.state.lock().unwrap().identities.clone()
+    }
 }
 
 #[async_trait]
@@ -89,7 +106,7 @@ impl UserRepository for MemoryUserRepository {
         let user = user_from_record(id, &record);
         state.users.push(StoredUser {
             user: user.clone(),
-            password_hash: required_password_hash(&record)?,
+            password_hash: record.password_hash.clone(),
         });
         state.created.push(record);
         Ok(user)
@@ -195,6 +212,67 @@ impl UserRepository for MemoryUserRepository {
             page_size: request.page_size,
         })
     }
+
+    async fn create_identity(&self, input: UserIdentityInput) -> AppResult<UserIdentity> {
+        let mut state = self.state.lock().unwrap();
+        let identity = identity_from_input(format!("identity-{}", state.identities.len() + 1), input);
+        state.identities.push(identity.clone());
+        Ok(identity)
+    }
+
+    async fn find_identity(&self, provider: IdentityProvider, subject: &str) -> AppResult<Option<UserIdentity>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .identities
+            .iter()
+            .find(|identity| identity.provider == provider && identity.provider_subject == subject)
+            .cloned())
+    }
+
+    async fn list_identities_by_user_id(&self, user_id: &str) -> AppResult<Vec<UserIdentity>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .identities
+            .iter()
+            .filter(|identity| identity.user_id == user_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn list_identities_by_user_ids(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, Vec<UserIdentity>>> {
+        let mut grouped = BTreeMap::<String, Vec<UserIdentity>>::new();
+        for identity in self.state.lock().unwrap().identities.iter() {
+            if user_ids.contains(&identity.user_id) {
+                grouped.entry(identity.user_id.clone()).or_default().push(identity.clone());
+            }
+        }
+        Ok(grouped)
+    }
+
+    async fn touch_identity_login(&self, identity_id: &str) -> AppResult<()> {
+        let mut state = self.state.lock().unwrap();
+        let identity = state
+            .identities
+            .iter_mut()
+            .find(|identity| identity.id == identity_id)
+            .ok_or(AppError::NotFound)?;
+        identity.last_login_at = Some(default_user_created_at());
+        Ok(())
+    }
+
+    async fn delete_identity(&self, identity_id: &str) -> AppResult<()> {
+        let mut state = self.state.lock().unwrap();
+        let current_len = state.identities.len();
+        state.identities.retain(|identity| identity.id != identity_id);
+        if state.identities.len() == current_len {
+            return Err(AppError::NotFound);
+        }
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -219,7 +297,8 @@ impl PasswordResetRepository for MemoryUserRepository {
         }
         let user_id = state.reset_tokens[index].user_id.clone();
         let stored = find_stored_user_mut(&mut state, &user_id)?;
-        stored.password_hash = password_hash.to_owned();
+        stored.password_hash = Some(password_hash.to_owned());
+        stored.user.password_set = true;
         let user = stored.user.clone();
         state.reset_tokens[index].consumed_at = Some(now);
         Ok(Some(user))
@@ -294,14 +373,22 @@ pub(crate) fn stored_user(id: u64, username: &str, password_hash: &str) -> Store
             allowed_provider_ids: Vec::new(),
             auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
             email_verified: false,
+            password_set: true,
             system: false,
             rate_limit_rpm: None,
             quota_mode: USER_QUOTA_MODE_WALLET.into(),
             created_at: default_user_created_at(),
             last_login_at: None,
         },
-        password_hash: password_hash.into(),
+        password_hash: Some(password_hash.into()),
     }
+}
+
+pub(crate) fn passwordless_stored_user(id: u64, username: &str) -> StoredUser {
+    let mut user = stored_user(id, username, "");
+    user.user.password_set = false;
+    user.password_hash = None;
+    user
 }
 
 pub(crate) fn system_user() -> TestSystemUserProvider {
@@ -318,6 +405,7 @@ pub(crate) fn system_user() -> TestSystemUserProvider {
                 allowed_provider_ids: Vec::new(),
                 auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
                 email_verified: true,
+                password_set: true,
                 system: true,
                 rate_limit_rpm: None,
                 quota_mode: USER_QUOTA_MODE_WALLET.into(),
@@ -341,7 +429,10 @@ fn find_stored_user_mut<'a>(state: &'a mut RepositoryState, id: &UserId) -> AppR
 fn replace_stored_user(state: &mut RepositoryState, id: &UserId, record: &ReplaceUserRecord) -> AppResult<User> {
     let stored = find_stored_user_mut(state, id)?;
     stored.user = updated_user(id.clone(), &stored.user, record);
-    stored.password_hash = required_password_hash(record)?;
+    if let Some(password_hash) = &record.password_hash {
+        stored.password_hash = Some(password_hash.clone());
+        stored.user.password_set = true;
+    }
     Ok(stored.user.clone())
 }
 
@@ -357,6 +448,7 @@ fn user_from_record(id: UserId, record: &ReplaceUserRecord) -> User {
         allowed_provider_ids: record.allowed_provider_ids.clone(),
         auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
         email_verified: record.email_verified.unwrap_or(false),
+        password_set: record.password_hash.is_some(),
         system: false,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode.clone(),
@@ -365,20 +457,30 @@ fn user_from_record(id: UserId, record: &ReplaceUserRecord) -> User {
     }
 }
 
+fn identity_from_input(id: String, input: UserIdentityInput) -> UserIdentity {
+    UserIdentity {
+        id,
+        user_id: input.user_id,
+        provider: input.provider,
+        provider_subject: input.provider_subject,
+        email: input.email,
+        email_verified: input.email_verified,
+        display_name: input.display_name,
+        avatar_url: input.avatar_url,
+        created_at: default_user_created_at(),
+        updated_at: default_user_created_at(),
+        last_login_at: None,
+    }
+}
+
 fn updated_user(id: UserId, current: &User, record: &ReplaceUserRecord) -> User {
     User {
         email_verified: record.email_verified.unwrap_or(current.email_verified),
+        password_set: current.password_set || record.password_hash.is_some(),
         created_at: current.created_at.clone(),
         last_login_at: current.last_login_at.clone(),
         ..user_from_record(id, record)
     }
-}
-
-fn required_password_hash(record: &ReplaceUserRecord) -> AppResult<String> {
-    record
-        .password_hash
-        .clone()
-        .ok_or_else(|| AppError::InvalidInput("password_hash is required".into()))
 }
 
 pub(crate) fn user_id(id: u64) -> UserId {

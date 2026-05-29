@@ -15,6 +15,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { SwitchRow, TextFieldRow } from './shared';
 import { SettingsSection } from './system-settings-section';
 import { emailConfigComplete } from './system-settings-utils';
+import { AuthProviderFields } from './system-settings-auth-provider-section';
 import { EmailTemplateEditor } from './system-settings-email-template-editor';
 
 type Props = {
@@ -30,6 +31,8 @@ export function SystemSettingsRegistrationSection({ form, setForm, userGroups }:
     <SettingsSection title={t('systemSettings.sections.registration')}>
       <Stack spacing={3}>
         <RegistrationControls form={form} setForm={setForm} userGroups={userGroups} />
+        <Divider />
+        <AuthProviderFields form={form} setForm={setForm} />
         <Divider />
         <EmailRestrictionFields form={form} setForm={setForm} />
         <Divider />

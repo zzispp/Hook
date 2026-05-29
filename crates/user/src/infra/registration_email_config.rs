@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use storage::{Database, i18n::I18nStore, setting::SettingStore};
-use types::user::AuthConfigResponse;
+use types::user::{AuthConfigResponse, AuthProviderConfigResponse, OAuthProviderPublicConfig, WalletProviderPublicConfig};
 
 use crate::application::{AppError, AppResult, EmailSettings, RegistrationEmailConfig, RegistrationEmailTemplate};
 
@@ -31,6 +31,28 @@ impl RegistrationEmailConfig for StorageRegistrationEmailConfig {
         Ok(AuthConfigResponse {
             allow_registration: settings.allow_registration,
             registration_email_verification_enabled: settings.registration_email_verification_enabled,
+            providers: AuthProviderConfigResponse {
+                github: OAuthProviderPublicConfig {
+                    enabled: settings.auth_github_enabled,
+                },
+                google: OAuthProviderPublicConfig {
+                    enabled: settings.auth_google_enabled,
+                },
+                evm: WalletProviderPublicConfig {
+                    enabled: settings.auth_evm_enabled,
+                    domain: settings.auth_wallet_domain.clone(),
+                    statement: settings.auth_wallet_statement.clone(),
+                    evm_chain_ids: evm_chain_ids(&settings.auth_evm_chain_ids)?,
+                    solana_network: String::new(),
+                },
+                solana: WalletProviderPublicConfig {
+                    enabled: settings.auth_solana_enabled,
+                    domain: settings.auth_wallet_domain,
+                    statement: settings.auth_wallet_statement,
+                    evm_chain_ids: Vec::new(),
+                    solana_network: settings.auth_solana_network,
+                },
+            },
         })
     }
 
@@ -54,6 +76,14 @@ impl RegistrationEmailConfig for StorageRegistrationEmailConfig {
         let html = self.template_value(lang, REGISTRATION_HTML_KEY).await?;
         Ok(RegistrationEmailTemplate { subject, html })
     }
+}
+
+fn evm_chain_ids(value: &str) -> AppResult<Vec<u64>> {
+    value.split(',').map(str::trim).filter(|item| !item.is_empty()).map(parse_chain_id).collect()
+}
+
+fn parse_chain_id(value: &str) -> AppResult<u64> {
+    value.parse().map_err(|_| AppError::InvalidInput(format!("invalid EVM chain id: {value}")))
 }
 
 impl StorageRegistrationEmailConfig {

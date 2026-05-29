@@ -1,3 +1,6 @@
+mod auth_provider_config;
+mod auth_ticket_store;
+mod oauth_client;
 mod password;
 mod password_reset_config;
 mod password_reset_mailer;
@@ -9,6 +12,9 @@ mod system_user;
 mod user_group_repository;
 mod user_repository;
 
+pub use auth_provider_config::StorageAuthProviderConfig;
+pub use auth_ticket_store::{RedisAuthTicketStore, RedisPurposeEmailCodeStore};
+pub use oauth_client::ReqwestOAuthClient;
 pub use password::BcryptPasswordHasher;
 pub use password_reset_config::StoragePasswordResetConfig;
 pub use password_reset_mailer::SmtpPasswordResetMailer;

@@ -8,6 +8,8 @@ pub enum AppError {
     InvalidInput(String),
     #[error("username or password is incorrect")]
     InvalidCredentials,
+    #[error("local password is not set")]
+    PasswordNotSet,
     #[error("unauthorized")]
     Unauthorized,
     #[error("resource conflict: {0}")]

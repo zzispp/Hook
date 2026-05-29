@@ -25,7 +25,7 @@ impl IntoResponse for ApiError {
 
 fn status_code(error: &AppError) -> StatusCode {
     match error {
-        AppError::InvalidCredentials | AppError::Unauthorized => StatusCode::UNAUTHORIZED,
+        AppError::InvalidCredentials | AppError::PasswordNotSet | AppError::Unauthorized => StatusCode::UNAUTHORIZED,
         AppError::InvalidInput(_) | AppError::Conflict(_) | AppError::NotFound | AppError::Infrastructure(_) => StatusCode::OK,
     }
 }

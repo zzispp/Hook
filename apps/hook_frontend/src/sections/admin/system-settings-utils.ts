@@ -8,6 +8,12 @@ import {
   DEFAULT_REGISTRATION_TEMPLATE_HTML,
   DEFAULT_PASSWORD_RESET_TEMPLATE_HTML,
 } from './system-settings-email-templates';
+import {
+  authProviderPayloadFields,
+  DEFAULT_AUTH_PROVIDER_FORM,
+  authProviderFormFromSettings,
+  applyAuthProviderSecretPayload,
+} from './system-settings-auth-provider-utils';
 
 export type SystemSettingsForm = {
   site_name: string;
@@ -20,6 +26,20 @@ export type SystemSettingsForm = {
   support_ticket_captcha_enabled: boolean;
   recharge_captcha_enabled: boolean;
   registration_email_verification_enabled: boolean;
+  auth_github_enabled: boolean;
+  auth_github_client_id: string;
+  auth_github_client_secret: string;
+  auth_github_client_secret_set: boolean;
+  auth_google_enabled: boolean;
+  auth_google_client_id: string;
+  auth_google_client_secret: string;
+  auth_google_client_secret_set: boolean;
+  auth_evm_enabled: boolean;
+  auth_evm_chain_ids: string;
+  auth_solana_enabled: boolean;
+  auth_solana_network: string;
+  auth_wallet_domain: string;
+  auth_wallet_statement: string;
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
@@ -76,6 +96,7 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   support_ticket_captcha_enabled: true,
   recharge_captcha_enabled: false,
   registration_email_verification_enabled: false,
+  ...DEFAULT_AUTH_PROVIDER_FORM,
   password_reset_enabled: false,
   email_config_enabled: false,
   support_ticket_email_notifications_enabled: false,
@@ -133,6 +154,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     support_ticket_captcha_enabled: settings.support_ticket_captcha_enabled,
     recharge_captcha_enabled: settings.recharge_captcha_enabled,
     registration_email_verification_enabled: settings.registration_email_verification_enabled,
+    ...authProviderFormFromSettings(settings),
     password_reset_enabled: settings.password_reset_enabled,
     email_config_enabled: settings.email_config_enabled,
     support_ticket_email_notifications_enabled:
@@ -192,6 +214,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     support_ticket_captcha_enabled: form.support_ticket_captcha_enabled,
     recharge_captcha_enabled: form.recharge_captcha_enabled,
     registration_email_verification_enabled: form.registration_email_verification_enabled,
+    ...authProviderPayloadFields(form),
     password_reset_enabled: form.password_reset_enabled,
     email_config_enabled: form.email_config_enabled,
     support_ticket_email_notifications_enabled:
@@ -238,6 +261,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
   if (form.smtp_password.trim()) {
     payload.smtp_password = form.smtp_password.trim();
   }
+  applyAuthProviderSecretPayload(payload, form);
   return payload;
 }
 

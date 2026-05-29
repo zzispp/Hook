@@ -2,9 +2,11 @@ use constants::pagination::PAGE_INDEX_OFFSET;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, TransactionTrait,
 };
+use std::collections::BTreeMap;
+
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{User, UserId, UserListFilters},
+    user::{IdentityProvider, User, UserId, UserIdentity, UserIdentityInput, UserListFilters},
     user_group::{UserGroup, UserGroupListRequest, UserGroupPageResponse, UserGroupResponse},
 };
 
@@ -12,18 +14,19 @@ use crate::{
     Database, StorageError, StorageResult, json,
     rbac::role_records,
     user::UserColumn,
+    user::identity_record::{ActiveModel as UserIdentityActiveModel, Entity as UserIdentityEntity},
     user::password_reset_tokens::{self, ActiveModel as PasswordResetTokenActiveModel},
     user::record::ActiveModel as UserActiveModel,
     user::user_groups::ActiveModel as UserGroupActiveModel,
 };
 
 use super::{
-    PasswordResetTokenRecord, PasswordResetTokenRecordInput, UserAuthRecord, UserGroupRecord, UserGroupRecordInput, UserGroupRecordPatch, UserRecord,
-    UserRecordInput,
+    PasswordResetTokenRecord, PasswordResetTokenRecordInput, UserAuthRecord, UserGroupRecord, UserGroupRecordInput, UserGroupRecordPatch, UserIdentityRecord,
+    UserRecord, UserRecordInput,
     query::{active_users, filtered_users},
     tokens::{password_reset_token_active_model, password_reset_token_record},
     user_groups,
-    user_mutations::{delete_user_api_tokens, required_password_hash, set_wallet_limit_mode},
+    user_mutations::{delete_user_api_tokens, set_wallet_limit_mode},
 };
 
 #[derive(Clone)]
@@ -48,7 +51,7 @@ impl UserStore {
         UserActiveModel {
             id: Set(self.database.next_id()),
             username: Set(user.username),
-            password_hash: Set(required_password_hash(user.password_hash)?),
+            password_hash: Set(user.password_hash),
             email: Set(user.email),
             role: Set(user.role),
             group_code: Set(user.group_code),
@@ -79,7 +82,7 @@ impl UserStore {
         let quota_mode = user.quota_mode.clone();
         active.username = Set(user.username);
         if let Some(password_hash) = user.password_hash {
-            active.password_hash = Set(password_hash);
+            active.password_hash = Set(Some(password_hash));
         }
         active.email = Set(user.email);
         active.role = Set(user.role);
@@ -124,7 +127,7 @@ impl UserStore {
         let user_id = UserId(token.user_id.clone());
         let record = self.find_record_by_id_in_tx(&user_id, &tx).await?.ok_or(StorageError::NotFound)?;
         let mut user_active: UserActiveModel = record.into();
-        user_active.password_hash = Set(password_hash.to_owned());
+        user_active.password_hash = Set(Some(password_hash.to_owned()));
         user_active.updated_at = Set(now);
         user_active.update(&tx).await?;
 
@@ -230,6 +233,85 @@ impl UserStore {
         })
     }
 
+    pub async fn create_identity(&self, input: UserIdentityInput) -> StorageResult<UserIdentity> {
+        let now = time::OffsetDateTime::now_utc();
+        UserIdentityActiveModel {
+            id: Set(self.database.next_id()),
+            user_id: Set(input.user_id),
+            provider: Set(input.provider.as_str().to_owned()),
+            provider_subject: Set(input.provider_subject),
+            email: Set(input.email),
+            email_verified: Set(input.email_verified),
+            display_name: Set(input.display_name),
+            avatar_url: Set(input.avatar_url),
+            metadata_json: Set(input.metadata_json),
+            created_at: Set(now),
+            updated_at: Set(now),
+            last_login_at: Set(None),
+        }
+        .insert(self.database.connection())
+        .await
+        .map_err(StorageError::from)?
+        .into_domain()
+    }
+
+    pub async fn find_identity(&self, provider: IdentityProvider, subject: &str) -> StorageResult<Option<UserIdentity>> {
+        UserIdentityEntity::find()
+            .filter(super::identity_record::Column::Provider.eq(provider.as_str()))
+            .filter(super::identity_record::Column::ProviderSubject.eq(subject))
+            .one(self.database.connection())
+            .await
+            .map_err(StorageError::from)?
+            .map(UserIdentityRecord::into_domain)
+            .transpose()
+    }
+
+    pub async fn list_identities_by_user_id(&self, user_id: &str) -> StorageResult<Vec<UserIdentity>> {
+        UserIdentityEntity::find()
+            .filter(super::identity_record::Column::UserId.eq(user_id))
+            .all(self.database.connection())
+            .await
+            .map_err(StorageError::from)?
+            .into_iter()
+            .map(UserIdentityRecord::into_domain)
+            .collect()
+    }
+
+    pub async fn list_identities_by_user_ids(&self, user_ids: &[String]) -> StorageResult<BTreeMap<String, Vec<UserIdentity>>> {
+        if user_ids.is_empty() {
+            return Ok(BTreeMap::new());
+        }
+        let identities = UserIdentityEntity::find()
+            .filter(super::identity_record::Column::UserId.is_in(user_ids.iter().cloned()))
+            .all(self.database.connection())
+            .await
+            .map_err(StorageError::from)?;
+        group_identities(identities)
+    }
+
+    pub async fn touch_identity_login(&self, identity_id: &str) -> StorageResult<()> {
+        let record = UserIdentityEntity::find_by_id(identity_id.to_owned())
+            .one(self.database.connection())
+            .await?
+            .ok_or(StorageError::NotFound)?;
+        let mut active: UserIdentityActiveModel = record.into();
+        let now = time::OffsetDateTime::now_utc();
+        active.last_login_at = Set(Some(now));
+        active.updated_at = Set(now);
+        active.update(self.database.connection()).await?;
+        Ok(())
+    }
+
+    pub async fn delete_identity(&self, identity_id: &str) -> StorageResult<()> {
+        let result = UserIdentityEntity::delete_by_id(identity_id.to_owned())
+            .exec(self.database.connection())
+            .await?;
+        if result.rows_affected == 0 {
+            return Err(StorageError::NotFound);
+        }
+        Ok(())
+    }
+
     async fn find_record_by_id(&self, id: &UserId) -> StorageResult<Option<UserRecord>> {
         self.find_record(UserColumn::Id.eq(id.0.as_str()).into()).await
     }
@@ -254,6 +336,15 @@ impl UserStore {
             .map(|record| record.map(password_reset_token_record))
             .map_err(StorageError::from)
     }
+}
+
+fn group_identities(records: Vec<UserIdentityRecord>) -> StorageResult<BTreeMap<String, Vec<UserIdentity>>> {
+    let mut grouped = BTreeMap::<String, Vec<UserIdentity>>::new();
+    for identity in records {
+        let identity = identity.into_domain()?;
+        grouped.entry(identity.user_id.clone()).or_default().push(identity);
+    }
+    Ok(grouped)
 }
 
 impl UserGroupStore {

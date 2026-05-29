@@ -40,7 +40,7 @@ fn user_record(is_deleted: bool) -> UserRecord {
     UserRecord {
         id: "user-1".into(),
         username: "hwnet".into(),
-        password_hash: "hash".into(),
+        password_hash: Some("hash".into()),
         email: "hwnet@example.test".into(),
         group_code: DEFAULT_USER_GROUP_CODE.into(),
         role: "user".into(),

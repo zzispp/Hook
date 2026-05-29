@@ -23,6 +23,7 @@ impl ConfigSystemUserProvider {
                     allowed_provider_ids: Vec::new(),
                     auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
                     email_verified: true,
+                    password_set: true,
                     system: true,
                     rate_limit_rpm: None,
                     quota_mode: USER_QUOTA_MODE_WALLET.into(),

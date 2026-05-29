@@ -1,3 +1,4 @@
+mod identity_record;
 mod password_reset_tokens;
 mod query;
 mod record;
@@ -10,6 +11,7 @@ mod user_mutations;
 pub use repository::{UserGroupStore, UserStore};
 pub use types::{PasswordResetTokenRecord, PasswordResetTokenRecordInput, UserAuthRecord, UserGroupRecordInput, UserGroupRecordPatch, UserRecordInput};
 
+pub use identity_record::{Column as UserIdentityColumn, Entity as UserIdentityEntity, UserIdentityRecord};
 pub use password_reset_tokens::{Column as PasswordResetTokenColumn, Entity as PasswordResetTokenEntity};
 pub(crate) use record::ActiveModel as UserActiveModel;
 pub use record::{Column as UserColumn, Entity as UserEntity, UserRecord};

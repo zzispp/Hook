@@ -12,7 +12,7 @@ pub struct Model {
     pub id: String,
     #[sea_orm(unique)]
     pub username: String,
-    pub password_hash: String,
+    pub password_hash: Option<String>,
     #[sea_orm(unique)]
     pub email: String,
     pub role: String,
@@ -52,6 +52,7 @@ impl UserRecord {
             allowed_provider_ids,
             auth_source: self.auth_source,
             email_verified: self.email_verified,
+            password_set: self.password_hash.is_some(),
             system: false,
             rate_limit_rpm: self.rate_limit_rpm,
             quota_mode: self.quota_mode,

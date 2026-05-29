@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map existing auth/settings/user boundaries,DONE,"Relevant backend and frontend entrypoints are inspected","rg -n \"auth|settings|users|password_hash|system_settings\" crates apps/hook_backend apps/hook_frontend",2026-05-29,0,
+2,Implement backend data model and storage,DONE,"users.password_hash is optional and user_identities/provider settings are stored","just check",2026-05-29,0,
+3,Implement backend auth/account/admin flows,DONE,"OAuth wallet account profile identity and password OTP APIs compile and are covered by focused tests","timeout 60 cargo test -p user social_auth_tests -- --nocapture",2026-05-29,0,
+4,Implement frontend settings login profile and admin UI,DONE,"Provider settings login buttons profile page and admin badges compile","pnpm lint:frontend",2026-05-29,0,
+5,Run final validation and fix surfaced failures,DONE,"Repository checks pass or failures are documented with root cause","timeout 60 just check && pnpm lint:frontend && pnpm build:frontend",2026-05-29,0,"just test has one unrelated pre-existing failure in apps/hook_backend/src/llm_proxy/formats.rs"

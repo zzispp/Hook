@@ -276,6 +276,15 @@ export async function deleteUser(id: string) {
   await mutate((key) => isEndpointKey(key, endpoints.users));
 }
 
+export async function getUser(id: string) {
+  return requestData<SystemUser>(axios.get(endpoints.user(id)));
+}
+
+export async function deleteUserIdentity(userId: string, identityId: string) {
+  await requestData<void>(axios.delete(endpoints.userIdentity(userId, identityId)));
+  await mutate((key) => isEndpointKey(key, endpoints.users));
+}
+
 function isEndpointKey(key: unknown, endpoint: string) {
   return key === endpoint || (Array.isArray(key) && key[0] === endpoint);
 }

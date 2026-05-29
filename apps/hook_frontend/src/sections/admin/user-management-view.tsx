@@ -13,7 +13,14 @@ import { useTranslate } from 'src/locales/use-locales';
 import { useUserGroups } from 'src/actions/user-groups';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
-import { useRoles, useUsers, createUser, deleteUser, updateUser } from 'src/actions/rbac';
+import {
+  useRoles,
+  useUsers,
+  createUser,
+  deleteUser,
+  updateUser,
+  deleteUserIdentity,
+} from 'src/actions/rbac';
 
 import { toast } from 'src/components/snackbar';
 import { useTable } from 'src/components/table';
@@ -196,6 +203,7 @@ function useUserDialog(t: ReturnType<typeof useTranslate>['t'], refresh: VoidFun
   const [editing, setEditing] = useState<SystemUser | null>(null);
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [unlinkingIdentityId, setUnlinkingIdentityId] = useState<string | null>(null);
 
   const close = useCallback(() => {
     setEditing(null);
@@ -234,6 +242,31 @@ function useUserDialog(t: ReturnType<typeof useTranslate>['t'], refresh: VoidFun
     }
   }, [close, editing, form, refresh, t]);
 
+  const unlinkIdentity = useCallback(
+    async (identityId: string) => {
+      if (!editing) return;
+      setUnlinkingIdentityId(identityId);
+      try {
+        await deleteUserIdentity(editing.id, identityId);
+        toast.success(t('messages.userIdentityDeleted'));
+        refresh();
+        setEditing((current) =>
+          current
+            ? {
+                ...current,
+                identities: current.identities.filter((identity) => identity.id !== identityId),
+              }
+            : current
+        );
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : t('messages.deleteFailed'));
+      } finally {
+        setUnlinkingIdentityId(null);
+      }
+    },
+    [editing, refresh, t]
+  );
+
   return {
     close,
     creating,
@@ -245,5 +278,7 @@ function useUserDialog(t: ReturnType<typeof useTranslate>['t'], refresh: VoidFun
     setForm,
     submit,
     submitting,
+    unlinkIdentity,
+    unlinkingIdentityId,
   };
 }

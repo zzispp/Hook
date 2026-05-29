@@ -64,7 +64,7 @@ fn system_auth_by_identifier<S: SystemUserProvider>(system_users: &S, identifier
     }
     Some(UserAuthRecord {
         user,
-        password_hash: system_user.password_hash,
+        password_hash: Some(system_user.password_hash),
     })
 }
 

@@ -53,9 +53,20 @@ impl SettingRepository for StorageSettingRepository {
         self.store.get_smtp_settings().await.map(stored_smtp_settings).map_err(storage_error)
     }
 
-    async fn update_system_settings(&self, input: SystemSettingsUpdate, encrypted_smtp_password: Option<String>) -> SettingResult<SystemSettingsResponse> {
+    async fn update_system_settings(
+        &self,
+        input: SystemSettingsUpdate,
+        encrypted_smtp_password: Option<String>,
+        encrypted_github_client_secret: Option<String>,
+        encrypted_google_client_secret: Option<String>,
+    ) -> SettingResult<SystemSettingsResponse> {
         self.store
-            .update_system_settings(record_patch(input, encrypted_smtp_password))
+            .update_system_settings(record_patch(
+                input,
+                encrypted_smtp_password,
+                encrypted_github_client_secret,
+                encrypted_google_client_secret,
+            ))
             .await
             .map(Into::into)
             .map_err(storage_error)
@@ -92,7 +103,12 @@ fn stored_smtp_settings(value: storage::setting::SystemSettingsSmtpRecord) -> St
     }
 }
 
-fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<String>) -> storage::setting::SystemSettingsRecordPatch {
+fn record_patch(
+    input: SystemSettingsUpdate,
+    encrypted_smtp_password: Option<String>,
+    encrypted_github_client_secret: Option<String>,
+    encrypted_google_client_secret: Option<String>,
+) -> storage::setting::SystemSettingsRecordPatch {
     storage::setting::SystemSettingsRecordPatch {
         site_name: input.site_name,
         site_subtitle: input.site_subtitle,
@@ -104,6 +120,18 @@ fn record_patch(input: SystemSettingsUpdate, encrypted_smtp_password: Option<Str
         support_ticket_captcha_enabled: input.support_ticket_captcha_enabled,
         recharge_captcha_enabled: input.recharge_captcha_enabled,
         registration_email_verification_enabled: input.registration_email_verification_enabled,
+        auth_github_enabled: input.auth_github_enabled,
+        auth_github_client_id: input.auth_github_client_id,
+        encrypted_auth_github_client_secret: encrypted_github_client_secret,
+        auth_google_enabled: input.auth_google_enabled,
+        auth_google_client_id: input.auth_google_client_id,
+        encrypted_auth_google_client_secret: encrypted_google_client_secret,
+        auth_evm_enabled: input.auth_evm_enabled,
+        auth_evm_chain_ids: input.auth_evm_chain_ids,
+        auth_solana_enabled: input.auth_solana_enabled,
+        auth_solana_network: input.auth_solana_network,
+        auth_wallet_domain: input.auth_wallet_domain,
+        auth_wallet_statement: input.auth_wallet_statement,
         password_reset_enabled: input.password_reset_enabled,
         email_config_enabled: input.email_config_enabled,
         support_ticket_email_notifications_enabled: input.support_ticket_email_notifications_enabled,

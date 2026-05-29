@@ -6,6 +6,7 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
     let mut tables = vec![
         user_groups_table(),
         users_table(),
+        user_identities_table(),
         user_password_reset_tokens_table(),
         roles_table(),
         api_permissions_table(),
@@ -34,7 +35,7 @@ fn users_table() -> TableCreateStatement {
         .if_not_exists()
         .col(string_len(Users::Id, 36).primary_key())
         .col(string_len(Users::Username, 100))
-        .col(string_len(Users::PasswordHash, 255))
+        .col(string_len_null(Users::PasswordHash, 255))
         .col(string_len(Users::Email, 255))
         .col(string_len(Users::Role, 100))
         .col(string_len(Users::GroupCode, 64))
@@ -50,6 +51,27 @@ fn users_table() -> TableCreateStatement {
         .col(big_integer_null(Users::RateLimitRpm))
         .col(string_len(Users::QuotaMode, 20).default("wallet"))
         .foreign_key(&mut user_group_fk)
+        .to_owned()
+}
+
+fn user_identities_table() -> TableCreateStatement {
+    let mut user_fk = user_identity_user_fk();
+    Table::create()
+        .table(UserIdentities::Table)
+        .if_not_exists()
+        .col(string_len(UserIdentities::Id, 36).primary_key())
+        .col(string_len(UserIdentities::UserId, 36))
+        .col(string_len(UserIdentities::Provider, 20))
+        .col(string_len(UserIdentities::ProviderSubject, 255))
+        .col(string_len_null(UserIdentities::Email, 255))
+        .col(boolean(UserIdentities::EmailVerified))
+        .col(string_len_null(UserIdentities::DisplayName, 255))
+        .col(string_len_null(UserIdentities::AvatarUrl, 1024))
+        .col(text(UserIdentities::MetadataJson).default("{}"))
+        .col(timestamp_tz(UserIdentities::CreatedAt))
+        .col(timestamp_tz(UserIdentities::UpdatedAt))
+        .col(timestamp_tz_null(UserIdentities::LastLoginAt))
+        .foreign_key(&mut user_fk)
         .to_owned()
 }
 
@@ -99,6 +121,16 @@ fn user_password_reset_token_user_fk() -> ForeignKeyCreateStatement {
     foreign_key
         .name("fk_user_password_reset_tokens_user")
         .from(UserPasswordResetTokens::Table, UserPasswordResetTokens::UserId)
+        .to(Users::Table, Users::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn user_identity_user_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_user_identities_user")
+        .from(UserIdentities::Table, UserIdentities::UserId)
         .to(Users::Table, Users::Id)
         .on_delete(ForeignKeyAction::Cascade);
     foreign_key

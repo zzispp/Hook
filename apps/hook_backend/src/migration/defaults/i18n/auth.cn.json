@@ -32,6 +32,22 @@
     "resetPasswordLoading": "正在重置...",
     "backToSignIn": "返回登录"
   },
+  "social": {
+    "or": "或使用快捷登录",
+    "github": "使用 GitHub 登录",
+    "google": "使用 Google 登录",
+    "evm": "使用 EVM 钱包登录",
+    "solana": "使用 Solana 钱包登录",
+    "walletEmailRequired": "钱包 {{address}} 尚未绑定账户，请验证邮箱后继续。",
+    "resendCode": "重新发送验证码",
+    "completeWallet": "完成钱包绑定并登录",
+    "oauthProcessing": "正在处理第三方登录...",
+    "oauthMissingParams": "第三方登录回调缺少必要参数。",
+    "bindingRequiredTitle": "绑定已有账户",
+    "bindingRequiredDescription": "{{provider}} 邮箱 {{email}} 已属于用户 {{username}}，确认后会把该 Provider 绑定到这个账户。",
+    "confirmBinding": "确认绑定并登录",
+    "cancelBinding": "取消"
+  },
   "signIn": {
     "title": "登录你的账户",
     "noAccount": "还没有账户？",

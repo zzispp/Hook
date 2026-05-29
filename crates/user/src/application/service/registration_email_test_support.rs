@@ -233,6 +233,7 @@ impl RegistrationEmailConfig for TestRegistrationEmailConfig {
         Ok(types::user::AuthConfigResponse {
             allow_registration: true,
             registration_email_verification_enabled: true,
+            providers: types::user::AuthProviderConfigResponse::default(),
         })
     }
 

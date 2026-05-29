@@ -10,6 +10,10 @@ use super::{SettingError, SettingResult};
 const MAX_SITE_NAME_LENGTH: usize = 100;
 const MAX_SITE_SUBTITLE_LENGTH: usize = 200;
 const MAX_PUBLIC_BASE_URL_LENGTH: usize = 255;
+const MAX_AUTH_CLIENT_ID_LENGTH: usize = 255;
+const MAX_AUTH_CLIENT_SECRET_LENGTH: usize = 2048;
+const MAX_AUTH_WALLET_DOMAIN_LENGTH: usize = 255;
+const MAX_AUTH_WALLET_STATEMENT_LENGTH: usize = 200;
 const MAX_SMTP_HOST_LENGTH: usize = 255;
 const MAX_SMTP_USERNAME_LENGTH: usize = 255;
 const MAX_SMTP_PASSWORD_LENGTH: usize = 1024;
@@ -31,6 +35,14 @@ pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
         default_user_group_code: trim_optional(input.default_user_group_code),
         client_sensitive_request_headers: normalize_optional_headers(input.client_sensitive_request_headers),
         provider_sensitive_request_headers: normalize_optional_headers(input.provider_sensitive_request_headers),
+        auth_github_client_id: trim_optional(input.auth_github_client_id),
+        auth_github_client_secret: trim_optional(input.auth_github_client_secret),
+        auth_google_client_id: trim_optional(input.auth_google_client_id),
+        auth_google_client_secret: trim_optional(input.auth_google_client_secret),
+        auth_evm_chain_ids: trim_optional(input.auth_evm_chain_ids),
+        auth_solana_network: trim_optional(input.auth_solana_network),
+        auth_wallet_domain: trim_optional(input.auth_wallet_domain),
+        auth_wallet_statement: trim_optional(input.auth_wallet_statement),
         smtp_host: trim_optional(input.smtp_host),
         smtp_username: trim_optional(input.smtp_username),
         smtp_password: trim_optional(input.smtp_password),
@@ -63,7 +75,32 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_positive_i64("token_limit_per_user", input.token_limit_per_user)?;
     validate_positive_i64("cache_affinity_ttl_minutes", input.cache_affinity_ttl_minutes)?;
     validate_provider_cooldown_policy(input.provider_cooldown_policy.as_ref())?;
+    validate_auth_provider_settings(input)?;
     validate_mail_settings(input)
+}
+
+fn validate_auth_provider_settings(input: &SystemSettingsUpdate) -> SettingResult<()> {
+    validate_optional_length("auth_github_client_id", input.auth_github_client_id.as_deref(), MAX_AUTH_CLIENT_ID_LENGTH)?;
+    validate_required_optional_length(
+        "auth_github_client_secret",
+        input.auth_github_client_secret.as_deref(),
+        MAX_AUTH_CLIENT_SECRET_LENGTH,
+    )?;
+    validate_optional_length("auth_google_client_id", input.auth_google_client_id.as_deref(), MAX_AUTH_CLIENT_ID_LENGTH)?;
+    validate_required_optional_length(
+        "auth_google_client_secret",
+        input.auth_google_client_secret.as_deref(),
+        MAX_AUTH_CLIENT_SECRET_LENGTH,
+    )?;
+    validate_optional_length("auth_evm_chain_ids", input.auth_evm_chain_ids.as_deref(), MAX_AUTH_CLIENT_ID_LENGTH)?;
+    validate_optional_length("auth_solana_network", input.auth_solana_network.as_deref(), MAX_AUTH_CLIENT_ID_LENGTH)?;
+    validate_optional_length("auth_wallet_domain", input.auth_wallet_domain.as_deref(), MAX_AUTH_WALLET_DOMAIN_LENGTH)?;
+    validate_optional_length(
+        "auth_wallet_statement",
+        input.auth_wallet_statement.as_deref(),
+        MAX_AUTH_WALLET_STATEMENT_LENGTH,
+    )?;
+    Ok(())
 }
 
 fn validate_optional_code(field: &str, value: Option<&str>) -> SettingResult<()> {

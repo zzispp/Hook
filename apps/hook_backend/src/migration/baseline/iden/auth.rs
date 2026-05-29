@@ -46,3 +46,20 @@ pub(in crate::migration::baseline) enum UserPasswordResetTokens {
     ConsumedAt,
     CreatedAt,
 }
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum UserIdentities {
+    Table,
+    Id,
+    UserId,
+    Provider,
+    ProviderSubject,
+    Email,
+    EmailVerified,
+    DisplayName,
+    AvatarUrl,
+    MetadataJson,
+    CreatedAt,
+    UpdatedAt,
+    LastLoginAt,
+}

@@ -1,18 +1,17 @@
 'use client';
 
 import type * as z from 'zod';
+import type { IdentityProvider } from 'src/types/rbac';
+import type { WalletSignInResponse } from '../../context/jwt';
+import type { WalletTicketState } from './jwt-social-sign-in';
+import type { WalletProviderPublicConfig } from 'src/actions/auth-config';
 
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useBoolean } from 'minimal-shared/hooks';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import Alert from '@mui/material/Alert';
-import Button from '@mui/material/Button';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
@@ -20,16 +19,24 @@ import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { useCaptchaConfig } from 'src/actions/captcha';
 import { useTranslate } from 'src/locales/use-locales';
-
-import { Iconify } from 'src/components/iconify';
-import { Form, Field } from 'src/components/hook-form';
+import { useAuthConfig } from 'src/actions/auth-config';
 
 import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
 import { FormHead } from '../../components/form-head';
-import { signInWithPassword } from '../../context/jwt';
-import { AuthCaptcha } from '../../components/cap-widget';
+import { JwtSocialSignIn } from './jwt-social-sign-in';
 import { signInSchema } from '../../context/jwt/validation';
+import { JwtPasswordSignInForm } from './jwt-password-sign-in-form';
+import { signWalletMessage, connectWalletAccount } from '../../context/jwt/wallet-signing';
+import {
+  startOAuth,
+  walletNonce,
+  walletSignIn,
+  completeWallet,
+  signInWithPassword,
+  requestWalletEmailCode,
+  applyAuthenticatedSession,
+} from '../../context/jwt';
 
 // ----------------------------------------------------------------------
 
@@ -45,17 +52,22 @@ const PASSWORD_RESET_SUCCESS_VALUE = 'success';
 export function JwtSignInView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useTranslate('auth');
-
-  const showPassword = useBoolean();
+  const { t, currentLang } = useTranslate('auth');
 
   const { checkUserSession } = useAuthContext();
+  const authConfig = useAuthConfig();
   const captchaConfig = useCaptchaConfig();
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [socialLoading, setSocialLoading] = useState<IdentityProvider | null>(null);
+  const [walletTicket, setWalletTicket] = useState<WalletTicketState | null>(null);
+  const [walletEmail, setWalletEmail] = useState('');
+  const [walletCode, setWalletCode] = useState('');
+  const [walletCodeSent, setWalletCodeSent] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
+  const providers = authConfig.data?.providers;
   const captchaEnabled = captchaConfig.data?.login_captcha_enabled ?? false;
   const captchaUnavailable = captchaConfig.isLoading || !!captchaConfig.error;
   const visibleErrorMessage =
@@ -113,71 +125,6 @@ export function JwtSignInView() {
     }
   });
 
-  const renderForm = () => (
-    <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
-      <Field.Text
-        name="identifier"
-        label={t('fields.identifier')}
-        placeholder={t('placeholders.identifier')}
-        slotProps={{ inputLabel: { shrink: true } }}
-      />
-
-      <Box sx={{ gap: 1.5, display: 'flex', flexDirection: 'column' }}>
-        <Link
-          component={RouterLink}
-          href={paths.auth.jwt.forgotPassword}
-          variant="body2"
-          color="inherit"
-          sx={{ alignSelf: 'flex-end' }}
-        >
-          {t('signIn.forgotPassword')}
-        </Link>
-
-        <Field.Text
-          name="password"
-          label={t('fields.password')}
-          placeholder={t('placeholders.password')}
-          type={showPassword.value ? 'text' : 'password'}
-          slotProps={{
-            inputLabel: { shrink: true },
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton onClick={showPassword.onToggle} edge="end">
-                    <Iconify
-                      icon={showPassword.value ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
-                    />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-      </Box>
-
-      <AuthCaptcha
-        enabled={captchaEnabled}
-        resetKey={captchaResetKey}
-        onTokenChange={setCaptchaToken}
-      />
-
-      <Button
-        fullWidth
-        color="inherit"
-        size="large"
-        type="submit"
-        variant="contained"
-        disabled={captchaUnavailable}
-        loading={isSubmitting || captchaConfig.isLoading}
-        loadingIndicator={
-          captchaConfig.isLoading ? t('common.loading', { ns: 'common' }) : t('actions.signInLoading')
-        }
-      >
-        {t('actions.signIn')}
-      </Button>
-    </Box>
-  );
-
   return (
     <>
       <FormHead
@@ -205,9 +152,128 @@ export function JwtSignInView() {
         </Alert>
       )}
 
-      <Form methods={methods} onSubmit={onSubmit}>
-        {renderForm()}
-      </Form>
+      <JwtSocialSignIn
+        providers={providers}
+        loading={socialLoading}
+        walletTicket={walletTicket}
+        walletEmail={walletEmail}
+        walletCode={walletCode}
+        walletCodeSent={walletCodeSent}
+        onWalletEmailChange={setWalletEmail}
+        onWalletCodeChange={setWalletCode}
+        onOAuth={(provider) =>
+          runSocialAction(setErrorMessage, setSocialLoading, provider, async () => {
+            const { authorization_url } = await startOAuth(provider);
+            window.location.assign(authorization_url);
+          })
+        }
+        onWallet={(provider, config) =>
+          runSocialAction(setErrorMessage, setSocialLoading, provider, async () => {
+            const account = await connectWalletAccount(walletScope(provider, config));
+            const challenge = await walletNonce(account);
+            const signed = await signWalletMessage({
+              ...account,
+              message: challenge.message,
+            });
+            const result = await walletSignIn({
+              ...account,
+              message: challenge.message,
+              signature: signed.signature,
+            });
+            await handleWalletResult(result, checkUserSession, router.refresh, setWalletTicket);
+          })
+        }
+        onSendWalletCode={() =>
+          runSocialAction(setErrorMessage, setSocialLoading, walletTicket?.provider ?? 'evm', async () => {
+            if (!walletTicket) return;
+            await requestWalletEmailCode({
+              walletTicket: walletTicket.ticket,
+              email: walletEmail,
+              lang: currentLang.value,
+            });
+            setWalletCodeSent(true);
+          })
+        }
+        onCompleteWallet={() =>
+          runSocialAction(setErrorMessage, setSocialLoading, walletTicket?.provider ?? 'evm', async () => {
+            if (!walletTicket) return;
+            await completeWallet({
+              walletTicket: walletTicket.ticket,
+              email: walletEmail,
+              emailVerificationCode: walletCode,
+            });
+            await checkUserSession?.();
+            router.refresh();
+          })
+        }
+      />
+
+      <JwtPasswordSignInForm
+        methods={methods}
+        onSubmit={onSubmit}
+        captchaEnabled={captchaEnabled}
+        captchaResetKey={captchaResetKey}
+        captchaUnavailable={captchaUnavailable}
+        loading={isSubmitting}
+        captchaLoading={captchaConfig.isLoading}
+        signInLabel={t('actions.signIn')}
+        signInLoadingLabel={t('actions.signInLoading')}
+        captchaLoadingLabel={t('common.loading', { ns: 'common' })}
+        identifierLabel={t('fields.identifier')}
+        identifierPlaceholder={t('placeholders.identifier')}
+        passwordLabel={t('fields.password')}
+        passwordPlaceholder={t('placeholders.password')}
+        forgotPasswordLabel={t('signIn.forgotPassword')}
+        onCaptchaTokenChange={setCaptchaToken}
+      />
     </>
   );
+}
+
+async function runSocialAction(
+  setErrorMessage: (message: string | null) => void,
+  setSocialLoading: (provider: IdentityProvider | null) => void,
+  provider: IdentityProvider,
+  action: () => Promise<void>
+) {
+  setErrorMessage(null);
+  setSocialLoading(provider);
+  try {
+    await action();
+  } catch (error) {
+    console.error(error);
+    setErrorMessage(getErrorMessage(error));
+  } finally {
+    setSocialLoading(null);
+  }
+}
+
+function walletScope(
+  provider: Extract<IdentityProvider, 'evm' | 'solana'>,
+  config: WalletProviderPublicConfig
+) {
+  return {
+    provider,
+    chainId: provider === 'evm' ? config.evm_chain_ids[0] : undefined,
+    network: provider === 'solana' ? config.solana_network : undefined,
+  };
+}
+
+async function handleWalletResult(
+  result: WalletSignInResponse,
+  checkUserSession: (() => Promise<void>) | undefined,
+  refresh: VoidFunction,
+  setWalletTicket: (ticket: WalletTicketState | null) => void
+) {
+  if (result.status === 'authenticated') {
+    await applyAuthenticatedSession(result);
+    await checkUserSession?.();
+    refresh();
+    return;
+  }
+  setWalletTicket({
+    ticket: result.wallet_ticket,
+    provider: result.provider as Extract<IdentityProvider, 'evm' | 'solana'>,
+    address: result.address,
+  });
 }

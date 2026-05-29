@@ -32,6 +32,22 @@
     "resetPasswordLoading": "Resetting...",
     "backToSignIn": "Back to sign in"
   },
+  "social": {
+    "or": "Or continue with",
+    "github": "Continue with GitHub",
+    "google": "Continue with Google",
+    "evm": "Continue with EVM wallet",
+    "solana": "Continue with Solana wallet",
+    "walletEmailRequired": "Wallet {{address}} is not linked yet. Verify an email to continue.",
+    "resendCode": "Resend code",
+    "completeWallet": "Link wallet and sign in",
+    "oauthProcessing": "Processing third-party sign-in...",
+    "oauthMissingParams": "Third-party sign-in callback is missing required parameters.",
+    "bindingRequiredTitle": "Link existing account",
+    "bindingRequiredDescription": "{{provider}} email {{email}} already belongs to {{username}}. Confirm to link this provider to that account.",
+    "confirmBinding": "Confirm and sign in",
+    "cancelBinding": "Cancel"
+  },
   "signIn": {
     "title": "Sign in to your account",
     "noAccount": "Don’t have an account?",

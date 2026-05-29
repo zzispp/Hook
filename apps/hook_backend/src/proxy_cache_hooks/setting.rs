@@ -30,8 +30,17 @@ where
         self.inner.get_smtp_settings().await
     }
 
-    async fn update_system_settings(&self, input: SystemSettingsUpdate, encrypted_smtp_password: Option<String>) -> SettingResult<SystemSettingsResponse> {
-        let settings = self.inner.update_system_settings(input, encrypted_smtp_password).await?;
+    async fn update_system_settings(
+        &self,
+        input: SystemSettingsUpdate,
+        encrypted_smtp_password: Option<String>,
+        encrypted_github_client_secret: Option<String>,
+        encrypted_google_client_secret: Option<String>,
+    ) -> SettingResult<SystemSettingsResponse> {
+        let settings = self
+            .inner
+            .update_system_settings(input, encrypted_smtp_password, encrypted_github_client_secret, encrypted_google_client_secret)
+            .await?;
         self.refresh_scheduling().await?;
         Ok(settings)
     }

@@ -1,7 +1,12 @@
+mod auth_ports;
 mod error;
 mod ports;
 mod service;
 
+pub use auth_ports::{
+    AuthProviderConfig, AuthTicketStore, OAuthClient, OAuthPendingBinding, OAuthProfile, OAuthProviderSettings, OAuthSignInResult, OAuthStateRecord,
+    PurposeEmailCodeStore, WalletChallenge, WalletNonceInput, WalletPendingBinding, WalletProviderSettings, WalletSignInInput, WalletSignInResult,
+};
 pub use error::{AppError, AppResult};
 pub use ports::{
     EmailSettings, InitialGrantLedger, PasswordHasher, PasswordResetConfig, PasswordResetEmail, PasswordResetMailer, PasswordResetRecord,

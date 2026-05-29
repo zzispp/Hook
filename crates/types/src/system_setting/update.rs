@@ -28,6 +28,30 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub registration_email_verification_enabled: Option<bool>,
     #[serde(default)]
+    pub auth_github_enabled: Option<bool>,
+    #[serde(default)]
+    pub auth_github_client_id: Option<String>,
+    #[serde(default)]
+    pub auth_github_client_secret: Option<String>,
+    #[serde(default)]
+    pub auth_google_enabled: Option<bool>,
+    #[serde(default)]
+    pub auth_google_client_id: Option<String>,
+    #[serde(default)]
+    pub auth_google_client_secret: Option<String>,
+    #[serde(default)]
+    pub auth_evm_enabled: Option<bool>,
+    #[serde(default)]
+    pub auth_evm_chain_ids: Option<String>,
+    #[serde(default)]
+    pub auth_solana_enabled: Option<bool>,
+    #[serde(default)]
+    pub auth_solana_network: Option<String>,
+    #[serde(default)]
+    pub auth_wallet_domain: Option<String>,
+    #[serde(default)]
+    pub auth_wallet_statement: Option<String>,
+    #[serde(default)]
     pub password_reset_enabled: Option<bool>,
     #[serde(default)]
     pub email_config_enabled: Option<bool>,
@@ -134,6 +158,18 @@ impl SystemSettingsUpdate {
             && self.support_ticket_captcha_enabled.is_none()
             && self.recharge_captcha_enabled.is_none()
             && self.registration_email_verification_enabled.is_none()
+            && self.auth_github_enabled.is_none()
+            && self.auth_github_client_id.is_none()
+            && self.auth_github_client_secret.is_none()
+            && self.auth_google_enabled.is_none()
+            && self.auth_google_client_id.is_none()
+            && self.auth_google_client_secret.is_none()
+            && self.auth_evm_enabled.is_none()
+            && self.auth_evm_chain_ids.is_none()
+            && self.auth_solana_enabled.is_none()
+            && self.auth_solana_network.is_none()
+            && self.auth_wallet_domain.is_none()
+            && self.auth_wallet_statement.is_none()
             && self.password_reset_enabled.is_none()
             && self.default_user_group_code.is_none()
             && self.default_user_grant.is_none()

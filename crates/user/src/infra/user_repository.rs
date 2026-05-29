@@ -10,7 +10,7 @@ use storage::{
 };
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{User, UserId, UserListFilters, UserWalletSummaryResponse},
+    user::{IdentityProvider, User, UserId, UserIdentity, UserIdentityInput, UserListFilters, UserWalletSummaryResponse},
 };
 
 use crate::application::{
@@ -126,6 +126,30 @@ impl UserRepository for StorageUserRepository {
 
     async fn list_slice(&self, request: PageSliceRequest, filters: UserListFilters) -> AppResult<Page<User>> {
         self.store.list_slice(request, filters).await.map_err(storage_error)
+    }
+
+    async fn create_identity(&self, input: UserIdentityInput) -> AppResult<UserIdentity> {
+        self.store.create_identity(input).await.map_err(storage_error)
+    }
+
+    async fn find_identity(&self, provider: IdentityProvider, subject: &str) -> AppResult<Option<UserIdentity>> {
+        self.store.find_identity(provider, subject).await.map_err(storage_error)
+    }
+
+    async fn list_identities_by_user_id(&self, user_id: &str) -> AppResult<Vec<UserIdentity>> {
+        self.store.list_identities_by_user_id(user_id).await.map_err(storage_error)
+    }
+
+    async fn list_identities_by_user_ids(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, Vec<UserIdentity>>> {
+        self.store.list_identities_by_user_ids(user_ids).await.map_err(storage_error)
+    }
+
+    async fn touch_identity_login(&self, identity_id: &str) -> AppResult<()> {
+        self.store.touch_identity_login(identity_id).await.map_err(storage_error)
+    }
+
+    async fn delete_identity(&self, identity_id: &str) -> AppResult<()> {
+        self.store.delete_identity(identity_id).await.map_err(storage_error)
     }
 }
 

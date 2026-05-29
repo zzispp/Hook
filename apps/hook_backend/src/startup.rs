@@ -101,9 +101,10 @@ use user::{
     api::{ApiState, TokenService, create_router as create_user_router},
     application::{SystemUserProvider, UserService},
     infra::{
-        BcryptPasswordHasher, ConfigSystemUserProvider, RedisRegistrationEmailCodeStore, SmtpPasswordResetMailer, SmtpRegistrationEmailMailer,
-        StorageInitialGrantLedger, StoragePasswordResetConfig, StorageRegistrationEmailConfig, StorageRegistrationPolicy, StorageUserGroupBillingCatalog,
-        StorageUserGroupRepository, StorageUserGroupSettingCatalog, StorageUserRepository, StorageUserWalletCatalog,
+        BcryptPasswordHasher, ConfigSystemUserProvider, RedisAuthTicketStore, RedisPurposeEmailCodeStore, RedisRegistrationEmailCodeStore, ReqwestOAuthClient,
+        SmtpPasswordResetMailer, SmtpRegistrationEmailMailer, StorageAuthProviderConfig, StorageInitialGrantLedger, StoragePasswordResetConfig,
+        StorageRegistrationEmailConfig, StorageRegistrationPolicy, StorageUserGroupBillingCatalog, StorageUserGroupRepository, StorageUserGroupSettingCatalog,
+        StorageUserRepository, StorageUserWalletCatalog,
     },
 };
 use wallet::{
@@ -233,6 +234,12 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
             StorageRegistrationEmailConfig::new(database.clone()),
             SmtpRegistrationEmailMailer::new(database.clone(), setting_secret_cipher.clone()),
             RedisRegistrationEmailCodeStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
+        )
+        .with_social_auth(
+            StorageAuthProviderConfig::new(database.clone(), setting_secret_cipher.clone()),
+            ReqwestOAuthClient::new()?,
+            RedisAuthTicketStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
+            RedisPurposeEmailCodeStore::new(redis_connection.clone(), settings.redis.key_prefix.clone()),
         ),
     );
     let user_groups = Arc::new(user::application::UserGroupService::new(

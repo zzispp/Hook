@@ -12,6 +12,31 @@
   "auth": {
     "logoutError": "Unable to logout"
   },
+  "profile": {
+    "title": "Profile",
+    "menu": "Profile",
+    "accountTitle": "Account information",
+    "passwordTitle": "Local password",
+    "providersTitle": "Linked providers",
+    "username": "Username",
+    "email": "Email",
+    "emailVerified": "Email verified",
+    "emailUnverified": "Email not verified",
+    "passwordSet": "Local password set",
+    "passwordNotSet": "Local password not set",
+    "sendCode": "Send email code",
+    "emailCode": "Email verification code",
+    "newPassword": "New password",
+    "changePassword": "Change password",
+    "noProviders": "No linked providers",
+    "unlink": "Unlink",
+    "messages": {
+      "codeSent": "Code sent. Please check your inbox.",
+      "passwordChanged": "Password changed.",
+      "providerUnlinked": "Provider unlinked.",
+      "saveFailed": "Operation failed"
+    }
+  },
   "home": {
     "hero": {
       "headingSuffix": "Gateway",

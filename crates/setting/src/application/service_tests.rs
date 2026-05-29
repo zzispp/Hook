@@ -25,6 +25,8 @@ type UpdateLog = Arc<Mutex<Option<UpdateRecord>>>;
 struct UpdateRecord {
     input: SystemSettingsUpdate,
     encrypted_smtp_password: Option<String>,
+    encrypted_github_client_secret: Option<String>,
+    encrypted_google_client_secret: Option<String>,
 }
 
 #[async_trait]
@@ -37,10 +39,18 @@ impl SettingRepository for FakeRepository {
         Ok(self.stored.clone())
     }
 
-    async fn update_system_settings(&self, input: SystemSettingsUpdate, encrypted_smtp_password: Option<String>) -> SettingResult<SystemSettingsResponse> {
+    async fn update_system_settings(
+        &self,
+        input: SystemSettingsUpdate,
+        encrypted_smtp_password: Option<String>,
+        encrypted_github_client_secret: Option<String>,
+        encrypted_google_client_secret: Option<String>,
+    ) -> SettingResult<SystemSettingsResponse> {
         *self.update.lock().unwrap() = Some(UpdateRecord {
             input,
             encrypted_smtp_password,
+            encrypted_github_client_secret,
+            encrypted_google_client_secret,
         });
         Ok(self.settings.clone())
     }
@@ -146,6 +156,18 @@ fn system_settings_response() -> SystemSettingsResponse {
         support_ticket_captcha_enabled: true,
         recharge_captcha_enabled: false,
         registration_email_verification_enabled: false,
+        auth_github_enabled: false,
+        auth_github_client_id: String::new(),
+        auth_github_client_secret_set: false,
+        auth_google_enabled: false,
+        auth_google_client_id: String::new(),
+        auth_google_client_secret_set: false,
+        auth_evm_enabled: false,
+        auth_evm_chain_ids: "1".into(),
+        auth_solana_enabled: false,
+        auth_solana_network: "mainnet-beta".into(),
+        auth_wallet_domain: String::new(),
+        auth_wallet_statement: "Sign in to Hook".into(),
         password_reset_enabled: false,
         email_config_enabled: false,
         support_ticket_email_notifications_enabled: false,

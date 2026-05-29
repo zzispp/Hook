@@ -85,6 +85,7 @@ pub fn reversed_tables() -> Vec<DynIden> {
         ApiPermissions::Table.into_iden(),
         Roles::Table.into_iden(),
         UserPasswordResetTokens::Table.into_iden(),
+        UserIdentities::Table.into_iden(),
         Users::Table.into_iden(),
         UserGroups::Table.into_iden(),
     ]

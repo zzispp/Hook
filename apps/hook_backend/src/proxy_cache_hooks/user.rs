@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{User, UserId, UserListFilters},
+    user::{IdentityProvider, User, UserId, UserIdentity, UserIdentityInput, UserListFilters},
     user_group::{UserGroupListRequest, UserGroupPageResponse, UserGroupResponse},
 };
 use user::application::{
@@ -78,6 +78,33 @@ where
 
     async fn list_slice(&self, request: PageSliceRequest, filters: UserListFilters) -> AppResult<Page<User>> {
         self.inner.list_slice(request, filters).await
+    }
+
+    async fn create_identity(&self, input: UserIdentityInput) -> AppResult<UserIdentity> {
+        let identity = self.inner.create_identity(input).await?;
+        self.refresh_scheduling().await?;
+        Ok(identity)
+    }
+
+    async fn find_identity(&self, provider: IdentityProvider, subject: &str) -> AppResult<Option<UserIdentity>> {
+        self.inner.find_identity(provider, subject).await
+    }
+
+    async fn list_identities_by_user_id(&self, user_id: &str) -> AppResult<Vec<UserIdentity>> {
+        self.inner.list_identities_by_user_id(user_id).await
+    }
+
+    async fn list_identities_by_user_ids(&self, user_ids: &[String]) -> AppResult<std::collections::BTreeMap<String, Vec<UserIdentity>>> {
+        self.inner.list_identities_by_user_ids(user_ids).await
+    }
+
+    async fn touch_identity_login(&self, identity_id: &str) -> AppResult<()> {
+        self.inner.touch_identity_login(identity_id).await
+    }
+
+    async fn delete_identity(&self, identity_id: &str) -> AppResult<()> {
+        self.inner.delete_identity(identity_id).await?;
+        self.refresh_scheduling().await
     }
 }
 

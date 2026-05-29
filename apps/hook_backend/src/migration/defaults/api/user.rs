@@ -14,6 +14,12 @@ pub const USER_APIS: &[ApiDefinition] = &[
         name: "创建用户",
     },
     ApiDefinition {
+        code: "users_detail",
+        method: "GET",
+        path_pattern: "/api/users/{id}",
+        name: "用户详情",
+    },
+    ApiDefinition {
         code: "users_update",
         method: "PUT",
         path_pattern: "/api/users/{id}",
@@ -24,6 +30,12 @@ pub const USER_APIS: &[ApiDefinition] = &[
         method: "DELETE",
         path_pattern: "/api/users/{id}",
         name: "删除用户",
+    },
+    ApiDefinition {
+        code: "users_identity_delete",
+        method: "DELETE",
+        path_pattern: "/api/users/{id}/identities/{identity_id}",
+        name: "解绑用户登录 Provider",
     },
     ApiDefinition {
         code: "user_groups_read",

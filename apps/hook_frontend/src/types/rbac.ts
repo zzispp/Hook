@@ -126,6 +126,20 @@ export type BackendNavItem = {
   children: BackendNavItem[];
 };
 
+export type IdentityProvider = 'github' | 'google' | 'evm' | 'solana';
+
+export type UserIdentitySummary = {
+  id: string;
+  provider: IdentityProvider;
+  provider_subject: string;
+  email?: string | null;
+  email_verified: boolean;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  created_at: string;
+  last_login_at?: string | null;
+};
+
 export type SystemUser = {
   id: string;
   username: string;
@@ -137,12 +151,14 @@ export type SystemUser = {
   allowed_provider_ids: string[];
   auth_source: string;
   email_verified: boolean;
+  password_set: boolean;
   system: boolean;
   rate_limit_rpm?: number | null;
   quota_mode: UserQuotaMode;
   created_at: string;
   last_login_at?: string | null;
   wallet?: UserWalletSummary | null;
+  identities: UserIdentitySummary[];
 };
 
 export type UserInput = {

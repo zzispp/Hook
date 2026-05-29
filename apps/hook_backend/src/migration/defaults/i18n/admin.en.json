@@ -371,6 +371,7 @@
     "saveFailed": "Save failed",
     "userCreated": "User created",
     "userDeleted": "User deleted",
+    "userIdentityDeleted": "Provider unlinked",
     "userGroupAssignmentUpdated": "User group association updated",
     "userGroupCreated": "User group created",
     "userGroupDeleted": "User group deleted",
@@ -1118,6 +1119,9 @@
     "followSystem": "Follow system",
     "manageTokens": "Tokens",
     "manageWallet": "Wallet",
+    "providers": "Providers",
+    "passwordNotSet": "Local password not set",
+    "unlinkProvider": "Unlink",
     "unlimited": "Unlimited",
     "walletLimited": "Wallet limited"
   },
@@ -1603,7 +1607,38 @@
       "emailTemplateRegistrationSubjectLength": "Registration email subject is required and must be at most {{max}} characters.",
       "emailTemplateRegistrationHtmlRequired": "Registration email HTML template is required.",
       "emailTemplatePasswordResetSubjectLength": "Password reset email subject is required and must be at most {{max}} characters.",
-      "emailTemplatePasswordResetHtmlRequired": "Password reset email HTML template is required."
+      "emailTemplatePasswordResetHtmlRequired": "Password reset email HTML template is required.",
+      "authClientIdLength": "OAuth Client ID must be at most {{max}} characters.",
+      "authClientSecretLength": "OAuth Client Secret must be at most {{max}} characters.",
+      "oauthProviderIncomplete": "Enabled OAuth providers require a Client ID and a saved Client Secret.",
+      "walletDomainLength": "Wallet signature domain must be at most {{max}} characters.",
+      "walletStatementLength": "Wallet signature statement must be at most {{max}} characters.",
+      "evmChainIdsRequired": "At least one chain id is required when EVM wallet sign-in is enabled.",
+      "solanaNetworkRequired": "Solana network is required when Solana wallet sign-in is enabled.",
+      "walletDomainRequired": "Wallet signature domain is required when wallet sign-in is enabled.",
+      "walletStatementRequired": "Wallet signature statement is required when wallet sign-in is enabled."
+    },
+    "authProviders": {
+      "title": "Quick sign-in providers",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "secretSet": "Already set; leave blank to keep the current secret.",
+      "evmChainIds": "EVM Chain IDs",
+      "solanaNetwork": "Solana Network",
+      "walletDomain": "Wallet signature domain",
+      "walletStatement": "Wallet signature statement",
+      "github": {
+        "enabled": "Enable GitHub sign-in"
+      },
+      "google": {
+        "enabled": "Enable Google sign-in"
+      },
+      "evm": {
+        "enabled": "Enable EVM wallet"
+      },
+      "solana": {
+        "enabled": "Enable Solana wallet"
+      }
     },
     "recharge": {
       "description": "Controls the user recharge entry, amount conversion, and enabled state for registered payment channels.",

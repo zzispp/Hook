@@ -7,6 +7,13 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         index("index_users_by_username", Users::Table, Users::Username, true),
         index("index_users_by_email", Users::Table, Users::Email, true),
         index("index_users_by_group_code", Users::Table, Users::GroupCode, false),
+        index("index_user_identities_by_user", UserIdentities::Table, UserIdentities::UserId, false),
+        compound_index_unique(
+            "index_user_identities_by_provider_subject",
+            UserIdentities::Table,
+            UserIdentities::Provider,
+            UserIdentities::ProviderSubject,
+        ),
         index("index_user_groups_by_active", UserGroups::Table, UserGroups::IsActive, false),
         index(
             "index_user_password_reset_tokens_by_hash",
@@ -531,4 +538,20 @@ where
     C2: Iden + 'static,
 {
     Index::create().name(name).table(table).col(first).col(second).if_not_exists().to_owned()
+}
+
+fn compound_index_unique<T, C1, C2>(name: &str, table: T, first: C1, second: C2) -> IndexCreateStatement
+where
+    T: Iden + 'static,
+    C1: Iden + 'static,
+    C2: Iden + 'static,
+{
+    Index::create()
+        .name(name)
+        .table(table)
+        .col(first)
+        .col(second)
+        .unique()
+        .if_not_exists()
+        .to_owned()
 }

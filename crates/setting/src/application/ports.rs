@@ -9,7 +9,13 @@ use super::{SettingResult, SmtpConnectionConfig, StoredSmtpSettings};
 pub trait SettingRepository: Send + Sync + 'static {
     async fn get_system_settings(&self) -> SettingResult<SystemSettingsResponse>;
     async fn get_smtp_settings(&self) -> SettingResult<StoredSmtpSettings>;
-    async fn update_system_settings(&self, input: SystemSettingsUpdate, encrypted_smtp_password: Option<String>) -> SettingResult<SystemSettingsResponse>;
+    async fn update_system_settings(
+        &self,
+        input: SystemSettingsUpdate,
+        encrypted_smtp_password: Option<String>,
+        encrypted_github_client_secret: Option<String>,
+        encrypted_google_client_secret: Option<String>,
+    ) -> SettingResult<SystemSettingsResponse>;
 }
 
 pub trait SettingSecretCipher: Send + Sync + 'static {

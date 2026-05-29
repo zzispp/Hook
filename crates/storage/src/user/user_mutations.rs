@@ -1,6 +1,6 @@
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, sea_query::Expr};
 
-use crate::{StorageError, StorageResult, api_token::api_token_records};
+use crate::{StorageResult, api_token::api_token_records};
 
 pub(super) async fn set_wallet_limit_mode(db: &sea_orm::DatabaseTransaction, user_id: &str, quota_mode: &str) -> StorageResult<()> {
     crate::wallet::wallet_records::Entity::update_many()
@@ -24,8 +24,4 @@ fn wallet_limit_mode(quota_mode: &str) -> &'static str {
         types::user::USER_QUOTA_MODE_UNLIMITED => "unlimited",
         _ => "finite",
     }
-}
-
-pub(super) fn required_password_hash(password_hash: Option<String>) -> StorageResult<String> {
-    password_hash.ok_or_else(|| StorageError::Conflict("password_hash is required".into()))
 }

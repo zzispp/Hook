@@ -129,6 +129,20 @@ export const endpoints = {
     registrationEmailCode: '/api/auth/registration-email-code',
     passwordResetRequest: '/api/auth/password-reset/request',
     passwordResetConfirm: '/api/auth/password-reset/confirm',
+    oauthStart: (provider: string) => `/api/auth/oauth/${provider}/start`,
+    oauthCallback: (provider: string) => `/api/auth/oauth/${provider}/callback`,
+    oauthBindExisting: (provider: string) => `/api/auth/oauth/${provider}/bind-existing`,
+    walletNonce: '/api/auth/wallet/nonce',
+    walletSignIn: '/api/auth/wallet/sign-in',
+    walletEmailCode: '/api/auth/wallet/email-code',
+    walletComplete: '/api/auth/wallet/complete',
+  },
+  account: {
+    profile: '/api/account/profile',
+    passwordEmailCode: '/api/account/password/email-code',
+    passwordChange: '/api/account/password/change',
+    identities: '/api/account/identities',
+    identity: (id: string) => `/api/account/identities/${id}`,
   },
   captcha: {
     config: '/api/captcha/config',
@@ -141,6 +155,8 @@ export const endpoints = {
   siteInfo: '/api/site-info',
   users: '/api/users',
   user: (id: string) => `/api/users/${id}`,
+  userIdentity: (userId: string, identityId: string) =>
+    `/api/users/${userId}/identities/${identityId}`,
   rbac: {
     roles: '/api/rbac/roles',
     role: (code: string) => `/api/rbac/roles/${code}`,

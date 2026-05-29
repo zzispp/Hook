@@ -211,6 +211,23 @@ async fn update_allows_ticket_email_notifications_when_payload_completes_email_c
 }
 
 #[tokio::test]
+async fn update_encrypts_oauth_client_secrets() {
+    let (service, update) = test_update_service(system_settings_response());
+    let input = SystemSettingsUpdate {
+        auth_github_client_secret: Some("github-secret".into()),
+        auth_google_client_secret: Some("google-secret".into()),
+        ..Default::default()
+    };
+
+    service.update_system_settings(input.clone()).await.unwrap();
+
+    let record = update.lock().unwrap().clone().unwrap();
+    assert_eq!(record.input, input);
+    assert_eq!(record.encrypted_github_client_secret.as_deref(), Some("encrypted:github-secret"));
+    assert_eq!(record.encrypted_google_client_secret.as_deref(), Some("encrypted:google-secret"));
+}
+
+#[tokio::test]
 async fn update_rejects_disabling_email_config_while_ticket_email_notifications_remain_enabled() {
     let mut settings = complete_email_settings();
     settings.support_ticket_email_notifications_enabled = true;

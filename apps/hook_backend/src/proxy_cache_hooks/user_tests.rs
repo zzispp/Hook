@@ -1,9 +1,14 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{NewUser, SignUpUser, USER_QUOTA_MODE_WALLET, User, UserId, UserListFilters, default_user_created_at},
+    user::{
+        IdentityProvider, NewUser, SignUpUser, USER_QUOTA_MODE_WALLET, User, UserId, UserIdentity, UserIdentityInput, UserListFilters, default_user_created_at,
+    },
 };
 use user::application::{
     AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, UserAuthRecord, UserRepository, UserUseCase,
@@ -88,11 +93,12 @@ struct RepositoryState {
     next_id: u64,
     users: Vec<StoredUser>,
     deleted: Vec<UserId>,
+    identities: Vec<UserIdentity>,
 }
 
 struct StoredUser {
     user: User,
-    password_hash: String,
+    password_hash: Option<String>,
 }
 
 #[async_trait]
@@ -101,10 +107,9 @@ impl UserRepository for MemoryUserRepository {
         let mut state = self.state.lock().unwrap();
         state.next_id += 1;
         let user = user_from_record(state.next_id, &record);
-        let password_hash = record.password_hash.ok_or_else(|| AppError::InvalidInput("password_hash is required".into()))?;
         state.users.push(StoredUser {
             user: user.clone(),
-            password_hash,
+            password_hash: record.password_hash,
         });
         Ok(user)
     }
@@ -114,7 +119,7 @@ impl UserRepository for MemoryUserRepository {
         let stored = state.users.iter_mut().find(|stored| stored.user.id == id).ok_or(AppError::NotFound)?;
         stored.user = user_from_replace(id, &stored.user, &record);
         if let Some(password_hash) = record.password_hash {
-            stored.password_hash = password_hash;
+            stored.password_hash = Some(password_hash);
         }
         Ok(stored.user.clone())
     }
@@ -205,6 +210,68 @@ impl UserRepository for MemoryUserRepository {
             page_size: request.page_size,
         })
     }
+
+    async fn create_identity(&self, input: UserIdentityInput) -> AppResult<UserIdentity> {
+        let mut state = self.state.lock().unwrap();
+        let identity = UserIdentity {
+            id: format!("identity-{}", state.identities.len() + 1),
+            user_id: input.user_id,
+            provider: input.provider,
+            provider_subject: input.provider_subject,
+            email: input.email,
+            email_verified: input.email_verified,
+            display_name: input.display_name,
+            avatar_url: input.avatar_url,
+            created_at: default_user_created_at(),
+            updated_at: default_user_created_at(),
+            last_login_at: None,
+        };
+        state.identities.push(identity.clone());
+        Ok(identity)
+    }
+
+    async fn find_identity(&self, provider: IdentityProvider, subject: &str) -> AppResult<Option<UserIdentity>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .identities
+            .iter()
+            .find(|identity| identity.provider == provider && identity.provider_subject == subject)
+            .cloned())
+    }
+
+    async fn list_identities_by_user_id(&self, user_id: &str) -> AppResult<Vec<UserIdentity>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .identities
+            .iter()
+            .filter(|identity| identity.user_id == user_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn list_identities_by_user_ids(&self, user_ids: &[String]) -> AppResult<BTreeMap<String, Vec<UserIdentity>>> {
+        let mut grouped = BTreeMap::<String, Vec<UserIdentity>>::new();
+        for identity in self.state.lock().unwrap().identities.iter() {
+            if user_ids.contains(&identity.user_id) {
+                grouped.entry(identity.user_id.clone()).or_default().push(identity.clone());
+            }
+        }
+        Ok(grouped)
+    }
+
+    async fn touch_identity_login(&self, _identity_id: &str) -> AppResult<()> {
+        Ok(())
+    }
+
+    async fn delete_identity(&self, identity_id: &str) -> AppResult<()> {
+        let mut state = self.state.lock().unwrap();
+        state.identities.retain(|identity| identity.id != identity_id);
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -267,6 +334,7 @@ fn user_from_record(id: u64, record: &ReplaceUserRecord) -> User {
         allowed_provider_ids: record.allowed_provider_ids.clone(),
         auth_source: constants::auth::DEFAULT_AUTH_SOURCE.into(),
         email_verified: record.email_verified.unwrap_or(false),
+        password_set: record.password_hash.is_some(),
         system: false,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode.clone(),
@@ -279,6 +347,7 @@ fn user_from_replace(id: UserId, current: &User, record: &ReplaceUserRecord) -> 
     User {
         id,
         email_verified: record.email_verified.unwrap_or(current.email_verified),
+        password_set: current.password_set || record.password_hash.is_some(),
         created_at: current.created_at.clone(),
         last_login_at: current.last_login_at.clone(),
         ..user_from_record(0, record)

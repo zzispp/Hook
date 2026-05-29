@@ -163,9 +163,11 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         menu_code: "admin_users",
         api_codes: &[
             "users_read",
+            "users_detail",
             "users_create",
             "users_update",
             "users_delete",
+            "users_identity_delete",
             "user_groups_read",
             "roles_read",
             "admin_wallet_user_balance_read",
