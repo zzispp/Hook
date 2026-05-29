@@ -174,7 +174,7 @@ fn user(id: &str, allowed_model_ids: &str) -> UserRecord {
     UserRecord {
         id: id.to_owned(),
         username: "user-a".to_owned(),
-        password_hash: "hash".to_owned(),
+        password_hash: Some("hash".to_owned()),
         email: "user@example.com".to_owned(),
         group_code: DEFAULT_USER_GROUP_CODE.to_owned(),
         role: "user".to_owned(),
