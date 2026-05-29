@@ -66,15 +66,15 @@ const DEFAULT_PASSWORD_RESET_HTML: &str = r#"<!DOCTYPE html>
 const DEFAULT_SITE_LOGO_BASE64: &str = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHN0eWxlPgogICAgcGF0aCB7IGZpbGw6ICMwMDAwMDA7IH0KICAgIEBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6IGRhcmspIHsKICAgICAgcGF0aCB7IGZpbGw6ICNGRkZGRkY7IH0KICAgIH0KICA8L3N0eWxlPgogIDxwYXRoIGQ9Ik0xMS4wNSA3LjAyNThIMTQuNTUyTDEzLjUxOTQgMTMuMjE4NkgxNi4zMTczTDIwLjEyMzQgMTguMjQxMUgxMi42ODE1TDExLjk2MzcgMjIuNTQ5OUg4LjQ2MTdMMTEuMDUgNy4wMjU4WiBNMjMuNDUgNy4wMjU4SDI2Ljk1MkwyNC4zNjM3IDIyLjU0OTlIMjAuODYxN0wyMS41Nzk1IDE4LjI0MTFIMjEuOTkyNkwxOC4xODY1IDEzLjIxODZIMjIuNDE3NEwyMy40NSA3LjAyNThaIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz4KPC9zdmc+Cg==";
 
 pub(super) async fn seed_system_settings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    manager
-        .execute(
-            Query::insert()
-                .into_table(SystemSettings::Table)
-                .columns(system_settings_columns())
-                .values_panic(system_settings_values())
-                .to_owned(),
-        )
-        .await
+    manager.execute(system_settings_insert()).await
+}
+
+fn system_settings_insert() -> InsertStatement {
+    Query::insert()
+        .into_table(SystemSettings::Table)
+        .columns(system_settings_columns())
+        .values_panic(system_settings_values())
+        .to_owned()
 }
 
 fn system_settings_columns() -> Vec<SystemSettings> {
@@ -165,6 +165,7 @@ fn system_settings_values() -> Vec<Expr> {
         true.into(),
         false.into(),
         false.into(),
+        false.into(),
         "".into(),
         "".into(),
         false.into(),
@@ -176,7 +177,6 @@ fn system_settings_values() -> Vec<Expr> {
         "mainnet-beta".into(),
         "".into(),
         "Sign in to Hook".into(),
-        false.into(),
         false.into(),
         false.into(),
         false.into(),
@@ -225,4 +225,44 @@ fn system_settings_values() -> Vec<Expr> {
         Expr::current_timestamp(),
         Expr::current_timestamp(),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use sea_orm_migration::prelude::Value;
+
+    use super::*;
+
+    #[test]
+    fn system_settings_seed_values_match_auth_provider_columns() {
+        let columns = system_settings_columns();
+        let values = system_settings_values();
+
+        assert_eq!(columns.len(), values.len());
+        assert_bool_value(&columns, &values, SystemSettings::AuthGithubEnabled, false);
+        assert_string_value(&columns, &values, SystemSettings::AuthGithubClientId, "");
+        assert_string_value(&columns, &values, SystemSettings::EncryptedAuthGithubClientSecret, "");
+        assert_bool_value(&columns, &values, SystemSettings::AuthGoogleEnabled, false);
+        assert_string_value(&columns, &values, SystemSettings::AuthGoogleClientId, "");
+        assert_string_value(&columns, &values, SystemSettings::EncryptedAuthGoogleClientSecret, "");
+    }
+
+    fn assert_bool_value(columns: &[SystemSettings], values: &[Expr], column: SystemSettings, expected: bool) {
+        let index = column_index(columns, column);
+
+        assert_eq!(values[index], Expr::Value(Value::Bool(Some(expected))));
+    }
+
+    fn assert_string_value(columns: &[SystemSettings], values: &[Expr], column: SystemSettings, expected: &str) {
+        let index = column_index(columns, column);
+
+        assert_eq!(values[index], Expr::Value(Value::String(Some(expected.to_owned()))));
+    }
+
+    fn column_index(columns: &[SystemSettings], column: SystemSettings) -> usize {
+        columns
+            .iter()
+            .position(|candidate| candidate.to_string() == column.to_string())
+            .expect("seed column exists")
+    }
 }
