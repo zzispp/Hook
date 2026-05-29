@@ -8,7 +8,8 @@ use types::dashboard::{
 use crate::{StorageError, StorageResult, provider::record::request_records};
 
 use super::{
-    DashboardApiKeyLeaderboardQuery, DashboardCostForecastQuery, DashboardCostSavingsQuery, DashboardProviderAggregationQuery, DashboardStore, scope::SqlParams,
+    DashboardApiKeyLeaderboardQuery, DashboardCostForecastQuery, DashboardCostSavingsQuery, DashboardProviderAggregationQuery, DashboardStore,
+    scope::SqlParams, token_context,
 };
 
 const DIMENSION_GLOBAL: &str = "global";
@@ -558,11 +559,9 @@ impl BucketContribution {
             failed_count: i64::from(record.status == TERMINAL_FAILED || record.status == TERMINAL_CANCELLED),
             input_tokens: record.prompt_tokens.unwrap_or_default(),
             output_tokens: record.completion_tokens.unwrap_or_default(),
-            cache_creation_tokens: record.cache_creation_input_tokens.unwrap_or_default(),
+            cache_creation_tokens: token_context::cache_creation_tokens(record),
             cache_read_tokens,
-            total_tokens: record
-                .total_tokens
-                .unwrap_or_else(|| record.prompt_tokens.unwrap_or_default() + record.completion_tokens.unwrap_or_default()),
+            total_tokens: token_context::total_tokens(record),
             total_cost: record.total_cost.unwrap_or(Decimal::ZERO),
             upstream_total_cost: record.upstream_total_cost.unwrap_or(Decimal::ZERO),
             cache_read_cost: record.cache_read_cost.unwrap_or(Decimal::ZERO),

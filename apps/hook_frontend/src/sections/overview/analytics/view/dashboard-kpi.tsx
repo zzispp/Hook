@@ -144,6 +144,11 @@ function KpiContent({ item, chartOptions }: { item: KpiCardData; chartOptions: C
       <Box sx={{ flexGrow: 1, minWidth: KPI_TEXT_MIN_WIDTH }}>
         <Box sx={{ mb: 1, typography: 'subtitle2' }}>{item.label}</Box>
         <Box sx={{ typography: 'h4' }}>{item.value}</Box>
+        {item.detail ? (
+          <Box sx={{ mt: 0.5, color: 'text.secondary', typography: 'caption', whiteSpace: 'pre-line' }}>
+            {item.detail}
+          </Box>
+        ) : null}
       </Box>
       {item.series.length ? (
         <Chart
@@ -210,10 +215,11 @@ function kpiVisible(config: KpiCardConfig, isAdmin: boolean) {
   return true;
 }
 
-function kpiCard({ label, value, color, icon, series }: KpiCardInput): KpiCardData {
+function kpiCard({ label, value, detail, color, icon, series }: KpiCardInput): KpiCardData {
   return {
     label,
     value,
+    detail,
     color,
     icon,
     series,
@@ -224,6 +230,7 @@ function cardFromConfig({ t, locale, summary, points, config }: KpiConfigInput) 
   return kpiCard({
     label: t(config.labelKey),
     value: config.value(summary, locale),
+    detail: config.detail?.(summary, t),
     color: config.color,
     icon: config.icon,
     series: config.series(points),

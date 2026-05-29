@@ -1,9 +1,16 @@
 import type { TFunction } from 'i18next';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
-import type { DashboardDailyStat, DashboardDailyStats } from 'src/types/dashboard';
+import type {
+  DashboardDailyStat,
+  DashboardDailyStats,
+  DashboardDailyBreakdownItem,
+} from 'src/types/dashboard';
 
+import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
+import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -23,6 +30,8 @@ import {
   formatInteger,
   formatDashboardCost,
   formatDashboardTokens,
+  formatDashboardPercent,
+  formatDashboardCostDetail,
 } from './dashboard-format';
 
 type DailyTableProps = {
@@ -34,7 +43,7 @@ type DailyTableProps = {
   data?: DashboardDailyStats;
 };
 
-const DAILY_TABLE_MIN_WIDTH = 960;
+const DAILY_TABLE_MIN_WIDTH = 1120;
 const MODEL_NAME_MAX_WIDTH = 220;
 const DAILY_TABLE_ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -85,13 +94,23 @@ function DailyRow({
       <TableCell align="right">{formatInteger(row.request_count, locale)}</TableCell>
       <TableCell align="right">{formatDashboardTokens(row.total_tokens)}</TableCell>
       <TableCell align="right">{formatDashboardCost(row.total_cost)}</TableCell>
+      {isAdmin ? <TableCell align="right">{formatDashboardCost(row.upstream_total_cost)}</TableCell> : null}
+      {isAdmin ? <TableCell align="right">{formatDashboardPercent(row.profit_rate)}</TableCell> : null}
       <TableCell align="right">{formatMs(row.avg_latency_ms)}</TableCell>
       <TableCell>
         <Typography variant="body2" noWrap sx={{ maxWidth: MODEL_NAME_MAX_WIDTH }}>
           {modelText(row, t)}
         </Typography>
       </TableCell>
-      {isAdmin ? <TableCell align="right">{formatInteger(row.unique_providers, locale)}</TableCell> : null}
+      {isAdmin ? (
+        <TableCell align="right">
+          <ProviderTooltip items={row.provider_breakdown} t={t}>
+            <Box component="span" sx={{ cursor: row.provider_breakdown.length ? 'help' : 'default' }}>
+              {formatInteger(row.unique_providers, locale)}
+            </Box>
+          </ProviderTooltip>
+        </TableCell>
+      ) : null}
     </TableRow>
   );
 }
@@ -102,9 +121,17 @@ function tableHead(t: TFunction<'admin'>, isAdmin: boolean): TableHeadCellProps[
     { id: 'requests', label: t('dashboard.stats.columns.requests'), align: 'right' as const },
     { id: 'tokens', label: t('dashboard.stats.columns.tokens'), align: 'right' as const },
     { id: 'cost', label: t('dashboard.stats.columns.cost'), align: 'right' as const },
-    { id: 'avgLatency', label: t('dashboard.stats.columns.avgLatency'), align: 'right' as const },
-    { id: 'models', label: t('dashboard.stats.daily.models') },
   ];
+  if (isAdmin) {
+    head.push(
+      { id: 'upstreamCost', label: t('dashboard.stats.columns.upstreamCost'), align: 'right' as const },
+      { id: 'profitRate', label: t('dashboard.stats.columns.profitRate'), align: 'right' as const }
+    );
+  }
+  head.push(
+    { id: 'avgLatency', label: t('dashboard.stats.columns.avgLatency'), align: 'right' as const },
+    { id: 'models', label: t('dashboard.stats.daily.models') }
+  );
   if (isAdmin) {
     head.push({
       id: 'providers',
@@ -113,6 +140,62 @@ function tableHead(t: TFunction<'admin'>, isAdmin: boolean): TableHeadCellProps[
     });
   }
   return head;
+}
+
+function ProviderTooltip({
+  t,
+  items,
+  children,
+}: {
+  t: TFunction<'admin'>;
+  items: DashboardDailyBreakdownItem[];
+  children: React.ReactElement;
+}) {
+  if (!items.length) return children;
+  return (
+    <Tooltip arrow placement="top" title={<ProviderTooltipContent t={t} items={items} />}>
+      {children}
+    </Tooltip>
+  );
+}
+
+function ProviderTooltipContent({
+  t,
+  items,
+}: {
+  t: TFunction<'admin'>;
+  items: DashboardDailyBreakdownItem[];
+}) {
+  return (
+    <Stack spacing={1} sx={{ minWidth: 260 }}>
+      {items.map((item) => (
+        <ProviderTooltipRow key={item.name} item={item} t={t} />
+      ))}
+    </Stack>
+  );
+}
+
+function ProviderTooltipRow({
+  item,
+  t,
+}: {
+  item: DashboardDailyBreakdownItem;
+  t: TFunction<'admin'>;
+}) {
+  return (
+    <Box>
+      <Typography variant="subtitle2">{item.name}</Typography>
+      <Typography variant="caption" component="div">
+        {t('dashboard.stats.columns.cost')}: {formatDashboardCostDetail(item.total_cost)}
+      </Typography>
+      <Typography variant="caption" component="div">
+        {t('dashboard.stats.columns.upstreamCost')}: {formatDashboardCostDetail(item.upstream_total_cost)}
+      </Typography>
+      <Typography variant="caption" component="div">
+        {t('dashboard.stats.columns.profitRate')}: {formatDashboardPercent(item.profit_rate)}
+      </Typography>
+    </Box>
+  );
 }
 
 function modelText(row: DashboardDailyStat, t: TFunction<'admin'>) {

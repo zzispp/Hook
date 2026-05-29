@@ -1,12 +1,19 @@
+import type { TFunction } from 'i18next';
 import type { PaletteColorKey } from 'src/theme/core';
 import type { IconifyName } from 'src/components/iconify';
 import type { DashboardOverviewResponse } from 'src/types/dashboard';
 
-import { formatInteger, formatDashboardCost, formatDashboardTokens } from './dashboard-format';
+import {
+  formatInteger,
+  formatDashboardCost,
+  formatDashboardTokens,
+  formatDashboardPercent,
+} from './dashboard-format';
 
 export type KpiCardData = {
   label: string;
   value: string;
+  detail?: string;
   color: PaletteColorKey;
   icon: IconifyName;
   series: number[];
@@ -17,6 +24,10 @@ export type KpiCardConfig = {
   color: PaletteColorKey;
   icon: IconifyName;
   value: (summary: DashboardOverviewResponse['summary'] | undefined, locale: string) => string;
+  detail?: (
+    summary: DashboardOverviewResponse['summary'] | undefined,
+    t: TFunction<'admin'>
+  ) => string;
   series: (points: DashboardOverviewResponse['timeseries']) => number[];
   adminOnly?: boolean;
   userOnly?: boolean;
@@ -58,7 +69,23 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     color: 'info',
     icon: 'solar:bill-list-bold',
     value: (summary) => formatDashboardCost(summary?.total_cost),
+    detail: (summary, t) =>
+      [
+        t('dashboard.stats.period.upstreamCost', {
+          value: formatDashboardCost(summary?.upstream_total_cost),
+        }),
+        `${t('dashboard.stats.kpi.cacheHitRate')} ${formatDashboardPercent(summary?.cache_hit_rate)}`,
+      ].join('\n'),
     series: emptySeries,
+    adminOnly: true,
+  },
+  {
+    labelKey: 'dashboard.stats.today.cost',
+    color: 'info',
+    icon: 'solar:bill-list-bold',
+    value: (summary) => formatDashboardCost(summary?.total_cost),
+    series: emptySeries,
+    userOnly: true,
   },
 ];
 

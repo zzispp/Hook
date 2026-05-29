@@ -313,11 +313,51 @@ async fn request_record_storage_updates_main_record() {
     assert!(sql.contains("\"client_response_body\" = $"), "{sql}");
 }
 
+#[tokio::test]
+async fn request_record_storage_syncs_dashboard_tokens_with_cache_context() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
+        .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
+        .append_exec_results([
+            mock_exec_result(),
+            mock_exec_result(),
+            mock_exec_result(),
+            mock_exec_result(),
+            mock_exec_result(),
+        ])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    store.update_request_record(main_record_patch()).await.unwrap();
+
+    let logs = connection.into_transaction_log();
+    let user_bucket = logged_statement(&logs, "dashboard_user_usage_buckets");
+    let user_bucket_sql = &user_bucket.sql;
+    assert!(user_bucket_sql.contains("dashboard_user_usage_buckets"), "{user_bucket_sql}");
+    assert_eq!(statement_value(user_bucket.values.as_ref().unwrap(), 9), Value::from(27_i64));
+    let cost_bucket = logged_statement(&logs, "dashboard_cost_analysis_buckets");
+    let cost_bucket_sql = &cost_bucket.sql;
+    assert!(cost_bucket_sql.contains("dashboard_cost_analysis_buckets"), "{cost_bucket_sql}");
+    assert_eq!(statement_value(cost_bucket.values.as_ref().unwrap(), 12), Value::from(3_i64));
+    assert_eq!(statement_value(cost_bucket.values.as_ref().unwrap(), 14), Value::from(27_i64));
+}
+
 fn mock_exec_result() -> MockExecResult {
     MockExecResult {
         last_insert_id: 0,
         rows_affected: 1,
     }
+}
+
+fn statement_value(values: &sea_orm::Values, index: usize) -> Value {
+    values.iter().nth(index).cloned().expect("statement value must exist")
+}
+
+fn logged_statement<'a>(logs: &'a [sea_orm::Transaction], pattern: &str) -> &'a sea_orm::Statement {
+    logs.iter()
+        .flat_map(|entry| entry.statements())
+        .find(|statement| statement.sql.contains(pattern))
+        .expect("statement must be logged")
 }
 
 #[tokio::test]

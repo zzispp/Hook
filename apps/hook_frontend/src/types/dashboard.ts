@@ -88,6 +88,9 @@ export type DashboardDailyBreakdownItem = {
   request_count: number;
   total_tokens: number;
   total_cost: number;
+  upstream_total_cost: number;
+  profit: number;
+  profit_rate: number;
 };
 
 export type DashboardDailyStat = {
@@ -95,10 +98,14 @@ export type DashboardDailyStat = {
   request_count: number;
   total_tokens: number;
   total_cost: number;
+  upstream_total_cost: number;
+  profit: number;
+  profit_rate: number;
   avg_latency_ms?: number | null;
   unique_models: number;
   unique_providers: number;
   model_breakdown: DashboardDailyBreakdownItem[];
+  provider_breakdown: DashboardDailyBreakdownItem[];
 };
 
 export type DashboardDailyModelSummary = {
@@ -106,6 +113,9 @@ export type DashboardDailyModelSummary = {
   request_count: number;
   total_tokens: number;
   total_cost: number;
+  upstream_total_cost: number;
+  profit: number;
+  profit_rate: number;
   avg_latency_ms?: number | null;
   cost_per_request: number;
   tokens_per_request: number;
@@ -116,6 +126,9 @@ export type DashboardDailyProviderSummary = {
   request_count: number;
   total_tokens: number;
   total_cost: number;
+  upstream_total_cost: number;
+  profit: number;
+  profit_rate: number;
 };
 
 export type DashboardDailyStats = {

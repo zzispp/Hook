@@ -15,6 +15,8 @@ async fn dashboard_overview_casts_latency_averages_to_double_precision() {
         .append_query_results([[summary_row()]])
         .append_query_results([[summary_row()]])
         .append_query_results([vec![timeseries_row()]])
+        .append_query_results([daily_rows()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
@@ -32,14 +34,65 @@ async fn dashboard_overview_casts_latency_averages_to_double_precision() {
     assert_eq!(response.timeseries[0].upstream_total_cost, Decimal::new(3, 2));
     assert_eq!(response.daily.day_page.total, 1);
     assert_eq!(response.daily.day_page.items.len(), 1);
+    assert_daily_costs(&response.daily);
     let logs = connection.into_transaction_log();
     let summary_sql = &logs[0].statements()[0].sql;
     let timeseries_sql = &logs[3].statements()[0].sql;
+    let daily_sql = &logs[4].statements()[0].sql;
     assert!(summary_sql.contains("AVG(r.total_latency_ms::double precision)"), "{summary_sql}");
     assert!(summary_sql.contains("AVG(r.first_byte_time_ms::double precision)"), "{summary_sql}");
     assert!(summary_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{summary_sql}");
     assert!(timeseries_sql.contains("AVG(r.total_latency_ms::double precision)"), "{timeseries_sql}");
     assert!(timeseries_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{timeseries_sql}");
+    assert!(daily_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{daily_sql}");
+}
+
+#[tokio::test]
+async fn dashboard_overview_uses_context_tokens_for_cache_usage() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[summary_row()]])
+        .append_query_results([[summary_row()]])
+        .append_query_results([[summary_row()]])
+        .append_query_results([vec![timeseries_row()]])
+        .append_query_results([daily_rows()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .into_connection();
+    let store = DashboardStore::new(Database::new(connection.clone()));
+
+    store.overview(overview_query()).await.unwrap();
+
+    let logs = connection.into_transaction_log();
+    let summary_sql = &logs[0].statements()[0].sql;
+    let timeseries_sql = &logs[3].statements()[0].sql;
+    let daily_sql = &logs[4].statements()[0].sql;
+    assert_token_context_sql(summary_sql);
+    assert_token_context_sql(timeseries_sql);
+    assert_token_context_sql(daily_sql);
+}
+
+fn assert_token_context_sql(sql: &str) {
+    assert!(sql.contains("cache_creation_5m_input_tokens"), "{sql}");
+    assert!(sql.contains("cache_creation_1h_input_tokens"), "{sql}");
+    assert!(sql.contains("cache_read_input_tokens"), "{sql}");
+    assert!(sql.contains("AS total_tokens"), "{sql}");
+}
+
+fn assert_daily_costs(daily: &types::dashboard::DashboardDailyStats) {
+    let day = &daily.days[0];
+    assert_eq!(day.total_cost, Decimal::new(30, 2));
+    assert_eq!(day.upstream_total_cost, Decimal::new(12, 2));
+    assert_eq!(day.profit, Decimal::new(18, 2));
+    assert_eq!(day.profit_rate, 0.6);
+    assert_eq!(day.model_breakdown[0].name, "model-a");
+    assert_eq!(day.model_breakdown[0].upstream_total_cost, Decimal::new(10, 2));
+    assert_eq!(day.provider_breakdown[0].name, "provider-a");
+    assert_eq!(day.provider_breakdown[0].profit_rate, 0.6);
+    assert_eq!(daily.model_summary[0].upstream_total_cost, Decimal::new(10, 2));
+    assert_eq!(daily.provider_summary[0].upstream_total_cost, Decimal::new(10, 2));
 }
 
 fn overview_query() -> DashboardStoreOverviewQuery {
@@ -53,7 +106,7 @@ fn overview_query() -> DashboardStoreOverviewQuery {
         monthly_started_at: ts(0),
         monthly_ended_at: ts(3_600),
         bucket: DashboardBucketFilter::Hour,
-        include_admin_breakdowns: false,
+        include_admin_breakdowns: true,
         include_admin_costs: true,
         tz_offset_minutes: 0,
         daily_page: PageRequest { page: 1, page_size: 10 },
@@ -99,6 +152,31 @@ fn timeseries_row() -> BTreeMap<&'static str, Value> {
         ("avg_latency_ms", Value::from(130.0_f64)),
         ("avg_ttfb_ms", Value::from(40.0_f64)),
     ])
+}
+
+fn daily_rows() -> Vec<BTreeMap<&'static str, Value>> {
+    vec![
+        daily_row("model-a", "provider-a", Decimal::new(25, 2), Decimal::new(10, 2)),
+        daily_row("model-b", "provider-b", Decimal::new(5, 2), Decimal::new(2, 2)),
+    ]
+}
+
+fn daily_row(model_name: &'static str, provider_name: &'static str, total_cost: Decimal, upstream_total_cost: Decimal) -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([
+        ("date", Value::from(date())),
+        ("model_name", Value::from(model_name)),
+        ("provider_name", Value::from(provider_name)),
+        ("request_count", Value::from(1_i64)),
+        ("total_tokens", Value::from(12_i64)),
+        ("total_cost", Value::from(total_cost)),
+        ("upstream_total_cost", Value::from(upstream_total_cost)),
+        ("latency_total_ms", Value::from(100.0_f64)),
+        ("latency_sample_count", Value::from(1_i64)),
+    ])
+}
+
+fn date() -> time::Date {
+    time::Date::from_calendar_date(1970, time::Month::January, 1).unwrap()
 }
 
 fn ts(seconds: i64) -> time::OffsetDateTime {

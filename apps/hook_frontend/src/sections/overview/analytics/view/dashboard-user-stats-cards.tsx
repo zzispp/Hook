@@ -1,9 +1,5 @@
 import type { TFunction } from 'i18next';
-import type { ChartOptions } from 'src/components/chart';
-import type {
-  DashboardUserStatsMetric,
-  DashboardUserStatsTimeSeriesPoint,
-} from 'src/types/dashboard';
+import type { DashboardUserStatsMetric } from 'src/types/dashboard';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -18,17 +14,14 @@ import CardHeader from '@mui/material/CardHeader';
 import ToggleButton from '@mui/material/ToggleButton';
 import TableContainer from '@mui/material/TableContainer';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { useTheme, alpha as hexAlpha } from '@mui/material/styles';
 
 import { Scrollbar } from 'src/components/scrollbar';
-import { Chart, useChart } from 'src/components/chart';
 import { TablePaginationCustom } from 'src/components/table';
 
 import {
   formatInteger,
   formatDashboardCost,
   formatDashboardTokens,
-  formatDashboardCostDetail,
 } from './dashboard-format';
 
 const METRICS: DashboardUserStatsMetric[] = ['requests', 'tokens', 'cost'];
@@ -146,56 +139,6 @@ export function SummaryCard({
   );
 }
 
-export function UserTrendCard({
-  t,
-  title,
-  loading,
-  data,
-}: {
-  t: TFunction<'admin'>;
-  title: string;
-  loading: boolean;
-  data?: DashboardUserStatsTimeSeriesPoint[];
-}) {
-  const options = useUserTrendOptions(data);
-  return (
-    <Card variant="outlined">
-      <CardHeader title={title} />
-      {loading ? <Skeleton variant="rectangular" height={280} sx={{ m: 2 }} /> : null}
-      {!loading ? (
-        <Chart
-          type="line"
-          series={[{ name: t('dashboard.stats.userStats.totalCost'), data: costSeries(data) }]}
-          options={options}
-          sx={{ height: 280, p: 2 }}
-        />
-      ) : null}
-    </Card>
-  );
-}
-
-export function UserCompareTrendCard({
-  t,
-  loading,
-  enabled,
-  data,
-}: {
-  t: TFunction<'admin'>;
-  loading: boolean;
-  enabled: boolean;
-  data?: DashboardUserStatsTimeSeriesPoint[];
-}) {
-  if (!enabled) return null;
-  return (
-    <UserTrendCard
-      t={t}
-      title={t('dashboard.stats.userStats.compareTrend')}
-      loading={loading}
-      data={data}
-    />
-  );
-}
-
 function LeaderboardRows({
   t,
   items,
@@ -281,26 +224,12 @@ function summaryCards(
   ];
 }
 
-function useUserTrendOptions(data?: DashboardUserStatsTimeSeriesPoint[]) {
-  const theme = useTheme();
-  return useChart({
-    colors: [hexAlpha(theme.palette.info.main, 0.88)],
-    xaxis: { categories: data?.map((point) => point.date) ?? [], labels: { rotate: -35 } },
-    legend: { show: false },
-    tooltip: { y: { formatter: (value: number) => formatDashboardCostDetail(value) } },
-  } satisfies ChartOptions);
-}
-
-function costSeries(data?: DashboardUserStatsTimeSeriesPoint[]) {
-  return data?.map((point) => point.total_cost) ?? [];
-}
-
 function metricValue(
   metric: DashboardUserStatsMetric,
-  item: { requests: number; tokens: number; cost: number },
+  item: { value: number },
   locale: string
 ) {
-  if (metric === 'cost') return formatDashboardCost(item.cost);
-  if (metric === 'tokens') return formatDashboardTokens(item.tokens);
-  return formatInteger(item.requests, locale);
+  if (metric === 'cost') return formatDashboardCost(item.value);
+  if (metric === 'tokens') return formatDashboardTokens(item.value);
+  return formatInteger(item.value, locale);
 }

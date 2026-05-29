@@ -86,6 +86,7 @@ fn timeseries_response_preserves_ttfb_cache_hit_rate_and_profit() {
             success_count: Some(3),
             failed_count: Some(1),
             prompt_tokens: Some(90),
+            cache_creation_input_tokens: Some(0),
             cache_read_input_tokens: Some(10),
             total_tokens: Some(250),
             total_cost: Some(Decimal::new(55, 2)),
@@ -99,6 +100,29 @@ fn timeseries_response_preserves_ttfb_cache_hit_rate_and_profit() {
     assert_eq!(response.cache_hit_rate, 0.1);
     assert_eq!(response.profit, Decimal::new(44, 2));
     assert_eq!(response.avg_ttfb_ms, Some(80.0));
+}
+
+#[test]
+fn timeseries_response_includes_cache_creation_in_hit_rate_denominator() {
+    let response = timeseries_response(
+        TimeseriesRow {
+            bucket: "2026-04-28".into(),
+            request_count: Some(4),
+            success_count: Some(3),
+            failed_count: Some(1),
+            prompt_tokens: Some(70),
+            cache_creation_input_tokens: Some(20),
+            cache_read_input_tokens: Some(10),
+            total_tokens: Some(250),
+            total_cost: Some(Decimal::new(55, 2)),
+            upstream_total_cost: Some(Decimal::new(11, 2)),
+            avg_latency_ms: Some(250.0),
+            avg_ttfb_ms: Some(80.0),
+        },
+        true,
+    );
+
+    assert_eq!(response.cache_hit_rate, 0.1);
 }
 
 #[test]

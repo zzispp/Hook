@@ -18,7 +18,6 @@ import Typography from '@mui/material/Typography';
 import { Chart, useChart, ChartLegends } from 'src/components/chart';
 
 import { dashboardPeriodLabel } from './dashboard-period';
-import { DailyTotalsGrid } from './dashboard-daily-totals';
 import {
   formatDashboardCost,
   formatDashboardTokens,
@@ -48,10 +47,16 @@ export function DailyInsights({ t, locale, isAdmin, loading, preset, data }: Dai
 
   return (
     <Stack spacing={3}>
-      <DailyTotalsGrid t={t} locale={locale} loading={loading} preset={preset} data={data} />
       <Box sx={DAILY_GRID_SX}>
         {!isAdmin ? <DailyUsageTrendCard t={t} locale={locale} loading={loading} data={data} /> : null}
-        <DailyModelCostCard t={t} locale={locale} loading={loading} period={period} data={data} />
+        <DailyModelCostCard
+          t={t}
+          locale={locale}
+          isAdmin={isAdmin}
+          loading={loading}
+          period={period}
+          data={data}
+        />
         {isAdmin ? <ProviderCostCard t={t} loading={loading} data={data} /> : null}
       </Box>
     </Stack>
@@ -90,22 +95,24 @@ function DailyUsageTrendCard({
 function DailyModelCostCard({
   t,
   locale,
+  isAdmin,
   loading,
   period,
   data,
 }: {
   t: TFunction<'admin'>;
   locale: string;
+  isAdmin: boolean;
   loading: boolean;
   period: string;
   data?: DashboardDailyStats;
 }) {
   const days = data?.days ?? [];
-  const models = modelNames(days.flatMap((day) => day.model_breakdown));
+  const models = modelNames(days.flatMap((day) => day.model_breakdown), isAdmin);
   const options = useModelCostOptions(locale, days.map((day) => day.date));
   const series = models.map((name) => ({
     name: compactModelName(name),
-    data: days.map((day) => modelCost(day.model_breakdown, name)),
+    data: days.map((day) => modelCost(day.model_breakdown, name, isAdmin)),
   }));
 
   return (
@@ -121,21 +128,28 @@ function ProviderCostCard({
   data,
 }: Pick<DailyChartProps, 't' | 'loading' | 'data'>) {
   const theme = useTheme();
-  const items = data?.provider_summary ?? [];
+  const items = providerCostItems(data);
   const labels = items.map((item) => item.name);
   const colors = paletteColors(theme).slice(0, items.length);
   const options = useProviderCostOptions(labels, colors);
+  const costs = items.map((item) => item.upstream_total_cost);
 
   return (
     <DailyChartCard title={t('dashboard.stats.daily.providerCost')} loading={loading} empty={!items.length}>
-      <Chart type="donut" series={items.map((item) => item.total_cost)} options={options} sx={{ height: CHART_HEIGHT }} />
+      <Chart type="donut" series={costs} options={options} sx={{ height: CHART_HEIGHT }} />
       <ChartLegends
         labels={labels}
         colors={colors}
-        values={items.map((item) => formatDashboardCost(item.total_cost))}
+        values={costs.map((value) => formatDashboardCost(value))}
         sx={{ px: 3, pb: 3, justifyContent: 'center' }}
       />
     </DailyChartCard>
+  );
+}
+
+function providerCostItems(data?: DashboardDailyStats) {
+  return [...(data?.provider_summary ?? [])].sort(
+    (left, right) => right.upstream_total_cost - left.upstream_total_cost
   );
 }
 
@@ -202,14 +216,21 @@ function usageTooltip(t: TFunction<'admin'>, value: number, context?: { seriesIn
   return t('dashboard.stats.activity.requestCount', { count: value });
 }
 
-function modelNames(items: DashboardDailyBreakdownItem[]) {
+function modelNames(items: DashboardDailyBreakdownItem[], useUpstreamCost: boolean) {
   const totals = new Map<string, number>();
-  items.forEach((item) => totals.set(item.name, (totals.get(item.name) ?? 0) + item.total_cost));
+  items.forEach((item) => {
+    totals.set(item.name, (totals.get(item.name) ?? 0) + itemCost(item, useUpstreamCost));
+  });
   return [...totals.entries()].sort((left, right) => right[1] - left[1]).map(([name]) => name);
 }
 
-function modelCost(items: DashboardDailyBreakdownItem[], name: string) {
-  return items.find((item) => item.name === name)?.total_cost ?? 0;
+function modelCost(items: DashboardDailyBreakdownItem[], name: string, useUpstreamCost: boolean) {
+  const item = items.find((entry) => entry.name === name);
+  return item ? itemCost(item, useUpstreamCost) : 0;
+}
+
+function itemCost(item: DashboardDailyBreakdownItem, useUpstreamCost: boolean) {
+  return useUpstreamCost ? item.upstream_total_cost : item.total_cost;
 }
 
 function compactModelName(name: string) {

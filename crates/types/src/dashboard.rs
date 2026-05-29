@@ -389,10 +389,16 @@ pub struct DashboardDailyStat {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub upstream_total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub profit: Decimal,
+    pub profit_rate: f64,
     pub avg_latency_ms: Option<f64>,
     pub unique_models: usize,
     pub unique_providers: usize,
     pub model_breakdown: Vec<DashboardDailyBreakdownItem>,
+    pub provider_breakdown: Vec<DashboardDailyBreakdownItem>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -402,6 +408,11 @@ pub struct DashboardDailyBreakdownItem {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub upstream_total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub profit: Decimal,
+    pub profit_rate: f64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -411,6 +422,11 @@ pub struct DashboardDailyModelSummary {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub upstream_total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub profit: Decimal,
+    pub profit_rate: f64,
     pub avg_latency_ms: Option<f64>,
     #[serde(with = "rust_decimal::serde::float")]
     pub cost_per_request: Decimal,
@@ -424,6 +440,11 @@ pub struct DashboardDailyProviderSummary {
     pub total_tokens: i64,
     #[serde(with = "rust_decimal::serde::float")]
     pub total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub upstream_total_cost: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub profit: Decimal,
+    pub profit_rate: f64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

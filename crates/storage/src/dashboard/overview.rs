@@ -128,6 +128,7 @@ pub(super) fn summary_response(row: SummaryRow, include_admin_costs: bool) -> Da
     let success_count = row.success_count.unwrap_or_default();
     let failed_count = row.failed_count.unwrap_or_default();
     let prompt_tokens = row.prompt_tokens.unwrap_or_default();
+    let cache_creation_tokens = row.cache_creation_input_tokens.unwrap_or_default();
     let cache_read_tokens = row.cache_read_input_tokens.unwrap_or_default();
     let total_cost = row.total_cost.unwrap_or(Decimal::ZERO);
     let metrics = admin_cost_metrics(total_cost, row.upstream_total_cost.unwrap_or(Decimal::ZERO), include_admin_costs);
@@ -138,10 +139,10 @@ pub(super) fn summary_response(row: SummaryRow, include_admin_costs: bool) -> Da
         active_count: row.active_count.unwrap_or_default(),
         success_rate: success_rate(success_count, failed_count),
         error_rate: error_rate(success_count, failed_count),
-        cache_hit_rate: cache_hit_rate(cache_read_tokens, prompt_tokens),
+        cache_hit_rate: cache_hit_rate(cache_read_tokens, prompt_tokens, cache_creation_tokens),
         prompt_tokens,
         completion_tokens: row.completion_tokens.unwrap_or_default(),
-        cache_creation_input_tokens: row.cache_creation_input_tokens.unwrap_or_default(),
+        cache_creation_input_tokens: cache_creation_tokens,
         cache_read_input_tokens: cache_read_tokens,
         total_tokens: row.total_tokens.unwrap_or_default(),
         cache_creation_cost: row.cache_creation_cost.unwrap_or(Decimal::ZERO),
@@ -175,7 +176,11 @@ pub(super) fn timeseries_response(row: TimeseriesRow, include_admin_costs: bool)
         profit_rate: metrics.profit_rate,
         avg_latency_ms: row.avg_latency_ms,
         avg_ttfb_ms: row.avg_ttfb_ms,
-        cache_hit_rate: cache_hit_rate(row.cache_read_input_tokens.unwrap_or_default(), row.prompt_tokens.unwrap_or_default()),
+        cache_hit_rate: cache_hit_rate(
+            row.cache_read_input_tokens.unwrap_or_default(),
+            row.prompt_tokens.unwrap_or_default(),
+            row.cache_creation_input_tokens.unwrap_or_default(),
+        ),
     }
 }
 
@@ -211,8 +216,8 @@ fn error_rate(success_count: i64, failed_count: i64) -> f64 {
     failed_count as f64 / denominator as f64
 }
 
-fn cache_hit_rate(cache_read_tokens: i64, prompt_tokens: i64) -> f64 {
-    let denominator = prompt_tokens + cache_read_tokens;
+fn cache_hit_rate(cache_read_tokens: i64, prompt_tokens: i64, cache_creation_tokens: i64) -> f64 {
+    let denominator = prompt_tokens + cache_creation_tokens + cache_read_tokens;
     if denominator <= 0 {
         return 0.0;
     }
@@ -275,6 +280,7 @@ pub(super) struct TimeseriesRow {
     pub(super) success_count: Option<i64>,
     pub(super) failed_count: Option<i64>,
     pub(super) prompt_tokens: Option<i64>,
+    pub(super) cache_creation_input_tokens: Option<i64>,
     pub(super) cache_read_input_tokens: Option<i64>,
     pub(super) total_tokens: Option<i64>,
     pub(super) total_cost: Option<Decimal>,

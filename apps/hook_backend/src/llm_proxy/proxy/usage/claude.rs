@@ -32,7 +32,12 @@ pub(super) fn usage(response: &Value) -> Option<TokenUsage> {
 }
 
 fn cache_creation(value: &Value, cache_creation_5m: Option<i64>, cache_creation_1h: Option<i64>) -> Option<i64> {
-    number(value.get("cache_creation_input_tokens")).or_else(|| super::common::sum_optional(cache_creation_5m, cache_creation_1h))
+    let split_total = super::common::sum_optional(cache_creation_5m, cache_creation_1h);
+    match number(value.get("cache_creation_input_tokens")) {
+        Some(0) => split_total.or(Some(0)),
+        Some(value) => Some(value),
+        None => split_total,
+    }
 }
 
 fn cache_creation_5m(value: &Value) -> Option<i64> {
@@ -70,6 +75,27 @@ mod tests {
         assert_eq!(usage.total_tokens, Some(17));
         assert_eq!(usage.cache_creation_input_tokens, Some(7));
         assert_eq!(usage.cache_read_input_tokens, Some(5));
+        assert_eq!(usage.cache_creation_5m_input_tokens, Some(3));
+        assert_eq!(usage.cache_creation_1h_input_tokens, Some(4));
+    }
+
+    #[test]
+    fn uses_claude_cache_creation_split_when_total_is_zero() {
+        let response = json!({
+            "usage": {
+                "input_tokens": 11,
+                "output_tokens": 6,
+                "cache_creation_input_tokens": 0,
+                "cache_creation": {
+                    "ephemeral_5m_input_tokens": 3,
+                    "ephemeral_1h_input_tokens": 4
+                }
+            }
+        });
+
+        let usage = usage(&response).expect("usage should be extracted");
+
+        assert_eq!(usage.cache_creation_input_tokens, Some(7));
         assert_eq!(usage.cache_creation_5m_input_tokens, Some(3));
         assert_eq!(usage.cache_creation_1h_input_tokens, Some(4));
     }

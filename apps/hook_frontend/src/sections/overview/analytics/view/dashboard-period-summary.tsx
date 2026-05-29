@@ -16,13 +16,7 @@ import Typography from '@mui/material/Typography';
 import { Iconify } from 'src/components/iconify';
 
 import { dashboardPeriodLabel } from './dashboard-period';
-import {
-  formatMs,
-  formatInteger,
-  formatDashboardCost,
-  formatDashboardTokens,
-  formatDashboardPercent,
-} from './dashboard-format';
+import { formatMs, formatInteger, formatDashboardTokens, formatDashboardPercent } from './dashboard-format';
 
 type PeriodItem = {
   label: string;
@@ -145,15 +139,6 @@ function adminPeriodItems(
       'solar:transfer-horizontal-bold-duotone',
       'warning'
     ),
-    metric(
-      t('dashboard.stats.period.cost', { period }),
-      formatDashboardCost(summary?.total_cost),
-      'solar:bill-list-bold',
-      'info',
-      t('dashboard.stats.period.upstreamCost', {
-        value: formatDashboardCost(summary?.upstream_total_cost),
-      })
-    ),
   ];
 }
 
@@ -180,12 +165,6 @@ function userPeriodItems(
       formatDashboardTokens(summary?.cache_creation_input_tokens),
       'solar:archive-down-minimlistic-bold',
       'warning'
-    ),
-    metric(
-      t('dashboard.stats.period.cost', { period }),
-      formatDashboardCost(summary?.total_cost),
-      'solar:bill-list-bold',
-      'info'
     ),
   ];
 }

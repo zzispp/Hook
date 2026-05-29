@@ -13,10 +13,9 @@ import {
 
 import {
   SummaryCard,
-  UserTrendCard,
   LeaderboardCard,
-  UserCompareTrendCard,
 } from './dashboard-user-stats-cards';
+import { UserTrendCard, UserCompareTrendCard } from './dashboard-user-stats-trend';
 
 type Props = {
   t: TFunction<'admin'>;
@@ -30,6 +29,8 @@ export function DashboardUserStats({ t, locale, filters, onChange }: Props) {
   const summary = useDashboardUserUsageStats(true, filters);
   const mainTrend = useDashboardUserStatsTimeSeries(true, filters);
   const compareTrend = useDashboardCompareUserStatsTimeSeries(true, filters);
+  const leaderboardData =
+    leaderboard.data?.metric === filters.metric ? leaderboard.data : undefined;
 
   function patch(next: Partial<DashboardUserStatsFilters>) {
     onChange({ ...filters, ...next });
@@ -45,8 +46,8 @@ export function DashboardUserStats({ t, locale, filters, onChange }: Props) {
             metric={filters.metric}
             loading={leaderboard.isLoading}
             page={filters.leaderboardPage}
-            total={leaderboard.data?.total ?? 0}
-            items={leaderboard.data?.items}
+            total={leaderboardData?.total ?? 0}
+            items={leaderboardData?.items}
             rowsPerPage={filters.leaderboardPageSize}
             onMetricChange={(metric) => patch({ metric, leaderboardPage: 0 })}
             onPageChange={(page) => patch({ leaderboardPage: page })}

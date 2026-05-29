@@ -10,6 +10,7 @@ use super::{
     DashboardStore, DashboardStoreActivityQuery,
     money::admin_cost_metrics,
     scope::{SqlParams, scope_response, scoped_time_where},
+    token_context::sum_total_tokens_sql,
 };
 
 pub(super) async fn activity(store: &DashboardStore, query: DashboardStoreActivityQuery) -> StorageResult<DashboardActivityResponse> {
@@ -33,13 +34,14 @@ async fn activity_rows(store: &DashboardStore, query: &DashboardStoreActivityQue
     let sql = format!(
         "SELECT ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))::date AS date, \
         COUNT(*)::bigint AS request_count, \
-        COALESCE(SUM(COALESCE(r.total_tokens, COALESCE(r.prompt_tokens, 0) + COALESCE(r.completion_tokens, 0), 0)), 0)::bigint AS total_tokens, \
+        {} AS total_tokens, \
         COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
         COALESCE(SUM(COALESCE(r.base_cost, 0)), 0) AS base_cost, \
         COALESCE(SUM(COALESCE(r.upstream_total_cost, 0)), 0) AS upstream_total_cost \
         FROM request_records r {where_sql} \
         GROUP BY date \
-        ORDER BY date ASC"
+        ORDER BY date ASC",
+        sum_total_tokens_sql("r")
     );
     ActivityRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())
