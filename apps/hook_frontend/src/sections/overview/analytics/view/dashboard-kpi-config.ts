@@ -49,10 +49,10 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     series: emptySeries,
   },
   {
-    labelKey: 'dashboard.stats.today.activeUsers',
-    color: 'success',
-    icon: 'solar:users-group-rounded-bold',
-    value: (summary, locale) => formatInteger(summary?.user_count, locale),
+    labelKey: 'dashboard.stats.kpi.cacheHitRate',
+    color: 'info',
+    icon: 'solar:chart-square-outline',
+    value: (summary) => formatDashboardPercent(summary?.cache_hit_rate),
     series: emptySeries,
     adminOnly: true,
   },
@@ -69,13 +69,6 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     color: 'info',
     icon: 'solar:bill-list-bold',
     value: (summary) => formatDashboardCost(summary?.total_cost),
-    detail: (summary, t) =>
-      [
-        t('dashboard.stats.period.upstreamCost', {
-          value: formatDashboardCost(summary?.upstream_total_cost),
-        }),
-        `${t('dashboard.stats.kpi.cacheHitRate')} ${formatDashboardPercent(summary?.cache_hit_rate)}`,
-      ].join('\n'),
     series: emptySeries,
     adminOnly: true,
   },

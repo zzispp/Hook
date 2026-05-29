@@ -16,7 +16,13 @@ import Typography from '@mui/material/Typography';
 import { Iconify } from 'src/components/iconify';
 
 import { dashboardPeriodLabel } from './dashboard-period';
-import { formatMs, formatInteger, formatDashboardTokens, formatDashboardPercent } from './dashboard-format';
+import {
+  formatMs,
+  formatInteger,
+  formatDashboardCost,
+  formatDashboardTokens,
+  formatDashboardPercent,
+} from './dashboard-format';
 
 type PeriodItem = {
   label: string;
@@ -134,10 +140,16 @@ function adminPeriodItems(
       'error'
     ),
     metric(
-      t('dashboard.stats.period.failovers', { period }),
-      formatInteger(summary?.failover_count, locale),
-      'solar:transfer-horizontal-bold-duotone',
+      t('dashboard.stats.kpi.upstreamCost'),
+      formatDashboardCost(summary?.upstream_total_cost),
+      'solar:bill-list-bold',
       'warning'
+    ),
+    metric(
+      t('dashboard.stats.today.activeUsers'),
+      formatInteger(summary?.user_count, locale),
+      'solar:users-group-rounded-bold',
+      'success'
     ),
   ];
 }
