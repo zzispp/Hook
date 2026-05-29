@@ -3,6 +3,7 @@ use sea_orm_migration::prelude::*;
 mod auth;
 mod billing;
 mod card_code;
+mod model_status;
 mod operations;
 mod performance_monitoring;
 mod provider;
@@ -19,6 +20,7 @@ mod wallet;
 pub(super) use auth::*;
 pub(super) use billing::*;
 pub(super) use card_code::*;
+pub(super) use model_status::*;
 pub(super) use operations::*;
 pub(super) use performance_monitoring::*;
 pub(super) use provider::*;
@@ -35,6 +37,9 @@ pub(super) use wallet::*;
 pub fn reversed_tables() -> Vec<DynIden> {
     vec![
         UsageFlushBatches::Table.into_iden(),
+        ModelStatusCheckHourlyStats::Table.into_iden(),
+        ModelStatusCheckRuns::Table.into_iden(),
+        ModelStatusChecks::Table.into_iden(),
         PaymentCallbackRecords::Table.into_iden(),
         RechargeOrders::Table.into_iden(),
         RechargePackages::Table.into_iden(),

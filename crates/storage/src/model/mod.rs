@@ -1,4 +1,6 @@
 mod cleanup;
+#[cfg(test)]
+mod cleanup_tests;
 mod record;
 mod repository;
 mod repository_helpers;

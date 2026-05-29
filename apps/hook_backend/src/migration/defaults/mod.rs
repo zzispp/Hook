@@ -20,10 +20,12 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_performance_monitoring",
     "admin_user_stats",
     "admin_cost_analysis",
+    "dashboard_model_status",
     "admin_wallets",
     "admin_card_codes",
     "admin_recharges",
     "admin_tokens",
+    "admin_model_status_checks",
     "admin_announcements",
     "admin_tickets",
     "admin_user_groups",
@@ -43,6 +45,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
 
 pub const USER_MENU_CODES: &[&str] = &[
     "dashboard_home",
+    "dashboard_model_status",
     "announcements",
     "support_tickets",
     "dashboard_models",
@@ -86,6 +89,10 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "admin_api_key_leaderboard_read",
             "admin_provider_usage_aggregation_read",
         ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "dashboard_model_status",
+        api_codes: &["model_status_checks_read"],
     },
     MenuApiBindingDefinition {
         menu_code: "announcements",
@@ -347,6 +354,21 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "admin_api_tokens_update",
             "admin_api_tokens_delete",
             "admin_api_tokens_secret_read",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "admin_model_status_checks",
+        api_codes: &[
+            "admin_model_status_checks_read",
+            "admin_model_status_checks_create",
+            "admin_model_status_checks_batch_create",
+            "admin_model_status_checks_update",
+            "admin_model_status_checks_delete",
+            "admin_model_status_checks_batch_delete",
+            "admin_model_status_checks_batch_update",
+            "admin_model_status_runs_read",
+            "models_global_read",
+            "admin_api_tokens_read",
         ],
     },
     MenuApiBindingDefinition {

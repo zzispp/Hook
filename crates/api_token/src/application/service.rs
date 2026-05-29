@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use async_trait::async_trait;
 use types::api_token::{
-    AdminApiTokenCreate, ApiTokenCreate, ApiTokenCreateResponse, ApiTokenListRequest, ApiTokenListResponse, ApiTokenOwnerResponse, ApiTokenResponse,
+    AdminApiTokenCreate, ApiToken, ApiTokenCreate, ApiTokenCreateResponse, ApiTokenListRequest, ApiTokenListResponse, ApiTokenOwnerResponse, ApiTokenResponse,
     ApiTokenSecretResponse, ApiTokenUpdate,
 };
 
@@ -85,6 +85,8 @@ where
     }
 
     async fn delete_token(&self, user_id: &str, id: &str) -> ApiTokenResult<()> {
+        let current = self.repository.find_user_token(user_id, id).await?.ok_or(ApiTokenError::NotFound)?;
+        self.ensure_model_status_unbound(&current).await?;
         self.repository.delete_token(user_id, id).await
     }
 
@@ -132,6 +134,8 @@ where
     }
 
     async fn delete_admin_token(&self, id: &str) -> ApiTokenResult<()> {
+        let current = self.repository.find_token(id).await?.ok_or(ApiTokenError::NotFound)?;
+        self.ensure_model_status_unbound(&current).await?;
         self.repository.delete_any_token(id).await
     }
 
@@ -245,6 +249,16 @@ where
         let count = self.repository.count_owner_tokens(owner_id, token_type).await?;
         if count >= u64::try_from(limit).map_err(|_| ApiTokenError::Infrastructure("token limit must fit u64".into()))? {
             return Err(ApiTokenError::Conflict("token quantity limit reached".into()));
+        }
+        Ok(())
+    }
+
+    async fn ensure_model_status_unbound(&self, token: &ApiToken) -> ApiTokenResult<()> {
+        if token.token_type != types::api_token::ApiTokenType::Independent {
+            return Ok(());
+        }
+        if self.repository.token_has_model_status_checks(&token.id).await? {
+            return Err(ApiTokenError::Conflict("independent token is bound to model status checks".into()));
         }
         Ok(())
     }

@@ -7,6 +7,7 @@ pub mod group;
 pub mod i18n;
 mod json;
 pub mod model;
+pub mod model_status;
 pub mod operations;
 pub mod performance_monitoring;
 pub mod provider;

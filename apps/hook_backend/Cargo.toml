@@ -17,6 +17,7 @@ futures-util.workspace = true
 group.workspace = true
 i18n.workspace = true
 model.workspace = true
+model_status.workspace = true
 operations.workspace = true
 payment.workspace = true
 provider.workspace = true

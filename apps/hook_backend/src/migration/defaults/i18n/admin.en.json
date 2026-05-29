@@ -6,6 +6,7 @@
     "dashboard_home": "Dashboard",
     "admin_user_stats": "User Statistics",
     "admin_cost_analysis": "Cost Analysis",
+    "dashboard_model_status": "Model Status",
     "admin_performance_monitoring": "Performance Monitoring",
     "dashboard_models": "Model Catalog",
     "dashboard_groups": "Price Groups",
@@ -13,6 +14,7 @@
     "api_tokens": "My Tokens",
     "usage_records": "Usage Records",
     "admin_tokens": "Token Management",
+    "admin_model_status_checks": "Model Status Management",
     "admin_users": "User Management",
     "admin_roles": "Role Management",
     "admin_apis": "API Management",
@@ -33,6 +35,93 @@
     "admin_announcements": "Announcement Management",
     "admin_tickets": "Ticket Management",
     "admin_scheduled_tasks": "Scheduled Tasks"
+  },
+  "modelStatus": {
+    "title": "Model Status",
+    "subtitle": "View availability and recent status for enabled model checks",
+    "name": "Name",
+    "status": "Latest status",
+    "availability": "Availability",
+    "timeline": "Timeline",
+    "apiFormat": "Endpoint",
+    "allApiFormats": "All endpoints",
+    "searchPlaceholder": "Search model name or endpoint",
+    "range": "Date range",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "empty": "No model status checks",
+    "presets": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last7days": "Last 7 days",
+      "last30days": "Last 30 days",
+      "last90days": "Last 90 days",
+      "custom": "Custom"
+    },
+    "statusLabel": {
+      "operational": "Operational",
+      "degraded": "Degraded",
+      "failed": "Failed",
+      "error": "Error",
+      "unknown": "Unknown"
+    }
+  },
+  "modelStatusChecks": {
+    "title": "Model Status Management",
+    "subtitle": "Manage model status checks",
+    "create": "New check",
+    "edit": "Edit check",
+    "name": "Name",
+    "model": "Model",
+    "apiFormat": "API format",
+    "apiToken": "Independent token",
+    "interval": "Check interval",
+    "enabled": "Enabled",
+    "lastStatus": "Latest status",
+    "lastCheckedAt": "Last checked",
+    "lastLatency": "Latency",
+    "lastMessage": "Message",
+    "modelRequired": "Select at least one model",
+    "apiFormatRequired": "Select at least one endpoint",
+    "empty": "No model status checks",
+    "deleteSelected": "Delete selected ({{count}})",
+    "deleteTitle": "Delete model status check",
+    "deleteContent": "This model will no longer be checked after deletion.",
+    "batchDeleteTitle": "Delete model status checks",
+    "batchDeleteContent": "Delete {{count}} model status checks and their probe records.",
+    "batchFix": "Batch fix",
+    "batchFixTitle": "Batch fix model status checks",
+    "batchFixCount": "{{count}} checks selected",
+    "noChange": "No change",
+    "enable": "Enable",
+    "disable": "Disable",
+    "namePrefix": "Name prefix",
+    "namePrefixPlaceholder": "For example, GPT",
+    "emptyBatchFix": "Select at least one batch fix item",
+    "tabs": {
+      "checks": "Checks",
+      "runs": "Probe records"
+    },
+    "runs": {
+      "checkedAt": "Checked at",
+      "statusCode": "Status code",
+      "detailTitle": "Probe details",
+      "empty": "No probe records",
+      "searchPlaceholder": "Search check name, model name, or endpoint",
+      "defaultMessage": {
+        "operational": "Probe succeeded",
+        "degraded": "Probe succeeded with slow latency",
+        "failed": "Probe failed",
+        "error": "Probe errored"
+      }
+    },
+    "messages": {
+      "created": "Model status check created",
+      "updated": "Model status check updated",
+      "deleted": "Model status check deleted",
+      "batchDeleted": "Deleted {{count}} model status checks",
+      "batchFixed": "Batch fixed {{count}} model status checks"
+    }
   },
   "common": {
     "active": "Active",
@@ -1807,6 +1896,14 @@
       "performanceMonitoringCleanup": {
         "name": "Performance monitoring cleanup",
         "description": "Delete performance monitoring snapshots by retention policy."
+      },
+      "modelStatusCheckDispatch": {
+        "name": "Model status check dispatch",
+        "description": "Claim due model status checks and run real probes on schedule."
+      },
+      "modelStatusRunsCleanup": {
+        "name": "Model status probe record cleanup",
+        "description": "Delete model status probe records and hourly aggregates by retention policy."
       }
     },
     "config": {
@@ -1823,6 +1920,13 @@
       },
       "performanceMonitoringCleanup": {
         "retentionDays": "Performance monitoring retention days"
+      },
+      "modelStatusCheckDispatch": {
+        "batchSize": "Batch size",
+        "concurrency": "Probe concurrency"
+      },
+      "modelStatusRunsCleanup": {
+        "retentionDays": "Model status probe record retention days"
       }
     }
   }

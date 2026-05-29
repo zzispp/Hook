@@ -5,7 +5,7 @@ use crate::{Database, StorageError, StorageResult, json, usage_flush::UsageFlush
 
 use super::{
     GlobalModelRecord, GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord, ModelRecord,
-    cleanup::{delete_model_bindings, prune_model_references},
+    cleanup::{delete_model_bindings, delete_model_status_checks, prune_model_references},
     record::{global_models, global_models::ActiveModel as GlobalModelActiveModel, provider_models},
     repository_helpers::{apply_global_model_patch, capabilities, description, record_matches, unique_provider_count},
     usage,
@@ -56,6 +56,7 @@ impl ModelStore {
     pub async fn delete_global_model(&self, id: &str) -> StorageResult<()> {
         let tx = self.database.connection().begin().await?;
         let record = self.find_global_model_record(&tx, id).await?.ok_or(StorageError::NotFound)?;
+        delete_model_status_checks(&tx, &record.id).await?;
         delete_model_bindings(&tx, &record.id).await?;
         prune_model_references(&tx, &record.id).await?;
         let active: GlobalModelActiveModel = record.into();

@@ -6,6 +6,7 @@
     "dashboard_home": "仪表盘",
     "admin_user_stats": "用户统计",
     "admin_cost_analysis": "成本分析",
+    "dashboard_model_status": "模型状态",
     "admin_performance_monitoring": "性能监控",
     "dashboard_models": "模型目录",
     "dashboard_groups": "价格分组",
@@ -13,6 +14,7 @@
     "api_tokens": "我的令牌",
     "usage_records": "使用记录",
     "admin_tokens": "令牌管理",
+    "admin_model_status_checks": "模型状态管理",
     "admin_users": "用户管理",
     "admin_roles": "角色管理",
     "admin_apis": "API管理",
@@ -33,6 +35,93 @@
     "admin_announcements": "公告管理",
     "admin_tickets": "工单管理",
     "admin_scheduled_tasks": "定时任务"
+  },
+  "modelStatus": {
+    "title": "模型状态",
+    "subtitle": "查看已启用模型探测的可用性和最近状态",
+    "name": "名称",
+    "status": "最新状态",
+    "availability": "可用性",
+    "timeline": "状态条",
+    "apiFormat": "端点",
+    "allApiFormats": "全部端点",
+    "searchPlaceholder": "搜索模型名或端点",
+    "range": "日期范围",
+    "startDate": "开始日期",
+    "endDate": "结束日期",
+    "empty": "暂无模型状态检查",
+    "presets": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "last7days": "最近 7 天",
+      "last30days": "最近 30 天",
+      "last90days": "最近 90 天",
+      "custom": "自定义"
+    },
+    "statusLabel": {
+      "operational": "正常",
+      "degraded": "慢响应",
+      "failed": "失败",
+      "error": "错误",
+      "unknown": "未知"
+    }
+  },
+  "modelStatusChecks": {
+    "title": "模型状态管理",
+    "subtitle": "管理模型状态探测项",
+    "create": "新增检查",
+    "edit": "编辑检查",
+    "name": "名称",
+    "model": "模型",
+    "apiFormat": "API 格式",
+    "apiToken": "独立令牌",
+    "interval": "探测间隔",
+    "enabled": "启用",
+    "lastStatus": "最新状态",
+    "lastCheckedAt": "最近探测",
+    "lastLatency": "延迟",
+    "lastMessage": "消息",
+    "modelRequired": "请选择至少一个模型",
+    "apiFormatRequired": "请选择至少一个端点",
+    "empty": "暂无模型状态检查",
+    "deleteSelected": "删除已选 ({{count}})",
+    "deleteTitle": "删除模型状态检查",
+    "deleteContent": "删除后将不再继续探测该模型。",
+    "batchDeleteTitle": "批量删除模型状态检查",
+    "batchDeleteContent": "将删除 {{count}} 个模型状态检查及其探测记录。",
+    "batchFix": "批量修复",
+    "batchFixTitle": "批量修复模型状态检查",
+    "batchFixCount": "已选择 {{count}} 个检查",
+    "noChange": "不修改",
+    "enable": "启用",
+    "disable": "禁用",
+    "namePrefix": "名称前缀",
+    "namePrefixPlaceholder": "例如 GPT",
+    "emptyBatchFix": "请选择至少一个批量修复项",
+    "tabs": {
+      "checks": "检查管理",
+      "runs": "探测记录"
+    },
+    "runs": {
+      "checkedAt": "探测时间",
+      "statusCode": "状态码",
+      "detailTitle": "探测详情",
+      "empty": "暂无探测记录",
+      "searchPlaceholder": "搜索检查名称、模型名或端点",
+      "defaultMessage": {
+        "operational": "探测成功",
+        "degraded": "探测成功，但响应较慢",
+        "failed": "探测失败",
+        "error": "探测异常"
+      }
+    },
+    "messages": {
+      "created": "模型状态检查已创建",
+      "updated": "模型状态检查已更新",
+      "deleted": "模型状态检查已删除",
+      "batchDeleted": "已删除 {{count}} 个模型状态检查",
+      "batchFixed": "已批量修复 {{count}} 个模型状态检查"
+    }
   },
   "common": {
     "active": "启用",
@@ -1807,6 +1896,14 @@
       "performanceMonitoringCleanup": {
         "name": "性能监控清理",
         "description": "按保留策略清理性能监控快照。"
+      },
+      "modelStatusCheckDispatch": {
+        "name": "模型状态探测调度",
+        "description": "定期领取到期模型状态检查并执行真实探测。"
+      },
+      "modelStatusRunsCleanup": {
+        "name": "模型状态探测记录清理",
+        "description": "按保留窗口删除模型状态探测记录和小时聚合数据。"
       }
     },
     "config": {
@@ -1823,6 +1920,13 @@
       },
       "performanceMonitoringCleanup": {
         "retentionDays": "性能监控保留天数"
+      },
+      "modelStatusCheckDispatch": {
+        "batchSize": "单次领取数量",
+        "concurrency": "并发探测数"
+      },
+      "modelStatusRunsCleanup": {
+        "retentionDays": "模型状态探测记录保留天数"
       }
     }
   }

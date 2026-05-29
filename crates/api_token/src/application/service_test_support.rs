@@ -64,13 +64,24 @@ pub(super) fn record_owner(user_id: Option<&str>, token_type: ApiTokenType) -> (
 #[derive(Clone)]
 pub(super) struct MemoryTokenRepository {
     created: Arc<Mutex<Vec<ApiTokenCreateRecord>>>,
+    tokens: Arc<Mutex<BTreeMap<String, ApiToken>>>,
+    deleted: Arc<Mutex<Vec<String>>>,
     owner_token_count: u64,
+    model_status_bound: bool,
 }
 
 impl MemoryTokenRepository {
     pub(super) fn with_owner_token_count(owner_token_count: u64) -> Self {
         Self {
             owner_token_count,
+            ..Self::default()
+        }
+    }
+
+    pub(super) fn with_token(token: ApiToken, model_status_bound: bool) -> Self {
+        Self {
+            tokens: Arc::new(Mutex::new(BTreeMap::from([(token.id.clone(), token)]))),
+            model_status_bound,
             ..Self::default()
         }
     }
@@ -83,13 +94,20 @@ impl MemoryTokenRepository {
             .map(|record| (record.user_id.clone(), record.token_type))
             .collect()
     }
+
+    pub(super) fn deleted_ids(&self) -> Vec<String> {
+        self.deleted.lock().unwrap().clone()
+    }
 }
 
 impl Default for MemoryTokenRepository {
     fn default() -> Self {
         Self {
             created: Arc::default(),
+            tokens: Arc::default(),
+            deleted: Arc::default(),
             owner_token_count: EMPTY_OWNER_TOKEN_COUNT,
+            model_status_bound: false,
         }
     }
 }
@@ -109,20 +127,22 @@ impl ApiTokenRepository for MemoryTokenRepository {
         unimplemented!("not needed for service tests")
     }
 
-    async fn delete_token(&self, _user_id: &str, _id: &str) -> ApiTokenResult<()> {
-        unimplemented!("not needed for service tests")
+    async fn delete_token(&self, _user_id: &str, id: &str) -> ApiTokenResult<()> {
+        self.deleted.lock().unwrap().push(id.to_owned());
+        Ok(())
     }
 
-    async fn delete_any_token(&self, _id: &str) -> ApiTokenResult<()> {
-        unimplemented!("not needed for service tests")
+    async fn delete_any_token(&self, id: &str) -> ApiTokenResult<()> {
+        self.deleted.lock().unwrap().push(id.to_owned());
+        Ok(())
     }
 
-    async fn find_user_token(&self, _user_id: &str, _id: &str) -> ApiTokenResult<Option<ApiToken>> {
-        unimplemented!("not needed for service tests")
+    async fn find_user_token(&self, _user_id: &str, id: &str) -> ApiTokenResult<Option<ApiToken>> {
+        Ok(self.tokens.lock().unwrap().get(id).cloned())
     }
 
-    async fn find_token(&self, _id: &str) -> ApiTokenResult<Option<ApiToken>> {
-        unimplemented!("not needed for service tests")
+    async fn find_token(&self, id: &str) -> ApiTokenResult<Option<ApiToken>> {
+        Ok(self.tokens.lock().unwrap().get(id).cloned())
     }
 
     async fn find_by_hash(&self, _token_hash: &str) -> ApiTokenResult<Option<ApiToken>> {
@@ -144,6 +164,10 @@ impl ApiTokenRepository for MemoryTokenRepository {
     async fn count_owner_tokens(&self, _user_id: &str, _token_type: ApiTokenType) -> ApiTokenResult<u64> {
         Ok(self.owner_token_count)
     }
+
+    async fn token_has_model_status_checks(&self, _id: &str) -> ApiTokenResult<bool> {
+        Ok(self.model_status_bound)
+    }
 }
 
 fn token_from_record(record: ApiTokenCreateRecord) -> ApiToken {
@@ -161,6 +185,30 @@ fn token_from_record(record: ApiTokenCreateRecord) -> ApiToken {
         allowed_model_ids: record.allowed_model_ids,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_limit: record.quota_limit,
+        used_quota: Decimal::ZERO,
+        request_count: 0,
+        is_active: true,
+        last_used_at: None,
+        created_at: "2026-05-11T00:00:00Z".into(),
+        updated_at: "2026-05-11T00:00:00Z".into(),
+    }
+}
+
+pub(super) fn token_with_type(id: &str, token_type: ApiTokenType) -> ApiToken {
+    ApiToken {
+        id: id.into(),
+        user_id: Some(USER_ID.into()),
+        token_type,
+        name: "test token".into(),
+        token_value: "hk-test-secret".into(),
+        token_hash: "hash".into(),
+        token_prefix: "hk-test".into(),
+        group_code: constants::billing::DEFAULT_SYSTEM_GROUP_CODE.into(),
+        expires_at: None,
+        model_access_mode: ModelAccessMode::All,
+        allowed_model_ids: Vec::new(),
+        rate_limit_rpm: None,
+        quota_limit: None,
         used_quota: Decimal::ZERO,
         request_count: 0,
         is_active: true,

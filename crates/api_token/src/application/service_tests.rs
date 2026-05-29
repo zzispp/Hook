@@ -2,7 +2,7 @@ use types::api_token::ApiTokenType;
 
 use super::{
     ApiTokenUseCase,
-    service_test_support::{ExistingUsers, MemoryTokenRepository, SYSTEM_ACTOR_ID, USER_ID, admin_create, record_owner, service, user_create},
+    service_test_support::{ExistingUsers, MemoryTokenRepository, SYSTEM_ACTOR_ID, USER_ID, admin_create, record_owner, service, token_with_type, user_create},
 };
 
 #[tokio::test]
@@ -97,4 +97,30 @@ async fn admin_user_token_create_rejects_owner_limit() {
 
     assert_eq!(result.unwrap_err().to_string(), "api token conflict: token quantity limit reached");
     assert!(repository.created_records().is_empty());
+}
+
+#[tokio::test]
+async fn delete_admin_independent_token_rejects_model_status_binding() {
+    let token = token_with_type("token-1", ApiTokenType::Independent);
+    let repository = MemoryTokenRepository::with_token(token, true);
+    let service = service(repository.clone(), ExistingUsers::with([USER_ID]));
+
+    let result = service.delete_admin_token("token-1").await;
+
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "api token conflict: independent token is bound to model status checks"
+    );
+    assert!(repository.deleted_ids().is_empty());
+}
+
+#[tokio::test]
+async fn delete_admin_user_token_ignores_model_status_binding_check() {
+    let token = token_with_type("token-1", ApiTokenType::User);
+    let repository = MemoryTokenRepository::with_token(token, true);
+    let service = service(repository.clone(), ExistingUsers::with([USER_ID]));
+
+    service.delete_admin_token("token-1").await.unwrap();
+
+    assert_eq!(repository.deleted_ids(), vec!["token-1".to_owned()]);
 }

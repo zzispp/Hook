@@ -6,6 +6,7 @@ mod dashboard;
 mod group;
 mod i18n;
 mod model;
+mod model_status;
 mod operations;
 mod performance_monitoring;
 mod provider;
@@ -30,6 +31,7 @@ const API_GROUPS: &[&[ApiDefinition]] = &[
     dashboard::DASHBOARD_APIS,
     rbac::RBAC_APIS,
     model::MODEL_APIS,
+    model_status::MODEL_STATUS_APIS,
     operations::OPERATIONS_APIS,
     provider::PROVIDER_APIS,
     recharge::RECHARGE_APIS,

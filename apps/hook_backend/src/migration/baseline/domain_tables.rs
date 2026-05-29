@@ -1,6 +1,6 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
-use super::{iden::*, performance_monitoring_tables, request_candidate_tables, scheduler_tables, setting_tables, translation_tables};
+use super::{iden::*, model_status_tables, performance_monitoring_tables, request_candidate_tables, scheduler_tables, setting_tables, translation_tables};
 
 pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
     let mut tables = vec![
@@ -27,6 +27,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
     ];
     tables.extend(scheduler_tables::scheduler_tables());
     tables.extend(performance_monitoring_tables::performance_monitoring_tables());
+    tables.extend(model_status_tables::model_status_tables());
     tables
 }
 

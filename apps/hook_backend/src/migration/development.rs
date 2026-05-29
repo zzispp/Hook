@@ -86,6 +86,9 @@ pub fn table_names() -> Vec<&'static str> {
         "support_ticket_email_events",
         "notification_states",
         "usage_flush_batches",
+        "model_status_checks",
+        "model_status_check_runs",
+        "model_status_check_hourly_stats",
     ]
 }
 

@@ -1,18 +1,20 @@
 use std::sync::Arc;
 
+mod model_status;
+mod performance_monitoring;
+
 use api_token::application::ApiTokenRepository;
 use api_token::infra::StorageApiTokenRepository;
 use scheduler::runtime::{
     DurationExt, ScheduleTaskContext, ScheduledTaskLifecycle, SchedulerError, SchedulerRegistry, SchedulerResult, TaskConfigValue, TaskResult,
 };
-use storage::{
-    performance_monitoring::{PerformanceMonitoringStore, SnapshotAggregationWindow},
-    provider::ProviderStore,
-    scheduler::task_definition,
-};
-use types::performance_monitoring::SnapshotGranularity;
+use storage::{provider::ProviderStore, scheduler::task_definition};
 use types::scheduler::ScheduledTaskConfigValueType;
 
+use self::{
+    model_status::{ModelStatusCheckDispatchTask, ModelStatusRunsCleanupTask},
+    performance_monitoring::{PerformanceMonitoringCleanupTask, PerformanceMonitoringSnapshotTask},
+};
 use crate::{llm_proxy::LlmProxyCache, performance_monitoring_os::PerformanceOsCollector, proxy_cache_hooks::CachedApiTokenRepository};
 
 const REQUEST_RECORD_STALE_SWEEP_INTERVAL_SECONDS: i64 = 300;
@@ -25,6 +27,7 @@ pub fn scheduler_registry(
     cache: LlmProxyCache,
     performance_os_collector: Arc<PerformanceOsCollector>,
     recharge_service: Arc<dyn recharge::application::RechargeUseCase>,
+    model_status_service: Arc<dyn ::model_status::application::ModelStatusUseCase>,
 ) -> SchedulerResult<SchedulerRegistry> {
     let mut registry = SchedulerRegistry::new();
     registry.register(ApiTokenCleanupTask { cache })?;
@@ -35,6 +38,8 @@ pub fn scheduler_registry(
         os_collector: performance_os_collector,
     })?;
     registry.register(PerformanceMonitoringCleanupTask)?;
+    registry.register(ModelStatusCheckDispatchTask { model_status_service })?;
+    registry.register(ModelStatusRunsCleanupTask)?;
     Ok(registry)
 }
 
@@ -53,14 +58,6 @@ struct RequestRecordStaleSweepTask;
 struct RechargePaymentPollTask {
     recharge_service: Arc<dyn recharge::application::RechargeUseCase>,
 }
-
-#[derive(Clone)]
-struct PerformanceMonitoringSnapshotTask {
-    os_collector: Arc<PerformanceOsCollector>,
-}
-
-#[derive(Clone, Copy)]
-struct PerformanceMonitoringCleanupTask;
 
 #[async_trait::async_trait]
 impl ScheduledTaskLifecycle for ApiTokenCleanupTask {
@@ -206,66 +203,7 @@ impl ScheduledTaskLifecycle for RechargePaymentPollTask {
     }
 }
 
-#[async_trait::async_trait]
-impl ScheduledTaskLifecycle for PerformanceMonitoringSnapshotTask {
-    fn definition(&self) -> types::scheduler::ScheduledTaskDefinition {
-        task_definition(
-            "performance_monitoring_snapshot",
-            "scheduledTasks.definitions.performanceMonitoringSnapshot.name",
-            "scheduledTasks.definitions.performanceMonitoringSnapshot.description",
-            60,
-            serde_json::json!({}),
-            Vec::new(),
-        )
-    }
-
-    fn validate_config(&self, config: &TaskConfigValue) -> SchedulerResult<()> {
-        validate_empty_config(config)
-    }
-
-    async fn run(&self, ctx: ScheduleTaskContext, _config: TaskConfigValue) -> TaskResult {
-        let now = time::OffsetDateTime::now_utc();
-        let windows = aggregation_windows(now);
-        let count = windows.len();
-        let system = self.os_collector.clone().snapshot().await.map_err(performance_collector_error)?;
-        let store = PerformanceMonitoringStore::new(ctx.database);
-        for window in windows {
-            store.aggregate_window_with_system(window, system.clone()).await.map_err(storage_error)?;
-        }
-        Ok(Some(format!("buckets={count}")))
-    }
-}
-
-#[async_trait::async_trait]
-impl ScheduledTaskLifecycle for PerformanceMonitoringCleanupTask {
-    fn definition(&self) -> types::scheduler::ScheduledTaskDefinition {
-        task_definition(
-            "performance_monitoring_cleanup",
-            "scheduledTasks.definitions.performanceMonitoringCleanup.name",
-            "scheduledTasks.definitions.performanceMonitoringCleanup.description",
-            24_i64.hours(),
-            serde_json::json!({
-                "retention_days": 30
-            }),
-            integer_fields(&[("retention_days", "scheduledTasks.config.performanceMonitoringCleanup.retentionDays", 1)]),
-        )
-    }
-
-    fn validate_config(&self, config: &TaskConfigValue) -> SchedulerResult<()> {
-        validate_positive_integer(config, "retention_days", 1)
-    }
-
-    async fn run(&self, ctx: ScheduleTaskContext, config: TaskConfigValue) -> TaskResult {
-        let retention_days = integer_config(&config, "retention_days")?;
-        let deleted = PerformanceMonitoringStore::new(ctx.database)
-            .delete_snapshots_before(time::OffsetDateTime::now_utc() - time::Duration::days(retention_days))
-            .await
-            .map_err(storage_error)?;
-        Ok(Some(format!("deleted_snapshots={deleted}")))
-    }
-}
-
-fn integer_fields(items: &[(&str, &str, i64)]) -> Vec<types::scheduler::ScheduledTaskConfigField> {
+pub(super) fn integer_fields(items: &[(&str, &str, i64)]) -> Vec<types::scheduler::ScheduledTaskConfigField> {
     items
         .iter()
         .map(|(key, label_key, min)| types::scheduler::ScheduledTaskConfigField {
@@ -280,14 +218,14 @@ fn integer_fields(items: &[(&str, &str, i64)]) -> Vec<types::scheduler::Schedule
         .collect()
 }
 
-fn validate_empty_config(config: &TaskConfigValue) -> SchedulerResult<()> {
+pub(super) fn validate_empty_config(config: &TaskConfigValue) -> SchedulerResult<()> {
     if config.is_null() || config == &serde_json::json!({}) {
         return Ok(());
     }
     Err(SchedulerError::InvalidInput("task config must be an empty object".into()))
 }
 
-fn validate_positive_integer(config: &TaskConfigValue, key: &str, min: i64) -> SchedulerResult<()> {
+pub(super) fn validate_positive_integer(config: &TaskConfigValue, key: &str, min: i64) -> SchedulerResult<()> {
     let value = integer_config(config, key)?;
     if value < min {
         return Err(SchedulerError::InvalidInput(format!("{key} must be greater than or equal to {min}")));
@@ -295,50 +233,18 @@ fn validate_positive_integer(config: &TaskConfigValue, key: &str, min: i64) -> S
     Ok(())
 }
 
-fn integer_config(config: &TaskConfigValue, key: &str) -> SchedulerResult<i64> {
+pub(super) fn integer_config(config: &TaskConfigValue, key: &str) -> SchedulerResult<i64> {
     config
         .get(key)
         .and_then(serde_json::Value::as_i64)
         .ok_or_else(|| SchedulerError::InvalidInput(format!("missing integer config field: {key}")))
 }
 
-fn aggregation_windows(now: time::OffsetDateTime) -> Vec<SnapshotAggregationWindow> {
-    let minute_start = floor_minute(now) - time::Duration::minutes(1);
-    let mut windows = vec![window(SnapshotGranularity::Minute, minute_start)];
-    if minute_start.minute() == 59 {
-        windows.push(window(SnapshotGranularity::Hour, floor_hour(now) - time::Duration::hours(1)));
-    }
-    if minute_start.hour() == 23 && minute_start.minute() == 59 {
-        windows.push(window(SnapshotGranularity::Day, floor_day(now) - time::Duration::days(1)));
-    }
-    windows
-}
-
-fn window(granularity: SnapshotGranularity, started_at: time::OffsetDateTime) -> SnapshotAggregationWindow {
-    SnapshotAggregationWindow {
-        granularity,
-        started_at,
-        ended_at: started_at + time::Duration::seconds(granularity.bucket_seconds()),
-    }
-}
-
-fn floor_minute(value: time::OffsetDateTime) -> time::OffsetDateTime {
-    value.replace_second(0).unwrap().replace_nanosecond(0).unwrap()
-}
-
-fn floor_hour(value: time::OffsetDateTime) -> time::OffsetDateTime {
-    floor_minute(value).replace_minute(0).unwrap()
-}
-
-fn floor_day(value: time::OffsetDateTime) -> time::OffsetDateTime {
-    floor_hour(value).replace_hour(0).unwrap()
-}
-
 fn api_token_error(error: api_token::application::ApiTokenError) -> SchedulerError {
     SchedulerError::Infrastructure(error.to_string())
 }
 
-fn storage_error(error: storage::StorageError) -> SchedulerError {
+pub(super) fn storage_error(error: storage::StorageError) -> SchedulerError {
     SchedulerError::Infrastructure(error.to_string())
 }
 
@@ -346,6 +252,10 @@ fn recharge_error(error: recharge::application::RechargeError) -> SchedulerError
     SchedulerError::Infrastructure(error.to_string())
 }
 
-fn performance_collector_error(error: crate::performance_monitoring_os::PerformanceOsCollectorError) -> SchedulerError {
+pub(super) fn performance_collector_error(error: crate::performance_monitoring_os::PerformanceOsCollectorError) -> SchedulerError {
+    SchedulerError::Infrastructure(error.to_string())
+}
+
+pub(super) fn model_status_error(error: ::model_status::application::ModelStatusError) -> SchedulerError {
     SchedulerError::Infrastructure(error.to_string())
 }

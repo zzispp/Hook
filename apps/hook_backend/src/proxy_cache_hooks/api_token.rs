@@ -81,6 +81,10 @@ where
     async fn count_owner_tokens(&self, user_id: &str, token_type: ApiTokenType) -> ApiTokenResult<u64> {
         self.inner.count_owner_tokens(user_id, token_type).await
     }
+
+    async fn token_has_model_status_checks(&self, id: &str) -> ApiTokenResult<bool> {
+        self.inner.token_has_model_status_checks(id).await
+    }
 }
 
 impl<R, C> CachedApiTokenRepository<R, C>

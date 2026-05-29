@@ -33,6 +33,7 @@ pub use cache::{LlmProxyCache, LlmProxyCacheOptions};
 pub(crate) use cache_affinity::{AffinityEntry, AffinityRecord, AffinitySelection, ClearAffinityInput, InvalidateAffinityInput, SetAffinityInput};
 pub use error::LlmProxyError;
 pub(crate) use model_test::LlmProxyProviderModelTester;
+pub(crate) use proxy::{ProxyJsonRequest, proxy_json};
 
 pub const OPENAI_CHAT_FORMAT: &str = "openai:chat";
 pub const OPENAI_COMPLETION_FORMAT: &str = "openai_completion";

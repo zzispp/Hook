@@ -9,6 +9,7 @@ use crate::{
         LlmProxyCache, LlmProxyCacheOptions, LlmProxyProviderModelTester, LlmProxyState, cached_system_user_access, create_router as create_llm_proxy_router,
         create_v1beta_router,
     },
+    model_status_probe::LlmProxyModelStatusProbe,
     performance_monitoring_api::{PerformanceMonitoringApiState, create_router as create_performance_monitoring_router},
     performance_monitoring_os::PerformanceOsCollector,
     proxy_cache_hooks::{
@@ -53,6 +54,11 @@ use model::{
     api::{ModelApiState, create_router as create_model_router},
     application::ModelService,
     infra::{ModelsDevClient, StorageModelRepository},
+};
+use model_status::{
+    api::{ModelStatusApiState, create_router as create_model_status_router},
+    application::ModelStatusService,
+    infra::{StorageModelStatusRepository, StorageModelStatusTokenCatalog},
 };
 use operations::{
     api::{OperationsApiState, create_router as create_operations_router},
@@ -171,10 +177,24 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         )
         .await?,
     );
+    let llm_proxy = LlmProxyState::new(
+        database.clone(),
+        provider_key_cipher,
+        redis_connection.clone(),
+        proxy_cache.clone(),
+        settings.redis.key_prefix.clone(),
+        system_wallet_provider.system_wallet().map(|record| record.wallet),
+    );
+    let model_status = Arc::new(ModelStatusService::new(
+        StorageModelStatusRepository::new(database.clone()),
+        StorageModelStatusTokenCatalog::new(database.clone()),
+        LlmProxyModelStatusProbe::new(llm_proxy.clone()),
+    ));
     let scheduler_registry = Arc::new(crate::scheduled_tasks::scheduler_registry(
         proxy_cache.clone(),
         performance_os_collector.clone(),
         recharges.clone(),
+        model_status.clone(),
     )?);
     let scheduler_handle = SchedulerRuntime::spawn(database.clone(), scheduler_registry.clone())?;
     let scheduler = Arc::new(SchedulerService::new(
@@ -230,14 +250,6 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         CaptchaTicketVerifier::new(captcha.clone()),
         settings.admin.email.clone(),
     ));
-    let llm_proxy = LlmProxyState::new(
-        database.clone(),
-        provider_key_cipher,
-        redis_connection,
-        proxy_cache,
-        settings.redis.key_prefix.clone(),
-        system_wallet_provider.system_wallet().map(|record| record.wallet),
-    );
     let tokens = TokenService::new(token_settings(settings)?);
     let authorization = authorization_config(settings, &payment_callback_endpoints);
 
@@ -250,6 +262,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         models,
         providers,
         dashboard,
+        model_status,
         wallets,
         card_codes,
         recharges,
@@ -294,6 +307,7 @@ fn create_app(state: AppState) -> Router {
     let model_state = ModelApiState::new(state.models);
     let provider_state = ProviderApiState::new(state.providers, Arc::new(LlmProxyProviderModelTester::new(state.llm_proxy.clone())));
     let dashboard_state = DashboardApiState::new(state.dashboard);
+    let model_status_state = ModelStatusApiState::new(state.model_status);
     let wallet_state = WalletApiState::new(state.wallets);
     let card_code_state = CardCodeApiState::new(state.card_codes);
     let recharge_state = RechargeApiState::new(state.recharges, state.captcha.clone());
@@ -320,6 +334,7 @@ fn create_app(state: AppState) -> Router {
         .merge(create_model_router(model_state))
         .merge(create_provider_router(provider_state))
         .merge(create_dashboard_router(dashboard_state))
+        .merge(create_model_status_router(model_status_state))
         .merge(create_wallet_router(wallet_state))
         .merge(create_card_code_router(card_code_state))
         .merge(create_recharge_router(recharge_state))

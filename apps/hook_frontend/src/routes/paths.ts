@@ -32,6 +32,7 @@ export const paths = {
     announcementDetail: `${ROOTS.DASHBOARD}/announcements/detail`,
     tokens: `${ROOTS.DASHBOARD}/tokens`,
     usageRecords: `${ROOTS.DASHBOARD}/usage-records`,
+    modelStatus: `${ROOTS.DASHBOARD}/model-status`,
     tickets: `${ROOTS.DASHBOARD}/tickets`,
     wallet: `${ROOTS.DASHBOARD}/wallet`,
     admin: {
@@ -48,6 +49,7 @@ export const paths = {
       performanceMonitoring: `${ROOTS.DASHBOARD}/admin/performance-monitoring`,
       userStats: `${ROOTS.DASHBOARD}/admin/user-stats`,
       costAnalysis: `${ROOTS.DASHBOARD}/admin/cost-analysis`,
+      modelStatusChecks: `${ROOTS.DASHBOARD}/admin/model-status-checks`,
       requestRecords: `${ROOTS.DASHBOARD}/admin/request-records`,
       tickets: `${ROOTS.DASHBOARD}/admin/tickets`,
       tokens: `${ROOTS.DASHBOARD}/admin/tokens`,

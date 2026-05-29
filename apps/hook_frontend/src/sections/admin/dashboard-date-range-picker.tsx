@@ -32,11 +32,13 @@ export function DashboardDateRangePicker({
   filters,
   onChange,
   inline = false,
+  translationRoot = 'dashboard.stats.costAnalysis',
 }: {
   t: TFunction<'admin'>;
   filters: AdminDashboardRangeFilters;
   onChange: (filters: AdminDashboardRangeFilters) => void;
   inline?: boolean;
+  translationRoot?: string;
 }) {
   const isCustom = filters.preset === 'custom';
   return (
@@ -50,20 +52,20 @@ export function DashboardDateRangePicker({
       }}
     >
       <FormControl size="small">
-        <InputLabel>{t('dashboard.stats.costAnalysis.range')}</InputLabel>
+        <InputLabel>{t(`${translationRoot}.range`)}</InputLabel>
         <Select
-          label={t('dashboard.stats.costAnalysis.range')}
+          label={t(`${translationRoot}.range`)}
           value={filters.preset}
           onChange={(event) => onChange(rangeForPreset(event.target.value as DashboardCostAnalysisPreset, filters))}
         >
           {RANGE_PRESETS.map((preset) => (
             <MenuItem key={preset} value={preset}>
-              {t(`dashboard.stats.costAnalysis.presets.${preset}`)}
+              {t(`${translationRoot}.presets.${preset}`)}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
-      {isCustom ? <CustomRangeFields t={t} filters={filters} onChange={onChange} /> : null}
+      {isCustom ? <CustomRangeFields t={t} filters={filters} onChange={onChange} translationRoot={translationRoot} /> : null}
     </Stack>
   );
 }
@@ -72,21 +74,23 @@ function CustomRangeFields({
   t,
   filters,
   onChange,
+  translationRoot,
 }: {
   t: TFunction<'admin'>;
   filters: AdminDashboardRangeFilters;
   onChange: (filters: AdminDashboardRangeFilters) => void;
+  translationRoot: string;
 }) {
   return (
     <>
       <DatePicker
-        label={t('dashboard.stats.costAnalysis.startDate')}
+        label={t(`${translationRoot}.startDate`)}
         value={filters.start_date ? dayjs(filters.start_date) : null}
         slotProps={{ textField: { size: 'small' } }}
         onChange={(value) => onChange({ ...filters, start_date: value?.format('YYYY-MM-DD') })}
       />
       <DatePicker
-        label={t('dashboard.stats.costAnalysis.endDate')}
+        label={t(`${translationRoot}.endDate`)}
         value={filters.end_date ? dayjs(filters.end_date) : null}
         slotProps={{ textField: { size: 'small' } }}
         onChange={(value) => onChange({ ...filters, end_date: value?.format('YYYY-MM-DD') })}

@@ -210,6 +210,17 @@ export const endpoints = {
     overview: '/api/admin/performance-monitoring/overview',
     realtime: '/api/admin/performance-monitoring/realtime',
   },
+  modelStatus: {
+    checks: '/api/model-status/checks',
+  },
+  adminModelStatus: {
+    checks: '/api/admin/model-status/checks',
+    batchCreate: '/api/admin/model-status/checks/batch-create',
+    batchDelete: '/api/admin/model-status/checks/batch-delete',
+    batchUpdate: '/api/admin/model-status/checks/batch-update',
+    runs: '/api/admin/model-status/runs',
+    byId: (id: string) => `/api/admin/model-status/checks/${id}`,
+  },
   cacheMonitoring: {
     affinities: '/api/admin/monitoring/cache/affinities',
     affinityById: (

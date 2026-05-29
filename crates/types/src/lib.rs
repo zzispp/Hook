@@ -6,6 +6,7 @@ pub mod dashboard;
 pub mod group;
 pub mod i18n;
 pub mod model;
+pub mod model_status;
 pub mod operations;
 pub mod pagination;
 pub mod performance_monitoring;

@@ -4,6 +4,7 @@ mod card_code_tables;
 mod domain_tables;
 pub mod iden;
 mod indices;
+mod model_status_tables;
 mod operations_tables;
 mod performance_monitoring_tables;
 mod recharge_tables;

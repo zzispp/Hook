@@ -9,6 +9,8 @@ export const DASHBOARD_MENU_CODES = {
   dashboard: 'dashboard_home',
   userStats: 'admin_user_stats',
   costAnalysis: 'admin_cost_analysis',
+  modelStatus: 'dashboard_model_status',
+  modelStatusChecks: 'admin_model_status_checks',
   menuManagement: 'admin_menus',
   modelCatalog: 'dashboard_models',
   modelManagement: 'admin_models',

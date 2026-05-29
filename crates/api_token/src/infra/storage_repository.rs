@@ -6,6 +6,7 @@ use storage::{
     api_token::{ApiTokenRecordInput, ApiTokenRecordPatch, ApiTokenStore, ApiTokenUsageRecord},
     group::GroupStore,
     model::ModelStore,
+    model_status::ModelStatusStore,
     setting::SettingStore,
     user::{UserGroupStore, UserStore},
 };
@@ -23,6 +24,7 @@ use crate::application::{
 #[derive(Clone)]
 pub struct StorageApiTokenRepository {
     store: ApiTokenStore,
+    model_status: ModelStatusStore,
 }
 
 #[derive(Clone)]
@@ -50,7 +52,8 @@ pub struct StorageSystemTokenPolicy {
 impl StorageApiTokenRepository {
     pub fn new(database: Database) -> Self {
         Self {
-            store: ApiTokenStore::new(database),
+            store: ApiTokenStore::new(database.clone()),
+            model_status: ModelStatusStore::new(database),
         }
     }
 
@@ -149,6 +152,10 @@ impl ApiTokenRepository for StorageApiTokenRepository {
 
     async fn count_owner_tokens(&self, user_id: &str, token_type: types::api_token::ApiTokenType) -> ApiTokenResult<u64> {
         self.store.count_owner_tokens(user_id, token_type).await.map_err(storage_error)
+    }
+
+    async fn token_has_model_status_checks(&self, id: &str) -> ApiTokenResult<bool> {
+        self.model_status.token_has_checks(id).await.map_err(storage_error)
     }
 }
 

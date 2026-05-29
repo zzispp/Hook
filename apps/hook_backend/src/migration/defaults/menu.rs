@@ -83,6 +83,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000231",
+        section_id: OVERVIEW_SECTION_ID,
+        code: "dashboard_model_status",
+        title: "模型状态",
+        path: "/dashboard/model-status",
+        icon: "solar:pulse-bold",
+        sort_order: 4,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000202",
         section_id: OPERATIONS_SECTION_ID,
         code: "dashboard_models",
@@ -160,6 +170,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         path: "/dashboard/admin/tokens",
         icon: "ic:round-vpn-key",
         sort_order: 30,
+        deep_match: true,
+    },
+    MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000232",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "admin_model_status_checks",
+        title: "模型状态管理",
+        path: "/dashboard/admin/model-status-checks",
+        icon: "solar:pulse-bold",
+        sort_order: 31,
         deep_match: true,
     },
     MenuItemDefinition {

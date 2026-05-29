@@ -86,6 +86,10 @@ impl ApiTokenRepository for ListRepository {
     async fn count_owner_tokens(&self, _user_id: &str, _token_type: ApiTokenType) -> ApiTokenResult<u64> {
         unimplemented!("not needed for list owner tests")
     }
+
+    async fn token_has_model_status_checks(&self, _id: &str) -> ApiTokenResult<bool> {
+        unimplemented!("not needed for list owner tests")
+    }
 }
 
 struct OwnerUsers;

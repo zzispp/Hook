@@ -6,6 +6,7 @@ mod frontend;
 mod http_config;
 mod llm_proxy;
 mod migration;
+mod model_status_probe;
 mod performance_monitoring_api;
 mod performance_monitoring_disk;
 mod performance_monitoring_os;

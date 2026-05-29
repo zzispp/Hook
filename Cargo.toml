@@ -12,6 +12,7 @@ members = [
     "crates/group",
     "crates/i18n",
     "crates/model",
+    "crates/model_status",
     "crates/operations",
     "crates/payment",
     "crates/proxy",
@@ -87,6 +88,7 @@ uuid = { version = "1.23.1", features = ["v4", "v7", "fast-rng"] }
 url = "2.5.7"
 jiff = "0.2.23"
 model = { path = "crates/model" }
+model_status = { path = "crates/model_status" }
 operations = { path = "crates/operations" }
 payment = { path = "crates/payment" }
 provider = { path = "crates/provider" }

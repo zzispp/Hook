@@ -465,6 +465,7 @@ dependencies = [
  "hook_tracing",
  "i18n",
  "model",
+ "model_status",
  "netstat2",
  "operations",
  "payment",
@@ -2302,6 +2303,23 @@ dependencies = [
  "serde_json",
  "storage",
  "thiserror 2.0.18",
+ "tokio",
+ "types",
+]
+
+[[package]]
+name = "model_status"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "constants",
+ "futures-util",
+ "rust_decimal",
+ "serde_json",
+ "storage",
+ "thiserror 2.0.18",
+ "time",
  "tokio",
  "types",
 ]

@@ -310,6 +310,37 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             PerformanceMonitoringSnapshots::BucketGranularity,
             PerformanceMonitoringSnapshots::BucketStartedAt,
         ),
+        compound_index(
+            "index_model_status_checks_by_enabled_due",
+            ModelStatusChecks::Table,
+            ModelStatusChecks::Enabled,
+            ModelStatusChecks::NextDueAt,
+        ),
+        index(
+            "index_model_status_checks_by_token",
+            ModelStatusChecks::Table,
+            ModelStatusChecks::ApiTokenId,
+            false,
+        ),
+        compound_index(
+            "index_model_status_runs_by_check_checked",
+            ModelStatusCheckRuns::Table,
+            ModelStatusCheckRuns::CheckId,
+            ModelStatusCheckRuns::CheckedAt,
+        ),
+        index(
+            "index_model_status_runs_by_checked",
+            ModelStatusCheckRuns::Table,
+            ModelStatusCheckRuns::CheckedAt,
+            false,
+        ),
+        model_status_hourly_stats_unique_index(),
+        compound_index(
+            "index_model_status_hourly_stats_by_check_bucket",
+            ModelStatusCheckHourlyStats::Table,
+            ModelStatusCheckHourlyStats::CheckId,
+            ModelStatusCheckHourlyStats::BucketStartedAt,
+        ),
     ]
 }
 
@@ -465,6 +496,17 @@ fn dashboard_user_usage_buckets_user_bucket_index() -> IndexCreateStatement {
         .col(DashboardUserUsageBuckets::UserId)
         .col(DashboardUserUsageBuckets::BucketGranularity)
         .col(DashboardUserUsageBuckets::BucketStartedAt)
+        .if_not_exists()
+        .to_owned()
+}
+
+fn model_status_hourly_stats_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_model_status_hourly_stats_unique")
+        .table(ModelStatusCheckHourlyStats::Table)
+        .col(ModelStatusCheckHourlyStats::CheckId)
+        .col(ModelStatusCheckHourlyStats::BucketStartedAt)
+        .unique()
         .if_not_exists()
         .to_owned()
 }

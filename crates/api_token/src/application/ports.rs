@@ -52,6 +52,7 @@ pub trait ApiTokenRepository: Send + Sync + 'static {
     async fn list_admin_tokens(&self, request: ApiTokenListRequest) -> ApiTokenResult<ApiTokenListResponse>;
     async fn delete_expired_tokens(&self) -> ApiTokenResult<u64>;
     async fn count_owner_tokens(&self, user_id: &str, token_type: ApiTokenType) -> ApiTokenResult<u64>;
+    async fn token_has_model_status_checks(&self, id: &str) -> ApiTokenResult<bool>;
 }
 
 #[async_trait]
