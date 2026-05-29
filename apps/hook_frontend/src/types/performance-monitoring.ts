@@ -8,26 +8,22 @@ export type EffectiveTimeRange = {
   ended_at: string;
 };
 
-export type MetricDimension = {
-  name: string;
-  count: number;
-};
-
 export type CoreRequestMetrics = {
   request_count: number;
   qps: number;
   concurrent_requests: number;
-  success_rate: number;
   error_rate: number;
   timeout_rate: number;
   rate_limited_count: number;
   server_error_count: number;
   p50_latency_ms?: number | null;
+  p90_latency_ms?: number | null;
   p95_latency_ms?: number | null;
   p99_latency_ms?: number | null;
-  p50_ttft_ms?: number | null;
-  p95_ttft_ms?: number | null;
-  p99_ttft_ms?: number | null;
+  p50_ttfb_ms?: number | null;
+  p90_ttfb_ms?: number | null;
+  p95_ttfb_ms?: number | null;
+  p99_ttfb_ms?: number | null;
   retry_count: number;
   circuit_breaker_count: number;
   stream_request_count: number;
@@ -36,14 +32,10 @@ export type CoreRequestMetrics = {
 export type LlmBusinessMetrics = {
   prompt_tokens: number;
   completion_tokens: number;
-  total_tokens: number;
   tokens_per_request: number;
   tokens_per_second: number;
-  model_distribution: MetricDimension[];
-  provider_distribution: MetricDimension[];
   failover_count: number;
   cache_hit_rate: number;
-  cost: number;
   quota_limited_count: number;
 };
 
@@ -110,4 +102,110 @@ export type HostRealtimeMetrics = {
 export type PerformanceMonitoringRealtimeResponse = {
   snapshot?: PerformanceSnapshotPoint | null;
   host: HostRealtimeMetrics;
+};
+
+export type PerformanceMonitoringAnalyticsQuery = {
+  range: PerformanceMonitoringRange;
+  limit?: number;
+  slow_threshold_ms?: number;
+  provider_id?: string;
+  model?: string;
+  api_format?: string;
+  is_stream?: boolean;
+  needs_conversion?: boolean;
+};
+
+export type PerformancePercentilePoint = {
+  bucket_started_at: string;
+  bucket_ended_at: string;
+  p50_latency_ms?: number | null;
+  p90_latency_ms?: number | null;
+  p99_latency_ms?: number | null;
+  p50_ttfb_ms?: number | null;
+  p90_ttfb_ms?: number | null;
+  p99_ttfb_ms?: number | null;
+};
+
+export type ErrorDistributionItem = {
+  category: string;
+  count: number;
+};
+
+export type ErrorTrendPoint = {
+  bucket_started_at: string;
+  bucket_ended_at: string;
+  total: number;
+  categories: ErrorDistributionItem[];
+};
+
+export type UpstreamPerformanceSummary = {
+  request_count: number;
+  success_count: number;
+  error_count: number;
+  success_rate: number;
+  error_rate: number;
+  output_tokens: number;
+  avg_output_tps?: number | null;
+  avg_ttfb_ms?: number | null;
+  avg_latency_ms?: number | null;
+  p90_latency_ms?: number | null;
+  p99_latency_ms?: number | null;
+  p90_ttfb_ms?: number | null;
+  p99_ttfb_ms?: number | null;
+  tps_sample_count: number;
+  latency_sample_count: number;
+  ttfb_sample_count: number;
+  slow_request_count: number;
+};
+
+export type UpstreamPerformanceProvider = UpstreamPerformanceSummary & {
+  provider_id: string;
+  provider_name: string;
+};
+
+export type UpstreamPerformanceTimelinePoint = {
+  bucket_started_at: string;
+  bucket_ended_at: string;
+  provider_id: string;
+  provider_name: string;
+  request_count: number;
+  success_count: number;
+  error_count: number;
+  success_rate: number;
+  error_rate: number;
+  output_tokens: number;
+  avg_output_tps?: number | null;
+  avg_ttfb_ms?: number | null;
+  avg_latency_ms?: number | null;
+  slow_request_count: number;
+};
+
+export type UpstreamPerformance = {
+  summary: UpstreamPerformanceSummary;
+  providers: UpstreamPerformanceProvider[];
+  timeline: UpstreamPerformanceTimelinePoint[];
+};
+
+export type RecentPerformanceError = {
+  created_at: string;
+  request_id: string;
+  provider_id?: string | null;
+  provider_name?: string | null;
+  model?: string | null;
+  status_code?: number | null;
+  error_type?: string | null;
+  error_message?: string | null;
+  latency_ms?: number | null;
+  ttfb_ms?: number | null;
+};
+
+export type PerformanceMonitoringAnalyticsResponse = {
+  range: PerformanceMonitoringRange;
+  effective_range: EffectiveTimeRange;
+  bucket_granularity: SnapshotGranularity;
+  percentiles: PerformancePercentilePoint[];
+  error_distribution: ErrorDistributionItem[];
+  error_trend: ErrorTrendPoint[];
+  upstream_performance: UpstreamPerformance;
+  recent_errors: RecentPerformanceError[];
 };

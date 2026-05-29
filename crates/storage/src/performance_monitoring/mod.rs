@@ -1,4 +1,7 @@
 mod aggregation;
+mod analytics;
+mod analytics_rows;
+mod analytics_sql;
 mod query;
 pub mod record;
 mod repository;

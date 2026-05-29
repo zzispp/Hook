@@ -134,3 +134,30 @@ pub(in crate::migration::baseline) enum ProviderCooldowns {
     CreatedAt,
     UpdatedAt,
 }
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum ProviderCooldownEvents {
+    Table,
+    Id,
+    ProviderId,
+    ProviderNameSnapshot,
+    StatusCode,
+    ObservedCount,
+    ThresholdCount,
+    WindowSeconds,
+    CooldownSeconds,
+    TriggeredAt,
+    CooldownUntil,
+    RequestId,
+    CandidateIndex,
+    RetryIndex,
+    EndpointId,
+    EndpointNameSnapshot,
+    KeyId,
+    KeyNameSnapshot,
+    ErrorType,
+    ErrorMessage,
+    ErrorCode,
+    ErrorParam,
+    CreatedAt,
+}

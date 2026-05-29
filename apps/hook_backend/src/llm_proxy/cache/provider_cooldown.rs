@@ -151,9 +151,10 @@ async fn upsert_cooldown_record(
     triggered_at: OffsetDateTime,
     cooldown_until: OffsetDateTime,
 ) -> Result<(), LlmProxyError> {
-    storage::provider::ProviderStore::new(database.clone())
-        .upsert_provider_cooldown(record_input(input, rule, window_seconds, observed, triggered_at, cooldown_until))
-        .await?;
+    let store = storage::provider::ProviderStore::new(database.clone());
+    let record = record_input(input, rule, window_seconds, observed, triggered_at, cooldown_until);
+    store.upsert_provider_cooldown(record.clone()).await?;
+    store.create_provider_cooldown_event(record).await?;
     Ok(())
 }
 

@@ -64,6 +64,7 @@ pub fn reversed_tables() -> Vec<DynIden> {
         BillingGroupModels::Table.into_iden(),
         ProviderModelCosts::Table.into_iden(),
         ProviderModels::Table.into_iden(),
+        ProviderCooldownEvents::Table.into_iden(),
         ProviderCooldowns::Table.into_iden(),
         ProviderApiKeys::Table.into_iden(),
         ProviderEndpoints::Table.into_iden(),

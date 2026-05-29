@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
-use types::provider::{Provider, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderListRequest, ProviderListResponse};
+use types::provider::{Provider, ProviderListRequest, ProviderListResponse};
 
 use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
     BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord,
-    ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
-    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput, ProviderModelRecordPatch,
+    ProviderRecordInput, ProviderRecordPatch,
     record::{
         provider_api_keys, provider_endpoints, provider_models,
         providers::{self, ActiveModel as ProviderActiveModel},
@@ -207,22 +207,6 @@ impl ProviderStore {
 
     pub async fn find_model_cost(&self, key_id: &str, provider_model_id: &str) -> StorageResult<Option<types::provider::ProviderModelCost>> {
         super::provider_model_cost_query::find_model_cost(self, key_id, provider_model_id).await
-    }
-
-    pub async fn upsert_provider_cooldown(&self, input: ProviderCooldownRecordInput) -> StorageResult<types::provider::ProviderCooldown> {
-        super::provider_cooldown_query::upsert_provider_cooldown(self, input).await
-    }
-
-    pub async fn list_active_provider_cooldowns(&self, request: ProviderCooldownListRequest) -> StorageResult<ProviderCooldownListResponse> {
-        super::provider_cooldown_query::list_active_provider_cooldowns(self, request).await
-    }
-
-    pub async fn release_provider_cooldown(&self, provider_id: &str) -> StorageResult<types::provider::ProviderCooldown> {
-        super::provider_cooldown_query::release_provider_cooldown(self, provider_id).await
-    }
-
-    pub async fn active_provider_cooldowns_for_restore(&self) -> StorageResult<Vec<types::provider::ProviderCooldown>> {
-        super::provider_cooldown_query::active_provider_cooldowns_for_restore(self).await
     }
 
     pub async fn create_billing_rule(&self, input: BillingRuleRecordInput) -> StorageResult<super::record::BillingRuleRecord> {

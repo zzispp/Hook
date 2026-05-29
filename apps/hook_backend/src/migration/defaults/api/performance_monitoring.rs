@@ -13,4 +13,10 @@ pub const PERFORMANCE_MONITORING_APIS: &[ApiDefinition] = &[
         path_pattern: "/api/admin/performance-monitoring/realtime",
         name: "读取性能监控实时指标",
     },
+    ApiDefinition {
+        code: "performance_monitoring_analytics_read",
+        method: "GET",
+        path_pattern: "/api/admin/performance-monitoring/analytics",
+        name: "读取性能监控分析",
+    },
 ];

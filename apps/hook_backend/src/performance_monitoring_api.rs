@@ -9,7 +9,8 @@ use std::sync::Arc;
 use storage::{Database, performance_monitoring::PerformanceMonitoringStore};
 use types::{
     performance_monitoring::{
-        HostRealtimeMetrics, PerformanceMonitoringOverviewRequest, PerformanceMonitoringOverviewResponse, PerformanceMonitoringRealtimeResponse,
+        HostRealtimeMetrics, PerformanceMonitoringAnalyticsRequest, PerformanceMonitoringAnalyticsResponse, PerformanceMonitoringOverviewRequest,
+        PerformanceMonitoringOverviewResponse, PerformanceMonitoringRealtimeResponse,
     },
     response::{ApiErrorResponse, ApiResponse},
 };
@@ -40,6 +41,7 @@ pub fn create_router(state: PerformanceMonitoringApiState) -> Router {
     Router::new()
         .route("/admin/performance-monitoring/overview", get(overview))
         .route("/admin/performance-monitoring/realtime", get(realtime))
+        .route("/admin/performance-monitoring/analytics", get(analytics))
         .with_state(state)
 }
 
@@ -65,6 +67,16 @@ async fn realtime(State(state): State<PerformanceMonitoringApiState>) -> ApiResu
             metrics: system.host,
         },
     }))
+}
+
+async fn analytics(
+    State(state): State<PerformanceMonitoringApiState>,
+    Query(query): Query<PerformanceMonitoringAnalyticsRequest>,
+) -> ApiResult<ApiJson<PerformanceMonitoringAnalyticsResponse>> {
+    let response = PerformanceMonitoringStore::new(state.database)
+        .analytics(query, time::OffsetDateTime::now_utc())
+        .await?;
+    Ok(ok(response))
 }
 
 fn realtime_window(now: time::OffsetDateTime) -> storage::performance_monitoring::SnapshotAggregationWindow {

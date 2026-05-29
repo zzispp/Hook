@@ -2,7 +2,7 @@
 
 import type { PerformanceMonitoringRange } from 'src/types/performance-monitoring';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
@@ -16,29 +16,39 @@ import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-value
 import {
   usePerformanceMonitoringOverview,
   usePerformanceMonitoringRealtime,
+  usePerformanceMonitoringAnalytics,
 } from 'src/actions/performance-monitoring';
 
 import { RefreshButton, AdminBreadcrumbs } from './shared';
+import { PercentileChart } from './performance-monitoring-percentiles';
+import { RecentErrorsTable } from './performance-monitoring-recent-errors';
+import { UpstreamTrendCharts } from './performance-monitoring-upstream-trends';
+import { UpstreamSummaryCards } from './performance-monitoring-upstream-summary';
+import { UpstreamPerformanceTable } from './performance-monitoring-upstream-table';
+import { SummaryGrid, PerformanceDetailPanels } from './performance-monitoring-summary';
+import { RequestTrendChart, SnapshotLatencyChart } from './performance-monitoring-cards';
+import { ErrorTrendChart, ErrorDistributionChart } from './performance-monitoring-errors';
 import {
-  SummaryGrid,
-  DetailCards,
-  SeriesChart,
-  LatencyChart,
-  DistributionCard,
-} from './performance-monitoring-cards';
+  AnalyticsFilters,
+  toAnalyticsQueryFilters,
+  DEFAULT_ANALYTICS_FILTERS,
+} from './performance-monitoring-analytics-filters';
 
 const RANGE_OPTIONS: PerformanceMonitoringRange[] = ['realtime', 'today', '7d', '30d', 'all'];
 
 export function PerformanceMonitoringView() {
-  const { t } = useTranslate('admin');
   const [range, setRange] = useState<PerformanceMonitoringRange>('realtime');
+  const [filters, setFilters] = useState(DEFAULT_ANALYTICS_FILTERS);
   const isRealtime = range === 'realtime';
   const overview = usePerformanceMonitoringOverview(range);
   const realtime = usePerformanceMonitoringRealtime(isRealtime);
-  const activeSnapshot =
-    (range === 'realtime' ? realtime.data?.snapshot : overview.data?.series.at(-1)) ?? undefined;
-  const chartSeries =
+  const analyticsQuery = useMemo(() => ({ range, ...toAnalyticsQueryFilters(filters) }), [filters, range]);
+  const analytics = usePerformanceMonitoringAnalytics(analyticsQuery);
+  const snapshot =
+    (isRealtime ? realtime.data?.snapshot : overview.data?.series.at(-1)) ?? undefined;
+  const series =
     overview.data?.series ?? (isRealtime && realtime.data?.snapshot ? [realtime.data.snapshot] : []);
+  const analyticsData = analytics.data;
 
   return (
     <DashboardContent maxWidth="xl">
@@ -47,13 +57,12 @@ export function PerformanceMonitoringView() {
         action={
           <HeaderActions
             range={range}
-            loading={overview.isLoading || realtime.isLoading}
+            loading={overview.isLoading || realtime.isLoading || analytics.isLoading}
             onRangeChange={setRange}
             onRefresh={() => {
               void overview.refresh();
-              if (isRealtime) {
-                void realtime.refresh();
-              }
+              void analytics.refresh();
+              if (isRealtime) void realtime.refresh();
             }}
           />
         }
@@ -62,32 +71,76 @@ export function PerformanceMonitoringView() {
       <Stack spacing={3}>
         <StatusAlerts
           overview={overview.data}
-          error={overview.error ?? realtime.error}
+          error={overview.error ?? realtime.error ?? analytics.error}
         />
-        <SummaryGrid snapshot={activeSnapshot} />
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 8 }}>
-            <SeriesChart title={t('performanceMonitoring.charts.requests')} series={chartSeries} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <DistributionCard
-              title={t('performanceMonitoring.charts.models')}
-              items={activeSnapshot?.metrics.llm.model_distribution ?? []}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 8 }}>
-            <LatencyChart title={t('performanceMonitoring.charts.latency')} series={chartSeries} />
-          </Grid>
-          <Grid size={{ xs: 12, md: 4 }}>
-            <DistributionCard
-              title={t('performanceMonitoring.charts.providers')}
-              items={activeSnapshot?.metrics.llm.provider_distribution ?? []}
-            />
-          </Grid>
-        </Grid>
-        <DetailCards snapshot={activeSnapshot} hostStatus={realtime.data?.host.metrics.status} />
+        <SummaryGrid snapshot={snapshot} />
+        <PerformanceDetailPanels snapshot={snapshot} hostStatus={realtime.data?.host.metrics.status} />
+        <SnapshotCharts series={series} />
+        <AnalyticsFilters filters={filters} onChange={setFilters} />
+        <UpstreamSummaryCards summary={analyticsData?.upstream_performance.summary} />
+        <UpstreamTrendCharts
+          providers={analyticsData?.upstream_performance.providers ?? []}
+          timeline={analyticsData?.upstream_performance.timeline ?? []}
+        />
+        <AnalyticsCharts
+          percentiles={analyticsData?.percentiles ?? []}
+          errorDistribution={analyticsData?.error_distribution ?? []}
+          errorTrend={analyticsData?.error_trend ?? []}
+        />
+        <UpstreamPerformanceTable providers={analyticsData?.upstream_performance.providers ?? []} />
+        <RecentErrorsTable errors={analyticsData?.recent_errors ?? []} />
       </Stack>
     </DashboardContent>
+  );
+}
+
+function SnapshotCharts({ series }: { series: Parameters<typeof RequestTrendChart>[0]['series'] }) {
+  return (
+    <Grid container spacing={3}>
+      <Grid size={{ xs: 12, lg: 6 }}>
+        <RequestTrendChart series={series} />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 6 }}>
+        <SnapshotLatencyChart series={series} />
+      </Grid>
+    </Grid>
+  );
+}
+
+function AnalyticsCharts({
+  percentiles,
+  errorTrend,
+  errorDistribution,
+}: {
+  percentiles: Parameters<typeof PercentileChart>[0]['points'];
+  errorTrend: Parameters<typeof ErrorTrendChart>[0]['points'];
+  errorDistribution: Parameters<typeof ErrorDistributionChart>[0]['items'];
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Grid container spacing={3}>
+      <Grid size={{ xs: 12, lg: 6 }}>
+        <PercentileChart
+          mode="latency"
+          points={percentiles}
+          title={t('performanceMonitoring.charts.responsePercentiles')}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 6 }}>
+        <PercentileChart
+          mode="ttfb"
+          points={percentiles}
+          title={t('performanceMonitoring.charts.ttfbPercentiles')}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 6 }}>
+        <ErrorDistributionChart items={errorDistribution} />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 6 }}>
+        <ErrorTrendChart points={errorTrend} />
+      </Grid>
+    </Grid>
   );
 }
 
@@ -131,9 +184,7 @@ function StatusAlerts({
 }) {
   const { t } = useTranslate('admin');
 
-  if (error) {
-    return <Alert severity="error">{error.message}</Alert>;
-  }
+  if (error) return <Alert severity="error">{error.message}</Alert>;
   if (overview?.status === 'empty_snapshot') {
     return <Alert severity="info">{t('performanceMonitoring.emptySnapshot')}</Alert>;
   }

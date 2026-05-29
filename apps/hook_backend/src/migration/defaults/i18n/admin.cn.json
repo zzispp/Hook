@@ -1140,17 +1140,19 @@
     },
     "charts": {
       "requests": "核心请求趋势",
-      "latency": "延迟与 TTFT",
-      "models": "模型分布",
-      "providers": "提供商分布"
+      "latency": "响应延迟与 TTFB",
+      "outputTpsTrend": "输出 TPS 趋势",
+      "avgTtfbTrend": "平均首字趋势",
+      "responsePercentiles": "响应延迟百分位",
+      "ttfbPercentiles": "首字节延迟百分位",
+      "errorDistribution": "错误分布",
+      "errorTrend": "错误趋势"
     },
     "metrics": {
       "qps": "QPS",
-      "successRate": "成功率",
-      "p95": "P95 延迟",
-      "tokensPerSecond": "Tokens/s",
-      "totalTokens": "总 token",
-      "cost": "成本"
+      "p95Latency": "P95 响应延迟",
+      "ttfb": "TTFB",
+      "tokensPerSecond": "Tokens/s"
     },
     "groups": {
       "core": "核心请求",
@@ -1160,10 +1162,11 @@
     },
     "rows": {
       "qpsConcurrency": "QPS / 并发",
+      "errorTimeout": "错误率 / 超时率",
       "rateLimitedServerErrors": "429 / 5xx",
-      "timeoutRetryCircuitBreaker": "超时 / 重试 / 熔断",
+      "retryCircuitBreaker": "重试 / 冷却触发",
       "streamRequests": "流式请求",
-      "inputOutputTotalTokens": "输入 / 输出 / 总 token",
+      "inputOutputTokens": "输入 / 输出 token",
       "tokensPerRequestPerSecond": "每请求 token / tokens/s",
       "failoverCacheHit": "回退 / 缓存命中",
       "quotaLimited": "配额命中",
@@ -1176,13 +1179,73 @@
       "diskSpace": "文件系统可用 / 总量",
       "collectionStatus": "采集状态"
     },
+    "series": {
+      "errorRate": "错误率"
+    },
+    "filters": {
+      "title": "上游服务筛选",
+      "providerId": "Provider ID",
+      "model": "模型",
+      "apiFormat": "API 格式",
+      "limit": "上游数量",
+      "slowThresholdMs": "慢请求阈值 ms",
+      "streamOnly": "仅流式",
+      "conversionOnly": "仅格式转换"
+    },
+    "upstream": {
+      "requestSamples": "请求样本",
+      "errorCount": "错误 {{value}}",
+      "p99Latency": "P99 响应",
+      "p99Ttfb": "P99 首字",
+      "p90Value": "P90 {{value}}",
+      "outputTps": "输出 TPS",
+      "tpsSamples": "TPS 样本 {{value}}",
+      "avgTtfb": "平均首字",
+      "ttfbSamples": "首字样本 {{value}}",
+      "avgLatency": "平均响应",
+      "latencySamples": "响应样本 {{value}}",
+      "errorRate": "错误率",
+      "successRate": "成功率 {{value}}",
+      "slowRequests": "慢请求",
+      "currentWindow": "当前时间窗口"
+    },
+    "tables": {
+      "upstreamPerformance": "上游服务性能",
+      "recentErrors": "最近错误"
+    },
+    "columns": {
+      "upstreamService": "上游服务",
+      "requests": "请求",
+      "successRate": "成功率",
+      "errorRate": "错误率",
+      "outputTps": "输出 TPS",
+      "avgTtfb": "平均首字",
+      "avgLatency": "平均响应",
+      "p90P99Latency": "P90 / P99 响应",
+      "p90P99Ttfb": "P90 / P99 首字",
+      "slowRequests": "慢请求",
+      "sampleCoverage": "样本覆盖",
+      "time": "时间",
+      "requestId": "Request ID",
+      "providerModel": "提供商 / 模型",
+      "statusCode": "状态码",
+      "errorType": "错误类型",
+      "errorMessage": "错误信息",
+      "latencyTtfb": "响应 / 首字"
+    },
+    "empty": {
+      "noSeriesData": "当前范围没有趋势数据。",
+      "noPercentileData": "当前范围没有可计算的百分位样本。",
+      "noErrorData": "当前范围没有错误数据。",
+      "noUpstreamData": "当前范围没有真实上游尝试样本。",
+      "noRecentErrors": "当前范围没有最近错误。"
+    },
     "status": {
       "ready": "采集正常",
       "unsupported": "不支持采集"
     },
     "emptySnapshot": "当前范围没有监控快照。查询层不会临时扫描请求明细补数据。",
-    "allRangeNotice": "ALL 当前展示保留期内全部快照，使用 {{granularity}}，最大 720 个点。",
-    "noDimensionData": "暂无分布数据"
+    "allRangeNotice": "ALL 当前展示保留期内全部快照，使用 {{granularity}}，最大 720 个点。"
   },
   "cacheMonitoring": {
     "searchPlaceholder": "搜索用户、邮箱、令牌、提供商、模型或 API 格式...",

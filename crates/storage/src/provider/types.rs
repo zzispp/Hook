@@ -144,6 +144,8 @@ pub struct ProviderCooldownRecordInput {
     pub error_param: Option<String>,
 }
 
+pub type ProviderCooldownEventRecordInput = ProviderCooldownRecordInput;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderModelCostRecordInput {
     pub provider_id: String,

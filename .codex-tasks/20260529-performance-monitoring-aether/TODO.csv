@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Implement backend metric types and aggregation,DONE,Snapshot schema uses TTFB/P90 and removes visible distribution/cost fields,cargo check --workspace,2026-05-29T00:00:00Z,0,
+2,Add analytics API and storage queries,DONE,Analytics endpoint returns percentiles errors upstream performance and recent errors,cargo check --workspace,2026-05-29T00:00:00Z,0,
+3,Add provider cooldown events baseline and writes,DONE,Cooldown triggers append real event rows and aggregation reads them,cargo check --workspace,2026-05-29T00:00:00Z,0,
+4,Refactor frontend performance monitoring UI,DONE,Page shows Aether-style performance panels charts tables and no removed widgets,pnpm lint:frontend,2026-05-29T00:00:00Z,0,
+5,Update i18n and API permission seeds,DONE,New route and all UI copy are backend-seeded,rg "performanceMonitoring" apps/hook_backend/src/migration/defaults/i18n/admin.cn.json,2026-05-29T00:00:00Z,0,
+6,Run validation and record results,DONE,Rust and frontend checks are run or failures are documented,just check && just test && pnpm lint:frontend && pnpm build:frontend,2026-05-29T00:00:00Z,0,"just check, targeted Rust tests, pnpm lint:frontend, and pnpm build:frontend passed; just test has unrelated existing backend llm_proxy::formats::tests::streaming_requests_do_not_route_to_force_non_stream_formats failure"

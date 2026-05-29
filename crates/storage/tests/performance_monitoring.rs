@@ -11,7 +11,7 @@ async fn realtime_range_queries_minute_snapshot_buckets() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([Vec::<snapshots::Model>::new()])
         .append_query_results([[summary_row(0)]])
-        .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+        .append_query_results([[count_row(0)]])
         .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
         .into_connection();
     let store = PerformanceMonitoringStore::new(Database::new(connection.clone()));
@@ -31,7 +31,7 @@ async fn today_range_queries_hour_snapshot_buckets() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([Vec::<snapshots::Model>::new()])
         .append_query_results([[summary_row(0)]])
-        .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+        .append_query_results([[count_row(0)]])
         .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
         .into_connection();
     let store = PerformanceMonitoringStore::new(Database::new(connection.clone()));
@@ -48,7 +48,7 @@ async fn range_all_queries_day_snapshot_buckets_and_live_tail() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([vec![snapshot("day-1", SnapshotGranularity::Day, 0)]])
         .append_query_results([[summary_row(0)]])
-        .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+        .append_query_results([[count_row(0)]])
         .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
         .into_connection();
     let store = PerformanceMonitoringStore::new(Database::new(connection.clone()));
@@ -73,7 +73,7 @@ async fn range_all_appends_live_request_window_without_day_snapshots() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([Vec::<snapshots::Model>::new()])
         .append_query_results([[summary_row(3)]])
-        .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+        .append_query_results([[count_row(0)]])
         .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
         .into_connection();
     let store = PerformanceMonitoringStore::new(Database::new(connection.clone()));
@@ -95,7 +95,7 @@ async fn aggregate_point_calculates_cache_hit_rate_by_input_context_tokens() {
     summary.insert("cache_read_input_tokens".into(), Value::from(25_i64));
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary]])
-        .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+        .append_query_results([[count_row(0)]])
         .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
         .into_connection();
     let store = PerformanceMonitoringStore::new(Database::new(connection));
@@ -120,7 +120,7 @@ async fn thirty_day_range_uses_hour_buckets_at_point_cap() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([Vec::<snapshots::Model>::new()])
         .append_query_results([[summary_row(0)]])
-        .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
+        .append_query_results([[count_row(0)]])
         .append_query_results([Vec::<BTreeMap<String, Value>>::new()])
         .into_connection();
     let store = PerformanceMonitoringStore::new(Database::new(connection.clone()));
@@ -210,22 +210,26 @@ fn summary_row(request_count: i64) -> BTreeMap<String, Value> {
         ("rate_limited_count".into(), Value::from(0_i64)),
         ("server_error_count".into(), Value::from(0_i64)),
         ("p50_latency_ms".into(), Value::BigInt(None)),
+        ("p90_latency_ms".into(), Value::BigInt(None)),
         ("p95_latency_ms".into(), Value::BigInt(None)),
         ("p99_latency_ms".into(), Value::BigInt(None)),
-        ("p50_ttft_ms".into(), Value::BigInt(None)),
-        ("p95_ttft_ms".into(), Value::BigInt(None)),
-        ("p99_ttft_ms".into(), Value::BigInt(None)),
+        ("p50_ttfb_ms".into(), Value::BigInt(None)),
+        ("p90_ttfb_ms".into(), Value::BigInt(None)),
+        ("p95_ttfb_ms".into(), Value::BigInt(None)),
+        ("p99_ttfb_ms".into(), Value::BigInt(None)),
         ("retry_count".into(), Value::from(0_i64)),
-        ("circuit_breaker_count".into(), Value::from(0_i64)),
         ("stream_request_count".into(), Value::from(0_i64)),
         ("prompt_tokens".into(), Value::from(0_i64)),
         ("completion_tokens".into(), Value::from(0_i64)),
         ("total_tokens".into(), Value::from(0_i64)),
         ("failover_count".into(), Value::from(0_i64)),
         ("cache_read_input_tokens".into(), Value::from(0_i64)),
-        ("cost".into(), Value::from(rust_decimal::Decimal::ZERO)),
         ("quota_limited_count".into(), Value::from(0_i64)),
     ])
+}
+
+fn count_row(count: i64) -> BTreeMap<String, Value> {
+    BTreeMap::from([("count".into(), Value::from(count))])
 }
 
 fn ts(seconds: i64) -> time::OffsetDateTime {

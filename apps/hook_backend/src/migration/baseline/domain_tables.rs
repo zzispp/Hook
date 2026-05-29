@@ -13,6 +13,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         billing_rules_table(),
         dimension_collectors_table(),
         provider_cooldowns_table(),
+        provider_cooldown_events_table(),
         billing_group_providers_table(),
         billing_group_user_groups_table(),
         setting_tables::system_settings_table(),
@@ -277,6 +278,41 @@ fn provider_cooldowns_table() -> TableCreateStatement {
         .col(string_len_null(ProviderCooldowns::ErrorParam, 160))
         .col(timestamp_tz(ProviderCooldowns::CreatedAt))
         .col(timestamp_tz(ProviderCooldowns::UpdatedAt))
+        .foreign_key(&mut provider_fk)
+        .to_owned()
+}
+
+fn provider_cooldown_events_table() -> TableCreateStatement {
+    let mut provider_fk = provider_fk(
+        "fk_provider_cooldown_events_provider",
+        ProviderCooldownEvents::Table,
+        ProviderCooldownEvents::ProviderId,
+    );
+    Table::create()
+        .table(ProviderCooldownEvents::Table)
+        .if_not_exists()
+        .col(string_len(ProviderCooldownEvents::Id, 36).primary_key())
+        .col(string_len(ProviderCooldownEvents::ProviderId, 36))
+        .col(string_len(ProviderCooldownEvents::ProviderNameSnapshot, 100))
+        .col(integer(ProviderCooldownEvents::StatusCode))
+        .col(big_integer(ProviderCooldownEvents::ObservedCount))
+        .col(big_integer(ProviderCooldownEvents::ThresholdCount))
+        .col(big_integer(ProviderCooldownEvents::WindowSeconds))
+        .col(big_integer(ProviderCooldownEvents::CooldownSeconds))
+        .col(timestamp_tz(ProviderCooldownEvents::TriggeredAt))
+        .col(timestamp_tz(ProviderCooldownEvents::CooldownUntil))
+        .col(string_len(ProviderCooldownEvents::RequestId, 64))
+        .col(integer(ProviderCooldownEvents::CandidateIndex))
+        .col(integer(ProviderCooldownEvents::RetryIndex))
+        .col(string_len_null(ProviderCooldownEvents::EndpointId, 36))
+        .col(string_len_null(ProviderCooldownEvents::EndpointNameSnapshot, 50))
+        .col(string_len_null(ProviderCooldownEvents::KeyId, 36))
+        .col(string_len_null(ProviderCooldownEvents::KeyNameSnapshot, 100))
+        .col(string_len_null(ProviderCooldownEvents::ErrorType, 100))
+        .col(text_null(ProviderCooldownEvents::ErrorMessage))
+        .col(string_len_null(ProviderCooldownEvents::ErrorCode, 120))
+        .col(string_len_null(ProviderCooldownEvents::ErrorParam, 160))
+        .col(timestamp_tz(ProviderCooldownEvents::CreatedAt))
         .foreign_key(&mut provider_fk)
         .to_owned()
 }

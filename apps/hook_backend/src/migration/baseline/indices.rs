@@ -158,6 +158,18 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             ProviderCooldowns::StatusCode,
             false,
         ),
+        index(
+            "index_provider_cooldown_events_by_triggered",
+            ProviderCooldownEvents::Table,
+            ProviderCooldownEvents::TriggeredAt,
+            false,
+        ),
+        compound_index(
+            "index_provider_cooldown_events_by_provider_triggered",
+            ProviderCooldownEvents::Table,
+            ProviderCooldownEvents::ProviderId,
+            ProviderCooldownEvents::TriggeredAt,
+        ),
         index("index_billing_groups_by_active", BillingGroups::Table, BillingGroups::IsActive, false),
         index("index_api_tokens_by_hash", ApiTokens::Table, ApiTokens::TokenHash, true),
         index("index_api_tokens_by_user_id", ApiTokens::Table, ApiTokens::UserId, false),
@@ -240,6 +252,12 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RequestRecords::CreatedAt,
         ),
         compound_index(
+            "index_request_records_by_client_error_created",
+            RequestRecords::Table,
+            RequestRecords::ClientErrorType,
+            RequestRecords::CreatedAt,
+        ),
+        compound_index(
             "index_dashboard_user_usage_buckets_by_bucket",
             DashboardUserUsageBuckets::Table,
             DashboardUserUsageBuckets::BucketGranularity,
@@ -263,6 +281,24 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RequestCandidates::Table,
             RequestCandidates::CreatedAt,
             false,
+        ),
+        compound_index(
+            "index_request_candidates_by_provider_created",
+            RequestCandidates::Table,
+            RequestCandidates::ProviderId,
+            RequestCandidates::CreatedAt,
+        ),
+        compound_index(
+            "index_request_candidates_by_model_created",
+            RequestCandidates::Table,
+            RequestCandidates::GlobalModelId,
+            RequestCandidates::CreatedAt,
+        ),
+        compound_index(
+            "index_request_candidates_by_status_created",
+            RequestCandidates::Table,
+            RequestCandidates::Status,
+            RequestCandidates::CreatedAt,
         ),
         compound_index(
             "index_scheduled_task_runs_by_task_started",

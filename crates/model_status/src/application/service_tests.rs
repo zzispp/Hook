@@ -121,6 +121,13 @@ impl ModelStatusRepository for MemoryRepository {
         Ok(check_response())
     }
 
+    async fn batch_create_checks(
+        &self,
+        _input: types::model_status::ModelStatusCheckBatchCreateRequest,
+    ) -> ModelStatusResult<types::model_status::ModelStatusCheckBatchCreateResponse> {
+        unimplemented!("not needed for service tests")
+    }
+
     async fn update_check(&self, _id: &str, _input: ModelStatusCheckUpdate) -> ModelStatusResult<ModelStatusCheckResponse> {
         unimplemented!("not needed for service tests")
     }
@@ -131,6 +138,13 @@ impl ModelStatusRepository for MemoryRepository {
         }
         self.deleted.lock().unwrap().push(id.to_owned());
         Ok(())
+    }
+
+    async fn batch_update_checks(
+        &self,
+        _input: types::model_status::ModelStatusCheckBatchUpdateRequest,
+    ) -> ModelStatusResult<types::model_status::ModelStatusCheckBatchUpdateResponse> {
+        unimplemented!("not needed for service tests")
     }
 
     async fn list_runs(&self, _request: ModelStatusRunListRequest) -> ModelStatusResult<ModelStatusRunListResponse> {

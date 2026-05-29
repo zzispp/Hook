@@ -225,6 +225,7 @@ export const endpoints = {
   performanceMonitoring: {
     overview: '/api/admin/performance-monitoring/overview',
     realtime: '/api/admin/performance-monitoring/realtime',
+    analytics: '/api/admin/performance-monitoring/analytics',
   },
   modelStatus: {
     checks: '/api/model-status/checks',

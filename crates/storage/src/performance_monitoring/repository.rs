@@ -1,7 +1,8 @@
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use types::performance_monitoring::{
-    EffectiveTimeRange, MAX_SERIES_POINTS, PerformanceMonitoringOverviewResponse, PerformanceMonitoringRange, PerformanceSnapshotMetrics,
-    PerformanceSnapshotPoint, SnapshotDataStatus, SnapshotGranularity,
+    EffectiveTimeRange, MAX_SERIES_POINTS, PerformanceMonitoringAnalyticsRequest, PerformanceMonitoringAnalyticsResponse,
+    PerformanceMonitoringOverviewResponse, PerformanceMonitoringRange, PerformanceSnapshotMetrics, PerformanceSnapshotPoint, SnapshotDataStatus,
+    SnapshotGranularity,
 };
 
 use crate::{Database, StorageResult};
@@ -28,6 +29,14 @@ impl PerformanceMonitoringStore {
 
     pub async fn overview(&self, range: PerformanceMonitoringRange, now: time::OffsetDateTime) -> StorageResult<PerformanceMonitoringOverviewResponse> {
         self.overview_with_system(range, now, SystemMetricsSnapshot::default()).await
+    }
+
+    pub async fn analytics(
+        &self,
+        request: PerformanceMonitoringAnalyticsRequest,
+        now: time::OffsetDateTime,
+    ) -> StorageResult<PerformanceMonitoringAnalyticsResponse> {
+        super::analytics::analytics(self, request, now).await
     }
 
     pub async fn overview_with_system(

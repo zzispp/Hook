@@ -143,7 +143,11 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
     },
     MenuApiBindingDefinition {
         menu_code: "admin_performance_monitoring",
-        api_codes: &["performance_monitoring_overview_read", "performance_monitoring_realtime_read"],
+        api_codes: &[
+            "performance_monitoring_overview_read",
+            "performance_monitoring_realtime_read",
+            "performance_monitoring_analytics_read",
+        ],
     },
     MenuApiBindingDefinition {
         menu_code: "admin_announcements",

@@ -1140,17 +1140,19 @@
     },
     "charts": {
       "requests": "Core request trend",
-      "latency": "Latency and TTFT",
-      "models": "Model distribution",
-      "providers": "Provider distribution"
+      "latency": "Response latency and TTFB",
+      "outputTpsTrend": "Output TPS trend",
+      "avgTtfbTrend": "Average first-byte trend",
+      "responsePercentiles": "Response latency percentiles",
+      "ttfbPercentiles": "First-byte latency percentiles",
+      "errorDistribution": "Error distribution",
+      "errorTrend": "Error trend"
     },
     "metrics": {
       "qps": "QPS",
-      "successRate": "Success rate",
-      "p95": "P95 latency",
-      "tokensPerSecond": "Tokens/s",
-      "totalTokens": "Total tokens",
-      "cost": "Cost"
+      "p95Latency": "P95 response latency",
+      "ttfb": "TTFB",
+      "tokensPerSecond": "Tokens/s"
     },
     "groups": {
       "core": "Core requests",
@@ -1160,10 +1162,11 @@
     },
     "rows": {
       "qpsConcurrency": "QPS / concurrency",
+      "errorTimeout": "Error rate / timeout rate",
       "rateLimitedServerErrors": "429 / 5xx",
-      "timeoutRetryCircuitBreaker": "Timeout / retry / circuit breaker",
+      "retryCircuitBreaker": "Retry / cooldown triggers",
       "streamRequests": "Streaming requests",
-      "inputOutputTotalTokens": "Input / output / total tokens",
+      "inputOutputTokens": "Input / output tokens",
       "tokensPerRequestPerSecond": "Tokens per request / tokens/s",
       "failoverCacheHit": "Failover / cache hit",
       "quotaLimited": "Quota hits",
@@ -1176,13 +1179,73 @@
       "diskSpace": "Filesystem available / total",
       "collectionStatus": "Collection status"
     },
+    "series": {
+      "errorRate": "Error rate"
+    },
+    "filters": {
+      "title": "Upstream service filters",
+      "providerId": "Provider ID",
+      "model": "Model",
+      "apiFormat": "API format",
+      "limit": "Provider count",
+      "slowThresholdMs": "Slow threshold ms",
+      "streamOnly": "Streaming only",
+      "conversionOnly": "Conversion only"
+    },
+    "upstream": {
+      "requestSamples": "Request samples",
+      "errorCount": "{{value}} errors",
+      "p99Latency": "P99 response",
+      "p99Ttfb": "P99 first byte",
+      "p90Value": "P90 {{value}}",
+      "outputTps": "Output TPS",
+      "tpsSamples": "{{value}} TPS samples",
+      "avgTtfb": "Average first byte",
+      "ttfbSamples": "{{value}} first-byte samples",
+      "avgLatency": "Average response",
+      "latencySamples": "{{value}} response samples",
+      "errorRate": "Error rate",
+      "successRate": "{{value}} success rate",
+      "slowRequests": "Slow requests",
+      "currentWindow": "Current time window"
+    },
+    "tables": {
+      "upstreamPerformance": "Upstream service performance",
+      "recentErrors": "Recent errors"
+    },
+    "columns": {
+      "upstreamService": "Upstream service",
+      "requests": "Requests",
+      "successRate": "Success rate",
+      "errorRate": "Error rate",
+      "outputTps": "Output TPS",
+      "avgTtfb": "Average first byte",
+      "avgLatency": "Average response",
+      "p90P99Latency": "P90 / P99 response",
+      "p90P99Ttfb": "P90 / P99 first byte",
+      "slowRequests": "Slow requests",
+      "sampleCoverage": "Sample coverage",
+      "time": "Time",
+      "requestId": "Request ID",
+      "providerModel": "Provider / model",
+      "statusCode": "Status code",
+      "errorType": "Error type",
+      "errorMessage": "Error message",
+      "latencyTtfb": "Response / first byte"
+    },
+    "empty": {
+      "noSeriesData": "No trend data exists for this range.",
+      "noPercentileData": "No percentile samples can be calculated for this range.",
+      "noErrorData": "No error data exists for this range.",
+      "noUpstreamData": "No real upstream attempt samples exist for this range.",
+      "noRecentErrors": "No recent errors exist for this range."
+    },
     "status": {
       "ready": "Collection ready",
       "unsupported": "Collection unsupported"
     },
     "emptySnapshot": "No monitoring snapshots exist for this range. The query layer will not scan request details to backfill data.",
-    "allRangeNotice": "ALL shows every retained snapshot bucket using {{granularity}}, capped at 720 points.",
-    "noDimensionData": "No distribution data"
+    "allRangeNotice": "ALL shows every retained snapshot bucket using {{granularity}}, capped at 720 points."
   },
   "cacheMonitoring": {
     "searchPlaceholder": "Search user, email, token, provider, model, or API format...",

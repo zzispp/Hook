@@ -4,7 +4,11 @@ use types::provider::{ProviderCooldown, ProviderCooldownListRequest, ProviderCoo
 
 use crate::{StorageError, StorageResult};
 
-use super::{ProviderCooldownRecordInput, record::provider_cooldowns, repository::ProviderStore};
+use super::{
+    ProviderCooldownEventRecordInput, ProviderCooldownRecordInput,
+    record::{provider_cooldown_events, provider_cooldowns},
+    repository::ProviderStore,
+};
 
 pub async fn upsert_provider_cooldown(store: &ProviderStore, input: ProviderCooldownRecordInput) -> StorageResult<ProviderCooldown> {
     let now = time::OffsetDateTime::now_utc();
@@ -16,6 +20,36 @@ pub async fn upsert_provider_cooldown(store: &ProviderStore, input: ProviderCool
         None => insert_provider_cooldown_record(store, input, now).await?,
     };
     Ok(provider_cooldown(record))
+}
+
+pub async fn create_provider_cooldown_event(store: &ProviderStore, input: ProviderCooldownEventRecordInput) -> StorageResult<()> {
+    let now = time::OffsetDateTime::now_utc();
+    let active = provider_cooldown_events::ActiveModel {
+        id: Set(store.next_id()),
+        provider_id: Set(input.provider_id),
+        provider_name_snapshot: Set(input.provider_name_snapshot),
+        status_code: Set(input.status_code),
+        observed_count: Set(input.observed_count),
+        threshold_count: Set(input.threshold_count),
+        window_seconds: Set(input.window_seconds),
+        cooldown_seconds: Set(input.cooldown_seconds),
+        triggered_at: Set(input.triggered_at),
+        cooldown_until: Set(input.cooldown_until),
+        request_id: Set(input.request_id),
+        candidate_index: Set(input.candidate_index),
+        retry_index: Set(input.retry_index),
+        endpoint_id: Set(input.endpoint_id),
+        endpoint_name_snapshot: Set(input.endpoint_name_snapshot),
+        key_id: Set(input.key_id),
+        key_name_snapshot: Set(input.key_name_snapshot),
+        error_type: Set(input.error_type),
+        error_message: Set(input.error_message),
+        error_code: Set(input.error_code),
+        error_param: Set(input.error_param),
+        created_at: Set(now),
+    };
+    active.insert(store.connection()).await?;
+    Ok(())
 }
 
 async fn insert_provider_cooldown_record(
