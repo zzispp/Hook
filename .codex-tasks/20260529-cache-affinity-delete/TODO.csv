@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate root cause,DONE,Deletion failure source and API response contract are identified,rg -n "Response data not found|deleteCacheAffinity|ApiResponse<\\(\\)>" apps crates,2026-05-29T14:09:31+08:00,0,Frontend required non-null data for a void delete response.
+2,Implement fix,DONE,Cache affinity delete checks success envelope without requiring non-null data,rg -n "deleteCacheAffinity|requestSuccess" apps/hook_frontend/src/actions/cache-monitoring.ts,2026-05-29T14:10:11+08:00,0,deleteCacheAffinity now checks success without requiring data.
+3,Run verification,DONE,Relevant frontend validation completes or any blocker is recorded,pnpm lint:frontend,2026-05-29T14:13:21+08:00,0,Installed workspace dependencies with pnpm install --frozen-lockfile first because node_modules was missing; lint passed afterward.

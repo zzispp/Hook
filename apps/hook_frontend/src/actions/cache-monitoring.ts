@@ -43,7 +43,7 @@ export function useCacheAffinities(page: number, pageSize: number, search: strin
 }
 
 export async function deleteCacheAffinity(item: CacheAffinityIdentity) {
-  await requestData<void>(
+  await requestSuccess(
     axios.delete(
       endpoints.cacheMonitoring.affinityById(
         item.affinity_key,
@@ -59,11 +59,6 @@ export async function deleteCacheAffinity(item: CacheAffinityIdentity) {
 export async function clearCacheAffinities() {
   await requestSuccess(axios.delete(endpoints.cacheMonitoring.clearAll));
   await mutate(isCacheMonitoringKey);
-}
-
-async function requestData<T>(request: Promise<{ data: ApiEnvelope<T> }>) {
-  const response = await request;
-  return requireApiData(response.data);
 }
 
 async function requestSuccess(request: Promise<{ data: ApiEnvelope<unknown> }>) {
