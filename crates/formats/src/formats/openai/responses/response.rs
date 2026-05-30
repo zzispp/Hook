@@ -152,13 +152,13 @@ pub fn to_raw(canonical: &CanonicalResponse, report_context: &Value, _compact: b
                 output.push(Value::Object(item));
             }
             CanonicalContentBlock::Unknown { raw_type, payload, .. } if raw_type == "refusal" => {
-                if let Some(text) = payload.get("refusal").and_then(Value::as_str) {
-                    if !text.trim().is_empty() {
-                        message_content.push(json!({
-                            "type": "refusal",
-                            "refusal": text,
-                        }));
-                    }
+                if let Some(text) = payload.get("refusal").and_then(Value::as_str)
+                    && !text.trim().is_empty()
+                {
+                    message_content.push(json!({
+                        "type": "refusal",
+                        "refusal": text,
+                    }));
                 }
             }
             CanonicalContentBlock::Unknown { .. } => {}

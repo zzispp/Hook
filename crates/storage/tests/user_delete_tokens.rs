@@ -1,4 +1,3 @@
-use constants::user_group::DEFAULT_USER_GROUP_CODE;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 use storage::{
     Database,
@@ -42,7 +41,6 @@ fn user_record(is_deleted: bool) -> UserRecord {
         username: "hwnet".into(),
         password_hash: Some("hash".into()),
         email: "hwnet@example.test".into(),
-        group_code: DEFAULT_USER_GROUP_CODE.into(),
         role: "user".into(),
         is_active: true,
         is_deleted,

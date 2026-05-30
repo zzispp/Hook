@@ -6,6 +6,7 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
     let mut tables = vec![
         user_groups_table(),
         users_table(),
+        user_group_memberships_table(),
         user_identities_table(),
         user_password_reset_tokens_table(),
         roles_table(),
@@ -29,7 +30,6 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
 }
 
 fn users_table() -> TableCreateStatement {
-    let mut user_group_fk = user_group_fk();
     Table::create()
         .table(Users::Table)
         .if_not_exists()
@@ -38,7 +38,6 @@ fn users_table() -> TableCreateStatement {
         .col(string_len_null(Users::PasswordHash, 255))
         .col(string_len(Users::Email, 255))
         .col(string_len(Users::Role, 100))
-        .col(string_len(Users::GroupCode, 64))
         .col(boolean(Users::IsActive))
         .col(boolean(Users::IsDeleted))
         .col(text(Users::AllowedModelIds).default("[]"))
@@ -50,6 +49,21 @@ fn users_table() -> TableCreateStatement {
         .col(boolean(Users::EmailVerified))
         .col(big_integer_null(Users::RateLimitRpm))
         .col(string_len(Users::QuotaMode, 20).default("wallet"))
+        .to_owned()
+}
+
+fn user_group_memberships_table() -> TableCreateStatement {
+    let mut user_fk = user_group_membership_user_fk();
+    let mut user_group_fk = user_group_membership_user_group_fk();
+    Table::create()
+        .table(UserGroupMemberships::Table)
+        .if_not_exists()
+        .col(string_len(UserGroupMemberships::Id, 36).primary_key())
+        .col(string_len(UserGroupMemberships::UserId, 36))
+        .col(string_len(UserGroupMemberships::UserGroupCode, 64))
+        .col(timestamp_tz(UserGroupMemberships::CreatedAt))
+        .col(timestamp_tz(UserGroupMemberships::UpdatedAt))
+        .foreign_key(&mut user_fk)
         .foreign_key(&mut user_group_fk)
         .to_owned()
 }
@@ -92,11 +106,21 @@ fn user_groups_table() -> TableCreateStatement {
         .to_owned()
 }
 
-fn user_group_fk() -> ForeignKeyCreateStatement {
+fn user_group_membership_user_fk() -> ForeignKeyCreateStatement {
     let mut foreign_key = ForeignKey::create();
     foreign_key
-        .name("fk_users_user_group")
-        .from(Users::Table, Users::GroupCode)
+        .name("fk_user_group_memberships_user")
+        .from(UserGroupMemberships::Table, UserGroupMemberships::UserId)
+        .to(Users::Table, Users::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn user_group_membership_user_group_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_user_group_memberships_user_group")
+        .from(UserGroupMemberships::Table, UserGroupMemberships::UserGroupCode)
         .to(UserGroups::Table, UserGroups::Code);
     foreign_key
 }

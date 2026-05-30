@@ -27,13 +27,13 @@ fn visible_models_for_token_returns_intersection_of_group_token_and_user_scope()
 #[test]
 fn visible_models_for_token_rejects_user_token_when_owner_group_loses_billing_group_visibility() {
     let mut snapshot = snapshot();
-    snapshot.users[0].group_code = "group-b".into();
+    snapshot.users[0].group_codes = vec!["group-b".into()];
     snapshot.active_user_group_codes.push("group-b".into());
     let token = token(ApiTokenType::User, "group-a", ModelAccessMode::All, Vec::new());
 
     let error = visible_models_for_token(&snapshot, &token).unwrap_err();
 
-    assert!(matches!(error, LlmProxyError::Forbidden(message) if message == "billing group is not visible to user group group-b: group-a"));
+    assert!(matches!(error, LlmProxyError::Forbidden(message) if message == "billing group is not visible to user groups group-b: group-a"));
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn visible_models_for_token_rejects_user_token_when_owner_group_is_inactive() {
 
     let error = visible_models_for_token(&snapshot, &token).unwrap_err();
 
-    assert!(matches!(error, LlmProxyError::Forbidden(message) if message == "user group is inactive or unavailable: group-a"));
+    assert!(matches!(error, LlmProxyError::Forbidden(message) if message == "user groups are inactive or unavailable: group-a"));
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn snapshot() -> SchedulingSnapshot {
         users: vec![CachedUserAccess {
             id: "user-a".into(),
             username: "alice".into(),
-            group_code: "group-a".into(),
+            group_codes: vec!["group-a".into()],
             is_active: true,
             allowed_model_ids: vec!["global-model-a".into()],
             allowed_provider_ids: Vec::new(),

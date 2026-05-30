@@ -101,6 +101,8 @@ impl SettingPaymentChannelCatalog for FakePaymentChannels {
     }
 }
 
+#[path = "service_tests/oauth.rs"]
+mod oauth;
 #[path = "service_tests/smtp.rs"]
 mod smtp;
 #[path = "service_tests/update.rs"]

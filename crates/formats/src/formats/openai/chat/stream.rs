@@ -246,29 +246,29 @@ impl OpenAIChatProviderState {
                             });
                             state.started_emitted = true;
                         }
-                        if let Some(arguments) = function.get("arguments").and_then(Value::as_str) {
-                            if !arguments.is_empty() {
-                                if !state.started_emitted {
-                                    out.push(CanonicalStreamFrame {
-                                        id: id.clone(),
-                                        model: model.clone(),
-                                        event: CanonicalStreamEvent::ToolCallStart {
-                                            index,
-                                            call_id: state.id.clone().unwrap_or_else(|| build_generated_tool_call_id(index)),
-                                            name: state.name.clone().unwrap_or_else(|| "unknown".to_string()),
-                                        },
-                                    });
-                                    state.started_emitted = true;
-                                }
+                        if let Some(arguments) = function.get("arguments").and_then(Value::as_str)
+                            && !arguments.is_empty()
+                        {
+                            if !state.started_emitted {
                                 out.push(CanonicalStreamFrame {
                                     id: id.clone(),
                                     model: model.clone(),
-                                    event: CanonicalStreamEvent::ToolCallArgumentsDelta {
+                                    event: CanonicalStreamEvent::ToolCallStart {
                                         index,
-                                        arguments: arguments.to_string(),
+                                        call_id: state.id.clone().unwrap_or_else(|| build_generated_tool_call_id(index)),
+                                        name: state.name.clone().unwrap_or_else(|| "unknown".to_string()),
                                     },
                                 });
+                                state.started_emitted = true;
                             }
+                            out.push(CanonicalStreamFrame {
+                                id: id.clone(),
+                                model: model.clone(),
+                                event: CanonicalStreamEvent::ToolCallArgumentsDelta {
+                                    index,
+                                    arguments: arguments.to_string(),
+                                },
+                            });
                         }
                     }
                 }
@@ -354,11 +354,11 @@ impl OpenAIResponsesProviderState {
             self.last_tool_index = Some(output_index);
             return output_index;
         }
-        if let Some(key) = key.as_ref() {
-            if let Some(index) = self.tool_index_by_key.get(key).copied() {
-                self.last_tool_index = Some(index);
-                return index;
-            }
+        if let Some(key) = key.as_ref()
+            && let Some(index) = self.tool_index_by_key.get(key).copied()
+        {
+            self.last_tool_index = Some(index);
+            return index;
         }
         let index = self.last_tool_index.unwrap_or(self.tool_calls.len());
         if let Some(key) = key {
@@ -586,10 +586,10 @@ impl OpenAIResponsesProviderState {
             let Some(content) = raw_content.as_object() else {
                 continue;
             };
-            if content.get("type").and_then(Value::as_str) == Some("output_text") {
-                if let Some(text) = content.get("text").and_then(Value::as_str) {
-                    completed_text.push_str(text);
-                }
+            if content.get("type").and_then(Value::as_str) == Some("output_text")
+                && let Some(text) = content.get("text").and_then(Value::as_str)
+            {
+                completed_text.push_str(text);
             }
         }
         if !completed_text.is_empty() {
@@ -606,10 +606,10 @@ impl OpenAIResponsesProviderState {
             let Some(summary) = raw_summary.as_object() else {
                 continue;
             };
-            if summary.get("type").and_then(Value::as_str) == Some("summary_text") {
-                if let Some(text) = summary.get("text").and_then(Value::as_str) {
-                    completed_reasoning.push_str(text);
-                }
+            if summary.get("type").and_then(Value::as_str) == Some("summary_text")
+                && let Some(text) = summary.get("text").and_then(Value::as_str)
+            {
+                completed_reasoning.push_str(text);
             }
         }
         if !completed_reasoning.is_empty() {
@@ -706,24 +706,21 @@ impl OpenAIResponsesProviderState {
                 }
             }
             "response.content_part.added" | "response.content_part.done" => {
-                if let Some(part) = value.get("part").and_then(Value::as_object) {
-                    if part.get("type").and_then(Value::as_str) == Some("output_text") {
-                        if let Some(text) = part.get("text").and_then(Value::as_str) {
-                            if !text.is_empty() {
-                                self.emit_missing_text(report_context, &mut out, text);
-                            }
-                        }
-                    }
+                if let Some(part) = value.get("part").and_then(Value::as_object)
+                    && part.get("type").and_then(Value::as_str) == Some("output_text")
+                    && let Some(text) = part.get("text").and_then(Value::as_str)
+                    && !text.is_empty()
+                {
+                    self.emit_missing_text(report_context, &mut out, text);
                 }
             }
             "response.reasoning_summary_part.added" | "response.reasoning_summary_part.done" => {
-                if let Some(part) = value.get("part").and_then(Value::as_object) {
-                    if part.get("type").and_then(Value::as_str) == Some("summary_text") {
-                        if let Some(text) = part.get("text").and_then(Value::as_str) {
-                            let summary_index = value.get("summary_index").and_then(Value::as_u64).map(|value| value as usize).unwrap_or(0);
-                            self.emit_missing_reasoning_part_text(report_context, &mut out, summary_index, text);
-                        }
-                    }
+                if let Some(part) = value.get("part").and_then(Value::as_object)
+                    && part.get("type").and_then(Value::as_str) == Some("summary_text")
+                    && let Some(text) = part.get("text").and_then(Value::as_str)
+                {
+                    let summary_index = value.get("summary_index").and_then(Value::as_u64).map(|value| value as usize).unwrap_or(0);
+                    self.emit_missing_reasoning_part_text(report_context, &mut out, summary_index, text);
                 }
             }
             "response.output_text.done" => {
@@ -2178,10 +2175,10 @@ impl OpenAIResponsesClientEmitter {
                 } else {
                     openai_stream_terminal_error_body(&payload).unwrap_or(payload)
                 };
-                if payload.get("type").is_none() {
-                    if let Some(object) = payload.as_object_mut() {
-                        object.insert("type".to_string(), Value::String(event.clone()));
-                    }
+                if payload.get("type").is_none()
+                    && let Some(object) = payload.as_object_mut()
+                {
+                    object.insert("type".to_string(), Value::String(event.clone()));
                 }
                 self.encode_response_event(event.as_str(), payload)
             }

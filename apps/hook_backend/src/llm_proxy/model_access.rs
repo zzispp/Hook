@@ -52,16 +52,33 @@ fn ensure_group_visible_to_token_owner(
     let Some(user) = token_user else {
         return Ok(());
     };
-    if !snapshot.active_user_group_codes.iter().any(|code| code == &user.group_code) {
-        return Err(LlmProxyError::Forbidden(format!("user group is inactive or unavailable: {}", user.group_code)));
+    let active_user_group_codes = active_user_group_codes(snapshot, user);
+    if active_user_group_codes.is_empty() {
+        return Err(LlmProxyError::Forbidden(format!(
+            "user groups are inactive or unavailable: {}",
+            user.group_codes.join(",")
+        )));
     }
-    if group.visible_user_group_codes.iter().any(|code| code == &user.group_code) {
+    if group
+        .visible_user_group_codes
+        .iter()
+        .any(|code| active_user_group_codes.iter().any(|user_code| user_code == code))
+    {
         return Ok(());
     }
     Err(LlmProxyError::Forbidden(format!(
-        "billing group is not visible to user group {}: {}",
-        user.group_code, group.code
+        "billing group is not visible to user groups {}: {}",
+        active_user_group_codes.join(","),
+        group.code
     )))
+}
+
+fn active_user_group_codes(snapshot: &SchedulingSnapshot, user: &CachedUserAccess) -> Vec<String> {
+    user.group_codes
+        .iter()
+        .filter(|code| snapshot.active_user_group_codes.iter().any(|active| active == *code))
+        .cloned()
+        .collect()
 }
 
 pub(crate) fn ensure_token_allows_model(token: &ApiToken, model_id: &str) -> Result<(), LlmProxyError> {

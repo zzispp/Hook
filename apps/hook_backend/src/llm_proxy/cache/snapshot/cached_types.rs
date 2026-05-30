@@ -62,7 +62,7 @@ pub struct CachedBillingGroup {
 pub struct CachedUserAccess {
     pub id: String,
     pub username: String,
-    pub group_code: String,
+    pub group_codes: Vec<String>,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,

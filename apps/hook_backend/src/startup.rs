@@ -294,7 +294,7 @@ fn api_token_system_owner(provider: &impl SystemUserProvider) -> Option<(String,
         ApiTokenOwnerResponse {
             username: user.username,
             email: user.email,
-            group_code: user.group_code,
+            group_codes: user.group_codes,
         },
     ))
 }

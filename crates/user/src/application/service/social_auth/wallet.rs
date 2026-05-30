@@ -2,7 +2,7 @@ use types::user::{IdentityProvider, User, UserId};
 
 use crate::application::{
     AppError, AppResult, AuthProviderConfig, AuthTicketStore, PurposeEmailCodeStore, UserRepository, WalletChallenge, WalletPendingBinding,
-    WalletProviderSettings, WalletSignInResult,
+    WalletProviderSettings, WalletSignInInput, WalletSignInResult,
 };
 
 use super::super::validation::validate_email_verification_code;
@@ -43,31 +43,30 @@ where
     Ok(challenge)
 }
 
+pub(in crate::application::service) struct WalletSignInDeps<'a, R, C, T> {
+    pub repository: &'a R,
+    pub config: &'a C,
+    pub tickets: &'a T,
+}
+
 pub(in crate::application::service) async fn wallet_sign_in<R, C, T>(
-    repository: &R,
-    config: &C,
-    tickets: &T,
-    provider: IdentityProvider,
-    address: String,
-    message: String,
-    signature: String,
-    chain_id: Option<u64>,
-    network: Option<String>,
+    deps: WalletSignInDeps<'_, R, C, T>,
+    input: WalletSignInInput,
 ) -> AppResult<WalletSignInResult>
 where
     R: UserRepository,
     C: AuthProviderConfig,
     T: AuthTicketStore,
 {
-    let settings = config.wallet_provider_settings().await?;
-    ensure_wallet_provider_enabled(&settings, provider)?;
-    let nonce = message_nonce(provider, &message)?;
-    let challenge = tickets.consume_wallet_challenge(&nonce).await?.ok_or(AppError::Unauthorized)?;
-    if challenge.chain_id != chain_id || challenge.network != network {
+    let settings = deps.config.wallet_provider_settings().await?;
+    ensure_wallet_provider_enabled(&settings, input.provider)?;
+    let nonce = message_nonce(input.provider, &input.message)?;
+    let challenge = deps.tickets.consume_wallet_challenge(&nonce).await?.ok_or(AppError::Unauthorized)?;
+    if challenge.chain_id != input.chain_id || challenge.network != input.network {
         return Err(AppError::Unauthorized);
     }
-    verify_wallet_challenge(&settings, &challenge, provider, &address, &message, &signature).await?;
-    existing_wallet_or_ticket(repository, tickets, provider, &address).await
+    verify_wallet_challenge(&settings, &challenge, input.provider, &input.address, &input.message, &input.signature).await?;
+    existing_wallet_or_ticket(deps.repository, deps.tickets, input.provider, &input.address).await
 }
 
 pub(in crate::application::service) async fn complete_wallet_binding<R, T, S>(
@@ -103,7 +102,7 @@ where
         repository.touch_identity_login(&identity.id).await?;
         let user = repository.find_by_id(UserId(identity.user_id)).await?.ok_or(AppError::NotFound)?;
         repository.record_login(user.id.clone()).await?;
-        return Ok(WalletSignInResult::Authenticated(user));
+        return Ok(WalletSignInResult::Authenticated(Box::new(user)));
     }
     let ticket = random_token(TICKET_BYTES);
     tickets
@@ -224,7 +223,6 @@ async fn verify_evm_message(settings: &WalletProviderSettings, challenge: &Walle
                 domain: Some(settings.domain.parse().map_err(|_| AppError::InvalidInput("wallet domain is invalid".into()))?),
                 nonce: Some(challenge.nonce.clone()),
                 timestamp: Some(time::OffsetDateTime::now_utc()),
-                ..Default::default()
             },
         )
         .await

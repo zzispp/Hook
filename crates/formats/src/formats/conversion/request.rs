@@ -59,12 +59,11 @@ pub fn extract_openai_text_content(content: Option<&Value>) -> Option<String> {
             for part in parts {
                 let part_object = part.as_object()?;
                 let part_type = part_object.get("type").and_then(Value::as_str).unwrap_or_default();
-                if matches!(part_type, "text" | "input_text") {
-                    if let Some(text) = part_object.get("text").and_then(Value::as_str) {
-                        if !text.trim().is_empty() {
-                            collected.push(text.to_string());
-                        }
-                    }
+                if matches!(part_type, "text" | "input_text")
+                    && let Some(text) = part_object.get("text").and_then(Value::as_str)
+                    && !text.trim().is_empty()
+                {
+                    collected.push(text.to_string());
                 }
             }
             Some(collected.join("\n"))

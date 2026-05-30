@@ -211,7 +211,7 @@ fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
         email: record.email,
         email_verified: record.email_verified,
         role: record.role,
-        group_code: record.group_code,
+        group_codes: record.group_codes,
         is_active: record.is_active,
         allowed_model_ids: record.allowed_model_ids,
         allowed_provider_ids: record.allowed_provider_ids,

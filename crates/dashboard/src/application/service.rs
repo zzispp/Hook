@@ -460,7 +460,7 @@ fn validated_page(page: u64, page_size: u64) -> DashboardResult<PageRequest> {
     if page < MIN_PAGE_NUMBER {
         return Err(DashboardError::InvalidInput("page must be greater than 0".into()));
     }
-    if page_size < MIN_PAGE_SIZE || page_size > MAX_PAGE_SIZE {
+    if !(MIN_PAGE_SIZE..=MAX_PAGE_SIZE).contains(&page_size) {
         return Err(DashboardError::InvalidInput(format!(
             "page_size must be between {MIN_PAGE_SIZE} and {MAX_PAGE_SIZE}"
         )));
@@ -469,7 +469,7 @@ fn validated_page(page: u64, page_size: u64) -> DashboardResult<PageRequest> {
 }
 
 fn validated_limit(limit: u64) -> DashboardResult<u64> {
-    if limit < MIN_PAGE_SIZE || limit > MAX_PAGE_SIZE {
+    if !(MIN_PAGE_SIZE..=MAX_PAGE_SIZE).contains(&limit) {
         return Err(DashboardError::InvalidInput(format!(
             "limit must be between {MIN_PAGE_SIZE} and {MAX_PAGE_SIZE}"
         )));

@@ -187,17 +187,18 @@ impl UserCatalog for StorageUserCatalog {
             .map_err(storage_error)
     }
 
-    async fn user_group_code(&self, id: &str) -> ApiTokenResult<Option<String>> {
+    async fn user_group_codes(&self, id: &str) -> ApiTokenResult<Option<Vec<String>>> {
         if system_owner_id_matches(&self.system_owner, id) {
-            return Ok(Some(constants::user_group::DEFAULT_USER_GROUP_CODE.into()));
+            return Ok(Some(vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()]));
         }
         let Some(user) = self.store.find_by_id(UserId(id.to_owned())).await.map_err(storage_error)? else {
             return Ok(None);
         };
-        if !self.user_groups.active_group_exists(&user.group_code).await.map_err(storage_error)? {
-            return Err(ApiTokenError::InvalidInput(format!("active user group does not exist: {}", user.group_code)));
+        let active_group_codes = active_user_group_codes(&self.user_groups, user.group_codes).await?;
+        if active_group_codes.is_empty() {
+            return Err(ApiTokenError::InvalidInput(format!("user has no active user groups: {id}")));
         }
-        Ok(Some(user.group_code))
+        Ok(Some(active_group_codes))
     }
 
     async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {
@@ -211,12 +212,22 @@ impl UserCatalog for StorageUserCatalog {
                 ApiTokenOwnerResponse {
                     username: user.username,
                     email: user.email,
-                    group_code: user.group_code,
+                    group_codes: user.group_codes,
                 },
             )
         }));
         Ok(owners)
     }
+}
+
+async fn active_user_group_codes(user_groups: &UserGroupStore, group_codes: Vec<String>) -> ApiTokenResult<Vec<String>> {
+    let mut active = Vec::new();
+    for code in group_codes {
+        if user_groups.active_group_exists(&code).await.map_err(storage_error)? {
+            active.push(code);
+        }
+    }
+    Ok(active)
 }
 
 fn split_owner_ids(ids: &[String], system_owner: &Option<(String, ApiTokenOwnerResponse)>) -> (BTreeMap<String, ApiTokenOwnerResponse>, Vec<String>) {
@@ -309,7 +320,7 @@ mod tests {
             ApiTokenOwnerResponse {
                 username: "admin".into(),
                 email: "admin@example.test".into(),
-                group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+                group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
             },
         ));
 
@@ -321,7 +332,7 @@ mod tests {
             Some(&ApiTokenOwnerResponse {
                 username: "admin".into(),
                 email: "admin@example.test".into(),
-                group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+                group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
             })
         );
     }

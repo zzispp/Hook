@@ -709,19 +709,18 @@ pub fn apply_codex_openai_responses_special_headers(
         .map(str::trim)
         .filter(|value| !value.is_empty());
 
-    if !header_map_has_non_empty_value(original_headers, "chatgpt-account-id") && !btree_map_has_non_empty_value(provider_request_headers, "chatgpt-account-id")
+    if !header_map_has_non_empty_value(original_headers, "chatgpt-account-id")
+        && !btree_map_has_non_empty_value(provider_request_headers, "chatgpt-account-id")
+        && let Some(account_id) = extract_codex_account_id(decrypted_auth_config_raw)
     {
-        if let Some(account_id) = extract_codex_account_id(decrypted_auth_config_raw) {
-            provider_request_headers.insert("chatgpt-account-id".to_string(), account_id);
-        }
+        provider_request_headers.insert("chatgpt-account-id".to_string(), account_id);
     }
 
     if !header_map_has_non_empty_value(original_headers, "x-client-request-id")
         && !btree_map_has_non_empty_value(provider_request_headers, "x-client-request-id")
+        && let Some(request_id) = request_id.map(str::trim).filter(|value| !value.is_empty())
     {
-        if let Some(request_id) = request_id.map(str::trim).filter(|value| !value.is_empty()) {
-            provider_request_headers.insert("x-client-request-id".to_string(), request_id.to_string());
-        }
+        provider_request_headers.insert("x-client-request-id".to_string(), request_id.to_string());
     }
 
     if !is_openai_image_request(provider_api_format) {
@@ -731,19 +730,19 @@ pub fn apply_codex_openai_responses_special_headers(
 
     let short_session_id = prompt_cache_key.and_then(build_short_codex_header_id);
 
-    if !header_map_has_non_empty_value(original_headers, "session_id") && !btree_map_has_non_empty_value(provider_request_headers, "session_id") {
-        if let Some(short_session_id) = short_session_id.as_deref() {
-            provider_request_headers.insert("session_id".to_string(), short_session_id.to_string());
-        }
+    if !header_map_has_non_empty_value(original_headers, "session_id")
+        && !btree_map_has_non_empty_value(provider_request_headers, "session_id")
+        && let Some(short_session_id) = short_session_id.as_deref()
+    {
+        provider_request_headers.insert("session_id".to_string(), short_session_id.to_string());
     }
 
     if aether_ai_formats::is_openai_responses_format(provider_api_format)
         && !header_map_has_non_empty_value(original_headers, "conversation_id")
         && !btree_map_has_non_empty_value(provider_request_headers, "conversation_id")
+        && let Some(short_session_id) = short_session_id.as_deref()
     {
-        if let Some(short_session_id) = short_session_id.as_deref() {
-            provider_request_headers.insert("conversation_id".to_string(), short_session_id.to_string());
-        }
+        provider_request_headers.insert("conversation_id".to_string(), short_session_id.to_string());
     }
 }
 

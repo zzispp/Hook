@@ -17,13 +17,13 @@ import { defaultGroupCode } from './api-token-management-utils';
 
 type UserGroupOwner = {
   id: string;
-  group_code: string;
+  group_codes: string[];
 };
 
 type TokenOwnerBillingGroupsOptions = {
   dialog: TokenDialogState;
   disabled: boolean;
-  fixedUserGroupCode?: string;
+  fixedUserGroupCodes?: string[];
   scope: TokenScope;
   users: UserGroupOwner[];
 };
@@ -31,7 +31,7 @@ type TokenOwnerBillingGroupsOptions = {
 export function useTokenOwnerBillingGroups({
   dialog,
   disabled,
-  fixedUserGroupCode,
+  fixedUserGroupCodes,
   scope,
   users,
 }: TokenOwnerBillingGroupsOptions) {
@@ -43,16 +43,16 @@ export function useTokenOwnerBillingGroups({
     { is_active: true }
   );
   const groupSource = scope === 'admin' ? adminGroups : availableGroups;
-  const ownerGroupCode = tokenOwnerGroupCode({
-    currentUserGroupCode: authUserGroupCode(user),
+  const ownerGroupCodes = tokenOwnerGroupCodes({
+    currentUserGroupCodes: authUserGroupCodes(user),
     dialog,
-    fixedUserGroupCode,
+    fixedUserGroupCodes,
     scope,
     users,
   });
   const items = useMemo(
-    () => visibleGroupsForOwner({ groups: groupSource.items, ownerGroupCode, scope }),
-    [groupSource.items, ownerGroupCode, scope]
+    () => visibleGroupsForOwner({ groups: groupSource.items, ownerGroupCodes, scope }),
+    [groupSource.items, ownerGroupCodes, scope]
   );
 
   useEffect(() => {
@@ -70,62 +70,66 @@ export function useTokenOwnerBillingGroups({
 
 function visibleGroupsForOwner({
   groups,
-  ownerGroupCode,
+  ownerGroupCodes,
   scope,
 }: {
   groups: BillingGroupOption[];
-  ownerGroupCode: string;
+  ownerGroupCodes: string[];
   scope: TokenScope;
 }) {
   if (scope !== 'admin') {
     return groups;
   }
 
-  if (!ownerGroupCode) {
+  if (ownerGroupCodes.length === 0) {
     return [];
   }
 
-  return groups.filter((group) => group.visible_user_group_codes.includes(ownerGroupCode));
+  return groups.filter((group) =>
+    group.visible_user_group_codes.some((code) => ownerGroupCodes.includes(code))
+  );
 }
 
-function tokenOwnerGroupCode({
-  currentUserGroupCode,
+function tokenOwnerGroupCodes({
+  currentUserGroupCodes,
   dialog,
-  fixedUserGroupCode,
+  fixedUserGroupCodes,
   scope,
   users,
 }: {
-  currentUserGroupCode: string;
+  currentUserGroupCodes: string[];
   dialog: TokenDialogState;
-  fixedUserGroupCode?: string;
+  fixedUserGroupCodes?: string[];
   scope: TokenScope;
   users: UserGroupOwner[];
 }) {
   if (scope !== 'admin') {
-    return '';
+    return [];
   }
 
-  if (dialog.editing?.owner?.group_code) {
-    return dialog.editing.owner.group_code;
+  if (dialog.editing?.owner?.group_codes.length) {
+    return dialog.editing.owner.group_codes;
   }
 
-  if (fixedUserGroupCode) {
-    return fixedUserGroupCode;
+  if (fixedUserGroupCodes?.length) {
+    return fixedUserGroupCodes;
   }
 
   if (dialog.form.token_type === 'user') {
-    return users.find((item) => item.id === dialog.form.user_id)?.group_code ?? '';
+    return users.find((item) => item.id === dialog.form.user_id)?.group_codes ?? [];
   }
 
-  return currentUserGroupCode;
+  return currentUserGroupCodes;
 }
 
-function authUserGroupCode(user: unknown) {
+function authUserGroupCodes(user: unknown) {
   if (!isRecord(user)) {
-    return '';
+    return [];
   }
 
-  return typeof user.group_code === 'string' ? user.group_code : '';
+  return Array.isArray(user.group_codes)
+    ? user.group_codes.filter((code): code is string => typeof code === 'string')
+    : [];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -151,14 +151,13 @@ pub fn openai_stream_terminal_error_body(payload: &Value) -> Option<Value> {
         }
     });
 
-    if !error.contains_key("code") {
-        if let Some(reason) = response
+    if !error.contains_key("code")
+        && let Some(reason) = response
             .and_then(|response| response.get("incomplete_details"))
             .and_then(|details| details.get("reason"))
             .and_then(Value::as_str)
-        {
-            error.insert("code".to_string(), Value::String(reason.to_string()));
-        }
+    {
+        error.insert("code".to_string(), Value::String(reason.to_string()));
     }
 
     Some(json!({ "error": Value::Object(error) }))

@@ -201,10 +201,10 @@ where
     }
 
     async fn ensure_create_policy(&self, owner_id: &str, group_code: &str, model_ids: &[String]) -> ApiTokenResult<()> {
-        let owner_group_code = self.owner_group_code(owner_id).await?;
+        let owner_group_codes = self.owner_group_codes(owner_id).await?;
         let group = self.active_group(group_code).await?;
         self.ensure_models_exist(model_ids).await?;
-        ensure_group_visible_to_owner(&group, &owner_group_code)?;
+        ensure_group_visible_to_owner(&group, &owner_group_codes)?;
         ensure_group_allows_models(&group, model_ids)
     }
 
@@ -213,11 +213,11 @@ where
             .user_id
             .as_deref()
             .ok_or_else(|| ApiTokenError::InvalidInput("token owner is required".into()))?;
-        let owner_group_code = self.owner_group_code(owner_id).await?;
+        let owner_group_codes = self.owner_group_codes(owner_id).await?;
         let group_code = input.group_code.as_deref().unwrap_or(&current.group_code);
         let group = self.active_group(group_code).await?;
         self.ensure_models_exist(model_ids).await?;
-        ensure_group_visible_to_owner(&group, &owner_group_code)?;
+        ensure_group_visible_to_owner(&group, &owner_group_codes)?;
         ensure_group_allows_models(&group, model_ids)
     }
 
@@ -237,9 +237,9 @@ where
         Ok(())
     }
 
-    async fn owner_group_code(&self, owner_id: &str) -> ApiTokenResult<String> {
+    async fn owner_group_codes(&self, owner_id: &str) -> ApiTokenResult<Vec<String>> {
         self.users
-            .user_group_code(owner_id)
+            .user_group_codes(owner_id)
             .await?
             .ok_or_else(|| ApiTokenError::InvalidInput(format!("user does not exist: {owner_id}")))
     }
@@ -302,12 +302,17 @@ fn ensure_group_allows_models(group: &types::group::BillingGroupResponse, model_
     Ok(())
 }
 
-fn ensure_group_visible_to_owner(group: &types::group::BillingGroupResponse, owner_group_code: &str) -> ApiTokenResult<()> {
-    if group.visible_user_group_codes.iter().any(|code| code == owner_group_code) {
+fn ensure_group_visible_to_owner(group: &types::group::BillingGroupResponse, owner_group_codes: &[String]) -> ApiTokenResult<()> {
+    if group
+        .visible_user_group_codes
+        .iter()
+        .any(|code| owner_group_codes.iter().any(|owner_code| owner_code == code))
+    {
         return Ok(());
     }
     Err(ApiTokenError::InvalidInput(format!(
-        "billing group is not visible to user group {owner_group_code}: {}",
+        "billing group is not visible to user groups {}: {}",
+        owner_group_codes.join(","),
         group.code
     )))
 }

@@ -94,12 +94,13 @@ where
         Ok(found.user)
     }
 
-    async fn oauth_start(&self, provider: IdentityProvider, redirect_uri: String) -> AppResult<String> {
-        social_auth::oauth_start(&self.auth_provider_config, &self.auth_ticket_store, provider, redirect_uri).await
+    async fn oauth_start(&self, provider: IdentityProvider) -> AppResult<String> {
+        social_auth::oauth_start(&self.auth_provider_config, &self.auth_ticket_store, provider).await
     }
 
-    async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String, redirect_uri: String) -> AppResult<OAuthSignInResult> {
+    async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String) -> AppResult<OAuthSignInResult> {
         let settings = self.auth_provider_config.oauth_provider_settings(provider).await?;
+        let redirect_uri = social_auth::oauth_redirect_uri(&settings, provider)?;
         let profile = self.oauth_client.fetch_profile(provider, settings, &code, &redirect_uri).await?;
         social_auth::oauth_callback(
             &self.repository,
@@ -131,15 +132,12 @@ where
 
     async fn wallet_sign_in(&self, input: WalletSignInInput) -> AppResult<WalletSignInResult> {
         social_auth::wallet_sign_in(
-            &self.repository,
-            &self.auth_provider_config,
-            &self.auth_ticket_store,
-            input.provider,
-            input.address,
-            input.message,
-            input.signature,
-            input.chain_id,
-            input.network,
+            social_auth::WalletSignInDeps {
+                repository: &self.repository,
+                config: &self.auth_provider_config,
+                tickets: &self.auth_ticket_store,
+            },
+            input,
         )
         .await
     }

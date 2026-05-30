@@ -1,5 +1,6 @@
 mod email_config;
 mod error;
+mod oauth_config;
 mod ports;
 mod service;
 mod smtp;

@@ -20,6 +20,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Label } from 'src/components/label';
 
+import { userGroupSelectionLabel } from './user-group-utils';
 import { providerTypeLabel } from './provider-management-utils';
 import { SwitchRow, TextFieldRow, ManagementDialog } from './shared';
 import { providerColor, providerLabel } from '../profile/provider-utils';
@@ -148,19 +149,27 @@ function IdentityFields({ dialog, roles, userGroups }: Pick<Props, 'dialog' | 'r
           </MenuItem>
         ))}
       </TextFieldRow>
-      <TextFieldRow
+      <TextField
         required
         select
+        fullWidth
         label={t('fields.userGroup')}
-        value={dialog.form.group_code}
-        onChange={(value) => dialog.setForm((form) => ({ ...form, group_code: value }))}
+        value={dialog.form.group_codes}
+        SelectProps={{
+          multiple: true,
+          renderValue: (selected) => userGroupSelectionLabel(selected as string[], userGroups, t),
+        }}
+        onChange={(event) =>
+          dialog.setForm((form) => ({ ...form, group_codes: selectedValues(event.target.value) }))
+        }
       >
         {userGroups.map((group) => (
           <MenuItem key={group.code} value={group.code}>
-            {group.name} ({group.code})
+            <Checkbox checked={dialog.form.group_codes.includes(group.code)} />
+            <ListItemText primary={group.name} secondary={group.code} />
           </MenuItem>
         ))}
-      </TextFieldRow>
+      </TextField>
       <TextFieldRow
         required
         type="password"
@@ -171,6 +180,10 @@ function IdentityFields({ dialog, roles, userGroups }: Pick<Props, 'dialog' | 'r
       />
     </>
   );
+}
+
+function selectedValues(value: string | string[]) {
+  return Array.isArray(value) ? value : value.split(',').filter(Boolean);
 }
 
 function RestrictionFields({

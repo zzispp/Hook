@@ -1,4 +1,7 @@
-use types::user::{IdentityProvider, User, UserId};
+use types::{
+    system_setting::public_base_url_is_valid,
+    user::{IdentityProvider, User, UserId},
+};
 
 use crate::application::{
     AppError, AppResult, AuthProviderConfig, AuthTicketStore, OAuthPendingBinding, OAuthProfile, OAuthProviderSettings, OAuthSignInResult, OAuthStateRecord,
@@ -7,13 +10,13 @@ use crate::application::{
 
 use super::helpers::{OAUTH_BINDING_TTL_SECONDS, OAUTH_STATE_TTL_SECONDS, TICKET_BYTES, new_provider_user, provider_identity, random_token};
 
-pub(in crate::application::service) async fn oauth_start<C, T>(config: &C, tickets: &T, provider: IdentityProvider, redirect_uri: String) -> AppResult<String>
+pub(in crate::application::service) async fn oauth_start<C, T>(config: &C, tickets: &T, provider: IdentityProvider) -> AppResult<String>
 where
     C: AuthProviderConfig,
     T: AuthTicketStore,
 {
     let settings = config.oauth_provider_settings(provider).await?;
-    ensure_oauth_ready(&settings)?;
+    let redirect_uri = oauth_redirect_uri(&settings, provider)?;
     let state = random_token(TICKET_BYTES);
     tickets
         .save_oauth_state(
@@ -26,6 +29,15 @@ where
         )
         .await?;
     Ok(oauth_authorize_url(provider, &settings.client_id, &redirect_uri, &state))
+}
+
+pub(in crate::application::service) fn oauth_redirect_uri(settings: &OAuthProviderSettings, provider: IdentityProvider) -> AppResult<String> {
+    ensure_oauth_ready(settings)?;
+    Ok(format!(
+        "{}/auth/oauth/callback/{}",
+        settings.public_base_url.trim().trim_end_matches('/'),
+        provider.as_str()
+    ))
 }
 
 pub(in crate::application::service) async fn oauth_callback<R, C, T>(
@@ -77,7 +89,7 @@ where
         repository.touch_identity_login(&identity.id).await?;
         let user = repository.find_by_id(UserId(identity.user_id)).await?.ok_or(AppError::NotFound)?;
         repository.record_login(user.id.clone()).await?;
-        return Ok(OAuthSignInResult::Authenticated(user));
+        return Ok(OAuthSignInResult::Authenticated(Box::new(user)));
     }
     if let Some(user) = repository.find_by_email(&profile.email).await? {
         return oauth_binding_required(repository, tickets, user, provider, profile).await;
@@ -86,7 +98,7 @@ where
     let identity = oauth_identity(provider, &profile, user.id.0.clone());
     repository.create_identity(identity).await?;
     repository.record_login(user.id.clone()).await?;
-    Ok(OAuthSignInResult::Authenticated(user))
+    Ok(OAuthSignInResult::Authenticated(Box::new(user)))
 }
 
 async fn oauth_binding_required<R, T>(
@@ -146,6 +158,16 @@ fn ensure_oauth_ready(settings: &OAuthProviderSettings) -> AppResult<()> {
     }
     if settings.client_id.is_empty() || settings.client_secret.is_empty() {
         return Err(AppError::InvalidInput("OAuth provider configuration is incomplete".into()));
+    }
+    if settings.public_base_url.trim().is_empty() {
+        return Err(AppError::InvalidInput("public_base_url is required before using OAuth provider".into()));
+    }
+    let is_valid = public_base_url_is_valid(settings.public_base_url.trim())
+        .map_err(|error| AppError::Infrastructure(format!("invalid public_base_url validation regex: {error}")))?;
+    if !is_valid {
+        return Err(AppError::InvalidInput(
+            "public_base_url must be a valid HTTP or HTTPS URL before using OAuth provider".into(),
+        ));
     }
     Ok(())
 }

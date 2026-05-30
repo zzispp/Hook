@@ -10,6 +10,7 @@ use crate::application::{
 
 use super::{
     email_config::validate_email_feature_prerequisites,
+    oauth_config::validate_oauth_provider_prerequisites,
     smtp::{failure_response, sanitize_smtp_test_request, smtp_connection_config, success_response},
     validation::{sanitize_update, validate_recharge_bounds, validate_update},
 };
@@ -62,6 +63,7 @@ where
         let current = self.repository.get_system_settings().await?;
         validate_recharge_bounds(&input, &current)?;
         validate_recharge_payment_channels(&self.payment_channels, &input, &current).await?;
+        validate_oauth_provider_prerequisites(&input, &current)?;
         validate_email_feature_prerequisites(&input, &current)?;
         validate_default_user_group(&self.user_groups, input.default_user_group_code.as_deref()).await?;
         let encrypted_smtp_password = input

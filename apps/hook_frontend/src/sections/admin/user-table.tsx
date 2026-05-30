@@ -122,9 +122,13 @@ function UserTableRow({ row, props }: { row: SystemUser; props: Props }) {
 
 function UserGroupBadge({ user, groups }: { user: SystemUser; groups: UserGroup[] }) {
   return (
-    <Label color="info" variant="soft">
-      {displayUserGroup(user.group_code, groups)}
-    </Label>
+    <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', rowGap: 0.75 }}>
+      {user.group_codes.map((code) => (
+        <Label key={code} color="info" variant="soft">
+          {displayUserGroup(code, groups)}
+        </Label>
+      ))}
+    </Stack>
   );
 }
 
@@ -224,7 +228,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
     { id: 'email', label: t('common.email'), width: 220 },
     { id: 'providers', label: t('users.providers'), width: 190 },
     { id: 'role', label: t('common.role'), width: 150 },
-    { id: 'group_code', label: t('fields.userGroup'), width: 150 },
+    { id: 'group_codes', label: t('fields.userGroup'), width: 180 },
     { id: 'wallet', label: t('fields.wallet'), width: 190 },
     { id: 'statistics', label: t('fields.statistics'), width: 150 },
     { id: 'is_active', label: t('common.status'), width: 110 },

@@ -44,7 +44,7 @@ fn resolve_owner_uses_system_owner() {
         ApiTokenOwnerResponse {
             username: "codex".into(),
             email: "codex@example.com".into(),
-            group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+            group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
         },
     ));
 

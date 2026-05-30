@@ -177,10 +177,10 @@ impl OpenAiImageStreamState {
         if self.emitted_failure {
             return Ok(Vec::new());
         }
-        if self.latest_image.is_none() {
-            if let Some(result) = completed_response_image_result(event) {
-                self.latest_image = Some(OpenAiImageFrame { b64_json: result.to_string() });
-            }
+        if self.latest_image.is_none()
+            && let Some(result) = completed_response_image_result(event)
+        {
+            self.latest_image = Some(OpenAiImageFrame { b64_json: result.to_string() });
         }
         let Some(latest_image) = self.latest_image.clone() else {
             return Ok(Vec::new());
@@ -286,21 +286,21 @@ impl OpenAiImageChatStreamState {
         if item.get("type").and_then(Value::as_str) != Some("image_generation_call") {
             return Ok(Vec::new());
         }
-        if let Some(result) = item.get("result").and_then(Value::as_str).map(str::trim) {
-            if !result.is_empty() {
-                let key = image_chat_output_key(item, result);
-                if self.emitted_image_keys.insert(key) {
-                    self.latest_image = Some(OpenAiImageChatFrame {
-                        b64_json: result.to_string(),
-                        output_format: item
-                            .get("output_format")
-                            .and_then(Value::as_str)
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                            .map(ToOwned::to_owned),
-                    });
-                    self.emitted_image_count = self.emitted_image_count.saturating_add(1);
-                }
+        if let Some(result) = item.get("result").and_then(Value::as_str).map(str::trim)
+            && !result.is_empty()
+        {
+            let key = image_chat_output_key(item, result);
+            if self.emitted_image_keys.insert(key) {
+                self.latest_image = Some(OpenAiImageChatFrame {
+                    b64_json: result.to_string(),
+                    output_format: item
+                        .get("output_format")
+                        .and_then(Value::as_str)
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty())
+                        .map(ToOwned::to_owned),
+                });
+                self.emitted_image_count = self.emitted_image_count.saturating_add(1);
             }
         }
         self.ensure_started(report_context)
@@ -312,11 +312,11 @@ impl OpenAiImageChatStreamState {
         }
         if let Some(response) = event.get("response") {
             self.update_identity_from_response(response);
-            if self.latest_image.is_none() {
-                if let Some(frame) = completed_response_image_chat_frame(response) {
-                    self.latest_image = Some(frame);
-                    self.emitted_image_count = self.emitted_image_count.saturating_add(1);
-                }
+            if self.latest_image.is_none()
+                && let Some(frame) = completed_response_image_chat_frame(response)
+            {
+                self.latest_image = Some(frame);
+                self.emitted_image_count = self.emitted_image_count.saturating_add(1);
             }
         }
         let usage = event.get("response").and_then(Value::as_object).and_then(|response| {
@@ -772,8 +772,8 @@ fn image_failure_error(event: &Value) -> Value {
         .cloned()
         .unwrap_or_default();
 
-    if !error.contains_key("message") {
-        if let Some(message) = event
+    if !error.contains_key("message")
+        && let Some(message) = event
             .get("message")
             .and_then(Value::as_str)
             .or_else(|| {
@@ -785,18 +785,16 @@ fn image_failure_error(event: &Value) -> Value {
             })
             .map(str::trim)
             .filter(|value| !value.is_empty())
-        {
-            error.insert("message".to_string(), Value::String(message.to_string()));
-        }
+    {
+        error.insert("message".to_string(), Value::String(message.to_string()));
     }
-    if !error.contains_key("code") {
-        if let Some(code) = event
+    if !error.contains_key("code")
+        && let Some(code) = event
             .get("code")
             .or_else(|| event.get("response").and_then(|value| value.get("error")).and_then(|value| value.get("code")))
             .cloned()
-        {
-            error.insert("code".to_string(), code);
-        }
+    {
+        error.insert("code".to_string(), code);
     }
     if !error.contains_key("type") {
         let inferred_type = error

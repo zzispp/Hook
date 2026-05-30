@@ -550,10 +550,10 @@ pub(crate) fn canonical_blocks_to_openai_chat_message(content: &[CanonicalConten
                 }
             }
             CanonicalContentBlock::Unknown { raw_type, payload, .. } if raw_type == "refusal" => {
-                if let Some(text) = payload.get("refusal").and_then(Value::as_str) {
-                    if !text.trim().is_empty() {
-                        refusal.push(text.to_string());
-                    }
+                if let Some(text) = payload.get("refusal").and_then(Value::as_str)
+                    && !text.trim().is_empty()
+                {
+                    refusal.push(text.to_string());
                 }
             }
             other => {
@@ -796,7 +796,7 @@ pub(crate) fn gemini_part_to_canonical_block(part: &Value, index: usize) -> Opti
             .unwrap_or_else(|| format!("toolu_response_{index}"));
         let response = function_response.get("response").cloned().unwrap_or_else(|| json!({}));
         let output = match response {
-            Value::Object(mut object) => object.remove("result").unwrap_or_else(|| Value::Object(object)),
+            Value::Object(mut object) => object.remove("result").unwrap_or(Value::Object(object)),
             other => other,
         };
         return Some(CanonicalContentBlock::ToolResult {
@@ -985,11 +985,11 @@ pub(crate) fn claude_content_to_canonical_blocks(content: Option<&Value>) -> Opt
             let mut next_generated_tool_use_index = 0usize;
             for block in blocks {
                 let mut canonical_block = claude_block_to_canonical_block(block)?;
-                if let CanonicalContentBlock::ToolUse { id, .. } = &mut canonical_block {
-                    if id.trim().is_empty() {
-                        *id = format!("toolu_auto_{next_generated_tool_use_index}");
-                        next_generated_tool_use_index += 1;
-                    }
+                if let CanonicalContentBlock::ToolUse { id, .. } = &mut canonical_block
+                    && id.trim().is_empty()
+                {
+                    *id = format!("toolu_auto_{next_generated_tool_use_index}");
+                    next_generated_tool_use_index += 1;
                 }
                 canonical.push(canonical_block);
             }
@@ -1136,21 +1136,22 @@ pub(crate) fn openai_message_content_blocks(message: &Map<String, Value>) -> Opt
             });
         }
     }
-    if role == CanonicalRole::Assistant && !saw_tool_calls {
-        if let Some(function_call) = message.get("function_call").and_then(Value::as_object) {
-            let name = function_call.get("name").and_then(Value::as_str).unwrap_or_default().to_string();
-            blocks.push(CanonicalContentBlock::ToolUse {
-                id: message
-                    .get("id")
-                    .and_then(Value::as_str)
-                    .filter(|value| !value.trim().is_empty())
-                    .unwrap_or(name.as_str())
-                    .to_string(),
-                name,
-                input: parse_jsonish_value(function_call.get("arguments")),
-                extensions: openai_extensions(message, &["role", "content", "function_call"]),
-            });
-        }
+    if role == CanonicalRole::Assistant
+        && !saw_tool_calls
+        && let Some(function_call) = message.get("function_call").and_then(Value::as_object)
+    {
+        let name = function_call.get("name").and_then(Value::as_str).unwrap_or_default().to_string();
+        blocks.push(CanonicalContentBlock::ToolUse {
+            id: message
+                .get("id")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or(name.as_str())
+                .to_string(),
+            name,
+            input: parse_jsonish_value(function_call.get("arguments")),
+            extensions: openai_extensions(message, &["role", "content", "function_call"]),
+        });
     }
     if role == CanonicalRole::Tool {
         let text = openai_content_text(message.get("content"));
@@ -1766,10 +1767,10 @@ pub(crate) fn canonical_message_to_openai_chat_messages(message: &CanonicalMessa
     for (index, block) in message.content.iter().enumerate() {
         if let CanonicalContentBlock::ToolResult { .. } = block {
             saw_tool_result = true;
-            if pending_start < index {
-                if let Some(message_value) = canonical_message_blocks_to_openai_chat(message, &message.content[pending_start..index], false) {
-                    messages.push(message_value);
-                }
+            if pending_start < index
+                && let Some(message_value) = canonical_message_blocks_to_openai_chat(message, &message.content[pending_start..index], false)
+            {
+                messages.push(message_value);
             }
             messages.push(canonical_tool_result_to_openai_chat(block));
             pending_start = index + 1;
@@ -1780,10 +1781,10 @@ pub(crate) fn canonical_message_to_openai_chat_messages(message: &CanonicalMessa
         return vec![canonical_message_without_tool_results_to_openai_chat(message)];
     }
 
-    if pending_start < message.content.len() {
-        if let Some(message_value) = canonical_message_blocks_to_openai_chat(message, &message.content[pending_start..], false) {
-            messages.push(message_value);
-        }
+    if pending_start < message.content.len()
+        && let Some(message_value) = canonical_message_blocks_to_openai_chat(message, &message.content[pending_start..], false)
+    {
+        messages.push(message_value);
     }
 
     messages
@@ -2236,10 +2237,10 @@ pub(crate) fn openai_content_value_from_parts(parts: Vec<Value>, tool_only: bool
     if parts.is_empty() && tool_only {
         return Value::Null;
     }
-    if parts.len() == 1 {
-        if let Some(text) = parts[0].as_object().and_then(|object| object.get("text")).and_then(Value::as_str) {
-            return Value::String(text.to_string());
-        }
+    if parts.len() == 1
+        && let Some(text) = parts[0].as_object().and_then(|object| object.get("text")).and_then(Value::as_str)
+    {
+        return Value::String(text.to_string());
     }
     if parts.iter().all(|part| {
         part.as_object().and_then(|object| object.get("text")).and_then(Value::as_str).is_some()
@@ -3273,11 +3274,12 @@ pub(crate) fn simplify_canonical_claude_content(blocks: Vec<Value>) -> Value {
         let Some(block_object) = block.as_object() else {
             return Value::Array(blocks);
         };
-        if block_object.len() == 2 && block_object.get("type").and_then(Value::as_str) == Some("text") {
-            if let Some(text) = block_object.get("text").and_then(Value::as_str) {
-                text_values.push(text.to_string());
-                continue;
-            }
+        if block_object.len() == 2
+            && block_object.get("type").and_then(Value::as_str) == Some("text")
+            && let Some(text) = block_object.get("text").and_then(Value::as_str)
+        {
+            text_values.push(text.to_string());
+            continue;
         }
         return Value::Array(blocks);
     }
@@ -3382,12 +3384,11 @@ pub(crate) fn canonical_tool_choice_to_claude(choice: Option<&CanonicalToolChoic
         })),
         None => parallel_tool_calls.map(|_| json!({ "type": "auto" })),
     }?;
-    if let Some(parallel_tool_calls) = parallel_tool_calls {
-        if let Some(object) = out.as_object_mut() {
-            if object.get("type").and_then(Value::as_str) != Some("none") {
-                object.insert("disable_parallel_tool_use".to_string(), Value::Bool(!parallel_tool_calls));
-            }
-        }
+    if let Some(parallel_tool_calls) = parallel_tool_calls
+        && let Some(object) = out.as_object_mut()
+        && object.get("type").and_then(Value::as_str) != Some("none")
+    {
+        object.insert("disable_parallel_tool_use".to_string(), Value::Bool(!parallel_tool_calls));
     }
     Some(out)
 }
@@ -3772,10 +3773,10 @@ pub(crate) fn split_data_url(value: Option<String>, fallback_media_type: Option<
     let Some(value) = value else {
         return (fallback_media_type, None, None);
     };
-    if let Some(rest) = value.strip_prefix("data:") {
-        if let Some((media_type, data)) = rest.split_once(";base64,") {
-            return (Some(media_type.to_string()), Some(data.to_string()), None);
-        }
+    if let Some(rest) = value.strip_prefix("data:")
+        && let Some((media_type, data)) = rest.split_once(";base64,")
+    {
+        return (Some(media_type.to_string()), Some(data.to_string()), None);
     }
     (fallback_media_type, None, Some(value))
 }
@@ -3801,10 +3802,10 @@ pub(crate) fn offset_openai_annotation_indices(annotation: &Value, offset: i64) 
 }
 
 pub(crate) fn insert_f64(output: &mut Map<String, Value>, key: &str, value: Option<f64>) {
-    if let Some(value) = value {
-        if let Some(number) = serde_json::Number::from_f64(value) {
-            output.insert(key.to_string(), Value::Number(number));
-        }
+    if let Some(value) = value
+        && let Some(number) = serde_json::Number::from_f64(value)
+    {
+        output.insert(key.to_string(), Value::Number(number));
     }
 }
 

@@ -17,7 +17,7 @@ impl ConfigSystemUserProvider {
                     username: settings.admin.username.trim().into(),
                     email: settings.admin.email.trim().into(),
                     role: settings.admin.role.trim().into(),
-                    group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+                    group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
                     is_active: settings.admin.is_active,
                     allowed_model_ids: Vec::new(),
                     allowed_provider_ids: Vec::new(),

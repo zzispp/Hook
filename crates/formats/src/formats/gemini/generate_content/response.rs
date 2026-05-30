@@ -101,14 +101,14 @@ fn gemini_response_output_has_visible_content(output: &CanonicalResponseOutput) 
 
 pub fn to_raw(canonical: &CanonicalResponse, report_context: &Value) -> Option<Value> {
     let mut response = canonical_to_gemini_response(canonical, report_context)?;
-    if let Some(object) = response.as_object_mut() {
-        if let Some(gemini) = canonical.extensions.get("gemini").and_then(Value::as_object) {
-            for (key, value) in gemini {
-                if key == "raw_candidates" || object.contains_key(key) {
-                    continue;
-                }
-                object.insert(key.clone(), value.clone());
+    if let Some(object) = response.as_object_mut()
+        && let Some(gemini) = canonical.extensions.get("gemini").and_then(Value::as_object)
+    {
+        for (key, value) in gemini {
+            if key == "raw_candidates" || object.contains_key(key) {
+                continue;
             }
+            object.insert(key.clone(), value.clone());
         }
     }
     Some(response)
@@ -139,11 +139,11 @@ fn canonical_to_gemini_response(canonical: &CanonicalResponse, report_context: &
                 output.stop_reason.as_ref().or(canonical.stop_reason.as_ref())
             ),
         });
-        if let Some(candidate_object) = candidate.as_object_mut() {
-            if let Some(gemini) = output.extensions.get("gemini").and_then(Value::as_object) {
-                for (key, value) in gemini {
-                    candidate_object.entry(key.clone()).or_insert(value.clone());
-                }
+        if let Some(candidate_object) = candidate.as_object_mut()
+            && let Some(gemini) = output.extensions.get("gemini").and_then(Value::as_object)
+        {
+            for (key, value) in gemini {
+                candidate_object.entry(key.clone()).or_insert(value.clone());
             }
         }
         candidates.push(candidate);

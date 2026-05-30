@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate current provider settings and public address source,DONE,Relevant files and data flow identified,rg/sed inspection,2026-05-30T23:04:00+08:00,0,"public_base_url is already in SystemSettingsForm and AuthProviderFields receives the full form"
+2,Implement callback address display,DONE,GitHub and Google provider cards show deterministic callback address text,"prettier --check, pnpm lint:frontend, jq empty",2026-05-30T23:06:00+08:00,0,
+3,Validate and summarize,DONE,Checks run or limitations recorded,"pnpm build:frontend, tsc --noEmit, pnpm lint:frontend, prettier --check, jq empty",2026-05-30T23:08:00+08:00,0,

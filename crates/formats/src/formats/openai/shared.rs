@@ -36,10 +36,10 @@ pub fn copy_request_number_field(request: &Map<String, Value>, target: &mut Map<
 }
 
 pub fn copy_request_number_field_as(request: &Map<String, Value>, target: &mut Map<String, Value>, source_key: &str, target_key: &str) {
-    if let Some(value) = request.get(source_key).cloned() {
-        if value.is_number() {
-            target.insert(target_key.to_string(), value);
-        }
+    if let Some(value) = request.get(source_key).cloned()
+        && value.is_number()
+    {
+        target.insert(target_key.to_string(), value);
     }
 }
 

@@ -60,7 +60,7 @@ pub(super) fn user_access(id: &str, username: &str, allowed_provider_ids: Vec<St
     CachedUserAccess {
         id: id.into(),
         username: username.into(),
-        group_code: "default".into(),
+        group_codes: vec!["default".into()],
         is_active: true,
         allowed_model_ids: Vec::new(),
         allowed_provider_ids,

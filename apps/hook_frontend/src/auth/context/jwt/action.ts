@@ -140,10 +140,7 @@ export const requestRegistrationEmailCode = async ({
 };
 
 export async function startOAuth(provider: Extract<IdentityProvider, 'github' | 'google'>) {
-  const redirectUri = `${window.location.origin}/auth/oauth/callback/${provider}`;
-  const res = await axios.get(endpoints.auth.oauthStart(provider), {
-    params: { redirect_uri: redirectUri },
-  });
+  const res = await axios.get(endpoints.auth.oauthStart(provider));
   return requireApiData<{ authorization_url: string }>(res.data);
 }
 
@@ -156,9 +153,8 @@ export async function completeOAuthCallback({
   code: string;
   state: string;
 }) {
-  const redirectUri = `${window.location.origin}/auth/oauth/callback/${provider}`;
   const res = await axios.get(endpoints.auth.oauthCallback(provider), {
-    params: { code, state, redirect_uri: redirectUri },
+    params: { code, state },
   });
   return requireApiData<OAuthCallbackResponse>(res.data);
 }

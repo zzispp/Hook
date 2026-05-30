@@ -10,7 +10,7 @@ export type UserForm = {
   password: string;
   email: string;
   role: string;
-  group_code: string;
+  group_codes: string[];
   is_active: boolean;
   allowed_model_ids: string[];
   allowed_provider_ids: string[];
@@ -23,7 +23,7 @@ export const DEFAULT_USER_FORM: UserForm = {
   password: '',
   email: '',
   role: '',
-  group_code: 'default',
+  group_codes: ['default'],
   is_active: true,
   allowed_model_ids: [],
   allowed_provider_ids: [],
@@ -48,7 +48,7 @@ export function formFromUser(user: SystemUser): UserForm {
     password: '',
     email: user.email,
     role: user.role,
-    group_code: user.group_code,
+    group_codes: user.group_codes,
     is_active: user.is_active,
     allowed_model_ids: user.allowed_model_ids,
     allowed_provider_ids: user.allowed_provider_ids,
@@ -63,7 +63,7 @@ export function formToPayload(form: UserForm): UserInput {
     password: form.password,
     email: form.email,
     role: form.role,
-    group_code: form.group_code,
+    group_codes: form.group_codes,
     is_active: form.is_active,
     allowed_model_ids: form.allowed_model_ids,
     allowed_provider_ids: form.allowed_provider_ids,

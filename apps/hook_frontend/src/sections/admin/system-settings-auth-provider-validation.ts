@@ -14,6 +14,7 @@ export function validateAuthProviderFields(form: SystemSettingsForm, t: T) {
       form.auth_github_client_id,
       form.auth_github_client_secret,
       form.auth_github_client_secret_set,
+      form.public_base_url,
       t
     ) ||
     validateOAuthProvider(
@@ -21,6 +22,7 @@ export function validateAuthProviderFields(form: SystemSettingsForm, t: T) {
       form.auth_google_client_id,
       form.auth_google_client_secret,
       form.auth_google_client_secret_set,
+      form.public_base_url,
       t
     ) ||
     validateWalletProvider(form, t)
@@ -32,6 +34,7 @@ function validateOAuthProvider(
   clientId: string,
   clientSecret: string,
   secretSet: boolean,
+  publicBaseUrl: string,
   t: T
 ) {
   if (clientId.trim().length > MAX_AUTH_CLIENT_ID_LENGTH) {
@@ -41,6 +44,9 @@ function validateOAuthProvider(
     return t('systemSettings.validation.authClientSecretLength', {
       max: MAX_AUTH_CLIENT_SECRET_LENGTH,
     });
+  }
+  if (enabled && !publicBaseUrl.trim()) {
+    return t('systemSettings.validation.oauthPublicBaseUrlRequired');
   }
   if (enabled && (!clientId.trim() || (!clientSecret.trim() && !secretSet))) {
     return t('systemSettings.validation.oauthProviderIncomplete');

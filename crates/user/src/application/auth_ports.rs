@@ -10,6 +10,7 @@ pub struct OAuthProviderSettings {
     pub enabled: bool,
     pub client_id: String,
     pub client_secret: String,
+    pub public_base_url: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -46,7 +47,7 @@ pub struct OAuthProfile {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OAuthSignInResult {
-    Authenticated(User),
+    Authenticated(Box<User>),
     BindingRequired {
         ticket: String,
         provider: IdentityProvider,
@@ -90,7 +91,7 @@ pub struct WalletSignInInput {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WalletSignInResult {
-    Authenticated(User),
+    Authenticated(Box<User>),
     EmailRequired {
         ticket: String,
         provider: IdentityProvider,

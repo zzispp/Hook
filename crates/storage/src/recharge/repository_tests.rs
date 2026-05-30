@@ -81,7 +81,6 @@ fn user_record() -> UserRecord {
         password_hash: Some("hash".into()),
         email: "alice@example.com".into(),
         role: "user".into(),
-        group_code: "default".into(),
         is_active: true,
         is_deleted: false,
         allowed_model_ids: "[]".into(),

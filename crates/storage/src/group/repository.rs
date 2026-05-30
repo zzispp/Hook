@@ -115,11 +115,12 @@ impl GroupStore {
         self.groups_from_records(records).await
     }
 
-    pub async fn active_groups_for_user_group(&self, user_group_code: &str) -> StorageResult<Vec<BillingGroup>> {
+    pub async fn active_groups_for_user_groups(&self, user_group_codes: &[String]) -> StorageResult<Vec<BillingGroup>> {
+        let user_group_codes = user_group_codes.iter().collect::<std::collections::BTreeSet<_>>();
         let groups = self.active_groups().await?;
         Ok(groups
             .into_iter()
-            .filter(|group| group.visible_user_group_codes.iter().any(|code| code == user_group_code))
+            .filter(|group| group.visible_user_group_codes.iter().any(|code| user_group_codes.contains(code)))
             .collect())
     }
 

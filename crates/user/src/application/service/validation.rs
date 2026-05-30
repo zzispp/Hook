@@ -25,7 +25,7 @@ pub(super) fn validate_new_user(input: &NewUser) -> AppResult<()> {
     validate_password(&input.password)?;
     validate_email(&input.email)?;
     reject_blank("role", &input.role)?;
-    validate_optional_group_code(&input.group_code)?;
+    validate_optional_group_codes(&input.group_codes)?;
     validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
     validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
     validate_rate_limit(input.rate_limit_rpm)?;
@@ -39,7 +39,7 @@ pub(super) fn validate_replace_user(input: &ReplaceUser) -> AppResult<()> {
     }
     validate_email(&input.email)?;
     reject_blank("role", &input.role)?;
-    reject_blank("group_code", &input.group_code)?;
+    validate_group_codes(&input.group_codes)?;
     validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
     validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
     validate_rate_limit(input.rate_limit_rpm)?;
@@ -88,7 +88,7 @@ pub(super) fn sanitize_new_user(input: NewUser) -> NewUser {
         password: input.password.trim().into(),
         email: input.email.trim().into(),
         role: input.role,
-        group_code: trim_optional(input.group_code),
+        group_codes: input.group_codes.map(normalize_ids),
         is_active: input.is_active,
         allowed_model_ids: normalize_ids(input.allowed_model_ids),
         allowed_provider_ids: normalize_ids(input.allowed_provider_ids),
@@ -103,7 +103,7 @@ pub(super) fn sanitize_replace_user(input: ReplaceUser) -> ReplaceUser {
         password: nonblank_password(input.password),
         email: input.email.trim().into(),
         role: input.role,
-        group_code: input.group_code.trim().into(),
+        group_codes: normalize_ids(input.group_codes),
         is_active: input.is_active,
         allowed_model_ids: normalize_ids(input.allowed_model_ids),
         allowed_provider_ids: normalize_ids(input.allowed_provider_ids),
@@ -230,16 +230,18 @@ fn reject_blank(field: &str, value: &str) -> AppResult<()> {
     Ok(())
 }
 
-fn validate_optional_group_code(value: &Option<String>) -> AppResult<()> {
-    if let Some(group_code) = value {
-        reject_blank("group_code", group_code)?;
+fn validate_optional_group_codes(value: &Option<Vec<String>>) -> AppResult<()> {
+    match value {
+        Some(group_codes) => validate_group_codes(group_codes),
+        None => Ok(()),
     }
-    Ok(())
 }
 
-fn trim_optional(value: Option<String>) -> Option<String> {
-    let value = value?.trim().to_owned();
-    if value.is_empty() { None } else { Some(value) }
+fn validate_group_codes(group_codes: &[String]) -> AppResult<()> {
+    if group_codes.is_empty() {
+        return Err(AppError::InvalidInput("group_codes cannot be empty".into()));
+    }
+    validate_ids("group_codes", group_codes)
 }
 
 fn validate_lang(value: &str) -> AppResult<()> {

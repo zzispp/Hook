@@ -214,7 +214,7 @@ function useUserDialog(t: ReturnType<typeof useTranslate>['t'], refresh: VoidFun
   const openCreate = useCallback((defaultRole = '', defaultGroupCode = 'default') => {
     setEditing(null);
     setCreating(true);
-    setForm({ ...DEFAULT_USER_FORM, role: defaultRole, group_code: defaultGroupCode });
+    setForm({ ...DEFAULT_USER_FORM, role: defaultRole, group_codes: [defaultGroupCode] });
   }, []);
 
   const openEdit = useCallback((user: SystemUser) => {

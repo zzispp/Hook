@@ -32,6 +32,17 @@ struct ApiKeyFilters {
     exclude_admin: bool,
 }
 
+#[derive(Clone, Copy, Debug)]
+struct DimensionRowsQuery<'a> {
+    window: &'a super::DashboardCostAnalysisWindow,
+    dimension_kind: &'a str,
+    limit: u64,
+    offset: u64,
+    metric: DashboardUserStatsMetric,
+    order: DashboardSortOrder,
+    filters: ApiKeyFilters,
+}
+
 pub async fn sync_cost_analysis_buckets(
     connection: &sea_orm::DatabaseConnection,
     old_record: &request_records::Model,
@@ -98,13 +109,15 @@ pub(super) async fn api_key_leaderboard(store: &DashboardStore, query: Dashboard
     };
     let rows = dimension_rows(
         store,
-        &query.window,
-        DIMENSION_API_KEY,
-        query.limit,
-        query.offset,
-        query.metric,
-        query.order,
-        filters,
+        DimensionRowsQuery {
+            window: &query.window,
+            dimension_kind: DIMENSION_API_KEY,
+            limit: query.limit,
+            offset: query.offset,
+            metric: query.metric,
+            order: query.order,
+            filters,
+        },
     )
     .await?;
     let total = dimension_total(store, &query.window, DIMENSION_API_KEY, filters).await?;
@@ -248,22 +261,13 @@ async fn global_savings_row(store: &DashboardStore, window: &super::DashboardCos
         .ok_or_else(|| StorageError::Database("dashboard cost savings query returned no rows".into()))
 }
 
-async fn dimension_rows(
-    store: &DashboardStore,
-    window: &super::DashboardCostAnalysisWindow,
-    dimension_kind: &str,
-    limit: u64,
-    offset: u64,
-    metric: DashboardUserStatsMetric,
-    order: DashboardSortOrder,
-    filters: ApiKeyFilters,
-) -> StorageResult<Vec<LeaderboardRow>> {
+async fn dimension_rows(store: &DashboardStore, query: DimensionRowsQuery<'_>) -> StorageResult<Vec<LeaderboardRow>> {
     let mut params = SqlParams::new();
-    let limit = params.push(limit as i64);
-    let offset = params.push(offset as i64);
-    let order_sql = order_sql(order);
-    let metric_sql = metric_sql(metric);
-    let token_join = api_key_token_join(filters, &mut params);
+    let limit = params.push(query.limit as i64);
+    let offset = params.push(query.offset as i64);
+    let order_sql = order_sql(query.order);
+    let metric_sql = metric_sql(query.metric);
+    let token_join = api_key_token_join(query.filters, &mut params);
     let sql = format!(
         "WITH aggregated AS ( \
             SELECT b.dimension_id, COALESCE(MAX(b.dimension_name), b.dimension_id) AS fallback_name, MAX(b.dimension_name) AS dimension_name, \
@@ -275,7 +279,7 @@ async fn dimension_rows(
         ) \
         SELECT rank::bigint AS rank, dimension_id, fallback_name, dimension_name, request_count, total_tokens, total_cost \
         FROM ranked ORDER BY {metric_sql} {order_sql}, fallback_name ASC, dimension_id ASC LIMIT {limit} OFFSET {offset}",
-        dimension_where(window, dimension_kind, filters, &mut params)
+        dimension_where(query.window, query.dimension_kind, query.filters, &mut params)
     );
     LeaderboardRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())

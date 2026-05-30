@@ -231,7 +231,7 @@ mod tests {
             users: vec![CachedUserAccess {
                 id: "user-1".into(),
                 username: "alice".into(),
-                group_code: "default".into(),
+                group_codes: vec!["default".into()],
                 is_active: true,
                 allowed_model_ids: Vec::new(),
                 allowed_provider_ids: Vec::new(),

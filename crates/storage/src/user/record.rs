@@ -16,7 +16,6 @@ pub struct Model {
     #[sea_orm(unique)]
     pub email: String,
     pub role: String,
-    pub group_code: String,
     pub is_active: bool,
     pub is_deleted: bool,
     pub allowed_model_ids: String,
@@ -38,7 +37,7 @@ impl ActiveModelBehavior for ActiveModel {}
 pub type UserRecord = Model;
 
 impl UserRecord {
-    pub fn into_domain(self) -> crate::StorageResult<User> {
+    pub fn into_domain(self, group_codes: Vec<String>) -> crate::StorageResult<User> {
         let allowed_model_ids = serde_json::from_str(&self.allowed_model_ids)?;
         let allowed_provider_ids = serde_json::from_str(&self.allowed_provider_ids)?;
         Ok(User {
@@ -46,7 +45,7 @@ impl UserRecord {
             username: self.username,
             email: self.email,
             role: self.role,
-            group_code: self.group_code,
+            group_codes,
             is_active: self.is_active,
             allowed_model_ids,
             allowed_provider_ids,
@@ -61,10 +60,10 @@ impl UserRecord {
         })
     }
 
-    pub fn into_auth(self) -> crate::StorageResult<UserAuthRecord> {
+    pub fn into_auth(self, group_codes: Vec<String>) -> crate::StorageResult<UserAuthRecord> {
         let password_hash = self.password_hash.clone();
         Ok(UserAuthRecord {
-            user: self.into_domain()?,
+            user: self.into_domain(group_codes)?,
             password_hash,
         })
     }

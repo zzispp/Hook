@@ -17,16 +17,15 @@ pub fn from(body: &Value, _ctx: &FormatContext) -> Option<CanonicalResponse> {
 
 pub fn to(response: &CanonicalResponse, ctx: &FormatContext) -> Option<Value> {
     let mut body = to_raw(response);
-    if body.get("service_tier").is_none() {
-        if let Some(service_tier) = ctx
+    if body.get("service_tier").is_none()
+        && let Some(service_tier) = ctx
             .report_context_value()
             .get("original_request_body")
             .and_then(Value::as_object)
             .and_then(|request| request.get("service_tier"))
             .cloned()
-        {
-            body["service_tier"] = service_tier;
-        }
+    {
+        body["service_tier"] = service_tier;
     }
     Some(body)
 }
@@ -41,22 +40,21 @@ pub fn from_raw(body_json: &Value) -> Option<CanonicalResponse> {
         let choice = choice_value.as_object()?;
         let message = choice.get("message").and_then(Value::as_object)?;
         let mut content = openai_message_content_blocks(message)?;
-        if !content.iter().any(|block| matches!(block, CanonicalContentBlock::Thinking { .. })) {
-            if let Some(reasoning_content) = message
+        if !content.iter().any(|block| matches!(block, CanonicalContentBlock::Thinking { .. }))
+            && let Some(reasoning_content) = message
                 .get("reasoning_content")
                 .and_then(Value::as_str)
                 .filter(|value| !value.trim().is_empty())
-            {
-                content.insert(
-                    0,
-                    CanonicalContentBlock::Thinking {
-                        text: reasoning_content.to_string(),
-                        signature: None,
-                        encrypted_content: None,
-                        extensions: BTreeMap::new(),
-                    },
-                );
-            }
+        {
+            content.insert(
+                0,
+                CanonicalContentBlock::Thinking {
+                    text: reasoning_content.to_string(),
+                    signature: None,
+                    encrypted_content: None,
+                    extensions: BTreeMap::new(),
+                },
+            );
         }
         let stop_reason = openai_finish_reason_to_canonical(choice.get("finish_reason").and_then(Value::as_str));
         outputs.push(CanonicalResponseOutput {

@@ -1065,12 +1065,11 @@ fn parse_stream_json_events(body: &[u8]) -> Option<Vec<Value>> {
         }
 
         let mut event: Value = serde_json::from_str(data_line).ok()?;
-        if let Some(event_object) = event.as_object_mut() {
-            if !event_object.contains_key("type") {
-                if let Some(event_name) = current_event_type.take() {
-                    event_object.insert("type".to_string(), Value::String(event_name));
-                }
-            }
+        if let Some(event_object) = event.as_object_mut()
+            && !event_object.contains_key("type")
+            && let Some(event_name) = current_event_type.take()
+        {
+            event_object.insert("type".to_string(), Value::String(event_name));
         }
         events.push(event);
         current_event_type = None;
@@ -1626,24 +1625,24 @@ fn merge_openai_responses_tool_item(state: &mut OpenAIResponsesSyncToolState, it
 }
 
 fn register_openai_responses_tool_aliases(aliases: &mut BTreeMap<String, usize>, output_index: usize, item: &Map<String, Value>) {
-    if let Some(id) = item.get("id").and_then(Value::as_str).map(str::trim) {
-        if !id.is_empty() {
-            aliases.insert(id.to_string(), output_index);
-        }
+    if let Some(id) = item.get("id").and_then(Value::as_str).map(str::trim)
+        && !id.is_empty()
+    {
+        aliases.insert(id.to_string(), output_index);
     }
-    if let Some(call_id) = item.get("call_id").and_then(Value::as_str).map(str::trim) {
-        if !call_id.is_empty() {
-            aliases.insert(call_id.to_string(), output_index);
-        }
+    if let Some(call_id) = item.get("call_id").and_then(Value::as_str).map(str::trim)
+        && !call_id.is_empty()
+    {
+        aliases.insert(call_id.to_string(), output_index);
     }
 }
 
 fn register_openai_responses_tool_event_aliases(aliases: &mut BTreeMap<String, usize>, event: &Map<String, Value>, output_index: usize) {
     for key in ["item_id", "call_id", "id"] {
-        if let Some(value) = event.get(key).and_then(Value::as_str).map(str::trim) {
-            if !value.is_empty() {
-                aliases.insert(value.to_string(), output_index);
-            }
+        if let Some(value) = event.get(key).and_then(Value::as_str).map(str::trim)
+            && !value.is_empty()
+        {
+            aliases.insert(value.to_string(), output_index);
         }
     }
 }
@@ -1789,24 +1788,24 @@ pub fn aggregate_claude_stream_sync_response(body: &[u8]) -> Option<Value> {
                         }
                     }
                     "signature_delta" => {
-                        if let Some(signature) = delta.get("signature").and_then(Value::as_str) {
-                            if !signature.is_empty() {
-                                state.signature = Some(signature.to_string());
-                            }
+                        if let Some(signature) = delta.get("signature").and_then(Value::as_str)
+                            && !signature.is_empty()
+                        {
+                            state.signature = Some(signature.to_string());
                         }
                     }
                     _ => {}
                 }
             }
             "message_delta" => {
-                if let Some(message) = message_object.as_mut() {
-                    if let Some(delta) = event_object.get("delta").and_then(Value::as_object) {
-                        if let Some(stop_reason) = delta.get("stop_reason") {
-                            message.insert("stop_reason".to_string(), stop_reason.clone());
-                        }
-                        if let Some(stop_sequence) = delta.get("stop_sequence") {
-                            message.insert("stop_sequence".to_string(), stop_sequence.clone());
-                        }
+                if let Some(message) = message_object.as_mut()
+                    && let Some(delta) = event_object.get("delta").and_then(Value::as_object)
+                {
+                    if let Some(stop_reason) = delta.get("stop_reason") {
+                        message.insert("stop_reason".to_string(), stop_reason.clone());
+                    }
+                    if let Some(stop_sequence) = delta.get("stop_sequence") {
+                        message.insert("stop_sequence".to_string(), stop_sequence.clone());
                     }
                 }
                 if let Some(delta_usage) = event_object.get("usage") {
@@ -1949,10 +1948,10 @@ pub fn aggregate_gemini_stream_sync_response(body: &[u8]) -> Option<Value> {
                     candidate.insert(key.clone(), value.clone());
                 }
             }
-            if let Some(content) = candidate_object.get("content").and_then(Value::as_object) {
-                if let Some(content_role) = content.get("role") {
-                    role = Some(content_role.clone());
-                }
+            if let Some(content) = candidate_object.get("content").and_then(Value::as_object)
+                && let Some(content_role) = content.get("role")
+            {
+                role = Some(content_role.clone());
             }
             saw_candidate = true;
         }

@@ -2,7 +2,6 @@ use super::cleanup::{
     delete_model_bindings, delete_model_status_checks, prune_api_token_model_ids, prune_provider_api_key_model_ids, prune_user_model_ids, remove_model_id,
 };
 use crate::{api_token::api_token_records, provider::record::provider_api_keys, user::UserRecord};
-use constants::user_group::DEFAULT_USER_GROUP_CODE;
 use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
 
 #[test]
@@ -176,7 +175,6 @@ fn user(id: &str, allowed_model_ids: &str) -> UserRecord {
         username: "user-a".to_owned(),
         password_hash: Some("hash".to_owned()),
         email: "user@example.com".to_owned(),
-        group_code: DEFAULT_USER_GROUP_CODE.to_owned(),
         role: "user".to_owned(),
         is_active: true,
         is_deleted: false,

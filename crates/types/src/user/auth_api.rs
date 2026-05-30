@@ -35,14 +35,6 @@ pub struct WalletProviderPublicConfig {
 pub struct OAuthCallbackQuery {
     pub code: String,
     pub state: String,
-    #[serde(default)]
-    pub redirect_uri: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct OAuthStartQuery {
-    #[serde(default)]
-    pub redirect_uri: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -58,7 +50,7 @@ pub struct OAuthBindExistingPayload {
 #[derive(Debug, Serialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum OAuthCallbackResponse {
-    Authenticated(AuthSessionData),
+    Authenticated(Box<AuthSessionData>),
     BindingRequired {
         binding_ticket: String,
         provider: IdentityProvider,
@@ -94,7 +86,7 @@ pub struct WalletSignInPayload {
 #[derive(Debug, Serialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum WalletSignInResponse {
-    Authenticated(AuthSessionData),
+    Authenticated(Box<AuthSessionData>),
     EmailRequired {
         wallet_ticket: String,
         provider: IdentityProvider,

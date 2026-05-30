@@ -21,7 +21,7 @@ pub async fn available_groups(
     State(state): State<GroupApiState>,
     Extension(current_user): Extension<CurrentUser>,
 ) -> ApiResult<ApiJson<Vec<BillingGroupResponse>>> {
-    Ok(ok(state.groups.available_groups(&current_user.group_code).await?))
+    Ok(ok(state.groups.available_groups(&current_user.group_codes).await?))
 }
 
 pub async fn get_group(State(state): State<GroupApiState>, Path(id): Path<String>) -> ApiResult<ApiJson<BillingGroupResponse>> {

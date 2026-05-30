@@ -336,7 +336,7 @@ pub(crate) fn new_user(username: &str) -> NewUser {
         password: VALID_PASSWORD.into(),
         email: format!("{}@example.com", username.trim()),
         role: "admin".into(),
-        group_code: None,
+        group_codes: None,
         is_active: true,
         allowed_model_ids: Vec::new(),
         allowed_provider_ids: Vec::new(),
@@ -351,7 +351,7 @@ pub(crate) fn replace_user(username: &str, is_active: bool) -> ReplaceUser {
         password: Some(VALID_PASSWORD.into()),
         email: format!("{}@example.com", username.trim()),
         role: "admin".into(),
-        group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+        group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
         is_active,
         allowed_model_ids: Vec::new(),
         allowed_provider_ids: Vec::new(),
@@ -367,7 +367,7 @@ pub(crate) fn stored_user(id: u64, username: &str, password_hash: &str) -> Store
             username: username.into(),
             email: format!("{username}@example.com"),
             role: "admin".into(),
-            group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+            group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
             is_active: true,
             allowed_model_ids: Vec::new(),
             allowed_provider_ids: Vec::new(),
@@ -399,7 +399,7 @@ pub(crate) fn system_user() -> TestSystemUserProvider {
                 username: "admin".into(),
                 email: "admin@example.com".into(),
                 role: "admin".into(),
-                group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+                group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
                 is_active: true,
                 allowed_model_ids: Vec::new(),
                 allowed_provider_ids: Vec::new(),
@@ -442,7 +442,7 @@ fn user_from_record(id: UserId, record: &ReplaceUserRecord) -> User {
         username: record.username.clone(),
         email: record.email.clone(),
         role: record.role.clone(),
-        group_code: record.group_code.clone(),
+        group_codes: record.group_codes.clone(),
         is_active: record.is_active,
         allowed_model_ids: record.allowed_model_ids.clone(),
         allowed_provider_ids: record.allowed_provider_ids.clone(),
@@ -494,8 +494,14 @@ fn user_matches_filters(user: &User, filters: &UserListFilters) -> bool {
     if filters.role.as_ref().is_some_and(|role| user.role != *role) {
         return false;
     }
-    filters
-        .search
+    if filters
+        .group_code
         .as_ref()
-        .is_none_or(|search| user.username.contains(search) || user.email.contains(search) || user.role.contains(search))
+        .is_some_and(|group_code| !user.group_codes.iter().any(|code| code == group_code))
+    {
+        return false;
+    }
+    filters.search.as_ref().is_none_or(|search| {
+        user.username.contains(search) || user.email.contains(search) || user.role.contains(search) || user.group_codes.iter().any(|code| code.contains(search))
+    })
 }

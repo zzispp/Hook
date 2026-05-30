@@ -85,6 +85,26 @@ async fn create_user_ignores_closed_self_registration() {
     assert_eq!(repository.created_records().len(), 1);
 }
 
+#[tokio::test]
+async fn registration_assigns_default_group_codes() {
+    let repository = MemoryUserRepository::default();
+    let service = service_with_registration_settings(
+        repository,
+        RegistrationSettings {
+            allow_registration: true,
+            registration_email_verification_enabled: false,
+            default_user_grant: Decimal::ZERO,
+            default_user_group_code: "paid".into(),
+            email_suffix_mode: EmailSuffixMode::None,
+            email_suffixes: String::new(),
+        },
+    );
+
+    let user = service.sign_up(sign_up_user(new_user("alice"))).await.unwrap();
+
+    assert_eq!(user.group_codes, vec!["paid".to_string()]);
+}
+
 fn service_with_suffix_policy(repository: MemoryUserRepository, mode: EmailSuffixMode, suffixes: &str) -> TestRegistrationService {
     service_with_registration_settings(
         repository,

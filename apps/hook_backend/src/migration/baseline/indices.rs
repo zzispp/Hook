@@ -6,7 +6,19 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
     vec![
         index("index_users_by_username", Users::Table, Users::Username, true),
         index("index_users_by_email", Users::Table, Users::Email, true),
-        index("index_users_by_group_code", Users::Table, Users::GroupCode, false),
+        user_group_memberships_unique_index(),
+        index(
+            "index_user_group_memberships_by_user",
+            UserGroupMemberships::Table,
+            UserGroupMemberships::UserId,
+            false,
+        ),
+        index(
+            "index_user_group_memberships_by_user_group",
+            UserGroupMemberships::Table,
+            UserGroupMemberships::UserGroupCode,
+            false,
+        ),
         index("index_user_identities_by_user", UserIdentities::Table, UserIdentities::UserId, false),
         compound_index_unique(
             "index_user_identities_by_provider_subject",
@@ -493,6 +505,16 @@ fn billing_group_user_groups_unique_index() -> IndexCreateStatement {
         .col(BillingGroupUserGroups::UserGroupCode)
         .unique()
         .if_not_exists()
+        .to_owned()
+}
+
+fn user_group_memberships_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_user_group_memberships_unique")
+        .table(UserGroupMemberships::Table)
+        .col(UserGroupMemberships::UserId)
+        .col(UserGroupMemberships::UserGroupCode)
+        .unique()
         .to_owned()
 }
 

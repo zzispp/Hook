@@ -3,7 +3,7 @@
 import type { SystemUser } from 'src/types/rbac';
 import type { UserGroup } from 'src/types/user-group';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { useUsers, updateUser } from 'src/actions/rbac';
@@ -27,7 +27,7 @@ type AssignmentSubmitInput = {
   close: VoidFunction;
   canSubmit: boolean;
   onAssigned: VoidFunction;
-  targetGroupCode: string;
+  targetGroupCodes: string[];
   setSubmitting: (value: boolean) => void;
 };
 
@@ -37,28 +37,36 @@ export function useUserGroupAssignmentDialogState(input: AssignmentStateInput) {
   const { t } = useTranslate('admin');
   const [search, setSearch] = useState('');
   const [user, setUser] = useState<SystemUser | null>(null);
-  const [targetCode, setTargetCode] = useState('');
+  const [targetCodes, setTargetCodes] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const usersPage = input.initialGroup ? 0 : -1;
   const users = useUsers(usersPage, USER_SEARCH_PAGE_SIZE, { search: search.trim() || undefined });
-  const targetGroups = withInitialGroup(input.groups, input.initialGroup);
+  const targetGroups = mergeGroups(withInitialGroup(input.groups, input.initialGroup), groupsForUser(input.displayGroups, user));
   const visibleGroups = mergeGroups(input.displayGroups, targetGroups);
-  const targetGroupCode = targetCode || input.initialGroup?.code || '';
-  const canSubmit = Boolean(user && targetGroupCode && user.group_code !== targetGroupCode);
+  const targetGroupCodes = targetCodes;
+  const canSubmit = Boolean(user && targetGroupCodes.length > 0 && !sameCodes(user.group_codes, targetGroupCodes));
+
+  useEffect(() => {
+    setTargetCodes(defaultTargetCodes(user, input.initialGroup));
+  }, [input.initialGroup, user]);
 
   const close = useCallback(() => {
     setSearch('');
     setUser(null);
-    setTargetCode('');
+    setTargetCodes([]);
     input.onClose();
   }, [input]);
+
+  const selectUser = useCallback((nextUser: SystemUser | null) => {
+    setUser(nextUser);
+  }, []);
 
   const submit = useAssignmentSubmit({
     t,
     user,
     close,
     canSubmit,
-    targetGroupCode,
+    targetGroupCodes,
     setSubmitting,
     onAssigned: input.onAssigned,
   });
@@ -69,7 +77,7 @@ export function useUserGroupAssignmentDialogState(input: AssignmentStateInput) {
     search,
     close,
     submit,
-    setUser,
+    setUser: selectUser,
     canSubmit,
     submitting,
     setSearch,
@@ -77,8 +85,8 @@ export function useUserGroupAssignmentDialogState(input: AssignmentStateInput) {
     visibleGroups,
     usersLoading: users.isLoading,
     users: assignableUsers(users.items),
-    setTargetCode,
-    targetGroupCode,
+    setTargetCodes,
+    targetGroupCodes,
   };
 }
 
@@ -88,14 +96,14 @@ function useAssignmentSubmit({
   close,
   canSubmit,
   onAssigned,
-  targetGroupCode,
+  targetGroupCodes,
   setSubmitting,
 }: AssignmentSubmitInput) {
   return useCallback(async () => {
     if (!user || !canSubmit) return;
     setSubmitting(true);
     try {
-      await updateUser(user.id, userGroupPayload(user, targetGroupCode));
+      await updateUser(user.id, userGroupPayload(user, targetGroupCodes));
       await mutateUserGroupResources();
       toast.success(t('messages.userGroupAssignmentUpdated'));
       onAssigned();
@@ -105,11 +113,35 @@ function useAssignmentSubmit({
     } finally {
       setSubmitting(false);
     }
-  }, [canSubmit, close, onAssigned, setSubmitting, t, targetGroupCode, user]);
+  }, [canSubmit, close, onAssigned, setSubmitting, t, targetGroupCodes, user]);
 }
 
-function userGroupPayload(user: SystemUser, targetGroupCode: string) {
-  return formToPayload({ ...formFromUser(user), group_code: targetGroupCode });
+function userGroupPayload(user: SystemUser, targetGroupCodes: string[]) {
+  return formToPayload({
+    ...formFromUser(user),
+    group_codes: targetGroupCodes,
+  });
+}
+
+function defaultTargetCodes(user: SystemUser | null, initialGroup: UserGroup | null) {
+  const codes = user?.group_codes ?? [];
+  if (!initialGroup) {
+    return codes;
+  }
+  return uniqueCodes([...codes, initialGroup.code]);
+}
+
+function groupsForUser(groups: UserGroup[], user: SystemUser | null) {
+  const codes = new Set(user?.group_codes ?? []);
+  return groups.filter((group) => codes.has(group.code));
+}
+
+function sameCodes(left: string[], right: string[]) {
+  return left.length === right.length && left.every((code) => right.includes(code));
+}
+
+function uniqueCodes(codes: string[]) {
+  return [...new Set(codes)];
 }
 
 function withInitialGroup(groups: UserGroup[], initialGroup: UserGroup | null) {

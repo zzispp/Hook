@@ -624,15 +624,15 @@ fn collect_openai_response_output_item_for_gemini(item: &Value, parts: &mut Vec<
             .or_else(|| item.get("url").and_then(Value::as_str))
             .map(str::trim)
             .filter(|value| !value.is_empty());
-        if let Some(image_url) = image_url {
-            if let Some((mime_type, data)) = parse_data_url(image_url) {
-                parts.push(json!({
-                    "inlineData": {
-                        "mimeType": mime_type,
-                        "data": data,
-                    }
-                }));
-            }
+        if let Some(image_url) = image_url
+            && let Some((mime_type, data)) = parse_data_url(image_url)
+        {
+            parts.push(json!({
+                "inlineData": {
+                    "mimeType": mime_type,
+                    "data": data,
+                }
+            }));
         }
     }
 }

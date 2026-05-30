@@ -84,6 +84,9 @@ impl FormatConversionRegistry {
         if require_stream {
             return source.is_stream_convertible() && target.is_stream_convertible();
         }
+        if source == ApiFormat::OpenAiChat && target == ApiFormat::OpenAiResponsesCompact {
+            return true;
+        }
         let Ok(source_id) = source.as_format_id() else {
             return false;
         };

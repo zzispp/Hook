@@ -403,23 +403,24 @@ impl ClaudeClientEmitter {
             ClaudeOpenBlock::Text { block_index } => block_index,
             ClaudeOpenBlock::Thinking { block_index } => block_index,
             ClaudeOpenBlock::Tool { tool_index, block_index } => {
-                if let Some(state) = self.tool_states.get_mut(&tool_index) {
-                    if state.name == "Read" && !state.buffered_arguments.is_empty() {
-                        let arguments = remove_empty_pages_from_tool_arguments(&state.name, &state.buffered_arguments);
-                        state.buffered_arguments.clear();
-                        if !arguments.is_empty() {
-                            out.extend(encode_json_sse(
-                                Some("content_block_delta"),
-                                &json!({
-                                    "type": "content_block_delta",
-                                    "index": block_index,
-                                    "delta": {
-                                        "type": "input_json_delta",
-                                        "partial_json": arguments,
-                                    }
-                                }),
-                            )?);
-                        }
+                if let Some(state) = self.tool_states.get_mut(&tool_index)
+                    && state.name == "Read"
+                    && !state.buffered_arguments.is_empty()
+                {
+                    let arguments = remove_empty_pages_from_tool_arguments(&state.name, &state.buffered_arguments);
+                    state.buffered_arguments.clear();
+                    if !arguments.is_empty() {
+                        out.extend(encode_json_sse(
+                            Some("content_block_delta"),
+                            &json!({
+                                "type": "content_block_delta",
+                                "index": block_index,
+                                "delta": {
+                                    "type": "input_json_delta",
+                                    "partial_json": arguments,
+                                }
+                            }),
+                        )?);
                     }
                 }
                 block_index
@@ -487,10 +488,9 @@ impl ClaudeClientEmitter {
             tool_index: current_tool_index,
             ..
         }) = self.open_block
+            && current_tool_index == tool_index
         {
-            if current_tool_index == tool_index {
-                return Ok(out);
-            }
+            return Ok(out);
         }
         out.extend(self.close_open_block()?);
         let block_index = self.tool_block_indices.get(&tool_index).copied().unwrap_or_else(|| {

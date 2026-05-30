@@ -45,4 +45,4 @@ export type BillingGroupOption = {
 
 export type TokenModelOption = Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>;
 
-export type UserOption = Pick<SystemUser, 'id' | 'username' | 'email' | 'group_code' | 'system'>;
+export type UserOption = Pick<SystemUser, 'id' | 'username' | 'email' | 'group_codes' | 'system'>;

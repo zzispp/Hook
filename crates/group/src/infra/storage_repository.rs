@@ -96,9 +96,9 @@ impl GroupRepository for StorageGroupRepository {
             .map_err(storage_error)
     }
 
-    async fn active_groups_for_user_group(&self, user_group_code: &str) -> GroupResult<Vec<BillingGroupResponse>> {
+    async fn active_groups_for_user_groups(&self, user_group_codes: &[String]) -> GroupResult<Vec<BillingGroupResponse>> {
         self.store
-            .active_groups_for_user_group(user_group_code)
+            .active_groups_for_user_groups(user_group_codes)
             .await
             .map(|groups| groups.into_iter().map(Into::into).collect())
             .map_err(storage_error)

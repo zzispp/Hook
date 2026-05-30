@@ -84,6 +84,7 @@ pub struct SystemSettingsSmtpRecord {
 }
 
 pub struct SystemSettingsAuthProviderRecord {
+    pub public_base_url: String,
     pub auth_github_enabled: bool,
     pub auth_github_client_id: String,
     pub encrypted_auth_github_client_secret: String,

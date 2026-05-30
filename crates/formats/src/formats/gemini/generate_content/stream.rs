@@ -141,17 +141,15 @@ impl GeminiProviderState {
                             },
                         });
                     }
-                    if is_reasoning {
-                        if let Some(signature) = reasoning_signature.as_ref() {
-                            let previous_signature = self.reasoning_signatures.entry(index).or_default();
-                            if previous_signature.as_str() != signature.as_str() {
-                                *previous_signature = signature.clone();
-                                out.push(CanonicalStreamFrame {
-                                    id: id.clone(),
-                                    model: model.clone(),
-                                    event: CanonicalStreamEvent::ReasoningSignature(signature.clone()),
-                                });
-                            }
+                    if is_reasoning && let Some(signature) = reasoning_signature.as_ref() {
+                        let previous_signature = self.reasoning_signatures.entry(index).or_default();
+                        if previous_signature.as_str() != signature.as_str() {
+                            *previous_signature = signature.clone();
+                            out.push(CanonicalStreamFrame {
+                                id: id.clone(),
+                                model: model.clone(),
+                                event: CanonicalStreamEvent::ReasoningSignature(signature.clone()),
+                            });
                         }
                     }
                     continue;

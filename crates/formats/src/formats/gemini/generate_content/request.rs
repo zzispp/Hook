@@ -590,11 +590,11 @@ fn compact_gemini_contents(contents: Vec<Value>) -> Vec<Value> {
         }
         if let Some(last) = compact.last_mut() {
             let last_role = last.get("role").and_then(Value::as_str).unwrap_or_default();
-            if last_role == role {
-                if let Some(last_parts) = last.as_object_mut().and_then(|object| object.get_mut("parts")).and_then(Value::as_array_mut) {
-                    last_parts.extend(parts);
-                    continue;
-                }
+            if last_role == role
+                && let Some(last_parts) = last.as_object_mut().and_then(|object| object.get_mut("parts")).and_then(Value::as_array_mut)
+            {
+                last_parts.extend(parts);
+                continue;
             }
         }
         compact.push(json!({

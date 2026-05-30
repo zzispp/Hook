@@ -341,10 +341,10 @@ fn apply_local_body_rules_inner(body: &mut Value, rules: Option<&Value>, origina
                         reverse: false,
                     },
                 ) {
-                    if let Some(target) = get_nested_value_mut(body, &target_path) {
-                        if let Some(values) = target.as_array_mut() {
-                            values.push(value.clone());
-                        }
+                    if let Some(target) = get_nested_value_mut(body, &target_path)
+                        && let Some(values) = target.as_array_mut()
+                    {
+                        values.push(value.clone());
                     }
                 }
             }
@@ -359,11 +359,11 @@ fn apply_local_body_rules_inner(body: &mut Value, rules: Option<&Value>, origina
                     continue;
                 }
                 let value = rule.get("value").cloned().unwrap_or(Value::Null);
-                if let Some(target) = get_nested_value_mut(body, &path) {
-                    if let Some(values) = target.as_array_mut() {
-                        let insert_index = normalize_insert_index(values.len(), index);
-                        values.insert(insert_index, value);
-                    }
+                if let Some(target) = get_nested_value_mut(body, &path)
+                    && let Some(values) = target.as_array_mut()
+                {
+                    let insert_index = normalize_insert_index(values.len(), index);
+                    values.insert(insert_index, value);
                 }
             }
             Some("regex_replace") => {

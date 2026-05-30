@@ -201,7 +201,7 @@ mod tests {
             id: "user_1".into(),
             username: "admin".into(),
             role: "admin".into(),
-            group_code: "default".into(),
+            group_codes: vec!["default".into()],
             system,
         }
     }

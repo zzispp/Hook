@@ -41,6 +41,7 @@ impl SettingStore {
     pub async fn get_auth_provider_settings(&self) -> StorageResult<SystemSettingsAuthProviderRecord> {
         let record = self.get_system_settings_record().await?;
         Ok(SystemSettingsAuthProviderRecord {
+            public_base_url: record.public_base_url,
             auth_github_enabled: record.auth_github_enabled,
             auth_github_client_id: record.auth_github_client_id,
             encrypted_auth_github_client_secret: record.encrypted_auth_github_client_secret,

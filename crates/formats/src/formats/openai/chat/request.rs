@@ -147,8 +147,8 @@ pub fn to_raw(canonical: &CanonicalRequest) -> Value {
     if let Some(response_format) = &canonical.response_format {
         output.insert("response_format".to_string(), canonical_response_format_to_openai(response_format));
     }
-    if let Some(thinking) = &canonical.thinking {
-        if let Some(reasoning_effort) = thinking
+    if let Some(thinking) = &canonical.thinking
+        && let Some(reasoning_effort) = thinking
             .extensions
             .get("openai")
             .and_then(|value| value.get("reasoning_effort"))
@@ -158,9 +158,8 @@ pub fn to_raw(canonical: &CanonicalRequest) -> Value {
                     .and_then(|value| value.get("effort"))
                     .and_then(Value::as_str)
             })
-        {
-            output.insert("reasoning_effort".to_string(), Value::String(reasoning_effort.to_string()));
-        }
+    {
+        output.insert("reasoning_effort".to_string(), Value::String(reasoning_effort.to_string()));
     }
     output.extend(namespace_extension_object(&canonical.extensions, "openai", &output));
     output.extend(namespace_extension_object(&canonical.extensions, OPENAI_RESPONSES_EXTENSION_NAMESPACE, &output));

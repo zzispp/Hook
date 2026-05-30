@@ -8,11 +8,11 @@ use axum::{
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use std::collections::{HashMap, HashSet};
 use storage::{
-    Database,
+    Database, StorageError,
     api_token::api_token_records,
     model::global_models,
     provider::record::{provider_api_keys, provider_endpoints, providers},
-    user::{UserColumn, UserEntity, UserRecord},
+    user::UserStore,
 };
 use time::OffsetDateTime;
 use types::{
@@ -20,6 +20,7 @@ use types::{
     cache_monitoring::{CacheAffinityItem, CacheAffinityListRequest},
     pagination::Page,
     response::{ApiErrorResponse, ApiResponse},
+    user::User,
 };
 
 use crate::llm_proxy::{AffinityEntry, ClearAffinityInput, LlmProxyError, LlmProxyState};
@@ -47,7 +48,7 @@ pub enum CacheMonitoringApiError {
 #[derive(Default)]
 struct AffinityLookups {
     tokens: HashMap<String, api_token_records::Model>,
-    users: HashMap<String, UserRecord>,
+    users: HashMap<String, User>,
     providers: HashMap<String, providers::Model>,
     endpoints: HashMap<String, provider_endpoints::Model>,
     keys: HashMap<String, provider_api_keys::Model>,
@@ -129,7 +130,11 @@ async fn load_lookups(database: &Database, entries: &[AffinityEntry]) -> ApiResu
 
     Ok(AffinityLookups {
         tokens: token_rows.into_iter().map(|record| (record.id.clone(), record)).collect(),
-        users: find_users(db, user_ids).await?.into_iter().map(|record| (record.id.clone(), record)).collect(),
+        users: find_users(database, user_ids)
+            .await?
+            .into_iter()
+            .map(|user| (user.id.0.clone(), user))
+            .collect(),
         providers: find_providers(db, provider_ids)
             .await?
             .into_iter()
@@ -265,7 +270,7 @@ fn model_name(record: &global_models::Model) -> String {
 
 fn resolve_owner(
     user_id: Option<&str>,
-    users: &HashMap<String, UserRecord>,
+    users: &HashMap<String, User>,
     system_owner: Option<&(String, ApiTokenOwnerResponse)>,
 ) -> Option<ApiTokenOwnerResponse> {
     let user_id = user_id?;
@@ -277,7 +282,7 @@ fn resolve_owner(
     users.get(user_id).map(|record| ApiTokenOwnerResponse {
         username: record.username.clone(),
         email: record.email.clone(),
-        group_code: record.group_code.clone(),
+        group_codes: record.group_codes.clone(),
     })
 }
 
@@ -288,8 +293,8 @@ fn ok<T>(data: T) -> ApiJson<T> {
 async fn find_tokens(db: &sea_orm::DatabaseConnection, ids: HashSet<String>) -> Result<Vec<api_token_records::Model>, sea_orm::DbErr> {
     find_by_ids(ids, api_token_records::Entity::find, api_token_records::Column::Id, db).await
 }
-async fn find_users(db: &sea_orm::DatabaseConnection, ids: HashSet<String>) -> Result<Vec<UserRecord>, sea_orm::DbErr> {
-    find_by_ids(ids, UserEntity::find, UserColumn::Id, db).await
+async fn find_users(database: &Database, ids: HashSet<String>) -> Result<Vec<User>, StorageError> {
+    UserStore::new(database.clone()).find_by_ids(&ids.into_iter().collect::<Vec<_>>()).await
 }
 async fn find_providers(db: &sea_orm::DatabaseConnection, ids: HashSet<String>) -> Result<Vec<providers::Model>, sea_orm::DbErr> {
     find_by_ids(ids, providers::Entity::find, providers::Column::Id, db).await
@@ -318,6 +323,12 @@ where
 
 impl From<sea_orm::DbErr> for CacheMonitoringApiError {
     fn from(value: sea_orm::DbErr) -> Self {
+        Self::Internal(value.to_string())
+    }
+}
+
+impl From<StorageError> for CacheMonitoringApiError {
+    fn from(value: StorageError) -> Self {
         Self::Internal(value.to_string())
     }
 }

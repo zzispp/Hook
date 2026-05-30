@@ -9,7 +9,7 @@ pub use api::{
 };
 pub use auth_api::{
     AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProfileResponse, AuthConfigResponse, AuthProviderConfigResponse, AuthSessionData,
-    OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse, OAuthProviderPublicConfig, OAuthStartQuery, OAuthStartResponse, WalletCompletePayload,
+    OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse, OAuthProviderPublicConfig, OAuthStartResponse, WalletCompletePayload,
     WalletEmailCodePayload, WalletNoncePayload, WalletNonceResponse, WalletProviderPublicConfig, WalletSignInPayload, WalletSignInResponse,
 };
 pub use core::{

@@ -72,15 +72,29 @@ where
         self.repository.list_groups(request).await
     }
 
-    async fn available_groups(&self, user_group_code: &str) -> GroupResult<Vec<BillingGroupResponse>> {
-        if !self.user_groups.active_user_group_exists(user_group_code).await? {
+    async fn available_groups(&self, user_group_codes: &[String]) -> GroupResult<Vec<BillingGroupResponse>> {
+        let active_user_group_codes = active_user_group_codes(&self.user_groups, user_group_codes).await?;
+        if active_user_group_codes.is_empty() {
             return Ok(Vec::new());
         }
         self.repository
-            .active_groups_for_user_group(user_group_code)
+            .active_groups_for_user_groups(&active_user_group_codes)
             .await
             .map(sanitize_available_groups)
     }
+}
+
+async fn active_user_group_codes<U>(user_groups: &U, codes: &[String]) -> GroupResult<Vec<String>>
+where
+    U: GroupUserGroupCatalog,
+{
+    let mut active = Vec::new();
+    for code in codes {
+        if user_groups.active_user_group_exists(code).await? {
+            active.push(code.clone());
+        }
+    }
+    Ok(active)
 }
 
 fn sanitize_available_groups(groups: Vec<BillingGroupResponse>) -> Vec<BillingGroupResponse> {

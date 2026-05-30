@@ -15,10 +15,7 @@ async fn oauth_verified_email_without_user_creates_passwordless_user() {
     let service = test_service(repository.clone(), TestOAuthClient::with_profile(github_profile("new@example.com")));
 
     let state = oauth_state(&service).await;
-    let result = service
-        .oauth_callback(IdentityProvider::Github, "oauth-code".into(), state, redirect_uri())
-        .await
-        .unwrap();
+    let result = service.oauth_callback(IdentityProvider::Github, "oauth-code".into(), state).await.unwrap();
 
     let OAuthSignInResult::Authenticated(user) = result else {
         panic!("expected authenticated OAuth result");
@@ -27,6 +24,16 @@ async fn oauth_verified_email_without_user_creates_passwordless_user() {
     assert!(!user.password_set);
     assert_eq!(repository.created_records()[0].password_hash, None);
     assert_eq!(repository.identities()[0].provider, IdentityProvider::Github);
+}
+
+#[tokio::test]
+async fn oauth_start_uses_public_base_url_callback() {
+    let service = test_service(MemoryUserRepository::default(), TestOAuthClient::default());
+
+    let url = service.oauth_start(IdentityProvider::Github).await.unwrap();
+    let encoded_redirect = redirect_uri().replace(':', "%3A").replace('/', "%2F");
+
+    assert!(url.contains(&format!("redirect_uri={encoded_redirect}")));
 }
 
 #[tokio::test]
@@ -72,7 +79,7 @@ async fn oauth_rejects_unverified_provider_email() {
     let service = test_service(MemoryUserRepository::default(), TestOAuthClient::with_profile(profile));
 
     let result = service
-        .oauth_callback(IdentityProvider::Github, "oauth-code".into(), oauth_state(&service).await, redirect_uri())
+        .oauth_callback(IdentityProvider::Github, "oauth-code".into(), oauth_state(&service).await)
         .await;
 
     assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "verified provider email is required"));
@@ -187,12 +194,12 @@ async fn wallet_existing_identity_signs_in_without_email() {
 }
 
 async fn oauth_state(service: &impl UserUseCase) -> String {
-    state_from_url(&service.oauth_start(IdentityProvider::Github, redirect_uri()).await.unwrap())
+    state_from_url(&service.oauth_start(IdentityProvider::Github).await.unwrap())
 }
 
 async fn oauth_callback(service: &impl UserUseCase) -> OAuthSignInResult {
     service
-        .oauth_callback(IdentityProvider::Github, "oauth-code".into(), oauth_state(service).await, redirect_uri())
+        .oauth_callback(IdentityProvider::Github, "oauth-code".into(), oauth_state(service).await)
         .await
         .unwrap()
 }

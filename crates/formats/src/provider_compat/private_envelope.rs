@@ -136,10 +136,10 @@ fn transform_provider_private_stream_line_with_event_state(
         GEMINI_CLI_V1INTERNAL_ENVELOPE_NAME => body.get("response").cloned().unwrap_or(body),
         ANTIGRAVITY_V1INTERNAL_ENVELOPE_NAME => {
             let mut response = body.get("response").cloned().unwrap_or(body.clone());
-            if let Some(response_id) = body.get("responseId").cloned() {
-                if let Some(object) = response.as_object_mut() {
-                    object.entry("_v1internal_response_id".to_string()).or_insert(response_id);
-                }
+            if let Some(response_id) = body.get("responseId").cloned()
+                && let Some(object) = response.as_object_mut()
+            {
+                object.entry("_v1internal_response_id".to_string()).or_insert(response_id);
             }
             inject_antigravity_stream_tool_ids(&mut response);
             response
@@ -274,10 +274,10 @@ pub fn maybe_build_provider_private_stream_normalizer<'a>(report_context: Option
 }
 
 pub fn extract_provider_private_stream_error_body(report_context: Option<&Value>, body: &[u8]) -> Option<Value> {
-    if report_context.is_none_or(report_context_is_windsurf_envelope) {
-        if let Some(error_body) = extract_windsurf_connect_json_error_body(body) {
-            return Some(error_body);
-        }
+    if report_context.is_none_or(report_context_is_windsurf_envelope)
+        && let Some(error_body) = extract_windsurf_connect_json_error_body(body)
+    {
+        return Some(error_body);
     }
 
     extract_stream_error_event_body(body)
@@ -521,12 +521,11 @@ fn extract_stream_error_event_body(body: &[u8]) -> Option<Value> {
         let Ok(mut event) = serde_json::from_str::<Value>(data_line) else {
             continue;
         };
-        if let Some(event_object) = event.as_object_mut() {
-            if !event_object.contains_key("type") {
-                if let Some(event_name) = current_event_type.take() {
-                    event_object.insert("type".to_string(), Value::String(event_name));
-                }
-            }
+        if let Some(event_object) = event.as_object_mut()
+            && !event_object.contains_key("type")
+            && let Some(event_name) = current_event_type.take()
+        {
+            event_object.insert("type".to_string(), Value::String(event_name));
         }
         if event
             .get("type")
@@ -547,18 +546,16 @@ fn normalize_provider_private_error_body(error: Value) -> Value {
         serde_json::json!({ "error": error })
     };
 
-    if let Some(error_object) = error.get_mut("error").and_then(Value::as_object_mut) {
-        if !error_object.contains_key("type") {
-            if let Some(kind) = error_object
-                .get("code")
-                .or_else(|| error_object.get("status"))
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-            {
-                error_object.insert("type".to_string(), Value::String(kind.to_string()));
-            }
-        }
+    if let Some(error_object) = error.get_mut("error").and_then(Value::as_object_mut)
+        && !error_object.contains_key("type")
+        && let Some(kind) = error_object
+            .get("code")
+            .or_else(|| error_object.get("status"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+    {
+        error_object.insert("type".to_string(), Value::String(kind.to_string()));
     }
 
     error
@@ -680,12 +677,11 @@ fn postprocess_private_response_value(data: &mut Value, report_context: &Value) 
     ) {
         return;
     }
-    if let Some(object) = data.as_object_mut() {
-        if !object.contains_key("_v1internal_response_id") {
-            if let Some(response_id) = object.remove("responseId") {
-                object.insert("_v1internal_response_id".to_string(), response_id);
-            }
-        }
+    if let Some(object) = data.as_object_mut()
+        && !object.contains_key("_v1internal_response_id")
+        && let Some(response_id) = object.remove("responseId")
+    {
+        object.insert("_v1internal_response_id".to_string(), response_id);
     }
     inject_antigravity_sync_tool_ids(data, local_finalize_response_model(report_context));
 }

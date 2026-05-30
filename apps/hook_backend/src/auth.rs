@@ -84,7 +84,7 @@ fn current_user(user: User) -> CurrentUser {
         id: user.id.0,
         username: user.username,
         role: user.role,
-        group_code: user.group_code,
+        group_codes: user.group_codes,
     }
 }
 

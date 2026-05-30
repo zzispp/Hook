@@ -155,6 +155,7 @@ where
     G: InitialGrantLedger,
     W: UserWalletCatalog,
 {
+    #[allow(clippy::type_complexity)]
     pub fn with_password_reset<NC, NM>(
         self,
         password_reset_config: NC,
@@ -179,6 +180,7 @@ where
         }
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn with_registration_email<NE, NN, NK>(
         self,
         registration_email_config: NE,
@@ -204,6 +206,7 @@ where
         }
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn with_social_auth<NA, NO, NT, NY>(
         self,
         auth_provider_config: NA,
@@ -272,7 +275,7 @@ where
             email: input.email,
             email_verified,
             role: input.role,
-            group_code: input.group_code.unwrap_or_default(),
+            group_codes: input.group_codes.unwrap_or_default(),
             is_active: input.is_active,
             allowed_model_ids: input.allowed_model_ids,
             allowed_provider_ids: input.allowed_provider_ids,
@@ -288,7 +291,7 @@ where
             email: input.email,
             email_verified: None,
             role: input.role,
-            group_code: input.group_code,
+            group_codes: input.group_codes,
             is_active: input.is_active,
             allowed_model_ids: input.allowed_model_ids,
             allowed_provider_ids: input.allowed_provider_ids,
@@ -303,8 +306,8 @@ where
 }
 
 fn with_default_user_group(mut input: NewUser, default_user_group_code: &str) -> NewUser {
-    if input.group_code.is_none() {
-        input.group_code = Some(default_user_group_code.to_owned());
+    if input.group_codes.is_none() {
+        input.group_codes = Some(vec![default_user_group_code.to_owned()]);
     }
     input
 }
@@ -316,7 +319,7 @@ fn provider_user_record(input: NewUser, email_verified: Option<bool>) -> Replace
         email: input.email,
         email_verified,
         role: input.role,
-        group_code: input.group_code.unwrap_or_default(),
+        group_codes: input.group_codes.unwrap_or_default(),
         is_active: input.is_active,
         allowed_model_ids: input.allowed_model_ids,
         allowed_provider_ids: input.allowed_provider_ids,

@@ -75,7 +75,7 @@ pub(super) fn test_service_with_codes(repository: MemoryUserRepository, codes: T
 }
 
 pub(super) fn redirect_uri() -> String {
-    "https://app.example.com/api/auth/oauth/github/callback".into()
+    "https://app.example.com/auth/oauth/callback/github".into()
 }
 
 pub(super) fn state_from_url(url: &str) -> String {
@@ -113,6 +113,7 @@ impl Default for TestAuthProviderConfig {
                 enabled: true,
                 client_id: "client-id".into(),
                 client_secret: "client-secret".into(),
+                public_base_url: "https://app.example.com".into(),
             },
             wallet: WalletProviderSettings {
                 evm_enabled: true,

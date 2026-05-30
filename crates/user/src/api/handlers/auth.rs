@@ -5,9 +5,9 @@ use axum::{
 };
 use constants::auth::{DEFAULT_USER_IS_ACTIVE, DEFAULT_USER_ROLE};
 use types::user::{
-    AuthConfigResponse, NewUser, OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse, OAuthStartQuery, OAuthStartResponse,
-    PasswordResetConfirmPayload, PasswordResetRequestPayload, RefreshTokenPayload, RegistrationEmailCodePayload, SignInPayload, SignUpPayload, SignUpUser,
-    USER_QUOTA_MODE_WALLET, WalletCompletePayload, WalletEmailCodePayload, WalletNoncePayload, WalletNonceResponse, WalletSignInPayload, WalletSignInResponse,
+    AuthConfigResponse, NewUser, OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse, OAuthStartResponse, PasswordResetConfirmPayload,
+    PasswordResetRequestPayload, RefreshTokenPayload, RegistrationEmailCodePayload, SignInPayload, SignUpPayload, SignUpUser, USER_QUOTA_MODE_WALLET,
+    WalletCompletePayload, WalletEmailCodePayload, WalletNoncePayload, WalletNonceResponse, WalletSignInPayload, WalletSignInResponse,
 };
 
 use crate::api::{ApiState, handlers::shared::*};
@@ -36,15 +36,9 @@ pub async fn sign_in(State(state): State<ApiState>, Json(payload): Json<SignInPa
     Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
 }
 
-pub async fn oauth_start(
-    State(state): State<ApiState>,
-    Path(provider): Path<String>,
-    Query(query): Query<OAuthStartQuery>,
-    headers: HeaderMap,
-) -> ApiResult<ApiJson<OAuthStartResponse>> {
+pub async fn oauth_start(State(state): State<ApiState>, Path(provider): Path<String>) -> ApiResult<ApiJson<OAuthStartResponse>> {
     let provider = parse_provider(&provider)?;
-    let redirect_uri = query.redirect_uri.unwrap_or(oauth_redirect_uri(&headers, provider)?);
-    let authorization_url = state.users.oauth_start(provider, redirect_uri).await?;
+    let authorization_url = state.users.oauth_start(provider).await?;
     Ok(ok(OAuthStartResponse { authorization_url }))
 }
 
@@ -52,15 +46,14 @@ pub async fn oauth_callback(
     State(state): State<ApiState>,
     Path(provider): Path<String>,
     Query(query): Query<OAuthCallbackQuery>,
-    headers: HeaderMap,
 ) -> ApiResult<ApiJson<OAuthCallbackResponse>> {
     let provider = parse_provider(&provider)?;
-    let redirect_uri = query.redirect_uri.unwrap_or(oauth_redirect_uri(&headers, provider)?);
-    let result = state.users.oauth_callback(provider, query.code, query.state, redirect_uri).await?;
+    let result = state.users.oauth_callback(provider, query.code, query.state).await?;
     match result {
         crate::application::OAuthSignInResult::Authenticated(user) => {
+            let user = *user;
             let tokens = state.tokens.issue_pair(user.id.clone())?;
-            Ok(ok(OAuthCallbackResponse::Authenticated(new_auth_session_data(user.into(), tokens))))
+            Ok(ok(OAuthCallbackResponse::Authenticated(Box::new(new_auth_session_data(user.into(), tokens)))))
         }
         crate::application::OAuthSignInResult::BindingRequired {
             ticket,
@@ -117,8 +110,9 @@ pub async fn wallet_sign_in(State(state): State<ApiState>, Json(payload): Json<W
         .await?;
     match result {
         crate::application::WalletSignInResult::Authenticated(user) => {
+            let user = *user;
             let tokens = state.tokens.issue_pair(user.id.clone())?;
-            Ok(ok(WalletSignInResponse::Authenticated(new_auth_session_data(user.into(), tokens))))
+            Ok(ok(WalletSignInResponse::Authenticated(Box::new(new_auth_session_data(user.into(), tokens)))))
         }
         crate::application::WalletSignInResult::EmailRequired { ticket, provider, address } => Ok(ok(WalletSignInResponse::EmailRequired {
             wallet_ticket: ticket,
@@ -175,7 +169,7 @@ fn new_sign_up_user(payload: SignUpPayload) -> SignUpUser {
             password: payload.password,
             email: payload.email,
             role: DEFAULT_USER_ROLE.into(),
-            group_code: None,
+            group_codes: None,
             is_active: DEFAULT_USER_IS_ACTIVE,
             allowed_model_ids: Vec::new(),
             allowed_provider_ids: Vec::new(),

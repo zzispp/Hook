@@ -32,11 +32,13 @@ where
                 enabled: settings.auth_github_enabled,
                 client_id: settings.auth_github_client_id,
                 client_secret: decrypt_secret(&self.cipher, &settings.encrypted_auth_github_client_secret)?,
+                public_base_url: settings.public_base_url,
             }),
             IdentityProvider::Google => Ok(OAuthProviderSettings {
                 enabled: settings.auth_google_enabled,
                 client_id: settings.auth_google_client_id,
                 client_secret: decrypt_secret(&self.cipher, &settings.encrypted_auth_google_client_secret)?,
+                public_base_url: settings.public_base_url,
             }),
             _ => Err(AppError::InvalidInput("OAuth provider is invalid".into())),
         }

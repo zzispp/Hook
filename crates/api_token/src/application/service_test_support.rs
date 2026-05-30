@@ -273,9 +273,9 @@ impl UserCatalog for ExistingUsers {
         Ok(self.ids.iter().any(|existing| existing == id))
     }
 
-    async fn user_group_code(&self, id: &str) -> ApiTokenResult<Option<String>> {
+    async fn user_group_codes(&self, id: &str) -> ApiTokenResult<Option<Vec<String>>> {
         if id == SYSTEM_ACTOR_ID || self.ids.iter().any(|existing| existing == id) {
-            return Ok(Some(constants::user_group::DEFAULT_USER_GROUP_CODE.into()));
+            return Ok(Some(vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()]));
         }
         Ok(None)
     }
@@ -290,7 +290,7 @@ impl UserCatalog for ExistingUsers {
                     ApiTokenOwnerResponse {
                         username: id.clone(),
                         email: format!("{id}@example.test"),
-                        group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+                        group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
                     },
                 )
             })

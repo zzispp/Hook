@@ -138,11 +138,11 @@ impl KiroClaudeStreamState {
                 }
 
                 let keep = "<thinking>".len();
-                if let Some((safe, remaining)) = split_preserving_trailing_bytes(&self.thinking_buffer, keep) {
-                    if !safe.trim().is_empty() {
-                        events.extend(self.emit_text_delta(&safe));
-                        self.thinking_buffer = remaining;
-                    }
+                if let Some((safe, remaining)) = split_preserving_trailing_bytes(&self.thinking_buffer, keep)
+                    && !safe.trim().is_empty()
+                {
+                    events.extend(self.emit_text_delta(&safe));
+                    self.thinking_buffer = remaining;
                 }
                 break;
             }
@@ -170,11 +170,11 @@ impl KiroClaudeStreamState {
                 }
 
                 let keep = "</thinking>".len();
-                if let Some((safe, remaining)) = split_preserving_trailing_bytes(&self.thinking_buffer, keep) {
-                    if !safe.is_empty() {
-                        events.extend(self.emit_thinking_delta(&safe));
-                        self.thinking_buffer = remaining;
-                    }
+                if let Some((safe, remaining)) = split_preserving_trailing_bytes(&self.thinking_buffer, keep)
+                    && !safe.is_empty()
+                {
+                    events.extend(self.emit_thinking_delta(&safe));
+                    self.thinking_buffer = remaining;
                 }
                 break;
             }

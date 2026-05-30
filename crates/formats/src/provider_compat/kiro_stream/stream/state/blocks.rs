@@ -4,10 +4,10 @@ use super::super::KiroClaudeStreamState;
 
 impl KiroClaudeStreamState {
     pub(super) fn ensure_text_block_open(&mut self) -> Vec<Value> {
-        if let Some(idx) = self.text_block_index {
-            if self.open_blocks.get(&idx).map(|value| value == "text").unwrap_or(false) {
-                return Vec::new();
-            }
+        if let Some(idx) = self.text_block_index
+            && self.open_blocks.get(&idx).map(|value| value == "text").unwrap_or(false)
+        {
+            return Vec::new();
         }
         let idx = self.next_block_index;
         self.next_block_index += 1;
@@ -21,10 +21,10 @@ impl KiroClaudeStreamState {
     }
 
     pub(super) fn ensure_thinking_block_open(&mut self) -> Vec<Value> {
-        if let Some(idx) = self.thinking_block_index {
-            if self.open_blocks.get(&idx).map(|value| value == "thinking").unwrap_or(false) {
-                return Vec::new();
-            }
+        if let Some(idx) = self.thinking_block_index
+            && self.open_blocks.get(&idx).map(|value| value == "thinking").unwrap_or(false)
+        {
+            return Vec::new();
         }
         let idx = self.next_block_index;
         self.next_block_index += 1;

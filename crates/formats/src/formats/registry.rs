@@ -100,10 +100,10 @@ pub fn emit_response(target_format: &str, response: &CanonicalResponse, ctx: &Fo
 
 pub fn convert_response(source_format: &str, target_format: &str, body: &Value, ctx: &FormatContext) -> Result<Value, FormatError> {
     let mut response = parse_response(source_format, body, ctx)?;
-    if response.model.trim().is_empty() || response.model == "unknown" {
-        if let Some(mapped_model) = ctx.mapped_model.as_deref().filter(|value| !value.trim().is_empty()) {
-            response.model = mapped_model.to_string();
-        }
+    if (response.model.trim().is_empty() || response.model == "unknown")
+        && let Some(mapped_model) = ctx.mapped_model.as_deref().filter(|value| !value.trim().is_empty())
+    {
+        response.model = mapped_model.to_string();
     }
     emit_response(target_format, &response, ctx)
 }

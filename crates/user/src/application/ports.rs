@@ -23,7 +23,7 @@ pub struct ReplaceUserRecord {
     pub email: String,
     pub email_verified: Option<bool>,
     pub role: String,
-    pub group_code: String,
+    pub group_codes: Vec<String>,
     pub is_active: bool,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
@@ -247,8 +247,8 @@ pub trait UserUseCase: Send + Sync + 'static {
     async fn request_registration_email_code(&self, input: RegistrationEmailCodeRequest) -> AppResult<()>;
     async fn sign_up(&self, input: SignUpUser) -> AppResult<User>;
     async fn sign_in(&self, input: Credentials) -> AppResult<User>;
-    async fn oauth_start(&self, provider: IdentityProvider, redirect_uri: String) -> AppResult<String>;
-    async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String, redirect_uri: String) -> AppResult<OAuthSignInResult>;
+    async fn oauth_start(&self, provider: IdentityProvider) -> AppResult<String>;
+    async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String) -> AppResult<OAuthSignInResult>;
     async fn bind_oauth_existing(&self, provider: IdentityProvider, ticket: String) -> AppResult<User>;
     async fn wallet_nonce(&self, input: WalletNonceInput) -> AppResult<WalletChallenge>;
     async fn wallet_sign_in(&self, input: WalletSignInInput) -> AppResult<WalletSignInResult>;

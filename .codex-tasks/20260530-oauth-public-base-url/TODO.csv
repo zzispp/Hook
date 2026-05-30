@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current OAuth and settings validation flow,DONE,Current frontend/backend read sites and validation patterns identified,rg/sed inspection,2026-05-30T23:21:00+08:00,0,"Current frontend sends window.location.origin; backend fallback uses request Host; settings validation has existing effective-state patterns for email/recharge"
+2,Implement public-base redirect URI,DONE,OAuth start and callback use saved public_base_url for redirect_uri,rg residual scan,2026-05-30T23:32:00+08:00,0,
+3,Require public base URL before enabling GitHub or Google,DONE,Frontend and backend reject enabled OAuth providers without valid public_base_url,frontend/backend checks,2026-05-30T23:32:00+08:00,0,
+4,Validate and summarize,DONE,Relevant checks pass or failures are recorded,"pnpm lint:frontend; pnpm tsc --noEmit; pnpm build:frontend; cargo fmt --check; cargo check -p backend; cargo test -p setting oauth; cargo test -p user oauth",2026-05-30T23:42:00+08:00,0,

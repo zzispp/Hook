@@ -27,7 +27,7 @@ async fn admin_token_list_includes_owner_identity() {
         Some(ApiTokenOwnerResponse {
             username: OWNER_USERNAME.into(),
             email: OWNER_EMAIL.into(),
-            group_code: OWNER_GROUP_CODE.into(),
+            group_codes: vec![OWNER_GROUP_CODE.into()],
         })
     );
 }
@@ -100,7 +100,7 @@ impl UserCatalog for OwnerUsers {
         unimplemented!("not needed for list owner tests")
     }
 
-    async fn user_group_code(&self, _id: &str) -> ApiTokenResult<Option<String>> {
+    async fn user_group_codes(&self, _id: &str) -> ApiTokenResult<Option<Vec<String>>> {
         unimplemented!("not needed for list owner tests")
     }
 
@@ -111,7 +111,7 @@ impl UserCatalog for OwnerUsers {
             ApiTokenOwnerResponse {
                 username: OWNER_USERNAME.into(),
                 email: OWNER_EMAIL.into(),
-                group_code: OWNER_GROUP_CODE.into(),
+                group_codes: vec![OWNER_GROUP_CODE.into()],
             },
         )]))
     }

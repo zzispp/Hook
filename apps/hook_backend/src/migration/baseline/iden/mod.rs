@@ -87,6 +87,7 @@ pub fn reversed_tables() -> Vec<DynIden> {
         Roles::Table.into_iden(),
         UserPasswordResetTokens::Table.into_iden(),
         UserIdentities::Table.into_iden(),
+        UserGroupMemberships::Table.into_iden(),
         Users::Table.into_iden(),
         UserGroups::Table.into_iden(),
     ]

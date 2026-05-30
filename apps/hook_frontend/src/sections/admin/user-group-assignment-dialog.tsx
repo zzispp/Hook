@@ -7,17 +7,19 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Checkbox from '@mui/material/Checkbox';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
+import ListItemText from '@mui/material/ListItemText';
 
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 
-import { displayUserGroup } from './user-group-utils';
 import { TextFieldRow, ManagementDialog } from './shared';
+import { displayUserGroup, userGroupSelectionLabel } from './user-group-utils';
 import { useUserGroupAssignmentDialogState } from './user-group-assignment-state';
 
 type Props = {
@@ -63,13 +65,13 @@ export function UserGroupAssignmentDialog({
       />
       <CurrentGroupField user={state.user} groups={state.visibleGroups} />
       <TargetGroupField
-        value={state.targetGroupCode}
+        value={state.targetGroupCodes}
         groups={state.targetGroups}
-        onChange={state.setTargetCode}
+        onChange={state.setTargetCodes}
       />
       <AssignmentPreview
         user={state.user}
-        targetCode={state.targetGroupCode}
+        targetCodes={state.targetGroupCodes}
         groups={state.visibleGroups}
       />
     </ManagementDialog>
@@ -116,7 +118,7 @@ function UserSearchField({
           <Stack spacing={0.25}>
             <Typography variant="subtitle2">{option.username}</Typography>
             <Typography variant="caption" color="text.secondary">
-              {option.email} · {displayUserGroup(option.group_code, groups)}
+              {option.email} · {userGroupSelectionLabel(option.group_codes, groups, t)}
             </Typography>
           </Stack>
         </MenuItem>
@@ -132,7 +134,7 @@ function CurrentGroupField({ user, groups }: { user: SystemUser | null; groups: 
     <TextFieldRow
       disabled
       label={t('fields.currentUserGroup')}
-      value={user ? displayUserGroup(user.group_code, groups) : ''}
+      value={user ? userGroupSelectionLabel(user.group_codes, groups, t) : ''}
       placeholder={t('userGroups.selectUserForAssignment')}
       onChange={() => undefined}
     />
@@ -144,14 +146,25 @@ function TargetGroupField({
   groups,
   onChange,
 }: {
-  value: string;
+  value: string[];
   groups: UserGroup[];
-  onChange: (value: string) => void;
+  onChange: (value: string[]) => void;
 }) {
   const { t } = useTranslate('admin');
 
   return (
-    <TextFieldRow select required label={t('fields.targetUserGroup')} value={value} onChange={onChange}>
+    <TextField
+      select
+      required
+      fullWidth
+      label={t('fields.targetUserGroup')}
+      value={value}
+      SelectProps={{
+        multiple: true,
+        renderValue: (selected) => userGroupSelectionLabel(selected as string[], groups, t),
+      }}
+      onChange={(event) => onChange(selectedValues(event.target.value))}
+    >
       {groups.length === 0 ? (
         <MenuItem disabled value="">
           {t('userGroups.noActiveGroups')}
@@ -159,20 +172,21 @@ function TargetGroupField({
       ) : null}
       {groups.map((group) => (
         <MenuItem key={group.code} value={group.code}>
-          {group.name} ({group.code})
+          <Checkbox checked={value.includes(group.code)} />
+          <ListItemText primary={group.name} secondary={group.code} />
         </MenuItem>
       ))}
-    </TextFieldRow>
+    </TextField>
   );
 }
 
 function AssignmentPreview({
   user,
-  targetCode,
+  targetCodes,
   groups,
 }: {
   user: SystemUser | null;
-  targetCode: string;
+  targetCodes: string[];
   groups: UserGroup[];
 }) {
   const { t } = useTranslate('admin');
@@ -180,8 +194,9 @@ function AssignmentPreview({
     return <Alert severity="info">{t('userGroups.selectUserForAssignment')}</Alert>;
   }
 
-  const currentName = displayUserGroup(user.group_code, groups);
-  const targetName = displayUserGroup(targetCode, groups);
+  const currentName = userGroupSelectionLabel(user.group_codes, groups, t);
+  const targetName =
+    targetCodes.length > 0 ? userGroupSelectionLabel(targetCodes, groups, t) : t('common.none');
 
   return (
     <Box sx={{ p: 2, borderRadius: 1, bgcolor: 'background.neutral' }}>
@@ -190,7 +205,13 @@ function AssignmentPreview({
         <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
           <Chip label={currentName} variant="soft" color="default" />
           <Iconify icon="solar:double-alt-arrow-right-bold-duotone" sx={{ color: 'text.secondary' }} />
-          <Chip label={targetName} variant="soft" color="info" />
+          {targetCodes.length === 0 ? (
+            <Chip label={targetName} variant="soft" color="info" />
+          ) : (
+            targetCodes.map((code) => (
+              <Chip key={code} label={displayUserGroup(code, groups)} variant="soft" color="info" />
+            ))
+          )}
         </Stack>
         <Typography variant="body2" color="text.secondary">
           {t('userGroups.assignmentPreviewText', {
@@ -206,4 +227,8 @@ function AssignmentPreview({
 
 function userLabel(user: SystemUser) {
   return `${user.username} (${user.email})`;
+}
+
+function selectedValues(value: string | string[]) {
+  return Array.isArray(value) ? value : value.split(',').filter(Boolean);
 }

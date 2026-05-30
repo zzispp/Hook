@@ -2,12 +2,15 @@
 
 import type { SystemSettingsForm } from './system-settings-utils';
 
+import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 
 import { SwitchRow, TextFieldRow } from './shared';
+
+const OAUTH_CALLBACK_PATH_PREFIX = '/auth/oauth/callback';
 
 type Props = {
   form: SystemSettingsForm;
@@ -32,8 +35,15 @@ function OAuthProviderFields({ name, form, setForm }: Props & { name: 'github' |
   const prefix = name === 'github' ? 'auth_github' : 'auth_google';
   const enabled = name === 'github' ? form.auth_github_enabled : form.auth_google_enabled;
   const clientId = name === 'github' ? form.auth_github_client_id : form.auth_google_client_id;
-  const secret = name === 'github' ? form.auth_github_client_secret : form.auth_google_client_secret;
-  const secretSet = name === 'github' ? form.auth_github_client_secret_set : form.auth_google_client_secret_set;
+  const secret =
+    name === 'github' ? form.auth_github_client_secret : form.auth_google_client_secret;
+  const secretSet =
+    name === 'github' ? form.auth_github_client_secret_set : form.auth_google_client_secret_set;
+  const callbackAddress = oauthCallbackAddress(
+    form.public_base_url,
+    name,
+    t('systemSettings.authProviders.publicBaseUrlMissing')
+  );
 
   return (
     <Stack spacing={2}>
@@ -62,7 +72,23 @@ function OAuthProviderFields({ name, form, setForm }: Props & { name: 'github' |
           }
         />
       </Stack>
+      <CallbackAddressField value={callbackAddress} />
     </Stack>
+  );
+}
+
+function CallbackAddressField({ value }: { value: string }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Alert severity="info" sx={{ py: 1 }}>
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        {t('systemSettings.authProviders.callbackAddress')}
+      </Typography>
+      <Typography component="div" variant="body2" sx={{ mt: 0.5, fontFamily: 'monospace' }}>
+        {value}
+      </Typography>
+    </Alert>
   );
 }
 
@@ -80,12 +106,27 @@ function WalletProviderFields({ form, setForm }: Props) {
         <SwitchRow
           checked={form.auth_solana_enabled}
           label={t('systemSettings.authProviders.solana.enabled')}
-          onChange={(checked) => setForm((current) => ({ ...current, auth_solana_enabled: checked }))}
+          onChange={(checked) =>
+            setForm((current) => ({ ...current, auth_solana_enabled: checked }))
+          }
         />
       </Stack>
       <WalletTextFields form={form} setForm={setForm} />
     </Stack>
   );
+}
+
+function oauthCallbackAddress(
+  publicBaseUrl: string,
+  provider: 'github' | 'google',
+  missingBase: string
+) {
+  const baseUrl = publicBaseUrl.trim().replace(/\/+$/, '');
+  if (!baseUrl) {
+    return missingBase;
+  }
+
+  return `${baseUrl}${OAUTH_CALLBACK_PATH_PREFIX}/${provider}`;
 }
 
 function WalletTextFields({ form, setForm }: Props) {
