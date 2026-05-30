@@ -87,6 +87,20 @@ mod tests {
         assert!(statements.iter().any(|sql| sql.contains("INSERT INTO \"scheduled_tasks\"")), "{statements:?}");
     }
 
+    #[tokio::test]
+    async fn list_tasks_ignores_unregistered_database_rows() {
+        let connection = MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[task_record("recharge_payment_poll")]])
+            .append_query_results([[task_record("request_record_stale_sweep")]])
+            .into_connection();
+        let store = SchedulerStore::new(Database::new(connection));
+        let registry = Arc::new(test_registry());
+
+        let tasks = list_tasks(&store, &registry).await.unwrap();
+
+        assert!(tasks.is_empty());
+    }
+
     fn test_registry() -> SchedulerRegistry {
         let mut registry = SchedulerRegistry::new();
         registry.register(TestTask).unwrap();

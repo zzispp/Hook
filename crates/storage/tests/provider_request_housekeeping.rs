@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+use sea_orm::{DatabaseBackend, MockDatabase};
 use storage::{
     Database,
     provider::{
@@ -51,38 +51,6 @@ async fn request_record_storage_compresses_old_payloads() {
     assert_eq!(changed, 2);
     let logs = connection.into_transaction_log();
     assert!(logs[1].statements()[0].sql.contains("UPDATE \"request_records\" SET"));
-    assert!(logs[3].statements()[0].sql.contains("UPDATE \"request_candidates\" SET"));
-}
-
-#[tokio::test]
-async fn request_record_storage_sweeps_stale_pending_requests() {
-    let now = time::OffsetDateTime::now_utc();
-    let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_query_results([[stale_pending_record(now)]])
-        .append_query_results([[failed_record(now)]])
-        .append_exec_results([MockExecResult {
-            last_insert_id: 0,
-            rows_affected: 1,
-        }])
-        .append_exec_results([MockExecResult {
-            last_insert_id: 0,
-            rows_affected: 1,
-        }])
-        .into_connection();
-    let store = ProviderStore::new(Database::new(connection.clone()));
-
-    let report = store
-        .sweep_stale_request_records(now - time::Duration::minutes(15), now - time::Duration::minutes(120))
-        .await
-        .unwrap();
-
-    assert_eq!(report.pending_records, 1);
-    assert_eq!(report.streaming_records, 0);
-    assert_eq!(report.failed_candidates, 1);
-    assert_eq!(report.skipped_candidates, 1);
-    let logs = connection.into_transaction_log();
-    assert!(logs[1].statements()[0].sql.contains("UPDATE \"request_records\" SET"));
-    assert!(logs[2].statements()[0].sql.contains("UPDATE \"request_candidates\" SET"));
     assert!(logs[3].statements()[0].sql.contains("UPDATE \"request_candidates\" SET"));
 }
 
@@ -273,110 +241,6 @@ fn candidate_record(
         started_at: Some(now()),
         finished_at: Some(now()),
     }
-}
-
-fn stale_pending_record(now: time::OffsetDateTime) -> request_records::Model {
-    request_records::Model {
-        request_id: "req-stale".into(),
-        token_id: Some("token-1".into()),
-        user_id_snapshot: Some("user-1".into()),
-        username_snapshot: Some("hwnet".into()),
-        token_name_snapshot: Some("Token A".into()),
-        token_prefix_snapshot: Some("sk-test".into()),
-        group_code: Some("default".into()),
-        global_model_id: Some("gpt-5.5".into()),
-        model_name_snapshot: Some("gpt-5.5".into()),
-        provider_id: Some("provider-1".into()),
-        provider_name_snapshot: Some("Provider A".into()),
-        endpoint_id: Some("endpoint-1".into()),
-        key_id: Some("key-1".into()),
-        provider_key_name_snapshot: Some("Key A".into()),
-        provider_key_preview_snapshot: Some("***test".into()),
-        client_api_format: "openai:chat".into(),
-        provider_api_format: Some("openai:chat".into()),
-        request_type: "chat".into(),
-        is_stream: false,
-        has_failover: false,
-        has_retry: false,
-        status: "pending".into(),
-        billing_status: "pending".into(),
-        client_status_code: None,
-        client_error_type: None,
-        client_error_message: None,
-        termination_origin: None,
-        termination_reason: None,
-        stream_end_reason: None,
-        prompt_tokens: None,
-        completion_tokens: None,
-        total_tokens: None,
-        cache_creation_input_tokens: None,
-        cache_read_input_tokens: None,
-        input_text_tokens: None,
-        input_audio_tokens: None,
-        input_image_tokens: None,
-        output_text_tokens: None,
-        output_audio_tokens: None,
-        output_image_tokens: None,
-        reasoning_tokens: None,
-        cache_creation_5m_input_tokens: None,
-        cache_creation_1h_input_tokens: None,
-        usage_source: None,
-        usage_semantic: None,
-        service_tier: None,
-        upstream_cost_mode: None,
-        upstream_cost_source: None,
-        upstream_price_per_request: None,
-        upstream_input_price_per_million: None,
-        upstream_output_price_per_million: None,
-        upstream_cache_creation_price_per_million: None,
-        upstream_cache_read_price_per_million: None,
-        upstream_request_cost: None,
-        upstream_input_cost: None,
-        upstream_output_cost: None,
-        upstream_cache_creation_cost: None,
-        upstream_cache_read_cost: None,
-        upstream_total_cost: None,
-        input_cost: None,
-        output_cost: None,
-        cache_creation_cost: None,
-        cache_read_cost: None,
-        request_cost: None,
-        input_price_per_million: None,
-        output_price_per_million: None,
-        cache_creation_price_per_million: None,
-        cache_read_price_per_million: None,
-        cost_currency: None,
-        token_cost: None,
-        base_cost: None,
-        total_cost: None,
-        billing_multiplier: None,
-        billing_snapshot: None,
-        first_byte_time_ms: None,
-        total_latency_ms: None,
-        candidate_count: 2,
-        request_headers: None,
-        request_body: None,
-        client_response_headers: None,
-        client_response_body: None,
-        created_at: now - time::Duration::hours(1),
-        started_at: Some(now - time::Duration::hours(1)),
-        finished_at: None,
-        updated_at: now - time::Duration::hours(1),
-    }
-}
-
-fn failed_record(now: time::OffsetDateTime) -> request_records::Model {
-    let mut record = stale_pending_record(now);
-    record.status = "failed".into();
-    record.billing_status = "void".into();
-    record.client_status_code = Some(504);
-    record.client_error_type = Some("stale_pending_request".into());
-    record.client_error_message = Some("request remained pending beyond stale sweep threshold".into());
-    record.termination_origin = Some("server".into());
-    record.termination_reason = Some("pending_timeout".into());
-    record.finished_at = Some(now);
-    record.updated_at = now;
-    record
 }
 
 fn now() -> time::OffsetDateTime {

@@ -36,11 +36,17 @@ impl SchedulerStore {
     }
 
     pub async fn list_tasks(&self, definitions: &[ScheduledTaskDefinition]) -> StorageResult<Vec<ScheduledTask>> {
+        let codes = definitions.iter().map(|definition| definition.code.clone()).collect::<Vec<_>>();
         let records = scheduled_tasks::Entity::find()
+            .filter(scheduled_tasks::Column::Code.is_in(codes))
             .order_by_asc(scheduled_tasks::Column::Code)
             .all(self.database.connection())
             .await?;
-        records.into_iter().map(|record| task_response(record, definitions)).collect()
+        records
+            .into_iter()
+            .filter(|record| definitions.iter().any(|definition| definition.code == record.code))
+            .map(|record| task_response(record, definitions))
+            .collect()
     }
 
     pub async fn update_task(&self, definition: &ScheduledTaskDefinition, patch: ScheduledTaskRecordPatch) -> StorageResult<ScheduledTaskRecord> {

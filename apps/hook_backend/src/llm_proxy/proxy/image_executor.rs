@@ -6,7 +6,7 @@ use types::api_token::ApiToken;
 
 use super::{
     LlmProxyError, LlmProxyState, affinity,
-    attempt_log::{StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
+    attempt_log::{AttemptCancelGuard, StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
     capture::RequestCapture,
     failure_classification::{FailureDecision, classify_status},
     image_form::MultipartImageRequest,
@@ -138,7 +138,7 @@ async fn attempt_once(
         }
     };
     let started = Instant::now();
-    let attempt_cancel = record_started_attempt(StartedAttemptInput {
+    let mut attempt_cancel = record_started_attempt(StartedAttemptInput {
         state,
         request_id: &prepared.request_id,
         candidate,
@@ -151,7 +151,7 @@ async fn attempt_once(
     let request_timeout = timeout::non_stream_total_timeout(candidate, false);
     let response = match execute_upstream_request(&state.http, request, request_timeout).await {
         Ok(response) => {
-            attempt_cancel.disarm();
+            attempt_cancel.mark_response_started();
             response
         }
         Err(error) => {
@@ -169,6 +169,7 @@ async fn attempt_once(
             retry_index,
             started,
             request_timeout,
+            attempt_cancel: &mut attempt_cancel,
             last_failure,
         },
         response,
@@ -216,12 +217,13 @@ struct HandleResponseInput<'a> {
     retry_index: i32,
     started: Instant,
     request_timeout: Option<Duration>,
+    attempt_cancel: &'a mut AttemptCancelGuard,
     last_failure: &'a mut Option<transport::UpstreamFailure>,
 }
 
 async fn handle_response(input: HandleResponseInput<'_>, response: req::Response) -> Result<AttemptOnceOutcome, LlmProxyError> {
     if !response.status().is_success() {
-        return handle_upstream_failure(
+        let outcome = handle_upstream_failure(
             input.state,
             input.prepared,
             input.candidate,
@@ -230,7 +232,9 @@ async fn handle_response(input: HandleResponseInput<'_>, response: req::Response
             response,
             input.last_failure,
         )
-        .await;
+        .await?;
+        input.attempt_cancel.disarm();
+        return Ok(outcome);
     }
     let response = transport::full_response(transport::FullResponseArgs {
         state: input.state.clone(),
@@ -244,7 +248,9 @@ async fn handle_response(input: HandleResponseInput<'_>, response: req::Response
         retry_index: input.retry_index,
         request_timeout: input.request_timeout,
     })
-    .await?;
+    .await;
+    input.attempt_cancel.disarm();
+    let response = response?;
     affinity::remember(input.state, input.candidate, input.prepared.cache_affinity_ttl_minutes).await?;
     Ok(AttemptOnceOutcome::Response(response))
 }

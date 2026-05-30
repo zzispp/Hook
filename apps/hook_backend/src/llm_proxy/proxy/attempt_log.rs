@@ -1,4 +1,7 @@
-use std::time::Instant;
+use std::{
+    sync::{Arc, Mutex},
+    time::Instant,
+};
 
 use axum::response::Response;
 use types::model::PatchField;
@@ -15,26 +18,39 @@ pub(super) struct AttemptCancelGuard {
     candidate: ProxyCandidate,
     retry_index: i32,
     started: Instant,
-    armed: bool,
+    shared: Arc<Mutex<AttemptCancelShared>>,
 }
 
 impl AttemptCancelGuard {
-    pub(super) fn disarm(mut self) {
-        self.armed = false;
+    pub(super) fn handle(&self) -> AttemptCancelHandle {
+        AttemptCancelHandle {
+            shared: Arc::clone(&self.shared),
+        }
+    }
+
+    pub(super) fn mark_response_started(&self) {
+        update_cancel_shared(&self.shared, |shared| {
+            shared.phase = AttemptCancelPhase::AwaitingTerminal;
+        });
+    }
+
+    pub(super) fn disarm(&self) {
+        self.handle().disarm();
     }
 }
 
 impl Drop for AttemptCancelGuard {
     fn drop(&mut self) {
-        if !self.armed {
+        let Some(phase) = take_cancel_phase(&self.shared) else {
             return;
-        }
+        };
         let input = CancelledAttemptInput {
             state: self.state.clone(),
             request_id: self.request_id.clone(),
             candidate: self.candidate.clone(),
             retry_index: self.retry_index,
             latency_ms: elapsed_ms(self.started),
+            phase,
         };
         tokio::spawn(async move {
             if let Err(error) = record_cancelled_attempt(input).await {
@@ -44,12 +60,46 @@ impl Drop for AttemptCancelGuard {
     }
 }
 
+pub(super) struct AttemptCancelHandle {
+    shared: Arc<Mutex<AttemptCancelShared>>,
+}
+
+impl AttemptCancelHandle {
+    pub(super) fn disarm(&self) {
+        update_cancel_shared(&self.shared, |shared| {
+            shared.armed = false;
+        });
+    }
+
+    #[cfg(test)]
+    pub(super) fn noop_for_test() -> Self {
+        Self {
+            shared: Arc::new(Mutex::new(AttemptCancelShared {
+                phase: AttemptCancelPhase::WaitingUpstreamResponseStart,
+                armed: false,
+            })),
+        }
+    }
+}
+
 struct CancelledAttemptInput {
     state: LlmProxyState,
     request_id: String,
     candidate: ProxyCandidate,
     retry_index: i32,
     latency_ms: i64,
+    phase: AttemptCancelPhase,
+}
+
+#[derive(Clone, Copy)]
+enum AttemptCancelPhase {
+    WaitingUpstreamResponseStart,
+    AwaitingTerminal,
+}
+
+struct AttemptCancelShared {
+    phase: AttemptCancelPhase,
+    armed: bool,
 }
 
 pub(super) struct StartedAttemptInput<'a> {
@@ -129,7 +179,10 @@ pub(super) async fn record_started_attempt(input: StartedAttemptInput<'_>) -> Re
         candidate: input.candidate.clone(),
         retry_index: input.retry_index,
         started: input.started,
-        armed: true,
+        shared: Arc::new(Mutex::new(AttemptCancelShared {
+            phase: AttemptCancelPhase::WaitingUpstreamResponseStart,
+            armed: true,
+        })),
     })
 }
 
@@ -158,6 +211,21 @@ pub(super) async fn record_send_error(
     Ok(None)
 }
 
+pub(super) async fn record_stream_candidate_watchdog_timeout(
+    state: &LlmProxyState,
+    request_id: &str,
+    candidate: &ProxyCandidate,
+    retry_index: i32,
+    started: Instant,
+) -> Result<(), LlmProxyError> {
+    record_attempt(
+        state,
+        request_id,
+        stream_candidate_watchdog_timeout_record(candidate, retry_index, elapsed_ms(started)),
+    )
+    .await
+}
+
 fn send_error_type(error: &req::ClientError) -> &'static str {
     if matches!(error, req::ClientError::Timeout) {
         return "upstream_timeout";
@@ -166,15 +234,14 @@ fn send_error_type(error: &req::ClientError) -> &'static str {
 }
 
 async fn record_cancelled_attempt(input: CancelledAttemptInput) -> Result<(), LlmProxyError> {
-    record_attempt(
-        &input.state,
-        &input.request_id,
-        cancelled_attempt_record(&input.candidate, input.retry_index, input.latency_ms),
-    )
-    .await
+    let record = match input.phase {
+        AttemptCancelPhase::WaitingUpstreamResponseStart => cancelled_before_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
+        AttemptCancelPhase::AwaitingTerminal => cancelled_after_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
+    };
+    record_attempt(&input.state, &input.request_id, record).await
 }
 
-fn cancelled_attempt_record(candidate: &ProxyCandidate, retry_index: i32, latency_ms: i64) -> AttemptRecordInput<'_> {
+fn cancelled_before_upstream_response_record(candidate: &ProxyCandidate, retry_index: i32, latency_ms: i64) -> AttemptRecordInput<'_> {
     AttemptRecordInput {
         status_code: Some(499),
         latency_ms: Some(latency_ms),
@@ -187,84 +254,50 @@ fn cancelled_attempt_record(candidate: &ProxyCandidate, retry_index: i32, latenc
     }
 }
 
+fn cancelled_after_upstream_response_record(candidate: &ProxyCandidate, retry_index: i32, latency_ms: i64) -> AttemptRecordInput<'_> {
+    AttemptRecordInput {
+        status_code: Some(499),
+        latency_ms: Some(latency_ms),
+        error_type: Some("client_disconnected"),
+        error_message: Some("client disconnected before request terminal finalization"),
+        termination_origin: PatchField::Value("client".into()),
+        termination_reason: PatchField::Value("disconnected".into()),
+        stream_end_reason: PatchField::Value("client_gone".into()),
+        ..AttemptRecordInput::new(candidate, retry_index, "cancelled", true)
+    }
+}
+
+fn stream_candidate_watchdog_timeout_record(candidate: &ProxyCandidate, retry_index: i32, latency_ms: i64) -> AttemptRecordInput<'_> {
+    AttemptRecordInput {
+        status_code: Some(504),
+        latency_ms: Some(latency_ms),
+        error_type: Some("local_stream_candidate_watchdog_timeout"),
+        error_message: Some("stream candidate timed out before handoff completed"),
+        ..AttemptRecordInput::new(candidate, retry_index, "failed", true)
+    }
+}
+
 fn elapsed_ms(started: Instant) -> i64 {
     started.elapsed().as_millis().try_into().unwrap_or(i64::MAX)
 }
 
-#[cfg(test)]
-mod tests {
-    use rust_decimal::Decimal;
-    use types::{model::PatchField, model::TieredPricingConfig};
-
-    use super::cancelled_attempt_record;
-    use crate::llm_proxy::{
-        audit::request_billing_status,
-        candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
-    };
-
-    #[test]
-    fn cancelled_before_upstream_response_is_explicit_terminal_record() {
-        let candidate = candidate();
-        let input = cancelled_attempt_record(&candidate, 0, 42);
-
-        assert_eq!(input.status, "cancelled");
-        assert!(input.finished);
-        assert_eq!(input.status_code, Some(499));
-        assert_eq!(input.latency_ms, Some(42));
-        assert_eq!(input.error_type, Some("client_disconnected"));
-        assert_eq!(input.error_message, Some("client disconnected before upstream response started"));
-        assert_eq!(input.termination_origin, PatchField::Value("client".into()));
-        assert_eq!(input.termination_reason, PatchField::Value("disconnected".into()));
-        assert_eq!(input.stream_end_reason, PatchField::Value("client_gone".into()));
-        assert_eq!(request_billing_status(&input, None), "void");
-    }
-
-    fn candidate() -> ProxyCandidate {
-        ProxyCandidate {
-            trace: CandidateTrace {
-                token_id: Some("token-1".into()),
-                user_id_snapshot: Some("user-1".into()),
-                username_snapshot: Some("admin".into()),
-                token_name_snapshot: Some("token".into()),
-                token_prefix_snapshot: Some("sk".into()),
-                group_code: Some("default".into()),
-                global_model_id: "model-1".into(),
-                provider_model_id: "provider-model-1".into(),
-                model_name_snapshot: "gpt-test".into(),
-                provider_id: "provider-1".into(),
-                provider_name_snapshot: "provider".into(),
-                endpoint_id: "endpoint-1".into(),
-                endpoint_name_snapshot: "openai_cli".into(),
-                key_id: "key-1".into(),
-                key_name_snapshot: "key".into(),
-                key_preview_snapshot: "***key".into(),
-                client_api_format: "openai_cli".into(),
-                provider_api_format: "openai_cli".into(),
-                needs_conversion: false,
-                is_stream: true,
-                is_cached: false,
-                candidate_index: 0,
-            },
-            requested_model_name: "gpt-test".into(),
-            api_key: "secret".into(),
-            base_url: "https://example.com".into(),
-            custom_path: None,
-            upstream_url: "https://example.com/v1/responses".into(),
-            provider_model_name: "gpt-test".into(),
-            reasoning_effort: None,
-            header_rules: None,
-            body_rules: None,
-            price_per_request: None,
-            tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
-            billing_multiplier: Decimal::ONE,
-            max_retries: 0,
-            request_timeout_seconds: Some(300.0),
-            stream_first_byte_timeout_seconds: Some(30.0),
-            stream_idle_timeout_seconds: Some(30.0),
-            cache_ttl_minutes: 5,
-            key_rpm_limit: None,
-            is_cached: false,
-            route: CandidateRoute { options: Vec::new() },
-        }
+fn update_cancel_shared(shared: &Arc<Mutex<AttemptCancelShared>>, update: impl FnOnce(&mut AttemptCancelShared)) {
+    if let Ok(mut shared) = shared.lock()
+        && shared.armed
+    {
+        update(&mut shared);
     }
 }
+
+fn take_cancel_phase(shared: &Arc<Mutex<AttemptCancelShared>>) -> Option<AttemptCancelPhase> {
+    let mut shared = shared.lock().ok()?;
+    if !shared.armed {
+        return None;
+    }
+    shared.armed = false;
+    Some(shared.phase)
+}
+
+#[cfg(test)]
+#[path = "attempt_log_tests.rs"]
+mod tests;

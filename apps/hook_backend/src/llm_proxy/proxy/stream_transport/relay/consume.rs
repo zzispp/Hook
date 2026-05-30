@@ -119,7 +119,7 @@ impl StreamRelay {
     }
 
     fn push_converted_chunk(&mut self, chunk: &Value) -> Result<(), LlmProxyError> {
-        let converted = FormatConversionRegistry::default()
+        let converted = FormatConversionRegistry
             .convert_stream_chunk(StreamChunkConversion {
                 chunk,
                 source: self.target_format,

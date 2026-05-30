@@ -283,6 +283,13 @@ pub fn failure_response(failure: UpstreamFailure) -> Result<Response, LlmProxyEr
         .map_err(response_error)
 }
 
+pub fn gateway_timeout_failure() -> UpstreamFailure {
+    UpstreamFailure {
+        status: StatusCode::GATEWAY_TIMEOUT,
+        cooldown_triggered: false,
+    }
+}
+
 async fn response_body(
     http: &req::ReqwestClient,
     bytes: &[u8],
@@ -292,7 +299,7 @@ async fn response_body(
 ) -> Result<Vec<u8>, LlmProxyError> {
     let body = if needs_conversion {
         let value: Value = serde_json::from_slice(bytes).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
-        let converted = FormatConversionRegistry::default()
+        let converted = FormatConversionRegistry
             .convert_response(&value, target_format, source_format)
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         serde_json::to_vec(&converted).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?

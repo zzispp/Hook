@@ -22,6 +22,7 @@ use types::model::PatchField;
 
 use super::{
     LlmProxyError, LlmProxyState,
+    attempt_log::AttemptCancelGuard,
     response_payload::{body_value, upstream_status_error_details},
     timeout, transport,
 };
@@ -55,7 +56,7 @@ pub struct StreamResponseArgs {
     pub retry_index: i32,
 }
 
-pub async fn stream_response(args: StreamResponseArgs) -> Result<Response, LlmProxyError> {
+pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptCancelGuard) -> Result<Response, LlmProxyError> {
     let StreamResponseArgs {
         state,
         request_id,
@@ -86,6 +87,7 @@ pub async fn stream_response(args: StreamResponseArgs) -> Result<Response, LlmPr
     let upstream = req::response_bytes_stream(response);
     let first_byte_timeout = timeout::remaining_stream_first_byte_timeout(started, &context.candidate);
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
+    attempt_cancel.disarm();
     if let Some(response) = prefetch_with_timeout(&mut relay, first_byte_timeout).await? {
         return Ok(response);
     }

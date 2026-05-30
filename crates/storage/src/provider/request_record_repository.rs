@@ -55,12 +55,4 @@ impl ProviderStore {
     pub async fn compress_request_record_payloads_before(&self, cutoff: time::OffsetDateTime) -> StorageResult<u64> {
         super::request_record_cleanup::compress_request_record_payloads_before(self, cutoff).await
     }
-
-    pub async fn sweep_stale_request_records(
-        &self,
-        pending_cutoff: time::OffsetDateTime,
-        streaming_cutoff: time::OffsetDateTime,
-    ) -> StorageResult<super::StaleRequestSweepReport> {
-        super::request_record_sweep::sweep_stale_request_records(self, pending_cutoff, streaming_cutoff).await
-    }
 }

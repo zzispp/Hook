@@ -17,9 +17,6 @@ use self::{
 };
 use crate::{llm_proxy::LlmProxyCache, performance_monitoring_os::PerformanceOsCollector, proxy_cache_hooks::CachedApiTokenRepository};
 
-const REQUEST_RECORD_STALE_SWEEP_INTERVAL_SECONDS: i64 = 300;
-const REQUEST_RECORD_STALE_PENDING_TIMEOUT_MINUTES: i64 = 15;
-const REQUEST_RECORD_STALE_STREAMING_TIMEOUT_MINUTES: i64 = 120;
 const RECHARGE_PAYMENT_POLL_INTERVAL_SECONDS: i64 = 60;
 const RECHARGE_PAYMENT_POLL_LIMIT: i64 = 50;
 
@@ -32,7 +29,6 @@ pub fn scheduler_registry(
     let mut registry = SchedulerRegistry::new();
     registry.register(ApiTokenCleanupTask { cache })?;
     registry.register(RequestRecordCleanupTask)?;
-    registry.register(RequestRecordStaleSweepTask)?;
     registry.register(RechargePaymentPollTask { recharge_service })?;
     registry.register(PerformanceMonitoringSnapshotTask {
         os_collector: performance_os_collector,
@@ -50,9 +46,6 @@ struct ApiTokenCleanupTask {
 
 #[derive(Clone, Copy)]
 struct RequestRecordCleanupTask;
-
-#[derive(Clone, Copy)]
-struct RequestRecordStaleSweepTask;
 
 #[derive(Clone)]
 struct RechargePaymentPollTask {
@@ -123,53 +116,6 @@ impl ScheduledTaskLifecycle for RequestRecordCleanupTask {
             .await
             .map_err(storage_error)?;
         Ok(Some(format!("deleted_records={deleted_records}, compressed_payloads={compressed_payloads}")))
-    }
-}
-
-#[async_trait::async_trait]
-impl ScheduledTaskLifecycle for RequestRecordStaleSweepTask {
-    fn definition(&self) -> types::scheduler::ScheduledTaskDefinition {
-        task_definition(
-            "request_record_stale_sweep",
-            "scheduledTasks.definitions.requestRecordStaleSweep.name",
-            "scheduledTasks.definitions.requestRecordStaleSweep.description",
-            REQUEST_RECORD_STALE_SWEEP_INTERVAL_SECONDS,
-            serde_json::json!({
-                "stale_pending_timeout_minutes": REQUEST_RECORD_STALE_PENDING_TIMEOUT_MINUTES,
-                "stale_streaming_timeout_minutes": REQUEST_RECORD_STALE_STREAMING_TIMEOUT_MINUTES
-            }),
-            integer_fields(&[
-                (
-                    "stale_pending_timeout_minutes",
-                    "scheduledTasks.config.requestRecordStaleSweep.pendingTimeoutMinutes",
-                    1,
-                ),
-                (
-                    "stale_streaming_timeout_minutes",
-                    "scheduledTasks.config.requestRecordStaleSweep.streamingTimeoutMinutes",
-                    1,
-                ),
-            ]),
-        )
-    }
-
-    fn validate_config(&self, config: &TaskConfigValue) -> SchedulerResult<()> {
-        validate_positive_integer(config, "stale_pending_timeout_minutes", 1)?;
-        validate_positive_integer(config, "stale_streaming_timeout_minutes", 1)
-    }
-
-    async fn run(&self, ctx: ScheduleTaskContext, config: TaskConfigValue) -> TaskResult {
-        let now = time::OffsetDateTime::now_utc();
-        let pending_timeout = integer_config(&config, "stale_pending_timeout_minutes")?;
-        let streaming_timeout = integer_config(&config, "stale_streaming_timeout_minutes")?;
-        let report = ProviderStore::new(ctx.database)
-            .sweep_stale_request_records(now - time::Duration::minutes(pending_timeout), now - time::Duration::minutes(streaming_timeout))
-            .await
-            .map_err(storage_error)?;
-        Ok(Some(format!(
-            "pending_records={}, streaming_records={}, failed_candidates={}, skipped_candidates={}",
-            report.pending_records, report.streaming_records, report.failed_candidates, report.skipped_candidates
-        )))
     }
 }
 

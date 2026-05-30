@@ -5,7 +5,10 @@ use req::Response as UpstreamResponse;
 
 use super::{
     LlmProxyError, LlmProxyState, affinity,
-    attempt_log::{StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
+    attempt_log::{
+        AttemptCancelGuard, AttemptCancelHandle, StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error,
+        record_started_attempt, record_stream_candidate_watchdog_timeout,
+    },
     failure_classification::{FailureDecision, classify_status},
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
     request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
@@ -116,11 +119,26 @@ async fn attempt_once(
         provider_body: &payload.body,
     })
     .await?;
+    if prepared.is_stream {
+        return attempt_stream_candidate_with_watchdog(
+            state,
+            prepared,
+            candidate,
+            retry_index,
+            started,
+            payload,
+            request,
+            attempt_cancel,
+            last_failure,
+            last_error,
+        )
+        .await;
+    }
     let request_timeout = timeout::non_stream_total_timeout(candidate, prepared.is_stream);
     let response_start_timeout = timeout::response_start_timeout(candidate, prepared.is_stream);
     let response = match execute_upstream_request(&state.http, request, response_start_timeout).await {
         Ok(response) => {
-            attempt_cancel.disarm();
+            attempt_cancel.mark_response_started();
             response
         }
         Err(error) => {
@@ -139,9 +157,190 @@ async fn attempt_once(
         payload,
         response,
         request_timeout,
+        attempt_cancel: &attempt_cancel,
         failures: (last_failure, last_error),
     })
     .await
+}
+
+struct StreamAttemptTaskOutput {
+    outcome: AttemptOnceOutcome,
+    last_failure: Option<transport::UpstreamFailure>,
+    last_error: Option<LlmProxyError>,
+}
+
+enum StreamWatchdogOutcome<T> {
+    Completed(T),
+    TimedOut,
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn attempt_stream_candidate_with_watchdog(
+    state: &LlmProxyState,
+    prepared: &PreparedProxyRequest,
+    candidate: &ProxyCandidate,
+    retry_index: i32,
+    started: Instant,
+    payload: AttemptPayload,
+    request: req::Request,
+    attempt_cancel: AttemptCancelGuard,
+    last_failure: &mut Option<transport::UpstreamFailure>,
+    last_error: &mut Option<LlmProxyError>,
+) -> Result<AttemptOnceOutcome, LlmProxyError> {
+    let timeout_state = state.clone();
+    let timeout_request_id = prepared.request_id.clone();
+    let timeout_candidate = candidate.clone();
+    let timeout_duration = timeout::stream_candidate_watchdog_timeout(candidate);
+    let watchdog_handle = attempt_cancel.handle();
+    let output = match run_stream_candidate_watchdog(
+        timeout_duration,
+        watchdog_handle,
+        execute_stream_candidate_task(StreamAttemptTaskInput {
+            state: state.clone(),
+            request_id: prepared.request_id.clone(),
+            cache_affinity_ttl_minutes: prepared.cache_affinity_ttl_minutes,
+            candidate: candidate.clone(),
+            retry_index,
+            started,
+            payload,
+            request,
+            attempt_cancel,
+        }),
+    )
+    .await?
+    {
+        StreamWatchdogOutcome::Completed(output) => output,
+        StreamWatchdogOutcome::TimedOut => {
+            record_stream_candidate_watchdog_timeout(&timeout_state, &timeout_request_id, &timeout_candidate, retry_index, started).await?;
+            affinity::invalidate_matching(&timeout_state, &timeout_candidate).await?;
+            stream_candidate_watchdog_timeout_output()
+        }
+    };
+    *last_failure = output.last_failure;
+    *last_error = output.last_error;
+    Ok(output.outcome)
+}
+
+struct StreamAttemptTaskInput {
+    state: LlmProxyState,
+    request_id: String,
+    cache_affinity_ttl_minutes: i64,
+    candidate: ProxyCandidate,
+    retry_index: i32,
+    started: Instant,
+    payload: AttemptPayload,
+    request: req::Request,
+    attempt_cancel: AttemptCancelGuard,
+}
+
+async fn execute_stream_candidate_task(input: StreamAttemptTaskInput) -> Result<StreamAttemptTaskOutput, LlmProxyError> {
+    let response_start_timeout = timeout::response_start_timeout(&input.candidate, true);
+    let response = match execute_upstream_request(&input.state.http, input.request, response_start_timeout).await {
+        Ok(response) => {
+            input.attempt_cancel.mark_response_started();
+            response
+        }
+        Err(error) => {
+            input.attempt_cancel.disarm();
+            let mut last_error = None;
+            let outcome = record_send_error(
+                &input.state,
+                &input.request_id,
+                &input.candidate,
+                input.retry_index,
+                input.started,
+                &error,
+                &mut last_error,
+            )
+            .await?;
+            affinity::invalidate_matching(&input.state, &input.candidate).await?;
+            return Ok(StreamAttemptTaskOutput {
+                outcome: option_response_outcome(outcome),
+                last_failure: None,
+                last_error,
+            });
+        }
+    };
+    if !response.status().is_success() {
+        let mut last_failure = None;
+        let outcome = handle_upstream_failure(
+            &input.state,
+            &input.request_id,
+            &input.candidate,
+            input.retry_index,
+            input.started,
+            response,
+            &mut last_failure,
+        )
+        .await?;
+        input.attempt_cancel.disarm();
+        return Ok(StreamAttemptTaskOutput {
+            outcome,
+            last_failure,
+            last_error: None,
+        });
+    }
+    let response = stream_transport::stream_response(
+        stream_transport::StreamResponseArgs {
+            state: input.state.clone(),
+            request_id: input.request_id.clone(),
+            response,
+            candidate: input.candidate.clone(),
+            source_format: input.payload.source_format,
+            target_format: input.payload.target_format,
+            provider_request_body: input.payload.body,
+            started: input.started,
+            retry_index: input.retry_index,
+        },
+        &input.attempt_cancel,
+    )
+    .await;
+    match response {
+        Ok(response) => {
+            affinity::remember(&input.state, &input.candidate, input.cache_affinity_ttl_minutes).await?;
+            Ok(StreamAttemptTaskOutput {
+                outcome: AttemptOnceOutcome::Response(response),
+                last_failure: None,
+                last_error: None,
+            })
+        }
+        Err(error) => Ok(StreamAttemptTaskOutput {
+            outcome: AttemptOnceOutcome::ContinueCandidate,
+            last_failure: None,
+            last_error: Some(error),
+        }),
+    }
+}
+
+async fn run_stream_candidate_watchdog<T>(
+    timeout_duration: Option<Duration>,
+    watchdog_handle: AttemptCancelHandle,
+    future: impl std::future::Future<Output = Result<T, LlmProxyError>> + Send + 'static,
+) -> Result<StreamWatchdogOutcome<T>, LlmProxyError>
+where
+    T: Send + 'static,
+{
+    let Some(timeout_duration) = timeout_duration else {
+        return future.await.map(StreamWatchdogOutcome::Completed);
+    };
+    let mut join_handle = tokio::spawn(future);
+    match tokio::time::timeout(timeout_duration, &mut join_handle).await {
+        Ok(Ok(result)) => result.map(StreamWatchdogOutcome::Completed),
+        Ok(Err(error)) => Err(LlmProxyError::Infrastructure(format!("stream candidate task join failed: {error}"))),
+        Err(_) => {
+            watchdog_handle.disarm();
+            join_handle.abort();
+            Ok(StreamWatchdogOutcome::TimedOut)
+        }
+    }
+}
+
+fn stream_candidate_watchdog_timeout_output() -> StreamAttemptTaskOutput {
+    StreamAttemptTaskOutput {
+        outcome: AttemptOnceOutcome::NextCandidate,
+        last_failure: Some(transport::gateway_timeout_failure()),
+        last_error: Some(LlmProxyError::Upstream("stream candidate watchdog timed out".into())),
+    }
 }
 
 async fn execute_upstream_request(
@@ -165,21 +364,24 @@ struct HandleUpstreamResponseInput<'a> {
     payload: AttemptPayload,
     response: UpstreamResponse,
     request_timeout: Option<Duration>,
+    attempt_cancel: &'a AttemptCancelGuard,
     failures: (&'a mut Option<transport::UpstreamFailure>, &'a mut Option<LlmProxyError>),
 }
 
 async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Result<AttemptOnceOutcome, LlmProxyError> {
     if !input.response.status().is_success() {
-        return handle_upstream_failure(
+        let outcome = handle_upstream_failure(
             &input.state,
-            input.prepared,
+            &input.prepared.request_id,
             input.candidate,
             input.retry_index,
             input.started,
             input.response,
             input.failures.0,
         )
-        .await;
+        .await?;
+        input.attempt_cancel.disarm();
+        return Ok(outcome);
     }
     match success_response(SuccessResponseInput {
         state: input.state.clone(),
@@ -190,6 +392,7 @@ async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Res
         payload: input.payload,
         response: input.response,
         request_timeout: input.request_timeout,
+        attempt_cancel: input.attempt_cancel,
     })
     .await
     {
@@ -206,7 +409,7 @@ async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Res
 
 async fn handle_upstream_failure(
     state: &LlmProxyState,
-    prepared: &PreparedProxyRequest,
+    request_id: &str,
     candidate: &ProxyCandidate,
     retry_index: i32,
     started: Instant,
@@ -215,7 +418,7 @@ async fn handle_upstream_failure(
 ) -> Result<AttemptOnceOutcome, LlmProxyError> {
     let decision = classify_status(response.status());
     let record_cooldown = decision.records_provider_cooldown();
-    let failure = transport::record_upstream_failure(state, &prepared.request_id, response, candidate, started, retry_index, record_cooldown).await?;
+    let failure = transport::record_upstream_failure(state, request_id, response, candidate, started, retry_index, record_cooldown).await?;
     affinity::invalidate_retryable(state, candidate, decision).await?;
     match decision {
         FailureDecision::ReturnResponse => transport::failure_response(failure).map(AttemptOnceOutcome::Response),
@@ -251,24 +454,28 @@ struct SuccessResponseInput<'a> {
     payload: AttemptPayload,
     response: UpstreamResponse,
     request_timeout: Option<Duration>,
+    attempt_cancel: &'a AttemptCancelGuard,
 }
 
 async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, LlmProxyError> {
     if input.prepared.is_stream {
-        return stream_transport::stream_response(stream_transport::StreamResponseArgs {
-            state: input.state,
-            request_id: input.prepared.request_id.clone(),
-            response: input.response,
-            candidate: input.candidate.clone(),
-            source_format: input.payload.source_format,
-            target_format: input.payload.target_format,
-            provider_request_body: input.payload.body,
-            started: input.started,
-            retry_index: input.retry_index,
-        })
+        return stream_transport::stream_response(
+            stream_transport::StreamResponseArgs {
+                state: input.state,
+                request_id: input.prepared.request_id.clone(),
+                response: input.response,
+                candidate: input.candidate.clone(),
+                source_format: input.payload.source_format,
+                target_format: input.payload.target_format,
+                provider_request_body: input.payload.body,
+                started: input.started,
+                retry_index: input.retry_index,
+            },
+            input.attempt_cancel,
+        )
         .await;
     }
-    transport::full_response(transport::FullResponseArgs {
+    let response = transport::full_response(transport::FullResponseArgs {
         state: input.state,
         request_id: input.prepared.request_id.clone(),
         response: input.response,
@@ -280,5 +487,11 @@ async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, L
         retry_index: input.retry_index,
         request_timeout: input.request_timeout,
     })
-    .await
+    .await;
+    input.attempt_cancel.disarm();
+    response
 }
+
+#[cfg(test)]
+#[path = "executor_tests.rs"]
+mod tests;

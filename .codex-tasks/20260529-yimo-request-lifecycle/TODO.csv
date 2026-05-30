@@ -1,0 +1,9 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,分析 Aether 与 Hook 的请求生命周期差异,DONE,明确根因和涉及文件,echo SKIP,2026-05-29T18:14:46+0800,0,已对照 Aether 的 candidate watchdog 与 terminal guard，确认 Hook 的缺口在 pending 生命周期 ownership
+2,在 Hook 中实现根因修复,DONE,相关代码完成且无悬挂状态路径,echo SKIP,2026-05-29T18:14:46+0800,0,延长 attempt guard 到真正终态或 stream relay 接手，并区分响应前/响应后取消
+3,移除 request_record_stale_sweep 任务及其引用,DONE,代码中不再注册或依赖该任务,echo SKIP,2026-05-29T18:14:46+0800,0,已移除 backend 定时任务、storage sweep 模块与对应 i18n 配置
+4,补充或更新测试验证修复,DONE,相关测试可运行并通过,echo SKIP,2026-05-29T18:14:46+0800,0,新增 attempt guard 签名与终态记录测试，补充 scheduler 对历史任务行过滤测试
+5,执行验证并汇总结论,DONE,完成静态检查或测试并产出结论,echo SKIP,2026-05-29T18:14:46+0800,0,just test 仍被仓库现有 formats 失败用例拦住；backend no-deps clippy 通过；全量 clippy 仍被既有 formats/types 告警拦住
+6,补齐外层 stream candidate watchdog 的测试覆盖,DONE,watchdog timeout 与 next-candidate 语义有单测覆盖,echo SKIP,2026-05-29T21:46:00+0800,0,已补 attempt_log 记录语义测试与 executor watchdog helper 测试
+7,完成 executor 外层 watchdog 实现收尾,DONE,stream candidate timeout 后显式 failed 并继续候选,echo SKIP,2026-05-29T21:46:00+0800,0,已去掉 fake PreparedProxyRequest，stream candidate 超时后会 abort task 落 failed 并切下一候选
+8,验证外层 watchdog 修复并更新结论,DONE,完成 fmt check test clippy 并记录结果,echo SKIP,2026-05-29T21:46:00+0800,0,cargo fmt、cargo check、watchdog 相关单测与 backend no-deps clippy 通过；just test 与全量 clippy 仍被仓库既有问题拦住

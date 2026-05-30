@@ -2,6 +2,8 @@ use std::time::{Duration, Instant};
 
 use crate::llm_proxy::candidate::ProxyCandidate;
 
+const STREAM_CANDIDATE_WATCHDOG_SLACK: Duration = Duration::from_secs(1);
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct ProxyTimeouts {
     pub(super) request: Option<Duration>,
@@ -49,6 +51,12 @@ pub(super) fn remaining_timeout_after(elapsed: Duration, total_timeout: Duration
     total_timeout.saturating_sub(elapsed)
 }
 
+pub(super) fn stream_candidate_watchdog_timeout(candidate: &ProxyCandidate) -> Option<Duration> {
+    proxy_timeouts(candidate)
+        .stream_first_byte
+        .map(|timeout| timeout.saturating_add(STREAM_CANDIDATE_WATCHDOG_SLACK))
+}
+
 pub(super) fn timeout_duration(seconds: f64) -> Option<Duration> {
     (seconds.is_finite() && seconds > 0.0).then(|| Duration::from_secs_f64(seconds))
 }
@@ -60,7 +68,10 @@ mod tests {
     use rust_decimal::Decimal;
     use types::model::TieredPricingConfig;
 
-    use super::{non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout_after, remaining_timeout_after, response_start_timeout};
+    use super::{
+        non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout_after, remaining_timeout_after, response_start_timeout,
+        stream_candidate_watchdog_timeout,
+    };
     use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
     #[test]
@@ -136,6 +147,15 @@ mod tests {
         let timeout = remaining_stream_first_byte_timeout_after(Duration::from_secs(31), &candidate);
 
         assert_eq!(timeout, Some(Duration::ZERO));
+    }
+
+    #[test]
+    fn stream_candidate_watchdog_adds_handoff_slack_to_first_byte_budget() {
+        let candidate = candidate();
+
+        let timeout = stream_candidate_watchdog_timeout(&candidate);
+
+        assert_eq!(timeout, Some(Duration::from_secs(31)));
     }
 
     #[test]

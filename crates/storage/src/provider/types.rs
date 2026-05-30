@@ -416,11 +416,3 @@ pub struct RequestUpstreamCostRecordPatch {
     pub upstream_cache_read_cost: PatchField<Decimal>,
     pub upstream_total_cost: PatchField<Decimal>,
 }
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct StaleRequestSweepReport {
-    pub pending_records: u64,
-    pub streaming_records: u64,
-    pub failed_candidates: u64,
-    pub skipped_candidates: u64,
-}

@@ -106,7 +106,7 @@ pub fn formats_compatible(client_format: &str, provider_format: &str, is_stream:
     if !client.data_format.supports_chat_conversion() || !provider.data_format.supports_chat_conversion() {
         return false;
     }
-    FormatConversionRegistry::default().can_convert(client.data_format, provider.data_format, is_stream)
+    FormatConversionRegistry.can_convert(client.data_format, provider.data_format, is_stream)
 }
 
 pub fn formats_exact(client_format: &str, provider_format: &str, is_stream: bool) -> Result<bool, LlmProxyError> {
@@ -126,7 +126,7 @@ pub fn conversion_formats(client_format: &str, provider_format: &str, is_stream:
     let provider = endpoint_metadata(provider_format, is_stream)?;
     let source = client.data_format;
     let target = provider.data_format;
-    if source == target || (cross_protocol_conversion_allowed(client, provider) && FormatConversionRegistry::default().can_convert(source, target, is_stream)) {
+    if source == target || (cross_protocol_conversion_allowed(client, provider) && FormatConversionRegistry.can_convert(source, target, is_stream)) {
         return Ok((source, target));
     }
     Err(LlmProxyError::InvalidRequest(format!(

@@ -105,7 +105,7 @@ impl StreamRelay {
         if !self.needs_conversion {
             return Ok(());
         }
-        let converted = FormatConversionRegistry::default()
+        let converted = FormatConversionRegistry
             .flush_stream(self.target_format, self.source_format, &mut self.conversion)
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         for mut event in converted {

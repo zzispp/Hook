@@ -1979,10 +1979,6 @@
         "name": "Request record cleanup",
         "description": "Delete request records and compress payloads by retention policy."
       },
-      "requestRecordStaleSweep": {
-        "name": "Request record stale sweep",
-        "description": "Sweep pending or streaming request records that have timed out."
-      },
       "rechargePaymentPoll": {
         "name": "Recharge payment polling",
         "description": "Regularly query unexpired pending recharge orders and settle them when the channel reports paid."
@@ -2008,10 +2004,6 @@
       "requestRecordCleanup": {
         "recordRetentionDays": "Request record retention days",
         "payloadRetentionDays": "Request payload retention days"
-      },
-      "requestRecordStaleSweep": {
-        "pendingTimeoutMinutes": "Pending timeout (minutes)",
-        "streamingTimeoutMinutes": "Streaming timeout (minutes)"
       },
       "rechargePaymentPoll": {
         "limit": "Orders per scan"

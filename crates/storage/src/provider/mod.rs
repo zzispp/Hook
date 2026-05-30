@@ -15,7 +15,6 @@ mod request_record_payload_codec;
 mod request_record_query;
 mod request_record_repository;
 mod request_record_summary;
-mod request_record_sweep;
 mod request_record_write;
 mod request_upstream_cost;
 mod types;
@@ -26,7 +25,6 @@ pub use types::{
     ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput,
     ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch, RequestBillingRecordValues,
     RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch, RequestUpstreamCostRecordPatch,
-    StaleRequestSweepReport,
 };
 
 pub(super) use record::{ProviderEndpointRecord, ProviderModelRecord, ProviderRecord};

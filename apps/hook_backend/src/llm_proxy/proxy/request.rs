@@ -137,7 +137,7 @@ fn upstream_body(
     let is_stream = body.get("stream").and_then(Value::as_bool).unwrap_or(false);
     let (source, target) = formats::conversion_formats(&candidate.trace.client_api_format, &candidate.trace.provider_api_format, is_stream)?;
     if candidate.trace.needs_conversion {
-        body = FormatConversionRegistry::default()
+        body = FormatConversionRegistry
             .convert_request(&body, source, target)
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
     }
