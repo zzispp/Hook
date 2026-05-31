@@ -16,7 +16,6 @@ export type AuthConfig = {
     github: OAuthProviderPublicConfig;
     google: OAuthProviderPublicConfig;
     evm: WalletProviderPublicConfig;
-    solana: WalletProviderPublicConfig;
   };
 };
 
@@ -29,7 +28,6 @@ export type WalletProviderPublicConfig = {
   domain: string;
   statement: string;
   evm_chain_ids: number[];
-  solana_network: string;
 };
 
 const swrOptions = {

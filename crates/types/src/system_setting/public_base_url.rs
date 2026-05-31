@@ -22,6 +22,23 @@ pub fn public_base_url_is_valid(value: &str) -> Result<bool, String> {
     Ok(public_host_is_valid(host.as_str()))
 }
 
+pub fn public_base_url_domain(value: &str) -> Result<String, String> {
+    let url = url::Url::parse(value).map_err(|error| error.to_string())?;
+    let host = url.host_str().ok_or_else(|| "public base URL host is required".to_owned())?;
+    let host = public_base_url_authority_host(host);
+    Ok(match url.port() {
+        Some(port) => format!("{host}:{port}"),
+        None => host,
+    })
+}
+
+fn public_base_url_authority_host(host: &str) -> String {
+    if host.contains(':') {
+        return format!("[{host}]");
+    }
+    host.to_owned()
+}
+
 fn public_host_is_valid(host: &str) -> bool {
     let normalized = host.trim_start_matches('[').trim_end_matches(']').to_ascii_lowercase();
     if normalized == "localhost" || normalized.ends_with(".localhost") {
@@ -45,7 +62,7 @@ fn ipv6_is_link_local(addr: std::net::Ipv6Addr) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::public_base_url_is_valid;
+    use super::{public_base_url_domain, public_base_url_is_valid};
 
     #[test]
     fn public_base_url_accepts_http_and_https_urls() {
@@ -67,5 +84,11 @@ mod tests {
         assert_eq!(public_base_url_is_valid("http://127.0.0.1").unwrap(), false);
         assert_eq!(public_base_url_is_valid("http://10.0.0.1").unwrap(), false);
         assert_eq!(public_base_url_is_valid("http://[::1]").unwrap(), false);
+    }
+
+    #[test]
+    fn public_base_url_domain_uses_url_authority() {
+        assert_eq!(public_base_url_domain("https://hook.test/app").unwrap(), "hook.test");
+        assert_eq!(public_base_url_domain("https://hook.test:8443/app").unwrap(), "hook.test:8443");
     }
 }

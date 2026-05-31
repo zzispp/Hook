@@ -68,7 +68,6 @@ pub(in crate::application::service::social_auth) fn username_from_email(email: &
 pub(in crate::application::service::social_auth) fn normalize_subject(provider: IdentityProvider, value: &str) -> String {
     match provider {
         IdentityProvider::Evm => value.trim().to_ascii_lowercase(),
-        IdentityProvider::Solana => value.trim().to_owned(),
         _ => value.trim().to_owned(),
     }
 }
@@ -77,13 +76,10 @@ pub(in crate::application::service::social_auth) fn ensure_wallet_scope(
     settings: &WalletProviderSettings,
     provider: IdentityProvider,
     chain_id: Option<u64>,
-    network: Option<&str>,
 ) -> crate::application::AppResult<()> {
     match provider {
         IdentityProvider::Evm if chain_id.is_some_and(|id| settings.evm_chain_ids.contains(&id)) => Ok(()),
-        IdentityProvider::Solana if network == Some(settings.solana_network.as_str()) => Ok(()),
         IdentityProvider::Evm => Err(crate::application::AppError::InvalidInput("EVM chain is not allowed".into())),
-        IdentityProvider::Solana => Err(crate::application::AppError::InvalidInput("Solana network is not allowed".into())),
         _ => Err(crate::application::AppError::InvalidInput("wallet provider is invalid".into())),
     }
 }

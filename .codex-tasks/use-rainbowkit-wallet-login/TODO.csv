@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current wallet flow,DONE,Current connector and app provider structure are understood,rg wallet signing and package deps,2026-06-01,0,"Current EVM flow directly calls window.ethereum from wallet-signing.ts; app root has no Wagmi/RainbowKit providers."
+2,Install RainbowKit wallet dependencies,DONE,Frontend package includes RainbowKit Wagmi Viem and React Query,pnpm add deps --filter hook_frontend,2026-06-01,1,"Initial install selected Wagmi 3.x; corrected to Wagmi 2.19.5 to satisfy RainbowKit 2.2.11 peer range."
+3,Add RainbowKit providers,IN_PROGRESS,App root wraps client tree with configured Wagmi/RainbowKit providers and requested WalletConnect project id,pnpm lint:frontend,,0,
+4,Replace custom wallet connector,TODO,Sign-in uses RainbowKit/Wagmi account connection and message signing,pnpm lint:frontend,,0,
+5,Run verification,TODO,Frontend lint/build pass and project id is present,pnpm lint:frontend && pnpm build:frontend,,0,

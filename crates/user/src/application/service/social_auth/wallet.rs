@@ -18,7 +18,6 @@ pub(in crate::application::service) async fn wallet_nonce<C, T>(
     provider: IdentityProvider,
     address: String,
     chain_id: Option<u64>,
-    network: Option<String>,
 ) -> AppResult<WalletChallenge>
 where
     C: AuthProviderConfig,
@@ -26,16 +25,15 @@ where
 {
     let settings = config.wallet_provider_settings().await?;
     ensure_wallet_provider_enabled(&settings, provider)?;
-    ensure_wallet_scope(&settings, provider, chain_id, network.as_deref())?;
+    ensure_wallet_scope(&settings, provider, chain_id)?;
     let nonce = random_nonce();
-    let message = wallet_message(&settings, provider, &address, chain_id, network.as_deref(), &nonce);
+    let message = wallet_message(&settings, provider, &address, chain_id, &nonce)?;
     let challenge = WalletChallenge {
         provider,
         address: normalize_subject(provider, &address),
         nonce,
         message,
         chain_id,
-        network,
     };
     tickets
         .save_wallet_challenge(&challenge.nonce, challenge.clone(), WALLET_CHALLENGE_TTL_SECONDS)
@@ -62,7 +60,7 @@ where
     ensure_wallet_provider_enabled(&settings, input.provider)?;
     let nonce = message_nonce(input.provider, &input.message)?;
     let challenge = deps.tickets.consume_wallet_challenge(&nonce).await?.ok_or(AppError::Unauthorized)?;
-    if challenge.chain_id != input.chain_id || challenge.network != input.network {
+    if challenge.chain_id != input.chain_id {
         return Err(AppError::Unauthorized);
     }
     verify_wallet_challenge(&settings, &challenge, input.provider, &input.address, &input.message, &input.signature).await?;
@@ -148,21 +146,13 @@ fn wallet_identity(provider: IdentityProvider, subject: String) -> types::user::
     provider_identity(provider, subject, None, false, None, None, "{}".into())
 }
 
-fn wallet_message(
-    settings: &WalletProviderSettings,
-    provider: IdentityProvider,
-    address: &str,
-    chain_id: Option<u64>,
-    network: Option<&str>,
-    nonce: &str,
-) -> String {
+fn wallet_message(settings: &WalletProviderSettings, provider: IdentityProvider, address: &str, chain_id: Option<u64>, nonce: &str) -> AppResult<String> {
     let issued_at = time::OffsetDateTime::now_utc()
         .format(&time::format_description::well_known::Rfc3339)
         .expect("current time must format");
     match provider {
-        IdentityProvider::Evm => evm_message(settings, address, chain_id, nonce, &issued_at),
-        IdentityProvider::Solana => solana_message(settings, address, network, nonce, &issued_at),
-        _ => String::new(),
+        IdentityProvider::Evm => Ok(evm_message(settings, address, chain_id, nonce, &issued_at)),
+        _ => Err(AppError::InvalidInput("wallet provider is invalid".into())),
     }
 }
 
@@ -171,21 +161,9 @@ fn evm_message(settings: &WalletProviderSettings, address: &str, chain_id: Optio
         "{} wants you to sign in with your Ethereum account:\n{}\n\n{}\n\nURI: https://{}\nVersion: 1\nChain ID: {}\nNonce: {}\nIssued At: {}",
         settings.domain,
         address,
-        settings.statement,
+        settings.evm_statement,
         settings.domain,
         chain_id.unwrap_or(1),
-        nonce,
-        issued_at,
-    )
-}
-
-fn solana_message(settings: &WalletProviderSettings, address: &str, network: Option<&str>, nonce: &str, issued_at: &str) -> String {
-    format!(
-        "{} wants you to sign in with your Solana account:\n{}\n\n{}\n\nNetwork: {}\nNonce: {}\nIssued At: {}",
-        settings.domain,
-        address,
-        settings.statement,
-        network.unwrap_or(&settings.solana_network),
         nonce,
         issued_at,
     )
@@ -202,10 +180,9 @@ async fn verify_wallet_challenge(
     if challenge.provider != provider || challenge.address != normalize_subject(provider, address) || challenge.message != message {
         return Err(AppError::Unauthorized);
     }
-    ensure_wallet_scope(settings, provider, challenge.chain_id, challenge.network.as_deref())?;
+    ensure_wallet_scope(settings, provider, challenge.chain_id)?;
     match provider {
         IdentityProvider::Evm => verify_evm_message(settings, challenge, message, signature).await,
-        IdentityProvider::Solana => verify_solana_message(&challenge.address, message, signature),
         _ => Err(AppError::InvalidInput("wallet provider is invalid".into())),
     }
 }
@@ -229,17 +206,6 @@ async fn verify_evm_message(settings: &WalletProviderSettings, challenge: &Walle
         .map_err(|_| AppError::Unauthorized)
 }
 
-fn verify_solana_message(address: &str, message: &str, signature: &str) -> AppResult<()> {
-    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
-    let public_key = bs58::decode(address).into_vec().map_err(|_| AppError::Unauthorized)?;
-    let public_key: [u8; 32] = public_key.try_into().map_err(|_| AppError::Unauthorized)?;
-    let signature = bs58::decode(signature).into_vec().map_err(|_| AppError::Unauthorized)?;
-    let signature: [u8; 64] = signature.try_into().map_err(|_| AppError::Unauthorized)?;
-    let key = VerifyingKey::from_bytes(&public_key).map_err(|_| AppError::Unauthorized)?;
-    key.verify(message.as_bytes(), &Signature::from_bytes(&signature))
-        .map_err(|_| AppError::Unauthorized)
-}
-
 fn decode_hex_signature(signature: &str) -> AppResult<Vec<u8>> {
     let trimmed = signature.trim().trim_start_matches("0x");
     hex::decode(trimmed).map_err(|_| AppError::Unauthorized)
@@ -248,8 +214,7 @@ fn decode_hex_signature(signature: &str) -> AppResult<Vec<u8>> {
 fn ensure_wallet_provider_enabled(settings: &WalletProviderSettings, provider: IdentityProvider) -> AppResult<()> {
     match provider {
         IdentityProvider::Evm if settings.evm_enabled => Ok(()),
-        IdentityProvider::Solana if settings.solana_enabled => Ok(()),
-        IdentityProvider::Evm | IdentityProvider::Solana => Err(AppError::InvalidInput("wallet provider is disabled".into())),
+        IdentityProvider::Evm => Err(AppError::InvalidInput("wallet provider is disabled".into())),
         _ => Err(AppError::InvalidInput("wallet provider is invalid".into())),
     }
 }
@@ -260,11 +225,6 @@ fn message_nonce(provider: IdentityProvider, message: &str) -> AppResult<String>
             let message: siwe::Message = message.parse().map_err(|_| AppError::Unauthorized)?;
             Ok(message.nonce)
         }
-        IdentityProvider::Solana => message
-            .lines()
-            .find_map(|line| line.strip_prefix("Nonce: "))
-            .map(str::to_owned)
-            .ok_or(AppError::Unauthorized),
         _ => Err(AppError::InvalidInput("wallet provider is invalid".into())),
     }
 }

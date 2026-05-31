@@ -13,5 +13,10 @@
     "build:backend": "cargo build -p backend",
     "build:backend:embedded": "pnpm build:frontend:embedded && cargo build -p backend --release",
     "start:embedded": "pnpm build:frontend:embedded && cargo run -p backend"
+  },
+  "pnpm": {
+    "overrides": {
+      "cuer@0.0.3>qr": "0.5.5"
+    }
   }
 }

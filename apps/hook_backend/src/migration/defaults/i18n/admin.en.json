@@ -1675,12 +1675,11 @@
       "authClientSecretLength": "OAuth Client Secret must be at most {{max}} characters.",
       "oauthProviderIncomplete": "Enabled OAuth providers require a Client ID and a saved Client Secret.",
       "oauthPublicBaseUrlRequired": "Fill the public base URL before enabling GitHub or Google sign-in.",
-      "walletDomainLength": "Wallet signature domain must be at most {{max}} characters.",
+      "walletPublicBaseUrlRequired": "Fill the public base URL before enabling EVM wallet sign-in.",
       "walletStatementLength": "Wallet signature statement must be at most {{max}} characters.",
-      "evmChainIdsRequired": "At least one chain id is required when EVM wallet sign-in is enabled.",
-      "solanaNetworkRequired": "Solana network is required when Solana wallet sign-in is enabled.",
-      "walletDomainRequired": "Wallet signature domain is required when wallet sign-in is enabled.",
-      "walletStatementRequired": "Wallet signature statement is required when wallet sign-in is enabled."
+      "evmNetworksRequired": "At least one network is required when EVM wallet sign-in is enabled.",
+      "evmNetworksUnsupported": "EVM wallet sign-in only supports ETH, BSC, and ARB.",
+      "evmStatementRequired": "EVM statement is required when EVM wallet sign-in is enabled."
     },
     "authProviders": {
       "title": "Quick sign-in providers",
@@ -1689,10 +1688,7 @@
       "secretSet": "Already set; leave blank to keep the current secret.",
       "callbackAddress": "Callback URL",
       "publicBaseUrlMissing": "Set public base URL first",
-      "evmChainIds": "EVM Chain IDs",
-      "solanaNetwork": "Solana Network",
-      "walletDomain": "Wallet signature domain",
-      "walletStatement": "Wallet signature statement",
+      "walletDomain": "Wallet signature domain (from public base URL)",
       "github": {
         "enabled": "Enable GitHub sign-in"
       },
@@ -1700,10 +1696,10 @@
         "enabled": "Enable Google sign-in"
       },
       "evm": {
-        "enabled": "Enable EVM wallet"
-      },
-      "solana": {
-        "enabled": "Enable Solana wallet"
+        "title": "EVM wallet",
+        "enabled": "Enable EVM wallet",
+        "networks": "EVM networks",
+        "statement": "EVM statement"
       }
     },
     "recharge": {

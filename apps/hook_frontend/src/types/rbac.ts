@@ -126,7 +126,7 @@ export type BackendNavItem = {
   children: BackendNavItem[];
 };
 
-export type IdentityProvider = 'github' | 'google' | 'evm' | 'solana';
+export type IdentityProvider = 'github' | 'google' | 'evm';
 
 export type UserIdentitySummary = {
   id: string;

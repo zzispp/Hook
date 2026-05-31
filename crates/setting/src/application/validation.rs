@@ -12,7 +12,6 @@ const MAX_SITE_SUBTITLE_LENGTH: usize = 200;
 const MAX_PUBLIC_BASE_URL_LENGTH: usize = 255;
 const MAX_AUTH_CLIENT_ID_LENGTH: usize = 255;
 const MAX_AUTH_CLIENT_SECRET_LENGTH: usize = 2048;
-const MAX_AUTH_WALLET_DOMAIN_LENGTH: usize = 255;
 const MAX_AUTH_WALLET_STATEMENT_LENGTH: usize = 200;
 const MAX_SMTP_HOST_LENGTH: usize = 255;
 const MAX_SMTP_USERNAME_LENGTH: usize = 255;
@@ -40,9 +39,7 @@ pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
         auth_google_client_id: trim_optional(input.auth_google_client_id),
         auth_google_client_secret: trim_optional(input.auth_google_client_secret),
         auth_evm_chain_ids: trim_optional(input.auth_evm_chain_ids),
-        auth_solana_network: trim_optional(input.auth_solana_network),
-        auth_wallet_domain: trim_optional(input.auth_wallet_domain),
-        auth_wallet_statement: trim_optional(input.auth_wallet_statement),
+        auth_evm_statement: trim_optional(input.auth_evm_statement),
         smtp_host: trim_optional(input.smtp_host),
         smtp_username: trim_optional(input.smtp_username),
         smtp_password: trim_optional(input.smtp_password),
@@ -93,13 +90,7 @@ fn validate_auth_provider_settings(input: &SystemSettingsUpdate) -> SettingResul
         MAX_AUTH_CLIENT_SECRET_LENGTH,
     )?;
     validate_optional_length("auth_evm_chain_ids", input.auth_evm_chain_ids.as_deref(), MAX_AUTH_CLIENT_ID_LENGTH)?;
-    validate_optional_length("auth_solana_network", input.auth_solana_network.as_deref(), MAX_AUTH_CLIENT_ID_LENGTH)?;
-    validate_optional_length("auth_wallet_domain", input.auth_wallet_domain.as_deref(), MAX_AUTH_WALLET_DOMAIN_LENGTH)?;
-    validate_optional_length(
-        "auth_wallet_statement",
-        input.auth_wallet_statement.as_deref(),
-        MAX_AUTH_WALLET_STATEMENT_LENGTH,
-    )?;
+    validate_optional_length("auth_evm_statement", input.auth_evm_statement.as_deref(), MAX_AUTH_WALLET_STATEMENT_LENGTH)?;
     Ok(())
 }
 

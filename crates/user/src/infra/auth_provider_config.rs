@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use setting::application::SettingSecretCipher;
 use storage::{Database, setting::SettingStore};
-use types::user::IdentityProvider;
+use types::{system_setting::public_base_url_domain, user::IdentityProvider};
 
 use crate::application::{AppError, AppResult, AuthProviderConfig, OAuthProviderSettings, WalletProviderSettings};
 
@@ -46,15 +46,21 @@ where
 
     async fn wallet_provider_settings(&self) -> AppResult<WalletProviderSettings> {
         let settings = self.store.get_auth_provider_settings().await.map_err(storage_error)?;
+        let domain = wallet_domain(&settings)?;
         Ok(WalletProviderSettings {
             evm_enabled: settings.auth_evm_enabled,
             evm_chain_ids: evm_chain_ids(&settings.auth_evm_chain_ids)?,
-            solana_enabled: settings.auth_solana_enabled,
-            solana_network: settings.auth_solana_network,
-            domain: settings.auth_wallet_domain,
-            statement: settings.auth_wallet_statement,
+            evm_statement: settings.auth_evm_statement,
+            domain,
         })
     }
+}
+
+fn wallet_domain(settings: &storage::setting::SystemSettingsAuthProviderRecord) -> AppResult<String> {
+    if !settings.auth_evm_enabled {
+        return Ok(String::new());
+    }
+    public_base_url_domain(settings.public_base_url.trim()).map_err(|_| AppError::InvalidInput("wallet domain is invalid".into()))
 }
 
 fn decrypt_secret<C>(cipher: &C, encrypted: &str) -> AppResult<String>

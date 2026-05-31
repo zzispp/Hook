@@ -1,4 +1,5 @@
 import 'src/global.css';
+import '@rainbow-me/rainbowkit/styles.css';
 
 import type { Metadata, Viewport } from 'next';
 
@@ -17,6 +18,7 @@ import { MotionLazy } from 'src/components/animate/motion-lazy';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from 'src/components/settings';
 
 import { AuthProvider } from 'src/auth/context/jwt';
+import { WalletConnectorProvider } from 'src/auth/context/jwt/wallet-connector-provider';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -71,25 +73,27 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         />
 
         <I18nProvider lang={appConfig.i18nLang}>
-          <AuthProvider>
-            <SettingsProvider defaultSettings={defaultSettings}>
-              <LocalizationProvider>
-                <AppRouterCacheProvider options={{ key: 'css' }}>
-                  <ThemeProvider
-                    modeStorageKey={themeConfig.modeStorageKey}
-                    defaultMode={themeConfig.defaultMode}
-                  >
-                    <MotionLazy>
-                      <Snackbar />
-                      <ProgressBar />
-                      <SettingsDrawer defaultSettings={defaultSettings} />
-                      {children}
-                    </MotionLazy>
-                  </ThemeProvider>
-                </AppRouterCacheProvider>
-              </LocalizationProvider>
-            </SettingsProvider>
-          </AuthProvider>
+          <WalletConnectorProvider>
+            <AuthProvider>
+              <SettingsProvider defaultSettings={defaultSettings}>
+                <LocalizationProvider>
+                  <AppRouterCacheProvider options={{ key: 'css' }}>
+                    <ThemeProvider
+                      modeStorageKey={themeConfig.modeStorageKey}
+                      defaultMode={themeConfig.defaultMode}
+                    >
+                      <MotionLazy>
+                        <Snackbar />
+                        <ProgressBar />
+                        <SettingsDrawer defaultSettings={defaultSettings} />
+                        {children}
+                      </MotionLazy>
+                    </ThemeProvider>
+                  </AppRouterCacheProvider>
+                </LocalizationProvider>
+              </SettingsProvider>
+            </AuthProvider>
+          </WalletConnectorProvider>
         </I18nProvider>
       </body>
     </html>

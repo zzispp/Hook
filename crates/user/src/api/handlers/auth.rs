@@ -87,7 +87,6 @@ pub async fn wallet_nonce(State(state): State<ApiState>, Json(payload): Json<Wal
             provider: payload.provider,
             address: payload.address,
             chain_id: payload.chain_id,
-            network: payload.network,
         })
         .await?;
     Ok(ok(WalletNonceResponse {
@@ -105,7 +104,6 @@ pub async fn wallet_sign_in(State(state): State<ApiState>, Json(payload): Json<W
             message: payload.message,
             signature: payload.signature,
             chain_id: payload.chain_id,
-            network: payload.network,
         })
         .await?;
     match result {

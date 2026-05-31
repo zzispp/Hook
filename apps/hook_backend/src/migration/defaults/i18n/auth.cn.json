@@ -37,7 +37,6 @@
     "github": "使用 GitHub 登录",
     "google": "使用 Google 登录",
     "evm": "使用 EVM 钱包登录",
-    "solana": "使用 Solana 钱包登录",
     "walletEmailRequired": "钱包 {{address}} 尚未绑定账户，请验证邮箱后继续。",
     "resendCode": "重新发送验证码",
     "completeWallet": "完成钱包绑定并登录",

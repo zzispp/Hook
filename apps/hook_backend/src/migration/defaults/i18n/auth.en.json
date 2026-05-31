@@ -37,7 +37,6 @@
     "github": "Continue with GitHub",
     "google": "Continue with Google",
     "evm": "Continue with EVM wallet",
-    "solana": "Continue with Solana wallet",
     "walletEmailRequired": "Wallet {{address}} is not linked yet. Verify an email to continue.",
     "resendCode": "Resend code",
     "completeWallet": "Link wallet and sign in",

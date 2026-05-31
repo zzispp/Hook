@@ -2,8 +2,8 @@ import type { SystemSettingsForm } from './system-settings-utils';
 
 const MAX_AUTH_CLIENT_ID_LENGTH = 255;
 const MAX_AUTH_CLIENT_SECRET_LENGTH = 2048;
-const MAX_AUTH_WALLET_DOMAIN_LENGTH = 255;
 const MAX_AUTH_WALLET_STATEMENT_LENGTH = 200;
+const SUPPORTED_EVM_CHAIN_IDS = new Set([1, 56, 42161]);
 
 type T = (key: string, options?: Record<string, unknown>) => string;
 
@@ -55,27 +55,22 @@ function validateOAuthProvider(
 }
 
 function validateWalletProvider(form: SystemSettingsForm, t: T) {
-  if (form.auth_wallet_domain.trim().length > MAX_AUTH_WALLET_DOMAIN_LENGTH) {
-    return t('systemSettings.validation.walletDomainLength', {
-      max: MAX_AUTH_WALLET_DOMAIN_LENGTH,
-    });
-  }
-  if (form.auth_wallet_statement.trim().length > MAX_AUTH_WALLET_STATEMENT_LENGTH) {
+  if (form.auth_evm_statement.trim().length > MAX_AUTH_WALLET_STATEMENT_LENGTH) {
     return t('systemSettings.validation.walletStatementLength', {
       max: MAX_AUTH_WALLET_STATEMENT_LENGTH,
     });
   }
+  if (form.auth_evm_enabled && !form.public_base_url.trim()) {
+    return t('systemSettings.validation.walletPublicBaseUrlRequired');
+  }
   if (form.auth_evm_enabled && evmChainIds(form.auth_evm_chain_ids).length === 0) {
-    return t('systemSettings.validation.evmChainIdsRequired');
+    return t('systemSettings.validation.evmNetworksRequired');
   }
-  if (form.auth_solana_enabled && !form.auth_solana_network.trim()) {
-    return t('systemSettings.validation.solanaNetworkRequired');
+  if (form.auth_evm_enabled && evmChainIds(form.auth_evm_chain_ids).some(unsupportedEvmChainId)) {
+    return t('systemSettings.validation.evmNetworksUnsupported');
   }
-  if ((form.auth_evm_enabled || form.auth_solana_enabled) && !form.auth_wallet_domain.trim()) {
-    return t('systemSettings.validation.walletDomainRequired');
-  }
-  if ((form.auth_evm_enabled || form.auth_solana_enabled) && !form.auth_wallet_statement.trim()) {
-    return t('systemSettings.validation.walletStatementRequired');
+  if (form.auth_evm_enabled && !form.auth_evm_statement.trim()) {
+    return t('systemSettings.validation.evmStatementRequired');
   }
   return '';
 }
@@ -85,4 +80,8 @@ function evmChainIds(value: string) {
     .split(',')
     .map((item) => Number(item.trim()))
     .filter((item) => Number.isInteger(item) && item > 0);
+}
+
+function unsupportedEvmChainId(item: number) {
+  return !SUPPORTED_EVM_CHAIN_IDS.has(item);
 }

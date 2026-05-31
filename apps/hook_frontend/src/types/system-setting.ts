@@ -23,10 +23,7 @@ export type SystemSettings = {
   auth_google_client_secret_set: boolean;
   auth_evm_enabled: boolean;
   auth_evm_chain_ids: string;
-  auth_solana_enabled: boolean;
-  auth_solana_network: string;
-  auth_wallet_domain: string;
-  auth_wallet_statement: string;
+  auth_evm_statement: string;
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
@@ -95,10 +92,7 @@ export type SystemSettingsUpdate = Partial<{
   auth_google_client_secret: string;
   auth_evm_enabled: boolean;
   auth_evm_chain_ids: string;
-  auth_solana_enabled: boolean;
-  auth_solana_network: string;
-  auth_wallet_domain: string;
-  auth_wallet_statement: string;
+  auth_evm_statement: string;
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;

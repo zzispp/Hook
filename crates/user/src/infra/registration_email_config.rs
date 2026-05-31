@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 use storage::{Database, i18n::I18nStore, setting::SettingStore};
-use types::user::{AuthConfigResponse, AuthProviderConfigResponse, OAuthProviderPublicConfig, WalletProviderPublicConfig};
+use types::{
+    system_setting::public_base_url_domain,
+    user::{AuthConfigResponse, AuthProviderConfigResponse, OAuthProviderPublicConfig, WalletProviderPublicConfig},
+};
 
 use crate::application::{AppError, AppResult, EmailSettings, RegistrationEmailConfig, RegistrationEmailTemplate};
 
@@ -28,6 +31,7 @@ impl StorageRegistrationEmailConfig {
 impl RegistrationEmailConfig for StorageRegistrationEmailConfig {
     async fn auth_config(&self) -> AppResult<AuthConfigResponse> {
         let settings = self.settings.get_system_settings().await.map_err(storage_error)?;
+        let domain = wallet_domain(&settings)?;
         Ok(AuthConfigResponse {
             allow_registration: settings.allow_registration,
             registration_email_verification_enabled: settings.registration_email_verification_enabled,
@@ -40,17 +44,9 @@ impl RegistrationEmailConfig for StorageRegistrationEmailConfig {
                 },
                 evm: WalletProviderPublicConfig {
                     enabled: settings.auth_evm_enabled,
-                    domain: settings.auth_wallet_domain.clone(),
-                    statement: settings.auth_wallet_statement.clone(),
+                    domain,
+                    statement: settings.auth_evm_statement,
                     evm_chain_ids: evm_chain_ids(&settings.auth_evm_chain_ids)?,
-                    solana_network: String::new(),
-                },
-                solana: WalletProviderPublicConfig {
-                    enabled: settings.auth_solana_enabled,
-                    domain: settings.auth_wallet_domain,
-                    statement: settings.auth_wallet_statement,
-                    evm_chain_ids: Vec::new(),
-                    solana_network: settings.auth_solana_network,
                 },
             },
         })
@@ -76,6 +72,13 @@ impl RegistrationEmailConfig for StorageRegistrationEmailConfig {
         let html = self.template_value(lang, REGISTRATION_HTML_KEY).await?;
         Ok(RegistrationEmailTemplate { subject, html })
     }
+}
+
+fn wallet_domain(settings: &types::system_setting::SystemSettings) -> AppResult<String> {
+    if !settings.auth_evm_enabled {
+        return Ok(String::new());
+    }
+    public_base_url_domain(settings.public_base_url.trim()).map_err(|_| AppError::InvalidInput("wallet domain is invalid".into()))
 }
 
 fn evm_chain_ids(value: &str) -> AppResult<Vec<u64>> {

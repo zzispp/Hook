@@ -5,6 +5,7 @@ mod ports;
 mod service;
 mod smtp;
 mod validation;
+mod wallet_config;
 
 pub use error::{SettingError, SettingResult};
 pub use ports::{SettingPaymentChannelCatalog, SettingRepository, SettingSecretCipher, SettingUseCase, SettingUserGroupCatalog, SmtpConnectionTester};

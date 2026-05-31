@@ -9,7 +9,7 @@ mod update;
 pub use core::SystemSettings;
 pub use enums::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 pub use public::PublicSiteInfoResponse;
-pub use public_base_url::public_base_url_is_valid;
+pub use public_base_url::{public_base_url_domain, public_base_url_is_valid};
 pub use response::SystemSettingsResponse;
 pub use smtp_test::{SystemSettingsSmtpTestRequest, SystemSettingsSmtpTestResponse};
 pub use update::SystemSettingsUpdate;

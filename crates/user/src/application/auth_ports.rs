@@ -17,10 +17,8 @@ pub struct OAuthProviderSettings {
 pub struct WalletProviderSettings {
     pub evm_enabled: bool,
     pub evm_chain_ids: Vec<u64>,
-    pub solana_enabled: bool,
-    pub solana_network: String,
+    pub evm_statement: String,
     pub domain: String,
-    pub statement: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -63,7 +61,6 @@ pub struct WalletChallenge {
     pub nonce: String,
     pub message: String,
     pub chain_id: Option<u64>,
-    pub network: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -76,7 +73,6 @@ pub struct WalletNonceInput {
     pub provider: IdentityProvider,
     pub address: String,
     pub chain_id: Option<u64>,
-    pub network: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -86,7 +82,6 @@ pub struct WalletSignInInput {
     pub message: String,
     pub signature: String,
     pub chain_id: Option<u64>,
-    pub network: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

@@ -13,6 +13,7 @@ use super::{
     oauth_config::validate_oauth_provider_prerequisites,
     smtp::{failure_response, sanitize_smtp_test_request, smtp_connection_config, success_response},
     validation::{sanitize_update, validate_recharge_bounds, validate_update},
+    wallet_config::validate_wallet_provider_prerequisites,
 };
 
 pub struct SettingService<R, C, T, U = NoSettingUserGroupCatalog, P = NoSettingPaymentChannelCatalog> {
@@ -64,6 +65,7 @@ where
         validate_recharge_bounds(&input, &current)?;
         validate_recharge_payment_channels(&self.payment_channels, &input, &current).await?;
         validate_oauth_provider_prerequisites(&input, &current)?;
+        validate_wallet_provider_prerequisites(&input, &current)?;
         validate_email_feature_prerequisites(&input, &current)?;
         validate_default_user_group(&self.user_groups, input.default_user_group_code.as_deref()).await?;
         let encrypted_smtp_password = input

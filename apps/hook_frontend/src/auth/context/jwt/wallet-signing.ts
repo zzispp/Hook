@@ -1,133 +1,185 @@
+'use client';
+
+import type { MutableRefObject } from 'react';
 import type { IdentityProvider } from 'src/types/rbac';
 
-type EthereumProvider = {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-};
-
-type SolanaProvider = {
-  connect: () => Promise<{ publicKey?: { toString: () => string } }>;
-  signMessage: (message: Uint8Array, encoding?: string) => Promise<{ signature: Uint8Array }>;
-};
+import { useRef, useEffect, useCallback } from 'react';
+import { useConnectModal } from '@rainbow-me/rainbowkit';
+import { useAccount, useSignMessage, useSwitchChain } from 'wagmi';
 
 export type WalletSignatureResult = {
-  provider: Extract<IdentityProvider, 'evm' | 'solana'>;
+  provider: Extract<IdentityProvider, 'evm'>;
   address: string;
   signature: string;
   chainId?: number;
-  network?: string;
 };
 
 export type WalletAccountResult = Omit<WalletSignatureResult, 'signature'>;
 
-const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-
-export async function connectWalletAccount({
-  provider,
-  chainId,
-  network,
-}: {
-  provider: Extract<IdentityProvider, 'evm' | 'solana'>;
+type WalletConnectRequest = {
+  provider: Extract<IdentityProvider, 'evm'>;
   chainId?: number;
-  network?: string;
+};
+
+type PendingConnect = {
+  request: WalletConnectRequest;
+  modalSeen: boolean;
+  resolve: (account: WalletAccountResult) => void;
+  reject: (error: Error) => void;
+};
+
+type SwitchChainAsync = ReturnType<typeof useSwitchChain>['switchChainAsync'];
+
+export function useWalletSigning() {
+  const pendingConnect = useRef<PendingConnect | null>(null);
+  const { address, chainId: activeChainId, isConnected } = useAccount();
+  const { openConnectModal, connectModalOpen } = useConnectModal();
+  const { switchChainAsync } = useSwitchChain();
+  const { signMessageAsync } = useSignMessage();
+
+  const connectWalletAccount = useCallback(
+    async (request: WalletConnectRequest): Promise<WalletAccountResult> => {
+      if (isConnected && address) {
+        return ensureWalletAccount({ request, address, activeChainId, switchChainAsync });
+      }
+      if (!openConnectModal) {
+        throw new Error('EVM wallet connector is not available');
+      }
+      return waitForRainbowKitConnection({ request, openConnectModal, pendingConnect });
+    },
+    [activeChainId, address, isConnected, openConnectModal, switchChainAsync]
+  );
+
+  const signWalletMessage = useCallback(
+    async (input: WalletAccountResult & { message: string }): Promise<WalletSignatureResult> => {
+      const account = await ensureWalletAccount({
+        request: input,
+        address,
+        activeChainId,
+        switchChainAsync,
+      });
+      assertMatchingAddress(account.address, input.address);
+      const signature = await signMessageAsync({ message: input.message });
+      return { ...account, signature };
+    },
+    [activeChainId, address, signMessageAsync, switchChainAsync]
+  );
+
+  usePendingRainbowKitConnection({
+    pendingConnect,
+    address,
+    activeChainId,
+    isConnected,
+    connectModalOpen,
+    switchChainAsync,
+  });
+
+  return { connectWalletAccount, signWalletMessage };
+}
+
+function waitForRainbowKitConnection({
+  request,
+  openConnectModal,
+  pendingConnect,
+}: {
+  request: WalletConnectRequest;
+  openConnectModal: () => void;
+  pendingConnect: MutableRefObject<PendingConnect | null>;
+}) {
+  return new Promise<WalletAccountResult>((resolve, reject) => {
+    pendingConnect.current = { request, resolve, reject, modalSeen: false };
+    openConnectModal();
+  });
+}
+
+function usePendingRainbowKitConnection({
+  pendingConnect,
+  address,
+  activeChainId,
+  isConnected,
+  connectModalOpen,
+  switchChainAsync,
+}: {
+  pendingConnect: MutableRefObject<PendingConnect | null>;
+  address?: string;
+  activeChainId?: number;
+  isConnected: boolean;
+  connectModalOpen: boolean;
+  switchChainAsync: SwitchChainAsync;
+}) {
+  useEffect(() => {
+    const pending = pendingConnect.current;
+    if (!pending) return;
+    if (isConnected && address) {
+      resolvePendingConnection({ pendingConnect, pending, address, activeChainId, switchChainAsync });
+      return;
+    }
+    if (!connectModalOpen && pending.modalSeen) {
+      pendingConnect.current = null;
+      pending.reject(new Error('EVM wallet connection was cancelled'));
+      return;
+    }
+    if (connectModalOpen && !pending.modalSeen) {
+      pendingConnect.current = { ...pending, modalSeen: true };
+    }
+  }, [activeChainId, address, connectModalOpen, isConnected, pendingConnect, switchChainAsync]);
+}
+
+function resolvePendingConnection({
+  pendingConnect,
+  pending,
+  address,
+  activeChainId,
+  switchChainAsync,
+}: {
+  pendingConnect: MutableRefObject<PendingConnect | null>;
+  pending: PendingConnect;
+  address: string;
+  activeChainId?: number;
+  switchChainAsync: SwitchChainAsync;
+}) {
+  pendingConnect.current = null;
+  ensureWalletAccount({ request: pending.request, address, activeChainId, switchChainAsync })
+    .then(pending.resolve)
+    .catch(pending.reject);
+}
+
+async function ensureWalletAccount({
+  request,
+  address,
+  activeChainId,
+  switchChainAsync,
+}: {
+  request: WalletConnectRequest;
+  address?: string;
+  activeChainId?: number;
+  switchChainAsync: SwitchChainAsync;
 }): Promise<WalletAccountResult> {
-  if (provider === 'evm') {
-    const address = await connectEvmAddress();
-    return { provider, address, chainId };
-  }
-  const address = await connectSolanaAddress();
-  return { provider, address, network };
-}
-
-export async function signWalletMessage({
-  provider,
-  message,
-  chainId,
-  network,
-}: {
-  provider: Extract<IdentityProvider, 'evm' | 'solana'>;
-  message: string;
-  chainId?: number;
-  network?: string;
-}): Promise<WalletSignatureResult> {
-  if (provider === 'evm') {
-    return signEvmMessage(message, chainId);
-  }
-  return signSolanaMessage(message, network);
-}
-
-async function signEvmMessage(message: string, chainId?: number): Promise<WalletSignatureResult> {
-  const address = await connectEvmAddress();
-  const ethereum = requireWindowProvider('ethereum') as EthereumProvider;
-  const signature = (await ethereum.request({
-    method: 'personal_sign',
-    params: [message, address],
-  })) as string;
-  return { provider: 'evm', address, signature, chainId };
-}
-
-async function signSolanaMessage(
-  message: string,
-  network?: string
-): Promise<WalletSignatureResult> {
-  const address = await connectSolanaAddress();
-  const solana = requireWindowProvider('solana') as SolanaProvider;
-  const encodedMessage = new TextEncoder().encode(message);
-  const signed = await solana.signMessage(encodedMessage, 'utf8');
-  return { provider: 'solana', address, signature: base58Encode(signed.signature), network };
-}
-
-async function connectEvmAddress() {
-  const ethereum = requireWindowProvider('ethereum') as EthereumProvider;
-  const accounts = (await ethereum.request({ method: 'eth_requestAccounts' })) as string[];
-  const address = accounts[0];
   if (!address) {
     throw new Error('EVM wallet account not found');
   }
-  return address;
+  const chainId = await ensureWalletChain({ request, activeChainId, switchChainAsync });
+  return { provider: request.provider, address, chainId };
 }
 
-async function connectSolanaAddress() {
-  const solana = requireWindowProvider('solana') as SolanaProvider;
-  const connection = await solana.connect();
-  const address = connection.publicKey?.toString();
-  if (!address) {
-    throw new Error('Solana wallet account not found');
+async function ensureWalletChain({
+  request,
+  activeChainId,
+  switchChainAsync,
+}: {
+  request: WalletConnectRequest;
+  activeChainId?: number;
+  switchChainAsync: SwitchChainAsync;
+}) {
+  if (!request.chainId || activeChainId === request.chainId) {
+    return request.chainId ?? activeChainId;
   }
-  return address;
+  const chain = await switchChainAsync({ chainId: request.chainId });
+  return chain.id;
 }
 
-function requireWindowProvider(key: 'ethereum' | 'solana') {
-  const provider = windowProvider(key);
-  if (!provider) {
-    throw new Error(`${key === 'ethereum' ? 'EVM' : 'Solana'} wallet is not available`);
+function assertMatchingAddress(actual: string, expected: string) {
+  if (actual.toLowerCase() !== expected.toLowerCase()) {
+    throw new Error('Connected EVM account changed before signing');
   }
-  return provider;
-}
-
-function windowProvider(key: 'ethereum' | 'solana') {
-  if (typeof window === 'undefined') {
-    return undefined;
-  }
-  return (window as unknown as Record<typeof key, unknown>)[key];
-}
-
-function base58Encode(bytes: Uint8Array) {
-  let zeros = 0;
-  while (zeros < bytes.length && bytes[zeros] === 0) {
-    zeros += 1;
-  }
-  const digits: number[] = [];
-  for (const byte of bytes) {
-    let carry = byte;
-    for (let index = 0; index < digits.length; index += 1) {
-      carry += digits[index] * 256;
-      digits[index] = carry % 58;
-      carry = Math.floor(carry / 58);
-    }
-    while (carry > 0) {
-      digits.push(carry % 58);
-      carry = Math.floor(carry / 58);
-    }
-  }
-  return '1'.repeat(zeros) + digits.reverse().map((digit) => BASE58_ALPHABET[digit]).join('');
 }

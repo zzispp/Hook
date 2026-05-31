@@ -118,10 +118,8 @@ impl Default for TestAuthProviderConfig {
             wallet: WalletProviderSettings {
                 evm_enabled: true,
                 evm_chain_ids: vec![1],
-                solana_enabled: true,
-                solana_network: "mainnet-beta".into(),
+                evm_statement: "Sign in to Hook".into(),
                 domain: "app.example.com".into(),
-                statement: "Sign in to Hook".into(),
             },
         }
     }

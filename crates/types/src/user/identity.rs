@@ -6,7 +6,6 @@ pub enum IdentityProvider {
     Github,
     Google,
     Evm,
-    Solana,
 }
 
 impl IdentityProvider {
@@ -15,7 +14,6 @@ impl IdentityProvider {
             Self::Github => "github",
             Self::Google => "google",
             Self::Evm => "evm",
-            Self::Solana => "solana",
         }
     }
 
@@ -24,7 +22,6 @@ impl IdentityProvider {
             Self::Github => "GitHub",
             Self::Google => "Google",
             Self::Evm => "EVM",
-            Self::Solana => "Solana",
         }
     }
 }
@@ -37,7 +34,6 @@ impl TryFrom<&str> for IdentityProvider {
             "github" => Ok(Self::Github),
             "google" => Ok(Self::Google),
             "evm" => Ok(Self::Evm),
-            "solana" => Ok(Self::Solana),
             _ => Err(format!("invalid identity provider: {value}")),
         }
     }

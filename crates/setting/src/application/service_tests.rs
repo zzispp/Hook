@@ -107,6 +107,8 @@ mod oauth;
 mod smtp;
 #[path = "service_tests/update.rs"]
 mod update;
+#[path = "service_tests/wallet.rs"]
+mod wallet;
 
 fn test_service(tester: RecordingTester, stored: StoredSmtpSettings) -> TestSettingService {
     SettingService::new(
@@ -166,10 +168,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         auth_google_client_secret_set: false,
         auth_evm_enabled: false,
         auth_evm_chain_ids: "1".into(),
-        auth_solana_enabled: false,
-        auth_solana_network: "mainnet-beta".into(),
-        auth_wallet_domain: String::new(),
-        auth_wallet_statement: "Sign in to Hook".into(),
+        auth_evm_statement: "Sign in to Hook".into(),
         password_reset_enabled: false,
         email_config_enabled: false,
         support_ticket_email_notifications_enabled: false,

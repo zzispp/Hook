@@ -16,7 +16,7 @@ import { Iconify } from 'src/components/iconify';
 
 export type WalletTicketState = {
   ticket: string;
-  provider: Extract<IdentityProvider, 'evm' | 'solana'>;
+  provider: Extract<IdentityProvider, 'evm'>;
   address: string;
 };
 
@@ -29,7 +29,7 @@ type Props = {
   walletCodeSent: boolean;
   onOAuth: (provider: Extract<IdentityProvider, 'github' | 'google'>) => void;
   onWallet: (
-    provider: Extract<IdentityProvider, 'evm' | 'solana'>,
+    provider: Extract<IdentityProvider, 'evm'>,
     config: WalletProviderPublicConfig
   ) => void;
   onWalletEmailChange: (value: string) => void;
@@ -41,7 +41,7 @@ type Props = {
 export function JwtSocialSignIn(props: Props) {
   const { providers } = props;
   const hasOAuth = providers?.github.enabled || providers?.google.enabled;
-  const hasWallet = providers?.evm.enabled || providers?.solana.enabled;
+  const hasWallet = providers?.evm.enabled;
 
   if (!hasOAuth && !hasWallet) {
     return null;
@@ -63,10 +63,20 @@ function ProviderButtons({ providers, loading, onOAuth, onWallet }: Props) {
       <Divider sx={{ mb: 2 }}>{t('social.or')}</Divider>
       <Box sx={{ gap: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
         {providers?.github.enabled && (
-          <ProviderButton label={t('social.github')} icon="socials:github" loading={loading === 'github'} onClick={() => onOAuth('github')} />
+          <ProviderButton
+            label={t('social.github')}
+            icon="socials:github"
+            loading={loading === 'github'}
+            onClick={() => onOAuth('github')}
+          />
         )}
         {providers?.google.enabled && (
-          <ProviderButton label={t('social.google')} icon="socials:google" loading={loading === 'google'} onClick={() => onOAuth('google')} />
+          <ProviderButton
+            label={t('social.google')}
+            icon="socials:google"
+            loading={loading === 'google'}
+            onClick={() => onOAuth('google')}
+          />
         )}
         {providers?.evm.enabled && (
           <ProviderButton
@@ -74,14 +84,6 @@ function ProviderButtons({ providers, loading, onOAuth, onWallet }: Props) {
             icon="solar:wad-of-money-bold"
             loading={loading === 'evm'}
             onClick={() => onWallet('evm', providers.evm)}
-          />
-        )}
-        {providers?.solana.enabled && (
-          <ProviderButton
-            label={t('social.solana')}
-            icon="solar:wad-of-money-bold"
-            loading={loading === 'solana'}
-            onClick={() => onWallet('solana', providers.solana)}
           />
         )}
       </Box>
@@ -101,7 +103,14 @@ function ProviderButton({
   onClick: VoidFunction;
 }) {
   return (
-    <Button fullWidth color="inherit" variant="outlined" loading={loading} startIcon={<Iconify icon={icon} />} onClick={onClick}>
+    <Button
+      fullWidth
+      color="inherit"
+      variant="outlined"
+      loading={loading}
+      startIcon={<Iconify icon={icon} />}
+      onClick={onClick}
+    >
       {label}
     </Button>
   );
@@ -125,8 +134,18 @@ function WalletEmailBinding({
       <Typography variant="body2" color="text.secondary">
         {t('social.walletEmailRequired', { address: walletTicket.address })}
       </Typography>
-      <BindingText label={t('fields.email')} value={walletEmail} placeholder={t('placeholders.email')} onChange={onWalletEmailChange} />
-      <Button variant="outlined" color="inherit" loading={loading === walletTicket.provider} onClick={onSendWalletCode}>
+      <BindingText
+        label={t('fields.email')}
+        value={walletEmail}
+        placeholder={t('placeholders.email')}
+        onChange={onWalletEmailChange}
+      />
+      <Button
+        variant="outlined"
+        color="inherit"
+        loading={loading === walletTicket.provider}
+        onClick={onSendWalletCode}
+      >
         {walletCodeSent ? t('social.resendCode') : t('actions.sendRegistrationCode')}
       </Button>
       <BindingText
@@ -135,7 +154,12 @@ function WalletEmailBinding({
         placeholder={t('placeholders.emailVerificationCode')}
         onChange={onWalletCodeChange}
       />
-      <Button variant="contained" color="inherit" loading={loading === walletTicket.provider} onClick={onCompleteWallet}>
+      <Button
+        variant="contained"
+        color="inherit"
+        loading={loading === walletTicket.provider}
+        onClick={onCompleteWallet}
+      >
         {t('social.completeWallet')}
       </Button>
     </Box>

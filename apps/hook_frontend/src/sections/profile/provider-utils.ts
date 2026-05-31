@@ -5,7 +5,6 @@ export function providerLabel(provider: IdentityProvider) {
     github: 'GitHub',
     google: 'Google',
     evm: 'EVM',
-    solana: 'Solana',
   };
   return labels[provider];
 }
@@ -15,7 +14,6 @@ export function providerColor(provider: IdentityProvider) {
     github: 'primary',
     google: 'info',
     evm: 'warning',
-    solana: 'success',
   };
   return colors[provider];
 }

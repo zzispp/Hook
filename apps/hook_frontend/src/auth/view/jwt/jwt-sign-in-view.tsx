@@ -26,8 +26,8 @@ import { getErrorMessage } from '../../utils';
 import { FormHead } from '../../components/form-head';
 import { JwtSocialSignIn } from './jwt-social-sign-in';
 import { signInSchema } from '../../context/jwt/validation';
+import { useWalletSigning } from '../../context/jwt/wallet-signing';
 import { JwtPasswordSignInForm } from './jwt-password-sign-in-form';
-import { signWalletMessage, connectWalletAccount } from '../../context/jwt/wallet-signing';
 import {
   startOAuth,
   walletNonce,
@@ -55,6 +55,7 @@ export function JwtSignInView() {
   const { t, currentLang } = useTranslate('auth');
 
   const { checkUserSession } = useAuthContext();
+  const { signWalletMessage, connectWalletAccount } = useWalletSigning();
   const authConfig = useAuthConfig();
   const captchaConfig = useCaptchaConfig();
 
@@ -184,27 +185,37 @@ export function JwtSignInView() {
           })
         }
         onSendWalletCode={() =>
-          runSocialAction(setErrorMessage, setSocialLoading, walletTicket?.provider ?? 'evm', async () => {
-            if (!walletTicket) return;
-            await requestWalletEmailCode({
-              walletTicket: walletTicket.ticket,
-              email: walletEmail,
-              lang: currentLang.value,
-            });
-            setWalletCodeSent(true);
-          })
+          runSocialAction(
+            setErrorMessage,
+            setSocialLoading,
+            walletTicket?.provider ?? 'evm',
+            async () => {
+              if (!walletTicket) return;
+              await requestWalletEmailCode({
+                walletTicket: walletTicket.ticket,
+                email: walletEmail,
+                lang: currentLang.value,
+              });
+              setWalletCodeSent(true);
+            }
+          )
         }
         onCompleteWallet={() =>
-          runSocialAction(setErrorMessage, setSocialLoading, walletTicket?.provider ?? 'evm', async () => {
-            if (!walletTicket) return;
-            await completeWallet({
-              walletTicket: walletTicket.ticket,
-              email: walletEmail,
-              emailVerificationCode: walletCode,
-            });
-            await checkUserSession?.();
-            router.refresh();
-          })
+          runSocialAction(
+            setErrorMessage,
+            setSocialLoading,
+            walletTicket?.provider ?? 'evm',
+            async () => {
+              if (!walletTicket) return;
+              await completeWallet({
+                walletTicket: walletTicket.ticket,
+                email: walletEmail,
+                emailVerificationCode: walletCode,
+              });
+              await checkUserSession?.();
+              router.refresh();
+            }
+          )
         }
       />
 
@@ -249,13 +260,12 @@ async function runSocialAction(
 }
 
 function walletScope(
-  provider: Extract<IdentityProvider, 'evm' | 'solana'>,
+  provider: Extract<IdentityProvider, 'evm'>,
   config: WalletProviderPublicConfig
 ) {
   return {
     provider,
-    chainId: provider === 'evm' ? config.evm_chain_ids[0] : undefined,
-    network: provider === 'solana' ? config.solana_network : undefined,
+    chainId: config.evm_chain_ids[0],
   };
 }
 
@@ -273,7 +283,7 @@ async function handleWalletResult(
   }
   setWalletTicket({
     ticket: result.wallet_ticket,
-    provider: result.provider as Extract<IdentityProvider, 'evm' | 'solana'>,
+    provider: result.provider as Extract<IdentityProvider, 'evm'>,
     address: result.address,
   });
 }

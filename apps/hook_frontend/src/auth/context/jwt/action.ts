@@ -69,7 +69,6 @@ export type WalletNonceParams = {
   provider: IdentityProvider;
   address: string;
   chainId?: number;
-  network?: string;
 };
 
 export type WalletSignInParams = WalletNonceParams & {
@@ -172,12 +171,11 @@ export async function bindOAuthExisting({
   await setSession(requireAuthSession(res.data));
 }
 
-export async function walletNonce({ provider, address, chainId, network }: WalletNonceParams) {
+export async function walletNonce({ provider, address, chainId }: WalletNonceParams) {
   const res = await axios.post(endpoints.auth.walletNonce, {
     provider,
     address: trimCredential(address),
     chain_id: chainId,
-    network,
   });
   return requireApiData<{ message: string; nonce: string }>(res.data);
 }
@@ -186,7 +184,6 @@ export async function walletSignIn({
   provider,
   address,
   chainId,
-  network,
   message,
   signature,
 }: WalletSignInParams) {
@@ -194,7 +191,6 @@ export async function walletSignIn({
     provider,
     address: trimCredential(address),
     chain_id: chainId,
-    network,
     message,
     signature,
   });

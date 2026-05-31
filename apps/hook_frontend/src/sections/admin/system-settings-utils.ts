@@ -36,10 +36,7 @@ export type SystemSettingsForm = {
   auth_google_client_secret_set: boolean;
   auth_evm_enabled: boolean;
   auth_evm_chain_ids: string;
-  auth_solana_enabled: boolean;
-  auth_solana_network: string;
-  auth_wallet_domain: string;
-  auth_wallet_statement: string;
+  auth_evm_statement: string;
   password_reset_enabled: boolean;
   email_config_enabled: boolean;
   support_ticket_email_notifications_enabled: boolean;
@@ -157,8 +154,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     ...authProviderFormFromSettings(settings),
     password_reset_enabled: settings.password_reset_enabled,
     email_config_enabled: settings.email_config_enabled,
-    support_ticket_email_notifications_enabled:
-      settings.support_ticket_email_notifications_enabled,
+    support_ticket_email_notifications_enabled: settings.support_ticket_email_notifications_enabled,
     default_user_group_code: settings.default_user_group_code,
     token_limit_per_user: String(settings.token_limit_per_user),
     client_request_record_level: settings.client_request_record_level,
@@ -217,8 +213,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     ...authProviderPayloadFields(form),
     password_reset_enabled: form.password_reset_enabled,
     email_config_enabled: form.email_config_enabled,
-    support_ticket_email_notifications_enabled:
-      form.support_ticket_email_notifications_enabled,
+    support_ticket_email_notifications_enabled: form.support_ticket_email_notifications_enabled,
     default_user_group_code: form.default_user_group_code,
     token_limit_per_user: Number(form.token_limit_per_user || 0),
     client_request_record_level: form.client_request_record_level,

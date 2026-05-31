@@ -125,7 +125,6 @@ where
             input.provider,
             input.address,
             input.chain_id,
-            input.network,
         )
         .await
     }

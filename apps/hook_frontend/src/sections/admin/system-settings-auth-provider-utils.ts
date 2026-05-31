@@ -12,10 +12,7 @@ export const DEFAULT_AUTH_PROVIDER_FORM = {
   auth_google_client_secret_set: false,
   auth_evm_enabled: false,
   auth_evm_chain_ids: '1',
-  auth_solana_enabled: false,
-  auth_solana_network: 'mainnet-beta',
-  auth_wallet_domain: '',
-  auth_wallet_statement: 'Sign in to Hook',
+  auth_evm_statement: 'Sign in to Hook',
 };
 
 export function authProviderFormFromSettings(settings: SystemSettings) {
@@ -30,10 +27,7 @@ export function authProviderFormFromSettings(settings: SystemSettings) {
     auth_google_client_secret_set: settings.auth_google_client_secret_set,
     auth_evm_enabled: settings.auth_evm_enabled,
     auth_evm_chain_ids: settings.auth_evm_chain_ids,
-    auth_solana_enabled: settings.auth_solana_enabled,
-    auth_solana_network: settings.auth_solana_network,
-    auth_wallet_domain: settings.auth_wallet_domain,
-    auth_wallet_statement: settings.auth_wallet_statement,
+    auth_evm_statement: settings.auth_evm_statement,
   };
 }
 
@@ -45,10 +39,7 @@ export function authProviderPayloadFields(form: SystemSettingsForm) {
     auth_google_client_id: form.auth_google_client_id,
     auth_evm_enabled: form.auth_evm_enabled,
     auth_evm_chain_ids: form.auth_evm_chain_ids,
-    auth_solana_enabled: form.auth_solana_enabled,
-    auth_solana_network: form.auth_solana_network,
-    auth_wallet_domain: form.auth_wallet_domain,
-    auth_wallet_statement: form.auth_wallet_statement,
+    auth_evm_statement: form.auth_evm_statement,
   };
 }
 

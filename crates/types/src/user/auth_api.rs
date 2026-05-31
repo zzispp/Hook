@@ -14,7 +14,6 @@ pub struct AuthProviderConfigResponse {
     pub github: OAuthProviderPublicConfig,
     pub google: OAuthProviderPublicConfig,
     pub evm: WalletProviderPublicConfig,
-    pub solana: WalletProviderPublicConfig,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -28,7 +27,6 @@ pub struct WalletProviderPublicConfig {
     pub domain: String,
     pub statement: String,
     pub evm_chain_ids: Vec<u64>,
-    pub solana_network: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,7 +62,6 @@ pub struct WalletNoncePayload {
     pub provider: IdentityProvider,
     pub address: String,
     pub chain_id: Option<u64>,
-    pub network: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -80,7 +77,6 @@ pub struct WalletSignInPayload {
     pub message: String,
     pub signature: String,
     pub chain_id: Option<u64>,
-    pub network: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

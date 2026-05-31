@@ -50,10 +50,7 @@ impl SettingStore {
             encrypted_auth_google_client_secret: record.encrypted_auth_google_client_secret,
             auth_evm_enabled: record.auth_evm_enabled,
             auth_evm_chain_ids: record.auth_evm_chain_ids,
-            auth_solana_enabled: record.auth_solana_enabled,
-            auth_solana_network: record.auth_solana_network,
-            auth_wallet_domain: record.auth_wallet_domain,
-            auth_wallet_statement: record.auth_wallet_statement,
+            auth_evm_statement: record.auth_evm_statement,
         })
     }
 
@@ -138,17 +135,8 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = &input.auth_evm_chain_ids {
         active.auth_evm_chain_ids = Set(value.clone());
     }
-    if let Some(value) = input.auth_solana_enabled {
-        active.auth_solana_enabled = Set(value);
-    }
-    if let Some(value) = &input.auth_solana_network {
-        active.auth_solana_network = Set(value.clone());
-    }
-    if let Some(value) = &input.auth_wallet_domain {
-        active.auth_wallet_domain = Set(value.clone());
-    }
-    if let Some(value) = &input.auth_wallet_statement {
-        active.auth_wallet_statement = Set(value.clone());
+    if let Some(value) = &input.auth_evm_statement {
+        active.auth_evm_statement = Set(value.clone());
     }
     if let Some(value) = input.password_reset_enabled {
         active.password_reset_enabled = Set(value);

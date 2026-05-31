@@ -171,7 +171,6 @@ async fn wallet_existing_identity_signs_in_without_email() {
                 nonce: "testnonce".into(),
                 message: "testnonce".into(),
                 chain_id: Some(1),
-                network: None,
             },
             600,
         )
@@ -186,7 +185,6 @@ async fn wallet_existing_identity_signs_in_without_email() {
             message: "testnonce".into(),
             signature: "ignored".into(),
             chain_id: Some(1),
-            network: None,
         })
         .await;
 
