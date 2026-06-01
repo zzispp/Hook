@@ -11,8 +11,9 @@ use types::{
 };
 
 use super::{
-    ModelStatusError, ModelStatusProbe, ModelStatusProbeInput, ModelStatusProbeOutput, ModelStatusRepository, ModelStatusResult, ModelStatusRunRecord,
-    ModelStatusRunStatus, ModelStatusService, ModelStatusTokenCatalog, ModelStatusUseCase,
+    ModelStatusDispatchOptions, ModelStatusError, ModelStatusProbe, ModelStatusProbeInput, ModelStatusProbeOptions, ModelStatusProbeOutput,
+    ModelStatusProbeResult, ModelStatusRepository, ModelStatusResult, ModelStatusRunRecord, ModelStatusRunStatus, ModelStatusService, ModelStatusTokenCatalog,
+    ModelStatusUseCase,
 };
 
 #[tokio::test]
@@ -48,9 +49,10 @@ async fn run_due_checks_records_probe_result() {
     }]);
     let service = ModelStatusService::new(repository.clone(), StaticTokenCatalog::new(independent_token()), StaticProbe);
 
-    let dispatched = service.run_due_checks(20, 4).await.unwrap();
+    let report = service.run_due_checks(dispatch_options()).await.unwrap();
 
-    assert_eq!(dispatched, 1);
+    assert_eq!(report.probed_count, 1);
+    assert_eq!(report.deferred_count, 0);
     assert_eq!(repository.records().len(), 1);
     assert_eq!(repository.records()[0].status, ModelStatusRunStatus::Operational);
 }
@@ -160,6 +162,10 @@ impl ModelStatusRepository for MemoryRepository {
         Ok(())
     }
 
+    async fn defer_check(&self, _check_id: &str, _next_due_at: time::OffsetDateTime) -> ModelStatusResult<()> {
+        unimplemented!("not needed for service tests")
+    }
+
     async fn token_has_checks(&self, _token_id: &str) -> ModelStatusResult<bool> {
         Ok(false)
     }
@@ -188,13 +194,21 @@ struct StaticProbe;
 
 #[async_trait]
 impl ModelStatusProbe for StaticProbe {
-    async fn probe(&self, _input: ModelStatusProbeInput) -> ModelStatusProbeOutput {
-        ModelStatusProbeOutput {
+    async fn probe(&self, _input: ModelStatusProbeInput, _options: ModelStatusProbeOptions) -> ModelStatusProbeResult {
+        ModelStatusProbeResult::Completed(ModelStatusProbeOutput {
             status: ModelStatusRunStatus::Operational,
             latency_ms: Some(42),
             status_code: Some(200),
             message: None,
-        }
+        })
+    }
+}
+
+fn dispatch_options() -> ModelStatusDispatchOptions {
+    ModelStatusDispatchOptions {
+        limit: 20,
+        concurrency: 4,
+        provider_key_min_interval_seconds: 1,
     }
 }
 

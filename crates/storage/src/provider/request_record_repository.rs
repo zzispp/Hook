@@ -25,6 +25,10 @@ impl ProviderStore {
         super::request_candidate_query::mark_scheduled_request_candidates_skipped(self, request_id, skip_reason).await
     }
 
+    pub async fn mark_model_status_probe_deferred(&self, request_id: &str, skip_reason: &str) -> StorageResult<()> {
+        super::request_probe_defer::mark_model_status_probe_deferred(self, request_id, skip_reason).await
+    }
+
     pub async fn list_request_candidates(
         &self,
         request: types::provider::RequestCandidateListRequest,

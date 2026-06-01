@@ -3,8 +3,8 @@ use storage::provider::{
     ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
 };
 use types::provider::{
-    ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderModelBindingCreate,
-    ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderUpdate,
+    ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderModelBindingBatchUpdate,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderUpdate,
 };
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
@@ -122,6 +122,14 @@ pub(super) fn model_binding_input(provider_id: &str, input: ProviderModelBinding
         provider_model_mapping: input.provider_model_mapping,
         is_active: true,
         config: input.config,
+    }
+}
+
+pub(super) fn model_binding_batch_input(provider_id: &str, input: ProviderModelBindingBatchUpdate) -> storage::provider::ProviderModelRecordBatchUpdate {
+    storage::provider::ProviderModelRecordBatchUpdate {
+        provider_id: provider_id.to_owned(),
+        create: input.create.into_iter().map(|binding| model_binding_input(provider_id, binding)).collect(),
+        delete_ids: input.delete_ids,
     }
 }
 

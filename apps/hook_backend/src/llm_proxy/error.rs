@@ -18,6 +18,7 @@ pub enum LlmProxyError {
         code: &'static str,
     },
     RateLimited(String),
+    ProbeDeferred(String),
     InvalidRequest(String),
     NotFound(String),
     Upstream(String),
@@ -54,7 +55,7 @@ impl LlmProxyError {
             Self::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
             Self::InvalidRequest(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
-            Self::Upstream(_) | Self::Infrastructure(_) => StatusCode::BAD_GATEWAY,
+            Self::ProbeDeferred(_) | Self::Upstream(_) | Self::Infrastructure(_) => StatusCode::BAD_GATEWAY,
         }
     }
 
@@ -66,7 +67,7 @@ impl LlmProxyError {
             Self::RateLimited(_) => "rate_limit_error",
             Self::InvalidRequest(_) => "invalid_request_error",
             Self::NotFound(_) => "not_found_error",
-            Self::Upstream(_) | Self::Infrastructure(_) => client_error::SERVER_ERROR_TYPE,
+            Self::ProbeDeferred(_) | Self::Upstream(_) | Self::Infrastructure(_) => client_error::SERVER_ERROR_TYPE,
         }
     }
 
@@ -75,6 +76,7 @@ impl LlmProxyError {
             Self::Unauthorized => "missing or invalid bearer token".into(),
             Self::CodedForbidden { message, .. } => message.clone(),
             Self::Forbidden(message) | Self::RateLimited(message) | Self::InvalidRequest(message) | Self::NotFound(message) => message.clone(),
+            Self::ProbeDeferred(_) => client_error::SERVICE_UNAVAILABLE_MESSAGE.into(),
             Self::Upstream(_) => client_error::MODEL_SERVICE_UNAVAILABLE_MESSAGE.into(),
             Self::Infrastructure(_) => client_error::SERVICE_UNAVAILABLE_MESSAGE.into(),
         }
@@ -86,6 +88,7 @@ impl LlmProxyError {
             Self::Forbidden(message)
             | Self::CodedForbidden { message, .. }
             | Self::RateLimited(message)
+            | Self::ProbeDeferred(message)
             | Self::InvalidRequest(message)
             | Self::NotFound(message)
             | Self::Upstream(message)
@@ -97,7 +100,7 @@ impl LlmProxyError {
         match self {
             Self::CodedForbidden { code, .. } => Value::String((*code).into()),
             Self::Upstream(_) => Value::String(client_error::MODEL_SERVICE_UNAVAILABLE_CODE.into()),
-            Self::Infrastructure(_) => Value::String(client_error::SERVICE_UNAVAILABLE_CODE.into()),
+            Self::ProbeDeferred(_) | Self::Infrastructure(_) => Value::String(client_error::SERVICE_UNAVAILABLE_CODE.into()),
             _ => Value::Number(status.as_u16().into()),
         }
     }

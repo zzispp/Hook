@@ -924,7 +924,15 @@ mod tests {
             .expect("image should encode");
 
         let sse = String::from_utf8(bytes).expect("sse should be utf8");
-        assert!(sse.contains("\"inlineData\":{\"mimeType\":\"image/png\",\"data\":\"iVBORw0KGgo=\"}"));
+        let payload = sse
+            .lines()
+            .find_map(|line| line.strip_prefix("data: "))
+            .and_then(|line| serde_json::from_str::<Value>(line).ok())
+            .expect("image sse payload should be json");
+        assert_eq!(
+            payload["candidates"][0]["content"]["parts"][0]["inlineData"],
+            json!({"mimeType": "image/png", "data": "iVBORw0KGgo="})
+        );
     }
 
     #[test]

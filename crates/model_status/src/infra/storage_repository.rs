@@ -87,6 +87,10 @@ impl ModelStatusRepository for StorageModelStatusRepository {
         self.store.record_run(record_input(record), interval_seconds).await.map_err(storage_error)
     }
 
+    async fn defer_check(&self, check_id: &str, next_due_at: time::OffsetDateTime) -> ModelStatusResult<()> {
+        self.store.defer_check(check_id, next_due_at).await.map_err(storage_error)
+    }
+
     async fn token_has_checks(&self, token_id: &str) -> ModelStatusResult<bool> {
         self.store.token_has_checks(token_id).await.map_err(storage_error)
     }

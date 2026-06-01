@@ -85,6 +85,7 @@ async fn leaderboard_rows(store: &DashboardStore, query: &DashboardUserStatsLead
     let mut params = SqlParams::new();
     let where_sql = bucket_where(&query.window, GRANULARITY_DAY, None, &mut params);
     let order_column = metric_column(query.metric);
+    let value_column = metric_value_column(query.metric);
     let limit = params.push(query.limit as i64);
     let offset = params.push(query.offset as i64);
     let sql = format!(
@@ -100,7 +101,7 @@ async fn leaderboard_rows(store: &DashboardStore, query: &DashboardUserStatsLead
             SELECT *, DENSE_RANK() OVER (ORDER BY {order_column} DESC) AS rank \
             FROM aggregated \
         ) \
-        SELECT rank::bigint AS rank, id, name, requests, tokens, cost, {order_column} AS value \
+        SELECT rank::bigint AS rank, id, name, requests, tokens, cost, {value_column} AS value \
         FROM ranked \
         ORDER BY {order_column} DESC, name ASC, id ASC \
         LIMIT {limit} OFFSET {offset}"
@@ -159,6 +160,14 @@ fn metric_column(metric: DashboardUserStatsMetric) -> &'static str {
     match metric {
         DashboardUserStatsMetric::Requests => "requests",
         DashboardUserStatsMetric::Tokens => "tokens",
+        DashboardUserStatsMetric::Cost => "cost",
+    }
+}
+
+fn metric_value_column(metric: DashboardUserStatsMetric) -> &'static str {
+    match metric {
+        DashboardUserStatsMetric::Requests => "requests::numeric",
+        DashboardUserStatsMetric::Tokens => "tokens::numeric",
         DashboardUserStatsMetric::Cost => "cost",
     }
 }

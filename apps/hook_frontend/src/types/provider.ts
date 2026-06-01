@@ -247,6 +247,11 @@ export type ProviderModelBindingCreate = {
   config?: Record<string, unknown> | null;
 };
 
+export type ProviderModelBindingBatchUpdate = {
+  create: ProviderModelBindingCreate[];
+  delete_ids: string[];
+};
+
 export type ProviderModelBindingUpdate = {
   provider_model_name?: string;
   is_active?: boolean;

@@ -112,6 +112,13 @@ pub struct ProviderModelRecordInput {
     pub config: Option<serde_json::Value>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderModelRecordBatchUpdate {
+    pub provider_id: String,
+    pub create: Vec<ProviderModelRecordInput>,
+    pub delete_ids: Vec<String>,
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ProviderModelRecordPatch {
     pub provider_model_name: Option<String>,

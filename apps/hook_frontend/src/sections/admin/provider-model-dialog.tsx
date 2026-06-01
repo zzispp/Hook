@@ -16,7 +16,8 @@ import Typography from '@mui/material/Typography';
 import DialogActions from '@mui/material/DialogActions';
 
 import { useTranslate } from 'src/locales/use-locales';
-import { useProviderModels, createProviderModel, deleteProviderModel } from 'src/actions/providers';
+import { useProviderModels } from 'src/actions/providers';
+import { batchUpdateProviderModels } from 'src/actions/provider-model-bindings';
 
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -184,14 +185,10 @@ async function saveChanges(
   current: ReturnType<typeof useProviderModels>['items'],
   changes: PendingChanges
 ) {
-  for (const id of changes.remove) {
-    const binding = current.find((item) => item.global_model_id === id);
-    if (binding) await deleteProviderModel(providerId, binding.id);
-  }
-  for (const id of changes.add) {
-    const model = models.find((item) => item.id === id);
-    if (model) await createProviderModel(providerId, { global_model_id: id, provider_model_name: model.name });
-  }
+  await batchUpdateProviderModels(providerId, {
+    create: providerModelCreates(models, changes.add),
+    delete_ids: providerModelDeleteIds(current, changes.remove),
+  });
 }
 
 type PendingChanges = { add: string[]; remove: string[]; count: number };
@@ -207,6 +204,20 @@ function filterModels(models: GlobalModelResponse[], query: string) {
   return models
     .filter((model) => !normalized || model.name.toLowerCase().includes(normalized) || model.display_name.toLowerCase().includes(normalized))
     .sort((left, right) => left.display_name.localeCompare(right.display_name));
+}
+
+function providerModelCreates(models: GlobalModelResponse[], ids: string[]) {
+  return ids.flatMap((id) => {
+    const model = models.find((item) => item.id === id);
+    return model ? [{ global_model_id: id, provider_model_name: model.name }] : [];
+  });
+}
+
+function providerModelDeleteIds(current: ReturnType<typeof useProviderModels>['items'], ids: string[]) {
+  return ids.flatMap((id) => {
+    const binding = current.find((item) => item.global_model_id === id);
+    return binding ? [binding.id] : [];
+  });
 }
 
 function nextSelectedIds(current: Set<string>, id: string) {

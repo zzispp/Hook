@@ -17,7 +17,6 @@ pub const AUTHENTICATED_API_CODES: &[&str] = &[
 
 pub const ADMIN_MENU_CODES: &[&str] = &[
     "dashboard_home",
-    "dashboard_profile",
     "admin_performance_monitoring",
     "admin_user_stats",
     "admin_cost_analysis",
@@ -46,7 +45,6 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
 
 pub const USER_MENU_CODES: &[&str] = &[
     "dashboard_home",
-    "dashboard_profile",
     "dashboard_model_status",
     "announcements",
     "support_tickets",
@@ -263,6 +261,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "provider_keys_delete",
             "provider_models_read",
             "provider_models_create",
+            "provider_models_batch_update",
             "provider_models_update",
             "provider_models_delete",
             "provider_models_test",
@@ -416,7 +415,6 @@ mod tests {
         }
 
         assert!(ADMIN_MENU_CODES.contains(&"dashboard_home"));
-        assert!(ADMIN_MENU_CODES.contains(&"dashboard_profile"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_models"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_providers"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_cache_monitoring"));

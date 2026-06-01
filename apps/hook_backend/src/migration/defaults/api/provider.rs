@@ -80,6 +80,12 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "创建提供商模型绑定",
     },
     ApiDefinition {
+        code: "provider_models_batch_update",
+        method: "POST",
+        path_pattern: "/api/admin/providers/{provider_id}/models/batch-update",
+        name: "批量更新提供商模型绑定",
+    },
+    ApiDefinition {
         code: "provider_models_update",
         method: "PATCH",
         path_pattern: "/api/admin/providers/{provider_id}/models/{model_id}",

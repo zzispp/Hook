@@ -3,13 +3,15 @@ use storage::{Database, StorageError, model::ModelStore, provider::ProviderStore
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
-    ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    UsageRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
 use crate::infra::storage_mapping::{
-    api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_input, model_binding_patch, model_cost_inputs, provider_input, provider_patch,
+    api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_batch_input, model_binding_input, model_binding_patch, model_cost_inputs,
+    provider_input, provider_patch,
 };
 
 #[derive(Clone)]
@@ -131,6 +133,13 @@ impl ProviderRepository for StorageProviderRepository {
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding> {
         self.store
             .create_model_binding(model_binding_input(provider_id, input))
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn batch_update_model_bindings(&self, provider_id: &str, input: ProviderModelBindingBatchUpdate) -> ProviderResult<Vec<ProviderModelBinding>> {
+        self.store
+            .batch_update_model_bindings(model_binding_batch_input(provider_id, input))
             .await
             .map_err(storage_error)
     }

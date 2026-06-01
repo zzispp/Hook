@@ -15,7 +15,7 @@ use super::{
     stream_transport, timeout, transport,
 };
 use crate::llm_proxy::{
-    audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
+    audit::{SKIP_REASON_REQUEST_TERMINATED, record_probe_deferred, record_skipped_candidates},
     candidate::ProxyCandidate,
     rate_limit,
 };
@@ -75,6 +75,16 @@ async fn attempt_once(
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<AttemptOnceOutcome, LlmProxyError> {
+    if let Some(min_interval_seconds) = prepared.provider_key_probe_min_interval_seconds {
+        match rate_limit::claim_provider_key_probe_slot(state, &candidate.trace.key_id, min_interval_seconds).await {
+            Ok(()) => {}
+            Err(error @ LlmProxyError::ProbeDeferred(_)) => {
+                record_probe_deferred(state, &prepared.request_id).await?;
+                return Err(error);
+            }
+            Err(error) => return Err(error),
+        }
+    }
     match rate_limit::claim_provider_key_limit(state, &candidate.trace.key_id, candidate.key_rpm_limit).await {
         Ok(()) => {}
         Err(error @ LlmProxyError::RateLimited(_)) => {

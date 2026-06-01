@@ -181,12 +181,7 @@ async fn wallet_email_code_rejects_system_user_email() {
     let repository = MemoryUserRepository::default();
     let codes = TestPurposeEmailCodeStore::default();
     let tickets = TestAuthTicketStore::default();
-    let service = test_service_with_system_user(
-        repository,
-        codes.clone(),
-        tickets.clone(),
-        TestOAuthClient::default(),
-    );
+    let service = test_service_with_system_user(repository, codes.clone(), tickets.clone(), TestOAuthClient::default());
     tickets
         .seed_wallet_binding("wallet-ticket", identity_input(String::new(), IdentityProvider::Evm, "0xabc"))
         .await;
@@ -203,12 +198,7 @@ async fn wallet_complete_rejects_system_user_email() {
     let repository = MemoryUserRepository::default();
     let codes = TestPurposeEmailCodeStore::default();
     let tickets = TestAuthTicketStore::default();
-    let service = test_service_with_system_user(
-        repository.clone(),
-        codes.clone(),
-        tickets.clone(),
-        TestOAuthClient::default(),
-    );
+    let service = test_service_with_system_user(repository.clone(), codes.clone(), tickets.clone(), TestOAuthClient::default());
     tickets
         .seed_wallet_binding("wallet-ticket", identity_input(String::new(), IdentityProvider::Evm, "0xabc"))
         .await;

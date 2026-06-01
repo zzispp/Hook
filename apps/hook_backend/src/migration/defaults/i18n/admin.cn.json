@@ -90,15 +90,15 @@
     "deleteContent": "删除后将不再继续探测该模型。",
     "batchDeleteTitle": "批量删除模型状态检查",
     "batchDeleteContent": "将删除 {{count}} 个模型状态检查及其探测记录。",
-    "batchFix": "批量修复",
-    "batchFixTitle": "批量修复模型状态检查",
+    "batchFix": "批量修改",
+    "batchFixTitle": "批量修改模型状态检查",
     "batchFixCount": "已选择 {{count}} 个检查",
     "noChange": "不修改",
     "enable": "启用",
     "disable": "禁用",
     "namePrefix": "名称前缀",
     "namePrefixPlaceholder": "例如 GPT",
-    "emptyBatchFix": "请选择至少一个批量修复项",
+    "emptyBatchFix": "请选择至少一个批量修改项",
     "tabs": {
       "checks": "检查管理",
       "runs": "探测记录"
@@ -121,7 +121,7 @@
       "updated": "模型状态检查已更新",
       "deleted": "模型状态检查已删除",
       "batchDeleted": "已删除 {{count}} 个模型状态检查",
-      "batchFixed": "已批量修复 {{count}} 个模型状态检查"
+      "batchFixed": "已批量修改 {{count}} 个模型状态检查"
     }
   },
   "common": {
@@ -165,6 +165,7 @@
     "save": "保存",
     "section": "分组",
     "selectAll": "全选",
+    "deselectAll": "全不选",
     "sort": "排序",
     "sortOrder": "排序",
     "source": "来源",
@@ -2013,7 +2014,8 @@
       },
       "modelStatusCheckDispatch": {
         "batchSize": "单次领取数量",
-        "concurrency": "并发探测数"
+        "concurrency": "并发探测数",
+        "providerKeyMinIntervalSeconds": "同一提供商密钥探测最小间隔秒数"
       },
       "modelStatusRunsCleanup": {
         "retentionDays": "模型状态探测记录保留天数"

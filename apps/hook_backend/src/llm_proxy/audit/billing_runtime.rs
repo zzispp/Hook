@@ -187,7 +187,7 @@ fn should_record_successful_attempt(input: &AttemptRecordInput<'_>) -> bool {
 
 fn billing_status(status: &str) -> &'static str {
     match status {
-        "failed" | "cancelled" => "void",
+        "failed" | "cancelled" | "skipped" => "void",
         _ => "pending",
     }
 }

@@ -2,29 +2,31 @@ use async_trait::async_trait;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
-    ProviderModelCostListResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-    UsageRecordListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
+    RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
 
 mod key_endpoint_scope;
 mod key_permissions;
+mod model_bindings;
 mod model_costs;
 mod request_queries;
 
 use key_endpoint_scope::ensure_api_formats_bound;
 use key_permissions::ensure_allowed_models_bound;
+use model_bindings::{prepare_model_binding_batch_update, prepare_model_binding_create};
 use model_costs::{ensure_model_cost_delete_scope, ensure_model_cost_scope};
 use request_queries::{
     sanitize_active_request_record_request, sanitize_provider_cooldown_request, validate_provider_cooldown_request, validate_request_record_list_request,
 };
 
 use super::validation::{
-    sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request, sanitize_model_binding,
+    sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request,
     sanitize_model_binding_update, sanitize_model_cost_batch, sanitize_update, validate_api_key, validate_api_key_update, validate_create, validate_endpoint,
-    validate_endpoint_update, validate_list_request, validate_model_binding, validate_model_binding_update, validate_model_cost_batch, validate_update,
+    validate_endpoint_update, validate_list_request, validate_model_binding_update, validate_model_cost_batch, validate_update,
 };
 
 pub struct ProviderService<R, M, C, F> {
@@ -172,11 +174,13 @@ where
     }
 
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding> {
-        self.ensure_provider(provider_id).await?;
-        let input = sanitize_model_binding(input);
-        validate_model_binding(&input)?;
-        ensure_global_model(&self.models, &input.global_model_id).await?;
+        let input = prepare_model_binding_create(&self.repository, &self.models, provider_id, input).await?;
         self.repository.create_model_binding(provider_id, input).await
+    }
+
+    async fn batch_update_model_bindings(&self, provider_id: &str, input: ProviderModelBindingBatchUpdate) -> ProviderResult<Vec<ProviderModelBinding>> {
+        let input = prepare_model_binding_batch_update(&self.repository, &self.models, provider_id, input).await?;
+        self.repository.batch_update_model_bindings(provider_id, input).await
     }
 
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>> {
@@ -273,16 +277,6 @@ where
 {
     if repository.find_provider(name).await?.is_some() {
         return Err(ProviderError::Conflict(format!("provider already exists: {name}")));
-    }
-    Ok(())
-}
-
-async fn ensure_global_model<M>(models: &M, id: &str) -> ProviderResult<()>
-where
-    M: GlobalModelCatalog,
-{
-    if !models.global_model_exists(id).await? {
-        return Err(ProviderError::InvalidInput(format!("global model does not exist: {id}")));
     }
     Ok(())
 }

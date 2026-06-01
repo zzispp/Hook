@@ -114,7 +114,7 @@ where
         let validated = validate_admin_create(&input)?;
         let owner_id = admin_owner_id(&input)?;
         let required_owner_id = required_owner_id(owner_id.as_deref())?;
-        self.ensure_create_policy(required_owner_id, &validated.group_code, &validated.allowed_model_ids)
+        self.ensure_admin_create_policy(required_owner_id, &validated.group_code, &validated.allowed_model_ids)
             .await?;
         if let Some(user_id) = owner_id.as_deref() {
             self.ensure_owner_token_limit(user_id, input.token_type).await?;
@@ -205,6 +205,13 @@ where
         let group = self.active_group(group_code).await?;
         self.ensure_models_exist(model_ids).await?;
         ensure_group_visible_to_owner(&group, &owner_group_codes)?;
+        ensure_group_allows_models(&group, model_ids)
+    }
+
+    async fn ensure_admin_create_policy(&self, owner_id: &str, group_code: &str, model_ids: &[String]) -> ApiTokenResult<()> {
+        self.owner_group_codes(owner_id).await?;
+        let group = self.active_group(group_code).await?;
+        self.ensure_models_exist(model_ids).await?;
         ensure_group_allows_models(&group, model_ids)
     }
 

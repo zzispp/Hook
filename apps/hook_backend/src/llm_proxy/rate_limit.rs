@@ -36,6 +36,36 @@ pub async fn claim_provider_key_limit(state: &LlmProxyState, key_id: &str, rpm_l
     consume_scopes(state, &[RateLimitScope::provider_key(key_id, limit)]).await
 }
 
+pub async fn claim_provider_key_probe_slot(state: &LlmProxyState, key_id: &str, min_interval_seconds: i64) -> Result<(), LlmProxyError> {
+    if min_interval_seconds <= 0 {
+        return Err(LlmProxyError::Infrastructure(
+            "provider key probe minimum interval must be greater than 0".into(),
+        ));
+    }
+    let mut connection = state.affinity.clone();
+    let result: Option<String> = provider_key_probe_slot_command(&state.key_prefix, key_id, min_interval_seconds)
+        .query_async(&mut connection)
+        .await
+        .map_err(redis_error)?;
+    if result.is_some() {
+        return Ok(());
+    }
+    Err(LlmProxyError::ProbeDeferred(format!(
+        "provider key model status probe slot is occupied: {key_id}"
+    )))
+}
+
+fn provider_key_probe_slot_command(key_prefix: &str, key_id: &str, min_interval_seconds: i64) -> redis::Cmd {
+    let mut command = redis::cmd("SET");
+    command
+        .arg(format!("{key_prefix}:llm_proxy:model_status_probe_slot:{key_id}"))
+        .arg(1)
+        .arg("NX")
+        .arg("EX")
+        .arg(min_interval_seconds);
+    command
+}
+
 fn request_scopes(snapshot: &SchedulingSnapshot, token: &ApiToken) -> Vec<RateLimitScope> {
     let mut scopes = Vec::new();
     if let Some(scope) = user_scope(snapshot, token) {
@@ -153,116 +183,5 @@ impl RateLimitScope {
 }
 
 #[cfg(test)]
-mod tests {
-    use rust_decimal::Decimal;
-    use types::{
-        api_token::{ApiToken, ApiTokenType, ModelAccessMode},
-        provider::ProviderSchedulingMode,
-        system_setting::RequestRecordLevel,
-    };
-
-    use super::{CachedUserAccess, RateLimitScope, SchedulingSnapshot, request_scopes, token_scope};
-
-    #[test]
-    fn token_limit_follows_system_when_configured_zero() {
-        let snapshot = snapshot(7, None);
-        let scope = token_scope(&snapshot, &token(ApiTokenType::Independent, None, Some(0)));
-
-        assert_eq!(scope, Some(RateLimitScope::token("token-1", 7)));
-    }
-
-    #[test]
-    fn token_limit_uses_smaller_of_system_and_token() {
-        let snapshot = snapshot(7, None);
-        let scope = token_scope(&snapshot, &token(ApiTokenType::Independent, None, Some(3)));
-
-        assert_eq!(scope, Some(RateLimitScope::token("token-1", 3)));
-    }
-
-    #[test]
-    fn token_limit_uses_configured_value_when_system_unlimited() {
-        let snapshot = snapshot(0, None);
-        let scope = token_scope(&snapshot, &token(ApiTokenType::Independent, None, Some(3)));
-
-        assert_eq!(scope, Some(RateLimitScope::token("token-1", 3)));
-    }
-
-    #[test]
-    fn request_scopes_include_user_and_token_for_user_tokens() {
-        let snapshot = snapshot(7, Some(2));
-        let scopes = request_scopes(&snapshot, &token(ApiTokenType::User, Some("user-1"), Some(5)));
-
-        assert_eq!(scopes, vec![RateLimitScope::user("user-1", 2), RateLimitScope::token("token-1", 5)]);
-    }
-
-    #[test]
-    fn request_scopes_skip_user_limit_for_independent_tokens() {
-        let snapshot = snapshot(7, Some(2));
-        let scopes = request_scopes(&snapshot, &token(ApiTokenType::Independent, None, Some(5)));
-
-        assert_eq!(scopes, vec![RateLimitScope::token("token-1", 5)]);
-    }
-
-    fn snapshot(default_rate_limit_rpm: i64, user_rate_limit_rpm: Option<i64>) -> SchedulingSnapshot {
-        SchedulingSnapshot {
-            default_rate_limit_rpm,
-            scheduling_mode: ProviderSchedulingMode::FixedOrder,
-            cache_affinity_ttl_minutes: 5,
-            client_request_record_level: RequestRecordLevel::Basic,
-            client_record_request_headers: true,
-            client_record_request_body: true,
-            client_record_response_headers: true,
-            client_record_response_body: true,
-            client_max_request_body_size_kb: 1024,
-            client_max_response_body_size_kb: 1024,
-            client_sensitive_request_headers: String::new(),
-            provider_request_record_level: RequestRecordLevel::Basic,
-            provider_record_request_headers: true,
-            provider_record_request_body: true,
-            provider_record_response_headers: true,
-            provider_record_response_body: true,
-            provider_max_request_body_size_kb: 1024,
-            provider_max_response_body_size_kb: 1024,
-            provider_sensitive_request_headers: String::new(),
-            provider_cooldown_policy: Default::default(),
-            models: Vec::new(),
-            groups: Vec::new(),
-            active_user_group_codes: vec!["default".into()],
-            users: vec![CachedUserAccess {
-                id: "user-1".into(),
-                username: "alice".into(),
-                group_codes: vec!["default".into()],
-                is_active: true,
-                allowed_model_ids: Vec::new(),
-                allowed_provider_ids: Vec::new(),
-                quota_mode: "wallet".into(),
-                rate_limit_rpm: user_rate_limit_rpm,
-            }],
-            providers: Vec::new(),
-        }
-    }
-
-    fn token(token_type: ApiTokenType, user_id: Option<&str>, rate_limit_rpm: Option<i64>) -> ApiToken {
-        ApiToken {
-            id: "token-1".into(),
-            user_id: user_id.map(str::to_owned),
-            token_type,
-            name: "token".into(),
-            token_value: String::new(),
-            token_hash: String::new(),
-            token_prefix: "sk-test".into(),
-            group_code: "default".into(),
-            expires_at: None,
-            model_access_mode: ModelAccessMode::All,
-            allowed_model_ids: Vec::new(),
-            rate_limit_rpm,
-            quota_limit: None,
-            used_quota: Decimal::ZERO,
-            request_count: 0,
-            is_active: true,
-            last_used_at: None,
-            created_at: String::new(),
-            updated_at: String::new(),
-        }
-    }
-}
+#[path = "rate_limit_tests.rs"]
+mod tests;

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing dialog and selection flow,DONE,Current model picker and submit path identified,rg -n "ProviderModelCostDialog" apps/hook_frontend/src/sections/admin,,0,
+2,Implement checkbox options and bulk controls,DONE,Each option has checkbox and dropdown exposes select all and clear all,,2026-06-01T00:00:00+08:00,0,
+3,Add i18n seed keys,DONE,Chinese and English admin seed JSON include new labels,,2026-06-01T00:00:00+08:00,0,
+4,Run frontend validation,DONE,Frontend lint/build check completes or reports concrete errors,pnpm lint:frontend,2026-06-01T00:00:00+08:00,0,

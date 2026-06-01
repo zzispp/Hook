@@ -294,10 +294,6 @@ mod tests {
     };
     use serde_json::{Value, json};
 
-    fn object_keys(value: &Value) -> Vec<&str> {
-        value.as_object().expect("json object").keys().map(String::as_str).collect()
-    }
-
     #[test]
     fn builds_openai_chat_cross_format_request_body_from_openai_responses_source() {
         let body_json = json!({
@@ -314,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn local_openai_responses_request_body_preserves_original_field_order() {
+    fn local_openai_responses_request_body_preserves_passthrough_fields() {
         let body_json: Value = serde_json::from_str(
             r#"{
                 "model": "gpt-5",
@@ -327,8 +323,15 @@ mod tests {
 
         let provider_request_body = build_local_openai_responses_request_body(&body_json, "gpt-5-upstream", false).expect("openai responses body should build");
 
-        assert_eq!(object_keys(&provider_request_body), vec!["model", "include", "input", "instructions"]);
-        assert_eq!(provider_request_body["model"], "gpt-5-upstream");
+        assert_eq!(
+            provider_request_body,
+            json!({
+                "model": "gpt-5-upstream",
+                "include": ["reasoning.encrypted_content"],
+                "input": [],
+                "instructions": "Keep order"
+            })
+        );
     }
 
     #[test]

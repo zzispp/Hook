@@ -15,8 +15,8 @@ pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpd
 pub use enums::ProviderSchedulingMode;
 pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate};
 pub use model_binding::{
-    ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping, ProviderModelTestEndpoint, ProviderModelTestRequest,
-    ProviderModelTestResponse, ProviderUpstreamModelsResponse,
+    ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping,
+    ProviderModelTestEndpoint, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpstreamModelsResponse,
 };
 pub use model_cost::{
     ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostMode, ProviderModelCostSource, ProviderModelCostUpsert,

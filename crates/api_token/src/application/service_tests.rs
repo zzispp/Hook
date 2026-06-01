@@ -2,7 +2,10 @@ use types::api_token::ApiTokenType;
 
 use super::{
     ApiTokenUseCase,
-    service_test_support::{ExistingUsers, MemoryTokenRepository, SYSTEM_ACTOR_ID, USER_ID, admin_create, record_owner, service, token_with_type, user_create},
+    service_test_support::{
+        ExistingUsers, MemoryTokenRepository, RESTRICTED_BILLING_GROUP_CODE, SYSTEM_ACTOR_ID, USER_ID, admin_create, record_owner, service, token_with_type,
+        user_create,
+    },
 };
 
 #[tokio::test]
@@ -52,6 +55,19 @@ async fn admin_user_token_requires_existing_user() {
 
     assert_eq!(created.token.user_id, Some(USER_ID.into()));
     assert_eq!(created.token.token_type, ApiTokenType::User);
+    assert_eq!(repository.created_records(), vec![record_owner(Some(USER_ID), ApiTokenType::User)]);
+}
+
+#[tokio::test]
+async fn admin_user_token_allows_any_active_billing_group() {
+    let repository = MemoryTokenRepository::default();
+    let service = service(repository.clone(), ExistingUsers::with([USER_ID]));
+    let mut input = admin_create(ApiTokenType::User, Some(USER_ID));
+    input.group_code = Some(RESTRICTED_BILLING_GROUP_CODE.into());
+
+    let created = service.create_admin_token(SYSTEM_ACTOR_ID, input).await.unwrap();
+
+    assert_eq!(created.token.group_code, RESTRICTED_BILLING_GROUP_CODE);
     assert_eq!(repository.created_records(), vec![record_owner(Some(USER_ID), ApiTokenType::User)]);
 }
 

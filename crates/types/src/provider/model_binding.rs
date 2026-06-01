@@ -32,6 +32,14 @@ pub struct ProviderModelBindingCreate {
     pub config: Option<serde_json::Value>,
 }
 
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct ProviderModelBindingBatchUpdate {
+    #[serde(default)]
+    pub create: Vec<ProviderModelBindingCreate>,
+    #[serde(default)]
+    pub delete_ids: Vec<String>,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 pub struct ProviderModelBindingUpdate {
     #[serde(default)]

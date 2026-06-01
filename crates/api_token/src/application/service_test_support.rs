@@ -16,6 +16,7 @@ use super::{
 
 pub(super) const SYSTEM_ACTOR_ID: &str = "00000000-0000-7000-8000-000000000000";
 pub(super) const USER_ID: &str = "user-1";
+pub(super) const RESTRICTED_BILLING_GROUP_CODE: &str = "restricted";
 
 const DEFAULT_RATE_LIMIT_RPM: i64 = 0;
 const DEFAULT_TOKEN_LIMIT_PER_USER: i64 = 5;
@@ -231,7 +232,7 @@ impl BillingGroupCatalog for StaticGroups {
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: Vec::new(),
             allowed_provider_ids: Vec::new(),
-            visible_user_group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
+            visible_user_group_codes: visible_user_group_codes(code),
             is_active: true,
             is_system: true,
             sort_order: 0,
@@ -239,6 +240,13 @@ impl BillingGroupCatalog for StaticGroups {
             updated_at: "2026-05-11T00:00:00Z".into(),
         }))
     }
+}
+
+fn visible_user_group_codes(code: &str) -> Vec<String> {
+    if code == RESTRICTED_BILLING_GROUP_CODE {
+        return vec!["other-user-group".into()];
+    }
+    vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()]
 }
 
 pub(super) struct StaticModels;

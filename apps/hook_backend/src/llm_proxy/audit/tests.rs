@@ -64,6 +64,14 @@ fn estimated_stream_usage_can_settle_billing() {
     assert_eq!(settlement.expect("settlement").amount.total_cost, Decimal::ONE);
 }
 
+#[test]
+fn skipped_request_has_void_billing_status() {
+    let candidate = candidate();
+    let input = AttemptRecordInput::new(&candidate, 0, "skipped", true);
+
+    assert_eq!(request_billing_status(&input, None), "void");
+}
+
 fn candidate() -> ProxyCandidate {
     ProxyCandidate {
         trace: trace(),

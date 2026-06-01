@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use axum::http::HeaderMap;
-use model_status::application::{ModelStatusProbe, ModelStatusProbeInput, ModelStatusProbeOutput, ModelStatusRunStatus};
+use model_status::application::{
+    ModelStatusProbe, ModelStatusProbeInput, ModelStatusProbeOptions, ModelStatusProbeOutput, ModelStatusProbeResult, ModelStatusRunStatus,
+};
 use serde_json::{Value, json};
 use std::time::Instant;
 
@@ -23,26 +25,20 @@ impl LlmProxyModelStatusProbe {
 
 #[async_trait]
 impl ModelStatusProbe for LlmProxyModelStatusProbe {
-    async fn probe(&self, input: ModelStatusProbeInput) -> ModelStatusProbeOutput {
+    async fn probe(&self, input: ModelStatusProbeInput, options: ModelStatusProbeOptions) -> ModelStatusProbeResult {
         let Some(api_format) = supported_api_format(&input.api_format) else {
-            return error_output(format!("unsupported model status api_format: {}", input.api_format));
+            return completed_error(format!("unsupported model status api_format: {}", input.api_format));
         };
         let Some(body) = probe_body(&input) else {
-            return error_output(format!("unsupported model status api_format: {}", input.api_format));
+            return completed_error(format!("unsupported model status api_format: {}", input.api_format));
         };
         let started = Instant::now();
-        match proxy_json(ProxyJsonRequest::new(
-            self.state.clone(),
-            CurrentApiToken(input.token),
-            HeaderMap::new(),
-            body,
-            api_format,
-            true,
-        ))
-        .await
-        {
-            Ok(response) => classify_response(response.status().as_u16(), elapsed_ms(started)),
-            Err(error) => error_output(error.to_string()),
+        let request = ProxyJsonRequest::new(self.state.clone(), CurrentApiToken(input.token), HeaderMap::new(), body, api_format, true)
+            .with_provider_key_probe_min_interval_seconds(options.provider_key_min_interval_seconds);
+        match proxy_json(request).await {
+            Ok(response) => ModelStatusProbeResult::Completed(classify_response(response.status().as_u16(), elapsed_ms(started))),
+            Err(crate::llm_proxy::LlmProxyError::ProbeDeferred(_)) => ModelStatusProbeResult::Deferred,
+            Err(error) => completed_error(error.to_string()),
         }
     }
 }
@@ -139,6 +135,10 @@ fn error_output(message: String) -> ModelStatusProbeOutput {
         status_code: None,
         message: Some(message),
     }
+}
+
+fn completed_error(message: String) -> ModelStatusProbeResult {
+    ModelStatusProbeResult::Completed(error_output(message))
 }
 
 fn elapsed_ms(started: Instant) -> i64 {

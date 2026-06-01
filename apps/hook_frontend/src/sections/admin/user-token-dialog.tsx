@@ -27,7 +27,6 @@ export function UserTokenDialog({ user, onClose }: Props) {
   const panel = useTokenManagementPanelState({
     scope: 'admin',
     fixedUserId: user?.id,
-    fixedUserGroupCodes: user?.group_codes,
     disabled: !user,
   });
 

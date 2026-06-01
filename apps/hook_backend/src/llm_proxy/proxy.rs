@@ -33,6 +33,7 @@ pub struct ProxyJsonRequest {
     body: Value,
     api_format: &'static str,
     force_non_stream: bool,
+    provider_key_probe_min_interval_seconds: Option<i64>,
 }
 
 pub(in crate::llm_proxy) struct ProxyFixedJsonRequest {
@@ -73,7 +74,13 @@ impl ProxyJsonRequest {
             body,
             api_format,
             force_non_stream,
+            provider_key_probe_min_interval_seconds: None,
         }
+    }
+
+    pub fn with_provider_key_probe_min_interval_seconds(mut self, value: i64) -> Self {
+        self.provider_key_probe_min_interval_seconds = Some(value);
+        self
     }
 }
 
@@ -85,6 +92,7 @@ pub async fn proxy_json(request: ProxyJsonRequest) -> Result<Response, LlmProxyE
         request.body,
         request.api_format,
         request.force_non_stream,
+        request.provider_key_probe_min_interval_seconds,
         capture,
     )
     .await?;

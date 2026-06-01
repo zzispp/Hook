@@ -3,8 +3,9 @@ use provider::application::{ProviderApiKeySecret, ProviderError, ProviderReposit
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
-    ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    UsageRecordListResponse,
 };
 
 use super::cache::{ProxyCacheInvalidator, combine_cache_results};
@@ -110,6 +111,12 @@ where
         let binding = self.inner.create_model_binding(provider_id, input).await?;
         self.refresh_scheduling().await?;
         Ok(binding)
+    }
+
+    async fn batch_update_model_bindings(&self, provider_id: &str, input: ProviderModelBindingBatchUpdate) -> ProviderResult<Vec<ProviderModelBinding>> {
+        let bindings = self.inner.batch_update_model_bindings(provider_id, input).await?;
+        self.refresh_scheduling().await?;
+        Ok(bindings)
     }
 
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>> {

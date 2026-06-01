@@ -1,4 +1,6 @@
 const DISPLAY_DIGITS = 6;
+const COMPACT_DIGITS = 2;
+const COMPACT_DETAIL_THRESHOLD = 0.01;
 const USD_SYMBOL = '$';
 
 export function formatMoney(value: number | null | undefined) {
@@ -10,7 +12,13 @@ export function formatMoneyCompact(value: number | null | undefined) {
 }
 
 function formatPrice(value: number) {
-  if (value >= 0.01 || value === 0) return value.toFixed(2);
-  if (value < 0.0001) return value.toExponential(2);
-  return value.toFixed(4);
+  const absolute = Math.abs(value);
+  const maximumFractionDigits =
+    absolute >= COMPACT_DETAIL_THRESHOLD || value === 0 ? COMPACT_DIGITS : DISPLAY_DIGITS;
+
+  return new Intl.NumberFormat('en-US', {
+    useGrouping: false,
+    minimumFractionDigits: COMPACT_DIGITS,
+    maximumFractionDigits,
+  }).format(value);
 }

@@ -1,4 +1,4 @@
-use super::{list_query::availability_statement, repository::DUE_CHECKS_SQL};
+use super::{due_check::DUE_CHECKS_SQL, list_query::availability_statement};
 
 #[test]
 fn due_checks_sql_uses_skip_locked_claiming() {

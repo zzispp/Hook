@@ -24,7 +24,9 @@ use super::{
     password_reset::{request_password_reset, reset_password},
     registration::{reject_closed_registration, reject_disallowed_registration_email, request_registration_email_code, verify_registration_email_code},
     social_auth::{self, ACCOUNT_PASSWORD_EMAIL_PURPOSE},
-    system_user::{find_auth_by_identifier, list_with_system_user, reject_system_user_email, reject_system_user_id, reject_system_user_self_service, system_user_by_id},
+    system_user::{
+        find_auth_by_identifier, list_with_system_user, reject_system_user_email, reject_system_user_id, reject_system_user_self_service, system_user_by_id,
+    },
     validation::{
         sanitize_credentials, sanitize_password_reset_confirm, sanitize_password_reset_request, sanitize_registration_email_code_request,
         sanitize_replace_user, sanitize_sign_up_user, validate_credentials, validate_new_user, validate_page, validate_password_reset_confirm,

@@ -2,8 +2,8 @@ use rust_decimal::Decimal;
 use types::{
     model::PatchField,
     provider::{
-        ProviderCreate, ProviderListRequest, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostMode,
-        ProviderModelCostUpsert, ProviderModelMapping, ProviderUpdate,
+        ProviderCreate, ProviderListRequest, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+        ProviderModelCostBatchUpsert, ProviderModelCostMode, ProviderModelCostUpsert, ProviderModelMapping, ProviderUpdate,
     },
 };
 
@@ -59,6 +59,13 @@ pub fn sanitize_model_binding(input: ProviderModelBindingCreate) -> ProviderMode
     }
 }
 
+pub fn sanitize_model_binding_batch(input: ProviderModelBindingBatchUpdate) -> ProviderModelBindingBatchUpdate {
+    ProviderModelBindingBatchUpdate {
+        create: input.create.into_iter().map(sanitize_model_binding).collect(),
+        delete_ids: input.delete_ids.into_iter().map(|id| id.trim().to_owned()).collect(),
+    }
+}
+
 pub fn sanitize_model_binding_update(input: ProviderModelBindingUpdate) -> ProviderModelBindingUpdate {
     ProviderModelBindingUpdate {
         provider_model_name: input.provider_model_name.map(|value| value.trim().to_owned()),
@@ -102,6 +109,19 @@ pub fn validate_model_binding(input: &ProviderModelBindingCreate) -> ProviderRes
     validate_text("global_model_id", &input.global_model_id, MAX_NAME_LENGTH)?;
     validate_text("provider_model_name", &input.provider_model_name, MAX_MODEL_NAME_LENGTH)?;
     validate_provider_model_mapping(input.provider_model_mapping.as_ref())
+}
+
+pub fn validate_model_binding_batch(input: &ProviderModelBindingBatchUpdate) -> ProviderResult<()> {
+    if input.create.is_empty() && input.delete_ids.is_empty() {
+        return Err(ProviderError::InvalidInput("model binding batch payload is empty".into()));
+    }
+    for binding in &input.create {
+        validate_model_binding(binding)?;
+    }
+    for id in &input.delete_ids {
+        validate_text("delete_ids", id, MAX_MODEL_ID_LENGTH)?;
+    }
+    Ok(())
 }
 
 pub fn validate_model_binding_update(input: &ProviderModelBindingUpdate) -> ProviderResult<()> {

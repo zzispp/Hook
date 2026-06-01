@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate leaderboard metric mismatch,DONE,"Root cause is identified from frontend request and backend SQL/response mapping","rg -n \"user_stats_leaderboard|DashboardUserStatsMetric|metric\" crates/storage crates/dashboard crates/types apps/hook_frontend/src",,0,
+2,Implement minimal fix,DONE,"Requests and tokens leaderboard return non-empty data when source rows exist","cargo test -p storage --test dashboard_user_stats",,0,
+3,Run targeted validation,DONE,"Targeted Rust and frontend static checks pass or failures are documented","cargo test -p storage --test dashboard_user_stats; cargo test -p storage dashboard; cargo fmt -p storage --check",,0,

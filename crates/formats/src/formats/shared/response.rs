@@ -176,8 +176,12 @@ mod tests {
     #[test]
     fn removes_empty_pages_from_tool_arguments() {
         assert_eq!(
-            remove_empty_pages_from_tool_arguments("Read", r#"{"file_path":"/tmp/a.txt","offset":1,"limit":20,"pages":""}"#),
-            r#"{"file_path":"/tmp/a.txt","offset":1,"limit":20}"#
+            serde_json::from_str::<Value>(&remove_empty_pages_from_tool_arguments(
+                "Read",
+                r#"{"file_path":"/tmp/a.txt","offset":1,"limit":20,"pages":""}"#
+            ))
+            .expect("sanitized read arguments should remain json"),
+            serde_json::json!({"file_path": "/tmp/a.txt", "offset": 1, "limit": 20})
         );
         assert_eq!(
             remove_empty_pages_from_tool_arguments("Search", r#"{"query":"","pages":""}"#),

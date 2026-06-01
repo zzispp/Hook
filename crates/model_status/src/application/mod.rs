@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod dispatch_tests;
 mod error;
 mod ports;
 mod service;
@@ -7,7 +9,7 @@ mod validation;
 
 pub use error::{ModelStatusError, ModelStatusResult};
 pub use ports::{
-    ModelStatusProbe, ModelStatusProbeInput, ModelStatusProbeOutput, ModelStatusRepository, ModelStatusRunRecord, ModelStatusRunStatus,
-    ModelStatusTokenCatalog, ModelStatusUseCase,
+    ModelStatusDispatchOptions, ModelStatusDispatchReport, ModelStatusProbe, ModelStatusProbeInput, ModelStatusProbeOptions, ModelStatusProbeOutput,
+    ModelStatusProbeResult, ModelStatusRepository, ModelStatusRunRecord, ModelStatusRunStatus, ModelStatusTokenCatalog, ModelStatusUseCase,
 };
 pub use service::ModelStatusService;

@@ -1,12 +1,16 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
+import type { PaperProps } from '@mui/material/Paper';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { ProviderApiKey, ProviderModelBinding, ProviderModelCostMode } from 'src/types/provider';
 
 import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
+import Checkbox from '@mui/material/Checkbox';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -98,23 +102,80 @@ function ModelSelect({
   onChange: (values: ProviderModelBinding[]) => void;
 }) {
   const { t } = useTranslate('admin');
+  const allSelected = options.length > 0 && selected.length === options.length;
+
   return (
     <Autocomplete
       multiple
       disableCloseOnSelect
       options={options}
       value={selected}
+      slots={{
+        paper: (params) => (
+          <ModelSelectPaper
+            {...params}
+            clearDisabled={selected.length === 0}
+            selectAllDisabled={allSelected}
+            onClear={() => onChange([])}
+            onSelectAll={() => onChange(options)}
+          />
+        ),
+      }}
       getOptionLabel={(option) => bindingLabel(option, models)}
       isOptionEqualToValue={(option, value) => option.id === value.id}
       noOptionsText={t('providers.noBindableModels')}
       onChange={(_, values) => onChange(values)}
-      renderOption={(params, option) => (
+      renderOption={(params, option, state) => (
         <MenuItem {...params} key={option.id} value={option.id}>
+          <Checkbox readOnly checked={state.selected} size="small" tabIndex={-1} sx={optionCheckboxSx} />
           <ListItemText primary={bindingLabel(option, models)} secondary={option.provider_model_name} />
         </MenuItem>
       )}
       renderInput={(params) => <TextField {...params} label={t('providers.model')} />}
     />
+  );
+}
+
+function ModelSelectPaper({
+  children,
+  clearDisabled,
+  selectAllDisabled,
+  onClear,
+  onSelectAll,
+  ...paperProps
+}: PaperProps & {
+  clearDisabled: boolean;
+  selectAllDisabled: boolean;
+  onClear: () => void;
+  onSelectAll: () => void;
+}) {
+  const { t } = useTranslate('admin');
+  return (
+    <Paper {...paperProps}>
+      <Stack direction="row" spacing={1} sx={selectActionsSx} onMouseDown={(event) => event.preventDefault()}>
+        <Button
+          size="small"
+          variant="text"
+          disabled={selectAllDisabled}
+          startIcon={<Iconify icon="solar:check-circle-bold" />}
+          onClick={onSelectAll}
+        >
+          {t('common.selectAll')}
+        </Button>
+        <Button
+          size="small"
+          variant="text"
+          color="inherit"
+          disabled={clearDisabled}
+          startIcon={<Iconify icon="solar:close-circle-bold" />}
+          onClick={onClear}
+        >
+          {t('common.deselectAll')}
+        </Button>
+      </Stack>
+      <Divider />
+      {children}
+    </Paper>
   );
 }
 
@@ -224,6 +285,8 @@ function PriceField({ label, value, onChange }: { label: string; value: string; 
 }
 
 const rowSx = { border: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 1, p: 1.5 };
+const selectActionsSx = { px: 1, py: 0.75 };
+const optionCheckboxSx = { p: 0.5, mr: 1 };
 const titleSx = { display: 'block', typography: 'subtitle2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
 const subtitleSx = { display: 'block', typography: 'caption', fontFamily: 'monospace', color: 'text.secondary' };
 const priceGridSx = { mt: 1.5, display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } };

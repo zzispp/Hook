@@ -2,7 +2,7 @@ use types::model_status::{
     ModelStatusCheckBatchCreateRequest, ModelStatusCheckBatchUpdateRequest, ModelStatusCheckCreate, ModelStatusCheckUpdate, ModelStatusRunListRequest,
 };
 
-use super::{ModelStatusError, ModelStatusResult};
+use super::{ModelStatusDispatchOptions, ModelStatusError, ModelStatusResult};
 
 const MIN_INTERVAL_SECONDS: i64 = 60;
 const MAX_INTERVAL_SECONDS: i64 = 3600;
@@ -68,12 +68,17 @@ pub fn validate_run_list(request: &ModelStatusRunListRequest) -> ModelStatusResu
     Ok(())
 }
 
-pub fn validate_dispatch_options(limit: u64, concurrency: usize) -> ModelStatusResult<()> {
-    if limit == 0 {
+pub fn validate_dispatch_options(options: ModelStatusDispatchOptions) -> ModelStatusResult<()> {
+    if options.limit == 0 {
         return Err(ModelStatusError::InvalidInput("batch_size must be greater than 0".into()));
     }
-    if concurrency == 0 {
+    if options.concurrency == 0 {
         return Err(ModelStatusError::InvalidInput("concurrency must be greater than 0".into()));
+    }
+    if options.provider_key_min_interval_seconds <= 0 {
+        return Err(ModelStatusError::InvalidInput(
+            "provider_key_min_interval_seconds must be greater than 0".into(),
+        ));
     }
     Ok(())
 }

@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
     ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
-    ProviderModelCostListResponse, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail,
-    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpdate,
+    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -43,6 +43,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
     ) -> ProviderResult<ProviderApiKey>;
     async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()>;
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding>;
+    async fn batch_update_model_bindings(&self, provider_id: &str, input: ProviderModelBindingBatchUpdate) -> ProviderResult<Vec<ProviderModelBinding>>;
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>>;
     async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding>;
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;
@@ -94,6 +95,7 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyUpdate) -> ProviderResult<ProviderApiKey>;
     async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()>;
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding>;
+    async fn batch_update_model_bindings(&self, provider_id: &str, input: ProviderModelBindingBatchUpdate) -> ProviderResult<Vec<ProviderModelBinding>>;
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>>;
     async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding>;
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;

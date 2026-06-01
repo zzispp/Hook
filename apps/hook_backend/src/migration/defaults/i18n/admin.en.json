@@ -90,8 +90,8 @@
     "deleteContent": "This model will no longer be checked after deletion.",
     "batchDeleteTitle": "Delete model status checks",
     "batchDeleteContent": "Delete {{count}} model status checks and their probe records.",
-    "batchFix": "Batch fix",
-    "batchFixTitle": "Batch fix model status checks",
+    "batchFix": "Batch edit",
+    "batchFixTitle": "Batch edit model status checks",
     "batchFixCount": "{{count}} checks selected",
     "noChange": "No change",
     "enable": "Enable",
@@ -121,7 +121,7 @@
       "updated": "Model status check updated",
       "deleted": "Model status check deleted",
       "batchDeleted": "Deleted {{count}} model status checks",
-      "batchFixed": "Batch fixed {{count}} model status checks"
+      "batchFixed": "Batch edited {{count}} model status checks"
     }
   },
   "common": {
@@ -165,6 +165,7 @@
     "save": "Save",
     "section": "Section",
     "selectAll": "Select all",
+    "deselectAll": "Deselect all",
     "sort": "Sort",
     "sortOrder": "Sort order",
     "source": "Source",
@@ -2013,7 +2014,8 @@
       },
       "modelStatusCheckDispatch": {
         "batchSize": "Batch size",
-        "concurrency": "Probe concurrency"
+        "concurrency": "Probe concurrency",
+        "providerKeyMinIntervalSeconds": "Provider key probe minimum interval seconds"
       },
       "modelStatusRunsCleanup": {
         "retentionDays": "Model status probe record retention days"

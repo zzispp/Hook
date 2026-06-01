@@ -7,9 +7,9 @@ use types::{
     provider::{
         ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
         ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-        ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert,
-        ProviderModelCostListResponse, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse,
-        RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+        ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
+        ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest, ProviderModelTestResponse,
+        ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -122,6 +122,14 @@ pub async fn create_model_binding(
     Json(payload): Json<ProviderModelBindingCreate>,
 ) -> ApiResult<ApiJson<ProviderModelBinding>> {
     Ok(ok(state.providers.create_model_binding(&provider_id, payload).await?))
+}
+
+pub async fn batch_update_model_bindings(
+    State(state): State<ProviderApiState>,
+    Path(provider_id): Path<String>,
+    Json(payload): Json<ProviderModelBindingBatchUpdate>,
+) -> ApiResult<ApiJson<Vec<ProviderModelBinding>>> {
+    Ok(ok(state.providers.batch_update_model_bindings(&provider_id, payload).await?))
 }
 
 pub async fn update_model_binding(

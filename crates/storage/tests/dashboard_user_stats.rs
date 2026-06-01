@@ -10,20 +10,20 @@ use types::dashboard::DashboardUserStatsMetric;
 
 #[tokio::test]
 async fn leaderboard_requests_metric_returns_request_value_and_ordering() {
-    assert_leaderboard_metric(DashboardUserStatsMetric::Requests, "requests", Decimal::from(42)).await;
+    assert_leaderboard_metric(DashboardUserStatsMetric::Requests, "requests", "requests::numeric", Decimal::from(42)).await;
 }
 
 #[tokio::test]
 async fn leaderboard_tokens_metric_returns_token_value_and_ordering() {
-    assert_leaderboard_metric(DashboardUserStatsMetric::Tokens, "tokens", Decimal::from(4_096)).await;
+    assert_leaderboard_metric(DashboardUserStatsMetric::Tokens, "tokens", "tokens::numeric", Decimal::from(4_096)).await;
 }
 
 #[tokio::test]
 async fn leaderboard_cost_metric_returns_cost_value_and_ordering() {
-    assert_leaderboard_metric(DashboardUserStatsMetric::Cost, "cost", Decimal::new(1234, 2)).await;
+    assert_leaderboard_metric(DashboardUserStatsMetric::Cost, "cost", "cost", Decimal::new(1234, 2)).await;
 }
 
-async fn assert_leaderboard_metric(metric: DashboardUserStatsMetric, order_column: &str, expected_value: Decimal) {
+async fn assert_leaderboard_metric(metric: DashboardUserStatsMetric, order_column: &str, value_column: &str, expected_value: Decimal) {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[count_row()]])
         .append_query_results([[leaderboard_row(expected_value)]])
@@ -41,8 +41,28 @@ async fn assert_leaderboard_metric(metric: DashboardUserStatsMetric, order_colum
     let logs = connection.into_transaction_log();
     let sql = &logs[1].statements()[0].sql;
     assert!(sql.contains("requests, tokens, cost"), "{sql}");
-    assert!(sql.contains(&format!("{order_column} AS value")), "{sql}");
+    assert!(sql.contains(&format!("{value_column} AS value")), "{sql}");
     assert!(sql.contains(&format!("ORDER BY {order_column} DESC")), "{sql}");
+}
+
+#[tokio::test]
+async fn leaderboard_request_and_token_values_are_selected_as_decimal() {
+    assert_leaderboard_value_cast(DashboardUserStatsMetric::Requests, "requests").await;
+    assert_leaderboard_value_cast(DashboardUserStatsMetric::Tokens, "tokens").await;
+}
+
+async fn assert_leaderboard_value_cast(metric: DashboardUserStatsMetric, order_column: &str) {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[count_row()]])
+        .append_query_results([[leaderboard_row(Decimal::ONE)]])
+        .into_connection();
+    let store = DashboardStore::new(Database::new(connection.clone()));
+
+    store.user_stats_leaderboard(query(metric)).await.unwrap();
+
+    let logs = connection.into_transaction_log();
+    let sql = &logs[1].statements()[0].sql;
+    assert!(sql.contains(&format!("{order_column}::numeric AS value")), "{sql}");
 }
 
 fn query(metric: DashboardUserStatsMetric) -> DashboardUserStatsLeaderboardQuery {

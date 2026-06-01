@@ -2,7 +2,10 @@ use async_trait::async_trait;
 use futures_util::{StreamExt, stream};
 use types::model_status::*;
 
-use super::{ModelStatusError, ModelStatusProbe, ModelStatusRepository, ModelStatusResult, ModelStatusRunRecord, ModelStatusTokenCatalog, ModelStatusUseCase};
+use super::{
+    ModelStatusDispatchOptions, ModelStatusDispatchReport, ModelStatusError, ModelStatusProbe, ModelStatusProbeInput, ModelStatusProbeOptions,
+    ModelStatusProbeResult, ModelStatusRepository, ModelStatusResult, ModelStatusRunRecord, ModelStatusTokenCatalog, ModelStatusUseCase,
+};
 use crate::application::validation::{
     validate_batch_create, validate_batch_delete, validate_batch_update, validate_create, validate_dispatch_options, validate_run_list, validate_update,
 };
@@ -89,34 +92,24 @@ where
         self.repository.list_runs(request).await
     }
 
-    async fn run_due_checks(&self, limit: u64, concurrency: usize) -> ModelStatusResult<u64> {
-        validate_dispatch_options(limit, concurrency)?;
-        let checks = self.repository.due_checks(limit, time::OffsetDateTime::now_utc()).await?;
-        let total = checks.len() as u64;
+    async fn run_due_checks(&self, options: ModelStatusDispatchOptions) -> ModelStatusResult<ModelStatusDispatchReport> {
+        validate_dispatch_options(options)?;
+        let checks = self.repository.due_checks(options.limit, time::OffsetDateTime::now_utc()).await?;
         stream::iter(checks)
             .map(|input| async move {
-                let interval = input.interval_seconds;
-                let output = self.probe.probe(input.clone()).await;
-                self.repository
-                    .record_run(
-                        ModelStatusRunRecord {
-                            check_id: input.check_id,
-                            status: output.status,
-                            latency_ms: output.latency_ms,
-                            status_code: output.status_code,
-                            message: output.message,
-                            checked_at: time::OffsetDateTime::now_utc(),
-                        },
-                        interval,
-                    )
-                    .await
+                self.run_due_check(
+                    input,
+                    ModelStatusProbeOptions {
+                        provider_key_min_interval_seconds: options.provider_key_min_interval_seconds,
+                    },
+                )
+                .await
             })
-            .buffer_unordered(concurrency)
+            .buffer_unordered(options.concurrency)
             .collect::<Vec<_>>()
             .await
             .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(total)
+            .try_fold(ModelStatusDispatchReport::default(), |total, item| merge_dispatch_report(total, item?))
     }
 
     async fn token_has_checks(&self, token_id: &str) -> ModelStatusResult<bool> {
@@ -137,4 +130,42 @@ where
             .ok_or_else(|| ModelStatusError::InvalidInput("model status checks require an active independent token".into()))
             .map(|_| ())
     }
+
+    async fn run_due_check(&self, input: ModelStatusProbeInput, options: ModelStatusProbeOptions) -> ModelStatusResult<ModelStatusDispatchReport> {
+        let interval_seconds = input.interval_seconds;
+        match self.probe.probe(input.clone(), options).await {
+            ModelStatusProbeResult::Completed(output) => {
+                self.repository.record_run(run_record(input.check_id, output), interval_seconds).await?;
+                Ok(ModelStatusDispatchReport {
+                    probed_count: 1,
+                    deferred_count: 0,
+                })
+            }
+            ModelStatusProbeResult::Deferred => {
+                let next_due_at = time::OffsetDateTime::now_utc() + time::Duration::seconds(options.provider_key_min_interval_seconds);
+                self.repository.defer_check(&input.check_id, next_due_at).await?;
+                Ok(ModelStatusDispatchReport {
+                    probed_count: 0,
+                    deferred_count: 1,
+                })
+            }
+        }
+    }
+}
+
+fn run_record(check_id: String, output: super::ModelStatusProbeOutput) -> ModelStatusRunRecord {
+    ModelStatusRunRecord {
+        check_id,
+        status: output.status,
+        latency_ms: output.latency_ms,
+        status_code: output.status_code,
+        message: output.message,
+        checked_at: time::OffsetDateTime::now_utc(),
+    }
+}
+
+fn merge_dispatch_report(mut total: ModelStatusDispatchReport, item: ModelStatusDispatchReport) -> ModelStatusResult<ModelStatusDispatchReport> {
+    total.probed_count += item.probed_count;
+    total.deferred_count += item.deferred_count;
+    Ok(total)
 }

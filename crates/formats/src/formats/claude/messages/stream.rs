@@ -1183,7 +1183,16 @@ mod tests {
         );
 
         let sse = String::from_utf8(bytes).expect("sse should be utf8");
-        assert!(sse.contains("\"partial_json\":\"{\\\"file_path\\\":\\\"/tmp/a.txt\\\",\\\"offset\\\":1,\\\"limit\\\":20}\""));
+        let partial_json = sse
+            .lines()
+            .filter_map(|line| line.strip_prefix("data: "))
+            .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+            .find_map(|event| event.pointer("/delta/partial_json").and_then(Value::as_str).map(str::to_string))
+            .expect("sanitized read arguments should emit");
+        assert_eq!(
+            serde_json::from_str::<Value>(&partial_json).expect("sanitized read arguments should remain json"),
+            json!({"file_path": "/tmp/a.txt", "offset": 1, "limit": 20})
+        );
         assert!(!sse.contains("\\\"pages\\\":\\\"\\\""));
     }
 

@@ -44,12 +44,10 @@ export type TokenManagementPanelState = ReturnType<typeof useTokenManagementPane
 export function useTokenManagementPanelState({
   scope,
   fixedUserId,
-  fixedUserGroupCodes,
   disabled = false,
 }: {
   scope: TokenScope;
   fixedUserId?: string;
-  fixedUserGroupCodes?: string[];
   disabled?: boolean;
 }) {
   const { t } = useTranslate('admin');
@@ -72,9 +70,7 @@ export function useTokenManagementPanelState({
   const groups = useTokenOwnerBillingGroups({
     dialog,
     disabled,
-    fixedUserGroupCodes,
     scope,
-    users: users.items,
   });
   const ccSwitchImport = useCcSwitchImportDialog({
     scope,
@@ -99,7 +95,6 @@ export function useTokenManagementPanelState({
     dialog,
     filters,
     fixedUserId,
-    fixedUserGroupCodes,
     groups,
     handleFiltersChange,
     models,
