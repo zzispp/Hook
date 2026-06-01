@@ -1,9 +1,11 @@
-use std::{net::IpAddr, sync::LazyLock};
+use std::sync::LazyLock;
 
 use regex::Regex;
 
 const PUBLIC_BASE_URL_PATTERN: &str = concat!(
     r"^https?://(?P<host>",
+    r"localhost",
+    r"|",
     r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+(?:[A-Za-z]{2,63}|xn--[A-Za-z0-9-]{2,59})",
     r"|(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])",
     r"|\[[0-9A-Fa-f:.]+\]",
@@ -19,7 +21,7 @@ pub fn public_base_url_is_valid(value: &str) -> Result<bool, String> {
     let Some(host) = captures.name("host") else {
         return Ok(false);
     };
-    Ok(public_host_is_valid(host.as_str()))
+    Ok(!host.as_str().is_empty())
 }
 
 pub fn public_base_url_domain(value: &str) -> Result<String, String> {
@@ -37,27 +39,6 @@ fn public_base_url_authority_host(host: &str) -> String {
         return format!("[{host}]");
     }
     host.to_owned()
-}
-
-fn public_host_is_valid(host: &str) -> bool {
-    let normalized = host.trim_start_matches('[').trim_end_matches(']').to_ascii_lowercase();
-    if normalized == "localhost" || normalized.ends_with(".localhost") {
-        return false;
-    }
-    normalized.parse::<IpAddr>().map_or(true, public_ip_is_valid)
-}
-
-fn public_ip_is_valid(ip: IpAddr) -> bool {
-    match ip {
-        IpAddr::V4(addr) => {
-            !(addr.is_private() || addr.is_loopback() || addr.is_link_local() || addr.is_broadcast() || addr.is_unspecified() || addr.is_multicast())
-        }
-        IpAddr::V6(addr) => !(addr.is_loopback() || addr.is_unspecified() || addr.is_unique_local() || addr.is_multicast() || ipv6_is_link_local(addr)),
-    }
-}
-
-fn ipv6_is_link_local(addr: std::net::Ipv6Addr) -> bool {
-    (addr.segments()[0] & 0xffc0) == 0xfe80
 }
 
 #[cfg(test)]
@@ -79,11 +60,11 @@ mod tests {
     }
 
     #[test]
-    fn public_base_url_rejects_local_and_private_hosts() {
-        assert_eq!(public_base_url_is_valid("http://localhost:8080").unwrap(), false);
-        assert_eq!(public_base_url_is_valid("http://127.0.0.1").unwrap(), false);
-        assert_eq!(public_base_url_is_valid("http://10.0.0.1").unwrap(), false);
-        assert_eq!(public_base_url_is_valid("http://[::1]").unwrap(), false);
+    fn public_base_url_accepts_local_and_private_hosts() {
+        assert_eq!(public_base_url_is_valid("http://localhost:8080").unwrap(), true);
+        assert_eq!(public_base_url_is_valid("http://127.0.0.1").unwrap(), true);
+        assert_eq!(public_base_url_is_valid("http://10.0.0.1").unwrap(), true);
+        assert_eq!(public_base_url_is_valid("http://[::1]").unwrap(), true);
     }
 
     #[test]

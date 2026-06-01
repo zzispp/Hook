@@ -45,6 +45,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
 
 pub const USER_MENU_CODES: &[&str] = &[
     "dashboard_home",
+    "dashboard_profile",
     "dashboard_model_status",
     "announcements",
     "support_tickets",
@@ -410,7 +411,7 @@ mod tests {
 
     #[test]
     fn admin_defaults_exclude_user_only_menus() {
-        for user_only_code in ["dashboard_models", "wallet_center", "api_tokens", "usage_records"] {
+        for user_only_code in ["dashboard_profile", "dashboard_models", "wallet_center", "api_tokens", "usage_records"] {
             assert!(!ADMIN_MENU_CODES.contains(&user_only_code));
         }
 
@@ -430,6 +431,8 @@ mod tests {
         for code in ADMIN_MENU_CODES.iter().chain(USER_MENU_CODES) {
             assert!(menu_codes.contains(code), "default menu code does not exist: {code}");
         }
+
+        assert!(USER_MENU_CODES.contains(&"dashboard_profile"));
     }
 
     #[test]

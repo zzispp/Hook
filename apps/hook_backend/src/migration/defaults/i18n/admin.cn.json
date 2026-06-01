@@ -1652,7 +1652,7 @@
       "siteNameLength": "站点名称不能为空，且不能超过 {{max}} 个字符。",
       "siteSubtitleLength": "站点副标题不能超过 {{max}} 个字符。",
       "publicBaseUrlLength": "公网访问地址不能超过 {{max}} 个字符。",
-      "publicBaseUrlInvalid": "公网访问地址必须是有效的 HTTP/HTTPS 公网 URL。",
+      "publicBaseUrlInvalid": "公网访问地址必须是有效的 HTTP/HTTPS URL。",
       "contactIdRequired": "联系方式 ID 不能为空，且不能超过 255 个字符。",
       "contactIconRequired": "联系方式图标不能为空，且不能超过 255 个字符。",
       "contactValueRequired": "联系方式值不能为空，且不能超过 255 个字符。",

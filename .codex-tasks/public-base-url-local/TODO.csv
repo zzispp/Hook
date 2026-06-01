@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate public_base_url validators,DONE,"Frontend and backend validators identified","rg -n \"public_base_url_is_valid|publicBaseUrlIsValid\" crates apps/hook_frontend",2026-06-01T00:00:00+08:00,0,"Backend types helper and frontend admin helper are relevant."
+2,Allow localhost and 127.0.0.1 in validators,DONE,"Local HTTP/HTTPS URLs pass existing public_base_url validation","cargo test -p types system_setting && pnpm lint:frontend",2026-06-01T00:00:00+08:00,0,"Backend unit cases now accept localhost and 127.0.0.1; frontend helper mirrors the same structure rule."
+3,Update validation messages and tests,DONE,"Messages no longer say public-only and concrete local cases are covered","cargo test -p setting -p user -p recharge && pnpm lint:frontend",2026-06-01T00:00:00+08:00,0,"Relevant backend crate tests, frontend lint, and backend seed tests passed."

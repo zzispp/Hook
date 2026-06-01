@@ -1652,7 +1652,7 @@
       "siteNameLength": "Site name is required and must be at most {{max}} characters.",
       "siteSubtitleLength": "Site subtitle must be at most {{max}} characters.",
       "publicBaseUrlLength": "Public base URL must be at most {{max}} characters.",
-      "publicBaseUrlInvalid": "Public base URL must be a valid public HTTP/HTTPS URL.",
+      "publicBaseUrlInvalid": "Public base URL must be a valid HTTP/HTTPS URL.",
       "contactIdRequired": "Contact method ID is required and must be at most 255 characters.",
       "contactIconRequired": "Contact icon is required and must be at most 255 characters.",
       "contactValueRequired": "Contact value is required and must be at most 255 characters.",

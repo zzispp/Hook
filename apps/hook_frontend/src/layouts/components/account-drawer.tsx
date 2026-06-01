@@ -16,10 +16,6 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import ListSubheader from '@mui/material/ListSubheader';
 
-import { paths } from 'src/routes/paths';
-
-import { useTranslate } from 'src/locales';
-
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { AnimateBorder } from 'src/components/animate';
@@ -38,7 +34,6 @@ export type AccountDrawerProps = IconButtonProps & {
 
 export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
   const { user } = useMockedUser();
-  const { t } = useTranslate('common');
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
@@ -57,14 +52,6 @@ export function AccountDrawer({ data = [], sx, ...other }: AccountDrawerProps) {
 
   const renderList = () => (
     <MenuList disablePadding sx={menuListStyles}>
-      <AccountDrawerNavItem
-        item={{
-          title: t('profile.menu'),
-          path: paths.dashboard.profile,
-          icon: 'solar:user-id-bold',
-        }}
-        onClose={onClose}
-      />
       {data.flatMap((group) => renderNavGroup(group, onClose))}
     </MenuList>
   );
