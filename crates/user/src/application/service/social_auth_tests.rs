@@ -56,6 +56,55 @@ async fn oauth_existing_email_requires_binding_ticket_then_binds() {
 }
 
 #[tokio::test]
+async fn account_oauth_callback_links_identity_to_current_user() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    let service = test_service(repository.clone(), TestOAuthClient::with_profile(github_profile("other@example.com")));
+
+    let state = account_oauth_state(&service, user_id(1)).await;
+    let result = service
+        .account_oauth_callback(user_id(1), IdentityProvider::Github, "oauth-code".into(), state)
+        .await
+        .unwrap();
+
+    assert_eq!(result.identity.provider, IdentityProvider::Github);
+    assert_eq!(repository.users().len(), 1);
+    assert_eq!(repository.identities()[0].user_id, user_id(1).0);
+}
+
+#[tokio::test]
+async fn account_oauth_callback_rejects_existing_identity_subject() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    repository.seed_user(stored_user(2, "bob", "hashed:secret123"));
+    repository.seed_identity(identity_input(user_id(2).0, IdentityProvider::Github, "github-subject"));
+    let service = test_service(repository.clone(), TestOAuthClient::with_profile(github_profile("alice@example.com")));
+
+    let result = service
+        .account_oauth_callback(
+            user_id(1),
+            IdentityProvider::Github,
+            "oauth-code".into(),
+            account_oauth_state(&service, user_id(1)).await,
+        )
+        .await;
+
+    assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "provider identity is already linked"));
+    assert_eq!(repository.identities().len(), 1);
+}
+
+#[tokio::test]
+async fn sign_in_oauth_callback_rejects_account_binding_state() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    let service = test_service(repository.clone(), TestOAuthClient::with_profile(github_profile("alice@example.com")));
+
+    let result = service
+        .oauth_callback(IdentityProvider::Github, "oauth-code".into(), account_oauth_state(&service, user_id(1)).await)
+        .await;
+
+    assert!(matches!(result, Err(AppError::Unauthorized)));
+    assert!(repository.identities().is_empty());
+}
+
+#[tokio::test]
 async fn oauth_binding_ticket_rejects_wrong_provider_path() {
     let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
     let service = test_service(repository.clone(), TestOAuthClient::with_profile(github_profile("alice@example.com")));
@@ -214,6 +263,45 @@ async fn wallet_complete_rejects_system_user_email() {
 }
 
 #[tokio::test]
+async fn account_wallet_link_rejects_existing_wallet_identity() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    repository.seed_user(stored_user(2, "bob", "hashed:secret123"));
+    repository.seed_identity(identity_input(user_id(2).0, IdentityProvider::Evm, "0xabc"));
+    let tickets = TestAuthTicketStore::default();
+    tickets
+        .save_wallet_challenge(
+            "testnonce",
+            crate::application::WalletChallenge {
+                provider: IdentityProvider::Evm,
+                address: "0xabc".into(),
+                nonce: "testnonce".into(),
+                message: "testnonce".into(),
+                chain_id: Some(1),
+            },
+            600,
+        )
+        .await
+        .unwrap();
+    let service = test_service_with_tickets(repository.clone(), TestPurposeEmailCodeStore::default(), tickets);
+
+    let result = service
+        .account_wallet_link(
+            user_id(1),
+            WalletSignInInput {
+                provider: IdentityProvider::Evm,
+                address: "0xabc".into(),
+                message: "testnonce".into(),
+                signature: "ignored".into(),
+                chain_id: Some(1),
+            },
+        )
+        .await;
+
+    assert!(matches!(result, Err(AppError::Unauthorized)));
+    assert_eq!(repository.identities().len(), 1);
+}
+
+#[tokio::test]
 async fn wallet_existing_identity_signs_in_without_email() {
     let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
     repository.seed_identity(identity_input(user_id(1).0, IdentityProvider::Evm, "0xabc"));
@@ -249,6 +337,10 @@ async fn wallet_existing_identity_signs_in_without_email() {
 
 async fn oauth_state(service: &impl UserUseCase) -> String {
     state_from_url(&service.oauth_start(IdentityProvider::Github).await.unwrap())
+}
+
+async fn account_oauth_state(service: &impl UserUseCase, user_id: types::user::UserId) -> String {
+    state_from_url(&service.account_oauth_start(user_id, IdentityProvider::Github).await.unwrap())
 }
 
 async fn oauth_callback(service: &impl UserUseCase) -> OAuthSignInResult {

@@ -1,25 +1,31 @@
 'use client';
 
+import type { AuthConfig } from 'src/actions/auth-config';
 import type { SystemUser, UserIdentitySummary } from 'src/types/rbac';
+import type { OAuthProvider, WalletProvider } from './profile-provider-card';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 import CardContent from '@mui/material/CardContent';
 
+import { paths } from 'src/routes/paths';
+import { useRouter, useSearchParams } from 'src/routes/hooks';
+
 import { useTranslate } from 'src/locales/use-locales';
+import { useAuthConfig } from 'src/actions/auth-config';
 import { DashboardContent } from 'src/layouts/dashboard';
 import {
   useAccountProfile,
+  linkAccountWallet,
+  startAccountOAuth,
   deleteAccountIdentity,
   changeAccountPassword,
   requestAccountPasswordEmailCode,
@@ -28,16 +34,33 @@ import {
 import { Label } from 'src/components/label';
 import { toast } from 'src/components/snackbar';
 
-import { providerColor, providerLabel } from './provider-utils';
+import { walletNonce } from 'src/auth/context/jwt';
+import { useWalletSigning } from 'src/auth/context/jwt/wallet-signing';
+import { ACCOUNT_OAUTH_BINDING_KEY } from 'src/auth/view/jwt/jwt-oauth-callback-view';
+
+import { ProviderCard } from './profile-provider-card';
+
+const PROVIDER_LINKED_PARAM = 'provider_linked';
 
 export function ProfileView() {
   const { t } = useTranslate('common');
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const profile = useAccountProfile();
+  const authConfig = useAuthConfig();
+  const walletSigning = useWalletSigning();
   const passwordActions = useProfilePasswordActions(() => profile.refresh());
-  const identityActions = useProfileIdentityActions(() => profile.refresh());
+  const identityActions = useProfileIdentityActions(() => profile.refresh(), router.refresh);
+  const providerActions = useProviderLinkActions(authConfig.data, walletSigning, () => profile.refresh());
 
   const user = profile.data;
   const canUseSelfService = user !== undefined && !user.system;
+
+  useEffect(() => {
+    if (searchParams.get(PROVIDER_LINKED_PARAM) !== '1') return;
+    toast.success(t('profile.messages.providerLinked'));
+    router.replace(paths.dashboard.profile);
+  }, [router, searchParams, t]);
 
   return (
     <DashboardContent maxWidth="md">
@@ -59,8 +82,15 @@ export function ProfileView() {
             <PasswordCard {...passwordActions} />
             <ProviderCard
               identities={user.identities}
+              authConfig={authConfig.data}
+              linkingProvider={providerActions.linkingProvider}
               unlinkingId={identityActions.unlinkingId}
+              unlinkTarget={identityActions.unlinkTarget}
+              onOAuthLink={providerActions.linkOAuth}
+              onWalletLink={providerActions.linkWallet}
+              onCancelUnlink={identityActions.cancelUnlink}
               onUnlink={identityActions.unlinkIdentity}
+              onConfirmUnlink={identityActions.confirmUnlink}
             />
           </>
         )}
@@ -115,16 +145,24 @@ function useProfilePasswordActions(refresh: () => Promise<unknown>) {
   };
 }
 
-function useProfileIdentityActions(refresh: () => Promise<unknown>) {
+function useProfileIdentityActions(refresh: () => Promise<unknown>, refreshRouter: VoidFunction) {
   const { t } = useTranslate('common');
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+  const [unlinkTarget, setUnlinkTarget] = useState<UserIdentitySummary | null>(null);
 
   const unlinkIdentity = async (identity: UserIdentitySummary) => {
-    setUnlinkingId(identity.id);
+    setUnlinkTarget(identity);
+  };
+
+  const confirmUnlink = async () => {
+    if (!unlinkTarget) return;
+    setUnlinkingId(unlinkTarget.id);
     try {
-      await deleteAccountIdentity(identity.id);
+      await deleteAccountIdentity(unlinkTarget.id);
       await refresh();
+      refreshRouter();
       toast.success(t('profile.messages.providerUnlinked'));
+      setUnlinkTarget(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('profile.messages.saveFailed'));
     } finally {
@@ -132,7 +170,58 @@ function useProfileIdentityActions(refresh: () => Promise<unknown>) {
     }
   };
 
-  return { unlinkingId, unlinkIdentity };
+  const cancelUnlink = () => {
+    if (!unlinkingId) setUnlinkTarget(null);
+  };
+
+  return { unlinkingId, unlinkTarget, unlinkIdentity, confirmUnlink, cancelUnlink };
+}
+
+function useProviderLinkActions(
+  authConfig: AuthConfig | undefined,
+  walletSigning: ReturnType<typeof useWalletSigning>,
+  refresh: () => Promise<unknown>
+) {
+  const { t } = useTranslate('common');
+  const [linkingProvider, setLinkingProvider] = useState<UserIdentitySummary['provider'] | null>(null);
+
+  const linkOAuth = async (provider: OAuthProvider) => {
+    setLinkingProvider(provider);
+    try {
+      const { authorization_url } = await startAccountOAuth(provider);
+      window.sessionStorage.setItem(ACCOUNT_OAUTH_BINDING_KEY, provider);
+      window.location.assign(authorization_url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('profile.messages.saveFailed'));
+      setLinkingProvider(null);
+    }
+  };
+
+  const linkWallet = async (provider: WalletProvider) => {
+    const config = authConfig?.providers.evm;
+    if (!config?.enabled || config.evm_chain_ids.length === 0) {
+      toast.error(t('profile.messages.saveFailed'));
+      return;
+    }
+    setLinkingProvider(provider);
+    try {
+      const account = await walletSigning.connectWalletAccount({
+        provider,
+        chainId: config.evm_chain_ids[0],
+      });
+      const challenge = await walletNonce(account);
+      const signed = await walletSigning.signWalletMessage({ ...account, message: challenge.message });
+      await linkAccountWallet({ ...account, message: challenge.message, signature: signed.signature });
+      await refresh();
+      toast.success(t('profile.messages.providerLinked'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('profile.messages.saveFailed'));
+    } finally {
+      setLinkingProvider(null);
+    }
+  };
+
+  return { linkingProvider, linkOAuth, linkWallet };
 }
 
 function AccountCard({ user }: { user?: SystemUser }) {
@@ -191,42 +280,6 @@ function PasswordCard({
   );
 }
 
-function ProviderCard({
-  identities,
-  unlinkingId,
-  onUnlink,
-}: {
-  identities: UserIdentitySummary[];
-  unlinkingId: string | null;
-  onUnlink: (identity: UserIdentitySummary) => void;
-}) {
-  const { t } = useTranslate('common');
-
-  return (
-    <Card>
-      <CardHeader title={t('profile.providersTitle')} />
-      <CardContent>
-        <Stack spacing={2}>
-          {identities.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              {t('profile.noProviders')}
-            </Typography>
-          ) : (
-            identities.map((identity) => (
-              <ProviderRow
-                key={identity.id}
-                identity={identity}
-                loading={unlinkingId === identity.id}
-                onUnlink={() => onUnlink(identity)}
-              />
-            ))
-          )}
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
-
 function ReadOnlyRow({ label, value }: { label: string; value: string }) {
   return (
     <Box>
@@ -234,43 +287,6 @@ function ReadOnlyRow({ label, value }: { label: string; value: string }) {
         {label}
       </Typography>
       <Typography variant="body2">{value || '-'}</Typography>
-    </Box>
-  );
-}
-
-function ProviderRow({
-  identity,
-  loading,
-  onUnlink,
-}: {
-  identity: UserIdentitySummary;
-  loading: boolean;
-  onUnlink: VoidFunction;
-}) {
-  const { t } = useTranslate('common');
-
-  return (
-    <Box>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
-        <Chip
-          size="small"
-          label={providerLabel(identity.provider)}
-          color={providerColor(identity.provider)}
-          variant="soft"
-        />
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography variant="body2" noWrap>
-            {identity.display_name || identity.email || identity.provider_subject}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>
-            {identity.provider_subject}
-          </Typography>
-        </Box>
-        <Button color="error" variant="text" loading={loading} onClick={onUnlink}>
-          {t('profile.unlink')}
-        </Button>
-      </Stack>
-      <Divider sx={{ mt: 2 }} />
     </Box>
   );
 }

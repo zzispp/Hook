@@ -88,6 +88,12 @@ auth:
     - methods: ["DELETE"]
       path_pattern: "/api/account/identities/{identity_id}"
     - methods: ["GET"]
+      path_pattern: "/api/account/oauth/{provider}/start"
+    - methods: ["GET"]
+      path_pattern: "/api/account/oauth/{provider}/callback"
+    - methods: ["POST"]
+      path_pattern: "/api/account/wallet/link"
+    - methods: ["GET"]
       path_pattern: "/api/navbar"
     - methods: ["GET"]
       path_pattern: "/api/notifications"

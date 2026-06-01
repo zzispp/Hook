@@ -110,6 +110,7 @@ impl RegistrationEmailConfig for NoRegistrationEmailConfig {
         Ok(types::user::AuthConfigResponse {
             allow_registration: true,
             registration_email_verification_enabled: false,
+            email_verification_available: false,
             providers: types::user::AuthProviderConfigResponse::default(),
         })
     }

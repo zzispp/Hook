@@ -143,6 +143,9 @@ export const endpoints = {
     passwordChange: '/api/account/password/change',
     identities: '/api/account/identities',
     identity: (id: string) => `/api/account/identities/${id}`,
+    oauthStart: (provider: string) => `/api/account/oauth/${provider}/start`,
+    oauthCallback: (provider: string) => `/api/account/oauth/${provider}/callback`,
+    walletLink: '/api/account/wallet/link',
   },
   captcha: {
     config: '/api/captcha/config',

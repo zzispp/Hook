@@ -25,6 +25,7 @@ pub struct WalletProviderSettings {
 pub struct OAuthStateRecord {
     pub provider: IdentityProvider,
     pub redirect_uri: String,
+    pub user_id: Option<UserId>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]

@@ -43,10 +43,16 @@
     "newPassword": "New password",
     "changePassword": "Change password",
     "noProviders": "No linked providers",
+    "linkProvider": "Link {{provider}}",
+    "providerLinked": "{{provider}} linked",
     "unlink": "Unlink",
+    "cancel": "Cancel",
+    "unlinkConfirmTitle": "Unlink provider",
+    "unlinkConfirmContent": "Unlink {{provider}}? You will no longer be able to sign in with this provider.",
     "messages": {
       "codeSent": "Code sent. Please check your inbox.",
       "passwordChanged": "Password changed.",
+      "providerLinked": "Provider linked.",
       "providerUnlinked": "Provider unlinked.",
       "saveFailed": "Operation failed"
     }

@@ -12,6 +12,7 @@ import { requireApiData } from './rbac';
 export type AuthConfig = {
   allow_registration: boolean;
   registration_email_verification_enabled: boolean;
+  email_verification_available: boolean;
   providers: {
     github: OAuthProviderPublicConfig;
     google: OAuthProviderPublicConfig;

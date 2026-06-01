@@ -20,6 +20,9 @@ const EMAIL_CODE_TTL_SECONDS: u64 = 10 * 60;
 const EMAIL_CODE_COOLDOWN_SECONDS: u64 = 60;
 const EMAIL_CODE_BYTES: usize = 4;
 const EMAIL_CODE_MODULO: u32 = 1_000_000;
+const EMAIL_FEATURE_DISABLED: &str = "email verification is disabled";
+const EMAIL_CONFIGURATION_DISABLED: &str = "email configuration is disabled";
+const SMTP_CONFIGURATION_INCOMPLETE: &str = "SMTP configuration is incomplete";
 
 pub(in crate::application::service) async fn request_purpose_email_code<S, C, M>(
     store: &S,
@@ -82,9 +85,7 @@ where
     M: RegistrationEmailMailer,
 {
     let settings = config.registration_email_settings().await?;
-    if settings.smtp_host.is_empty() || settings.smtp_username.is_empty() || !settings.smtp_password_set || settings.smtp_from_email.is_empty() {
-        return Err(AppError::InvalidInput("SMTP configuration is incomplete".into()));
-    }
+    reject_unready_email_config(&settings)?;
     let template = config.registration_email_template(&input.lang).await?;
     let html = template
         .html
@@ -101,6 +102,19 @@ where
             settings,
         })
         .await
+}
+
+fn reject_unready_email_config(settings: &crate::application::EmailSettings) -> AppResult<()> {
+    if !settings.feature_enabled {
+        return Err(AppError::InvalidInput(EMAIL_FEATURE_DISABLED.into()));
+    }
+    if !settings.email_config_enabled {
+        return Err(AppError::InvalidInput(EMAIL_CONFIGURATION_DISABLED.into()));
+    }
+    if settings.smtp_host.is_empty() || settings.smtp_username.is_empty() || !settings.smtp_password_set || settings.smtp_from_email.is_empty() {
+        return Err(AppError::InvalidInput(SMTP_CONFIGURATION_INCOMPLETE.into()));
+    }
+    Ok(())
 }
 
 fn random_code() -> String {

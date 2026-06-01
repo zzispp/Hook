@@ -14,6 +14,7 @@ import { paths } from 'src/routes/paths';
 import { useRouter, useSearchParams } from 'src/routes/hooks';
 
 import { useTranslate } from 'src/locales/use-locales';
+import { completeAccountOAuthCallback } from 'src/actions/account';
 
 import { useAuthContext } from '../../hooks';
 import { getErrorMessage } from '../../utils';
@@ -22,6 +23,8 @@ import { bindOAuthExisting, completeOAuthCallback, applyAuthenticatedSession } f
 type Props = {
   provider: Extract<IdentityProvider, 'github' | 'google'>;
 };
+
+export const ACCOUNT_OAUTH_BINDING_KEY = 'hook.account.oauth.binding';
 
 type BindingState = {
   bindingTicket: string;
@@ -35,6 +38,7 @@ export function JwtOAuthCallbackView({ provider }: Props) {
   const searchParams = useSearchParams();
   const { t } = useTranslate('auth');
   const { checkUserSession } = useAuthContext();
+  const accountBinding = accountOAuthBindingProvider() === provider;
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [binding, setBinding] = useState<BindingState | null>(null);
@@ -54,6 +58,18 @@ export function JwtOAuthCallbackView({ provider }: Props) {
       setLoading(false);
       return;
     }
+    if (accountBinding) {
+      completeAccountOAuthCallback({ provider, code, state })
+        .then(() => {
+          router.replace(`${paths.dashboard.profile}?provider_linked=1`);
+        })
+        .catch((error) => setErrorMessage(getErrorMessage(error)))
+        .finally(() => {
+          window.sessionStorage.removeItem(ACCOUNT_OAUTH_BINDING_KEY);
+          setLoading(false);
+        });
+      return;
+    }
     completeOAuthCallback({ provider, code, state })
       .then(async (result) => {
         if (result.status === 'authenticated') {
@@ -70,7 +86,7 @@ export function JwtOAuthCallbackView({ provider }: Props) {
       })
       .catch((error) => setErrorMessage(getErrorMessage(error)))
       .finally(() => setLoading(false));
-  }, [finishAuthenticated, provider, searchParams, t]);
+  }, [accountBinding, finishAuthenticated, provider, router, searchParams, t]);
 
   const confirmBinding = async () => {
     if (!binding) return;
@@ -130,4 +146,9 @@ export function JwtOAuthCallbackView({ provider }: Props) {
 
 function providerLabel(provider: Extract<IdentityProvider, 'github' | 'google'>) {
   return provider === 'github' ? 'GitHub' : 'Google';
+}
+
+function accountOAuthBindingProvider() {
+  if (typeof window === 'undefined') return null;
+  return window.sessionStorage.getItem(ACCOUNT_OAUTH_BINDING_KEY);
 }

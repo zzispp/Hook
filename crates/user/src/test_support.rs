@@ -70,6 +70,14 @@ impl MemoryUserRepository {
         repository
     }
 
+    pub(crate) fn seed_user(&self, user: StoredUser) {
+        self.state.lock().unwrap().users.push(user);
+    }
+
+    pub(crate) fn users(&self) -> Vec<User> {
+        self.state.lock().unwrap().users.iter().map(|item| item.user.clone()).collect()
+    }
+
     pub(crate) fn created_records(&self) -> Vec<ReplaceUserRecord> {
         self.state.lock().unwrap().created.clone()
     }

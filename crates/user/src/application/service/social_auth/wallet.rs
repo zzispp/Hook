@@ -1,4 +1,4 @@
-use types::user::{IdentityProvider, User, UserId};
+use types::user::{IdentityProvider, User, UserId, UserIdentitySummary};
 
 use crate::application::{
     AppError, AppResult, AuthProviderConfig, AuthTicketStore, PurposeEmailCodeStore, UserRepository, WalletChallenge, WalletPendingBinding,
@@ -65,6 +65,38 @@ where
     }
     verify_wallet_challenge(&settings, &challenge, input.provider, &input.address, &input.message, &input.signature).await?;
     existing_wallet_or_ticket(deps.repository, deps.tickets, input.provider, &input.address).await
+}
+
+pub(in crate::application::service) async fn account_wallet_link<R, C, T>(
+    deps: WalletSignInDeps<'_, R, C, T>,
+    user_id: UserId,
+    input: WalletSignInInput,
+) -> AppResult<UserIdentitySummary>
+where
+    R: UserRepository,
+    C: AuthProviderConfig,
+    T: AuthTicketStore,
+{
+    let settings = deps.config.wallet_provider_settings().await?;
+    ensure_wallet_provider_enabled(&settings, input.provider)?;
+    let nonce = message_nonce(input.provider, &input.message)?;
+    let challenge = deps.tickets.consume_wallet_challenge(&nonce).await?.ok_or(AppError::Unauthorized)?;
+    if challenge.chain_id != input.chain_id {
+        return Err(AppError::Unauthorized);
+    }
+    verify_wallet_challenge(&settings, &challenge, input.provider, &input.address, &input.message, &input.signature).await?;
+    let user = deps.repository.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
+    let subject = normalize_subject(input.provider, &input.address);
+    if deps.repository.find_identity(input.provider, &subject).await?.is_some() {
+        return Err(AppError::InvalidInput("provider identity is already linked".into()));
+    }
+    let identity = types::user::UserIdentityInput {
+        user_id: user.id.0,
+        email: Some(user.email),
+        email_verified: user.email_verified,
+        ..wallet_identity(input.provider, subject)
+    };
+    Ok(UserIdentitySummary::from(deps.repository.create_identity(identity).await?))
 }
 
 pub(in crate::application::service) async fn complete_wallet_binding<R, T, S>(

@@ -6,6 +6,7 @@ use super::{IdentityProvider, UserResponse};
 pub struct AuthConfigResponse {
     pub allow_registration: bool,
     pub registration_email_verification_enabled: bool,
+    pub email_verification_available: bool,
     pub providers: AuthProviderConfigResponse,
 }
 
@@ -77,6 +78,11 @@ pub struct WalletSignInPayload {
     pub message: String,
     pub signature: String,
     pub chain_id: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AccountProviderLinkResponse {
+    pub identity: super::UserIdentitySummary,
 }
 
 #[derive(Debug, Serialize)]

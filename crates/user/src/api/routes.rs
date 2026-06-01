@@ -6,9 +6,10 @@ use axum::{
 use crate::api::{
     ApiState,
     handlers::{
-        account_identities, account_password_change, account_password_email_code, account_profile, account_unlink_identity, admin_unlink_identity, auth_config,
-        bind_oauth_existing, create_user, delete_user, get_user, list_users, me, oauth_callback, oauth_start, refresh, replace_user, request_password_reset,
-        request_registration_email_code, reset_password, sign_in, sign_up, wallet_complete, wallet_email_code, wallet_nonce, wallet_sign_in,
+        account_identities, account_oauth_callback, account_oauth_start, account_password_change, account_password_email_code, account_profile,
+        account_unlink_identity, account_wallet_link, admin_unlink_identity, auth_config, bind_oauth_existing, create_user, delete_user, get_user, list_users,
+        me, oauth_callback, oauth_start, refresh, replace_user, request_password_reset, request_registration_email_code, reset_password, sign_in, sign_up,
+        wallet_complete, wallet_email_code, wallet_nonce, wallet_sign_in,
     },
     user_group_handlers::{create_user_group, delete_user_group, get_user_group, list_user_group_members, list_user_groups, update_user_group},
 };
@@ -35,6 +36,9 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/account/password/change", post(account_password_change))
         .route("/account/identities", get(account_identities))
         .route("/account/identities/{identity_id}", delete(account_unlink_identity))
+        .route("/account/oauth/{provider}/start", get(account_oauth_start))
+        .route("/account/oauth/{provider}/callback", get(account_oauth_callback))
+        .route("/account/wallet/link", post(account_wallet_link))
         .route("/users", get(list_users).post(create_user))
         .route("/users/{id}", get(get_user).put(replace_user).delete(delete_user))
         .route("/users/{id}/identities/{identity_id}", delete(admin_unlink_identity))

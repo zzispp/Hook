@@ -1,6 +1,6 @@
 use types::{
     system_setting::public_base_url_is_valid,
-    user::{IdentityProvider, User, UserId},
+    user::{IdentityProvider, User, UserId, UserIdentitySummary},
 };
 
 use crate::application::{
@@ -24,6 +24,34 @@ where
             OAuthStateRecord {
                 provider,
                 redirect_uri: redirect_uri.clone(),
+                user_id: None,
+            },
+            OAUTH_STATE_TTL_SECONDS,
+        )
+        .await?;
+    Ok(oauth_authorize_url(provider, &settings.client_id, &redirect_uri, &state))
+}
+
+pub(in crate::application::service) async fn account_oauth_start<C, T>(
+    config: &C,
+    tickets: &T,
+    user_id: UserId,
+    provider: IdentityProvider,
+) -> AppResult<String>
+where
+    C: AuthProviderConfig,
+    T: AuthTicketStore,
+{
+    let settings = config.oauth_provider_settings(provider).await?;
+    let redirect_uri = oauth_redirect_uri(&settings, provider)?;
+    let state = random_token(TICKET_BYTES);
+    tickets
+        .save_oauth_state(
+            &state,
+            OAuthStateRecord {
+                provider,
+                redirect_uri: redirect_uri.clone(),
+                user_id: Some(user_id),
             },
             OAUTH_STATE_TTL_SECONDS,
         )
@@ -62,7 +90,45 @@ where
         return Err(AppError::Unauthorized);
     }
     ensure_oauth_ready(&config.oauth_provider_settings(state.provider).await?)?;
+    if state.user_id.is_some() {
+        return Err(AppError::Unauthorized);
+    }
     provider_profile_result(repository, tickets, state.provider, profile).await
+}
+
+pub(in crate::application::service) async fn account_oauth_callback<R, C, T>(
+    repository: &R,
+    config: &C,
+    tickets: &T,
+    expected_user_id: UserId,
+    provider: IdentityProvider,
+    state: &str,
+    redirect_uri: &str,
+    profile: OAuthProfile,
+) -> AppResult<UserIdentitySummary>
+where
+    R: UserRepository,
+    C: AuthProviderConfig,
+    T: AuthTicketStore,
+{
+    if !profile.email_verified {
+        return Err(AppError::InvalidInput("verified provider email is required".into()));
+    }
+    let state = tickets.consume_oauth_state(state).await?.ok_or(AppError::Unauthorized)?;
+    if state.provider != provider || state.redirect_uri != redirect_uri {
+        return Err(AppError::Unauthorized);
+    }
+    ensure_oauth_ready(&config.oauth_provider_settings(state.provider).await?)?;
+    let user_id = state.user_id.ok_or(AppError::Unauthorized)?;
+    if user_id != expected_user_id {
+        return Err(AppError::Unauthorized);
+    }
+    let user = repository.find_by_id(user_id.clone()).await?.ok_or(AppError::NotFound)?;
+    if repository.find_identity(provider, &profile.subject).await?.is_some() {
+        return Err(AppError::InvalidInput("provider identity is already linked".into()));
+    }
+    let identity = repository.create_identity(oauth_identity(provider, &profile, user.id.0)).await?;
+    Ok(UserIdentitySummary::from(identity))
 }
 
 pub(in crate::application::service) async fn bind_oauth_ticket<R, T>(repository: &R, tickets: &T, provider: IdentityProvider, ticket: &str) -> AppResult<User>

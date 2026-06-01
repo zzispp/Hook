@@ -1,5 +1,6 @@
 'use client';
 
+import type { WalletSignInParams } from 'src/auth/context/jwt';
 import type { SystemUser, ApiEnvelope, UserIdentitySummary } from 'src/types/rbac';
 
 import { useMemo } from 'react';
@@ -62,6 +63,57 @@ export async function deleteAccountIdentity(identityId: string) {
   await mutate(endpoints.account.profile);
   await mutate(endpoints.account.identities);
   await mutate(endpoints.auth.me);
+}
+
+export async function startAccountOAuth(provider: Extract<UserIdentitySummary['provider'], 'github' | 'google'>) {
+  const response = await axios.get<ApiEnvelope<{ authorization_url: string }>>(
+    endpoints.account.oauthStart(provider)
+  );
+  return requireApiData(response.data);
+}
+
+export async function completeAccountOAuthCallback({
+  provider,
+  code,
+  state,
+}: {
+  provider: Extract<UserIdentitySummary['provider'], 'github' | 'google'>;
+  code: string;
+  state: string;
+}) {
+  const response = await axios.get<ApiEnvelope<{ identity: UserIdentitySummary }>>(
+    endpoints.account.oauthCallback(provider),
+    { params: { code, state } }
+  );
+  const result = requireApiData(response.data);
+  await mutate(endpoints.account.profile);
+  await mutate(endpoints.account.identities);
+  await mutate(endpoints.auth.me);
+  return result;
+}
+
+export async function linkAccountWallet({
+  provider,
+  address,
+  chainId,
+  message,
+  signature,
+}: WalletSignInParams) {
+  const response = await axios.post<ApiEnvelope<{ identity: UserIdentitySummary }>>(
+    endpoints.account.walletLink,
+    {
+      provider,
+      address: address.trim(),
+      chain_id: chainId,
+      message,
+      signature,
+    }
+  );
+  const result = requireApiData(response.data);
+  await mutate(endpoints.account.profile);
+  await mutate(endpoints.account.identities);
+  await mutate(endpoints.auth.me);
+  return result;
 }
 
 export async function getAccountIdentities() {

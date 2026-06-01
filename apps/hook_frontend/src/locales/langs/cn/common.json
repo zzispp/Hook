@@ -43,10 +43,16 @@
     "newPassword": "新密码",
     "changePassword": "修改密码",
     "noProviders": "暂无已绑定 Provider",
+    "linkProvider": "绑定 {{provider}}",
+    "providerLinked": "{{provider}} 已绑定",
     "unlink": "解绑",
+    "cancel": "取消",
+    "unlinkConfirmTitle": "解绑 Provider",
+    "unlinkConfirmContent": "确认解绑 {{provider}}？解绑后将无法再使用该 Provider 登录。",
     "messages": {
       "codeSent": "验证码已发送，请检查邮箱。",
       "passwordChanged": "密码已修改。",
+      "providerLinked": "Provider 已绑定。",
       "providerUnlinked": "Provider 已解绑。",
       "saveFailed": "操作失败"
     }

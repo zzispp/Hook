@@ -6,9 +6,9 @@ use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     system_setting::{EmailSuffixMode, SmtpEncryption},
     user::{
-        AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AuthConfigResponse, Credentials, IdentityProvider, NewUser, PasswordResetConfirm,
-        PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId, UserIdentity, UserIdentityInput, UserIdentitySummary,
-        UserListFilters, UserWalletSummaryResponse,
+        AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProviderLinkResponse, AuthConfigResponse, Credentials, IdentityProvider, NewUser,
+        PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId, UserIdentity, UserIdentityInput,
+        UserIdentitySummary, UserListFilters, UserWalletSummaryResponse,
     },
     user_group::{UserGroupCreate, UserGroupListRequest, UserGroupPageResponse, UserGroupResponse, UserGroupUpdate},
 };
@@ -250,8 +250,11 @@ pub trait UserUseCase: Send + Sync + 'static {
     async fn oauth_start(&self, provider: IdentityProvider) -> AppResult<String>;
     async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String) -> AppResult<OAuthSignInResult>;
     async fn bind_oauth_existing(&self, provider: IdentityProvider, ticket: String) -> AppResult<User>;
+    async fn account_oauth_start(&self, id: UserId, provider: IdentityProvider) -> AppResult<String>;
+    async fn account_oauth_callback(&self, id: UserId, provider: IdentityProvider, code: String, state: String) -> AppResult<AccountProviderLinkResponse>;
     async fn wallet_nonce(&self, input: WalletNonceInput) -> AppResult<WalletChallenge>;
     async fn wallet_sign_in(&self, input: WalletSignInInput) -> AppResult<WalletSignInResult>;
+    async fn account_wallet_link(&self, id: UserId, input: WalletSignInInput) -> AppResult<AccountProviderLinkResponse>;
     async fn request_wallet_email_code(&self, ticket: String, email: String, lang: String) -> AppResult<()>;
     async fn complete_wallet(&self, ticket: String, email: String, code: String) -> AppResult<User>;
     async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()>;

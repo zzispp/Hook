@@ -35,6 +35,7 @@ impl RegistrationEmailConfig for StorageRegistrationEmailConfig {
         Ok(AuthConfigResponse {
             allow_registration: settings.allow_registration,
             registration_email_verification_enabled: settings.registration_email_verification_enabled,
+            email_verification_available: email_verification_available(&settings),
             providers: AuthProviderConfigResponse {
                 github: OAuthProviderPublicConfig {
                     enabled: settings.auth_github_enabled,
@@ -72,6 +73,15 @@ impl RegistrationEmailConfig for StorageRegistrationEmailConfig {
         let html = self.template_value(lang, REGISTRATION_HTML_KEY).await?;
         Ok(RegistrationEmailTemplate { subject, html })
     }
+}
+
+fn email_verification_available(settings: &types::system_setting::SystemSettings) -> bool {
+    settings.registration_email_verification_enabled
+        && settings.email_config_enabled
+        && !settings.smtp_host.is_empty()
+        && !settings.smtp_username.is_empty()
+        && settings.smtp_password_set
+        && !settings.smtp_from_email.is_empty()
 }
 
 fn wallet_domain(settings: &types::system_setting::SystemSettings) -> AppResult<String> {

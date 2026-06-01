@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest},
     user::{
-        AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AuthConfigResponse, Credentials, IdentityProvider, NewUser, PasswordResetConfirm,
-        PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId, UserIdentitySummary, UserListFilters,
+        AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProviderLinkResponse, AuthConfigResponse, Credentials, IdentityProvider, NewUser,
+        PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId, UserIdentitySummary, UserListFilters,
         UserWalletSummaryResponse,
     },
 };
@@ -123,6 +123,33 @@ where
         social_auth::bind_oauth_ticket(&self.repository, &self.auth_ticket_store, provider, &ticket).await
     }
 
+    async fn account_oauth_start(&self, id: UserId, provider: IdentityProvider) -> AppResult<String> {
+        let user = self.authenticated_user(id).await?;
+        reject_system_user_self_service(&user)?;
+        social_auth::account_oauth_start(&self.auth_provider_config, &self.auth_ticket_store, user.id, provider).await
+    }
+
+    async fn account_oauth_callback(&self, id: UserId, provider: IdentityProvider, code: String, state: String) -> AppResult<AccountProviderLinkResponse> {
+        let user = self.authenticated_user(id).await?;
+        reject_system_user_self_service(&user)?;
+        let settings = self.auth_provider_config.oauth_provider_settings(provider).await?;
+        let redirect_uri = social_auth::oauth_redirect_uri(&settings, provider)?;
+        let profile = self.oauth_client.fetch_profile(provider, settings, &code, &redirect_uri).await?;
+        reject_system_user_email(&self.system_users, &profile.email)?;
+        let identity = social_auth::account_oauth_callback(
+            &self.repository,
+            &self.auth_provider_config,
+            &self.auth_ticket_store,
+            user.id,
+            provider,
+            &state,
+            &redirect_uri,
+            profile,
+        )
+        .await?;
+        Ok(AccountProviderLinkResponse { identity })
+    }
+
     async fn wallet_nonce(&self, input: WalletNonceInput) -> AppResult<WalletChallenge> {
         social_auth::wallet_nonce(
             &self.auth_provider_config,
@@ -144,6 +171,22 @@ where
             input,
         )
         .await
+    }
+
+    async fn account_wallet_link(&self, id: UserId, input: WalletSignInInput) -> AppResult<AccountProviderLinkResponse> {
+        let user = self.authenticated_user(id).await?;
+        reject_system_user_self_service(&user)?;
+        let identity = social_auth::account_wallet_link(
+            social_auth::WalletSignInDeps {
+                repository: &self.repository,
+                config: &self.auth_provider_config,
+                tickets: &self.auth_ticket_store,
+            },
+            user.id,
+            input,
+        )
+        .await?;
+        Ok(AccountProviderLinkResponse { identity })
     }
 
     async fn request_wallet_email_code(&self, ticket: String, email: String, lang: String) -> AppResult<()> {
