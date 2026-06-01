@@ -1,4 +1,7 @@
-use types::{pagination::PageRequest, user::Credentials};
+use types::{
+    pagination::PageRequest,
+    user::{AccountPasswordChangePayload, AccountPasswordEmailCodePayload, Credentials},
+};
 
 use super::{AllowRegistrationPolicy, NoInitialGrantLedger, NoUserWalletCatalog, tests::WithPassword};
 use crate::{
@@ -46,6 +49,47 @@ async fn authenticated_user_returns_system_user_from_provider() {
 
     assert_eq!(user.username, "admin");
     assert!(user.system);
+}
+
+#[tokio::test]
+async fn system_user_cannot_request_account_password_email_code() {
+    let service = service_with_system_user(MemoryUserRepository::default());
+
+    let result = service
+        .request_account_password_email_code(user_id(0), AccountPasswordEmailCodePayload { lang: "en".into() })
+        .await;
+
+    assert_system_self_service_error(result);
+}
+
+#[tokio::test]
+async fn system_user_cannot_change_account_password() {
+    let repository = MemoryUserRepository::default();
+    let service = service_with_system_user(repository.clone());
+
+    let result = service
+        .change_account_password(
+            user_id(0),
+            AccountPasswordChangePayload {
+                email_verification_code: "123456".into(),
+                password: "new-secret123".into(),
+            },
+        )
+        .await;
+
+    assert_system_self_service_error(result);
+    assert!(repository.replaced_records().is_empty());
+}
+
+#[tokio::test]
+async fn system_user_cannot_unlink_identity() {
+    let repository = MemoryUserRepository::default();
+    let service = service_with_system_user(repository.clone());
+
+    let result = service.unlink_identity(user_id(0), "identity-1".into()).await;
+
+    assert_system_self_service_error(result);
+    assert!(repository.identities().is_empty());
 }
 
 #[tokio::test]
@@ -120,6 +164,10 @@ async fn list_users_offsets_database_page_after_system_user() {
     let usernames = page.items.iter().map(|user| user.username.as_str()).collect::<Vec<_>>();
     assert_eq!(usernames, vec!["bob", "carol"]);
     assert_eq!(page.total, 4);
+}
+
+fn assert_system_self_service_error<T>(result: Result<T, AppError>) {
+    assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "system user cannot use account self-service"));
 }
 
 fn service_with_system_user(

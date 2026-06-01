@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Compare current auth layout with Minimal reference,DONE,"Auth layout root cause identified from source and runtime evidence","rg \"AuthSplitLayout|AuthSplitContent\" apps/hook_frontend/src /Users/bubu/Downloads/minimal-next-ts-main/src",2026-06-01T01:07:00+08:00,0,
+2,Fix login and registration vertical centering,DONE,"Sign in and sign up forms are vertically centered in the auth content area","pnpm lint:frontend",2026-06-01T01:08:00+08:00,0,
+3,Fix dashboard profile 403 via seed defaults,DONE,"Default user and admin RBAC navbars include /dashboard/profile from seeded menu data","cargo test -p backend migration::defaults",2026-06-01T01:20:00+08:00,0,
+4,Run validation and inspect final diff,DONE,"Lint, Rust check, targeted migration defaults tests, and diff whitespace checks pass","git diff --check && pnpm lint:frontend && cargo check --workspace && cargo test -p backend migration::defaults",2026-06-01T01:21:00+08:00,0,

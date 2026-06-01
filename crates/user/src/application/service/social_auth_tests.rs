@@ -2,7 +2,7 @@ use types::user::{AccountPasswordChangePayload, AccountPasswordEmailCodePayload,
 
 use super::social_auth_test_support::{
     TestAuthTicketStore, TestOAuthClient, TestPurposeEmailCodeStore, github_profile, identity_input, redirect_uri, state_from_url, test_service,
-    test_service_with_codes,
+    test_service_with_codes, test_service_with_system_user, test_service_with_tickets,
 };
 use crate::{
     application::{AppError, AuthTicketStore, OAuthProfile, OAuthSignInResult, UserService, UserUseCase, WalletSignInInput},
@@ -86,6 +86,25 @@ async fn oauth_rejects_unverified_provider_email() {
 }
 
 #[tokio::test]
+async fn oauth_rejects_system_user_email() {
+    let repository = MemoryUserRepository::default();
+    let service = test_service_with_system_user(
+        repository.clone(),
+        TestPurposeEmailCodeStore::default(),
+        TestAuthTicketStore::default(),
+        TestOAuthClient::with_profile(github_profile("admin@example.com")),
+    );
+
+    let result = service
+        .oauth_callback(IdentityProvider::Github, "oauth-code".into(), oauth_state(&service).await)
+        .await;
+
+    assert_system_self_service_error(result);
+    assert!(repository.created_records().is_empty());
+    assert!(repository.identities().is_empty());
+}
+
+#[tokio::test]
 async fn passwordless_user_cannot_sign_in_with_password() {
     let service = UserService::new(MemoryUserRepository::with_user(passwordless_stored_user(1, "alice")), TestPasswordHasher);
 
@@ -158,6 +177,53 @@ async fn wallet_ticket_complete_creates_passwordless_user() {
 }
 
 #[tokio::test]
+async fn wallet_email_code_rejects_system_user_email() {
+    let repository = MemoryUserRepository::default();
+    let codes = TestPurposeEmailCodeStore::default();
+    let tickets = TestAuthTicketStore::default();
+    let service = test_service_with_system_user(
+        repository,
+        codes.clone(),
+        tickets.clone(),
+        TestOAuthClient::default(),
+    );
+    tickets
+        .seed_wallet_binding("wallet-ticket", identity_input(String::new(), IdentityProvider::Evm, "0xabc"))
+        .await;
+
+    let result = service
+        .request_wallet_email_code("wallet-ticket".into(), "admin@example.com".into(), "en".into())
+        .await;
+
+    assert_system_self_service_error(result);
+}
+
+#[tokio::test]
+async fn wallet_complete_rejects_system_user_email() {
+    let repository = MemoryUserRepository::default();
+    let codes = TestPurposeEmailCodeStore::default();
+    let tickets = TestAuthTicketStore::default();
+    let service = test_service_with_system_user(
+        repository.clone(),
+        codes.clone(),
+        tickets.clone(),
+        TestOAuthClient::default(),
+    );
+    tickets
+        .seed_wallet_binding("wallet-ticket", identity_input(String::new(), IdentityProvider::Evm, "0xabc"))
+        .await;
+    codes.seed_code("wallet_binding", "admin@example.com", "123456");
+
+    let result = service
+        .complete_wallet("wallet-ticket".into(), "admin@example.com".into(), "123456".into())
+        .await;
+
+    assert_system_self_service_error(result);
+    assert!(repository.created_records().is_empty());
+    assert!(repository.identities().is_empty());
+}
+
+#[tokio::test]
 async fn wallet_existing_identity_signs_in_without_email() {
     let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
     repository.seed_identity(identity_input(user_id(1).0, IdentityProvider::Evm, "0xabc"));
@@ -202,44 +268,6 @@ async fn oauth_callback(service: &impl UserUseCase) -> OAuthSignInResult {
         .unwrap()
 }
 
-fn test_service_with_tickets(
-    repository: MemoryUserRepository,
-    codes: TestPurposeEmailCodeStore,
-    tickets: TestAuthTicketStore,
-) -> UserService<
-    MemoryUserRepository,
-    TestPasswordHasher,
-    super::NoSystemUserProvider,
-    super::social_auth_test_support::TestRegistrationPolicy,
-    super::NoInitialGrantLedger,
-    super::NoUserWalletCatalog,
-    super::NoPasswordResetConfig,
-    super::NoPasswordResetMailer,
-    super::social_auth_test_support::TestEmailConfig,
-    super::social_auth_test_support::TestMailer,
-    super::NoRegistrationEmailCodeStore,
-    super::social_auth_test_support::TestAuthProviderConfig,
-    TestOAuthClient,
-    TestAuthTicketStore,
-    TestPurposeEmailCodeStore,
-> {
-    UserService::with_system_user_and_registration(
-        repository,
-        TestPasswordHasher,
-        super::NoSystemUserProvider,
-        super::social_auth_test_support::TestRegistrationPolicy,
-        super::NoInitialGrantLedger,
-        super::NoUserWalletCatalog,
-    )
-    .with_registration_email(
-        super::social_auth_test_support::TestEmailConfig,
-        super::social_auth_test_support::TestMailer::default(),
-        super::NoRegistrationEmailCodeStore,
-    )
-    .with_social_auth(
-        super::social_auth_test_support::TestAuthProviderConfig::default(),
-        TestOAuthClient::default(),
-        tickets,
-        codes,
-    )
+fn assert_system_self_service_error<T>(result: Result<T, AppError>) {
+    assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "system user cannot use account self-service"));
 }

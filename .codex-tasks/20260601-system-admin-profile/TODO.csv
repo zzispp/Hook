@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate system admin profile capability boundaries,DONE,"System admin source and profile/action call sites identified","rg \"system_user|profile|change_account_password|unlink_identity\" crates/user apps/hook_frontend/src/sections/profile",2026-06-01T02:00:00+08:00,0,
+2,Add backend system-user rejection for self-service mutations,DONE,"System users cannot request password email code, change account password, unlink identity, or receive social identity binding","perl -e 'alarm shift; exec @ARGV' 60 cargo test -p user --lib --bins",2026-06-01T02:07:00+08:00,0,
+3,Hide profile mutation UI for system users,DONE,"/dashboard/profile shows no password/provider mutation cards for system users while normal users keep them","pnpm lint:frontend",2026-06-01T02:18:00+08:00,0,
+4,Run validation and inspect diff,DONE,"Targeted tests/lint and whitespace checks pass","git diff --check && pnpm lint:frontend && perl -e 'alarm shift; exec @ARGV' 60 cargo test -p user --lib --bins",2026-06-01T02:18:00+08:00,0,

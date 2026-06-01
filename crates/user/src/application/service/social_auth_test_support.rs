@@ -8,9 +8,9 @@ use types::user::{IdentityProvider, UserIdentityInput};
 use crate::{
     application::{
         AppError, AppResult, AuthProviderConfig, AuthTicketStore, OAuthClient, OAuthPendingBinding, OAuthProfile, OAuthProviderSettings, OAuthStateRecord,
-        UserService, WalletChallenge, WalletPendingBinding, WalletProviderSettings,
+        SystemUserProvider, UserService, WalletChallenge, WalletPendingBinding, WalletProviderSettings,
     },
-    test_support::{MemoryUserRepository, TestPasswordHasher},
+    test_support::{MemoryUserRepository, TestPasswordHasher, TestSystemUserProvider, system_user},
 };
 
 pub(super) use super::social_auth_email_test_support::{TestEmailConfig, TestMailer, TestPurposeEmailCodeStore, TestRegistrationPolicy};
@@ -72,6 +72,23 @@ pub(super) fn test_service_with_codes(repository: MemoryUserRepository, codes: T
     )
     .with_registration_email(TestEmailConfig, TestMailer::default(), super::NoRegistrationEmailCodeStore)
     .with_social_auth(TestAuthProviderConfig::default(), oauth_client, TestAuthTicketStore::default(), codes)
+}
+
+pub(super) fn test_service_with_tickets(
+    repository: MemoryUserRepository,
+    codes: TestPurposeEmailCodeStore,
+    tickets: TestAuthTicketStore,
+) -> SocialAuthTestService<super::NoSystemUserProvider> {
+    service_with_system_provider(repository, codes, tickets, TestOAuthClient::default(), super::NoSystemUserProvider)
+}
+
+pub(super) fn test_service_with_system_user(
+    repository: MemoryUserRepository,
+    codes: TestPurposeEmailCodeStore,
+    tickets: TestAuthTicketStore,
+    oauth_client: TestOAuthClient,
+) -> SocialAuthTestService<TestSystemUserProvider> {
+    service_with_system_provider(repository, codes, tickets, oauth_client, system_user())
 }
 
 pub(super) fn redirect_uri() -> String {
@@ -136,6 +153,46 @@ impl TestAuthTicketStore {
         self.save_wallet_binding(ticket, WalletPendingBinding { identity }, 600).await.unwrap();
     }
 }
+
+fn service_with_system_provider<S>(
+    repository: MemoryUserRepository,
+    codes: TestPurposeEmailCodeStore,
+    tickets: TestAuthTicketStore,
+    oauth_client: TestOAuthClient,
+    system_users: S,
+) -> SocialAuthTestService<S>
+where
+    S: SystemUserProvider,
+{
+    UserService::with_system_user_and_registration(
+        repository,
+        TestPasswordHasher,
+        system_users,
+        TestRegistrationPolicy,
+        super::NoInitialGrantLedger,
+        super::NoUserWalletCatalog,
+    )
+    .with_registration_email(TestEmailConfig, TestMailer::default(), super::NoRegistrationEmailCodeStore)
+    .with_social_auth(TestAuthProviderConfig::default(), oauth_client, tickets, codes)
+}
+
+pub(super) type SocialAuthTestService<S> = UserService<
+    MemoryUserRepository,
+    TestPasswordHasher,
+    S,
+    TestRegistrationPolicy,
+    super::NoInitialGrantLedger,
+    super::NoUserWalletCatalog,
+    super::NoPasswordResetConfig,
+    super::NoPasswordResetMailer,
+    TestEmailConfig,
+    TestMailer,
+    super::NoRegistrationEmailCodeStore,
+    TestAuthProviderConfig,
+    TestOAuthClient,
+    TestAuthTicketStore,
+    TestPurposeEmailCodeStore,
+>;
 
 #[async_trait]
 impl AuthProviderConfig for TestAuthProviderConfig {

@@ -53,6 +53,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: false,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000233",
+        section_id: OVERVIEW_SECTION_ID,
+        code: "dashboard_profile",
+        title: "个人资料",
+        path: "/dashboard/profile",
+        icon: "solar:user-id-bold",
+        sort_order: 5,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000223",
         section_id: OVERVIEW_SECTION_ID,
         code: "admin_performance_monitoring",

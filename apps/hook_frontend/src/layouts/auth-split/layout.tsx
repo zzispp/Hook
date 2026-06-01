@@ -78,7 +78,13 @@ export function AuthSplitLayout({
     <MainSection
       {...slotProps?.main}
       sx={[
-        (theme) => ({ [theme.breakpoints.up(layoutQuery)]: { flexDirection: 'row' } }),
+        (theme) => ({
+          minHeight: 'calc(100vh - var(--layout-header-mobile-height))',
+          [theme.breakpoints.up(layoutQuery)]: {
+            minHeight: '100vh',
+            flexDirection: 'row',
+          },
+        }),
         ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
       ]}
     >

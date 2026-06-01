@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest},
     user::{
@@ -14,22 +13,25 @@ use types::{
 use crate::application::{
     AppError, AppResult, AuthProviderConfig, AuthTicketStore, InitialGrantLedger, OAuthClient, OAuthSignInResult, PasswordHasher, PasswordResetConfig,
     PasswordResetMailer, PasswordResetRepository, PurposeEmailCodeStore, RegistrationEmailCodeStore, RegistrationEmailConfig, RegistrationEmailMailer,
-    RegistrationPolicy, SystemUserProvider, UserAuthRecord, UserRepository, UserUseCase, UserWalletCatalog, WalletChallenge, WalletNonceInput,
-    WalletSignInInput, WalletSignInResult,
+    RegistrationPolicy, SystemUserProvider, UserRepository, UserUseCase, UserWalletCatalog, WalletChallenge, WalletNonceInput, WalletSignInInput,
+    WalletSignInResult,
 };
+
+mod helpers;
 
 use super::{
     UserService,
     password_reset::{request_password_reset, reset_password},
     registration::{reject_closed_registration, reject_disallowed_registration_email, request_registration_email_code, verify_registration_email_code},
     social_auth::{self, ACCOUNT_PASSWORD_EMAIL_PURPOSE},
-    system_user::{find_auth_by_identifier, list_with_system_user, reject_system_user_id, system_user_by_id},
+    system_user::{find_auth_by_identifier, list_with_system_user, reject_system_user_email, reject_system_user_id, reject_system_user_self_service, system_user_by_id},
     validation::{
         sanitize_credentials, sanitize_password_reset_confirm, sanitize_password_reset_request, sanitize_registration_email_code_request,
         sanitize_replace_user, sanitize_sign_up_user, validate_credentials, validate_new_user, validate_page, validate_password_reset_confirm,
         validate_password_reset_request, validate_registration_email_code_request, validate_replace_user,
     },
 };
+use helpers::{grant_initial_balance, identity_summaries, unlink_identity, verify_password};
 
 #[async_trait]
 impl<R, H, S, P, G, W, C, M, E, N, K, A, O, T, Y> UserUseCase for UserService<R, H, S, P, G, W, C, M, E, N, K, A, O, T, Y>
@@ -102,6 +104,7 @@ where
         let settings = self.auth_provider_config.oauth_provider_settings(provider).await?;
         let redirect_uri = social_auth::oauth_redirect_uri(&settings, provider)?;
         let profile = self.oauth_client.fetch_profile(provider, settings, &code, &redirect_uri).await?;
+        reject_system_user_email(&self.system_users, &profile.email)?;
         social_auth::oauth_callback(
             &self.repository,
             &self.auth_provider_config,
@@ -143,6 +146,7 @@ where
 
     async fn request_wallet_email_code(&self, ticket: String, email: String, lang: String) -> AppResult<()> {
         self.auth_ticket_store.get_wallet_binding(&ticket).await?.ok_or(AppError::Unauthorized)?;
+        reject_system_user_email(&self.system_users, &email)?;
         social_auth::request_purpose_email_code(
             &self.purpose_email_code_store,
             &self.registration_email_config,
@@ -155,6 +159,7 @@ where
 
     async fn complete_wallet(&self, ticket: String, email: String, code: String) -> AppResult<User> {
         let settings = self.registration_policy.registration_settings().await?;
+        reject_system_user_email(&self.system_users, &email)?;
         social_auth::complete_wallet_binding(
             &self.repository,
             &self.auth_ticket_store,
@@ -236,11 +241,12 @@ where
 
     async fn identities(&self, id: UserId) -> AppResult<Vec<UserIdentitySummary>> {
         let user = self.authenticated_user(id).await?;
-        identity_summaries(self.repository.list_identities_by_user_id(&user.id.0).await?)
+        Ok(identity_summaries(self.repository.list_identities_by_user_id(&user.id.0).await?))
     }
 
     async fn request_account_password_email_code(&self, id: UserId, input: AccountPasswordEmailCodePayload) -> AppResult<()> {
         let user = self.authenticated_user(id).await?;
+        reject_system_user_self_service(&user)?;
         social_auth::request_purpose_email_code(
             &self.purpose_email_code_store,
             &self.registration_email_config,
@@ -256,6 +262,7 @@ where
 
     async fn change_account_password(&self, id: UserId, input: AccountPasswordChangePayload) -> AppResult<User> {
         let user = self.authenticated_user(id).await?;
+        reject_system_user_self_service(&user)?;
         social_auth::change_password_with_email_code(
             &self.repository,
             &self.purpose_email_code_store,
@@ -269,6 +276,7 @@ where
 
     async fn unlink_identity(&self, id: UserId, identity_id: String) -> AppResult<()> {
         let user = self.authenticated_user(id).await?;
+        reject_system_user_self_service(&user)?;
         unlink_identity(&self.repository, &user, &identity_id).await
     }
 
@@ -280,42 +288,4 @@ where
         let user = self.repository.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
         unlink_identity(&self.repository, &user, &identity_id).await
     }
-}
-
-async fn grant_initial_balance<G>(ledger: &G, user: &User, amount: Decimal) -> AppResult<()>
-where
-    G: InitialGrantLedger,
-{
-    if amount <= Decimal::ZERO {
-        return Ok(());
-    }
-    ledger.grant_initial_balance(&user.id.0, amount).await
-}
-
-fn verify_password<H: PasswordHasher>(hasher: &H, password: &str, found: &UserAuthRecord) -> AppResult<()> {
-    let Some(password_hash) = found.password_hash.as_deref() else {
-        return Err(AppError::PasswordNotSet);
-    };
-    if hasher.verify(password, password_hash)? {
-        return Ok(());
-    }
-    Err(AppError::InvalidCredentials)
-}
-
-async fn unlink_identity<R>(repository: &R, user: &User, identity_id: &str) -> AppResult<()>
-where
-    R: UserRepository,
-{
-    let identities = repository.list_identities_by_user_id(&user.id.0).await?;
-    if !identities.iter().any(|identity| identity.id == identity_id) {
-        return Err(AppError::NotFound);
-    }
-    if !user.password_set && identities.len() <= 1 {
-        return Err(AppError::InvalidInput("at least one login method must remain".into()));
-    }
-    repository.delete_identity(identity_id).await
-}
-
-fn identity_summaries(identities: Vec<types::user::UserIdentity>) -> AppResult<Vec<UserIdentitySummary>> {
-    Ok(identities.into_iter().map(UserIdentitySummary::from).collect())
 }

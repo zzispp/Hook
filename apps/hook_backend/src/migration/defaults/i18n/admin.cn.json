@@ -4,6 +4,7 @@
     "operations": "运营管理",
     "system_management": "系统管理",
     "dashboard_home": "仪表盘",
+    "dashboard_profile": "个人资料",
     "admin_user_stats": "用户统计",
     "admin_cost_analysis": "成本分析",
     "dashboard_model_status": "模型状态",

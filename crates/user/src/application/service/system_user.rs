@@ -6,12 +6,31 @@ use types::{
 
 use crate::application::{AppError, AppResult, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository};
 
+const SYSTEM_USER_SELF_SERVICE_MESSAGE: &str = "system user cannot use account self-service";
+
 pub(super) fn reject_conflicting_system_user<S: SystemUserProvider>(system_users: &S, username: &str, email: &str) -> AppResult<()> {
     let Some(system) = system_users.system_user().map(|record| record.user) else {
         return Ok(());
     };
     reject_conflicting_field(username == system.username, "username")?;
     reject_conflicting_field(email == system.email, "email")
+}
+
+pub(super) fn reject_system_user_self_service(user: &User) -> AppResult<()> {
+    if user.system {
+        return Err(AppError::InvalidInput(SYSTEM_USER_SELF_SERVICE_MESSAGE.into()));
+    }
+    Ok(())
+}
+
+pub(super) fn reject_system_user_email<S: SystemUserProvider>(system_users: &S, email: &str) -> AppResult<()> {
+    let Some(system) = system_users.system_user().map(|record| record.user) else {
+        return Ok(());
+    };
+    if system.email.eq_ignore_ascii_case(email.trim()) {
+        return Err(AppError::InvalidInput(SYSTEM_USER_SELF_SERVICE_MESSAGE.into()));
+    }
+    Ok(())
 }
 
 pub(super) fn reject_system_user_id<S: SystemUserProvider>(system_users: &S, id: &UserId) -> AppResult<()> {

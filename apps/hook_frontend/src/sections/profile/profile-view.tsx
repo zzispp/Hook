@@ -1,6 +1,6 @@
 'use client';
 
-import type { UserIdentitySummary } from 'src/types/rbac';
+import type { SystemUser, UserIdentitySummary } from 'src/types/rbac';
 
 import { useState } from 'react';
 
@@ -31,13 +31,50 @@ import { toast } from 'src/components/snackbar';
 import { providerColor, providerLabel } from './provider-utils';
 
 export function ProfileView() {
-  const { t, currentLang } = useTranslate('common');
+  const { t } = useTranslate('common');
   const profile = useAccountProfile();
+  const passwordActions = useProfilePasswordActions(() => profile.refresh());
+  const identityActions = useProfileIdentityActions(() => profile.refresh());
+
+  const user = profile.data;
+  const canUseSelfService = user !== undefined && !user.system;
+
+  return (
+    <DashboardContent maxWidth="md">
+      <Typography variant="h4" sx={{ mb: 3 }}>
+        {t('profile.title')}
+      </Typography>
+
+      {profile.error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {profile.error.message}
+        </Alert>
+      )}
+
+      <Stack spacing={3}>
+        <AccountCard user={user} />
+
+        {canUseSelfService && (
+          <>
+            <PasswordCard {...passwordActions} />
+            <ProviderCard
+              identities={user.identities}
+              unlinkingId={identityActions.unlinkingId}
+              onUnlink={identityActions.unlinkIdentity}
+            />
+          </>
+        )}
+      </Stack>
+    </DashboardContent>
+  );
+}
+
+function useProfilePasswordActions(refresh: () => Promise<unknown>) {
+  const { t, currentLang } = useTranslate('common');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
   const [sendingCode, setSendingCode] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
   const sendCode = async () => {
     setSendingCode(true);
@@ -57,7 +94,7 @@ export function ProfileView() {
       await changeAccountPassword({ emailVerificationCode: code, password });
       setCode('');
       setPassword('');
-      await profile.refresh();
+      await refresh();
       toast.success(t('profile.messages.passwordChanged'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('profile.messages.saveFailed'));
@@ -66,11 +103,27 @@ export function ProfileView() {
     }
   };
 
+  return {
+    code,
+    password,
+    sendingCode,
+    changingPassword,
+    setCode,
+    setPassword,
+    sendCode,
+    changePassword,
+  };
+}
+
+function useProfileIdentityActions(refresh: () => Promise<unknown>) {
+  const { t } = useTranslate('common');
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
+
   const unlinkIdentity = async (identity: UserIdentitySummary) => {
     setUnlinkingId(identity.id);
     try {
       await deleteAccountIdentity(identity.id);
-      await profile.refresh();
+      await refresh();
       toast.success(t('profile.messages.providerUnlinked'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('profile.messages.saveFailed'));
@@ -79,105 +132,98 @@ export function ProfileView() {
     }
   };
 
-  const user = profile.data;
+  return { unlinkingId, unlinkIdentity };
+}
+
+function AccountCard({ user }: { user?: SystemUser }) {
+  const { t } = useTranslate('common');
+  return (
+    <Card>
+      <CardHeader title={t('profile.accountTitle')} />
+      <CardContent>
+        <Stack spacing={2}>
+          <ReadOnlyRow label={t('profile.username')} value={user?.username ?? ''} />
+          <ReadOnlyRow label={t('profile.email')} value={user?.email ?? ''} />
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+            <Label color={user?.email_verified ? 'success' : 'warning'} variant="soft">
+              {user?.email_verified ? t('profile.emailVerified') : t('profile.emailUnverified')}
+            </Label>
+            <Label color={user?.password_set ? 'success' : 'warning'} variant="soft">
+              {user?.password_set ? t('profile.passwordSet') : t('profile.passwordNotSet')}
+            </Label>
+          </Stack>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
+type PasswordCardProps = ReturnType<typeof useProfilePasswordActions>;
+
+function PasswordCard({
+  code,
+  password,
+  sendingCode,
+  changingPassword,
+  setCode,
+  setPassword,
+  sendCode,
+  changePassword,
+}: PasswordCardProps) {
+  const { t } = useTranslate('common');
 
   return (
-    <DashboardContent maxWidth="md">
-      <Typography variant="h4" sx={{ mb: 3 }}>
-        {t('profile.title')}
-      </Typography>
+    <Card>
+      <CardHeader title={t('profile.passwordTitle')} />
+      <CardContent>
+        <Stack spacing={2}>
+          <Button color="inherit" variant="outlined" loading={sendingCode} onClick={sendCode} sx={{ alignSelf: 'flex-start' }}>
+            {t('profile.sendCode')}
+          </Button>
+          <TextField fullWidth label={t('profile.emailCode')} value={code} onChange={(event) => setCode(event.target.value)} />
+          <TextField fullWidth type="password" label={t('profile.newPassword')} value={password} onChange={(event) => setPassword(event.target.value)} />
+          <Button color="inherit" variant="contained" loading={changingPassword} onClick={changePassword} sx={{ alignSelf: 'flex-start' }}>
+            {t('profile.changePassword')}
+          </Button>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
 
-      {profile.error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {profile.error.message}
-        </Alert>
-      )}
+function ProviderCard({
+  identities,
+  unlinkingId,
+  onUnlink,
+}: {
+  identities: UserIdentitySummary[];
+  unlinkingId: string | null;
+  onUnlink: (identity: UserIdentitySummary) => void;
+}) {
+  const { t } = useTranslate('common');
 
-      <Stack spacing={3}>
-        <Card>
-          <CardHeader title={t('profile.accountTitle')} />
-          <CardContent>
-            <Stack spacing={2}>
-              <ReadOnlyRow label={t('profile.username')} value={user?.username ?? ''} />
-              <ReadOnlyRow label={t('profile.email')} value={user?.email ?? ''} />
-              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                <Label color={user?.email_verified ? 'success' : 'warning'} variant="soft">
-                  {user?.email_verified
-                    ? t('profile.emailVerified')
-                    : t('profile.emailUnverified')}
-                </Label>
-                <Label color={user?.password_set ? 'success' : 'warning'} variant="soft">
-                  {user?.password_set
-                    ? t('profile.passwordSet')
-                    : t('profile.passwordNotSet')}
-                </Label>
-              </Stack>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader title={t('profile.passwordTitle')} />
-          <CardContent>
-            <Stack spacing={2}>
-              <Button
-                color="inherit"
-                variant="outlined"
-                loading={sendingCode}
-                onClick={sendCode}
-                sx={{ alignSelf: 'flex-start' }}
-              >
-                {t('profile.sendCode')}
-              </Button>
-              <TextField
-                fullWidth
-                label={t('profile.emailCode')}
-                value={code}
-                onChange={(event) => setCode(event.target.value)}
+  return (
+    <Card>
+      <CardHeader title={t('profile.providersTitle')} />
+      <CardContent>
+        <Stack spacing={2}>
+          {identities.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {t('profile.noProviders')}
+            </Typography>
+          ) : (
+            identities.map((identity) => (
+              <ProviderRow
+                key={identity.id}
+                identity={identity}
+                loading={unlinkingId === identity.id}
+                onUnlink={() => onUnlink(identity)}
               />
-              <TextField
-                fullWidth
-                type="password"
-                label={t('profile.newPassword')}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <Button
-                color="inherit"
-                variant="contained"
-                loading={changingPassword}
-                onClick={changePassword}
-                sx={{ alignSelf: 'flex-start' }}
-              >
-                {t('profile.changePassword')}
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader title={t('profile.providersTitle')} />
-          <CardContent>
-            <Stack spacing={2}>
-              {(user?.identities ?? []).length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  {t('profile.noProviders')}
-                </Typography>
-              ) : (
-                user?.identities.map((identity) => (
-                  <ProviderRow
-                    key={identity.id}
-                    identity={identity}
-                    loading={unlinkingId === identity.id}
-                    onUnlink={() => unlinkIdentity(identity)}
-                  />
-                ))
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-      </Stack>
-    </DashboardContent>
+            ))
+          )}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }
 
