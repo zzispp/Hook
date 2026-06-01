@@ -26,6 +26,7 @@ import { DashboardRouteGuard } from './route-guard';
 import { MenuButton } from '../components/menu-button';
 import { AccountDrawer } from '../components/account-drawer';
 import { SettingsButton } from '../components/settings-button';
+import { ContactsPopover } from '../components/contacts-popover';
 import { dashboardLayoutVars, dashboardNavColorVars } from './css-vars';
 import { NotificationsDrawer } from '../components/notifications-drawer';
 import { MainSection, layoutClasses, HeaderSection, LayoutSection } from '../core';
@@ -126,6 +127,9 @@ export function DashboardLayout({
 
           {/** @slot Notifications popover */}
           <NotificationsDrawer />
+
+          {/** @slot Contacts popover */}
+          <ContactsPopover />
 
           {/** @slot Settings button */}
           <SettingsButton />

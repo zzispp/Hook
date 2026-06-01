@@ -1574,6 +1574,7 @@
   "systemSettings": {
     "sections": {
       "site": "Site information",
+      "contactMethods": "Contact methods",
       "base": "Base configuration",
       "registration": "Registration",
       "email": "Email configuration",
@@ -1585,6 +1586,11 @@
       "siteName": "Site name",
       "siteSubtitle": "Site subtitle",
       "siteLogoUpload": "Upload logo",
+      "contactType": "Contact type",
+      "contactCustomType": "Custom type",
+      "contactIcon": "Icon",
+      "contactValue": "Contact value",
+      "contactQrCode": "QR code",
       "allowRegistration": "Allow registration",
       "loginCaptchaEnabled": "Enable login CAPTCHA",
       "registrationCaptchaEnabled": "Enable registration CAPTCHA",
@@ -1629,6 +1635,7 @@
       "rechargeCaptchaEnabled": "When enabled, users must complete CAPTCHA before creating a recharge order.",
       "tokenLimitPerUser": "Maximum number of tokens each user can create.",
       "siteLogoUpload": "Uploaded images are saved to the database and used by the frontend navigation, homepage, and auth pages.",
+      "contactQrCode": "Use an HTTP/HTTPS image URL or upload an image to save a data URL.",
       "clientRequestRecordLevel": "Controls the detail level for client request headers, request bodies, response headers, and response bodies.",
       "clientMaxRequestBodySizeKb": "Client request bodies larger than this are truncated before recording.",
       "clientMaxResponseBodySizeKb": "Client response bodies larger than this are truncated before recording.",
@@ -1646,6 +1653,11 @@
       "siteSubtitleLength": "Site subtitle must be at most {{max}} characters.",
       "publicBaseUrlLength": "Public base URL must be at most {{max}} characters.",
       "publicBaseUrlInvalid": "Public base URL must be a valid public HTTP/HTTPS URL.",
+      "contactIdRequired": "Contact method ID is required and must be at most 255 characters.",
+      "contactIconRequired": "Contact icon is required and must be at most 255 characters.",
+      "contactValueRequired": "Contact value is required and must be at most 255 characters.",
+      "contactCustomTypeRequired": "Custom contact type is required and must be at most 255 characters.",
+      "contactQrCodeInvalid": "QR code must be an image data URL or a valid HTTP/HTTPS URL.",
       "defaultUserGroupCodeInvalid": "Default registration user group must be 1-64 letters, numbers, underscores, or hyphens.",
       "userGroupsLoadingBeforeSave": "User groups are still loading. Try saving system settings again after they finish loading.",
       "userGroupsUnavailableBeforeSave": "User groups could not be loaded. Confirm the default user group status before saving.",
@@ -1702,6 +1714,20 @@
         "enabled": "Enable EVM wallet",
         "networks": "EVM networks",
         "statement": "EVM statement"
+      }
+    },
+    "contactMethods": {
+      "description": "Configure public contact methods shown to users.",
+      "add": "Add contact method",
+      "uploadQrCode": "Upload QR code",
+      "itemTitle": "Contact method {{index}}",
+      "types": {
+        "wechat": "WeChat",
+        "telegram": "Telegram",
+        "discord": "Discord",
+        "qq": "QQ",
+        "qq_group": "QQ group",
+        "custom": "Custom"
       }
     },
     "recharge": {

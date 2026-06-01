@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Implement backend contact settings,DONE,"Types storage migration seed validation and tests cover contact_methods","timeout 60 cargo test -p setting --lib",2026-06-01,0,
+2,Implement frontend contact settings UI,DONE,"Admin settings has contacts tab and payload mapping","pnpm lint:frontend",2026-06-01,0,
+3,Register icons and i18n,DONE,"Default contact icons and CN/EN copy exist","pnpm lint:frontend",2026-06-01,0,
+4,Run final validation,DONE,"Backend tests and frontend checks pass","timeout 60 cargo test -p setting -p storage -p types && pnpm lint:frontend && pnpm build:frontend",2026-06-01,0,

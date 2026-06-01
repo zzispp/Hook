@@ -1,7 +1,10 @@
+mod contact_methods;
 mod email_config;
 mod error;
+mod mail_validation;
 mod oauth_config;
 mod ports;
+mod provider_cooldown;
 mod service;
 mod smtp;
 mod validation;

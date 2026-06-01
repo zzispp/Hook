@@ -114,6 +114,7 @@ fn record_patch(
         site_subtitle: input.site_subtitle,
         public_base_url: input.public_base_url,
         site_logo_base64: input.site_logo_base64,
+        contact_methods: input.contact_methods,
         allow_registration: input.allow_registration,
         login_captcha_enabled: input.login_captcha_enabled,
         registration_captcha_enabled: input.registration_captcha_enabled,

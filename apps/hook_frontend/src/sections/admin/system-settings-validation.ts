@@ -4,6 +4,7 @@ import type { SystemSettingsForm } from './system-settings-utils';
 
 import { emailConfigComplete } from './system-settings-utils';
 import { publicBaseUrlIsValid } from './system-settings-url-validation';
+import { validateContactMethods } from './system-settings-contact-methods-validation';
 import { validateAuthProviderFields } from './system-settings-auth-provider-validation';
 
 const MAX_SITE_NAME_LENGTH = 100;
@@ -39,6 +40,7 @@ export function validateSystemSettingsBeforeSubmit(
 ) {
   return (
     validateSiteFields(form, t) ||
+    validateContactMethods(form, t) ||
     validateDefaultUserGroup(form, context, t) ||
     validateNumberFields(form, t) ||
     validateRequestRecordFields(form, t) ||

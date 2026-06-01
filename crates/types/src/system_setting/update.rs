@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
 
-use super::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
+use super::{ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 pub struct SystemSettingsUpdate {
@@ -15,6 +15,8 @@ pub struct SystemSettingsUpdate {
     pub public_base_url: Option<String>,
     #[serde(default)]
     pub site_logo_base64: Option<String>,
+    #[serde(default)]
+    pub contact_methods: Option<Vec<ContactMethod>>,
     #[serde(default)]
     pub allow_registration: Option<bool>,
     #[serde(default)]
@@ -146,6 +148,7 @@ impl SystemSettingsUpdate {
             && self.site_subtitle.is_none()
             && self.public_base_url.is_none()
             && self.site_logo_base64.is_none()
+            && self.contact_methods.is_none()
             && self.allow_registration.is_none()
             && self.login_captcha_enabled.is_none()
             && self.registration_captcha_enabled.is_none()

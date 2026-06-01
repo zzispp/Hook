@@ -12,6 +12,20 @@
   "auth": {
     "logoutError": "退出登录失败"
   },
+  "contacts": {
+    "title": "联系方式",
+    "viewQrCode": "点击查看二维码",
+    "value": "联系方式",
+    "qrCode": "二维码",
+    "types": {
+      "wechat": "微信",
+      "telegram": "Telegram",
+      "discord": "Discord",
+      "qq": "QQ",
+      "qq_group": "QQ 群",
+      "custom": "联系方式"
+    }
+  },
   "profile": {
     "title": "个人资料",
     "menu": "个人资料",

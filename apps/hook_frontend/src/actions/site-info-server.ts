@@ -10,6 +10,7 @@ const STATIC_SITE_INFO = {
   site_name: 'Hook',
   site_subtitle: 'Gateway',
   site_logo_base64: '',
+  contact_methods: [],
 };
 
 export const getSiteInfo = cache(async (): Promise<PublicSiteInfo> => {

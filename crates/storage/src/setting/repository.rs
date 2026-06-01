@@ -93,6 +93,9 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = &input.site_logo_base64 {
         active.site_logo_base64 = Set(value.clone());
     }
+    if let Some(value) = &input.contact_methods {
+        active.contact_methods = Set(serde_json::to_string(value).expect("contact methods must serialize"));
+    }
     if let Some(value) = input.allow_registration {
         active.allow_registration = Set(value);
     }

@@ -1574,6 +1574,7 @@
   "systemSettings": {
     "sections": {
       "site": "站点信息",
+      "contactMethods": "联系方式",
       "base": "基础配置",
       "registration": "注册相关",
       "email": "邮件配置",
@@ -1585,6 +1586,11 @@
       "siteName": "站点名称",
       "siteSubtitle": "站点副标题",
       "siteLogoUpload": "上传 Logo",
+      "contactType": "联系方式类型",
+      "contactCustomType": "自定义类型",
+      "contactIcon": "图标",
+      "contactValue": "联系方式值",
+      "contactQrCode": "二维码",
       "allowRegistration": "开放允许注册",
       "loginCaptchaEnabled": "启用登录验证码",
       "registrationCaptchaEnabled": "启用注册验证码",
@@ -1629,6 +1635,7 @@
       "rechargeCaptchaEnabled": "开启后，用户创建充值订单前必须完成人机验证。",
       "tokenLimitPerUser": "每个用户可创建的令牌数量上限。",
       "siteLogoUpload": "上传图片后会自动保存到数据库，前台导航、首页和登录页 Logo 会读取该字段。",
+      "contactQrCode": "可填写 HTTP/HTTPS 图片地址，也可上传图片后自动写入 data URL。",
       "clientRequestRecordLevel": "控制客户端请求头、请求体、响应头和响应体的记录详细程度。",
       "clientMaxRequestBodySizeKb": "超过此大小的客户端请求体将被截断记录。",
       "clientMaxResponseBodySizeKb": "超过此大小的客户端响应体将被截断记录。",
@@ -1646,6 +1653,11 @@
       "siteSubtitleLength": "站点副标题不能超过 {{max}} 个字符。",
       "publicBaseUrlLength": "公网访问地址不能超过 {{max}} 个字符。",
       "publicBaseUrlInvalid": "公网访问地址必须是有效的 HTTP/HTTPS 公网 URL。",
+      "contactIdRequired": "联系方式 ID 不能为空，且不能超过 255 个字符。",
+      "contactIconRequired": "联系方式图标不能为空，且不能超过 255 个字符。",
+      "contactValueRequired": "联系方式值不能为空，且不能超过 255 个字符。",
+      "contactCustomTypeRequired": "自定义联系方式类型不能为空，且不能超过 255 个字符。",
+      "contactQrCodeInvalid": "二维码必须是图片 data URL 或有效的 HTTP/HTTPS URL。",
       "defaultUserGroupCodeInvalid": "用户注册默认分组必须是 1-64 位字母、数字、下划线或短横线。",
       "userGroupsLoadingBeforeSave": "用户组仍在加载，请稍后再保存系统设置。",
       "userGroupsUnavailableBeforeSave": "用户组列表读取失败，请先确认默认用户组状态后再保存。",
@@ -1702,6 +1714,20 @@
         "enabled": "启用 EVM 钱包",
         "networks": "EVM 网络",
         "statement": "EVM Statement"
+      }
+    },
+    "contactMethods": {
+      "description": "配置公开给用户查看的站点联系方式。",
+      "add": "添加联系方式",
+      "uploadQrCode": "上传二维码",
+      "itemTitle": "联系方式 {{index}}",
+      "types": {
+        "wechat": "微信",
+        "telegram": "Telegram",
+        "discord": "Discord",
+        "qq": "QQ",
+        "qq_group": "QQ 群",
+        "custom": "自定义"
       }
     },
     "recharge": {

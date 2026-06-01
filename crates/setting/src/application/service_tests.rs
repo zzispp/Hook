@@ -154,6 +154,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         site_subtitle: "AI API platform".into(),
         public_base_url: "https://hook.test".into(),
         site_logo_base64: String::new(),
+        contact_methods: Vec::new(),
         allow_registration: true,
         login_captcha_enabled: false,
         registration_captcha_enabled: false,

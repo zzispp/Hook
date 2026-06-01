@@ -12,6 +12,7 @@ pub struct Model {
     pub site_subtitle: String,
     pub public_base_url: String,
     pub site_logo_base64: String,
+    pub contact_methods: String,
     pub allow_registration: bool,
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,
@@ -90,6 +91,7 @@ impl TryFrom<Model> for SystemSettings {
             site_subtitle: value.site_subtitle,
             public_base_url: value.public_base_url,
             site_logo_base64: value.site_logo_base64,
+            contact_methods: decode_contact_methods(&value.contact_methods)?,
             allow_registration: value.allow_registration,
             login_captcha_enabled: value.login_captcha_enabled,
             registration_captcha_enabled: value.registration_captcha_enabled,
@@ -162,4 +164,8 @@ fn format_timestamp(value: TimeDateTimeWithTimeZone) -> String {
 
 fn decode_provider_cooldown_policy(value: &str) -> Result<ProviderCooldownPolicy, String> {
     serde_json::from_str(value).map_err(|error| format!("invalid provider cooldown policy: {error}"))
+}
+
+fn decode_contact_methods(value: &str) -> Result<Vec<types::system_setting::ContactMethod>, String> {
+    serde_json::from_str(value).map_err(|error| format!("invalid contact methods: {error}"))
 }

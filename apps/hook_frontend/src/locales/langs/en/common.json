@@ -12,6 +12,20 @@
   "auth": {
     "logoutError": "Unable to logout"
   },
+  "contacts": {
+    "title": "Contacts",
+    "viewQrCode": "Click to view QR code",
+    "value": "Value",
+    "qrCode": "QR code",
+    "types": {
+      "wechat": "WeChat",
+      "telegram": "Telegram",
+      "discord": "Discord",
+      "qq": "QQ",
+      "qq_group": "QQ Group",
+      "custom": "Contact"
+    }
+  },
   "profile": {
     "title": "Profile",
     "menu": "Profile",

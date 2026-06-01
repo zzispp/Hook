@@ -28,6 +28,7 @@ import { RechargeSettingsSection } from './system-settings-recharge-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { enabledUserGroupOptions, USER_GROUP_MAX_PAGE_SIZE } from './user-group-utils';
 import { SystemSettingsRegistrationSection } from './system-settings-registration-section';
+import { SystemSettingsContactMethodsSection } from './system-settings-contact-methods-section';
 import {
   usePaymentChannelForms,
   paymentChannelsWithForms,
@@ -36,6 +37,7 @@ import {
 
 type SystemSettingsTab =
   | 'site'
+  | 'contactMethods'
   | 'registration'
   | 'email'
   | 'tokens'
@@ -47,6 +49,7 @@ const SYSTEM_SETTINGS_TABS: ReadonlyArray<{
   labelKey: string;
 }> = [
   { value: 'site', labelKey: 'systemSettings.sections.site' },
+  { value: 'contactMethods', labelKey: 'systemSettings.sections.contactMethods' },
   { value: 'registration', labelKey: 'systemSettings.sections.registration' },
   { value: 'email', labelKey: 'systemSettings.sections.email' },
   { value: 'tokens', labelKey: 'systemSettings.sections.tokens' },
@@ -207,6 +210,9 @@ function SettingsTabPanel(props: {
         userGroups={props.userGroups}
       />
     );
+  }
+  if (props.tab === 'contactMethods') {
+    return <SystemSettingsContactMethodsSection form={props.form} setForm={props.setForm} />;
   }
   if (props.tab === 'email') {
     return <EmailSettingsSection form={props.form} setForm={props.setForm} />;

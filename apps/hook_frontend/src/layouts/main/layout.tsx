@@ -25,6 +25,7 @@ import { MenuButton } from '../components/menu-button';
 import { navData as mainNavData } from '../nav-config-main';
 import { SignInButton } from '../components/sign-in-button';
 import { SettingsButton } from '../components/settings-button';
+import { ContactsPopover } from '../components/contacts-popover';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
 
 // ----------------------------------------------------------------------
@@ -95,6 +96,9 @@ export function MainLayout({
           />
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            {/** @slot Contacts popover */}
+            <ContactsPopover />
+
             {/** @slot Settings button */}
             <SettingsButton />
 

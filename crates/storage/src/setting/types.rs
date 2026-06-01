@@ -1,6 +1,6 @@
 use rust_decimal::Decimal;
 use types::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
-use types::system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
+use types::system_setting::{ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SystemSettingsRecordPatch {
@@ -8,6 +8,7 @@ pub struct SystemSettingsRecordPatch {
     pub site_subtitle: Option<String>,
     pub public_base_url: Option<String>,
     pub site_logo_base64: Option<String>,
+    pub contact_methods: Option<Vec<ContactMethod>>,
     pub allow_registration: Option<bool>,
     pub login_captcha_enabled: Option<bool>,
     pub registration_captcha_enabled: Option<bool>,

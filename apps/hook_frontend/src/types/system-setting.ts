@@ -3,12 +3,23 @@ import type { ProviderCooldownPolicy, ProviderSchedulingMode } from './provider'
 export type RequestRecordLevel = 'basic' | 'headers' | 'full';
 export type SmtpEncryption = 'none' | 'tls' | 'ssl';
 export type EmailSuffixMode = 'none' | 'whitelist' | 'blacklist';
+export type ContactMethodType = 'wechat' | 'telegram' | 'discord' | 'qq' | 'qq_group' | 'custom';
+
+export type ContactMethod = {
+  id: string;
+  type: ContactMethodType;
+  custom_type: string;
+  icon: string;
+  value: string;
+  qr_code: string;
+};
 
 export type SystemSettings = {
   site_name: string;
   site_subtitle: string;
   public_base_url: string;
   site_logo_base64: string;
+  contact_methods: ContactMethod[];
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -78,6 +89,7 @@ export type SystemSettingsUpdate = Partial<{
   site_subtitle: string;
   public_base_url: string;
   site_logo_base64: string;
+  contact_methods: ContactMethod[];
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -144,6 +156,7 @@ export type PublicSiteInfo = {
   site_name: string;
   site_subtitle: string;
   site_logo_base64: string;
+  contact_methods: ContactMethod[];
 };
 
 export type SystemSettingsSmtpTestRequest = Partial<{

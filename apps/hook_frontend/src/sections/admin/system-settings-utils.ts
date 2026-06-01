@@ -1,4 +1,5 @@
 import type {
+  ContactMethod,
   SystemSettings,
   SystemSettingsUpdate,
   SystemSettingsSmtpTestRequest,
@@ -20,6 +21,7 @@ export type SystemSettingsForm = {
   site_subtitle: string;
   public_base_url: string;
   site_logo_base64: string;
+  contact_methods: ContactMethod[];
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -87,6 +89,7 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   site_subtitle: '',
   public_base_url: '',
   site_logo_base64: '',
+  contact_methods: [],
   allow_registration: true,
   login_captcha_enabled: false,
   registration_captcha_enabled: false,
@@ -145,6 +148,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     site_subtitle: settings.site_subtitle,
     public_base_url: settings.public_base_url,
     site_logo_base64: settings.site_logo_base64,
+    contact_methods: settings.contact_methods,
     allow_registration: settings.allow_registration,
     login_captcha_enabled: settings.login_captcha_enabled,
     registration_captcha_enabled: settings.registration_captcha_enabled,
@@ -204,6 +208,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     site_subtitle: form.site_subtitle,
     public_base_url: form.public_base_url,
     site_logo_base64: form.site_logo_base64,
+    contact_methods: form.contact_methods,
     allow_registration: form.allow_registration,
     login_captcha_enabled: form.login_captcha_enabled,
     registration_captcha_enabled: form.registration_captcha_enabled,
