@@ -203,6 +203,7 @@ mod tests {
         SchedulingSnapshot {
             default_rate_limit_rpm: 0,
             scheduling_mode: ProviderSchedulingMode::FixedOrder,
+            provider_priority_mode: types::provider::ProviderPriorityMode::Provider,
             cache_affinity_ttl_minutes: 5,
             client_request_record_level: RequestRecordLevel::Basic,
             client_record_request_headers: true,

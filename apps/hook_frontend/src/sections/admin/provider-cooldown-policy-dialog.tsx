@@ -143,10 +143,12 @@ function RuleRow({ rule, index, canDelete, onChange, onDelete }: RuleRowProps) {
         gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr auto' },
       }}
     >
-      <NumberField
+      <TextField
+        fullWidth
+        size="small"
         label={t('providers.cooldownStatusCode')}
         value={rule.status_code}
-        onChange={(status_code) => onChange(index, { status_code })}
+        onChange={(event) => onChange(index, { status_code: event.target.value })}
       />
       <NumberField
         label={t('providers.cooldownFailureCount')}

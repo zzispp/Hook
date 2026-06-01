@@ -1,6 +1,6 @@
-import type { PriorityItem } from './provider-priority-utils';
 import type { SystemSettingsUpdate } from 'src/types/system-setting';
-import type { Provider, ProviderSchedulingMode } from 'src/types/provider';
+import type { PriorityItem, PriorityKind } from './provider-priority-utils';
+import type { Provider, ProviderApiKey, ProviderPriorityMode, ProviderSchedulingMode } from 'src/types/provider';
 
 import { useState, useEffect, useCallback } from 'react';
 
@@ -10,6 +10,7 @@ import { updateSystemSettings } from 'src/actions/system-settings';
 import { toast } from 'src/components/snackbar';
 
 import {
+  orderKeys,
   orderProviders,
   parsePriorities,
   movePriorityItem,
@@ -20,8 +21,11 @@ import {
 export type ProviderPriorityDialogProps = {
   open: boolean;
   providers: Provider[];
+  keysByProvider: Record<string, ProviderApiKey[]>;
   loading: boolean;
   schedulingMode: ProviderSchedulingMode;
+  priorityMode: ProviderPriorityMode;
+  keyPrioritySnapshotInitialized: boolean;
   cacheAffinityTtlMinutes: number;
   onClose: () => void;
   onSaved: () => void;
@@ -67,10 +71,14 @@ export function usePriorityDialogState(props: ProviderPriorityDialogProps) {
 function usePriorityFormState({
   open,
   providers,
+  keysByProvider,
   schedulingMode,
+  priorityMode,
+  keyPrioritySnapshotInitialized,
   cacheAffinityTtlMinutes: initialCacheAffinityTtlMinutes,
 }: ProviderPriorityDialogProps) {
-  const [items, setItems] = useState(orderProviders(providers));
+  const [kind, setKind] = useState<PriorityKind>(priorityMode);
+  const [items, setItems] = useState(priorityItems(priorityMode, providers, keysByProvider, keyPrioritySnapshotInitialized));
   const [mode, setMode] = useState<ProviderSchedulingMode>(schedulingMode);
   const [cacheAffinityTtlMinutes, setCacheAffinityTtlMinutes] = useState(
     String(initialCacheAffinityTtlMinutes || DEFAULT_CACHE_AFFINITY_TTL_MINUTES)
@@ -80,12 +88,23 @@ function usePriorityFormState({
 
   useEffect(() => {
     if (!open) return;
-    setItems(orderProviders(providers));
+    setKind(priorityMode);
+    setItems(priorityItems(priorityMode, providers, keysByProvider, keyPrioritySnapshotInitialized));
     setMode(schedulingMode);
     setCacheAffinityTtlMinutes(String(initialCacheAffinityTtlMinutes || DEFAULT_CACHE_AFFINITY_TTL_MINUTES));
     setEditingId(null);
     setDraggingId(null);
-  }, [open, providers, schedulingMode, initialCacheAffinityTtlMinutes]);
+  }, [open, providers, keysByProvider, priorityMode, keyPrioritySnapshotInitialized, schedulingMode, initialCacheAffinityTtlMinutes]);
+
+  const changeKind = useCallback(
+    (nextKind: PriorityKind) => {
+      setKind(nextKind);
+      setItems(priorityItems(nextKind, providers, keysByProvider, keyPrioritySnapshotInitialized));
+      setEditingId(null);
+      setDraggingId(null);
+    },
+    [keyPrioritySnapshotInitialized, keysByProvider, providers]
+  );
 
   const changePriority = useCallback((id: string, value: string) => {
     setItems((current) => changeItemPriority(current, id, value));
@@ -95,17 +114,29 @@ function usePriorityFormState({
 
   return {
     cacheAffinityTtlMinutes,
+    changeKind,
     changePriority,
     draggingId,
     dropOn,
     editingId,
     items,
+    kind,
     mode,
     setCacheAffinityTtlMinutes,
     setDraggingId,
     setEditingId,
     setMode,
   };
+}
+
+function priorityItems(
+  kind: PriorityKind,
+  providers: Provider[],
+  keysByProvider: Record<string, ProviderApiKey[]>,
+  keyPrioritySnapshotInitialized: boolean
+) {
+  const keyPrioritySource = keyPrioritySnapshotInitialized ? 'global' : 'internal';
+  return kind === 'key' ? orderKeys(providers, keysByProvider, keyPrioritySource) : orderProviders(providers);
 }
 
 function useDropHandler({
@@ -130,20 +161,28 @@ function useDropHandler({
 async function savePriorityState({
   cacheTtlMinutes,
   items,
+  kind,
+  keysByProvider,
   mode,
   providers,
   priorities,
+  priorityMode,
+  keyPrioritySnapshotInitialized,
   schedulingMode,
 }: {
   cacheTtlMinutes: number | null;
   items: PriorityItem[];
+  kind: PriorityKind;
+  keysByProvider: Record<string, ProviderApiKey[]>;
   mode: ProviderSchedulingMode;
   providers: Provider[];
   priorities: Map<string, number>;
+  priorityMode: ProviderPriorityMode;
+  keyPrioritySnapshotInitialized: boolean;
   schedulingMode: ProviderSchedulingMode;
 }) {
-  await savePriorityChanges(items, providers, priorities);
-  const patch = settingsPatch(mode, schedulingMode, cacheTtlMinutes);
+  await savePriorityChanges(kind, items, providers, keysByProvider, priorities);
+  const patch = settingsPatch(mode, schedulingMode, cacheTtlMinutes, kind, priorityMode, keyPrioritySnapshotInitialized);
   if (patch) await updateSystemSettings(patch);
 }
 
@@ -157,13 +196,22 @@ function parseCacheTtlMinutes(value: string) {
 function settingsPatch(
   mode: ProviderSchedulingMode,
   schedulingMode: ProviderSchedulingMode,
-  cacheTtlMinutes: number | null
+  cacheTtlMinutes: number | null,
+  priorityKind: PriorityKind,
+  priorityMode: ProviderPriorityMode,
+  keyPrioritySnapshotInitialized: boolean
 ): SystemSettingsUpdate | null {
+  const priorityPatch: Partial<SystemSettingsUpdate> = priorityKind === priorityMode ? {} : { provider_priority_mode: priorityKind };
+  if (priorityKind === 'key' && !keyPrioritySnapshotInitialized) {
+    priorityPatch.key_priority_snapshot_initialized = true;
+  }
   if (mode === 'cache_affinity') {
     return {
       scheduling_mode: mode,
       cache_affinity_ttl_minutes: cacheTtlMinutes!,
+      ...priorityPatch,
     };
   }
-  return mode === schedulingMode ? null : { scheduling_mode: mode };
+  if (mode !== schedulingMode) return { scheduling_mode: mode, ...priorityPatch };
+  return Object.keys(priorityPatch).length > 0 ? priorityPatch : null;
 }

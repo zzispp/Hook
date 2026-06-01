@@ -1,6 +1,6 @@
 use super::{
-    AffinityCandidate, Candidate, EndpointSnapshot, KeySnapshot, ModelAccessPolicy, ModelBindingSnapshot, ProviderSnapshot, SchedulerError, SchedulerInput,
-    SchedulingMode,
+    AffinityCandidate, Candidate, EndpointSnapshot, KeySnapshot, ModelAccessPolicy, ModelBindingSnapshot, PriorityMode, ProviderSnapshot, SchedulerError,
+    SchedulerInput, SchedulingMode,
 };
 
 const FNV_OFFSET_BASIS: u64 = 14_695_981_039_346_656_037;
@@ -116,7 +116,7 @@ fn append_endpoint_candidates(context: EndpointBuildContext<'_>, output: &mut Ve
 
 fn sort_candidates(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
     set_conversion_flags(candidates, input);
-    candidates.sort_by(stable_priority);
+    candidates.sort_by(|left, right| stable_priority(left, right, &input.priority_mode));
     demote_conversion(candidates, input);
     match input.scheduling_mode {
         SchedulingMode::FixedOrder => {}
@@ -210,24 +210,55 @@ fn apply_load_balance(candidates: &mut [Candidate], input: &SchedulerInput) {
     candidates.sort_by(|left, right| load_balance_key(left, input).cmp(&load_balance_key(right, input)));
 }
 
-fn stable_priority(left: &Candidate, right: &Candidate) -> std::cmp::Ordering {
-    (left.provider_priority, left.key_priority, &left.provider_id, &left.endpoint_id, &left.key_id).cmp(&(
-        right.provider_priority,
-        right.key_priority,
-        &right.provider_id,
-        &right.endpoint_id,
-        &right.key_id,
-    ))
+fn stable_priority(left: &Candidate, right: &Candidate, mode: &PriorityMode) -> std::cmp::Ordering {
+    match mode {
+        PriorityMode::Provider => provider_priority_key(left).cmp(&provider_priority_key(right)),
+        PriorityMode::Key => key_priority_key(left).cmp(&key_priority_key(right)),
+    }
 }
 
-fn load_balance_key<'a>(candidate: &'a Candidate, input: &SchedulerInput) -> (i32, i32, i32, u64, &'a str) {
+fn provider_priority_key(candidate: &Candidate) -> (i32, i32, &str, &str, &str) {
     (
-        conversion_rank(candidate, input),
         candidate.provider_priority,
         candidate.key_priority,
-        stable_hash(&format!("{}:{}", input.load_balance_seed.as_deref().unwrap_or_default(), candidate.key_id)),
+        candidate.provider_id.as_str(),
+        candidate.endpoint_id.as_str(),
         candidate.key_id.as_str(),
     )
+}
+
+fn key_priority_key(candidate: &Candidate) -> (i32, i32, &str, &str, &str) {
+    (
+        candidate.key_priority,
+        candidate.provider_priority,
+        candidate.provider_id.as_str(),
+        candidate.endpoint_id.as_str(),
+        candidate.key_id.as_str(),
+    )
+}
+
+fn load_balance_key<'a>(candidate: &'a Candidate, input: &SchedulerInput) -> (i32, i32, i32, u64, &'a str, &'a str, &'a str) {
+    let seed = input.load_balance_seed.as_deref().unwrap_or_default();
+    match input.priority_mode {
+        PriorityMode::Provider => (
+            conversion_rank(candidate, input),
+            candidate.provider_priority,
+            candidate.key_priority,
+            stable_hash(&format!("{seed}:{}", candidate.key_id)),
+            candidate.provider_id.as_str(),
+            candidate.endpoint_id.as_str(),
+            candidate.key_id.as_str(),
+        ),
+        PriorityMode::Key => (
+            conversion_rank(candidate, input),
+            candidate.key_priority,
+            candidate.provider_priority,
+            stable_hash(&format!("{seed}:{}", candidate.key_id)),
+            candidate.provider_id.as_str(),
+            candidate.endpoint_id.as_str(),
+            candidate.key_id.as_str(),
+        ),
+    }
 }
 
 fn conversion_rank(candidate: &Candidate, input: &SchedulerInput) -> i32 {

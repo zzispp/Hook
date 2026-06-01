@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use provider::application::{ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
-    ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-    UsageRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
+    ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail,
+    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::cache::{ProxyCacheInvalidator, combine_cache_results};
@@ -100,6 +100,12 @@ where
         let key = self.inner.update_api_key(provider_id, key_id, input, encrypted_api_key).await?;
         self.refresh_scheduling().await?;
         Ok(key)
+    }
+
+    async fn batch_update_api_key_priorities(&self, input: ProviderApiKeyPriorityBatchUpdate) -> ProviderResult<Vec<ProviderApiKey>> {
+        let keys = self.inner.batch_update_api_key_priorities(input).await?;
+        self.refresh_scheduling().await?;
+        Ok(keys)
     }
 
     async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()> {

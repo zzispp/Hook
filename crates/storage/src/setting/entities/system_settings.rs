@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
 use time::format_description::well_known::Rfc3339;
-use types::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
+use types::provider::{ProviderCooldownPolicy, ProviderPriorityMode, ProviderSchedulingMode};
 use types::system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -58,6 +58,8 @@ pub struct Model {
     pub recharge_min_amount: rust_decimal::Decimal,
     pub recharge_max_amount: rust_decimal::Decimal,
     pub scheduling_mode: String,
+    pub provider_priority_mode: String,
+    pub key_priority_snapshot_initialized: bool,
     pub cache_affinity_ttl_minutes: i64,
     pub provider_cooldown_policy: String,
     pub smtp_host: String,
@@ -137,6 +139,8 @@ impl TryFrom<Model> for SystemSettings {
             recharge_min_amount: value.recharge_min_amount,
             recharge_max_amount: value.recharge_max_amount,
             scheduling_mode: ProviderSchedulingMode::from(value.scheduling_mode.as_str()),
+            provider_priority_mode: ProviderPriorityMode::from(value.provider_priority_mode.as_str()),
+            key_priority_snapshot_initialized: value.key_priority_snapshot_initialized,
             cache_affinity_ttl_minutes: value.cache_affinity_ttl_minutes,
             provider_cooldown_policy: decode_provider_cooldown_policy(&value.provider_cooldown_policy)?,
             smtp_host: value.smtp_host,

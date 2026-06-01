@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use storage::{Database, StorageError, model::ModelStore, provider::ProviderStore};
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
-    ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-    UsageRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
+    ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail,
+    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
@@ -106,6 +106,7 @@ impl ProviderRepository for StorageProviderRepository {
                         allowed_model_ids: record.allowed_model_ids,
                         encrypted_api_key: record.encrypted_api_key,
                         internal_priority: record.internal_priority,
+                        global_priority: record.global_priority,
                         is_active: record.is_active,
                     })
                     .collect()
@@ -122,6 +123,23 @@ impl ProviderRepository for StorageProviderRepository {
     ) -> ProviderResult<ProviderApiKey> {
         self.store
             .update_api_key(provider_id, key_id, api_key_patch(input, encrypted_api_key))
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn batch_update_api_key_priorities(&self, input: ProviderApiKeyPriorityBatchUpdate) -> ProviderResult<Vec<ProviderApiKey>> {
+        self.store
+            .batch_update_api_key_priorities(
+                input
+                    .updates
+                    .into_iter()
+                    .map(|update| storage::provider::ProviderApiKeyPriorityRecordPatch {
+                        provider_id: update.provider_id,
+                        key_id: update.key_id,
+                        global_priority: update.global_priority,
+                    })
+                    .collect(),
+            )
             .await
             .map_err(storage_error)
     }

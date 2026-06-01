@@ -54,12 +54,7 @@ impl LlmProxyCache {
         };
         let now = OffsetDateTime::now_utc();
         let observed = self
-            .record_failure_event(
-                &input.candidate.trace.provider_id,
-                input.status_code,
-                snapshot.provider_cooldown_policy.window_seconds,
-                now,
-            )
+            .record_failure_event(&input.candidate.trace.provider_id, rule, snapshot.provider_cooldown_policy.window_seconds, now)
             .await?;
         if observed < rule.failure_count {
             return Ok(false);
@@ -88,8 +83,14 @@ impl LlmProxyCache {
         self.write_provider_cooldown(&cooldown.provider_id, seconds).await
     }
 
-    async fn record_failure_event(&self, provider_id: &str, status_code: i32, window_seconds: i64, now: OffsetDateTime) -> Result<i64, LlmProxyError> {
-        let key = self.provider_cooldown_failure_key(provider_id, status_code);
+    async fn record_failure_event(
+        &self,
+        provider_id: &str,
+        rule: &ProviderCooldownRule,
+        window_seconds: i64,
+        now: OffsetDateTime,
+    ) -> Result<i64, LlmProxyError> {
+        let key = self.provider_cooldown_failure_key(provider_id, rule);
         let min_score = now.unix_timestamp() - window_seconds + 1;
         let member = format!("{}:{}", now.unix_timestamp_nanos(), uuid::Uuid::now_v7());
         let mut connection = self.connection.clone();
@@ -130,16 +131,26 @@ impl LlmProxyCache {
         format!("{}:llm_proxy:provider_cooldown:{provider_id}", self.key_prefix)
     }
 
-    fn provider_cooldown_failure_key(&self, provider_id: &str, status_code: i32) -> String {
-        format!("{}:llm_proxy:provider_cooldown_failures:{provider_id}:{status_code}", self.key_prefix)
+    fn provider_cooldown_failure_key(&self, provider_id: &str, rule: &ProviderCooldownRule) -> String {
+        provider_cooldown_failure_key(&self.key_prefix, provider_id, rule)
     }
+}
+
+fn provider_cooldown_failure_key(key_prefix: &str, provider_id: &str, rule: &ProviderCooldownRule) -> String {
+    format!(
+        "{key_prefix}:llm_proxy:provider_cooldown_failures:{provider_id}:{}-{}",
+        rule.status_code_start, rule.status_code_end
+    )
 }
 
 fn matching_rule(policy: &ProviderCooldownPolicy, status_code: i32) -> Option<&ProviderCooldownRule> {
     if policy.window_seconds <= 0 {
         return None;
     }
-    policy.rules.iter().find(|rule| rule.status_code == status_code)
+    policy
+        .rules
+        .iter()
+        .find(|rule| (rule.status_code_start..=rule.status_code_end).contains(&status_code))
 }
 
 async fn upsert_cooldown_record(
@@ -198,4 +209,54 @@ fn parse_timestamp(value: &str) -> Result<OffsetDateTime, LlmProxyError> {
 fn ttl_seconds(until: OffsetDateTime, now: OffsetDateTime) -> Option<i64> {
     let seconds = (until - now).whole_seconds();
     (seconds > 0).then_some(seconds)
+}
+
+#[cfg(test)]
+mod tests {
+    use types::provider::{ProviderCooldownPolicy, ProviderCooldownRule};
+
+    use super::{matching_rule, provider_cooldown_failure_key};
+
+    #[test]
+    fn matching_rule_accepts_status_codes_inside_range() {
+        let policy = policy_with_range(502, 504);
+
+        assert_eq!(matching_rule(&policy, 502), Some(&policy.rules[0]));
+        assert_eq!(matching_rule(&policy, 503), Some(&policy.rules[0]));
+        assert_eq!(matching_rule(&policy, 504), Some(&policy.rules[0]));
+    }
+
+    #[test]
+    fn matching_rule_rejects_status_codes_outside_range() {
+        let policy = policy_with_range(502, 504);
+
+        assert_eq!(matching_rule(&policy, 501), None);
+        assert_eq!(matching_rule(&policy, 505), None);
+    }
+
+    #[test]
+    fn range_failure_counter_key_uses_rule_range() {
+        let rule = range_rule(502, 504);
+
+        assert_eq!(
+            provider_cooldown_failure_key("hook", "provider-1", &rule),
+            "hook:llm_proxy:provider_cooldown_failures:provider-1:502-504"
+        );
+    }
+
+    fn policy_with_range(start: i32, end: i32) -> ProviderCooldownPolicy {
+        ProviderCooldownPolicy {
+            window_seconds: 60,
+            rules: vec![range_rule(start, end)],
+        }
+    }
+
+    fn range_rule(start: i32, end: i32) -> ProviderCooldownRule {
+        ProviderCooldownRule {
+            status_code_start: start,
+            status_code_end: end,
+            failure_count: 2,
+            cooldown_seconds: 60,
+        }
+    }
 }

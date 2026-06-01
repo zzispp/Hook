@@ -12,7 +12,8 @@ pub struct ProviderCooldownPolicy {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ProviderCooldownRule {
-    pub status_code: i32,
+    pub status_code_start: i32,
+    pub status_code_end: i32,
     pub failure_count: i64,
     pub cooldown_seconds: i64,
 }

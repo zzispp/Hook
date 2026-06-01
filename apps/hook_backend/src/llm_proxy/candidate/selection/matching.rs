@@ -82,14 +82,36 @@ fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &m
     if endpoints.is_empty() || keys.is_empty() {
         return;
     }
-    output.push(CandidateParts {
-        provider: input.provider.clone(),
-        endpoints,
-        keys,
-        model,
-        client_api_format: input.request.api_format.to_owned(),
-        is_cached: false,
-    });
+    append_key_candidates(input.provider, model, input.model_id, input.request, endpoints, keys, output);
+}
+
+fn append_key_candidates(
+    provider: &CachedProvider,
+    model: CachedModelBinding,
+    model_id: &str,
+    request: CandidateRequest<'_>,
+    endpoints: Vec<CachedEndpoint>,
+    keys: Vec<CachedProviderKey>,
+    output: &mut Vec<CandidateParts>,
+) {
+    for key in keys {
+        let key_endpoints = endpoints
+            .iter()
+            .filter(|endpoint| key_allows_model(&key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format))
+            .cloned()
+            .collect::<Vec<_>>();
+        if key_endpoints.is_empty() {
+            continue;
+        }
+        output.push(CandidateParts {
+            provider: provider.clone(),
+            endpoints: key_endpoints,
+            keys: vec![key],
+            model: model.clone(),
+            client_api_format: request.api_format.to_owned(),
+            is_cached: false,
+        });
+    }
 }
 
 struct OrderedKeysInput<'a> {

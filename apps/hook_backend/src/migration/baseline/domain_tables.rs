@@ -188,6 +188,7 @@ fn provider_api_keys_table() -> TableCreateStatement {
         .col(text(ProviderApiKeys::EncryptedApiKey))
         .col(text_null(ProviderApiKeys::Note))
         .col(integer(ProviderApiKeys::InternalPriority))
+        .col(integer(ProviderApiKeys::GlobalPriority))
         .col(integer_null(ProviderApiKeys::RpmLimit))
         .col(integer_null(ProviderApiKeys::LearnedRpmLimit))
         .col(integer(ProviderApiKeys::CacheTtlMinutes))

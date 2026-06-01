@@ -1,10 +1,10 @@
 use proxy::{
     format_conversion::ApiFormat,
-    scheduler::{AffinityCandidate, AttemptOutcome, CandidateBuilder, FailoverExecutor, SchedulerError, SchedulerInput, SchedulingMode},
+    scheduler::{AffinityCandidate, AttemptOutcome, CandidateBuilder, FailoverExecutor, PriorityMode, SchedulerError, SchedulerInput, SchedulingMode},
 };
 
 mod common;
-use common::{base_input, provider_a, provider_b, provider_with_gemini_low_priority, provider_with_two_keys};
+use common::{base_input, provider_a, provider_b, provider_with_gemini_low_priority, provider_with_priority, provider_with_two_keys};
 
 #[test]
 fn scheduler_filters_by_group_provider_endpoint_format_and_model() {
@@ -83,6 +83,38 @@ fn scheduler_demotes_conversion_unless_provider_keeps_priority() {
 }
 
 #[test]
+fn scheduler_provider_priority_mode_orders_by_provider_then_key() {
+    let candidates = CandidateBuilder::build(&SchedulerInput {
+        providers: vec![
+            provider_with_priority("provider-slow-key", 1, "key-slow", 90),
+            provider_with_priority("provider-fast-key", 10, "key-fast", 1),
+        ],
+        priority_mode: PriorityMode::Provider,
+        ..base_input()
+    })
+    .unwrap();
+
+    assert_eq!(candidates[0].provider_id, "provider-slow-key");
+    assert_eq!(candidates[0].key_id, "key-slow");
+}
+
+#[test]
+fn scheduler_key_priority_mode_orders_by_key_then_provider() {
+    let candidates = CandidateBuilder::build(&SchedulerInput {
+        providers: vec![
+            provider_with_priority("provider-slow-key", 1, "key-slow", 90),
+            provider_with_priority("provider-fast-key", 10, "key-fast", 1),
+        ],
+        priority_mode: PriorityMode::Key,
+        ..base_input()
+    })
+    .unwrap();
+
+    assert_eq!(candidates[0].provider_id, "provider-fast-key");
+    assert_eq!(candidates[0].key_id, "key-fast");
+}
+
+#[test]
 fn scheduler_cache_affinity_promotes_matching_key() {
     let input = SchedulerInput {
         affinity: Some(AffinityCandidate {
@@ -156,6 +188,27 @@ fn scheduler_load_balance_keeps_priority_group_and_uses_stable_hash() {
     assert_eq!(first.len(), 2);
     assert_eq!(first[0].provider_priority, first[1].provider_priority);
     assert_eq!(first[0].key_priority, first[1].key_priority);
+}
+
+#[test]
+fn scheduler_key_priority_load_balance_keeps_key_priority_tier() {
+    let candidates = CandidateBuilder::build(&SchedulerInput {
+        scheduling_mode: SchedulingMode::LoadBalance,
+        priority_mode: PriorityMode::Key,
+        load_balance_seed: Some("request-1".into()),
+        providers: vec![
+            provider_with_priority("provider-high", 1, "key-high", 20),
+            provider_with_priority("provider-a", 10, "key-a", 5),
+            provider_with_priority("provider-b", 20, "key-b", 5),
+        ],
+        ..base_input()
+    })
+    .unwrap();
+
+    assert_eq!(candidates.len(), 3);
+    assert_eq!(candidates[0].key_priority, 5);
+    assert_eq!(candidates[1].key_priority, 5);
+    assert_eq!(candidates[2].key_id, "key-high");
 }
 
 #[test]

@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use proxy::scheduler::{AffinityCandidate, Candidate, CandidateBuilder, ModelAccessPolicy, ProviderSnapshot, SchedulerInput, SchedulingMode};
+use proxy::scheduler::{AffinityCandidate, Candidate, CandidateBuilder, ModelAccessPolicy, PriorityMode, ProviderSnapshot, SchedulerInput, SchedulingMode};
 use types::{
     api_token::{ApiToken, ModelAccessMode},
-    provider::ProviderSchedulingMode,
+    provider::{ProviderPriorityMode, ProviderSchedulingMode},
 };
 
 use super::{CandidatePartKey, CandidateParts};
@@ -24,6 +24,7 @@ pub(super) struct OrderCandidatePartsInput<'a> {
     pub(super) request_id: &'a str,
     pub(super) affinity: Option<AffinitySelection>,
     pub(super) mode: ProviderSchedulingMode,
+    pub(super) priority_mode: ProviderPriorityMode,
 }
 
 pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Result<Vec<CandidateParts>, LlmProxyError> {
@@ -37,6 +38,7 @@ pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Resu
         request_id,
         affinity,
         mode,
+        priority_mode,
     } = input;
     let input = scheduler_input(SchedulerInputArgs {
         parts: &parts,
@@ -48,9 +50,13 @@ pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Resu
         request_id,
         affinity: affinity.as_ref(),
         mode,
+        priority_mode,
     })?;
     let mut by_key = parts.into_iter().map(|part| (part_key(&part), part)).collect::<HashMap<_, _>>();
-    let mut candidates = by_key.values().map(scheduler_candidate).collect::<Result<Vec<_>, _>>()?;
+    let mut candidates = by_key
+        .values()
+        .map(|part| scheduler_candidate(part, priority_mode))
+        .collect::<Result<Vec<_>, _>>()?;
     CandidateBuilder::order(&mut candidates, &input);
     Ok(candidates.into_iter().filter_map(|candidate| ordered_part(&mut by_key, candidate)).collect())
 }
@@ -71,6 +77,7 @@ fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmPr
         affinity: args.affinity.map(proxy_affinity),
         load_balance_seed: Some(args.request_id.to_owned()),
         scheduling_mode: scheduler_mode(args.mode),
+        priority_mode: priority_mode(args.priority_mode),
         global_keep_priority_on_conversion: false,
         global_format_conversion_enabled: true,
         providers: scheduler_providers(args.parts),
@@ -87,9 +94,10 @@ struct SchedulerInputArgs<'a> {
     request_id: &'a str,
     affinity: Option<&'a AffinitySelection>,
     mode: ProviderSchedulingMode,
+    priority_mode: ProviderPriorityMode,
 }
 
-fn scheduler_candidate(parts: &CandidateParts) -> Result<Candidate, LlmProxyError> {
+fn scheduler_candidate(parts: &CandidateParts, priority_mode: ProviderPriorityMode) -> Result<Candidate, LlmProxyError> {
     let endpoint = primary_endpoint(parts);
     let key = primary_key(parts);
     let provider_api_format = formats::endpoint_metadata(&endpoint.api_format, false)?.data_format;
@@ -105,7 +113,10 @@ fn scheduler_candidate(parts: &CandidateParts) -> Result<Candidate, LlmProxyErro
         needs_conversion,
         is_cached: parts.is_cached,
         provider_priority: parts.provider.priority,
-        key_priority: key.internal_priority,
+        key_priority: match priority_mode {
+            ProviderPriorityMode::Provider => key.internal_priority,
+            ProviderPriorityMode::Key => key.global_priority,
+        },
     })
 }
 
@@ -147,12 +158,19 @@ fn scheduler_mode(mode: ProviderSchedulingMode) -> SchedulingMode {
     }
 }
 
+fn priority_mode(mode: ProviderPriorityMode) -> PriorityMode {
+    match mode {
+        ProviderPriorityMode::Provider => PriorityMode::Provider,
+        ProviderPriorityMode::Key => PriorityMode::Key,
+    }
+}
+
 fn part_key(parts: &CandidateParts) -> CandidatePartKey {
-    (parts.provider.id.clone(), parts.model.global_model_id.clone())
+    (parts.provider.id.clone(), primary_key(parts).id.clone())
 }
 
 fn candidate_key(candidate: &Candidate) -> CandidatePartKey {
-    (candidate.provider_id.clone(), candidate.global_model_id.clone())
+    (candidate.provider_id.clone(), candidate.key_id.clone())
 }
 
 fn ordered_part(by_key: &mut HashMap<CandidatePartKey, CandidateParts>, candidate: Candidate) -> Option<CandidateParts> {

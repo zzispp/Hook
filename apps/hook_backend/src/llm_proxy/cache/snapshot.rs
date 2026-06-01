@@ -30,6 +30,7 @@ pub async fn load(database: &Database, system_users: &[CachedUserAccess]) -> Res
     Ok(SchedulingSnapshot {
         default_rate_limit_rpm: settings.default_rate_limit_rpm,
         scheduling_mode: settings.scheduling_mode,
+        provider_priority_mode: settings.provider_priority_mode,
         cache_affinity_ttl_minutes: settings.cache_affinity_ttl_minutes,
         client_request_record_level: settings.client_request_record_level,
         client_record_request_headers: settings.client_record_request_headers,
@@ -221,6 +222,7 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
                 key_preview: record.name,
                 encrypted_api_key: record.encrypted_api_key,
                 internal_priority: record.internal_priority,
+                global_priority: record.global_priority,
                 rpm_limit: record.rpm_limit,
                 cache_ttl_minutes: record.cache_ttl_minutes,
                 time_range_enabled: record.time_range_enabled,

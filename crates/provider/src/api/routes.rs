@@ -6,11 +6,11 @@ use axum::{
 use crate::api::{
     ProviderApiState,
     handlers::{
-        batch_update_model_bindings, create_api_key, create_endpoint, create_model_binding, create_provider, delete_api_key, delete_endpoint,
-        delete_model_binding, delete_model_cost, delete_provider, fetch_upstream_models, get_provider, get_request_record, list_active_request_records,
-        list_api_keys, list_endpoints, list_model_bindings, list_model_costs, list_provider_cooldowns, list_providers, list_request_records,
-        list_usage_records, release_provider_cooldown, test_model_binding, update_api_key, update_endpoint, update_model_binding, update_provider,
-        upsert_model_costs,
+        batch_update_api_key_priorities, batch_update_model_bindings, create_api_key, create_endpoint, create_model_binding, create_provider, delete_api_key,
+        delete_endpoint, delete_model_binding, delete_model_cost, delete_provider, fetch_upstream_models, get_provider, get_request_record,
+        list_active_request_records, list_api_keys, list_endpoints, list_model_bindings, list_model_costs, list_provider_cooldowns, list_providers,
+        list_request_records, list_usage_records, release_provider_cooldown, test_model_binding, update_api_key, update_endpoint, update_model_binding,
+        update_provider, upsert_model_costs,
     },
 };
 
@@ -24,6 +24,7 @@ pub fn create_router(state: ProviderApiState) -> Router {
             patch(update_endpoint).delete(delete_endpoint),
         )
         .route("/admin/providers/{provider_id}/keys", get(list_api_keys).post(create_api_key))
+        .route("/admin/providers/keys/batch-priorities", post(batch_update_api_key_priorities))
         .route("/admin/providers/{provider_id}/keys/{key_id}", patch(update_api_key).delete(delete_api_key))
         .route("/admin/providers/{provider_id}/upstream-models", get(fetch_upstream_models))
         .route("/admin/providers/{provider_id}/models", get(list_model_bindings).post(create_model_binding))

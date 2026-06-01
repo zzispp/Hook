@@ -6,9 +6,9 @@ use types::provider::{Provider, ProviderListRequest, ProviderListResponse};
 use crate::{Database, StorageError, StorageResult, json};
 
 use super::{
-    BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord,
-    ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput, ProviderModelRecordPatch,
-    ProviderRecordInput, ProviderRecordPatch,
+    BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyPriorityRecordPatch, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch,
+    ProviderApiKeySecretRecord, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
+    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
     record::{
         provider_api_keys, provider_endpoints, provider_models,
         providers::{self, ActiveModel as ProviderActiveModel},
@@ -107,6 +107,7 @@ impl ProviderStore {
             encrypted_api_key: Set(input.encrypted_api_key),
             note: Set(input.note),
             internal_priority: Set(input.internal_priority),
+            global_priority: Set(input.global_priority),
             rpm_limit: Set(input.rpm_limit),
             learned_rpm_limit: Set(None),
             cache_ttl_minutes: Set(input.cache_ttl_minutes),
@@ -150,6 +151,7 @@ impl ProviderStore {
                     allowed_model_ids: json::decode_required(record.allowed_model_ids)?,
                     encrypted_api_key: record.encrypted_api_key,
                     internal_priority: record.internal_priority,
+                    global_priority: record.global_priority,
                     is_active: record.is_active,
                 })
             })
@@ -163,6 +165,28 @@ impl ProviderStore {
         active.updated_at = Set(time::OffsetDateTime::now_utc());
         let record = active.update(self.database.connection()).await?;
         record.response()
+    }
+
+    pub async fn batch_update_api_key_priorities(
+        &self,
+        updates: Vec<ProviderApiKeyPriorityRecordPatch>,
+    ) -> StorageResult<Vec<types::provider::ProviderApiKey>> {
+        let mut output = Vec::with_capacity(updates.len());
+        for update in updates {
+            output.push(self.update_api_key_priority(update).await?);
+        }
+        Ok(output)
+    }
+
+    async fn update_api_key_priority(&self, update: ProviderApiKeyPriorityRecordPatch) -> StorageResult<types::provider::ProviderApiKey> {
+        let record = self
+            .find_api_key_record(&update.provider_id, &update.key_id)
+            .await?
+            .ok_or(StorageError::NotFound)?;
+        let mut active: provider_api_keys::ActiveModel = record.into();
+        active.global_priority = Set(update.global_priority);
+        active.updated_at = Set(time::OffsetDateTime::now_utc());
+        active.update(self.database.connection()).await?.response()
     }
 
     pub async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> StorageResult<()> {

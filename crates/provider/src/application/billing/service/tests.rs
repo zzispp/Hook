@@ -8,6 +8,8 @@ use super::*;
 use crate::application::billing::rules::{BillingRule, BillingRuleLookup, BillingRuleScope};
 use crate::application::billing::{CollectorSource, DimensionCollector, DimensionValueType};
 
+mod cache_creation;
+
 #[test]
 fn grouped_total_is_applied_after_base_cost() {
     let result = BillingService::calculate_from_response(BillingServiceInput {
@@ -116,7 +118,7 @@ fn openai_cache_creation_tokens_are_removed_from_billable_input() {
     assert_eq!(result.snapshot.resolved_dimensions["input_tokens"], 500);
     assert_eq!(result.snapshot.resolved_dimensions["total_input_context"], 1000);
     assert_eq!(result.snapshot.cost_breakdown["input_cost"], Decimal::new(100000, 8));
-    assert_eq!(result.snapshot.cost_breakdown["cache_creation_cost"], Decimal::new(50000, 8));
+    assert_eq!(result.snapshot.cost_breakdown["cache_creation_uncategorized_cost"], Decimal::new(50000, 8));
     assert_eq!(result.snapshot.cost_breakdown["cache_read_cost"], Decimal::new(6000, 8));
 }
 
@@ -191,7 +193,7 @@ fn request_price_is_billed_without_token_usage() {
     assert_eq!(result.snapshot.total_cost, Decimal::new(5, 1));
 }
 
-fn calculate_default(api_format: &str, base_dimensions: BTreeMap<String, Value>, tiered_pricing: TieredPricingConfig) -> CostResult {
+pub(super) fn calculate_default(api_format: &str, base_dimensions: BTreeMap<String, Value>, tiered_pricing: TieredPricingConfig) -> CostResult {
     BillingService::calculate_from_response(BillingServiceInput {
         task_type: "chat".into(),
         model_name: "gpt-test".into(),
@@ -230,7 +232,29 @@ fn raw_input_rule() -> BillingRuleLookup {
     }
 }
 
-fn pricing(input_price_per_1m: i64, output_price_per_1m: i64) -> TieredPricingConfig {
+pub(super) fn legacy_cache_creation_rule() -> BillingRuleLookup {
+    BillingRuleLookup {
+        rule: BillingRule {
+            id: "legacy".into(),
+            name: "legacy".into(),
+            task_type: "chat".into(),
+            expression: "cache_creation_cost".into(),
+            variables: json!({"cache_creation_price_per_1m": Decimal::new(25, 1)}),
+            dimension_mappings: json!({
+                "cache_creation_tokens": {"source": "dimension", "key": "cache_creation_tokens", "required": true},
+                "cache_creation_cost": {
+                    "source": "computed",
+                    "expression": "cache_creation_tokens * cache_creation_price_per_1m / 1000000",
+                    "required": true
+                }
+            }),
+        },
+        scope: BillingRuleScope::Model,
+        effective_task_type: "chat".into(),
+    }
+}
+
+pub(super) fn pricing(input_price_per_1m: i64, output_price_per_1m: i64) -> TieredPricingConfig {
     TieredPricingConfig {
         tiers: vec![PricingTier {
             up_to: None,

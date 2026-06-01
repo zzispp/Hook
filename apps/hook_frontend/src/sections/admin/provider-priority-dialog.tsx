@@ -1,7 +1,7 @@
 'use client';
 
-import type { ProviderSchedulingMode } from 'src/types/provider';
 import type { ProviderPriorityDialogProps } from './provider-priority-state';
+import type { ProviderPriorityMode, ProviderSchedulingMode } from 'src/types/provider';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -44,9 +44,11 @@ export function ProviderPriorityDialog(props: ProviderPriorityDialogProps) {
         />
       </DialogContent>
       <PriorityDialogActions
+        kind={state.kind}
         mode={state.mode}
         submitting={state.submitting}
         cacheAffinityTtlMinutes={state.cacheAffinityTtlMinutes}
+        onKindChange={state.changeKind}
         onModeChange={state.setMode}
         onCacheAffinityTtlChange={state.setCacheAffinityTtlMinutes}
         onClose={props.onClose}
@@ -80,17 +82,21 @@ function PriorityDialogTitle({ onClose }: { onClose: () => void }) {
 }
 
 function PriorityDialogActions({
+  kind,
   mode,
   submitting,
   cacheAffinityTtlMinutes,
+  onKindChange,
   onModeChange,
   onCacheAffinityTtlChange,
   onClose,
   onSave,
 }: {
+  kind: ProviderPriorityMode;
   mode: ProviderSchedulingMode;
   submitting: boolean;
   cacheAffinityTtlMinutes: string;
+  onKindChange: (kind: ProviderPriorityMode) => void;
   onModeChange: (mode: ProviderSchedulingMode) => void;
   onCacheAffinityTtlChange: (value: string) => void;
   onClose: () => void;
@@ -102,6 +108,8 @@ function PriorityDialogActions({
     <DialogActions sx={{ px: 3, py: 2, display: 'block' }}>
       <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} justifyContent="space-between" spacing={2}>
         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} spacing={1.5}>
+          <PriorityTargetPicker value={kind} onChange={onKindChange} />
+          <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', sm: 'block' } }} />
           <Typography variant="caption" color="text.secondary">
             {t('providers.currentMode')}:{' '}
             <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
@@ -127,6 +135,35 @@ function PriorityDialogActions({
         </Stack>
       </Stack>
     </DialogActions>
+  );
+}
+
+function PriorityTargetPicker({
+  value,
+  onChange,
+}: {
+  value: ProviderPriorityMode;
+  onChange: (mode: ProviderPriorityMode) => void;
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Stack direction="row" alignItems="center" spacing={1}>
+      <Typography variant="caption" color="text.secondary">
+        {t('providers.priorityTarget')}:
+      </Typography>
+      <ToggleButtonGroup
+        exclusive
+        size="small"
+        value={value}
+        onChange={(_, nextValue: ProviderPriorityMode | null) => {
+          if (nextValue) onChange(nextValue);
+        }}
+      >
+        <ToggleButton value="provider">{t('providers.priorityTargetProvider')}</ToggleButton>
+        <ToggleButton value="key">{t('providers.priorityTargetKey')}</ToggleButton>
+      </ToggleButtonGroup>
+    </Stack>
   );
 }
 

@@ -103,11 +103,7 @@ pub(super) fn test_service_with_disabled_account_email(
         super::NoInitialGrantLedger,
         super::NoUserWalletCatalog,
     )
-    .with_registration_email(
-        DisabledAccountEmailConfig,
-        TestMailer::default(),
-        super::NoRegistrationEmailCodeStore,
-    )
+    .with_registration_email(DisabledAccountEmailConfig, TestMailer::default(), super::NoRegistrationEmailCodeStore)
     .with_social_auth(
         TestAuthProviderConfig::default(),
         oauth_client,

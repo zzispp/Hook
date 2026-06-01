@@ -54,6 +54,8 @@ pub(super) fn system_settings() -> SystemSettings {
         recharge_min_amount: Decimal::new(1, 0),
         recharge_max_amount: Decimal::new(3000, 0),
         scheduling_mode: types::provider::ProviderSchedulingMode::FixedOrder,
+        provider_priority_mode: types::provider::ProviderPriorityMode::Provider,
+        key_priority_snapshot_initialized: false,
         cache_affinity_ttl_minutes: 60,
         provider_cooldown_policy: types::provider::ProviderCooldownPolicy::default(),
         smtp_host: String::new(),

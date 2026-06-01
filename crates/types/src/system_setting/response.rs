@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use serde::Serialize;
 
-use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
+use crate::provider::{ProviderCooldownPolicy, ProviderPriorityMode, ProviderSchedulingMode};
 
 use super::{ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
 
@@ -61,6 +61,8 @@ pub struct SystemSettingsResponse {
     #[serde(with = "rust_decimal::serde::float")]
     pub recharge_max_amount: Decimal,
     pub scheduling_mode: ProviderSchedulingMode,
+    pub provider_priority_mode: ProviderPriorityMode,
+    pub key_priority_snapshot_initialized: bool,
     pub cache_affinity_ttl_minutes: i64,
     pub provider_cooldown_policy: ProviderCooldownPolicy,
     pub smtp_host: String,
@@ -133,6 +135,8 @@ impl From<SystemSettings> for SystemSettingsResponse {
             recharge_min_amount: value.recharge_min_amount,
             recharge_max_amount: value.recharge_max_amount,
             scheduling_mode: value.scheduling_mode,
+            provider_priority_mode: value.provider_priority_mode,
+            key_priority_snapshot_initialized: value.key_priority_snapshot_initialized,
             cache_affinity_ttl_minutes: value.cache_affinity_ttl_minutes,
             provider_cooldown_policy: value.provider_cooldown_policy,
             smtp_host: value.smtp_host,

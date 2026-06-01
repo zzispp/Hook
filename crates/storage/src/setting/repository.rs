@@ -183,6 +183,12 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.scheduling_mode {
         active.scheduling_mode = Set(value.as_str().to_owned());
     }
+    if let Some(value) = input.provider_priority_mode {
+        active.provider_priority_mode = Set(value.as_str().to_owned());
+    }
+    if let Some(value) = input.key_priority_snapshot_initialized {
+        active.key_priority_snapshot_initialized = Set(value);
+    }
     if let Some(value) = input.cache_affinity_ttl_minutes {
         active.cache_affinity_ttl_minutes = Set(value);
     }

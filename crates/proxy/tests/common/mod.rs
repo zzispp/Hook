@@ -2,7 +2,7 @@
 
 use proxy::{
     format_conversion::ApiFormat,
-    scheduler::{EndpointSnapshot, KeySnapshot, ModelAccessPolicy, ModelBindingSnapshot, ProviderSnapshot, SchedulerInput, SchedulingMode},
+    scheduler::{EndpointSnapshot, KeySnapshot, ModelAccessPolicy, ModelBindingSnapshot, PriorityMode, ProviderSnapshot, SchedulerInput, SchedulingMode},
 };
 
 pub fn base_input() -> SchedulerInput {
@@ -20,6 +20,7 @@ pub fn base_input() -> SchedulerInput {
         affinity: None,
         load_balance_seed: None,
         scheduling_mode: SchedulingMode::FixedOrder,
+        priority_mode: PriorityMode::Provider,
         global_keep_priority_on_conversion: false,
         global_format_conversion_enabled: true,
         providers: Vec::new(),
@@ -72,6 +73,20 @@ pub fn provider_with_two_keys() -> ProviderSnapshot {
     ProviderSnapshot {
         keys: vec![key("key-a-1", 10), key("key-a-2", 10)],
         ..provider_a()
+    }
+}
+
+pub fn provider_with_priority(provider_id: &str, provider_priority: i32, key_id: &str, key_priority: i32) -> ProviderSnapshot {
+    ProviderSnapshot {
+        id: provider_id.into(),
+        name: provider_id.into(),
+        priority: provider_priority,
+        keep_priority_on_conversion: false,
+        enable_format_conversion: true,
+        is_active: true,
+        endpoints: vec![endpoint(&format!("endpoint-{provider_id}"), ApiFormat::OpenAiChat)],
+        keys: vec![key(key_id, key_priority)],
+        models: vec![model("gpt-4o-mini", &format!("upstream-{provider_id}"))],
     }
 }
 

@@ -2,8 +2,7 @@ use rand_core::{OsRng, RngCore};
 use types::user::User;
 
 use crate::application::{
-    AppError, AppResult, PurposeEmailCodeStore, RegistrationEmailCodeRequest, RegistrationEmailConfig, RegistrationEmailMailer, UserAuthRecord,
-    UserRepository,
+    AppError, AppResult, PurposeEmailCodeStore, RegistrationEmailCodeRequest, RegistrationEmailConfig, RegistrationEmailMailer, UserAuthRecord, UserRepository,
 };
 
 use super::helpers::{email_verified_record, password_replace_record};

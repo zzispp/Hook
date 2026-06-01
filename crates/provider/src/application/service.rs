@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
-    ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
-    RequestRecordListResponse, UsageRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
+    ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate,
+    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
@@ -25,8 +25,9 @@ use request_queries::{
 
 use super::validation::{
     sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request,
-    sanitize_model_binding_update, sanitize_model_cost_batch, sanitize_update, validate_api_key, validate_api_key_update, validate_create, validate_endpoint,
-    validate_endpoint_update, validate_list_request, validate_model_binding_update, validate_model_cost_batch, validate_update,
+    sanitize_model_binding_update, sanitize_model_cost_batch, sanitize_update, validate_api_key, validate_api_key_priority_batch, validate_api_key_update,
+    validate_create, validate_endpoint, validate_endpoint_update, validate_list_request, validate_model_binding_update, validate_model_cost_batch,
+    validate_update,
 };
 
 pub struct ProviderService<R, M, C, F> {
@@ -166,6 +167,11 @@ where
         }
         let encrypted = input.api_key.as_deref().map(|api_key| self.cipher.encrypt_provider_key(api_key)).transpose()?;
         self.repository.update_api_key(provider_id, key_id, input, encrypted).await
+    }
+
+    async fn batch_update_api_key_priorities(&self, input: ProviderApiKeyPriorityBatchUpdate) -> ProviderResult<Vec<ProviderApiKey>> {
+        validate_api_key_priority_batch(&input)?;
+        self.repository.batch_update_api_key_priorities(input).await
     }
 
     async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()> {

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Update default billing rule,DONE,Default rule computes cache creation split costs,cargo test -p provider billing::service::tests::cache_creation, ,0,
+2,Update billing amount aggregation,DONE,RequestBillingAmount sums split cache creation costs,cargo test -p provider billing::service::tests::request_billing_amount_sums_split_cache_creation_costs, ,0,
+3,Add regression tests,DONE,Total-only split-only and uncategorized cases are covered,cargo test -p provider, ,0,
+4,Run verification,DONE,Provider tests pass under 60s,timeout 60 cargo test -p provider, ,0,

@@ -12,9 +12,11 @@ export type {
 export type ProviderType = 'custom';
 
 export type ProviderSchedulingMode = 'fixed_order' | 'cache_affinity' | 'load_balance';
+export type ProviderPriorityMode = 'provider' | 'key';
 
 export type ProviderCooldownRule = {
-  status_code: number;
+  status_code_start: number;
+  status_code_end: number;
   failure_count: number;
   cooldown_seconds: number;
 };
@@ -186,6 +188,7 @@ export type ProviderApiKey = {
   allowed_model_ids: string[];
   note?: string | null;
   internal_priority: number;
+  global_priority: number;
   rpm_limit?: number | null;
   learned_rpm_limit?: number | null;
   cache_ttl_minutes: number;
@@ -219,6 +222,16 @@ export type ProviderApiKeyCreate = {
 
 export type ProviderApiKeyUpdate = Partial<Omit<ProviderApiKeyCreate, 'api_key'>> & {
   api_key?: string;
+};
+
+export type ProviderApiKeyPriorityUpdate = {
+  provider_id: string;
+  key_id: string;
+  global_priority: number;
+};
+
+export type ProviderApiKeyPriorityBatchUpdate = {
+  updates: ProviderApiKeyPriorityUpdate[];
 };
 
 export type ProviderModelReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';

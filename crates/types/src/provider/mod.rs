@@ -12,8 +12,8 @@ mod time_range;
 pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCooldownPolicy, ProviderCooldownRule};
 pub use core::{Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderUpdate};
 pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate};
-pub use enums::ProviderSchedulingMode;
-pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate};
+pub use enums::{ProviderPriorityMode, ProviderSchedulingMode};
+pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate, ProviderApiKeyPriorityUpdate, ProviderApiKeyUpdate};
 pub use model_binding::{
     ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping,
     ProviderModelTestEndpoint, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpstreamModelsResponse,

@@ -17,6 +17,7 @@ pub(super) fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnap
     SchedulingSnapshot {
         default_rate_limit_rpm: 0,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        provider_priority_mode: types::provider::ProviderPriorityMode::Provider,
         cache_affinity_ttl_minutes: 5,
         client_request_record_level: RequestRecordLevel::Basic,
         client_record_request_headers: true,
@@ -220,6 +221,7 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         key_preview: format!("{id}-name"),
         encrypted_api_key: "encrypted".into(),
         internal_priority,
+        global_priority: internal_priority,
         rpm_limit: None,
         cache_ttl_minutes: 5,
         time_range_enabled: false,

@@ -22,6 +22,7 @@ import type {
   ProviderCooldownListResponse,
   ProviderModelCostListResponse,
   ProviderUpstreamModelsResponse,
+  ProviderApiKeyPriorityBatchUpdate,
 } from 'src/types/provider';
 
 import { useMemo } from 'react';
@@ -80,6 +81,25 @@ export function useProviderEndpoints(providerId?: string | null) {
 
 export function useProviderApiKeys(providerId?: string | null) {
   return useProviderChildResource<ProviderApiKey>(providerId, endpoints.adminProviders.keys);
+}
+
+export function useProviderPriorityKeys(providers: Provider[]) {
+  const providerIds = useMemo(() => providers.map((provider) => provider.id), [providers]);
+  const key = providerIds.length > 0 ? ['provider-priority-keys', providerIds] : null;
+  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
+    Record<string, ProviderApiKey[]>
+  >(key, () => fetchProviderKeysByProvider(providerIds), swrOptions);
+
+  return useMemo(
+    () => ({
+      itemsByProvider: data ?? {},
+      isLoading: providerIds.length > 0 ? isLoading : false,
+      error,
+      isValidating: providerIds.length > 0 ? isValidating : false,
+      refresh: revalidate,
+    }),
+    [data, error, isLoading, isValidating, providerIds.length, revalidate]
+  );
 }
 
 export function useProviderModels(providerId?: string | null) {
@@ -206,6 +226,15 @@ export async function updateProviderApiKey(
   return apiKey;
 }
 
+export async function updateProviderApiKeyPriorities(payload: ProviderApiKeyPriorityBatchUpdate) {
+  const apiKeys = await requestData<ProviderApiKey[]>(
+    axios.post(endpoints.adminProviders.keyBatchPriorities, payload)
+  );
+  await mutateProviders();
+  await Promise.all([...new Set(payload.updates.map((update) => update.provider_id))].map(mutateProviderChildren));
+  return apiKeys;
+}
+
 export async function fetchProviderUpstreamModels(providerId: string) {
   const response = await requestData<ProviderUpstreamModelsResponse>(
     axios.get(endpoints.adminProviders.upstreamModels(providerId))
@@ -309,6 +338,16 @@ async function requestSuccess(request: Promise<{ data: ApiEnvelope<unknown> }>) 
   if (!response.data.success) {
     throw new Error(response.data.message || 'Request failed');
   }
+}
+
+async function fetchProviderKeysByProvider(providerIds: string[]) {
+  const pairs = await Promise.all(
+    providerIds.map(async (providerId) => {
+      const keys = await requestData<ProviderApiKey[]>(axios.get(endpoints.adminProviders.keys(providerId)));
+      return [providerId, keys] as const;
+    })
+  );
+  return Object.fromEntries(pairs);
 }
 
 async function mutateProviders() {

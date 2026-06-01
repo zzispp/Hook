@@ -54,6 +54,8 @@ pub(in crate::migration::baseline) enum SystemSettings {
     RechargeMinAmount,
     RechargeMaxAmount,
     SchedulingMode,
+    ProviderPriorityMode,
+    KeyPrioritySnapshotInitialized,
     CacheAffinityTtlMinutes,
     ProviderCooldownPolicy,
     SmtpHost,

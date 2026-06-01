@@ -9,9 +9,9 @@ pub use api::{
 };
 pub use auth_api::{
     AccountEmailVerifyPayload, AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProfileResponse, AccountProviderLinkResponse,
-    AuthConfigResponse,
-    AuthProviderConfigResponse, AuthSessionData, OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse, OAuthProviderPublicConfig,
-    OAuthStartResponse, WalletNoncePayload, WalletNonceResponse, WalletProviderPublicConfig, WalletSignInPayload, WalletSignInResponse,
+    AuthConfigResponse, AuthProviderConfigResponse, AuthSessionData, OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse,
+    OAuthProviderPublicConfig, OAuthStartResponse, WalletNoncePayload, WalletNonceResponse, WalletProviderPublicConfig, WalletSignInPayload,
+    WalletSignInResponse,
 };
 pub use core::{
     Credentials, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, USER_QUOTA_MODE_UNLIMITED,

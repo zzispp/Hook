@@ -160,6 +160,8 @@ fn record_patch(
         recharge_min_amount: input.recharge_min_amount,
         recharge_max_amount: input.recharge_max_amount,
         scheduling_mode: input.scheduling_mode,
+        provider_priority_mode: input.provider_priority_mode,
+        key_priority_snapshot_initialized: input.key_priority_snapshot_initialized,
         cache_affinity_ttl_minutes: input.cache_affinity_ttl_minutes,
         provider_cooldown_policy: input.provider_cooldown_policy,
         smtp_host: input.smtp_host,

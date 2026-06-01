@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use types::{
     model::TieredPricingConfig,
-    provider::{ProviderCooldownPolicy, ProviderModelMapping, ProviderSchedulingMode},
+    provider::{ProviderCooldownPolicy, ProviderModelMapping, ProviderPriorityMode, ProviderSchedulingMode},
     system_setting::RequestRecordLevel,
 };
 
@@ -11,6 +11,7 @@ pub struct SchedulingSnapshot {
     #[serde(default)]
     pub default_rate_limit_rpm: i64,
     pub scheduling_mode: ProviderSchedulingMode,
+    pub provider_priority_mode: ProviderPriorityMode,
     pub cache_affinity_ttl_minutes: i64,
     pub client_request_record_level: RequestRecordLevel,
     pub client_record_request_headers: bool,
@@ -113,6 +114,7 @@ pub struct CachedProviderKey {
     pub key_preview: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
+    pub global_priority: i32,
     #[serde(default)]
     pub rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,

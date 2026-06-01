@@ -1,10 +1,11 @@
 use async_trait::async_trait;
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
-    ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpdate,
-    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
+    ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest,
+    ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    UsageRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -17,6 +18,7 @@ pub struct ProviderApiKeySecret {
     pub allowed_model_ids: Vec<String>,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
+    pub global_priority: i32,
     pub is_active: bool,
 }
 
@@ -41,6 +43,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
         input: ProviderApiKeyUpdate,
         encrypted_api_key: Option<String>,
     ) -> ProviderResult<ProviderApiKey>;
+    async fn batch_update_api_key_priorities(&self, input: ProviderApiKeyPriorityBatchUpdate) -> ProviderResult<Vec<ProviderApiKey>>;
     async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()>;
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding>;
     async fn batch_update_model_bindings(&self, provider_id: &str, input: ProviderModelBindingBatchUpdate) -> ProviderResult<Vec<ProviderModelBinding>>;
@@ -93,6 +96,7 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>>;
     async fn fetch_upstream_models(&self, provider_id: &str) -> ProviderResult<ProviderUpstreamModelsResponse>;
     async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyUpdate) -> ProviderResult<ProviderApiKey>;
+    async fn batch_update_api_key_priorities(&self, input: ProviderApiKeyPriorityBatchUpdate) -> ProviderResult<Vec<ProviderApiKey>>;
     async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()>;
     async fn create_model_binding(&self, provider_id: &str, input: ProviderModelBindingCreate) -> ProviderResult<ProviderModelBinding>;
     async fn batch_update_model_bindings(&self, provider_id: &str, input: ProviderModelBindingBatchUpdate) -> ProviderResult<Vec<ProviderModelBinding>>;

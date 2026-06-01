@@ -11,6 +11,7 @@ pub struct ProviderApiKey {
     pub allowed_model_ids: Vec<String>,
     pub note: Option<String>,
     pub internal_priority: i32,
+    pub global_priority: i32,
     pub rpm_limit: Option<i32>,
     pub learned_rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,
@@ -82,4 +83,17 @@ pub struct ProviderApiKeyUpdate {
     pub time_range_end: PatchField<String>,
     #[serde(default)]
     pub is_active: Option<bool>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct ProviderApiKeyPriorityUpdate {
+    pub provider_id: String,
+    pub key_id: String,
+    pub global_priority: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct ProviderApiKeyPriorityBatchUpdate {
+    #[serde(default)]
+    pub updates: Vec<ProviderApiKeyPriorityUpdate>,
 }

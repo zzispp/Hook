@@ -130,6 +130,9 @@ pub fn apply_provider_api_key_patch(active: &mut ProviderApiKeyActiveModel, inpu
     if let Some(value) = input.internal_priority {
         active.internal_priority = Set(value);
     }
+    if let Some(value) = input.global_priority {
+        active.global_priority = Set(value);
+    }
     apply_i32_patch(&mut active.rpm_limit, input.rpm_limit);
     if let Some(value) = input.cache_ttl_minutes {
         active.cache_ttl_minutes = Set(value);

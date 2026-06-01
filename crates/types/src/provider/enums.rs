@@ -28,3 +28,29 @@ impl From<&str> for ProviderSchedulingMode {
         }
     }
 }
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderPriorityMode {
+    #[default]
+    Provider,
+    Key,
+}
+
+impl ProviderPriorityMode {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Provider => "provider",
+            Self::Key => "key",
+        }
+    }
+}
+
+impl From<&str> for ProviderPriorityMode {
+    fn from(value: &str) -> Self {
+        match value {
+            "key" => Self::Key,
+            _ => Self::Provider,
+        }
+    }
+}

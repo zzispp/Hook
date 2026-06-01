@@ -23,11 +23,11 @@ mod types;
 
 pub use repository::ProviderStore;
 pub use types::{
-    BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderApiKeySecretRecord,
-    ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput,
-    ProviderModelRecordBatchUpdate, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch,
-    RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch,
-    RequestUpstreamCostRecordPatch,
+    BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyPriorityRecordPatch, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch,
+    ProviderApiKeySecretRecord, ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,
+    ProviderModelCostRecordInput, ProviderModelRecordBatchUpdate, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    RequestBillingRecordPatch, RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput,
+    RequestRecordRecordPatch, RequestUpstreamCostRecordPatch,
 };
 
 pub(super) use record::{ProviderEndpointRecord, ProviderModelRecord, ProviderRecord};

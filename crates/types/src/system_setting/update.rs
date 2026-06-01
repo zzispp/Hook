@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
-use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
+use crate::provider::{ProviderCooldownPolicy, ProviderPriorityMode, ProviderSchedulingMode};
 
 use super::{ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
@@ -108,6 +108,10 @@ pub struct SystemSettingsUpdate {
     #[serde(default)]
     pub scheduling_mode: Option<ProviderSchedulingMode>,
     #[serde(default)]
+    pub provider_priority_mode: Option<ProviderPriorityMode>,
+    #[serde(default)]
+    pub key_priority_snapshot_initialized: Option<bool>,
+    #[serde(default)]
     pub cache_affinity_ttl_minutes: Option<i64>,
     #[serde(default)]
     pub provider_cooldown_policy: Option<ProviderCooldownPolicy>,
@@ -175,6 +179,8 @@ impl SystemSettingsUpdate {
             && self.recharge_min_amount.is_none()
             && self.recharge_max_amount.is_none()
             && self.scheduling_mode.is_none()
+            && self.provider_priority_mode.is_none()
+            && self.key_priority_snapshot_initialized.is_none()
             && self.cache_affinity_ttl_minutes.is_none()
             && self.provider_cooldown_policy.is_none()
             && self.token_limit_per_user.is_none()

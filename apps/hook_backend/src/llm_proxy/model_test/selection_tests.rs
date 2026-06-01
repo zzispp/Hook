@@ -55,6 +55,7 @@ fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
     SchedulingSnapshot {
         default_rate_limit_rpm: 0,
         scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        provider_priority_mode: types::provider::ProviderPriorityMode::Provider,
         cache_affinity_ttl_minutes: 5,
         client_request_record_level: RequestRecordLevel::Basic,
         client_record_request_headers: true,
@@ -141,6 +142,7 @@ fn key(id: &str, api_formats: Vec<&str>) -> CachedProviderKey {
         key_preview: "sk-***".into(),
         encrypted_api_key: "encrypted".into(),
         internal_priority: 0,
+        global_priority: 0,
         rpm_limit: None,
         cache_ttl_minutes: 0,
         time_range_enabled: false,

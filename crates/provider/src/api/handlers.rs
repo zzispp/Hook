@@ -5,11 +5,12 @@ use axum::{
 use rbac::api::CurrentUser;
 use types::{
     provider::{
-        ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCooldown,
-        ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate,
-        ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
-        ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest, ProviderModelTestResponse,
-        ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+        ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
+        ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
+        ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
+        ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest,
+        ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+        UsageRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -105,6 +106,13 @@ pub async fn update_api_key(
     Json(payload): Json<ProviderApiKeyUpdate>,
 ) -> ApiResult<ApiJson<ProviderApiKey>> {
     Ok(ok(state.providers.update_api_key(&provider_id, &key_id, payload).await?))
+}
+
+pub async fn batch_update_api_key_priorities(
+    State(state): State<ProviderApiState>,
+    Json(payload): Json<ProviderApiKeyPriorityBatchUpdate>,
+) -> ApiResult<ApiJson<Vec<ProviderApiKey>>> {
+    Ok(ok(state.providers.batch_update_api_key_priorities(payload).await?))
 }
 
 pub async fn delete_api_key(State(state): State<ProviderApiState>, Path((provider_id, key_id)): Path<(String, String)>) -> ApiResult<ApiJson<()>> {

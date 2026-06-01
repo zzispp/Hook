@@ -1,6 +1,6 @@
 use types::{
     model::PatchField,
-    provider::{ProviderApiKeyCreate, ProviderApiKeyUpdate, parse_provider_key_time_range_minute},
+    provider::{ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate, ProviderApiKeyUpdate, parse_provider_key_time_range_minute},
 };
 
 use crate::application::{ProviderError, ProviderResult};
@@ -10,6 +10,7 @@ use super::{MAX_API_FORMAT_LENGTH, MAX_MODEL_ID_LENGTH, MAX_NAME_LENGTH, trim_op
 const TIME_RANGE_REQUIRED_MESSAGE: &str = "time_range_start and time_range_end are required when time_range_enabled is true";
 const TIME_RANGE_SAME_VALUE_MESSAGE: &str = "time_range_start and time_range_end cannot be equal";
 const TIME_RANGE_UPDATE_ENABLED_MESSAGE: &str = "time_range_enabled must be provided when changing time range";
+const MIN_PRIORITY: i32 = 0;
 
 pub fn sanitize_api_key(input: ProviderApiKeyCreate) -> ProviderApiKeyCreate {
     ProviderApiKeyCreate {
@@ -64,6 +65,20 @@ pub fn validate_api_key_update(input: &ProviderApiKeyUpdate) -> ProviderResult<(
         validate_ids("allowed_model_ids", allowed_model_ids)?;
     }
     validate_update_time_range(input)
+}
+
+pub fn validate_api_key_priority_batch(input: &ProviderApiKeyPriorityBatchUpdate) -> ProviderResult<()> {
+    if input.updates.is_empty() {
+        return Err(ProviderError::InvalidInput("api key priority batch payload is empty".into()));
+    }
+    for update in &input.updates {
+        validate_text("provider_id", update.provider_id.trim(), MAX_MODEL_ID_LENGTH)?;
+        validate_text("key_id", update.key_id.trim(), MAX_MODEL_ID_LENGTH)?;
+        if update.global_priority < MIN_PRIORITY {
+            return Err(ProviderError::InvalidInput("global_priority must be non-negative".into()));
+        }
+    }
+    Ok(())
 }
 
 fn validate_create_time_range(input: &ProviderApiKeyCreate) -> ProviderResult<()> {
@@ -254,6 +269,21 @@ mod tests {
             error.to_string(),
             "invalid input: api_formats must use canonical family:kind format: openai_chat"
         );
+    }
+
+    #[test]
+    fn validate_api_key_priority_batch_rejects_negative_priority() {
+        let input = ProviderApiKeyPriorityBatchUpdate {
+            updates: vec![types::provider::ProviderApiKeyPriorityUpdate {
+                provider_id: "provider-a".to_owned(),
+                key_id: "key-a".to_owned(),
+                global_priority: -1,
+            }],
+        };
+
+        let error = validate_api_key_priority_batch(&input).unwrap_err();
+
+        assert_eq!(error.to_string(), "invalid input: global_priority must be non-negative");
     }
 
     fn api_key_create(enabled: bool, start: Option<&str>, end: Option<&str>) -> ProviderApiKeyCreate {

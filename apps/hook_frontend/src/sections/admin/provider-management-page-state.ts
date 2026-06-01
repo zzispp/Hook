@@ -5,9 +5,9 @@ import type { Provider } from 'src/types/provider';
 import { useState, useCallback } from 'react';
 
 import { useGlobalModels } from 'src/actions/models';
-import { useProviders } from 'src/actions/providers';
 import { useTranslate } from 'src/locales/use-locales';
 import { useSystemSettings } from 'src/actions/system-settings';
+import { useProviders, useProviderPriorityKeys } from 'src/actions/providers';
 
 import { useTable } from 'src/components/table';
 
@@ -29,6 +29,7 @@ export function useProviderManagementState() {
   const providers = useProviders(ui.table.page, ui.table.rowsPerPage, toProviderFilters(ui.filters));
   const cooldownState = useProviderCooldownState(t, ui.cooldownTable);
   const priorityProviders = useProviders(0, PROVIDER_PRIORITY_LIMIT);
+  const priorityKeys = useProviderPriorityKeys(priorityProviders.items);
   const settings = useSystemSettings();
   const models = useGlobalModels(0, 1000);
   const dialog = useProviderDialog(t);
@@ -46,8 +47,9 @@ export function useProviderManagementState() {
     childDialogs,
     deleteDialog,
     cooldowns: cooldownState.cooldowns,
-    errorMessage: errorMessage(providers.error, cooldownState.cooldowns.error, settings.error, models.error),
+    errorMessage: errorMessage(providers.error, cooldownState.cooldowns.error, settings.error, models.error, priorityKeys.error),
     priorityProviders,
+    priorityKeys,
     cooldownFilters: cooldownState.filters,
     releasingCooldownId: cooldownState.releasingId,
     releaseCooldown: cooldownState.release,

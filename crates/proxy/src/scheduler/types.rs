@@ -7,6 +7,13 @@ pub enum SchedulingMode {
     LoadBalance,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum PriorityMode {
+    #[default]
+    Provider,
+    Key,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ModelAccessPolicy {
     All,
@@ -28,6 +35,7 @@ pub struct SchedulerInput {
     pub affinity: Option<AffinityCandidate>,
     pub load_balance_seed: Option<String>,
     pub scheduling_mode: SchedulingMode,
+    pub priority_mode: PriorityMode,
     pub global_keep_priority_on_conversion: bool,
     pub global_format_conversion_enabled: bool,
     pub providers: Vec<ProviderSnapshot>,

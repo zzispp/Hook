@@ -273,6 +273,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "provider_keys_read",
             "provider_keys_create",
             "provider_keys_update",
+            "provider_keys_batch_priorities",
             "provider_keys_delete",
             "provider_models_read",
             "provider_models_create",

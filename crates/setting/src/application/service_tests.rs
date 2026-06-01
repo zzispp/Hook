@@ -200,6 +200,8 @@ fn system_settings_response() -> SystemSettingsResponse {
         recharge_min_amount: Decimal::new(1, 2),
         recharge_max_amount: Decimal::new(3000, 0),
         scheduling_mode: ProviderSchedulingMode::CacheAffinity,
+        provider_priority_mode: types::provider::ProviderPriorityMode::Provider,
+        key_priority_snapshot_initialized: false,
         cache_affinity_ttl_minutes: 5,
         provider_cooldown_policy: ProviderCooldownPolicy::default(),
         smtp_host: String::new(),

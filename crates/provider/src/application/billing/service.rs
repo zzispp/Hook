@@ -1,3 +1,5 @@
+mod amount;
+
 use std::collections::BTreeMap;
 
 use rust_decimal::Decimal;
@@ -5,9 +7,9 @@ use serde_json::Value;
 use time::format_description::well_known::Rfc3339;
 
 use super::{
-    BuiltinRuleInput, DimensionCollectInput, DimensionCollector, DimensionCollectorRuntime, FormulaEngine, FormulaStatus, RequestBillingAmount,
+    BuiltinRuleInput, DimensionCollectInput, DimensionCollector, DimensionCollectorRuntime, FormulaEngine, FormulaStatus,
     rules::{BillingRuleLookup, BillingRuleScope, effective_rule_task_type, universal_rule},
-    types::{ACCOUNTING_CURRENCY, BILLING_SNAPSHOT_SCHEMA_VERSION, BillingSnapshot, BillingSnapshotStatus, CostResult, quantize},
+    types::{BILLING_SNAPSHOT_SCHEMA_VERSION, BillingSnapshot, BillingSnapshotStatus, CostResult, quantize},
 };
 
 #[derive(Clone, Debug)]
@@ -118,36 +120,10 @@ fn calculate_with_rule(input: BillingServiceInput, lookup: BillingRuleLookup, di
     }
 }
 
-impl From<CostResult> for RequestBillingAmount {
-    fn from(result: CostResult) -> Self {
-        let breakdown = &result.snapshot.cost_breakdown;
-        let input_cost = breakdown_cost(breakdown, "input_cost");
-        let output_cost = breakdown_cost(breakdown, "output_cost");
-        let cache_creation_cost = breakdown_cost(breakdown, "cache_creation_cost");
-        let cache_read_cost = breakdown_cost(breakdown, "cache_read_cost");
-        let request_cost = breakdown_cost(breakdown, "request_cost");
-        Self {
-            input_cost,
-            output_cost,
-            cache_creation_cost,
-            cache_read_cost,
-            request_cost,
-            token_cost: quantize(input_cost + output_cost + cache_creation_cost + cache_read_cost),
-            base_cost: result.snapshot.base_total_cost,
-            total_cost: result.snapshot.total_cost,
-            billing_multiplier: result.snapshot.billing_multiplier,
-            input_price_per_1m: snapshot_decimal(&result.snapshot, "input_price_per_1m"),
-            output_price_per_1m: snapshot_decimal(&result.snapshot, "output_price_per_1m"),
-            cache_creation_price_per_1m: snapshot_decimal(&result.snapshot, "cache_creation_price_per_1m"),
-            cache_read_price_per_1m: snapshot_decimal(&result.snapshot, "cache_read_price_per_1m"),
-            currency: ACCOUNTING_CURRENCY.into(),
-            snapshot: result.snapshot,
-        }
-    }
-}
-
 fn normalized_dimensions(api_format: &str, mut dimensions: BTreeMap<String, Value>, normalize_cache_tokens: bool) -> BTreeMap<String, Value> {
     alias(&mut dimensions, "cache_creation_tokens", "cache_creation_input_tokens");
+    derive_cache_creation_tokens(&mut dimensions);
+    derive_uncategorized_cache_creation_tokens(&mut dimensions);
     alias(&mut dimensions, "cache_read_tokens", "cache_read_input_tokens");
     dimensions.entry("request_count".into()).or_insert(Value::from(1));
     preserve_raw_input_tokens(&mut dimensions);
@@ -158,6 +134,25 @@ fn normalized_dimensions(api_format: &str, mut dimensions: BTreeMap<String, Valu
         normalize_billable_input_tokens(api_format, &mut dimensions);
     }
     dimensions
+}
+
+fn derive_cache_creation_tokens(dimensions: &mut BTreeMap<String, Value>) {
+    if dimensions.contains_key("cache_creation_tokens") {
+        return;
+    }
+    let split_total = int_dim(dimensions, "cache_creation_5m_input_tokens").saturating_add(int_dim(dimensions, "cache_creation_1h_input_tokens"));
+    if split_total > 0 {
+        dimensions.insert("cache_creation_tokens".into(), Value::from(split_total));
+    }
+}
+
+fn derive_uncategorized_cache_creation_tokens(dimensions: &mut BTreeMap<String, Value>) {
+    if dimensions.contains_key("cache_creation_uncategorized_tokens") {
+        return;
+    }
+    let split_total = int_dim(dimensions, "cache_creation_5m_input_tokens").saturating_add(int_dim(dimensions, "cache_creation_1h_input_tokens"));
+    let uncategorized = int_dim(dimensions, "cache_creation_tokens").saturating_sub(split_total).max(0);
+    dimensions.insert("cache_creation_uncategorized_tokens".into(), Value::from(uncategorized));
 }
 
 fn preserve_raw_input_tokens(dimensions: &mut BTreeMap<String, Value>) {
@@ -265,18 +260,6 @@ fn snapshot_for_incomplete(
         calculated_at: now_rfc3339(),
         engine_version: BILLING_SNAPSHOT_SCHEMA_VERSION.into(),
     }
-}
-
-fn breakdown_cost(breakdown: &BTreeMap<String, Decimal>, key: &str) -> Decimal {
-    breakdown.get(key).copied().unwrap_or(Decimal::ZERO)
-}
-
-fn snapshot_decimal(snapshot: &BillingSnapshot, key: &str) -> Option<Decimal> {
-    snapshot.resolved_variables.get(key).and_then(|value| match value {
-        Value::Number(number) => number.as_f64().and_then(Decimal::from_f64_retain),
-        Value::String(text) => text.parse().ok(),
-        _ => None,
-    })
 }
 
 fn scope_name(scope: &BillingRuleScope) -> &'static str {

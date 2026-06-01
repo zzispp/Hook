@@ -1,4 +1,4 @@
-import type { ProviderCooldownPolicy, ProviderSchedulingMode } from './provider';
+import type { ProviderPriorityMode, ProviderCooldownPolicy, ProviderSchedulingMode } from './provider';
 
 export type RequestRecordLevel = 'basic' | 'headers' | 'full';
 export type SmtpEncryption = 'none' | 'tls' | 'ssl';
@@ -65,6 +65,8 @@ export type SystemSettings = {
   recharge_min_amount: number;
   recharge_max_amount: number;
   scheduling_mode: ProviderSchedulingMode;
+  provider_priority_mode: ProviderPriorityMode;
+  key_priority_snapshot_initialized: boolean;
   cache_affinity_ttl_minutes: number;
   provider_cooldown_policy: ProviderCooldownPolicy;
   smtp_host: string;
@@ -135,6 +137,8 @@ export type SystemSettingsUpdate = Partial<{
   recharge_min_amount: number;
   recharge_max_amount: number;
   scheduling_mode: ProviderSchedulingMode;
+  provider_priority_mode: ProviderPriorityMode;
+  key_priority_snapshot_initialized: boolean;
   cache_affinity_ttl_minutes: number;
   provider_cooldown_policy: ProviderCooldownPolicy;
   smtp_host: string;

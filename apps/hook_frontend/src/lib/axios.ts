@@ -202,6 +202,7 @@ export const endpoints = {
     endpointById: (providerId: string, endpointId: string) =>
       `/api/admin/providers/${providerId}/endpoints/${endpointId}`,
     keys: (id: string) => `/api/admin/providers/${id}/keys`,
+    keyBatchPriorities: '/api/admin/providers/keys/batch-priorities',
     keyById: (providerId: string, keyId: string) =>
       `/api/admin/providers/${providerId}/keys/${keyId}`,
     upstreamModels: (id: string) => `/api/admin/providers/${id}/upstream-models`,

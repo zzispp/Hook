@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use types::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
+use types::provider::{ProviderCooldownPolicy, ProviderPriorityMode, ProviderSchedulingMode};
 use types::system_setting::{ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -54,6 +54,8 @@ pub struct SystemSettingsRecordPatch {
     pub recharge_min_amount: Option<Decimal>,
     pub recharge_max_amount: Option<Decimal>,
     pub scheduling_mode: Option<ProviderSchedulingMode>,
+    pub provider_priority_mode: Option<ProviderPriorityMode>,
+    pub key_priority_snapshot_initialized: Option<bool>,
     pub cache_affinity_ttl_minutes: Option<i64>,
     pub provider_cooldown_policy: Option<ProviderCooldownPolicy>,
     pub smtp_host: Option<String>,

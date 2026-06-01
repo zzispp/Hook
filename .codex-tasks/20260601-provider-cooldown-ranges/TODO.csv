@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Update shared policy schema and validation,DONE,Rust and TypeScript rule types use status_code_start/status_code_end,,2026-06-01,0,
+2,Update cooldown runtime matching and range counting,DONE,Range rules match inclusively and share failure counter,,2026-06-01,0,
+3,Update frontend policy modal and i18n seed text,DONE,Modal accepts single code and dash ranges with overlap validation,,2026-06-01,0,
+4,Run targeted verification,DONE,Rust tests plus frontend lint/build checked,timeout 60 cargo test -p setting provider_cooldown; timeout 60 cargo test -p backend provider_cooldown; pnpm lint:frontend; pnpm build:frontend; cargo fmt --check,2026-06-01,0,

@@ -71,6 +71,7 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         request_id: &request_id,
         affinity,
         mode: snapshot.scheduling_mode,
+        priority_mode: snapshot.provider_priority_mode,
     })?;
     let candidates = proxy_candidates(ProxyCandidateBuildInput {
         state,

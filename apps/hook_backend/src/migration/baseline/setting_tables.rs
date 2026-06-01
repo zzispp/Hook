@@ -62,6 +62,8 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(decimal_len(SystemSettings::RechargeMinAmount, 20, 8).default(Expr::cust("0.01")))
         .col(decimal_len(SystemSettings::RechargeMaxAmount, 20, 8).default(3000))
         .col(string_len(SystemSettings::SchedulingMode, 30))
+        .col(string_len(SystemSettings::ProviderPriorityMode, 30).default("provider"))
+        .col(boolean(SystemSettings::KeyPrioritySnapshotInitialized).default(false))
         .col(big_integer(SystemSettings::CacheAffinityTtlMinutes).default(DEFAULT_CACHE_AFFINITY_TTL_MINUTES))
         .col(text(SystemSettings::ProviderCooldownPolicy).default(r#"{"window_seconds":0,"rules":[]}"#))
         .col(string_len(SystemSettings::SmtpHost, 255))

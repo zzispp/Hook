@@ -19,6 +19,12 @@ const EMPTY_POLICY: ProviderCooldownPolicy = { window_seconds: 0, rules: [] };
 const DEFAULT_SECONDS = '300';
 const MIN_STATUS_CODE = 100;
 const MAX_STATUS_CODE = 599;
+const STATUS_CODE_RANGE_SEPARATOR = '-';
+
+type StatusCodeRange = {
+  start: number;
+  end: number;
+};
 
 export function initialPolicyForm(policy?: ProviderCooldownPolicy): PolicyForm {
   const current = policy ?? EMPTY_POLICY;
@@ -43,41 +49,42 @@ export function policyPayload({ windowSeconds, rules, t }: PolicyPayloadOptions)
   const windowSecondsValue = positiveInteger(windowSeconds);
   if (windowSecondsValue === null) throw new Error(t('messages.providerCooldownWindowRequired'));
 
-  const statusCodes = new Set<number>();
+  const statusCodeRanges: StatusCodeRange[] = [];
 
   return {
     window_seconds: windowSecondsValue,
-    rules: rules.map((rule) => rulePayload({ rule, statusCodes, t })),
+    rules: rules.map((rule) => rulePayload({ rule, statusCodeRanges, t })),
   };
 }
 
 function rulePayload({
   rule,
-  statusCodes,
+  statusCodeRanges,
   t,
 }: {
   rule: RuleForm;
-  statusCodes: Set<number>;
+  statusCodeRanges: StatusCodeRange[];
   t: (key: string) => string;
 }): ProviderCooldownRule {
   if (ruleIncomplete(rule)) throw new Error(t('messages.providerCooldownRuleRequired'));
 
-  const statusCode = integerValue(rule.status_code);
+  const statusCodeRange = parseStatusCodeRange(rule.status_code);
   const failureCount = positiveInteger(rule.failure_count);
   const cooldownSeconds = positiveInteger(rule.cooldown_seconds);
 
-  if (statusCode === null || statusCode < MIN_STATUS_CODE || statusCode > MAX_STATUS_CODE) {
+  if (statusCodeRange === null || !validStatusCodeRange(statusCodeRange)) {
     throw new Error(t('messages.providerCooldownStatusCodeInvalid'));
   }
   if (failureCount === null || cooldownSeconds === null) {
     throw new Error(t('messages.providerCooldownPositiveValuesRequired'));
   }
-  if (statusCodes.has(statusCode))
+  if (statusCodeRanges.some((range) => rangesOverlap(range, statusCodeRange)))
     throw new Error(t('messages.providerCooldownDuplicateStatusCode'));
 
-  statusCodes.add(statusCode);
+  statusCodeRanges.push(statusCodeRange);
   return {
-    status_code: statusCode,
+    status_code_start: statusCodeRange.start,
+    status_code_end: statusCodeRange.end,
     failure_count: failureCount,
     cooldown_seconds: cooldownSeconds,
   };
@@ -85,7 +92,7 @@ function rulePayload({
 
 function ruleForm(rule: ProviderCooldownRule): RuleForm {
   return {
-    status_code: String(rule.status_code),
+    status_code: formatStatusCodeRange(rule),
     failure_count: String(rule.failure_count),
     cooldown_seconds: String(rule.cooldown_seconds),
   };
@@ -105,4 +112,32 @@ function integerValue(value: string) {
   if (!trimmed) return null;
   const number = Number(trimmed);
   return Number.isInteger(number) ? number : null;
+}
+
+function parseStatusCodeRange(value: string): StatusCodeRange | null {
+  const parts = value.split(STATUS_CODE_RANGE_SEPARATOR).map((part) => integerValue(part));
+  if (parts.length === 1 && parts[0] !== null) return { start: parts[0], end: parts[0] };
+  if (parts.length === 2 && parts[0] !== null && parts[1] !== null) {
+    return { start: parts[0], end: parts[1] };
+  }
+  return null;
+}
+
+function validStatusCodeRange(range: StatusCodeRange) {
+  return (
+    range.start >= MIN_STATUS_CODE &&
+    range.start <= MAX_STATUS_CODE &&
+    range.end >= MIN_STATUS_CODE &&
+    range.end <= MAX_STATUS_CODE &&
+    range.start <= range.end
+  );
+}
+
+function rangesOverlap(left: StatusCodeRange, right: StatusCodeRange) {
+  return left.start <= right.end && right.start <= left.end;
+}
+
+function formatStatusCodeRange(rule: ProviderCooldownRule) {
+  if (rule.status_code_start === rule.status_code_end) return String(rule.status_code_start);
+  return `${rule.status_code_start}-${rule.status_code_end}`;
 }

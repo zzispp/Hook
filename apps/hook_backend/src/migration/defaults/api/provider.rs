@@ -62,6 +62,12 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "更新提供商密钥",
     },
     ApiDefinition {
+        code: "provider_keys_batch_priorities",
+        method: "POST",
+        path_pattern: "/api/admin/providers/keys/batch-priorities",
+        name: "批量更新提供商密钥优先级",
+    },
+    ApiDefinition {
         code: "provider_keys_delete",
         method: "DELETE",
         path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}",

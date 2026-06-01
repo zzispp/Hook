@@ -51,21 +51,7 @@ pub fn universal_rule(input: BuiltinRuleInput) -> BillingRule {
         .unwrap_or(input_price * Decimal::new(125, 2));
     let cache_read_price = first.and_then(cache_read_price).unwrap_or(input_price * Decimal::new(1, 1));
 
-    let mut mappings = json!({
-        "input_tokens": {"source": "dimension", "key": "input_tokens", "required": false, "allow_zero": true, "default": 0},
-        "output_tokens": {"source": "dimension", "key": "output_tokens", "required": false, "allow_zero": true, "default": 0},
-        "cache_creation_tokens": {"source": "dimension", "key": "cache_creation_tokens", "required": false, "allow_zero": true, "default": 0},
-        "cache_read_tokens": {"source": "dimension", "key": "cache_read_tokens", "required": false, "allow_zero": true, "default": 0},
-        "request_count": {"source": "dimension", "key": "request_count", "required": false, "allow_zero": true, "default": 1},
-        "duration_seconds": {"source": "dimension", "key": "duration_seconds", "required": false, "allow_zero": true, "default": 0},
-        "video_price_per_second": {"source": "constant", "default": 0},
-        "input_cost": {"source": "computed", "expression": "input_tokens * input_price_per_1m / 1000000", "required": false, "default": 0},
-        "output_cost": {"source": "computed", "expression": "output_tokens * output_price_per_1m / 1000000", "required": false, "default": 0},
-        "cache_creation_cost": {"source": "computed", "expression": "cache_creation_tokens * cache_creation_price_per_1m / 1000000", "required": false, "default": 0},
-        "cache_read_cost": {"source": "computed", "expression": "cache_read_tokens * cache_read_price_per_1m / 1000000", "required": false, "default": 0},
-        "request_cost": {"source": "computed", "expression": "request_count * price_per_request", "required": false, "default": 0},
-        "video_cost": {"source": "computed", "expression": "duration_seconds * video_price_per_second", "required": false, "default": 0}
-    });
+    let mut mappings = default_dimension_mappings();
 
     if !input.tiered_pricing.tiers.is_empty() {
         mappings["input_price_per_1m"] = tiered_mapping("input_price_per_1m", &input.tiered_pricing, None);
@@ -78,7 +64,7 @@ pub fn universal_rule(input: BuiltinRuleInput) -> BillingRule {
         id: "__default__".into(),
         name: format!("Default rule for {}", input.global_model_name),
         task_type: effective_rule_task_type(&input.task_type),
-        expression: "input_cost + output_cost + cache_creation_cost + cache_read_cost + request_cost + video_cost".into(),
+        expression: default_expression().into(),
         variables: json!({
             "input_price_per_1m": input_price,
             "output_price_per_1m": output_price,
@@ -88,6 +74,48 @@ pub fn universal_rule(input: BuiltinRuleInput) -> BillingRule {
         }),
         dimension_mappings: mappings,
     }
+}
+
+fn default_dimension_mappings() -> Value {
+    json!({
+        "input_tokens": {"source": "dimension", "key": "input_tokens", "required": false, "allow_zero": true, "default": 0},
+        "output_tokens": {"source": "dimension", "key": "output_tokens", "required": false, "allow_zero": true, "default": 0},
+        "cache_creation_tokens": {"source": "dimension", "key": "cache_creation_tokens", "required": false, "allow_zero": true, "default": 0},
+        "cache_creation_5m_input_tokens": {"source": "dimension", "key": "cache_creation_5m_input_tokens", "required": false, "allow_zero": true, "default": 0},
+        "cache_creation_1h_input_tokens": {"source": "dimension", "key": "cache_creation_1h_input_tokens", "required": false, "allow_zero": true, "default": 0},
+        "cache_read_tokens": {"source": "dimension", "key": "cache_read_tokens", "required": false, "allow_zero": true, "default": 0},
+        "request_count": {"source": "dimension", "key": "request_count", "required": false, "allow_zero": true, "default": 1},
+        "duration_seconds": {"source": "dimension", "key": "duration_seconds", "required": false, "allow_zero": true, "default": 0},
+        "video_price_per_second": {"source": "constant", "default": 0},
+        "cache_creation_uncategorized_tokens": {"source": "dimension", "key": "cache_creation_uncategorized_tokens", "required": false, "allow_zero": true, "default": 0},
+        "input_cost": {"source": "computed", "expression": "input_tokens * input_price_per_1m / 1000000", "required": false, "default": 0},
+        "output_cost": {"source": "computed", "expression": "output_tokens * output_price_per_1m / 1000000", "required": false, "default": 0},
+        "cache_creation_uncategorized_cost": {
+            "source": "computed",
+            "expression": "cache_creation_uncategorized_tokens * cache_creation_price_per_1m / 1000000",
+            "required": false,
+            "default": 0
+        },
+        "cache_creation_ephemeral_5m_cost": {
+            "source": "computed",
+            "expression": "cache_creation_5m_input_tokens * cache_creation_price_per_1m / 1000000",
+            "required": false,
+            "default": 0
+        },
+        "cache_creation_ephemeral_1h_cost": {
+            "source": "computed",
+            "expression": "cache_creation_1h_input_tokens * cache_creation_price_per_1m / 1000000",
+            "required": false,
+            "default": 0
+        },
+        "cache_read_cost": {"source": "computed", "expression": "cache_read_tokens * cache_read_price_per_1m / 1000000", "required": false, "default": 0},
+        "request_cost": {"source": "computed", "expression": "request_count * price_per_request", "required": false, "default": 0},
+        "video_cost": {"source": "computed", "expression": "duration_seconds * video_price_per_second", "required": false, "default": 0}
+    })
+}
+
+fn default_expression() -> &'static str {
+    "input_cost + output_cost + cache_creation_uncategorized_cost + cache_creation_ephemeral_5m_cost + cache_creation_ephemeral_1h_cost + cache_read_cost + request_cost + video_cost"
 }
 
 fn tiered_mapping(key: &str, pricing: &TieredPricingConfig, ttl_value_key: Option<&str>) -> Value {

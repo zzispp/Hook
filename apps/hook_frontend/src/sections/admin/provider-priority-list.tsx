@@ -82,6 +82,14 @@ function PriorityRow({
             <DisabledChip />
           </Stack>
         )}
+        {(item.providerName || item.apiFormats?.length) && (
+          <Stack direction="row" spacing={0.75} sx={{ mt: 0.5 }} useFlexGap flexWrap="wrap">
+            {item.providerName ? <Chip size="small" variant="soft" label={item.providerName} /> : null}
+            {item.apiFormats?.map((format) => (
+              <Chip key={format} size="small" label={format} />
+            ))}
+          </Stack>
+        )}
       </Box>
     </Box>
   );

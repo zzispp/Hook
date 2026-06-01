@@ -1,6 +1,6 @@
 use rust_decimal::Decimal;
 
-use crate::provider::{ProviderCooldownPolicy, ProviderSchedulingMode};
+use crate::provider::{ProviderCooldownPolicy, ProviderPriorityMode, ProviderSchedulingMode};
 
 use super::{ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
@@ -56,6 +56,8 @@ pub struct SystemSettings {
     pub recharge_min_amount: Decimal,
     pub recharge_max_amount: Decimal,
     pub scheduling_mode: ProviderSchedulingMode,
+    pub provider_priority_mode: ProviderPriorityMode,
+    pub key_priority_snapshot_initialized: bool,
     pub cache_affinity_ttl_minutes: i64,
     pub provider_cooldown_policy: ProviderCooldownPolicy,
     pub smtp_host: String,

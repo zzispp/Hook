@@ -150,13 +150,17 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
       <ProviderPriorityDialog
         open={state.priorityOpen}
         providers={state.priorityProviders.items}
-        loading={state.priorityProviders.isLoading}
+        keysByProvider={state.priorityKeys.itemsByProvider}
+        loading={state.priorityProviders.isLoading || state.priorityKeys.isLoading}
         schedulingMode={state.settings.data?.scheduling_mode ?? 'cache_affinity'}
+        priorityMode={state.settings.data?.provider_priority_mode ?? 'provider'}
+        keyPrioritySnapshotInitialized={state.settings.data?.key_priority_snapshot_initialized ?? false}
         cacheAffinityTtlMinutes={state.settings.data?.cache_affinity_ttl_minutes ?? 5}
         onClose={() => state.setPriorityOpen(false)}
         onSaved={() => {
           void state.providers.refresh();
           void state.priorityProviders.refresh();
+          void state.priorityKeys.refresh();
           void state.settings.refresh();
         }}
       />

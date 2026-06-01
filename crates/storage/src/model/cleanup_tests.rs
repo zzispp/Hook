@@ -130,6 +130,7 @@ fn provider_api_key(id: &str, allowed_model_ids: &str) -> provider_api_keys::Mod
         encrypted_api_key: "encrypted".to_owned(),
         note: None,
         internal_priority: 0,
+        global_priority: 0,
         rpm_limit: None,
         learned_rpm_limit: None,
         cache_ttl_minutes: 60,

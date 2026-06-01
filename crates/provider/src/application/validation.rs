@@ -12,7 +12,7 @@ use super::{ProviderError, ProviderResult};
 mod api_key;
 mod endpoint;
 
-pub use api_key::{sanitize_api_key, sanitize_api_key_update, validate_api_key, validate_api_key_update};
+pub use api_key::{sanitize_api_key, sanitize_api_key_update, validate_api_key, validate_api_key_priority_batch, validate_api_key_update};
 pub use endpoint::{sanitize_endpoint, sanitize_endpoint_update, validate_endpoint, validate_endpoint_update};
 
 const MAX_LIST_LIMIT: u64 = 1000;

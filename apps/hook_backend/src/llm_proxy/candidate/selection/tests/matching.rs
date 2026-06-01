@@ -16,7 +16,7 @@ use crate::llm_proxy::{
 };
 
 #[test]
-fn matching_candidate_parts_compacts_endpoint_key_product_into_provider_route() {
+fn matching_candidate_parts_builds_one_candidate_per_key() {
     let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
     let group = &snapshot.groups[0];
 
@@ -32,13 +32,14 @@ fn matching_candidate_parts_compacts_endpoint_key_product_into_provider_route() 
         cooled_provider_ids: &HashSet::new(),
     });
 
-    assert_eq!(parts.len(), 1);
+    assert_eq!(parts.len(), 2);
     assert_eq!(parts[0].provider.id, "provider-a");
     assert_eq!(parts[0].endpoints.len(), 2);
-    assert_eq!(parts[0].keys.len(), 2);
+    assert_eq!(parts[0].keys.len(), 1);
     assert_eq!(parts[0].endpoints[0].api_format, "openai:chat");
     assert_eq!(parts[0].endpoints[1].api_format, "gemini:chat");
     assert_eq!(parts[0].keys[0].id, "key-a-1");
+    assert_eq!(parts[1].keys[0].id, "key-a-2");
 }
 
 #[test]
@@ -59,10 +60,10 @@ fn matching_candidate_parts_promotes_affinity_key_inside_route() {
         cooled_provider_ids: &HashSet::new(),
     });
 
-    assert_eq!(parts.len(), 1);
+    assert_eq!(parts.len(), 2);
     assert_eq!(parts[0].endpoints[0].id, "endpoint-openai");
     assert_eq!(parts[0].keys[0].id, "key-a-2");
-    assert_eq!(parts[0].keys[1].id, "key-a-1");
+    assert_eq!(parts[1].keys[0].id, "key-a-1");
 }
 
 fn affinity(key_id: &str) -> AffinitySelection {
@@ -93,9 +94,9 @@ fn matching_candidate_parts_keeps_all_provider_routes_without_silent_budget() {
         cooled_provider_ids: &HashSet::new(),
     });
 
-    assert_eq!(parts.len(), 2);
+    assert_eq!(parts.len(), 3);
     assert_eq!(parts[0].provider.id, "provider-a");
-    assert_eq!(parts[1].provider.id, "provider-b");
+    assert_eq!(parts[2].provider.id, "provider-b");
 }
 
 #[test]
@@ -115,7 +116,7 @@ fn matching_candidate_parts_prefers_highest_priority_mapped_provider_model_name(
         cooled_provider_ids: &HashSet::new(),
     });
 
-    assert_eq!(parts.len(), 1);
+    assert_eq!(parts.len(), 2);
     assert_eq!(parts[0].model.provider_model_name, "mapped-upstream-model");
     assert_eq!(
         parts[0]
@@ -175,6 +176,33 @@ fn matching_candidate_parts_filters_cooled_providers() {
 
     assert_eq!(parts.len(), 1);
     assert_eq!(parts[0].provider.id, "provider-b");
+}
+
+#[test]
+fn matching_candidate_parts_filters_all_keys_for_cooled_provider_in_key_mode() {
+    let snapshot = SchedulingSnapshot {
+        provider_priority_mode: types::provider::ProviderPriorityMode::Key,
+        providers: vec![provider_with_endpoints_and_keys(), provider_b()],
+        ..snapshot_with_provider(provider_with_endpoints_and_keys())
+    };
+    let group = &snapshot.groups[0];
+    let cooled_provider_ids = HashSet::from(["provider-a".to_owned()]);
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: request(),
+        affinity: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+        cooled_provider_ids: &cooled_provider_ids,
+    });
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].provider.id, "provider-b");
+    assert!(parts.iter().all(|part| part.keys[0].provider_id != "provider-a"));
 }
 
 #[test]
@@ -319,9 +347,9 @@ fn matching_candidate_parts_routes_non_chat_request_only_to_matching_data_format
         cooled_provider_ids: &HashSet::new(),
     });
 
-    assert_eq!(parts.len(), 1);
-    assert_eq!(parts[0].endpoints.len(), 1);
-    assert_eq!(parts[0].endpoints[0].api_format, "openai_image");
+    assert_eq!(parts.len(), 2);
+    assert!(parts.iter().all(|part| part.endpoints.len() == 1));
+    assert!(parts.iter().all(|part| part.endpoints[0].api_format == "openai_image"));
 }
 
 #[test]
@@ -375,11 +403,18 @@ fn matching_candidate_parts_requires_key_to_support_endpoint_format() {
         cooled_provider_ids: &HashSet::new(),
     });
 
-    assert_eq!(parts.len(), 1);
-    assert_eq!(parts[0].endpoints.len(), 2);
-    assert_eq!(parts[0].keys.len(), 2);
-    assert!(parts[0].endpoints.iter().any(|endpoint| endpoint.api_format == "openai:chat"));
-    assert!(parts[0].endpoints.iter().any(|endpoint| endpoint.api_format == "gemini:chat"));
+    assert_eq!(parts.len(), 2);
+    assert!(parts.iter().all(|part| part.keys.len() == 1));
+    assert!(
+        parts
+            .iter()
+            .any(|part| part.keys[0].id == "key-openai" && part.endpoints.iter().any(|endpoint| endpoint.api_format == "openai:chat"))
+    );
+    assert!(
+        parts
+            .iter()
+            .any(|part| part.keys[0].id == "key-gemini" && part.endpoints.iter().any(|endpoint| endpoint.api_format == "gemini:chat"))
+    );
 }
 
 #[test]
