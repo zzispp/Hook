@@ -54,15 +54,15 @@ export function useWalletSigning() {
     async (input: WalletAccountResult & { message: string }): Promise<WalletSignatureResult> => {
       const account = await ensureWalletAccount({
         request: input,
-        address,
-        activeChainId,
+        address: input.address,
+        activeChainId: input.chainId ?? activeChainId,
         switchChainAsync,
       });
       assertMatchingAddress(account.address, input.address);
       const signature = await signMessageAsync({ message: input.message });
       return { ...account, signature };
     },
-    [activeChainId, address, signMessageAsync, switchChainAsync]
+    [activeChainId, signMessageAsync, switchChainAsync]
   );
 
   usePendingRainbowKitConnection({

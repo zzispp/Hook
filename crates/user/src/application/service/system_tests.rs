@@ -71,7 +71,8 @@ async fn system_user_cannot_change_account_password() {
         .change_account_password(
             user_id(0),
             AccountPasswordChangePayload {
-                email_verification_code: "123456".into(),
+                email_verification_code: Some("123456".into()),
+                current_password: None,
                 password: "new-secret123".into(),
             },
         )

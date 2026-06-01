@@ -3,7 +3,6 @@
 import type * as z from 'zod';
 import type { IdentityProvider } from 'src/types/rbac';
 import type { WalletSignInResponse } from '../../context/jwt';
-import type { WalletTicketState } from './jwt-social-sign-in';
 import type { WalletProviderPublicConfig } from 'src/actions/auth-config';
 
 import { useMemo, useState } from 'react';
@@ -32,9 +31,7 @@ import {
   startOAuth,
   walletNonce,
   walletSignIn,
-  completeWallet,
   signInWithPassword,
-  requestWalletEmailCode,
   applyAuthenticatedSession,
 } from '../../context/jwt';
 
@@ -52,7 +49,7 @@ const PASSWORD_RESET_SUCCESS_VALUE = 'success';
 export function JwtSignInView() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, currentLang } = useTranslate('auth');
+  const { t } = useTranslate('auth');
 
   const { checkUserSession } = useAuthContext();
   const { signWalletMessage, connectWalletAccount } = useWalletSigning();
@@ -61,10 +58,6 @@ export function JwtSignInView() {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [socialLoading, setSocialLoading] = useState<IdentityProvider | null>(null);
-  const [walletTicket, setWalletTicket] = useState<WalletTicketState | null>(null);
-  const [walletEmail, setWalletEmail] = useState('');
-  const [walletCode, setWalletCode] = useState('');
-  const [walletCodeSent, setWalletCodeSent] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
@@ -156,12 +149,6 @@ export function JwtSignInView() {
       <JwtSocialSignIn
         providers={providers}
         loading={socialLoading}
-        walletTicket={walletTicket}
-        walletEmail={walletEmail}
-        walletCode={walletCode}
-        walletCodeSent={walletCodeSent}
-        onWalletEmailChange={setWalletEmail}
-        onWalletCodeChange={setWalletCode}
         onOAuth={(provider) =>
           runSocialAction(setErrorMessage, setSocialLoading, provider, async () => {
             const { authorization_url } = await startOAuth(provider);
@@ -181,41 +168,8 @@ export function JwtSignInView() {
               message: challenge.message,
               signature: signed.signature,
             });
-            await handleWalletResult(result, checkUserSession, router.refresh, setWalletTicket);
+            await handleWalletResult(result, checkUserSession, router.refresh, t);
           })
-        }
-        onSendWalletCode={() =>
-          runSocialAction(
-            setErrorMessage,
-            setSocialLoading,
-            walletTicket?.provider ?? 'evm',
-            async () => {
-              if (!walletTicket) return;
-              await requestWalletEmailCode({
-                walletTicket: walletTicket.ticket,
-                email: walletEmail,
-                lang: currentLang.value,
-              });
-              setWalletCodeSent(true);
-            }
-          )
-        }
-        onCompleteWallet={() =>
-          runSocialAction(
-            setErrorMessage,
-            setSocialLoading,
-            walletTicket?.provider ?? 'evm',
-            async () => {
-              if (!walletTicket) return;
-              await completeWallet({
-                walletTicket: walletTicket.ticket,
-                email: walletEmail,
-                emailVerificationCode: walletCode,
-              });
-              await checkUserSession?.();
-              router.refresh();
-            }
-          )
         }
       />
 
@@ -273,7 +227,7 @@ async function handleWalletResult(
   result: WalletSignInResponse,
   checkUserSession: (() => Promise<void>) | undefined,
   refresh: VoidFunction,
-  setWalletTicket: (ticket: WalletTicketState | null) => void
+  t: ReturnType<typeof useTranslate>['t']
 ) {
   if (result.status === 'authenticated') {
     await applyAuthenticatedSession(result);
@@ -281,9 +235,6 @@ async function handleWalletResult(
     refresh();
     return;
   }
-  setWalletTicket({
-    ticket: result.wallet_ticket,
-    provider: result.provider as Extract<IdentityProvider, 'evm'>,
-    address: result.address,
-  });
+
+  throw new Error(t('social.walletAccountRequired', { address: result.address }));
 }

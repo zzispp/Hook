@@ -68,6 +68,21 @@ impl RegistrationEmailConfig for StorageRegistrationEmailConfig {
         })
     }
 
+    async fn account_email_settings(&self) -> AppResult<EmailSettings> {
+        let settings = self.settings.get_system_settings().await.map_err(storage_error)?;
+        Ok(EmailSettings {
+            site_name: settings.site_name,
+            feature_enabled: true,
+            email_config_enabled: settings.email_config_enabled,
+            smtp_host: settings.smtp_host,
+            smtp_username: settings.smtp_username,
+            smtp_password_set: settings.smtp_password_set,
+            smtp_from_email: settings.smtp_from_email,
+            smtp_from_name: settings.smtp_from_name,
+            smtp_encryption: settings.smtp_encryption,
+        })
+    }
+
     async fn registration_email_template(&self, lang: &str) -> AppResult<RegistrationEmailTemplate> {
         let subject = self.template_value(lang, REGISTRATION_SUBJECT_KEY).await?;
         let html = self.template_value(lang, REGISTRATION_HTML_KEY).await?;

@@ -1,5 +1,6 @@
 'use client';
 
+import type { Theme } from '@mui/material/styles';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { ProviderModelBinding } from 'src/types/provider';
 
@@ -9,7 +10,6 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
@@ -58,9 +58,8 @@ export function ProviderModelMappingsSection({ providerId, items, loading, model
             {t('actions.addProviderModelMapping')}
           </Button>
         </Stack>
-        <Divider />
-        <Box sx={{ p: 2 }}>
-          {mappedItems.length > 0 ? (
+        {mappedItems.length > 0 ? (
+          <Box sx={{ p: 2 }}>
             <Stack spacing={1.5}>
               {mappedItems.map((item) => (
                 <MappingRow
@@ -75,10 +74,10 @@ export function ProviderModelMappingsSection({ providerId, items, loading, model
                 />
               ))}
             </Stack>
-          ) : (
-            <EmptyList loading={loading} length={mappedItems.length} />
-          )}
-        </Box>
+          </Box>
+        ) : (
+          <EmptyList loading={loading} length={mappedItems.length} />
+        )}
       </Box>
       <ProviderModelMappingDialog
         open={dialogOpen}
@@ -152,6 +151,14 @@ function MappingRow({
   );
 }
 
-const panelSx = { border: (theme: any) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 1 };
-const headerSx = { px: 2, py: 1.5 };
+const panelSx = {
+  border: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`,
+  borderRadius: 2,
+  overflow: 'hidden',
+};
+const headerSx = {
+  px: 2,
+  py: 1.5,
+  borderBottom: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`,
+};
 const rowSx = { border: (theme: any) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 1.5, p: 1.5 };

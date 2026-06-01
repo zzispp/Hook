@@ -1,8 +1,6 @@
 'use client';
 
-import type { IdentityProvider } from 'src/types/rbac';
-
-import { useState, useEffect, useCallback } from 'react';
+import type { OAuthProvider, OAuthCallbackContentProps } from './jwt-oauth-callback-controller';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
@@ -10,100 +8,26 @@ import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { paths } from 'src/routes/paths';
-import { useRouter, useSearchParams } from 'src/routes/hooks';
-
 import { useTranslate } from 'src/locales/use-locales';
-import { completeAccountOAuthCallback } from 'src/actions/account';
 
-import { useAuthContext } from '../../hooks';
-import { getErrorMessage } from '../../utils';
-import { bindOAuthExisting, completeOAuthCallback, applyAuthenticatedSession } from '../../context/jwt';
+import {
+  ACCOUNT_OAUTH_BINDING_KEY,
+  useOAuthCallbackController,
+} from './jwt-oauth-callback-controller';
+
+export { ACCOUNT_OAUTH_BINDING_KEY };
 
 type Props = {
-  provider: Extract<IdentityProvider, 'github' | 'google'>;
-};
-
-export const ACCOUNT_OAUTH_BINDING_KEY = 'hook.account.oauth.binding';
-
-type BindingState = {
-  bindingTicket: string;
-  provider: Extract<IdentityProvider, 'github' | 'google'>;
-  email: string;
-  username: string;
+  provider: OAuthProvider;
 };
 
 export function JwtOAuthCallbackView({ provider }: Props) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  return <OAuthCallbackContent {...useOAuthCallbackController(provider)} />;
+}
+
+function OAuthCallbackContent(props: OAuthCallbackContentProps) {
   const { t } = useTranslate('auth');
-  const { checkUserSession } = useAuthContext();
-  const accountBinding = accountOAuthBindingProvider() === provider;
-
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [binding, setBinding] = useState<BindingState | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-
-  const finishAuthenticated = useCallback(async () => {
-    await checkUserSession?.();
-    router.replace(paths.dashboard.root);
-  }, [checkUserSession, router]);
-
-  useEffect(() => {
-    const code = searchParams.get('code')?.trim();
-    const state = searchParams.get('state')?.trim();
-    if (!code || !state) {
-      setErrorMessage(t('social.oauthMissingParams'));
-      setLoading(false);
-      return;
-    }
-    if (accountBinding) {
-      completeAccountOAuthCallback({ provider, code, state })
-        .then(() => {
-          router.replace(`${paths.dashboard.profile}?provider_linked=1`);
-        })
-        .catch((error) => setErrorMessage(getErrorMessage(error)))
-        .finally(() => {
-          window.sessionStorage.removeItem(ACCOUNT_OAUTH_BINDING_KEY);
-          setLoading(false);
-        });
-      return;
-    }
-    completeOAuthCallback({ provider, code, state })
-      .then(async (result) => {
-        if (result.status === 'authenticated') {
-          await applyAuthenticatedSession(result);
-          await finishAuthenticated();
-          return;
-        }
-        setBinding({
-          bindingTicket: result.binding_ticket,
-          provider: result.provider as Extract<IdentityProvider, 'github' | 'google'>,
-          email: result.email,
-          username: result.username,
-        });
-      })
-      .catch((error) => setErrorMessage(getErrorMessage(error)))
-      .finally(() => setLoading(false));
-  }, [accountBinding, finishAuthenticated, provider, router, searchParams, t]);
-
-  const confirmBinding = async () => {
-    if (!binding) return;
-    setSubmitting(true);
-    setErrorMessage(null);
-    try {
-      await bindOAuthExisting({
-        provider: binding.provider,
-        bindingTicket: binding.bindingTicket,
-      });
-      await finishAuthenticated();
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const { binding, errorMessage, loading, submitting, onCancelBinding, onConfirmBinding } = props;
 
   return (
     <Box sx={{ textAlign: 'center' }}>
@@ -132,10 +56,15 @@ export function JwtOAuthCallbackView({ provider }: Props) {
               username: binding.username,
             })}
           </Typography>
-          <Button color="inherit" variant="contained" loading={submitting} onClick={confirmBinding}>
+          <Button
+            color="inherit"
+            variant="contained"
+            loading={submitting}
+            onClick={onConfirmBinding}
+          >
             {t('social.confirmBinding')}
           </Button>
-          <Button color="inherit" variant="text" onClick={() => router.replace(paths.auth.jwt.signIn)}>
+          <Button color="inherit" variant="text" onClick={onCancelBinding}>
             {t('social.cancelBinding')}
           </Button>
         </Box>
@@ -144,11 +73,6 @@ export function JwtOAuthCallbackView({ provider }: Props) {
   );
 }
 
-function providerLabel(provider: Extract<IdentityProvider, 'github' | 'google'>) {
+function providerLabel(provider: OAuthProvider) {
   return provider === 'github' ? 'GitHub' : 'Google';
-}
-
-function accountOAuthBindingProvider() {
-  if (typeof window === 'undefined') return null;
-  return window.sessionStorage.getItem(ACCOUNT_OAUTH_BINDING_KEY);
 }

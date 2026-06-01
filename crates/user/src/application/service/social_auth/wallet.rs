@@ -1,16 +1,10 @@
-use types::user::{IdentityProvider, User, UserId, UserIdentitySummary};
+use types::user::{IdentityProvider, UserId, UserIdentitySummary};
 
 use crate::application::{
-    AppError, AppResult, AuthProviderConfig, AuthTicketStore, PurposeEmailCodeStore, UserRepository, WalletChallenge, WalletPendingBinding,
-    WalletProviderSettings, WalletSignInInput, WalletSignInResult,
+    AppError, AppResult, AuthProviderConfig, AuthTicketStore, UserRepository, WalletChallenge, WalletProviderSettings, WalletSignInInput, WalletSignInResult,
 };
 
-use super::super::validation::validate_email_verification_code;
-use super::email::WALLET_EMAIL_PURPOSE;
-use super::helpers::{
-    TICKET_BYTES, WALLET_BINDING_TTL_SECONDS, WALLET_CHALLENGE_TTL_SECONDS, ensure_wallet_scope, new_provider_user, normalize_subject, provider_identity,
-    random_nonce, random_token,
-};
+use super::helpers::{WALLET_CHALLENGE_TTL_SECONDS, ensure_wallet_scope, normalize_subject, provider_identity, random_nonce};
 
 pub(in crate::application::service) async fn wallet_nonce<C, T>(
     config: &C,
@@ -64,7 +58,7 @@ where
         return Err(AppError::Unauthorized);
     }
     verify_wallet_challenge(&settings, &challenge, input.provider, &input.address, &input.message, &input.signature).await?;
-    existing_wallet_or_ticket(deps.repository, deps.tickets, input.provider, &input.address).await
+    existing_wallet_identity_or_account_required(deps.repository, input.provider, &input.address).await
 }
 
 pub(in crate::application::service) async fn account_wallet_link<R, C, T>(
@@ -99,33 +93,9 @@ where
     Ok(UserIdentitySummary::from(deps.repository.create_identity(identity).await?))
 }
 
-pub(in crate::application::service) async fn complete_wallet_binding<R, T, S>(
-    repository: &R,
-    tickets: &T,
-    codes: &S,
-    ticket: &str,
-    email: &str,
-    code: &str,
-    default_group_code: &str,
-) -> AppResult<User>
+async fn existing_wallet_identity_or_account_required<R>(repository: &R, provider: IdentityProvider, address: &str) -> AppResult<WalletSignInResult>
 where
     R: UserRepository,
-    T: AuthTicketStore,
-    S: PurposeEmailCodeStore,
-{
-    validate_email_verification_code(code)?;
-    let email = email.trim().to_ascii_lowercase();
-    if !codes.consume_email_code(WALLET_EMAIL_PURPOSE, &email, code).await? {
-        return Err(AppError::InvalidInput("email verification code is invalid or expired".into()));
-    }
-    let pending = tickets.consume_wallet_binding(ticket).await?.ok_or(AppError::Unauthorized)?;
-    bind_identity_to_email(repository, pending.identity, &email, default_group_code).await
-}
-
-async fn existing_wallet_or_ticket<R, T>(repository: &R, tickets: &T, provider: IdentityProvider, address: &str) -> AppResult<WalletSignInResult>
-where
-    R: UserRepository,
-    T: AuthTicketStore,
 {
     let subject = normalize_subject(provider, address);
     if let Some(identity) = repository.find_identity(provider, &subject).await? {
@@ -134,44 +104,8 @@ where
         repository.record_login(user.id.clone()).await?;
         return Ok(WalletSignInResult::Authenticated(Box::new(user)));
     }
-    let ticket = random_token(TICKET_BYTES);
-    tickets
-        .save_wallet_binding(
-            &ticket,
-            WalletPendingBinding {
-                identity: wallet_identity(provider, subject.clone()),
-            },
-            WALLET_BINDING_TTL_SECONDS,
-        )
-        .await?;
-    Ok(WalletSignInResult::EmailRequired {
-        ticket,
-        provider,
-        address: subject,
-    })
-}
 
-async fn bind_identity_to_email<R>(repository: &R, identity: types::user::UserIdentityInput, email: &str, default_group_code: &str) -> AppResult<User>
-where
-    R: UserRepository,
-{
-    let user = match repository.find_by_email(email).await? {
-        Some(user) => user,
-        None => {
-            repository
-                .create(super::super::provider_user_record(new_provider_user(email, default_group_code), Some(true)))
-                .await?
-        }
-    };
-    let identity = types::user::UserIdentityInput {
-        user_id: user.id.0.clone(),
-        email: Some(email.to_owned()),
-        email_verified: true,
-        ..identity
-    };
-    repository.create_identity(identity).await?;
-    repository.record_login(user.id.clone()).await?;
-    Ok(user)
+    Ok(WalletSignInResult::AccountRequired { provider, address: subject })
 }
 
 fn wallet_identity(provider: IdentityProvider, subject: String) -> types::user::UserIdentityInput {
@@ -258,5 +192,28 @@ fn message_nonce(provider: IdentityProvider, message: &str) -> AppResult<String>
             Ok(message.nonce)
         }
         _ => Err(AppError::InvalidInput("wallet provider is invalid".into())),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_support::MemoryUserRepository;
+
+    #[tokio::test]
+    async fn unknown_wallet_identity_requires_existing_account() {
+        let repository = MemoryUserRepository::default();
+
+        let result = existing_wallet_identity_or_account_required(&repository, IdentityProvider::Evm, "0xABC")
+            .await
+            .unwrap();
+
+        assert_eq!(
+            result,
+            WalletSignInResult::AccountRequired {
+                provider: IdentityProvider::Evm,
+                address: "0xabc".into(),
+            }
+        );
     }
 }

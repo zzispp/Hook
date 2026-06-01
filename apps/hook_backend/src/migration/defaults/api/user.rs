@@ -2,6 +2,60 @@ use super::ApiDefinition;
 
 pub const USER_APIS: &[ApiDefinition] = &[
     ApiDefinition {
+        code: "account_profile_read",
+        method: "GET",
+        path_pattern: "/api/account/profile",
+        name: "个人资料",
+    },
+    ApiDefinition {
+        code: "account_password_email_code",
+        method: "POST",
+        path_pattern: "/api/account/password/email-code",
+        name: "发送账户改密邮箱验证码",
+    },
+    ApiDefinition {
+        code: "account_password_change",
+        method: "POST",
+        path_pattern: "/api/account/password/change",
+        name: "修改账户密码",
+    },
+    ApiDefinition {
+        code: "account_verify_email",
+        method: "POST",
+        path_pattern: "/api/account/email/verify",
+        name: "验证账户邮箱",
+    },
+    ApiDefinition {
+        code: "account_identities_read",
+        method: "GET",
+        path_pattern: "/api/account/identities",
+        name: "账户登录 Provider 列表",
+    },
+    ApiDefinition {
+        code: "account_identity_delete",
+        method: "DELETE",
+        path_pattern: "/api/account/identities/{identity_id}",
+        name: "解绑账户登录 Provider",
+    },
+    ApiDefinition {
+        code: "account_oauth_start",
+        method: "GET",
+        path_pattern: "/api/account/oauth/{provider}/start",
+        name: "账户 OAuth 绑定开始",
+    },
+    ApiDefinition {
+        code: "account_oauth_callback",
+        method: "GET",
+        path_pattern: "/api/account/oauth/{provider}/callback",
+        name: "账户 OAuth 绑定回调",
+    },
+    ApiDefinition {
+        code: "account_wallet_link",
+        method: "POST",
+        path_pattern: "/api/account/wallet/link",
+        name: "绑定账户钱包",
+    },
+    ApiDefinition {
         code: "users_read",
         method: "GET",
         path_pattern: "/api/users",

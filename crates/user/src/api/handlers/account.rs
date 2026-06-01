@@ -4,8 +4,8 @@ use axum::{
 };
 use rbac::api::CurrentUser;
 use types::user::{
-    AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProfileResponse, AccountProviderLinkResponse, OAuthCallbackQuery, OAuthStartResponse,
-    UserId, UserIdentitySummary, UserResponse, WalletSignInPayload,
+    AccountEmailVerifyPayload, AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProfileResponse, AccountProviderLinkResponse,
+    OAuthCallbackQuery, OAuthStartResponse, UserId, UserIdentitySummary, UserResponse, WalletSignInPayload,
 };
 
 use crate::api::{ApiState, handlers::shared::*};
@@ -14,8 +14,10 @@ use crate::application::WalletSignInInput;
 pub async fn account_profile(State(state): State<ApiState>, Extension(current_user): Extension<CurrentUser>) -> ApiResult<ApiJson<AccountProfileResponse>> {
     let user = state.users.profile(UserId(current_user.id)).await?;
     let identities = state.users.identities(user.id.clone()).await?;
+    let email_code_available = state.users.account_email_code_available().await?;
     Ok(ok(AccountProfileResponse {
         user: UserResponse::from(user).with_identities(identities),
+        email_code_available,
     }))
 }
 
@@ -34,6 +36,16 @@ pub async fn account_password_change(
     Json(payload): Json<AccountPasswordChangePayload>,
 ) -> ApiResult<ApiJson<UserResponse>> {
     let user = state.users.change_account_password(UserId(current_user.id), payload).await?;
+    let identities = state.users.identities(user.id.clone()).await?;
+    Ok(ok(UserResponse::from(user).with_identities(identities)))
+}
+
+pub async fn account_verify_email(
+    State(state): State<ApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Json(payload): Json<AccountEmailVerifyPayload>,
+) -> ApiResult<ApiJson<UserResponse>> {
+    let user = state.users.verify_account_email(UserId(current_user.id), payload).await?;
     let identities = state.users.identities(user.id.clone()).await?;
     Ok(ok(UserResponse::from(user).with_identities(identities)))
 }

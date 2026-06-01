@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use redis::AsyncCommands;
 
-use crate::application::{
-    AppError, AppResult, AuthTicketStore, OAuthPendingBinding, OAuthStateRecord, PurposeEmailCodeStore, WalletChallenge, WalletPendingBinding,
-};
+use crate::application::{AppError, AppResult, AuthTicketStore, OAuthPendingBinding, OAuthStateRecord, PurposeEmailCodeStore, WalletChallenge};
 
 #[derive(Clone)]
 pub struct RedisAuthTicketStore {
@@ -66,18 +64,6 @@ impl AuthTicketStore for RedisAuthTicketStore {
     async fn consume_wallet_challenge(&self, nonce: &str) -> AppResult<Option<WalletChallenge>> {
         self.consume_json("wallet_challenge", nonce).await
     }
-
-    async fn save_wallet_binding(&self, ticket: &str, record: WalletPendingBinding, ttl_seconds: u64) -> AppResult<()> {
-        self.save_json("wallet_binding", ticket, &record, ttl_seconds).await
-    }
-
-    async fn get_wallet_binding(&self, ticket: &str) -> AppResult<Option<WalletPendingBinding>> {
-        self.get_json("wallet_binding", ticket).await
-    }
-
-    async fn consume_wallet_binding(&self, ticket: &str) -> AppResult<Option<WalletPendingBinding>> {
-        self.consume_json("wallet_binding", ticket).await
-    }
 }
 
 #[async_trait]
@@ -139,15 +125,6 @@ impl RedisAuthTicketStore {
         let mut connection = self.connection.clone();
         let value = serde_json::to_string(record).map_err(json_error)?;
         connection.set_ex::<_, _, ()>(self.key(kind, id), value, ttl_seconds).await.map_err(redis_error)
-    }
-
-    async fn get_json<T>(&self, kind: &str, id: &str) -> AppResult<Option<T>>
-    where
-        T: serde::de::DeserializeOwned,
-    {
-        let mut connection = self.connection.clone();
-        let value: Option<String> = connection.get(self.key(kind, id)).await.map_err(redis_error)?;
-        value.map(|item| serde_json::from_str(&item).map_err(json_error)).transpose()
     }
 
     async fn consume_json<T>(&self, kind: &str, id: &str) -> AppResult<Option<T>>

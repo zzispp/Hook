@@ -5,7 +5,7 @@ mod service;
 
 pub use auth_ports::{
     AuthProviderConfig, AuthTicketStore, OAuthClient, OAuthPendingBinding, OAuthProfile, OAuthProviderSettings, OAuthSignInResult, OAuthStateRecord,
-    PurposeEmailCodeStore, WalletChallenge, WalletNonceInput, WalletPendingBinding, WalletProviderSettings, WalletSignInInput, WalletSignInResult,
+    PurposeEmailCodeStore, WalletChallenge, WalletNonceInput, WalletProviderSettings, WalletSignInInput, WalletSignInResult,
 };
 pub use error::{AppError, AppResult};
 pub use ports::{

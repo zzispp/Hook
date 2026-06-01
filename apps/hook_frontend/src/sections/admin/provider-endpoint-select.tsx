@@ -15,7 +15,8 @@ export function ProviderEndpointSearchSelect({
   options,
   label,
   size = 'small',
-  placeholder = '输入关键词搜索...',
+  placeholder,
+  noOptionsText,
   disabled,
   sx,
   onChange,
@@ -25,6 +26,7 @@ export function ProviderEndpointSearchSelect({
   label?: string;
   size?: 'small' | 'medium';
   placeholder?: string;
+  noOptionsText?: string;
   disabled?: boolean;
   sx?: SxProps<Theme>;
   onChange: (value: string) => void;
@@ -40,9 +42,49 @@ export function ProviderEndpointSearchSelect({
       value={selected}
       getOptionLabel={(option) => option.label}
       isOptionEqualToValue={(option, current) => option.value === current.value}
-      noOptionsText="无匹配项"
+      noOptionsText={noOptionsText}
       sx={sx}
       onChange={(_, option) => onChange(option?.value ?? '')}
+      renderInput={(params) => <TextField {...params} label={label} placeholder={placeholder} />}
+    />
+  );
+}
+
+export function ProviderEndpointMultiSearchSelect({
+  value,
+  options,
+  label,
+  size = 'small',
+  placeholder,
+  noOptionsText,
+  disabled,
+  sx,
+  onChange,
+}: {
+  value: string[];
+  options: SearchSelectOption[];
+  label?: string;
+  size?: 'small' | 'medium';
+  placeholder?: string;
+  noOptionsText?: string;
+  disabled?: boolean;
+  sx?: SxProps<Theme>;
+  onChange: (value: string[]) => void;
+}) {
+  const selected = options.filter((option) => value.includes(option.value));
+
+  return (
+    <Autocomplete
+      multiple
+      disabled={disabled}
+      options={options}
+      size={size}
+      value={selected}
+      getOptionLabel={(option) => option.label}
+      isOptionEqualToValue={(option, current) => option.value === current.value}
+      noOptionsText={noOptionsText}
+      sx={sx}
+      onChange={(_, items) => onChange(items.map((item) => item.value))}
       renderInput={(params) => <TextField {...params} label={label} placeholder={placeholder} />}
     />
   );

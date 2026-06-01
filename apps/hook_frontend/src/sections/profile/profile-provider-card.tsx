@@ -19,6 +19,8 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Iconify } from 'src/components/iconify';
 import { ConfirmDialog } from 'src/components/custom-dialog';
 
+import { WalletConnectControl } from 'src/auth/components/wallet-connect-control';
+
 import { providerColor, providerLabel } from './provider-utils';
 
 export type OAuthProvider = Extract<UserIdentitySummary['provider'], 'github' | 'google'>;
@@ -107,6 +109,18 @@ function ProviderLinkButtons({
     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
       {enabledProviders.map((provider) => {
         const linked = linkedProviders.has(provider);
+        if (provider === 'evm' && !linked) {
+          const label = t('profile.linkProvider', { provider: providerLabel(provider) });
+          return (
+            <WalletConnectControl
+              key={provider}
+              label={label}
+              connectedActionLabel={label}
+              loading={linkingProvider === provider}
+              onAction={() => onWalletLink(provider)}
+            />
+          );
+        }
         return (
           <Button
             key={provider}

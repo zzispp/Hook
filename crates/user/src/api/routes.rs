@@ -7,9 +7,9 @@ use crate::api::{
     ApiState,
     handlers::{
         account_identities, account_oauth_callback, account_oauth_start, account_password_change, account_password_email_code, account_profile,
-        account_unlink_identity, account_wallet_link, admin_unlink_identity, auth_config, bind_oauth_existing, create_user, delete_user, get_user, list_users,
-        me, oauth_callback, oauth_start, refresh, replace_user, request_password_reset, request_registration_email_code, reset_password, sign_in, sign_up,
-        wallet_complete, wallet_email_code, wallet_nonce, wallet_sign_in,
+        account_unlink_identity, account_verify_email, account_wallet_link, admin_unlink_identity, auth_config, bind_oauth_existing, create_user, delete_user,
+        get_user, list_users, me, oauth_callback, oauth_start, refresh, replace_user, request_password_reset, request_registration_email_code, reset_password,
+        sign_in, sign_up, wallet_nonce, wallet_sign_in,
     },
     user_group_handlers::{create_user_group, delete_user_group, get_user_group, list_user_group_members, list_user_groups, update_user_group},
 };
@@ -26,14 +26,13 @@ pub fn create_router(state: ApiState) -> Router {
         .route("/auth/oauth/{provider}/bind-existing", post(bind_oauth_existing))
         .route("/auth/wallet/nonce", post(wallet_nonce))
         .route("/auth/wallet/sign-in", post(wallet_sign_in))
-        .route("/auth/wallet/email-code", post(wallet_email_code))
-        .route("/auth/wallet/complete", post(wallet_complete))
         .route("/auth/password-reset/request", post(request_password_reset))
         .route("/auth/password-reset/confirm", post(reset_password))
         .route("/auth/me", get(me))
         .route("/account/profile", get(account_profile))
         .route("/account/password/email-code", post(account_password_email_code))
         .route("/account/password/change", post(account_password_change))
+        .route("/account/email/verify", post(account_verify_email))
         .route("/account/identities", get(account_identities))
         .route("/account/identities/{identity_id}", delete(account_unlink_identity))
         .route("/account/oauth/{provider}/start", get(account_oauth_start))

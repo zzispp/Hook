@@ -7,7 +7,7 @@ use constants::auth::{DEFAULT_USER_IS_ACTIVE, DEFAULT_USER_ROLE};
 use types::user::{
     AuthConfigResponse, NewUser, OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse, OAuthStartResponse, PasswordResetConfirmPayload,
     PasswordResetRequestPayload, RefreshTokenPayload, RegistrationEmailCodePayload, SignInPayload, SignUpPayload, SignUpUser, USER_QUOTA_MODE_WALLET,
-    WalletCompletePayload, WalletEmailCodePayload, WalletNoncePayload, WalletNonceResponse, WalletSignInPayload, WalletSignInResponse,
+    WalletNoncePayload, WalletNonceResponse, WalletSignInPayload, WalletSignInResponse,
 };
 
 use crate::api::{ApiState, handlers::shared::*};
@@ -112,29 +112,8 @@ pub async fn wallet_sign_in(State(state): State<ApiState>, Json(payload): Json<W
             let tokens = state.tokens.issue_pair(user.id.clone())?;
             Ok(ok(WalletSignInResponse::Authenticated(Box::new(new_auth_session_data(user.into(), tokens)))))
         }
-        crate::application::WalletSignInResult::EmailRequired { ticket, provider, address } => Ok(ok(WalletSignInResponse::EmailRequired {
-            wallet_ticket: ticket,
-            provider,
-            address,
-        })),
+        crate::application::WalletSignInResult::AccountRequired { provider, address } => Ok(ok(WalletSignInResponse::AccountRequired { provider, address })),
     }
-}
-
-pub async fn wallet_email_code(State(state): State<ApiState>, Json(payload): Json<WalletEmailCodePayload>) -> ApiResult<ApiJson<()>> {
-    state
-        .users
-        .request_wallet_email_code(payload.wallet_ticket, payload.email, payload.lang)
-        .await?;
-    Ok(ok(()))
-}
-
-pub async fn wallet_complete(State(state): State<ApiState>, Json(payload): Json<WalletCompletePayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
-    let user = state
-        .users
-        .complete_wallet(payload.wallet_ticket, payload.email, payload.email_verification_code)
-        .await?;
-    let tokens = state.tokens.issue_pair(user.id.clone())?;
-    Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
 }
 
 pub async fn refresh(State(state): State<ApiState>, Json(payload): Json<RefreshTokenPayload>) -> ApiResult<ApiJson<TokenPairResponse>> {

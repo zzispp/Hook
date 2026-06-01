@@ -2,10 +2,11 @@ use rand_core::{OsRng, RngCore};
 use types::user::User;
 
 use crate::application::{
-    AppError, AppResult, PurposeEmailCodeStore, RegistrationEmailCodeRequest, RegistrationEmailConfig, RegistrationEmailMailer, UserRepository,
+    AppError, AppResult, PurposeEmailCodeStore, RegistrationEmailCodeRequest, RegistrationEmailConfig, RegistrationEmailMailer, UserAuthRecord,
+    UserRepository,
 };
 
-use super::helpers::password_replace_record;
+use super::helpers::{email_verified_record, password_replace_record};
 use crate::application::PasswordHasher;
 use crate::application::RegistrationEmail;
 
@@ -14,7 +15,6 @@ use super::super::validation::{
 };
 
 pub(in crate::application::service) const ACCOUNT_PASSWORD_EMAIL_PURPOSE: &str = "account_password";
-pub(in crate::application::service) const WALLET_EMAIL_PURPOSE: &str = "wallet_binding";
 
 const EMAIL_CODE_TTL_SECONDS: u64 = 10 * 60;
 const EMAIL_CODE_COOLDOWN_SECONDS: u64 = 60;
@@ -61,7 +61,46 @@ where
         return Err(AppError::InvalidInput("email verification code is invalid or expired".into()));
     }
     let password_hash = hasher.hash(password)?;
-    repository.replace(user.id.clone(), password_replace_record(user, password_hash)).await
+    let user_id = user.id.clone();
+    let mut record = password_replace_record(user, password_hash);
+    record.email_verified = Some(true);
+    repository.replace(user_id, record).await
+}
+
+pub(in crate::application::service) async fn change_password_with_current_password<R, H>(
+    repository: &R,
+    hasher: &H,
+    user_auth: UserAuthRecord,
+    current_password: &str,
+    password: &str,
+) -> AppResult<User>
+where
+    R: UserRepository,
+    H: PasswordHasher,
+{
+    validate_password(current_password)?;
+    validate_password(password)?;
+    let Some(password_hash) = user_auth.password_hash.as_deref() else {
+        return Err(AppError::PasswordNotSet);
+    };
+    if !hasher.verify(current_password, password_hash)? {
+        return Err(AppError::InvalidCredentials);
+    }
+    let password_hash = hasher.hash(password)?;
+    let user_id = user_auth.user.id.clone();
+    repository.replace(user_id, password_replace_record(user_auth.user, password_hash)).await
+}
+
+pub(in crate::application::service) async fn verify_email_with_code<R, S>(repository: &R, codes: &S, user: User, code: &str) -> AppResult<User>
+where
+    R: UserRepository,
+    S: PurposeEmailCodeStore,
+{
+    validate_email_verification_code(code)?;
+    if !codes.consume_email_code(ACCOUNT_PASSWORD_EMAIL_PURPOSE, &user.email, code).await? {
+        return Err(AppError::InvalidInput("email verification code is invalid or expired".into()));
+    }
+    repository.replace(user.id.clone(), email_verified_record(user)).await
 }
 
 async fn purpose_email_code<S>(store: &S, purpose: &str, email: &str) -> AppResult<String>
@@ -84,7 +123,7 @@ where
     C: RegistrationEmailConfig,
     M: RegistrationEmailMailer,
 {
-    let settings = config.registration_email_settings().await?;
+    let settings = config.account_email_settings().await?;
     reject_unready_email_config(&settings)?;
     let template = config.registration_email_template(&input.lang).await?;
     let html = template
@@ -111,7 +150,7 @@ fn reject_unready_email_config(settings: &crate::application::EmailSettings) -> 
     if !settings.email_config_enabled {
         return Err(AppError::InvalidInput(EMAIL_CONFIGURATION_DISABLED.into()));
     }
-    if settings.smtp_host.is_empty() || settings.smtp_username.is_empty() || !settings.smtp_password_set || settings.smtp_from_email.is_empty() {
+    if !settings.is_ready() {
         return Err(AppError::InvalidInput(SMTP_CONFIGURATION_INCOMPLETE.into()));
     }
     Ok(())

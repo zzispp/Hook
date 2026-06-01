@@ -8,12 +8,14 @@ use types::user::{IdentityProvider, UserIdentityInput};
 use crate::{
     application::{
         AppError, AppResult, AuthProviderConfig, AuthTicketStore, OAuthClient, OAuthPendingBinding, OAuthProfile, OAuthProviderSettings, OAuthStateRecord,
-        SystemUserProvider, UserService, WalletChallenge, WalletPendingBinding, WalletProviderSettings,
+        SystemUserProvider, UserService, WalletChallenge, WalletProviderSettings,
     },
     test_support::{MemoryUserRepository, TestPasswordHasher, TestSystemUserProvider, system_user},
 };
 
-pub(super) use super::social_auth_email_test_support::{TestEmailConfig, TestMailer, TestPurposeEmailCodeStore, TestRegistrationPolicy};
+pub(super) use super::social_auth_email_test_support::{
+    DisabledAccountEmailConfig, TestEmailConfig, TestMailer, TestPurposeEmailCodeStore, TestRegistrationPolicy,
+};
 
 type TestService = UserService<
     MemoryUserRepository,
@@ -54,7 +56,6 @@ struct TicketState {
     oauth_states: BTreeMap<String, OAuthStateRecord>,
     oauth_bindings: BTreeMap<String, OAuthPendingBinding>,
     wallet_challenges: BTreeMap<String, WalletChallenge>,
-    wallet_bindings: BTreeMap<String, WalletPendingBinding>,
 }
 
 pub(super) fn test_service(repository: MemoryUserRepository, oauth_client: TestOAuthClient) -> TestService {
@@ -72,6 +73,47 @@ pub(super) fn test_service_with_codes(repository: MemoryUserRepository, codes: T
     )
     .with_registration_email(TestEmailConfig, TestMailer::default(), super::NoRegistrationEmailCodeStore)
     .with_social_auth(TestAuthProviderConfig::default(), oauth_client, TestAuthTicketStore::default(), codes)
+}
+
+pub(super) fn test_service_with_disabled_account_email(
+    repository: MemoryUserRepository,
+    oauth_client: TestOAuthClient,
+) -> UserService<
+    MemoryUserRepository,
+    TestPasswordHasher,
+    super::NoSystemUserProvider,
+    TestRegistrationPolicy,
+    super::NoInitialGrantLedger,
+    super::NoUserWalletCatalog,
+    super::NoPasswordResetConfig,
+    super::NoPasswordResetMailer,
+    DisabledAccountEmailConfig,
+    TestMailer,
+    super::NoRegistrationEmailCodeStore,
+    TestAuthProviderConfig,
+    TestOAuthClient,
+    TestAuthTicketStore,
+    TestPurposeEmailCodeStore,
+> {
+    UserService::with_system_user_and_registration(
+        repository,
+        TestPasswordHasher,
+        super::NoSystemUserProvider,
+        TestRegistrationPolicy,
+        super::NoInitialGrantLedger,
+        super::NoUserWalletCatalog,
+    )
+    .with_registration_email(
+        DisabledAccountEmailConfig,
+        TestMailer::default(),
+        super::NoRegistrationEmailCodeStore,
+    )
+    .with_social_auth(
+        TestAuthProviderConfig::default(),
+        oauth_client,
+        TestAuthTicketStore::default(),
+        TestPurposeEmailCodeStore::default(),
+    )
 }
 
 pub(super) fn test_service_with_tickets(
@@ -145,12 +187,6 @@ impl Default for TestAuthProviderConfig {
 impl TestOAuthClient {
     pub(super) fn with_profile(profile: OAuthProfile) -> Self {
         Self { profile: Some(profile) }
-    }
-}
-
-impl TestAuthTicketStore {
-    pub(super) async fn seed_wallet_binding(&self, ticket: &str, identity: UserIdentityInput) {
-        self.save_wallet_binding(ticket, WalletPendingBinding { identity }, 600).await.unwrap();
     }
 }
 
@@ -241,18 +277,5 @@ impl AuthTicketStore for TestAuthTicketStore {
 
     async fn consume_wallet_challenge(&self, nonce: &str) -> AppResult<Option<WalletChallenge>> {
         Ok(self.state.lock().unwrap().wallet_challenges.remove(nonce))
-    }
-
-    async fn save_wallet_binding(&self, ticket: &str, record: WalletPendingBinding, _ttl_seconds: u64) -> AppResult<()> {
-        self.state.lock().unwrap().wallet_bindings.insert(ticket.into(), record);
-        Ok(())
-    }
-
-    async fn get_wallet_binding(&self, ticket: &str) -> AppResult<Option<WalletPendingBinding>> {
-        Ok(self.state.lock().unwrap().wallet_bindings.get(ticket).cloned())
-    }
-
-    async fn consume_wallet_binding(&self, ticket: &str) -> AppResult<Option<WalletPendingBinding>> {
-        Ok(self.state.lock().unwrap().wallet_bindings.remove(ticket))
     }
 }

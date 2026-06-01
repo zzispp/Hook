@@ -36,6 +36,8 @@ export const paths = {
     tickets: `${ROOTS.DASHBOARD}/tickets`,
     wallet: `${ROOTS.DASHBOARD}/wallet`,
     profile: `${ROOTS.DASHBOARD}/profile`,
+    profileChangePassword: `${ROOTS.DASHBOARD}/profile/change-password`,
+    profileVerifyEmail: `${ROOTS.DASHBOARD}/profile/verify-email`,
     admin: {
       root: `${ROOTS.DASHBOARD}/admin`,
       users: `${ROOTS.DASHBOARD}/admin/users`,

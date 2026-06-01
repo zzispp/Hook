@@ -154,7 +154,7 @@ function EndpointUrlFields({
         size="small"
         label={t('providers.customPath')}
         value={editState.customPath}
-        placeholder={path || '留空使用默认'}
+        placeholder={path || t('providers.defaultWhenBlank')}
         helperText={path ? `${t('providers.defaultWhenBlank')} ${path}` : t('providers.defaultWhenBlank')}
         onChange={(event) => onEditStateChange({ ...editState, customPath: event.target.value })}
       />

@@ -6,9 +6,9 @@ use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     system_setting::{EmailSuffixMode, SmtpEncryption},
     user::{
-        AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProviderLinkResponse, AuthConfigResponse, Credentials, IdentityProvider, NewUser,
-        PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId, UserIdentity, UserIdentityInput,
-        UserIdentitySummary, UserListFilters, UserWalletSummaryResponse,
+        AccountEmailVerifyPayload, AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProviderLinkResponse, AuthConfigResponse, Credentials,
+        IdentityProvider, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId,
+        UserIdentity, UserIdentityInput, UserIdentitySummary, UserListFilters, UserWalletSummaryResponse,
     },
     user_group::{UserGroupCreate, UserGroupListRequest, UserGroupPageResponse, UserGroupResponse, UserGroupUpdate},
 };
@@ -117,6 +117,17 @@ pub struct EmailSettings {
     pub smtp_encryption: SmtpEncryption,
 }
 
+impl EmailSettings {
+    pub fn is_ready(&self) -> bool {
+        self.feature_enabled
+            && self.email_config_enabled
+            && !self.smtp_host.is_empty()
+            && !self.smtp_username.is_empty()
+            && self.smtp_password_set
+            && !self.smtp_from_email.is_empty()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PasswordResetTemplate {
     pub subject: String,
@@ -166,6 +177,7 @@ pub struct RegistrationEmail {
 pub trait RegistrationEmailConfig: Send + Sync + 'static {
     async fn auth_config(&self) -> AppResult<AuthConfigResponse>;
     async fn registration_email_settings(&self) -> AppResult<EmailSettings>;
+    async fn account_email_settings(&self) -> AppResult<EmailSettings>;
     async fn registration_email_template(&self, lang: &str) -> AppResult<RegistrationEmailTemplate>;
 }
 
@@ -255,8 +267,6 @@ pub trait UserUseCase: Send + Sync + 'static {
     async fn wallet_nonce(&self, input: WalletNonceInput) -> AppResult<WalletChallenge>;
     async fn wallet_sign_in(&self, input: WalletSignInInput) -> AppResult<WalletSignInResult>;
     async fn account_wallet_link(&self, id: UserId, input: WalletSignInInput) -> AppResult<AccountProviderLinkResponse>;
-    async fn request_wallet_email_code(&self, ticket: String, email: String, lang: String) -> AppResult<()>;
-    async fn complete_wallet(&self, ticket: String, email: String, code: String) -> AppResult<User>;
     async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()>;
     async fn reset_password(&self, input: PasswordResetConfirm) -> AppResult<()>;
     async fn authenticated_user(&self, id: UserId) -> AppResult<User>;
@@ -269,6 +279,8 @@ pub trait UserUseCase: Send + Sync + 'static {
     async fn profile(&self, id: UserId) -> AppResult<User>;
     async fn identities(&self, id: UserId) -> AppResult<Vec<UserIdentitySummary>>;
     async fn request_account_password_email_code(&self, id: UserId, input: AccountPasswordEmailCodePayload) -> AppResult<()>;
+    async fn account_email_code_available(&self) -> AppResult<bool>;
+    async fn verify_account_email(&self, id: UserId, input: AccountEmailVerifyPayload) -> AppResult<User>;
     async fn change_account_password(&self, id: UserId, input: AccountPasswordChangePayload) -> AppResult<User>;
     async fn unlink_identity(&self, id: UserId, identity_id: String) -> AppResult<()>;
     async fn admin_user(&self, id: UserId) -> AppResult<User>;

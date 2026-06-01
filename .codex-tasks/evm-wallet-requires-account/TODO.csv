@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm current wallet sign-in and account binding paths,DONE,Existing login and profile wallet link paths are identified,rg -n "wallet_sign_in|account_wallet_link" crates/user/src apps/hook_frontend/src,,0,
+2,Change backend unknown wallet behavior,DONE,Unknown wallet sign-in returns account_required without creating binding tickets,cargo test -p user unknown_wallet_identity_requires_existing_account,2026-06-01T00:00:00Z,1,Exact filter did not match nested test path; rerun without --exact passed.
+3,Remove frontend login wallet binding UI,DONE,Sign-in page no longer imports or renders wallet email code completion controls and connected wallets show RainbowKit account control on sign-in and provider binding,pnpm lint:frontend,2026-06-01T00:00:00Z,0,
+4,Run focused validation,DONE,Rust focused tests and frontend lint checks pass,cargo test -p user unknown_wallet_identity_requires_existing_account && pnpm lint:frontend,2026-06-01T00:00:00Z,0,

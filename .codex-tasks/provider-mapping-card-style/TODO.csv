@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate style difference,DONE,Relevant components and shared styles identified,rg/sed inspection,,0,provider-model-mappings-section differs from bindings section
+2,Implement style alignment,DONE,Mapping card uses same panel and empty-state spacing as model list,manual code inspection,,0,updated panel/header/empty state structure
+3,Run verification,DONE,Frontend check for touched file passes or failure is reported,pnpm lint:frontend,,0,passed

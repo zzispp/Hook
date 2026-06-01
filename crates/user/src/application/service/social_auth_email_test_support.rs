@@ -66,10 +66,6 @@ impl TestPurposeEmailCodeStore {
     pub(super) fn saved_code(&self, purpose: &str, email: &str) -> String {
         self.state.lock().unwrap().codes.get(&(purpose.into(), email.into())).cloned().unwrap()
     }
-
-    pub(super) fn seed_code(&self, purpose: &str, email: &str, code: &str) {
-        self.state.lock().unwrap().codes.insert((purpose.into(), email.into()), code.into());
-    }
 }
 
 #[async_trait]
@@ -87,17 +83,50 @@ impl RegistrationEmailConfig for TestEmailConfig {
     }
 
     async fn registration_email_settings(&self) -> AppResult<EmailSettings> {
-        Ok(EmailSettings {
-            site_name: "Hook".into(),
-            feature_enabled: true,
-            email_config_enabled: true,
-            smtp_host: "smtp.example.com".into(),
-            smtp_username: "smtp-user".into(),
-            smtp_password_set: true,
-            smtp_from_email: "noreply@example.com".into(),
-            smtp_from_name: "Hook".into(),
-            smtp_encryption: SmtpEncryption::Tls,
+        Ok(ready_email_settings(true))
+    }
+
+    async fn account_email_settings(&self) -> AppResult<EmailSettings> {
+        Ok(ready_email_settings(true))
+    }
+
+    async fn registration_email_template(&self, _lang: &str) -> AppResult<RegistrationEmailTemplate> {
+        Ok(RegistrationEmailTemplate {
+            subject: "Your code".into(),
+            html: "Code {{code}}".into(),
         })
+    }
+}
+
+fn ready_email_settings(email_config_enabled: bool) -> EmailSettings {
+    EmailSettings {
+        site_name: "Hook".into(),
+        feature_enabled: true,
+        email_config_enabled,
+        smtp_host: "smtp.example.com".into(),
+        smtp_username: "smtp-user".into(),
+        smtp_password_set: true,
+        smtp_from_email: "noreply@example.com".into(),
+        smtp_from_name: "Hook".into(),
+        smtp_encryption: SmtpEncryption::Tls,
+    }
+}
+
+#[derive(Clone)]
+pub(super) struct DisabledAccountEmailConfig;
+
+#[async_trait]
+impl RegistrationEmailConfig for DisabledAccountEmailConfig {
+    async fn auth_config(&self) -> AppResult<types::user::AuthConfigResponse> {
+        TestEmailConfig.auth_config().await
+    }
+
+    async fn registration_email_settings(&self) -> AppResult<EmailSettings> {
+        Ok(ready_email_settings(true))
+    }
+
+    async fn account_email_settings(&self) -> AppResult<EmailSettings> {
+        Ok(ready_email_settings(false))
     }
 
     async fn registration_email_template(&self, _lang: &str) -> AppResult<RegistrationEmailTemplate> {

@@ -1,8 +1,8 @@
-use types::user::{AccountPasswordChangePayload, AccountPasswordEmailCodePayload, Credentials, IdentityProvider};
+use types::user::{AccountEmailVerifyPayload, AccountPasswordChangePayload, AccountPasswordEmailCodePayload, Credentials, IdentityProvider};
 
 use super::social_auth_test_support::{
     TestAuthTicketStore, TestOAuthClient, TestPurposeEmailCodeStore, github_profile, identity_input, redirect_uri, state_from_url, test_service,
-    test_service_with_codes, test_service_with_system_user, test_service_with_tickets,
+    test_service_with_codes, test_service_with_disabled_account_email, test_service_with_system_user, test_service_with_tickets,
 };
 use crate::{
     application::{AppError, AuthTicketStore, OAuthProfile, OAuthSignInResult, UserService, UserUseCase, WalletSignInInput},
@@ -193,7 +193,31 @@ async fn account_password_change_sets_local_password_after_email_code() {
         .change_account_password(
             user_id(1),
             AccountPasswordChangePayload {
-                email_verification_code: codes.saved_code("account_password", "alice@example.com"),
+                email_verification_code: Some(codes.saved_code("account_password", "alice@example.com")),
+                current_password: None,
+                password: "new-secret123".into(),
+            },
+        )
+        .await
+        .unwrap();
+
+    assert!(user.password_set);
+    assert!(user.email_verified);
+    assert_eq!(repository.replaced_records()[0].1.password_hash.as_deref(), Some("hashed:new-secret123"));
+    assert_eq!(repository.replaced_records()[0].1.email_verified, Some(true));
+}
+
+#[tokio::test]
+async fn account_password_change_uses_current_password_when_account_email_is_disabled() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    let service = test_service_with_disabled_account_email(repository.clone(), TestOAuthClient::default());
+
+    let user = service
+        .change_account_password(
+            user_id(1),
+            AccountPasswordChangePayload {
+                email_verification_code: None,
+                current_password: Some("secret123".into()),
                 password: "new-secret123".into(),
             },
         )
@@ -202,64 +226,53 @@ async fn account_password_change_sets_local_password_after_email_code() {
 
     assert!(user.password_set);
     assert_eq!(repository.replaced_records()[0].1.password_hash.as_deref(), Some("hashed:new-secret123"));
+    assert_eq!(repository.replaced_records()[0].1.email_verified, None);
 }
 
 #[tokio::test]
-async fn wallet_ticket_complete_creates_passwordless_user() {
-    let repository = MemoryUserRepository::default();
-    let codes = TestPurposeEmailCodeStore::default();
-    let tickets = TestAuthTicketStore::default();
-    let service = test_service_with_tickets(repository.clone(), codes.clone(), tickets.clone());
-    tickets
-        .seed_wallet_binding("wallet-ticket", identity_input(String::new(), IdentityProvider::Evm, "0xabc"))
-        .await;
-    codes.seed_code("wallet_binding", "wallet@example.com", "123456");
+async fn account_password_change_rejects_passwordless_user_when_account_email_is_disabled() {
+    let repository = MemoryUserRepository::with_user(passwordless_stored_user(1, "alice"));
+    let service = test_service_with_disabled_account_email(repository.clone(), TestOAuthClient::default());
 
+    let result = service
+        .change_account_password(
+            user_id(1),
+            AccountPasswordChangePayload {
+                email_verification_code: None,
+                current_password: Some("secret123".into()),
+                password: "new-secret123".into(),
+            },
+        )
+        .await;
+
+    assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "account email verification is disabled"));
+    assert!(repository.replaced_records().is_empty());
+}
+
+#[tokio::test]
+async fn verify_account_email_marks_current_email_verified_after_email_code() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    let codes = TestPurposeEmailCodeStore::default();
+    let service = test_service_with_codes(repository.clone(), codes.clone(), TestOAuthClient::default());
+
+    service
+        .request_account_password_email_code(user_id(1), AccountPasswordEmailCodePayload { lang: "en".into() })
+        .await
+        .unwrap();
     let user = service
-        .complete_wallet("wallet-ticket".into(), "wallet@example.com".into(), "123456".into())
+        .verify_account_email(
+            user_id(1),
+            AccountEmailVerifyPayload {
+                email_verification_code: codes.saved_code("account_password", "alice@example.com"),
+            },
+        )
         .await
         .unwrap();
 
-    assert_eq!(user.email, "wallet@example.com");
-    assert!(!user.password_set);
-    assert_eq!(repository.identities()[0].provider, IdentityProvider::Evm);
-}
-
-#[tokio::test]
-async fn wallet_email_code_rejects_system_user_email() {
-    let repository = MemoryUserRepository::default();
-    let codes = TestPurposeEmailCodeStore::default();
-    let tickets = TestAuthTicketStore::default();
-    let service = test_service_with_system_user(repository, codes.clone(), tickets.clone(), TestOAuthClient::default());
-    tickets
-        .seed_wallet_binding("wallet-ticket", identity_input(String::new(), IdentityProvider::Evm, "0xabc"))
-        .await;
-
-    let result = service
-        .request_wallet_email_code("wallet-ticket".into(), "admin@example.com".into(), "en".into())
-        .await;
-
-    assert_system_self_service_error(result);
-}
-
-#[tokio::test]
-async fn wallet_complete_rejects_system_user_email() {
-    let repository = MemoryUserRepository::default();
-    let codes = TestPurposeEmailCodeStore::default();
-    let tickets = TestAuthTicketStore::default();
-    let service = test_service_with_system_user(repository.clone(), codes.clone(), tickets.clone(), TestOAuthClient::default());
-    tickets
-        .seed_wallet_binding("wallet-ticket", identity_input(String::new(), IdentityProvider::Evm, "0xabc"))
-        .await;
-    codes.seed_code("wallet_binding", "admin@example.com", "123456");
-
-    let result = service
-        .complete_wallet("wallet-ticket".into(), "admin@example.com".into(), "123456".into())
-        .await;
-
-    assert_system_self_service_error(result);
-    assert!(repository.created_records().is_empty());
-    assert!(repository.identities().is_empty());
+    assert!(user.email_verified);
+    assert!(user.password_set);
+    assert_eq!(repository.replaced_records()[0].1.email_verified, Some(true));
+    assert_eq!(repository.replaced_records()[0].1.password_hash, None);
 }
 
 #[tokio::test]

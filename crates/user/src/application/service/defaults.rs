@@ -8,7 +8,7 @@ use crate::application::{
     AppResult, AuthProviderConfig, AuthTicketStore, InitialGrantLedger, OAuthClient, OAuthPendingBinding, OAuthProfile, OAuthProviderSettings,
     OAuthStateRecord, PasswordResetConfig, PasswordResetEmail, PasswordResetMailer, PasswordResetTemplate, PurposeEmailCodeStore, RegistrationEmail,
     RegistrationEmailCodeStore, RegistrationEmailConfig, RegistrationEmailMailer, RegistrationEmailTemplate, RegistrationPolicy, RegistrationSettings,
-    SystemUserProvider, SystemUserRecord, UserWalletCatalog, WalletChallenge, WalletPendingBinding, WalletProviderSettings,
+    SystemUserProvider, SystemUserRecord, UserWalletCatalog, WalletChallenge, WalletProviderSettings,
 };
 
 #[derive(Clone, Copy)]
@@ -121,6 +121,12 @@ impl RegistrationEmailConfig for NoRegistrationEmailConfig {
         ))
     }
 
+    async fn account_email_settings(&self) -> AppResult<crate::application::EmailSettings> {
+        Err(crate::application::AppError::Infrastructure(
+            "account email configuration is not available".into(),
+        ))
+    }
+
     async fn registration_email_template(&self, _lang: &str) -> AppResult<RegistrationEmailTemplate> {
         Err(crate::application::AppError::Infrastructure(
             "registration email template is not available".into(),
@@ -215,18 +221,6 @@ impl AuthTicketStore for NoAuthTicketStore {
     }
 
     async fn consume_wallet_challenge(&self, _nonce: &str) -> AppResult<Option<WalletChallenge>> {
-        Err(auth_ticket_store_error())
-    }
-
-    async fn save_wallet_binding(&self, _ticket: &str, _record: WalletPendingBinding, _ttl_seconds: u64) -> AppResult<()> {
-        Err(auth_ticket_store_error())
-    }
-
-    async fn get_wallet_binding(&self, _ticket: &str) -> AppResult<Option<WalletPendingBinding>> {
-        Err(auth_ticket_store_error())
-    }
-
-    async fn consume_wallet_binding(&self, _ticket: &str) -> AppResult<Option<WalletPendingBinding>> {
         Err(auth_ticket_store_error())
     }
 }

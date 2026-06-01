@@ -11,7 +11,6 @@ import Card from '@mui/material/Card';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import CardHeader from '@mui/material/CardHeader';
 import CardContent from '@mui/material/CardContent';
@@ -27,8 +26,6 @@ import {
   linkAccountWallet,
   startAccountOAuth,
   deleteAccountIdentity,
-  changeAccountPassword,
-  requestAccountPasswordEmailCode,
 } from 'src/actions/account';
 
 import { Label } from 'src/components/label';
@@ -49,9 +46,10 @@ export function ProfileView() {
   const profile = useAccountProfile();
   const authConfig = useAuthConfig();
   const walletSigning = useWalletSigning();
-  const passwordActions = useProfilePasswordActions(() => profile.refresh());
   const identityActions = useProfileIdentityActions(() => profile.refresh(), router.refresh);
-  const providerActions = useProviderLinkActions(authConfig.data, walletSigning, () => profile.refresh());
+  const providerActions = useProviderLinkActions(authConfig.data, walletSigning, () =>
+    profile.refresh()
+  );
 
   const user = profile.data;
   const canUseSelfService = user !== undefined && !user.system;
@@ -75,11 +73,14 @@ export function ProfileView() {
       )}
 
       <Stack spacing={3}>
-        <AccountCard user={user} />
+        <AccountCard user={user} emailCodeAvailable={profile.emailCodeAvailable} />
 
         {canUseSelfService && (
           <>
-            <PasswordCard {...passwordActions} />
+            <PasswordSummaryCard
+              passwordSet={user.password_set}
+              emailCodeAvailable={profile.emailCodeAvailable}
+            />
             <ProviderCard
               identities={user.identities}
               authConfig={authConfig.data}
@@ -99,50 +100,42 @@ export function ProfileView() {
   );
 }
 
-function useProfilePasswordActions(refresh: () => Promise<unknown>) {
-  const { t, currentLang } = useTranslate('common');
-  const [code, setCode] = useState('');
-  const [password, setPassword] = useState('');
-  const [sendingCode, setSendingCode] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
+function PasswordSummaryCard({
+  passwordSet,
+  emailCodeAvailable,
+}: {
+  passwordSet: boolean;
+  emailCodeAvailable: boolean;
+}) {
+  const { t } = useTranslate('common');
+  const router = useRouter();
 
-  const sendCode = async () => {
-    setSendingCode(true);
-    try {
-      await requestAccountPasswordEmailCode(currentLang.value);
-      toast.success(t('profile.messages.codeSent'));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('profile.messages.saveFailed'));
-    } finally {
-      setSendingCode(false);
+  const openChangePassword = () => {
+    if (!emailCodeAvailable && !passwordSet) {
+      toast.error(t('profile.messages.passwordResetRequiresAdmin'));
+      return;
     }
+    router.push(paths.dashboard.profileChangePassword);
   };
 
-  const changePassword = async () => {
-    setChangingPassword(true);
-    try {
-      await changeAccountPassword({ emailVerificationCode: code, password });
-      setCode('');
-      setPassword('');
-      await refresh();
-      toast.success(t('profile.messages.passwordChanged'));
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('profile.messages.saveFailed'));
-    } finally {
-      setChangingPassword(false);
-    }
-  };
-
-  return {
-    code,
-    password,
-    sendingCode,
-    changingPassword,
-    setCode,
-    setPassword,
-    sendCode,
-    changePassword,
-  };
+  return (
+    <Card>
+      <CardHeader title={t('profile.passwordTitle')} />
+      <CardContent>
+        <Stack spacing={2} alignItems="flex-start">
+          <Label color={passwordSet ? 'success' : 'warning'} variant="soft">
+            {passwordSet ? t('profile.passwordSet') : t('profile.passwordNotSet')}
+          </Label>
+          <Typography variant="body2" color="text.secondary">
+            {t('profile.passwordDescription')}
+          </Typography>
+          <Button variant="contained" onClick={openChangePassword}>
+            {t('profile.changePassword')}
+          </Button>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
 }
 
 function useProfileIdentityActions(refresh: () => Promise<unknown>, refreshRouter: VoidFunction) {
@@ -183,7 +176,9 @@ function useProviderLinkActions(
   refresh: () => Promise<unknown>
 ) {
   const { t } = useTranslate('common');
-  const [linkingProvider, setLinkingProvider] = useState<UserIdentitySummary['provider'] | null>(null);
+  const [linkingProvider, setLinkingProvider] = useState<UserIdentitySummary['provider'] | null>(
+    null
+  );
 
   const linkOAuth = async (provider: OAuthProvider) => {
     setLinkingProvider(provider);
@@ -210,8 +205,15 @@ function useProviderLinkActions(
         chainId: config.evm_chain_ids[0],
       });
       const challenge = await walletNonce(account);
-      const signed = await walletSigning.signWalletMessage({ ...account, message: challenge.message });
-      await linkAccountWallet({ ...account, message: challenge.message, signature: signed.signature });
+      const signed = await walletSigning.signWalletMessage({
+        ...account,
+        message: challenge.message,
+      });
+      await linkAccountWallet({
+        ...account,
+        message: challenge.message,
+        signature: signed.signature,
+      });
       await refresh();
       toast.success(t('profile.messages.providerLinked'));
     } catch (error) {
@@ -224,8 +226,24 @@ function useProviderLinkActions(
   return { linkingProvider, linkOAuth, linkWallet };
 }
 
-function AccountCard({ user }: { user?: SystemUser }) {
+function AccountCard({
+  user,
+  emailCodeAvailable,
+}: {
+  user?: SystemUser;
+  emailCodeAvailable: boolean;
+}) {
   const { t } = useTranslate('common');
+  const router = useRouter();
+
+  const openVerifyEmail = () => {
+    if (!emailCodeAvailable) {
+      toast.error(t('profile.messages.emailConfigUnavailable'));
+      return;
+    }
+    router.push(paths.dashboard.profileVerifyEmail);
+  };
+
   return (
     <Card>
       <CardHeader title={t('profile.accountTitle')} />
@@ -241,39 +259,15 @@ function AccountCard({ user }: { user?: SystemUser }) {
               {user?.password_set ? t('profile.passwordSet') : t('profile.passwordNotSet')}
             </Label>
           </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
-
-type PasswordCardProps = ReturnType<typeof useProfilePasswordActions>;
-
-function PasswordCard({
-  code,
-  password,
-  sendingCode,
-  changingPassword,
-  setCode,
-  setPassword,
-  sendCode,
-  changePassword,
-}: PasswordCardProps) {
-  const { t } = useTranslate('common');
-
-  return (
-    <Card>
-      <CardHeader title={t('profile.passwordTitle')} />
-      <CardContent>
-        <Stack spacing={2}>
-          <Button color="inherit" variant="outlined" loading={sendingCode} onClick={sendCode} sx={{ alignSelf: 'flex-start' }}>
-            {t('profile.sendCode')}
-          </Button>
-          <TextField fullWidth label={t('profile.emailCode')} value={code} onChange={(event) => setCode(event.target.value)} />
-          <TextField fullWidth type="password" label={t('profile.newPassword')} value={password} onChange={(event) => setPassword(event.target.value)} />
-          <Button color="inherit" variant="contained" loading={changingPassword} onClick={changePassword} sx={{ alignSelf: 'flex-start' }}>
-            {t('profile.changePassword')}
-          </Button>
+          {user && !user.email_verified ? (
+            <Button
+              variant="outlined"
+              sx={{ alignSelf: 'flex-start' }}
+              onClick={openVerifyEmail}
+            >
+              {t('profile.verifyEmail')}
+            </Button>
+          ) : null}
         </Stack>
       </CardContent>
     </Card>

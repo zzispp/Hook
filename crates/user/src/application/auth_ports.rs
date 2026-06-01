@@ -64,11 +64,6 @@ pub struct WalletChallenge {
     pub chain_id: Option<u64>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
-pub struct WalletPendingBinding {
-    pub identity: UserIdentityInput,
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WalletNonceInput {
     pub provider: IdentityProvider,
@@ -88,11 +83,7 @@ pub struct WalletSignInInput {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WalletSignInResult {
     Authenticated(Box<User>),
-    EmailRequired {
-        ticket: String,
-        provider: IdentityProvider,
-        address: String,
-    },
+    AccountRequired { provider: IdentityProvider, address: String },
 }
 
 #[async_trait]
@@ -114,9 +105,6 @@ pub trait AuthTicketStore: Send + Sync + 'static {
     async fn consume_oauth_binding(&self, ticket: &str) -> AppResult<Option<OAuthPendingBinding>>;
     async fn save_wallet_challenge(&self, nonce: &str, record: WalletChallenge, ttl_seconds: u64) -> AppResult<()>;
     async fn consume_wallet_challenge(&self, nonce: &str) -> AppResult<Option<WalletChallenge>>;
-    async fn save_wallet_binding(&self, ticket: &str, record: WalletPendingBinding, ttl_seconds: u64) -> AppResult<()>;
-    async fn get_wallet_binding(&self, ticket: &str) -> AppResult<Option<WalletPendingBinding>>;
-    async fn consume_wallet_binding(&self, ticket: &str) -> AppResult<Option<WalletPendingBinding>>;
 }
 
 #[async_trait]

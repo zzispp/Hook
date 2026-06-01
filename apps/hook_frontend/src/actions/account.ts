@@ -12,11 +12,17 @@ import { requireApiData } from './rbac';
 
 type AccountProfileResponse = {
   user: SystemUser;
+  email_code_available: boolean;
 };
 
 type PasswordChangePayload = {
-  emailVerificationCode: string;
+  emailVerificationCode?: string;
+  currentPassword?: string;
   password: string;
+};
+
+type EmailVerifyPayload = {
+  emailVerificationCode: string;
 };
 
 const swrOptions = {
@@ -35,6 +41,7 @@ export function useAccountProfile() {
 
     return {
       data: profile?.user,
+      emailCodeAvailable: profile?.email_code_available ?? false,
       isLoading,
       error: error ?? apiError,
       isValidating,
@@ -44,13 +51,24 @@ export function useAccountProfile() {
 }
 
 export async function requestAccountPasswordEmailCode(lang: string) {
-  await axios.post(endpoints.account.passwordEmailCode, { lang });
+  await requestSuccess(axios.post<ApiEnvelope<unknown>>(endpoints.account.passwordEmailCode, { lang }));
 }
 
 export async function changeAccountPassword(payload: PasswordChangePayload) {
   const response = await axios.post<ApiEnvelope<SystemUser>>(endpoints.account.passwordChange, {
-    email_verification_code: payload.emailVerificationCode.trim(),
+    email_verification_code: payload.emailVerificationCode?.trim(),
+    current_password: payload.currentPassword?.trim(),
     password: payload.password.trim(),
+  });
+  const user = requireApiData(response.data);
+  await mutate(endpoints.account.profile);
+  await mutate(endpoints.auth.me);
+  return user;
+}
+
+export async function verifyAccountEmail(payload: EmailVerifyPayload) {
+  const response = await axios.post<ApiEnvelope<SystemUser>>(endpoints.account.verifyEmail, {
+    email_verification_code: payload.emailVerificationCode.trim(),
   });
   const user = requireApiData(response.data);
   await mutate(endpoints.account.profile);
@@ -119,4 +137,11 @@ export async function linkAccountWallet({
 export async function getAccountIdentities() {
   const response = await axios.get<ApiEnvelope<UserIdentitySummary[]>>(endpoints.account.identities);
   return requireApiData(response.data);
+}
+
+async function requestSuccess(request: Promise<{ data: ApiEnvelope<unknown> }>) {
+  const response = await request;
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Request failed');
+  }
 }

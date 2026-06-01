@@ -4,7 +4,7 @@ use super::{SettingError, SettingResult};
 
 const MAX_CONTACT_FIELD_LENGTH: usize = 255;
 const MAX_CONTACT_QR_CODE_URL_LENGTH: usize = 4096;
-const MAX_CONTACT_QR_CODE_DATA_URL_LENGTH: usize = 1_048_576_0;//10M
+const MAX_CONTACT_QR_CODE_DATA_URL_LENGTH: usize = 1_048_576_0; //10M
 
 pub(super) fn sanitize_contact_methods(methods: Vec<ContactMethod>) -> Vec<ContactMethod> {
     methods

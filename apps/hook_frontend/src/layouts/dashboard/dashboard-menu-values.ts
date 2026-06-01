@@ -16,6 +16,7 @@ export const DASHBOARD_MENU_CODES = {
   modelManagement: 'admin_models',
   performanceMonitoring: 'admin_performance_monitoring',
   providerManagement: 'admin_providers',
+  profile: 'dashboard_profile',
   requestRecords: 'admin_request_records',
   roleManagement: 'admin_roles',
   scheduledTaskManagement: 'admin_scheduled_tasks',

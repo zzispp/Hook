@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest},
     user::{
-        AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProviderLinkResponse, AuthConfigResponse, Credentials, IdentityProvider, NewUser,
-        PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId, UserIdentitySummary, UserListFilters,
-        UserWalletSummaryResponse,
+        AccountEmailVerifyPayload, AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProviderLinkResponse, AuthConfigResponse, Credentials,
+        IdentityProvider, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId,
+        UserIdentitySummary, UserListFilters, UserWalletSummaryResponse,
     },
 };
 
@@ -34,6 +34,8 @@ use super::{
     },
 };
 use helpers::{grant_initial_balance, identity_summaries, unlink_identity, verify_password};
+
+const ACCOUNT_EMAIL_CODE_DISABLED_MESSAGE: &str = "account email verification is disabled";
 
 #[async_trait]
 impl<R, H, S, P, G, W, C, M, E, N, K, A, O, T, Y> UserUseCase for UserService<R, H, S, P, G, W, C, M, E, N, K, A, O, T, Y>
@@ -189,34 +191,6 @@ where
         Ok(AccountProviderLinkResponse { identity })
     }
 
-    async fn request_wallet_email_code(&self, ticket: String, email: String, lang: String) -> AppResult<()> {
-        self.auth_ticket_store.get_wallet_binding(&ticket).await?.ok_or(AppError::Unauthorized)?;
-        reject_system_user_email(&self.system_users, &email)?;
-        social_auth::request_purpose_email_code(
-            &self.purpose_email_code_store,
-            &self.registration_email_config,
-            &self.registration_email_mailer,
-            social_auth::WALLET_EMAIL_PURPOSE,
-            RegistrationEmailCodeRequest { email, lang },
-        )
-        .await
-    }
-
-    async fn complete_wallet(&self, ticket: String, email: String, code: String) -> AppResult<User> {
-        let settings = self.registration_policy.registration_settings().await?;
-        reject_system_user_email(&self.system_users, &email)?;
-        social_auth::complete_wallet_binding(
-            &self.repository,
-            &self.auth_ticket_store,
-            &self.purpose_email_code_store,
-            &ticket,
-            &email,
-            &code,
-            &settings.default_user_group_code,
-        )
-        .await
-    }
-
     async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()> {
         let input = sanitize_password_reset_request(input);
         validate_password_reset_request(&input)?;
@@ -305,18 +279,37 @@ where
         .await
     }
 
+    async fn account_email_code_available(&self) -> AppResult<bool> {
+        Ok(self.registration_email_config.account_email_settings().await?.is_ready())
+    }
+
+    async fn verify_account_email(&self, id: UserId, input: AccountEmailVerifyPayload) -> AppResult<User> {
+        let user = self.authenticated_user(id).await?;
+        reject_system_user_self_service(&user)?;
+        social_auth::verify_email_with_code(&self.repository, &self.purpose_email_code_store, user, &input.email_verification_code).await
+    }
+
     async fn change_account_password(&self, id: UserId, input: AccountPasswordChangePayload) -> AppResult<User> {
         let user = self.authenticated_user(id).await?;
         reject_system_user_self_service(&user)?;
-        social_auth::change_password_with_email_code(
-            &self.repository,
-            &self.purpose_email_code_store,
-            &self.password_hasher,
-            user,
-            &input.email_verification_code,
-            &input.password,
-        )
-        .await
+        if self.account_email_code_available().await? {
+            let code = input.email_verification_code.as_deref().unwrap_or_default();
+            return social_auth::change_password_with_email_code(
+                &self.repository,
+                &self.purpose_email_code_store,
+                &self.password_hasher,
+                user,
+                code,
+                &input.password,
+            )
+            .await;
+        }
+        let current_password = input.current_password.as_deref().unwrap_or_default();
+        let user_auth = self.repository.find_auth_by_id(user.id.clone()).await?.ok_or(AppError::NotFound)?;
+        if user_auth.password_hash.is_none() {
+            return Err(AppError::InvalidInput(ACCOUNT_EMAIL_CODE_DISABLED_MESSAGE.into()));
+        }
+        social_auth::change_password_with_current_password(&self.repository, &self.password_hasher, user_auth, current_password, &input.password).await
     }
 
     async fn unlink_identity(&self, id: UserId, identity_id: String) -> AppResult<()> {

@@ -8,7 +8,6 @@ pub(in crate::application::service::social_auth) const TICKET_BYTES: usize = 32;
 pub(in crate::application::service::social_auth) const OAUTH_STATE_TTL_SECONDS: u64 = 10 * 60;
 pub(in crate::application::service::social_auth) const OAUTH_BINDING_TTL_SECONDS: u64 = 10 * 60;
 pub(in crate::application::service::social_auth) const WALLET_CHALLENGE_TTL_SECONDS: u64 = 10 * 60;
-pub(in crate::application::service::social_auth) const WALLET_BINDING_TTL_SECONDS: u64 = 10 * 60;
 
 const NONCE_BYTES: usize = 16;
 
@@ -90,6 +89,22 @@ pub(in crate::application::service::social_auth) fn password_replace_record(user
         password_hash: Some(password_hash),
         email: user.email,
         email_verified: None,
+        role: user.role,
+        group_codes: user.group_codes,
+        is_active: user.is_active,
+        allowed_model_ids: user.allowed_model_ids,
+        allowed_provider_ids: user.allowed_provider_ids,
+        rate_limit_rpm: user.rate_limit_rpm,
+        quota_mode: user.quota_mode,
+    }
+}
+
+pub(in crate::application::service::social_auth) fn email_verified_record(user: User) -> ReplaceUserRecord {
+    ReplaceUserRecord {
+        username: user.username,
+        password_hash: None,
+        email: user.email,
+        email_verified: Some(true),
         role: user.role,
         group_codes: user.group_codes,
         is_active: user.is_active,

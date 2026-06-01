@@ -14,6 +14,7 @@ import Button from '@mui/material/Button';
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
 
+import { PasswordIcon } from 'src/assets/icons';
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Form, Field } from 'src/components/hook-form';
@@ -60,9 +61,9 @@ export function JwtForgotPasswordView() {
   return (
     <>
       <FormHead
+        icon={<PasswordIcon />}
         title={t('forgotPassword.title')}
         description={t('forgotPassword.description')}
-        sx={{ textAlign: { xs: 'center', md: 'left' } }}
       />
 
       {!!errorMessage && (
@@ -80,6 +81,7 @@ export function JwtForgotPasswordView() {
       <Form methods={methods} onSubmit={onSubmit}>
         <Box sx={{ gap: 3, display: 'flex', flexDirection: 'column' }}>
           <Field.Text
+            autoFocus
             name="email"
             label={t('fields.email')}
             placeholder={t('placeholders.email')}
@@ -88,7 +90,6 @@ export function JwtForgotPasswordView() {
 
           <Button
             fullWidth
-            color="inherit"
             size="large"
             type="submit"
             variant="contained"

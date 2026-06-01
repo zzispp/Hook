@@ -242,6 +242,10 @@ impl RegistrationEmailConfig for TestRegistrationEmailConfig {
         Ok(self.settings.clone())
     }
 
+    async fn account_email_settings(&self) -> AppResult<EmailSettings> {
+        Ok(self.settings.clone())
+    }
+
     async fn registration_email_template(&self, _lang: &str) -> AppResult<RegistrationEmailTemplate> {
         Ok(self.template.clone())
     }

@@ -59,8 +59,7 @@ export type OAuthCallbackResponse =
 export type WalletSignInResponse =
   | ({ status: 'authenticated' } & AuthSessionResponse)
   | {
-      status: 'email_required';
-      wallet_ticket: string;
+      status: 'account_required';
       provider: IdentityProvider;
       address: string;
     };
@@ -197,39 +196,6 @@ export async function walletSignIn({
   return requireApiData<WalletSignInResponse>(res.data);
 }
 
-export async function requestWalletEmailCode({
-  walletTicket,
-  email,
-  lang,
-}: {
-  walletTicket: string;
-  email: string;
-  lang: string;
-}) {
-  await axios.post(endpoints.auth.walletEmailCode, {
-    wallet_ticket: trimCredential(walletTicket),
-    email: trimCredential(email),
-    lang: trimCredential(lang),
-  });
-}
-
-export async function completeWallet({
-  walletTicket,
-  email,
-  emailVerificationCode,
-}: {
-  walletTicket: string;
-  email: string;
-  emailVerificationCode: string;
-}) {
-  const res = await axios.post(endpoints.auth.walletComplete, {
-    wallet_ticket: trimCredential(walletTicket),
-    email: trimCredential(email),
-    email_verification_code: trimCredential(emailVerificationCode),
-  });
-  await setSession(requireAuthSession(res.data));
-}
-
 export async function applyAuthenticatedSession(response: AuthSessionResponse) {
   await setSession(assertAuthSession(response));
 }
@@ -242,21 +208,23 @@ export const requestPasswordReset = async ({
   lang,
   resetOrigin,
 }: PasswordResetRequestParams): Promise<void> => {
-  await axios.post(endpoints.auth.passwordResetRequest, {
+  const response = await axios.post<ApiEnvelope<unknown>>(endpoints.auth.passwordResetRequest, {
     email: trimCredential(email),
     lang: trimCredential(lang),
     reset_origin: trimCredential(resetOrigin),
   });
+  requireApiSuccess(response.data);
 };
 
 export const confirmPasswordReset = async ({
   token,
   password,
 }: PasswordResetConfirmParams): Promise<void> => {
-  await axios.post(endpoints.auth.passwordResetConfirm, {
+  const response = await axios.post<ApiEnvelope<unknown>>(endpoints.auth.passwordResetConfirm, {
     token: trimCredential(token),
     password: trimCredential(password),
   });
+  requireApiSuccess(response.data);
 };
 
 /** **************************************
@@ -274,6 +242,12 @@ export const signOut = async (): Promise<void> => {
 function requireAuthSession(payload: ApiEnvelope<AuthSessionResponse>): AuthSessionResponse {
   const session = requireApiData<AuthSessionResponse>(payload);
   return assertAuthSession(session);
+}
+
+function requireApiSuccess(payload: ApiEnvelope<unknown>) {
+  if (!payload.success) {
+    throw new Error(payload.message || 'Request failed');
+  }
 }
 
 function assertAuthSession(session: AuthSessionResponse): AuthSessionResponse {

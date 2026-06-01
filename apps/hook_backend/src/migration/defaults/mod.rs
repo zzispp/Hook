@@ -74,6 +74,20 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         api_codes: &["dashboard_overview_read", "dashboard_activity_read", "dashboard_filter_options_read"],
     },
     MenuApiBindingDefinition {
+        menu_code: "dashboard_profile",
+        api_codes: &[
+            "account_profile_read",
+            "account_password_email_code",
+            "account_password_change",
+            "account_verify_email",
+            "account_identities_read",
+            "account_identity_delete",
+            "account_oauth_start",
+            "account_oauth_callback",
+            "account_wallet_link",
+        ],
+    },
+    MenuApiBindingDefinition {
         menu_code: "admin_user_stats",
         api_codes: &[
             "admin_user_stats_leaderboard_read",

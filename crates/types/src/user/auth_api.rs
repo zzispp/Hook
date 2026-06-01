@@ -89,25 +89,7 @@ pub struct AccountProviderLinkResponse {
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum WalletSignInResponse {
     Authenticated(Box<AuthSessionData>),
-    EmailRequired {
-        wallet_ticket: String,
-        provider: IdentityProvider,
-        address: String,
-    },
-}
-
-#[derive(Debug, Deserialize)]
-pub struct WalletEmailCodePayload {
-    pub wallet_ticket: String,
-    pub email: String,
-    pub lang: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct WalletCompletePayload {
-    pub wallet_ticket: String,
-    pub email: String,
-    pub email_verification_code: String,
+    AccountRequired { provider: IdentityProvider, address: String },
 }
 
 #[derive(Debug, Serialize)]
@@ -120,6 +102,7 @@ pub struct AuthSessionData {
 #[derive(Debug, Serialize)]
 pub struct AccountProfileResponse {
     pub user: UserResponse,
+    pub email_code_available: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -128,7 +111,15 @@ pub struct AccountPasswordEmailCodePayload {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AccountPasswordChangePayload {
+pub struct AccountEmailVerifyPayload {
     pub email_verification_code: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AccountPasswordChangePayload {
+    #[serde(default)]
+    pub email_verification_code: Option<String>,
+    #[serde(default)]
+    pub current_password: Option<String>,
     pub password: String,
 }
