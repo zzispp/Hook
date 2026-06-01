@@ -276,12 +276,12 @@ function namedProviderKeys(
   group: BillingGroup,
   providers: Pick<Provider, 'id' | 'name'>[],
   providerKeysByProvider: Record<string, ProviderApiKey[]>
-) {
+): string[] {
   const keys = providers.flatMap((provider) =>
     (providerKeysByProvider[provider.id] ?? []).map((key) => [
       key.id,
       `${provider.name} / ${key.name}`,
-    ])
+    ] as const)
   );
   const labels = new Map(keys);
   if (group.allowed_provider_key_ids.length === 0) {
