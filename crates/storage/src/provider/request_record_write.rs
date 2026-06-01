@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, EntityTrait, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use serde_json::Value;
 use types::model::PatchField;
 
@@ -16,7 +16,8 @@ pub async fn create_request_record(store: &ProviderStore, input: RequestRecordRe
 }
 
 pub async fn update_request_record(store: &ProviderStore, input: RequestRecordRecordPatch) -> StorageResult<()> {
-    let Some(record) = request_records::Entity::find_by_id(input.request_id.clone()).one(store.connection()).await? else {
+    let request_id = input.request_id.clone();
+    let Some(record) = request_records::Entity::find_by_id(request_id.clone()).one(store.connection()).await? else {
         return Err(StorageError::NotFound);
     };
     let now = time::OffsetDateTime::now_utc();
@@ -27,7 +28,18 @@ pub async fn update_request_record(store: &ProviderStore, input: RequestRecordRe
     let mut active: request_records::ActiveModel = record.into();
     apply_request_record_patch(&mut active, input, now, was_started, has_failover, has_retry)?;
     active.updated_at = Set(now);
-    let updated = active.update(store.connection()).await?;
+    let result = request_records::Entity::update_many()
+        .set(active)
+        .filter(request_records::Column::RequestId.eq(&request_id))
+        .exec(store.connection())
+        .await?;
+    if result.rows_affected == 0 {
+        return Err(StorageError::NotFound);
+    }
+    let updated = request_records::Entity::find_by_id(request_id)
+        .one(store.connection())
+        .await?
+        .ok_or(StorageError::NotFound)?;
     crate::dashboard::sync_user_usage_buckets(store.connection(), &old_record, &updated).await?;
     crate::dashboard::sync_cost_analysis_buckets(store.connection(), &old_record, &updated).await?;
     Ok(())

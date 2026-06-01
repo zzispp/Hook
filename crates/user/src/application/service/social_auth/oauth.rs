@@ -96,21 +96,32 @@ where
     provider_profile_result(repository, tickets, state.provider, profile).await
 }
 
+pub(in crate::application::service) struct AccountOAuthCallbackInput<'a> {
+    pub expected_user_id: UserId,
+    pub provider: IdentityProvider,
+    pub state: &'a str,
+    pub redirect_uri: &'a str,
+    pub profile: OAuthProfile,
+}
+
 pub(in crate::application::service) async fn account_oauth_callback<R, C, T>(
     repository: &R,
     config: &C,
     tickets: &T,
-    expected_user_id: UserId,
-    provider: IdentityProvider,
-    state: &str,
-    redirect_uri: &str,
-    profile: OAuthProfile,
+    input: AccountOAuthCallbackInput<'_>,
 ) -> AppResult<UserIdentitySummary>
 where
     R: UserRepository,
     C: AuthProviderConfig,
     T: AuthTicketStore,
 {
+    let AccountOAuthCallbackInput {
+        expected_user_id,
+        provider,
+        state,
+        redirect_uri,
+        profile,
+    } = input;
     if !profile.email_verified {
         return Err(AppError::InvalidInput("verified provider email is required".into()));
     }

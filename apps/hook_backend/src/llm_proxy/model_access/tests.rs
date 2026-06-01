@@ -124,6 +124,7 @@ fn snapshot() -> SchedulingSnapshot {
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: vec!["global-model-a".into(), "global-model-c".into()],
             allowed_provider_ids: Vec::new(),
+            allowed_provider_key_ids: Vec::new(),
             visible_user_group_codes: vec!["group-a".into()],
             is_active: true,
         }],

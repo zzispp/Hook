@@ -15,8 +15,8 @@ mod snapshot;
 
 use super::{
     LlmProxyError, LlmProxyState,
+    audit::AuditCandidate,
     cache::snapshot::{CachedUserAccess, SchedulingSnapshot},
-    candidate::ProxyCandidate,
     client_error,
 };
 
@@ -31,7 +31,7 @@ const WALLET_LIMIT_UNLIMITED: &str = "unlimited";
 
 pub(super) struct WalletSettlementInput<'a> {
     pub(super) request_id: &'a str,
-    pub(super) candidate: &'a ProxyCandidate,
+    pub(super) candidate: &'a AuditCandidate,
     pub(super) amount: RequestBillingAmount,
 }
 
@@ -117,7 +117,7 @@ fn ensure_wallet_available(wallet: &Wallet) -> Result<(), LlmProxyError> {
     Ok(())
 }
 
-async fn settlement_token(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<Option<ApiToken>, LlmProxyError> {
+async fn settlement_token(state: &LlmProxyState, candidate: &AuditCandidate) -> Result<Option<ApiToken>, LlmProxyError> {
     let Some(token_id) = candidate.trace.token_id.as_deref() else {
         return Ok(None);
     };

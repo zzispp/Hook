@@ -292,14 +292,15 @@ async fn request_record_storage_creates_main_record() {
 async fn request_record_storage_updates_main_record() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
-        .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
         .append_exec_results([
             mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
+            mock_exec_result(),
         ])
+        .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -317,14 +318,15 @@ async fn request_record_storage_updates_main_record() {
 async fn request_record_storage_syncs_dashboard_tokens_with_cache_context() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
-        .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
         .append_exec_results([
             mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
+            mock_exec_result(),
         ])
+        .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 

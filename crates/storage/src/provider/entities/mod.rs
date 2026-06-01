@@ -1,3 +1,4 @@
+pub mod billing_group_provider_keys;
 pub mod billing_group_providers;
 pub mod billing_rules;
 pub mod dimension_collectors;

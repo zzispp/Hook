@@ -11,7 +11,8 @@ use time::OffsetDateTime;
 
 pub(crate) use self::billing_runtime::{BillingAttempt, request_billing_status};
 use self::billing_runtime::{attempt_billing, model_usage_record, token_usage_record, wallet_settlement_input};
-use self::event::AuditEvent;
+pub(crate) use self::event::AuditCandidate;
+use self::event::{AttemptAuditInput, AuditEvent};
 pub use self::event::{AttemptRecordInput, TokenUsage};
 use super::{
     LlmProxyError, LlmProxyState,
@@ -28,15 +29,12 @@ pub async fn record_scheduled_candidates(state: &LlmProxyState, selection: &Cand
     persist_event(state, AuditEvent::ScheduledCandidates { selection, capture }).await
 }
 
-pub async fn record_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
-    persist_event(
-        state,
-        AuditEvent::Attempt {
-            request_id,
-            input: Box::new(input),
-        },
-    )
-    .await
+pub fn record_attempt<'a>(
+    state: &'a LlmProxyState,
+    request_id: &'a str,
+    input: AttemptRecordInput<'_>,
+) -> impl Future<Output = Result<(), LlmProxyError>> + 'a {
+    persist_attempt(state, request_id, AttemptAuditInput::from(input))
 }
 
 pub async fn record_skipped_candidates(state: &LlmProxyState, request_id: &str, skip_reason: &str) -> Result<(), LlmProxyError> {
@@ -53,7 +51,6 @@ pub async fn record_probe_deferred(state: &LlmProxyState, request_id: &str) -> R
 async fn persist_event(state: &LlmProxyState, event: AuditEvent<'_>) -> Result<(), LlmProxyError> {
     match event {
         AuditEvent::ScheduledCandidates { selection, capture } => persist_scheduled_candidates(state, selection, capture).await,
-        AuditEvent::Attempt { request_id, input } => persist_attempt(state, request_id, *input).await,
         AuditEvent::SkippedCandidates { request_id, skip_reason } => persist_skipped_candidates(state, request_id, skip_reason).await,
     }
 }
@@ -72,22 +69,19 @@ async fn persist_scheduled_candidates(state: &LlmProxyState, selection: &Candida
     Ok(())
 }
 
-async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: AttemptRecordInput<'_>) -> Result<(), LlmProxyError> {
+async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: AttemptAuditInput) -> Result<(), LlmProxyError> {
     let store = ProviderStore::new(state.database.clone());
     let billing = attempt_billing(&store, request_id, &input).await?;
     let upstream_cost = upstream_cost::request_upstream_cost(&store, &input).await?;
     let policies = request_record_policies(state).await?;
-    match store
-        .update_request_candidate(records::attempt_patch(request_id, &input, billing.as_ref(), &upstream_cost, &policies)?)
-        .await
-    {
+    let candidate_patch = records::attempt_patch(request_id, &input, billing.as_ref(), &upstream_cost, &policies)?;
+    match store.update_request_candidate(candidate_patch).await {
         Ok(_) => {}
         Err(StorageError::NotFound) => create_missing_attempt(&store, request_id, &input, billing.as_ref(), &upstream_cost, &policies).await?,
         Err(error) => return Err(error.into()),
     }
-    store
-        .update_request_record(records::request_record_patch(request_id, &input, billing.as_ref(), &upstream_cost, &policies)?)
-        .await?;
+    let request_patch = records::request_record_patch(request_id, &input, billing.as_ref(), &upstream_cost, &policies)?;
+    store.update_request_record(request_patch).await?;
     let model_usage_record = model_usage_record(&input, billing.as_ref());
     let usage_record = token_usage_record(request_id, &input, billing.as_ref(), OffsetDateTime::now_utc())?;
     let settlement = wallet_settlement_input(request_id, &input, billing.as_ref())?;
@@ -104,7 +98,7 @@ async fn persist_skipped_candidates(state: &LlmProxyState, request_id: &str, ski
 async fn create_missing_attempt(
     store: &ProviderStore,
     request_id: &str,
-    input: &AttemptRecordInput<'_>,
+    input: &AttemptAuditInput,
     billing: Option<&BillingAttempt>,
     upstream_cost: &types::provider::RequestUpstreamCost,
     policies: &RequestRecordPolicies,

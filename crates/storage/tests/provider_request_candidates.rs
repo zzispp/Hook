@@ -79,11 +79,13 @@ async fn request_candidate_storage_lists_failed_and_no_candidate_records() {
 #[tokio::test]
 async fn request_candidate_storage_updates_existing_attempt() {
     let streaming = request_candidate_record("record-1", "streaming");
-    let success = request_candidate_record("record-1", "success");
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[streaming]])
-            .append_query_results([[success]])
+            .append_exec_results([MockExecResult {
+                last_insert_id: 0,
+                rows_affected: 1,
+            }])
             .append_query_results([[request_candidate_record("record-1", "success")]])
             .append_query_results([Vec::<request_records::Model>::new()])
             .append_query_results([[summary_record("success")]])

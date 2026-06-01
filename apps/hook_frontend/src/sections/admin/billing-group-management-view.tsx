@@ -9,11 +9,11 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 
 import { useGlobalModels } from 'src/actions/models';
-import { useProviders } from 'src/actions/providers';
 import { useBillingGroups } from 'src/actions/groups';
 import { useTranslate } from 'src/locales/use-locales';
 import { useUserGroups } from 'src/actions/user-groups';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useProviders, useProviderKeysByProvider } from 'src/actions/providers';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import { useTable } from 'src/components/table';
@@ -72,6 +72,7 @@ function useBillingGroupManagementPage() {
   const groups = useBillingGroups(table.page, table.rowsPerPage, toModelFilters(filters));
   const models = useGlobalModels(0, 1000);
   const providers = useProviders(0, 1000);
+  const providerKeys = useProviderKeysByProvider(providers.items);
   const userGroups = useUserGroups(0, USER_GROUP_MAX_PAGE_SIZE);
   const dialog = useGroupDialog(t);
   const deleteDialog = useDeleteGroupDialog(t);
@@ -91,6 +92,7 @@ function useBillingGroupManagementPage() {
     groups,
     models,
     providers,
+    providerKeys,
     userGroups,
     userGroupOptions,
     dialog,
@@ -108,6 +110,7 @@ function BillingGroupDialogs({ state }: { state: ReturnType<typeof useBillingGro
         group={state.detailTarget}
         models={state.models.items}
         providers={state.providers.items}
+        providerKeysByProvider={state.providerKeys.itemsByProvider}
         userGroups={state.userGroups.items}
         open={!!state.detailTarget}
         onClose={() => state.setDetailTarget(null)}
@@ -116,6 +119,7 @@ function BillingGroupDialogs({ state }: { state: ReturnType<typeof useBillingGro
         dialog={state.dialog}
         models={state.models.items}
         providers={state.providers.items}
+        providerKeysByProvider={state.providerKeys.itemsByProvider}
         userGroups={state.userGroupOptions}
       />
       <DeleteBillingGroupDialog

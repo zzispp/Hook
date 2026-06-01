@@ -1,5 +1,5 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set, sea_query::Expr};
-use types::provider::RequestCandidateListRequest;
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set, UpdateMany, sea_query::Expr};
+use types::{model::PatchField, provider::RequestCandidateListRequest};
 
 use crate::{StorageError, StorageResult, json};
 
@@ -108,49 +108,204 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     else {
         return Err(StorageError::NotFound);
     };
+    let record_id = record.id.clone();
     let was_started = record.started_at.is_some();
     let now = time::OffsetDateTime::now_utc();
-    let mut record: request_candidates::ActiveModel = record.into();
-    record.status = Set(input.status);
-    record.skip_reason = Set(input.skip_reason);
-    record.status_code = Set(input.status_code);
-    record.prompt_tokens = Set(input.prompt_tokens);
-    record.completion_tokens = Set(input.completion_tokens);
-    record.total_tokens = Set(input.total_tokens);
-    record.cache_creation_input_tokens = Set(input.cache_creation_input_tokens);
-    record.cache_read_input_tokens = Set(input.cache_read_input_tokens);
-    record.input_text_tokens = Set(input.input_text_tokens);
-    record.input_audio_tokens = Set(input.input_audio_tokens);
-    record.input_image_tokens = Set(input.input_image_tokens);
-    record.output_text_tokens = Set(input.output_text_tokens);
-    record.output_audio_tokens = Set(input.output_audio_tokens);
-    record.output_image_tokens = Set(input.output_image_tokens);
-    record.reasoning_tokens = Set(input.reasoning_tokens);
-    record.cache_creation_5m_input_tokens = Set(input.cache_creation_5m_input_tokens);
-    record.cache_creation_1h_input_tokens = Set(input.cache_creation_1h_input_tokens);
-    record.usage_source = Set(input.usage_source);
-    record.usage_semantic = Set(input.usage_semantic);
-    request_upstream_cost::apply_candidate_patch(&mut record, input.upstream_cost);
-    apply_billing_values(&mut record, input.billing)?;
-    apply_json_patch(&mut record.billing_snapshot, input.billing_snapshot)?;
-    record.latency_ms = Set(input.latency_ms);
-    record.first_byte_time_ms = Set(input.first_byte_time_ms);
-    record.error_type = Set(input.error_type);
-    record.error_message = Set(input.error_message);
-    record.error_code = Set(input.error_code);
-    record.error_param = Set(input.error_param);
-    apply_json_patch(&mut record.provider_request_headers, input.provider_request_headers)?;
-    apply_json_patch(&mut record.provider_request_body, input.provider_request_body)?;
-    apply_json_patch(&mut record.provider_response_headers, input.provider_response_headers)?;
-    apply_json_patch(&mut record.provider_response_body, input.provider_response_body)?;
+    let update = candidate_update(input, now, was_started)?;
+    let result = update.filter(request_candidates::Column::Id.eq(&record_id)).exec(store.connection()).await?;
+    if result.rows_affected == 0 {
+        return Err(StorageError::NotFound);
+    }
+    let record = request_candidates::Entity::find_by_id(record_id)
+        .one(store.connection())
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    record.response()
+}
+
+fn candidate_update(input: RequestCandidateRecordPatch, now: time::OffsetDateTime, was_started: bool) -> StorageResult<UpdateMany<request_candidates::Entity>> {
+    let mut update = request_candidates::Entity::update_many()
+        .col_expr(request_candidates::Column::Status, Expr::val(input.status))
+        .col_expr(request_candidates::Column::SkipReason, Expr::val(input.skip_reason))
+        .col_expr(request_candidates::Column::StatusCode, Expr::val(input.status_code))
+        .col_expr(request_candidates::Column::PromptTokens, Expr::val(input.prompt_tokens))
+        .col_expr(request_candidates::Column::CompletionTokens, Expr::val(input.completion_tokens))
+        .col_expr(request_candidates::Column::TotalTokens, Expr::val(input.total_tokens))
+        .col_expr(
+            request_candidates::Column::CacheCreationInputTokens,
+            Expr::val(input.cache_creation_input_tokens),
+        )
+        .col_expr(request_candidates::Column::CacheReadInputTokens, Expr::val(input.cache_read_input_tokens))
+        .col_expr(request_candidates::Column::InputTextTokens, Expr::val(input.input_text_tokens))
+        .col_expr(request_candidates::Column::InputAudioTokens, Expr::val(input.input_audio_tokens))
+        .col_expr(request_candidates::Column::InputImageTokens, Expr::val(input.input_image_tokens))
+        .col_expr(request_candidates::Column::OutputTextTokens, Expr::val(input.output_text_tokens))
+        .col_expr(request_candidates::Column::OutputAudioTokens, Expr::val(input.output_audio_tokens))
+        .col_expr(request_candidates::Column::OutputImageTokens, Expr::val(input.output_image_tokens))
+        .col_expr(request_candidates::Column::ReasoningTokens, Expr::val(input.reasoning_tokens))
+        .col_expr(
+            request_candidates::Column::CacheCreation5mInputTokens,
+            Expr::val(input.cache_creation_5m_input_tokens),
+        )
+        .col_expr(
+            request_candidates::Column::CacheCreation1hInputTokens,
+            Expr::val(input.cache_creation_1h_input_tokens),
+        )
+        .col_expr(request_candidates::Column::UsageSource, Expr::val(input.usage_source))
+        .col_expr(request_candidates::Column::UsageSemantic, Expr::val(input.usage_semantic));
+    update = apply_candidate_upstream_cost_patch(update, input.upstream_cost);
+    update = apply_candidate_billing_values(update, input.billing)?;
+    update = apply_json_expr(update, request_candidates::Column::BillingSnapshot, input.billing_snapshot)?;
+    update = update
+        .col_expr(request_candidates::Column::LatencyMs, Expr::val(input.latency_ms))
+        .col_expr(request_candidates::Column::FirstByteTimeMs, Expr::val(input.first_byte_time_ms))
+        .col_expr(request_candidates::Column::ErrorType, Expr::val(input.error_type))
+        .col_expr(request_candidates::Column::ErrorMessage, Expr::val(input.error_message))
+        .col_expr(request_candidates::Column::ErrorCode, Expr::val(input.error_code))
+        .col_expr(request_candidates::Column::ErrorParam, Expr::val(input.error_param));
+    update = apply_json_expr(update, request_candidates::Column::ProviderRequestHeaders, input.provider_request_headers)?;
+    update = apply_json_expr(update, request_candidates::Column::ProviderRequestBody, input.provider_request_body)?;
+    update = apply_json_expr(update, request_candidates::Column::ProviderResponseHeaders, input.provider_response_headers)?;
+    update = apply_json_expr(update, request_candidates::Column::ProviderResponseBody, input.provider_response_body)?;
     if !was_started {
-        record.started_at = Set(Some(now));
+        update = update.col_expr(request_candidates::Column::StartedAt, Expr::val(Some(now)));
     }
     if input.finished {
-        record.finished_at = Set(Some(now));
+        update = update.col_expr(request_candidates::Column::FinishedAt, Expr::val(Some(now)));
     }
-    let record = record.update(store.connection()).await?;
-    record.response()
+    Ok(update)
+}
+
+fn apply_candidate_upstream_cost_patch(
+    mut update: UpdateMany<request_candidates::Entity>,
+    patch: super::RequestUpstreamCostRecordPatch,
+) -> UpdateMany<request_candidates::Entity> {
+    if !patch.upstream_cost_mode.is_missing() {
+        update = update.col_expr(
+            request_candidates::Column::UpstreamCostMode,
+            patch_string_value(patch.upstream_cost_mode, request_upstream_cost::mode_value),
+        );
+    }
+    if !patch.upstream_cost_source.is_missing() {
+        update = update.col_expr(
+            request_candidates::Column::UpstreamCostSource,
+            patch_string_value(patch.upstream_cost_source, request_upstream_cost::source_value),
+        );
+    }
+    if !patch.upstream_price_per_request.is_missing() {
+        update = update.col_expr(
+            request_candidates::Column::UpstreamPricePerRequest,
+            patch_value(patch.upstream_price_per_request),
+        );
+    }
+    if !patch.upstream_input_price_per_million.is_missing() {
+        update = update.col_expr(
+            request_candidates::Column::UpstreamInputPricePerMillion,
+            patch_value(patch.upstream_input_price_per_million),
+        );
+    }
+    if !patch.upstream_output_price_per_million.is_missing() {
+        update = update.col_expr(
+            request_candidates::Column::UpstreamOutputPricePerMillion,
+            patch_value(patch.upstream_output_price_per_million),
+        );
+    }
+    if !patch.upstream_cache_creation_price_per_million.is_missing() {
+        update = update.col_expr(
+            request_candidates::Column::UpstreamCacheCreationPricePerMillion,
+            patch_value(patch.upstream_cache_creation_price_per_million),
+        );
+    }
+    if !patch.upstream_cache_read_price_per_million.is_missing() {
+        update = update.col_expr(
+            request_candidates::Column::UpstreamCacheReadPricePerMillion,
+            patch_value(patch.upstream_cache_read_price_per_million),
+        );
+    }
+    if !patch.upstream_request_cost.is_missing() {
+        update = update.col_expr(request_candidates::Column::UpstreamRequestCost, patch_value(patch.upstream_request_cost));
+    }
+    if !patch.upstream_input_cost.is_missing() {
+        update = update.col_expr(request_candidates::Column::UpstreamInputCost, patch_value(patch.upstream_input_cost));
+    }
+    if !patch.upstream_output_cost.is_missing() {
+        update = update.col_expr(request_candidates::Column::UpstreamOutputCost, patch_value(patch.upstream_output_cost));
+    }
+    if !patch.upstream_cache_creation_cost.is_missing() {
+        update = update.col_expr(
+            request_candidates::Column::UpstreamCacheCreationCost,
+            patch_value(patch.upstream_cache_creation_cost),
+        );
+    }
+    if !patch.upstream_cache_read_cost.is_missing() {
+        update = update.col_expr(request_candidates::Column::UpstreamCacheReadCost, patch_value(patch.upstream_cache_read_cost));
+    }
+    if !patch.upstream_total_cost.is_missing() {
+        update = update.col_expr(request_candidates::Column::UpstreamTotalCost, patch_value(patch.upstream_total_cost));
+    }
+    update
+}
+
+fn apply_candidate_billing_values(
+    mut update: UpdateMany<request_candidates::Entity>,
+    billing: RequestBillingRecordValues,
+) -> StorageResult<UpdateMany<request_candidates::Entity>> {
+    if let Some(service_tier) = billing.service_tier {
+        update = update.col_expr(request_candidates::Column::ServiceTier, Expr::val(Some(service_tier)));
+    }
+    Ok(update
+        .col_expr(
+            request_candidates::Column::CostCurrency,
+            Expr::val(ensure_accounting_cost_currency(billing.cost_currency)?),
+        )
+        .col_expr(request_candidates::Column::InputCost, Expr::val(billing.input_cost))
+        .col_expr(request_candidates::Column::OutputCost, Expr::val(billing.output_cost))
+        .col_expr(request_candidates::Column::CacheCreationCost, Expr::val(billing.cache_creation_cost))
+        .col_expr(request_candidates::Column::CacheReadCost, Expr::val(billing.cache_read_cost))
+        .col_expr(request_candidates::Column::RequestCost, Expr::val(billing.request_cost))
+        .col_expr(request_candidates::Column::TokenCost, Expr::val(billing.token_cost))
+        .col_expr(request_candidates::Column::BaseCost, Expr::val(billing.base_cost))
+        .col_expr(request_candidates::Column::TotalCost, Expr::val(billing.total_cost))
+        .col_expr(request_candidates::Column::BillingMultiplier, Expr::val(billing.billing_multiplier))
+        .col_expr(request_candidates::Column::InputPricePerMillion, Expr::val(billing.input_price_per_million))
+        .col_expr(request_candidates::Column::OutputPricePerMillion, Expr::val(billing.output_price_per_million))
+        .col_expr(
+            request_candidates::Column::CacheCreationPricePerMillion,
+            Expr::val(billing.cache_creation_price_per_million),
+        )
+        .col_expr(
+            request_candidates::Column::CacheReadPricePerMillion,
+            Expr::val(billing.cache_read_price_per_million),
+        ))
+}
+
+fn apply_json_expr(
+    update: UpdateMany<request_candidates::Entity>,
+    column: request_candidates::Column,
+    patch: PatchField<serde_json::Value>,
+) -> StorageResult<UpdateMany<request_candidates::Entity>> {
+    Ok(match patch {
+        PatchField::Value(value) => update.col_expr(column, Expr::val(Some(json::encode_required(&value)?))),
+        PatchField::Null => update.col_expr(column, Expr::val(Option::<String>::None)),
+        PatchField::Missing => update,
+    })
+}
+
+fn patch_value<T>(patch: PatchField<T>) -> sea_orm::sea_query::SimpleExpr
+where
+    T: Into<sea_orm::Value> + sea_orm::sea_query::Nullable,
+{
+    match patch {
+        PatchField::Value(value) => Expr::val(Some(value)),
+        PatchField::Null | PatchField::Missing => Expr::val(Option::<T>::None),
+    }
+}
+
+fn patch_string_value<T>(patch: PatchField<T>, render: fn(&T) -> &'static str) -> sea_orm::sea_query::SimpleExpr {
+    match patch {
+        PatchField::Value(value) => Expr::val(Some(render(&value).to_owned())),
+        PatchField::Null | PatchField::Missing => Expr::val(Option::<String>::None),
+    }
 }
 
 fn apply_billing_values(record: &mut request_candidates::ActiveModel, billing: RequestBillingRecordValues) -> StorageResult<()> {
@@ -196,13 +351,4 @@ pub async fn list_request_candidates(store: &ProviderStore, request: RequestCand
     }
     let records = query.offset(request.skip).limit(request.limit).all(store.connection()).await?;
     records.into_iter().map(|record| record.response()).collect()
-}
-
-fn apply_json_patch(active: &mut sea_orm::ActiveValue<Option<String>>, patch: types::model::PatchField<serde_json::Value>) -> StorageResult<()> {
-    match patch {
-        types::model::PatchField::Value(value) => *active = Set(Some(json::encode_required(&value)?)),
-        types::model::PatchField::Null => *active = Set(None),
-        types::model::PatchField::Missing => {}
-    }
-    Ok(())
 }

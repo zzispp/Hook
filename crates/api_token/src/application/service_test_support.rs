@@ -232,6 +232,7 @@ impl BillingGroupCatalog for StaticGroups {
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: Vec::new(),
             allowed_provider_ids: Vec::new(),
+            allowed_provider_key_ids: Vec::new(),
             visible_user_group_codes: visible_user_group_codes(code),
             is_active: true,
             is_system: true,

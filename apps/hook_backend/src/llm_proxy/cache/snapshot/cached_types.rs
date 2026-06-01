@@ -55,6 +55,7 @@ pub struct CachedBillingGroup {
     pub billing_multiplier: Decimal,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_ids: Vec<String>,
+    pub allowed_provider_key_ids: Vec<String>,
     pub visible_user_group_codes: Vec<String>,
     pub is_active: bool,
 }

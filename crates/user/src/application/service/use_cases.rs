@@ -142,11 +142,13 @@ where
             &self.repository,
             &self.auth_provider_config,
             &self.auth_ticket_store,
-            user.id,
-            provider,
-            &state,
-            &redirect_uri,
-            profile,
+            social_auth::AccountOAuthCallbackInput {
+                expected_user_id: user.id,
+                provider,
+                state: &state,
+                redirect_uri: &redirect_uri,
+                profile,
+            },
         )
         .await?;
         Ok(AccountProviderLinkResponse { identity })

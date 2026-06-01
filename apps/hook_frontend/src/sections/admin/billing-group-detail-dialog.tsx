@@ -1,10 +1,10 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
-import type { Provider } from 'src/types/provider';
 import type { BillingGroup } from 'src/types/group';
 import type { UserGroup } from 'src/types/user-group';
 import type { GlobalModelResponse } from 'src/types/model';
+import type { Provider, ProviderApiKey } from 'src/types/provider';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -32,6 +32,7 @@ type Props = {
   group: BillingGroup | null;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
   providers: Pick<Provider, 'id' | 'name'>[];
+  providerKeysByProvider: Record<string, ProviderApiKey[]>;
   userGroups: UserGroup[];
   open: boolean;
   onClose: () => void;
@@ -41,6 +42,7 @@ export function BillingGroupDetailDialog({
   group,
   models,
   providers,
+  providerKeysByProvider,
   userGroups,
   open,
   onClose,
@@ -57,10 +59,39 @@ export function BillingGroupDetailDialog({
           <Divider />
           <ModelSelectionSection group={group} models={models} />
           <ProviderSelectionSection group={group} providers={providers} />
+          <ProviderKeySelectionSection
+            group={group}
+            providers={providers}
+            providerKeysByProvider={providerKeysByProvider}
+          />
           <UserGroupSelectionSection group={group} userGroups={userGroups} />
         </Stack>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ProviderKeySelectionSection({
+  group,
+  providers,
+  providerKeysByProvider,
+}: {
+  group: BillingGroup;
+  providers: Pick<Provider, 'id' | 'name'>[];
+  providerKeysByProvider: Record<string, ProviderApiKey[]>;
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <SelectionSection
+      title={t('fields.allowedProviderKeys')}
+      summaryLabel={
+        group.allowed_provider_key_ids.length === 0
+          ? t('billingGroups.allProviderKeys')
+          : undefined
+      }
+      items={namedProviderKeys(group, providers, providerKeysByProvider)}
+    />
   );
 }
 
@@ -239,6 +270,24 @@ function namedProviders(group: BillingGroup, providers: Pick<Provider, 'id' | 'n
     return providers.map((provider) => provider.name);
   }
   return group.allowed_provider_ids.map((id) => labels.get(id) ?? id);
+}
+
+function namedProviderKeys(
+  group: BillingGroup,
+  providers: Pick<Provider, 'id' | 'name'>[],
+  providerKeysByProvider: Record<string, ProviderApiKey[]>
+) {
+  const keys = providers.flatMap((provider) =>
+    (providerKeysByProvider[provider.id] ?? []).map((key) => [
+      key.id,
+      `${provider.name} / ${key.name}`,
+    ])
+  );
+  const labels = new Map(keys);
+  if (group.allowed_provider_key_ids.length === 0) {
+    return Array.from(labels.values());
+  }
+  return group.allowed_provider_key_ids.map((id) => labels.get(id) ?? id);
 }
 
 function namedUserGroups(group: BillingGroup, userGroups: UserGroup[]) {

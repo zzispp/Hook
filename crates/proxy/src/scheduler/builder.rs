@@ -97,7 +97,7 @@ fn append_endpoint_candidates(context: EndpointBuildContext<'_>, output: &mut Ve
     let provider = context.provider;
     let endpoint = context.endpoint;
     let model = context.model;
-    for key in provider.keys.iter().filter(|key| key_allowed(key)) {
+    for key in provider.keys.iter().filter(|key| key_allowed(key, context.input)) {
         output.push(Candidate {
             provider_id: provider.id.clone(),
             provider_name: provider.name.clone(),
@@ -143,8 +143,8 @@ fn input_compatible(endpoint: &EndpointSnapshot, input: &SchedulerInput, provide
     input.global_format_conversion_enabled || provider.enable_format_conversion || endpoint.accepts_format_conversion
 }
 
-fn key_allowed(key: &KeySnapshot) -> bool {
-    key.is_active
+fn key_allowed(key: &KeySnapshot, input: &SchedulerInput) -> bool {
+    key.is_active && ids_allow(&input.group_allowed_provider_key_ids, &key.id)
 }
 
 fn policy_allows(policy: &ModelAccessPolicy, model_id: &str) -> bool {

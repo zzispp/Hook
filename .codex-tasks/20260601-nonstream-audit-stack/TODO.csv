@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect response/audit data flow,DONE,Current borrow and await boundaries are mapped,rg + source reads,2026-06-01,0,
+2,Introduce owned audit attempt input,DONE,record_attempt no longer holds borrowed large input across billing/storage awaits,cargo check,2026-06-01,0,
+3,Remove non-stream spawn workaround,DONE,executor calls full_response directly and stack overflow stays fixed,cargo check,2026-06-01,0,
+4,Run focused validation,DONE,Checks tests and reproduced curl pass,cargo fmt --all && cargo check,2026-06-01,0,

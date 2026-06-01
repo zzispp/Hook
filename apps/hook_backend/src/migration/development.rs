@@ -71,6 +71,7 @@ pub fn table_names() -> Vec<&'static str> {
         "dimension_collectors",
         "provider_cooldowns",
         "billing_group_providers",
+        "billing_group_provider_keys",
         "billing_groups",
         "system_settings",
         "translation_languages",

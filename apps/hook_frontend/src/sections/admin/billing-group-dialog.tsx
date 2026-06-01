@@ -1,8 +1,8 @@
 'use client';
 
-import type { Provider } from 'src/types/provider';
 import type { UserGroup } from 'src/types/user-group';
 import type { GlobalModelResponse } from 'src/types/model';
+import type { Provider, ProviderApiKey } from 'src/types/provider';
 import type { useGroupDialog } from './billing-group-management-state';
 
 import Stack from '@mui/material/Stack';
@@ -21,11 +21,13 @@ export function BillingGroupDialog({
   dialog,
   models,
   providers,
+  providerKeysByProvider,
   userGroups,
 }: {
   dialog: ReturnType<typeof useGroupDialog>;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
   providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
+  providerKeysByProvider: Record<string, ProviderApiKey[]>;
   userGroups: UserGroup[];
 }) {
   const { t } = useTranslate('admin');
@@ -77,7 +79,16 @@ export function BillingGroupDialog({
         />
       </Stack>
       <ModelSelect dialog={dialog} models={models} />
-      <ProviderSelect dialog={dialog} providers={providers} />
+      <ProviderSelect
+        dialog={dialog}
+        providers={providers}
+        providerKeysByProvider={providerKeysByProvider}
+      />
+      <ProviderKeySelect
+        dialog={dialog}
+        providers={providers}
+        providerKeysByProvider={providerKeysByProvider}
+      />
       <UserGroupSelect dialog={dialog} userGroups={userGroups} />
       <SwitchRow
         checked={dialog.form.is_active}
@@ -85,6 +96,55 @@ export function BillingGroupDialog({
         onChange={(checked) => dialog.setForm((form) => ({ ...form, is_active: checked }))}
       />
     </ManagementDialog>
+  );
+}
+
+function ProviderKeySelect({
+  dialog,
+  providers,
+  providerKeysByProvider,
+}: {
+  dialog: ReturnType<typeof useGroupDialog>;
+  providers: Pick<Provider, 'id' | 'name'>[];
+  providerKeysByProvider: Record<string, ProviderApiKey[]>;
+}) {
+  const { t } = useTranslate('admin');
+  const keys = providerKeyOptions(
+    providers,
+    dialog.form.allowed_provider_ids,
+    providerKeysByProvider
+  );
+
+  return (
+    <TextField
+      select
+      fullWidth
+      label={t('fields.allowedProviderKeys')}
+      value={dialog.form.allowed_provider_key_ids}
+      helperText={t('helper.groupProviderKeyAccess')}
+      SelectProps={{
+        multiple: true,
+        renderValue: (selected) => providerKeySelectionLabel(selected as string[], keys, t),
+      }}
+      onChange={(event) =>
+        dialog.setForm((form) => ({
+          ...form,
+          allowed_provider_key_ids: selectedValues(event.target.value),
+        }))
+      }
+    >
+      {keys.length === 0 ? (
+        <MenuItem disabled value="">
+          {t('providers.noApiKeys')}
+        </MenuItem>
+      ) : null}
+      {keys.map((key) => (
+        <MenuItem key={key.id} value={key.id}>
+          <Checkbox checked={dialog.form.allowed_provider_key_ids.includes(key.id)} />
+          <ListItemText primary={key.name} secondary={key.providerName} />
+        </MenuItem>
+      ))}
+    </TextField>
   );
 }
 
@@ -133,9 +193,11 @@ function UserGroupSelect({
 function ProviderSelect({
   dialog,
   providers,
+  providerKeysByProvider,
 }: {
   dialog: ReturnType<typeof useGroupDialog>;
   providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
+  providerKeysByProvider: Record<string, ProviderApiKey[]>;
 }) {
   const { t } = useTranslate('admin');
 
@@ -150,7 +212,20 @@ function ProviderSelect({
         multiple: true,
         renderValue: (selected) => providerSelectionLabel(selected as string[], providers, t),
       }}
-      onChange={(event) => dialog.setForm((form) => ({ ...form, allowed_provider_ids: selectedValues(event.target.value) }))}
+      onChange={(event) =>
+        dialog.setForm((form) => {
+          const providerIds = selectedValues(event.target.value);
+          return {
+            ...form,
+            allowed_provider_ids: providerIds,
+            allowed_provider_key_ids: allowedProviderKeyIds(
+              form.allowed_provider_key_ids,
+              providerIds,
+              providerKeysByProvider
+            ),
+          };
+        })
+      }
     >
       {providers.length === 0 ? (
         <MenuItem disabled value="">
@@ -243,4 +318,61 @@ function providerSelectionLabel(
 
 function providerLabel(id: string, providers: Pick<Provider, 'id' | 'name'>[]) {
   return providers.find((item) => item.id === id)?.name || id;
+}
+
+type ProviderKeyOption = {
+  id: string;
+  name: string;
+  providerName: string;
+};
+
+function providerKeyOptions(
+  providers: Pick<Provider, 'id' | 'name'>[],
+  allowedProviderIds: string[],
+  providerKeysByProvider: Record<string, ProviderApiKey[]>
+) {
+  const providerOptions = allowedProviderIds.length === 0
+    ? providers
+    : providers.filter((provider) => allowedProviderIds.includes(provider.id));
+
+  return providerOptions.flatMap((provider) =>
+    (providerKeysByProvider[provider.id] ?? []).map((key) => ({
+      id: key.id,
+      name: key.name,
+      providerName: provider.name,
+    }))
+  );
+}
+
+function allowedProviderKeyIds(
+  keyIds: string[],
+  providerIds: string[],
+  providerKeysByProvider: Record<string, ProviderApiKey[]>
+) {
+  if (providerIds.length === 0) {
+    return keyIds;
+  }
+  const allowedKeyIds = new Set(
+    providerIds.flatMap((providerId) => providerKeysByProvider[providerId] ?? []).map((key) => key.id)
+  );
+  return keyIds.filter((keyId) => allowedKeyIds.has(keyId));
+}
+
+function providerKeySelectionLabel(
+  ids: string[],
+  keys: ProviderKeyOption[],
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
+  if (ids.length === 0) {
+    return t('billingGroups.allProviderKeys');
+  }
+  if (ids.length > 2) {
+    return t('billingGroups.selectedProviderKeyCount', { count: ids.length });
+  }
+  return ids.map((id) => providerKeyLabel(id, keys)).join(', ');
+}
+
+function providerKeyLabel(id: string, keys: ProviderKeyOption[]) {
+  const key = keys.find((item) => item.id === id);
+  return key ? `${key.providerName} / ${key.name}` : id;
 }

@@ -102,6 +102,25 @@ export function useProviderPriorityKeys(providers: Provider[]) {
   );
 }
 
+export function useProviderKeysByProvider(providers: Pick<Provider, 'id'>[]) {
+  const providerIds = useMemo(() => providers.map((provider) => provider.id), [providers]);
+  const key = providerIds.length > 0 ? ['provider-keys-by-provider', providerIds] : null;
+  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
+    Record<string, ProviderApiKey[]>
+  >(key, () => fetchProviderKeysByProvider(providerIds), swrOptions);
+
+  return useMemo(
+    () => ({
+      itemsByProvider: data ?? {},
+      isLoading: providerIds.length > 0 ? isLoading : false,
+      error,
+      isValidating: providerIds.length > 0 ? isValidating : false,
+      refresh: revalidate,
+    }),
+    [data, error, isLoading, isValidating, providerIds.length, revalidate]
+  );
+}
+
 export function useProviderModels(providerId?: string | null) {
   return useProviderChildResource<ProviderModelBinding>(providerId, endpoints.adminProviders.models);
 }

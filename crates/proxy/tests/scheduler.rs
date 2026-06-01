@@ -50,6 +50,21 @@ fn scheduler_filters_by_user_provider_scope() {
 }
 
 #[test]
+fn scheduler_filters_by_group_provider_key_scope() {
+    let input = SchedulerInput {
+        group_allowed_provider_key_ids: vec!["key-a-2".into()],
+        providers: vec![provider_with_two_keys()],
+        ..base_input()
+    };
+
+    let candidates = CandidateBuilder::build(&input).unwrap();
+
+    assert_eq!(candidates.len(), 1);
+    assert_eq!(candidates[0].provider_id, "provider-a");
+    assert_eq!(candidates[0].key_id, "key-a-2");
+}
+
+#[test]
 fn scheduler_returns_group_model_unavailable_when_no_provider_model_matches() {
     let input = SchedulerInput {
         requested_model_id: "claude-3-haiku".into(),

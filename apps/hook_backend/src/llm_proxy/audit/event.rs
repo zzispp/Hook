@@ -1,9 +1,10 @@
 use axum::http::HeaderMap;
+use rust_decimal::Decimal;
 use serde_json::Value;
-use types::model::PatchField;
+use types::model::{PatchField, TieredPricingConfig};
 
 use crate::llm_proxy::{
-    candidate::{CandidateSelection, ProxyCandidate},
+    candidate::{CandidateSelection, CandidateTrace, ProxyCandidate},
     proxy::capture::RequestCapture,
 };
 
@@ -11,10 +12,6 @@ pub(super) enum AuditEvent<'a> {
     ScheduledCandidates {
         selection: &'a CandidateSelection,
         capture: &'a RequestCapture,
-    },
-    Attempt {
-        request_id: &'a str,
-        input: Box<AttemptRecordInput<'a>>,
     },
     SkippedCandidates {
         request_id: &'a str,
@@ -94,6 +91,82 @@ impl<'a> AttemptRecordInput<'a> {
             termination_reason: PatchField::Missing,
             stream_end_reason: PatchField::Missing,
             finished,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct AuditCandidate {
+    pub(crate) trace: CandidateTrace,
+    pub(crate) price_per_request: Option<Decimal>,
+    pub(crate) tiered_pricing: TieredPricingConfig,
+    pub(crate) billing_multiplier: Decimal,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct AttemptAuditInput {
+    pub(crate) candidate: AuditCandidate,
+    pub(crate) retry_index: i32,
+    pub(crate) status: String,
+    pub(crate) skip_reason: Option<String>,
+    pub(crate) status_code: Option<i32>,
+    pub(crate) usage: Option<TokenUsage>,
+    pub(crate) service_tier: Option<String>,
+    pub(crate) latency_ms: Option<i64>,
+    pub(crate) first_byte_time_ms: Option<i64>,
+    pub(crate) error_type: Option<String>,
+    pub(crate) error_message: Option<String>,
+    pub(crate) error_code: Option<String>,
+    pub(crate) error_param: Option<String>,
+    pub(crate) provider_request_headers: PatchField<HeaderMap>,
+    pub(crate) provider_request_body: PatchField<Value>,
+    pub(crate) provider_response_headers: PatchField<HeaderMap>,
+    pub(crate) provider_response_body: PatchField<Value>,
+    pub(crate) client_response_headers: PatchField<HeaderMap>,
+    pub(crate) client_response_body: PatchField<Value>,
+    pub(crate) termination_origin: PatchField<String>,
+    pub(crate) termination_reason: PatchField<String>,
+    pub(crate) stream_end_reason: PatchField<String>,
+    pub(crate) finished: bool,
+}
+
+impl From<AttemptRecordInput<'_>> for AttemptAuditInput {
+    fn from(input: AttemptRecordInput<'_>) -> Self {
+        Self {
+            candidate: AuditCandidate::from(input.candidate),
+            retry_index: input.retry_index,
+            status: input.status.to_owned(),
+            skip_reason: input.skip_reason.map(str::to_owned),
+            status_code: input.status_code,
+            usage: input.usage,
+            service_tier: input.service_tier,
+            latency_ms: input.latency_ms,
+            first_byte_time_ms: input.first_byte_time_ms,
+            error_type: input.error_type.map(str::to_owned),
+            error_message: input.error_message.map(str::to_owned),
+            error_code: input.error_code.map(str::to_owned),
+            error_param: input.error_param.map(str::to_owned),
+            provider_request_headers: input.provider_request_headers,
+            provider_request_body: input.provider_request_body,
+            provider_response_headers: input.provider_response_headers,
+            provider_response_body: input.provider_response_body,
+            client_response_headers: input.client_response_headers,
+            client_response_body: input.client_response_body,
+            termination_origin: input.termination_origin,
+            termination_reason: input.termination_reason,
+            stream_end_reason: input.stream_end_reason,
+            finished: input.finished,
+        }
+    }
+}
+
+impl From<&ProxyCandidate> for AuditCandidate {
+    fn from(candidate: &ProxyCandidate) -> Self {
+        Self {
+            trace: candidate.trace.clone(),
+            price_per_request: candidate.price_per_request,
+            tiered_pricing: candidate.tiered_pricing.clone(),
+            billing_multiplier: candidate.billing_multiplier,
         }
     }
 }

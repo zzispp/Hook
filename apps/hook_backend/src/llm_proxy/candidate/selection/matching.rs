@@ -43,6 +43,7 @@ pub(super) fn matching_candidate_parts_at(input: MatchingCandidatePartsInput<'_>
         append_provider_candidate(
             AppendProviderCandidateInput {
                 provider,
+                group: input.group,
                 model_id: input.model_id,
                 request: input.request,
                 affinity: input.affinity,
@@ -58,6 +59,7 @@ pub(super) fn matching_candidate_parts_at(input: MatchingCandidatePartsInput<'_>
 
 struct AppendProviderCandidateInput<'a> {
     provider: &'a CachedProvider,
+    group: &'a CachedBillingGroup,
     model_id: &'a str,
     request: CandidateRequest<'a>,
     affinity: Option<&'a AffinitySelection>,
@@ -71,9 +73,10 @@ fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &m
         return;
     };
     let affinity = matching_affinity(input.provider, input.affinity);
-    let endpoints = ordered_endpoints(input.provider, input.model_id, input.request, input.current_minute, affinity);
+    let endpoints = ordered_endpoints(input.provider, input.group, input.model_id, input.request, input.current_minute, affinity);
     let keys = ordered_keys(OrderedKeysInput {
         provider: input.provider,
+        group: input.group,
         affinity,
         scheduling_mode: input.scheduling_mode,
         request_id: input.request_id,
@@ -116,6 +119,7 @@ fn append_key_candidates(
 
 struct OrderedKeysInput<'a> {
     provider: &'a CachedProvider,
+    group: &'a CachedBillingGroup,
     affinity: Option<&'a AffinitySelection>,
     scheduling_mode: ProviderSchedulingMode,
     request_id: &'a str,
@@ -124,6 +128,7 @@ struct OrderedKeysInput<'a> {
 
 fn ordered_endpoints(
     provider: &CachedProvider,
+    group: &CachedBillingGroup,
     model_id: &str,
     request: CandidateRequest<'_>,
     current_minute: u16,
@@ -137,7 +142,7 @@ fn ordered_endpoints(
             provider
                 .keys
                 .iter()
-                .any(|key| key_allowed_for_model_endpoint(key, model_id, endpoint, current_minute))
+                .any(|key| key_allowed_for_model_endpoint(key, model_id, endpoint, group, current_minute))
         })
         .cloned()
         .partition(|endpoint| endpoint_exact(endpoint, request));
@@ -151,7 +156,7 @@ fn ordered_keys(input: OrderedKeysInput<'_>) -> Vec<CachedProviderKey> {
         .provider
         .keys
         .iter()
-        .filter(|key| key_allowed(key, input.current_minute))
+        .filter(|key| key_allowed(key, input.group, input.current_minute))
         .cloned()
         .collect::<Vec<_>>();
     keys.sort_by(|left, right| (left.internal_priority, &left.id).cmp(&(right.internal_priority, &right.id)));
@@ -230,12 +235,12 @@ fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {
         .unwrap_or(false)
 }
 
-fn key_allowed(key: &CachedProviderKey, current_minute: u16) -> bool {
-    key.is_active && !key.api_formats.is_empty() && key_time_range_allowed(key, current_minute)
+fn key_allowed(key: &CachedProviderKey, group: &CachedBillingGroup, current_minute: u16) -> bool {
+    key.is_active && !key.api_formats.is_empty() && ids_allow(&group.allowed_provider_key_ids, &key.id) && key_time_range_allowed(key, current_minute)
 }
 
-fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, current_minute: u16) -> bool {
-    key_allowed(key, current_minute) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
+fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, group: &CachedBillingGroup, current_minute: u16) -> bool {
+    key_allowed(key, group, current_minute) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
 }
 
 fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool {
@@ -250,6 +255,10 @@ fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool 
 
 fn key_allows_model(key: &CachedProviderKey, model_id: &str) -> bool {
     key.allowed_model_ids.is_empty() || key.allowed_model_ids.iter().any(|id| id == model_id)
+}
+
+fn ids_allow(ids: &[String], id: &str) -> bool {
+    ids.is_empty() || ids.iter().any(|item| item == id)
 }
 
 fn selected_provider_model(model: &CachedModelBinding) -> CachedModelBinding {

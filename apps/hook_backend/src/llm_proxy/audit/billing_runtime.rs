@@ -11,7 +11,7 @@ use storage::{api_token::ApiTokenUsageRecord, model::GlobalModelUsageRecord, pro
 use time::OffsetDateTime;
 use types::model::PatchField;
 
-use super::{AttemptRecordInput, TokenUsage};
+use super::{AttemptAuditInput, TokenUsage};
 use crate::llm_proxy::{LlmProxyError, billing::WalletSettlementInput};
 
 #[derive(Clone, Debug)]
@@ -35,7 +35,7 @@ impl BillingAttempt {
     }
 }
 
-pub(crate) async fn attempt_billing(store: &ProviderStore, request_id: &str, input: &AttemptRecordInput<'_>) -> Result<Option<BillingAttempt>, LlmProxyError> {
+pub(crate) async fn attempt_billing(store: &ProviderStore, request_id: &str, input: &AttemptAuditInput) -> Result<Option<BillingAttempt>, LlmProxyError> {
     if input.status != "success" {
         return Ok(None);
     }
@@ -61,8 +61,8 @@ pub(crate) async fn attempt_billing(store: &ProviderStore, request_id: &str, inp
     Ok(Some(BillingAttempt::from_result(request_id, result)?))
 }
 
-pub(crate) fn request_billing_status(input: &AttemptRecordInput<'_>, billing: Option<&BillingAttempt>) -> &'static str {
-    match input.status {
+pub(crate) fn request_billing_status(input: &AttemptAuditInput, billing: Option<&BillingAttempt>) -> &'static str {
+    match input.status.as_str() {
         "success" if billing.is_some_and(BillingAttempt::is_complete) => "settled",
         "success" => "billing_incomplete",
         status => billing_status(status),
@@ -71,7 +71,7 @@ pub(crate) fn request_billing_status(input: &AttemptRecordInput<'_>, billing: Op
 
 pub(crate) fn token_usage_record(
     request_id: &str,
-    input: &AttemptRecordInput<'_>,
+    input: &AttemptAuditInput,
     billing: Option<&BillingAttempt>,
     used_at: OffsetDateTime,
 ) -> Result<Option<ApiTokenUsageRecord>, LlmProxyError> {
@@ -90,7 +90,7 @@ pub(crate) fn token_usage_record(
     }))
 }
 
-pub(crate) fn model_usage_record(input: &AttemptRecordInput<'_>, billing: Option<&BillingAttempt>) -> Option<GlobalModelUsageRecord> {
+pub(crate) fn model_usage_record(input: &AttemptAuditInput, billing: Option<&BillingAttempt>) -> Option<GlobalModelUsageRecord> {
     if !should_record_successful_attempt(input) || !billing.is_some_and(BillingAttempt::is_complete) {
         return None;
     }
@@ -102,7 +102,7 @@ pub(crate) fn model_usage_record(input: &AttemptRecordInput<'_>, billing: Option
 
 pub(crate) fn wallet_settlement_input<'a>(
     request_id: &'a str,
-    input: &'a AttemptRecordInput<'a>,
+    input: &'a AttemptAuditInput,
     billing: Option<&BillingAttempt>,
 ) -> Result<Option<WalletSettlementInput<'a>>, LlmProxyError> {
     if !should_record_successful_attempt(input) {
@@ -111,7 +111,7 @@ pub(crate) fn wallet_settlement_input<'a>(
     let amount = complete_amount(request_id, billing)?.clone();
     Ok(Some(WalletSettlementInput {
         request_id,
-        candidate: input.candidate,
+        candidate: &input.candidate,
         amount,
     }))
 }
@@ -120,7 +120,7 @@ pub(crate) fn total_tokens(usage: Option<TokenUsage>) -> Option<i64> {
     usage.and_then(|item| item.total_tokens.or_else(|| Some(item.prompt_tokens? + item.completion_tokens?)))
 }
 
-async fn billing_rule_lookup(store: &ProviderStore, input: &AttemptRecordInput<'_>, task_type: &str) -> Result<Option<BillingRuleLookup>, LlmProxyError> {
+async fn billing_rule_lookup(store: &ProviderStore, input: &AttemptAuditInput, task_type: &str) -> Result<Option<BillingRuleLookup>, LlmProxyError> {
     if let Some(rule) = store
         .enabled_billing_rule_for_model(&input.candidate.trace.provider_model_id, task_type)
         .await?
@@ -181,7 +181,7 @@ fn complete_amount<'a>(request_id: &str, billing: Option<&'a BillingAttempt>) ->
     )))
 }
 
-fn should_record_successful_attempt(input: &AttemptRecordInput<'_>) -> bool {
+fn should_record_successful_attempt(input: &AttemptAuditInput) -> bool {
     input.status == "success" && input.finished
 }
 
@@ -192,7 +192,7 @@ fn billing_status(status: &str) -> &'static str {
     }
 }
 
-fn request_task_type(input: &AttemptRecordInput<'_>) -> String {
+fn request_task_type(input: &AttemptAuditInput) -> String {
     if input.candidate.trace.client_api_format == "openai:cli" {
         return "cli".into();
     }

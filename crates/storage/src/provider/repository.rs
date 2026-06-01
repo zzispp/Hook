@@ -135,6 +135,14 @@ impl ProviderStore {
         records.into_iter().map(|record| record.response()).collect()
     }
 
+    pub async fn find_api_key(&self, key_id: &str) -> StorageResult<Option<types::provider::ProviderApiKey>> {
+        provider_api_keys::Entity::find_by_id(key_id.to_owned())
+            .one(self.database.connection())
+            .await?
+            .map(|record| record.response())
+            .transpose()
+    }
+
     pub async fn api_key_secrets_for_provider(&self, provider_id: &str) -> StorageResult<Vec<ProviderApiKeySecretRecord>> {
         let records = provider_api_keys::Entity::find()
             .filter(provider_api_keys::Column::ProviderId.eq(provider_id))

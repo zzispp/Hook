@@ -134,25 +134,6 @@ pub(super) fn apply_request_patch(active: &mut request_records::ActiveModel, pat
     apply_decimal_patch(&mut active.upstream_total_cost, patch.upstream_total_cost);
 }
 
-pub(super) fn apply_candidate_patch(active: &mut request_candidates::ActiveModel, patch: RequestUpstreamCostRecordPatch) {
-    apply_mode_patch(&mut active.upstream_cost_mode, patch.upstream_cost_mode);
-    apply_source_patch(&mut active.upstream_cost_source, patch.upstream_cost_source);
-    apply_decimal_patch(&mut active.upstream_price_per_request, patch.upstream_price_per_request);
-    apply_decimal_patch(&mut active.upstream_input_price_per_million, patch.upstream_input_price_per_million);
-    apply_decimal_patch(&mut active.upstream_output_price_per_million, patch.upstream_output_price_per_million);
-    apply_decimal_patch(
-        &mut active.upstream_cache_creation_price_per_million,
-        patch.upstream_cache_creation_price_per_million,
-    );
-    apply_decimal_patch(&mut active.upstream_cache_read_price_per_million, patch.upstream_cache_read_price_per_million);
-    apply_decimal_patch(&mut active.upstream_request_cost, patch.upstream_request_cost);
-    apply_decimal_patch(&mut active.upstream_input_cost, patch.upstream_input_cost);
-    apply_decimal_patch(&mut active.upstream_output_cost, patch.upstream_output_cost);
-    apply_decimal_patch(&mut active.upstream_cache_creation_cost, patch.upstream_cache_creation_cost);
-    apply_decimal_patch(&mut active.upstream_cache_read_cost, patch.upstream_cache_read_cost);
-    apply_decimal_patch(&mut active.upstream_total_cost, patch.upstream_total_cost);
-}
-
 pub(super) fn mode_value(value: &ProviderModelCostMode) -> &'static str {
     match value {
         ProviderModelCostMode::PerRequest => "per_request",

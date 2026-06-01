@@ -15,6 +15,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         provider_cooldowns_table(),
         provider_cooldown_events_table(),
         billing_group_providers_table(),
+        billing_group_provider_keys_table(),
         billing_group_user_groups_table(),
         setting_tables::system_settings_table(),
         translation_tables::translation_languages_table(),
@@ -338,6 +339,22 @@ fn billing_group_providers_table() -> TableCreateStatement {
         .to_owned()
 }
 
+fn billing_group_provider_keys_table() -> TableCreateStatement {
+    let mut group_fk = billing_group_provider_key_group_fk();
+    let mut key_fk = billing_group_provider_key_key_fk();
+    Table::create()
+        .table(BillingGroupProviderKeys::Table)
+        .if_not_exists()
+        .col(string_len(BillingGroupProviderKeys::Id, 36).primary_key())
+        .col(string_len(BillingGroupProviderKeys::GroupCode, 64))
+        .col(string_len(BillingGroupProviderKeys::ProviderKeyId, 36))
+        .col(timestamp_tz(BillingGroupProviderKeys::CreatedAt))
+        .col(timestamp_tz(BillingGroupProviderKeys::UpdatedAt))
+        .foreign_key(&mut group_fk)
+        .foreign_key(&mut key_fk)
+        .to_owned()
+}
+
 fn api_tokens_table() -> TableCreateStatement {
     Table::create()
         .table(ApiTokens::Table)
@@ -492,6 +509,26 @@ fn billing_group_provider_group_fk() -> ForeignKeyCreateStatement {
         .name("fk_billing_group_providers_group")
         .from(BillingGroupProviders::Table, BillingGroupProviders::GroupCode)
         .to(BillingGroups::Table, BillingGroups::Code)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn billing_group_provider_key_group_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_billing_group_provider_keys_group")
+        .from(BillingGroupProviderKeys::Table, BillingGroupProviderKeys::GroupCode)
+        .to(BillingGroups::Table, BillingGroups::Code)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn billing_group_provider_key_key_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_billing_group_provider_keys_key")
+        .from(BillingGroupProviderKeys::Table, BillingGroupProviderKeys::ProviderKeyId)
+        .to(ProviderApiKeys::Table, ProviderApiKeys::Id)
         .on_delete(ForeignKeyAction::Cascade);
     foreign_key
 }

@@ -115,6 +115,7 @@ function BillingGroupTableRow({
       <TableCell>{row.billing_multiplier}</TableCell>
       <TableCell>{modelAccessText(row, t)}</TableCell>
       <TableCell>{providerAccessText(row, t)}</TableCell>
+      <TableCell>{providerKeyAccessText(row, t)}</TableCell>
       <TableCell>{userGroupSelectionLabel(row.visible_user_group_codes, userGroups, t)}</TableCell>
       <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
       <TableCell>{row.is_system ? t('common.system') : t('common.custom')}</TableCell>
@@ -189,6 +190,7 @@ function groupTableHead(t: (key: string, options?: Record<string, unknown>) => s
     { id: 'billing_multiplier', label: t('fields.billingMultiplier') },
     { id: 'allowed_model_ids', label: t('fields.allowedModels') },
     { id: 'allowed_provider_ids', label: t('fields.allowedProviders') },
+    { id: 'allowed_provider_key_ids', label: t('fields.allowedProviderKeys') },
     { id: 'visible_user_group_codes', label: t('fields.visibleUserGroups') },
     { id: 'status', label: t('common.status') },
     { id: 'system', label: t('common.system') },
@@ -207,4 +209,10 @@ function providerAccessText(group: BillingGroup, t: (key: string, options?: Reco
   return group.allowed_provider_ids.length === 0
     ? t('billingGroups.allProviders')
     : t('billingGroups.selectedProviderCount', { count: group.allowed_provider_ids.length });
+}
+
+function providerKeyAccessText(group: BillingGroup, t: (key: string, options?: Record<string, unknown>) => string) {
+  return group.allowed_provider_key_ids.length === 0
+    ? t('billingGroups.allProviderKeys')
+    : t('billingGroups.selectedProviderKeyCount', { count: group.allowed_provider_key_ids.length });
 }

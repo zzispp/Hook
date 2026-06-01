@@ -201,6 +201,19 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             BillingGroupProviders::GroupCode,
             false,
         ),
+        billing_group_provider_keys_unique_index(),
+        index(
+            "index_billing_group_provider_keys_by_group",
+            BillingGroupProviderKeys::Table,
+            BillingGroupProviderKeys::GroupCode,
+            false,
+        ),
+        index(
+            "index_billing_group_provider_keys_by_key",
+            BillingGroupProviderKeys::Table,
+            BillingGroupProviderKeys::ProviderKeyId,
+            false,
+        ),
         billing_group_user_groups_unique_index(),
         index(
             "index_billing_group_user_groups_by_billing_group",
@@ -492,6 +505,17 @@ fn billing_group_providers_unique_index() -> IndexCreateStatement {
         .table(BillingGroupProviders::Table)
         .col(BillingGroupProviders::GroupCode)
         .col(BillingGroupProviders::ProviderId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn billing_group_provider_keys_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_billing_group_provider_keys_unique")
+        .table(BillingGroupProviderKeys::Table)
+        .col(BillingGroupProviderKeys::GroupCode)
+        .col(BillingGroupProviderKeys::ProviderKeyId)
         .unique()
         .if_not_exists()
         .to_owned()

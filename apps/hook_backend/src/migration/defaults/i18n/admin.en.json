@@ -254,6 +254,7 @@
     "tierLimit": "Tier limit",
     "allowedModels": "Allowed models",
     "allowedProviders": "Allowed providers",
+    "allowedProviderKeys": "Allowed provider keys",
     "apiKey": "Key",
     "billingMultiplier": "Billing multiplier",
     "costWithCurrency": "Cost ({{currency}})",
@@ -333,6 +334,7 @@
     "updatePasswordRequired": "Leave blank to keep the current password.",
     "groupModelAccess": "Leave models unselected to allow all models in this group.",
     "groupProviderAccess": "Leave providers unselected to allow all providers in this group.",
+    "groupProviderKeyAccess": "Leave keys unselected to allow all keys under the selected providers. Select keys to schedule only those keys.",
     "groupUserGroupVisibility": "Only selected user groups can see this billing group. Empty means nobody can see it.",
     "systemRateLimit": "0 follows the system rate; non-zero will use min(system rate, this value).",
     "unlimitedExpiresAt": "Leave empty for no time limit; entered values must be in the future.",
@@ -1293,10 +1295,12 @@
   "billingGroups": {
     "allModels": "All models",
     "allProviders": "All providers",
+    "allProviderKeys": "All provider keys",
     "deleteConfirm": "Delete billing group {{name}}?",
     "noVisibleUserGroups": "Visible to nobody",
     "selectedModelCount": "{{count}} models",
     "selectedProviderCount": "{{count}} providers",
+    "selectedProviderKeyCount": "{{count}} keys",
     "selectedUserGroupCount": "{{count}} user groups"
   },
   "userGroups": {
@@ -1349,6 +1353,7 @@
     "selectFormats": "Select endpoint formats...",
     "selectSupportedFormats": "Select endpoint formats...",
     "noSupportedFormats": "No endpoint formats configured",
+    "noApiKeys": "No keys configured",
     "noEndpointFormatsForKey": "Add an endpoint to this provider first.",
     "unboundKeyFormats": "These formats are not bound to this provider's endpoints: {{formats}}",
     "modelPermission": "Model permissions",

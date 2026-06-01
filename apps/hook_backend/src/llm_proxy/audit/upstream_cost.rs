@@ -7,7 +7,7 @@ use storage::provider::ProviderStore;
 use types::model::{PricingTier, TieredPricingConfig};
 use types::provider::{ProviderModelCost, ProviderModelCostMode, ProviderModelCostSource, RequestUpstreamCost};
 
-use super::{AttemptRecordInput, TokenUsage, billing_runtime::total_tokens};
+use super::{AttemptAuditInput, TokenUsage, billing_runtime::total_tokens};
 use crate::llm_proxy::LlmProxyError;
 
 const PRICE_SCALE: i64 = 1_000_000;
@@ -23,7 +23,7 @@ struct UpstreamCostPrices {
     cache_read_price_per_million: Option<Decimal>,
 }
 
-pub(super) async fn request_upstream_cost(store: &ProviderStore, input: &AttemptRecordInput<'_>) -> Result<RequestUpstreamCost, LlmProxyError> {
+pub(super) async fn request_upstream_cost(store: &ProviderStore, input: &AttemptAuditInput) -> Result<RequestUpstreamCost, LlmProxyError> {
     if input.status != "success" {
         return Ok(RequestUpstreamCost::default());
     }
@@ -52,7 +52,7 @@ fn configured_prices(cost: ProviderModelCost) -> UpstreamCostPrices {
     }
 }
 
-fn global_default_prices(input: &AttemptRecordInput<'_>) -> UpstreamCostPrices {
+fn global_default_prices(input: &AttemptAuditInput) -> UpstreamCostPrices {
     if let Some(tier) = selected_global_tier(input) {
         return token_prices(ProviderModelCostSource::GlobalDefault, tier);
     }
@@ -91,7 +91,7 @@ fn per_request_cost(prices: UpstreamCostPrices) -> RequestUpstreamCost {
     }
 }
 
-fn per_token_cost(prices: UpstreamCostPrices, input: &AttemptRecordInput<'_>) -> RequestUpstreamCost {
+fn per_token_cost(prices: UpstreamCostPrices, input: &AttemptAuditInput) -> RequestUpstreamCost {
     let usage = normalized_usage(input);
     let input_cost = token_cost(usage.input_tokens, prices.input_price_per_million);
     let output_cost = token_cost(usage.output_tokens, prices.output_price_per_million);
@@ -121,7 +121,7 @@ struct NormalizedUsage {
     cache_read_tokens: i64,
 }
 
-fn normalized_usage(input: &AttemptRecordInput<'_>) -> NormalizedUsage {
+fn normalized_usage(input: &AttemptAuditInput) -> NormalizedUsage {
     let dimensions = normalized_default_dimensions(&input.candidate.trace.provider_api_format, usage_dimensions(input.usage));
     NormalizedUsage {
         input_tokens: int_dim(&dimensions, "input_tokens"),
@@ -143,7 +143,7 @@ fn usage_dimensions(usage: Option<TokenUsage>) -> BTreeMap<String, Value> {
     dimensions
 }
 
-fn selected_global_tier<'a>(input: &'a AttemptRecordInput<'_>) -> Option<&'a PricingTier> {
+fn selected_global_tier<'a>(input: &'a AttemptAuditInput) -> Option<&'a PricingTier> {
     let pricing = &input.candidate.tiered_pricing;
     let total_context = normalized_default_dimensions(&input.candidate.trace.provider_api_format, usage_dimensions(input.usage))
         .get("total_input_context")
@@ -260,8 +260,8 @@ mod tests {
         output_tokens: i64,
         cache_creation_tokens: Option<i64>,
         cache_read_tokens: Option<i64>,
-    ) -> AttemptRecordInput<'_> {
-        AttemptRecordInput {
+    ) -> AttemptAuditInput {
+        AttemptAuditInput::from(AttemptRecordInput {
             usage: Some(TokenUsage {
                 prompt_tokens: Some(input_tokens),
                 completion_tokens: Some(output_tokens),
@@ -270,7 +270,7 @@ mod tests {
                 ..TokenUsage::default()
             }),
             ..AttemptRecordInput::new(candidate, 0, "success", true)
-        }
+        })
     }
 
     fn candidate_with_pricing(tiered_pricing: TieredPricingConfig) -> ProxyCandidate {

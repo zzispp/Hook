@@ -1,9 +1,9 @@
 use storage::provider::{RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordPatch};
 use types::model::PatchField;
 
-use crate::llm_proxy::audit::{AttemptRecordInput, TokenUsage};
+use crate::llm_proxy::audit::{AttemptAuditInput, TokenUsage};
 
-pub(super) fn candidate_patch(input: &AttemptRecordInput<'_>, patch: &mut RequestCandidateRecordPatch) {
+pub(super) fn candidate_patch(input: &AttemptAuditInput, patch: &mut RequestCandidateRecordPatch) {
     let usage = display_usage(input);
     patch.prompt_tokens = usage.and_then(|usage| usage.prompt_tokens);
     patch.completion_tokens = input.usage.and_then(|usage| usage.completion_tokens);
@@ -23,7 +23,7 @@ pub(super) fn candidate_patch(input: &AttemptRecordInput<'_>, patch: &mut Reques
     patch.usage_semantic = input.usage.and_then(|usage| usage.usage_semantic.map(str::to_owned));
 }
 
-pub(super) fn candidate_input(input: &AttemptRecordInput<'_>, record: &mut RequestCandidateRecordInput) {
+pub(super) fn candidate_input(input: &AttemptAuditInput, record: &mut RequestCandidateRecordInput) {
     let usage = display_usage(input);
     record.prompt_tokens = usage.and_then(|usage| usage.prompt_tokens);
     record.completion_tokens = input.usage.and_then(|usage| usage.completion_tokens);
@@ -43,7 +43,7 @@ pub(super) fn candidate_input(input: &AttemptRecordInput<'_>, record: &mut Reque
     record.usage_semantic = input.usage.and_then(|usage| usage.usage_semantic.map(str::to_owned));
 }
 
-pub(super) fn request_patch(input: &AttemptRecordInput<'_>, patch: &mut RequestRecordRecordPatch) {
+pub(super) fn request_patch(input: &AttemptAuditInput, patch: &mut RequestRecordRecordPatch) {
     let usage = display_usage(input);
     patch.prompt_tokens = option_patch(usage.and_then(|usage| usage.prompt_tokens));
     patch.completion_tokens = option_patch(input.usage.and_then(|usage| usage.completion_tokens));
@@ -63,7 +63,7 @@ pub(super) fn request_patch(input: &AttemptRecordInput<'_>, patch: &mut RequestR
     patch.usage_semantic = option_patch(input.usage.and_then(|usage| usage.usage_semantic.map(str::to_owned)));
 }
 
-fn display_usage(input: &AttemptRecordInput<'_>) -> Option<TokenUsage> {
+fn display_usage(input: &AttemptAuditInput) -> Option<TokenUsage> {
     input.usage.map(|usage| display_token_usage(usage, &input.candidate.trace.provider_api_format))
 }
 

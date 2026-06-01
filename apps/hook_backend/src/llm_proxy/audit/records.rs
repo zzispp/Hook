@@ -9,7 +9,7 @@ use storage::provider::{
 use types::model::PatchField;
 use types::provider::RequestUpstreamCost;
 
-use super::{AttemptRecordInput, BillingAttempt, record_billing, request_billing_status};
+use super::{AttemptAuditInput, BillingAttempt, record_billing, request_billing_status};
 use crate::llm_proxy::{
     LlmProxyError,
     candidate::{CandidateSelection, CandidateTrace},
@@ -19,7 +19,7 @@ use crate::llm_proxy::{
 
 pub(super) fn attempt_patch(
     request_id: &str,
-    input: &AttemptRecordInput<'_>,
+    input: &AttemptAuditInput,
     billing: Option<&BillingAttempt>,
     upstream_cost: &RequestUpstreamCost,
     policies: &RequestRecordPolicies,
@@ -30,7 +30,7 @@ pub(super) fn attempt_patch(
         candidate_index: input.candidate.trace.candidate_index,
         retry_index: input.retry_index,
         status: input.status.to_owned(),
-        skip_reason: input.skip_reason.map(str::to_owned),
+        skip_reason: input.skip_reason.clone(),
         status_code: input.status_code,
         prompt_tokens: None,
         completion_tokens: None,
@@ -53,10 +53,10 @@ pub(super) fn attempt_patch(
         billing_snapshot: billing_snapshot_patch(billing),
         latency_ms: input.latency_ms,
         first_byte_time_ms: input.first_byte_time_ms,
-        error_type: input.error_type.map(str::to_owned),
-        error_message: input.error_message.map(str::to_owned),
-        error_code: input.error_code.map(str::to_owned),
-        error_param: input.error_param.map(str::to_owned),
+        error_type: input.error_type.clone(),
+        error_message: input.error_message.clone(),
+        error_code: input.error_code.clone(),
+        error_param: input.error_param.clone(),
         provider_request_headers: payload::header_patch(input.provider_request_headers.clone(), policy)?,
         provider_request_body: payload::request_body_patch(input.provider_request_body.clone(), policy)?,
         provider_response_headers: payload::response_header_patch(input.provider_response_headers.clone(), policy)?,
@@ -69,25 +69,25 @@ pub(super) fn attempt_patch(
 
 pub(super) fn attempt_input(
     request_id: &str,
-    input: &AttemptRecordInput<'_>,
+    input: &AttemptAuditInput,
     billing: Option<&BillingAttempt>,
     upstream_cost: &RequestUpstreamCost,
     policies: &RequestRecordPolicies,
 ) -> Result<RequestCandidateRecordInput, LlmProxyError> {
     let policy = policies.provider();
-    let mut record = base_input(request_id, &input.candidate.trace, input.retry_index, input.status, true, input.finished);
+    let mut record = base_input(request_id, &input.candidate.trace, input.retry_index, &input.status, true, input.finished);
     record.status_code = input.status_code;
-    record.skip_reason = input.skip_reason.map(str::to_owned);
+    record.skip_reason = input.skip_reason.clone();
     usage_fields::candidate_input(input, &mut record);
     record.upstream_cost = upstream_cost.clone();
     record.billing = record_billing::billing_values(input.service_tier.clone(), billing.map(|item| &item.amount));
     record.billing_snapshot = billing.map(|item| item.snapshot.clone());
     record.latency_ms = input.latency_ms;
     record.first_byte_time_ms = input.first_byte_time_ms;
-    record.error_type = input.error_type.map(str::to_owned);
-    record.error_message = input.error_message.map(str::to_owned);
-    record.error_code = input.error_code.map(str::to_owned);
-    record.error_param = input.error_param.map(str::to_owned);
+    record.error_type = input.error_type.clone();
+    record.error_message = input.error_message.clone();
+    record.error_code = input.error_code.clone();
+    record.error_param = input.error_param.clone();
     record.provider_request_headers = payload::header_input(input.provider_request_headers.clone(), policy);
     record.provider_request_body = payload::request_body_input(input.provider_request_body.clone(), policy)?;
     record.provider_response_headers = payload::response_header_input(input.provider_response_headers.clone(), policy);
@@ -147,7 +147,7 @@ pub(super) fn request_record_input(
 
 pub(super) fn request_record_patch(
     request_id: &str,
-    input: &AttemptRecordInput<'_>,
+    input: &AttemptAuditInput,
     billing: Option<&BillingAttempt>,
     upstream_cost: &RequestUpstreamCost,
     policies: &RequestRecordPolicies,
@@ -168,8 +168,8 @@ pub(super) fn request_record_patch(
         status: input.status.to_owned(),
         billing_status: request_billing_status(input, billing).into(),
         client_status_code: option_patch(input.status_code),
-        client_error_type: option_str_patch(input.error_type),
-        client_error_message: option_str_patch(input.error_message),
+        client_error_type: option_str_patch(input.error_type.as_deref()),
+        client_error_message: option_str_patch(input.error_message.as_deref()),
         termination_origin: input.termination_origin.clone(),
         termination_reason: input.termination_reason.clone(),
         stream_end_reason: input.stream_end_reason.clone(),

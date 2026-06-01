@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Write failing scheduler test for group key allow list,DONE,Scheduler excludes keys not allowed by the billing group,cargo test -p proxy group_allowed_key_ids --test scheduler,,0,
+2,Extend backend group/key data flow,DONE,cargo check,,0,
+3,Wire admin UI key selection and labels,DONE,Group create/update payloads include allowed_provider_key_ids and UI renders counts,pnpm lint:frontend,,0,
+4,Run focused validation,DONE,Rust and frontend checks complete,just test && pnpm lint:frontend,,0,

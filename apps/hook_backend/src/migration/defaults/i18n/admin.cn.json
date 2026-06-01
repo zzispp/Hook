@@ -254,6 +254,7 @@
     "tierLimit": "阶梯上限",
     "allowedModels": "允许模型",
     "allowedProviders": "允许提供商",
+    "allowedProviderKeys": "允许提供商密钥",
     "apiKey": "密钥",
     "billingMultiplier": "计费倍率",
     "costWithCurrency": "费用({{currency}})",
@@ -333,6 +334,7 @@
     "updatePasswordRequired": "不填写则保留当前密码。",
     "groupModelAccess": "不选择模型表示该分组允许所有模型。",
     "groupProviderAccess": "不选择提供商表示该分组允许所有提供商。",
+    "groupProviderKeyAccess": "不选择密钥表示该分组允许已选提供商下所有密钥；选择后只调度这些密钥。",
     "groupUserGroupVisibility": "只有选中的用户分组可见；清空表示无人可见。",
     "systemRateLimit": "0 表示跟随系统；非 0 后续运行时取 min(系统速率, 此处速率)。",
     "unlimitedExpiresAt": "不输入有效期表示无时间限制；填写时必须晚于当前时间。",
@@ -1293,10 +1295,12 @@
   "billingGroups": {
     "allModels": "所有模型",
     "allProviders": "所有提供商",
+    "allProviderKeys": "所有提供商密钥",
     "deleteConfirm": "确认删除计费分组 {{name}}？",
     "noVisibleUserGroups": "无人可见",
     "selectedModelCount": "{{count}} 个模型",
     "selectedProviderCount": "{{count}} 个提供商",
+    "selectedProviderKeyCount": "{{count}} 个密钥",
     "selectedUserGroupCount": "{{count}} 个用户分组"
   },
   "userGroups": {
@@ -1349,6 +1353,7 @@
     "selectFormats": "选择端点格式...",
     "selectSupportedFormats": "选择端点格式...",
     "noSupportedFormats": "未配置端点格式",
+    "noApiKeys": "未配置密钥",
     "noEndpointFormatsForKey": "请先为该提供商添加端点",
     "unboundKeyFormats": "以下格式未绑定到当前提供商端点：{{formats}}",
     "modelPermission": "模型权限",

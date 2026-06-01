@@ -23,12 +23,14 @@ use crate::llm_proxy::{
 enum AttemptCandidateOutcome {
     Continue,
     Response(Response),
+    FullResponse(transport::FullResponseArgs, AttemptCancelGuard),
 }
 
 enum AttemptOnceOutcome {
     ContinueCandidate,
     NextCandidate,
     Response(Response),
+    FullResponse(transport::FullResponseArgs, AttemptCancelGuard),
 }
 
 pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: PreparedProxyRequest) -> Result<Response, LlmProxyError> {
@@ -36,9 +38,19 @@ pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: Prepar
     let mut last_error = None;
     for candidate in &prepared.candidates {
         let outcome = attempt_candidate(&state, &prepared, candidate, &mut last_failure, &mut last_error).await?;
-        if let AttemptCandidateOutcome::Response(response) = outcome {
-            record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
-            return Ok(response);
+        match outcome {
+            AttemptCandidateOutcome::Continue => {}
+            AttemptCandidateOutcome::Response(response) => {
+                record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
+                return Ok(response);
+            }
+            AttemptCandidateOutcome::FullResponse(args, attempt_cancel) => {
+                let response = transport::full_response(args).await?;
+                attempt_cancel.disarm();
+                affinity::remember(&state, candidate, prepared.cache_affinity_ttl_minutes).await?;
+                record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
+                return Ok(response);
+            }
         }
     }
     if let Some(failure) = last_failure {
@@ -62,6 +74,7 @@ async fn attempt_candidate(
             AttemptOnceOutcome::ContinueCandidate => {}
             AttemptOnceOutcome::NextCandidate => return Ok(AttemptCandidateOutcome::Continue),
             AttemptOnceOutcome::Response(response) => return Ok(AttemptCandidateOutcome::Response(response)),
+            AttemptOnceOutcome::FullResponse(args, attempt_cancel) => return Ok(AttemptCandidateOutcome::FullResponse(args, attempt_cancel)),
         }
     }
     Ok(AttemptCandidateOutcome::Continue)
@@ -167,7 +180,7 @@ async fn attempt_once(
         payload,
         response,
         request_timeout,
-        attempt_cancel: &attempt_cancel,
+        attempt_cancel,
         failures: (last_failure, last_error),
     })
     .await
@@ -374,7 +387,7 @@ struct HandleUpstreamResponseInput<'a> {
     payload: AttemptPayload,
     response: UpstreamResponse,
     request_timeout: Option<Duration>,
-    attempt_cancel: &'a AttemptCancelGuard,
+    attempt_cancel: AttemptCancelGuard,
     failures: (&'a mut Option<transport::UpstreamFailure>, &'a mut Option<LlmProxyError>),
 }
 
@@ -393,7 +406,7 @@ async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Res
         input.attempt_cancel.disarm();
         return Ok(outcome);
     }
-    match success_response(SuccessResponseInput {
+    let outcome = success_response(SuccessResponseInput {
         state: input.state.clone(),
         prepared: input.prepared,
         candidate: input.candidate,
@@ -404,12 +417,13 @@ async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Res
         request_timeout: input.request_timeout,
         attempt_cancel: input.attempt_cancel,
     })
-    .await
-    {
-        Ok(response) => {
+    .await;
+    match outcome {
+        Ok(AttemptOnceOutcome::Response(response)) => {
             affinity::remember(&input.state, input.candidate, input.prepared.cache_affinity_ttl_minutes).await?;
             Ok(AttemptOnceOutcome::Response(response))
         }
+        Ok(outcome) => Ok(outcome),
         Err(error) => {
             *input.failures.1 = Some(error);
             Ok(AttemptOnceOutcome::ContinueCandidate)
@@ -464,10 +478,10 @@ struct SuccessResponseInput<'a> {
     payload: AttemptPayload,
     response: UpstreamResponse,
     request_timeout: Option<Duration>,
-    attempt_cancel: &'a AttemptCancelGuard,
+    attempt_cancel: AttemptCancelGuard,
 }
 
-async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, LlmProxyError> {
+async fn success_response(input: SuccessResponseInput<'_>) -> Result<AttemptOnceOutcome, LlmProxyError> {
     if input.prepared.is_stream {
         return stream_transport::stream_response(
             stream_transport::StreamResponseArgs {
@@ -481,11 +495,12 @@ async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, L
                 started: input.started,
                 retry_index: input.retry_index,
             },
-            input.attempt_cancel,
+            &input.attempt_cancel,
         )
-        .await;
+        .await
+        .map(AttemptOnceOutcome::Response);
     }
-    let response = transport::full_response(transport::FullResponseArgs {
+    let response = transport::FullResponseArgs {
         state: input.state,
         request_id: input.prepared.request_id.clone(),
         response: input.response,
@@ -496,10 +511,8 @@ async fn success_response(input: SuccessResponseInput<'_>) -> Result<Response, L
         started: input.started,
         retry_index: input.retry_index,
         request_timeout: input.request_timeout,
-    })
-    .await;
-    input.attempt_cancel.disarm();
-    response
+    };
+    Ok(AttemptOnceOutcome::FullResponse(response, input.attempt_cancel))
 }
 
 #[cfg(test)]

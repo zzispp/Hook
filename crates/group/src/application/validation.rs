@@ -17,6 +17,7 @@ pub fn sanitize_create(input: BillingGroupCreate) -> BillingGroupCreate {
         description: input.description.and_then(trim_optional),
         allowed_model_ids: normalize_ids(input.allowed_model_ids),
         allowed_provider_ids: normalize_ids(input.allowed_provider_ids),
+        allowed_provider_key_ids: normalize_ids(input.allowed_provider_key_ids),
         ..input
     }
 }
@@ -27,6 +28,7 @@ pub fn sanitize_update(input: BillingGroupUpdate) -> BillingGroupUpdate {
         description: sanitize_patch_string(input.description),
         allowed_model_ids: sanitize_id_patch(input.allowed_model_ids),
         allowed_provider_ids: sanitize_id_patch(input.allowed_provider_ids),
+        allowed_provider_key_ids: sanitize_id_patch(input.allowed_provider_key_ids),
         ..input
     }
 }
@@ -37,7 +39,8 @@ pub fn validate_create(input: &BillingGroupCreate) -> GroupResult<()> {
     validate_description(input.description.as_deref())?;
     validate_multiplier(input.billing_multiplier)?;
     validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
-    validate_ids("allowed_provider_ids", &input.allowed_provider_ids)
+    validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
+    validate_ids("allowed_provider_key_ids", &input.allowed_provider_key_ids)
 }
 
 pub fn validate_update(input: &BillingGroupUpdate) -> GroupResult<()> {
@@ -53,6 +56,7 @@ pub fn validate_update(input: &BillingGroupUpdate) -> GroupResult<()> {
     }
     validate_id_patch("allowed_model_ids", &input.allowed_model_ids)?;
     validate_id_patch("allowed_provider_ids", &input.allowed_provider_ids)?;
+    validate_id_patch("allowed_provider_key_ids", &input.allowed_provider_key_ids)?;
     Ok(())
 }
 

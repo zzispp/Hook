@@ -1,13 +1,9 @@
 use provider::application::billing::{CollectorSource, DimensionCollector, DimensionValueType};
 use storage::{provider::ProviderStore, provider::record::DimensionCollectorRecord};
 
-use crate::llm_proxy::{LlmProxyError, audit::AttemptRecordInput};
+use crate::llm_proxy::{LlmProxyError, audit::AttemptAuditInput};
 
-pub(super) async fn billing_collectors(
-    store: &ProviderStore,
-    input: &AttemptRecordInput<'_>,
-    task_type: &str,
-) -> Result<Vec<DimensionCollector>, LlmProxyError> {
+pub(super) async fn billing_collectors(store: &ProviderStore, input: &AttemptAuditInput, task_type: &str) -> Result<Vec<DimensionCollector>, LlmProxyError> {
     let mut collectors = builtin_collectors(&input.candidate.trace.provider_api_format, task_type);
     for record in store
         .enabled_dimension_collectors(&input.candidate.trace.provider_api_format, task_type)

@@ -90,6 +90,7 @@ async fn load_groups(database: &Database) -> Result<Vec<CachedBillingGroup>, Llm
             billing_multiplier: group.billing_multiplier,
             allowed_model_ids: group.allowed_model_ids,
             allowed_provider_ids: group.allowed_provider_ids,
+            allowed_provider_key_ids: group.allowed_provider_key_ids,
             visible_user_group_codes: group.visible_user_group_codes,
             is_active: group.is_active,
         })
