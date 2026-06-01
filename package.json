@@ -15,6 +15,13 @@
     "start:embedded": "pnpm build:frontend:embedded && cargo run -p backend"
   },
   "pnpm": {
+    "packageExtensions": {
+      "@hookform/resolvers": {
+        "peerDependencies": {
+          "zod": "*"
+        }
+      }
+    },
     "overrides": {
       "cuer@0.0.3>qr": "0.5.5"
     }
