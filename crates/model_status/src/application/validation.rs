@@ -80,6 +80,11 @@ pub fn validate_dispatch_options(options: ModelStatusDispatchOptions) -> ModelSt
             "provider_key_min_interval_seconds must be greater than 0".into(),
         ));
     }
+    if options.provider_key_probe_wait_timeout_seconds <= 0 {
+        return Err(ModelStatusError::InvalidInput(
+            "provider_key_probe_wait_timeout_seconds must be greater than 0".into(),
+        ));
+    }
     Ok(())
 }
 

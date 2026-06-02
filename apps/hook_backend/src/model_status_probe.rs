@@ -7,7 +7,8 @@ use serde_json::{Value, json};
 use std::time::Instant;
 
 use crate::llm_proxy::{
-    CLAUDE_CHAT_FORMAT, CurrentApiToken, GEMINI_CHAT_FORMAT, LlmProxyState, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, ProxyJsonRequest, proxy_json,
+    CLAUDE_CHAT_FORMAT, CurrentApiToken, GEMINI_CHAT_FORMAT, LlmProxyState, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, ProviderKeyProbeSlotOptions,
+    ProxyJsonRequest, proxy_json,
 };
 
 pub(crate) const DEGRADED_AFTER_MS: i64 = 6_000;
@@ -34,10 +35,12 @@ impl ModelStatusProbe for LlmProxyModelStatusProbe {
         };
         let started = Instant::now();
         let request = ProxyJsonRequest::new(self.state.clone(), CurrentApiToken(input.token), HeaderMap::new(), body, api_format, true)
-            .with_provider_key_probe_min_interval_seconds(options.provider_key_min_interval_seconds);
+            .with_provider_key_probe_slot_options(ProviderKeyProbeSlotOptions {
+                min_interval_seconds: options.provider_key_min_interval_seconds,
+                wait_timeout_seconds: options.provider_key_probe_wait_timeout_seconds,
+            });
         match proxy_json(request).await {
             Ok(response) => ModelStatusProbeResult::Completed(classify_response(response.status().as_u16(), elapsed_ms(started))),
-            Err(crate::llm_proxy::LlmProxyError::ProbeDeferred(_)) => ModelStatusProbeResult::Deferred,
             Err(error) => completed_error(error.to_string()),
         }
     }

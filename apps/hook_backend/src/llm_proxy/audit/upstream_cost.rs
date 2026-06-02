@@ -143,7 +143,7 @@ fn usage_dimensions(usage: Option<TokenUsage>) -> BTreeMap<String, Value> {
     dimensions
 }
 
-fn selected_global_tier<'a>(input: &'a AttemptAuditInput) -> Option<&'a PricingTier> {
+fn selected_global_tier(input: &AttemptAuditInput) -> Option<&PricingTier> {
     let pricing = &input.candidate.tiered_pricing;
     let total_context = normalized_default_dimensions(&input.candidate.trace.provider_api_format, usage_dimensions(input.usage))
         .get("total_input_context")
@@ -199,7 +199,7 @@ mod tests {
 
     use super::{matching_tier, per_token_cost, token_prices};
     use crate::llm_proxy::{
-        audit::{AttemptRecordInput, TokenUsage},
+        audit::{AttemptAuditInput, AttemptRecordInput, TokenUsage},
         candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
     };
 

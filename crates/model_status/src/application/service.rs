@@ -94,22 +94,20 @@ where
 
     async fn run_due_checks(&self, options: ModelStatusDispatchOptions) -> ModelStatusResult<ModelStatusDispatchReport> {
         validate_dispatch_options(options)?;
-        let checks = self.repository.due_checks(options.limit, time::OffsetDateTime::now_utc()).await?;
-        stream::iter(checks)
-            .map(|input| async move {
-                self.run_due_check(
-                    input,
-                    ModelStatusProbeOptions {
-                        provider_key_min_interval_seconds: options.provider_key_min_interval_seconds,
-                    },
-                )
-                .await
-            })
-            .buffer_unordered(options.concurrency)
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .try_fold(ModelStatusDispatchReport::default(), |total, item| merge_dispatch_report(total, item?))
+        let dispatch_started_at = time::OffsetDateTime::now_utc();
+        let probe_options = ModelStatusProbeOptions {
+            provider_key_min_interval_seconds: options.provider_key_min_interval_seconds,
+            provider_key_probe_wait_timeout_seconds: options.provider_key_probe_wait_timeout_seconds,
+        };
+        let mut total = ModelStatusDispatchReport::default();
+        loop {
+            let checks = self.repository.due_checks(options.limit, dispatch_started_at).await?;
+            if checks.is_empty() {
+                return Ok(total);
+            }
+            total.pages_count += 1;
+            total = merge_dispatch_report(total, self.run_due_page(checks, probe_options, options.concurrency).await?)?;
+        }
     }
 
     async fn token_has_checks(&self, token_id: &str) -> ModelStatusResult<bool> {
@@ -123,6 +121,21 @@ where
     T: ModelStatusTokenCatalog,
     P: ModelStatusProbe,
 {
+    async fn run_due_page(
+        &self,
+        checks: Vec<ModelStatusProbeInput>,
+        options: ModelStatusProbeOptions,
+        concurrency: usize,
+    ) -> ModelStatusResult<ModelStatusDispatchReport> {
+        stream::iter(checks)
+            .map(|input| async move { self.run_due_check(input, options).await })
+            .buffer_unordered(concurrency)
+            .collect::<Vec<_>>()
+            .await
+            .into_iter()
+            .try_fold(ModelStatusDispatchReport::default(), |total, item| merge_dispatch_report(total, item?))
+    }
+
     async fn ensure_independent_token(&self, id: &str) -> ModelStatusResult<()> {
         self.tokens
             .independent_token(id)
@@ -139,6 +152,8 @@ where
                 Ok(ModelStatusDispatchReport {
                     probed_count: 1,
                     deferred_count: 0,
+                    scanned_count: 1,
+                    pages_count: 0,
                 })
             }
             ModelStatusProbeResult::Deferred => {
@@ -147,6 +162,8 @@ where
                 Ok(ModelStatusDispatchReport {
                     probed_count: 0,
                     deferred_count: 1,
+                    scanned_count: 1,
+                    pages_count: 0,
                 })
             }
         }
@@ -167,5 +184,7 @@ fn run_record(check_id: String, output: super::ModelStatusProbeOutput) -> ModelS
 fn merge_dispatch_report(mut total: ModelStatusDispatchReport, item: ModelStatusDispatchReport) -> ModelStatusResult<ModelStatusDispatchReport> {
     total.probed_count += item.probed_count;
     total.deferred_count += item.deferred_count;
+    total.scanned_count += item.scanned_count;
+    total.pages_count += item.pages_count;
     Ok(total)
 }

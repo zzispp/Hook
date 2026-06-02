@@ -53,8 +53,52 @@ async fn run_due_checks_records_probe_result() {
 
     assert_eq!(report.probed_count, 1);
     assert_eq!(report.deferred_count, 0);
+    assert_eq!(report.scanned_count, 1);
+    assert_eq!(report.pages_count, 1);
     assert_eq!(repository.records().len(), 1);
     assert_eq!(repository.records()[0].status, ModelStatusRunStatus::Operational);
+}
+
+#[tokio::test]
+async fn run_due_checks_drains_all_due_pages() {
+    let repository = MemoryRepository::with_due((1..=5).map(probe_input).collect());
+    let service = ModelStatusService::new(repository.clone(), StaticTokenCatalog::new(independent_token()), StaticProbe);
+
+    let report = service
+        .run_due_checks(ModelStatusDispatchOptions {
+            limit: 2,
+            concurrency: 2,
+            provider_key_min_interval_seconds: 1,
+            provider_key_probe_wait_timeout_seconds: 30,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(report.probed_count, 5);
+    assert_eq!(report.deferred_count, 0);
+    assert_eq!(report.scanned_count, 5);
+    assert_eq!(report.pages_count, 3);
+    assert_eq!(repository.records().len(), 5);
+    assert_eq!(repository.due_calls(), 4);
+}
+
+#[tokio::test]
+async fn run_due_checks_rejects_missing_probe_wait_timeout() {
+    let service = ModelStatusService::new(MemoryRepository::default(), StaticTokenCatalog::new(independent_token()), StaticProbe);
+
+    let result = service
+        .run_due_checks(ModelStatusDispatchOptions {
+            limit: 20,
+            concurrency: 4,
+            provider_key_min_interval_seconds: 1,
+            provider_key_probe_wait_timeout_seconds: 0,
+        })
+        .await;
+
+    assert_eq!(
+        result.unwrap_err().to_string(),
+        "invalid input: provider_key_probe_wait_timeout_seconds must be greater than 0"
+    );
 }
 
 #[tokio::test]
@@ -81,7 +125,8 @@ async fn batch_delete_reports_success_and_failed_items() {
 
 #[derive(Clone, Default)]
 struct MemoryRepository {
-    due: Arc<Vec<ModelStatusProbeInput>>,
+    due: Arc<Mutex<Vec<ModelStatusProbeInput>>>,
+    due_calls: Arc<Mutex<u64>>,
     created: Arc<Mutex<u64>>,
     records: Arc<Mutex<Vec<ModelStatusRunRecord>>>,
     deleted: Arc<Mutex<Vec<String>>>,
@@ -90,7 +135,7 @@ struct MemoryRepository {
 impl MemoryRepository {
     fn with_due(due: Vec<ModelStatusProbeInput>) -> Self {
         Self {
-            due: Arc::new(due),
+            due: Arc::new(Mutex::new(due)),
             ..Self::default()
         }
     }
@@ -101,6 +146,10 @@ impl MemoryRepository {
 
     fn records(&self) -> Vec<ModelStatusRunRecord> {
         self.records.lock().unwrap().clone()
+    }
+
+    fn due_calls(&self) -> u64 {
+        *self.due_calls.lock().unwrap()
     }
 
     fn deleted(&self) -> Vec<String> {
@@ -154,7 +203,11 @@ impl ModelStatusRepository for MemoryRepository {
     }
 
     async fn due_checks(&self, _limit: u64, _now: time::OffsetDateTime) -> ModelStatusResult<Vec<ModelStatusProbeInput>> {
-        Ok((*self.due).clone())
+        *self.due_calls.lock().unwrap() += 1;
+        let mut due = self.due.lock().unwrap();
+        let limit = usize::try_from(_limit).unwrap();
+        let count = limit.min(due.len());
+        Ok(due.drain(..count).collect())
     }
 
     async fn record_run(&self, record: ModelStatusRunRecord, _interval_seconds: i64) -> ModelStatusResult<()> {
@@ -209,6 +262,17 @@ fn dispatch_options() -> ModelStatusDispatchOptions {
         limit: 20,
         concurrency: 4,
         provider_key_min_interval_seconds: 1,
+        provider_key_probe_wait_timeout_seconds: 30,
+    }
+}
+
+fn probe_input(index: u64) -> ModelStatusProbeInput {
+    ModelStatusProbeInput {
+        check_id: format!("check-{index}"),
+        model_name: "gpt-test".into(),
+        api_format: "openai:chat".into(),
+        interval_seconds: 300,
+        token: independent_token(),
     }
 }
 

@@ -5,7 +5,7 @@ use super::{
     AttemptCancelGuard, cancelled_after_upstream_response_record, cancelled_before_upstream_response_record, stream_candidate_watchdog_timeout_record,
 };
 use crate::llm_proxy::{
-    audit::request_billing_status,
+    audit::{AttemptAuditInput, request_billing_status},
     candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
 };
 
@@ -30,7 +30,7 @@ fn cancelled_before_upstream_response_is_explicit_terminal_record() {
     assert_eq!(input.termination_origin, PatchField::Value("client".into()));
     assert_eq!(input.termination_reason, PatchField::Value("disconnected".into()));
     assert_eq!(input.stream_end_reason, PatchField::Value("client_gone".into()));
-    assert_eq!(request_billing_status(&input, None), "void");
+    assert_eq!(request_billing_status(&AttemptAuditInput::from(input), None), "void");
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn cancelled_after_upstream_response_is_explicit_terminal_record() {
     assert_eq!(input.termination_origin, PatchField::Value("client".into()));
     assert_eq!(input.termination_reason, PatchField::Value("disconnected".into()));
     assert_eq!(input.stream_end_reason, PatchField::Value("client_gone".into()));
-    assert_eq!(request_billing_status(&input, None), "void");
+    assert_eq!(request_billing_status(&AttemptAuditInput::from(input), None), "void");
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn stream_candidate_watchdog_timeout_is_explicit_failed_record() {
     assert_eq!(input.latency_ms, Some(42));
     assert_eq!(input.error_type, Some("local_stream_candidate_watchdog_timeout"));
     assert_eq!(input.error_message, Some("stream candidate timed out before handoff completed"));
-    assert_eq!(request_billing_status(&input, None), "void");
+    assert_eq!(request_billing_status(&AttemptAuditInput::from(input), None), "void");
 }
 
 fn candidate() -> ProxyCandidate {

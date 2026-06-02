@@ -11,8 +11,8 @@ use time::OffsetDateTime;
 
 pub(crate) use self::billing_runtime::{BillingAttempt, request_billing_status};
 use self::billing_runtime::{attempt_billing, model_usage_record, token_usage_record, wallet_settlement_input};
-pub(crate) use self::event::AuditCandidate;
-use self::event::{AttemptAuditInput, AuditEvent};
+use self::event::AuditEvent;
+pub(crate) use self::event::{AttemptAuditInput, AuditCandidate};
 pub use self::event::{AttemptRecordInput, TokenUsage};
 use super::{
     LlmProxyError, LlmProxyState,
@@ -23,7 +23,6 @@ use super::{
 };
 
 pub const SKIP_REASON_REQUEST_TERMINATED: &str = "request_terminated_before_attempt";
-pub const SKIP_REASON_MODEL_STATUS_PROBE_THROTTLED: &str = "model_status_probe_throttled";
 
 pub async fn record_scheduled_candidates(state: &LlmProxyState, selection: &CandidateSelection, capture: &RequestCapture) -> Result<(), LlmProxyError> {
     persist_event(state, AuditEvent::ScheduledCandidates { selection, capture }).await
@@ -39,13 +38,6 @@ pub fn record_attempt<'a>(
 
 pub async fn record_skipped_candidates(state: &LlmProxyState, request_id: &str, skip_reason: &str) -> Result<(), LlmProxyError> {
     persist_event(state, AuditEvent::SkippedCandidates { request_id, skip_reason }).await
-}
-
-pub async fn record_probe_deferred(state: &LlmProxyState, request_id: &str) -> Result<(), LlmProxyError> {
-    ProviderStore::new(state.database.clone())
-        .mark_model_status_probe_deferred(request_id, SKIP_REASON_MODEL_STATUS_PROBE_THROTTLED)
-        .await?;
-    Ok(())
 }
 
 async fn persist_event(state: &LlmProxyState, event: AuditEvent<'_>) -> Result<(), LlmProxyError> {

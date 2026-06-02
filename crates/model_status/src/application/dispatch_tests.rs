@@ -22,19 +22,22 @@ async fn run_due_checks_defers_throttled_probe() {
             limit: 20,
             concurrency: 4,
             provider_key_min_interval_seconds: 1,
+            provider_key_probe_wait_timeout_seconds: 30,
         })
         .await
         .unwrap();
 
     assert_eq!(report.probed_count, 0);
     assert_eq!(report.deferred_count, 1);
+    assert_eq!(report.scanned_count, 1);
+    assert_eq!(report.pages_count, 1);
     assert_eq!(repository.recorded_count(), 0);
     assert_eq!(repository.deferred_ids(), vec!["check-1"]);
 }
 
 #[derive(Clone, Default)]
 struct MemoryRepository {
-    due: Arc<Vec<ModelStatusProbeInput>>,
+    due: Arc<Mutex<Vec<ModelStatusProbeInput>>>,
     records: Arc<Mutex<Vec<ModelStatusRunRecord>>>,
     deferred: Arc<Mutex<Vec<String>>>,
 }
@@ -42,7 +45,7 @@ struct MemoryRepository {
 impl MemoryRepository {
     fn with_due(due: Vec<ModelStatusProbeInput>) -> Self {
         Self {
-            due: Arc::new(due),
+            due: Arc::new(Mutex::new(due)),
             ..Self::default()
         }
     }
@@ -90,8 +93,10 @@ impl ModelStatusRepository for MemoryRepository {
         unimplemented!()
     }
 
-    async fn due_checks(&self, _limit: u64, _now: time::OffsetDateTime) -> ModelStatusResult<Vec<ModelStatusProbeInput>> {
-        Ok((*self.due).clone())
+    async fn due_checks(&self, limit: u64, _now: time::OffsetDateTime) -> ModelStatusResult<Vec<ModelStatusProbeInput>> {
+        let mut due = self.due.lock().unwrap();
+        let count = usize::try_from(limit).unwrap().min(due.len());
+        Ok(due.drain(..count).collect())
     }
 
     async fn record_run(&self, record: ModelStatusRunRecord, _interval_seconds: i64) -> ModelStatusResult<()> {

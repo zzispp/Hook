@@ -1953,6 +1953,7 @@
       "success": "成功",
       "cancelled": "已取消",
       "failed": "失败",
+      "skipped": "已跳过",
       "active": "进行中",
       "queued": "待调度",
       "unscheduled": "未调度",
@@ -1965,7 +1966,8 @@
       "streaming": "传输中",
       "success": "成功",
       "failed": "失败",
-      "cancelled": "已取消"
+      "cancelled": "已取消",
+      "skipped": "已跳过"
     },
     "billingStatus": {
       "pending": "待计费",
@@ -2054,7 +2056,8 @@
       "modelStatusCheckDispatch": {
         "batchSize": "单次领取数量",
         "concurrency": "并发探测数",
-        "providerKeyMinIntervalSeconds": "同一提供商密钥探测最小间隔秒数"
+        "providerKeyMinIntervalSeconds": "同一提供商密钥探测最小间隔秒数",
+        "providerKeyProbeWaitTimeoutSeconds": "同一提供商密钥探测等待超时秒数"
       },
       "modelStatusRunsCleanup": {
         "retentionDays": "模型状态探测记录保留天数"

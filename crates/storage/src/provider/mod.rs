@@ -9,7 +9,6 @@ pub mod record;
 mod repository;
 mod repository_helpers;
 mod request_candidate_query;
-mod request_probe_defer;
 mod request_record_cleanup;
 mod request_record_detail;
 mod request_record_filter;

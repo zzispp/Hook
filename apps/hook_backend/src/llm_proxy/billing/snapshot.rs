@@ -31,14 +31,18 @@ mod tests {
     };
 
     use super::*;
-    use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
+    use crate::llm_proxy::{
+        audit::AuditCandidate,
+        candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
+    };
 
     #[test]
     fn settlement_description_describes_public_usage_without_internal_snapshot() {
         let candidate = candidate();
+        let audit_candidate = AuditCandidate::from(&candidate);
         let input = WalletSettlementInput {
             request_id: "request-1",
-            candidate: &candidate,
+            candidate: &audit_candidate,
             amount: billing_amount(),
         };
 

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add regression tests,DONE,Tests cover multi-page due dispatch and probe-slot pacing,cargo test targets fail before fix,2026-06-02T00:00:00Z,0,
+2,Implement due queue draining,DONE,run_due_checks loops until no due rows remain,cargo test -p model_status,2026-06-02T00:00:00Z,0,
+3,Implement probe slot waiting,DONE,probe throttling waits instead of marking request skipped,cargo test -p backend,2026-06-02T00:00:00Z,0,
+4,Run validation,DONE,model_status and backend tests pass,timeout 60 cargo test -p model_status && timeout 60 cargo test -p backend,2026-06-02T00:00:00Z,0,just test exceeded repository 60s wrapper twice after passing executed tests
+5,Add probe wait timeout,DONE,Provider-key probe slot waiting has a configured total timeout and candidate failure continues degradation,timeout 60 cargo test -p model_status && timeout 60 cargo test -p backend,2026-06-02T00:00:00Z,0,just test exceeded repository 60s wrapper after executed tests passed

@@ -9,6 +9,7 @@ use crate::llm_proxy::{
     billing::enforce_preflight_access,
     candidate::{CandidateRequest, CandidateSelection, ProxyCandidate, select_candidates},
     formats, rate_limit,
+    rate_limit::ProviderKeyProbeSlotOptions,
 };
 
 use super::{body_rules::apply_provider_body_rules, capture::RequestCapture};
@@ -21,7 +22,7 @@ pub(super) struct PreparedProxyRequest {
     pub(super) service_tier: Option<String>,
     pub(super) is_stream: bool,
     pub(super) force_non_stream: bool,
-    pub(super) provider_key_probe_min_interval_seconds: Option<i64>,
+    pub(super) provider_key_probe_slot_options: Option<ProviderKeyProbeSlotOptions>,
     pub(super) provider_headers: HeaderMap,
 }
 
@@ -38,7 +39,7 @@ pub(super) async fn prepare_proxy_request(
     body: Value,
     api_format: &'static str,
     force_non_stream: bool,
-    provider_key_probe_min_interval_seconds: Option<i64>,
+    provider_key_probe_slot_options: Option<ProviderKeyProbeSlotOptions>,
     capture: RequestCapture,
 ) -> Result<PreparedProxyRequest, LlmProxyError> {
     let model_name = required_model(&body)?;
@@ -65,7 +66,7 @@ pub(super) async fn prepare_proxy_request(
         service_tier,
         is_stream,
         force_non_stream,
-        provider_key_probe_min_interval_seconds,
+        provider_key_probe_slot_options,
         provider_headers: HeaderMap::new(),
     })
 }
@@ -92,7 +93,7 @@ pub(super) async fn prepare_proxy_request_with_candidates(
         service_tier,
         is_stream,
         force_non_stream,
-        provider_key_probe_min_interval_seconds: None,
+        provider_key_probe_slot_options: None,
         provider_headers,
     })
 }

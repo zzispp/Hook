@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use time::OffsetDateTime;
 use types::api_token::{ApiToken, ApiTokenType};
 
@@ -23,6 +25,18 @@ end
 return 0
 "#;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ProviderKeyProbeSlotOptions {
+    pub(crate) min_interval_seconds: i64,
+    pub(crate) wait_timeout_seconds: i64,
+}
+
+#[derive(Debug)]
+pub(crate) enum ProviderKeyProbeSlotClaim {
+    Claimed,
+    TimedOut(LlmProxyError),
+}
+
 pub async fn enforce_request_limits(state: &LlmProxyState, token: &ApiToken) -> Result<(), LlmProxyError> {
     let snapshot = state.scheduling_snapshot().await?;
     let scopes = request_scopes(&snapshot, token);
@@ -36,23 +50,63 @@ pub async fn claim_provider_key_limit(state: &LlmProxyState, key_id: &str, rpm_l
     consume_scopes(state, &[RateLimitScope::provider_key(key_id, limit)]).await
 }
 
-pub async fn claim_provider_key_probe_slot(state: &LlmProxyState, key_id: &str, min_interval_seconds: i64) -> Result<(), LlmProxyError> {
-    if min_interval_seconds <= 0 {
-        return Err(LlmProxyError::Infrastructure(
-            "provider key probe minimum interval must be greater than 0".into(),
-        ));
-    }
+pub async fn claim_provider_key_probe_slot(
+    state: &LlmProxyState,
+    key_id: &str,
+    options: ProviderKeyProbeSlotOptions,
+) -> Result<ProviderKeyProbeSlotClaim, LlmProxyError> {
     let mut connection = state.affinity.clone();
-    let result: Option<String> = provider_key_probe_slot_command(&state.key_prefix, key_id, min_interval_seconds)
-        .query_async(&mut connection)
+    let (wait_duration, wait_timeout) = provider_key_probe_slot_durations(options)?;
+    let claimed = tokio::time::timeout(wait_timeout, async {
+        loop {
+            if try_claim_provider_key_probe_slot(&mut connection, &state.key_prefix, key_id, options.min_interval_seconds).await? {
+                return Ok::<_, LlmProxyError>(ProviderKeyProbeSlotClaim::Claimed);
+            }
+            tokio::time::sleep(wait_duration).await;
+        }
+    })
+    .await;
+    match claimed {
+        Ok(result) => result,
+        Err(_) => Ok(ProviderKeyProbeSlotClaim::TimedOut(LlmProxyError::Upstream(format!(
+            "provider key model status probe slot wait timed out for key {key_id} after {} seconds",
+            options.wait_timeout_seconds
+        )))),
+    }
+}
+
+async fn try_claim_provider_key_probe_slot(
+    connection: &mut redis::aio::ConnectionManager,
+    key_prefix: &str,
+    key_id: &str,
+    min_interval_seconds: i64,
+) -> Result<bool, LlmProxyError> {
+    let result: Option<String> = provider_key_probe_slot_command(key_prefix, key_id, min_interval_seconds)
+        .query_async(connection)
         .await
         .map_err(redis_error)?;
-    if result.is_some() {
-        return Ok(());
+    Ok(result.is_some())
+}
+
+fn provider_key_probe_slot_durations(options: ProviderKeyProbeSlotOptions) -> Result<(Duration, Duration), LlmProxyError> {
+    let wait = positive_seconds(
+        options.min_interval_seconds,
+        "provider key probe minimum interval",
+        "provider key probe minimum interval is out of range",
+    )?;
+    let timeout = positive_seconds(
+        options.wait_timeout_seconds,
+        "provider key probe wait timeout",
+        "provider key probe wait timeout is out of range",
+    )?;
+    Ok((Duration::from_secs(wait), Duration::from_secs(timeout)))
+}
+
+fn positive_seconds(value: i64, label: &str, range_message: &str) -> Result<u64, LlmProxyError> {
+    if value <= 0 {
+        return Err(LlmProxyError::Infrastructure(format!("{label} must be greater than 0")));
     }
-    Err(LlmProxyError::ProbeDeferred(format!(
-        "provider key model status probe slot is occupied: {key_id}"
-    )))
+    u64::try_from(value).map_err(|_| LlmProxyError::Infrastructure(range_message.into()))
 }
 
 fn provider_key_probe_slot_command(key_prefix: &str, key_id: &str, min_interval_seconds: i64) -> redis::Cmd {

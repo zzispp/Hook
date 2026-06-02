@@ -24,7 +24,7 @@ use axum::http::HeaderMap;
 use axum::response::Response;
 use serde_json::Value;
 
-use super::{CurrentApiToken, LlmProxyError, LlmProxyState, candidate::CandidateSelection};
+use super::{CurrentApiToken, LlmProxyError, LlmProxyState, candidate::CandidateSelection, rate_limit::ProviderKeyProbeSlotOptions};
 
 pub struct ProxyJsonRequest {
     state: LlmProxyState,
@@ -33,7 +33,7 @@ pub struct ProxyJsonRequest {
     body: Value,
     api_format: &'static str,
     force_non_stream: bool,
-    provider_key_probe_min_interval_seconds: Option<i64>,
+    provider_key_probe_slot_options: Option<ProviderKeyProbeSlotOptions>,
 }
 
 pub(in crate::llm_proxy) struct ProxyFixedJsonRequest {
@@ -74,12 +74,12 @@ impl ProxyJsonRequest {
             body,
             api_format,
             force_non_stream,
-            provider_key_probe_min_interval_seconds: None,
+            provider_key_probe_slot_options: None,
         }
     }
 
-    pub fn with_provider_key_probe_min_interval_seconds(mut self, value: i64) -> Self {
-        self.provider_key_probe_min_interval_seconds = Some(value);
+    pub fn with_provider_key_probe_slot_options(mut self, value: ProviderKeyProbeSlotOptions) -> Self {
+        self.provider_key_probe_slot_options = Some(value);
         self
     }
 }
@@ -92,7 +92,7 @@ pub async fn proxy_json(request: ProxyJsonRequest) -> Result<Response, LlmProxyE
         request.body,
         request.api_format,
         request.force_non_stream,
-        request.provider_key_probe_min_interval_seconds,
+        request.provider_key_probe_slot_options,
         capture,
     )
     .await?;

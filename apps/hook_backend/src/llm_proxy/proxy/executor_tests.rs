@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{AttemptOnceOutcome, StreamWatchdogOutcome, run_stream_candidate_watchdog, stream_candidate_watchdog_timeout_output};
+use super::{AttemptOnceOutcome, StreamWatchdogOutcome, probe_slot_timeout_outcome, run_stream_candidate_watchdog, stream_candidate_watchdog_timeout_output};
 use crate::llm_proxy::{LlmProxyError, proxy::attempt_log::AttemptCancelHandle};
 
 #[tokio::test]
@@ -35,4 +35,11 @@ fn stream_candidate_watchdog_timeout_advances_to_next_candidate() {
         output.last_error.map(|error| error.to_string()),
         Some("stream candidate watchdog timed out".into())
     );
+}
+
+#[test]
+fn probe_slot_timeout_continues_candidate_route() {
+    let output = probe_slot_timeout_outcome();
+
+    assert!(matches!(output, AttemptOnceOutcome::ContinueCandidate));
 }

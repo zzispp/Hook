@@ -6,8 +6,8 @@ use req::Response as UpstreamResponse;
 use super::{
     LlmProxyError, LlmProxyState, affinity,
     attempt_log::{
-        AttemptCancelGuard, AttemptCancelHandle, StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error,
-        record_started_attempt, record_stream_candidate_watchdog_timeout,
+        AttemptCancelGuard, AttemptCancelHandle, StartedAttemptInput, record_attempt_error, record_probe_slot_timeout, record_rate_limit_rejection,
+        record_send_error, record_started_attempt, record_stream_candidate_watchdog_timeout,
     },
     failure_classification::{FailureDecision, classify_status},
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
@@ -15,7 +15,7 @@ use super::{
     stream_transport, timeout, transport,
 };
 use crate::llm_proxy::{
-    audit::{SKIP_REASON_REQUEST_TERMINATED, record_probe_deferred, record_skipped_candidates},
+    audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
     candidate::ProxyCandidate,
     rate_limit,
 };
@@ -23,14 +23,14 @@ use crate::llm_proxy::{
 enum AttemptCandidateOutcome {
     Continue,
     Response(Response),
-    FullResponse(transport::FullResponseArgs, AttemptCancelGuard),
+    FullResponse(Box<transport::FullResponseArgs>, Box<AttemptCancelGuard>),
 }
 
 enum AttemptOnceOutcome {
     ContinueCandidate,
     NextCandidate,
     Response(Response),
-    FullResponse(transport::FullResponseArgs, AttemptCancelGuard),
+    FullResponse(Box<transport::FullResponseArgs>, Box<AttemptCancelGuard>),
 }
 
 pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: PreparedProxyRequest) -> Result<Response, LlmProxyError> {
@@ -45,7 +45,7 @@ pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: Prepar
                 return Ok(response);
             }
             AttemptCandidateOutcome::FullResponse(args, attempt_cancel) => {
-                let response = transport::full_response(args).await?;
+                let response = transport::full_response(*args).await?;
                 attempt_cancel.disarm();
                 affinity::remember(&state, candidate, prepared.cache_affinity_ttl_minutes).await?;
                 record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
@@ -88,14 +88,13 @@ async fn attempt_once(
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<AttemptOnceOutcome, LlmProxyError> {
-    if let Some(min_interval_seconds) = prepared.provider_key_probe_min_interval_seconds {
-        match rate_limit::claim_provider_key_probe_slot(state, &candidate.trace.key_id, min_interval_seconds).await {
-            Ok(()) => {}
-            Err(error @ LlmProxyError::ProbeDeferred(_)) => {
-                record_probe_deferred(state, &prepared.request_id).await?;
-                return Err(error);
+    if let Some(options) = prepared.provider_key_probe_slot_options {
+        match rate_limit::claim_provider_key_probe_slot(state, &candidate.trace.key_id, options).await? {
+            rate_limit::ProviderKeyProbeSlotClaim::Claimed => {}
+            rate_limit::ProviderKeyProbeSlotClaim::TimedOut(error) => {
+                record_probe_slot_timeout(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;
+                return Ok(probe_slot_timeout_outcome());
             }
-            Err(error) => return Err(error),
         }
     }
     match rate_limit::claim_provider_key_limit(state, &candidate.trace.key_id, candidate.key_rpm_limit).await {
@@ -366,6 +365,10 @@ fn stream_candidate_watchdog_timeout_output() -> StreamAttemptTaskOutput {
     }
 }
 
+fn probe_slot_timeout_outcome() -> AttemptOnceOutcome {
+    AttemptOnceOutcome::ContinueCandidate
+}
+
 async fn execute_upstream_request(
     http: &req::ReqwestClient,
     request: req::Request,
@@ -512,7 +515,7 @@ async fn success_response(input: SuccessResponseInput<'_>) -> Result<AttemptOnce
         retry_index: input.retry_index,
         request_timeout: input.request_timeout,
     };
-    Ok(AttemptOnceOutcome::FullResponse(response, input.attempt_cancel))
+    Ok(AttemptOnceOutcome::FullResponse(Box::new(response), Box::new(input.attempt_cancel)))
 }
 
 #[cfg(test)]

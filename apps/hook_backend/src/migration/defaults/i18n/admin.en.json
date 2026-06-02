@@ -1953,6 +1953,7 @@
       "success": "Success",
       "cancelled": "Cancelled",
       "failed": "Failed",
+      "skipped": "Skipped",
       "active": "In progress",
       "queued": "Queued",
       "unscheduled": "Unscheduled",
@@ -1965,7 +1966,8 @@
       "streaming": "Streaming",
       "success": "Success",
       "failed": "Failed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "skipped": "Skipped"
     },
     "billingStatus": {
       "pending": "Pending billing",
@@ -2054,7 +2056,8 @@
       "modelStatusCheckDispatch": {
         "batchSize": "Batch size",
         "concurrency": "Probe concurrency",
-        "providerKeyMinIntervalSeconds": "Provider key probe minimum interval seconds"
+        "providerKeyMinIntervalSeconds": "Provider key probe minimum interval seconds",
+        "providerKeyProbeWaitTimeoutSeconds": "Provider key probe wait timeout seconds"
       },
       "modelStatusRunsCleanup": {
         "retentionDays": "Model status probe record retention days"

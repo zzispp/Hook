@@ -138,6 +138,19 @@ pub(super) async fn record_rate_limit_rejection(
     Ok(None)
 }
 
+pub(super) async fn record_probe_slot_timeout(
+    state: &LlmProxyState,
+    request_id: &str,
+    candidate: &ProxyCandidate,
+    retry_index: i32,
+    error: LlmProxyError,
+    last_error: &mut Option<LlmProxyError>,
+) -> Result<Option<Response>, LlmProxyError> {
+    record_failed_attempt(state, request_id, candidate, retry_index, "provider_key_probe_slot_timeout", &error).await?;
+    *last_error = Some(error);
+    Ok(None)
+}
+
 async fn record_failed_attempt(
     state: &LlmProxyState,
     request_id: &str,

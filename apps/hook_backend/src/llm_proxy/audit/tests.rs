@@ -4,13 +4,13 @@ use serde_json::json;
 use std::collections::BTreeMap;
 use types::model::TieredPricingConfig;
 
-use super::{AttemptRecordInput, billing_runtime::BillingAttempt, request_billing_status, token_usage_record, wallet_settlement_input};
+use super::{AttemptAuditInput, AttemptRecordInput, billing_runtime::BillingAttempt, request_billing_status, token_usage_record, wallet_settlement_input};
 use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
 #[test]
 fn success_without_usage_still_settles_request_only_billing() {
     let candidate = candidate();
-    let input = AttemptRecordInput::new(&candidate, 0, "success", true);
+    let input = audit_input(AttemptRecordInput::new(&candidate, 0, "success", true));
     let billing = request_only_billing();
 
     let usage_record = token_usage_record("request-1", &input, Some(&billing), time::OffsetDateTime::UNIX_EPOCH).unwrap();
@@ -24,14 +24,14 @@ fn success_without_usage_still_settles_request_only_billing() {
 #[test]
 fn incomplete_billing_sets_status_and_blocks_settlement() {
     let candidate = candidate();
-    let input = AttemptRecordInput {
+    let input = audit_input(AttemptRecordInput {
         usage: Some(super::TokenUsage {
             prompt_tokens: Some(10),
             completion_tokens: Some(5),
             ..Default::default()
         }),
         ..AttemptRecordInput::new(&candidate, 0, "success", true)
-    };
+    });
     let billing = incomplete_billing();
 
     let settlement = wallet_settlement_input("request-1", &input, Some(&billing));
@@ -43,7 +43,7 @@ fn incomplete_billing_sets_status_and_blocks_settlement() {
 #[test]
 fn estimated_stream_usage_can_settle_billing() {
     let candidate = candidate();
-    let input = AttemptRecordInput {
+    let input = audit_input(AttemptRecordInput {
         usage: Some(super::TokenUsage {
             prompt_tokens: Some(10),
             completion_tokens: Some(5),
@@ -53,7 +53,7 @@ fn estimated_stream_usage_can_settle_billing() {
             ..Default::default()
         }),
         ..AttemptRecordInput::new(&candidate, 0, "success", true)
-    };
+    });
     let billing = complete_billing();
 
     let usage_record = token_usage_record("request-1", &input, Some(&billing), time::OffsetDateTime::UNIX_EPOCH).unwrap();
@@ -67,9 +67,13 @@ fn estimated_stream_usage_can_settle_billing() {
 #[test]
 fn skipped_request_has_void_billing_status() {
     let candidate = candidate();
-    let input = AttemptRecordInput::new(&candidate, 0, "skipped", true);
+    let input = audit_input(AttemptRecordInput::new(&candidate, 0, "skipped", true));
 
     assert_eq!(request_billing_status(&input, None), "void");
+}
+
+fn audit_input(input: AttemptRecordInput<'_>) -> AttemptAuditInput {
+    AttemptAuditInput::from(input)
 }
 
 fn candidate() -> ProxyCandidate {

@@ -11,6 +11,7 @@ const DISPATCH_INTERVAL_SECONDS: i64 = 60;
 const DISPATCH_BATCH_SIZE: i64 = 20;
 const DISPATCH_CONCURRENCY: i64 = 4;
 const PROVIDER_KEY_MIN_INTERVAL_SECONDS: i64 = 1;
+const PROVIDER_KEY_PROBE_WAIT_TIMEOUT_SECONDS: i64 = 30;
 const RUNS_CLEANUP_INTERVAL_SECONDS: i64 = 300;
 const RUNS_CLEANUP_RETENTION_DAYS: i64 = 90;
 
@@ -33,7 +34,8 @@ impl ScheduledTaskLifecycle for ModelStatusCheckDispatchTask {
             serde_json::json!({
                 "batch_size": DISPATCH_BATCH_SIZE,
                 "concurrency": DISPATCH_CONCURRENCY,
-                "provider_key_min_interval_seconds": PROVIDER_KEY_MIN_INTERVAL_SECONDS
+                "provider_key_min_interval_seconds": PROVIDER_KEY_MIN_INTERVAL_SECONDS,
+                "provider_key_probe_wait_timeout_seconds": PROVIDER_KEY_PROBE_WAIT_TIMEOUT_SECONDS
             }),
             integer_fields(&[
                 ("batch_size", "scheduledTasks.config.modelStatusCheckDispatch.batchSize", 1),
@@ -43,6 +45,11 @@ impl ScheduledTaskLifecycle for ModelStatusCheckDispatchTask {
                     "scheduledTasks.config.modelStatusCheckDispatch.providerKeyMinIntervalSeconds",
                     1,
                 ),
+                (
+                    "provider_key_probe_wait_timeout_seconds",
+                    "scheduledTasks.config.modelStatusCheckDispatch.providerKeyProbeWaitTimeoutSeconds",
+                    1,
+                ),
             ]),
         )
     }
@@ -50,23 +57,29 @@ impl ScheduledTaskLifecycle for ModelStatusCheckDispatchTask {
     fn validate_config(&self, config: &TaskConfigValue) -> SchedulerResult<()> {
         validate_positive_integer(config, "batch_size", 1)?;
         validate_positive_integer(config, "concurrency", 1)?;
-        validate_positive_integer(config, "provider_key_min_interval_seconds", 1)
+        validate_positive_integer(config, "provider_key_min_interval_seconds", 1)?;
+        validate_positive_integer(config, "provider_key_probe_wait_timeout_seconds", 1)
     }
 
     async fn run(&self, _ctx: ScheduleTaskContext, config: TaskConfigValue) -> TaskResult {
         let batch_size = positive_u64_config(&config, "batch_size")?;
         let concurrency = positive_usize_config(&config, "concurrency")?;
         let provider_key_min_interval_seconds = integer_config(&config, "provider_key_min_interval_seconds")?;
+        let provider_key_probe_wait_timeout_seconds = integer_config(&config, "provider_key_probe_wait_timeout_seconds")?;
         let report = self
             .model_status_service
             .run_due_checks(ModelStatusDispatchOptions {
                 limit: batch_size,
                 concurrency,
                 provider_key_min_interval_seconds,
+                provider_key_probe_wait_timeout_seconds,
             })
             .await
             .map_err(model_status_error)?;
-        Ok(Some(format!("probed_count={}, deferred_count={}", report.probed_count, report.deferred_count)))
+        Ok(Some(format!(
+            "probed_count={}, deferred_count={}, scanned_count={}, pages_count={}",
+            report.probed_count, report.deferred_count, report.scanned_count, report.pages_count
+        )))
     }
 }
 

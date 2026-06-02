@@ -41,6 +41,7 @@ pub struct ModelStatusProbeOutput {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ModelStatusProbeOptions {
     pub provider_key_min_interval_seconds: i64,
+    pub provider_key_probe_wait_timeout_seconds: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -54,12 +55,15 @@ pub struct ModelStatusDispatchOptions {
     pub limit: u64,
     pub concurrency: usize,
     pub provider_key_min_interval_seconds: i64,
+    pub provider_key_probe_wait_timeout_seconds: i64,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ModelStatusDispatchReport {
     pub probed_count: u64,
     pub deferred_count: u64,
+    pub scanned_count: u64,
+    pub pages_count: u64,
 }
 
 #[async_trait]

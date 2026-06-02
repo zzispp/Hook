@@ -1,11 +1,15 @@
 use rust_decimal::Decimal;
+use std::time::Duration;
 use types::{
     api_token::{ApiToken, ApiTokenType, ModelAccessMode},
     provider::ProviderSchedulingMode,
     system_setting::RequestRecordLevel,
 };
 
-use super::{CachedUserAccess, RateLimitScope, SchedulingSnapshot, provider_key_probe_slot_command, request_scopes, token_scope};
+use super::{
+    CachedUserAccess, ProviderKeyProbeSlotOptions, RateLimitScope, SchedulingSnapshot, provider_key_probe_slot_command, provider_key_probe_slot_durations,
+    request_scopes, token_scope,
+};
 
 #[test]
 fn provider_key_probe_throttle_uses_atomic_set_nx_ex() {
@@ -16,6 +20,32 @@ fn provider_key_probe_throttle_uses_atomic_set_nx_ex() {
     assert_eq!(
         packed,
         "*6\r\n$3\r\nSET\r\n$44\r\nhook:llm_proxy:model_status_probe_slot:key-1\r\n$1\r\n1\r\n$2\r\nNX\r\n$2\r\nEX\r\n$1\r\n2\r\n"
+    );
+}
+
+#[test]
+fn occupied_provider_key_probe_slot_waits_for_configured_interval() {
+    let options = ProviderKeyProbeSlotOptions {
+        min_interval_seconds: 2,
+        wait_timeout_seconds: 7,
+    };
+
+    assert_eq!(
+        provider_key_probe_slot_durations(options).unwrap(),
+        (Duration::from_secs(2), Duration::from_secs(7))
+    );
+}
+
+#[test]
+fn provider_key_probe_slot_timeout_requires_positive_seconds() {
+    let options = ProviderKeyProbeSlotOptions {
+        min_interval_seconds: 2,
+        wait_timeout_seconds: 0,
+    };
+
+    assert_eq!(
+        provider_key_probe_slot_durations(options).unwrap_err().to_string(),
+        "provider key probe wait timeout must be greater than 0"
     );
 }
 
