@@ -1,6 +1,7 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
+import type { Dispatch, SetStateAction } from 'react';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { ProviderApiKey, ProviderModelBinding, ProviderModelCostMode } from 'src/types/provider';
 
@@ -30,6 +31,7 @@ import {
   type TokenCostDraft,
   parseRequiredNumber,
   tokenDraftFromGlobal,
+  bindingsAllowedForKey,
 } from './provider-model-cost-utils';
 
 type Props = {
@@ -43,6 +45,43 @@ type Props = {
 
 export function ProviderModelCostDialog(props: Props) {
   const { t } = useTranslate('admin');
+  const dialog = useProviderModelCostDialogState(props);
+  const submit = () => submitModelCosts({ props, dialog, t });
+
+  return (
+    <Dialog fullWidth maxWidth="md" open={props.open} onClose={props.onClose} PaperProps={{ sx: paperSx }}>
+      <DialogHeader onClose={props.onClose} />
+      <Box sx={contentSx}>
+        <ProviderModelCostDialogFields
+          apiKeys={props.apiKeys}
+          mode={dialog.mode}
+          models={props.models}
+          multiplier={dialog.multiplier}
+          options={dialog.options}
+          pricePerRequest={dialog.pricePerRequest}
+          selected={dialog.selected}
+          tokenDrafts={dialog.tokenDrafts}
+          valueKeyId={dialog.keyId}
+          onApplyMultiplier={dialog.applyMultiplier}
+          onDraftChange={dialog.patchDraft}
+          onKeyChange={dialog.changeKey}
+          onModeChange={dialog.setMode}
+          onMultiplierChange={dialog.setMultiplier}
+          onPricePerRequestChange={dialog.setPricePerRequest}
+          onSelectionChange={dialog.changeSelection}
+        />
+      </Box>
+      <DialogActions sx={footerSx}>
+        <Button variant="outlined" onClick={props.onClose}>{t('common.cancel')}</Button>
+        <Button variant="contained" loading={dialog.saving} disabled={!dialog.canSave} onClick={submit}>
+          {t('common.save')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function useProviderModelCostDialogState(props: Props) {
   const [keyId, setKeyId] = useState('');
   const [mode, setMode] = useState<ProviderModelCostMode>('per_token');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -50,7 +89,11 @@ export function ProviderModelCostDialog(props: Props) {
   const [multiplier, setMultiplier] = useState('1');
   const [tokenDrafts, setTokenDrafts] = useState<ModelCostDrafts>({});
   const [saving, setSaving] = useState(false);
-  const options = useMemo(() => sortedBindings(props.bindings, props.models), [props.bindings, props.models]);
+  const selectedKey = props.apiKeys.find((key) => key.id === keyId);
+  const options = useMemo(
+    () => sortedBindings(visibleBindings(selectedKey, props.bindings), props.models),
+    [props.bindings, props.models, selectedKey]
+  );
   const selected = options.filter((item) => selectedIds.includes(item.id));
 
   useEffect(() => {
@@ -64,66 +107,26 @@ export function ProviderModelCostDialog(props: Props) {
     setSaving(false);
   }, [props.apiKeys, props.open]);
 
-  const applyMultiplier = () => {
-    const factor = parseRequiredNumber(multiplier);
-    setTokenDrafts((current) => {
-      const next = { ...current };
-      for (const binding of selected) {
-        next[binding.id] = tokenDraftFromGlobal(binding, props.models, factor);
-      }
-      return next;
-    });
+  return {
+    keyId,
+    mode,
+    options,
+    saving,
+    selected,
+    multiplier,
+    tokenDrafts,
+    pricePerRequest,
+    canSave: Boolean(keyId && selected.length > 0),
+    setMode,
+    setSaving,
+    setMultiplier,
+    applyMultiplier: () => applyMultiplier({ multiplier, selected, models: props.models, setTokenDrafts }),
+    changeKey: (value: string) => changeKey({ value, setKeyId, setSelectedIds, setTokenDrafts }),
+    changeSelection: (values: ProviderModelBinding[]) =>
+      changeSelection({ values, models: props.models, setSelectedIds, setTokenDrafts }),
+    patchDraft: (id: string, patch: Partial<TokenCostDraft>) => patchDraft({ id, patch, setTokenDrafts }),
+    setPricePerRequest,
   };
-
-  const submit = async () => {
-    if (!keyId || selected.length === 0 || saving) return;
-    setSaving(true);
-    try {
-      const costs = selected.map((binding) => costPayload(binding, mode, pricePerRequest, tokenDrafts[binding.id]));
-      await upsertProviderModelCosts(props.providerId, keyId, { costs });
-      toast.success(t('messages.providerModelCostSaved'));
-      props.onClose();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Dialog fullWidth maxWidth="md" open={props.open} onClose={props.onClose} PaperProps={{ sx: paperSx }}>
-      <DialogHeader onClose={props.onClose} />
-      <Box sx={contentSx}>
-        <ProviderModelCostDialogFields
-          apiKeys={props.apiKeys}
-          mode={mode}
-          models={props.models}
-          multiplier={multiplier}
-          options={options}
-          pricePerRequest={pricePerRequest}
-          selected={selected}
-          tokenDrafts={tokenDrafts}
-          valueKeyId={keyId}
-          onApplyMultiplier={applyMultiplier}
-          onDraftChange={(id, patch) => setTokenDrafts((current) => ({ ...current, [id]: { ...current[id], ...patch } }))}
-          onKeyChange={setKeyId}
-          onModeChange={setMode}
-          onMultiplierChange={setMultiplier}
-          onPricePerRequestChange={setPricePerRequest}
-          onSelectionChange={(values) => {
-            setSelectedIds(values.map((value) => value.id));
-            setTokenDrafts((current) => ensureDrafts(values, current, props.models));
-          }}
-        />
-      </Box>
-      <DialogActions sx={footerSx}>
-        <Button variant="outlined" onClick={props.onClose}>{t('common.cancel')}</Button>
-        <Button variant="contained" loading={saving} disabled={!keyId || selected.length === 0} onClick={submit}>
-          {t('common.save')}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
 }
 
 function DialogHeader({ onClose }: { onClose: () => void }) {
@@ -144,6 +147,104 @@ function sortedBindings(bindings: ProviderModelBinding[], models: GlobalModelRes
   return [...bindings].sort((left, right) => bindingLabel(left, models).localeCompare(bindingLabel(right, models)));
 }
 
+function visibleBindings(key: ProviderApiKey | undefined, bindings: ProviderModelBinding[]) {
+  return key ? bindingsAllowedForKey(key, bindings) : [];
+}
+
+function applyMultiplier({
+  multiplier,
+  selected,
+  models,
+  setTokenDrafts,
+}: {
+  multiplier: string;
+  selected: ProviderModelBinding[];
+  models: GlobalModelResponse[];
+  setTokenDrafts: Dispatch<SetStateAction<ModelCostDrafts>>;
+}) {
+  const factor = parseRequiredNumber(multiplier);
+  setTokenDrafts((current) => {
+    const next = { ...current };
+    for (const binding of selected) {
+      next[binding.id] = tokenDraftFromGlobal(binding, models, factor);
+    }
+    return next;
+  });
+}
+
+function changeKey({
+  value,
+  setKeyId,
+  setSelectedIds,
+  setTokenDrafts,
+}: {
+  value: string;
+  setKeyId: Dispatch<SetStateAction<string>>;
+  setSelectedIds: Dispatch<SetStateAction<string[]>>;
+  setTokenDrafts: Dispatch<SetStateAction<ModelCostDrafts>>;
+}) {
+  setKeyId(value);
+  setSelectedIds([]);
+  setTokenDrafts({});
+}
+
+function changeSelection({
+  values,
+  models,
+  setSelectedIds,
+  setTokenDrafts,
+}: {
+  values: ProviderModelBinding[];
+  models: GlobalModelResponse[];
+  setSelectedIds: Dispatch<SetStateAction<string[]>>;
+  setTokenDrafts: Dispatch<SetStateAction<ModelCostDrafts>>;
+}) {
+  setSelectedIds(values.map((value) => value.id));
+  setTokenDrafts((current) => ensureDrafts(values, current, models));
+}
+
+function patchDraft({
+  id,
+  patch,
+  setTokenDrafts,
+}: {
+  id: string;
+  patch: Partial<TokenCostDraft>;
+  setTokenDrafts: Dispatch<SetStateAction<ModelCostDrafts>>;
+}) {
+  setTokenDrafts((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
+}
+
+async function submitModelCosts({
+  props,
+  dialog,
+  t,
+}: {
+  props: Props;
+  dialog: ReturnType<typeof useProviderModelCostDialogState>;
+  t: (key: string) => string;
+}) {
+  if (!dialog.canSave || dialog.saving) return;
+  dialog.setSaving(true);
+  try {
+    const costs = dialog.selected.map((binding) =>
+      costPayload({
+        binding,
+        mode: dialog.mode,
+        pricePerRequest: dialog.pricePerRequest,
+        draft: dialog.tokenDrafts[binding.id],
+      })
+    );
+    await upsertProviderModelCosts(props.providerId, dialog.keyId, { costs });
+    toast.success(t('messages.providerModelCostSaved'));
+    props.onClose();
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
+  } finally {
+    dialog.setSaving(false);
+  }
+}
+
 function ensureDrafts(bindings: ProviderModelBinding[], current: ModelCostDrafts, models: GlobalModelResponse[]) {
   const next: ModelCostDrafts = {};
   for (const binding of bindings) {
@@ -152,7 +253,17 @@ function ensureDrafts(bindings: ProviderModelBinding[], current: ModelCostDrafts
   return next;
 }
 
-function costPayload(binding: ProviderModelBinding, mode: ProviderModelCostMode, pricePerRequest: string, draft: TokenCostDraft | undefined) {
+function costPayload({
+  binding,
+  mode,
+  pricePerRequest,
+  draft,
+}: {
+  binding: ProviderModelBinding;
+  mode: ProviderModelCostMode;
+  pricePerRequest: string;
+  draft: TokenCostDraft | undefined;
+}) {
   if (mode === 'per_request') {
     return { provider_model_id: binding.id, cost_mode: mode, price_per_request: parseRequiredNumber(pricePerRequest) };
   }

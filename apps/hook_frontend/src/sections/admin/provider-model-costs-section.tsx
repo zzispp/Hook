@@ -27,7 +27,9 @@ import { ProviderModelCostDialog } from './provider-model-cost-dialog';
 import {
   bindingLabel,
   globalDefaultMode,
+  keyModelScopeLabel,
   effectiveTokenDraft,
+  bindingsAllowedForKey,
   effectiveRequestPrice,
 } from './provider-model-cost-utils';
 
@@ -43,7 +45,14 @@ type Props = {
 export function ProviderModelCostsSection({ providerId, apiKeys, bindings, costs, loading, models }: Props) {
   const { t } = useTranslate('admin');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const rows = useMemo(() => costRows(apiKeys, bindings, costs, models), [apiKeys, bindings, costs, models]);
+  const sections = useMemo(
+    () => costSections({ apiKeys, bindings, costs, models }),
+    [apiKeys, bindings, costs, models]
+  );
+  const rowCount = useMemo(
+    () => sections.reduce((total, section) => total + section.rows.length, 0),
+    [sections]
+  );
 
   return (
     <>
@@ -62,10 +71,10 @@ export function ProviderModelCostsSection({ providerId, apiKeys, bindings, costs
           </Button>
         </Stack>
         <Box sx={listSx}>
-          {rows.map((row) => (
-            <CostRow key={`${row.key.id}:${row.binding.id}`} providerId={providerId} row={row} />
+          {sections.map((section) => (
+            <CostSection key={section.key.id} providerId={providerId} section={section} />
           ))}
-          <EmptyList loading={loading} length={rows.length} />
+          <EmptyList loading={loading} length={rowCount} />
         </Box>
       </Box>
       <ProviderModelCostDialog
@@ -77,6 +86,32 @@ export function ProviderModelCostsSection({ providerId, apiKeys, bindings, costs
         onClose={() => setDialogOpen(false)}
       />
     </>
+  );
+}
+
+function CostSection({
+  providerId,
+  section,
+}: {
+  providerId: string;
+  section: CostSectionItem;
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Box sx={sectionSx}>
+      <Box sx={sectionHeaderSx}>
+        <Typography variant="subtitle2" noWrap>{section.key.name}</Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {keyModelScopeLabel(section.key, t)}
+        </Typography>
+      </Box>
+      <Box sx={sectionListSx}>
+        {section.rows.map((row) => (
+          <CostRow key={row.binding.id} providerId={providerId} row={row} />
+        ))}
+      </Box>
+    </Box>
   );
 }
 
@@ -117,7 +152,6 @@ function CostRow({ providerId, row }: { providerId: string; row: CostRowItem }) 
         </Stack>
       </Stack>
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={metaSx}>
-        <Chip size="small" variant="outlined" label={`${t('providers.key')}: ${row.key.name}`} />
         <Chip size="small" variant="outlined" label={modeLabel(row.mode, t)} />
         <Typography variant="caption" sx={priceSx}>{priceSummary(row, t)}</Typography>
       </Stack>
@@ -125,30 +159,50 @@ function CostRow({ providerId, row }: { providerId: string; row: CostRowItem }) 
   );
 }
 
-type CostRowItem = ReturnType<typeof costRows>[number];
+type CostSectionItem = ReturnType<typeof costSections>[number];
+type CostRowItem = CostSectionItem['rows'][number];
 
-function costRows(
-  apiKeys: ProviderApiKey[],
-  bindings: ProviderModelBinding[],
-  costs: ProviderModelCost[],
-  models: GlobalModelResponse[]
-) {
+function costSections({
+  apiKeys,
+  bindings,
+  costs,
+  models,
+}: {
+  apiKeys: ProviderApiKey[];
+  bindings: ProviderModelBinding[];
+  costs: ProviderModelCost[];
+  models: GlobalModelResponse[];
+}) {
   const costMap = new Map(costs.map((cost) => [`${cost.key_id}:${cost.provider_model_id}`, cost]));
-  return apiKeys.flatMap((key) =>
-    bindings.map((binding) => {
-      const cost = costMap.get(`${key.id}:${binding.id}`);
-      return {
-        key,
-        binding,
-        cost,
-        modelLabel: bindingLabel(binding, models),
-        mode: cost?.cost_mode ?? globalDefaultMode(binding, models),
-        source: cost ? 'configured' : 'global_default',
-        requestPrice: effectiveRequestPrice(binding, models, cost),
-        tokenDraft: effectiveTokenDraft(binding, models, cost),
-      };
-    })
-  );
+  return apiKeys.map((key) => ({
+    key,
+    rows: bindingsAllowedForKey(key, bindings).map((binding) =>
+      costRow({ key, binding, cost: costMap.get(`${key.id}:${binding.id}`), models })
+    ),
+  }));
+}
+
+function costRow({
+  key,
+  binding,
+  cost,
+  models,
+}: {
+  key: ProviderApiKey;
+  binding: ProviderModelBinding;
+  cost: ProviderModelCost | undefined;
+  models: GlobalModelResponse[];
+}) {
+  return {
+    key,
+    binding,
+    cost,
+    modelLabel: bindingLabel(binding, models),
+    mode: cost?.cost_mode ?? globalDefaultMode(binding, models),
+    source: cost ? 'configured' : 'global_default',
+    requestPrice: effectiveRequestPrice(binding, models, cost),
+    tokenDraft: effectiveTokenDraft(binding, models, cost),
+  };
 }
 
 function priceSummary(row: CostRowItem, t: (key: string) => string) {
@@ -179,6 +233,9 @@ function formatPrice(value: number | null | undefined) {
 const panelSx = { border: (theme: Theme) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 2, overflow: 'hidden' };
 const headerSx = { p: 2, borderBottom: (theme: Theme) => `1px solid ${theme.vars.palette.divider}` };
 const listSx = { '& > * + *': { borderTop: (theme: Theme) => `1px solid ${theme.vars.palette.divider}` } };
+const sectionSx = {};
+const sectionHeaderSx = { px: 2, py: 1.25, bgcolor: 'background.neutral' };
+const sectionListSx = { '& > * + *': { borderTop: (theme: Theme) => `1px solid ${theme.vars.palette.divider}` } };
 const rowSx = { px: 2, py: 1.5, transition: (theme: Theme) => theme.transitions.create('background-color'), '&:hover': { bgcolor: 'action.hover' } };
 const monoSx = { fontFamily: 'monospace', color: 'text.secondary' };
 const metaSx = { mt: 1, alignItems: 'center', color: 'text.secondary' };

@@ -208,7 +208,21 @@ function useProviderCostOptions(labels: string[], colors: string[]) {
     stroke: { width: 0 },
     legend: { show: false },
     tooltip: { y: { formatter: formatDashboardCostDetail } },
+    plotOptions: {
+      pie: {
+        donut: {
+          labels: {
+            value: { formatter: (value: string) => formatDashboardCost(Number(value)) },
+            total: { formatter: (chart) => formatDashboardCost(sumChartSeries(chart.globals.seriesTotals)) },
+          },
+        },
+      },
+    },
   } satisfies ChartOptions);
+}
+
+function sumChartSeries(values: number[] | undefined) {
+  return values?.reduce((total, value) => total + value, 0) ?? 0;
 }
 
 function usageTooltip(t: TFunction<'admin'>, value: number, context?: { seriesIndex?: number }) {

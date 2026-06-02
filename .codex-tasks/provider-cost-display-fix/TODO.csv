@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate relevant dashboard and provider detail code,DONE,Files and data flow identified,test -n "$(rg -l \"ProviderCost|provider.*cost|modelCosts|costSummary\" apps/hook_frontend/src | head -n 1)",2026-06-02,0,"Provider donut uses default Apex total formatter; model costs flatMap all keys and bindings; key allowed_model_ids limits models when non-empty."
+2,Implement formatting grouping and model filtering,DONE,UI code formats totals groups by key and filters cost rows to visible bindings,pnpm --filter hook_frontend lint,2026-06-02,0,"Updated provider donut money formatters, grouped cost rows by key, filtered rows and dialog options by key.allowed_model_ids."
+3,Run validation and record result,DONE,Validation command result is recorded,pnpm --filter hook_frontend lint,2026-06-02,0,"pnpm --filter hook_frontend lint passed; pnpm --filter hook_frontend exec tsc --noEmit passed."
