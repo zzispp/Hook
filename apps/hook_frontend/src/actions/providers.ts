@@ -25,8 +25,8 @@ import type {
   ProviderApiKeyPriorityBatchUpdate,
 } from 'src/types/provider';
 
-import { useMemo } from 'react';
 import useSWR, { mutate } from 'swr';
+import { useMemo, useCallback } from 'react';
 
 import axios, { fetcher, endpoints } from 'src/lib/axios';
 
@@ -85,10 +85,17 @@ export function useProviderApiKeys(providerId?: string | null) {
 
 export function useProviderPriorityKeys(providers: Provider[]) {
   const providerIds = useMemo(() => providers.map((provider) => provider.id), [providers]);
-  const key = providerIds.length > 0 ? ['provider-priority-keys', providerIds] : null;
+  const key = providerIds.length > 0 ? providerPriorityKeysCacheKey(providerIds) : null;
   const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
     Record<string, ProviderApiKey[]>
   >(key, () => fetchProviderKeysByProvider(providerIds), swrOptions);
+  const refreshForProviders = useCallback(async (nextProviders: Pick<Provider, 'id'>[]) => {
+    const nextProviderIds = nextProviders.map((provider) => provider.id);
+    if (nextProviderIds.length === 0) return {};
+    const nextData = await fetchProviderKeysByProvider(nextProviderIds);
+    await mutate(providerPriorityKeysCacheKey(nextProviderIds), nextData, false);
+    return nextData;
+  }, []);
 
   return useMemo(
     () => ({
@@ -97,8 +104,9 @@ export function useProviderPriorityKeys(providers: Provider[]) {
       error,
       isValidating: providerIds.length > 0 ? isValidating : false,
       refresh: revalidate,
+      refreshForProviders,
     }),
-    [data, error, isLoading, isValidating, providerIds.length, revalidate]
+    [data, error, isLoading, isValidating, providerIds.length, refreshForProviders, revalidate]
   );
 }
 
@@ -369,6 +377,10 @@ async function fetchProviderKeysByProvider(providerIds: string[]) {
   return Object.fromEntries(pairs);
 }
 
+function providerPriorityKeysCacheKey(providerIds: string[]) {
+  return ['provider-priority-keys', providerIds] as const;
+}
+
 async function mutateProviders() {
   await mutate((key) => isProviderKey(key));
 }
@@ -378,7 +390,11 @@ async function mutateProviderCooldowns() {
 }
 
 async function mutateProviderChildren(providerId: string) {
-  await mutate((key) => typeof key === 'string' && key.startsWith(`/api/admin/providers/${providerId}/`));
+  await mutate(
+    (key) =>
+      (typeof key === 'string' && key.startsWith(`/api/admin/providers/${providerId}/`)) ||
+      isProviderPriorityKeysKey(key, providerId)
+  );
 }
 
 function isProviderKey(key: unknown) {
@@ -387,4 +403,13 @@ function isProviderKey(key: unknown) {
 
 function isEndpointKey(key: unknown, endpoint: string) {
   return key === endpoint || (Array.isArray(key) && key[0] === endpoint);
+}
+
+function isProviderPriorityKeysKey(key: unknown, providerId: string) {
+  return (
+    Array.isArray(key) &&
+    key[0] === 'provider-priority-keys' &&
+    Array.isArray(key[1]) &&
+    key[1].includes(providerId)
+  );
 }

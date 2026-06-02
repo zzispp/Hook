@@ -1,9 +1,9 @@
 'use client';
 
+import type { LabelColor } from 'src/components/label';
 import type { PriorityItem } from './provider-priority-utils';
 
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
@@ -13,6 +13,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 import { useTranslate } from 'src/locales/use-locales';
 
+import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 
 type PriorityListProps = {
@@ -84,9 +85,15 @@ function PriorityRow({
         )}
         {(item.providerName || item.apiFormats?.length) && (
           <Stack direction="row" spacing={0.75} sx={{ mt: 0.5 }} useFlexGap flexWrap="wrap">
-            {item.providerName ? <Chip size="small" variant="soft" label={item.providerName} /> : null}
+            {item.providerName ? (
+              <Label color="info" variant="soft">
+                {item.providerName}
+              </Label>
+            ) : null}
             {item.apiFormats?.map((format) => (
-              <Chip key={format} size="small" label={format} />
+              <Label key={format} color={apiFormatColor(format)} variant="soft">
+                {format}
+              </Label>
             ))}
           </Stack>
         )}
@@ -98,7 +105,14 @@ function PriorityRow({
 function DisabledChip() {
   const { t } = useTranslate('admin');
 
-  return <Chip size="small" label={t('common.disabled')} color="default" />;
+  return <Label variant="soft">{t('common.disabled')}</Label>;
+}
+
+function apiFormatColor(format: string): LabelColor {
+  if (format.startsWith('openai:')) return 'success';
+  if (format.startsWith('claude:')) return 'warning';
+  if (format.startsWith('gemini:')) return 'secondary';
+  return 'default';
 }
 
 function PriorityValue({

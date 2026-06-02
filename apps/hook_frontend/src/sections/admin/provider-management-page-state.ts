@@ -1,6 +1,7 @@
 'use client';
 
-import type { Provider } from 'src/types/provider';
+import type { ApiEnvelope } from 'src/types/rbac';
+import type { Provider, ProviderListResponse } from 'src/types/provider';
 
 import { useState, useCallback } from 'react';
 
@@ -35,6 +36,11 @@ export function useProviderManagementState() {
   const dialog = useProviderDialog(t);
   const deleteDialog = useDeleteProviderDialog(t);
   const childDialogs = useProviderChildDialogs(t, ui.selectedProvider?.id);
+  const openPriorityDialog = useOpenPriorityDialog({
+    setPriorityOpen: ui.setPriorityOpen,
+    refreshProviders: priorityProviders.refresh,
+    refreshKeysForProviders: priorityKeys.refreshForProviders,
+  });
 
   return {
     ...ui,
@@ -50,11 +56,30 @@ export function useProviderManagementState() {
     errorMessage: errorMessage(providers.error, cooldownState.cooldowns.error, settings.error, models.error, priorityKeys.error),
     priorityProviders,
     priorityKeys,
+    openPriorityDialog,
     cooldownFilters: cooldownState.filters,
     releasingCooldownId: cooldownState.releasingId,
     releaseCooldown: cooldownState.release,
     handleCooldownFiltersChange: cooldownState.changeFilters,
   };
+}
+
+function useOpenPriorityDialog({
+  setPriorityOpen,
+  refreshProviders,
+  refreshKeysForProviders,
+}: {
+  setPriorityOpen: (value: boolean) => void;
+  refreshProviders: () => Promise<ApiEnvelope<ProviderListResponse> | undefined>;
+  refreshKeysForProviders: (providers: Pick<Provider, 'id'>[]) => Promise<unknown>;
+}) {
+  return useCallback(() => {
+    void (async () => {
+      const response = await refreshProviders();
+      await refreshKeysForProviders(response?.data?.providers ?? []);
+      setPriorityOpen(true);
+    })();
+  }, [refreshKeysForProviders, refreshProviders, setPriorityOpen]);
 }
 
 function useProviderUiState() {

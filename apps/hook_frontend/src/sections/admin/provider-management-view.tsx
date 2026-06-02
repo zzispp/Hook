@@ -77,7 +77,7 @@ function ProviderTableCard({ state }: { state: ReturnType<typeof useProviderMana
         models={state.models.items}
         schedulingLabel={schedulingModeLabel(state.settings.data?.scheduling_mode ?? 'cache_affinity', state.t)}
         onChange={state.handleFiltersChange}
-        onOpenPriority={() => state.setPriorityOpen(true)}
+        onOpenPriority={state.openPriorityDialog}
         onOpenCooldownPolicy={() => state.setCooldownPolicyOpen(true)}
       />
       <ProviderTable
