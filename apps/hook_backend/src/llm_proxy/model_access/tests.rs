@@ -37,6 +37,18 @@ fn visible_models_for_token_rejects_user_token_when_owner_group_loses_billing_gr
 }
 
 #[test]
+fn visible_models_for_token_allows_independent_token_when_owner_group_lacks_billing_group_visibility() {
+    let mut snapshot = snapshot();
+    snapshot.users[0].group_codes = vec!["group-b".into()];
+    snapshot.active_user_group_codes.push("group-b".into());
+    let token = token(ApiTokenType::Independent, "group-a", ModelAccessMode::All, Vec::new());
+
+    let models = visible_models_for_token(&snapshot, &token).unwrap();
+
+    assert_eq!(models.iter().map(|model| model.name.as_str()).collect::<Vec<_>>(), vec!["model-a", "model-c"]);
+}
+
+#[test]
 fn visible_models_for_token_rejects_user_token_when_owner_group_is_inactive() {
     let mut snapshot = snapshot();
     snapshot.active_user_group_codes.clear();

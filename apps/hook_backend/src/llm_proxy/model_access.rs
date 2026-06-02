@@ -9,7 +9,7 @@ use super::{
 pub(crate) fn visible_models_for_token<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToken) -> Result<Vec<&'a CachedGlobalModel>, LlmProxyError> {
     let token_user = token_user_for_snapshot(snapshot, token)?;
     let user_access = user_access_for_token(token, token_user);
-    let group = active_group(snapshot, token, token_user)?;
+    let group = active_group(snapshot, token, user_access)?;
     Ok(snapshot
         .models
         .iter()
@@ -30,7 +30,7 @@ pub(crate) fn visible_model_for_token<'a>(snapshot: &'a SchedulingSnapshot, toke
 pub(crate) fn active_group<'a>(
     snapshot: &'a SchedulingSnapshot,
     token: &ApiToken,
-    token_user: Option<&CachedUserAccess>,
+    visibility_user: Option<&CachedUserAccess>,
 ) -> Result<&'a CachedBillingGroup, LlmProxyError> {
     let group = snapshot
         .groups
@@ -40,7 +40,7 @@ pub(crate) fn active_group<'a>(
     if !group.is_active {
         return Err(LlmProxyError::Forbidden(format!("billing group is inactive: {}", group.code)));
     }
-    ensure_group_visible_to_token_owner(snapshot, group, token_user)?;
+    ensure_group_visible_to_token_owner(snapshot, group, visibility_user)?;
     Ok(group)
 }
 
