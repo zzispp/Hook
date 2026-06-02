@@ -9,7 +9,7 @@ fn fixed_parts_uses_selected_endpoint_as_client_format_and_routes_to_compatible_
         endpoint("endpoint-openai", "openai:cli"),
     ]));
 
-    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-gemini", true).unwrap();
+    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-gemini", "key-openai", true).unwrap();
 
     assert_eq!(parts.client_api_format, "gemini:cli");
     assert_eq!(parts.endpoints.len(), 1);
@@ -26,7 +26,7 @@ fn fixed_parts_excludes_compact_endpoint_from_stream_responses_test_route() {
         vec![key("key-responses", vec!["openai:cli"]), key("key-compact", vec!["openai:compact"])],
     ));
 
-    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-responses", true).unwrap();
+    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-responses", "key-responses", true).unwrap();
 
     assert!(parts.effective_stream);
     assert_eq!(parts.endpoints.len(), 1);
@@ -42,13 +42,78 @@ fn fixed_parts_supports_openai_image_edit_provider_tests() {
         vec![key("key-image-edit", vec!["openai_image_edit"])],
     ));
 
-    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-image-edit", false).unwrap();
+    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-image-edit", "key-image-edit", false).unwrap();
 
     assert_eq!(parts.client_api_format, "openai_image_edit");
     assert_eq!(parts.endpoints.len(), 1);
     assert_eq!(parts.endpoints[0].api_format, "openai_image_edit");
     assert_eq!(parts.keys.len(), 1);
     assert_eq!(parts.keys[0].id, "key-image-edit");
+}
+
+#[test]
+fn fixed_parts_uses_selected_key_for_compatible_test_route() {
+    let snapshot = snapshot(provider_with_keys_and_endpoints(
+        vec![endpoint("endpoint-openai", "openai:cli")],
+        vec![key("key-a", vec!["openai:cli"]), key("key-b", vec!["openai:cli"])],
+    ));
+
+    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-openai", "key-b", true).unwrap();
+
+    assert_eq!(parts.keys.len(), 1);
+    assert_eq!(parts.keys[0].id, "key-b");
+}
+
+#[test]
+fn fixed_parts_rejects_selected_key_that_does_not_support_test_route() {
+    let snapshot = snapshot(provider_with_keys_and_endpoints(
+        vec![endpoint("endpoint-openai", "openai:cli")],
+        vec![key("key-claude", vec!["claude:chat"])],
+    ));
+
+    let error = fixed_parts_error(&snapshot, "key-claude");
+
+    assert!(
+        error
+            .to_string()
+            .contains("selected API key does not support a compatible test endpoint format")
+    );
+}
+
+#[test]
+fn fixed_parts_rejects_inactive_selected_key() {
+    let snapshot = snapshot(provider_with_keys_and_endpoints(
+        vec![endpoint("endpoint-openai", "openai:cli")],
+        vec![inactive_key("key-inactive", vec!["openai:cli"])],
+    ));
+
+    let error = fixed_parts_error(&snapshot, "key-inactive");
+
+    assert!(error.to_string().contains("selected API key is inactive"));
+}
+
+#[test]
+fn fixed_parts_rejects_selected_key_that_does_not_allow_model() {
+    let snapshot = snapshot(provider_with_keys_and_endpoints(
+        vec![endpoint("endpoint-openai", "openai:cli")],
+        vec![model_scoped_key("key-scoped", vec!["openai:cli"], vec!["other-model"])],
+    ));
+
+    let error = fixed_parts_error(&snapshot, "key-scoped");
+
+    assert!(error.to_string().contains("selected API key does not allow this model"));
+}
+
+#[test]
+fn fixed_parts_rejects_selected_key_outside_time_range() {
+    let snapshot = snapshot(provider_with_keys_and_endpoints(
+        vec![endpoint("endpoint-openai", "openai:cli")],
+        vec![out_of_range_key("key-window", vec!["openai:cli"])],
+    ));
+
+    let error = fixed_parts_error(&snapshot, "key-window");
+
+    assert!(error.to_string().contains("selected API key is outside its active time range"));
 }
 
 fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
@@ -117,6 +182,13 @@ fn provider_with_keys_and_endpoints(endpoints: Vec<CachedEndpoint>, keys: Vec<Ca
     }
 }
 
+fn fixed_parts_error(snapshot: &SchedulingSnapshot, key_id: &str) -> LlmProxyError {
+    match fixed_parts(snapshot, "provider-a", "binding-a", "endpoint-openai", key_id, true) {
+        Ok(_) => panic!("fixed_parts should reject key {key_id}"),
+        Err(error) => error,
+    }
+}
+
 fn endpoint(id: &str, api_format: &str) -> CachedEndpoint {
     CachedEndpoint {
         id: id.into(),
@@ -149,5 +221,31 @@ fn key(id: &str, api_formats: Vec<&str>) -> CachedProviderKey {
         time_range_start_minute: None,
         time_range_end_minute: None,
         is_active: true,
+    }
+}
+
+fn inactive_key(id: &str, api_formats: Vec<&str>) -> CachedProviderKey {
+    CachedProviderKey {
+        is_active: false,
+        ..key(id, api_formats)
+    }
+}
+
+fn model_scoped_key(id: &str, api_formats: Vec<&str>, model_ids: Vec<&str>) -> CachedProviderKey {
+    CachedProviderKey {
+        allowed_model_ids: model_ids.into_iter().map(str::to_owned).collect(),
+        ..key(id, api_formats)
+    }
+}
+
+fn out_of_range_key(id: &str, api_formats: Vec<&str>) -> CachedProviderKey {
+    let current_minute = current_utc_minute();
+    let start = (current_minute + 1) % 1440;
+    let end = (current_minute + 2) % 1440;
+    CachedProviderKey {
+        time_range_enabled: true,
+        time_range_start_minute: Some(start),
+        time_range_end_minute: Some(end),
+        ..key(id, api_formats)
     }
 }

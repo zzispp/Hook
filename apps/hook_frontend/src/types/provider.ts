@@ -315,6 +315,7 @@ export type ProviderUpstreamModelsResponse = {
 
 export type ProviderModelTestRequest = {
   endpoint_id: string;
+  key_id: string;
   request_headers: Record<string, string>;
   request_body: Record<string, unknown>;
 };
@@ -325,10 +326,17 @@ export type ProviderModelTestEndpoint = {
   base_url: string;
 };
 
+export type ProviderModelTestKey = {
+  id: string;
+  name: string;
+  preview: string;
+};
+
 export type ProviderModelTestResponse = {
   success: boolean;
   model: string;
   endpoint: ProviderModelTestEndpoint;
+  key?: ProviderModelTestKey | null;
   status_code?: number | null;
   latency_ms: number;
   request_url: string;

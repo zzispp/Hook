@@ -123,6 +123,7 @@ function ProviderBindingsContent(props: ProviderBindingsContentProps) {
       <ProviderModelSection
         providerId={props.providerId}
         endpoints={props.endpointItems}
+        apiKeys={props.apiKeyItems}
         items={props.providerModelItems}
         loading={props.providerModelLoading}
         models={props.models}
@@ -209,6 +210,7 @@ function ApiKeySection({
 function ProviderModelSection({
   providerId,
   endpoints,
+  apiKeys,
   items,
   loading,
   models,
@@ -216,6 +218,7 @@ function ProviderModelSection({
 }: {
   providerId: string;
   endpoints: ReturnType<typeof useProviderEndpoints>['items'];
+  apiKeys: ReturnType<typeof useProviderApiKeys>['items'];
   items: ReturnType<typeof useProviderModels>['items'];
   loading: boolean;
   models: GlobalModelResponse[];
@@ -225,6 +228,7 @@ function ProviderModelSection({
     <ProviderModelBindingsSection
       providerId={providerId}
       endpoints={endpoints}
+      apiKeys={apiKeys}
       items={items}
       loading={loading}
       models={models}

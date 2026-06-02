@@ -11,10 +11,11 @@ use crate::llm_proxy::{
 
 pub(super) fn proxy_candidate(state: &LlmProxyState, parts: FixedParts, stream: bool) -> Result<ProxyCandidate, LlmProxyError> {
     let route = candidate_route(state, &parts, stream)?;
-    let key = &route.options[0].key;
-    let endpoint = &route.options[0].endpoint;
+    let option = &route.options[0];
+    let key = &option.key;
+    let endpoint = &option.endpoint;
     Ok(ProxyCandidate {
-        trace: candidate_trace(&parts, key, stream),
+        trace: candidate_trace(&parts, key, endpoint, stream),
         requested_model_name: parts.global_model.name.clone(),
         api_key: key.api_key.clone(),
         base_url: endpoint.base_url.clone(),
@@ -86,8 +87,7 @@ fn key_option(state: &LlmProxyState, key: &CachedProviderKey) -> Result<Candidat
     })
 }
 
-fn candidate_trace(parts: &FixedParts, key: &CandidateKeyOption, stream: bool) -> CandidateTrace {
-    let endpoint = &parts.endpoints[0];
+fn candidate_trace(parts: &FixedParts, key: &CandidateKeyOption, endpoint: &CandidateEndpointOption, stream: bool) -> CandidateTrace {
     CandidateTrace {
         token_id: None,
         user_id_snapshot: None,
@@ -101,13 +101,13 @@ fn candidate_trace(parts: &FixedParts, key: &CandidateKeyOption, stream: bool) -
         provider_id: parts.provider.id.clone(),
         provider_name_snapshot: parts.provider.name.clone(),
         endpoint_id: endpoint.id.clone(),
-        endpoint_name_snapshot: endpoint.api_format.clone(),
+        endpoint_name_snapshot: endpoint.provider_api_format.clone(),
         key_id: key.id.clone(),
         key_name_snapshot: key.name.clone(),
         key_preview_snapshot: key.key_preview.clone(),
         client_api_format: parts.client_api_format.clone(),
-        provider_api_format: endpoint.api_format.clone(),
-        needs_conversion: formats::needs_conversion(&parts.client_api_format, &endpoint.api_format, stream).unwrap_or(false),
+        provider_api_format: endpoint.provider_api_format.clone(),
+        needs_conversion: endpoint.needs_conversion,
         is_stream: stream,
         is_cached: false,
         candidate_index: 0,

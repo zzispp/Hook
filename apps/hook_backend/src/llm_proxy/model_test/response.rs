@@ -6,7 +6,7 @@ use axum::{
 };
 use serde_json::Value;
 use storage::provider::ProviderStore;
-use types::provider::{ProviderModelTestEndpoint, ProviderModelTestResponse, RequestCandidateDetail};
+use types::provider::{ProviderModelTestEndpoint, ProviderModelTestKey, ProviderModelTestResponse, RequestCandidateDetail};
 
 use super::TestRequest;
 use crate::llm_proxy::{LlmProxyError, LlmProxyState};
@@ -21,6 +21,7 @@ pub(super) async fn response_to_result(response: axum::response::Response, reque
         success: status.is_success(),
         model: request.model_name.clone(),
         endpoint: test_endpoint(request, candidate),
+        key: test_key(candidate),
         status_code: status_code(candidate, status)?,
         latency_ms: candidate.and_then(|item| item.latency_ms).unwrap_or_default() as u128,
         request_url: request_url(request, candidate),
@@ -28,6 +29,15 @@ pub(super) async fn response_to_result(response: axum::response::Response, reque
         response_headers: headers,
         response_body: body,
         error: test_error(status, candidate, &detail.record.client_error_message),
+    })
+}
+
+fn test_key(candidate: Option<&RequestCandidateDetail>) -> Option<ProviderModelTestKey> {
+    let item = candidate?;
+    Some(ProviderModelTestKey {
+        id: item.key_id.clone()?,
+        name: item.key_name.clone()?,
+        preview: item.key_preview.clone().unwrap_or_default(),
     })
 }
 

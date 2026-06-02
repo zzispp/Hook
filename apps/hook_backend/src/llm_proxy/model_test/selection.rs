@@ -22,6 +22,7 @@ pub(super) fn fixed_parts(
     provider_id: &str,
     model_id: &str,
     endpoint_id: &str,
+    key_id: &str,
     requested_stream: bool,
 ) -> Result<FixedParts, LlmProxyError> {
     let provider = active_provider(snapshot, provider_id)?;
@@ -31,8 +32,10 @@ pub(super) fn fixed_parts(
     ensure_test_format_supported(&client_api_format, effective_stream)?;
     let model = active_model(&provider, model_id)?;
     let global_model = active_global_model(snapshot, &model.global_model_id)?;
-    let endpoints = eligible_endpoints(&provider, &model.global_model_id, &client_api_format, effective_stream)?;
-    let keys = eligible_keys(&provider, &model.global_model_id, &endpoints)?;
+    let endpoints = eligible_endpoints(&provider, &client_api_format, effective_stream)?;
+    let key = eligible_key(&provider, &model.global_model_id, &endpoints, key_id)?;
+    let endpoints = endpoints_for_key(endpoints, &key);
+    let keys = vec![key];
     Ok(FixedParts {
         provider,
         global_model,
@@ -87,47 +90,64 @@ fn active_global_model(snapshot: &SchedulingSnapshot, model_id: &str) -> Result<
         .ok_or_else(|| LlmProxyError::InvalidRequest("bound global model is not active or does not exist".into()))
 }
 
-fn eligible_endpoints(provider: &CachedProvider, model_id: &str, client_api_format: &str, stream: bool) -> Result<Vec<CachedEndpoint>, LlmProxyError> {
-    let current_minute = current_utc_minute();
+fn eligible_endpoints(provider: &CachedProvider, client_api_format: &str, stream: bool) -> Result<Vec<CachedEndpoint>, LlmProxyError> {
     let (mut exact, converted): (Vec<_>, Vec<_>) = provider
         .endpoints
         .iter()
         .filter(|endpoint| endpoint_allowed(provider, endpoint, client_api_format, stream))
-        .filter(|endpoint| {
-            provider
-                .keys
-                .iter()
-                .any(|key| key_allowed_for_model_endpoint(key, model_id, endpoint, current_minute))
-        })
         .cloned()
         .partition(|endpoint| endpoint_exact(endpoint, client_api_format, stream));
     exact.extend(converted);
     if exact.is_empty() {
         return Err(LlmProxyError::InvalidRequest(
-            "provider has no compatible active endpoint and API key for selected test format".into(),
+            "provider has no compatible active endpoint for selected test format".into(),
         ));
     }
     Ok(exact)
 }
 
-fn eligible_keys(provider: &CachedProvider, model_id: &str, endpoints: &[CachedEndpoint]) -> Result<Vec<CachedProviderKey>, LlmProxyError> {
+fn eligible_key(provider: &CachedProvider, model_id: &str, endpoints: &[CachedEndpoint], key_id: &str) -> Result<CachedProviderKey, LlmProxyError> {
+    if key_id.trim().is_empty() {
+        return Err(LlmProxyError::InvalidRequest("key_id cannot be blank".into()));
+    }
     let current_minute = current_utc_minute();
-    let keys = provider
+    let key = provider
         .keys
         .iter()
-        .filter(|key| {
-            endpoints
-                .iter()
-                .any(|endpoint| key_allowed_for_model_endpoint(key, model_id, endpoint, current_minute))
-        })
+        .find(|key| key.id == key_id)
         .cloned()
-        .collect::<Vec<_>>();
-    if keys.is_empty() {
+        .ok_or_else(|| LlmProxyError::InvalidRequest("selected API key does not exist for provider".into()))?;
+    if endpoints
+        .iter()
+        .any(|endpoint| key_allowed_for_model_endpoint(&key, model_id, endpoint, current_minute))
+    {
+        return Ok(key);
+    }
+    if !key.is_active {
+        return Err(LlmProxyError::InvalidRequest("selected API key is inactive".into()));
+    }
+    if !key_time_range_allowed(&key, current_minute) {
+        return Err(LlmProxyError::InvalidRequest("selected API key is outside its active time range".into()));
+    }
+    if !key_allows_model(&key, model_id) {
+        return Err(LlmProxyError::InvalidRequest("selected API key does not allow this model".into()));
+    }
+    if !endpoints
+        .iter()
+        .any(|endpoint| key.api_formats.iter().any(|format| format == &endpoint.api_format))
+    {
         return Err(LlmProxyError::InvalidRequest(
-            "provider has no active API key for compatible test endpoint".into(),
+            "selected API key does not support a compatible test endpoint format".into(),
         ));
     }
-    Ok(keys)
+    Err(LlmProxyError::InvalidRequest("selected API key is not eligible for this model test".into()))
+}
+
+fn endpoints_for_key(endpoints: Vec<CachedEndpoint>, key: &CachedProviderKey) -> Vec<CachedEndpoint> {
+    endpoints
+        .into_iter()
+        .filter(|endpoint| key.api_formats.iter().any(|format| format == &endpoint.api_format))
+        .collect()
 }
 
 fn ensure_test_format_supported(api_format: &str, stream: bool) -> Result<(), LlmProxyError> {

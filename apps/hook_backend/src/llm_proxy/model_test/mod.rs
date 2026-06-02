@@ -63,7 +63,7 @@ impl TestRequest {
         let body = input.request_body;
         let requested_stream = is_stream(&body);
         let snapshot = state.scheduling_snapshot().await?;
-        let parts = selection::fixed_parts(&snapshot, provider_id, model_id, &input.endpoint_id, requested_stream)?;
+        let parts = selection::fixed_parts(&snapshot, provider_id, model_id, &input.endpoint_id, &input.key_id, requested_stream)?;
         let force_non_stream = parts.force_non_stream;
         let effective_stream = parts.effective_stream;
         let client_api_format = parts.client_api_format.clone();

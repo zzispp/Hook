@@ -1,6 +1,6 @@
 'use client';
 
-import type { ProviderEndpoint, ProviderModelBinding, ProviderModelTestResponse } from 'src/types/provider';
+import type { ProviderApiKey, ProviderEndpoint, ProviderModelBinding, ProviderModelTestResponse } from 'src/types/provider';
 
 import { useMemo, useState, useEffect } from 'react';
 
@@ -22,9 +22,14 @@ import { testProviderModel } from 'src/actions/providers';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
-import { formatApiFormat } from './provider-management-utils';
 import { RequestRecordJsonViewer } from './request-record-json-viewer';
-import { resultSx, editorGridSx, editorInputSx, endpointGridSx, endpointButtonSx } from './provider-model-test-styles';
+import { resultSx, editorGridSx, editorInputSx } from './provider-model-test-styles';
+import { ProviderModelTestEndpointPicker } from './provider-model-test-endpoint-picker';
+import {
+  eligibleModelTestKeys,
+  firstEligibleModelTestKey,
+  ProviderModelTestKeyPicker,
+} from './provider-model-test-key-picker';
 import {
   formatJsonDraft,
   defaultModelTestBody,
@@ -45,13 +50,15 @@ type Props = {
   providerId: string;
   binding: ProviderModelBinding | null;
   endpoints: ProviderEndpoint[];
+  apiKeys: ProviderApiKey[];
   onClose: () => void;
 };
 
-export function ProviderModelTestDialog({ providerId, binding, endpoints, onClose }: Props) {
+export function ProviderModelTestDialog({ providerId, binding, endpoints, apiKeys, onClose }: Props) {
   const { t } = useTranslate('admin');
   const activeEndpoints = useMemo(() => testableEndpoints(endpoints), [endpoints]);
   const [endpointId, setEndpointId] = useState('');
+  const [keyId, setKeyId] = useState('');
   const [headersDraft, setHeadersDraft] = useState(defaultModelTestHeaders);
   const [bodyDraft, setBodyDraft] = useState('{}');
   const [testing, setTesting] = useState(false);
@@ -60,19 +67,25 @@ export function ProviderModelTestDialog({ providerId, binding, endpoints, onClos
     () => activeEndpoints.find((endpoint) => endpoint.id === endpointId),
     [activeEndpoints, endpointId]
   );
+  const matchingKeys = useMemo(
+    () => eligibleModelTestKeys(apiKeys, binding?.global_model_id, selectedEndpoint?.api_format),
+    [apiKeys, binding?.global_model_id, selectedEndpoint?.api_format]
+  );
 
   useEffect(() => {
     if (!binding) return;
     const endpoint = activeEndpoints[0];
     setEndpointId(endpoint?.id ?? '');
+    setKeyId(firstEligibleModelTestKey(apiKeys, binding.global_model_id, endpoint?.api_format)?.id ?? '');
     setHeadersDraft(defaultModelTestHeaders());
     setBodyDraft(defaultModelTestBody(binding, endpoint?.api_format));
     setResult(null);
-  }, [activeEndpoints, binding]);
+  }, [activeEndpoints, apiKeys, binding]);
 
   const handleEndpointSelect = (id: string) => {
     setEndpointId(id);
     const endpoint = activeEndpoints.find((item) => item.id === id);
+    setKeyId(firstEligibleModelTestKey(apiKeys, binding?.global_model_id, endpoint?.api_format)?.id ?? '');
     if (binding && endpoint) {
       setBodyDraft(defaultModelTestBody(binding, endpoint.api_format));
     }
@@ -81,7 +94,7 @@ export function ProviderModelTestDialog({ providerId, binding, endpoints, onClos
 
   const submit = async () => {
     if (!binding || testing) return;
-    const payload = parsePayload(endpointId, headersDraft, bodyDraft);
+    const payload = parsePayload(endpointId, keyId, headersDraft, bodyDraft);
     if (payload.error) {
       toast.error(payload.error);
       return;
@@ -111,7 +124,8 @@ export function ProviderModelTestDialog({ providerId, binding, endpoints, onClos
       </DialogTitle>
       <DialogContent dividers sx={{ px: 3, py: 2 }}>
         <Stack spacing={2.5}>
-          <EndpointPicker endpoints={activeEndpoints} selectedId={endpointId} onSelect={handleEndpointSelect} />
+          <ProviderModelTestEndpointPicker endpoints={activeEndpoints} selectedId={endpointId} onSelect={handleEndpointSelect} />
+          <ProviderModelTestKeyPicker keys={matchingKeys} selectedId={keyId} onSelect={setKeyId} />
           <EditorGrid
             headersDraft={headersDraft}
             bodyDraft={bodyDraft}
@@ -127,50 +141,11 @@ export function ProviderModelTestDialog({ providerId, binding, endpoints, onClos
       </DialogContent>
       <DialogActions>
         <Button variant="outlined" onClick={onClose} disabled={testing}>{t('common.cancel')}</Button>
-        <Button variant="contained" loading={testing} disabled={!binding || !endpointId} onClick={submit}>
+        <Button variant="contained" loading={testing} disabled={!binding || !endpointId || !keyId} onClick={submit}>
           {t('providers.startModelTest')}
         </Button>
       </DialogActions>
     </Dialog>
-  );
-}
-
-function EndpointPicker({
-  endpoints,
-  selectedId,
-  onSelect,
-}: {
-  endpoints: ProviderEndpoint[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-}) {
-  const { t } = useTranslate('admin');
-  if (endpoints.length === 0) {
-    return <Typography variant="body2" color="text.secondary">{t('providers.noTestableEndpoints')}</Typography>;
-  }
-  return (
-    <Stack spacing={1}>
-      <Typography variant="subtitle2">{t('providers.selectTestEndpoint')}</Typography>
-      <Box sx={endpointGridSx}>
-        {endpoints.map((endpoint) => (
-          <Button
-            key={endpoint.id}
-            variant={selectedId === endpoint.id ? 'soft' : 'outlined'}
-            color={selectedId === endpoint.id ? 'primary' : 'inherit'}
-            onClick={() => onSelect(endpoint.id)}
-            sx={endpointButtonSx}
-          >
-            <Box sx={{ minWidth: 0, textAlign: 'left' }}>
-              <Typography variant="subtitle2" noWrap>{formatApiFormat(endpoint.api_format)}</Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
-                {endpoint.base_url}
-              </Typography>
-            </Box>
-            <Chip size="small" label={selectedId === endpoint.id ? t('providers.selected') : t('common.enabled')} />
-          </Button>
-        ))}
-      </Box>
-    </Stack>
   );
 }
 
@@ -237,6 +212,7 @@ function TestResult({ result }: { result: ProviderModelTestResponse }) {
         </Stack>
         {result.error ? <Typography variant="body2" color="error">{result.error}</Typography> : null}
         <ResultBlock title={t('providers.requestUrl')} value={result.request_url} />
+        <ResultBlock title={t('providers.testProviderKey')} value={result.key ?? null} />
         <ResultBlock title={t('providers.upstreamRequestBody')} value={result.request_body} />
         <ResultBlock title={t('providers.upstreamResponseBody')} value={result.response_body} />
       </Stack>
@@ -253,9 +229,12 @@ function ResultBlock({ title, value }: { title: string; value: unknown }) {
   );
 }
 
-function parsePayload(endpointId: string, headersDraft: string, bodyDraft: string) {
+function parsePayload(endpointId: string, keyId: string, headersDraft: string, bodyDraft: string) {
   if (!endpointId) {
     return { value: null as never, error: '请选择要测试的端点' };
+  }
+  if (!keyId) {
+    return { value: null as never, error: '请选择要测试的提供商密钥' };
   }
   const headers = parseJsonObjectDraft(headersDraft, {});
   if (headers.error || !headers.value) {
@@ -265,7 +244,15 @@ function parsePayload(endpointId: string, headersDraft: string, bodyDraft: strin
   if (body.error || !body.value) {
     return { value: null as never, error: `测试请求体无效: ${body.error || 'Invalid JSON'}` };
   }
-  return { value: { endpoint_id: endpointId, request_headers: stringHeaders(headers.value), request_body: body.value }, error: null };
+  return {
+    value: {
+      endpoint_id: endpointId,
+      key_id: keyId,
+      request_headers: stringHeaders(headers.value),
+      request_body: body.value,
+    },
+    error: null,
+  };
 }
 
 function stringHeaders(headers: Record<string, unknown>) {

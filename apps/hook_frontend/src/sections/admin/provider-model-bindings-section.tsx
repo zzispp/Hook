@@ -2,7 +2,7 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { ProviderEndpoint, ProviderModelBinding } from 'src/types/provider';
+import type { ProviderApiKey, ProviderEndpoint, ProviderModelBinding } from 'src/types/provider';
 
 import { useState } from 'react';
 
@@ -25,6 +25,7 @@ import { GlobalModelPriceDialog } from './provider-model-price-dialog';
 type Props = {
   providerId: string;
   endpoints: ProviderEndpoint[];
+  apiKeys: ProviderApiKey[];
   items: ProviderModelBinding[];
   loading: boolean;
   models: GlobalModelResponse[];
@@ -34,6 +35,7 @@ type Props = {
 export function ProviderModelBindingsSection({
   providerId,
   endpoints,
+  apiKeys,
   items,
   loading,
   models,
@@ -88,6 +90,7 @@ export function ProviderModelBindingsSection({
         providerId={providerId}
         binding={testingBinding}
         endpoints={endpoints}
+        apiKeys={apiKeys}
         onClose={() => setTestingBinding(null)}
       />
     </Box>
