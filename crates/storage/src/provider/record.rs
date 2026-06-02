@@ -55,7 +55,7 @@ impl ProviderApiKeyRecord {
             allowed_model_ids: json::decode_required(self.allowed_model_ids)?,
             note: self.note,
             internal_priority: self.internal_priority,
-            global_priority: self.global_priority,
+            global_priority_by_format: json::decode_required(self.global_priority_by_format)?,
             rpm_limit: self.rpm_limit,
             learned_rpm_limit: self.learned_rpm_limit,
             cache_ttl_minutes: self.cache_ttl_minutes,

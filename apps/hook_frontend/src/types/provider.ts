@@ -188,7 +188,7 @@ export type ProviderApiKey = {
   allowed_model_ids: string[];
   note?: string | null;
   internal_priority: number;
-  global_priority: number;
+  global_priority_by_format: Record<string, number>;
   rpm_limit?: number | null;
   learned_rpm_limit?: number | null;
   cache_ttl_minutes: number;
@@ -227,7 +227,7 @@ export type ProviderApiKeyUpdate = Partial<Omit<ProviderApiKeyCreate, 'api_key'>
 export type ProviderApiKeyPriorityUpdate = {
   provider_id: string;
   key_id: string;
-  global_priority: number;
+  global_priority_by_format: Record<string, number>;
 };
 
 export type ProviderApiKeyPriorityBatchUpdate = {

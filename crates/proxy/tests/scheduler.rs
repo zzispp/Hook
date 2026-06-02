@@ -5,6 +5,7 @@ use proxy::{
 
 mod common;
 use common::{base_input, provider_a, provider_b, provider_with_gemini_low_priority, provider_with_priority, provider_with_two_keys};
+use proxy::scheduler::{EndpointSnapshot, KeySnapshot, ModelBindingSnapshot, ProviderSnapshot};
 
 #[test]
 fn scheduler_filters_by_group_provider_endpoint_format_and_model() {
@@ -127,6 +128,30 @@ fn scheduler_key_priority_mode_orders_by_key_then_provider() {
 
     assert_eq!(candidates[0].provider_id, "provider-fast-key");
     assert_eq!(candidates[0].key_id, "key-fast");
+}
+
+#[test]
+fn scheduler_key_priority_mode_uses_endpoint_format_bucket() {
+    let provider = provider_with_format_priority_keys();
+    let openai = CandidateBuilder::build(&SchedulerInput {
+        providers: vec![provider.clone()],
+        priority_mode: PriorityMode::Key,
+        client_format: ApiFormat::OpenAiChat,
+        ..base_input()
+    })
+    .unwrap();
+    let gemini = CandidateBuilder::build(&SchedulerInput {
+        providers: vec![provider],
+        priority_mode: PriorityMode::Key,
+        client_format: ApiFormat::GeminiChat,
+        ..base_input()
+    })
+    .unwrap();
+
+    assert_eq!(openai[0].key_id, "key-openai-first");
+    assert_eq!(openai[0].endpoint_id, "endpoint-openai");
+    assert_eq!(gemini[0].key_id, "key-gemini-first");
+    assert_eq!(gemini[0].endpoint_id, "endpoint-gemini");
 }
 
 #[test]
@@ -262,4 +287,51 @@ fn scheduler_failover_stops_after_retryable_failure_then_success() {
     assert_eq!(attempts[0].candidate.key_id, "key-a-1");
     assert_eq!(attempts[1].candidate.key_id, "key-a-2");
     assert_eq!(attempts[1].outcome, AttemptOutcome::Success);
+}
+
+fn provider_with_format_priority_keys() -> ProviderSnapshot {
+    ProviderSnapshot {
+        id: "provider-format".into(),
+        name: "Provider Format".into(),
+        priority: 10,
+        keep_priority_on_conversion: false,
+        enable_format_conversion: true,
+        is_active: true,
+        endpoints: vec![
+            endpoint("endpoint-openai", ApiFormat::OpenAiChat),
+            endpoint("endpoint-gemini", ApiFormat::GeminiChat),
+        ],
+        keys: vec![
+            key_with_priorities("key-openai-first", 10, 1, 90),
+            key_with_priorities("key-gemini-first", 20, 90, 1),
+        ],
+        models: vec![ModelBindingSnapshot {
+            global_model_id: "gpt-4o-mini".into(),
+            provider_model_name: "upstream-format".into(),
+        }],
+    }
+}
+
+fn endpoint(id: &str, api_format: ApiFormat) -> EndpointSnapshot {
+    EndpointSnapshot {
+        id: id.into(),
+        api_format,
+        is_active: true,
+        accepts_format_conversion: true,
+        supports_stream_conversion: true,
+    }
+}
+
+fn key_with_priorities(id: &str, internal_priority: i32, openai_priority: i32, gemini_priority: i32) -> KeySnapshot {
+    KeySnapshot {
+        id: id.into(),
+        api_formats: vec![ApiFormat::OpenAiChat, ApiFormat::GeminiChat],
+        internal_priority,
+        global_priority_by_format: std::collections::BTreeMap::from([
+            (ApiFormat::OpenAiChat, openai_priority),
+            (ApiFormat::GeminiChat, gemini_priority),
+        ]),
+        cache_ttl_minutes: 5,
+        is_active: true,
+    }
 }

@@ -62,7 +62,7 @@ pub(in crate::migration::baseline) enum ProviderApiKeys {
     EncryptedApiKey,
     Note,
     InternalPriority,
-    GlobalPriority,
+    GlobalPriorityByFormat,
     RpmLimit,
     LearnedRpmLimit,
     CacheTtlMinutes,

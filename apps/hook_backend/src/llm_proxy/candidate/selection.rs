@@ -24,7 +24,7 @@ pub(super) use crate::llm_proxy::model_access::{token_user_for_snapshot, user_ac
 
 pub(super) const DEFAULT_MAX_RETRIES: i32 = 2;
 
-pub(super) type CandidatePartKey = (String, String);
+pub(super) type CandidatePartKey = (String, String, String);
 
 pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request: CandidateRequest<'_>) -> Result<CandidateSelection, LlmProxyError> {
     let request_id = Uuid::now_v7().to_string();

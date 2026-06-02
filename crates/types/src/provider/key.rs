@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use crate::model::{PatchField, deserialize_patch_value};
 
@@ -11,7 +12,7 @@ pub struct ProviderApiKey {
     pub allowed_model_ids: Vec<String>,
     pub note: Option<String>,
     pub internal_priority: i32,
-    pub global_priority: i32,
+    pub global_priority_by_format: BTreeMap<String, i32>,
     pub rpm_limit: Option<i32>,
     pub learned_rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,
@@ -89,7 +90,7 @@ pub struct ProviderApiKeyUpdate {
 pub struct ProviderApiKeyPriorityUpdate {
     pub provider_id: String,
     pub key_id: String,
-    pub global_priority: i32,
+    pub global_priority_by_format: BTreeMap<String, i32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]

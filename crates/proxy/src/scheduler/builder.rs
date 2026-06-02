@@ -97,7 +97,11 @@ fn append_endpoint_candidates(context: EndpointBuildContext<'_>, output: &mut Ve
     let provider = context.provider;
     let endpoint = context.endpoint;
     let model = context.model;
-    for key in provider.keys.iter().filter(|key| key_allowed(key, context.input)) {
+    for key in provider
+        .keys
+        .iter()
+        .filter(|key| key_allowed_for_endpoint(key, endpoint, context.input))
+    {
         output.push(Candidate {
             provider_id: provider.id.clone(),
             provider_name: provider.name.clone(),
@@ -109,7 +113,7 @@ fn append_endpoint_candidates(context: EndpointBuildContext<'_>, output: &mut Ve
             needs_conversion: endpoint.api_format != context.input.client_format,
             is_cached: false,
             provider_priority: provider.priority,
-            key_priority: key.internal_priority,
+            key_priority: key_priority(key, endpoint, &context.input.priority_mode),
         });
     }
 }
@@ -145,6 +149,21 @@ fn input_compatible(endpoint: &EndpointSnapshot, input: &SchedulerInput, provide
 
 fn key_allowed(key: &KeySnapshot, input: &SchedulerInput) -> bool {
     key.is_active && ids_allow(&input.group_allowed_provider_key_ids, &key.id)
+}
+
+fn key_allowed_for_endpoint(key: &KeySnapshot, endpoint: &EndpointSnapshot, input: &SchedulerInput) -> bool {
+    key_allowed(key, input) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
+}
+
+fn key_priority(key: &KeySnapshot, endpoint: &EndpointSnapshot, mode: &PriorityMode) -> i32 {
+    match mode {
+        PriorityMode::Provider => key.internal_priority,
+        PriorityMode::Key => key
+            .global_priority_by_format
+            .get(&endpoint.api_format)
+            .copied()
+            .unwrap_or(key.internal_priority),
+    }
 }
 
 fn policy_allows(policy: &ModelAccessPolicy, model_id: &str) -> bool {

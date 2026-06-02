@@ -12,7 +12,7 @@ pub struct Model {
     pub encrypted_api_key: String,
     pub note: Option<String>,
     pub internal_priority: i32,
-    pub global_priority: i32,
+    pub global_priority_by_format: String,
     pub rpm_limit: Option<i32>,
     pub learned_rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,

@@ -171,7 +171,7 @@ fn snapshot() -> SchedulingSnapshot {
                 key_preview: "sk-***".into(),
                 encrypted_api_key: "encrypted".into(),
                 internal_priority: 0,
-                global_priority: 0,
+                global_priority_by_format: std::collections::BTreeMap::from([("openai:chat".to_owned(), 0)]),
                 rpm_limit: None,
                 cache_ttl_minutes: 0,
                 time_range_enabled: false,

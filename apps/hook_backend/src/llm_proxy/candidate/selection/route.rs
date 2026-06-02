@@ -196,7 +196,7 @@ mod tests {
             key_preview: format!("{id}-name"),
             encrypted_api_key: "encrypted".into(),
             internal_priority: 10,
-            global_priority: 10,
+            global_priority_by_format: std::collections::BTreeMap::from([("openai:chat".to_owned(), 10)]),
             rpm_limit: None,
             cache_ttl_minutes: 5,
             time_range_enabled: false,

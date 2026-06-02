@@ -78,15 +78,16 @@ pub(super) fn endpoint_patch(input: ProviderEndpointUpdate) -> ProviderEndpointR
 }
 
 pub(super) fn api_key_input(provider_id: &str, input: ProviderApiKeyCreate, encrypted_api_key: String) -> ProviderApiKeyRecordInput {
+    let internal_priority = input.internal_priority.unwrap_or(DEFAULT_PROVIDER_KEY_PRIORITY);
     ProviderApiKeyRecordInput {
         provider_id: provider_id.to_owned(),
         name: input.name,
+        global_priority_by_format: global_priority_by_format(&input.api_formats, internal_priority),
         api_formats: input.api_formats,
         allowed_model_ids: input.allowed_model_ids,
         encrypted_api_key,
         note: input.note,
-        internal_priority: input.internal_priority.unwrap_or(DEFAULT_PROVIDER_KEY_PRIORITY),
-        global_priority: input.internal_priority.unwrap_or(DEFAULT_PROVIDER_KEY_PRIORITY),
+        internal_priority,
         rpm_limit: input.rpm_limit,
         cache_ttl_minutes: input.cache_ttl_minutes.unwrap_or(DEFAULT_PROVIDER_KEY_CACHE_TTL_MINUTES),
         max_probe_interval_minutes: input.max_probe_interval_minutes.unwrap_or(DEFAULT_PROVIDER_KEY_MAX_PROBE_INTERVAL_MINUTES),
@@ -105,7 +106,7 @@ pub(super) fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Opti
         encrypted_api_key,
         note: input.note,
         internal_priority: input.internal_priority,
-        global_priority: None,
+        global_priority_by_format: None,
         rpm_limit: input.rpm_limit,
         cache_ttl_minutes: input.cache_ttl_minutes,
         max_probe_interval_minutes: input.max_probe_interval_minutes,
@@ -114,6 +115,13 @@ pub(super) fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Opti
         time_range_end: input.time_range_end,
         is_active: input.is_active,
     }
+}
+
+fn global_priority_by_format(api_formats: &[String], priority: i32) -> std::collections::BTreeMap<String, i32> {
+    api_formats
+        .iter()
+        .map(|format| (format.clone(), priority))
+        .collect()
 }
 
 pub(super) fn model_binding_input(provider_id: &str, input: ProviderModelBindingCreate) -> ProviderModelRecordInput {

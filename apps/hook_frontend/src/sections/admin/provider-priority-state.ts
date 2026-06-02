@@ -1,5 +1,5 @@
 import type { SystemSettingsUpdate } from 'src/types/system-setting';
-import type { PriorityItem, PriorityKind } from './provider-priority-utils';
+import type { PriorityItem, PriorityKind, PriorityItemsByFormat } from './provider-priority-utils';
 import type { Provider, ProviderApiKey, ProviderPriorityMode, ProviderSchedulingMode } from 'src/types/provider';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -13,7 +13,9 @@ import {
   orderKeys,
   orderProviders,
   parsePriorities,
+  priorityFormats,
   movePriorityItem,
+  orderKeysByFormat,
   changeItemPriority,
   savePriorityChanges,
 } from './provider-priority-utils';
@@ -41,7 +43,8 @@ export function usePriorityDialogState(props: ProviderPriorityDialogProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const save = useCallback(async () => {
-    const priorities = parsePriorities(form.items);
+    const saveItems = prioritySaveItems(form.kind, form.items, form.itemsByFormat);
+    const priorities = parsePriorities(saveItems);
     const cacheTtlMinutes = parseCacheTtlMinutes(form.cacheAffinityTtlMinutes);
     if (!priorities) {
       toast.error(t('messages.providerPriorityInvalid'));
@@ -54,7 +57,7 @@ export function usePriorityDialogState(props: ProviderPriorityDialogProps) {
 
     setSubmitting(true);
     try {
-      await savePriorityState({ ...props, ...form, cacheTtlMinutes, priorities });
+      await savePriorityState({ ...props, ...form, items: saveItems, cacheTtlMinutes, priorities });
       toast.success(t('messages.providerPriorityUpdated'));
       props.onSaved();
       props.onClose();
@@ -79,6 +82,8 @@ function usePriorityFormState({
 }: ProviderPriorityDialogProps) {
   const [kind, setKind] = useState<PriorityKind>(priorityMode);
   const [items, setItems] = useState(priorityItems(priorityMode, providers, keysByProvider, keyPrioritySnapshotInitialized));
+  const [itemsByFormat, setItemsByFormat] = useState(keyPriorityItemsByFormat(providers, keysByProvider, keyPrioritySnapshotInitialized));
+  const [activeFormat, setActiveFormat] = useState(firstPriorityFormat(keysByProvider));
   const [mode, setMode] = useState<ProviderSchedulingMode>(schedulingMode);
   const [cacheAffinityTtlMinutes, setCacheAffinityTtlMinutes] = useState(
     String(initialCacheAffinityTtlMinutes || DEFAULT_CACHE_AFFINITY_TTL_MINUTES)
@@ -90,6 +95,8 @@ function usePriorityFormState({
     if (!open) return;
     setKind(priorityMode);
     setItems(priorityItems(priorityMode, providers, keysByProvider, keyPrioritySnapshotInitialized));
+    setItemsByFormat(keyPriorityItemsByFormat(providers, keysByProvider, keyPrioritySnapshotInitialized));
+    setActiveFormat(firstPriorityFormat(keysByProvider));
     setMode(schedulingMode);
     setCacheAffinityTtlMinutes(String(initialCacheAffinityTtlMinutes || DEFAULT_CACHE_AFFINITY_TTL_MINUTES));
     setEditingId(null);
@@ -100,28 +107,54 @@ function usePriorityFormState({
     (nextKind: PriorityKind) => {
       setKind(nextKind);
       setItems(priorityItems(nextKind, providers, keysByProvider, keyPrioritySnapshotInitialized));
+      setItemsByFormat(keyPriorityItemsByFormat(providers, keysByProvider, keyPrioritySnapshotInitialized));
+      setActiveFormat((current) => current || firstPriorityFormat(keysByProvider));
       setEditingId(null);
       setDraggingId(null);
     },
     [keyPrioritySnapshotInitialized, keysByProvider, providers]
   );
 
-  const changePriority = useCallback((id: string, value: string) => {
-    setItems((current) => changeItemPriority(current, id, value));
+  const changePriority = useCallback(
+    (id: string, value: string) => {
+      if (kind === 'key') {
+        setItemsByFormat((current) => changeFormatItemPriority(current, activeFormat, id, value));
+        return;
+      }
+      setItems((current) => changeItemPriority(current, id, value));
+    },
+    [activeFormat, kind]
+  );
+
+  const changeActiveFormat = useCallback((value: string) => {
+    setActiveFormat(value);
+    setEditingId(null);
+    setDraggingId(null);
   }, []);
 
-  const dropOn = useDropHandler({ draggingId, setDraggingId, setItems });
+  const dropOn = useDropHandler({
+    activeFormat,
+    draggingId,
+    kind,
+    setDraggingId,
+    setItems,
+    setItemsByFormat,
+  });
 
   return {
     cacheAffinityTtlMinutes,
     changeKind,
     changePriority,
+    activeFormat,
     draggingId,
     dropOn,
     editingId,
     items,
+    itemsByFormat,
     kind,
     mode,
+    priorityFormats: priorityFormats(keysByProvider),
+    setActiveFormat: changeActiveFormat,
     setCacheAffinityTtlMinutes,
     setDraggingId,
     setEditingId,
@@ -136,26 +169,83 @@ function priorityItems(
   keyPrioritySnapshotInitialized: boolean
 ) {
   const keyPrioritySource = keyPrioritySnapshotInitialized ? 'global' : 'internal';
-  return kind === 'key' ? orderKeys(providers, keysByProvider, keyPrioritySource) : orderProviders(providers);
+  const firstFormat = firstPriorityFormat(keysByProvider);
+  return kind === 'key' && firstFormat ? orderKeys(providers, keysByProvider, keyPrioritySource, firstFormat) : orderProviders(providers);
+}
+
+function keyPriorityItemsByFormat(
+  providers: Provider[],
+  keysByProvider: Record<string, ProviderApiKey[]>,
+  keyPrioritySnapshotInitialized: boolean
+) {
+  const keyPrioritySource = keyPrioritySnapshotInitialized ? 'global' : 'internal';
+  return orderKeysByFormat(providers, keysByProvider, keyPrioritySource);
+}
+
+function firstPriorityFormat(keysByProvider: Record<string, ProviderApiKey[]>) {
+  return priorityFormats(keysByProvider)[0] ?? '';
 }
 
 function useDropHandler({
+  activeFormat,
   draggingId,
+  kind,
   setDraggingId,
   setItems,
+  setItemsByFormat,
 }: {
+  activeFormat: string;
   draggingId: string | null;
+  kind: PriorityKind;
   setDraggingId: (value: string | null) => void;
   setItems: React.Dispatch<React.SetStateAction<PriorityItem[]>>;
+  setItemsByFormat: React.Dispatch<React.SetStateAction<PriorityItemsByFormat>>;
 }) {
   return useCallback(
     (targetId: string) => {
       if (!draggingId || draggingId === targetId) return;
+      if (kind === 'key') {
+        setItemsByFormat((current) => moveFormatPriorityItem(current, activeFormat, draggingId, targetId));
+        setDraggingId(null);
+        return;
+      }
       setItems((current) => movePriorityItem(current, draggingId, targetId));
       setDraggingId(null);
     },
-    [draggingId, setDraggingId, setItems]
+    [activeFormat, draggingId, kind, setDraggingId, setItems, setItemsByFormat]
   );
+}
+
+function changeFormatItemPriority(
+  itemsByFormat: PriorityItemsByFormat,
+  apiFormat: string,
+  id: string,
+  value: string
+) {
+  return {
+    ...itemsByFormat,
+    [apiFormat]: changeItemPriority(itemsByFormat[apiFormat] ?? [], id, value),
+  };
+}
+
+function moveFormatPriorityItem(
+  itemsByFormat: PriorityItemsByFormat,
+  apiFormat: string,
+  sourceId: string,
+  targetId: string
+) {
+  return {
+    ...itemsByFormat,
+    [apiFormat]: movePriorityItem(itemsByFormat[apiFormat] ?? [], sourceId, targetId),
+  };
+}
+
+function prioritySaveItems(
+  kind: PriorityKind,
+  items: PriorityItem[],
+  itemsByFormat: PriorityItemsByFormat
+) {
+  return kind === 'key' ? Object.values(itemsByFormat).flat() : items;
 }
 
 async function savePriorityState({

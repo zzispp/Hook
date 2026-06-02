@@ -59,15 +59,20 @@ fn provider_with_mismatched_key_priorities() -> crate::llm_proxy::cache::snapsho
     let provider = provider_with_endpoints_and_keys();
     crate::llm_proxy::cache::snapshot::CachedProvider {
         keys: vec![
-            key_with_global_priority("key-internal-first", 1, 100),
-            key_with_global_priority("key-global-first", 100, 1),
+            key_with_format_priority("key-internal-first", 1, "openai:chat", 100),
+            key_with_format_priority("key-global-first", 100, "openai:chat", 1),
         ],
         ..provider
     }
 }
 
-fn key_with_global_priority(id: &str, internal_priority: i32, global_priority: i32) -> crate::llm_proxy::cache::snapshot::CachedProviderKey {
+fn key_with_format_priority(
+    id: &str,
+    internal_priority: i32,
+    api_format: &str,
+    global_priority: i32,
+) -> crate::llm_proxy::cache::snapshot::CachedProviderKey {
     let mut key = super::helpers::provider_key(id, internal_priority, vec!["openai:chat"]);
-    key.global_priority = global_priority;
+    key.global_priority_by_format.insert(api_format.to_owned(), global_priority);
     key
 }

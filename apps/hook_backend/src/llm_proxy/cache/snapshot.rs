@@ -223,7 +223,8 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
                 key_preview: record.name,
                 encrypted_api_key: record.encrypted_api_key,
                 internal_priority: record.internal_priority,
-                global_priority: record.global_priority,
+                global_priority_by_format: serde_json::from_str(&record.global_priority_by_format)
+                    .map_err(|error| LlmProxyError::Infrastructure(format!("provider key global_priority_by_format decode error: {error}")))?,
                 rpm_limit: record.rpm_limit,
                 cache_ttl_minutes: record.cache_ttl_minutes,
                 time_range_enabled: record.time_range_enabled,

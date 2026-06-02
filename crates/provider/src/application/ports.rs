@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::collections::BTreeMap;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
@@ -18,7 +19,7 @@ pub struct ProviderApiKeySecret {
     pub allowed_model_ids: Vec<String>,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
-    pub global_priority: i32,
+    pub global_priority_by_format: BTreeMap<String, i32>,
     pub is_active: bool,
 }
 

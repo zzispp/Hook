@@ -1,4 +1,5 @@
 use crate::format_conversion::ApiFormat;
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SchedulingMode {
@@ -74,7 +75,9 @@ pub struct EndpointSnapshot {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeySnapshot {
     pub id: String,
+    pub api_formats: Vec<ApiFormat>,
     pub internal_priority: i32,
+    pub global_priority_by_format: BTreeMap<ApiFormat, i32>,
     pub cache_ttl_minutes: i32,
     pub is_active: bool,
 }

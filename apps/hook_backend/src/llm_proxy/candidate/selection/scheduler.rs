@@ -116,7 +116,7 @@ fn scheduler_candidate(parts: &CandidateParts, priority_mode: ProviderPriorityMo
         provider_priority: parts.provider.priority,
         key_priority: match priority_mode {
             ProviderPriorityMode::Provider => key.internal_priority,
-            ProviderPriorityMode::Key => key.global_priority,
+            ProviderPriorityMode::Key => key.global_priority_by_format.get(&endpoint.api_format).copied().unwrap_or(key.internal_priority),
         },
     })
 }
@@ -167,11 +167,11 @@ fn priority_mode(mode: ProviderPriorityMode) -> PriorityMode {
 }
 
 fn part_key(parts: &CandidateParts) -> CandidatePartKey {
-    (parts.provider.id.clone(), primary_key(parts).id.clone())
+    (parts.provider.id.clone(), primary_endpoint(parts).id.clone(), primary_key(parts).id.clone())
 }
 
 fn candidate_key(candidate: &Candidate) -> CandidatePartKey {
-    (candidate.provider_id.clone(), candidate.key_id.clone())
+    (candidate.provider_id.clone(), candidate.endpoint_id.clone(), candidate.key_id.clone())
 }
 
 fn ordered_part(by_key: &mut HashMap<CandidatePartKey, CandidateParts>, candidate: Candidate) -> Option<CandidateParts> {

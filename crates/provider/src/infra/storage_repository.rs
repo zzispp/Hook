@@ -106,7 +106,7 @@ impl ProviderRepository for StorageProviderRepository {
                         allowed_model_ids: record.allowed_model_ids,
                         encrypted_api_key: record.encrypted_api_key,
                         internal_priority: record.internal_priority,
-                        global_priority: record.global_priority,
+                        global_priority_by_format: record.global_priority_by_format,
                         is_active: record.is_active,
                     })
                     .collect()
@@ -136,7 +136,7 @@ impl ProviderRepository for StorageProviderRepository {
                     .map(|update| storage::provider::ProviderApiKeyPriorityRecordPatch {
                         provider_id: update.provider_id,
                         key_id: update.key_id,
-                        global_priority: update.global_priority,
+                        global_priority_by_format: update.global_priority_by_format,
                     })
                     .collect(),
             )

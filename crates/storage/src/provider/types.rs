@@ -1,4 +1,5 @@
 use rust_decimal::Decimal;
+use std::collections::BTreeMap;
 use serde_json::Value;
 use types::model::PatchField;
 use types::provider::{ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, RequestUpstreamCost};
@@ -65,7 +66,7 @@ pub struct ProviderApiKeyRecordInput {
     pub encrypted_api_key: String,
     pub note: Option<String>,
     pub internal_priority: i32,
-    pub global_priority: i32,
+    pub global_priority_by_format: BTreeMap<String, i32>,
     pub rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,
     pub max_probe_interval_minutes: i32,
@@ -83,7 +84,7 @@ pub struct ProviderApiKeyRecordPatch {
     pub encrypted_api_key: Option<String>,
     pub note: PatchField<String>,
     pub internal_priority: Option<i32>,
-    pub global_priority: Option<i32>,
+    pub global_priority_by_format: Option<BTreeMap<String, i32>>,
     pub rpm_limit: PatchField<i32>,
     pub cache_ttl_minutes: Option<i32>,
     pub max_probe_interval_minutes: Option<i32>,
@@ -101,7 +102,7 @@ pub struct ProviderApiKeySecretRecord {
     pub allowed_model_ids: Vec<String>,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
-    pub global_priority: i32,
+    pub global_priority_by_format: BTreeMap<String, i32>,
     pub is_active: bool,
 }
 
@@ -109,7 +110,7 @@ pub struct ProviderApiKeySecretRecord {
 pub struct ProviderApiKeyPriorityRecordPatch {
     pub provider_id: String,
     pub key_id: String,
-    pub global_priority: i32,
+    pub global_priority_by_format: BTreeMap<String, i32>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

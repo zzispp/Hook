@@ -107,7 +107,7 @@ impl ProviderStore {
             encrypted_api_key: Set(input.encrypted_api_key),
             note: Set(input.note),
             internal_priority: Set(input.internal_priority),
-            global_priority: Set(input.global_priority),
+            global_priority_by_format: Set(json::encode_required(&input.global_priority_by_format)?),
             rpm_limit: Set(input.rpm_limit),
             learned_rpm_limit: Set(None),
             cache_ttl_minutes: Set(input.cache_ttl_minutes),
@@ -159,7 +159,7 @@ impl ProviderStore {
                     allowed_model_ids: json::decode_required(record.allowed_model_ids)?,
                     encrypted_api_key: record.encrypted_api_key,
                     internal_priority: record.internal_priority,
-                    global_priority: record.global_priority,
+                    global_priority_by_format: json::decode_required(record.global_priority_by_format)?,
                     is_active: record.is_active,
                 })
             })
@@ -192,7 +192,7 @@ impl ProviderStore {
             .await?
             .ok_or(StorageError::NotFound)?;
         let mut active: provider_api_keys::ActiveModel = record.into();
-        active.global_priority = Set(update.global_priority);
+        active.global_priority_by_format = Set(json::encode_required(&update.global_priority_by_format)?);
         active.updated_at = Set(time::OffsetDateTime::now_utc());
         active.update(self.database.connection()).await?.response()
     }

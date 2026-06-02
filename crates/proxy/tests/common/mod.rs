@@ -65,7 +65,7 @@ pub fn provider_with_gemini_low_priority() -> ProviderSnapshot {
         enable_format_conversion: true,
         is_active: true,
         endpoints: vec![endpoint("endpoint-gemini", ApiFormat::GeminiChat)],
-        keys: vec![key("key-gemini", 10)],
+        keys: vec![key_for_format("key-gemini", 10, ApiFormat::GeminiChat)],
         models: vec![model("gpt-4o-mini", "gemini-upstream")],
     }
 }
@@ -102,9 +102,15 @@ fn endpoint(id: &str, api_format: ApiFormat) -> EndpointSnapshot {
 }
 
 fn key(id: &str, internal_priority: i32) -> KeySnapshot {
+    key_for_format(id, internal_priority, ApiFormat::OpenAiChat)
+}
+
+fn key_for_format(id: &str, internal_priority: i32, api_format: ApiFormat) -> KeySnapshot {
     KeySnapshot {
         id: id.into(),
+        api_formats: vec![api_format],
         internal_priority,
+        global_priority_by_format: std::collections::BTreeMap::from([(api_format, internal_priority)]),
         cache_ttl_minutes: 5,
         is_active: true,
     }

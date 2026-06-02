@@ -74,8 +74,17 @@ pub fn validate_api_key_priority_batch(input: &ProviderApiKeyPriorityBatchUpdate
     for update in &input.updates {
         validate_text("provider_id", update.provider_id.trim(), MAX_MODEL_ID_LENGTH)?;
         validate_text("key_id", update.key_id.trim(), MAX_MODEL_ID_LENGTH)?;
-        if update.global_priority < MIN_PRIORITY {
-            return Err(ProviderError::InvalidInput("global_priority must be non-negative".into()));
+        if update.global_priority_by_format.is_empty() {
+            return Err(ProviderError::InvalidInput("global_priority_by_format cannot be empty".into()));
+        }
+        for (api_format, priority) in &update.global_priority_by_format {
+            validate_text("global_priority_by_format.api_format", api_format.trim(), MAX_API_FORMAT_LENGTH)?;
+            validate_canonical_chat_cli_format(api_format)?;
+            if *priority < MIN_PRIORITY {
+                return Err(ProviderError::InvalidInput(
+                    "global_priority_by_format priority must be non-negative".into(),
+                ));
+            }
         }
     }
     Ok(())
@@ -273,17 +282,37 @@ mod tests {
 
     #[test]
     fn validate_api_key_priority_batch_rejects_negative_priority() {
+        let mut global_priority_by_format = std::collections::BTreeMap::new();
+        global_priority_by_format.insert("openai:chat".to_owned(), -1);
         let input = ProviderApiKeyPriorityBatchUpdate {
             updates: vec![types::provider::ProviderApiKeyPriorityUpdate {
                 provider_id: "provider-a".to_owned(),
                 key_id: "key-a".to_owned(),
-                global_priority: -1,
+                global_priority_by_format,
             }],
         };
 
         let error = validate_api_key_priority_batch(&input).unwrap_err();
 
-        assert_eq!(error.to_string(), "invalid input: global_priority must be non-negative");
+        assert_eq!(
+            error.to_string(),
+            "invalid input: global_priority_by_format priority must be non-negative"
+        );
+    }
+
+    #[test]
+    fn validate_api_key_priority_batch_rejects_empty_format_map() {
+        let input = ProviderApiKeyPriorityBatchUpdate {
+            updates: vec![types::provider::ProviderApiKeyPriorityUpdate {
+                provider_id: "provider-a".to_owned(),
+                key_id: "key-a".to_owned(),
+                global_priority_by_format: std::collections::BTreeMap::new(),
+            }],
+        };
+
+        let error = validate_api_key_priority_batch(&input).unwrap_err();
+
+        assert_eq!(error.to_string(), "invalid input: global_priority_by_format cannot be empty");
     }
 
     fn api_key_create(enabled: bool, start: Option<&str>, end: Option<&str>) -> ProviderApiKeyCreate {

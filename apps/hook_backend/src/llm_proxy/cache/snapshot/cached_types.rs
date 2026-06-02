@@ -1,5 +1,6 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use types::{
     model::TieredPricingConfig,
     provider::{ProviderCooldownPolicy, ProviderModelMapping, ProviderPriorityMode, ProviderSchedulingMode},
@@ -115,7 +116,7 @@ pub struct CachedProviderKey {
     pub key_preview: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
-    pub global_priority: i32,
+    pub global_priority_by_format: BTreeMap<String, i32>,
     #[serde(default)]
     pub rpm_limit: Option<i32>,
     pub cache_ttl_minutes: i32,

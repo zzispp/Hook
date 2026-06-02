@@ -31,8 +31,15 @@ export function ProviderPriorityDialog(props: ProviderPriorityDialogProps) {
     <Dialog fullWidth maxWidth="md" open={props.open} onClose={props.onClose}>
       <PriorityDialogTitle onClose={props.onClose} />
       <DialogContent dividers sx={{ px: 3, py: 2 }}>
+        {state.kind === 'key' ? (
+          <PriorityFormatPicker
+            formats={state.priorityFormats}
+            value={state.activeFormat}
+            onChange={state.setActiveFormat}
+          />
+        ) : null}
         <ProviderPriorityList
-          items={state.items}
+          items={state.kind === 'key' ? state.itemsByFormat[state.activeFormat] ?? [] : state.items}
           loading={props.loading}
           editingId={state.editingId}
           draggingId={state.draggingId}
@@ -55,6 +62,34 @@ export function ProviderPriorityDialog(props: ProviderPriorityDialogProps) {
         onSave={state.save}
       />
     </Dialog>
+  );
+}
+
+function PriorityFormatPicker({
+  formats,
+  value,
+  onChange,
+}: {
+  formats: string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  if (formats.length === 0) return null;
+
+  return (
+    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ pb: 1.5 }}>
+      {formats.map((format) => (
+        <Button
+          key={format}
+          size="small"
+          variant={format === value ? 'contained' : 'outlined'}
+          color={format === value ? 'primary' : 'inherit'}
+          onClick={() => onChange(format)}
+        >
+          {format}
+        </Button>
+      ))}
+    </Stack>
   );
 }
 
