@@ -1,49 +1,117 @@
-import type { MouseEvent } from 'react';
+import type { MouseEvent, CSSProperties } from 'react';
 
-import { createPortal } from 'react-dom';
 import { FaGithub } from 'react-icons/fa6';
-import { LuUser, LuHeart, LuSearch } from 'react-icons/lu';
-import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
+import { paths } from 'src/routes/paths';
+
+import { useTranslate } from 'src/locales';
 import { Link, useLocation } from 'src/react-bits/router';
+import { primaryColorPresets } from 'src/theme/with-settings';
 import { SettingsButton } from 'src/layouts/components/settings-button';
 
-import { TOOLS } from '../../../constants/Tools';
+import { useSettingsContext } from 'src/components/settings';
+
+import { useAuthContext } from 'src/auth/hooks';
+
 import { Logo } from '../../common/SVGComponents';
-import { useStars } from '../../../hooks/useStars';
 import { GITHUB_URL } from '../../../constants/Site';
-import { CATEGORIES } from '../../../constants/Categories';
-import { useSearch } from '../../context/SearchContext/useSearch';
-import { useOptions } from '../../context/OptionsContext/useOptions';
 
-const cssIcon = '/assets/react-bits/icons/css.svg';
-const jsIcon = '/assets/react-bits/icons/js.svg';
-const tsIcon = '/assets/react-bits/icons/ts.svg';
-const twIcon = '/assets/react-bits/icons/tw.svg';
+function hexToRgbChannels(hex: string): string {
+  const cleanHex = hex.replace('#', '').trim();
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (cleanHex.length === 3) {
+    r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    b = parseInt(cleanHex[2] + cleanHex[2], 16);
+  } else if (cleanHex.length === 6) {
+    r = parseInt(cleanHex.slice(0, 2), 16);
+    g = parseInt(cleanHex.slice(2, 4), 16);
+    b = parseInt(cleanHex.slice(4, 6), 16);
+  }
+  return `${r}, ${g}, ${b}`;
+}
 
-const NAV_LINKS = [
-  { label: 'Docs', to: '/get-started/introduction', match: '/get-started' },
-  { label: 'Showcase', to: '/showcase', match: '/showcase' },
-  { label: 'Tools', to: '/tools', match: '/tools' },
-  { label: 'Sponsors', to: '/sponsors', match: '/sponsors' },
-];
+const Navbar = () => {
+  const { state } = useSettingsContext();
+  const primaryColor = state.primaryColor;
+  const preset = primaryColorPresets[primaryColor] || primaryColorPresets.default;
 
-const slug = (str: string) => str.replace(/\s+/g, '-').toLowerCase();
-
-const Navbar = ({ showDocs = false }: { readonly showDocs?: boolean }) => {
-  const stars = useStars();
+  const styleOverrides = {
+    '--pro-base': preset.main,
+    '--pro-dark': preset.dark,
+    '--pro-light': preset.light,
+    '--pro-glow': hexToRgbChannels(preset.main),
+    '--pro-glow-dark': hexToRgbChannels(preset.dark),
+    '--pro-glow-light': hexToRgbChannels(preset.light),
+  } as CSSProperties;
+  const { authenticated } = useAuthContext();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [prefsOpen, setPrefsOpen] = useState(false);
   const linksRef = useRef<HTMLElement | null>(null);
   const highlightRef = useRef<HTMLDivElement | null>(null);
-  const prefsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { toggleSearch } = useSearch();
-  const { languagePreset, setLanguagePreset, stylePreset, setStylePreset } = useOptions();
+  const { t } = useTranslate('landing');
   const location = useLocation();
+  const navLinks = [
+    { label: t('navbar.links.features'), to: '/#features', match: 'features' },
+    { label: t('navbar.links.demo'), to: '/#live-demo', match: 'live-demo' },
+    { label: t('navbar.links.quickStart'), to: '/#quick-start', match: 'quick-start' },
+    { label: t('navbar.links.providers'), to: '/#providers', match: 'providers' },
+  ];
 
-  const isActive = useCallback((match: string) => location.pathname.startsWith(match), [location.pathname]);
+  const [activeSection, setActiveSection] = useState<string>('');
+
+  useEffect(() => {
+    if (location.pathname !== '/') {
+      setActiveSection('');
+      return undefined;
+    }
+
+    const sectionIds = ['features', 'live-demo', 'quick-start', 'providers'];
+
+    const handleScroll = () => {
+      let currentSection = '';
+      for (const id of sectionIds) {
+        const element = document.getElementById(id);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          if (rect.top < window.innerHeight * 0.4 && rect.bottom > window.innerHeight * 0.2) {
+            currentSection = id;
+            break;
+          }
+        }
+      }
+      setActiveSection(currentSection);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [location.pathname]);
+
+  const handleNavLinkClick = useCallback((e: MouseEvent<HTMLAnchorElement>, to: string) => {
+    const hashIndex = to.indexOf('#');
+    if (hashIndex !== -1) {
+      const hash = to.substring(hashIndex + 1);
+      const element = document.getElementById(hash);
+      if (element) {
+        e.preventDefault();
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.history.pushState(null, '', `#${hash}`);
+        setActiveSection(hash);
+        setMenuOpen(false);
+      }
+    }
+  }, []);
+
+  const isActive = useCallback(
+    (match: string) => (location.pathname === '/' ? activeSection === match : location.pathname.startsWith(match)),
+    [location.pathname, activeSection]
+  );
 
   useEffect(() => {
     if (menuOpen) {
@@ -92,30 +160,21 @@ const Navbar = ({ showDocs = false }: { readonly showDocs?: boolean }) => {
     }
   }, [positionHighlight, getActiveEl]);
 
-  // Position highlight on active link on mount and route change
+  // Position highlight on active link on mount, route change and activeSection change
   useEffect(() => {
     requestAnimationFrame(() => {
       const activeEl = getActiveEl();
-      if (activeEl) positionHighlight(activeEl);
+      if (activeEl) {
+        positionHighlight(activeEl);
+      } else {
+        const highlight = highlightRef.current;
+        if (highlight) highlight.style.opacity = '0';
+      }
     });
-  }, [location.pathname, positionHighlight, getActiveEl]);
-
-  const formattedStars = useMemo(() =>
-    stars >= 1000 ? `${(stars / 1000).toFixed(1).replace(/\.0$/, '')}k` : stars,
-    [stars]
-  );
-
-  const handlePrefsEnter = useCallback(() => {
-    if (prefsTimeoutRef.current) clearTimeout(prefsTimeoutRef.current);
-    setPrefsOpen(true);
-  }, []);
-
-  const handlePrefsLeave = useCallback(() => {
-    prefsTimeoutRef.current = setTimeout(() => setPrefsOpen(false), 150);
-  }, []);
+  }, [location.pathname, activeSection, positionHighlight, getActiveEl]);
 
   return (
-    <header className={`ln-navbar${scrolled ? ' ln-navbar-scrolled' : ''}${showDocs ? ' ln-navbar-docs' : ''}`}>
+    <header className={`ln-navbar${scrolled ? ' ln-navbar-scrolled' : ''}`} style={styleOverrides}>
       <div className="ln-navbar-inner">
         <div className="ln-navbar-left">
           <Link to="/" className="ln-navbar-logo">
@@ -126,8 +185,14 @@ const Navbar = ({ showDocs = false }: { readonly showDocs?: boolean }) => {
 
           <nav className="ln-navbar-links" ref={linksRef} onMouseLeave={handleLinksLeave}>
             <div className="ln-navbar-link-highlight" ref={highlightRef} />
-            {NAV_LINKS.map(({ label, to, match }) => (
-              <Link key={to} className={`ln-navbar-link${isActive(match) ? ' ln-navbar-link-active' : ''}`} to={to} onMouseEnter={handleLinkHover}>
+            {navLinks.map(({ label, to, match }) => (
+              <Link
+                key={to}
+                className={`ln-navbar-link${isActive(match) ? ' ln-navbar-link-active' : ''}`}
+                to={to}
+                onClick={(e) => handleNavLinkClick(e, to)}
+                onMouseEnter={handleLinkHover}
+              >
                 {label}
               </Link>
             ))}
@@ -135,60 +200,10 @@ const Navbar = ({ showDocs = false }: { readonly showDocs?: boolean }) => {
         </div>
 
         <div className="ln-navbar-right">
-          {showDocs && (
+          {authenticated ? (
             <>
-              <button className="ln-navbar-icon-btn ln-navbar-search-btn" onClick={toggleSearch} aria-label="Search">
-                <LuSearch size={15} />
-                <span className="ln-navbar-search-text">Search...</span>
-                <kbd className="ln-navbar-kbd">/</kbd>
-              </button>
-
-              <div
-                className="ln-navbar-prefs-wrapper"
-                onMouseEnter={handlePrefsEnter}
-                onMouseLeave={handlePrefsLeave}
-              >
-                <button className="ln-navbar-icon-btn ln-navbar-prefs-trigger" aria-label="Preferences">
-                  <LuUser size={16} />
-                </button>
-
-                {prefsOpen && (
-                  <div className="ln-navbar-prefs-menu">
-                    <span className="ln-navbar-prefs-label">Language</span>
-                    <div className="ln-navbar-toggle-group">
-                      <button className={`ln-navbar-toggle-item${languagePreset === 'JS' ? ' active' : ''}`} onClick={() => setLanguagePreset('JS')}>
-                        <img src={jsIcon} alt="JS" width={18} height={18} />
-                      </button>
-                      <button className={`ln-navbar-toggle-item${languagePreset === 'TS' ? ' active' : ''}`} onClick={() => setLanguagePreset('TS')}>
-                        <img src={tsIcon} alt="TS" width={18} height={18} />
-                      </button>
-                    </div>
-                    <span className="ln-navbar-prefs-label">Styling</span>
-                    <div className="ln-navbar-toggle-group">
-                      <button className={`ln-navbar-toggle-item${stylePreset === 'CSS' ? ' active' : ''}`} onClick={() => setStylePreset('CSS')}>
-                        <img src={cssIcon} alt="CSS" width={18} height={18} />
-                      </button>
-                      <button className={`ln-navbar-toggle-item${stylePreset === 'TW' ? ' active' : ''}`} onClick={() => setStylePreset('TW')}>
-                        <img src={twIcon} alt="TW" width={18} height={18} />
-                      </button>
-                    </div>
-                    <div className="ln-navbar-prefs-divider" />
-                    <Link to="/favorites" className="ln-navbar-prefs-fav" onClick={() => setPrefsOpen(false)}>
-                      <LuHeart size={13} />
-                      Favorites
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {!showDocs && (
-            <>
-              <a
-                href="https://pro.reactbits.dev"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to={paths.dashboard.root}
                 className="ln-navbar-pro"
                 onMouseMove={e => {
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -196,11 +211,36 @@ const Navbar = ({ showDocs = false }: { readonly showDocs?: boolean }) => {
                   e.currentTarget.style.setProperty('--pro-mx', `${x}%`);
                 }}
               >
-                GET PRO
-              </a>
-              <span className="ln-navbar-browse">
-                COMMUNITY <span className="ln-navbar-soon">SOON</span>
-              </span>
+                {t('navbar.actions.console')}
+              </Link>
+              <Link
+                to={paths.dashboard.models}
+                className="ln-navbar-browse"
+                style={{ padding: '0 12px' }}
+              >
+                {t('navbar.actions.catalog')}
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                to={paths.auth.jwt.signIn}
+                className="ln-navbar-pro"
+                onMouseMove={e => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  e.currentTarget.style.setProperty('--pro-mx', `${x}%`);
+                }}
+              >
+                {t('navbar.actions.signIn')}
+              </Link>
+              <Link
+                to={paths.auth.jwt.signUp}
+                className="ln-navbar-browse"
+                style={{ padding: '0 12px' }}
+              >
+                {t('navbar.actions.signUp')}
+              </Link>
             </>
           )}
 
@@ -211,7 +251,6 @@ const Navbar = ({ showDocs = false }: { readonly showDocs?: boolean }) => {
             rel="noopener noreferrer"
           >
             <FaGithub size={16} />
-            <span>{formattedStars}</span>
           </a>
 
           <SettingsButton className="ln-navbar-settings" />
@@ -219,22 +258,42 @@ const Navbar = ({ showDocs = false }: { readonly showDocs?: boolean }) => {
           <button
             className={`ln-navbar-hamburger${menuOpen ? ' open' : ''}`}
             onClick={() => setMenuOpen(o => !o)}
-            aria-label="Menu"
+            aria-label={t('navbar.actions.menu')}
           >
-            <span /><span /><span />
+            <span />
+            <span />
+            <span />
           </button>
         </div>
 
-        {menuOpen && !showDocs && (
+        {menuOpen && (
           <div className="ln-navbar-mobile-menu">
-            {NAV_LINKS.map(({ label, to }) => (
-              <Link key={to} className="ln-navbar-mobile-link" to={to} onClick={() => setMenuOpen(false)}>
+            {authenticated ? (
+              <>
+                <Link to={paths.dashboard.root} className="ln-navbar-mobile-pro" onClick={() => setMenuOpen(false)}>
+                  <span className="ln-navbar-mobile-pro-title">{t('navbar.actions.console')}</span>
+                  <span className="ln-navbar-mobile-pro-arrow">→</span>
+                </Link>
+                <Link to={paths.dashboard.models} className="ln-navbar-mobile-link" onClick={() => setMenuOpen(false)}>
+                  {t('navbar.actions.catalog')}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to={paths.auth.jwt.signIn} className="ln-navbar-mobile-pro" onClick={() => setMenuOpen(false)}>
+                  <span className="ln-navbar-mobile-pro-title">{t('navbar.actions.signIn')}</span>
+                  <span className="ln-navbar-mobile-pro-arrow">→</span>
+                </Link>
+                <Link to={paths.auth.jwt.signUp} className="ln-navbar-mobile-link" onClick={() => setMenuOpen(false)}>
+                  {t('navbar.actions.signUp')}
+                </Link>
+              </>
+            )}
+            {navLinks.map(({ label, to }) => (
+              <Link key={to} className="ln-navbar-mobile-link" to={to} onClick={(e) => handleNavLinkClick(e, to)}>
                 {label}
               </Link>
             ))}
-            <span className="ln-navbar-mobile-link">
-              Community <span className="ln-navbar-soon">Soon</span>
-            </span>
             <a
               href={GITHUB_URL}
               target="_blank"
@@ -243,47 +302,10 @@ const Navbar = ({ showDocs = false }: { readonly showDocs?: boolean }) => {
               onClick={() => setMenuOpen(false)}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <FaGithub size={14} /> GitHub
+                <FaGithub size={14} /> {t('navbar.actions.github')}
               </span>
-              <span style={{ opacity: 0.6 }}>{formattedStars}</span>
             </a>
           </div>
-        )}
-
-        {menuOpen && showDocs && createPortal(
-          <>
-            <div className="ln-navbar-mobile-backdrop" onClick={() => setMenuOpen(false)} />
-            <div className="ln-navbar-mobile-menu ln-navbar-mobile-menu-docs">
-              <div className="ln-navbar-mobile-scroll">
-                {CATEGORIES.map((cat, i) => (
-                    <div className="ln-navbar-mobile-section" key={cat.name}>
-                      <span className="ln-navbar-mobile-label">{cat.name}</span>
-                      {cat.subcategories.map(sub => (
-                        <Link
-                          key={sub}
-                          className="ln-navbar-mobile-link"
-                          to={`/${slug(cat.name)}/${slug(sub)}`}
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          {sub}
-                        </Link>
-                      ))}
-                      {i === 0 && (
-                        <>
-                          <span className="ln-navbar-mobile-label" style={{ marginTop: 12 }}>Tools</span>
-                          {TOOLS.map(tool => (
-                            <Link key={tool.id} className="ln-navbar-mobile-link" to={tool.path} onClick={() => setMenuOpen(false)}>
-                              {tool.label}
-                            </Link>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </>,
-          document.body
         )}
       </div>
     </header>

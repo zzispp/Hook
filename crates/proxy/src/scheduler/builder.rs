@@ -97,11 +97,7 @@ fn append_endpoint_candidates(context: EndpointBuildContext<'_>, output: &mut Ve
     let provider = context.provider;
     let endpoint = context.endpoint;
     let model = context.model;
-    for key in provider
-        .keys
-        .iter()
-        .filter(|key| key_allowed_for_endpoint(key, endpoint, context.input))
-    {
+    for key in provider.keys.iter().filter(|key| key_allowed_for_endpoint(key, endpoint, context.input)) {
         output.push(Candidate {
             provider_id: provider.id.clone(),
             provider_name: provider.name.clone(),

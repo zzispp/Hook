@@ -1,85 +1,31 @@
 .ln-hero-band {
-  mix-blend-mode: var(--landing-hero-band-blend);
   opacity: var(--landing-hero-band-opacity);
 }
 
-.ln-footer-logo {
-  filter: var(--landing-logo-filter);
-}
-
-.ln-sp-card-logo--dark {
-  display: none;
-}
-
-.ln-sp-card-logo--light {
-  display: block;
-}
-
-[data-color-scheme='dark'] .ln-sp-card-logo--dark {
-  display: block;
-}
-
-[data-color-scheme='dark'] .ln-sp-card-logo--light {
-  display: none;
-}
-
-.ln-hero-code-dropdown-menu,
-.ln-hero-color-picker,
-.ln-qs-runner-menu {
+.ln-hero-code-dropdown-menu {
   border-color: var(--border-subtle);
   background: var(--bg-glass-strong);
   box-shadow: var(--shadow-dropdown);
 }
 
-.ln-hero-code-reset,
 .ln-hero-code-dropdown-trigger {
   border-color: var(--border-secondary);
   background: var(--bg-input);
 }
 
-.ln-hero-code-reset:hover,
 .ln-hero-code-dropdown-trigger:hover,
 .ln-hero-code-dropdown-item:hover,
-.ln-qs-runner-item:hover,
-.ln-navbar-prefs-fav:hover,
 .ln-navbar-mobile-link:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
 .ln-hero-code-pre {
-  color: var(--color-accent);
+  color: var(--text-secondary);
 }
 
-.c-kw,
-.c-attr,
-.c-fn,
-.ln-hero-code-value--bool {
-  color: var(--text-primary);
-}
-
-.c-punc {
-  color: var(--text-muted);
-}
-
-.c-comp,
-.c-str,
-.ln-hero-code-value--color {
-  color: var(--color-accent);
-}
-
-.c-tag {
-  color: var(--color-warm);
-}
-
-.ln-hero-code-value--bool,
-.ln-hero-code-value--color {
-  background: var(--bg-code-token);
-}
-
-.ln-hero-code-swatch,
-.ln-hero-color-picker-preset {
-  border-color: var(--border-strong);
+.ln-hero-code-hint {
+  color: var(--text-soft);
 }
 
 .ln-navbar-hamburger span {
@@ -93,8 +39,7 @@
 
 .ln-features-card:hover,
 .ln-demo-card:hover,
-.ln-test-card:hover,
-.ln-sp-card:hover {
+.ln-test-card:hover {
   border-color: var(--border-strong);
 }
 
@@ -105,10 +50,7 @@
 
 .ln-feat-tool-box,
 .ln-feat-orbit-node,
-.ln-feat-orbit-center,
-.dock-panel,
-.dock-item,
-.dock-label {
+.ln-feat-orbit-center {
   border-color: var(--border-secondary);
   background-color: var(--bg-elevated);
   color: var(--text-muted);
@@ -146,35 +88,39 @@
   color: var(--text-soft);
 }
 
-.ln-feat-stars-count {
-  color: var(--color-primary);
-  background: linear-gradient(to bottom, var(--color-primary) 30%, transparent 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
+.ln-feat-quota-bar-fill {
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%);
 }
 
-.ln-feat-stars-chart stop {
-  stop-color: var(--feature-star-fill);
+.ln-feat-quota-value {
+  color: var(--text-primary);
 }
 
-.ln-feat-stars-chart path[stroke] {
-  stroke: var(--feature-star-stroke);
+.ln-feat-quota-row {
+  border-color: var(--border-secondary);
+  background: var(--bg-input);
 }
 
-.ln-demo-card-overlay {
-  background: var(--landing-card-overlay);
+.ln-feat-quota-row-name {
+  color: var(--text-muted);
 }
 
-.ln-demo-shiny {
-  --shiny-text-color: var(--text-muted);
-  --shiny-text-highlight: var(--landing-shine-color);
+.ln-feat-quota-row-val {
+  color: var(--text-dimmed);
+}
+
+.ln-eco-name {
+  color: var(--text-primary);
+}
+
+.ln-eco-badge {
+  color: var(--text-muted);
+  border-color: var(--border-secondary);
+  background: var(--bg-input);
 }
 
 .ln-qs-tab:hover,
 .ln-qs-tab--active,
-.ln-qs-runner-trigger:hover,
-.ln-qs-runner-item.active,
-.ln-qs-runner-item:hover,
 .ln-qs-cmd-text,
 .ln-qs-copy:hover,
 .ln-qs-copy--done,

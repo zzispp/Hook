@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,盘点首页落地页路由与硬编码文案范围,DONE,"确认当前首页入口、组件范围与硬编码文案位置","rg -n \"LandingPage|landingnew|generateMetadata|useTranslation|t\\(\" apps/hook_frontend/src/app/\\(home\\) apps/hook_frontend/src/react-bits/components/landingnew apps/hook_frontend/src/react-bits/pages -S","2026-06-03 15:00",0,"当前首页路由使用 react-bits LandingPage，未接入项目内首页旧版 home section。"
+2,补充首页翻译资源并改造组件取词,DONE,"首页主要组件改为使用项目现有翻译函数取词","rg -n \"useTranslate\\('landing'\\)|getServerTranslations\\('landing'\\)\" apps/hook_frontend/src/app/\\(home\\) apps/hook_frontend/src/locales apps/hook_frontend/src/react-bits/components/landingnew apps/hook_frontend/src/react-bits/pages -S","2026-06-03 15:41",0,"新增 landing namespace 与中英文资源，首页 metadata、Navbar、Hero、Features、LiveDemo、QuickStart、Sponsors、CTA、Footer 已切到 landing 取词。"
+3,运行前端校验并确认结果,DONE,"前端校验命令通过","pnpm lint:frontend","2026-06-03 15:41",0,"已通过完整前端 ESLint 校验。"

@@ -19,6 +19,7 @@ fn matching_candidate_parts_excludes_openai_chat_for_gemini_request_conversion()
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "gemini:chat",
+            routing_api_format: "gemini:chat",
             ..request()
         },
         affinity: None,
@@ -48,6 +49,7 @@ fn matching_candidate_parts_routes_gemini_request_to_openai_cli_when_converted()
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "gemini:chat",
+            routing_api_format: "gemini:chat",
             is_stream: true,
             ..request()
         },
@@ -74,6 +76,7 @@ fn matching_candidate_parts_excludes_openai_chat_for_claude_request_conversion()
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "claude:chat",
+            routing_api_format: "claude:chat",
             ..request()
         },
         affinity: None,
@@ -103,6 +106,7 @@ fn matching_candidate_parts_routes_claude_request_to_openai_cli_when_converted()
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "claude:chat",
+            routing_api_format: "claude:chat",
             is_stream: true,
             ..request()
         },

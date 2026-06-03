@@ -155,8 +155,8 @@ fn system_settings_columns() -> Vec<SystemSettings> {
 fn system_settings_values() -> Vec<Expr> {
     vec![
         SYSTEM_SETTINGS_ID.into(),
-        "Hook".into(),
-        "Gateway".into(),
+        "Hook AI".into(),
+        "自托管 AI API 统一网关".into(),
         "".into(),
         DEFAULT_SITE_LOGO_BASE64.into(),
         "[]".into(),

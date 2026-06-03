@@ -1,4 +1,4 @@
-use proxy::format_conversion::{ApiFormat, FormatConversionError, FormatConversionRegistry};
+use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
 use serde_json::json;
 
 #[test]
@@ -23,7 +23,7 @@ fn error_conversion_maps_provider_error_shape() {
 }
 
 #[test]
-fn responses_request_rejects_reasoning_input_item_for_cross_format() {
+fn responses_request_reasoning_input_item_converts_to_openai_chat() {
     let registry = FormatConversionRegistry::default();
     let input = json!({
         "model": "gpt-5.5",
@@ -37,15 +37,12 @@ fn responses_request_rejects_reasoning_input_item_for_cross_format() {
         ]
     });
 
-    let error = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap_err();
+    let chat = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::OpenAiChat).unwrap();
 
-    assert_eq!(
-        error,
-        FormatConversionError::UnsupportedFeature {
-            format: "openai:responses",
-            feature: "unsupported input item type reasoning".to_string(),
-        }
-    );
+    assert_eq!(chat["messages"][1]["role"], "assistant");
+    assert_eq!(chat["messages"][1]["reasoning_parts"][0]["type"], "redacted_thinking");
+    assert_eq!(chat["messages"][1]["reasoning_parts"][0]["data"], "sig_1");
+    assert_eq!(chat["messages"][1]["content"], "");
 }
 
 #[test]

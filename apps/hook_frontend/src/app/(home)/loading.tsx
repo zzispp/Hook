@@ -1,7 +1,7 @@
-import { ReactBitsLoader } from 'src/components/loading-screen';
+import { SplashScreen } from 'src/components/loading-screen';
 
 // ----------------------------------------------------------------------
 
 export default function Loading() {
-  return <ReactBitsLoader mode="dark" />;
+  return <SplashScreen />;
 }

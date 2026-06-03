@@ -105,6 +105,7 @@ pub(super) struct CandidateParts {
     pub(super) keys: Vec<CachedProviderKey>,
     pub(super) model: CachedModelBinding,
     pub(super) client_api_format: String,
+    pub(super) routing_api_format: String,
     pub(super) is_cached: bool,
 }
 

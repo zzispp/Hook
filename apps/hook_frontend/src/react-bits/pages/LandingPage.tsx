@@ -13,12 +13,14 @@ import Sponsors from '../components/landingnew/Sponsors/Sponsors';
 import QuickStart from '../components/landingnew/QuickStart/QuickStart';
 import Testimonials from '../components/landingnew/Testimonials/Testimonials';
 import LandingLoader from '../components/landingnew/LandingLoader/LandingLoader';
-import { SearchProvider } from '../components/context/SearchContext/SearchContext';
-import { OptionsProvider } from '../components/context/OptionsContext/OptionsContext';
-import { InstallationProvider } from '../components/context/InstallationContext/InstallationContext';
 
 const MIN_LOADER_MS = 800;
+const HERO_DEBUG_PREFIX = '[hero-bg]';
 const HOME_BACKGROUND_ATTRIBUTE = 'data-react-bits-home';
+
+function debugHeroBg(event: string, payload: Record<string, unknown> = {}) {
+  console.log(`${HERO_DEBUG_PREFIX} ${JSON.stringify({ event, ...payload })}`);
+}
 
 function useHomeDocumentBackground() {
   useLayoutEffect(() => {
@@ -37,9 +39,13 @@ const LandingPage = () => {
   const [hiding, setHiding] = useState(false);
 
   const reveal = useCallback(() => {
+    debugHeroBg('LandingPage reveal start');
     setHiding(true);
     // after the loader fade-out finishes, mark fully loaded & unlock scroll
-    setTimeout(() => setLoaded(true), 600);
+    setTimeout(() => {
+      debugHeroBg('LandingPage loaded true');
+      setLoaded(true);
+    }, 600);
   }, []);
 
   useLayoutEffect(() => {
@@ -58,20 +64,17 @@ const LandingPage = () => {
     document.fonts.ready.then(() => {
       const elapsed = Date.now() - start;
       const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+      debugHeroBg('LandingPage fonts ready', { elapsed, remaining });
       setTimeout(reveal, remaining);
     });
   }, [reveal]);
 
   return (
-    <OptionsProvider>
-      <SearchProvider>
-        <InstallationProvider>
+    <>
       {!loaded && <LandingLoader hiding={hiding} />}
       <section className={`landing-wrapper no-side-fades${loaded ? ' ln-loaded' : ' ln-loading'}`}>
-        <title>React Bits - Animated UI Components For React</title>
-
         <Navbar />
-        <Hero />
+        <Hero visualReady={loaded} />
         <Features />
         <Testimonials />
         <LiveDemo />
@@ -80,9 +83,7 @@ const LandingPage = () => {
         <CTA />
         <Footer />
       </section>
-        </InstallationProvider>
-      </SearchProvider>
-    </OptionsProvider>
+    </>
   );
 };
 

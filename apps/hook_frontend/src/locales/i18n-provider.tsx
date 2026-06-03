@@ -10,6 +10,8 @@ import enCommon from './langs/en/common.json';
 import cnCommon from './langs/cn/common.json';
 import enNavbar from './langs/en/navbar.json';
 import cnNavbar from './langs/cn/navbar.json';
+import enLanding from './langs/en/landing.json';
+import cnLanding from './langs/cn/landing.json';
 import enMessages from './langs/en/messages.json';
 import cnMessages from './langs/cn/messages.json';
 import { i18nOptions, fallbackLng } from './locales-config';
@@ -19,11 +21,11 @@ import { i18nOptions, fallbackLng } from './locales-config';
 /**
  * Initialize i18next
  */
-const I18N_NAMESPACES = ['common', 'messages', 'admin', 'auth', 'navbar'];
+const I18N_NAMESPACES = ['common', 'messages', 'landing', 'admin', 'auth', 'navbar'];
 
 const I18N_RESOURCES = {
-  cn: { common: cnCommon, messages: cnMessages, navbar: cnNavbar },
-  en: { common: enCommon, messages: enMessages, navbar: enNavbar },
+  cn: { common: cnCommon, messages: cnMessages, landing: cnLanding, navbar: cnNavbar },
+  en: { common: enCommon, messages: enMessages, landing: enLanding, navbar: enNavbar },
 };
 
 function createI18n(lang: LangCode) {

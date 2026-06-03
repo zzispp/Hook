@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current Hero and product copy,DONE,Hero implementation and existing Hook gateway copy are identified,rg -n "ln-hero|home.hero|Gateway" apps/hook_frontend/src,2026-06-03,0,Found React Bits Hero and existing Hook gateway homepage copy.
+2,Research New API positioning,DONE,New API positioning is summarized from public source,curl -L https://raw.githubusercontent.com/QuantumNous/new-api/main/README.md,2026-06-03,0,README describes next-generation LLM gateway and AI asset management system.
+3,Replace Hero copy and code snippets,IN_PROGRESS,Hero shows Hook copy and cURL Node.js Python OpenAI-compatible snippets,pnpm --filter hook_frontend lint,,0,
+4,Validate frontend,TODO,Lint passes or failure is documented,pnpm --filter hook_frontend lint,,0,

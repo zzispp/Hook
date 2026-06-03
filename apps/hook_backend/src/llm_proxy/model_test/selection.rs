@@ -25,7 +25,7 @@ pub(super) fn fixed_parts(
     key_id: &str,
     requested_stream: bool,
 ) -> Result<FixedParts, LlmProxyError> {
-    let provider = active_provider(snapshot, provider_id)?;
+    let provider = selected_provider(snapshot, provider_id)?;
     let client_api_format = active_endpoint(&provider, endpoint_id, requested_stream)?.api_format;
     let force_non_stream = force_non_stream(&client_api_format, requested_stream)?;
     let effective_stream = requested_stream && !force_non_stream;
@@ -48,13 +48,13 @@ pub(super) fn fixed_parts(
     })
 }
 
-fn active_provider(snapshot: &SchedulingSnapshot, provider_id: &str) -> Result<CachedProvider, LlmProxyError> {
+fn selected_provider(snapshot: &SchedulingSnapshot, provider_id: &str) -> Result<CachedProvider, LlmProxyError> {
     snapshot
         .providers
         .iter()
-        .find(|provider| provider.id == provider_id && provider.is_active)
+        .find(|provider| provider.id == provider_id)
         .cloned()
-        .ok_or_else(|| LlmProxyError::NotFound("provider not found or inactive".into()))
+        .ok_or_else(|| LlmProxyError::NotFound("provider not found".into()))
 }
 
 fn active_endpoint(provider: &CachedProvider, endpoint_id: &str, stream: bool) -> Result<CachedEndpoint, LlmProxyError> {

@@ -49,7 +49,7 @@ fn route_option_inputs<'a>(endpoints: &'a [CachedEndpoint], keys: &'a [CachedPro
 }
 
 fn endpoint_option(request: CandidateRequest<'_>, parts: &CandidateParts, endpoint: &CachedEndpoint) -> Result<CandidateEndpointOption, LlmProxyError> {
-    let needs_conversion = formats::needs_conversion(request.api_format, &endpoint.api_format, request.is_stream)?;
+    let needs_conversion = formats::needs_conversion(&parts.routing_api_format, &endpoint.api_format, request.is_stream)?;
     Ok(CandidateEndpointOption {
         id: endpoint.id.clone(),
         name: endpoint.api_format.clone(),

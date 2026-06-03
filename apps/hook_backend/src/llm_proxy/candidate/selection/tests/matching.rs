@@ -226,6 +226,34 @@ fn matching_candidate_parts_does_not_route_chat_request_to_non_chat_endpoint() {
 }
 
 #[test]
+fn matching_candidate_parts_routes_explicit_image_intent_to_image_endpoint() {
+    let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
+    let group = &snapshot.groups[0];
+
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: "model-a",
+        request: CandidateRequest {
+            api_format: "openai:cli",
+            routing_api_format: "openai_image",
+            model_name: "gpt-test",
+            is_stream: false,
+        },
+        affinity: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
+    });
+
+    assert_eq!(parts.len(), 2);
+    assert!(parts.iter().all(|part| part.client_api_format == "openai:cli"));
+    assert!(parts.iter().all(|part| part.routing_api_format == "openai_image"));
+    assert!(parts.iter().all(|part| part.endpoints[0].api_format == "openai_image"));
+}
+
+#[test]
 fn matching_candidate_parts_does_not_route_stream_responses_to_compact_endpoint() {
     let provider = provider_with_responses_and_compact_endpoints(vec![
         provider_key("key-responses", 10, vec!["openai:cli"]),
@@ -241,6 +269,7 @@ fn matching_candidate_parts_does_not_route_stream_responses_to_compact_endpoint(
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "openai:cli",
+            routing_api_format: "openai:cli",
             model_name: "gpt-test",
             is_stream: true,
         },
@@ -268,6 +297,7 @@ fn matching_candidate_parts_does_not_treat_responses_compact_as_exact_route() {
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "openai:cli",
+            routing_api_format: "openai:cli",
             model_name: "gpt-test",
             is_stream: false,
         },
@@ -293,6 +323,7 @@ fn matching_candidate_parts_routes_responses_request_to_chat_endpoint_through_co
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "openai:cli",
+            routing_api_format: "openai:cli",
             model_name: "gpt-test",
             is_stream: true,
         },
@@ -338,6 +369,7 @@ fn matching_candidate_parts_routes_non_chat_request_only_to_matching_data_format
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "openai_image",
+            routing_api_format: "openai_image",
             model_name: "gpt-test",
             is_stream: false,
         },
@@ -368,6 +400,7 @@ fn matching_candidate_parts_routes_image_edit_only_to_exact_edit_endpoint() {
         model_id: "model-a",
         request: CandidateRequest {
             api_format: "openai_image_edit",
+            routing_api_format: "openai_image_edit",
             model_name: "gpt-test",
             is_stream: false,
         },

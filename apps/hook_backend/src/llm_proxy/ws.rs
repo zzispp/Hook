@@ -39,6 +39,7 @@ pub async fn realtime(
         &token.0,
         CandidateRequest {
             api_format: OPENAI_CHAT_FORMAT,
+            routing_api_format: OPENAI_CHAT_FORMAT,
             model_name,
             is_stream: true,
         },

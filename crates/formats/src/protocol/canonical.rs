@@ -1385,6 +1385,15 @@ pub(crate) fn openai_responses_input_to_canonical_messages(input: Option<&Value>
                             extensions: BTreeMap::new(),
                         });
                     }
+                    "reasoning" => {
+                        if let Some(block) = openai_responses_reasoning_item_to_block(item_object) {
+                            messages.push(CanonicalMessage {
+                                role: CanonicalRole::Assistant,
+                                content: vec![block],
+                                extensions: openai_responses_extensions(item_object, &["type", "id", "status", "summary", "encrypted_content"]),
+                            });
+                        }
+                    }
                     _ => messages.push(CanonicalMessage {
                         role: CanonicalRole::Unknown,
                         content: vec![CanonicalContentBlock::Unknown {
@@ -1400,6 +1409,39 @@ pub(crate) fn openai_responses_input_to_canonical_messages(input: Option<&Value>
         }
         _ => None,
     }
+}
+
+fn openai_responses_reasoning_item_to_block(item_object: &Map<String, Value>) -> Option<CanonicalContentBlock> {
+    let encrypted_content = item_object.get("encrypted_content").and_then(Value::as_str).filter(|value| !value.is_empty());
+    let text = openai_responses_reasoning_summary_text(item_object);
+    if text.trim().is_empty() && encrypted_content.is_none() {
+        return None;
+    }
+    let mut extensions = openai_responses_extensions(item_object, &["type", "id", "status", "summary", "encrypted_content"]);
+    canonical_extension_object_mut(&mut extensions, "openai").insert("omit_reasoning_parts".to_string(), Value::Bool(true));
+    Some(CanonicalContentBlock::Thinking {
+        text,
+        signature: None,
+        encrypted_content: encrypted_content.map(ToOwned::to_owned),
+        extensions,
+    })
+}
+
+fn openai_responses_reasoning_summary_text(item_object: &Map<String, Value>) -> String {
+    let Some(summary_items) = item_object.get("summary").and_then(Value::as_array) else {
+        return String::new();
+    };
+    summary_items
+        .iter()
+        .filter_map(|summary| {
+            summary
+                .as_object()
+                .and_then(|object| object.get("text"))
+                .and_then(Value::as_str)
+                .filter(|text| !text.trim().is_empty())
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 pub(crate) fn openai_responses_content_to_blocks(content: Option<&Value>) -> Option<Vec<CanonicalContentBlock>> {

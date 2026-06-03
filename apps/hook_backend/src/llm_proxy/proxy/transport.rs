@@ -6,7 +6,7 @@ use axum::{
     response::Response,
 };
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
-use serde_json::Value;
+use serde_json::{Value, json};
 use types::model::PatchField;
 
 use super::{
@@ -140,7 +140,7 @@ async fn full_success_response(input: FullResponseInput) -> Result<Response, Llm
     let body = match response_body(
         &input.state.http,
         &input.bytes,
-        input.candidate.trace.needs_conversion,
+        input.source_format != input.target_format,
         input.source_format,
         input.target_format,
     )
@@ -297,6 +297,9 @@ async fn response_body(
     source_format: ApiFormat,
     target_format: ApiFormat,
 ) -> Result<Vec<u8>, LlmProxyError> {
+    if target_format == ApiFormat::OpenAiImage && matches!(source_format, ApiFormat::OpenAiChat | ApiFormat::OpenAiResponses) {
+        return openai_image_bridge_response_body(bytes, source_format);
+    }
     let body = if needs_conversion {
         let value: Value = serde_json::from_slice(bytes).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         let converted = FormatConversionRegistry
@@ -310,6 +313,57 @@ async fn response_body(
         return normalize_image_response_bytes(http, &body).await;
     }
     Ok(body)
+}
+
+fn openai_image_bridge_response_body(bytes: &[u8], source_format: ApiFormat) -> Result<Vec<u8>, LlmProxyError> {
+    let response: Value = serde_json::from_slice(bytes).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+    let client = match source_format {
+        ApiFormat::OpenAiResponses => response,
+        ApiFormat::OpenAiChat => openai_image_response_to_chat_response(&response)?,
+        _ => unreachable!("openai image bridge only supports OpenAI chat or responses clients"),
+    };
+    serde_json::to_vec(&client).map_err(|error| LlmProxyError::Infrastructure(error.to_string()))
+}
+
+fn openai_image_response_to_chat_response(response: &Value) -> Result<Value, LlmProxyError> {
+    let markdown =
+        image_markdown_from_response(response).ok_or_else(|| LlmProxyError::Upstream("upstream image response did not include generated image data".into()))?;
+    Ok(json!({
+        "id": response.get("id").cloned().unwrap_or_else(|| Value::String("chatcmpl-image".to_string())),
+        "object": "chat.completion",
+        "created": response.get("created_at").cloned().unwrap_or_else(|| Value::Number(0.into())),
+        "model": response.get("model").cloned().unwrap_or(Value::Null),
+        "choices": [{
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": markdown,
+            },
+            "finish_reason": "stop",
+        }],
+        "usage": response.get("usage").cloned().unwrap_or(Value::Null),
+    }))
+}
+
+fn image_markdown_from_response(response: &Value) -> Option<String> {
+    let item = response
+        .get("output")
+        .and_then(Value::as_array)?
+        .iter()
+        .find(|item| item.get("type").and_then(Value::as_str) == Some("image_generation_call"))?;
+    let b64_json = item.get("result").and_then(Value::as_str)?;
+    let output_format = item.get("output_format").and_then(Value::as_str).unwrap_or("png");
+    Some(format!("![generated image](data:{};base64,{b64_json})", image_mime_type(output_format)))
+}
+
+fn image_mime_type(output_format: &str) -> String {
+    match output_format.trim().to_ascii_lowercase().as_str() {
+        "jpg" | "jpeg" => "image/jpeg".to_string(),
+        "webp" => "image/webp".to_string(),
+        "png" => "image/png".to_string(),
+        value if !value.is_empty() => format!("image/{value}"),
+        _ => "image/png".to_string(),
+    }
 }
 
 pub(super) fn content_type_headers(content_type: Option<&HeaderValue>) -> PatchField<HeaderMap> {

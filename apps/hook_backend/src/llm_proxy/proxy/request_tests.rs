@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use serde_json::json;
 use types::model::TieredPricingConfig;
 
-use super::{apply_reasoning_effort, rewrite_upstream_body};
+use super::{apply_reasoning_effort, bridge_openai_chat_image_body, openai_request_explicitly_selects_image_generation, rewrite_upstream_body};
 use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 use proxy::format_conversion::ApiFormat;
 
@@ -35,6 +35,46 @@ fn openai_chat_stream_requests_include_usage() {
     rewrite_upstream_body(&mut body, &candidate("openai:chat"), false, ApiFormat::OpenAiChat).unwrap();
 
     assert_eq!(body["stream_options"]["include_usage"], true);
+}
+
+#[test]
+fn image_generation_intent_requires_explicit_tool_choice() {
+    let body = json!({
+        "model": "gpt-5.5",
+        "input": "draw",
+        "tools": [{"type": "image_generation"}]
+    });
+
+    assert!(!openai_request_explicitly_selects_image_generation("openai:cli", &body));
+}
+
+#[test]
+fn image_generation_intent_accepts_object_tool_choice() {
+    let body = json!({
+        "model": "gpt-5.5",
+        "input": "draw",
+        "tools": [{"type": "image_generation"}],
+        "tool_choice": {"type": "image_generation"}
+    });
+
+    assert!(openai_request_explicitly_selects_image_generation("openai:cli", &body));
+}
+
+#[test]
+fn chat_image_bridge_preserves_image_tool_declaration() {
+    let body = json!({
+        "model": "gpt-5.5",
+        "messages": [{"role": "user", "content": "draw a cat"}],
+        "tools": [{"type": "image_generation", "size": "1024x1024"}],
+        "tool_choice": {"type": "image_generation"}
+    });
+
+    let bridged = bridge_openai_chat_image_body(body).unwrap();
+
+    assert_eq!(bridged["input"][0]["content"], "draw a cat");
+    assert_eq!(bridged["tools"][0]["type"], "image_generation");
+    assert_eq!(bridged["tools"][0]["size"], "1024x1024");
+    assert_eq!(bridged["tool_choice"]["type"], "image_generation");
 }
 
 fn candidate(provider_api_format: &str) -> ProxyCandidate {

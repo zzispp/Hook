@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate hero background implementation,DONE,Relevant hero visual components and styles identified,rg -n "HeroBand|DotField|ln-hero" apps/hook_frontend/src/react-bits,,0,"Hero.tsx DotField.tsx HeroBand.tsx Hero.css"
+2,Confirm likely refresh failure mode,IN_PROGRESS,Runtime or source evidence identifies a concrete first-render failure path,,0,
+3,Implement minimal root-cause fix,TODO,Hero background layers initialize from stable measurements and render visible pixels,,0,
+4,Validate frontend,TODO,Lint/build or targeted browser checks pass,,0,

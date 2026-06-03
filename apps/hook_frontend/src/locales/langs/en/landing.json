@@ -1,0 +1,366 @@
+{
+  "pageMetadata": {
+    "title": "Hook | Unified AI Gateway",
+    "description": "Unify OpenAI, Claude, Gemini, and CLI traffic behind one entry point, with routing, token governance, cost quotas, and health monitoring in one control plane."
+  },
+  "navbar": {
+    "links": {
+      "features": "Features",
+      "demo": "Live demo",
+      "quickStart": "Quick start",
+      "providers": "Providers"
+    },
+    "actions": {
+      "console": "Open console",
+      "catalog": "View model catalog",
+      "signIn": "Sign in",
+      "signUp": "Sign up",
+      "github": "GitHub",
+      "menu": "Menu"
+    },
+    "docs": {
+      "search": "Search",
+      "searchPlaceholder": "Search...",
+      "preferences": "Preferences",
+      "language": "Language",
+      "styling": "Styling",
+      "favorites": "Favorites"
+    }
+  },
+  "hero": {
+    "badge": "AI Gateway",
+    "badgeSuffix": "OpenAI Compatible",
+    "headlineDefaultName": "Hook AI",
+    "headlineSuffix": "Unified AI Gateway",
+    "description": "Unify Claude, OpenAI, Gemini, and CLI tool traffic behind one entry point, with model routing, user tokens, cost quotas, and health monitoring in a single control plane.",
+    "buttons": {
+      "console": "Open console",
+      "catalog": "View model catalog",
+      "signIn": "Sign in",
+      "signUp": "Sign up"
+    },
+    "code": {
+      "baseUrl": "Base URL",
+      "prompt": "Call a unified AI gateway through Hook"
+    }
+  },
+  "features": {
+    "title": "Core capabilities",
+    "cards": {
+      "models": {
+        "title": "Connect 300+ models",
+        "description": "Bring OpenAI, Claude, Gemini, DeepSeek, Qwen, and other leading or domestic model providers behind one entry point for chat, embeddings, image, and audio workloads."
+      },
+      "tokens": {
+        "title": "Token and access control",
+        "description": "Issue API tokens to users and teams, then control model access by group and role."
+      },
+      "routing": {
+        "title": "Smart load balancing",
+        "description": "Route across multiple provider endpoints with priority, weight, and health status, and switch automatically during failures."
+      },
+      "deployment": {
+        "title": "Self-hosted deployment",
+        "description": "Start with Docker in one step, or run on Kubernetes and source builds. Keep your data and credentials in your own environment."
+      },
+      "monitoring": {
+        "title": "Health monitoring and audit",
+        "description": "Track success rate, latency, and provider state in real time, with logs and request records ready when you need them."
+      },
+      "quota": {
+        "title": "Cost and quota control",
+        "description": "Record usage and cost by user, group, and model, then block traffic explicitly when budgets run out."
+      }
+    },
+    "quota": {
+      "monthly": "Monthly quota"
+    },
+    "monitor": {
+      "title": "Hook Gateway",
+      "frames": {
+        "health": {
+          "prompt": "check provider health",
+          "line1": {
+            "name": "OpenAI    ",
+            "status": "● healthy",
+            "metric": "  45ms"
+          },
+          "line2": {
+            "name": "Claude    ",
+            "status": "● healthy",
+            "metric": "  62ms"
+          },
+          "line3": {
+            "name": "Gemini    ",
+            "status": "○ degraded",
+            "metric": " 380ms"
+          }
+        },
+        "stats": {
+          "prompt": "show request stats",
+          "line1": {
+            "label": "Total:   ",
+            "value": "12,847",
+            "suffix": " requests"
+          },
+          "line2": {
+            "label": "Success: ",
+            "value": "99.2%",
+            "suffix": " uptime"
+          },
+          "line3": {
+            "label": "Avg:     ",
+            "value": "124ms",
+            "suffix": " latency"
+          }
+        },
+        "tokens": {
+          "prompt": "list active tokens",
+          "line1": {
+            "name": "sk-***xK9  ",
+            "status": "active",
+            "metric": "  dev-team"
+          },
+          "line2": {
+            "name": "sk-***mP4  ",
+            "status": "active",
+            "metric": "  staging"
+          },
+          "line3": {
+            "name": "sk-***zR7  ",
+            "status": "expired",
+            "metric": " personal"
+          }
+        }
+      }
+    },
+    "deployOptions": {
+      "dockerCompose": "Docker Compose",
+      "kubernetes": "Kubernetes",
+      "binary": "Binary",
+      "sourceBuild": "Source Build"
+    }
+  },
+  "ecosystem": {
+    "title": "Compatible ecosystem",
+    "items": {
+      "openai": {
+        "models": "GPT-4o · GPT-4.1 · o3 · DALL·E",
+        "badge": "Chat / Image / Embedding"
+      },
+      "anthropic": {
+        "models": "Claude 4 Opus · Sonnet · Haiku",
+        "badge": "Chat / Claude Code"
+      },
+      "google": {
+        "models": "Gemini 2.5 Pro · Flash · Imagen",
+        "badge": "Chat / Image / Embedding"
+      },
+      "deepseek": {
+        "models": "DeepSeek R1 · V3 · Coder",
+        "badge": "Chat / Reasoning"
+      },
+      "qwen": {
+        "models": "Qwen 3 · Qwen-VL · Qwen-Audio",
+        "badge": "Chat / Vision / Audio"
+      },
+      "azure": {
+        "models": "GPT-4o · Whisper · TTS",
+        "badge": "Chat / Audio / Speech"
+      },
+      "bedrock": {
+        "models": "Claude · Llama · Titan",
+        "badge": "Chat / Embedding"
+      },
+      "zhipu": {
+        "models": "GLM-4 · CogView · CogVideo",
+        "badge": "Chat / Image / Video"
+      },
+      "mistral": {
+        "models": "Mistral Large · Medium · Codestral",
+        "badge": "Chat / Code"
+      },
+      "ernie": {
+        "models": "ERNIE 4.5 · ERNIE Speed",
+        "badge": "Chat / Embedding"
+      },
+      "llama": {
+        "models": "Llama 4 · Llama 3.3",
+        "badge": "Chat / Code"
+      },
+      "moonshot": {
+        "models": "Kimi · Moonshot-v1",
+        "badge": "Chat / Long context"
+      },
+      "midjourney": {
+        "models": "MJ v6.1 · niji",
+        "badge": "Image generation"
+      },
+      "cursor": {
+        "models": "Point Cursor to the Hook gateway",
+        "badge": "IDE integration"
+      },
+      "claudeCode": {
+        "models": "Set API Base to Hook",
+        "badge": "CLI integration"
+      },
+      "suno": {
+        "models": "Suno v4 · v3.5",
+        "badge": "Music generation"
+      },
+      "yi": {
+        "models": "Yi-Lightning · Yi-Large",
+        "badge": "Chat / Vision"
+      },
+      "custom": {
+        "models": "Any OpenAI-compatible service",
+        "badge": "Custom headers / body"
+      }
+    }
+  },
+  "liveDemo": {
+    "title": "See Hook in action",
+    "subtitle": "Simulate multi-provider access, highly available load balancing, and automatic failover in seconds",
+    "controls": {
+      "modelLabel": "Select model",
+      "presetLabel": "Preset prompts",
+      "promptLabel": "Prompt input",
+      "promptPlaceholder": "Type your test prompt here...",
+      "failoverTitle": "Simulate provider failure",
+      "failoverDescription": "Force the primary channel to fail and rehearse automatic failover through the gateway",
+      "send": "Send gateway request",
+      "running": "Running simulation..."
+    },
+    "terminalTitle": "Hook Trace logs",
+    "emptyState": "Waiting for a request... Click “Send gateway request” on the left to inspect the forwarding trace",
+    "streamTitle": "Streaming response",
+    "streamOutput": "Server Stream Output",
+    "modelOptions": {
+      "gpt4o": "gpt-4o (OpenAI compatible / mainstream choice)",
+      "claude": "claude-3-5-sonnet (Anthropic / strong reasoning)",
+      "gemini": "gemini-1-5-pro (Google / long context)",
+      "deepseek": "deepseek-r1 (DeepSeek / deep reasoning)"
+    },
+    "presets": {
+      "gateway": {
+        "label": "What is an AI gateway?",
+        "text": "What is an AI gateway, and what are its core advantages?"
+      },
+      "joke": {
+        "label": "Tell a programmer joke",
+        "text": "Tell me a joke about programmers and bugs."
+      },
+      "rust": {
+        "label": "Write Rust Hello World",
+        "text": "Write the most basic Hello World example in Rust."
+      }
+    },
+    "responses": {
+      "gpt4o": {
+        "gateway": "An AI gateway is a unified proxy layer between clients and upstream AI services. It handles authentication, model routing, smart load balancing, rate control, auditing, and automatic failover so teams reduce key exposure and switch traffic within seconds during outages.",
+        "joke": "Why do programmers prefer dark mode? Because light attracts bugs.",
+        "rust": "```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```\nThis is the standard Rust starter example, using the `println!` macro to print to the console."
+      },
+      "claude": {
+        "gateway": "An AI gateway is a one-stop solution for multi-model integration. Instead of exposing every provider difference to application code, it hides protocol and pricing differences behind a standard interface and distributes traffic by priority or weight.",
+        "joke": "There are 10 kinds of people in the world: those who understand binary, and those who do not.",
+        "rust": "```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```\nIn Rust, the `main` function is the entry point and `println!` is the macro that writes output."
+      },
+      "gemini": {
+        "gateway": "An AI gateway is a high-performance middleware layer that shields applications from differences in streaming, error handling, and billing across model providers. It pulls cost control, security, and availability into one request path.",
+        "joke": "A programmer went shopping. Their partner said, “Buy a loaf of bread, and if they have watermelons, buy one.” The programmer came back with one loaf of bread because the store did have watermelons.",
+        "rust": "```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```\nRun `cargo run` to compile and execute the code."
+      },
+      "deepseek": {
+        "gateway": "<think>\nThought process:\n1. The user is asking for the definition and value of an AI gateway.\n2. Summarize the key problems: protocol fragmentation, credential sprawl, and missing failover.\n3. Answer in a structured, enterprise-oriented way.\n</think>\nAn AI gateway is key infrastructure for enterprise AI systems. It unifies API formats across major providers and provides unified routing, smart load balancing, and failover so traffic can move safely across multiple upstream channels.",
+        "joke": "<think>\nThought process:\n1. Pick a classic programmer joke.\n2. Use a base-conversion joke for instant recognition.\n</think>\nWhy do programmers always mix up Halloween and Christmas? Because Oct 31 equals Dec 25.",
+        "rust": "<think>\nThought process:\n1. Generate the smallest runnable Rust program.\n2. Return it in a code block.\n</think>\n```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```"
+      },
+      "custom": {
+        "deepseek": "<think>\nReasoning:\nThe user entered a custom prompt: \"{{prompt}}\". The gateway maps the request and forwards it to the configured {{model}} upstream.\n</think>\n[Hook Gateway] This is a simulated answer for the custom prompt. In production, Hook would route the request to your configured {{model}} provider and stream back the real result.",
+        "default": "[Hook Gateway] Received custom input: \"{{prompt}}\".\nThis is a preview environment. In production, the request would be routed safely through Hook to the configured {{model}} upstream and billed against your token and quota plan."
+      }
+    },
+    "logs": {
+      "request": "POST /v1/chat/completions (model: \"{{model}}\")",
+      "authPassed": "Validated API key [sk-hook-demo***]... passed (user: test-dev-team)",
+      "quotaChecked": "Checked quota and wallet balance... healthy. Remaining balance: $84.21",
+      "routeMatched": "Matched routing policy... target model: \"{{model}}\"",
+      "primarySelected": "Smart load balancing: selected primary channel A [Official OpenAI - weight 50%]",
+      "primaryForwarding": "Forwarding request to channel A...",
+      "primaryFailed": "Channel A failed: [HTTP 503] Service Unavailable (upstream rate limit or outage)",
+      "failoverTriggered": "Gateway failover triggered: the primary request failed, switching to automatic retry strategy.",
+      "secondarySelected": "Smart load balancing: selected backup channel B [Azure OpenAI backup - priority 2]",
+      "secondaryForwarding": "Forwarding request to channel B...",
+      "secondarySuccess": "Channel B returned 200 OK and established a Server-Sent Events stream.",
+      "primarySuccess": "Channel A returned 200 OK and established a Server-Sent Events stream.",
+      "streamComplete": "Streaming completed. API connection closed.",
+      "billing": "Billing applied: 840 tokens consumed (Input 40 / Output 800).",
+      "walletUpdated": "Wallet balance updated: $84.2088."
+    }
+  },
+  "quickStart": {
+    "title": "Get started in seconds",
+    "methods": {
+      "dockerRun": "Docker Run",
+      "dockerCompose": "Docker Compose",
+      "sourceBuild": "Source Build"
+    },
+    "copyCommand": "Copy command",
+    "hint": "Self-hosted deployment keeps your data and credentials in your own environment."
+  },
+  "providers": {
+    "title": "Supported provider channels and ecosystem integrations",
+    "subtitle": "Built-in cross-provider protocol rewriting wraps heterogeneous APIs into one standard format for mainstream clients and developer frameworks",
+    "items": {
+      "openai": {
+        "tag": "Official models",
+        "description": "GPT-4o, o1, DALL·E 3, Embeddings"
+      },
+      "anthropic": {
+        "tag": "Official models",
+        "description": "Claude 3.5 Sonnet, Claude 3 Opus"
+      },
+      "gemini": {
+        "tag": "Official models",
+        "description": "Gemini 1.5 Pro, Flash, 2.0 Flash"
+      },
+      "deepseek": {
+        "tag": "Mainstream channel",
+        "description": "DeepSeek-R1, DeepSeek-V3, Chat"
+      },
+      "local": {
+        "tag": "Self-hosted",
+        "description": "Ollama, vLLM, LocalAI, Llama.cpp"
+      },
+      "midjourney": {
+        "tag": "Multimodal",
+        "description": "Imagine, Upscale, and Variation image workflows"
+      },
+      "qwen": {
+        "tag": "Domestic models",
+        "description": "Qwen, full Qwen-2.5 Coder/Math lineup"
+      },
+      "groq": {
+        "tag": "Fast inference",
+        "description": "LLaMA 3.1 and Mixtral for low-latency inference"
+      }
+    }
+  },
+  "cta": {
+    "title": "Take control of your AI traffic",
+    "description": "Deploy Hook in one step and run model routing, load balancing, token throttling, and observability in a secure self-hosted environment. Open source, free, and private by default.",
+    "primaryAction": "Open console",
+    "secondaryAction": "GitHub repository"
+  },
+  "footer": {
+    "fallbackTagline": "A self-hosted AI API gateway.",
+    "navigation": "Navigation",
+    "community": "Community",
+    "console": "Open console",
+    "catalog": "Model catalog",
+    "status": "Channel status",
+    "createdWith": "Created with",
+    "by": "by"
+  }
+}

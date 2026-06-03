@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map Hook image routing pipeline,DONE,"Current proxy and candidate flow for OpenAI image bridge is understood","rg -n \"openai:image|image_generation\" apps/hook_backend crates",2026-06-03,0,"Candidate selection used client api_format for endpoint routing; image intent needed a separate routing format."
+2,Implement explicit image intent routing,DONE,"tool_choice.type=image_generation can select image-capable provider handling","timeout 60 cargo test -p backend matching_candidate_parts_routes_explicit_image_intent_to_image_endpoint",2026-06-03,0,
+3,Validate Aether parity boundaries,DONE,"tools declaration alone does not trigger image generation and no tool removal is added","timeout 60 cargo test -p backend image_generation_intent && timeout 60 cargo test -p backend chat_image_bridge_preserves_image_tool_declaration",2026-06-03,0,
+4,Run focused checks,DONE,"Focused backend tests pass within 60 seconds","timeout 60 cargo test -p backend image_generation --no-fail-fast",2026-06-03,0,"Also ran request::tests, matching_candidate_parts, and image_bridge_response."

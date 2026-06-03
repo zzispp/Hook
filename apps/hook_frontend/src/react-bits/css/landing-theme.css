@@ -40,9 +40,6 @@ html[data-react-bits-home='true'] body {
 .ln-navbar-mobile-link:hover,
 .ln-navbar-mobile-pro,
 .ln-navbar-mobile-pro-arrow,
-.ln-navbar-icon-btn:hover,
-.ln-navbar-toggle-item:hover,
-.ln-navbar-toggle-item.active,
 .ln-hero-headline,
 .ln-features-title,
 .ln-features-card-body h3,
@@ -50,7 +47,6 @@ html[data-react-bits-home='true'] body {
 .ln-test-title,
 .ln-qs-title,
 .ln-sp-title,
-.ln-sp-card-name,
 .ln-cta-headline {
   color: var(--text-primary);
 }
@@ -58,7 +54,6 @@ html[data-react-bits-home='true'] body {
 .ln-hero-description,
 .ln-features-card-body p,
 .ln-test-text,
-.ln-qs-subtitle,
 .ln-cta-sub,
 .ln-footer-tagline,
 .ln-footer-link,
@@ -71,17 +66,13 @@ html[data-react-bits-home='true'] body {
 .ln-navbar-browse,
 .ln-navbar-github,
 .ln-navbar-hamburger,
-.ln-navbar-icon-btn,
-.ln-navbar-prefs-menu,
 .ln-navbar-mobile-menu,
-.ln-navbar.ln-navbar-docs.ln-navbar-scrolled .ln-navbar-inner,
 .ln-hero-tag,
 .ln-hero-code-window,
 .ln-features-card,
 .ln-demo-card,
 .ln-test-card,
-.ln-qs-terminal,
-.ln-sp-card {
+.ln-qs-terminal {
   border-color: var(--border-subtle);
   background: var(--bg-glass);
   box-shadow: var(--shadow-card);
@@ -91,65 +82,23 @@ html[data-react-bits-home='true'] body {
 .ln-navbar-browse,
 .ln-navbar-github,
 .ln-navbar-hamburger,
-.ln-navbar-icon-btn,
-.ln-navbar-prefs-menu,
 .ln-navbar-mobile-menu,
 .ln-hero-tag,
 .ln-hero-code-window,
 .ln-features-card,
 .ln-demo-card,
-.ln-qs-terminal,
-.ln-sp-card {
+.ln-qs-terminal {
   backdrop-filter: blur(32px) saturate(1.3);
   -webkit-backdrop-filter: blur(32px) saturate(1.3);
 }
 
-.ln-navbar.ln-navbar-scrolled .ln-navbar-inner,
-.ln-navbar.ln-navbar-docs .ln-navbar-inner,
-.ln-navbar.ln-navbar-docs.ln-navbar-scrolled .ln-navbar-inner {
+.ln-navbar.ln-navbar-scrolled .ln-navbar-inner {
   background: var(--bg-glass);
   border-color: var(--border-subtle);
 }
 
 .ln-navbar-link-highlight {
   box-shadow: var(--shadow-card-soft);
-}
-
-.ln-sp-tier-badge--diamond {
-  color: var(--sponsor-diamond-badge-color);
-  border-color: var(--sponsor-diamond-badge-border);
-  background: var(--sponsor-diamond-badge-bg);
-}
-
-.ln-sp-tier-badge--platinum {
-  color: var(--sponsor-platinum-badge-color);
-}
-
-.ln-sp-tier-badge--silver {
-  color: var(--sponsor-silver-badge-color);
-}
-
-.ln-sp-card-arrow {
-  color: var(--sponsor-card-arrow);
-}
-
-.ln-sp-card:hover .ln-sp-card-arrow {
-  color: var(--sponsor-card-arrow-hover);
-}
-
-.ln-sp-card--empty {
-  border-color: var(--sponsor-empty-border);
-  background: var(--sponsor-empty-bg);
-  box-shadow: none;
-}
-
-.ln-sp-card--empty:hover {
-  border-color: var(--sponsor-empty-hover-border);
-}
-
-.ln-sp-empty-label,
-.ln-sp-empty-name {
-  color: var(--sponsor-empty-color);
 }
 
 .ln-navbar-settings.MuiIconButton-root {
@@ -175,36 +124,22 @@ html[data-react-bits-home='true'] body {
 .ln-navbar-browse:hover,
 .ln-navbar-github:hover,
 .ln-navbar-hamburger:hover,
-.ln-navbar-icon-btn:hover,
-.ln-navbar-toggle-item:hover,
 .ln-hero-tag:hover {
   border-color: var(--border-strong);
   background: var(--bg-glass-hover);
   color: var(--text-primary);
 }
 
-.ln-navbar-soon,
-.ln-navbar-kbd,
-.ln-navbar-toggle-group,
 .ln-feat-pill,
 .ln-feat-vrow,
 .ln-feat-aichat-inner,
-.ln-qs-copy,
-.ln-sp-tier-badge--platinum,
-.ln-sp-tier-badge--silver {
+.ln-qs-copy {
   border-color: var(--border-secondary);
   background: var(--bg-input);
 }
 
-.ln-navbar-soon,
-.ln-navbar-kbd,
-.ln-navbar-search-text,
-.ln-navbar-prefs-label,
-.ln-navbar-mobile-label,
 .ln-navbar-mobile-link,
-.ln-navbar-prefs-fav,
 .ln-hero-tag,
-.ln-hero-code-reset,
 .ln-hero-code-dropdown-trigger,
 .ln-hero-code-dropdown-item,
 .ln-feat-pill,
@@ -215,31 +150,24 @@ html[data-react-bits-home='true'] body {
 .ln-feat-aichat-title,
 .ln-feat-aichat-chevron,
 .ln-feat-aichat-prompt,
-.ln-feat-stars-label,
+.ln-feat-quota-label,
 .ln-demo-card-category,
 .ln-demo-card-name,
-.ln-test-handle,
-.ln-test-x-icon,
+.ln-eco-name,
+.ln-eco-badge,
 .ln-qs-tab,
-.ln-qs-runner-trigger,
-.ln-qs-runner-item,
 .ln-qs-prompt,
 .ln-qs-hint,
-.ln-sp-footer-link,
 .ln-footer-col-title,
 .ln-footer-attribution,
 .ln-footer-copy {
   color: var(--text-dimmed);
 }
 
-.ln-navbar-mobile-divider,
-.ln-navbar-prefs-divider,
 .ln-hero-code-titlebar,
 .ln-features-card-body,
 .ln-feat-aichat-head,
 .ln-feat-aichat-prompt-row,
-.ln-qs-tab-bar,
-.ln-sp-card-info,
-.ln-footer-divider {
+.ln-qs-tab-bar {
   border-color: var(--border-secondary);
 }

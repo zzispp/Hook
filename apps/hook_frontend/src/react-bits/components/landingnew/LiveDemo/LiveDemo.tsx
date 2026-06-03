@@ -1,180 +1,389 @@
-import type { ReactNode } from 'react';
+'use client';
 
-import { motion } from 'motion/react';
-import { lazy, Suspense, useState, useEffect } from 'react';
-import { FiHome, FiStar, FiHeart, FiSearch, FiSettings } from 'react-icons/fi';
+import type { CSSProperties } from 'react';
 
-import { Link } from 'src/react-bits/router';
+import { FiPlay, FiAlertTriangle } from 'react-icons/fi';
+import { useRef, useState, useEffect, useCallback } from 'react';
 
-const ShapeGrid = lazy(() => import('../../../content/Backgrounds/ShapeGrid/ShapeGrid'));
-const ShinyText = lazy(() => import('../../../content/TextAnimations/ShinyText/ShinyText'));
-const MagicRings = lazy(() => import('../../../content/Animations/MagicRings/MagicRings'));
-const Dock = lazy(() => import('../../../content/Components/Dock/Dock'));
+import { useTranslate } from 'src/locales';
+import { primaryColorPresets } from 'src/theme/with-settings';
 
-const DEMO_COLOR_DEFAULTS = {
-  shapeBorder: 'rgba(105, 80, 232, 0.18)',
-  shapeHover: 'rgba(105, 80, 232, 0.08)',
-  ringPrimary: '#6950E8',
-  ringSecondary: '#FFAB00',
+import { useSettingsContext } from 'src/components/settings';
+
+import {
+  type ModelKey,
+  getResponseBody,
+  getPresetPrompts,
+  type PresetPrompt,
+  findPresetByPrompt,
+  getModelOptionLabel,
+} from './live-demo-content';
+
+const DEFAULT_TIME = '11:00:00';
+const STREAM_CHAR_DELAY_MS = 15;
+const THINK_BLOCK_REGEX = /<think>([\s\S]*?)<\/think>([\s\S]*)/;
+
+type TraceLog = {
+  readonly time: string;
+  readonly tag: 'client' | 'gateway' | 'upstream' | 'error' | 'success';
+  readonly text: string;
 };
 
-type DemoColors = typeof DEMO_COLOR_DEFAULTS;
-
-type DemoCard = {
-  readonly category: string;
-  readonly component: string;
-  readonly href: string;
-  readonly span: number;
-  readonly tall?: boolean;
-  readonly render: (colors: DemoColors) => ReactNode;
+type SimulationStep = {
+  readonly delay: number;
+  readonly tag: TraceLog['tag'];
+  readonly text: string;
 };
 
-function readCssVar(styles: CSSStyleDeclaration, name: string, fallback: string): string {
-  const value = styles.getPropertyValue(name).trim();
-  return value || fallback;
+type CSSVariableProperties = CSSProperties & {
+  readonly [key: `--${string}`]: string;
+};
+
+function formatTime(): string {
+  return new Date().toTimeString().split(' ')[0] || DEFAULT_TIME;
 }
 
-function readDemoColors(): DemoColors {
-  if (typeof window === 'undefined') return DEMO_COLOR_DEFAULTS;
+function hexToRgba(hex: string, alpha: number): string {
+  const cleanHex = hex.replace('#', '').trim();
+  let r = 0;
+  let g = 0;
+  let b = 0;
 
-  const styles = window.getComputedStyle(document.documentElement);
+  if (cleanHex.length === 3) {
+    r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    b = parseInt(cleanHex[2] + cleanHex[2], 16);
+  } else if (cleanHex.length === 6) {
+    r = parseInt(cleanHex.slice(0, 2), 16);
+    g = parseInt(cleanHex.slice(2, 4), 16);
+    b = parseInt(cleanHex.slice(4, 6), 16);
+  }
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function splitResponseContent(responseBody: string) {
+  const match = THINK_BLOCK_REGEX.exec(responseBody);
+
+  if (!match) {
+    return { thinking: '', content: responseBody };
+  }
+
   return {
-    shapeBorder: readCssVar(styles, '--demo-shape-border', DEMO_COLOR_DEFAULTS.shapeBorder),
-    shapeHover: readCssVar(styles, '--demo-shape-hover', DEMO_COLOR_DEFAULTS.shapeHover),
-    ringPrimary: readCssVar(styles, '--demo-ring-primary', DEMO_COLOR_DEFAULTS.ringPrimary),
-    ringSecondary: readCssVar(styles, '--demo-ring-secondary', DEMO_COLOR_DEFAULTS.ringSecondary),
+    thinking: match[1] || '',
+    content: match[2] || '',
   };
 }
 
-function useDemoColors(): DemoColors {
-  const [colors, setColors] = useState(readDemoColors);
+const LiveDemo = () => {
+  const { t } = useTranslate('landing');
+  const { state } = useSettingsContext();
+  const primaryColor = state.primaryColor;
+  const preset = primaryColorPresets[primaryColor] || primaryColorPresets.default;
+  const presetPrompts = getPresetPrompts(t);
+  const defaultPrompt = presetPrompts[0]?.text ?? '';
+  const previousPresetPromptsRef = useRef<readonly PresetPrompt[]>(presetPrompts);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const [isDark, setIsDark] = useState(false);
+  const [model, setModel] = useState<ModelKey>('gpt-4o');
+  const [prompt, setPrompt] = useState(defaultPrompt);
+  const [simulateFailure, setSimulateFailure] = useState(false);
+  const [logs, setLogs] = useState<readonly TraceLog[]>([]);
+  const [streamText, setStreamText] = useState('');
+  const [thinkingText, setThinkingText] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [streamPhase, setStreamPhase] = useState<'idle' | 'thinking' | 'streaming' | 'done'>('idle');
+
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
+
+  const scheduleTimer = useCallback((callback: () => void, delay: number) => {
+    const timer = setTimeout(callback, delay);
+    timersRef.current.push(timer);
+    return timer;
+  }, []);
+
+  const addLog = useCallback((tag: TraceLog['tag'], text: string) => {
+    setLogs((prev) => [...prev, { time: formatTime(), tag, text }]);
+  }, []);
 
   useEffect(() => {
-    const update = () => setColors(readDemoColors());
-    const observer = new MutationObserver(update);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-color-scheme', 'data-react-bits-home'],
-    });
-    update();
+    const checkDark = () => {
+      const colorScheme = document.documentElement.getAttribute('data-color-scheme');
+      setIsDark(colorScheme === 'dark');
+    };
+
+    checkDark();
+
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, { attributeFilter: ['data-color-scheme'] });
+
     return () => observer.disconnect();
   }, []);
 
-  return colors;
-}
+  useEffect(() => clearTimers, [clearTimers]);
 
-const CARDS: readonly DemoCard[] = [
-  {
-    category: 'Backgrounds',
-    component: 'ShapeGrid',
-    href: '/backgrounds/shape-grid',
-    span: 7,
-    tall: true,
-    render: (colors) => (
-      <Suspense fallback={null}>
-        <ShapeGrid
-          shape="hexagon"
-          squareSize={48}
-          borderColor={colors.shapeBorder}
-          hoverFillColor={colors.shapeHover}
-          direction="right"
-          speed={0.3}
-        />
-      </Suspense>
-    ),
-  },
-  {
-    category: 'Animations',
-    component: 'MagicRings',
-    href: '/animations/magic-rings',
-    span: 5,
-    tall: true,
-    render: (colors) => (
-      <Suspense fallback={null}>
-        <div className="ln-demo-rings-wrap">
-          <MagicRings
-            color={colors.ringPrimary}
-            colorTwo={colors.ringSecondary}
-            ringCount={5}
-            speed={0.6}
-            lineThickness={1}
-            opacity={0.6}
-          />
-        </div>
-      </Suspense>
-    ),
-  },
-  {
-    category: 'Text Animations',
-    component: 'ShinyText',
-    href: '/text-animations/shiny-text',
-    span: 4,
-    render: () => (
-      <Suspense fallback={null}>
-        <div className="ln-demo-center">
-          <ShinyText
-            text="Shiny Text"
-            speed={2.5}
-            className="ln-demo-shiny"
-          />
-        </div>
-      </Suspense>
-    ),
-  },
-  {
-    category: 'Components',
-    component: 'Dock',
-    href: '/components/dock',
-    span: 8,
-    render: () => (
-      <Suspense fallback={null}>
-        <div className="ln-demo-dock-wrap">
-          <Dock
-            items={[
-              { icon: <FiHome size={20} />, label: 'Home' },
-              { icon: <FiSearch size={20} />, label: 'Search' },
-              { icon: <FiStar size={20} />, label: 'Favorites' },
-              { icon: <FiHeart size={20} />, label: 'Likes' },
-              { icon: <FiSettings size={20} />, label: 'Settings' },
-            ]}
-            magnification={56}
-            distance={150}
-            panelHeight={52}
-            baseItemSize={36}
-          />
-        </div>
-      </Suspense>
-    ),
-  },
-];
+  useEffect(() => {
+    if (isRunning) {
+      previousPresetPromptsRef.current = presetPrompts;
+      return;
+    }
 
-const LiveDemo = () => {
-  const colors = useDemoColors();
+    const previousPreset = findPresetByPrompt(previousPresetPromptsRef.current, prompt);
+
+    if (previousPreset) {
+      const nextPreset = presetPrompts.find((item) => item.key === previousPreset.key);
+
+      if (nextPreset && nextPreset.text !== prompt) {
+        setPrompt(nextPreset.text);
+      }
+    } else if (!prompt && defaultPrompt) {
+      setPrompt(defaultPrompt);
+    }
+
+    previousPresetPromptsRef.current = presetPrompts;
+  }, [defaultPrompt, isRunning, presetPrompts, prompt]);
+
+  const styleOverrides: CSSVariableProperties = {
+    '--accent-theme': preset.main,
+    '--accent-theme-hover': isDark ? (preset.light || preset.main) : (preset.dark || preset.main),
+    '--accent-theme-bg': hexToRgba(preset.main, 0.08),
+    '--accent-theme-border': hexToRgba(preset.main, 0.25),
+    '--accent-theme-contrast': preset.contrastText,
+  };
+
+  const handleSend = useCallback(() => {
+    if (isRunning) {
+      return;
+    }
+
+    const promptText = prompt.trim();
+
+    if (!promptText) {
+      return;
+    }
+
+    setIsRunning(true);
+    setLogs([]);
+    setStreamText('');
+    setThinkingText('');
+    setStreamPhase('idle');
+    clearTimers();
+
+    const selectedModel = model;
+    const presetPrompt = findPresetByPrompt(presetPrompts, promptText);
+    const responseBody = getResponseBody(t, selectedModel, promptText, presetPrompt);
+    const steps: SimulationStep[] = [
+      { delay: 0, tag: 'client', text: t('liveDemo.logs.request', { model: selectedModel }) },
+      { delay: 400, tag: 'gateway', text: t('liveDemo.logs.authPassed') },
+      { delay: 800, tag: 'gateway', text: t('liveDemo.logs.quotaChecked') },
+      { delay: 1200, tag: 'gateway', text: t('liveDemo.logs.routeMatched', { model: selectedModel }) },
+    ];
+
+    let currentDelay = 1600;
+
+    if (simulateFailure) {
+      steps.push(
+        { delay: currentDelay, tag: 'gateway', text: t('liveDemo.logs.primarySelected') },
+        { delay: currentDelay + 400, tag: 'upstream', text: t('liveDemo.logs.primaryForwarding') },
+        { delay: currentDelay + 1400, tag: 'error', text: t('liveDemo.logs.primaryFailed') },
+        { delay: currentDelay + 1800, tag: 'gateway', text: t('liveDemo.logs.failoverTriggered') },
+        { delay: currentDelay + 2200, tag: 'gateway', text: t('liveDemo.logs.secondarySelected') },
+        { delay: currentDelay + 2600, tag: 'upstream', text: t('liveDemo.logs.secondaryForwarding') },
+        { delay: currentDelay + 3200, tag: 'success', text: t('liveDemo.logs.secondarySuccess') }
+      );
+      currentDelay += 3500;
+    } else {
+      steps.push(
+        { delay: currentDelay, tag: 'gateway', text: t('liveDemo.logs.primarySelected') },
+        { delay: currentDelay + 400, tag: 'upstream', text: t('liveDemo.logs.primaryForwarding') },
+        { delay: currentDelay + 900, tag: 'success', text: t('liveDemo.logs.primarySuccess') }
+      );
+      currentDelay += 1200;
+    }
+
+    steps.forEach(({ delay, tag, text }) => {
+      scheduleTimer(() => addLog(tag, text), delay);
+    });
+
+    const { thinking, content } = splitResponseContent(responseBody);
+    const totalLength = thinking.length + content.length;
+    const streamStartDelay = currentDelay + 200;
+    let charIndex = 0;
+
+    const streamNextChar = () => {
+      if (thinking && charIndex < thinking.length) {
+        setStreamPhase('thinking');
+        setThinkingText(thinking.slice(0, charIndex + 1));
+        charIndex += 1;
+        scheduleTimer(streamNextChar, STREAM_CHAR_DELAY_MS);
+        return;
+      }
+
+      if (charIndex < totalLength) {
+        const contentIndex = charIndex - thinking.length;
+        setStreamPhase('streaming');
+        setStreamText(content.slice(0, contentIndex + 1));
+        charIndex += 1;
+        scheduleTimer(streamNextChar, STREAM_CHAR_DELAY_MS);
+        return;
+      }
+
+      setStreamPhase('done');
+      scheduleTimer(() => {
+        addLog('success', t('liveDemo.logs.streamComplete'));
+        addLog('gateway', t('liveDemo.logs.billing'));
+        addLog('gateway', t('liveDemo.logs.walletUpdated'));
+        setIsRunning(false);
+      }, 200);
+    };
+
+    scheduleTimer(streamNextChar, streamStartDelay);
+  }, [addLog, clearTimers, isRunning, model, presetPrompts, prompt, scheduleTimer, simulateFailure, t]);
+
+  const handlePromptSelect = useCallback(
+    (text: string) => {
+      if (isRunning) {
+        return;
+      }
+
+      setPrompt(text);
+    },
+    [isRunning]
+  );
 
   return (
-    <section className="ln-demo-section">
+    <section id="live-demo" className="ln-demo-section" style={styleOverrides}>
       <div className="ln-demo-inner">
-        <h2 className="ln-demo-title">See them in action</h2>
+        <h2 className="ln-demo-title">{t('liveDemo.title')}</h2>
+        <p className="ln-demo-subtitle">{t('liveDemo.subtitle')}</p>
 
-        <div className="ln-demo-grid">
-          {CARDS.map((card, i) => (
-            <motion.div
-              key={card.component}
-              className={`ln-demo-card ln-demo-card--span-${card.span}${card.tall ? ' ln-demo-card--tall' : ''}`}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, delay: i * 0.07, ease: [0.21, 0.47, 0.32, 0.98] }}
-            >
-              <Link to={card.href} className="ln-demo-card-link">
-                <div className="ln-demo-card-visual">{card.render(colors)}</div>
-                <div className="ln-demo-card-overlay">
-                  <span className="ln-demo-card-category">{card.category}</span>
-                  <span className="ln-demo-card-name">{card.component}</span>
+        <div className="ln-playground">
+          <div className="ln-playground-control">
+            <div className="ln-control-group">
+              <label className="ln-control-label">{t('liveDemo.controls.modelLabel')}</label>
+              <select
+                className="ln-select"
+                value={model}
+                onChange={(event) => !isRunning && setModel(event.target.value as ModelKey)}
+                disabled={isRunning}
+              >
+                <option value="gpt-4o">{getModelOptionLabel(t, 'gpt-4o')}</option>
+                <option value="claude-3-5-sonnet">{getModelOptionLabel(t, 'claude-3-5-sonnet')}</option>
+                <option value="gemini-1-5-pro">{getModelOptionLabel(t, 'gemini-1-5-pro')}</option>
+                <option value="deepseek-r1">{getModelOptionLabel(t, 'deepseek-r1')}</option>
+              </select>
+            </div>
+
+            <div className="ln-control-group">
+              <label className="ln-control-label">{t('liveDemo.controls.presetLabel')}</label>
+              <div className="ln-prompts-grid">
+                {presetPrompts.map((presetPrompt) => (
+                  <button
+                    key={presetPrompt.key}
+                    className={`ln-prompt-btn${prompt === presetPrompt.text ? ' active' : ''}`}
+                    onClick={() => handlePromptSelect(presetPrompt.text)}
+                    disabled={isRunning}
+                  >
+                    {presetPrompt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="ln-control-group">
+              <label className="ln-control-label">{t('liveDemo.controls.promptLabel')}</label>
+              <textarea
+                className="ln-textarea"
+                value={prompt}
+                onChange={(event) => !isRunning && setPrompt(event.target.value)}
+                placeholder={t('liveDemo.controls.promptPlaceholder')}
+                disabled={isRunning}
+              />
+            </div>
+
+            <div className="ln-toggle-wrapper">
+              <div className="ln-toggle-info">
+                <span className="ln-toggle-title">{t('liveDemo.controls.failoverTitle')}</span>
+                <span className="ln-toggle-desc">{t('liveDemo.controls.failoverDescription')}</span>
+              </div>
+              <label className="ln-switch">
+                <input
+                  type="checkbox"
+                  checked={simulateFailure}
+                  onChange={(event) => !isRunning && setSimulateFailure(event.target.checked)}
+                  disabled={isRunning}
+                />
+                <span className="ln-slider" />
+              </label>
+            </div>
+
+            <button className="ln-send-btn" onClick={handleSend} disabled={isRunning || !prompt.trim()}>
+              {isRunning ? (
+                <>{t('liveDemo.controls.running')}</>
+              ) : (
+                <>
+                  <FiPlay size={14} /> {t('liveDemo.controls.send')}
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="ln-playground-terminal">
+            <div className="ln-terminal-head">
+              <div className="ln-terminal-dots">
+                <span />
+                <span />
+                <span />
+              </div>
+              <span className="ln-terminal-title">{t('liveDemo.terminalTitle')}</span>
+            </div>
+
+            <div className="ln-terminal-body">
+              {logs.length === 0 && !isRunning && (
+                <div style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center', marginTop: '60px' }}>
+                  <FiAlertTriangle size={24} style={{ marginBottom: '8px', opacity: 0.7 }} />
+                  <p style={{ margin: 0 }}>{t('liveDemo.emptyState')}</p>
                 </div>
-              </Link>
-            </motion.div>
-          ))}
+              )}
+
+              {logs.map((log, index) => (
+                <div key={index} className="ln-trace-log">
+                  <span className="ln-trace-time">[{log.time}]</span>
+                  <span className="ln-trace-text">
+                    <span className={`ln-trace-tag ln-trace-tag--${log.tag}`}>{log.tag.toUpperCase()}</span>
+                    {log.text}
+                  </span>
+                </div>
+              ))}
+
+              {(thinkingText || streamText || (isRunning && logs.length >= 5)) && (
+                <div className="ln-stream-output">
+                  <div className="ln-stream-title">
+                    <span>
+                      {t('liveDemo.streamTitle')} ({t('liveDemo.streamOutput')})
+                    </span>
+                    <span style={{ color: 'rgba(56, 242, 178, 0.7)' }}>{model}</span>
+                  </div>
+                  <div className="ln-stream-text-box">
+                    {thinkingText && (
+                      <div className="ln-stream-think">
+                        &lt;think&gt;
+                        {thinkingText}
+                        {streamPhase === 'thinking' && <span className="ln-stream-cursor" />}
+                        &lt;/think&gt;
+                      </div>
+                    )}
+                    {streamText}
+                    {streamPhase === 'streaming' && <span className="ln-stream-cursor" />}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </section>

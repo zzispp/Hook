@@ -104,6 +104,7 @@ pub struct CandidateSelection {
 #[derive(Clone, Copy)]
 pub struct CandidateRequest<'a> {
     pub api_format: &'a str,
+    pub routing_api_format: &'a str,
     pub model_name: &'a str,
     pub is_stream: bool,
 }

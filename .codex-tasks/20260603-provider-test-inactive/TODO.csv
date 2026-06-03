@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,定位 provider 测试接口与 inactive 校验来源,DONE,"确认报错来源与受影响校验层级","rg -n \"provider not found or inactive|test_model_binding|fixed_parts\" apps/hook_backend/src","2026-06-03 14:42",0,"根因位于 model_test/selection.rs 的 provider 查找逻辑"
+2,修改模型测试链路以允许禁用 provider 参与测试,DONE,"测试链路不再因 provider.is_active=false 被拒绝","cargo test -p backend llm_proxy::model_test::selection::tests::fixed_parts_allows_inactive_provider_for_manual_test -- --exact","2026-06-03 14:46",0,"仅放开 provider 层，不改 endpoint/key/model 现有活跃性规则；先前一次过滤串写错导致 0 tests，已更正为真实测试路径"
+3,运行针对性验证并整理结果,DONE,"目标测试通过且变更范围清晰","cargo test -p backend fixed_parts_","2026-06-03 14:46",0,"9 个 fixed_parts 相关测试全部通过"

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Compare Aether behavior,DONE,"Aether reasoning/image handling inspected","test -d /Users/bubu/Downloads/Aether-main",2026-06-03T00:00:00Z,0,"Aether models image intent and capabilities instead of silently removing tools"
+2,Implement Responses reasoning input conversion,DONE,"Responses input reasoning can convert to Chat without unsupported-feature error","timeout 60 cargo test -p proxy responses_request_reasoning_input_item_converts_to_openai_chat",2026-06-03T07:34:54Z,0,"Also validated Responses reasoning roundtrip to ClaudeChat"
+3,Validate image_generation handling strategy,DONE,"No silent image-generation removal is added; existing behavior remains explicit","timeout 60 cargo test -p proxy format_conversion_openai_responses_unsupported_official_items_error",2026-06-03T07:34:54Z,0,"Rejected request-body mutation; unsupported capability remains explicit"
+4,Run focused checks,DONE,"Focused Rust tests pass within 60 seconds","timeout 60 cargo test -p proxy format_conversion",2026-06-03T07:34:54Z,0,

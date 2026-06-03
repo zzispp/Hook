@@ -112,6 +112,7 @@ fn append_key_candidates(
             keys: vec![key],
             model: model.clone(),
             client_api_format: request.api_format.to_owned(),
+            routing_api_format: request.routing_api_format.to_owned(),
             is_cached: false,
         });
     }
@@ -218,12 +219,12 @@ fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, reques
 
 fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
     (provider.enable_format_conversion || endpoint_accepts_conversion(endpoint))
-        && formats::formats_compatible(request.api_format, &endpoint.api_format, request.is_stream)
+        && formats::formats_compatible(request.routing_api_format, &endpoint.api_format, request.is_stream)
         && !endpoint_exact(endpoint, request)
 }
 
 fn endpoint_exact(endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
-    formats::formats_exact(request.api_format, &endpoint.api_format, request.is_stream).unwrap_or(false)
+    formats::formats_exact(request.routing_api_format, &endpoint.api_format, request.is_stream).unwrap_or(false)
 }
 
 fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {

@@ -3,6 +3,26 @@ import type { CSSProperties } from 'react';
 import { memo, useRef, useEffect } from 'react';
 
 const TWO_PI = Math.PI * 2;
+const HERO_DEBUG_PREFIX = '[hero-bg]';
+const DEBUG_FRAME_LIMIT = 5;
+
+function debugHeroBg(event: string, payload: Record<string, unknown> = {}) {
+  console.log(`${HERO_DEBUG_PREFIX} ${JSON.stringify({ event, ...payload })}`);
+}
+
+function sampleCanvasAlpha(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const sampleSize = 64;
+  const x = Math.max(0, Math.floor(width / 2 - sampleSize / 2));
+  const y = Math.max(0, Math.floor(height / 2 - sampleSize / 2));
+  const data = ctx.getImageData(x, y, Math.min(sampleSize, width), Math.min(sampleSize, height)).data;
+  let alphaPixels = 0;
+
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] > 0) alphaPixels++;
+  }
+
+  return alphaPixels;
+}
 
 export type DotFieldProps = {
   readonly dotRadius?: number;
@@ -111,6 +131,14 @@ const DotField = memo(function DotField({
     const ctx = context;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+    let loggedFrames = 0;
+
+    debugHeroBg('DotField mount', {
+      dpr,
+      gradientFrom: propsRef.current.gradientFrom,
+      gradientTo: propsRef.current.gradientTo,
+      hasParent: Boolean(canvas.parentElement),
+    });
 
     function resize() {
       if (resizeTimer) clearTimeout(resizeTimer);
@@ -137,6 +165,15 @@ const DotField = memo(function DotField({
       };
 
       buildDots(w, h);
+
+      debugHeroBg('DotField resize', {
+        parentRect: rect.toJSON(),
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        cssWidth: canvas.style.width,
+        cssHeight: canvas.style.height,
+        dots: dotsRef.current.length,
+      });
     }
 
     function buildDots(w: number, h: number) {
@@ -281,6 +318,20 @@ const DotField = memo(function DotField({
 
       ctx.fill();
 
+      if (loggedFrames < DEBUG_FRAME_LIMIT) {
+        loggedFrames++;
+        debugHeroBg('DotField frame', {
+          frameCount,
+          width: w,
+          height: h,
+          dots: len,
+          gradientFrom: p.gradientFrom,
+          gradientTo: p.gradientTo,
+          engagement: eng,
+          alphaPixels: sampleCanvasAlpha(ctx, canvas.width, canvas.height),
+        });
+      }
+
       rafRef.current = requestAnimationFrame(tick);
     }
 
@@ -296,6 +347,7 @@ const DotField = memo(function DotField({
     };
 
     return () => {
+      debugHeroBg('DotField cleanup');
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       clearInterval(speedInterval);
       if (resizeTimer) clearTimeout(resizeTimer);

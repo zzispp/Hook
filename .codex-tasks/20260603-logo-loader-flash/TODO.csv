@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate logo navigation and loader sources,DONE,Relevant code paths identified,rg-based source inspection,2026-06-03,0,"Logo defaults to /; home route loading forced dark while LandingLoader used global auto mode."
+2,Implement root-cause fix,DONE,Only the necessary loader behavior changes,code diff review,2026-06-03,0,"Home route loading and LandingLoader now both use SplashScreen."
+3,Run static/build validation,IN_PROGRESS,Frontend checks pass,pnpm lint:frontend or pnpm build:frontend,,0,
+4,Verify browser behavior,TODO,Logo navigation no longer shows black then white loader,browser reproduction,,0,

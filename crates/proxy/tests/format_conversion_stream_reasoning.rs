@@ -1,4 +1,4 @@
-use proxy::format_conversion::{ApiFormat, FormatConversionError, FormatConversionRegistry};
+use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
 use serde_json::json;
 
 #[test]
@@ -74,14 +74,15 @@ fn responses_stream_reasoning_emits_summary_without_signature_roundtrip() {
             { "type": "message", "role": "user", "content": [{ "type": "input_text", "text": "continue" }] }
         ]
     });
-    let error = registry
+    let claude_request = registry
         .convert_request(&next_request, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat)
-        .unwrap_err();
-    assert_eq!(
-        error,
-        FormatConversionError::UnsupportedFeature {
-            format: "openai:responses",
-            feature: "unsupported input item type reasoning".to_string(),
-        }
-    );
+        .unwrap();
+
+    assert_eq!(claude_request["messages"][0]["role"], "user");
+    assert_eq!(claude_request["messages"][0]["content"], "");
+    assert_eq!(claude_request["messages"][1]["role"], "assistant");
+    assert_eq!(claude_request["messages"][1]["content"][0]["type"], "redacted_thinking");
+    assert_eq!(claude_request["messages"][1]["content"][0]["data"], "sig_1");
+    assert_eq!(claude_request["messages"][2]["role"], "user");
+    assert_eq!(claude_request["messages"][2]["content"], "continue");
 }

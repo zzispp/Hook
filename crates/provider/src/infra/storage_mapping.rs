@@ -118,10 +118,7 @@ pub(super) fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Opti
 }
 
 fn global_priority_by_format(api_formats: &[String], priority: i32) -> std::collections::BTreeMap<String, i32> {
-    api_formats
-        .iter()
-        .map(|format| (format.clone(), priority))
-        .collect()
+    api_formats.iter().map(|format| (format.clone(), priority)).collect()
 }
 
 pub(super) fn model_binding_input(provider_id: &str, input: ProviderModelBindingCreate) -> ProviderModelRecordInput {

@@ -60,7 +60,7 @@ pub(super) async fn next_body_item(mut relay: StreamRelay) -> Option<(Downstream
 
 impl StreamRelay {
     pub(super) fn new(context: StreamAttemptContext, upstream: UpstreamStream, source_format: ApiFormat, target_format: ApiFormat) -> Self {
-        let needs_conversion = context.candidate.trace.needs_conversion;
+        let needs_conversion = source_format != target_format;
         let rewrite_model = context.candidate.provider_model_name != context.candidate.requested_model_name;
         let usage_estimator = StreamUsageEstimator::new(target_format, &context.provider_request_body, &context.candidate.provider_model_name);
         let stream_idle_timeout = super::super::timeout::proxy_timeouts(&context.candidate).stream_idle;

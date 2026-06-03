@@ -2,9 +2,15 @@ import { motion } from 'motion/react';
 import { FaGithub } from 'react-icons/fa6';
 import { FiArrowRight } from 'react-icons/fi';
 
+import { paths } from 'src/routes/paths';
+
+import { useTranslate } from 'src/locales';
 import { Link } from 'src/react-bits/router';
 
-const CTA = () => (
+const CTA = () => {
+  const { t } = useTranslate('landing');
+
+  return (
     <section className="ln-cta-section">
       <div className="ln-cta-glow" />
 
@@ -18,26 +24,21 @@ const CTA = () => (
         <div className="ln-cta-card-wrapper">
           <div className="ln-cta-card-border" />
           <div className="ln-cta-card">
-            <h2 className="ln-cta-headline">
-              Stop building from scratch.
-            </h2>
+            <h2 className="ln-cta-headline">{t('cta.title')}</h2>
 
-            <p className="ln-cta-sub">
-              Beautiful, animated React components you can drop into any project.
-              Open source. Always free.
-            </p>
+            <p className="ln-cta-sub">{t('cta.description')}</p>
 
             <div className="ln-cta-buttons">
-              <Link to="/get-started/index" className="ln-cta-btn ln-cta-btn--primary">
-                Browse Components <FiArrowRight size={15} />
+              <Link to={paths.auth.jwt.signIn} className="ln-cta-btn ln-cta-btn--primary">
+                {t('cta.primaryAction')} <FiArrowRight size={15} />
               </Link>
               <a
-                href="https://github.com/DavidHDev/react-bits"
+                href="https://github.com/zzispp/Hook"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="ln-cta-btn ln-cta-btn--secondary"
               >
-                <FaGithub size={15} /> Star on GitHub
+                <FaGithub size={15} /> {t('cta.secondaryAction')}
               </a>
             </div>
           </div>
@@ -45,5 +46,6 @@ const CTA = () => (
       </motion.div>
     </section>
   );
+};
 
 export default CTA;

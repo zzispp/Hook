@@ -81,9 +81,7 @@ pub fn validate_api_key_priority_batch(input: &ProviderApiKeyPriorityBatchUpdate
             validate_text("global_priority_by_format.api_format", api_format.trim(), MAX_API_FORMAT_LENGTH)?;
             validate_canonical_chat_cli_format(api_format)?;
             if *priority < MIN_PRIORITY {
-                return Err(ProviderError::InvalidInput(
-                    "global_priority_by_format priority must be non-negative".into(),
-                ));
+                return Err(ProviderError::InvalidInput("global_priority_by_format priority must be non-negative".into()));
             }
         }
     }
@@ -294,10 +292,7 @@ mod tests {
 
         let error = validate_api_key_priority_batch(&input).unwrap_err();
 
-        assert_eq!(
-            error.to_string(),
-            "invalid input: global_priority_by_format priority must be non-negative"
-        );
+        assert_eq!(error.to_string(), "invalid input: global_priority_by_format priority must be non-negative");
     }
 
     #[test]

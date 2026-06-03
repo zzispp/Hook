@@ -1,0 +1,366 @@
+{
+  "pageMetadata": {
+    "title": "Hook | 统一大模型网关",
+    "description": "统一 OpenAI、Claude、Gemini 与 CLI 工具调用入口，把模型路由、令牌治理、成本配额和健康监控放进同一个控制面。"
+  },
+  "navbar": {
+    "links": {
+      "features": "功能特性",
+      "demo": "功能演示",
+      "quickStart": "部署指南",
+      "providers": "支持渠道"
+    },
+    "actions": {
+      "console": "进入控制台",
+      "catalog": "查看模型目录",
+      "signIn": "登录",
+      "signUp": "注册",
+      "github": "GitHub",
+      "menu": "菜单"
+    },
+    "docs": {
+      "search": "搜索",
+      "searchPlaceholder": "搜索...",
+      "preferences": "偏好设置",
+      "language": "语言",
+      "styling": "样式",
+      "favorites": "收藏"
+    }
+  },
+  "hero": {
+    "badge": "AI Gateway",
+    "badgeSuffix": "OpenAI Compatible",
+    "headlineDefaultName": "Hook AI",
+    "headlineSuffix": "统一大模型网关",
+    "description": "统一 Claude、OpenAI、Gemini 与 CLI 工具调用入口，把模型路由、用户令牌、成本配额和健康监控放进同一个控制面。",
+    "buttons": {
+      "console": "进入控制台",
+      "catalog": "查看模型目录",
+      "signIn": "登录",
+      "signUp": "注册"
+    },
+    "code": {
+      "baseUrl": "Base URL",
+      "prompt": "通过 Hook 调用统一 AI 网关"
+    }
+  },
+  "features": {
+    "title": "核心能力",
+    "cards": {
+      "models": {
+        "title": "接入 300+ 模型",
+        "description": "统一 OpenAI、Claude、Gemini、DeepSeek、通义千问等主流和国产大模型，一个入口覆盖 Chat、Embedding、图像和语音。"
+      },
+      "tokens": {
+        "title": "令牌与权限管理",
+        "description": "为用户和团队分发 API Token，按分组和角色控制模型访问范围。"
+      },
+      "routing": {
+        "title": "智能负载均衡",
+        "description": "多供应商端点自动路由，结合优先级、权重和健康状态分配请求，故障自动切换。"
+      },
+      "deployment": {
+        "title": "自托管部署",
+        "description": "Docker 一键启动，也支持 K8s 和源码编译。数据和密钥留在自己手里。"
+      },
+      "monitoring": {
+        "title": "健康监控与审计",
+        "description": "实时追踪请求成功率、延迟和供应商状态，日志和调用记录随时可查。"
+      },
+      "quota": {
+        "title": "成本配额控制",
+        "description": "按用户、分组和模型维度记录用量和费用，预算耗尽时明确阻断请求。"
+      }
+    },
+    "quota": {
+      "monthly": "月度配额"
+    },
+    "monitor": {
+      "title": "Hook Gateway",
+      "frames": {
+        "health": {
+          "prompt": "检查供应商健康",
+          "line1": {
+            "name": "OpenAI    ",
+            "status": "● 正常",
+            "metric": "  45ms"
+          },
+          "line2": {
+            "name": "Claude    ",
+            "status": "● 正常",
+            "metric": "  62ms"
+          },
+          "line3": {
+            "name": "Gemini    ",
+            "status": "○ 降级",
+            "metric": " 380ms"
+          }
+        },
+        "stats": {
+          "prompt": "查看请求统计",
+          "line1": {
+            "label": "总量:   ",
+            "value": "12,847",
+            "suffix": " 次请求"
+          },
+          "line2": {
+            "label": "成功: ",
+            "value": "99.2%",
+            "suffix": " 可用率"
+          },
+          "line3": {
+            "label": "平均:     ",
+            "value": "124ms",
+            "suffix": " 延迟"
+          }
+        },
+        "tokens": {
+          "prompt": "列出活动令牌",
+          "line1": {
+            "name": "sk-***xK9  ",
+            "status": "active",
+            "metric": "  dev-team"
+          },
+          "line2": {
+            "name": "sk-***mP4  ",
+            "status": "active",
+            "metric": "  staging"
+          },
+          "line3": {
+            "name": "sk-***zR7  ",
+            "status": "expired",
+            "metric": " personal"
+          }
+        }
+      }
+    },
+    "deployOptions": {
+      "dockerCompose": "Docker Compose",
+      "kubernetes": "Kubernetes",
+      "binary": "Binary",
+      "sourceBuild": "Source Build"
+    }
+  },
+  "ecosystem": {
+    "title": "兼容生态",
+    "items": {
+      "openai": {
+        "models": "GPT-4o · GPT-4.1 · o3 · DALL·E",
+        "badge": "Chat / Image / Embedding"
+      },
+      "anthropic": {
+        "models": "Claude 4 Opus · Sonnet · Haiku",
+        "badge": "Chat / Claude Code"
+      },
+      "google": {
+        "models": "Gemini 2.5 Pro · Flash · Imagen",
+        "badge": "Chat / Image / Embedding"
+      },
+      "deepseek": {
+        "models": "DeepSeek R1 · V3 · Coder",
+        "badge": "Chat / Reasoning"
+      },
+      "qwen": {
+        "models": "Qwen 3 · Qwen-VL · Qwen-Audio",
+        "badge": "Chat / Vision / Audio"
+      },
+      "azure": {
+        "models": "GPT-4o · Whisper · TTS",
+        "badge": "Chat / Audio / Speech"
+      },
+      "bedrock": {
+        "models": "Claude · Llama · Titan",
+        "badge": "Chat / Embedding"
+      },
+      "zhipu": {
+        "models": "GLM-4 · CogView · CogVideo",
+        "badge": "Chat / Image / Video"
+      },
+      "mistral": {
+        "models": "Mistral Large · Medium · Codestral",
+        "badge": "Chat / Code"
+      },
+      "ernie": {
+        "models": "ERNIE 4.5 · ERNIE Speed",
+        "badge": "Chat / Embedding"
+      },
+      "llama": {
+        "models": "Llama 4 · Llama 3.3",
+        "badge": "Chat / Code"
+      },
+      "moonshot": {
+        "models": "Kimi · Moonshot-v1",
+        "badge": "Chat / 长上下文"
+      },
+      "midjourney": {
+        "models": "MJ v6.1 · niji",
+        "badge": "图像生成"
+      },
+      "cursor": {
+        "models": "指向 Hook 网关即可",
+        "badge": "IDE 集成"
+      },
+      "claudeCode": {
+        "models": "设置 API Base 指向 Hook",
+        "badge": "CLI 集成"
+      },
+      "suno": {
+        "models": "Suno v4 · v3.5",
+        "badge": "音乐生成"
+      },
+      "yi": {
+        "models": "Yi-Lightning · Yi-Large",
+        "badge": "Chat / Vision"
+      },
+      "custom": {
+        "models": "任意 OpenAI 兼容服务",
+        "badge": "自定义 Header / Body"
+      }
+    }
+  },
+  "liveDemo": {
+    "title": "查看 Hook 实时演示",
+    "subtitle": "模拟多提供商接入、高可用智能负载均衡与秒级自动容灾切换",
+    "controls": {
+      "modelLabel": "选择调用模型",
+      "presetLabel": "常用测试提示词",
+      "promptLabel": "对话输入",
+      "promptPlaceholder": "在此输入您的测试提示词...",
+      "failoverTitle": "模拟渠道故障",
+      "failoverDescription": "强制使主渠道报错，演练网关秒级故障自动切流",
+      "send": "发送网关请求",
+      "running": "正在演练中..."
+    },
+    "terminalTitle": "Hook Trace logs",
+    "emptyState": "等待发送请求... 点击左侧“发送网关请求”查看转发轨迹",
+    "streamTitle": "流式输出响应",
+    "streamOutput": "Server Stream Output",
+    "modelOptions": {
+      "gpt4o": "gpt-4o (OpenAI 兼容 / 主流之选)",
+      "claude": "claude-3-5-sonnet (Anthropic / 逻辑强悍)",
+      "gemini": "gemini-1-5-pro (Google / 超长上下文)",
+      "deepseek": "deepseek-r1 (DeepSeek / 深度推理链)"
+    },
+    "presets": {
+      "gateway": {
+        "label": "大模型网关是什么？",
+        "text": "大模型网关是什么，它的核心优势和作用有哪些？"
+      },
+      "joke": {
+        "label": "讲个程序员笑话",
+        "text": "讲一个关于程序员和 Bug 的笑话。"
+      },
+      "rust": {
+        "label": "写一段 Rust Hello World",
+        "text": "请用 Rust 语言编写一段最基础的 Hello World 代码。"
+      }
+    },
+    "responses": {
+      "gpt4o": {
+        "gateway": "AI 大模型网关是一层位于客户端与底层 AI 服务之间的统一代理。它负责统一鉴权、模型路由、智能负载均衡、限流、审计与自动故障切换，帮助团队降低密钥暴露风险，并在渠道异常时秒级切流。",
+        "joke": "为什么程序员喜欢暗黑模式？因为光会吸引 Bugs。",
+        "rust": "```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```\n这是最标准的 Rust 入门程序，使用 `println!` 宏向控制台输出文本。"
+      },
+      "claude": {
+        "gateway": "AI 大模型网关是多模型接入痛点的一站式解决方案。相比直接调用上游，它隐藏供应商协议与计费差异，把异构 API 统一包装为标准格式，并支持按优先级或权重在多渠道间分配请求。",
+        "joke": "世界上有 10 种人：懂二进制的，和不懂二进制的。",
+        "rust": "```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```\n在 Rust 中，`main` 函数是程序入口，`println!` 是负责输出的宏。"
+      },
+      "gemini": {
+        "gateway": "AI Gateway 是一个高性能中间层，能够屏蔽不同模型服务在流式传输、错误处理和计费维度上的差异。它把降本、安全和高可用收敛到同一条请求链路中。",
+        "joke": "一个程序员去商店，妻子说：“买一包面包，如果看到有卖西瓜的，买一个。”最后他只买了一个面包，因为他确实看到了卖西瓜的。",
+        "rust": "```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```\n用 `cargo run` 即可编译并执行以上代码。"
+      },
+      "deepseek": {
+        "gateway": "<think>\n思维链：\n1. 用户询问大模型网关的定义与作用。\n2. 抽取多模型协议、密钥治理与容灾三类核心痛点。\n3. 组织为面向企业场景的结构化回答。\n</think>\n大模型网关是企业级 AI 应用的关键基础设施。它统一主流服务商的 API 调用格式，提供统一路由、智能负载均衡和容灾切换，让业务流量可以在多个上游之间稳定分发。",
+        "joke": "<think>\n思维链：\n1. 选择程序员常见冷笑话。\n2. 选用进制梗保证辨识度。\n</think>\n为什么程序员总是分不清万圣节和圣诞节？因为 Oct 31 恰好等于 Dec 25。",
+        "rust": "<think>\n思维链：\n1. 生成最小可运行的 Rust 程序。\n2. 用代码块返回。\n</think>\n```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```"
+      },
+      "custom": {
+        "deepseek": "<think>\n思考过程：用户发送了自定义提示词 \"{{prompt}}\"。通过网关进行统一模型映射，并将请求转发到真实的 {{model}} 渠道。\n</think>\n[Hook Gateway] 这是对自定义提示词的模拟回复。在生产环境中，Hook 会将请求路由到你配置的真实 {{model}} 渠道并流式返回真实结果。",
+        "default": "[Hook Gateway] 收到自定义输入: \"{{prompt}}\"。\n这是在线预览环境。在生产环境中，该请求会通过 Hook 网关安全路由至 {{model}} 对应的上游，并根据你的 Token 与配额计划扣费。"
+      }
+    },
+    "logs": {
+      "request": "POST /v1/chat/completions (model: \"{{model}}\")",
+      "authPassed": "验证 API Key [sk-hook-demo***]... 通过 (用户: test-dev-team)",
+      "quotaChecked": "检查配额与钱包余额... 状态正常。剩余额度: $84.21",
+      "routeMatched": "匹配路由策略... 目标模型: \"{{model}}\"",
+      "primarySelected": "智能负载均衡：已选定主渠道 A [OpenAI 官方渠道 - 权重 50%]",
+      "primaryForwarding": "正在向渠道 A 转发请求...",
+      "primaryFailed": "渠道 A 调用失败：[HTTP 503] Service Unavailable (上游限频或不可用)",
+      "failoverTriggered": "触发网关容灾：主渠道调用受挫，执行自动 Failover 重试策略。",
+      "secondarySelected": "智能负载均衡：已选定备用渠道 B [Azure OpenAI 备份 - 优先级 2]",
+      "secondaryForwarding": "正在向渠道 B 转发请求...",
+      "secondarySuccess": "渠道 B 响应 200 OK，建立 Server-Sent Events 流式链接。",
+      "primarySuccess": "渠道 A 响应 200 OK，建立 Server-Sent Events 流式链接。",
+      "streamComplete": "流式数据接收完毕。API 链接关闭。",
+      "billing": "计费扣除：消耗 Token 计 840 (Input 40 / Output 800)。",
+      "walletUpdated": "钱包余额已更新：$84.2088。"
+    }
+  },
+  "quickStart": {
+    "title": "几秒内开始部署",
+    "methods": {
+      "dockerRun": "Docker Run",
+      "dockerCompose": "Docker Compose",
+      "sourceBuild": "Source Build"
+    },
+    "copyCommand": "复制命令",
+    "hint": "支持自托管部署，数据和凭证安全留在本地。"
+  },
+  "providers": {
+    "title": "支持的模型渠道与生态集成",
+    "subtitle": "内置跨提供商协议重写，将异构 API 统一封装为标准格式，兼容主流客户端与开发框架",
+    "items": {
+      "openai": {
+        "tag": "官方模型",
+        "description": "GPT-4o, o1, DALL·E 3, Embeddings"
+      },
+      "anthropic": {
+        "tag": "官方模型",
+        "description": "Claude 3.5 Sonnet, Claude 3 Opus"
+      },
+      "gemini": {
+        "tag": "官方模型",
+        "description": "Gemini 1.5 Pro, Flash, 2.0 Flash"
+      },
+      "deepseek": {
+        "tag": "主流通道",
+        "description": "DeepSeek-R1, DeepSeek-V3, Chat"
+      },
+      "local": {
+        "tag": "自托管",
+        "description": "Ollama, vLLM, LocalAI, Llama.cpp"
+      },
+      "midjourney": {
+        "tag": "多模态",
+        "description": "Imagine, Upscale, Variation 绘图接入"
+      },
+      "qwen": {
+        "tag": "国内大模型",
+        "description": "通义千问, Qwen-2.5-Coder/Math 全系列"
+      },
+      "groq": {
+        "tag": "高速推理",
+        "description": "LLaMA 3.1, Mixtral 极速推理接入"
+      }
+    }
+  },
+  "cta": {
+    "title": "集中掌控你的 AI 接口链路",
+    "description": "一键部署 Hook，在自托管的安全环境下，实现跨供应商模型路由、负载均衡、令牌限流与可观测性审计。开源免费，数据私有。",
+    "primaryAction": "进入控制台",
+    "secondaryAction": "GitHub 仓库"
+  },
+  "footer": {
+    "fallbackTagline": "自托管 AI API 统一网关。",
+    "navigation": "导航",
+    "community": "社区",
+    "console": "进入控制台",
+    "catalog": "模型目录",
+    "status": "通道状态",
+    "createdWith": "由",
+    "by": "构建者"
+  }
+}

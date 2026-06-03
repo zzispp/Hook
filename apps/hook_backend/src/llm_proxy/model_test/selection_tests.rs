@@ -65,6 +65,21 @@ fn fixed_parts_uses_selected_key_for_compatible_test_route() {
 }
 
 #[test]
+fn fixed_parts_allows_inactive_provider_for_manual_test() {
+    let snapshot = snapshot(CachedProvider {
+        is_active: false,
+        ..provider_with_keys_and_endpoints(vec![endpoint("endpoint-openai", "openai:cli")], vec![key("key-openai", vec!["openai:cli"])])
+    });
+
+    let parts = fixed_parts(&snapshot, "provider-a", "binding-a", "endpoint-openai", "key-openai", true).unwrap();
+
+    assert_eq!(parts.provider.id, "provider-a");
+    assert!(!parts.provider.is_active);
+    assert_eq!(parts.endpoints.len(), 1);
+    assert_eq!(parts.keys[0].id, "key-openai");
+}
+
+#[test]
 fn fixed_parts_rejects_selected_key_that_does_not_support_test_route() {
     let snapshot = snapshot(provider_with_keys_and_endpoints(
         vec![endpoint("endpoint-openai", "openai:cli")],

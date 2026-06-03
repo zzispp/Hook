@@ -66,12 +66,7 @@ fn provider_with_mismatched_key_priorities() -> crate::llm_proxy::cache::snapsho
     }
 }
 
-fn key_with_format_priority(
-    id: &str,
-    internal_priority: i32,
-    api_format: &str,
-    global_priority: i32,
-) -> crate::llm_proxy::cache::snapshot::CachedProviderKey {
+fn key_with_format_priority(id: &str, internal_priority: i32, api_format: &str, global_priority: i32) -> crate::llm_proxy::cache::snapshot::CachedProviderKey {
     let mut key = super::helpers::provider_key(id, internal_priority, vec!["openai:chat"]);
     key.global_priority_by_format.insert(api_format.to_owned(), global_priority);
     key

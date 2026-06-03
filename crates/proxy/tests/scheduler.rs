@@ -327,10 +327,7 @@ fn key_with_priorities(id: &str, internal_priority: i32, openai_priority: i32, g
         id: id.into(),
         api_formats: vec![ApiFormat::OpenAiChat, ApiFormat::GeminiChat],
         internal_priority,
-        global_priority_by_format: std::collections::BTreeMap::from([
-            (ApiFormat::OpenAiChat, openai_priority),
-            (ApiFormat::GeminiChat, gemini_priority),
-        ]),
+        global_priority_by_format: std::collections::BTreeMap::from([(ApiFormat::OpenAiChat, openai_priority), (ApiFormat::GeminiChat, gemini_priority)]),
         cache_ttl_minutes: 5,
         is_active: true,
     }

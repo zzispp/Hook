@@ -137,33 +137,37 @@
   gap: 10px;
 }
 
-.ln-test-avatar {
-  width: 30px;
-  height: 30px;
+.ln-eco-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  object-fit: cover;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.ln-test-handle {
+.ln-eco-name {
+  font-family: 'Geist', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.ln-eco-badge {
   font-family: 'Geist Mono', monospace;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.ln-test-x-icon {
-  width: 13px;
-  height: 13px;
-  color: rgba(255, 255, 255, 0.2);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 5px;
+  padding: 2px 8px;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
 .ln-test-text {
   font-family: 'Geist', sans-serif;
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.45);
   margin: 0;
 }
 

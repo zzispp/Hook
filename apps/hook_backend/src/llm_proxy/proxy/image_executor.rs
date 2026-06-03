@@ -52,6 +52,7 @@ async fn prepare_image_edit_request(
         token,
         CandidateRequest {
             api_format: OPENAI_IMAGE_EDIT_FORMAT,
+            routing_api_format: OPENAI_IMAGE_EDIT_FORMAT,
             model_name: request.model(),
             is_stream: false,
         },

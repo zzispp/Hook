@@ -158,6 +158,7 @@ pub(super) fn provider_b() -> CachedProvider {
 pub(super) fn request() -> CandidateRequest<'static> {
     CandidateRequest {
         api_format: "openai:chat",
+        routing_api_format: "openai:chat",
         model_name: "gpt-test",
         is_stream: false,
     }

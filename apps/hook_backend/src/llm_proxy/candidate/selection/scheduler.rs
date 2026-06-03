@@ -62,7 +62,7 @@ pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Resu
 }
 
 fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmProxyError> {
-    let client_format = formats::endpoint_metadata(args.request.api_format, args.request.is_stream)?.data_format;
+    let client_format = formats::endpoint_metadata(args.request.routing_api_format, args.request.is_stream)?.data_format;
     Ok(SchedulerInput {
         group_code: args.group.code.clone(),
         group_is_active: args.group.is_active,
@@ -102,7 +102,7 @@ fn scheduler_candidate(parts: &CandidateParts, priority_mode: ProviderPriorityMo
     let endpoint = primary_endpoint(parts);
     let key = primary_key(parts);
     let provider_api_format = formats::endpoint_metadata(&endpoint.api_format, false)?.data_format;
-    let needs_conversion = formats::needs_conversion(&parts.client_api_format, &endpoint.api_format, false)?;
+    let needs_conversion = formats::needs_conversion(&parts.routing_api_format, &endpoint.api_format, false)?;
     Ok(Candidate {
         provider_id: parts.provider.id.clone(),
         provider_name: parts.provider.name.clone(),
@@ -116,7 +116,11 @@ fn scheduler_candidate(parts: &CandidateParts, priority_mode: ProviderPriorityMo
         provider_priority: parts.provider.priority,
         key_priority: match priority_mode {
             ProviderPriorityMode::Provider => key.internal_priority,
-            ProviderPriorityMode::Key => key.global_priority_by_format.get(&endpoint.api_format).copied().unwrap_or(key.internal_priority),
+            ProviderPriorityMode::Key => key
+                .global_priority_by_format
+                .get(&endpoint.api_format)
+                .copied()
+                .unwrap_or(key.internal_priority),
         },
     })
 }

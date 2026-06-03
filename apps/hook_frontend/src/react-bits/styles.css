@@ -10,10 +10,6 @@
 @import './components/landingnew/CTA/CTA.css';
 @import './components/landingnew/Footer/Footer.css';
 @import './components/landingnew/LandingLoader/LandingLoader.css';
-@import './content/Backgrounds/ShapeGrid/ShapeGrid.css';
-@import './content/TextAnimations/ShinyText/ShinyText.css';
-@import './content/Animations/MagicRings/MagicRings.css';
-@import './content/Components/Dock/Dock.css';
 @import './css/landing-theme.css';
 @import './css/landing-theme-components.css';
 

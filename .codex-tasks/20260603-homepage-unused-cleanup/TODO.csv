@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,建立清理任务并锁定删除边界,DONE,"任务真相文件创建完成，删除范围明确","test -f .codex-tasks/20260603-homepage-unused-cleanup/SPEC.md && test -f .codex-tasks/20260603-homepage-unused-cleanup/TODO.csv && test -f .codex-tasks/20260603-homepage-unused-cleanup/PROGRESS.md","2026-06-03 15:29:00 CST",0,"删除范围分为直接游离文件与旧 docs 分支两组。"
+2,删除未使用入口与资源,DONE,"首页入口、Navbar、样式和目标无用文件已完成清理","! rg -n \"InstallationProvider|useSearch\\(|useOptions\\(|showDocs|react-bits-logo-small|react-bits-logo\\.svg|click-004|switch-007|diamondSponsors|platinumSponsors|silverSponsors|hasSponsors|hasDiamondSponsors|hasPlatinumSponsors|hasSilverSponsors\" apps/hook_frontend/src apps/hook_frontend/public","2026-06-03 16:14:28 CST",0,"已删除旧 docs 分支、上下文、常量、孤立内容组件和静态资源；复查 0 命中。"
+3,运行前端校验并记录结果,DONE,"前端 lint 校验通过","pnpm lint:frontend","2026-06-03 16:14:28 CST",0,"`pnpm lint:frontend` 通过。"

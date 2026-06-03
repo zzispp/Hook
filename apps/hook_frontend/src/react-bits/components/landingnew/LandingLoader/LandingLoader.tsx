@@ -1,5 +1,5 @@
-import { ReactBitsLoader } from 'src/components/loading-screen';
+import { SplashScreen } from 'src/components/loading-screen';
 
-const LandingLoader = ({ hiding = false }) => <ReactBitsLoader hiding={hiding} />;
+const LandingLoader = ({ hiding = false }) => <SplashScreen hiding={hiding} />;
 
 export default LandingLoader;

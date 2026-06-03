@@ -3,6 +3,49 @@ import type { CSSProperties } from 'react';
 import * as THREE from 'three';
 import { memo, useRef, useState, useEffect } from 'react';
 
+const HERO_DEBUG_PREFIX = '[hero-bg]';
+const DEBUG_FRAME_LIMIT = 5;
+
+function debugHeroBg(event: string, payload: Record<string, unknown> = {}) {
+  console.log(`${HERO_DEBUG_PREFIX} ${JSON.stringify({ event, ...payload })}`);
+}
+
+function warnHeroBg(event: string, payload: Record<string, unknown> = {}) {
+  console.warn(`${HERO_DEBUG_PREFIX} ${JSON.stringify({ event, ...payload })}`);
+}
+
+function sampleRendererAlpha(renderer: THREE.WebGLRenderer) {
+  const context = renderer.getContext();
+  const pixels = new Uint8Array(4 * 16);
+  const width = renderer.domElement.width;
+  const height = renderer.domElement.height;
+  const x = Math.max(0, Math.floor(width / 2 - 2));
+  const y = Math.max(0, Math.floor(height / 2 - 2));
+
+  context.readPixels(x, y, 4, 4, context.RGBA, context.UNSIGNED_BYTE, pixels);
+
+  let alphaPixels = 0;
+
+  for (let i = 3; i < pixels.length; i += 4) {
+    if (pixels[i] > 0) alphaPixels++;
+  }
+
+  return alphaPixels;
+}
+
+function rectSnapshot(rect: { readonly left: number; readonly top: number; readonly width: number; readonly height: number }) {
+  return {
+    left: rect.left,
+    top: rect.top,
+    width: rect.width,
+    height: rect.height,
+    right: rect.left + rect.width,
+    bottom: rect.top + rect.height,
+    x: rect.left,
+    y: rect.top,
+  };
+}
+
 function hasWebGL() {
   try {
     const c = document.createElement('canvas');
@@ -119,9 +162,20 @@ const HeroBand = memo(function HeroBand({
   const rectRef = useRef({ left: 0, top: 0, width: 1, height: 1 });
 
   useEffect(() => {
+    debugHeroBg('HeroBand support', {
+      supported,
+      color,
+      speed,
+      bandWidth,
+      intensity,
+    });
+
     if (!supported) return undefined;
     const container = containerRef.current;
-    if (!container) return undefined;
+    if (!container) {
+      warnHeroBg('HeroBand missing container');
+      return undefined;
+    }
 
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -163,6 +217,7 @@ const HeroBand = memo(function HeroBand({
         alpha: true,
       });
     } catch {
+      warnHeroBg('HeroBand renderer create failed');
       return undefined;
     }
 
@@ -173,8 +228,23 @@ const HeroBand = memo(function HeroBand({
     renderer.domElement.style.height = '100%';
     renderer.domElement.style.display = 'block';
     container.appendChild(renderer.domElement);
+    debugHeroBg('HeroBand renderer mounted', {
+      initialContainerRect: container.getBoundingClientRect().toJSON(),
+      canvasWidth: renderer.domElement.width,
+      canvasHeight: renderer.domElement.height,
+    });
+
+    const handleContextLost = (event: Event) => {
+      warnHeroBg('HeroBand webglcontextlost', { type: event.type });
+    };
+    const handleContextRestored = (event: Event) => {
+      debugHeroBg('HeroBand webglcontextrestored', { type: event.type });
+    };
+    renderer.domElement.addEventListener('webglcontextlost', handleContextLost);
+    renderer.domElement.addEventListener('webglcontextrestored', handleContextRestored);
 
     const clock = new THREE.Clock();
+    let loggedFrames = 0;
 
     const handleResize = () => {
       const w = container.clientWidth || 1;
@@ -182,6 +252,16 @@ const HeroBand = memo(function HeroBand({
       renderer.setSize(w, h, false);
       material.uniforms.uCanvas.value.set(w, h);
       rectRef.current = container.getBoundingClientRect();
+
+      debugHeroBg('HeroBand resize', {
+        clientWidth: container.clientWidth,
+        clientHeight: container.clientHeight,
+        rect: rectSnapshot(rectRef.current),
+        rendererWidth: renderer.domElement.width,
+        rendererHeight: renderer.domElement.height,
+        cssWidth: renderer.domElement.style.width,
+        cssHeight: renderer.domElement.style.height,
+      });
     };
 
     handleResize();
@@ -211,19 +291,35 @@ const HeroBand = memo(function HeroBand({
       material.uniforms.uPointer.value.copy(pointerCurrent.current);
 
       renderer.render(scene, camera);
+
+      if (loggedFrames < DEBUG_FRAME_LIMIT) {
+        loggedFrames++;
+        debugHeroBg('HeroBand frame', {
+          elapsedTime: clock.elapsedTime,
+          rendererWidth: renderer.domElement.width,
+          rendererHeight: renderer.domElement.height,
+          canvasUniform: material.uniforms.uCanvas.value.toArray(),
+          colorUniform: material.uniforms.uColor.value.toArray(),
+          intensity: material.uniforms.uIntensity.value,
+          alphaPixels: sampleRendererAlpha(renderer),
+        });
+      }
+
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
 
     return () => {
+      debugHeroBg('HeroBand cleanup');
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       if (ro) ro.disconnect();
       else globalThis.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handlePointer);
+      renderer.domElement.removeEventListener('webglcontextlost', handleContextLost);
+      renderer.domElement.removeEventListener('webglcontextrestored', handleContextRestored);
       geometry.dispose();
       material.dispose();
       renderer.dispose();
-      renderer.forceContextLoss();
       if (renderer.domElement?.parentElement === container) {
         container.removeChild(renderer.domElement);
       }

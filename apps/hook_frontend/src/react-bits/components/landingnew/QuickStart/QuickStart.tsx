@@ -1,43 +1,37 @@
-import type { CliTool, PackageManager } from '../../context/InstallationContext/InstallationContext';
-
-import { motion } from 'motion/react';
+import { FiCopy, FiCheck } from 'react-icons/fi';
 import { useRef, useState, useCallback } from 'react';
-import { FiCopy, FiCheck, FiChevronDown } from 'react-icons/fi';
 
-import { useInstallation } from '../../../hooks/useInstallation';
+import { useTranslate } from 'src/locales';
 
-type Runner = 'npx' | 'pnpm dlx' | 'bunx --bun' | 'yarn dlx';
+type DeployMethod = 'docker-run' | 'docker-compose' | 'source-build';
 
-const TOOLS: readonly CliTool[] = ['shadcn', 'jsrepo'];
-const RUNNERS: readonly Runner[] = ['npx', 'pnpm dlx', 'bunx --bun', 'yarn dlx'];
+const METHODS: readonly DeployMethod[] = ['docker-run', 'docker-compose', 'source-build'];
 
-const PKG_TO_RUNNER: Readonly<Record<PackageManager, Runner>> = {
-  npm: 'npx',
-  pnpm: 'pnpm dlx',
-  bun: 'bunx --bun',
-  yarn: 'yarn dlx',
-};
-
-const RUNNER_TO_PKG: Readonly<Record<Runner, PackageManager>> = {
-  npx: 'npm',
-  'pnpm dlx': 'pnpm',
-  'bunx --bun': 'bun',
-  'yarn dlx': 'yarn',
-};
-
-const COMMANDS: Readonly<Record<CliTool, (runner: Runner) => string>> = {
-  shadcn: (runner) => `${runner} shadcn@latest add @react-bits/Aurora-TS-TW`,
-  jsrepo: (runner) => `${runner} jsrepo@latest add github/davidhaz/react-bits Aurora-TS-TW`,
+const COMMANDS: Readonly<Record<DeployMethod, string>> = {
+  'docker-run': `docker run -d --name hook \\
+  -p 5555:5555 \\
+  -e DATABASE_URL="postgresql://postgres:123456@localhost:5432/hook" \\
+  -e REDIS_URL="redis://localhost:6379" \\
+  zzispp/hook:latest`,
+  'docker-compose': `curl -fsSL https://raw.githubusercontent.com/zzispp/Hook/main/docker-compose.yml -o docker-compose.yml && docker compose up -d`,
+  'source-build': `git clone https://github.com/zzispp/Hook.git && cd Hook
+pnpm install
+just backend-migration "up"
+just run-backend`,
 };
 
 const QuickStart = () => {
-  const { cliTool, setCliTool, packageManager, setPackageManager } = useInstallation();
+  const { t } = useTranslate('landing');
+  const [method, setMethod] = useState<DeployMethod>('docker-run');
   const [copied, setCopied] = useState(false);
-  const [dropOpen, setDropOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const methodLabels: Readonly<Record<DeployMethod, string>> = {
+    'docker-run': t('quickStart.methods.dockerRun'),
+    'docker-compose': t('quickStart.methods.dockerCompose'),
+    'source-build': t('quickStart.methods.sourceBuild'),
+  };
 
-  const runner = PKG_TO_RUNNER[packageManager];
-  const command = COMMANDS[cliTool](runner);
+  const command = COMMANDS[method];
 
   const copy = useCallback(() => {
     navigator.clipboard.writeText(command);
@@ -47,85 +41,49 @@ const QuickStart = () => {
   }, [command]);
 
   return (
-    <section className="ln-qs-section">
+    <section id="quick-start" className="ln-qs-section">
       <div className="ln-qs-inner">
-        <motion.div
-          className="ln-qs-header"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
-          transition={{ duration: 0.5, ease: [0.21, 0.47, 0.32, 0.98] }}
-        >
-          <h2 className="ln-qs-title">Get started in seconds</h2>
-        </motion.div>
+        <div className="ln-qs-header">
+          <h2 className="ln-qs-title">{t('quickStart.title')}</h2>
+        </div>
 
-        <motion.div
-          className="ln-qs-terminal-wrap"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
-          transition={{ duration: 0.5, delay: 0.07, ease: [0.21, 0.47, 0.32, 0.98] }}
-        >
+        <div className="ln-qs-terminal-wrap">
           <div className="ln-qs-glow" />
           <div className="ln-qs-terminal">
-          {/* tab bar with tool selector + runner dropdown */}
-          <div className="ln-qs-tab-bar">
-            <div className="ln-qs-tabs">
-              {TOOLS.map((t) => (
-                <button
-                  key={t}
-                  className={`ln-qs-tab${cliTool === t ? ' ln-qs-tab--active' : ''}`}
-                  onClick={() => setCliTool(t)}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-
-            <div className="ln-qs-tab-bar-right">
-              <div className="ln-qs-runner-dropdown">
-                <button
-                  className="ln-qs-runner-trigger"
-                  onClick={() => setDropOpen((v) => !v)}
-                >
-                  {runner}
-                  <FiChevronDown
-                    size={11}
-                    className={`ln-qs-caret${dropOpen ? ' open' : ''}`}
-                  />
-                </button>
-                <div className={`ln-qs-runner-menu${dropOpen ? ' open' : ''}`}>
-                  {RUNNERS.map((r) => (
-                    <button
-                      key={r}
-                      className={`ln-qs-runner-item${runner === r ? ' active' : ''}`}
-                      onClick={() => { setPackageManager(RUNNER_TO_PKG[r]); setDropOpen(false); }}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
+            {/* tab bar */}
+            <div className="ln-qs-tab-bar">
+              <div className="ln-qs-tabs">
+                {METHODS.map((m) => (
+                  <button
+                    key={m}
+                    className={`ln-qs-tab${method === m ? ' ln-qs-tab--active' : ''}`}
+                    onClick={() => setMethod(m)}
+                  >
+                    {methodLabels[m]}
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
 
-          {/* command line */}
-          <div className="ln-qs-cmd-area">
-            <div className="ln-qs-cmd-line">
-              <span className="ln-qs-prompt">~</span>
-              <code className="ln-qs-cmd-text">{command}</code>
+            {/* command line */}
+            <div className="ln-qs-cmd-area">
+              <div className="ln-qs-cmd-line">
+                <span className="ln-qs-prompt">~</span>
+                <code className="ln-qs-cmd-text" style={{ whiteSpace: 'pre-wrap' }}>
+                  {command}
+                </code>
+              </div>
+              <button
+                className={`ln-qs-copy${copied ? ' ln-qs-copy--done' : ''}`}
+                onClick={copy}
+                aria-label={t('quickStart.copyCommand')}
+              >
+                {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
+              </button>
             </div>
-            <button
-              className={`ln-qs-copy${copied ? ' ln-qs-copy--done' : ''}`}
-              onClick={copy}
-              aria-label="Copy command"
-            >
-              {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}
-            </button>
           </div>
+          <p className="ln-qs-hint">{t('quickStart.hint')}</p>
         </div>
-          <p className="ln-qs-hint">Works with any React project. Components are copied into your codebase.</p>
-        </motion.div>
       </div>
     </section>
   );
