@@ -23,30 +23,6 @@ import { getHeroCodeSnippets, type HeroCodeSnippet } from './hero-content';
 
 const DEFAULT_API_BASE_URL = '/v1';
 const THEME_ATTRIBUTE = 'data-color-scheme';
-const HERO_DEBUG_PREFIX = '[hero-bg]';
-
-function debugHeroBg(event: string, payload: Record<string, unknown> = {}) {
-  console.log(`${HERO_DEBUG_PREFIX} ${JSON.stringify({ event, ...payload })}`);
-}
-
-function elementDebug(selector: string) {
-  const element = document.querySelector(selector);
-
-  if (!element) return null;
-
-  const style = getComputedStyle(element);
-
-  return {
-    rect: element.getBoundingClientRect().toJSON(),
-    opacity: style.opacity,
-    zIndex: style.zIndex,
-    display: style.display,
-    visibility: style.visibility,
-    mixBlendMode: style.mixBlendMode,
-    background: style.background,
-    transform: style.transform,
-  };
-}
 
 type HeroPalette = {
   readonly accentColor: string;
@@ -137,40 +113,6 @@ function useHeroPalette(): HeroPalette {
   }, []);
 
   return getHeroPalette(state.primaryColor, isDark);
-}
-
-function useHeroDebug(palette: HeroPalette) {
-  useEffect(() => {
-    const logState = (label: string) => {
-      const hero = document.querySelector('.ln-hero');
-      const wrapper = document.querySelector('.landing-wrapper');
-
-      debugHeroBg('Hero', {
-        label,
-        theme: document.documentElement.getAttribute(THEME_ATTRIBUTE),
-        wrapperClass: wrapper?.className ?? null,
-        heroRect: hero?.getBoundingClientRect().toJSON() ?? null,
-        heroOpacity: hero ? getComputedStyle(hero).opacity : null,
-        layers: label === 'after-1000ms'
-          ? {
-              dotField: elementDebug('.ln-hero-dot-field'),
-              dotCanvas: elementDebug('.ln-hero-dot-field canvas'),
-              heroBand: elementDebug('.ln-hero-band'),
-              heroBandCanvas: elementDebug('.ln-hero-band canvas'),
-              bottomFade: elementDebug('.ln-hero-bottom-fade'),
-              content: elementDebug('.ln-hero-content'),
-            }
-          : undefined,
-        palette,
-      });
-    };
-
-    logState('effect');
-    requestAnimationFrame(() => logState('next-frame'));
-    const timer = window.setTimeout(() => logState('after-1000ms'), 1000);
-
-    return () => window.clearTimeout(timer);
-  }, [palette]);
 }
 
 function HeroCodeDropdown(props: HeroCodeDropdownProps) {
@@ -407,7 +349,6 @@ function HeroVisuals({ palette, visualReady }: { readonly palette: HeroPalette; 
 
 export default function Hero({ visualReady }: HeroProps) {
   const palette = useHeroPalette();
-  useHeroDebug(palette);
   const heroStyle = {
     '--ln-hero-accent': palette.accentColor,
     '--ln-hero-dot-from': palette.dotGradientFrom,

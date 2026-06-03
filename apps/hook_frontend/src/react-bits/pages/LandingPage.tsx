@@ -15,12 +15,7 @@ import Testimonials from '../components/landingnew/Testimonials/Testimonials';
 import LandingLoader from '../components/landingnew/LandingLoader/LandingLoader';
 
 const MIN_LOADER_MS = 800;
-const HERO_DEBUG_PREFIX = '[hero-bg]';
 const HOME_BACKGROUND_ATTRIBUTE = 'data-react-bits-home';
-
-function debugHeroBg(event: string, payload: Record<string, unknown> = {}) {
-  console.log(`${HERO_DEBUG_PREFIX} ${JSON.stringify({ event, ...payload })}`);
-}
 
 function useHomeDocumentBackground() {
   useLayoutEffect(() => {
@@ -39,11 +34,9 @@ const LandingPage = () => {
   const [hiding, setHiding] = useState(false);
 
   const reveal = useCallback(() => {
-    debugHeroBg('LandingPage reveal start');
     setHiding(true);
     // after the loader fade-out finishes, mark fully loaded & unlock scroll
     setTimeout(() => {
-      debugHeroBg('LandingPage loaded true');
       setLoaded(true);
     }, 600);
   }, []);
@@ -64,7 +57,6 @@ const LandingPage = () => {
     document.fonts.ready.then(() => {
       const elapsed = Date.now() - start;
       const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
-      debugHeroBg('LandingPage fonts ready', { elapsed, remaining });
       setTimeout(reveal, remaining);
     });
   }, [reveal]);
