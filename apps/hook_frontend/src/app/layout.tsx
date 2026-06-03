@@ -1,4 +1,5 @@
 import 'src/global.css';
+import 'src/react-bits/styles.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
 import type { Metadata, Viewport } from 'next';
@@ -36,6 +37,17 @@ export const metadata: Metadata = {
   ],
 };
 
+const REACT_BITS_HOME_LIGHT_BACKGROUND = '#F8FAFC';
+const REACT_BITS_HOME_DARK_BACKGROUND = '#120F17';
+
+const REACT_BITS_HOME_BACKGROUND_SCRIPT = `
+(function () {
+  if (window.location.pathname === '/') {
+    document.documentElement.setAttribute('data-react-bits-home', 'true');
+  }
+})();
+`;
+
 // ----------------------------------------------------------------------
 
 type RootLayoutProps = {
@@ -65,6 +77,28 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
+      <head>
+        <style>{`
+          html[data-react-bits-home='true'],
+          html[data-react-bits-home='true'] body {
+            background: ${REACT_BITS_HOME_LIGHT_BACKGROUND} !important;
+          }
+
+          html[data-react-bits-home='true'][data-color-scheme='dark'],
+          html[data-react-bits-home='true'][data-color-scheme='dark'] body {
+            background: ${REACT_BITS_HOME_DARK_BACKGROUND} !important;
+          }
+
+          html[data-react-bits-home='true'] {
+            color-scheme: light;
+          }
+
+          html[data-react-bits-home='true'][data-color-scheme='dark'] {
+            color-scheme: dark;
+          }
+        `}</style>
+        <script dangerouslySetInnerHTML={{ __html: REACT_BITS_HOME_BACKGROUND_SCRIPT }} />
+      </head>
       <body>
         <InitColorSchemeScript
           modeStorageKey={themeConfig.modeStorageKey}

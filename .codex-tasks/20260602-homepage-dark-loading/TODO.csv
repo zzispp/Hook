@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Identify white frame source,DONE,Source is confirmed from user screenshot and current code,"rg -n \"SplashScreen|loading.tsx|data-color-scheme|ln-loader\" apps/hook_frontend/src",2026-06-02T23:28:00+08:00,0,"White frame occurs before body content is present; root document remains light."
+2,Apply earliest homepage dark background,IN_PROGRESS,Homepage hard refresh has dark html/body before React content mounts,"test -f apps/hook_frontend/src/app/(home)/loading.tsx",,0,
+3,Validate lint build and browser refresh,TODO,Lint/build pass and browser refresh does not expose light frame,"pnpm --filter hook_frontend lint && pnpm --filter hook_frontend build",,0,
+

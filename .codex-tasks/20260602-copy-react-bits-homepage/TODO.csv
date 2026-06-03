@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect Hook and React Bits homepage sources,DONE,Relevant entrypoints/styles/assets/dependencies are identified,"test -f .codex-tasks/20260602-copy-react-bits-homepage/raw/source-map.md",2026-06-02T23:00:00+08:00,0,
+2,Port homepage components styles and assets,DONE,Hook homepage source files contain the React Bits landing implementation,"test -f apps/hook_frontend/src/app/(home)/page.tsx",2026-06-02T23:10:00+08:00,0,
+3,Resolve Next.js dependency and compile issues,DONE,Static checks can run against the updated frontend,"pnpm --filter hook_frontend lint && pnpm --filter hook_frontend build",2026-06-02T23:16:00+08:00,0,
+4,Verify browser rendering,DONE,Local homepage renders without blank/obvious broken asset state,"browser screenshot / visual verification",2026-06-02T23:01:19+08:00,0,"Verified mobile/default and 1440x900 desktop screenshots; no console errors; React Bits source external avatar URLs remain unchanged."
+5,Record final validation and cleanup,DONE,Task progress captures files changed and validation outcomes,"git status --short",2026-06-02T23:04:58+08:00,0,"Final lint/build/browser verification recorded; git status reviewed."

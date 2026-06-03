@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inventory changed JS and JSX files,DONE,All current changed .js/.jsx files are listed,git status --short -- apps/hook_frontend/src | awk '$1 ~ /A|M|AM|MM/ {print $2}' | rg '\.(jsx|js)$',2026-06-03,0,Found 31 changed React Bits JS/JSX files.
+2,Rename JS to TS and JSX to TSX,DONE,No changed React Bits source files remain as .js/.jsx,find apps/hook_frontend/src/react-bits -type f \( -name '*.js' -o -name '*.jsx' \) | sort,2026-06-03,0,No JS/JSX files remain under src/react-bits.
+3,Fix TypeScript and lint issues,DONE,Frontend lint passes,pnpm --filter hook_frontend lint,2026-06-03,0,Added strict TS types for migrated React Bits files; lint and tsc passed.
+4,Run production build,DONE,Frontend build passes,pnpm --filter hook_frontend build,2026-06-03,0,Production build passed after TS/TSX migration.

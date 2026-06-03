@@ -1,0 +1,213 @@
+.ln-hero-band {
+  mix-blend-mode: var(--landing-hero-band-blend);
+  opacity: var(--landing-hero-band-opacity);
+}
+
+.ln-footer-logo {
+  filter: var(--landing-logo-filter);
+}
+
+.ln-sp-card-logo--dark {
+  display: none;
+}
+
+.ln-sp-card-logo--light {
+  display: block;
+}
+
+[data-color-scheme='dark'] .ln-sp-card-logo--dark {
+  display: block;
+}
+
+[data-color-scheme='dark'] .ln-sp-card-logo--light {
+  display: none;
+}
+
+.ln-hero-code-dropdown-menu,
+.ln-hero-color-picker,
+.ln-qs-runner-menu {
+  border-color: var(--border-subtle);
+  background: var(--bg-glass-strong);
+  box-shadow: var(--shadow-dropdown);
+}
+
+.ln-hero-code-reset,
+.ln-hero-code-dropdown-trigger {
+  border-color: var(--border-secondary);
+  background: var(--bg-input);
+}
+
+.ln-hero-code-reset:hover,
+.ln-hero-code-dropdown-trigger:hover,
+.ln-hero-code-dropdown-item:hover,
+.ln-qs-runner-item:hover,
+.ln-navbar-prefs-fav:hover,
+.ln-navbar-mobile-link:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.ln-hero-code-pre {
+  color: var(--color-accent);
+}
+
+.c-kw,
+.c-attr,
+.c-fn,
+.ln-hero-code-value--bool {
+  color: var(--text-primary);
+}
+
+.c-punc {
+  color: var(--text-muted);
+}
+
+.c-comp,
+.c-str,
+.ln-hero-code-value--color {
+  color: var(--color-accent);
+}
+
+.c-tag {
+  color: var(--color-warm);
+}
+
+.ln-hero-code-value--bool,
+.ln-hero-code-value--color {
+  background: var(--bg-code-token);
+}
+
+.ln-hero-code-swatch,
+.ln-hero-color-picker-preset {
+  border-color: var(--border-strong);
+}
+
+.ln-navbar-hamburger span {
+  background: var(--text-primary);
+}
+
+.ln-hero-bottom-fade stop,
+.ln-hero .dot-field-glow-stop {
+  stop-color: var(--bg-body);
+}
+
+.ln-features-card:hover,
+.ln-demo-card:hover,
+.ln-test-card:hover,
+.ln-sp-card:hover {
+  border-color: var(--border-strong);
+}
+
+.ln-feat-pill:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.ln-feat-tool-box,
+.ln-feat-orbit-node,
+.ln-feat-orbit-center,
+.dock-panel,
+.dock-item,
+.dock-label {
+  border-color: var(--border-secondary);
+  background-color: var(--bg-elevated);
+  color: var(--text-muted);
+}
+
+.ln-feat-orbit-ring {
+  border-color: var(--border-secondary);
+}
+
+.ln-feat-vrow-dot {
+  background: var(--feature-variant-accent) !important;
+}
+
+.ln-feat-vrow-bar,
+.ln-feat-aichat-dots span,
+.ln-feat-aichat-thinking span,
+.ln-feat-aichat-cursor {
+  background: var(--text-dimmed);
+}
+
+.ac-kw,
+.ac-tag,
+.ac-str {
+  color: var(--text-muted);
+}
+
+.ac-comp,
+.ac-attr,
+.ac-num {
+  color: var(--text-primary);
+}
+
+.ac-punc,
+.ln-feat-aichat-ln {
+  color: var(--text-soft);
+}
+
+.ln-feat-stars-count {
+  color: var(--color-primary);
+  background: linear-gradient(to bottom, var(--color-primary) 30%, transparent 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.ln-feat-stars-chart stop {
+  stop-color: var(--feature-star-fill);
+}
+
+.ln-feat-stars-chart path[stroke] {
+  stroke: var(--feature-star-stroke);
+}
+
+.ln-demo-card-overlay {
+  background: var(--landing-card-overlay);
+}
+
+.ln-demo-shiny {
+  --shiny-text-color: var(--text-muted);
+  --shiny-text-highlight: var(--landing-shine-color);
+}
+
+.ln-qs-tab:hover,
+.ln-qs-tab--active,
+.ln-qs-runner-trigger:hover,
+.ln-qs-runner-item.active,
+.ln-qs-runner-item:hover,
+.ln-qs-cmd-text,
+.ln-qs-copy:hover,
+.ln-qs-copy--done,
+.ln-footer-link:hover,
+.ln-footer-creator:hover {
+  color: var(--text-primary);
+}
+
+.ln-qs-tab--active {
+  border-bottom-color: var(--color-primary);
+}
+
+.ln-cta-card {
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
+}
+
+.ln-cta-btn--primary {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg-body);
+}
+
+.ln-cta-btn--secondary {
+  border-color: var(--border-secondary);
+  color: var(--text-muted);
+}
+
+.ln-cta-btn--secondary:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.ln-footer-heart {
+  color: var(--color-primary);
+}
