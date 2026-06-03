@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 
 import { motion, AnimatePresence } from 'motion/react';
-import { useRef, useState, useEffect, useCallback } from 'react';
 import { SiOpenai, SiGoogle, SiAnthropic } from 'react-icons/si';
+import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import {
   FiZap,
   FiKey,
@@ -212,7 +212,7 @@ const HealthTerminal = () => {
   const [phase, setPhase] = useState<'prompt' | 'thinking' | 'code'>('prompt');
   const [codeLines, setCodeLines] = useState(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const monitorFrames = getMonitorFrames(t);
+  const monitorFrames = useMemo(() => getMonitorFrames(t), [t]);
 
   const clearTimers = useCallback(() => {
     timers.current.forEach(clearTimeout);

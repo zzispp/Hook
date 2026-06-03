@@ -20,6 +20,10 @@
   color: var(--text-primary);
 }
 
+.ln-hero-code-dropdown-item.active {
+  color: var(--text-primary);
+}
+
 .ln-hero-code-pre {
   color: var(--text-secondary);
 }
