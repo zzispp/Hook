@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
 import { motion, AnimatePresence } from 'motion/react';
-import { Shapes, Palette, ImageIcon } from 'lucide-react';
 import { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import { FiZap, FiBox, FiEye, FiType, FiCode, FiGrid, FiStar, FiImage, FiHeart, FiCircle, FiLayers, FiCompass } from 'react-icons/fi';
 
 import { Link } from 'src/react-bits/router';
+import { Iconify } from 'src/components/iconify';
 
 import { useStars } from '../../../hooks/useStars';
 
@@ -70,21 +70,21 @@ const ToolsFloat = () => (
       animate={{ y: [-4, 4, -4] }}
       transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
     >
-      <Palette size={22} />
+      <Iconify icon="solar:palette-bold" width={22} />
     </motion.div>
     <motion.div
       className="ln-feat-tool-box ln-feat-tool-box--left"
       animate={{ y: [3, -3, 3], x: [-3, 2, -3] }}
       transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
     >
-      <Shapes size={18} />
+      <Iconify icon="solar:atom-bold-duotone" width={18} />
     </motion.div>
     <motion.div
       className="ln-feat-tool-box ln-feat-tool-box--right"
       animate={{ y: [3, -3, 3], x: [3, -2, 3] }}
       transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
     >
-      <ImageIcon size={18} />
+      <Iconify icon="solar:gallery-wide-bold" width={18} />
     </motion.div>
   </div>
 );

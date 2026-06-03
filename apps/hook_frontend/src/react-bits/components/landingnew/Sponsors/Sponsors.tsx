@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
-import { Gem, Crown, Medal, ArrowRight } from 'lucide-react';
 
 import { Link } from 'src/react-bits/router';
+import { Iconify } from 'src/components/iconify';
 
 import {
   silverSponsors,
@@ -60,7 +60,7 @@ const SponsorCard = ({ sponsor, tier }: { readonly sponsor: Sponsor; readonly ti
     </div>
     <div className="ln-sp-card-info">
       <span className="ln-sp-card-name">{sponsor.name}</span>
-      <ArrowRight size={13} className="ln-sp-card-arrow" />
+      <Iconify icon="eva:arrow-forward-fill" width={13} className="ln-sp-card-arrow" />
     </div>
   </a>
 );
@@ -100,7 +100,7 @@ const Sponsors = () => (
         >
           <div className="ln-sp-tier-header">
             <span className="ln-sp-tier-badge ln-sp-tier-badge--diamond">
-              <Gem size={12} /> Diamond
+              <Iconify icon="solar:verified-check-bold" width={12} /> Diamond
             </span>
           </div>
           <div className="ln-sp-grid ln-sp-grid--diamond">
@@ -121,7 +121,7 @@ const Sponsors = () => (
         >
           <div className="ln-sp-tier-header">
             <span className="ln-sp-tier-badge ln-sp-tier-badge--platinum">
-              <Crown size={12} /> Platinum
+              <Iconify icon="solar:cup-star-bold" width={12} /> Platinum
             </span>
           </div>
           <div className="ln-sp-grid ln-sp-grid--platinum">
@@ -145,7 +145,7 @@ const Sponsors = () => (
         >
           <div className="ln-sp-tier-header">
             <span className="ln-sp-tier-badge ln-sp-tier-badge--silver">
-              <Medal size={12} /> Silver
+              <Iconify icon="eva:award-fill" width={12} /> Silver
             </span>
           </div>
           <div className="ln-sp-grid ln-sp-grid--silver">
@@ -168,13 +168,13 @@ const Sponsors = () => (
         transition={{ duration: 0.5, delay: 0.28, ease: [0.21, 0.47, 0.32, 0.98] }}
       >
         <Link to="/sponsors" className="ln-sp-footer-link">
-          View all sponsors <ArrowRight size={12} />
+          View all sponsors <Iconify icon="eva:arrow-forward-fill" width={12} />
         </Link>
         <a
           href="mailto:contact@davidhaz.com?subject=React%20Bits%20Sponsorship%20Inquiry"
           className="ln-sp-footer-link"
         >
-          Become a sponsor <ArrowRight size={12} />
+          Become a sponsor <Iconify icon="eva:arrow-forward-fill" width={12} />
         </a>
       </motion.div>
     </div>

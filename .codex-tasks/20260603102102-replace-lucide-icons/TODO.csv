@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Locate lucide usage and internal icon component,DONE,Usage sites and replacement component identified,"rg -n ""lucide-react|src/components/iconify"" apps/hook_frontend/src",2026-06-03T10:21:02+08:00,0,"lucide-react appears in three react-bits files; internal component is Iconify."
+2,Replace lucide imports with Iconify,DONE,No source import of lucide-react remains,"rg -n ""lucide-react"" apps/hook_frontend/src",2026-06-03T10:21:02+08:00,0,
+3,Remove lucide dependency entry,DONE,Frontend package no longer declares lucide-react,"rg -n ""lucide-react"" apps/hook_frontend/package.json pnpm-lock.yaml",2026-06-03T10:21:02+08:00,0,
+4,Run frontend build and fix surfaced errors,DONE,pnpm build:frontend exits 0,"pnpm build:frontend",2026-06-03T10:21:02+08:00,0,
