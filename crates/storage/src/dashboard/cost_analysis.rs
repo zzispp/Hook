@@ -550,7 +550,7 @@ impl BucketContribution {
         if !is_terminal_status(&record.status) {
             return None;
         }
-        let cache_read_tokens = record.cache_read_input_tokens.unwrap_or_default();
+        let cache_read_tokens = token_context::cache_read_tokens(record);
         let input_price = record.input_price_per_million.unwrap_or(Decimal::ZERO);
         let estimated_full_cost = input_price * Decimal::from(cache_read_tokens) / Decimal::from(1_000_000_i64);
         Some(Self {

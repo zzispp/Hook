@@ -7,7 +7,8 @@ use serde_json::Value;
 use time::format_description::well_known::Rfc3339;
 
 use super::{
-    BuiltinRuleInput, DimensionCollectInput, DimensionCollector, DimensionCollectorRuntime, FormulaEngine, FormulaStatus,
+    BuiltinRuleInput, CACHE_CREATION_1H_TTL_MINUTES, CACHE_CREATION_5M_TTL_MINUTES, DimensionCollectInput, DimensionCollector, DimensionCollectorRuntime,
+    FormulaEngine, FormulaStatus,
     rules::{BillingRuleLookup, BillingRuleScope, effective_rule_task_type, universal_rule},
     types::{BILLING_SNAPSHOT_SCHEMA_VERSION, BillingSnapshot, BillingSnapshotStatus, CostResult, quantize},
 };
@@ -125,6 +126,12 @@ fn normalized_dimensions(api_format: &str, mut dimensions: BTreeMap<String, Valu
     derive_cache_creation_tokens(&mut dimensions);
     derive_uncategorized_cache_creation_tokens(&mut dimensions);
     alias(&mut dimensions, "cache_read_tokens", "cache_read_input_tokens");
+    dimensions
+        .entry("cache_creation_ephemeral_5m_ttl_minutes".into())
+        .or_insert(Value::from(CACHE_CREATION_5M_TTL_MINUTES));
+    dimensions
+        .entry("cache_creation_ephemeral_1h_ttl_minutes".into())
+        .or_insert(Value::from(CACHE_CREATION_1H_TTL_MINUTES));
     dimensions.entry("request_count".into()).or_insert(Value::from(1));
     preserve_raw_input_tokens(&mut dimensions);
     if !dimensions.contains_key("total_input_context") {
