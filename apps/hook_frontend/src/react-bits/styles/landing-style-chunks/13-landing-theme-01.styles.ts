@@ -1,3 +1,4 @@
+export const landingStyles13LandingTheme01 = String.raw`
 html[data-react-bits-home='true'],
 html[data-react-bits-home='true'] body {
   background: var(--bg-body);
@@ -171,3 +172,4 @@ html[data-react-bits-home='true'] body {
 .ln-qs-tab-bar {
   border-color: var(--border-secondary);
 }
+`;

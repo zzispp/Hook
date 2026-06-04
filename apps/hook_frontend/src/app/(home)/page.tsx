@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from 'src/global-config';
-import { getServerTranslations } from 'src/locales/server';
 import enLanding from 'src/locales/langs/en/landing.json';
+import { getServerTranslations } from 'src/locales/server';
 import LandingPage from 'src/react-bits/pages/LandingPage';
 
 // ----------------------------------------------------------------------

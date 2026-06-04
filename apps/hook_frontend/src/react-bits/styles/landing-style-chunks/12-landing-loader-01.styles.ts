@@ -1,3 +1,4 @@
+export const landingStyles12LandingLoader01 = String.raw`
 /* ─── Page reveal ─── */
 
 .landing-wrapper.ln-loading {
@@ -22,3 +23,4 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+`;

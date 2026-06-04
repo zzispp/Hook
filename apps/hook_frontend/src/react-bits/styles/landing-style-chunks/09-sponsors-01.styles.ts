@@ -1,3 +1,4 @@
+export const landingStyles09Sponsors01 = String.raw`
 /* ══════════════════════════════════════════════
    Supported Channels / Providers Grid (Landing)
    ══════════════════════════════════════════════ */
@@ -142,3 +143,4 @@
     grid-template-columns: 1fr;
   }
 }
+`;

@@ -1,3 +1,4 @@
+export const landingStyles01Variables01 = String.raw`
 html[data-react-bits-home='true'] {
   /* Background colors */
   --bg-body: #F8FAFC;
@@ -164,3 +165,4 @@ html[data-react-bits-home='true'][data-color-scheme='dark'] {
     background-position: 100% 50%;
   }
 }
+`;

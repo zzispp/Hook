@@ -1,3 +1,4 @@
+export const landingStyles14LandingThemeComponents01 = String.raw`
 .ln-hero-band {
   opacity: var(--landing-hero-band-opacity);
 }
@@ -161,3 +162,4 @@
 .ln-footer-heart {
   color: var(--color-primary);
 }
+`;

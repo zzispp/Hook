@@ -1,3 +1,4 @@
+export const landingStyles10Cta01 = String.raw`
 /* ══════════════════════════════════════════════
    CTA (Final)
    ══════════════════════════════════════════════ */
@@ -183,3 +184,4 @@
     justify-content: center;
   }
 }
+`;

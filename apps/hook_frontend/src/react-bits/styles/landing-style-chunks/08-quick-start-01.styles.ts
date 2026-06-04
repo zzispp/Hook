@@ -1,3 +1,4 @@
+export const landingStyles08QuickStart01 = String.raw`
 /* ══════════════════════════════════════════════
    QuickStart
    ══════════════════════════════════════════════ */
@@ -198,3 +199,4 @@
     font-size: 11px;
   }
 }
+`;

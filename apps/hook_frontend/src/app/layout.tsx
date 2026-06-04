@@ -1,5 +1,4 @@
 import 'src/global.css';
-import 'src/react-bits/styles.css';
 import '@rainbow-me/rainbowkit/styles.css';
 
 import type { Metadata, Viewport } from 'next';

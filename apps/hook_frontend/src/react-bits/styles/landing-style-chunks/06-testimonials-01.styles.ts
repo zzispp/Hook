@@ -1,3 +1,4 @@
+export const landingStyles06Testimonials01 = String.raw`
 /* ══════════════════════════════════════════════
    Testimonials
    ══════════════════════════════════════════════ */
@@ -203,3 +204,4 @@
     display: none;
   }
 }
+`;

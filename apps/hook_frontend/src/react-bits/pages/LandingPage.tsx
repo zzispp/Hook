@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import CTA from '../components/landingnew/CTA/CTA';
 import useScrollToTop from '../hooks/useScrollToTop';
 import Hero from '../components/landingnew/Hero/Hero';
+import { LandingStyles } from '../styles/LandingStyles';
 import Navbar from '../components/landingnew/Navbar/Navbar';
 import Footer from '../components/landingnew/Footer/Footer';
 import Features from '../components/landingnew/Features/Features';
@@ -63,6 +64,7 @@ const LandingPage = () => {
 
   return (
     <>
+      <LandingStyles />
       {!loaded && <LandingLoader hiding={hiding} />}
       <section className={`landing-wrapper no-side-fades${loaded ? ' ln-loaded' : ' ln-loading'}`}>
         <Navbar />

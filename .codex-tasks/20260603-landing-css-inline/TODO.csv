@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inventory commit-range CSS and current style patterns,DONE,Changed CSS files and project style pattern are identified,git diff --name-status c4067752d4f8987b2bec3958041cc9aff923d37b..HEAD,,0,Found React Bits landing CSS plus project-wide MUI sx/styled/GlobalStyles pattern
+2,Migrate landing CSS into TSX style entry,DONE,Landing page injects styles without importing react-bits CSS files,rg "react-bits/styles|landingnew/.+\\.css|react-bits/css" apps/hook_frontend/src -g '*.tsx' -g '*.ts',,0,Added LandingStyles with MUI GlobalStyles and removed root layout import
+3,Remove obsolete standalone CSS files,DONE,React Bits landing CSS files are removed,find apps/hook_frontend/src/react-bits -name '*.css' -type f -print,,0,No CSS files remain under src/react-bits
+4,Run validation,DONE,Frontend lint or build validates changed files,pnpm lint:frontend,,0,pnpm lint:frontend and pnpm build:frontend passed; browser check on existing localhost:8082 passed
