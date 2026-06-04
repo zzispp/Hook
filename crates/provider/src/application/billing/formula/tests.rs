@@ -77,6 +77,32 @@ fn matrix_and_ttl_tiered_mappings_resolve_cost() {
 }
 
 #[test]
+fn ttl_tiered_mapping_falls_back_when_ttl_is_not_exact_match() {
+    let result = FormulaEngine::evaluate(
+        "ttl_cost",
+        BTreeMap::new(),
+        object_map(json!({"total_input_context": 200, "cache_ttl_minutes": 30})),
+        object_map(json!({
+            "ttl_cost": {
+                "source": "tiered",
+                "tier_key": "total_input_context",
+                "ttl_key": "cache_ttl_minutes",
+                "ttl_value_key": "cache_read_price_per_1m",
+                "tiers": [{"up_to": null, "value": 1, "cache_ttl_pricing": [
+                    {"ttl_minutes": 5, "cache_read_price_per_1m": 3},
+                    {"ttl_minutes": 60, "cache_read_price_per_1m": 4}
+                ]}]
+            }
+        })),
+        false,
+    )
+    .unwrap();
+
+    assert_eq!(result.cost, Decimal::new(100000000, 8));
+    assert_eq!(result.tier_index, Some(0));
+}
+
+#[test]
 fn negative_cost_returns_incomplete() {
     let result = FormulaEngine::evaluate("-1", BTreeMap::new(), BTreeMap::new(), BTreeMap::new(), false).unwrap();
     assert_eq!(result.status, FormulaStatus::Incomplete);

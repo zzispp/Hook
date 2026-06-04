@@ -204,7 +204,7 @@ mod tests {
     };
 
     #[test]
-    fn per_token_cost_removes_openai_cache_tokens_from_input_cost() {
+    fn per_token_cost_removes_openai_cache_read_tokens_from_input_cost() {
         let candidate = candidate_with_pricing(TieredPricingConfig {
             tiers: vec![PricingTier {
                 up_to: None,
@@ -220,10 +220,10 @@ mod tests {
 
         assert_eq!(upstream.upstream_cost_mode, Some(ProviderModelCostMode::PerToken));
         assert_eq!(upstream.upstream_cost_source, Some(ProviderModelCostSource::GlobalDefault));
-        assert_eq!(upstream.upstream_input_cost, Some(Decimal::new(100000, 8)));
+        assert_eq!(upstream.upstream_input_cost, Some(Decimal::new(160000, 8)));
         assert_eq!(upstream.upstream_cache_creation_cost, Some(Decimal::new(75000, 8)));
         assert_eq!(upstream.upstream_cache_read_cost, Some(Decimal::new(20000, 8)));
-        assert_eq!(upstream.upstream_total_cost, Some(quantize(Decimal::new(235000, 8))));
+        assert_eq!(upstream.upstream_total_cost, Some(quantize(Decimal::new(295000, 8))));
     }
 
     #[test]

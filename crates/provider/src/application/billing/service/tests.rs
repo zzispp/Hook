@@ -103,7 +103,7 @@ fn gemini_cache_read_tokens_are_removed_from_billable_input() {
 }
 
 #[test]
-fn openai_cache_creation_tokens_are_removed_from_billable_input() {
+fn openai_cache_creation_tokens_are_not_removed_from_billable_input() {
     let result = calculate_default(
         "openai:chat",
         BTreeMap::from([
@@ -115,9 +115,9 @@ fn openai_cache_creation_tokens_are_removed_from_billable_input() {
         pricing(2, 4),
     );
 
-    assert_eq!(result.snapshot.resolved_dimensions["input_tokens"], 500);
+    assert_eq!(result.snapshot.resolved_dimensions["input_tokens"], 700);
     assert_eq!(result.snapshot.resolved_dimensions["total_input_context"], 1000);
-    assert_eq!(result.snapshot.cost_breakdown["input_cost"], Decimal::new(100000, 8));
+    assert_eq!(result.snapshot.cost_breakdown["input_cost"], Decimal::new(140000, 8));
     assert_eq!(result.snapshot.cost_breakdown["cache_creation_uncategorized_cost"], Decimal::new(50000, 8));
     assert_eq!(result.snapshot.cost_breakdown["cache_read_cost"], Decimal::new(6000, 8));
 }

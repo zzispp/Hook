@@ -94,17 +94,15 @@ fn tier_value_for_mapping(
 
 fn resolve_ttl_price(tier: &serde_json::Map<String, Value>, ttl_minutes: Decimal, value_key: &str) -> Option<Value> {
     let entries = tier.get("cache_ttl_pricing")?.as_array()?;
-    let mut last = None;
     for entry in entries.iter().filter_map(Value::as_object) {
-        last = entry.get(value_key).cloned();
         let Some(limit) = entry.get("ttl_minutes").and_then(|value| value_decimal(value).ok()) else {
             continue;
         };
-        if ttl_minutes <= limit {
-            return entry.get(value_key).cloned();
+        if ttl_minutes == limit {
+            return entry.get(value_key).filter(|value| !value.is_null()).cloned();
         }
     }
-    last
+    None
 }
 
 fn mapping_bool(mapping: &serde_json::Map<String, Value>, key: &str) -> bool {

@@ -184,11 +184,11 @@ fn normalize_billable_input_tokens(api_format: &str, dimensions: &mut BTreeMap<S
         return;
     }
     let input_tokens = int_dim(dimensions, "input_tokens");
-    let cache_tokens = int_dim(dimensions, "cache_creation_tokens").saturating_add(int_dim(dimensions, "cache_read_tokens"));
-    if input_tokens <= 0 || cache_tokens <= 0 {
+    let cache_read_tokens = int_dim(dimensions, "cache_read_tokens");
+    if input_tokens <= 0 || cache_read_tokens <= 0 {
         return;
     }
-    dimensions.insert("input_tokens".into(), Value::from((input_tokens - cache_tokens).max(0)));
+    dimensions.insert("input_tokens".into(), Value::from((input_tokens - cache_read_tokens).max(0)));
 }
 
 fn input_tokens_include_cache_dimensions(api_format: &str) -> bool {
