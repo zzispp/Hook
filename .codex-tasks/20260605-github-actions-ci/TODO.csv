@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing project commands,DONE,Existing Rust pnpm and Docker commands are inspected,test -f justfile && test -f package.json && test -f Dockerfile,,0,
+2,Add GitHub Actions workflow,DONE,.github/workflows/ci.yml exists and matches project commands,test -f .github/workflows/ci.yml,,0,
+3,Validate workflow locally,DONE,YAML and referenced config checks pass,bash -n scripts/create-docker-env.sh scripts/docker-entrypoint.sh update.sh deploy.sh,,0,Rust frontend Docker and Compose checks passed locally.
+4,Summarize result,DONE,User receives concise summary with validation evidence,test -f .codex-tasks/20260605-github-actions-ci/PROGRESS.md,,0,

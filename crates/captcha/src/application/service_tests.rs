@@ -14,7 +14,7 @@ async fn config_includes_recharge_captcha_flag() {
 
     let config = service.config().await.expect("config must load");
 
-    assert_eq!(config.recharge_captcha_enabled, true);
+    assert!(config.recharge_captcha_enabled);
 }
 
 #[tokio::test]

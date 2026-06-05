@@ -47,24 +47,24 @@ mod tests {
 
     #[test]
     fn public_base_url_accepts_http_and_https_urls() {
-        assert_eq!(public_base_url_is_valid("http://hook.test").unwrap(), true);
-        assert_eq!(public_base_url_is_valid("https://hook.test/payment").unwrap(), true);
-        assert_eq!(public_base_url_is_valid("https://1.1.1.1/callback").unwrap(), true);
+        assert!(public_base_url_is_valid("http://hook.test").unwrap());
+        assert!(public_base_url_is_valid("https://hook.test/payment").unwrap());
+        assert!(public_base_url_is_valid("https://1.1.1.1/callback").unwrap());
     }
 
     #[test]
     fn public_base_url_rejects_missing_or_unsupported_scheme() {
-        assert_eq!(public_base_url_is_valid("hook.test").unwrap(), false);
-        assert_eq!(public_base_url_is_valid("ftp://hook.test").unwrap(), false);
-        assert_eq!(public_base_url_is_valid("https://").unwrap(), false);
+        assert!(!public_base_url_is_valid("hook.test").unwrap());
+        assert!(!public_base_url_is_valid("ftp://hook.test").unwrap());
+        assert!(!public_base_url_is_valid("https://").unwrap());
     }
 
     #[test]
     fn public_base_url_accepts_local_and_private_hosts() {
-        assert_eq!(public_base_url_is_valid("http://localhost:8080").unwrap(), true);
-        assert_eq!(public_base_url_is_valid("http://127.0.0.1").unwrap(), true);
-        assert_eq!(public_base_url_is_valid("http://10.0.0.1").unwrap(), true);
-        assert_eq!(public_base_url_is_valid("http://[::1]").unwrap(), true);
+        assert!(public_base_url_is_valid("http://localhost:8080").unwrap());
+        assert!(public_base_url_is_valid("http://127.0.0.1").unwrap());
+        assert!(public_base_url_is_valid("http://10.0.0.1").unwrap());
+        assert!(public_base_url_is_valid("http://[::1]").unwrap());
     }
 
     #[test]

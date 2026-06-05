@@ -35,6 +35,24 @@ type TestService = UserService<
     TestPurposeEmailCodeStore,
 >;
 
+type DisabledAccountEmailTestService = UserService<
+    MemoryUserRepository,
+    TestPasswordHasher,
+    super::NoSystemUserProvider,
+    TestRegistrationPolicy,
+    super::NoInitialGrantLedger,
+    super::NoUserWalletCatalog,
+    super::NoPasswordResetConfig,
+    super::NoPasswordResetMailer,
+    DisabledAccountEmailConfig,
+    TestMailer,
+    super::NoRegistrationEmailCodeStore,
+    TestAuthProviderConfig,
+    TestOAuthClient,
+    TestAuthTicketStore,
+    TestPurposeEmailCodeStore,
+>;
+
 #[derive(Clone)]
 pub(super) struct TestAuthProviderConfig {
     oauth: OAuthProviderSettings,
@@ -75,26 +93,7 @@ pub(super) fn test_service_with_codes(repository: MemoryUserRepository, codes: T
     .with_social_auth(TestAuthProviderConfig::default(), oauth_client, TestAuthTicketStore::default(), codes)
 }
 
-pub(super) fn test_service_with_disabled_account_email(
-    repository: MemoryUserRepository,
-    oauth_client: TestOAuthClient,
-) -> UserService<
-    MemoryUserRepository,
-    TestPasswordHasher,
-    super::NoSystemUserProvider,
-    TestRegistrationPolicy,
-    super::NoInitialGrantLedger,
-    super::NoUserWalletCatalog,
-    super::NoPasswordResetConfig,
-    super::NoPasswordResetMailer,
-    DisabledAccountEmailConfig,
-    TestMailer,
-    super::NoRegistrationEmailCodeStore,
-    TestAuthProviderConfig,
-    TestOAuthClient,
-    TestAuthTicketStore,
-    TestPurposeEmailCodeStore,
-> {
+pub(super) fn test_service_with_disabled_account_email(repository: MemoryUserRepository, oauth_client: TestOAuthClient) -> DisabledAccountEmailTestService {
     UserService::with_system_user_and_registration(
         repository,
         TestPasswordHasher,

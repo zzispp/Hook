@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[test]
 fn format_conversion_stream_maps_delta_and_done() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let openai = vec![
         json!({
             "id": "chatcmpl_1",
@@ -46,7 +46,7 @@ fn format_conversion_stream_maps_delta_and_done() {
 
 #[test]
 fn format_conversion_stream_openai_finish_waits_for_usage_only_incremental_chunk() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let mut state = StreamConversionState::default();
     let finish = json!({
         "id": "chatcmpl_1",
@@ -91,7 +91,7 @@ fn format_conversion_stream_openai_finish_waits_for_usage_only_incremental_chunk
 
 #[test]
 fn format_conversion_stream_flushes_openai_done_when_usage_chunk_absent() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let mut state = StreamConversionState::default();
     let finish = json!({
         "id": "chatcmpl_1",
@@ -121,7 +121,7 @@ fn format_conversion_stream_flushes_openai_done_when_usage_chunk_absent() {
 
 #[test]
 fn format_conversion_stream_chunk_matches_batch_for_cumulative_gemini_text() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let gemini = vec![
         json!({
             "modelVersion": "gemini-1.5-flash",

@@ -119,7 +119,7 @@ fn commission_csv(items: Vec<types::user::AffiliateCommissionItem>) -> String {
     )
 }
 
-fn csv<'a>(headers: &[&str], rows: impl IntoIterator<Item = Vec<String>>) -> String {
+fn csv(headers: &[&str], rows: impl IntoIterator<Item = Vec<String>>) -> String {
     let mut lines = vec![csv_row(headers.iter().map(|value| (*value).to_owned()).collect())];
     lines.extend(rows.into_iter().map(csv_row));
     lines.join("\n")

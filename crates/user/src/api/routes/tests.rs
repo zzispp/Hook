@@ -256,7 +256,6 @@ impl crate::application::AffiliateUseCase for TestAffiliates {
             today_commission_amount: rust_decimal::Decimal::ZERO,
             month_commission_amount: rust_decimal::Decimal::ZERO,
             affiliate_commission_percent: rust_decimal::Decimal::ZERO,
-            affiliate_min_commission_amount: rust_decimal::Decimal::ZERO,
             last_commission_at: None,
         })
     }

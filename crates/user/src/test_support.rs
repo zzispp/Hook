@@ -320,7 +320,6 @@ impl AffiliateRepository for MemoryUserRepository {
             today_commission_amount: rust_decimal::Decimal::ZERO,
             month_commission_amount: rust_decimal::Decimal::ZERO,
             affiliate_commission_percent: rust_decimal::Decimal::ZERO,
-            affiliate_min_commission_amount: rust_decimal::Decimal::ZERO,
             last_commission_at: None,
         })
     }
@@ -388,7 +387,6 @@ impl AdminAffiliateRepository for MemoryUserRepository {
             today_commission_amount: rust_decimal::Decimal::ZERO,
             month_commission_amount: rust_decimal::Decimal::ZERO,
             affiliate_commission_percent: rust_decimal::Decimal::ZERO,
-            affiliate_min_commission_amount: rust_decimal::Decimal::ZERO,
         })
     }
 

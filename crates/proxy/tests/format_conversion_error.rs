@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[test]
 fn error_conversion_maps_provider_error_shape() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let claude_error = json!({
         "type": "error",
         "error": { "type": "rate_limit_error", "message": "too many requests" }
@@ -24,7 +24,7 @@ fn error_conversion_maps_provider_error_shape() {
 
 #[test]
 fn responses_request_reasoning_input_item_converts_to_openai_chat() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-5.5",
         "input": [
@@ -47,7 +47,7 @@ fn responses_request_reasoning_input_item_converts_to_openai_chat() {
 
 #[test]
 fn gemini_request_compacts_same_role_contents_for_claude_history() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "claude-sonnet",
         "messages": [
@@ -75,7 +75,7 @@ fn gemini_request_compacts_same_role_contents_for_claude_history() {
 
 #[test]
 fn claude_tool_stream_outputs_complete_gemini_function_call_on_block_stop() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let claude = vec![
         json!({ "type": "message_start", "message": { "id": "msg_1", "model": "claude-sonnet" } }),
         json!({ "type": "content_block_start", "index": 0, "content_block": { "type": "tool_use", "id": "tool_1", "name": "search" } }),
@@ -104,7 +104,7 @@ fn claude_tool_stream_outputs_complete_gemini_function_call_on_block_stop() {
 
 #[test]
 fn gemini_request_maps_parallel_function_calls_to_claude_tool_uses() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gemini-pro",
         "contents": [
@@ -144,7 +144,7 @@ fn gemini_request_maps_parallel_function_calls_to_claude_tool_uses() {
 
 #[test]
 fn gemini_request_maps_explicit_thought_part_to_claude_thinking() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gemini-pro",
         "contents": [
@@ -180,7 +180,7 @@ fn gemini_request_maps_explicit_thought_part_to_claude_thinking() {
 
 #[test]
 fn gemini_request_preserves_function_call_with_thought_signature_as_tool_use() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gemini-pro",
         "contents": [
@@ -219,7 +219,7 @@ fn gemini_request_preserves_function_call_with_thought_signature_as_tool_use() {
 
 #[test]
 fn gemini_to_claude_keeps_orphaned_history_tool_use_visible() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gemini-pro",
         "contents": [
@@ -253,7 +253,7 @@ fn gemini_to_claude_keeps_orphaned_history_tool_use_visible() {
 
 #[test]
 fn gemini_to_claude_preserves_mixed_user_part_order() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gemini-pro",
         "contents": [

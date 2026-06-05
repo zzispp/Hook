@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[test]
 fn format_conversion_openai_responses_tool_output_content_items_to_claude() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-5.5",
         "input": [
@@ -32,7 +32,7 @@ fn format_conversion_openai_responses_tool_output_content_items_to_claude() {
 
 #[test]
 fn format_conversion_openai_responses_tool_output_image_items_to_claude() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-5.5",
         "input": [
@@ -59,7 +59,7 @@ fn format_conversion_openai_responses_tool_output_image_items_to_claude() {
 
 #[test]
 fn format_conversion_openai_responses_custom_tool_round_trips() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-5.5",
         "input": [
@@ -85,7 +85,7 @@ fn format_conversion_openai_responses_custom_tool_round_trips() {
 
 #[test]
 fn format_conversion_openai_responses_response_custom_tool_round_trips_to_responses() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "id": "resp_1",
         "model": "gpt-5.5",
@@ -112,7 +112,7 @@ fn format_conversion_openai_responses_response_custom_tool_round_trips_to_respon
 
 #[test]
 fn format_conversion_openai_responses_response_prefers_output_items_over_output_text() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "id": "resp_1",
         "model": "gpt-5.5",
@@ -143,7 +143,7 @@ fn format_conversion_openai_responses_response_prefers_output_items_over_output_
 
 #[test]
 fn format_conversion_openai_responses_response_from_claude_preserves_items() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "id": "msg_1",
         "model": "claude-sonnet",
@@ -169,7 +169,7 @@ fn format_conversion_openai_responses_response_from_claude_preserves_items() {
 
 #[test]
 fn format_conversion_openai_responses_unsupported_official_items_error() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let request = json!({
         "model": "gpt-5.5",
         "input": [{

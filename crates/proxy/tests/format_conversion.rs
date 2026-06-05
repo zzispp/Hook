@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[test]
 fn format_conversion_request_openai_to_gemini_and_claude() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-4o-mini",
         "messages": [
@@ -30,7 +30,7 @@ fn format_conversion_request_openai_to_gemini_and_claude() {
 
 #[test]
 fn format_conversion_request_openai_to_responses_and_back() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-5.5",
         "messages": [
@@ -66,7 +66,7 @@ fn format_conversion_request_openai_to_responses_and_back() {
 
 #[test]
 fn format_conversion_request_openai_responses_hosted_web_search_to_claude() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-5.5",
         "input": [{ "role": "user", "content": [{ "type": "input_text", "text": "search it" }] }],
@@ -86,7 +86,7 @@ fn format_conversion_request_openai_responses_hosted_web_search_to_claude() {
 
 #[test]
 fn format_conversion_request_openai_responses_groups_parallel_tool_turns_for_claude() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-5.5",
         "input": [
@@ -115,7 +115,7 @@ fn format_conversion_request_openai_responses_groups_parallel_tool_turns_for_cla
 
 #[test]
 fn format_conversion_request_gemini_and_claude_to_openai() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let gemini = json!({
         "model": "gemini-1.5-flash",
         "systemInstruction": { "parts": [{ "text": "sys" }] },
@@ -146,7 +146,7 @@ fn format_conversion_request_gemini_and_claude_to_openai() {
 
 #[test]
 fn format_conversion_response_maps_text_finish_and_usage() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let openai = json!({
         "id": "chatcmpl_1",
         "model": "gpt-4o-mini",
@@ -174,7 +174,7 @@ fn format_conversion_response_maps_text_finish_and_usage() {
 
 #[test]
 fn format_conversion_preserves_tools_results_and_multimodal_blocks() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-4o-mini",
         "messages": [
@@ -236,7 +236,7 @@ fn api_format_parse_requires_canonical_chat_cli_ids() {
 
 #[test]
 fn responses_instructions_and_developer_messages_round_trip_to_chat() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let input = json!({
         "model": "gpt-5.5",
         "instructions": "system rules",
@@ -260,7 +260,7 @@ fn responses_instructions_and_developer_messages_round_trip_to_chat() {
 
 #[test]
 fn response_conversion_preserves_thinking_tool_calls_and_cache_usage() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let openai = json!({
         "id": "chatcmpl_1",
         "model": "gpt-5.5",

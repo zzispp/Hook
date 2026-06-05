@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[test]
 fn stream_conversion_maps_thinking_signature_tool_delta_and_usage() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let claude = vec![
         json!({ "type": "message_start", "message": { "id": "msg_1", "model": "claude-sonnet" } }),
         json!({ "type": "content_block_delta", "index": 0, "delta": { "type": "thinking_delta", "thinking": "why" } }),
@@ -25,7 +25,7 @@ fn stream_conversion_maps_thinking_signature_tool_delta_and_usage() {
 
 #[test]
 fn gemini_stream_output_omits_null_signature_and_usage_fields() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let claude = vec![
         json!({ "type": "message_start", "message": { "id": "msg_1", "model": "claude-sonnet" } }),
         json!({ "type": "content_block_start", "index": 0, "content_block": { "type": "thinking", "thinking": "" } }),
@@ -45,7 +45,7 @@ fn gemini_stream_output_omits_null_signature_and_usage_fields() {
 
 #[test]
 fn responses_stream_reasoning_emits_summary_without_signature_roundtrip() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let claude = vec![
         json!({ "type": "message_start", "message": { "id": "msg_1", "model": "claude-sonnet" } }),
         json!({ "type": "content_block_start", "index": 0, "content_block": { "type": "thinking", "thinking": "" } }),

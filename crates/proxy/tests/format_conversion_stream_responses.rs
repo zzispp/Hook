@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[test]
 fn responses_function_call_stream_to_claude_emits_tool_block() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let responses = vec![
         json!({ "type": "response.created", "response": { "id": "resp_1", "model": "gpt-5.5" } }),
         json!({
@@ -61,7 +61,7 @@ fn responses_function_call_stream_to_claude_emits_tool_block() {
 
 #[test]
 fn responses_custom_tool_stream_to_claude_errors_visibly() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let responses = vec![
         json!({ "type": "response.created", "response": { "id": "resp_1", "model": "gpt-5.5" } }),
         json!({
@@ -111,7 +111,7 @@ fn responses_custom_tool_stream_to_claude_errors_visibly() {
 
 #[test]
 fn responses_stream_unsupported_official_item_errors() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let responses = vec![
         json!({ "type": "response.created", "response": { "id": "resp_1", "model": "gpt-5.5" } }),
         json!({
@@ -131,7 +131,7 @@ fn responses_stream_unsupported_official_item_errors() {
 
 #[test]
 fn format_conversion_stream_openai_usage_only_chunk_completes_responses_usage() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let openai = vec![
         json!({
             "id": "chatcmpl_1",
@@ -173,7 +173,7 @@ fn format_conversion_stream_openai_usage_only_chunk_completes_responses_usage() 
 
 #[test]
 fn format_conversion_stream_openai_responses_completed_omits_null_usage_details() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let claude = vec![
         json!({
             "type": "message_start",

@@ -9,7 +9,7 @@ fn registry_delegates_standard_request_conversion_to_formats_crate() {
         "max_tokens": 16
     });
 
-    let claude = FormatConversionRegistry::default()
+    let claude = FormatConversionRegistry
         .convert_request(&input, ApiFormat::OpenAiChat, ApiFormat::ClaudeChat)
         .unwrap();
 
@@ -31,7 +31,7 @@ fn registry_preserves_same_format_payloads_without_normalization() {
         }]
     });
 
-    let output = FormatConversionRegistry::default()
+    let output = FormatConversionRegistry
         .convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::OpenAiResponses)
         .unwrap();
 
@@ -50,7 +50,7 @@ fn registry_rejects_unknown_openai_responses_items_for_cross_format_conversion()
         }]
     });
 
-    let error = FormatConversionRegistry::default()
+    let error = FormatConversionRegistry
         .convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat)
         .unwrap_err()
         .to_string();

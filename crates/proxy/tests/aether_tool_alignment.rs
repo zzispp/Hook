@@ -17,7 +17,7 @@ fn unsupported_openai_custom_tool_request_fails_visibly() {
         "tool_choice": { "type": "custom", "custom": { "name": "shell" } }
     });
 
-    let error = FormatConversionRegistry::default()
+    let error = FormatConversionRegistry
         .convert_request(&openai, ApiFormat::OpenAiChat, ApiFormat::OpenAiResponses)
         .unwrap_err()
         .to_string();
@@ -37,7 +37,7 @@ fn responses_web_search_tool_converts_through_formats_crate() {
         }]
     });
 
-    let claude = FormatConversionRegistry::default()
+    let claude = FormatConversionRegistry
         .convert_request(&responses, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat)
         .unwrap();
 

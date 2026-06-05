@@ -3,7 +3,7 @@ use serde_json::json;
 
 #[test]
 fn openai_tool_call_stream_to_claude_emits_tool_block() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let openai = vec![
         json!({
             "id": "chatcmpl_1",
@@ -58,7 +58,7 @@ fn openai_tool_call_stream_to_claude_emits_tool_block() {
 
 #[test]
 fn gemini_function_call_stream_to_claude_emits_tool_block() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let gemini = vec![json!({
         "modelVersion": "gemini-1.5-flash",
         "candidates": [{
@@ -87,7 +87,7 @@ fn gemini_function_call_stream_to_claude_emits_tool_block() {
 
 #[test]
 fn claude_tool_use_stream_to_gemini_finishes_with_stop() {
-    let registry = FormatConversionRegistry::default();
+    let registry = FormatConversionRegistry;
     let claude = vec![
         json!({ "type": "message_start", "message": { "id": "msg_1", "model": "claude-sonnet" } }),
         json!({

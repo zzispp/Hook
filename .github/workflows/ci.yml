@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_OPTIONS: --max-old-space-size=4096
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Check backend
+        run: cargo check -p hook_backend
+
+      - name: Lint workspace
+        run: just lint
+
+      - name: Compile tests
+        run: cargo test --workspace --all-targets --no-run
+
+      - name: Test backend crate
+        run: timeout 60s cargo test -p hook_backend --all-targets
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint frontend
+        run: pnpm lint:frontend
+
+      - name: Build embedded frontend
+        run: pnpm build:frontend:embedded
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    needs:
+      - rust
+      - frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check deployment scripts
+        run: bash -n deploy.sh update.sh scripts/create-docker-env.sh scripts/docker-entrypoint.sh
+
+      - name: Validate Docker Compose config
+        run: |
+          cat > .env.ci <<'EOF'
+          HOOK_PORT=5555
+          POSTGRES_DB=hook
+          POSTGRES_USER=hook
+          POSTGRES_PASSWORD=ci-postgres-password
+          HOOK_LOG_LEVEL=info
+          HOOK_ADMIN_USERNAME=admin
+          HOOK_ADMIN_EMAIL=admin@example.com
+          HOOK_ADMIN_PASSWORD_B64=YWRtaW4tcGFzc3dvcmQtMTIz
+          HOOK_JWT_SECRET=ci-jwt-secret-with-enough-length-for-validation
+          HOOK_PROVIDER_KEY_SECRET=ci-provider-key-secret-with-enough-length
+          EOF
+          docker compose --env-file .env.ci config >/dev/null
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: hook:ci
