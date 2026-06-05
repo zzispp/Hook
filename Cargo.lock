@@ -448,57 +448,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "backend"
-version = "0.1.0"
-dependencies = [
- "api_token",
- "async-trait",
- "axum",
- "base64",
- "captcha",
- "card_code",
- "configuration",
- "constants",
- "dashboard",
- "futures-util",
- "group 0.1.0",
- "hook_tracing",
- "i18n",
- "model",
- "model_status",
- "netstat2",
- "operations",
- "payment",
- "provider",
- "proxy",
- "rbac",
- "recharge",
- "redis",
- "regex",
- "req",
- "rust-embed",
- "rust_decimal",
- "scheduler",
- "sea-orm",
- "sea-orm-migration",
- "serde",
- "serde_json",
- "setting",
- "storage",
- "sysinfo",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tokio-postgres",
- "tower",
- "tower-http",
- "types",
- "user",
- "uuid",
- "wallet",
-]
-
-[[package]]
 name = "backon"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1658,6 +1607,57 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc627f471c528ff0c4a49e1d5e60450c8f6461dd6d10ba9dcd3a61d3dff7728d"
 dependencies = [
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "hook_backend"
+version = "0.1.0"
+dependencies = [
+ "api_token",
+ "async-trait",
+ "axum",
+ "base64",
+ "captcha",
+ "card_code",
+ "configuration",
+ "constants",
+ "dashboard",
+ "futures-util",
+ "group 0.1.0",
+ "hook_tracing",
+ "i18n",
+ "model",
+ "model_status",
+ "netstat2",
+ "operations",
+ "payment",
+ "provider",
+ "proxy",
+ "rbac",
+ "recharge",
+ "redis",
+ "regex",
+ "req",
+ "rust-embed",
+ "rust_decimal",
+ "scheduler",
+ "sea-orm",
+ "sea-orm-migration",
+ "serde",
+ "serde_json",
+ "setting",
+ "storage",
+ "sysinfo",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tokio-postgres",
+ "tower",
+ "tower-http",
+ "types",
+ "user",
+ "uuid",
+ "wallet",
 ]
 
 [[package]]

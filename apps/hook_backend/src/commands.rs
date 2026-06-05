@@ -29,7 +29,8 @@ async fn run_migration(settings: Settings, command: MigrationCommand) -> Backend
     let rebuild_rbac_cache = command.rebuilds_rbac_cache();
     let connection = database.connection();
     match command {
-        MigrationCommand::Up | MigrationCommand::Fresh | MigrationCommand::Refresh => development::apply(connection).await?,
+        MigrationCommand::Up => development::apply(connection).await?,
+        MigrationCommand::Fresh | MigrationCommand::Refresh => development::recreate(connection).await?,
         MigrationCommand::Down | MigrationCommand::Reset => development::drop(connection).await?,
         MigrationCommand::Status => print_baseline_status(development::status(connection).await?),
     }
@@ -41,6 +42,7 @@ async fn run_migration(settings: Settings, command: MigrationCommand) -> Backend
 
 fn print_baseline_status(status: development::BaselineStatus) {
     println!("baseline tables: {}/{} present", status.existing_tables.len(), status.total_tables);
+    println!("baseline migration marker: {}", if status.baseline_applied { "applied" } else { "pending" });
     for table_name in status.existing_tables {
         println!("  {table_name}");
     }

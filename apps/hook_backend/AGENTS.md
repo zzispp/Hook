@@ -71,7 +71,7 @@
 - Review the change for simplification: remove dead code, reduce duplication, and keep the diff focused on the requested behavior.
 - Avoid unrelated refactors, drive-by cleanups, and formatting-only churn.
 - Run `just test` before finishing backend work so the repository 60-second timeout wrapper is used.
-- Run `cargo clippy -p backend --all-targets -- -D warnings` for changes in this app; use the relevant crate name when backend behavior changes in `crates/*`.
+- Run `cargo clippy -p hook_backend --all-targets -- -D warnings` for changes in this app; use the relevant crate name when backend behavior changes in `crates/*`.
 - If Rust dependencies change, include the generated `Cargo.lock` update and run `cargo check`.
 - Use `cargo check` for fast compile validation while iterating.
 - Run `cargo fmt --all` after Rust edits. This is a hard requirement.

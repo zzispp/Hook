@@ -4,6 +4,8 @@ import type { BoxProps } from '@mui/material/Box';
 
 import Box from '@mui/material/Box';
 
+import { LogoIcon } from 'src/react-bits/components/common/SVGComponents';
+
 // ----------------------------------------------------------------------
 
 
@@ -55,7 +57,10 @@ export function ReactBitsLoader({
             '50%': { opacity: 0.7, transform: 'scale(1.08)' },
           },
           '& .ln-loader-logo': {
+            width: 40,
+            height: 40,
             opacity: 0.6,
+            color: 'var(--react-bits-loader-fg)',
             animation: 'react-bits-loader-pulse 1.8s ease-in-out infinite',
           },
         },
@@ -63,26 +68,8 @@ export function ReactBitsLoader({
       ]}
       {...other}
     >
-      <ReactBitsLoaderLogo />
+      <LogoIcon className="ln-loader-logo" aria-hidden />
     </Box>
-  );
-}
-
-function ReactBitsLoaderLogo() {
-  return (
-    <svg
-      className="ln-loader-logo"
-      width="40"
-      height="40"
-      viewBox="0 0 36 36"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <g stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M 30 4 V 20 A 12 12 0 0 1 6 20 A 6 6 0 0 1 12 14" />
-      </g>
-      <circle cx="21" cy="11" r="3.5" fill="currentColor" opacity="0.6" />
-    </svg>
   );
 }
 

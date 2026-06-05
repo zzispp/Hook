@@ -49,9 +49,9 @@ export const landingStyles03Navbar01 = String.raw`
   align-items: center;
 }
 
-.ln-navbar-logo svg {
+.ln-navbar-logo .ln-brand-logo {
   height: 20px;
-  width: auto;
+  width: 56px;
 }
 
 .ln-navbar-divider {

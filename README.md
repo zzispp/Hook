@@ -1,83 +1,114 @@
 # Hook
 
-Rust and pnpm monorepo for the Hook backend, frontend, mock API, and shared crates.
+<p align="center">
+  <img src="apps/hook_frontend/public/logo/logo.svg" width="240" alt="Hook Logo">
+</p>
 
-## Backend Logging
+<p align="center">
+  <strong>AI API Gateway and Operations Platform</strong>
+</p>
 
-Backend logging uses the internal `hook_tracing` crate. Runtime log verbosity is
-configured in `config/config.yaml`:
+<p align="center">
+  English • <a href="README_CN.md">中文</a>
+</p>
 
-```yaml
-tracing:
-  log_level: "info"
+---
+
+## Overview
+
+Hook is a Rust and pnpm monorepo for an AI API gateway, user console, and operations admin panel. The backend uses Axum, SeaORM, Redis, and PostgreSQL for proxying, authentication, scheduling, billing, monitoring, and admin APIs. The frontend uses Next.js, React, MUI, and TypeScript.
+
+Users call Hook with Hook-issued tokens through `/v1` or `/v1beta`. Hook routes requests by model, provider, group, wallet balance, and permission policy, then records usage, billing, and runtime status.
+
+## Features
+
+- **Unified AI proxy**: OpenAI-style `/v1` and Gemini-style `/v1beta` routes for chat, Responses, Claude Messages, images, embeddings, rerank, audio, moderations, and Realtime.
+- **Provider and model management**: Global models, providers, endpoints, upstream API keys, model bindings, model costs, cooldown release, and model connectivity tests.
+- **Tokens and permissions**: User tokens, admin tokens, RBAC roles, menus, API permissions, navigation permissions, and system token policy.
+- **Wallet and billing**: User wallets, balances, transactions, daily model usage, admin adjustments, admin recharge, billing groups, user groups, and price groups.
+- **Recharge, card codes, and affiliates**: Recharge packages, payment channels, callback records, card-code generation and redemption, affiliate relations, commissions, and report exports.
+- **Request records and cost analytics**: Client and upstream request records, active requests, usage history, user stats, cost forecast, savings, and aggregation stats.
+- **Model status and operations monitoring**: Model status checks, scheduled tasks, cache affinity monitoring, system performance monitoring, and health checks.
+- **Account and operations admin**: Sign-up, sign-in, token refresh, OAuth, wallet sign-in, password reset, profile, announcements, tickets, notifications, and site settings.
+- **Backend-driven admin i18n**: Admin copy is served from `translation_languages` and `translation_entries` through `/api/i18n/resources`.
+
+## Repository Layout
+
+```text
+.
+├── apps/
+│   ├── hook_backend/      # Axum backend, LLM proxy, migrations, monitoring, scheduling
+│   └── hook_frontend/     # Next.js user console and admin panel
+├── crates/                # Shared Rust domain modules
+├── config/config.yaml     # Default local config
+├── package.json           # pnpm workspace scripts
+├── Cargo.toml             # Rust workspace
+└── justfile               # Rust build, check, test, and migration commands
 ```
 
-Valid levels are `off`, `error`, `warn`, `info`, `debug`, and `trace`. Invalid
-values fail startup explicitly.
+Brand assets:
 
-## Backend Database
+- `apps/hook_frontend/public/logo/logo.svg`: full logo with text.
+- `apps/hook_frontend/public/logo/logo-icon.svg`: icon logo.
 
-The backend uses SeaORM for runtime database access and SeaORM Migrator for schema
-creation, schema evolution, and default seed data.
+## Local Development
 
-Startup does not create or mutate tables. Run migrations explicitly before serving
-against a fresh or upgraded database.
+Requirements: Rust edition 2024 toolchain, Node.js `>=22.12.0`, pnpm `10.33.4`, PostgreSQL, and Redis. The default config points to `localhost:5433` and `localhost:6380`.
 
-### Run Migrations
-
-Apply all pending migrations:
+Install dependencies, prepare config, initialize the database, generate embedded frontend assets, and run both dev servers:
 
 ```bash
-cargo run -p backend -- migration up
+pnpm install
+cp config/config.yaml config.yaml
+scripts/generate-password-hash.sh "your-password"
+cargo run -p hook_backend -- migration up
+NEXT_PUBLIC_SERVER_URL=http://127.0.0.1:5555 pnpm build:frontend:embedded
+NEXT_PUBLIC_SERVER_URL=http://127.0.0.1:5555 pnpm dev
 ```
 
-or:
+Development URLs: backend `http://127.0.0.1:5555`, frontend `http://127.0.0.1:8082`.
+
+## Build, Config, and Database
 
 ```bash
-just backend-migration "up"
+pnpm build:frontend
+pnpm build:backend
+NEXT_PUBLIC_SERVER_URL=http://127.0.0.1:5555 pnpm build:backend:embedded
+NEXT_PUBLIC_SERVER_URL=http://127.0.0.1:5555 pnpm start:embedded
 ```
 
-Check migration state:
+Important config keys include `server.*`, `database.*`, `redis.*`, `jwt.secret`, `security.provider_key_secret`, `admin.*`, `auth.*`, `tracing.log_level`, `NEXT_PUBLIC_SERVER_URL`, and `HOOK_BACKEND_URL`.
+
+Migration commands:
 
 ```bash
-cargo run -p backend -- migration status
+cargo run -p hook_backend -- migration up       # Apply baseline without clearing complete existing tables
+cargo run -p hook_backend -- migration status   # Show baseline table status
+cargo run -p hook_backend -- migration down     # Drop baseline tables and marker
+cargo run -p hook_backend -- migration fresh    # Drop and recreate baseline
+cargo run -p hook_backend -- migration refresh  # Drop and recreate baseline
+cargo run -p hook_backend -- migration reset    # Drop baseline tables and marker
 ```
 
-Roll back migrations:
+## API Entrypoints
+
+- `GET /health`: health check.
+- `/api/*`: console, admin, auth, wallet, billing, provider, model, and monitoring APIs.
+- `/v1/*`: OpenAI, Claude, and Jina compatible proxy.
+- `/v1beta/*`: Gemini compatible proxy.
+
+Common proxy routes include `/v1/models`, `/v1/chat/completions`, `/v1/responses`, `/v1/messages`, `/v1/images/generations`, `/v1/embeddings`, `/v1/rerank`, `/v1/realtime`, `/v1beta/models/{model}:generateContent`, and `/v1beta/models/{model}/embedContent`.
+
+## Validation
 
 ```bash
-cargo run -p backend -- migration down
-cargo run -p backend -- migration down 2
+just check
+just lint
+just test
+pnpm lint:frontend
+pnpm build:frontend
 ```
 
-`down` without a step count rolls back one migration.
+## License
 
-### Reset Commands
-
-SeaORM Migrator also exposes database reset helpers:
-
-```bash
-cargo run -p backend -- migration fresh
-cargo run -p backend -- migration refresh
-cargo run -p backend -- migration reset
-```
-
-- `fresh`: drop all migration-managed tables, then run every migration again.
-- `refresh`: roll back all applied migrations, then run every migration again.
-- `reset`: roll back all applied migrations.
-
-### Custom Config
-
-Pass a config file before the migration command:
-
-```bash
-cargo run -p backend -- --config config/config.yaml migration up
-just backend-migration-config config/config.yaml "up"
-```
-
-### Baseline Defaults
-
-The first migration creates the baseline tables and seeds built-in RBAC data,
-navigation menus, API permissions, and model tables. SeaORM tracks applied
-migrations in `seaql_migrations`, so `migration up` only applies pending
-migrations.
+This repository does not currently include a license file. The licensing scope is not declared.
