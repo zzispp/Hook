@@ -2,7 +2,7 @@ use types::provider::{ActiveRequestRecordRequest, ActiveRequestRecordResponse, R
 
 use crate::StorageResult;
 
-use super::ProviderStore;
+use super::{ProviderStore, StaleRequestRecordSweepResult};
 
 impl ProviderStore {
     pub async fn create_request_record(&self, input: super::RequestRecordRecordInput) -> StorageResult<()> {
@@ -54,5 +54,13 @@ impl ProviderStore {
 
     pub async fn compress_request_record_payloads_before(&self, cutoff: time::OffsetDateTime) -> StorageResult<u64> {
         super::request_record_cleanup::compress_request_record_payloads_before(self, cutoff).await
+    }
+
+    pub async fn mark_stale_request_records_failed(
+        &self,
+        pending_cutoff: time::OffsetDateTime,
+        streaming_cutoff: time::OffsetDateTime,
+    ) -> StorageResult<StaleRequestRecordSweepResult> {
+        super::request_record_cleanup::mark_stale_request_records_failed(self, pending_cutoff, streaming_cutoff).await
     }
 }

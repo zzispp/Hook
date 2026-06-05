@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 mod model_status;
 mod performance_monitoring;
+#[cfg(test)]
+mod tests;
 
 use api_token::application::ApiTokenRepository;
 use api_token::infra::StorageApiTokenRepository;
@@ -19,6 +21,9 @@ use crate::{llm_proxy::LlmProxyCache, performance_monitoring_os::PerformanceOsCo
 
 const RECHARGE_PAYMENT_POLL_INTERVAL_SECONDS: i64 = 60;
 const RECHARGE_PAYMENT_POLL_LIMIT: i64 = 50;
+const REQUEST_RECORD_STALE_SWEEP_INTERVAL_SECONDS: i64 = 300;
+const REQUEST_RECORD_STALE_PENDING_TIMEOUT_MINUTES: i64 = 10;
+const REQUEST_RECORD_STALE_STREAMING_TIMEOUT_MINUTES: i64 = 10;
 
 pub fn scheduler_registry(
     cache: LlmProxyCache,
@@ -29,6 +34,7 @@ pub fn scheduler_registry(
     let mut registry = SchedulerRegistry::new();
     registry.register(ApiTokenCleanupTask { cache })?;
     registry.register(RequestRecordCleanupTask)?;
+    registry.register(RequestRecordStaleSweepTask)?;
     registry.register(RechargePaymentPollTask { recharge_service })?;
     registry.register(PerformanceMonitoringSnapshotTask {
         os_collector: performance_os_collector,
@@ -46,6 +52,9 @@ struct ApiTokenCleanupTask {
 
 #[derive(Clone, Copy)]
 struct RequestRecordCleanupTask;
+
+#[derive(Clone, Copy)]
+struct RequestRecordStaleSweepTask;
 
 #[derive(Clone)]
 struct RechargePaymentPollTask {
@@ -116,6 +125,56 @@ impl ScheduledTaskLifecycle for RequestRecordCleanupTask {
             .await
             .map_err(storage_error)?;
         Ok(Some(format!("deleted_records={deleted_records}, compressed_payloads={compressed_payloads}")))
+    }
+}
+
+#[async_trait::async_trait]
+impl ScheduledTaskLifecycle for RequestRecordStaleSweepTask {
+    fn definition(&self) -> types::scheduler::ScheduledTaskDefinition {
+        task_definition(
+            "request_record_stale_sweep",
+            "scheduledTasks.definitions.requestRecordStaleSweep.name",
+            "scheduledTasks.definitions.requestRecordStaleSweep.description",
+            REQUEST_RECORD_STALE_SWEEP_INTERVAL_SECONDS,
+            serde_json::json!({
+                "pending_timeout_minutes": REQUEST_RECORD_STALE_PENDING_TIMEOUT_MINUTES,
+                "streaming_timeout_minutes": REQUEST_RECORD_STALE_STREAMING_TIMEOUT_MINUTES
+            }),
+            integer_fields(&[
+                (
+                    "pending_timeout_minutes",
+                    "scheduledTasks.config.requestRecordStaleSweep.pendingTimeoutMinutes",
+                    1,
+                ),
+                (
+                    "streaming_timeout_minutes",
+                    "scheduledTasks.config.requestRecordStaleSweep.streamingTimeoutMinutes",
+                    1,
+                ),
+            ]),
+        )
+    }
+
+    fn validate_config(&self, config: &TaskConfigValue) -> SchedulerResult<()> {
+        validate_positive_integer(config, "pending_timeout_minutes", 1)?;
+        validate_positive_integer(config, "streaming_timeout_minutes", 1)
+    }
+
+    async fn run(&self, ctx: ScheduleTaskContext, config: TaskConfigValue) -> TaskResult {
+        let now = time::OffsetDateTime::now_utc();
+        let pending_timeout_minutes = integer_config(&config, "pending_timeout_minutes")?;
+        let streaming_timeout_minutes = integer_config(&config, "streaming_timeout_minutes")?;
+        let result = ProviderStore::new(ctx.database)
+            .mark_stale_request_records_failed(
+                now - time::Duration::minutes(pending_timeout_minutes),
+                now - time::Duration::minutes(streaming_timeout_minutes),
+            )
+            .await
+            .map_err(storage_error)?;
+        Ok(Some(format!(
+            "stale_request_records={}, stale_request_candidates={}",
+            result.request_records, result.request_candidates
+        )))
     }
 }
 

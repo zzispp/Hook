@@ -21,6 +21,7 @@ mod request_upstream_cost;
 mod types;
 
 pub use repository::ProviderStore;
+pub use request_record_cleanup::StaleRequestRecordSweepResult;
 pub use types::{
     BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyPriorityRecordPatch, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch,
     ProviderApiKeySecretRecord, ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,

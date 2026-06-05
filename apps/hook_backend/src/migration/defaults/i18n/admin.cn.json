@@ -2139,6 +2139,10 @@
         "name": "请求记录清理",
         "description": "按保留策略删除请求记录并压缩 payload。"
       },
+      "requestRecordStaleSweep": {
+        "name": "请求记录超时扫尾",
+        "description": "当活跃请求记录长时间未推进状态时，将其标记为失败。"
+      },
       "rechargePaymentPoll": {
         "name": "充值支付轮询",
         "description": "定期查询未过期待支付充值订单，并在通道返回已支付时入账。"
@@ -2164,6 +2168,10 @@
       "requestRecordCleanup": {
         "recordRetentionDays": "请求记录保留天数",
         "payloadRetentionDays": "请求 payload 保留天数"
+      },
+      "requestRecordStaleSweep": {
+        "pendingTimeoutMinutes": "等待中请求超时分钟数",
+        "streamingTimeoutMinutes": "流式传输中请求超时分钟数"
       },
       "rechargePaymentPoll": {
         "limit": "单次扫描订单数"
