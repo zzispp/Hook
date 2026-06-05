@@ -144,6 +144,9 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
       - name: Check deployment scripts
         run: |
           for script in deploy.sh update.sh install.sh scripts/*.sh; do
