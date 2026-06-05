@@ -170,4 +170,4 @@ pnpm build:frontend
 
 ## 许可证
 
-当前仓库未包含许可证文件，授权范围未声明。
+Hook 使用 [MIT License](./LICENSE) 发布。

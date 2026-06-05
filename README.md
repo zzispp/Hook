@@ -163,4 +163,4 @@ pnpm build:frontend
 
 ## License
 
-This repository does not currently include a license file. The licensing scope is not declared.
+Hook is released under the [MIT License](./LICENSE).
