@@ -63,6 +63,7 @@
         <a href="#features">Features</a>
         <a href="#install">Installation</a>
         <a href="#update">Update</a>
+        <a href="#release-packages">Release Packages</a>
         <a href="#local-development">Local Development</a>
         <a href="#api">API Entrypoints</a>
         <a href="#configuration">Configuration</a>
@@ -128,6 +129,19 @@ docker compose down</code></pre></div>
             <pre id="update-command"><code>./update.sh</code></pre>
           </div>
           <p><code>update.sh</code> runs <code>git pull --ff-only</code>, pulls PostgreSQL and Redis base images, rebuilds the Hook image from the current source tree, and recreates containers. It does not delete Docker named volumes.</p>
+        </section>
+
+        <section id="release-packages" class="doc-section">
+          <h2>GitHub Release Packages</h2>
+          <p>Release assets include Linux and macOS binary packages, <code>install.sh</code>, and <code>SHA256SUMS</code>. Binary packages are intended for deployments where PostgreSQL and Redis are already managed outside Hook.</p>
+          <div class="code-block">
+            <div class="code-header"><span>Latest release installer</span><button type="button" data-copy="#release-install-command">Copy</button></div>
+            <pre id="release-install-command"><code>curl -fsSL https://github.com/zzispp/Hook/releases/latest/download/install.sh | sudo bash</code></pre>
+          </div>
+          <p>The installer verifies the downloaded package, installs it under <code>/opt/hook/releases/&lt;version&gt;</code>, updates <code>/opt/hook/current</code>, writes <code>/etc/hook/config.example.yaml</code>, and creates <code>/etc/hook/config.yaml</code> when it does not already exist. Edit <code>/etc/hook/config.yaml</code> before running Hook.</p>
+          <div class="code-block compact"><pre><code>/opt/hook/current/bin/generate_password_hash "your-password"
+/opt/hook/current/bin/hook_backend --config /etc/hook/config.yaml migration up
+/opt/hook/current/bin/hook_backend --config /etc/hook/config.yaml</code></pre></div>
         </section>
 
         <section id="local-development" class="doc-section">

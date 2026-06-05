@@ -63,6 +63,7 @@
         <a href="#features">功能</a>
         <a href="#install">安装部署</a>
         <a href="#update">更新</a>
+        <a href="#release-packages">Release 包</a>
         <a href="#local-development">本地开发</a>
         <a href="#api">API 入口</a>
         <a href="#configuration">配置</a>
@@ -128,6 +129,19 @@ docker compose down</code></pre></div>
             <pre id="update-command"><code>./update.sh</code></pre>
           </div>
           <p><code>update.sh</code> 会执行 <code>git pull --ff-only</code>，拉取 PostgreSQL 和 Redis 基础镜像，使用当前源码重新构建 Hook 镜像并重建容器。它不会删除 Docker named volumes。</p>
+        </section>
+
+        <section id="release-packages" class="doc-section">
+          <h2>GitHub Release 二进制包</h2>
+          <p>Release 资产包含 Linux 与 macOS 二进制平台包、<code>install.sh</code> 和 <code>SHA256SUMS</code>。二进制包适合 PostgreSQL 与 Redis 已经由外部托管的部署方式。</p>
+          <div class="code-block">
+            <div class="code-header"><span>安装最新 Release</span><button type="button" data-copy="#release-install-command">复制</button></div>
+            <pre id="release-install-command"><code>curl -fsSL https://github.com/zzispp/Hook/releases/latest/download/install.sh | sudo bash</code></pre>
+          </div>
+          <p>安装脚本会校验下载的包，安装到 <code>/opt/hook/releases/&lt;version&gt;</code>，更新 <code>/opt/hook/current</code>，写入 <code>/etc/hook/config.example.yaml</code>，并在配置不存在时创建 <code>/etc/hook/config.yaml</code>。运行 Hook 前需要先编辑 <code>/etc/hook/config.yaml</code>。</p>
+          <div class="code-block compact"><pre><code>/opt/hook/current/bin/generate_password_hash "your-password"
+/opt/hook/current/bin/hook_backend --config /etc/hook/config.yaml migration up
+/opt/hook/current/bin/hook_backend --config /etc/hook/config.yaml</code></pre></div>
         </section>
 
         <section id="local-development" class="doc-section">

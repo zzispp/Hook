@@ -44,7 +44,9 @@ Users call Hook with Hook-issued tokens through `/v1` or `/v1beta`. Hook routes 
 ├── Dockerfile             # Multi-stage image with embedded frontend assets
 ├── docker-compose.yml     # PostgreSQL, Redis, and Hook source-build deployment
 ├── deploy.sh              # One-command Docker Compose source-build deployment
+├── install.sh             # GitHub Release binary package installer
 ├── update.sh              # One-command Docker Compose source-build update
+├── packaging/             # Release package templates
 ├── package.json           # pnpm workspace scripts
 ├── Cargo.toml             # Rust workspace
 └── justfile               # Rust build, check, test, and migration commands
@@ -88,6 +90,37 @@ After Docker Compose deployment, run this command in the deployment directory:
 ```
 
 `update.sh` runs `git pull --ff-only`, pulls the PostgreSQL and Redis base images, rebuilds the Hook image from the current source tree, and recreates the containers. It does not delete Docker named volumes.
+
+### GitHub Release Binary Packages
+
+GitHub Releases publish platform packages for Linux and macOS:
+
+- `hook-vX.Y.Z-linux-amd64.tar.gz`
+- `hook-vX.Y.Z-linux-arm64.tar.gz`
+- `hook-vX.Y.Z-macos-amd64.tar.gz`
+- `hook-vX.Y.Z-macos-arm64.tar.gz`
+- `install.sh`
+- `SHA256SUMS`
+
+These packages contain `hook_backend`, `generate_password_hash`, a binary deployment config template, and the license. They are useful when PostgreSQL and Redis are already managed outside Hook. They do not start PostgreSQL or Redis.
+
+```bash
+curl -fsSL https://github.com/zzispp/Hook/releases/latest/download/install.sh | sudo bash
+```
+
+To install a specific version:
+
+```bash
+curl -fsSL https://github.com/zzispp/Hook/releases/download/v0.1.0/install.sh | sudo bash -s -- --version v0.1.0
+```
+
+The installer downloads the current platform package, verifies it against `SHA256SUMS`, installs it under `/opt/hook/releases/<version>`, updates `/opt/hook/current`, writes `/etc/hook/config.example.yaml`, and creates `/etc/hook/config.yaml` when it does not already exist. Edit `/etc/hook/config.yaml`, then run:
+
+```bash
+/opt/hook/current/bin/generate_password_hash "your-password"
+/opt/hook/current/bin/hook_backend --config /etc/hook/config.yaml migration up
+/opt/hook/current/bin/hook_backend --config /etc/hook/config.yaml
+```
 
 ### Source Build Without Docker
 

@@ -99,7 +99,10 @@ jobs:
           fetch-depth: 1
 
       - name: Check deployment scripts
-        run: bash -n deploy.sh update.sh scripts/create-docker-env.sh scripts/docker-entrypoint.sh
+        run: bash -n deploy.sh update.sh install.sh scripts/create-docker-env.sh scripts/docker-entrypoint.sh scripts/package-release.sh
+
+      - name: Validate release workflow
+        run: ruby -e 'require "yaml"; YAML.load_file(".github/workflows/release.yml")'
 
       - name: Validate Docker Compose config
         run: |
