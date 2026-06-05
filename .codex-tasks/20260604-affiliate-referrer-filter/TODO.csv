@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect selector and backend relation validation,DONE,Current frontend filters and backend validation located,rg/sed inspection,2026-06-04T17:04:00+08:00,0,
+2,Implement filtering and validation,DONE,Selector excludes self/admin and backend rejects admin referrer,cargo check -p backend -p user -p storage -p types,2026-06-04T17:12:00+08:00,0,
+3,Run verification,DONE,Frontend/backend checks pass,pnpm lint:frontend && pnpm build:frontend,2026-06-04T17:18:00+08:00,0,

@@ -119,6 +119,47 @@ fn validate_update_rejects_non_positive_recharge_max_unpaid_orders() {
 }
 
 #[test]
+fn validate_update_rejects_affiliate_commission_percent_above_100() {
+    let input = SystemSettingsUpdate {
+        affiliate_commission_percent: Some(Decimal::new(10001, 2)),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(error.to_string(), "invalid input: affiliate_commission_percent must be between 0 and 100");
+}
+
+#[test]
+fn validate_update_accepts_affiliate_commission_percent_boundaries() {
+    validate_update(&SystemSettingsUpdate {
+        affiliate_commission_percent: Some(Decimal::ZERO),
+        ..Default::default()
+    })
+    .unwrap();
+    validate_update(&SystemSettingsUpdate {
+        affiliate_commission_percent: Some(Decimal::new(100, 0)),
+        ..Default::default()
+    })
+    .unwrap();
+}
+
+#[test]
+fn validate_update_rejects_negative_affiliate_min_commission_amount() {
+    let input = SystemSettingsUpdate {
+        affiliate_min_commission_amount: Some(Decimal::new(-1, 0)),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "invalid input: affiliate_min_commission_amount must be greater than or equal to 0"
+    );
+}
+
+#[test]
 fn validate_update_rejects_invalid_public_base_url() {
     let input = SystemSettingsUpdate {
         public_base_url: Some("https://".into()),
@@ -220,6 +261,9 @@ fn system_settings_response() -> SystemSettingsResponse {
         recharge_max_unpaid_orders: 5,
         recharge_min_amount: Decimal::new(1, 2),
         recharge_max_amount: Decimal::new(3000, 0),
+        affiliate_enabled: false,
+        affiliate_commission_percent: Decimal::ZERO,
+        affiliate_min_commission_amount: Decimal::ZERO,
         scheduling_mode: types::provider::ProviderSchedulingMode::CacheAffinity,
         provider_priority_mode: types::provider::ProviderPriorityMode::Provider,
         key_priority_snapshot_initialized: false,

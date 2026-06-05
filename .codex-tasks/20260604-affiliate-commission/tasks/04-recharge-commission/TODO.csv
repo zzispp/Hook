@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Read recharge settlement and wallet ledger flow,DONE,Current settlement call graph and tables understood,rg settle_paid_order crates/storage apps/hook_backend,2026-06-04,0,
+2,Add focused commission settlement tests,DONE,Tests cover wallet creation and duplicate callback,cargo test -p storage affiliate -- --nocapture,2026-06-04,0,
+3,Implement commission settlement transaction,DONE,Focused tests pass,cargo test -p storage affiliate -- --nocapture,2026-06-04,0,
+4,Run focused recharge validation,DONE,Recharge settlement tests pass,cargo test -p storage recharge -- --nocapture,2026-06-04,0,

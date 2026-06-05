@@ -3,18 +3,28 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QuerySele
 use types::recharge::{RECHARGE_ORDER_STATUS_PAID, RECHARGE_ORDER_STATUS_PENDING};
 
 use super::{
-    RechargeOrderRecord, RechargePaymentSettlementInput, RechargePaymentSettlementRecord, RechargeStore, record::recharge_orders as recharge_order_records,
+    RechargeOrderRecord, RechargePaymentSettlementInput, RechargePaymentSettlementRecord, RechargeStore,
+    record::{affiliate_commissions as affiliate_commission_records, recharge_orders as recharge_order_records},
 };
 use crate::{
     Database, StorageError, StorageResult, json,
+    setting::{SYSTEM_SETTINGS_ID, system_setting_records},
+    user::{UserEntity, UserRecord},
     wallet::{wallet_records, wallet_records::ActiveModel as WalletActiveModel, wallet_transaction_records},
 };
 
 const DEFAULT_WALLET_STATUS: &str = "active";
 const DEFAULT_WALLET_LIMIT_MODE: &str = "finite";
 const PAYMENT_LINK_TYPE: &str = "payment_order";
+const AFFILIATE_LINK_TYPE: &str = "affiliate_commission";
 const TOPUP_GATEWAY_REASON: &str = "topup_gateway";
+const AFFILIATE_COMMISSION_REASON: &str = "affiliate_commission";
+const AFFILIATE_COMMISSION_STATUS_SUCCESS: &str = "success";
+const AFFILIATE_COMMISSION_STATUS_FAILED: &str = "failed";
+const AFFILIATE_COMMISSION_FAILURE_BELOW_MINIMUM: &str = "below_min_commission_amount";
 const RECHARGE_CATEGORY: &str = "recharge";
+const GIFT_CATEGORY: &str = "gift";
+const PERCENT_DENOMINATOR: i64 = 100;
 
 impl RechargeStore {
     pub async fn settle_paid_order(&self, input: RechargePaymentSettlementInput) -> StorageResult<RechargePaymentSettlementRecord> {
@@ -35,6 +45,7 @@ impl RechargeStore {
         ensure_provider_trade_no_unused(&record, input.provider_trade_no.as_deref(), &tx).await?;
         let wallet = ensure_wallet_in_tx(&self.database, &record.user_id, &tx).await?;
         credit_wallet_and_insert_transaction(&self.database, &wallet, &record, now, &tx).await?;
+        settle_affiliate_commission(&self.database, &record, now, &tx).await?;
         let order = mark_order_paid(record, input, now, &tx).await?;
         tx.commit().await?;
         Ok(RechargePaymentSettlementRecord {
@@ -229,6 +240,223 @@ fn payment_transaction(
 async fn insert_transaction_in_tx(transaction: wallet_transaction_records::ActiveModel, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {
     transaction.insert(tx).await?;
     Ok(())
+}
+
+async fn settle_affiliate_commission(
+    database: &Database,
+    order: &RechargeOrderRecord,
+    now: time::OffsetDateTime,
+    tx: &sea_orm::DatabaseTransaction,
+) -> StorageResult<()> {
+    let Some(context) = affiliate_commission_context(order, tx).await? else {
+        return Ok(());
+    };
+    if context.commission_below_minimum() {
+        return insert_affiliate_commission(
+            AffiliateCommissionInsert {
+                database,
+                context: &context,
+                outcome: AffiliateCommissionOutcome::Failed(AFFILIATE_COMMISSION_FAILURE_BELOW_MINIMUM),
+                now,
+            },
+            tx,
+        )
+        .await;
+    }
+    let referrer_wallet = ensure_wallet_in_tx(database, &context.referrer_user_id, tx).await?;
+    let transaction_id = database.next_id();
+    credit_affiliate_wallet_and_insert_transaction(&referrer_wallet, &context, &transaction_id, now, tx).await?;
+    insert_affiliate_commission(
+        AffiliateCommissionInsert {
+            database,
+            context: &context,
+            outcome: AffiliateCommissionOutcome::Success(&transaction_id),
+            now,
+        },
+        tx,
+    )
+    .await
+}
+
+async fn affiliate_commission_context(order: &RechargeOrderRecord, tx: &sea_orm::DatabaseTransaction) -> StorageResult<Option<AffiliateCommissionContext>> {
+    let Some(settings) = affiliate_commission_settings(tx).await? else {
+        return Ok(None);
+    };
+    if settings.percent <= Decimal::ZERO {
+        return Ok(None);
+    }
+    let user = UserEntity::find_by_id(order.user_id.clone())
+        .lock_exclusive()
+        .one(tx)
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    let Some(referrer_user_id) = valid_referrer_user_id(&user, order) else {
+        return Ok(None);
+    };
+    Ok(Some(AffiliateCommissionContext::new(order, referrer_user_id, settings)))
+}
+
+async fn affiliate_commission_settings(tx: &sea_orm::DatabaseTransaction) -> StorageResult<Option<AffiliateCommissionSettings>> {
+    let record = system_setting_records::Entity::find_by_id(SYSTEM_SETTINGS_ID.to_owned())
+        .one(tx)
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    Ok(active_affiliate_commission_settings(
+        record.affiliate_enabled,
+        record.affiliate_commission_percent,
+        record.affiliate_min_commission_amount,
+    ))
+}
+
+fn active_affiliate_commission_settings(
+    affiliate_enabled: bool,
+    commission_percent: Decimal,
+    min_commission_amount: Decimal,
+) -> Option<AffiliateCommissionSettings> {
+    affiliate_enabled.then_some(AffiliateCommissionSettings {
+        percent: commission_percent,
+        min_amount: min_commission_amount,
+    })
+}
+
+fn valid_referrer_user_id(user: &UserRecord, order: &RechargeOrderRecord) -> Option<String> {
+    user.referred_by_user_id.as_ref().filter(|referrer_id| *referrer_id != &order.user_id).cloned()
+}
+
+async fn credit_affiliate_wallet_and_insert_transaction(
+    wallet: &types::wallet::Wallet,
+    context: &AffiliateCommissionContext,
+    transaction_id: &str,
+    now: time::OffsetDateTime,
+    tx: &sea_orm::DatabaseTransaction,
+) -> StorageResult<()> {
+    update_wallet_in_tx(affiliate_credited_wallet(wallet, context.commission_amount), tx).await?;
+    insert_transaction_in_tx(affiliate_transaction(transaction_id.to_owned(), wallet, context, now), tx).await
+}
+
+fn affiliate_credited_wallet(wallet: &types::wallet::Wallet, amount: Decimal) -> types::wallet::Wallet {
+    types::wallet::Wallet {
+        gift_balance: wallet.gift_balance + amount,
+        total_adjusted: wallet.total_adjusted + amount,
+        ..wallet.clone()
+    }
+}
+
+fn affiliate_transaction(
+    id: String,
+    wallet: &types::wallet::Wallet,
+    context: &AffiliateCommissionContext,
+    now: time::OffsetDateTime,
+) -> wallet_transaction_records::ActiveModel {
+    let after_gift = wallet.gift_balance + context.commission_amount;
+    wallet_transaction_records::ActiveModel {
+        id: Set(id),
+        wallet_id: Set(wallet.id.0.clone()),
+        category: Set(GIFT_CATEGORY.into()),
+        reason_code: Set(AFFILIATE_COMMISSION_REASON.into()),
+        amount: Set(context.commission_amount),
+        balance_before: Set(wallet.recharge_balance + wallet.gift_balance),
+        balance_after: Set(wallet.recharge_balance + after_gift),
+        recharge_balance_before: Set(wallet.recharge_balance),
+        recharge_balance_after: Set(wallet.recharge_balance),
+        gift_balance_before: Set(wallet.gift_balance),
+        gift_balance_after: Set(after_gift),
+        link_type: Set(Some(AFFILIATE_LINK_TYPE.into())),
+        link_id: Set(Some(context.recharge_order_id.clone())),
+        operator_id: Set(Some(context.referred_user_id.clone())),
+        description: Set(Some(format!("Affiliate commission for order {}", context.order_no))),
+        created_at: Set(now),
+    }
+}
+
+async fn insert_affiliate_commission(input: AffiliateCommissionInsert<'_>, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {
+    affiliate_commission_records::ActiveModel {
+        id: Set(input.database.next_id()),
+        referrer_user_id: Set(input.context.referrer_user_id.clone()),
+        referred_user_id: Set(input.context.referred_user_id.clone()),
+        recharge_order_id: Set(input.context.recharge_order_id.clone()),
+        payable_amount: Set(input.context.payable_amount),
+        commission_percent: Set(input.context.commission_percent),
+        commission_amount: Set(input.context.commission_amount),
+        wallet_transaction_id: Set(input.outcome.wallet_transaction_id()),
+        status: Set(input.outcome.status().to_owned()),
+        failure_reason: Set(input.outcome.failure_reason()),
+        created_at: Set(input.now),
+    }
+    .insert(tx)
+    .await?;
+    Ok(())
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct AffiliateCommissionSettings {
+    percent: Decimal,
+    min_amount: Decimal,
+}
+
+struct AffiliateCommissionContext {
+    referrer_user_id: String,
+    referred_user_id: String,
+    recharge_order_id: String,
+    order_no: String,
+    payable_amount: Decimal,
+    commission_percent: Decimal,
+    commission_amount: Decimal,
+    min_commission_amount: Decimal,
+}
+
+impl AffiliateCommissionContext {
+    fn new(order: &RechargeOrderRecord, referrer_user_id: String, settings: AffiliateCommissionSettings) -> Self {
+        Self {
+            referrer_user_id,
+            referred_user_id: order.user_id.clone(),
+            recharge_order_id: order.id.clone(),
+            order_no: order.order_no.clone(),
+            payable_amount: order.payable_amount,
+            commission_percent: settings.percent,
+            commission_amount: order.payable_amount * settings.percent / Decimal::new(PERCENT_DENOMINATOR, 0),
+            min_commission_amount: settings.min_amount,
+        }
+    }
+
+    fn commission_below_minimum(&self) -> bool {
+        self.commission_amount < self.min_commission_amount
+    }
+}
+
+struct AffiliateCommissionInsert<'a> {
+    database: &'a Database,
+    context: &'a AffiliateCommissionContext,
+    outcome: AffiliateCommissionOutcome<'a>,
+    now: time::OffsetDateTime,
+}
+
+enum AffiliateCommissionOutcome<'a> {
+    Success(&'a str),
+    Failed(&'a str),
+}
+
+impl AffiliateCommissionOutcome<'_> {
+    fn wallet_transaction_id(&self) -> Option<String> {
+        match self {
+            Self::Success(transaction_id) => Some((*transaction_id).to_owned()),
+            Self::Failed(_) => None,
+        }
+    }
+
+    fn status(&self) -> &str {
+        match self {
+            Self::Success(_) => AFFILIATE_COMMISSION_STATUS_SUCCESS,
+            Self::Failed(_) => AFFILIATE_COMMISSION_STATUS_FAILED,
+        }
+    }
+
+    fn failure_reason(&self) -> Option<String> {
+        match self {
+            Self::Success(_) => None,
+            Self::Failed(reason) => Some((*reason).to_owned()),
+        }
+    }
 }
 
 #[cfg(test)]

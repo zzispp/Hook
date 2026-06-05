@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing affiliate admin API and UI,DONE,Routes storage types and tabs identified,rg/sed inspection,2026-06-04T00:00:00Z,0,Found audit table/write path but no list API or UI tab
+2,Add relation change query API and types,DONE,Backend exposes paginated relation change records,cargo check -p backend -p user -p storage -p types,2026-06-04T00:00:00Z,0,cargo check -p backend -p user -p storage -p types passed
+3,Add admin affiliate tab and i18n,DONE,Frontend tab renders audit records and calls API,pnpm lint:frontend,2026-06-04T00:00:00Z,0,pnpm lint:frontend passed before formatting
+4,Run validation,DONE,Rust and frontend checks pass,cargo fmt --all --check && timeout 60 cargo test -p user admin_affiliate -- --nocapture,2026-06-04T00:00:00Z,0,cargo fmt --all --check; cargo check -p backend -p user -p storage -p types; timeout 60 cargo test -p user admin_affiliate -- --nocapture; pnpm lint:frontend; pnpm build:frontend passed

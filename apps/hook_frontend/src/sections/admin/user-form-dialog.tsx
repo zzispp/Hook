@@ -178,6 +178,16 @@ function IdentityFields({ dialog, roles, userGroups }: Pick<Props, 'dialog' | 'r
         helperText={dialog.editing ? t('helper.updatePasswordRequired') : undefined}
         onChange={(value) => dialog.setForm((form) => ({ ...form, password: value }))}
       />
+      {!dialog.editing ? (
+        <TextFieldRow
+          label={t('fields.referrerAffCode')}
+          value={dialog.form.referrer_aff_code}
+          helperText={t('helper.referrerAffCode')}
+          onChange={(value) =>
+            dialog.setForm((form) => ({ ...form, referrer_aff_code: value }))
+          }
+        />
+      ) : null}
     </>
   );
 }

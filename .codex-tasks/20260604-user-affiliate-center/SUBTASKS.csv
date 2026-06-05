@@ -1,0 +1,5 @@
+id,task,task_type,status,depends_on,task_dir,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,实现用户侧返佣类型和存储查询,single-full,DONE,,tasks/01-types-storage,"summary/referrals/commissions/export 查询强制限定当前用户且邮箱脱敏","cargo check -p types -p storage -p user",2026-06-04,0,"cargo check -p types -p storage -p user passed"
+2,实现用户侧 API 权限菜单和路由,single-full,DONE,1,tasks/02-api-menu,"新增 /api/account/affiliate/* 路由、API seed、affiliate_center 菜单和 i18n seed","cargo test -p backend migration::defaults -- --nocapture && cargo test -p user api::routes::tests -- --nocapture",2026-06-04,0,"backend defaults and user route tests passed"
+3,实现前端返佣中心并清理钱包中心,single-full,DONE,"1;2",tasks/03-frontend,"/dashboard/affiliate 页面完整，钱包中心不再展示或请求返佣 summary","pnpm lint:frontend && pnpm build:frontend",2026-06-04,0,"frontend lint and build passed"
+4,全链路验证与收尾,single-full,DONE,"1;2;3",tasks/04-validation,"Rust/前端检查通过，任务状态同步","cargo fmt --all && cargo check -p backend -p user -p storage -p types && pnpm lint:frontend && pnpm build:frontend",2026-06-04,0,"fmt/check/lint/build/default route tests passed"

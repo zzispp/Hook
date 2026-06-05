@@ -60,6 +60,11 @@ pub struct SystemSettingsResponse {
     pub recharge_min_amount: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
     pub recharge_max_amount: Decimal,
+    pub affiliate_enabled: bool,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub affiliate_commission_percent: Decimal,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub affiliate_min_commission_amount: Decimal,
     pub scheduling_mode: ProviderSchedulingMode,
     pub provider_priority_mode: ProviderPriorityMode,
     pub key_priority_snapshot_initialized: bool,
@@ -134,6 +139,9 @@ impl From<SystemSettings> for SystemSettingsResponse {
             recharge_max_unpaid_orders: value.recharge_max_unpaid_orders,
             recharge_min_amount: value.recharge_min_amount,
             recharge_max_amount: value.recharge_max_amount,
+            affiliate_enabled: value.affiliate_enabled,
+            affiliate_commission_percent: value.affiliate_commission_percent,
+            affiliate_min_commission_amount: value.affiliate_min_commission_amount,
             scheduling_mode: value.scheduling_mode,
             provider_priority_mode: value.provider_priority_mode,
             key_priority_snapshot_initialized: value.key_priority_snapshot_initialized,

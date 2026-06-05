@@ -71,3 +71,19 @@ pub(in crate::migration::baseline) enum PaymentCallbackRecords {
     ReceivedAt,
     ProcessedAt,
 }
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum AffiliateCommissions {
+    Table,
+    Id,
+    ReferrerUserId,
+    ReferredUserId,
+    RechargeOrderId,
+    PayableAmount,
+    CommissionPercent,
+    CommissionAmount,
+    WalletTransactionId,
+    Status,
+    FailureReason,
+    CreatedAt,
+}

@@ -51,8 +51,11 @@ impl UserStore {
         let now = time::OffsetDateTime::now_utc();
         let group_codes = user.group_codes.clone();
         let tx = self.database.connection().begin().await?;
+        let user_id = self.database.next_id();
+        let referrer_user_id = referrer_user_id(user.referrer_aff_code.as_deref(), &tx).await?;
+        let referred_at = referrer_user_id.as_ref().map(|_| now);
         let record = UserActiveModel {
-            id: Set(self.database.next_id()),
+            id: Set(user_id.clone()),
             username: Set(user.username),
             password_hash: Set(user.password_hash),
             email: Set(user.email),
@@ -66,6 +69,9 @@ impl UserStore {
             email_verified: Set(user.email_verified.unwrap_or(false)),
             rate_limit_rpm: Set(user.rate_limit_rpm),
             quota_mode: Set(user.quota_mode),
+            affiliate_code: Set(affiliate_code_from_id(&user_id)),
+            referred_by_user_id: Set(referrer_user_id),
+            referred_at: Set(referred_at),
             created_at: Set(now),
             updated_at: Set(now),
         }
@@ -177,6 +183,11 @@ impl UserStore {
 
     pub async fn find_by_email(&self, email: &str) -> StorageResult<Option<User>> {
         self.optional_user(self.find_record(UserColumn::Email.eq(email).into()).await?).await
+    }
+
+    pub async fn find_by_affiliate_code(&self, affiliate_code: &str) -> StorageResult<Option<User>> {
+        self.optional_user(self.find_record(UserColumn::AffiliateCode.eq(affiliate_code).into()).await?)
+            .await
     }
 
     pub async fn find_auth_by_username(&self, username: &str) -> StorageResult<Option<UserAuthRecord>> {
@@ -383,6 +394,24 @@ async fn replace_user_groups(user_id: &str, group_codes: Vec<String>, store: &Us
         .exec(tx)
         .await?;
     insert_user_groups(user_id, group_codes, store, tx).await
+}
+
+async fn referrer_user_id(referrer_aff_code: Option<&str>, tx: &sea_orm::DatabaseTransaction) -> StorageResult<Option<String>> {
+    let Some(code) = referrer_aff_code.filter(|value| !value.trim().is_empty()) else {
+        return Ok(None);
+    };
+    let record = active_users()
+        .filter(UserColumn::AffiliateCode.eq(code.trim()))
+        .lock_exclusive()
+        .one(tx)
+        .await?;
+    record
+        .map(|user| Some(user.id))
+        .ok_or_else(|| StorageError::Conflict("referrer affiliate code does not exist".into()))
+}
+
+fn affiliate_code_from_id(id: &str) -> String {
+    id.chars().filter(|ch| *ch != '-').collect::<String>()
 }
 
 async fn insert_user_groups(user_id: &str, group_codes: Vec<String>, store: &UserStore, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {

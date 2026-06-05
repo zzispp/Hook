@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use constants::auth::{PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH};
 use constants::pagination::{MAX_PAGE_SIZE, MIN_PAGE_NUMBER, MIN_PAGE_SIZE};
 use types::{
-    pagination::PageRequest,
+    pagination::{PageRequest, PageSliceRequest},
     user::{Credentials, NewUser, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, USER_QUOTA_MODE_UNLIMITED, USER_QUOTA_MODE_WALLET},
 };
 
@@ -23,6 +23,15 @@ pub(super) fn validate_credentials(input: &Credentials) -> AppResult<()> {
 pub(super) fn validate_new_user(input: &NewUser) -> AppResult<()> {
     validate_username(&input.username)?;
     validate_password(&input.password)?;
+    validate_new_user_without_password(input)
+}
+
+pub(super) fn validate_passwordless_new_user(input: &NewUser) -> AppResult<()> {
+    validate_username(&input.username)?;
+    validate_new_user_without_password(input)
+}
+
+fn validate_new_user_without_password(input: &NewUser) -> AppResult<()> {
     validate_email(&input.email)?;
     reject_blank("role", &input.role)?;
     validate_optional_group_codes(&input.group_codes)?;
@@ -75,6 +84,21 @@ pub(super) fn validate_page(page: PageRequest) -> AppResult<()> {
     Ok(())
 }
 
+pub(super) fn validate_page_slice(request: PageSliceRequest) -> AppResult<()> {
+    validate_page(PageRequest {
+        page: request.page,
+        page_size: request.page_size,
+    })?;
+    if request.limit != request.page_size {
+        return Err(AppError::InvalidInput("limit must equal page_size".into()));
+    }
+    let expected_offset = (request.page - 1) * request.page_size;
+    if request.offset != expected_offset {
+        return Err(AppError::InvalidInput("offset must match page and page_size".into()));
+    }
+    Ok(())
+}
+
 pub(super) fn sanitize_credentials(input: Credentials) -> Credentials {
     Credentials {
         identifier: input.identifier.trim().into(),
@@ -94,6 +118,7 @@ pub(super) fn sanitize_new_user(input: NewUser) -> NewUser {
         allowed_provider_ids: normalize_ids(input.allowed_provider_ids),
         rate_limit_rpm: input.rate_limit_rpm,
         quota_mode: input.quota_mode,
+        referrer_aff_code: trim_optional_nonempty(input.referrer_aff_code),
     }
 }
 
@@ -138,6 +163,7 @@ pub(super) fn sanitize_sign_up_user(input: SignUpUser) -> SignUpUser {
     SignUpUser {
         user: sanitize_new_user(input.user),
         email_verification_code: input.email_verification_code.map(|value| value.trim().to_owned()),
+        aff_code: trim_optional_nonempty(input.aff_code),
     }
 }
 
@@ -167,6 +193,10 @@ fn nonblank_password(password: Option<String>) -> Option<String> {
         return None;
     }
     Some(password)
+}
+
+fn trim_optional_nonempty(value: Option<String>) -> Option<String> {
+    value.map(|item| item.trim().to_owned()).filter(|item| !item.is_empty())
 }
 
 pub(super) fn validate_password(password: &str) -> AppResult<()> {

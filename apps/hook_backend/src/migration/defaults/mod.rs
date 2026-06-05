@@ -24,6 +24,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_wallets",
     "admin_card_codes",
     "admin_recharges",
+    "admin_affiliates",
     "admin_tokens",
     "admin_model_status_checks",
     "admin_announcements",
@@ -52,6 +53,7 @@ pub const USER_MENU_CODES: &[&str] = &[
     "dashboard_models",
     "dashboard_groups",
     "wallet_center",
+    "affiliate_center",
     "api_tokens",
     "usage_records",
 ];
@@ -137,6 +139,15 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "recharge_orders_read",
             "recharge_orders_create",
             "payment_channels_read",
+        ],
+    },
+    MenuApiBindingDefinition {
+        menu_code: "affiliate_center",
+        api_codes: &[
+            "account_affiliate_summary_read",
+            "account_affiliate_referrals_read",
+            "account_affiliate_commissions_read",
+            "account_affiliate_commissions_export",
         ],
     },
     MenuApiBindingDefinition {
@@ -365,6 +376,19 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         ],
     },
     MenuApiBindingDefinition {
+        menu_code: "admin_affiliates",
+        api_codes: &[
+            "admin_affiliates_overview_read",
+            "admin_affiliates_relations_read",
+            "admin_affiliates_relations_update",
+            "admin_affiliates_relation_changes_read",
+            "admin_affiliates_commissions_read",
+            "admin_affiliates_reports_read",
+            "admin_affiliates_reports_export",
+            "users_read",
+        ],
+    },
+    MenuApiBindingDefinition {
         menu_code: "admin_tokens",
         api_codes: &[
             "groups_read",
@@ -422,6 +446,8 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use super::*;
 
     #[test]
@@ -448,6 +474,17 @@ mod tests {
         }
 
         assert!(USER_MENU_CODES.contains(&"dashboard_profile"));
+    }
+
+    #[test]
+    fn default_menu_ids_and_codes_are_unique() {
+        let mut ids = HashSet::new();
+        let mut codes = HashSet::new();
+
+        for item in menu::MENU_ITEMS {
+            assert!(ids.insert(item.id), "duplicate default menu item id: {}", item.id);
+            assert!(codes.insert(item.code), "duplicate default menu item code: {}", item.code);
+        }
     }
 
     #[test]

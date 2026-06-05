@@ -155,6 +155,7 @@ export type SystemUser = {
   system: boolean;
   rate_limit_rpm?: number | null;
   quota_mode: UserQuotaMode;
+  affiliate_code: string;
   created_at: string;
   last_login_at?: string | null;
   wallet?: UserWalletSummary | null;
@@ -172,6 +173,7 @@ export type UserInput = {
   allowed_provider_ids: string[];
   rate_limit_rpm?: number | null;
   quota_mode: UserQuotaMode;
+  referrer_aff_code?: string;
 };
 
 export type UserQuotaMode = 'wallet' | 'unlimited';

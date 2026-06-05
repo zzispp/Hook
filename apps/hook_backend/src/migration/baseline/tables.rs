@@ -8,6 +8,7 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
         users_table(),
         user_group_memberships_table(),
         user_identities_table(),
+        affiliate_relation_changes_table(),
         user_password_reset_tokens_table(),
         roles_table(),
         api_permissions_table(),
@@ -49,6 +50,9 @@ fn users_table() -> TableCreateStatement {
         .col(boolean(Users::EmailVerified))
         .col(big_integer_null(Users::RateLimitRpm))
         .col(string_len(Users::QuotaMode, 20).default("wallet"))
+        .col(string_len(Users::AffiliateCode, 64))
+        .col(string_len_null(Users::ReferredByUserId, 36))
+        .col(timestamp_tz_null(Users::ReferredAt))
         .to_owned()
 }
 
@@ -89,6 +93,28 @@ fn user_identities_table() -> TableCreateStatement {
         .to_owned()
 }
 
+fn affiliate_relation_changes_table() -> TableCreateStatement {
+    let mut user_fk = affiliate_relation_change_user_fk("fk_affiliate_relation_changes_user", AffiliateRelationChanges::UserId);
+    let mut old_referrer_fk = affiliate_relation_change_user_fk("fk_affiliate_relation_changes_old_referrer", AffiliateRelationChanges::OldReferrerUserId);
+    let mut new_referrer_fk = affiliate_relation_change_user_fk("fk_affiliate_relation_changes_new_referrer", AffiliateRelationChanges::NewReferrerUserId);
+    let mut operator_fk = affiliate_relation_change_user_fk("fk_affiliate_relation_changes_operator", AffiliateRelationChanges::OperatorUserId);
+    Table::create()
+        .table(AffiliateRelationChanges::Table)
+        .if_not_exists()
+        .col(string_len(AffiliateRelationChanges::Id, 36).primary_key())
+        .col(string_len(AffiliateRelationChanges::UserId, 36))
+        .col(string_len_null(AffiliateRelationChanges::OldReferrerUserId, 36))
+        .col(string_len_null(AffiliateRelationChanges::NewReferrerUserId, 36))
+        .col(string_len_null(AffiliateRelationChanges::OperatorUserId, 36))
+        .col(string_len(AffiliateRelationChanges::Reason, 500))
+        .col(timestamp_tz(AffiliateRelationChanges::CreatedAt))
+        .foreign_key(&mut user_fk)
+        .foreign_key(&mut old_referrer_fk)
+        .foreign_key(&mut new_referrer_fk)
+        .foreign_key(&mut operator_fk)
+        .to_owned()
+}
+
 fn user_groups_table() -> TableCreateStatement {
     Table::create()
         .table(UserGroups::Table)
@@ -104,6 +130,16 @@ fn user_groups_table() -> TableCreateStatement {
         .col(timestamp_tz(UserGroups::UpdatedAt))
         .index(Index::create().name("index_user_groups_by_code").col(UserGroups::Code).unique())
         .to_owned()
+}
+
+fn affiliate_relation_change_user_fk(name: &str, column: AffiliateRelationChanges) -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name(name)
+        .from(AffiliateRelationChanges::Table, column)
+        .to(Users::Table, Users::Id)
+        .on_delete(ForeignKeyAction::Restrict);
+    foreign_key
 }
 
 fn user_group_membership_user_fk() -> ForeignKeyCreateStatement {

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add affiliate binding tests,DONE,Tests encode signup/admin create behavior,cargo test -p user affiliate -- --nocapture,2026-06-04,0,
+2,Implement service and repository binding,DONE,User creation paths pass affiliate tests,cargo test -p user referrer -- --nocapture,2026-06-04,0,
+3,Wire API payloads,DONE,sign-up and admin create payloads carry affiliate fields,cargo test -p user oauth -- --nocapture,2026-06-04,0,
+4,Run focused validation,DONE,User crate affiliate tests pass,cargo test -p user referrer -- --nocapture,2026-06-04,0,

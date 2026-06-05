@@ -26,8 +26,10 @@ pub(super) fn filtered_users(filters: UserListFilters) -> Select<Users> {
 
 fn user_search_condition(search: &str) -> Condition {
     Condition::any()
+        .add(UserColumn::Id.contains(search))
         .add(UserColumn::Username.contains(search))
         .add(UserColumn::Email.contains(search))
+        .add(UserColumn::AffiliateCode.contains(search))
         .add(UserColumn::Role.contains(search))
         .add(UserColumn::Id.in_subquery(user_ids_for_group_search(search)))
 }

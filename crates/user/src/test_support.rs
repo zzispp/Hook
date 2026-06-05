@@ -7,13 +7,17 @@ use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     user::{
-        IdentityProvider, NewUser, ReplaceUser, USER_QUOTA_MODE_WALLET, User, UserId, UserIdentity, UserIdentityInput, UserListFilters, default_user_created_at,
+        AdminAffiliateCommissionItem, AdminAffiliateCommissionQuery, AdminAffiliateOverviewResponse, AdminAffiliateRelationChangeItem,
+        AdminAffiliateRelationChangeQuery, AdminAffiliateRelationItem, AdminAffiliateRelationQuery, AdminAffiliateReportQuery, AdminAffiliateReportResponse,
+        AffiliateCommissionItem, AffiliateCommissionQuery, AffiliateReferralItem, AffiliateReferralQuery, AffiliateRelationChangeRecord,
+        AffiliateSummaryResponse, IdentityProvider, NewUser, ReplaceUser, USER_QUOTA_MODE_WALLET, User, UserId, UserIdentity, UserIdentityInput,
+        UserListFilters, default_user_created_at,
     },
 };
 
 use crate::application::{
-    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord,
-    UserRepository,
+    AdminAffiliateRepository, AffiliateRelationUpdateRecord, AffiliateRepository, AppError, AppResult, PasswordHasher, PasswordResetRecord,
+    PasswordResetRepository, ReplaceUserRecord, SystemUserProvider, SystemUserRecord, UserAuthRecord, UserRepository,
 };
 
 pub(crate) const VALID_PASSWORD: &str = "secret123";
@@ -111,7 +115,8 @@ impl UserRepository for MemoryUserRepository {
     async fn create(&self, record: ReplaceUserRecord) -> AppResult<User> {
         let mut state = self.state.lock().unwrap();
         let id = next_user_id(&mut state);
-        let user = user_from_record(id, &record);
+        let referred_by_user_id = referrer_user_id(&state, record.referrer_aff_code.as_deref())?;
+        let user = user_from_record(id, &record, referred_by_user_id);
         state.users.push(StoredUser {
             user: user.clone(),
             password_hash: record.password_hash.clone(),
@@ -162,6 +167,17 @@ impl UserRepository for MemoryUserRepository {
             .users
             .iter()
             .find(|stored| stored.user.email == email)
+            .map(|stored| stored.user.clone()))
+    }
+
+    async fn find_by_affiliate_code(&self, affiliate_code: &str) -> AppResult<Option<User>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .users
+            .iter()
+            .find(|stored| stored.user.affiliate_code == affiliate_code)
             .map(|stored| stored.user.clone()))
     }
 
@@ -284,6 +300,55 @@ impl UserRepository for MemoryUserRepository {
 }
 
 #[async_trait]
+impl AffiliateRepository for MemoryUserRepository {
+    async fn affiliate_summary(&self, user_id: &str, affiliate_code: &str) -> AppResult<AffiliateSummaryResponse> {
+        let referred_user_count = self
+            .state
+            .lock()
+            .unwrap()
+            .users
+            .iter()
+            .filter(|stored| stored.user.referred_by_user_id.as_ref().is_some_and(|id| id.0 == user_id))
+            .count() as u64;
+        Ok(AffiliateSummaryResponse {
+            affiliate_code: affiliate_code.into(),
+            affiliate_link: format!("/auth/sign-up?aff={affiliate_code}"),
+            affiliate_enabled: false,
+            referred_user_count,
+            total_referred_recharge_amount: rust_decimal::Decimal::ZERO,
+            total_commission_amount: rust_decimal::Decimal::ZERO,
+            today_commission_amount: rust_decimal::Decimal::ZERO,
+            month_commission_amount: rust_decimal::Decimal::ZERO,
+            affiliate_commission_percent: rust_decimal::Decimal::ZERO,
+            affiliate_min_commission_amount: rust_decimal::Decimal::ZERO,
+            last_commission_at: None,
+        })
+    }
+
+    async fn page_affiliate_referrals(
+        &self,
+        _user_id: &str,
+        request: PageSliceRequest,
+        _query: AffiliateReferralQuery,
+    ) -> AppResult<Page<AffiliateReferralItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn page_affiliate_commissions(
+        &self,
+        _user_id: &str,
+        request: PageSliceRequest,
+        _query: AffiliateCommissionQuery,
+    ) -> AppResult<Page<AffiliateCommissionItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn export_affiliate_commissions(&self, _user_id: &str, _query: AffiliateCommissionQuery) -> AppResult<Vec<AffiliateCommissionItem>> {
+        Ok(Vec::new())
+    }
+}
+
+#[async_trait]
 impl PasswordResetRepository for MemoryUserRepository {
     async fn create_password_reset_token(&self, record: PasswordResetRecord) -> AppResult<()> {
         self.state.lock().unwrap().reset_tokens.push(StoredPasswordResetToken {
@@ -313,6 +378,94 @@ impl PasswordResetRepository for MemoryUserRepository {
     }
 }
 
+#[async_trait]
+impl AdminAffiliateRepository for MemoryUserRepository {
+    async fn admin_affiliate_overview(&self) -> AppResult<AdminAffiliateOverviewResponse> {
+        Ok(AdminAffiliateOverviewResponse {
+            total_referred_users: 0,
+            active_referrer_count: 0,
+            total_commission_amount: rust_decimal::Decimal::ZERO,
+            today_commission_amount: rust_decimal::Decimal::ZERO,
+            month_commission_amount: rust_decimal::Decimal::ZERO,
+            affiliate_commission_percent: rust_decimal::Decimal::ZERO,
+            affiliate_min_commission_amount: rust_decimal::Decimal::ZERO,
+        })
+    }
+
+    async fn page_admin_affiliate_relations(
+        &self,
+        request: PageSliceRequest,
+        _query: AdminAffiliateRelationQuery,
+    ) -> AppResult<Page<AdminAffiliateRelationItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn update_affiliate_relation(&self, user_id: &str, input: AffiliateRelationUpdateRecord) -> AppResult<AffiliateRelationChangeRecord> {
+        let mut state = self.state.lock().unwrap();
+        let new_referrer_user_id = new_referrer_id(&state, input.referrer_aff_code.as_deref(), input.clear_referrer)?;
+        let user = find_stored_user_mut(&mut state, &UserId(user_id.to_owned()))?;
+        let old_referrer_user_id = user.user.referred_by_user_id.as_ref().map(|id| id.0.clone());
+        user.user.referred_by_user_id = new_referrer_user_id.clone().map(UserId);
+        user.user.referred_at = new_referrer_user_id.as_ref().map(|_| default_user_created_at());
+        Ok(AffiliateRelationChangeRecord {
+            id: "change-1".into(),
+            user_id: user_id.into(),
+            old_referrer_user_id,
+            new_referrer_user_id,
+            operator_user_id: input.operator_user_id,
+            reason: input.reason,
+            created_at: default_user_created_at().to_string(),
+        })
+    }
+
+    async fn page_admin_affiliate_relation_changes(
+        &self,
+        request: PageSliceRequest,
+        _query: AdminAffiliateRelationChangeQuery,
+    ) -> AppResult<Page<AdminAffiliateRelationChangeItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn page_admin_affiliate_commissions(
+        &self,
+        request: PageSliceRequest,
+        _query: AdminAffiliateCommissionQuery,
+    ) -> AppResult<Page<AdminAffiliateCommissionItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn admin_affiliate_report(&self, query: AdminAffiliateReportQuery) -> AppResult<AdminAffiliateReportResponse> {
+        Ok(AdminAffiliateReportResponse {
+            daily_items: Vec::new(),
+            referrer_items: Vec::new(),
+            referrer_total: 0,
+            page: query.page,
+            page_size: query.page_size,
+        })
+    }
+
+    async fn export_admin_affiliate_commissions(&self, _query: AdminAffiliateCommissionQuery) -> AppResult<Vec<AdminAffiliateCommissionItem>> {
+        Ok(Vec::new())
+    }
+
+    async fn export_admin_affiliate_daily_report(&self, _query: AdminAffiliateReportQuery) -> AppResult<Vec<types::user::AdminAffiliateDailyReportItem>> {
+        Ok(Vec::new())
+    }
+
+    async fn export_admin_affiliate_referrer_report(&self, _query: AdminAffiliateReportQuery) -> AppResult<Vec<types::user::AdminAffiliateReferrerReportItem>> {
+        Ok(Vec::new())
+    }
+}
+
+fn empty_page<T>(request: PageSliceRequest) -> Page<T> {
+    Page {
+        items: Vec::new(),
+        total: 0,
+        page: request.page,
+        page_size: request.page_size,
+    }
+}
+
 impl PasswordHasher for TestPasswordHasher {
     fn hash(&self, password: &str) -> AppResult<String> {
         Ok(format!("hashed:{password}"))
@@ -336,6 +489,17 @@ impl StoredUser {
             password_hash: self.password_hash.clone(),
         }
     }
+
+    pub(crate) fn referred_by(mut self, referrer_id: UserId) -> Self {
+        self.user.referred_by_user_id = Some(referrer_id);
+        self.user.referred_at = Some(default_user_created_at());
+        self
+    }
+
+    pub(crate) fn regular_user(mut self) -> Self {
+        self.user.role = constants::auth::DEFAULT_USER_ROLE.into();
+        self
+    }
 }
 
 pub(crate) fn new_user(username: &str) -> NewUser {
@@ -350,6 +514,7 @@ pub(crate) fn new_user(username: &str) -> NewUser {
         allowed_provider_ids: Vec::new(),
         rate_limit_rpm: None,
         quota_mode: USER_QUOTA_MODE_WALLET.into(),
+        referrer_aff_code: None,
     }
 }
 
@@ -385,6 +550,9 @@ pub(crate) fn stored_user(id: u64, username: &str, password_hash: &str) -> Store
             system: false,
             rate_limit_rpm: None,
             quota_mode: USER_QUOTA_MODE_WALLET.into(),
+            affiliate_code: affiliate_code(&user_id(id)),
+            referred_by_user_id: None,
+            referred_at: None,
             created_at: default_user_created_at(),
             last_login_at: None,
         },
@@ -417,6 +585,9 @@ pub(crate) fn system_user() -> TestSystemUserProvider {
                 system: true,
                 rate_limit_rpm: None,
                 quota_mode: USER_QUOTA_MODE_WALLET.into(),
+                affiliate_code: affiliate_code(&user_id(0)),
+                referred_by_user_id: None,
+                referred_at: None,
                 created_at: default_user_created_at(),
                 last_login_at: None,
             },
@@ -444,8 +615,10 @@ fn replace_stored_user(state: &mut RepositoryState, id: &UserId, record: &Replac
     Ok(stored.user.clone())
 }
 
-fn user_from_record(id: UserId, record: &ReplaceUserRecord) -> User {
+fn user_from_record(id: UserId, record: &ReplaceUserRecord, referred_by_user_id: Option<UserId>) -> User {
+    let referred_at = referred_by_user_id.as_ref().map(|_| default_user_created_at());
     User {
+        affiliate_code: affiliate_code(&id),
         id,
         username: record.username.clone(),
         email: record.email.clone(),
@@ -460,6 +633,8 @@ fn user_from_record(id: UserId, record: &ReplaceUserRecord) -> User {
         system: false,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode.clone(),
+        referred_by_user_id,
+        referred_at,
         created_at: default_user_created_at(),
         last_login_at: None,
     }
@@ -485,14 +660,51 @@ fn updated_user(id: UserId, current: &User, record: &ReplaceUserRecord) -> User 
     User {
         email_verified: record.email_verified.unwrap_or(current.email_verified),
         password_set: current.password_set || record.password_hash.is_some(),
+        affiliate_code: current.affiliate_code.clone(),
+        referred_by_user_id: current.referred_by_user_id.clone(),
+        referred_at: current.referred_at.clone(),
         created_at: current.created_at.clone(),
         last_login_at: current.last_login_at.clone(),
-        ..user_from_record(id, record)
+        ..user_from_record(id, record, current.referred_by_user_id.clone())
     }
 }
 
 pub(crate) fn user_id(id: u64) -> UserId {
     UserId(format!("018f0000-0000-7000-8000-{id:012}"))
+}
+
+pub(crate) fn affiliate_code(id: &UserId) -> String {
+    id.0.chars().filter(|ch| *ch != '-').collect()
+}
+
+fn referrer_user_id(state: &RepositoryState, referrer_aff_code: Option<&str>) -> AppResult<Option<UserId>> {
+    let Some(code) = referrer_aff_code else {
+        return Ok(None);
+    };
+    state
+        .users
+        .iter()
+        .find(|stored| stored.user.affiliate_code == code)
+        .map(|stored| Some(stored.user.id.clone()))
+        .ok_or_else(|| AppError::Conflict("referrer affiliate code does not exist".into()))
+}
+
+fn new_referrer_id(state: &RepositoryState, referrer_aff_code: Option<&str>, clear_referrer: bool) -> AppResult<Option<String>> {
+    if clear_referrer {
+        return Ok(None);
+    }
+    let Some(code) = referrer_aff_code else {
+        return Ok(None);
+    };
+    let target = state
+        .users
+        .iter()
+        .find(|stored| stored.user.affiliate_code == code)
+        .ok_or_else(|| AppError::Conflict("referrer affiliate code does not exist".into()))?;
+    if target.user.role != constants::auth::DEFAULT_USER_ROLE {
+        return Err(AppError::Conflict("only regular users can be referrers".into()));
+    }
+    Ok(Some(target.user.id.0.clone()))
 }
 
 fn user_matches_filters(user: &User, filters: &UserListFilters) -> bool {

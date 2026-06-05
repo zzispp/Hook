@@ -141,6 +141,7 @@ fn sign_up_user(user: NewUser) -> SignUpUser {
     SignUpUser {
         user,
         email_verification_code: None,
+        aff_code: None,
     }
 }
 

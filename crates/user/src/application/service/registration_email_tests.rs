@@ -74,6 +74,7 @@ async fn sign_up_consumes_registration_email_code_once() {
         .sign_up(SignUpUser {
             user: new_user("alice"),
             email_verification_code: Some("123456".into()),
+            aff_code: None,
         })
         .await
         .unwrap();
@@ -82,6 +83,7 @@ async fn sign_up_consumes_registration_email_code_once() {
         .sign_up(SignUpUser {
             user: new_user("bob"),
             email_verification_code: Some("123456".into()),
+            aff_code: None,
         })
         .await;
     assert_invalid_input(result, "email verification code is invalid or expired");

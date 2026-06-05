@@ -12,7 +12,7 @@ use types::{
         AdminWalletLedgerEntriesResponse, AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse,
         AdminWalletRechargePayload, AdminWalletRechargeResponse, AdminWalletTransactionsResponse, WalletAdjustment, WalletBalanceResponse,
         WalletDailyUsageDetailRequest, WalletDailyUsageDetailsResponse, WalletLedgerEntriesResponse, WalletLedgerEntryFilters, WalletRecharge,
-        WalletTransactionsResponse,
+        WalletSummaryResponse, WalletTransactionsResponse,
     },
 };
 
@@ -71,7 +71,7 @@ pub struct WalletDailyUsageQuery {
 
 pub async fn balance(State(state): State<WalletApiState>, Extension(current_user): Extension<CurrentUser>) -> ApiResult<ApiJson<WalletBalanceResponse>> {
     ensure_user_wallet_access(&current_user)?;
-    Ok(ok(state.wallets.balance(&current_user.id).await?))
+    Ok(ok(current_owner_balance(state.wallets.balance(&current_user.id).await?, &current_user)))
 }
 
 pub async fn transactions(
@@ -80,7 +80,10 @@ pub async fn transactions(
     Query(query): Query<WalletListQuery>,
 ) -> ApiResult<ApiJson<WalletTransactionsResponse>> {
     ensure_user_wallet_access(&current_user)?;
-    Ok(ok(state.wallets.transactions(&current_user.id, query.into()).await?))
+    Ok(ok(current_owner_transactions(
+        state.wallets.transactions(&current_user.id, query.into()).await?,
+        &current_user,
+    )))
 }
 
 pub async fn ledger_entries(
@@ -89,10 +92,13 @@ pub async fn ledger_entries(
     Query(query): Query<WalletLedgerEntriesQuery>,
 ) -> ApiResult<ApiJson<WalletLedgerEntriesResponse>> {
     ensure_user_wallet_access(&current_user)?;
-    Ok(ok(state
-        .wallets
-        .ledger_entries(&current_user.id, PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
-        .await?))
+    Ok(ok(current_owner_ledger_entries(
+        state
+            .wallets
+            .ledger_entries(&current_user.id, PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
+            .await?,
+        &current_user,
+    )))
 }
 
 pub async fn daily_usage_transactions(
@@ -294,6 +300,35 @@ fn recharge(wallet_id: String, operator_id: String, payload: AdminWalletRecharge
 
 fn ok<T>(data: T) -> ApiJson<T> {
     Json(ApiResponse::new(data))
+}
+
+fn current_owner_balance(mut response: WalletBalanceResponse, current_user: &CurrentUser) -> WalletBalanceResponse {
+    set_current_owner(&mut response.wallet, current_user);
+    response
+}
+
+fn current_owner_transactions(mut response: WalletTransactionsResponse, current_user: &CurrentUser) -> WalletTransactionsResponse {
+    set_current_owner(&mut response.wallet, current_user);
+    response
+}
+
+fn current_owner_ledger_entries(mut response: WalletLedgerEntriesResponse, current_user: &CurrentUser) -> WalletLedgerEntriesResponse {
+    set_current_owner(&mut response.wallet, current_user);
+    response
+}
+
+fn set_current_owner(wallet: &mut WalletSummaryResponse, current_user: &CurrentUser) {
+    wallet.owner_name = current_owner_name(current_user);
+    wallet.owner_email = String::new();
+    wallet.owner_type = "user".into();
+}
+
+fn current_owner_name(current_user: &CurrentUser) -> String {
+    let username = current_user.username.trim();
+    if username.is_empty() {
+        return current_user.id.clone();
+    }
+    username.to_owned()
 }
 
 fn ensure_user_wallet_access(current_user: &CurrentUser) -> ApiResult<()> {

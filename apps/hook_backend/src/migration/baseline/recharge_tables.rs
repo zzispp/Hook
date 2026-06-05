@@ -9,6 +9,7 @@ pub(super) fn recharge_tables() -> Vec<TableCreateStatement> {
     vec![
         recharge_packages_table(),
         recharge_orders_table(),
+        affiliate_commissions_table(),
         payment_channels_table(),
         payment_callback_records_table(),
     ]
@@ -83,6 +84,69 @@ fn payment_channels_table() -> TableCreateStatement {
         .col(timestamp_tz(PaymentChannels::RegisteredAt))
         .col(timestamp_tz(PaymentChannels::UpdatedAt))
         .to_owned()
+}
+
+fn affiliate_commissions_table() -> TableCreateStatement {
+    let mut referrer_fk = affiliate_user_fk("fk_affiliate_commissions_referrer", AffiliateCommissions::ReferrerUserId);
+    let mut referred_fk = affiliate_user_fk("fk_affiliate_commissions_referred", AffiliateCommissions::ReferredUserId);
+    let mut order_fk = affiliate_order_fk();
+    let mut transaction_fk = affiliate_wallet_transaction_fk();
+    Table::create()
+        .table(AffiliateCommissions::Table)
+        .if_not_exists()
+        .col(string_len(AffiliateCommissions::Id, 36).primary_key())
+        .col(string_len(AffiliateCommissions::ReferrerUserId, 36))
+        .col(string_len(AffiliateCommissions::ReferredUserId, 36))
+        .col(string_len(AffiliateCommissions::RechargeOrderId, 36))
+        .col(recharge_decimal(AffiliateCommissions::PayableAmount))
+        .col(recharge_decimal(AffiliateCommissions::CommissionPercent))
+        .col(recharge_decimal(AffiliateCommissions::CommissionAmount))
+        .col(string_len_null(AffiliateCommissions::WalletTransactionId, 36))
+        .col(string_len(AffiliateCommissions::Status, 20).default("success"))
+        .col(text_null(AffiliateCommissions::FailureReason))
+        .col(timestamp_tz(AffiliateCommissions::CreatedAt))
+        .check(Expr::cust(r#""payable_amount" > 0"#))
+        .check(Expr::cust(r#""commission_percent" >= 0 AND "commission_percent" <= 100"#))
+        .check(Expr::cust(r#""commission_amount" >= 0"#))
+        .check(Expr::cust(r#""status" IN ('success', 'failed')"#))
+        .check(Expr::cust(
+            r#"("status" = 'success' AND "wallet_transaction_id" IS NOT NULL AND "failure_reason" IS NULL) OR ("status" = 'failed' AND "wallet_transaction_id" IS NULL AND "failure_reason" IS NOT NULL)"#,
+        ))
+        .foreign_key(&mut referrer_fk)
+        .foreign_key(&mut referred_fk)
+        .foreign_key(&mut order_fk)
+        .foreign_key(&mut transaction_fk)
+        .to_owned()
+}
+
+fn affiliate_user_fk(name: &str, column: AffiliateCommissions) -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name(name)
+        .from(AffiliateCommissions::Table, column)
+        .to(Users::Table, Users::Id)
+        .on_delete(ForeignKeyAction::Restrict);
+    foreign_key
+}
+
+fn affiliate_order_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_affiliate_commissions_recharge_order")
+        .from(AffiliateCommissions::Table, AffiliateCommissions::RechargeOrderId)
+        .to(RechargeOrders::Table, RechargeOrders::Id)
+        .on_delete(ForeignKeyAction::Restrict);
+    foreign_key
+}
+
+fn affiliate_wallet_transaction_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_affiliate_commissions_wallet_transaction")
+        .from(AffiliateCommissions::Table, AffiliateCommissions::WalletTransactionId)
+        .to(WalletTransactions::Table, WalletTransactions::Id)
+        .on_delete(ForeignKeyAction::Restrict);
+    foreign_key
 }
 
 fn payment_callback_records_table() -> TableCreateStatement {

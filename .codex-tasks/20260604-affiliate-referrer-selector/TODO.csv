@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current dialog and search API,DONE,Relevant frontend/backend paths verified,rg/sed inspection,2026-06-04T15:20:00+08:00,0,
+2,Implement selector and permissions/search support,DONE,Rebind modal supports affiliate-code and user search with referrer_aff_code payload,pnpm lint:frontend,2026-06-04T15:24:00+08:00,0,
+3,Run validation,DONE,Frontend and backend checks complete,pnpm build:frontend && cargo check -p backend -p user -p storage -p types,2026-06-04T15:40:00+08:00,0,

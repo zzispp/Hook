@@ -1,0 +1,7 @@
+id,task,task_type,status,depends_on,task_dir,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,建立返佣数据模型和系统设置字段,single-full,DONE,,tasks/01-data-model-settings,"用户表、返佣记录表、系统设置字段、baseline migration、storage/types 映射完整","cargo check -p types -p storage -p setting",2026-06-04,0,
+2,实现用户创建时生成邀请码与邀请关系绑定,single-full,DONE,1,tasks/02-user-affiliate-binding,"普通注册、OAuth 首次创建、管理员创建、钱包注册入口语义一致","cargo test -p user oauth -- --nocapture",2026-06-04,0,
+3,实现钱包注册链路,single-full,DONE,1,tasks/03-wallet-registration,"钱包签名 + 邮箱验证码 + 用户名创建无密码账号，并绑定钱包身份","cargo test -p user wallet -- --nocapture",2026-06-04,0,
+4,实现充值返佣结算,single-full,DONE,"1;2",tasks/04-recharge-commission,"支付成功结算时同事务写充值入账、邀请人钱包、返佣流水、返佣记录","cargo test -p storage recharge -- --nocapture",2026-06-04,0,
+5,实现后台返佣设置和用户端邀请展示,single-full,DONE,"1;2;4",tasks/05-frontend-affiliate-ui,"后台可配置返佣比例，用户端可复制邀请链接并查看返佣摘要","pnpm lint:frontend && pnpm build:frontend",2026-06-04,0,
+6,全链路验证与收尾,single-full,DONE,"1;2;3;4;5",tasks/06-validation,"Rust/前端检查通过，关键测试覆盖完成","cargo fmt --all; just check; focused cargo tests; pnpm lint:frontend; pnpm build:frontend",2026-06-04,0,"just test reached the repository 60s timeout during compilation without test failure output"

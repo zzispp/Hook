@@ -58,6 +58,10 @@
     "signIn": "Sign in",
     "emailCodeSent": "Code sent. Please check your inbox."
   },
+  "walletRegister": {
+    "title": "Wallet registration",
+    "submit": "Create wallet account"
+  },
   "forgotPassword": {
     "title": "Forgot password",
     "description": "Enter your account email and we’ll send a password reset link.",

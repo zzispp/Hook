@@ -101,7 +101,7 @@ fn candidate_trace(input: CandidateTraceInput<'_>) -> CandidateTrace {
         key_id: input.key.id.clone(),
         key_name_snapshot: input.key.name.clone(),
         key_preview_snapshot: input.key.key_preview.clone(),
-        client_api_format: input.request.api_format.to_owned(),
+        client_api_format: input.parts.client_api_format.clone(),
         provider_api_format: input.endpoint.provider_api_format.clone(),
         needs_conversion: input.endpoint.needs_conversion,
         is_stream: input.request.is_stream,

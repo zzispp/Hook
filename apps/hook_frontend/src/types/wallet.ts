@@ -1,6 +1,9 @@
 export type WalletSummary = {
   id: string;
   user_id: string;
+  owner_name: string;
+  owner_email: string;
+  owner_type: string;
   balance: number;
   recharge_balance: number;
   gift_balance: number;
@@ -17,11 +20,7 @@ export type WalletSummary = {
   updated_at: string;
 };
 
-export type AdminWallet = WalletSummary & {
-  owner_name: string;
-  owner_email: string;
-  owner_type: string;
-};
+export type AdminWallet = WalletSummary;
 
 export type WalletBalanceResponse = {
   wallet: WalletSummary;

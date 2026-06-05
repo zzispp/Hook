@@ -14,6 +14,7 @@ const MAX_AUTH_CLIENT_ID_LENGTH: usize = 255;
 const MAX_AUTH_CLIENT_SECRET_LENGTH: usize = 2048;
 const MAX_AUTH_WALLET_STATEMENT_LENGTH: usize = 200;
 const HEADER_SEPARATOR: &str = ", ";
+const MAX_AFFILIATE_COMMISSION_PERCENT: i64 = 100;
 
 pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
     SystemSettingsUpdate {
@@ -61,6 +62,8 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_non_negative_decimal("default_user_grant", input.default_user_grant)?;
     validate_non_negative_i64("default_rate_limit_rpm", input.default_rate_limit_rpm)?;
     validate_recharge_settings(input)?;
+    validate_percentage("affiliate_commission_percent", input.affiliate_commission_percent)?;
+    validate_non_negative_decimal("affiliate_min_commission_amount", input.affiliate_min_commission_amount)?;
     validate_positive_i64("token_limit_per_user", input.token_limit_per_user)?;
     validate_positive_i64("cache_affinity_ttl_minutes", input.cache_affinity_ttl_minutes)?;
     validate_provider_cooldown_policy(input.provider_cooldown_policy.as_ref())?;
@@ -201,6 +204,13 @@ fn validate_positive_i64(field: &str, value: Option<i64>) -> SettingResult<()> {
 fn validate_positive_decimal(field: &str, value: Option<Decimal>) -> SettingResult<()> {
     if value.is_some_and(|item| item <= Decimal::ZERO) {
         return Err(SettingError::InvalidInput(format!("{field} must be greater than 0")));
+    }
+    Ok(())
+}
+
+fn validate_percentage(field: &str, value: Option<Decimal>) -> SettingResult<()> {
+    if value.is_some_and(|item| item < Decimal::ZERO || item > Decimal::new(MAX_AFFILIATE_COMMISSION_PERCENT, 0)) {
+        return Err(SettingError::InvalidInput(format!("{field} must be between 0 and 100")));
     }
     Ok(())
 }

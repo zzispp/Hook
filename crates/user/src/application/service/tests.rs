@@ -1,12 +1,12 @@
 use constants::pagination::MAX_PAGE_SIZE;
 use types::{
     pagination::PageRequest,
-    user::{Credentials, NewUser, SignUpUser},
+    user::{AdminAffiliateRelationUpdateRequest, Credentials, NewUser, SignUpUser, default_user_created_at},
 };
 
 use crate::{
-    application::{AppError, UserService, UserUseCase},
-    test_support::{MemoryUserRepository, TestPasswordHasher, VALID_PASSWORD, new_user, replace_user, stored_user, user_id},
+    application::{AdminAffiliateUseCase, AffiliateUseCase, AppError, UserRepository, UserService, UserUseCase},
+    test_support::{MemoryUserRepository, TestPasswordHasher, VALID_PASSWORD, affiliate_code, new_user, replace_user, stored_user, user_id},
 };
 
 #[tokio::test]
@@ -19,6 +19,228 @@ async fn sign_up_hashes_password_and_persists_user() {
 
     assert_eq!(user.username, "alice");
     assert_eq!(created[0].password_hash.as_deref(), Some(format!("hashed:{VALID_PASSWORD}").as_str()));
+}
+
+#[tokio::test]
+async fn sign_up_generates_affiliate_code() {
+    let repository = MemoryUserRepository::default();
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let user = service.sign_up(sign_up_user(new_user("alice"))).await.unwrap();
+
+    assert_eq!(user.affiliate_code, affiliate_code(&user.id));
+    assert_eq!(user.referred_by_user_id, None);
+}
+
+#[tokio::test]
+async fn sign_up_binds_referrer_from_aff_code() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "referrer", "hashed:secret123"));
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let user = service
+        .sign_up(SignUpUser {
+            user: new_user("alice"),
+            email_verification_code: None,
+            aff_code: Some(affiliate_code(&user_id(1))),
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(user.referred_by_user_id, Some(user_id(1)));
+    assert_eq!(user.referred_at, Some(default_user_created_at()));
+}
+
+#[tokio::test]
+async fn sign_up_rejects_unknown_aff_code() {
+    let repository = MemoryUserRepository::default();
+    let service = UserService::new(repository.clone(), TestPasswordHasher);
+
+    let result = service
+        .sign_up(SignUpUser {
+            user: new_user("alice"),
+            email_verification_code: None,
+            aff_code: Some("missing-aff".into()),
+        })
+        .await;
+
+    assert!(matches!(result, Err(AppError::Conflict(message)) if message == "referrer affiliate code does not exist"));
+    assert_eq!(repository.created_records().len(), 0);
+}
+
+#[tokio::test]
+async fn create_user_binds_referrer_only_when_explicit() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "referrer", "hashed:secret123"));
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let user = service
+        .create_user(NewUser {
+            referrer_aff_code: Some(affiliate_code(&user_id(1))),
+            ..new_user("alice")
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(user.referred_by_user_id, Some(user_id(1)));
+}
+
+#[tokio::test]
+async fn create_user_defaults_to_no_referrer() {
+    let repository = MemoryUserRepository::default();
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let user = service.create_user(new_user("alice")).await.unwrap();
+
+    assert_eq!(user.referred_by_user_id, None);
+}
+
+#[tokio::test]
+async fn affiliate_summary_returns_code_link_count_and_total() {
+    let repository = MemoryUserRepository::with_users(vec![
+        stored_user(1, "referrer", "hashed:secret123"),
+        stored_user(2, "alice", "hashed:secret123").referred_by(user_id(1)),
+    ]);
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let summary = service.affiliate_summary(user_id(1)).await.unwrap();
+
+    assert_eq!(summary.affiliate_code, affiliate_code(&user_id(1)));
+    assert_eq!(summary.affiliate_link, format!("/auth/sign-up?aff={}", affiliate_code(&user_id(1))));
+    assert_eq!(summary.referred_user_count, 1);
+    assert_eq!(summary.total_commission_amount, rust_decimal::Decimal::ZERO);
+}
+
+#[tokio::test]
+async fn admin_affiliate_rebind_updates_referrer_with_reason() {
+    let repository = MemoryUserRepository::with_users(vec![
+        stored_user(1, "referrer", "hashed:secret123").regular_user(),
+        stored_user(2, "alice", "hashed:secret123"),
+    ]);
+    let service = UserService::new(repository.clone(), TestPasswordHasher);
+
+    service
+        .update_admin_affiliate_relation(
+            &user_id(2).0,
+            AdminAffiliateRelationUpdateRequest {
+                referrer_aff_code: Some(affiliate_code(&user_id(1))),
+                clear_referrer: false,
+                reason: "support request".into(),
+            },
+            Some(user_id(1).0),
+        )
+        .await
+        .unwrap();
+
+    let user = repository.find_by_id(user_id(2)).await.unwrap().unwrap();
+    assert_eq!(user.referred_by_user_id, Some(user_id(1)));
+}
+
+#[tokio::test]
+async fn admin_affiliate_rebind_accepts_virtual_system_operator() {
+    let repository = MemoryUserRepository::with_users(vec![
+        stored_user(1, "referrer", "hashed:secret123").regular_user(),
+        stored_user(2, "alice", "hashed:secret123"),
+    ]);
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let change = service
+        .update_admin_affiliate_relation(
+            &user_id(2).0,
+            AdminAffiliateRelationUpdateRequest {
+                referrer_aff_code: Some(affiliate_code(&user_id(1))),
+                clear_referrer: false,
+                reason: "support request".into(),
+            },
+            None,
+        )
+        .await;
+
+    assert_eq!(change.unwrap().operator_user_id, None);
+}
+
+#[tokio::test]
+async fn admin_affiliate_rebind_keeps_database_operator_id() {
+    let repository = MemoryUserRepository::with_users(vec![
+        stored_user(1, "referrer", "hashed:secret123").regular_user(),
+        stored_user(2, "alice", "hashed:secret123"),
+    ]);
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let change = service
+        .update_admin_affiliate_relation(
+            &user_id(2).0,
+            AdminAffiliateRelationUpdateRequest {
+                referrer_aff_code: Some(affiliate_code(&user_id(1))),
+                clear_referrer: false,
+                reason: "support request".into(),
+            },
+            Some(user_id(1).0),
+        )
+        .await;
+
+    assert_eq!(change.unwrap().operator_user_id, Some(user_id(1).0));
+}
+
+#[tokio::test]
+async fn admin_affiliate_rebind_rejects_admin_referrer() {
+    let repository = MemoryUserRepository::with_users(vec![
+        stored_user(1, "admin_referrer", "hashed:secret123"),
+        stored_user(2, "alice", "hashed:secret123"),
+    ]);
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let result = service
+        .update_admin_affiliate_relation(
+            &user_id(2).0,
+            AdminAffiliateRelationUpdateRequest {
+                referrer_aff_code: Some(affiliate_code(&user_id(1))),
+                clear_referrer: false,
+                reason: "support request".into(),
+            },
+            Some(user_id(1).0),
+        )
+        .await;
+
+    assert!(matches!(result, Err(AppError::Conflict(message)) if message == "only regular users can be referrers"));
+}
+
+#[tokio::test]
+async fn admin_affiliate_update_requires_reason() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let result = service
+        .update_admin_affiliate_relation(
+            &user_id(1).0,
+            AdminAffiliateRelationUpdateRequest {
+                referrer_aff_code: None,
+                clear_referrer: true,
+                reason: "  ".into(),
+            },
+            Some(user_id(1).0),
+        )
+        .await;
+
+    assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "reason is required"));
+}
+
+#[tokio::test]
+async fn admin_affiliate_rebind_requires_affiliate_code() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    let service = UserService::new(repository, TestPasswordHasher);
+
+    let result = service
+        .update_admin_affiliate_relation(
+            &user_id(1).0,
+            AdminAffiliateRelationUpdateRequest {
+                referrer_aff_code: None,
+                clear_referrer: false,
+                reason: "support request".into(),
+            },
+            Some(user_id(1).0),
+        )
+        .await;
+
+    assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "referrer_aff_code is required"));
 }
 
 #[tokio::test]
@@ -235,5 +457,6 @@ fn sign_up_user(user: NewUser) -> SignUpUser {
     SignUpUser {
         user,
         email_verification_code: None,
+        aff_code: None,
     }
 }

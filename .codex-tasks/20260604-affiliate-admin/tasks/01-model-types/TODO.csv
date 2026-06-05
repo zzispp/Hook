@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add admin affiliate API types,DONE,types crate exposes required request/response structs,cargo check -p types,2026-06-04,0,
+2,Add audit table baseline identifiers,DONE,baseline migration contains audit table and indices,cargo check -p storage,2026-06-04,0,
+3,Add SeaORM entity and exports,DONE,storage can query audit table,cargo check -p storage,2026-06-04,0,

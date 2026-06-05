@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Implement query filters and DTO mapping,IN_PROGRESS,overview/relation/commission/report methods compile,cargo check -p storage,,0,
+2,Implement relation update transaction,TODO,relation update validates and writes audit,cargo test -p storage affiliate_admin -- --nocapture,,0,
+3,Add focused storage tests,TODO,key storage scenarios covered,cargo test -p storage affiliate_admin -- --nocapture,,0,

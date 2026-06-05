@@ -7,6 +7,8 @@ use system_user::reject_conflicting_system_user;
 use types::user::{NewUser, ReplaceUser, User, UserId};
 use validation::{sanitize_new_user, validate_new_user};
 
+mod admin_affiliate;
+mod affiliate;
 mod defaults;
 mod password_reset;
 mod registration;
@@ -281,6 +283,7 @@ where
             allowed_provider_ids: input.allowed_provider_ids,
             rate_limit_rpm: input.rate_limit_rpm,
             quota_mode: input.quota_mode,
+            referrer_aff_code: input.referrer_aff_code,
         })
     }
 
@@ -297,6 +300,7 @@ where
             allowed_provider_ids: input.allowed_provider_ids,
             rate_limit_rpm: input.rate_limit_rpm,
             quota_mode: input.quota_mode,
+            referrer_aff_code: None,
         })
     }
 
@@ -325,6 +329,7 @@ fn provider_user_record(input: NewUser, email_verified: Option<bool>) -> Replace
         allowed_provider_ids: input.allowed_provider_ids,
         rate_limit_rpm: input.rate_limit_rpm,
         quota_mode: input.quota_mode,
+        referrer_aff_code: input.referrer_aff_code,
     }
 }
 

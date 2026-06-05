@@ -22,6 +22,8 @@ pub struct UserPayload {
     pub rate_limit_rpm: Option<i64>,
     #[serde(default)]
     pub quota_mode: Option<String>,
+    #[serde(default)]
+    pub referrer_aff_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -33,6 +35,8 @@ pub struct SignUpPayload {
     pub email_verification_code: Option<String>,
     #[serde(default)]
     pub captcha_token: Option<String>,
+    #[serde(default)]
+    pub aff_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -97,6 +101,9 @@ pub struct UserResponse {
     pub system: bool,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,
+    pub affiliate_code: String,
+    pub referred_by_user_id: Option<String>,
+    pub referred_at: Option<String>,
     pub created_at: String,
     pub last_login_at: Option<String>,
     pub wallet: Option<UserWalletSummaryResponse>,
@@ -139,6 +146,7 @@ impl From<UserPayload> for NewUser {
             allowed_provider_ids: value.allowed_provider_ids,
             rate_limit_rpm: value.rate_limit_rpm,
             quota_mode: value.quota_mode.unwrap_or_else(|| super::USER_QUOTA_MODE_WALLET.into()),
+            referrer_aff_code: value.referrer_aff_code,
         }
     }
 }
@@ -234,6 +242,9 @@ impl From<User> for UserResponse {
             system: value.system,
             rate_limit_rpm: value.rate_limit_rpm,
             quota_mode: value.quota_mode,
+            affiliate_code: value.affiliate_code,
+            referred_by_user_id: value.referred_by_user_id.map(|id| id.0),
+            referred_at: value.referred_at,
             created_at: value.created_at,
             last_login_at: value.last_login_at,
             wallet: None,

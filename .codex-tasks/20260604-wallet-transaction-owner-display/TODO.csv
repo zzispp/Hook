@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect wallet transaction UI and backend query,DONE,Identify source field and DB values,rg/sed and read-only DB query,2026-06-04T00:00:00Z,0,"DB rows had wallet user owner; response wallet summary lacked owner fields"
+2,Implement owner display fix,DONE,Wallet transaction owner field maps correctly for recharge/payment records,cargo check -p wallet -p types,2026-06-04T00:00:00Z,0,"User wallet API enriches wallet summary owner_name from CurrentUser"
+3,Run validation and document result,DONE,Formatting/checks pass and task record updated,cargo fmt/check and frontend lint if touched,2026-06-04T00:00:00Z,0,"cargo check -p wallet -p types; cargo fmt --all --check; pnpm lint:frontend; timeout 60 cargo test -p wallet ledger_entries -- --nocapture; git diff --check"

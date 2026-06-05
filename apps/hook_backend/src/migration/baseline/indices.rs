@@ -6,6 +6,8 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
     vec![
         index("index_users_by_username", Users::Table, Users::Username, true),
         index("index_users_by_email", Users::Table, Users::Email, true),
+        index("index_users_by_affiliate_code", Users::Table, Users::AffiliateCode, true),
+        index("index_users_by_referrer", Users::Table, Users::ReferredByUserId, false),
         user_group_memberships_unique_index(),
         index(
             "index_user_group_memberships_by_user",
@@ -20,6 +22,18 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         index("index_user_identities_by_user", UserIdentities::Table, UserIdentities::UserId, false),
+        compound_index(
+            "index_affiliate_relation_changes_by_user_created",
+            AffiliateRelationChanges::Table,
+            AffiliateRelationChanges::UserId,
+            AffiliateRelationChanges::CreatedAt,
+        ),
+        compound_index(
+            "index_affiliate_relation_changes_by_operator_created",
+            AffiliateRelationChanges::Table,
+            AffiliateRelationChanges::OperatorUserId,
+            AffiliateRelationChanges::CreatedAt,
+        ),
         compound_index_unique(
             "index_user_identities_by_provider_subject",
             UserIdentities::Table,
@@ -99,6 +113,24 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RechargeOrders::CreatedAt,
         ),
         recharge_orders_provider_trade_unique_index(),
+        index(
+            "index_affiliate_commissions_by_order",
+            AffiliateCommissions::Table,
+            AffiliateCommissions::RechargeOrderId,
+            true,
+        ),
+        compound_index(
+            "index_affiliate_commissions_by_referrer_created",
+            AffiliateCommissions::Table,
+            AffiliateCommissions::ReferrerUserId,
+            AffiliateCommissions::CreatedAt,
+        ),
+        compound_index(
+            "index_affiliate_commissions_by_referred_created",
+            AffiliateCommissions::Table,
+            AffiliateCommissions::ReferredUserId,
+            AffiliateCommissions::CreatedAt,
+        ),
         compound_index(
             "index_payment_callback_records_by_received",
             PaymentCallbackRecords::Table,

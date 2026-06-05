@@ -26,6 +26,7 @@ pub struct OAuthStateRecord {
     pub provider: IdentityProvider,
     pub redirect_uri: String,
     pub user_id: Option<UserId>,
+    pub aff_code: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
@@ -78,6 +79,15 @@ pub struct WalletSignInInput {
     pub message: String,
     pub signature: String,
     pub chain_id: Option<u64>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WalletRegisterInput {
+    pub wallet: WalletSignInInput,
+    pub username: String,
+    pub email: String,
+    pub email_verification_code: String,
+    pub aff_code: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

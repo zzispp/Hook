@@ -1,3 +1,4 @@
+mod admin_affiliate;
 mod admin_wallet;
 mod auth;
 mod cache_monitoring;
@@ -39,6 +40,7 @@ const API_GROUPS: &[&[ApiDefinition]] = &[
     i18n::I18N_APIS,
     token::TOKEN_APIS,
     wallet::WALLET_APIS,
+    admin_affiliate::ADMIN_AFFILIATE_APIS,
     admin_wallet::ADMIN_WALLET_APIS,
     card_code::CARD_CODE_APIS,
     setting::SETTING_APIS,

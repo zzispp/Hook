@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Run Rust formatting,DONE,Workspace formatting applied,cargo fmt --all,2026-06-04,0,
+2,Run Rust workspace check,DONE,Workspace cargo check passes,just check,2026-06-04,0,"warning remains in unrelated llm_proxy candidate selection dead_code"
+3,Run focused backend tests,DONE,Setting wallet summary recharge focused tests pass,cargo test focused filters,2026-06-04,0,
+4,Run frontend lint and build,DONE,ESLint and Next build pass,pnpm lint:frontend && pnpm build:frontend,2026-06-04,0,
+5,Record repository test timeout,DONE,Timeout is reported honestly,just test,2026-06-04,0,"reached repository 60s timeout during compilation without test failure output"

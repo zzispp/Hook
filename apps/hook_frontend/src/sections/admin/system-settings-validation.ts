@@ -20,6 +20,7 @@ const MIN_SMTP_PORT = 1;
 const MAX_SMTP_PORT = 65535;
 const CODE_PATTERN = /^[A-Za-z0-9_-]+$/;
 const HEADER_TOKEN_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+const MAX_PERCENT = 100;
 
 type T = (key: string, options?: Record<string, unknown>) => string;
 
@@ -129,6 +130,8 @@ function validateRechargeFields(
   const maxUnpaidOrders = integerValue(form.recharge_max_unpaid_orders);
   const minAmount = decimalValue(form.recharge_min_amount);
   const maxAmount = decimalValue(form.recharge_max_amount);
+  const affiliatePercent = decimalValue(form.affiliate_commission_percent);
+  const affiliateMinCommissionAmount = decimalValue(form.affiliate_min_commission_amount);
   if (ratio === null || ratio <= 0) {
     return t('systemSettings.validation.rechargeArrivalRatioPositive');
   }
@@ -143,6 +146,12 @@ function validateRechargeFields(
   }
   if (minAmount > maxAmount) {
     return t('systemSettings.validation.rechargeMinAmountNotGreaterThanMax');
+  }
+  if (affiliatePercent === null || affiliatePercent < 0 || affiliatePercent > MAX_PERCENT) {
+    return t('systemSettings.validation.affiliateCommissionPercentRange');
+  }
+  if (affiliateMinCommissionAmount === null || affiliateMinCommissionAmount < 0) {
+    return t('systemSettings.validation.affiliateMinCommissionAmountNonNegative');
   }
   if (!form.recharge_enabled) {
     return '';

@@ -1,3 +1,5 @@
+mod admin_affiliate_repository;
+mod affiliate_repository;
 mod auth_provider_config;
 mod auth_ticket_store;
 mod oauth_client;

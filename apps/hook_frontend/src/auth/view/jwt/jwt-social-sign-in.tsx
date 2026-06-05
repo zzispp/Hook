@@ -19,7 +19,7 @@ type Props = {
   providers?: AuthConfig['providers'];
   loading: IdentityProvider | null;
   onOAuth: (provider: Extract<IdentityProvider, 'github' | 'google'>) => void;
-  onWallet: (
+  onWallet?: (
     provider: Extract<IdentityProvider, 'evm'>,
     config: WalletProviderPublicConfig
   ) => void;
@@ -28,7 +28,7 @@ type Props = {
 export function JwtSocialSignIn(props: Props) {
   const { providers } = props;
   const hasOAuth = providers?.github.enabled || providers?.google.enabled;
-  const hasWallet = providers?.evm.enabled;
+  const hasWallet = providers?.evm.enabled && Boolean(props.onWallet);
 
   if (!hasOAuth && !hasWallet) {
     return null;
@@ -64,12 +64,12 @@ function ProviderButtons({ providers, loading, onOAuth, onWallet }: Props) {
             onClick={() => onOAuth('google')}
           />
         )}
-        {providers?.evm.enabled && (
+        {providers?.evm.enabled && onWallet && (
           <WalletProviderButton
             label={t('social.evm')}
             connectedSignInLabel={t('social.evmConnectedSignIn')}
             loading={loading === 'evm'}
-            onSignIn={() => onWallet('evm', providers.evm)}
+            onSignIn={() => onWallet?.('evm', providers.evm)}
           />
         )}
       </Stack>

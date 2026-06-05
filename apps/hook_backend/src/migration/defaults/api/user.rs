@@ -56,6 +56,30 @@ pub const USER_APIS: &[ApiDefinition] = &[
         name: "绑定账户钱包",
     },
     ApiDefinition {
+        code: "account_affiliate_summary_read",
+        method: "GET",
+        path_pattern: "/api/account/affiliate-summary",
+        name: "返佣中心概览",
+    },
+    ApiDefinition {
+        code: "account_affiliate_referrals_read",
+        method: "GET",
+        path_pattern: "/api/account/affiliate/referrals",
+        name: "返佣中心邀请用户",
+    },
+    ApiDefinition {
+        code: "account_affiliate_commissions_read",
+        method: "GET",
+        path_pattern: "/api/account/affiliate/commissions",
+        name: "返佣中心返佣记录",
+    },
+    ApiDefinition {
+        code: "account_affiliate_commissions_export",
+        method: "GET",
+        path_pattern: "/api/account/affiliate/commissions/export",
+        name: "导出个人返佣记录",
+    },
+    ApiDefinition {
         code: "users_read",
         method: "GET",
         path_pattern: "/api/users",

@@ -188,6 +188,9 @@ fn user(id: &str, allowed_model_ids: &str) -> UserRecord {
         email_verified: false,
         rate_limit_rpm: None,
         quota_mode: types::user::USER_QUOTA_MODE_WALLET.to_owned(),
+        affiliate_code: format!("{id}-aff"),
+        referred_by_user_id: None,
+        referred_at: None,
     }
 }
 

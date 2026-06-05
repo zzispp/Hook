@@ -10,7 +10,12 @@ use crate::application::{
 
 use super::helpers::{OAUTH_BINDING_TTL_SECONDS, OAUTH_STATE_TTL_SECONDS, TICKET_BYTES, new_provider_user, provider_identity, random_token};
 
-pub(in crate::application::service) async fn oauth_start<C, T>(config: &C, tickets: &T, provider: IdentityProvider) -> AppResult<String>
+pub(in crate::application::service) async fn oauth_start<C, T>(
+    config: &C,
+    tickets: &T,
+    provider: IdentityProvider,
+    aff_code: Option<String>,
+) -> AppResult<String>
 where
     C: AuthProviderConfig,
     T: AuthTicketStore,
@@ -25,6 +30,7 @@ where
                 provider,
                 redirect_uri: redirect_uri.clone(),
                 user_id: None,
+                aff_code: sanitize_aff_code(aff_code),
             },
             OAUTH_STATE_TTL_SECONDS,
         )
@@ -52,6 +58,7 @@ where
                 provider,
                 redirect_uri: redirect_uri.clone(),
                 user_id: Some(user_id),
+                aff_code: None,
             },
             OAUTH_STATE_TTL_SECONDS,
         )
@@ -93,7 +100,7 @@ where
     if state.user_id.is_some() {
         return Err(AppError::Unauthorized);
     }
-    provider_profile_result(repository, tickets, state.provider, profile).await
+    provider_profile_result(repository, tickets, state.provider, profile, state.aff_code).await
 }
 
 pub(in crate::application::service) struct AccountOAuthCallbackInput<'a> {
@@ -157,7 +164,13 @@ where
     Ok(user)
 }
 
-async fn provider_profile_result<R, T>(repository: &R, tickets: &T, provider: IdentityProvider, profile: OAuthProfile) -> AppResult<OAuthSignInResult>
+async fn provider_profile_result<R, T>(
+    repository: &R,
+    tickets: &T,
+    provider: IdentityProvider,
+    profile: OAuthProfile,
+    aff_code: Option<String>,
+) -> AppResult<OAuthSignInResult>
 where
     R: UserRepository,
     T: AuthTicketStore,
@@ -171,7 +184,7 @@ where
     if let Some(user) = repository.find_by_email(&profile.email).await? {
         return oauth_binding_required(repository, tickets, user, provider, profile).await;
     }
-    let user = create_provider_account(repository, &profile).await?;
+    let user = create_provider_account(repository, &profile, aff_code).await?;
     let identity = oauth_identity(provider, &profile, user.id.0.clone());
     repository.create_identity(identity).await?;
     repository.record_login(user.id.clone()).await?;
@@ -202,16 +215,17 @@ where
     })
 }
 
-async fn create_provider_account<R>(repository: &R, profile: &OAuthProfile) -> AppResult<User>
+async fn create_provider_account<R>(repository: &R, profile: &OAuthProfile, aff_code: Option<String>) -> AppResult<User>
 where
     R: UserRepository,
 {
-    repository
-        .create(super::super::provider_user_record(
-            new_provider_user(&profile.email, constants::user_group::DEFAULT_USER_GROUP_CODE),
-            Some(profile.email_verified),
-        ))
-        .await
+    let mut user = new_provider_user(&profile.email, constants::user_group::DEFAULT_USER_GROUP_CODE);
+    user.referrer_aff_code = aff_code;
+    repository.create(super::super::provider_user_record(user, Some(profile.email_verified))).await
+}
+
+fn sanitize_aff_code(value: Option<String>) -> Option<String> {
+    value.map(|item| item.trim().to_owned()).filter(|item| !item.is_empty())
 }
 
 fn oauth_identity(provider: IdentityProvider, profile: &OAuthProfile, user_id: String) -> types::user::UserIdentityInput {

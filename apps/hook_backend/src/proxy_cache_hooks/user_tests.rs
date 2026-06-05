@@ -7,11 +7,13 @@ use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     user::{
-        IdentityProvider, NewUser, SignUpUser, USER_QUOTA_MODE_WALLET, User, UserId, UserIdentity, UserIdentityInput, UserListFilters, default_user_created_at,
+        AffiliateCommissionItem, AffiliateCommissionQuery, AffiliateReferralItem, AffiliateReferralQuery, AffiliateSummaryResponse, IdentityProvider, NewUser,
+        SignUpUser, USER_QUOTA_MODE_WALLET, User, UserId, UserIdentity, UserIdentityInput, UserListFilters, default_user_created_at,
     },
 };
 use user::application::{
-    AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, UserAuthRecord, UserRepository, UserUseCase,
+    AffiliateRepository, AppError, AppResult, PasswordHasher, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, UserAuthRecord, UserRepository,
+    UserUseCase,
 };
 
 use super::{CachedUserRepository, ProxyCacheInvalidator};
@@ -26,6 +28,7 @@ async fn signup_refreshes_scheduling_snapshot_from_repository_create() {
         .sign_up(SignUpUser {
             user: new_user("demo"),
             email_verification_code: None,
+            aff_code: None,
         })
         .await
         .unwrap();
@@ -162,6 +165,17 @@ impl UserRepository for MemoryUserRepository {
             .map(|stored| stored.user.clone()))
     }
 
+    async fn find_by_affiliate_code(&self, affiliate_code: &str) -> AppResult<Option<User>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .users
+            .iter()
+            .find(|stored| stored.user.affiliate_code == affiliate_code)
+            .map(|stored| stored.user.clone()))
+    }
+
     async fn find_auth_by_username(&self, username: &str) -> AppResult<Option<UserAuthRecord>> {
         Ok(self
             .state
@@ -275,6 +289,63 @@ impl UserRepository for MemoryUserRepository {
 }
 
 #[async_trait]
+impl AffiliateRepository for MemoryUserRepository {
+    async fn affiliate_summary(&self, user_id: &str, affiliate_code: &str) -> AppResult<AffiliateSummaryResponse> {
+        let referred_user_count = self
+            .state
+            .lock()
+            .unwrap()
+            .users
+            .iter()
+            .filter(|stored| stored.user.referred_by_user_id.as_ref().is_some_and(|id| id.0 == user_id))
+            .count() as u64;
+        Ok(AffiliateSummaryResponse {
+            affiliate_code: affiliate_code.into(),
+            affiliate_link: format!("/auth/sign-up?aff={affiliate_code}"),
+            affiliate_enabled: false,
+            referred_user_count,
+            total_referred_recharge_amount: rust_decimal::Decimal::ZERO,
+            total_commission_amount: rust_decimal::Decimal::ZERO,
+            today_commission_amount: rust_decimal::Decimal::ZERO,
+            month_commission_amount: rust_decimal::Decimal::ZERO,
+            affiliate_commission_percent: rust_decimal::Decimal::ZERO,
+            last_commission_at: None,
+        })
+    }
+
+    async fn page_affiliate_referrals(
+        &self,
+        _user_id: &str,
+        request: PageSliceRequest,
+        _query: AffiliateReferralQuery,
+    ) -> AppResult<Page<AffiliateReferralItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn page_affiliate_commissions(
+        &self,
+        _user_id: &str,
+        request: PageSliceRequest,
+        _query: AffiliateCommissionQuery,
+    ) -> AppResult<Page<AffiliateCommissionItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn export_affiliate_commissions(&self, _user_id: &str, _query: AffiliateCommissionQuery) -> AppResult<Vec<AffiliateCommissionItem>> {
+        Ok(Vec::new())
+    }
+}
+
+fn empty_page<T>(request: PageSliceRequest) -> Page<T> {
+    Page {
+        items: Vec::new(),
+        total: 0,
+        page: request.page,
+        page_size: request.page_size,
+    }
+}
+
+#[async_trait]
 impl PasswordResetRepository for MemoryUserRepository {
     async fn create_password_reset_token(&self, _record: PasswordResetRecord) -> AppResult<()> {
         Ok(())
@@ -319,12 +390,13 @@ fn new_user(username: &str) -> NewUser {
         allowed_provider_ids: Vec::new(),
         rate_limit_rpm: None,
         quota_mode: USER_QUOTA_MODE_WALLET.into(),
+        referrer_aff_code: None,
     }
 }
 
 fn user_from_record(id: u64, record: &ReplaceUserRecord) -> User {
     User {
-        id: UserId(format!("user-{id}")),
+        id: user_id(id),
         username: record.username.clone(),
         email: record.email.clone(),
         role: record.role.clone(),
@@ -338,6 +410,9 @@ fn user_from_record(id: u64, record: &ReplaceUserRecord) -> User {
         system: false,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode.clone(),
+        affiliate_code: affiliate_code(id),
+        referred_by_user_id: None,
+        referred_at: None,
         created_at: default_user_created_at(),
         last_login_at: None,
     }
@@ -348,8 +423,19 @@ fn user_from_replace(id: UserId, current: &User, record: &ReplaceUserRecord) -> 
         id,
         email_verified: record.email_verified.unwrap_or(current.email_verified),
         password_set: current.password_set || record.password_hash.is_some(),
+        affiliate_code: current.affiliate_code.clone(),
+        referred_by_user_id: current.referred_by_user_id.clone(),
+        referred_at: current.referred_at.clone(),
         created_at: current.created_at.clone(),
         last_login_at: current.last_login_at.clone(),
         ..user_from_record(0, record)
     }
+}
+
+fn user_id(id: u64) -> UserId {
+    UserId(format!("user-{id}"))
+}
+
+fn affiliate_code(id: u64) -> String {
+    format!("aff-{id}")
 }

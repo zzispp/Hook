@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current affiliate settlement settings and tables,DONE,Current schema settlement settings and UI constraints identified,rg/sed inspection,2026-06-04T00:00:00Z,0,
+2,Add commission status reason and minimum setting backend,DONE,Schema types settings validation and settlement behavior updated,cargo check -p backend -p user -p storage -p types -p recharge -p setting,2026-06-04T00:00:00Z,0,
+3,Update admin and user affiliate records UI,DONE,Tables scroll cleanly buttons do not wrap and records show status reason,pnpm lint:frontend,2026-06-04T00:00:00Z,0,
+4,Run validation,DONE,Rust and frontend validation pass,cargo fmt --all --check && timeout 60 cargo test -p storage affiliate_commission -- --nocapture,2026-06-04T00:00:00Z,0,"cargo check -p backend -p user -p storage -p types -p recharge -p setting; cargo fmt --all --check; timeout 60 cargo test -p setting affiliate -- --nocapture; timeout 60 cargo test -p storage affiliate_commission -- --nocapture; pnpm lint:frontend; pnpm build:frontend; git diff --check"

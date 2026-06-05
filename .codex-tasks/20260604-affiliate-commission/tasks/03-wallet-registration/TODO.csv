@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Add wallet registration tests,DONE,Tests cover passwordless account identity and aff binding,cargo test -p user wallet_register -- --nocapture,2026-06-04,0,
+2,Implement wallet registration service,DONE,Service tests pass,cargo test -p user wallet_register -- --nocapture,2026-06-04,0,
+3,Wire wallet register API,DONE,Route and payload compile,cargo check -p user,2026-06-04,0,
+4,Run focused wallet validation,DONE,Wallet tests pass,cargo test -p user wallet -- --nocapture,2026-06-04,0,

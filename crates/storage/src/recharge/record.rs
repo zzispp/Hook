@@ -1,7 +1,7 @@
 #[path = "entities/mod.rs"]
 pub mod entities;
 
-pub use entities::{payment_callback_records, payment_channels, recharge_orders, recharge_packages};
+pub use entities::{affiliate_commissions, payment_callback_records, payment_channels, recharge_orders, recharge_packages};
 
 pub type RechargePackageRecord = recharge_packages::Model;
 pub type RechargeOrderRecord = recharge_orders::Model;

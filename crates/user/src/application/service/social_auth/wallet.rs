@@ -1,4 +1,4 @@
-use types::user::{IdentityProvider, UserId, UserIdentitySummary};
+use types::user::{IdentityProvider, NewUser, User, UserId, UserIdentitySummary};
 
 use crate::application::{
     AppError, AppResult, AuthProviderConfig, AuthTicketStore, UserRepository, WalletChallenge, WalletProviderSettings, WalletSignInInput, WalletSignInResult,
@@ -50,15 +50,9 @@ where
     C: AuthProviderConfig,
     T: AuthTicketStore,
 {
-    let settings = deps.config.wallet_provider_settings().await?;
-    ensure_wallet_provider_enabled(&settings, input.provider)?;
-    let nonce = message_nonce(input.provider, &input.message)?;
-    let challenge = deps.tickets.consume_wallet_challenge(&nonce).await?.ok_or(AppError::Unauthorized)?;
-    if challenge.chain_id != input.chain_id {
-        return Err(AppError::Unauthorized);
-    }
-    verify_wallet_challenge(&settings, &challenge, input.provider, &input.address, &input.message, &input.signature).await?;
-    existing_wallet_identity_or_account_required(deps.repository, input.provider, &input.address).await
+    let provider = input.provider;
+    let subject = verified_wallet_subject(&deps, input).await?;
+    existing_wallet_identity_or_account_required(deps.repository, provider, &subject).await
 }
 
 pub(in crate::application::service) async fn account_wallet_link<R, C, T>(
@@ -66,6 +60,58 @@ pub(in crate::application::service) async fn account_wallet_link<R, C, T>(
     user_id: UserId,
     input: WalletSignInInput,
 ) -> AppResult<UserIdentitySummary>
+where
+    R: UserRepository,
+    C: AuthProviderConfig,
+    T: AuthTicketStore,
+{
+    let provider = input.provider;
+    let subject = verified_wallet_subject(&deps, input).await?;
+    let user = deps.repository.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
+    if deps.repository.find_identity(provider, &subject).await?.is_some() {
+        return Err(AppError::InvalidInput("provider identity is already linked".into()));
+    }
+    let identity = types::user::UserIdentityInput {
+        user_id: user.id.0,
+        email: Some(user.email),
+        email_verified: user.email_verified,
+        ..wallet_identity(provider, subject)
+    };
+    Ok(UserIdentitySummary::from(deps.repository.create_identity(identity).await?))
+}
+
+pub(in crate::application::service) struct VerifiedWalletRegistration {
+    pub provider: IdentityProvider,
+    pub subject: String,
+    pub user: NewUser,
+}
+
+pub(in crate::application::service) async fn create_wallet_account_from_verified_identity<R>(
+    repository: &R,
+    input: VerifiedWalletRegistration,
+) -> AppResult<User>
+where
+    R: UserRepository,
+{
+    if repository.find_identity(input.provider, &input.subject).await?.is_some() {
+        return Err(AppError::InvalidInput("provider identity is already linked".into()));
+    }
+    let user = repository.create(super::super::provider_user_record(input.user, Some(true))).await?;
+    let identity = types::user::UserIdentityInput {
+        user_id: user.id.0.clone(),
+        email: Some(user.email.clone()),
+        email_verified: true,
+        ..wallet_identity(input.provider, input.subject)
+    };
+    repository.create_identity(identity).await?;
+    repository.record_login(user.id.clone()).await?;
+    Ok(user)
+}
+
+pub(in crate::application::service) async fn verified_wallet_subject<R, C, T>(
+    deps: &WalletSignInDeps<'_, R, C, T>,
+    input: WalletSignInInput,
+) -> AppResult<String>
 where
     R: UserRepository,
     C: AuthProviderConfig,
@@ -79,33 +125,24 @@ where
         return Err(AppError::Unauthorized);
     }
     verify_wallet_challenge(&settings, &challenge, input.provider, &input.address, &input.message, &input.signature).await?;
-    let user = deps.repository.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
-    let subject = normalize_subject(input.provider, &input.address);
-    if deps.repository.find_identity(input.provider, &subject).await?.is_some() {
-        return Err(AppError::InvalidInput("provider identity is already linked".into()));
-    }
-    let identity = types::user::UserIdentityInput {
-        user_id: user.id.0,
-        email: Some(user.email),
-        email_verified: user.email_verified,
-        ..wallet_identity(input.provider, subject)
-    };
-    Ok(UserIdentitySummary::from(deps.repository.create_identity(identity).await?))
+    Ok(normalize_subject(input.provider, &input.address))
 }
 
-async fn existing_wallet_identity_or_account_required<R>(repository: &R, provider: IdentityProvider, address: &str) -> AppResult<WalletSignInResult>
+async fn existing_wallet_identity_or_account_required<R>(repository: &R, provider: IdentityProvider, subject: &str) -> AppResult<WalletSignInResult>
 where
     R: UserRepository,
 {
-    let subject = normalize_subject(provider, address);
-    if let Some(identity) = repository.find_identity(provider, &subject).await? {
+    if let Some(identity) = repository.find_identity(provider, subject).await? {
         repository.touch_identity_login(&identity.id).await?;
         let user = repository.find_by_id(UserId(identity.user_id)).await?.ok_or(AppError::NotFound)?;
         repository.record_login(user.id.clone()).await?;
         return Ok(WalletSignInResult::Authenticated(Box::new(user)));
     }
 
-    Ok(WalletSignInResult::AccountRequired { provider, address: subject })
+    Ok(WalletSignInResult::AccountRequired {
+        provider,
+        address: subject.to_owned(),
+    })
 }
 
 fn wallet_identity(provider: IdentityProvider, subject: String) -> types::user::UserIdentityInput {
@@ -204,7 +241,7 @@ mod tests {
     async fn unknown_wallet_identity_requires_existing_account() {
         let repository = MemoryUserRepository::default();
 
-        let result = existing_wallet_identity_or_account_required(&repository, IdentityProvider::Evm, "0xABC")
+        let result = existing_wallet_identity_or_account_required(&repository, IdentityProvider::Evm, "0xabc")
             .await
             .unwrap();
 

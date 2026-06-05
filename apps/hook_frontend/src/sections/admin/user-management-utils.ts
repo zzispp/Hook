@@ -16,6 +16,7 @@ export type UserForm = {
   allowed_provider_ids: string[];
   rate_limit_rpm: string;
   quota_mode: UserQuotaMode;
+  referrer_aff_code: string;
 };
 
 export const DEFAULT_USER_FORM: UserForm = {
@@ -29,6 +30,7 @@ export const DEFAULT_USER_FORM: UserForm = {
   allowed_provider_ids: [],
   rate_limit_rpm: '',
   quota_mode: 'wallet',
+  referrer_aff_code: '',
 };
 
 export function enabledRoleOptions(roles: Role[]) {
@@ -54,11 +56,12 @@ export function formFromUser(user: SystemUser): UserForm {
     allowed_provider_ids: user.allowed_provider_ids,
     rate_limit_rpm: user.rate_limit_rpm ? String(user.rate_limit_rpm) : '',
     quota_mode: user.quota_mode,
+    referrer_aff_code: '',
   };
 }
 
 export function formToPayload(form: UserForm): UserInput {
-  return {
+  const payload: UserInput = {
     username: form.username,
     password: form.password,
     email: form.email,
@@ -70,6 +73,10 @@ export function formToPayload(form: UserForm): UserInput {
     rate_limit_rpm: rateLimitValue(form.rate_limit_rpm),
     quota_mode: form.quota_mode,
   };
+  if (form.referrer_aff_code.trim()) {
+    payload.referrer_aff_code = form.referrer_aff_code.trim();
+  }
+  return payload;
 }
 
 export function displayRole(code: string, roles: Role[]) {

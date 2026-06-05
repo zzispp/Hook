@@ -13,6 +13,7 @@ pub struct UserRecordInput {
     pub allowed_provider_ids: Vec<String>,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,
+    pub referrer_aff_code: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

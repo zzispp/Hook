@@ -19,6 +19,9 @@ pub(in crate::migration::baseline) enum Users {
     EmailVerified,
     RateLimitRpm,
     QuotaMode,
+    AffiliateCode,
+    ReferredByUserId,
+    ReferredAt,
 }
 
 #[derive(DeriveIden)]
@@ -71,4 +74,16 @@ pub(in crate::migration::baseline) enum UserIdentities {
     CreatedAt,
     UpdatedAt,
     LastLoginAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum AffiliateRelationChanges {
+    Table,
+    Id,
+    UserId,
+    OldReferrerUserId,
+    NewReferrerUserId,
+    OperatorUserId,
+    Reason,
+    CreatedAt,
 }

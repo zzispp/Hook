@@ -42,6 +42,12 @@ pub struct OAuthStartResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct OAuthStartQuery {
+    #[serde(default)]
+    pub aff_code: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct OAuthBindExistingPayload {
     pub binding_ticket: String,
 }
@@ -78,6 +84,20 @@ pub struct WalletSignInPayload {
     pub message: String,
     pub signature: String,
     pub chain_id: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WalletRegisterPayload {
+    pub provider: IdentityProvider,
+    pub address: String,
+    pub message: String,
+    pub signature: String,
+    pub chain_id: Option<u64>,
+    pub username: String,
+    pub email: String,
+    pub email_verification_code: String,
+    #[serde(default)]
+    pub aff_code: Option<String>,
 }
 
 #[derive(Debug, Serialize)]

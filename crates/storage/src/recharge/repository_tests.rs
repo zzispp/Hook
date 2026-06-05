@@ -92,6 +92,9 @@ fn user_record() -> UserRecord {
         email_verified: true,
         rate_limit_rpm: None,
         quota_mode: UserRecord::default_quota_mode(),
+        affiliate_code: "user-1-aff".into(),
+        referred_by_user_id: None,
+        referred_at: None,
     }
 }
 

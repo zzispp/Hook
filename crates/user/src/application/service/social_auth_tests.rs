@@ -6,7 +6,7 @@ use super::social_auth_test_support::{
 };
 use crate::{
     application::{AppError, AuthTicketStore, OAuthProfile, OAuthSignInResult, UserService, UserUseCase, WalletSignInInput},
-    test_support::{MemoryUserRepository, TestPasswordHasher, passwordless_stored_user, stored_user, user_id},
+    test_support::{MemoryUserRepository, TestPasswordHasher, affiliate_code, passwordless_stored_user, stored_user, user_id},
 };
 
 #[tokio::test]
@@ -30,10 +30,24 @@ async fn oauth_verified_email_without_user_creates_passwordless_user() {
 async fn oauth_start_uses_public_base_url_callback() {
     let service = test_service(MemoryUserRepository::default(), TestOAuthClient::default());
 
-    let url = service.oauth_start(IdentityProvider::Github).await.unwrap();
+    let url = service.oauth_start(IdentityProvider::Github, None).await.unwrap();
     let encoded_redirect = redirect_uri().replace(':', "%3A").replace('/', "%2F");
 
     assert!(url.contains(&format!("redirect_uri={encoded_redirect}")));
+}
+
+#[tokio::test]
+async fn oauth_first_account_creation_binds_referrer_from_aff_code() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "referrer", "hashed:secret123"));
+    let service = test_service(repository, TestOAuthClient::with_profile(github_profile("new@example.com")));
+
+    let state = oauth_state_with_aff(&service, Some(affiliate_code(&user_id(1)))).await;
+    let result = service.oauth_callback(IdentityProvider::Github, "oauth-code".into(), state).await.unwrap();
+
+    let OAuthSignInResult::Authenticated(user) = result else {
+        panic!("expected authenticated OAuth result");
+    };
+    assert_eq!(user.referred_by_user_id, Some(user_id(1)));
 }
 
 #[tokio::test]
@@ -348,8 +362,72 @@ async fn wallet_existing_identity_signs_in_without_email() {
     assert!(matches!(result, Err(AppError::Unauthorized)));
 }
 
+#[tokio::test]
+async fn wallet_register_verified_identity_creates_passwordless_user() {
+    let repository = MemoryUserRepository::default();
+
+    let user = super::social_auth::create_wallet_account_from_verified_identity(
+        &repository,
+        super::social_auth::VerifiedWalletRegistration {
+            provider: IdentityProvider::Evm,
+            subject: "0xabc".into(),
+            user: wallet_user("alice", None),
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(user.username, "alice");
+    assert!(user.email_verified);
+    assert!(!user.password_set);
+    assert_eq!(repository.created_records()[0].password_hash, None);
+    assert_eq!(repository.identities()[0].provider_subject, "0xabc");
+    assert_eq!(repository.login_records(), vec![user.id]);
+}
+
+#[tokio::test]
+async fn wallet_register_verified_identity_binds_referrer() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "referrer", "hashed:secret123"));
+
+    let user = super::social_auth::create_wallet_account_from_verified_identity(
+        &repository,
+        super::social_auth::VerifiedWalletRegistration {
+            provider: IdentityProvider::Evm,
+            subject: "0xabc".into(),
+            user: wallet_user("alice", Some(affiliate_code(&user_id(1)))),
+        },
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(user.referred_by_user_id, Some(user_id(1)));
+}
+
+#[tokio::test]
+async fn wallet_register_verified_identity_rejects_existing_wallet() {
+    let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
+    repository.seed_identity(identity_input(user_id(1).0, IdentityProvider::Evm, "0xabc"));
+
+    let result = super::social_auth::create_wallet_account_from_verified_identity(
+        &repository,
+        super::social_auth::VerifiedWalletRegistration {
+            provider: IdentityProvider::Evm,
+            subject: "0xabc".into(),
+            user: wallet_user("bob", None),
+        },
+    )
+    .await;
+
+    assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "provider identity is already linked"));
+    assert_eq!(repository.users().len(), 1);
+}
+
 async fn oauth_state(service: &impl UserUseCase) -> String {
-    state_from_url(&service.oauth_start(IdentityProvider::Github).await.unwrap())
+    oauth_state_with_aff(service, None).await
+}
+
+async fn oauth_state_with_aff(service: &impl UserUseCase, aff_code: Option<String>) -> String {
+    state_from_url(&service.oauth_start(IdentityProvider::Github, aff_code).await.unwrap())
 }
 
 async fn account_oauth_state(service: &impl UserUseCase, user_id: types::user::UserId) -> String {
@@ -365,4 +443,10 @@ async fn oauth_callback(service: &impl UserUseCase) -> OAuthSignInResult {
 
 fn assert_system_self_service_error<T>(result: Result<T, AppError>) {
     assert!(matches!(result, Err(AppError::InvalidInput(message)) if message == "system user cannot use account self-service"));
+}
+
+fn wallet_user(username: &str, referrer_aff_code: Option<String>) -> types::user::NewUser {
+    let mut user = crate::test_support::new_user(username);
+    user.referrer_aff_code = referrer_aff_code;
+    user
 }

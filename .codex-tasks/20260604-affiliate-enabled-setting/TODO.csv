@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current affiliate link and settings plumbing,DONE,Current API/frontend fields and settings tab located,rg/sed inspection,2026-06-04T16:18:00+08:00,0,
+2,Implement backend setting and API surface,DONE,System settings include affiliate_enabled and summary returns it,cargo check -p backend -p user -p storage -p types,2026-06-04T16:35:00+08:00,0,
+3,Implement frontend settings switch and warning,DONE,Admin switch persists and user center warns when disabled,pnpm lint:frontend && pnpm build:frontend,2026-06-04T16:42:00+08:00,0,
+4,Run validation,DONE,Focused frontend and backend checks pass,validation commands,2026-06-04T16:52:00+08:00,0,

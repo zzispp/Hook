@@ -1,11 +1,15 @@
+mod admin_affiliate;
+mod affiliate;
 mod auth_ports;
 mod error;
 mod ports;
 mod service;
 
+pub use admin_affiliate::{AdminAffiliateRepository, AdminAffiliateUseCase, AffiliateRelationUpdateRecord};
+pub use affiliate::{AffiliateRepository, AffiliateUseCase};
 pub use auth_ports::{
     AuthProviderConfig, AuthTicketStore, OAuthClient, OAuthPendingBinding, OAuthProfile, OAuthProviderSettings, OAuthSignInResult, OAuthStateRecord,
-    PurposeEmailCodeStore, WalletChallenge, WalletNonceInput, WalletProviderSettings, WalletSignInInput, WalletSignInResult,
+    PurposeEmailCodeStore, WalletChallenge, WalletNonceInput, WalletProviderSettings, WalletRegisterInput, WalletSignInInput, WalletSignInResult,
 };
 pub use error::{AppError, AppResult};
 pub use ports::{

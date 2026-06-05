@@ -6,8 +6,8 @@ import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 
-import { useTranslate } from 'src/locales/use-locales';
 import { useCaptchaConfig } from 'src/actions/captcha';
+import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useWalletDailyModelUsage } from 'src/actions/wallet';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
@@ -66,7 +66,9 @@ export function WalletCenterView() {
         t={t}
         loading={state.validating}
         rechargeEnabled={rechargeEnabled}
-        onRefresh={state.refresh}
+        onRefresh={() => {
+          void state.refresh();
+        }}
         onRecharge={() => setRechargeOpen(true)}
         onRedeemCardCode={() => setCardCodeOpen(true)}
       />

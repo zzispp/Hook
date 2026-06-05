@@ -11,6 +11,8 @@ use crate::{llm_proxy::LlmProxyState, performance_monitoring_os::PerformanceOsCo
 pub(crate) struct AppState {
     pub(crate) database: storage::Database,
     pub(crate) users: Arc<dyn user::application::UserUseCase>,
+    pub(crate) affiliates: Arc<dyn user::application::AffiliateUseCase>,
+    pub(crate) admin_affiliates: Arc<dyn user::application::AdminAffiliateUseCase>,
     pub(crate) user_groups: Arc<dyn user::application::UserGroupUseCase>,
     pub(crate) tokens: user::api::TokenService,
     pub(crate) rbac: Arc<RbacService<StorageRbacRepository, RedisRbacCache>>,

@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current schema and mappings,DONE,Relevant files identified,rg -n "affiliate_code|SystemSettings|RechargeOrders|Users" crates apps/hook_backend,2026-06-04,0,
+2,Add backend tests for setting validation and mappings,DONE,Tests fail before implementation,cargo test -p setting affiliate -- --nocapture,2026-06-04,0,
+3,Add schema/entities/types for affiliate data,DONE,Code compiles through type checking,cargo check -p types -p storage -p setting,2026-06-04,0,
+4,Run focused validation,DONE,Focused check passes,cargo test -p setting affiliate -- --nocapture,2026-06-04,0,

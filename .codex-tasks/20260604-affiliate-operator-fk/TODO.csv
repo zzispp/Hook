@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect operator identity and FK model,DONE,CurrentUser system semantics and audit schema confirmed,rg/sed inspection,2026-06-04T17:41:19+08:00,0,
+2,Implement explicit virtual system operator handling,DONE,System operator relation update does not write invalid FK and regular operators keep id,cargo check -p backend -p user -p storage -p types,2026-06-04T17:41:19+08:00,0,
+3,Run focused validation,DONE,Relevant tests/checks pass,timeout 60 cargo test -p user admin_affiliate -- --nocapture,2026-06-04T17:41:19+08:00,0,

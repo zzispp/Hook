@@ -25,6 +25,7 @@ import { EmailSettingsSection } from './system-settings-email-section';
 import { SystemSettingsSiteSection } from './system-settings-site-section';
 import { SystemSettingsTokenSection } from './system-settings-token-section';
 import { RechargeSettingsSection } from './system-settings-recharge-section';
+import { AffiliateSettingsSection } from './system-settings-affiliate-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { enabledUserGroupOptions, USER_GROUP_MAX_PAGE_SIZE } from './user-group-utils';
 import { SystemSettingsRegistrationSection } from './system-settings-registration-section';
@@ -42,6 +43,7 @@ type SystemSettingsTab =
   | 'email'
   | 'tokens'
   | 'recharge'
+  | 'affiliate'
   | 'requestRecord';
 
 const SYSTEM_SETTINGS_TABS: ReadonlyArray<{
@@ -54,6 +56,7 @@ const SYSTEM_SETTINGS_TABS: ReadonlyArray<{
   { value: 'email', labelKey: 'systemSettings.sections.email' },
   { value: 'tokens', labelKey: 'systemSettings.sections.tokens' },
   { value: 'recharge', labelKey: 'systemSettings.sections.recharge' },
+  { value: 'affiliate', labelKey: 'systemSettings.sections.affiliate' },
   { value: 'requestRecord', labelKey: 'systemSettings.sections.requestRecord' },
 ];
 
@@ -222,6 +225,9 @@ function SettingsTabPanel(props: {
   }
   if (props.tab === 'recharge') {
     return <RechargeSettingsSection {...rechargeProps(props)} />;
+  }
+  if (props.tab === 'affiliate') {
+    return <AffiliateSettingsSection form={props.form} setForm={props.setForm} />;
   }
   return <RequestRecordSection form={props.form} setForm={props.setForm} />;
 }

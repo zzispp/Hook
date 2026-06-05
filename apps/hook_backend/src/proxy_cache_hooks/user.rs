@@ -1,12 +1,18 @@
 use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
-    user::{IdentityProvider, User, UserId, UserIdentity, UserIdentityInput, UserListFilters},
+    user::{
+        AdminAffiliateCommissionItem, AdminAffiliateCommissionQuery, AdminAffiliateDailyReportItem, AdminAffiliateOverviewResponse,
+        AdminAffiliateReferrerReportItem, AdminAffiliateRelationChangeItem, AdminAffiliateRelationChangeQuery, AdminAffiliateRelationItem,
+        AdminAffiliateRelationQuery, AdminAffiliateReportQuery, AdminAffiliateReportResponse, AffiliateCommissionItem, AffiliateCommissionQuery,
+        AffiliateReferralItem, AffiliateReferralQuery, AffiliateRelationChangeRecord, AffiliateSummaryResponse, IdentityProvider, User, UserId, UserIdentity,
+        UserIdentityInput, UserListFilters,
+    },
     user_group::{UserGroupListRequest, UserGroupPageResponse, UserGroupResponse},
 };
 use user::application::{
-    AppError, AppResult, PasswordResetRecord, PasswordResetRepository, ReplaceUserRecord, UserAuthRecord, UserGroupCreateRecord, UserGroupRepository,
-    UserGroupUpdateRecord, UserRepository,
+    AdminAffiliateRepository, AffiliateRelationUpdateRecord, AffiliateRepository, AppError, AppResult, PasswordResetRecord, PasswordResetRepository,
+    ReplaceUserRecord, UserAuthRecord, UserGroupCreateRecord, UserGroupRepository, UserGroupUpdateRecord, UserRepository,
 };
 
 use super::cache::{ProxyCacheInvalidator, combine_cache_results};
@@ -58,6 +64,10 @@ where
 
     async fn find_by_email(&self, email: &str) -> AppResult<Option<User>> {
         self.inner.find_by_email(email).await
+    }
+
+    async fn find_by_affiliate_code(&self, affiliate_code: &str) -> AppResult<Option<User>> {
+        self.inner.find_by_affiliate_code(affiliate_code).await
     }
 
     async fn find_auth_by_username(&self, username: &str) -> AppResult<Option<UserAuthRecord>> {
@@ -120,6 +130,96 @@ where
 
     async fn consume_password_reset_token(&self, token_hash: &str, password_hash: &str, now: time::OffsetDateTime) -> AppResult<Option<User>> {
         self.inner.consume_password_reset_token(token_hash, password_hash, now).await
+    }
+}
+
+#[async_trait]
+impl<R, C> AffiliateRepository for CachedUserRepository<R, C>
+where
+    R: AffiliateRepository,
+    C: ProxyCacheInvalidator,
+{
+    async fn affiliate_summary(&self, user_id: &str, affiliate_code: &str) -> AppResult<AffiliateSummaryResponse> {
+        self.inner.affiliate_summary(user_id, affiliate_code).await
+    }
+
+    async fn page_affiliate_referrals(
+        &self,
+        user_id: &str,
+        request: PageSliceRequest,
+        query: AffiliateReferralQuery,
+    ) -> AppResult<Page<AffiliateReferralItem>> {
+        self.inner.page_affiliate_referrals(user_id, request, query).await
+    }
+
+    async fn page_affiliate_commissions(
+        &self,
+        user_id: &str,
+        request: PageSliceRequest,
+        query: AffiliateCommissionQuery,
+    ) -> AppResult<Page<AffiliateCommissionItem>> {
+        self.inner.page_affiliate_commissions(user_id, request, query).await
+    }
+
+    async fn export_affiliate_commissions(&self, user_id: &str, query: AffiliateCommissionQuery) -> AppResult<Vec<AffiliateCommissionItem>> {
+        self.inner.export_affiliate_commissions(user_id, query).await
+    }
+}
+
+#[async_trait]
+impl<R, C> AdminAffiliateRepository for CachedUserRepository<R, C>
+where
+    R: AdminAffiliateRepository,
+    C: ProxyCacheInvalidator,
+{
+    async fn admin_affiliate_overview(&self) -> AppResult<AdminAffiliateOverviewResponse> {
+        self.inner.admin_affiliate_overview().await
+    }
+
+    async fn page_admin_affiliate_relations(
+        &self,
+        request: PageSliceRequest,
+        query: AdminAffiliateRelationQuery,
+    ) -> AppResult<Page<AdminAffiliateRelationItem>> {
+        self.inner.page_admin_affiliate_relations(request, query).await
+    }
+
+    async fn update_affiliate_relation(&self, user_id: &str, input: AffiliateRelationUpdateRecord) -> AppResult<AffiliateRelationChangeRecord> {
+        let record = self.inner.update_affiliate_relation(user_id, input).await?;
+        self.refresh_scheduling().await?;
+        Ok(record)
+    }
+
+    async fn page_admin_affiliate_relation_changes(
+        &self,
+        request: PageSliceRequest,
+        query: AdminAffiliateRelationChangeQuery,
+    ) -> AppResult<Page<AdminAffiliateRelationChangeItem>> {
+        self.inner.page_admin_affiliate_relation_changes(request, query).await
+    }
+
+    async fn page_admin_affiliate_commissions(
+        &self,
+        request: PageSliceRequest,
+        query: AdminAffiliateCommissionQuery,
+    ) -> AppResult<Page<AdminAffiliateCommissionItem>> {
+        self.inner.page_admin_affiliate_commissions(request, query).await
+    }
+
+    async fn admin_affiliate_report(&self, query: AdminAffiliateReportQuery) -> AppResult<AdminAffiliateReportResponse> {
+        self.inner.admin_affiliate_report(query).await
+    }
+
+    async fn export_admin_affiliate_commissions(&self, query: AdminAffiliateCommissionQuery) -> AppResult<Vec<AdminAffiliateCommissionItem>> {
+        self.inner.export_admin_affiliate_commissions(query).await
+    }
+
+    async fn export_admin_affiliate_daily_report(&self, query: AdminAffiliateReportQuery) -> AppResult<Vec<AdminAffiliateDailyReportItem>> {
+        self.inner.export_admin_affiliate_daily_report(query).await
+    }
+
+    async fn export_admin_affiliate_referrer_report(&self, query: AdminAffiliateReportQuery) -> AppResult<Vec<AdminAffiliateReferrerReportItem>> {
+        self.inner.export_admin_affiliate_referrer_report(query).await
     }
 }
 

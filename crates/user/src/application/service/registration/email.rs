@@ -44,12 +44,24 @@ pub(in crate::application::service) async fn verify_registration_email_code<S>(
 where
     S: RegistrationEmailCodeStore,
 {
+    verify_registration_email_code_for_email(code_store, settings, &input.user.email, input.email_verification_code.as_deref()).await
+}
+
+pub(in crate::application::service) async fn verify_registration_email_code_for_email<S>(
+    code_store: &S,
+    settings: &RegistrationSettings,
+    email: &str,
+    code: Option<&str>,
+) -> AppResult<()>
+where
+    S: RegistrationEmailCodeStore,
+{
     if !settings.registration_email_verification_enabled {
         return Ok(());
     }
-    let code = required_code(input)?;
+    let code = required_code(code)?;
     validate_email_verification_code(code)?;
-    let consumed = code_store.consume_registration_email_code(&input.user.email.to_ascii_lowercase(), code).await?;
+    let consumed = code_store.consume_registration_email_code(&email.to_ascii_lowercase(), code).await?;
     if consumed {
         return Ok(());
     }
@@ -74,11 +86,8 @@ where
     Ok(code)
 }
 
-fn required_code(input: &SignUpUser) -> AppResult<&str> {
-    input
-        .email_verification_code
-        .as_deref()
-        .filter(|value| !value.is_empty())
+fn required_code(code: Option<&str>) -> AppResult<&str> {
+    code.filter(|value| !value.is_empty())
         .ok_or_else(|| AppError::InvalidInput("email verification code is required".into()))
 }
 

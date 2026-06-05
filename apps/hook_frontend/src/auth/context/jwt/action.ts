@@ -22,6 +22,7 @@ export type SignUpParams = {
   password: string;
   emailVerificationCode?: string;
   captchaToken?: string;
+  affCode?: string;
 };
 
 export type RegistrationEmailCodeParams = {
@@ -75,6 +76,13 @@ export type WalletSignInParams = WalletNonceParams & {
   signature: string;
 };
 
+export type WalletRegisterParams = WalletSignInParams & {
+  username: string;
+  email: string;
+  emailVerificationCode: string;
+  affCode?: string;
+};
+
 /** **************************************
  * Sign in
  *************************************** */
@@ -108,6 +116,7 @@ export const signUp = async ({
   password,
   emailVerificationCode,
   captchaToken,
+  affCode,
 }: SignUpParams): Promise<void> => {
   const params = {
     username: trimCredential(username),
@@ -115,6 +124,7 @@ export const signUp = async ({
     password: trimCredential(password),
     ...(emailVerificationCode && { email_verification_code: emailVerificationCode.trim() }),
     ...(captchaToken && { captcha_token: captchaToken.trim() }),
+    ...(affCode && { aff_code: affCode.trim() }),
   };
 
   try {
@@ -137,8 +147,10 @@ export const requestRegistrationEmailCode = async ({
   });
 };
 
-export async function startOAuth(provider: Extract<IdentityProvider, 'github' | 'google'>) {
-  const res = await axios.get(endpoints.auth.oauthStart(provider));
+export async function startOAuth(provider: Extract<IdentityProvider, 'github' | 'google'>, affCode?: string) {
+  const res = await axios.get(endpoints.auth.oauthStart(provider), {
+    params: affCode ? { aff_code: affCode.trim() } : undefined,
+  });
   return requireApiData<{ authorization_url: string }>(res.data);
 }
 
@@ -194,6 +206,31 @@ export async function walletSignIn({
     signature,
   });
   return requireApiData<WalletSignInResponse>(res.data);
+}
+
+export async function walletRegister({
+  provider,
+  address,
+  chainId,
+  message,
+  signature,
+  username,
+  email,
+  emailVerificationCode,
+  affCode,
+}: WalletRegisterParams) {
+  const res = await axios.post(endpoints.auth.walletRegister, {
+    provider,
+    address: trimCredential(address),
+    chain_id: chainId,
+    message,
+    signature,
+    username: trimCredential(username),
+    email: trimCredential(email),
+    email_verification_code: trimCredential(emailVerificationCode),
+    ...(affCode && { aff_code: affCode.trim() }),
+  });
+  await setSession(requireAuthSession(res.data));
 }
 
 export async function applyAuthenticatedSession(response: AuthSessionResponse) {

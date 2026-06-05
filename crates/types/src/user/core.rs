@@ -22,6 +22,9 @@ pub struct User {
     pub system: bool,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,
+    pub affiliate_code: String,
+    pub referred_by_user_id: Option<UserId>,
+    pub referred_at: Option<String>,
     pub created_at: String,
     pub last_login_at: Option<String>,
 }
@@ -38,12 +41,14 @@ pub struct NewUser {
     pub allowed_provider_ids: Vec<String>,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,
+    pub referrer_aff_code: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignUpUser {
     pub user: NewUser,
     pub email_verification_code: Option<String>,
+    pub aff_code: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

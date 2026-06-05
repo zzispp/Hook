@@ -147,6 +147,79 @@ async fn sign_in_rejects_invalid_password_with_credentials_message() {
     assert_eq!(body["message"], "username or password is incorrect");
 }
 
+#[tokio::test]
+async fn admin_affiliate_overview_route_returns_summary() {
+    let app = test_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/api/admin/affiliates/overview")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let body = response_json(response).await;
+
+    assert_success(&body);
+    assert_eq!(body["data"]["total_referred_users"], 0);
+    assert_eq!(body["data"]["affiliate_commission_percent"], 0.0);
+}
+
+#[tokio::test]
+async fn admin_affiliate_relation_changes_route_returns_page() {
+    let app = test_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/api/admin/affiliates/relation-changes?page=1&page_size=10")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let body = response_json(response).await;
+
+    assert_success(&body);
+    assert_eq!(body["data"]["items"].as_array().unwrap().len(), 0);
+    assert_eq!(body["data"]["total"], 0);
+    assert_eq!(body["data"]["page"], 1);
+    assert_eq!(body["data"]["page_size"], 10);
+}
+
+#[tokio::test]
+async fn admin_affiliate_export_route_returns_csv() {
+    let app = test_router();
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri("/api/admin/affiliates/reports/export")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let content_type = response
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let csv = String::from_utf8(body.to_vec()).unwrap();
+
+    assert_eq!(content_type.as_deref(), Some("text/csv; charset=utf-8"));
+    assert_eq!(
+        csv,
+        "\"id\",\"referrer_id\",\"referrer_username\",\"referred_id\",\"referred_username\",\"recharge_order_id\",\"payable_amount\",\"commission_percent\",\"commission_amount\",\"wallet_transaction_id\",\"status\",\"failure_reason\",\"created_at\""
+    );
+}
+
 struct SessionTokens {
     access_token: String,
     refresh_token: String,
@@ -154,11 +227,74 @@ struct SessionTokens {
 
 fn test_router() -> Router {
     let repository = MemoryUserRepository::with_user(stored_user(1, "alice", "hashed:secret123"));
-    let users = UserService::new(repository, TestPasswordHasher);
+    let users = Arc::new(UserService::new(repository, TestPasswordHasher));
     Router::new().nest(
         "/api",
-        create_router(ApiState::new(Arc::new(users), Arc::new(TestUserGroups), token_service(), Arc::new(TestCaptcha))),
+        create_router(ApiState::new(
+            users.clone(),
+            Arc::new(TestAffiliates),
+            users,
+            Arc::new(TestUserGroups),
+            token_service(),
+            Arc::new(TestCaptcha),
+        )),
     )
+}
+
+struct TestAffiliates;
+
+#[async_trait::async_trait]
+impl crate::application::AffiliateUseCase for TestAffiliates {
+    async fn affiliate_summary(&self, _id: types::user::UserId) -> crate::application::AppResult<types::user::AffiliateSummaryResponse> {
+        Ok(types::user::AffiliateSummaryResponse {
+            affiliate_code: "AFF-1".into(),
+            affiliate_link: "/auth/sign-up?aff=AFF-1".into(),
+            affiliate_enabled: false,
+            referred_user_count: 0,
+            total_referred_recharge_amount: rust_decimal::Decimal::ZERO,
+            total_commission_amount: rust_decimal::Decimal::ZERO,
+            today_commission_amount: rust_decimal::Decimal::ZERO,
+            month_commission_amount: rust_decimal::Decimal::ZERO,
+            affiliate_commission_percent: rust_decimal::Decimal::ZERO,
+            affiliate_min_commission_amount: rust_decimal::Decimal::ZERO,
+            last_commission_at: None,
+        })
+    }
+
+    async fn list_affiliate_referrals(
+        &self,
+        _id: types::user::UserId,
+        request: types::pagination::PageSliceRequest,
+        _query: types::user::AffiliateReferralQuery,
+    ) -> crate::application::AppResult<types::pagination::Page<types::user::AffiliateReferralItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn list_affiliate_commissions(
+        &self,
+        _id: types::user::UserId,
+        request: types::pagination::PageSliceRequest,
+        _query: types::user::AffiliateCommissionQuery,
+    ) -> crate::application::AppResult<types::pagination::Page<types::user::AffiliateCommissionItem>> {
+        Ok(empty_page(request))
+    }
+
+    async fn export_affiliate_commissions(
+        &self,
+        _id: types::user::UserId,
+        _query: types::user::AffiliateCommissionQuery,
+    ) -> crate::application::AppResult<Vec<types::user::AffiliateCommissionItem>> {
+        Ok(Vec::new())
+    }
+}
+
+fn empty_page<T>(request: types::pagination::PageSliceRequest) -> types::pagination::Page<T> {
+    types::pagination::Page {
+        items: Vec::new(),
+        total: 0,
+        page: request.page,
+        page_size: request.page_size,
+    }
 }
 
 struct TestUserGroups;

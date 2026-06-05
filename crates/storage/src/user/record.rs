@@ -27,6 +27,10 @@ pub struct Model {
     pub email_verified: bool,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,
+    #[sea_orm(unique)]
+    pub affiliate_code: String,
+    pub referred_by_user_id: Option<String>,
+    pub referred_at: Option<TimeDateTimeWithTimeZone>,
 }
 
 #[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]
@@ -55,6 +59,9 @@ impl UserRecord {
             system: false,
             rate_limit_rpm: self.rate_limit_rpm,
             quota_mode: self.quota_mode,
+            affiliate_code: self.affiliate_code,
+            referred_by_user_id: self.referred_by_user_id.map(UserId),
+            referred_at: self.referred_at.map(format_timestamp),
             created_at: format_timestamp(self.created_at),
             last_login_at: self.last_login_at.map(format_timestamp),
         })

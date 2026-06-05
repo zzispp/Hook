@@ -106,6 +106,12 @@ pub struct SystemSettingsUpdate {
     #[serde(default, with = "rust_decimal::serde::float_option")]
     pub recharge_max_amount: Option<Decimal>,
     #[serde(default)]
+    pub affiliate_enabled: Option<bool>,
+    #[serde(default, with = "rust_decimal::serde::float_option")]
+    pub affiliate_commission_percent: Option<Decimal>,
+    #[serde(default, with = "rust_decimal::serde::float_option")]
+    pub affiliate_min_commission_amount: Option<Decimal>,
+    #[serde(default)]
     pub scheduling_mode: Option<ProviderSchedulingMode>,
     #[serde(default)]
     pub provider_priority_mode: Option<ProviderPriorityMode>,
@@ -178,6 +184,9 @@ impl SystemSettingsUpdate {
             && self.recharge_max_unpaid_orders.is_none()
             && self.recharge_min_amount.is_none()
             && self.recharge_max_amount.is_none()
+            && self.affiliate_enabled.is_none()
+            && self.affiliate_commission_percent.is_none()
+            && self.affiliate_min_commission_amount.is_none()
             && self.scheduling_mode.is_none()
             && self.provider_priority_mode.is_none()
             && self.key_priority_snapshot_initialized.is_none()

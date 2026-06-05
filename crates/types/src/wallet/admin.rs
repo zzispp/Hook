@@ -20,6 +20,9 @@ pub struct AdminWalletLedgerFilters {
 pub struct WalletSummaryResponse {
     pub id: String,
     pub user_id: String,
+    pub owner_name: String,
+    pub owner_email: String,
+    pub owner_type: String,
     #[serde(with = "rust_decimal::serde::float")]
     pub balance: Decimal,
     #[serde(with = "rust_decimal::serde::float")]
@@ -207,9 +210,13 @@ impl From<Wallet> for WalletSummaryResponse {
         let gift_balance = value.gift_balance;
         let balance = recharge_balance + gift_balance;
         let unlimited = value.limit_mode == "unlimited";
+        let user_id = value.user_id;
         Self {
             id: value.id.0,
-            user_id: value.user_id,
+            owner_name: user_id.clone(),
+            owner_email: String::new(),
+            owner_type: "user".into(),
+            user_id,
             balance,
             recharge_balance,
             gift_balance,

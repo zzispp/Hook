@@ -1,0 +1,4 @@
+id,task,status,completed_at,notes
+1,定位重复菜单 seed ID,DONE,2026-06-04,"admin_affiliates 与 dashboard_profile 共用 00000000-0000-7000-8000-000000000233"
+2,修复菜单 seed ID 并补唯一性测试,DONE,2026-06-04,"admin_affiliates 改为 00000000-0000-7000-8000-000000000234；新增默认菜单 ID/code 唯一性测试"
+3,运行迁移 defaults 验证,DONE,2026-06-04,"cargo test -p backend migration::defaults -- --nocapture；cargo fmt --all --check；cargo check -p backend"

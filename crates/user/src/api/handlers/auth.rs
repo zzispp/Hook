@@ -5,13 +5,13 @@ use axum::{
 };
 use constants::auth::{DEFAULT_USER_IS_ACTIVE, DEFAULT_USER_ROLE};
 use types::user::{
-    AuthConfigResponse, NewUser, OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse, OAuthStartResponse, PasswordResetConfirmPayload,
-    PasswordResetRequestPayload, RefreshTokenPayload, RegistrationEmailCodePayload, SignInPayload, SignUpPayload, SignUpUser, USER_QUOTA_MODE_WALLET,
-    WalletNoncePayload, WalletNonceResponse, WalletSignInPayload, WalletSignInResponse,
+    AuthConfigResponse, NewUser, OAuthBindExistingPayload, OAuthCallbackQuery, OAuthCallbackResponse, OAuthStartQuery, OAuthStartResponse,
+    PasswordResetConfirmPayload, PasswordResetRequestPayload, RefreshTokenPayload, RegistrationEmailCodePayload, SignInPayload, SignUpPayload, SignUpUser,
+    USER_QUOTA_MODE_WALLET, WalletNoncePayload, WalletNonceResponse, WalletRegisterPayload, WalletSignInPayload, WalletSignInResponse,
 };
 
 use crate::api::{ApiState, handlers::shared::*};
-use crate::application::{AppError, WalletNonceInput, WalletSignInInput};
+use crate::application::{AppError, WalletNonceInput, WalletRegisterInput, WalletSignInInput};
 
 pub async fn sign_up(State(state): State<ApiState>, Json(payload): Json<SignUpPayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
     verify_registration_captcha(&state, payload.captcha_token.as_deref()).await?;
@@ -36,9 +36,13 @@ pub async fn sign_in(State(state): State<ApiState>, Json(payload): Json<SignInPa
     Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
 }
 
-pub async fn oauth_start(State(state): State<ApiState>, Path(provider): Path<String>) -> ApiResult<ApiJson<OAuthStartResponse>> {
+pub async fn oauth_start(
+    State(state): State<ApiState>,
+    Path(provider): Path<String>,
+    Query(query): Query<OAuthStartQuery>,
+) -> ApiResult<ApiJson<OAuthStartResponse>> {
     let provider = parse_provider(&provider)?;
-    let authorization_url = state.users.oauth_start(provider).await?;
+    let authorization_url = state.users.oauth_start(provider, query.aff_code).await?;
     Ok(ok(OAuthStartResponse { authorization_url }))
 }
 
@@ -116,6 +120,27 @@ pub async fn wallet_sign_in(State(state): State<ApiState>, Json(payload): Json<W
     }
 }
 
+pub async fn wallet_register(State(state): State<ApiState>, Json(payload): Json<WalletRegisterPayload>) -> ApiResult<ApiJson<AuthSessionResponse>> {
+    let user = state
+        .users
+        .wallet_register(WalletRegisterInput {
+            wallet: WalletSignInInput {
+                provider: payload.provider,
+                address: payload.address,
+                message: payload.message,
+                signature: payload.signature,
+                chain_id: payload.chain_id,
+            },
+            username: payload.username,
+            email: payload.email,
+            email_verification_code: payload.email_verification_code,
+            aff_code: payload.aff_code,
+        })
+        .await?;
+    let tokens = state.tokens.issue_pair(user.id.clone())?;
+    Ok(ok(AuthSessionResponse::new(user.into(), tokens)))
+}
+
 pub async fn refresh(State(state): State<ApiState>, Json(payload): Json<RefreshTokenPayload>) -> ApiResult<ApiJson<TokenPairResponse>> {
     let (user_id, tokens) = state.tokens.refresh(&payload.refresh_token)?;
     state.users.authenticated_user(user_id).await?;
@@ -152,8 +177,10 @@ fn new_sign_up_user(payload: SignUpPayload) -> SignUpUser {
             allowed_provider_ids: Vec::new(),
             rate_limit_rpm: None,
             quota_mode: USER_QUOTA_MODE_WALLET.into(),
+            referrer_aff_code: None,
         },
         email_verification_code: payload.email_verification_code,
+        aff_code: payload.aff_code,
     }
 }
 

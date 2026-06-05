@@ -32,6 +32,8 @@ export const DASHBOARD_MENU_CODES = {
   walletManagement: 'admin_wallets',
   cardCodeManagement: 'admin_card_codes',
   rechargeManagement: 'admin_recharges',
+  affiliateManagement: 'admin_affiliates',
+  affiliateCenter: 'affiliate_center',
 } as const;
 
 export const DASHBOARD_SECTION_CODES = {

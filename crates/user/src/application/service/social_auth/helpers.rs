@@ -54,6 +54,7 @@ pub(in crate::application::service::social_auth) fn new_provider_user(email: &st
         allowed_provider_ids: Vec::new(),
         rate_limit_rpm: None,
         quota_mode: USER_QUOTA_MODE_WALLET.into(),
+        referrer_aff_code: None,
     }
 }
 
@@ -96,6 +97,7 @@ pub(in crate::application::service::social_auth) fn password_replace_record(user
         allowed_provider_ids: user.allowed_provider_ids,
         rate_limit_rpm: user.rate_limit_rpm,
         quota_mode: user.quota_mode,
+        referrer_aff_code: None,
     }
 }
 
@@ -112,5 +114,6 @@ pub(in crate::application::service::social_auth) fn email_verified_record(user: 
         allowed_provider_ids: user.allowed_provider_ids,
         rate_limit_rpm: user.rate_limit_rpm,
         quota_mode: user.quota_mode,
+        referrer_aff_code: None,
     }
 }

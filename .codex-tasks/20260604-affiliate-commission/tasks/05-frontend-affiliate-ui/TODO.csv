@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Read frontend auth settings wallet admin patterns,DONE,Relevant files identified,rg sign-up apps/hook_frontend/src,2026-06-04,0,
+2,Add backend affiliate summary API data,DONE,Profile or wallet UI can fetch counts and total commission,cargo check -p user -p storage,2026-06-04,0,
+3,Wire registration aff propagation,DONE,Sign-up OAuth wallet registration include aff,pnpm lint:frontend,2026-06-04,0,
+4,Wire admin setting and create user fields,DONE,Admin payload includes commission percent and referrer aff,pnpm lint:frontend,2026-06-04,0,
+5,Render wallet affiliate card and i18n seeds,DONE,Wallet page displays link stats and seed JSON has copy,pnpm lint:frontend,2026-06-04,0,

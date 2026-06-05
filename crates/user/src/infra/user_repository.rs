@@ -20,7 +20,7 @@ use crate::application::{
 
 #[derive(Clone)]
 pub struct StorageUserRepository {
-    store: UserStore,
+    pub(super) store: UserStore,
 }
 
 #[derive(Clone)]
@@ -98,6 +98,10 @@ impl UserRepository for StorageUserRepository {
 
     async fn find_by_email(&self, email: &str) -> AppResult<Option<User>> {
         self.store.find_by_email(email).await.map_err(storage_error)
+    }
+
+    async fn find_by_affiliate_code(&self, affiliate_code: &str) -> AppResult<Option<User>> {
+        self.store.find_by_affiliate_code(affiliate_code).await.map_err(storage_error)
     }
 
     async fn find_auth_by_username(&self, username: &str) -> AppResult<Option<UserAuthRecord>> {
@@ -217,6 +221,7 @@ fn storage_record_input(record: ReplaceUserRecord) -> StorageUserRecordInput {
         allowed_provider_ids: record.allowed_provider_ids,
         rate_limit_rpm: record.rate_limit_rpm,
         quota_mode: record.quota_mode,
+        referrer_aff_code: record.referrer_aff_code,
     }
 }
 
@@ -247,7 +252,7 @@ fn user_auth_record(record: storage::user::UserAuthRecord) -> UserAuthRecord {
     }
 }
 
-fn storage_error(error: StorageError) -> AppError {
+pub(super) fn storage_error(error: StorageError) -> AppError {
     match error {
         StorageError::NotFound => AppError::NotFound,
         StorageError::Conflict(message) => AppError::Conflict(message),

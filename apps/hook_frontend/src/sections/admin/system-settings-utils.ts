@@ -68,6 +68,9 @@ export type SystemSettingsForm = {
   recharge_max_unpaid_orders: string;
   recharge_min_amount: string;
   recharge_max_amount: string;
+  affiliate_enabled: boolean;
+  affiliate_commission_percent: string;
+  affiliate_min_commission_amount: string;
   smtp_host: string;
   smtp_port: string;
   smtp_username: string;
@@ -126,6 +129,9 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   recharge_max_unpaid_orders: '5',
   recharge_min_amount: '0.01',
   recharge_max_amount: '3000',
+  affiliate_enabled: false,
+  affiliate_commission_percent: '0',
+  affiliate_min_commission_amount: '0',
   smtp_host: '',
   smtp_port: '587',
   smtp_username: '',
@@ -185,6 +191,9 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     recharge_max_unpaid_orders: String(settings.recharge_max_unpaid_orders),
     recharge_min_amount: String(settings.recharge_min_amount),
     recharge_max_amount: String(settings.recharge_max_amount),
+    affiliate_enabled: settings.affiliate_enabled,
+    affiliate_commission_percent: String(settings.affiliate_commission_percent),
+    affiliate_min_commission_amount: String(settings.affiliate_min_commission_amount),
     smtp_host: settings.smtp_host,
     smtp_port: String(settings.smtp_port),
     smtp_username: settings.smtp_username,
@@ -245,6 +254,9 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     recharge_max_unpaid_orders: Number(form.recharge_max_unpaid_orders || 0),
     recharge_min_amount: Number(form.recharge_min_amount || 0),
     recharge_max_amount: Number(form.recharge_max_amount || 0),
+    affiliate_enabled: form.affiliate_enabled,
+    affiliate_commission_percent: Number(form.affiliate_commission_percent || 0),
+    affiliate_min_commission_amount: Number(form.affiliate_min_commission_amount || 0),
     smtp_host: form.smtp_host,
     smtp_port: Number(form.smtp_port || 0),
     smtp_username: form.smtp_username,

@@ -28,6 +28,7 @@
     "admin_wallets": "钱包管理",
     "admin_card_codes": "卡密管理",
     "admin_recharges": "充值管理",
+    "admin_affiliates": "返佣管理",
     "admin_user_groups": "用户分组",
     "admin_groups": "计费分组",
     "admin_request_records": "请求记录",
@@ -35,7 +36,8 @@
     "support_tickets": "工单",
     "admin_announcements": "公告管理",
     "admin_tickets": "工单管理",
-    "admin_scheduled_tasks": "定时任务"
+    "admin_scheduled_tasks": "定时任务",
+    "affiliate_center": "返佣中心"
   },
   "modelStatus": {
     "title": "模型状态",
@@ -126,6 +128,7 @@
   },
   "common": {
     "active": "启用",
+    "actions": "操作",
     "add": "新增",
     "api": "API",
     "apis": "API",
@@ -277,7 +280,8 @@
     "targetUserGroup": "更新后的用户分组集合",
     "userGroup": "用户分组",
     "visibleUserGroups": "可见用户分组",
-    "wallet": "钱包"
+    "wallet": "钱包",
+    "referrerAffCode": "邀请人 aff_code"
   },
   "dialogs": {
     "createApi": "创建 API 权限",
@@ -342,7 +346,8 @@
     "userQuotaMode": "无限制不受钱包余额约束；按余额限制会使用钱包余额计费。",
     "userModelAccess": "不选择模型表示该用户允许所有模型。",
     "userProviderAccess": "不选择提供商表示该用户允许所有提供商。",
-    "userRateLimit": "留空或 0 表示不在用户层限制；最终 API 速率取用户限制和令牌限制的最小值。"
+    "userRateLimit": "留空或 0 表示不在用户层限制；最终 API 速率取用户限制和令牌限制的最小值。",
+    "referrerAffCode": "仅创建用户时生效；不填写则不绑定邀请人。"
   },
   "validation": {
     "groupRequired": "必须选择计费分组。",
@@ -1117,6 +1122,107 @@
       "paymentChannelUpdated": "支付渠道状态已更新"
     }
   },
+  "adminAffiliates": {
+    "title": "返佣管理",
+    "subtitle": "查看邀请关系、审计返佣记录并生成返佣报表",
+    "tabs": {
+      "relations": "邀请关系",
+      "relationChanges": "变更记录",
+      "commissions": "返佣记录",
+      "reports": "报表"
+    },
+    "overview": {
+      "totalCommission": "累计返佣金额",
+      "totalReferredUsers": "累计邀请用户数",
+      "todayCommission": "今日返佣金额",
+      "monthCommission": "本月返佣金额",
+      "commissionPercent": "当前返佣比例",
+      "activeReferrers": "有效邀请人数"
+    },
+    "filters": {
+      "userSearch": "用户关键词",
+      "userSearchPlaceholder": "用户名、邮箱、用户 ID 或邀请码",
+      "referrerSearch": "邀请人关键词",
+      "referrerSearchPlaceholder": "邀请人用户名、邮箱、用户 ID 或邀请码",
+      "referredSearch": "被邀请人关键词",
+      "orderId": "充值订单 ID",
+      "hasReferrer": "邀请关系",
+      "all": "全部",
+      "withReferrer": "有邀请人",
+      "withoutReferrer": "无邀请人",
+      "start": "开始时间",
+      "end": "结束时间",
+      "minCommission": "最小返佣金额",
+      "maxCommission": "最大返佣金额",
+      "apply": "筛选",
+      "reset": "重置"
+    },
+    "fields": {
+      "user": "用户",
+      "referrer": "邀请人",
+      "changedUser": "被修改用户",
+      "oldReferrer": "旧邀请人",
+      "newReferrer": "新邀请人",
+      "operator": "操作人",
+      "changeId": "变更记录 ID",
+      "affiliateCode": "邀请码",
+      "referredAt": "绑定时间",
+      "referredRechargeAmount": "下级累计充值",
+      "commissionAmount": "返佣金额",
+      "lastCommissionAt": "最近返佣",
+      "commissionId": "返佣 ID",
+      "referred": "被邀请人",
+      "rechargeOrderId": "充值订单 ID",
+      "payableAmount": "实付金额",
+      "commissionPercent": "返佣比例",
+      "walletTransactionId": "钱包流水 ID",
+      "status": "状态",
+      "failureReason": "失败原因",
+      "createdAt": "创建时间",
+      "date": "日期",
+      "commissionOrderCount": "返佣订单数",
+      "referredPayerCount": "被邀请充值人数",
+      "referredUserCount": "邀请人数",
+      "reason": "变更原因",
+      "newReferrerCode": "新邀请人邀请码",
+      "newReferrerUser": "新邀请人用户",
+      "referrerSearchType": "搜索类型",
+      "referrerSearchTypeAffCode": "邀请码",
+      "referrerSearchTypeUser": "用户"
+    },
+    "actions": {
+      "rebind": "改绑",
+      "clear": "清空邀请人",
+      "exportDetails": "导出明细",
+      "exportDaily": "导出日报",
+      "exportReferrers": "导出排行"
+    },
+    "dialogs": {
+      "rebindTitle": "改绑邀请人",
+      "clearTitle": "清空邀请人",
+      "rebindConfirm": "保存改绑",
+      "clearConfirm": "确认清空"
+    },
+    "empty": {
+      "relations": "暂无邀请关系数据",
+      "relationChanges": "暂无邀请关系变更记录",
+      "commissions": "暂无返佣记录",
+      "daily": "暂无日报数据",
+      "referrers": "暂无邀请人排行"
+    },
+    "messages": {
+      "relationUpdated": "邀请关系已更新",
+      "reasonRequired": "请填写变更原因",
+      "referrerCodeRequired": "请填写或选择邀请人邀请码"
+    },
+    "status": {
+      "success": "成功",
+      "failed": "失败"
+    },
+    "failureReasons": {
+      "belowMinCommissionAmount": "返佣金额低于最小返佣金额"
+    }
+  },
   "users": {
     "balance": "余额：{{amount}}",
     "consumed": "已消费：{{amount}}",
@@ -1596,6 +1702,7 @@
       "email": "邮件配置",
       "tokens": "令牌配置",
       "recharge": "充值配置",
+      "affiliate": "返佣设置",
       "requestRecord": "请求记录"
     },
     "fields": {
@@ -1630,6 +1737,8 @@
       "rechargeMaxUnpaidOrders": "用户最多未支付订单数",
       "rechargeMinAmount": "单笔最小充值金额",
       "rechargeMaxAmount": "单笔最大充值金额",
+      "affiliateCommissionPercent": "返佣百分比",
+      "affiliateMinCommissionAmount": "最小返佣金额",
       "smtpHost": "SMTP 服务器地址",
       "smtpPort": "SMTP 端口",
       "smtpUsername": "SMTP 用户名",
@@ -1641,7 +1750,8 @@
       "emailSuffixes": "邮箱后缀列表",
       "emailTemplateSubject": "邮件主题",
       "emailTemplateHtml": "HTML 模板",
-      "publicBaseUrl": "公网访问地址"
+      "publicBaseUrl": "公网访问地址",
+      "affiliateEnabled": "开启返佣"
     },
     "helper": {
       "defaultUserGrant": "新用户注册成功后写入赠款余额，并生成钱包流水。",
@@ -1660,9 +1770,12 @@
       "providerMaxRequestBodySizeKb": "超过此大小的 Provider 请求体将被截断记录。",
       "providerMaxResponseBodySizeKb": "超过此大小的 Provider 响应体将被截断记录。",
       "providerSensitiveRequestHeaders": "逗号分隔；Provider 请求头和响应头命中后会脱敏。",
+      "affiliateCommissionPercent": "按充值订单实际支付金额计算，写入邀请人的赠款余额。",
+      "affiliateMinCommissionAmount": "计算出的返佣金额低于该值时不入账，但会记录为失败返佣。",
       "registrationEmailVerificationRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
       "passwordResetRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
-      "supportTicketEmailNotificationsRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。"
+      "supportTicketEmailNotificationsRequiresEmailConfig": "需先开启邮件配置，并填写 SMTP 服务器、端口、用户名、密码和发件人邮箱。",
+      "affiliateEnabled": "关闭后不再为后续充值产生返佣，历史返佣记录不受影响。"
     },
     "validation": {
       "siteNameLength": "站点名称不能为空，且不能超过 {{max}} 个字符。",
@@ -1688,6 +1801,8 @@
       "rechargeMaxUnpaidOrdersPositive": "用户最多未支付订单数必须大于 0。",
       "rechargeAmountPositive": "单笔充值最小金额和最大金额都必须大于 0。",
       "rechargeMinAmountNotGreaterThanMax": "单笔最小充值金额不能大于单笔最大充值金额。",
+      "affiliateCommissionPercentRange": "返佣百分比必须在 0 到 100 之间。",
+      "affiliateMinCommissionAmountNonNegative": "最小返佣金额必须大于或等于 0。",
       "smtpHostLength": "SMTP 服务器地址不能超过 {{max}} 个字符。",
       "smtpUsernameLength": "SMTP 用户名不能超过 {{max}} 个字符。",
       "smtpPasswordLength": "SMTP 密码不能超过 {{max}} 个字符。",
@@ -2065,6 +2180,71 @@
       "modelStatusRunsCleanup": {
         "retentionDays": "模型状态探测记录保留天数"
       }
+    }
+  },
+  "affiliateCenter": {
+    "title": "返佣中心",
+    "subtitle": "查看邀请码、邀请用户和个人返佣记录",
+    "tabs": {
+      "referrals": "邀请用户",
+      "commissions": "返佣记录"
+    },
+    "overview": {
+      "referredUsers": "邀请人数",
+      "referredRecharge": "下级累计充值",
+      "totalCommission": "累计返佣",
+      "todayCommission": "今日返佣",
+      "monthCommission": "本月返佣",
+      "commissionPercent": "当前返佣比例",
+      "lastCommissionAt": "最近返佣时间"
+    },
+    "fields": {
+      "affiliateCode": "邀请码",
+      "inviteLink": "邀请链接",
+      "referredUser": "邀请用户",
+      "referredAt": "绑定时间",
+      "referredRechargeAmount": "下级充值金额",
+      "commissionAmount": "返佣金额",
+      "lastCommissionAt": "最近返佣时间",
+      "commissionId": "返佣记录 ID",
+      "rechargeOrderNo": "充值订单号",
+      "payableAmount": "实付金额",
+      "commissionPercent": "返佣比例",
+      "walletTransactionId": "钱包流水 ID",
+      "status": "状态",
+      "failureReason": "失败原因",
+      "createdAt": "创建时间"
+    },
+    "filters": {
+      "search": "搜索",
+      "referralSearchPlaceholder": "用户名 / 邮箱 / 用户 ID / 邀请码",
+      "referredSearch": "邀请用户",
+      "referredSearchPlaceholder": "用户名 / 邮箱 / 用户 ID / 邀请码",
+      "orderNo": "充值订单号",
+      "start": "开始时间",
+      "end": "结束时间",
+      "minCommission": "最小返佣金额",
+      "maxCommission": "最大返佣金额"
+    },
+    "actions": {
+      "copyLink": "复制链接",
+      "exportCsv": "导出 CSV"
+    },
+    "empty": {
+      "referrals": "暂无邀请用户",
+      "commissions": "暂无返佣记录"
+    },
+    "messages": {
+      "linkCopied": "邀请链接已复制",
+      "exportStarted": "CSV 导出已开始",
+      "affiliateDisabled": "系统返佣功能当前未开启。邀请链接和历史记录仍可查看，后续充值不会产生新的返佣。"
+    },
+    "status": {
+      "success": "成功",
+      "failed": "失败"
+    },
+    "failureReasons": {
+      "belowMinCommissionAmount": "返佣金额低于最小返佣金额"
     }
   }
 }

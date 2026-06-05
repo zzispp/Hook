@@ -28,6 +28,7 @@
     "admin_wallets": "Wallet Management",
     "admin_card_codes": "Card Code Management",
     "admin_recharges": "Recharge Management",
+    "admin_affiliates": "Affiliate Management",
     "admin_user_groups": "User Groups",
     "admin_groups": "Billing Groups",
     "admin_request_records": "Request Records",
@@ -35,7 +36,8 @@
     "support_tickets": "Tickets",
     "admin_announcements": "Announcement Management",
     "admin_tickets": "Ticket Management",
-    "admin_scheduled_tasks": "Scheduled Tasks"
+    "admin_scheduled_tasks": "Scheduled Tasks",
+    "affiliate_center": "Affiliate Center"
   },
   "modelStatus": {
     "title": "Model Status",
@@ -126,6 +128,7 @@
   },
   "common": {
     "active": "Active",
+    "actions": "Actions",
     "add": "Add",
     "api": "API",
     "apis": "APIs",
@@ -277,7 +280,8 @@
     "targetUserGroup": "Updated user groups",
     "userGroup": "User groups",
     "visibleUserGroups": "Visible user groups",
-    "wallet": "Wallet"
+    "wallet": "Wallet",
+    "referrerAffCode": "Referrer aff_code"
   },
   "dialogs": {
     "createApi": "Create API permission",
@@ -342,7 +346,8 @@
     "userQuotaMode": "Unlimited ignores wallet balance; wallet-limited charges against the wallet balance.",
     "userModelAccess": "Leave models unselected to allow all models for this user.",
     "userProviderAccess": "Leave providers unselected to allow all providers for this user.",
-    "userRateLimit": "Empty or 0 means no user-level limit; the final API rate is the minimum of the user and token limits."
+    "userRateLimit": "Empty or 0 means no user-level limit; the final API rate is the minimum of the user and token limits.",
+    "referrerAffCode": "Only applies when creating a user. Leave empty to create without a referrer."
   },
   "validation": {
     "groupRequired": "Billing group is required.",
@@ -1117,6 +1122,107 @@
       "paymentChannelUpdated": "Payment channel status updated"
     }
   },
+  "adminAffiliates": {
+    "title": "Affiliate Management",
+    "subtitle": "Review referral relations, audit commissions, and generate affiliate reports",
+    "tabs": {
+      "relations": "Relations",
+      "relationChanges": "Change Records",
+      "commissions": "Commissions",
+      "reports": "Reports"
+    },
+    "overview": {
+      "totalCommission": "Total Commission",
+      "totalReferredUsers": "Invited Users",
+      "todayCommission": "Today Commission",
+      "monthCommission": "Monthly Commission",
+      "commissionPercent": "Current Percent",
+      "activeReferrers": "Active Referrers"
+    },
+    "filters": {
+      "userSearch": "User keyword",
+      "userSearchPlaceholder": "Username, email, user ID, or affiliate code",
+      "referrerSearch": "Referrer keyword",
+      "referrerSearchPlaceholder": "Referrer username, email, user ID, or affiliate code",
+      "referredSearch": "Referred keyword",
+      "orderId": "Recharge order ID",
+      "hasReferrer": "Referral relation",
+      "all": "All",
+      "withReferrer": "With referrer",
+      "withoutReferrer": "Without referrer",
+      "start": "Start time",
+      "end": "End time",
+      "minCommission": "Minimum commission",
+      "maxCommission": "Maximum commission",
+      "apply": "Apply",
+      "reset": "Reset"
+    },
+    "fields": {
+      "user": "User",
+      "referrer": "Referrer",
+      "changedUser": "Changed User",
+      "oldReferrer": "Old Referrer",
+      "newReferrer": "New Referrer",
+      "operator": "Operator",
+      "changeId": "Change Record ID",
+      "affiliateCode": "Affiliate Code",
+      "referredAt": "Bound At",
+      "referredRechargeAmount": "Referred Recharge",
+      "commissionAmount": "Commission Amount",
+      "lastCommissionAt": "Last Commission",
+      "commissionId": "Commission ID",
+      "referred": "Referred User",
+      "rechargeOrderId": "Recharge Order ID",
+      "payableAmount": "Payable Amount",
+      "commissionPercent": "Commission Percent",
+      "walletTransactionId": "Wallet Transaction ID",
+      "status": "Status",
+      "failureReason": "Failure Reason",
+      "createdAt": "Created At",
+      "date": "Date",
+      "commissionOrderCount": "Commission Orders",
+      "referredPayerCount": "Referred Payers",
+      "referredUserCount": "Invited Users",
+      "reason": "Change Reason",
+      "newReferrerCode": "New Referrer Code",
+      "newReferrerUser": "New Referrer User",
+      "referrerSearchType": "Search Type",
+      "referrerSearchTypeAffCode": "Affiliate Code",
+      "referrerSearchTypeUser": "User"
+    },
+    "actions": {
+      "rebind": "Rebind",
+      "clear": "Clear Referrer",
+      "exportDetails": "Export Details",
+      "exportDaily": "Export Daily",
+      "exportReferrers": "Export Ranking"
+    },
+    "dialogs": {
+      "rebindTitle": "Rebind Referrer",
+      "clearTitle": "Clear Referrer",
+      "rebindConfirm": "Save Rebind",
+      "clearConfirm": "Confirm Clear"
+    },
+    "empty": {
+      "relations": "No referral relations",
+      "relationChanges": "No referral relation change records",
+      "commissions": "No commission records",
+      "daily": "No daily report data",
+      "referrers": "No referrer ranking data"
+    },
+    "messages": {
+      "relationUpdated": "Referral relation updated",
+      "reasonRequired": "Enter a change reason",
+      "referrerCodeRequired": "Enter or select the referrer affiliate code"
+    },
+    "status": {
+      "success": "Success",
+      "failed": "Failed"
+    },
+    "failureReasons": {
+      "belowMinCommissionAmount": "Commission amount is below the minimum commission amount"
+    }
+  },
   "users": {
     "balance": "Balance: {{amount}}",
     "consumed": "Consumed: {{amount}}",
@@ -1596,6 +1702,7 @@
       "email": "Email configuration",
       "tokens": "Token configuration",
       "recharge": "Recharge configuration",
+      "affiliate": "Affiliate settings",
       "requestRecord": "Request records"
     },
     "fields": {
@@ -1630,6 +1737,8 @@
       "rechargeMaxUnpaidOrders": "Max unpaid orders per user",
       "rechargeMinAmount": "Minimum single recharge amount",
       "rechargeMaxAmount": "Maximum single recharge amount",
+      "affiliateCommissionPercent": "Commission percent",
+      "affiliateMinCommissionAmount": "Minimum commission amount",
       "smtpHost": "SMTP server host",
       "smtpPort": "SMTP port",
       "smtpUsername": "SMTP username",
@@ -1641,7 +1750,8 @@
       "emailSuffixes": "Email suffix list",
       "emailTemplateSubject": "Email subject",
       "emailTemplateHtml": "HTML template",
-      "publicBaseUrl": "Public base URL"
+      "publicBaseUrl": "Public base URL",
+      "affiliateEnabled": "Enable affiliate commissions"
     },
     "helper": {
       "defaultUserGrant": "Added to the gift balance after sign-up and recorded in the wallet ledger.",
@@ -1660,9 +1770,12 @@
       "providerMaxRequestBodySizeKb": "Provider request bodies larger than this are truncated before recording.",
       "providerMaxResponseBodySizeKb": "Provider response bodies larger than this are truncated before recording.",
       "providerSensitiveRequestHeaders": "Comma-separated headers redacted from Provider request and response headers.",
+      "affiliateCommissionPercent": "Calculated from the actual paid recharge amount and credited to the referrer's gift balance.",
+      "affiliateMinCommissionAmount": "When the calculated commission is lower than this value, it is not credited and is recorded as failed.",
       "registrationEmailVerificationRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first.",
       "passwordResetRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first.",
-      "supportTicketEmailNotificationsRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first."
+      "supportTicketEmailNotificationsRequiresEmailConfig": "Enable email configuration and fill SMTP host, port, username, password, and sender email first.",
+      "affiliateEnabled": "When disabled, future recharges will not generate commissions. Historical commission records are unchanged."
     },
     "validation": {
       "siteNameLength": "Site name is required and must be at most {{max}} characters.",
@@ -1688,6 +1801,8 @@
       "rechargeMaxUnpaidOrdersPositive": "Max unpaid orders per user must be greater than 0.",
       "rechargeAmountPositive": "Minimum and maximum single recharge amounts must be greater than 0.",
       "rechargeMinAmountNotGreaterThanMax": "Minimum single recharge amount cannot be greater than maximum single recharge amount.",
+      "affiliateCommissionPercentRange": "Commission percent must be between 0 and 100.",
+      "affiliateMinCommissionAmountNonNegative": "Minimum commission amount must be greater than or equal to 0.",
       "smtpHostLength": "SMTP server host must be at most {{max}} characters.",
       "smtpUsernameLength": "SMTP username must be at most {{max}} characters.",
       "smtpPasswordLength": "SMTP password must be at most {{max}} characters.",
@@ -2065,6 +2180,71 @@
       "modelStatusRunsCleanup": {
         "retentionDays": "Model status probe record retention days"
       }
+    }
+  },
+  "affiliateCenter": {
+    "title": "Affiliate Center",
+    "subtitle": "View your affiliate code, referrals, and commission records",
+    "tabs": {
+      "referrals": "Referrals",
+      "commissions": "Commissions"
+    },
+    "overview": {
+      "referredUsers": "Referred users",
+      "referredRecharge": "Referral recharge total",
+      "totalCommission": "Total commission",
+      "todayCommission": "Today commission",
+      "monthCommission": "This month commission",
+      "commissionPercent": "Current commission rate",
+      "lastCommissionAt": "Latest commission time"
+    },
+    "fields": {
+      "affiliateCode": "Affiliate code",
+      "inviteLink": "Invite link",
+      "referredUser": "Referred user",
+      "referredAt": "Referred at",
+      "referredRechargeAmount": "Referred recharge amount",
+      "commissionAmount": "Commission amount",
+      "lastCommissionAt": "Latest commission time",
+      "commissionId": "Commission ID",
+      "rechargeOrderNo": "Recharge order no.",
+      "payableAmount": "Payable amount",
+      "commissionPercent": "Commission rate",
+      "walletTransactionId": "Wallet transaction ID",
+      "status": "Status",
+      "failureReason": "Failure reason",
+      "createdAt": "Created at"
+    },
+    "filters": {
+      "search": "Search",
+      "referralSearchPlaceholder": "Username / email / user ID / affiliate code",
+      "referredSearch": "Referred user",
+      "referredSearchPlaceholder": "Username / email / user ID / affiliate code",
+      "orderNo": "Recharge order no.",
+      "start": "Start time",
+      "end": "End time",
+      "minCommission": "Minimum commission",
+      "maxCommission": "Maximum commission"
+    },
+    "actions": {
+      "copyLink": "Copy link",
+      "exportCsv": "Export CSV"
+    },
+    "empty": {
+      "referrals": "No referred users",
+      "commissions": "No commission records"
+    },
+    "messages": {
+      "linkCopied": "Invite link copied",
+      "exportStarted": "CSV export started",
+      "affiliateDisabled": "System affiliate commissions are currently disabled. Invite links and history remain visible, but future recharges will not generate new commissions."
+    },
+    "status": {
+      "success": "Success",
+      "failed": "Failed"
+    },
+    "failureReasons": {
+      "belowMinCommissionAmount": "Commission amount is below the minimum commission amount"
     }
   }
 }

@@ -53,6 +53,9 @@ fn user_record(is_deleted: bool) -> UserRecord {
         email_verified: true,
         rate_limit_rpm: None,
         quota_mode: "wallet".into(),
+        affiliate_code: "user-1-aff".into(),
+        referred_by_user_id: None,
+        referred_at: None,
     }
 }
 

@@ -134,9 +134,14 @@ export const endpoints = {
     oauthBindExisting: (provider: string) => `/api/auth/oauth/${provider}/bind-existing`,
     walletNonce: '/api/auth/wallet/nonce',
     walletSignIn: '/api/auth/wallet/sign-in',
+    walletRegister: '/api/auth/wallet/register',
   },
   account: {
     profile: '/api/account/profile',
+    affiliateSummary: '/api/account/affiliate-summary',
+    affiliateReferrals: '/api/account/affiliate/referrals',
+    affiliateCommissions: '/api/account/affiliate/commissions',
+    affiliateCommissionsExport: '/api/account/affiliate/commissions/export',
     passwordEmailCode: '/api/account/password/email-code',
     passwordChange: '/api/account/password/change',
     verifyEmail: '/api/account/email/verify',
@@ -243,12 +248,7 @@ export const endpoints = {
   },
   cacheMonitoring: {
     affinities: '/api/admin/monitoring/cache/affinities',
-    affinityById: (
-      affinityKey: string,
-      endpointId: string,
-      modelId: string,
-      apiFormat: string
-    ) =>
+    affinityById: (affinityKey: string, endpointId: string, modelId: string, apiFormat: string) =>
       `/api/admin/monitoring/cache/affinities/${encodeURIComponent(affinityKey)}/${encodeURIComponent(endpointId)}/${encodeURIComponent(modelId)}/${encodeURIComponent(apiFormat)}`,
     clearAll: '/api/admin/monitoring/cache',
   },
@@ -353,6 +353,15 @@ export const endpoints = {
     paymentCallbacks: '/api/admin/payment-callbacks',
     paymentChannels: '/api/admin/payment-channels',
     paymentChannel: (code: string) => `/api/admin/payment-channels/${code}`,
+  },
+  adminAffiliates: {
+    overview: '/api/admin/affiliates/overview',
+    relations: '/api/admin/affiliates/relations',
+    relation: (userId: string) => `/api/admin/affiliates/relations/${userId}`,
+    relationChanges: '/api/admin/affiliates/relation-changes',
+    commissions: '/api/admin/affiliates/commissions',
+    reports: '/api/admin/affiliates/reports',
+    export: '/api/admin/affiliates/reports/export',
   },
   recharges: {
     packages: '/api/recharge-packages',

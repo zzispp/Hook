@@ -5,16 +5,16 @@ use types::{
     pagination::{Page, PageRequest},
     user::{
         AccountEmailVerifyPayload, AccountPasswordChangePayload, AccountPasswordEmailCodePayload, AccountProviderLinkResponse, AuthConfigResponse, Credentials,
-        IdentityProvider, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, User, UserId,
-        UserIdentitySummary, UserListFilters, UserWalletSummaryResponse,
+        IdentityProvider, NewUser, PasswordResetConfirm, PasswordResetRequest, RegistrationEmailCodeRequest, ReplaceUser, SignUpUser, USER_QUOTA_MODE_WALLET,
+        User, UserId, UserIdentitySummary, UserListFilters, UserWalletSummaryResponse,
     },
 };
 
 use crate::application::{
     AppError, AppResult, AuthProviderConfig, AuthTicketStore, InitialGrantLedger, OAuthClient, OAuthSignInResult, PasswordHasher, PasswordResetConfig,
     PasswordResetMailer, PasswordResetRepository, PurposeEmailCodeStore, RegistrationEmailCodeStore, RegistrationEmailConfig, RegistrationEmailMailer,
-    RegistrationPolicy, SystemUserProvider, UserRepository, UserUseCase, UserWalletCatalog, WalletChallenge, WalletNonceInput, WalletSignInInput,
-    WalletSignInResult,
+    RegistrationPolicy, SystemUserProvider, UserRepository, UserUseCase, UserWalletCatalog, WalletChallenge, WalletNonceInput, WalletRegisterInput,
+    WalletSignInInput, WalletSignInResult,
 };
 
 mod helpers;
@@ -22,15 +22,18 @@ mod helpers;
 use super::{
     UserService,
     password_reset::{request_password_reset, reset_password},
-    registration::{reject_closed_registration, reject_disallowed_registration_email, request_registration_email_code, verify_registration_email_code},
+    registration::{
+        reject_closed_registration, reject_disallowed_registration_email, request_registration_email_code, verify_registration_email_code,
+        verify_registration_email_code_for_email,
+    },
     social_auth::{self, ACCOUNT_PASSWORD_EMAIL_PURPOSE},
     system_user::{
         find_auth_by_identifier, list_with_system_user, reject_system_user_email, reject_system_user_id, reject_system_user_self_service, system_user_by_id,
     },
     validation::{
-        sanitize_credentials, sanitize_password_reset_confirm, sanitize_password_reset_request, sanitize_registration_email_code_request,
+        sanitize_credentials, sanitize_new_user, sanitize_password_reset_confirm, sanitize_password_reset_request, sanitize_registration_email_code_request,
         sanitize_replace_user, sanitize_sign_up_user, validate_credentials, validate_new_user, validate_page, validate_password_reset_confirm,
-        validate_password_reset_request, validate_registration_email_code_request, validate_replace_user,
+        validate_password_reset_request, validate_passwordless_new_user, validate_registration_email_code_request, validate_replace_user,
     },
 };
 use helpers::{grant_initial_balance, identity_summaries, unlink_identity, verify_password};
@@ -78,7 +81,10 @@ where
         let input = sanitize_sign_up_user(SignUpUser {
             user: super::with_default_user_group(input.user, &settings.default_user_group_code),
             email_verification_code: input.email_verification_code,
+            aff_code: input.aff_code,
         });
+        let mut input = input;
+        input.user.referrer_aff_code = input.aff_code.clone();
         validate_new_user(&input.user)?;
         reject_disallowed_registration_email(&settings, &input.user.email)?;
         verify_registration_email_code(&self.registration_email_code_store, &settings, &input).await?;
@@ -100,8 +106,8 @@ where
         Ok(found.user)
     }
 
-    async fn oauth_start(&self, provider: IdentityProvider) -> AppResult<String> {
-        social_auth::oauth_start(&self.auth_provider_config, &self.auth_ticket_store, provider).await
+    async fn oauth_start(&self, provider: IdentityProvider, aff_code: Option<String>) -> AppResult<String> {
+        social_auth::oauth_start(&self.auth_provider_config, &self.auth_ticket_store, provider, aff_code).await
     }
 
     async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String) -> AppResult<OAuthSignInResult> {
@@ -175,6 +181,45 @@ where
             input,
         )
         .await
+    }
+
+    async fn wallet_register(&self, input: WalletRegisterInput) -> AppResult<User> {
+        let settings = self.registration_policy.registration_settings().await?;
+        reject_closed_registration(&settings)?;
+        let input = sanitize_wallet_register_input(input);
+        let user_input = wallet_registration_user(&input, &settings.default_user_group_code);
+        validate_passwordless_new_user(&user_input)?;
+        reject_disallowed_registration_email(&settings, &user_input.email)?;
+        self.ensure_unique_user(&user_input.username, &user_input.email, None).await?;
+        self.ensure_unique_system_user(&user_input.username, &user_input.email)?;
+        let provider = input.wallet.provider;
+        let subject = social_auth::verified_wallet_subject(
+            &social_auth::WalletSignInDeps {
+                repository: &self.repository,
+                config: &self.auth_provider_config,
+                tickets: &self.auth_ticket_store,
+            },
+            input.wallet,
+        )
+        .await?;
+        verify_registration_email_code_for_email(
+            &self.registration_email_code_store,
+            &settings,
+            &user_input.email,
+            Some(&input.email_verification_code),
+        )
+        .await?;
+        let user = social_auth::create_wallet_account_from_verified_identity(
+            &self.repository,
+            social_auth::VerifiedWalletRegistration {
+                provider,
+                subject,
+                user: user_input,
+            },
+        )
+        .await?;
+        grant_initial_balance(&self.initial_grants, &user, settings.default_user_grant).await?;
+        Ok(user)
     }
 
     async fn account_wallet_link(&self, id: UserId, input: WalletSignInInput) -> AppResult<AccountProviderLinkResponse> {
@@ -328,4 +373,36 @@ where
         let user = self.repository.find_by_id(user_id).await?.ok_or(AppError::NotFound)?;
         unlink_identity(&self.repository, &user, &identity_id).await
     }
+}
+
+fn sanitize_wallet_register_input(input: WalletRegisterInput) -> WalletRegisterInput {
+    WalletRegisterInput {
+        wallet: WalletSignInInput {
+            provider: input.wallet.provider,
+            address: input.wallet.address.trim().to_owned(),
+            message: input.wallet.message,
+            signature: input.wallet.signature.trim().to_owned(),
+            chain_id: input.wallet.chain_id,
+        },
+        username: input.username.trim().to_owned(),
+        email: input.email.trim().to_ascii_lowercase(),
+        email_verification_code: input.email_verification_code.trim().to_owned(),
+        aff_code: input.aff_code.map(|value| value.trim().to_owned()).filter(|value| !value.is_empty()),
+    }
+}
+
+fn wallet_registration_user(input: &WalletRegisterInput, default_group_code: &str) -> NewUser {
+    sanitize_new_user(NewUser {
+        username: input.username.clone(),
+        password: String::new(),
+        email: input.email.clone(),
+        role: constants::auth::DEFAULT_USER_ROLE.into(),
+        group_codes: Some(vec![default_group_code.to_owned()]),
+        is_active: constants::auth::DEFAULT_USER_IS_ACTIVE,
+        allowed_model_ids: Vec::new(),
+        allowed_provider_ids: Vec::new(),
+        rate_limit_rpm: None,
+        quota_mode: USER_QUOTA_MODE_WALLET.into(),
+        referrer_aff_code: input.aff_code.clone(),
+    })
 }

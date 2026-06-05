@@ -58,6 +58,10 @@
     "signIn": "去登录",
     "emailCodeSent": "验证码已发送，请检查邮箱。"
   },
+  "walletRegister": {
+    "title": "钱包注册",
+    "submit": "创建钱包账户"
+  },
   "forgotPassword": {
     "title": "找回密码",
     "description": "输入账户邮箱，我们会发送密码重置链接。",

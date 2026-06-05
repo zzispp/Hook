@@ -14,7 +14,7 @@ use types::{
 };
 
 use super::AppResult;
-use super::{OAuthSignInResult, WalletChallenge, WalletNonceInput, WalletSignInInput, WalletSignInResult};
+use super::{OAuthSignInResult, WalletChallenge, WalletNonceInput, WalletRegisterInput, WalletSignInInput, WalletSignInResult};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReplaceUserRecord {
@@ -29,6 +29,7 @@ pub struct ReplaceUserRecord {
     pub allowed_provider_ids: Vec<String>,
     pub rate_limit_rpm: Option<i64>,
     pub quota_mode: String,
+    pub referrer_aff_code: Option<String>,
 }
 
 impl ReplaceUserRecord {
@@ -71,6 +72,7 @@ pub trait UserRepository: Send + Sync + 'static {
     async fn find_by_id(&self, id: UserId) -> AppResult<Option<User>>;
     async fn find_auth_by_id(&self, id: UserId) -> AppResult<Option<UserAuthRecord>>;
     async fn find_by_email(&self, email: &str) -> AppResult<Option<User>>;
+    async fn find_by_affiliate_code(&self, affiliate_code: &str) -> AppResult<Option<User>>;
     async fn find_auth_by_username(&self, username: &str) -> AppResult<Option<UserAuthRecord>>;
     async fn find_auth_by_email(&self, email: &str) -> AppResult<Option<UserAuthRecord>>;
     async fn record_login(&self, id: UserId) -> AppResult<()>;
@@ -259,13 +261,14 @@ pub trait UserUseCase: Send + Sync + 'static {
     async fn request_registration_email_code(&self, input: RegistrationEmailCodeRequest) -> AppResult<()>;
     async fn sign_up(&self, input: SignUpUser) -> AppResult<User>;
     async fn sign_in(&self, input: Credentials) -> AppResult<User>;
-    async fn oauth_start(&self, provider: IdentityProvider) -> AppResult<String>;
+    async fn oauth_start(&self, provider: IdentityProvider, aff_code: Option<String>) -> AppResult<String>;
     async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String) -> AppResult<OAuthSignInResult>;
     async fn bind_oauth_existing(&self, provider: IdentityProvider, ticket: String) -> AppResult<User>;
     async fn account_oauth_start(&self, id: UserId, provider: IdentityProvider) -> AppResult<String>;
     async fn account_oauth_callback(&self, id: UserId, provider: IdentityProvider, code: String, state: String) -> AppResult<AccountProviderLinkResponse>;
     async fn wallet_nonce(&self, input: WalletNonceInput) -> AppResult<WalletChallenge>;
     async fn wallet_sign_in(&self, input: WalletSignInInput) -> AppResult<WalletSignInResult>;
+    async fn wallet_register(&self, input: WalletRegisterInput) -> AppResult<User>;
     async fn account_wallet_link(&self, id: UserId, input: WalletSignInInput) -> AppResult<AccountProviderLinkResponse>;
     async fn request_password_reset(&self, input: PasswordResetRequest) -> AppResult<()>;
     async fn reset_password(&self, input: PasswordResetConfirm) -> AppResult<()>;

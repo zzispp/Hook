@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect schema drift,DONE,Missing affiliate columns identified,psql information_schema queries,2026-06-05T01:20:00Z,0,
+2,Patch local development database,DONE,Current database has expected affiliate setting and commission status schema,psql information_schema queries,2026-06-05T01:19:00Z,0,
+3,Sync development migration metadata,DONE,development table list includes affiliate_relation_changes,cargo check -p backend,2026-06-05T01:19:00Z,0,
+4,Validate backend startup path,DONE,backend no longer fails on affiliate_min_commission_amount,cargo check -p backend,2026-06-05T01:19:00Z,0,

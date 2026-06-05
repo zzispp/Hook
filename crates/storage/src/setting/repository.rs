@@ -180,6 +180,15 @@ fn apply_base_patch(active: &mut SystemSettingsActiveModel, input: &SystemSettin
     if let Some(value) = input.recharge_max_amount {
         active.recharge_max_amount = Set(value);
     }
+    if let Some(value) = input.affiliate_enabled {
+        active.affiliate_enabled = Set(value);
+    }
+    if let Some(value) = input.affiliate_commission_percent {
+        active.affiliate_commission_percent = Set(value);
+    }
+    if let Some(value) = input.affiliate_min_commission_amount {
+        active.affiliate_min_commission_amount = Set(value);
+    }
     if let Some(value) = input.scheduling_mode {
         active.scheduling_mode = Set(value.as_str().to_owned());
     }

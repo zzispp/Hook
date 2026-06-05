@@ -1,0 +1,7 @@
+id,task,task_type,status,depends_on,task_dir,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,建立返佣管理类型和审计数据模型,single-full,DONE,,tasks/01-model-types,"新增审计表、类型、baseline migration、SeaORM entity","cargo check -p types -p storage",2026-06-04,0,
+2,实现后台返佣查询和关系变更存储逻辑,single-full,DONE,1,tasks/02-storage-queries,"概览、关系、记录、报表、导出数据、改绑审计存储完整","cargo check -p storage",2026-06-04,0,
+3,实现后台 API 和权限菜单,single-full,DONE,"1;2",tasks/03-api-rbac-menu,"/api/admin/affiliates/* 路由、权限、菜单和 i18n seed 完整","cargo check -p user && cargo check -p backend && cargo test -p backend migration::defaults -- --nocapture",2026-06-04,0,
+4,实现前端返佣管理页面,single-full,DONE,3,tasks/04-frontend-page,"独立菜单页面展示概览、关系、记录、报表和 CSV 导出","pnpm lint:frontend && pnpm build:frontend",2026-06-04,0,
+5,补充关键测试,single-full,DONE,"2;3;4",tasks/05-tests,"覆盖统计、筛选、改绑校验、审计、报表导出","cargo test -p user admin_affiliate -- --nocapture && cargo test -p user api::routes::tests -- --nocapture && cargo test -p backend migration::defaults -- --nocapture",2026-06-04,0,
+6,全链路验证与收尾,single-full,DONE,"1;2;3;4;5",tasks/06-validation,"Rust/前端检查通过，任务状态同步","cargo fmt --all && just check && pnpm lint:frontend && pnpm build:frontend",2026-06-04,0,

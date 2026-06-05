@@ -323,6 +323,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000235",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "affiliate_center",
+        title: "返佣中心",
+        path: "/dashboard/affiliate",
+        icon: "solar:hand-money-bold",
+        sort_order: 11,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000209",
         section_id: OPERATIONS_SECTION_ID,
         code: "admin_wallets",
@@ -350,6 +360,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         path: "/dashboard/admin/recharges",
         icon: "solar:wallet-money-bold",
         sort_order: 4,
+        deep_match: true,
+    },
+    MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000234",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "admin_affiliates",
+        title: "返佣管理",
+        path: "/dashboard/admin/affiliates",
+        icon: "solar:hand-money-bold",
+        sort_order: 5,
         deep_match: true,
     },
     MenuItemDefinition {

@@ -64,6 +64,9 @@ export type SystemSettings = {
   recharge_max_unpaid_orders: number;
   recharge_min_amount: number;
   recharge_max_amount: number;
+  affiliate_enabled: boolean;
+  affiliate_commission_percent: number;
+  affiliate_min_commission_amount: number;
   scheduling_mode: ProviderSchedulingMode;
   provider_priority_mode: ProviderPriorityMode;
   key_priority_snapshot_initialized: boolean;
@@ -136,6 +139,9 @@ export type SystemSettingsUpdate = Partial<{
   recharge_max_unpaid_orders: number;
   recharge_min_amount: number;
   recharge_max_amount: number;
+  affiliate_enabled: boolean;
+  affiliate_commission_percent: number;
+  affiliate_min_commission_amount: number;
   scheduling_mode: ProviderSchedulingMode;
   provider_priority_mode: ProviderPriorityMode;
   key_priority_snapshot_initialized: boolean;
