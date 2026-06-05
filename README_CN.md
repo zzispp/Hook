@@ -168,6 +168,14 @@ pnpm lint:frontend
 pnpm build:frontend
 ```
 
+## 致谢
+
+Hook 参考并受到以下开源项目启发：
+
+- [looplj/axonhub](https://github.com/looplj/axonhub)
+- [fawney19/Aether](https://github.com/fawney19/Aether)
+- [QuantumNous/new-api](https://github.com/QuantumNous/new-api)
+
 ## 许可证
 
 Hook 使用 [MIT License](./LICENSE) 发布。

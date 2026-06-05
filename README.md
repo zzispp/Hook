@@ -161,6 +161,14 @@ pnpm lint:frontend
 pnpm build:frontend
 ```
 
+## Acknowledgments
+
+Hook references and is inspired by the following open-source projects:
+
+- [looplj/axonhub](https://github.com/looplj/axonhub)
+- [fawney19/Aether](https://github.com/fawney19/Aether)
+- [QuantumNous/new-api](https://github.com/QuantumNous/new-api)
+
 ## License
 
 Hook is released under the [MIT License](./LICENSE).
