@@ -3,30 +3,29 @@ import { useRef, useState, useCallback } from 'react';
 
 import { useTranslate } from 'src/locales';
 
-type DeployMethod = 'docker-run' | 'docker-compose' | 'source-build';
+type DeployMethod = 'docker-compose' | 'source-build';
 
-const METHODS: readonly DeployMethod[] = ['docker-run', 'docker-compose', 'source-build'];
+const METHODS: readonly DeployMethod[] = ['docker-compose', 'source-build'];
 
 const COMMANDS: Readonly<Record<DeployMethod, string>> = {
-  'docker-run': `docker run -d --name hook \\
-  -p 5555:5555 \\
-  -e DATABASE_URL="postgresql://postgres:123456@localhost:5432/hook" \\
-  -e REDIS_URL="redis://localhost:6379" \\
-  zzispp/hook:latest`,
-  'docker-compose': `curl -fsSL https://raw.githubusercontent.com/zzispp/Hook/main/docker-compose.yml -o docker-compose.yml && docker compose up -d`,
+  'docker-compose': `git clone https://github.com/zzispp/Hook.git && cd Hook
+./deploy.sh`,
   'source-build': `git clone https://github.com/zzispp/Hook.git && cd Hook
 pnpm install
-just backend-migration "up"
-just run-backend`,
+cp config/config.yaml config.yaml
+scripts/generate-password-hash.sh "your-password"
+# update config.yaml before running migrations
+cargo run -p hook_backend -- migration up
+pnpm build:frontend:embedded
+cargo run -p hook_backend`,
 };
 
 const QuickStart = () => {
   const { t } = useTranslate('landing');
-  const [method, setMethod] = useState<DeployMethod>('docker-run');
+  const [method, setMethod] = useState<DeployMethod>('docker-compose');
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const methodLabels: Readonly<Record<DeployMethod, string>> = {
-    'docker-run': t('quickStart.methods.dockerRun'),
     'docker-compose': t('quickStart.methods.dockerCompose'),
     'source-build': t('quickStart.methods.sourceBuild'),
   };

@@ -9,15 +9,15 @@ export type WalletOwner = {
 };
 
 export function walletOwner(wallet?: WalletSummary | AdminWallet): WalletOwner {
-  if (wallet && 'owner_name' in wallet) {
-    return {
-      name: wallet.owner_name || wallet.owner_email,
-      status: wallet.status,
-      type: wallet.owner_type || 'user',
-    };
+  if (!wallet) {
+    return { name: undefined, status: undefined, type: 'user' };
   }
 
-  return { name: undefined, status: wallet?.status, type: 'user' };
+  return {
+    name: wallet.owner_name || wallet.owner_email,
+    status: wallet.status,
+    type: wallet.owner_type || 'user',
+  };
 }
 
 export function walletFromTransaction(transaction: WalletTransaction): AdminWallet | undefined {

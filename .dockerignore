@@ -1,0 +1,16 @@
+.git
+.codex-tasks
+.DS_Store
+.env
+.env.*
+**/.env
+**/.env.*
+node_modules
+**/node_modules
+target
+apps/hook_frontend/.next
+apps/hook_frontend/out
+apps/hook_frontend/dist
+apps/hook_frontend/build
+logs
+*.log

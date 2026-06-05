@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current deployment files,DONE,README scripts compose and landing quick-start are inspected,rg -n 'create-docker-env|docker compose|quickStart' README.md README_CN.md apps/hook_frontend/src,,0,
+2,Implement deployment scripts,DONE,create-docker-env prompts for admin credentials and update.sh preserves volumes,bash -n scripts/create-docker-env.sh scripts/docker-entrypoint.sh update.sh,,0,
+3,Update README and landing deployment copy,DONE,English and Chinese docs describe real Docker Compose source build and one-click update,rg -n 'docker run|Docker Run|docker-run' README.md README_CN.md apps/hook_frontend/src || true,,0,
+4,Run validation,DONE,Static checks builds and Docker Compose deploy/update E2E pass,cargo check -p hook_backend && pnpm lint:frontend && pnpm build:frontend:embedded && docker build -t hook:codex-check .,,0,Local isolated deploy.sh/update.sh E2E passed on port 5555 with preserved Postgres marker.

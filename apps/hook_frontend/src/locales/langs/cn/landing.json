@@ -61,7 +61,7 @@
       },
       "deployment": {
         "title": "自托管部署",
-        "description": "Docker 一键启动，也支持 K8s 和源码编译。数据和密钥留在自己手里。"
+        "description": "使用 Docker Compose 快速启动，也支持源码编译。数据和密钥留在自己手里。"
       },
       "monitoring": {
         "title": "健康监控与审计",
@@ -302,8 +302,7 @@
   "quickStart": {
     "title": "几秒内开始部署",
     "methods": {
-      "dockerRun": "Docker Run",
-      "dockerCompose": "Docker Compose",
+      "dockerCompose": "Docker Compose Source Build",
       "sourceBuild": "Source Build"
     },
     "copyCommand": "复制命令",

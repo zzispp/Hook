@@ -61,7 +61,7 @@
       },
       "deployment": {
         "title": "Self-hosted deployment",
-        "description": "Start with Docker in one step, or run on Kubernetes and source builds. Keep your data and credentials in your own environment."
+        "description": "Start with Docker Compose, or build from source when you want full control. Keep your data and credentials in your own environment."
       },
       "monitoring": {
         "title": "Health monitoring and audit",
@@ -300,10 +300,9 @@
     }
   },
   "quickStart": {
-    "title": "Get started in seconds",
+    "title": "Start deployment in seconds",
     "methods": {
-      "dockerRun": "Docker Run",
-      "dockerCompose": "Docker Compose",
+      "dockerCompose": "Docker Compose Source Build",
       "sourceBuild": "Source Build"
     },
     "copyCommand": "Copy command",
