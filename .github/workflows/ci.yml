@@ -86,6 +86,52 @@ jobs:
       - name: Build embedded frontend
         run: pnpm build:frontend:embedded
 
+  migration:
+    name: Migration
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: hook_ci
+          POSTGRES_USER: hook
+          POSTGRES_PASSWORD: hook_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hook -d hook_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: migration
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Verify migration up preserves existing data
+        run: timeout 600s bash scripts/ci-migration-preservation.sh
+
   docker:
     name: Docker
     runs-on: ubuntu-latest
@@ -99,7 +145,10 @@ jobs:
           fetch-depth: 1
 
       - name: Check deployment scripts
-        run: bash -n deploy.sh update.sh install.sh scripts/create-docker-env.sh scripts/docker-entrypoint.sh scripts/package-release.sh
+        run: |
+          for script in deploy.sh update.sh install.sh scripts/*.sh; do
+            bash -n "$script"
+          done
 
       - name: Validate workflows
         run: ruby -e 'require "yaml"; Dir[".github/workflows/*.yml"].each { |file| YAML.load_file(file) }'
@@ -107,7 +156,8 @@ jobs:
       - name: Validate Docker Compose config
         run: |
           cat > .env.ci <<'EOF'
-          HOOK_PORT=5555
+          HOOK_PORT=15555
+          HOOK_IMAGE_TAG=ci
           POSTGRES_DB=hook
           POSTGRES_USER=hook
           POSTGRES_PASSWORD=ci-postgres-password
@@ -125,5 +175,11 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
+          load: true
           push: false
-          tags: hook:ci
+          tags: ghcr.io/zzispp/hook:ci
+          cache-from: type=gha,scope=ci-smoke
+          cache-to: type=gha,mode=max,scope=ci-smoke
+
+      - name: Smoke test Docker Compose deployment
+        run: bash scripts/ci-docker-smoke.sh

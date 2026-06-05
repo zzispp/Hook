@@ -78,3 +78,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Verify published Docker image tags
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+        run: bash scripts/verify-docker-image-tags.sh
