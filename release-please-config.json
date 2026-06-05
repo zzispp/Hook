@@ -4,17 +4,19 @@
   "include-component-in-tag": false,
   "include-v-in-tag": true,
   "include-v-in-release-name": true,
-  "plugins": [
-    {
-      "type": "cargo-workspace"
-    }
-  ],
   "packages": {
     ".": {
       "component": "hook",
-      "release-type": "rust",
+      "release-type": "go",
       "package-name": "hook",
-      "changelog-path": "CHANGELOG.md"
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "Cargo.toml",
+          "jsonpath": "$.workspace.package.version"
+        }
+      ]
     }
   }
 }
