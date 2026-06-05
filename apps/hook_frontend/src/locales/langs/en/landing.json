@@ -61,7 +61,7 @@
       },
       "deployment": {
         "title": "Self-hosted deployment",
-        "description": "Start with Docker Compose, or build from source when you want full control. Keep your data and credentials in your own environment."
+        "description": "Start with the prebuilt GHCR image through Docker Compose, or build from source when you want full control. Keep your data and credentials in your own environment."
       },
       "monitoring": {
         "title": "Health monitoring and audit",
@@ -302,11 +302,11 @@
   "quickStart": {
     "title": "Start deployment in seconds",
     "methods": {
-      "dockerCompose": "Docker Compose Source Build",
+      "dockerCompose": "Docker Compose Prebuilt",
       "sourceBuild": "Source Build"
     },
     "copyCommand": "Copy command",
-    "hint": "Self-hosted deployment keeps your data and credentials in your own environment."
+    "hint": "The default path uses ghcr.io/zzispp/hook:latest; source build remains available when you need to compile locally."
   },
   "providers": {
     "title": "Supported provider channels and ecosystem integrations",

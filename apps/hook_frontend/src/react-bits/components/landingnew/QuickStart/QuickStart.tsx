@@ -9,7 +9,7 @@ const METHODS: readonly DeployMethod[] = ['docker-compose', 'source-build'];
 
 const COMMANDS: Readonly<Record<DeployMethod, string>> = {
   'docker-compose': `git clone https://github.com/zzispp/Hook.git && cd Hook
-./deploy.sh`,
+HOOK_COMPOSE_FILES=docker-compose.prebuilt.yml ./deploy.sh`,
   'source-build': `git clone https://github.com/zzispp/Hook.git && cd Hook
 pnpm install
 cp config/config.yaml config.yaml

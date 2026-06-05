@@ -43,6 +43,40 @@ No JavaScript test runner is configured yet; rely on linting and Next.js builds 
 
 The current history uses Conventional Commit style, for example `chore: init monorepo`. Continue with concise messages such as `feat: add user profile route` or `fix: validate config path`. Pull requests should describe the change, list validation commands run, link related issues, and include screenshots or screen recordings for visible frontend changes.
 
+## Development & Release Workflow
+
+Use feature branches for normal development. Write code on a branch, open a pull request, wait for CI, then merge into `main`. Direct pushes to `main` should be reserved for small maintainer-only changes where review is not needed.
+
+Commit messages drive changelog and version calculation through Release Please, so keep them in Conventional Commit format:
+
+- `fix: ...` for patch releases.
+- `feat: ...` for minor releases.
+- `feat!: ...`, `fix!: ...`, or a `BREAKING CHANGE:` footer for major releases.
+- `docs: ...`, `chore: ...`, and CI-only changes are allowed, but they usually should not be relied on to create a product release by themselves.
+
+Every push to `main` runs CI and builds the GHCR development Docker images:
+
+- `ghcr.io/zzispp/hook:edge`
+- `ghcr.io/zzispp/hook:nightly`
+
+Every push to `main` also runs Release Please. Release Please creates or updates a release pull request that contains the generated `CHANGELOG.md`, version updates, and `.release-please-manifest.json` changes. Do not manually edit release changelog or version files for a normal stable release; review and merge the Release Please pull request instead.
+
+Stable release flow:
+
+1. Merge feature pull requests into `main`.
+2. Let Release Please create or update the release pull request.
+3. Review and merge the Release Please pull request.
+4. The merge creates the stable tag, for example `v1.0.1`.
+5. The stable tag triggers GitHub Release packaging, checksum generation, Docker image publishing, and GitHub Pages deployment.
+
+Stable release Docker tags include:
+
+- `ghcr.io/zzispp/hook:vX.Y.Z`
+- `ghcr.io/zzispp/hook:X.Y.Z`
+- `ghcr.io/zzispp/hook:latest`
+
+Prerelease flow is manual. Run the `Prerelease Tag` workflow from GitHub Actions, set `base_version` such as `1.0.1`, and choose `beta` or `rc`. The workflow creates the next available tag, for example `v1.0.1-beta.1` or `v1.0.1-rc.1`. Prerelease tags trigger GitHub prerelease packaging and Docker image publishing, but they do not deploy GitHub Pages.
+
 ## Security & Configuration Tips
 
 Do not commit secrets or local credentials. Keep runtime configuration in `config/` or environment variables, and document any new required setting in the relevant app or crate README.

@@ -37,7 +37,7 @@ update_source() {
 
 update_dependency_images() {
   set_compose_args
-  docker compose "${COMPOSE_ARGS[@]}" pull postgres redis
+  docker compose "${COMPOSE_ARGS[@]}" pull --ignore-buildable
 }
 
 rebuild_hook() {

@@ -1,0 +1,4 @@
+id,task,status,completed_at,notes
+1,Inspect current landing QuickStart command and i18n copy,DONE,2026-06-05,Confirmed default command still used source-build deploy.sh path.
+2,Update QuickStart default deployment command and bilingual labels,DONE,2026-06-05,Default Docker Compose tab now uses GHCR prebuilt compose file.
+3,Run frontend validation,DONE,2026-06-05,pnpm lint:frontend, JSON parse check, and git diff --check passed.

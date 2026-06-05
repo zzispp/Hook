@@ -61,7 +61,7 @@
       },
       "deployment": {
         "title": "自托管部署",
-        "description": "使用 Docker Compose 快速启动，也支持源码编译。数据和密钥留在自己手里。"
+        "description": "默认通过 Docker Compose 使用 GHCR 预构建镜像启动，也支持需要完全控制时源码编译。数据和密钥留在自己手里。"
       },
       "monitoring": {
         "title": "健康监控与审计",
@@ -302,11 +302,11 @@
   "quickStart": {
     "title": "几秒内开始部署",
     "methods": {
-      "dockerCompose": "Docker Compose Source Build",
-      "sourceBuild": "Source Build"
+      "dockerCompose": "Docker Compose 预构建",
+      "sourceBuild": "源码构建"
     },
     "copyCommand": "复制命令",
-    "hint": "支持自托管部署，数据和凭证安全留在本地。"
+    "hint": "默认使用 ghcr.io/zzispp/hook:latest；需要本机编译时可切换源码构建。"
   },
   "providers": {
     "title": "支持的模型渠道与生态集成",

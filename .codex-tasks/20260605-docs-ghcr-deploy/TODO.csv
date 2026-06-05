@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current deployment docs,DONE,README and docs-site deployment sections reviewed,rg -n "Docker|Compose|GHCR|Source Build|部署" README.md README_CN.md docs-site,,0,
+2,Add prebuilt Docker Compose deployment config,DONE,Users can deploy ghcr.io/zzispp/hook without source build,test -f docker-compose.prebuilt.yml,,0,
+3,Update README bilingual deployment docs,DONE,README.md and README_CN.md document GHCR prebuilt and source build flows,rg -n "ghcr.io/zzispp/hook|预构建" README.md README_CN.md,,0,
+4,Update docs site deployment pages,DONE,English and Chinese docs-site pages document GHCR prebuilt deployment,rg -n "ghcr.io/zzispp/hook|预构建" docs-site/index.html docs-site/zh.html,,0,
+5,Validate compose and docs changes,DONE,Docker Compose config and static docs checks pass,docker compose -f docker-compose.prebuilt.yml --env-file .env.ci config >/dev/null && git diff --check,,0,

@@ -101,8 +101,8 @@ jobs:
       - name: Check deployment scripts
         run: bash -n deploy.sh update.sh install.sh scripts/create-docker-env.sh scripts/docker-entrypoint.sh scripts/package-release.sh
 
-      - name: Validate release workflow
-        run: ruby -e 'require "yaml"; YAML.load_file(".github/workflows/release.yml")'
+      - name: Validate workflows
+        run: ruby -e 'require "yaml"; Dir[".github/workflows/*.yml"].each { |file| YAML.load_file(file) }'
 
       - name: Validate Docker Compose config
         run: |
@@ -119,6 +119,7 @@ jobs:
           HOOK_PROVIDER_KEY_SECRET=ci-provider-key-secret-with-enough-length
           EOF
           docker compose --env-file .env.ci config >/dev/null
+          docker compose --env-file .env.ci -f docker-compose.prebuilt.yml config >/dev/null
 
       - name: Build Docker image
         uses: docker/build-push-action@v7

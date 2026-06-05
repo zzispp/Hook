@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing Docker and workflow patterns,DONE,Current Dockerfile and CI behavior reviewed,rg -n "docker|build-push" .github Dockerfile docker-compose.yml,,0,
+2,Add GHCR publish workflow,DONE,Workflow publishes ghcr.io/zzispp/hook on main and version tags,test -f .github/workflows/docker-image.yml,,0,
+3,Validate workflow syntax and repository state,DONE,YAML parses and git diff is clean of unintended edits,ruby -e 'require "yaml"; YAML.load_file(".github/workflows/docker-image.yml")' && git diff --check,,0,

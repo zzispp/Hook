@@ -103,32 +103,41 @@
 
         <section id="install" class="doc-section">
           <h2>Installation</h2>
-          <p>Docker Compose Source Build is the recommended deployment path for the current stable version. It builds Hook from source, compiles the embedded frontend, starts PostgreSQL and Redis, runs migrations, and serves frontend plus API from <code>http://127.0.0.1:5555</code>.</p>
+          <p>Docker Compose with the prebuilt GHCR image is the recommended deployment path for stable releases. It starts PostgreSQL, Redis, and <code>ghcr.io/zzispp/hook:latest</code>, runs migrations, and serves frontend plus API from <code>http://127.0.0.1:5555</code>.</p>
           <div class="code-block">
-            <div class="code-header"><span>Docker Compose Source Build</span><button type="button" data-copy="#deploy-command">Copy</button></div>
+            <div class="code-header"><span>Docker Compose Prebuilt Image</span><button type="button" data-copy="#deploy-command">Copy</button></div>
             <pre id="deploy-command"><code>git clone https://github.com/zzispp/Hook.git
 cd Hook
-./deploy.sh</code></pre>
+HOOK_COMPOSE_FILES=docker-compose.prebuilt.yml ./deploy.sh</code></pre>
           </div>
           <div class="tip">
             <strong>First run</strong>
             <p><code>./deploy.sh</code> creates <code>.env</code>, asks for admin username, admin email, and admin password, then generates PostgreSQL password, JWT secret, and provider key secret automatically.</p>
           </div>
+          <h3>Pin an image tag</h3>
+          <p>Stable releases publish <code>latest</code> and version tags. Main branch builds publish <code>edge</code> and <code>nightly</code>.</p>
+          <div class="code-block compact"><pre><code>HOOK_IMAGE_TAG=v1.0.1 HOOK_COMPOSE_FILES=docker-compose.prebuilt.yml ./deploy.sh</code></pre></div>
+          <h3>Docker Compose Source Build</h3>
+          <p>Use source build when you want to build the image locally from this checkout.</p>
+          <div class="code-block compact"><pre><code>git clone https://github.com/zzispp/Hook.git
+cd Hook
+./deploy.sh</code></pre></div>
           <h3>Useful commands</h3>
-          <div class="code-block compact"><pre><code>docker compose logs -f hook
-docker compose ps
-docker compose down</code></pre></div>
+          <div class="code-block compact"><pre><code>docker compose --env-file .env -f docker-compose.prebuilt.yml logs -f hook
+docker compose --env-file .env -f docker-compose.prebuilt.yml ps
+docker compose --env-file .env -f docker-compose.prebuilt.yml down</code></pre></div>
           <p><code>docker compose down</code> stops containers without deleting Docker named volumes. Use <code>docker compose down -v</code> only when deployment data should be removed.</p>
         </section>
 
         <section id="update" class="doc-section">
           <h2>Update</h2>
-          <p>After Docker Compose deployment, run the update script from the deployment directory.</p>
+          <p>After prebuilt-image Docker Compose deployment, run the update script from the deployment directory.</p>
           <div class="code-block">
             <div class="code-header"><span>One-command update</span><button type="button" data-copy="#update-command">Copy</button></div>
-            <pre id="update-command"><code>./update.sh</code></pre>
+            <pre id="update-command"><code>HOOK_COMPOSE_FILES=docker-compose.prebuilt.yml ./update.sh</code></pre>
           </div>
-          <p><code>update.sh</code> runs <code>git pull --ff-only</code>, pulls PostgreSQL and Redis base images, rebuilds the Hook image from the current source tree, and recreates containers. It does not delete Docker named volumes.</p>
+          <p><code>update.sh</code> pulls the newest <code>ghcr.io/zzispp/hook:${HOOK_IMAGE_TAG:-latest}</code> image, pulls PostgreSQL and Redis base images, and recreates containers. It does not delete Docker named volumes.</p>
+          <p>For source-build deployments, run <code>./update.sh</code>. It runs <code>git pull --ff-only</code>, rebuilds the Hook image from the current source tree, and recreates containers.</p>
         </section>
 
         <section id="release-packages" class="doc-section">

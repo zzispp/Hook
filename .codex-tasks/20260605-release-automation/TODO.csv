@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect release automation requirements,DONE,Existing release/tag/docker workflows and version baseline reviewed,git tag --list 'v*' --sort=-version:refname | head,,0,
+2,Add release-please config and workflow,DONE,release-please can open release PR and create vX.Y.Z tags,test -f release-please-config.json && test -f .release-please-manifest.json && test -f .github/workflows/release-please.yml,,0,
+3,Add prerelease tag workflow,DONE,workflow_dispatch can create beta or rc tags without guessing,test -f .github/workflows/prerelease.yml,,0,
+4,Validate workflow syntax and action references,DONE,YAML/actionlint checks pass,ruby -e 'require "yaml"; Dir[".github/workflows/*.yml"].each { |f| YAML.load_file(f) }' && go run github.com/rhysd/actionlint/cmd/actionlint@latest .github/workflows/release-please.yml .github/workflows/prerelease.yml,,0,

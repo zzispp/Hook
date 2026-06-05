@@ -103,32 +103,41 @@
 
         <section id="install" class="doc-section">
           <h2>安装部署</h2>
-          <p>当前稳定版本推荐使用 Docker Compose Source Build。它会从源码构建 Hook，编译内嵌前端，启动 PostgreSQL 和 Redis，执行迁移，并在 <code>http://127.0.0.1:5555</code> 提供前端和 API。</p>
+          <p>稳定版推荐使用 Docker Compose 预构建 GHCR 镜像部署。它会启动 PostgreSQL、Redis 和 <code>ghcr.io/zzispp/hook:latest</code>，执行迁移，并在 <code>http://127.0.0.1:5555</code> 提供前端和 API。</p>
           <div class="code-block">
-            <div class="code-header"><span>Docker Compose Source Build</span><button type="button" data-copy="#deploy-command">复制</button></div>
+            <div class="code-header"><span>Docker Compose 预构建镜像</span><button type="button" data-copy="#deploy-command">复制</button></div>
             <pre id="deploy-command"><code>git clone https://github.com/zzispp/Hook.git
 cd Hook
-./deploy.sh</code></pre>
+HOOK_COMPOSE_FILES=docker-compose.prebuilt.yml ./deploy.sh</code></pre>
           </div>
           <div class="tip">
             <strong>首次运行</strong>
             <p><code>./deploy.sh</code> 会创建 <code>.env</code>，要求输入管理员用户名、邮箱和密码，并自动生成 PostgreSQL 密码、JWT secret 和 provider key secret。</p>
           </div>
+          <h3>固定镜像 tag</h3>
+          <p>稳定版会发布 <code>latest</code> 和版本 tag。main 分支构建会发布 <code>edge</code> 和 <code>nightly</code>。</p>
+          <div class="code-block compact"><pre><code>HOOK_IMAGE_TAG=v1.0.1 HOOK_COMPOSE_FILES=docker-compose.prebuilt.yml ./deploy.sh</code></pre></div>
+          <h3>Docker Compose Source Build</h3>
+          <p>如果你希望在服务器上从当前源码构建镜像，可以使用 Source Build 部署。</p>
+          <div class="code-block compact"><pre><code>git clone https://github.com/zzispp/Hook.git
+cd Hook
+./deploy.sh</code></pre></div>
           <h3>常用命令</h3>
-          <div class="code-block compact"><pre><code>docker compose logs -f hook
-docker compose ps
-docker compose down</code></pre></div>
+          <div class="code-block compact"><pre><code>docker compose --env-file .env -f docker-compose.prebuilt.yml logs -f hook
+docker compose --env-file .env -f docker-compose.prebuilt.yml ps
+docker compose --env-file .env -f docker-compose.prebuilt.yml down</code></pre></div>
           <p><code>docker compose down</code> 只停止容器，不删除 Docker named volumes。只有明确要删除部署数据时才使用 <code>docker compose down -v</code>。</p>
         </section>
 
         <section id="update" class="doc-section">
           <h2>更新</h2>
-          <p>Docker Compose 部署后，在部署目录直接运行更新脚本。</p>
+          <p>预构建镜像 Docker Compose 部署后，在部署目录直接运行更新脚本。</p>
           <div class="code-block">
             <div class="code-header"><span>一键更新</span><button type="button" data-copy="#update-command">复制</button></div>
-            <pre id="update-command"><code>./update.sh</code></pre>
+            <pre id="update-command"><code>HOOK_COMPOSE_FILES=docker-compose.prebuilt.yml ./update.sh</code></pre>
           </div>
-          <p><code>update.sh</code> 会执行 <code>git pull --ff-only</code>，拉取 PostgreSQL 和 Redis 基础镜像，使用当前源码重新构建 Hook 镜像并重建容器。它不会删除 Docker named volumes。</p>
+          <p><code>update.sh</code> 会拉取最新的 <code>ghcr.io/zzispp/hook:${HOOK_IMAGE_TAG:-latest}</code> 镜像，拉取 PostgreSQL 和 Redis 基础镜像，并重建容器。它不会删除 Docker named volumes。</p>
+          <p>Source Build 部署可执行 <code>./update.sh</code>。它会执行 <code>git pull --ff-only</code>，使用当前源码重新构建 Hook 镜像并重建容器。</p>
         </section>
 
         <section id="release-packages" class="doc-section">
