@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Hook 部署、本地开发、API 入口和配置文档。" />
+    <title>Hook 文档 | AI API 网关</title>
+    <link rel="icon" href="./assets/logo-icon.svg" type="image/svg+xml" />
+    <link rel="preload" href="./assets/logo.svg" as="image" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./docs.css" />
+    <link rel="stylesheet" href="./search.css" />
+    <link rel="stylesheet" href="./responsive.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#top" aria-label="Hook 文档首页">
+          <img class="brand-logo-full" src="./assets/logo.svg" alt="Hook" />
+        </a>
+        <nav class="topnav" aria-label="主导航">
+          <a href="#overview">文档</a>
+          <a href="#install">部署</a>
+          <a href="#api">API</a>
+          <a href="#credits">致谢</a>
+        </nav>
+        <div class="top-actions">
+          <button class="search-trigger" type="button" data-search-open aria-label="搜索文档">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <span>搜索文档</span>
+            <kbd>⌘K</kbd>
+          </button>
+          <button class="icon-button theme-toggle" type="button" data-theme-toggle aria-label="切换主题">
+            <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+            <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6.5 6.5 0 0 0 9 9A9 9 0 1 1 12 3Z"></path></svg>
+          </button>
+          <div class="language-switch" aria-label="语言切换">
+            <a href="./">EN</a>
+            <a class="active" href="./zh.html">中文</a>
+          </div>
+          <a class="icon-button github-link" href="https://github.com/zzispp/Hook" aria-label="Hook GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49.99.11-.78.42-1.3.76-1.6-2.67-.31-5.47-1.34-5.47-5.95 0-1.32.47-2.39 1.24-3.23-.12-.31-.54-1.55.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.63.24 2.87.12 3.18.77.84 1.24 1.91 1.24 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22v3.3c0 .32.22.69.82.58A12 12 0 0 0 12 .5Z"></path></svg>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <dialog class="search-dialog" data-search-dialog aria-label="搜索文档">
+      <div class="search-panel">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <input type="search" data-search-input placeholder="搜索文档..." aria-label="搜索文档" />
+          <button class="dialog-close" type="button" data-search-close>关闭</button>
+        </div>
+        <div class="search-results" data-search-results></div>
+      </div>
+    </dialog>
+
+    <div class="docs-shell" id="top">
+      <aside class="sidebar" aria-label="文档目录">
+        <p class="sidebar-title">Hook 文档</p>
+        <a href="#overview">简介</a>
+        <a href="#features">功能</a>
+        <a href="#install">安装部署</a>
+        <a href="#update">更新</a>
+        <a href="#local-development">本地开发</a>
+        <a href="#api">API 入口</a>
+        <a href="#configuration">配置</a>
+        <a href="#credits">致谢</a>
+      </aside>
+
+      <main class="content">
+        <section class="hero-doc">
+          <p class="eyebrow">自托管 AI 网关</p>
+          <h1>一个控制面，统一模型路由、访问策略、计费和观测。</h1>
+          <p class="lead">Hook 为团队提供私有化网关，用于统一供应商路由、令牌策略、钱包计费、用量记录和运行监控，覆盖 OpenAI 兼容、Claude 与 Gemini 接口。</p>
+          <div class="hero-actions">
+            <a class="button primary" href="#install">开始部署</a>
+            <a class="button secondary" href="https://github.com/zzispp/Hook">查看 GitHub</a>
+          </div>
+        </section>
+
+        <section id="overview" class="doc-section">
+          <h2>简介</h2>
+          <p>用户通过 Hook 令牌访问 <code>/v1</code> 或 <code>/v1beta</code>。Hook 会按模型、供应商、分组、钱包余额和权限策略完成路由，然后记录用量、计费和运行状态。</p>
+          <div class="info-grid">
+            <article><h3>后端</h3><p>Axum、SeaORM、PostgreSQL、Redis、调度、计费、监控和管理接口。</p></article>
+            <article><h3>前端</h3><p>Next.js、React、MUI 和 TypeScript，提供用户控制台与管理后台。</p></article>
+            <article><h3>适用场景</h3><p>供应商管理、OpenAI 兼容代理、额度控制、请求记录和运营监控。</p></article>
+          </div>
+        </section>
+
+        <section id="features" class="doc-section">
+          <h2>功能</h2>
+          <div class="feature-list">
+            <article><h3>统一 AI 代理</h3><p>提供 OpenAI 风格 <code>/v1</code> 和 Gemini 风格 <code>/v1beta</code>，覆盖聊天、Responses、Claude Messages、图片、Embedding、Rerank、音频、Moderations 和 Realtime。</p></article>
+            <article><h3>供应商与模型管理</h3><p>管理供应商、端点、上游 API Key、模型绑定、模型成本、冷却释放和模型连通性测试。</p></article>
+            <article><h3>令牌与权限</h3><p>控制用户令牌、管理员令牌、RBAC 角色、菜单、API 权限、导航权限、分组和模型访问策略。</p></article>
+            <article><h3>计费与监控</h3><p>跟踪钱包、余额、流水、使用记录、活跃请求、模型状态检查、定时任务和系统健康。</p></article>
+          </div>
+        </section>
+
+        <section id="install" class="doc-section">
+          <h2>安装部署</h2>
+          <p>当前稳定版本推荐使用 Docker Compose Source Build。它会从源码构建 Hook，编译内嵌前端，启动 PostgreSQL 和 Redis，执行迁移，并在 <code>http://127.0.0.1:5555</code> 提供前端和 API。</p>
+          <div class="code-block">
+            <div class="code-header"><span>Docker Compose Source Build</span><button type="button" data-copy="#deploy-command">复制</button></div>
+            <pre id="deploy-command"><code>git clone https://github.com/zzispp/Hook.git
+cd Hook
+./deploy.sh</code></pre>
+          </div>
+          <div class="tip">
+            <strong>首次运行</strong>
+            <p><code>./deploy.sh</code> 会创建 <code>.env</code>，要求输入管理员用户名、邮箱和密码，并自动生成 PostgreSQL 密码、JWT secret 和 provider key secret。</p>
+          </div>
+          <h3>常用命令</h3>
+          <div class="code-block compact"><pre><code>docker compose logs -f hook
+docker compose ps
+docker compose down</code></pre></div>
+          <p><code>docker compose down</code> 只停止容器，不删除 Docker named volumes。只有明确要删除部署数据时才使用 <code>docker compose down -v</code>。</p>
+        </section>
+
+        <section id="update" class="doc-section">
+          <h2>更新</h2>
+          <p>Docker Compose 部署后，在部署目录直接运行更新脚本。</p>
+          <div class="code-block">
+            <div class="code-header"><span>一键更新</span><button type="button" data-copy="#update-command">复制</button></div>
+            <pre id="update-command"><code>./update.sh</code></pre>
+          </div>
+          <p><code>update.sh</code> 会执行 <code>git pull --ff-only</code>，拉取 PostgreSQL 和 Redis 基础镜像，使用当前源码重新构建 Hook 镜像并重建容器。它不会删除 Docker named volumes。</p>
+        </section>
+
+        <section id="local-development" class="doc-section">
+          <h2>本地开发</h2>
+          <p>依赖：Rust edition 2024 toolchain、Node.js <code>&gt;=22.12.0</code>、pnpm <code>10.33.4</code>、PostgreSQL 和 Redis。</p>
+          <div class="code-block">
+            <div class="code-header"><span>源码工作流</span><button type="button" data-copy="#local-command">复制</button></div>
+            <pre id="local-command"><code>pnpm install
+cp config/config.yaml config.yaml
+scripts/generate-password-hash.sh "your-password"
+cargo run -p hook_backend -- migration up
+NEXT_PUBLIC_SERVER_URL=http://127.0.0.1:5555 pnpm build:frontend:embedded
+NEXT_PUBLIC_SERVER_URL=http://127.0.0.1:5555 pnpm dev</code></pre>
+          </div>
+          <table>
+            <tbody>
+              <tr><th>后端</th><td><code>http://127.0.0.1:5555</code></td></tr>
+              <tr><th>前端</th><td><code>http://127.0.0.1:8082</code></td></tr>
+              <tr><th>检查</th><td><code>cargo check -p hook_backend</code>、<code>pnpm lint:frontend</code>、<code>pnpm build:frontend</code></td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="api" class="doc-section">
+          <h2>API 入口</h2>
+          <table>
+            <tbody>
+              <tr><th><code>GET /health</code></th><td>健康检查接口。</td></tr>
+              <tr><th><code>/api/*</code></th><td>控制台、管理后台、鉴权、钱包、计费、供应商、模型和监控接口。</td></tr>
+              <tr><th><code>/v1/*</code></th><td>OpenAI、Claude 和 Jina 兼容代理入口。</td></tr>
+              <tr><th><code>/v1beta/*</code></th><td>Gemini 兼容代理入口。</td></tr>
+            </tbody>
+          </table>
+          <h3>常见代理路由</h3>
+          <ul class="route-grid">
+            <li><code>/v1/models</code></li><li><code>/v1/chat/completions</code></li>
+            <li><code>/v1/responses</code></li><li><code>/v1/messages</code></li>
+            <li><code>/v1/images/generations</code></li><li><code>/v1/embeddings</code></li>
+            <li><code>/v1/rerank</code></li><li><code>/v1/realtime</code></li>
+          </ul>
+        </section>
+
+        <section id="configuration" class="doc-section">
+          <h2>配置与数据</h2>
+          <table>
+            <tbody>
+              <tr><th><code>.env</code></th><td>首次 Docker Compose 部署时由 <code>./deploy.sh</code> 创建。</td></tr>
+              <tr><th><code>POSTGRES_*</code></th><td>PostgreSQL 容器的数据库名、用户和自动生成的密码。</td></tr>
+              <tr><th><code>HOOK_ADMIN_*</code></th><td>初始管理员用户名、邮箱和 base64 编码后的密码值。</td></tr>
+              <tr><th><code>HOOK_JWT_SECRET</code></th><td>后端令牌系统使用的自动生成签名密钥。</td></tr>
+              <tr><th><code>HOOK_PROVIDER_KEY_SECRET</code></th><td>用于保护供应商密钥的自动生成密钥。</td></tr>
+              <tr><th><code>hook-postgres / hook-redis</code></th><td>容器重建后仍保留部署数据的 Docker named volumes。</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="credits" class="doc-section">
+          <h2>致谢</h2>
+          <p>Hook 参考并受到以下开源项目启发。</p>
+          <ul class="credits">
+            <li><a href="https://github.com/tiagozip/cap">tiagozip/cap</a></li>
+            <li><a href="https://github.com/looplj/axonhub">looplj/axonhub</a></li>
+            <li><a href="https://github.com/fawney19/Aether">fawney19/Aether</a></li>
+            <li><a href="https://github.com/QuantumNous/new-api">QuantumNous/new-api</a></li>
+          </ul>
+        </section>
+      </main>
+    </div>
+
+    <script src="./site.js" defer></script>
+  </body>
+</html>

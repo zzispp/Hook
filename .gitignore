@@ -41,3 +41,6 @@ tsconfig.tsbuildinfo
 
 # rust build output
 target
+
+# task scratch repositories
+.codex-tasks/**/raw/*/

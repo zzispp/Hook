@@ -1,0 +1,89 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_pages: ${{ steps.classify.outputs.deploy_pages }}
+    steps:
+      - name: Ensure stable Pages release tag
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "deploy_pages=false" >> "${GITHUB_OUTPUT}"
+
+          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
+            echo "Manual Pages deployment."
+            echo "deploy_pages=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Skipping Pages deploy for non-stable release tag: ${tag}"
+            exit 0
+          fi
+
+          echo "deploy_pages=true" >> "${GITHUB_OUTPUT}"
+
+  build:
+    needs: preflight
+    if: needs.preflight.outputs.deploy_pages == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Prepare Pages artifact
+        run: |
+          set -euo pipefail
+          test -f docs-site/index.html
+          test -f docs-site/zh.html
+          test -f docs-site/404.html
+          test -f docs-site/styles.css
+          test -f docs-site/docs.css
+          test -f docs-site/search.css
+          test -f docs-site/responsive.css
+          test -f docs-site/site.js
+          test -f docs-site/assets/logo.svg
+          test -f docs-site/assets/logo-icon.svg
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs-site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
