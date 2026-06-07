@@ -41,11 +41,12 @@ type Props = {
 export function ApiTokenTable(props: Props) {
   const { t } = useTranslate('admin');
   const tableHead = tokenTableHead(t, props.showOwner);
+  const tableMinWidth = tokenTableMinWidth(tableHead);
 
   return (
     <>
-      <Scrollbar>
-        <Table sx={{ minWidth: props.showOwner ? 1320 : 1100 }}>
+      <Scrollbar sx={{ width: '100%' }} slotProps={{ contentSx: { minWidth: tableMinWidth } }}>
+        <Table sx={{ minWidth: tableMinWidth }}>
           <ManagementTableHead head={tableHead} />
           <TableBody>
             {props.loading ? (
@@ -204,7 +205,7 @@ function tokenTableHead(
       ]
     : [];
 
-  return [
+  const columns: TableHeadCellProps[] = [
     { id: 'name', label: t('fields.keyName'), width: 180 },
     { id: 'key', label: t('fields.apiKey'), width: 180 },
     ...ownerColumns,
@@ -213,8 +214,26 @@ function tokenTableHead(
     { id: 'rate_limit_rpm', label: t('fields.rateLimitRpm'), width: 140 },
     { id: 'status', label: t('common.status'), width: 110 },
     { id: 'last_used_at', label: t('fields.lastUsedAt'), width: 180 },
-    { id: '', width: 180 },
+    { id: 'actions', label: t('common.actions'), width: 180, align: 'right' },
   ];
+
+  return columns.map(withTokenHeadCellLayout);
+}
+
+function withTokenHeadCellLayout(cell: TableHeadCellProps): TableHeadCellProps {
+  return {
+    ...cell,
+    sx: { minWidth: cell.width, whiteSpace: 'nowrap' },
+  };
+}
+
+function tokenTableMinWidth(head: TableHeadCellProps[]) {
+  return head.reduce((total, cell) => {
+    if (typeof cell.width !== 'number') {
+      return total;
+    }
+    return total + cell.width;
+  }, 0);
 }
 
 function costColumnLabel(
