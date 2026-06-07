@@ -1,5 +1,10 @@
 use serde_json::Value;
 
+const MAX_ERROR_MESSAGE_CHARS: usize = 240;
+const MAX_ERROR_CODE_CHARS: usize = 120;
+const MAX_ERROR_PARAM_CHARS: usize = 160;
+const TRUNCATION_MARKER: &str = "...";
+
 pub(super) struct UpstreamStatusErrorDetails {
     pub(super) message: String,
     pub(super) code: Option<String>,
@@ -44,17 +49,17 @@ fn error_message_fragment(value: &Value) -> Option<String> {
 }
 
 fn error_code_fragment(value: &Value) -> Option<String> {
-    string_fragment(value, &["code", "error_code"])
+    string_fragment(value, &["code", "error_code"], MAX_ERROR_CODE_CHARS)
 }
 
 fn error_param_fragment(value: &Value) -> Option<String> {
-    string_fragment(value, &["param", "parameter", "field"])
+    string_fragment(value, &["param", "parameter", "field"], MAX_ERROR_PARAM_CHARS)
 }
 
-fn string_fragment(value: &Value, keys: &[&str]) -> Option<String> {
+fn string_fragment(value: &Value, keys: &[&str], max_chars: usize) -> Option<String> {
     let text = value_string(value, keys)?;
     let trimmed = text.trim();
-    (!trimmed.is_empty()).then(|| truncate_message(trimmed))
+    (!trimmed.is_empty()).then(|| truncate_fragment(trimmed, max_chars))
 }
 
 fn value_message(value: &Value) -> Option<String> {
@@ -72,7 +77,6 @@ fn value_message(value: &Value) -> Option<String> {
 
 fn value_string(value: &Value, keys: &[&str]) -> Option<String> {
     match value {
-        Value::String(text) => Some(text.clone()),
         Value::Array(items) => items.iter().find_map(|item| value_string(item, keys)),
         Value::Object(map) => direct_string(map, keys)
             .or_else(|| nested_string(map, "error", keys))
@@ -94,7 +98,7 @@ fn nested_message(map: &serde_json::Map<String, Value>, key: &str) -> Option<Str
 }
 
 fn direct_string(map: &serde_json::Map<String, Value>, keys: &[&str]) -> Option<String> {
-    keys.iter().find_map(|key| map.get(*key).and_then(value_message))
+    keys.iter().find_map(|key| map.get(*key).and_then(Value::as_str).map(str::to_owned))
 }
 
 fn nested_string(map: &serde_json::Map<String, Value>, key: &str, keys: &[&str]) -> Option<String> {
@@ -102,20 +106,26 @@ fn nested_string(map: &serde_json::Map<String, Value>, key: &str, keys: &[&str])
 }
 
 fn truncate_message(value: &str) -> String {
-    const MAX_ERROR_MESSAGE_CHARS: usize = 240;
-    let mut end = MAX_ERROR_MESSAGE_CHARS.min(value.len());
-    while !value.is_char_boundary(end) {
-        end -= 1;
-    }
-    if end == value.len() {
+    truncate_fragment(value, MAX_ERROR_MESSAGE_CHARS)
+}
+
+fn truncate_fragment(value: &str, max_chars: usize) -> String {
+    if value.chars().count() <= max_chars {
         return value.to_owned();
     }
-    format!("{}...", &value[..end])
+    let marker_chars = TRUNCATION_MARKER.chars().count();
+    let prefix_chars = max_chars.saturating_sub(marker_chars);
+    let end = byte_index_after_chars(value, prefix_chars);
+    format!("{}{}", &value[..end], TRUNCATION_MARKER)
+}
+
+fn byte_index_after_chars(value: &str, char_count: usize) -> usize {
+    value.char_indices().nth(char_count).map(|(index, _)| index).unwrap_or(value.len())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::upstream_status_error_details;
+    use super::{MAX_ERROR_CODE_CHARS, MAX_ERROR_PARAM_CHARS, TRUNCATION_MARKER, upstream_status_error_details};
 
     #[test]
     fn upstream_status_error_message_reads_nested_json_error() {
@@ -138,9 +148,28 @@ mod tests {
     #[test]
     fn upstream_status_error_message_reads_plain_text_body() {
         let bytes = b"provider overloaded";
-        assert_eq!(
-            upstream_status_error_details(503, bytes).message,
-            "upstream returned status 503: provider overloaded"
-        );
+        let details = upstream_status_error_details(503, bytes);
+        assert_eq!(details.message, "upstream returned status 503: provider overloaded");
+        assert_eq!(details.code, None);
+        assert_eq!(details.param, None);
+    }
+
+    #[test]
+    fn upstream_status_error_details_truncates_code_and_param_to_column_limits() {
+        let body = serde_json::json!({
+            "error": {
+                "message": "quota exceeded",
+                "code": "x".repeat(MAX_ERROR_CODE_CHARS + 20),
+                "param": "y".repeat(MAX_ERROR_PARAM_CHARS + 20)
+            }
+        })
+        .to_string();
+        let details = upstream_status_error_details(429, body.as_bytes());
+        let code = details.code.expect("structured code should be captured");
+        let param = details.param.expect("structured param should be captured");
+        assert_eq!(code.chars().count(), MAX_ERROR_CODE_CHARS);
+        assert_eq!(param.chars().count(), MAX_ERROR_PARAM_CHARS);
+        assert!(code.ends_with(TRUNCATION_MARKER));
+        assert!(param.ends_with(TRUNCATION_MARKER));
     }
 }
