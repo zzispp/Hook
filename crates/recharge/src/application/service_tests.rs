@@ -14,6 +14,8 @@ use self::support_payment::{PlainCipher, TestPaymentProvider};
 
 #[path = "service_tests/order_creation.rs"]
 mod order_creation;
+#[path = "service_tests/order_expiration.rs"]
+mod order_expiration;
 #[path = "service_tests/payment_callbacks.rs"]
 mod payment_callbacks;
 #[path = "service_tests/payment_polling.rs"]

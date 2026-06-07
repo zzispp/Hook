@@ -145,6 +145,10 @@ impl RechargeRepository for StorageRechargeRepository {
             })
             .map_err(storage_error)
     }
+
+    async fn expire_pending_orders(&self, now: time::OffsetDateTime) -> RechargeResult<u64> {
+        self.store.expire_pending_orders(now).await.map_err(storage_error)
+    }
 }
 
 fn package_input(input: RechargePackageCreatePayload) -> RechargePackageRecordInput {

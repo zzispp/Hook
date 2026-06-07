@@ -133,6 +133,10 @@ impl RechargeUseCase for RecordingRecharge {
     async fn poll_pending_payment_orders(&self, _limit: u64) -> RechargeResult<RechargePaymentPollResult> {
         Err(unused())
     }
+
+    async fn expire_pending_orders(&self) -> RechargeResult<u64> {
+        Err(unused())
+    }
 }
 
 #[derive(Clone, Copy)]

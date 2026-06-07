@@ -1,3 +1,4 @@
+mod expiration;
 mod payment_callback_records;
 mod payment_channels;
 mod query;

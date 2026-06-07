@@ -160,6 +160,10 @@ where
     async fn poll_pending_payment_orders(&self, limit: u64) -> RechargeResult<crate::application::RechargePaymentPollResult> {
         self.poll_pending_orders(limit).await
     }
+
+    async fn expire_pending_orders(&self) -> RechargeResult<u64> {
+        self.repository.expire_pending_orders(time::OffsetDateTime::now_utc()).await
+    }
 }
 
 impl<R, C> RechargeService<R, C>

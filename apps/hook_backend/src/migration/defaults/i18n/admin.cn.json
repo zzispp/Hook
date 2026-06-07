@@ -2143,6 +2143,10 @@
         "name": "请求记录超时扫尾",
         "description": "当活跃请求记录长时间未推进状态时，将其标记为失败。"
       },
+      "rechargeOrderExpire": {
+        "name": "充值订单过期",
+        "description": "定期将超过过期时间的待支付充值订单标记为已过期。"
+      },
       "rechargePaymentPoll": {
         "name": "充值支付轮询",
         "description": "定期查询未过期待支付充值订单，并在通道返回已支付时入账。"
