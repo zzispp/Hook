@@ -1,5 +1,6 @@
 mod body;
 mod consume;
+mod drop_record;
 mod finalize;
 mod timing;
 
@@ -17,7 +18,7 @@ use super::{
     estimated_usage::StreamUsageEstimator,
     event::{render_keepalive, stream_error},
     preflight::inspect_provider_error,
-    record::{StreamCancelledRecordInput, cancelled_record, record_stream_attempt, response_read_error_type},
+    record::{record_stream_attempt, response_read_error_type},
     status::{StreamEndReason, StreamStatus},
     terminal::StreamClientFailure,
     usage_parser::StreamUsageParser,
@@ -252,17 +253,10 @@ impl Drop for StreamRelay {
         if self.recorded_terminal || self.finished {
             return;
         }
-        self.stream_status
-            .set_end_reason(StreamEndReason::ClientGone, Some("client disconnected before stream completed".into()));
-        let record = cancelled_record(StreamCancelledRecordInput {
-            context: &self.context,
-            usage: self.usage,
-            status: &self.stream_status,
-            observability: self.cancelled_observability(),
-        });
+        let record = drop_record::drop_terminal_record(self);
         tokio::spawn(async move {
             if let Err(error) = record_stream_attempt(record).await {
-                hook_tracing::warn_with_fields!("failed to record cancelled streaming request candidate", error = error);
+                hook_tracing::warn_with_fields!("failed to record dropped streaming request candidate", error = error);
             }
         });
     }
