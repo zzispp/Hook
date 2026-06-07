@@ -45,7 +45,7 @@ export function ApiTokenTable(props: Props) {
 
   return (
     <>
-      <Scrollbar sx={{ width: '100%' }} slotProps={{ contentSx: { minWidth: tableMinWidth } }}>
+      <Scrollbar sx={{ width: 1, minWidth: 0 }}>
         <Table sx={{ minWidth: tableMinWidth }}>
           <ManagementTableHead head={tableHead} />
           <TableBody>
