@@ -5,8 +5,9 @@ use serde_json::json;
 use types::{
     pagination::{Page, PageRequest},
     recharge::{
-        PaymentCallbackListFilters, PaymentCallbackRecord, PaymentChannel, RECHARGE_ORDER_STATUS_PENDING, RECHARGE_PACKAGE_STATUS_ACTIVE, RechargeOrder,
-        RechargeOrderListFilters, RechargePackage, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageUpdatePayload,
+        PaymentCallbackListFilters, PaymentCallbackRecord, PaymentChannel, RECHARGE_ORDER_STATUS_EXPIRED, RECHARGE_ORDER_STATUS_PENDING,
+        RECHARGE_PACKAGE_STATUS_ACTIVE, RechargeOrder, RechargeOrderListFilters, RechargePackage, RechargePackageCreatePayload, RechargePackageListFilters,
+        RechargePackageUpdatePayload,
     },
     system_setting::SystemSettings,
 };
@@ -243,6 +244,18 @@ impl RechargeRepository for MemoryRechargeRepository {
         let order = order.clone();
         Ok(RechargePaymentSettlementResult { order, settled: true })
     }
+
+    async fn expire_pending_orders(&self, now: time::OffsetDateTime) -> RechargeResult<u64> {
+        let mut guard = self.state.lock().unwrap();
+        let mut expired = 0_u64;
+        for order in &mut guard.orders {
+            if expirable_order(order, now) {
+                order.status = RECHARGE_ORDER_STATUS_EXPIRED.into();
+                expired += 1;
+            }
+        }
+        Ok(expired)
+    }
 }
 
 impl Default for MemoryState {
@@ -342,6 +355,14 @@ fn apply_callback_update(callback: &mut PaymentCallbackRecord, input: PaymentCal
     callback.settled = input.settled;
     callback.error_message = input.error_message;
     callback.processed_at = Some(timestamp());
+}
+
+fn expirable_order(order: &RechargeOrder, now: time::OffsetDateTime) -> bool {
+    order.status == RECHARGE_ORDER_STATUS_PENDING && order_expires_at(order) <= now
+}
+
+fn order_expires_at(order: &RechargeOrder) -> time::OffsetDateTime {
+    time::OffsetDateTime::parse(&order.expires_at, &time::format_description::well_known::Rfc3339).expect("test recharge order expires_at must be RFC3339")
 }
 
 pub(super) fn timestamp() -> String {

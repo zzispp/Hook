@@ -48,6 +48,7 @@ pub trait RechargeRepository: Send + Sync + 'static {
     async fn sync_payment_channels(&self, registrations: &[PaymentChannelRegistration]) -> RechargeResult<()>;
     async fn get_system_settings(&self) -> RechargeResult<SystemSettings>;
     async fn settle_paid_order(&self, input: RechargePaymentSettlementRecord) -> RechargeResult<RechargePaymentSettlementResult>;
+    async fn expire_pending_orders(&self, now: time::OffsetDateTime) -> RechargeResult<u64>;
 }
 
 #[async_trait]
@@ -65,6 +66,7 @@ pub trait RechargeUseCase: Send + Sync + 'static {
     async fn update_payment_channel(&self, code: &str, input: PaymentChannelUpdatePayload) -> RechargeResult<types::recharge::PaymentChannel>;
     async fn handle_payment_callback(&self, request: RechargePaymentCallbackRequest) -> RechargeResult<RechargePaymentCallbackResult>;
     async fn poll_pending_payment_orders(&self, limit: u64) -> RechargeResult<RechargePaymentPollResult>;
+    async fn expire_pending_orders(&self) -> RechargeResult<u64>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

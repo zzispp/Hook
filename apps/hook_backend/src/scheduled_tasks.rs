@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 mod model_status;
 mod performance_monitoring;
+mod recharge;
 #[cfg(test)]
 mod tests;
 
@@ -16,11 +17,10 @@ use types::scheduler::ScheduledTaskConfigValueType;
 use self::{
     model_status::{ModelStatusCheckDispatchTask, ModelStatusRunsCleanupTask},
     performance_monitoring::{PerformanceMonitoringCleanupTask, PerformanceMonitoringSnapshotTask},
+    recharge::{RechargeOrderExpireTask, RechargePaymentPollTask},
 };
 use crate::{llm_proxy::LlmProxyCache, performance_monitoring_os::PerformanceOsCollector, proxy_cache_hooks::CachedApiTokenRepository};
 
-const RECHARGE_PAYMENT_POLL_INTERVAL_SECONDS: i64 = 60;
-const RECHARGE_PAYMENT_POLL_LIMIT: i64 = 50;
 const REQUEST_RECORD_STALE_SWEEP_INTERVAL_SECONDS: i64 = 300;
 const REQUEST_RECORD_STALE_PENDING_TIMEOUT_MINUTES: i64 = 10;
 const REQUEST_RECORD_STALE_STREAMING_TIMEOUT_MINUTES: i64 = 10;
@@ -28,13 +28,16 @@ const REQUEST_RECORD_STALE_STREAMING_TIMEOUT_MINUTES: i64 = 10;
 pub fn scheduler_registry(
     cache: LlmProxyCache,
     performance_os_collector: Arc<PerformanceOsCollector>,
-    recharge_service: Arc<dyn recharge::application::RechargeUseCase>,
+    recharge_service: Arc<dyn ::recharge::application::RechargeUseCase>,
     model_status_service: Arc<dyn ::model_status::application::ModelStatusUseCase>,
 ) -> SchedulerResult<SchedulerRegistry> {
     let mut registry = SchedulerRegistry::new();
     registry.register(ApiTokenCleanupTask { cache })?;
     registry.register(RequestRecordCleanupTask)?;
     registry.register(RequestRecordStaleSweepTask)?;
+    registry.register(RechargeOrderExpireTask {
+        recharge_service: recharge_service.clone(),
+    })?;
     registry.register(RechargePaymentPollTask { recharge_service })?;
     registry.register(PerformanceMonitoringSnapshotTask {
         os_collector: performance_os_collector,
@@ -55,11 +58,6 @@ struct RequestRecordCleanupTask;
 
 #[derive(Clone, Copy)]
 struct RequestRecordStaleSweepTask;
-
-#[derive(Clone)]
-struct RechargePaymentPollTask {
-    recharge_service: Arc<dyn recharge::application::RechargeUseCase>,
-}
 
 #[async_trait::async_trait]
 impl ScheduledTaskLifecycle for ApiTokenCleanupTask {
@@ -178,36 +176,6 @@ impl ScheduledTaskLifecycle for RequestRecordStaleSweepTask {
     }
 }
 
-#[async_trait::async_trait]
-impl ScheduledTaskLifecycle for RechargePaymentPollTask {
-    fn definition(&self) -> types::scheduler::ScheduledTaskDefinition {
-        task_definition(
-            "recharge_payment_poll",
-            "scheduledTasks.definitions.rechargePaymentPoll.name",
-            "scheduledTasks.definitions.rechargePaymentPoll.description",
-            RECHARGE_PAYMENT_POLL_INTERVAL_SECONDS,
-            serde_json::json!({
-                "limit": RECHARGE_PAYMENT_POLL_LIMIT
-            }),
-            integer_fields(&[("limit", "scheduledTasks.config.rechargePaymentPoll.limit", 1)]),
-        )
-    }
-
-    fn validate_config(&self, config: &TaskConfigValue) -> SchedulerResult<()> {
-        validate_positive_integer(config, "limit", 1)
-    }
-
-    async fn run(&self, _ctx: ScheduleTaskContext, config: TaskConfigValue) -> TaskResult {
-        let limit = integer_config(&config, "limit")?;
-        let limit = u64::try_from(limit).map_err(|_| SchedulerError::InvalidInput("limit must be greater than 0".into()))?;
-        let result = self.recharge_service.poll_pending_payment_orders(limit).await.map_err(recharge_error)?;
-        Ok(Some(format!(
-            "checked={}, paid={}, unsupported={}",
-            result.checked, result.paid, result.unsupported
-        )))
-    }
-}
-
 pub(super) fn integer_fields(items: &[(&str, &str, i64)]) -> Vec<types::scheduler::ScheduledTaskConfigField> {
     items
         .iter()
@@ -250,10 +218,6 @@ fn api_token_error(error: api_token::application::ApiTokenError) -> SchedulerErr
 }
 
 pub(super) fn storage_error(error: storage::StorageError) -> SchedulerError {
-    SchedulerError::Infrastructure(error.to_string())
-}
-
-fn recharge_error(error: recharge::application::RechargeError) -> SchedulerError {
     SchedulerError::Infrastructure(error.to_string())
 }
 

@@ -2143,6 +2143,10 @@
         "name": "Stale request record sweep",
         "description": "Mark active request records failed when their status has not advanced past the stale timeout."
       },
+      "rechargeOrderExpire": {
+        "name": "Recharge order expiration",
+        "description": "Regularly mark pending recharge orders expired after their expiration time."
+      },
       "rechargePaymentPoll": {
         "name": "Recharge payment polling",
         "description": "Regularly query unexpired pending recharge orders and settle them when the channel reports paid."
