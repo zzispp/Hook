@@ -242,7 +242,7 @@ pub(super) fn request_candidates_table() -> TableCreateStatement {
         .col(big_integer_null(RequestCandidates::FirstByteTimeMs))
         .col(string_len_null(RequestCandidates::ErrorType, 100))
         .col(text_null(RequestCandidates::ErrorMessage))
-        .col(string_len_null(RequestCandidates::ErrorCode, 120))
+        .col(text_null(RequestCandidates::ErrorCode))
         .col(string_len_null(RequestCandidates::ErrorParam, 160))
         .col(timestamp_tz(RequestCandidates::CreatedAt))
         .col(timestamp_tz_null(RequestCandidates::StartedAt))

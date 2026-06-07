@@ -1,8 +1,11 @@
+use std::sync::{Arc, Mutex};
+
 use rust_decimal::Decimal;
 use types::{model::PatchField, model::TieredPricingConfig};
 
 use super::{
-    AttemptCancelGuard, cancelled_after_upstream_response_record, cancelled_before_upstream_response_record, stream_candidate_watchdog_timeout_record,
+    AttemptCancelGuard, AttemptCancelHandle, AttemptCancelPhase, AttemptCancelShared, cancelled_after_upstream_response_record,
+    cancelled_before_upstream_response_record, stream_candidate_watchdog_timeout_record, take_cancel_phase,
 };
 use crate::llm_proxy::{
     audit::{AttemptAuditInput, request_billing_status},
@@ -14,6 +17,23 @@ fn disarm_keeps_guard_owned_by_caller() {
     fn accepts_shared_disarm(_: fn(&AttemptCancelGuard)) {}
 
     accepts_shared_disarm(AttemptCancelGuard::disarm);
+}
+
+#[test]
+fn armed_awaiting_terminal_guard_records_cancel_phase() {
+    let shared = cancel_shared(AttemptCancelPhase::AwaitingTerminal, true);
+
+    assert!(matches!(take_cancel_phase(&shared), Some(AttemptCancelPhase::AwaitingTerminal)));
+}
+
+#[test]
+fn disarmed_awaiting_terminal_guard_records_no_cancel_phase() {
+    let shared = cancel_shared(AttemptCancelPhase::AwaitingTerminal, true);
+    let handle = AttemptCancelHandle { shared: Arc::clone(&shared) };
+
+    handle.disarm();
+
+    assert!(take_cancel_phase(&shared).is_none());
 }
 
 #[test]
@@ -62,6 +82,10 @@ fn stream_candidate_watchdog_timeout_is_explicit_failed_record() {
     assert_eq!(input.error_type, Some("local_stream_candidate_watchdog_timeout"));
     assert_eq!(input.error_message, Some("stream candidate timed out before handoff completed"));
     assert_eq!(request_billing_status(&AttemptAuditInput::from(input), None), "void");
+}
+
+fn cancel_shared(phase: AttemptCancelPhase, armed: bool) -> Arc<Mutex<AttemptCancelShared>> {
+    Arc::new(Mutex::new(AttemptCancelShared { phase, armed }))
 }
 
 fn candidate() -> ProxyCandidate {

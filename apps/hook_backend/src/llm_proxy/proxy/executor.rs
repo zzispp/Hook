@@ -45,8 +45,9 @@ pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: Prepar
                 return Ok(response);
             }
             AttemptCandidateOutcome::FullResponse(args, attempt_cancel) => {
-                let response = transport::full_response(*args).await?;
+                let response = transport::full_response(*args).await;
                 attempt_cancel.disarm();
+                let response = response?;
                 affinity::remember(&state, candidate, prepared.cache_affinity_ttl_minutes).await?;
                 record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
                 return Ok(response);
@@ -294,8 +295,9 @@ async fn execute_stream_candidate_task(input: StreamAttemptTaskInput) -> Result<
             response,
             &mut last_failure,
         )
-        .await?;
+        .await;
         input.attempt_cancel.disarm();
+        let outcome = outcome?;
         return Ok(StreamAttemptTaskOutput {
             outcome,
             last_failure,
@@ -405,8 +407,9 @@ async fn handle_upstream_response(input: HandleUpstreamResponseInput<'_>) -> Res
             input.response,
             input.failures.0,
         )
-        .await?;
+        .await;
         input.attempt_cancel.disarm();
+        let outcome = outcome?;
         return Ok(outcome);
     }
     let outcome = success_response(SuccessResponseInput {
