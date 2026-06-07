@@ -15,11 +15,30 @@ COPY apps/hook_frontend apps/hook_frontend
 COPY apps/hook_backend/src/migration/defaults/i18n apps/hook_backend/src/migration/defaults/i18n
 RUN BUILD_STATIC_EXPORT=true pnpm --filter hook_frontend build
 
-FROM rust:1-bookworm AS backend
+FROM rust:1-bookworm AS backend-chef
 WORKDIR /app
-ARG TARGETOS
-ARG TARGETARCH
+ARG CARGO_CHEF_VERSION=0.1.77
 
+RUN --mount=type=cache,id=hook-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=hook-cargo-git,target=/usr/local/cargo/git,sharing=locked \
+    cargo install cargo-chef --locked --version "${CARGO_CHEF_VERSION}"
+
+FROM backend-chef AS backend-planner
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+COPY apps/hook_backend apps/hook_backend
+COPY crates crates
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM backend-chef AS backend-deps
+WORKDIR /app
+COPY --from=backend-planner /app/recipe.json recipe.json
+RUN --mount=type=cache,id=hook-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,id=hook-cargo-git,target=/usr/local/cargo/git,sharing=locked \
+    cargo chef cook --release --recipe-path recipe.json --package hook_backend --package user --bins
+
+FROM backend-deps AS backend
+WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY apps/hook_backend apps/hook_backend
 COPY crates crates
@@ -27,9 +46,7 @@ COPY --from=frontend /app/apps/hook_frontend/out apps/hook_frontend/out
 
 RUN --mount=type=cache,id=hook-cargo-registry,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,id=hook-cargo-git,target=/usr/local/cargo/git,sharing=locked \
-    --mount=type=cache,id=hook-target-${TARGETOS}-${TARGETARCH},target=/app/target,sharing=locked \
-    cargo build --release -p hook_backend \
-    && cargo build --release -p user --bin generate_password_hash \
+    cargo build --release --package hook_backend --package user --bins \
     && mkdir -p /app/dist-bin \
     && cp target/release/hook_backend /app/dist-bin/hook_backend \
     && cp target/release/generate_password_hash /app/dist-bin/generate_password_hash
