@@ -24,11 +24,14 @@ import { TicketCreateDialog } from './ticket-create-dialog';
 import { useTicketWorkspaceState } from './ticket-workspace-state';
 import { TicketStatusLabel, TicketPriorityLabel } from './operation-labels';
 
+const TICKET_EMPTY_STATE_MIN_HEIGHT = 160;
+
 const ticketPanelSx = {
   p: 2,
   width: { xs: 1, md: 360 },
   flexShrink: 0,
   display: 'flex',
+  flexDirection: 'column',
   overflow: { xs: 'visible', md: 'hidden' },
   minHeight: { md: 0 },
 };
@@ -62,6 +65,15 @@ const ticketPaginationSx = {
     ml: 0,
     flexShrink: 0,
   },
+};
+
+const ticketListEmptySx = {
+  minHeight: TICKET_EMPTY_STATE_MIN_HEIGHT,
+  flex: '1 1 auto',
+  alignItems: 'center',
+  justifyContent: 'center',
+  px: 2,
+  textAlign: 'center',
 };
 
 export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
@@ -117,10 +129,14 @@ export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
 }
 
 function TicketListPanel({ state }: { state: ReturnType<typeof useTicketWorkspaceState> }) {
+  const hasTickets = state.tickets.items.length > 0;
+  const showEmptyTickets = !state.tickets.isLoading && !hasTickets;
+
   return (
     <Card sx={ticketPanelSx}>
-      <Stack spacing={2} sx={{ width: 1, minHeight: { xs: 'auto', md: 0 } }}>
+      <Stack spacing={2} sx={{ width: 1, flex: '1 1 auto', minHeight: { xs: 'auto', md: 0 } }}>
         <TextField
+          fullWidth
           value={state.search}
           onChange={state.handleSearch}
           placeholder={state.t('operations.ticket.searchPlaceholder')}
@@ -134,16 +150,25 @@ function TicketListPanel({ state }: { state: ReturnType<typeof useTicketWorkspac
               onClick={() => state.selectTicket(ticket.id)}
             />
           ))}
+          {showEmptyTickets ? (
+            <Stack sx={ticketListEmptySx}>
+              <Typography variant="body2" color="text.secondary">
+                {state.t('common.noData')}
+              </Typography>
+            </Stack>
+          ) : null}
         </Stack>
-        <TablePaginationCustom
-          page={state.table.page}
-          count={state.tickets.total}
-          rowsPerPage={state.table.rowsPerPage}
-          rowsPerPageOptions={[]}
-          sx={ticketPaginationSx}
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
-          onPageChange={state.table.onChangePage}
-        />
+        {state.tickets.total > 0 ? (
+          <TablePaginationCustom
+            page={state.table.page}
+            count={state.tickets.total}
+            rowsPerPage={state.table.rowsPerPage}
+            rowsPerPageOptions={[]}
+            sx={ticketPaginationSx}
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
+            onPageChange={state.table.onChangePage}
+          />
+        ) : null}
       </Stack>
     </Card>
   );
