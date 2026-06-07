@@ -121,7 +121,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "api_token"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -642,7 +642,7 @@ checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
 name = "captcha"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -660,7 +660,7 @@ dependencies = [
 
 [[package]]
 name = "card_code"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -842,7 +842,7 @@ dependencies = [
 
 [[package]]
 name = "configuration"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "config",
  "constants",
@@ -884,7 +884,7 @@ dependencies = [
 
 [[package]]
 name = "constants"
-version = "1.0.0"
+version = "1.0.1"
 
 [[package]]
 name = "core-foundation-sys"
@@ -997,7 +997,7 @@ dependencies = [
 
 [[package]]
 name = "currency"
-version = "1.0.0"
+version = "1.0.1"
 
 [[package]]
 name = "darling"
@@ -1035,7 +1035,7 @@ dependencies = [
 
 [[package]]
 name = "dashboard"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -1317,7 +1317,7 @@ dependencies = [
 
 [[package]]
 name = "formats"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64",
  "http",
@@ -1490,7 +1490,7 @@ dependencies = [
 
 [[package]]
 name = "group"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -1611,7 +1611,7 @@ dependencies = [
 
 [[package]]
 name = "hook_backend"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "api_token",
  "async-trait",
@@ -1623,7 +1623,7 @@ dependencies = [
  "constants",
  "dashboard",
  "futures-util",
- "group 1.0.0",
+ "group 1.0.1",
  "hook_tracing",
  "i18n",
  "model",
@@ -1662,7 +1662,7 @@ dependencies = [
 
 [[package]]
 name = "hook_tracing"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "tracing",
  "tracing-subscriber",
@@ -1795,7 +1795,7 @@ dependencies = [
 
 [[package]]
 name = "i18n"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -2398,7 +2398,7 @@ dependencies = [
 
 [[package]]
 name = "model"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -2414,7 +2414,7 @@ dependencies = [
 
 [[package]]
 name = "model_status"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -2687,7 +2687,7 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
 name = "operations"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -2781,7 +2781,7 @@ checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 
 [[package]]
 name = "payment"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "md-5 0.10.6",
@@ -3028,7 +3028,7 @@ dependencies = [
 
 [[package]]
 name = "provider"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -3050,7 +3050,7 @@ dependencies = [
 
 [[package]]
 name = "proxy"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "formats",
  "serde_json",
@@ -3243,7 +3243,7 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "rbac"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -3261,7 +3261,7 @@ dependencies = [
 
 [[package]]
 name = "recharge"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -3365,7 +3365,7 @@ dependencies = [
 
 [[package]]
 name = "req"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "axum",
  "futures-util",
@@ -3618,7 +3618,7 @@ dependencies = [
 
 [[package]]
 name = "scheduler"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -3910,7 +3910,7 @@ dependencies = [
 
 [[package]]
 name = "setting"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -4303,7 +4303,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "storage"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "constants",
  "currency",
@@ -4829,7 +4829,7 @@ checksum = "40ce102ab67701b8526c123c1bab5cbe42d7040ccfd0f64af1a385808d2f43de"
 
 [[package]]
 name = "types"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "jiff",
  "payment",
@@ -4900,7 +4900,7 @@ dependencies = [
 
 [[package]]
 name = "user"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -4992,7 +4992,7 @@ dependencies = [
 
 [[package]]
 name = "wallet"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "async-trait",
  "axum",
