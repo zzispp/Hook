@@ -1,0 +1,4 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing worktree changes,DONE,Current branch diff and lifecycle paths are understood,git diff -- apps/hook_backend/src/llm_proxy/proxy,2026-06-07T00:00:00+08:00,0,Existing diff disarms guard after terminal writer future resolves and before propagating writer errors
+2,Patch non-stream terminal guard,DONE,Non-stream terminal record cannot be overwritten by guard after explicit terminal path,perl alarm cargo test -p hook_backend attempt_log,2026-06-07T00:00:00+08:00,0,Guard remains cancellation-capable while armed but disarm suppresses awaiting-terminal cancellation records
+3,Validate backend checks,DONE,Focused backend tests pass,perl alarm cargo test -p hook_backend llm_proxy::proxy && cargo check,2026-06-07T00:00:00+08:00,0,Proxy module tests passed 115 tests and cargo check passed

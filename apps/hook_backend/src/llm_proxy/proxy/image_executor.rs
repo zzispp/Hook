@@ -233,8 +233,9 @@ async fn handle_response(input: HandleResponseInput<'_>, response: req::Response
             response,
             input.last_failure,
         )
-        .await?;
+        .await;
         input.attempt_cancel.disarm();
+        let outcome = outcome?;
         return Ok(outcome);
     }
     let response = transport::full_response(transport::FullResponseArgs {
