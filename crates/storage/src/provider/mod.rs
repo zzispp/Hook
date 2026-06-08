@@ -14,6 +14,10 @@ mod request_candidate_query;
 mod request_record_cleanup;
 mod request_record_detail;
 mod request_record_filter;
+mod request_record_housekeeping;
+mod request_record_housekeeping_delete;
+mod request_record_housekeeping_payload;
+mod request_record_housekeeping_timeout;
 mod request_record_payload_codec;
 mod request_record_query;
 mod request_record_repository;
@@ -24,6 +28,7 @@ mod types;
 
 pub use repository::ProviderStore;
 pub use request_record_cleanup::StaleRequestRecordSweepResult;
+pub use request_record_housekeeping::{RequestRecordCleanupOptions, RequestRecordCleanupResult};
 pub use types::{
     BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyPriorityRecordPatch, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch,
     ProviderApiKeySecretRecord, ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,

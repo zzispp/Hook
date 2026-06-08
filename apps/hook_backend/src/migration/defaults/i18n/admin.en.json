@@ -2216,7 +2216,13 @@
     "config": {
       "requestRecordCleanup": {
         "recordRetentionDays": "Request record retention days",
-        "payloadRetentionDays": "Request payload retention days"
+        "payloadRetentionDays": "Request payload retention days",
+        "deleteBatchSize": "Delete batch size",
+        "compressBatchSize": "Payload compression batch size",
+        "maxRuntimeSeconds": "Maximum runtime seconds",
+        "batchSleepMs": "Batch sleep milliseconds",
+        "statementTimeoutSeconds": "Statement timeout seconds",
+        "lockTimeoutSeconds": "Lock timeout seconds"
       },
       "requestRecordStaleSweep": {
         "pendingTimeoutMinutes": "Pending request stale timeout minutes",

@@ -1,5 +1,6 @@
 use std::{collections::HashSet, sync::Arc, time::Duration};
 
+use sea_orm::{DbBackend, FromQueryResult, Statement, TransactionTrait};
 use storage::{
     Database,
     scheduler::{ScheduledTaskRunRecordInput, ScheduledTaskRunRecordPatch, ScheduledTaskRunStatus, SchedulerStore},
@@ -7,6 +8,11 @@ use storage::{
 use tokio::sync::Mutex;
 
 use crate::runtime::{ScheduleTaskContext, ScheduledTaskLifecycle, SchedulerError, SchedulerResult, TaskResult};
+
+const LOCAL_RUNNING_MESSAGE: &str = "task execution skipped because previous run is still active";
+const DATABASE_RUNNING_MESSAGE: &str = "task execution skipped because another scheduler instance is still active";
+const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+const FNV_PRIME: u64 = 0x100000001b3;
 
 pub async fn dispatch_task(
     store: &SchedulerStore,
@@ -17,7 +23,7 @@ pub async fn dispatch_task(
     config: serde_json::Value,
 ) -> SchedulerResult<()> {
     if is_running(running.clone(), code).await {
-        record_skipped(store, code).await?;
+        record_skipped(store, code, LOCAL_RUNNING_MESSAGE).await?;
         return Ok(());
     }
     spawn_task(store.clone(), running, code.to_owned(), task, database, config);
@@ -42,14 +48,14 @@ pub async fn mark_running(running: Arc<Mutex<HashSet<String>>>, code: &str, acti
     guard.remove(code);
 }
 
-async fn record_skipped(store: &SchedulerStore, code: &str) -> SchedulerResult<()> {
+async fn record_skipped(store: &SchedulerStore, code: &str, message: &str) -> SchedulerResult<()> {
     let started_at = time::OffsetDateTime::now_utc();
     let run_id = store
         .start_run(ScheduledTaskRunRecordInput {
             task_code: code.to_owned(),
             status: ScheduledTaskRunStatus::Running,
             started_at,
-            message: Some("task execution skipped because previous run is still active".into()),
+            message: Some(message.into()),
             error: None,
         })
         .await?;
@@ -59,7 +65,7 @@ async fn record_skipped(store: &SchedulerStore, code: &str) -> SchedulerResult<(
         status: ScheduledTaskRunStatus::SkippedRunning,
         finished_at,
         duration_ms,
-        message: Some("task execution skipped because previous run is still active".into()),
+        message: Some(message.into()),
         error: None,
     };
     store.finish_run(&run_id, patch.clone()).await?;
@@ -89,6 +95,17 @@ async fn execute_task_run(
     config: serde_json::Value,
 ) {
     mark_running(running.clone(), &code, true).await;
+    let lock = match acquire_task_lock(&database, &code).await {
+        Ok(Some(lock)) => lock,
+        Ok(None) => {
+            record_database_lock_skip(&store, &running, &code).await;
+            return;
+        }
+        Err(error) => {
+            record_startup_failure(&store, &running, &code, error).await;
+            return;
+        }
+    };
     let started_at = time::OffsetDateTime::now_utc();
     if let Err(error) = store.mark_task_started(&code, started_at).await {
         mark_running(running, &code, false).await;
@@ -110,7 +127,68 @@ async fn execute_task_run(
     if let Err(error) = store.update_task_last_run(&code, patch).await {
         hook_tracing::error("scheduler update last run failed", &error);
     }
+    if let Err(error) = lock.commit().await {
+        hook_tracing::error("scheduler advisory lock transaction commit failed", &error);
+    }
     mark_running(running, &code, false).await;
+}
+
+async fn record_database_lock_skip(store: &SchedulerStore, running: &Arc<Mutex<HashSet<String>>>, code: &str) {
+    if let Err(error) = record_skipped(store, code, DATABASE_RUNNING_MESSAGE).await {
+        hook_tracing::error("scheduler record database lock skip failed", &error);
+    }
+    mark_running(running.clone(), code, false).await;
+}
+
+async fn record_startup_failure(store: &SchedulerStore, running: &Arc<Mutex<HashSet<String>>>, code: &str, error: SchedulerError) {
+    if let Err(record_error) = record_failed(store, code, format!("scheduler startup failed: {error}")).await {
+        hook_tracing::error("scheduler record startup failure failed", &record_error);
+    }
+    mark_running(running.clone(), code, false).await;
+}
+
+async fn acquire_task_lock(database: &Database, code: &str) -> SchedulerResult<Option<sea_orm::DatabaseTransaction>> {
+    let tx = database.connection().begin().await.map_err(db_error)?;
+    if try_advisory_xact_lock(&tx, code).await? {
+        return Ok(Some(tx));
+    }
+    tx.rollback().await.map_err(db_error)?;
+    Ok(None)
+}
+
+async fn try_advisory_xact_lock(tx: &sea_orm::DatabaseTransaction, code: &str) -> SchedulerResult<bool> {
+    let row = AdvisoryLockRow::find_by_statement(lock_statement(code))
+        .one(tx)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(|| SchedulerError::Infrastructure("scheduler advisory lock query returned no rows".into()))?;
+    Ok(row.acquired)
+}
+
+fn db_error(error: sea_orm::DbErr) -> SchedulerError {
+    SchedulerError::Infrastructure(error.to_string())
+}
+
+fn lock_statement(code: &str) -> Statement {
+    Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        "SELECT pg_try_advisory_xact_lock($1) AS acquired",
+        vec![advisory_lock_key(code).into()],
+    )
+}
+
+fn advisory_lock_key(code: &str) -> i64 {
+    let mut hash = FNV_OFFSET_BASIS;
+    for byte in code.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash as i64
+}
+
+#[derive(Debug, FromQueryResult)]
+struct AdvisoryLockRow {
+    acquired: bool,
 }
 
 async fn start_task_run(store: &SchedulerStore, code: &str, started_at: time::OffsetDateTime) -> SchedulerResult<String> {
@@ -124,6 +202,22 @@ async fn start_task_run(store: &SchedulerStore, code: &str, started_at: time::Of
         })
         .await
         .map_err(Into::into)
+}
+
+async fn record_failed(store: &SchedulerStore, code: &str, error: String) -> SchedulerResult<()> {
+    let started_at = time::OffsetDateTime::now_utc();
+    let run_id = start_task_run(store, code, started_at).await?;
+    let finished_at = time::OffsetDateTime::now_utc();
+    let patch = ScheduledTaskRunRecordPatch {
+        status: ScheduledTaskRunStatus::Failed,
+        finished_at,
+        duration_ms: duration_millis(started_at, finished_at)?,
+        message: None,
+        error: Some(error),
+    };
+    store.finish_run(&run_id, patch.clone()).await?;
+    store.update_task_last_run(code, patch).await?;
+    Ok(())
 }
 
 fn finish_patch(result: TaskResult, started_at: time::OffsetDateTime) -> ScheduledTaskRunRecordPatch {
@@ -153,3 +247,7 @@ fn duration_millis(started_at: time::OffsetDateTime, finished_at: time::OffsetDa
         .try_into()
         .map_err(|_| SchedulerError::Infrastructure("task duration overflowed i64 milliseconds".into()))
 }
+
+#[cfg(test)]
+#[path = "worker_tests.rs"]
+mod worker_tests;

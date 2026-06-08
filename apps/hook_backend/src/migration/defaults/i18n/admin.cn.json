@@ -2216,7 +2216,13 @@
     "config": {
       "requestRecordCleanup": {
         "recordRetentionDays": "请求记录保留天数",
-        "payloadRetentionDays": "请求 payload 保留天数"
+        "payloadRetentionDays": "请求 payload 保留天数",
+        "deleteBatchSize": "删除批量大小",
+        "compressBatchSize": "Payload 压缩批量大小",
+        "maxRuntimeSeconds": "最大运行秒数",
+        "batchSleepMs": "批次间隔毫秒数",
+        "statementTimeoutSeconds": "SQL 执行超时秒数",
+        "lockTimeoutSeconds": "锁等待超时秒数"
       },
       "requestRecordStaleSweep": {
         "pendingTimeoutMinutes": "等待中请求超时分钟数",
