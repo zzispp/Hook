@@ -179,6 +179,8 @@ jobs:
           load: true
           push: false
           platforms: linux/amd64
+          build-args: |
+            RUST_BUILD_PROFILE=ci
           tags: ghcr.io/zzispp/hook:ci
           cache-from: type=gha,scope=ci-smoke
           cache-to: type=gha,mode=max,scope=ci-smoke
