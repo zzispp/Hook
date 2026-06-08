@@ -573,6 +573,7 @@ fn user_group_memberships_unique_index() -> IndexCreateStatement {
         .col(UserGroupMemberships::UserId)
         .col(UserGroupMemberships::UserGroupCode)
         .unique()
+        .if_not_exists()
         .to_owned()
 }
 
