@@ -126,7 +126,7 @@ fn sort_candidates(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
 }
 
 fn provider_allowed(provider: &ProviderSnapshot, input: &SchedulerInput) -> bool {
-    provider.is_active && ids_allow(&input.group_allowed_provider_ids, &provider.id) && ids_allow(&input.user_allowed_provider_ids, &provider.id)
+    provider.is_active && ids_allow(&input.user_allowed_provider_ids, &provider.id)
 }
 
 fn matching_model<'a>(provider: &'a ProviderSnapshot, input: &SchedulerInput) -> Option<&'a ModelBindingSnapshot> {
@@ -144,7 +144,14 @@ fn input_compatible(endpoint: &EndpointSnapshot, input: &SchedulerInput, provide
 }
 
 fn key_allowed(key: &KeySnapshot, input: &SchedulerInput) -> bool {
-    key.is_active && ids_allow(&input.group_allowed_provider_key_ids, &key.id)
+    key.is_active && key_in_group_scope(key, input)
+}
+
+fn key_in_group_scope(key: &KeySnapshot, input: &SchedulerInput) -> bool {
+    input
+        .group_allowed_provider_key_ids
+        .as_ref()
+        .is_none_or(|ids| ids.iter().any(|id| id == &key.id))
 }
 
 fn key_allowed_for_endpoint(key: &KeySnapshot, endpoint: &EndpointSnapshot, input: &SchedulerInput) -> bool {

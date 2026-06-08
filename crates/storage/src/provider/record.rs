@@ -10,13 +10,20 @@ pub mod entities;
 
 pub(crate) use crate::model::provider_models;
 pub use entities::{
-    billing_group_provider_keys, billing_group_providers, billing_rules, dimension_collectors, provider_api_keys, provider_cooldown_events, provider_cooldowns,
-    provider_endpoints, provider_model_costs, providers, request_candidates, request_records,
+    billing_group_provider_groups, billing_group_provider_key_groups, billing_group_provider_keys, billing_group_providers, billing_rules,
+    dimension_collectors, provider_api_keys, provider_cooldown_events, provider_cooldowns, provider_endpoints, provider_group_providers, provider_groups,
+    provider_key_group_keys, provider_key_groups, provider_model_costs, providers, request_candidates, request_records,
 };
 
 pub type ProviderRecord = providers::Model;
 pub type ProviderEndpointRecord = provider_endpoints::Model;
 pub type ProviderApiKeyRecord = provider_api_keys::Model;
+pub type ProviderGroupRecord = provider_groups::Model;
+pub type ProviderGroupProviderRecord = provider_group_providers::Model;
+pub type ProviderKeyGroupRecord = provider_key_groups::Model;
+pub type ProviderKeyGroupKeyRecord = provider_key_group_keys::Model;
+pub type BillingGroupProviderGroupRecord = billing_group_provider_groups::Model;
+pub type BillingGroupProviderKeyGroupRecord = billing_group_provider_key_groups::Model;
 pub type ProviderCooldownRecord = provider_cooldowns::Model;
 pub type ProviderCooldownEventRecord = provider_cooldown_events::Model;
 pub type ProviderModelRecord = provider_models::Model;

@@ -201,6 +201,10 @@ export const endpoints = {
   adminProviders: {
     list: '/api/admin/providers',
     byId: (id: string) => `/api/admin/providers/${id}`,
+    groups: '/api/admin/provider-groups',
+    groupById: (id: string) => `/api/admin/provider-groups/${id}`,
+    keyGroups: '/api/admin/provider-key-groups',
+    keyGroupById: (id: string) => `/api/admin/provider-key-groups/${id}`,
     cooldowns: '/api/admin/provider-cooldowns',
     releaseCooldown: (id: string) => `/api/admin/provider-cooldowns/${id}/release`,
     endpoints: (id: string) => `/api/admin/providers/${id}/endpoints`,

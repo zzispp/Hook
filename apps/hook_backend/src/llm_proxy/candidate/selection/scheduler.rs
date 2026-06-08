@@ -67,7 +67,6 @@ fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmPr
         group_code: args.group.code.clone(),
         group_is_active: args.group.is_active,
         group_allowed_model_ids: args.group.allowed_model_ids.clone(),
-        group_allowed_provider_ids: args.group.allowed_provider_ids.clone(),
         group_allowed_provider_key_ids: args.group.allowed_provider_key_ids.clone(),
         user_allowed_model_ids: args.user_access.map(|access| access.allowed_model_ids.clone()).unwrap_or_default(),
         user_allowed_provider_ids: args.user_access.map(|access| access.allowed_provider_ids.clone()).unwrap_or_default(),

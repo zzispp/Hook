@@ -1,10 +1,12 @@
 use storage::provider::{
-    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput,
-    ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderGroupRecordInput,
+    ProviderGroupRecordPatch, ProviderKeyGroupRecordInput, ProviderKeyGroupRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
+    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
 };
 use types::provider::{
-    ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderModelBindingBatchUpdate,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderUpdate,
+    ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroupCreate, ProviderGroupUpdate,
+    ProviderKeyGroupCreate, ProviderKeyGroupUpdate, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+    ProviderModelCostBatchUpsert, ProviderUpdate,
 };
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
@@ -114,6 +116,42 @@ pub(super) fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Opti
         time_range_start: input.time_range_start,
         time_range_end: input.time_range_end,
         is_active: input.is_active,
+    }
+}
+
+pub(super) fn provider_group_input(input: ProviderGroupCreate) -> ProviderGroupRecordInput {
+    ProviderGroupRecordInput {
+        name: input.name,
+        description: input.description,
+        sort_order: input.sort_order.unwrap_or(0),
+        provider_ids: input.provider_ids,
+    }
+}
+
+pub(super) fn provider_group_patch(input: ProviderGroupUpdate) -> ProviderGroupRecordPatch {
+    ProviderGroupRecordPatch {
+        name: input.name,
+        description: input.description,
+        sort_order: input.sort_order,
+        provider_ids: input.provider_ids,
+    }
+}
+
+pub(super) fn provider_key_group_input(input: ProviderKeyGroupCreate) -> ProviderKeyGroupRecordInput {
+    ProviderKeyGroupRecordInput {
+        name: input.name,
+        description: input.description,
+        sort_order: input.sort_order.unwrap_or(0),
+        provider_key_ids: input.provider_key_ids,
+    }
+}
+
+pub(super) fn provider_key_group_patch(input: ProviderKeyGroupUpdate) -> ProviderKeyGroupRecordPatch {
+    ProviderKeyGroupRecordPatch {
+        name: input.name,
+        description: input.description,
+        sort_order: input.sort_order,
+        provider_key_ids: input.provider_key_ids,
     }
 }
 

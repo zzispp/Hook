@@ -8,9 +8,8 @@ use common::{base_input, provider_a, provider_b, provider_with_gemini_low_priori
 use proxy::scheduler::{EndpointSnapshot, KeySnapshot, ModelBindingSnapshot, ProviderSnapshot};
 
 #[test]
-fn scheduler_filters_by_group_provider_endpoint_format_and_model() {
+fn scheduler_filters_by_endpoint_format_and_model() {
     let input = SchedulerInput {
-        group_allowed_provider_ids: vec!["provider-a".into()],
         providers: vec![provider_a(), provider_b()],
         ..base_input()
     };
@@ -53,7 +52,7 @@ fn scheduler_filters_by_user_provider_scope() {
 #[test]
 fn scheduler_filters_by_group_provider_key_scope() {
     let input = SchedulerInput {
-        group_allowed_provider_key_ids: vec!["key-a-2".into()],
+        group_allowed_provider_key_ids: Some(vec!["key-a-2".into()]),
         providers: vec![provider_with_two_keys()],
         ..base_input()
     };
@@ -63,6 +62,19 @@ fn scheduler_filters_by_group_provider_key_scope() {
     assert_eq!(candidates.len(), 1);
     assert_eq!(candidates[0].provider_id, "provider-a");
     assert_eq!(candidates[0].key_id, "key-a-2");
+}
+
+#[test]
+fn scheduler_rejects_empty_group_key_scope() {
+    let input = SchedulerInput {
+        group_allowed_provider_key_ids: Some(Vec::new()),
+        providers: vec![provider_a()],
+        ..base_input()
+    };
+
+    let error = CandidateBuilder::build(&input).unwrap_err();
+
+    assert_eq!(error, SchedulerError::NoModelCandidate { model: "gpt-4o-mini".into() });
 }
 
 #[test]

@@ -3,6 +3,7 @@
 import type { BillingGroup } from 'src/types/group';
 import type { UserGroup } from 'src/types/user-group';
 import type { UseTableReturn } from 'src/components/table';
+import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
 
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
@@ -30,6 +31,8 @@ import {
 export function BillingGroupTable({
   rows,
   userGroups,
+  providerGroups,
+  providerKeyGroups,
   total,
   loading,
   table,
@@ -39,6 +42,8 @@ export function BillingGroupTable({
 }: {
   rows: BillingGroup[];
   userGroups: UserGroup[];
+  providerGroups: ProviderGroup[];
+  providerKeyGroups: ProviderKeyGroup[];
   total: number;
   loading: boolean;
   table: UseTableReturn;
@@ -64,6 +69,8 @@ export function BillingGroupTable({
                     key={row.id}
                     row={row}
                     userGroups={userGroups}
+                    providerGroups={providerGroups}
+                    providerKeyGroups={providerKeyGroups}
                     onView={onView}
                     onEdit={onEdit}
                     onDelete={onDelete}
@@ -91,12 +98,16 @@ export function BillingGroupTable({
 function BillingGroupTableRow({
   row,
   userGroups,
+  providerGroups,
+  providerKeyGroups,
   onView,
   onEdit,
   onDelete,
 }: {
   row: BillingGroup;
   userGroups: UserGroup[];
+  providerGroups: ProviderGroup[];
+  providerKeyGroups: ProviderKeyGroup[];
   onView: (group: BillingGroup) => void;
   onEdit: (group: BillingGroup) => void;
   onDelete: (group: BillingGroup) => void;
@@ -114,8 +125,7 @@ function BillingGroupTableRow({
       <TableCell>{row.name}</TableCell>
       <TableCell>{row.billing_multiplier}</TableCell>
       <TableCell>{modelAccessText(row, t)}</TableCell>
-      <TableCell>{providerAccessText(row, t)}</TableCell>
-      <TableCell>{providerKeyAccessText(row, t)}</TableCell>
+      <TableCell>{accessScopeText(row, providerGroups, providerKeyGroups, t)}</TableCell>
       <TableCell>{userGroupSelectionLabel(row.visible_user_group_codes, userGroups, t)}</TableCell>
       <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
       <TableCell>{row.is_system ? t('common.system') : t('common.custom')}</TableCell>
@@ -189,8 +199,7 @@ function groupTableHead(t: (key: string, options?: Record<string, unknown>) => s
     { id: 'name', label: t('common.name') },
     { id: 'billing_multiplier', label: t('fields.billingMultiplier') },
     { id: 'allowed_model_ids', label: t('fields.allowedModels') },
-    { id: 'allowed_provider_ids', label: t('fields.allowedProviders') },
-    { id: 'allowed_provider_key_ids', label: t('fields.allowedProviderKeys') },
+    { id: 'access_scope', label: t('billingGroups.accessScope') },
     { id: 'visible_user_group_codes', label: t('fields.visibleUserGroups') },
     { id: 'status', label: t('common.status') },
     { id: 'system', label: t('common.system') },
@@ -205,14 +214,27 @@ function modelAccessText(group: BillingGroup, t: (key: string, options?: Record<
     : t('billingGroups.selectedModelCount', { count: group.allowed_model_ids.length });
 }
 
-function providerAccessText(group: BillingGroup, t: (key: string, options?: Record<string, unknown>) => string) {
-  return group.allowed_provider_ids.length === 0
-    ? t('billingGroups.allProviders')
-    : t('billingGroups.selectedProviderCount', { count: group.allowed_provider_ids.length });
+function accessScopeText(
+  group: BillingGroup,
+  providerGroups: ProviderGroup[],
+  providerKeyGroups: ProviderKeyGroup[],
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
+  if (group.allowed_provider_key_group_ids.length > 0) {
+    return groupNamesText(group.allowed_provider_key_group_ids, providerKeyGroups, t);
+  }
+  if (group.allowed_provider_group_ids.length > 0) {
+    return groupNamesText(group.allowed_provider_group_ids, providerGroups, t);
+  }
+  return t('billingGroups.accessModeUnrestricted');
 }
 
-function providerKeyAccessText(group: BillingGroup, t: (key: string, options?: Record<string, unknown>) => string) {
-  return group.allowed_provider_key_ids.length === 0
-    ? t('billingGroups.allProviderKeys')
-    : t('billingGroups.selectedProviderKeyCount', { count: group.allowed_provider_key_ids.length });
+function groupNamesText(
+  ids: string[],
+  groups: Array<ProviderGroup | ProviderKeyGroup>,
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
+  if (ids.length > 2) return t('billingGroups.selectedGroupCount', { count: ids.length });
+  const labels = new Map(groups.map((group) => [group.id, group.name]));
+  return ids.map((id) => labels.get(id) ?? id).join(', ');
 }

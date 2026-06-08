@@ -4,7 +4,7 @@ import type { Theme } from '@mui/material/styles';
 import type { BillingGroup } from 'src/types/group';
 import type { UserGroup } from 'src/types/user-group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { Provider, ProviderApiKey } from 'src/types/provider';
+import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -28,11 +28,13 @@ import { displayUserGroup } from './user-group-utils';
 
 const MAX_VISIBLE_ITEMS = 20;
 
+type NamedGroup = ProviderGroup | ProviderKeyGroup;
+
 type Props = {
   group: BillingGroup | null;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
-  providers: Pick<Provider, 'id' | 'name'>[];
-  providerKeysByProvider: Record<string, ProviderApiKey[]>;
+  providerGroups: ProviderGroup[];
+  providerKeyGroups: ProviderKeyGroup[];
   userGroups: UserGroup[];
   open: boolean;
   onClose: () => void;
@@ -41,8 +43,8 @@ type Props = {
 export function BillingGroupDetailDialog({
   group,
   models,
-  providers,
-  providerKeysByProvider,
+  providerGroups,
+  providerKeyGroups,
   userGroups,
   open,
   onClose,
@@ -58,40 +60,15 @@ export function BillingGroupDetailDialog({
           <Description group={group} />
           <Divider />
           <ModelSelectionSection group={group} models={models} />
-          <ProviderSelectionSection group={group} providers={providers} />
-          <ProviderKeySelectionSection
+          <AccessScopeSection
             group={group}
-            providers={providers}
-            providerKeysByProvider={providerKeysByProvider}
+            providerGroups={providerGroups}
+            providerKeyGroups={providerKeyGroups}
           />
           <UserGroupSelectionSection group={group} userGroups={userGroups} />
         </Stack>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function ProviderKeySelectionSection({
-  group,
-  providers,
-  providerKeysByProvider,
-}: {
-  group: BillingGroup;
-  providers: Pick<Provider, 'id' | 'name'>[];
-  providerKeysByProvider: Record<string, ProviderApiKey[]>;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <SelectionSection
-      title={t('fields.allowedProviderKeys')}
-      summaryLabel={
-        group.allowed_provider_key_ids.length === 0
-          ? t('billingGroups.allProviderKeys')
-          : undefined
-      }
-      items={namedProviderKeys(group, providers, providerKeysByProvider)}
-    />
   );
 }
 
@@ -102,17 +79,13 @@ function DialogHeader({ group, onClose }: { group: BillingGroup; onClose: () => 
     <DialogTitle sx={titleSx}>
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
-          <Typography variant="h6" noWrap>
-            {group.name}
-          </Typography>
+          <Typography variant="h6" noWrap>{group.name}</Typography>
           <Label color={group.is_active ? 'success' : 'default'} variant="soft">
             {group.is_active ? t('common.active') : t('common.disabled')}
           </Label>
           {group.is_system ? <Label variant="soft">{t('common.system')}</Label> : null}
         </Stack>
-        <Typography variant="caption" color="text.secondary" sx={codeSx}>
-          {group.code}
-        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={codeSx}>{group.code}</Typography>
       </Box>
       <Tooltip title={t('common.close')}>
         <IconButton onClick={onClose}>
@@ -125,7 +98,6 @@ function DialogHeader({ group, onClose }: { group: BillingGroup; onClose: () => 
 
 function Description({ group }: { group: BillingGroup }) {
   if (!group.description) return null;
-
   return (
     <Typography variant="body2" color="text.secondary">
       {group.description}
@@ -146,50 +118,11 @@ function SummaryGrid({ group }: { group: BillingGroup }) {
     <Box sx={summaryGridSx}>
       {items.map(([label, value]) => (
         <Stack key={label} spacing={0.5} sx={summaryItemSx}>
-          <Typography variant="caption" color="text.secondary">
-            {label}
-          </Typography>
-          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-            {value}
-          </Typography>
+          <Typography variant="caption" color="text.secondary">{label}</Typography>
+          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{value}</Typography>
         </Stack>
       ))}
     </Box>
-  );
-}
-
-function SelectionSection({
-  title,
-  summaryLabel,
-  items,
-}: {
-  title: string;
-  summaryLabel?: string;
-  items: string[];
-}) {
-  const visibleItems = items.slice(0, MAX_VISIBLE_ITEMS);
-  const hiddenCount = items.length - visibleItems.length;
-
-  return (
-    <Stack spacing={1}>
-      <Typography variant="subtitle2">{title}</Typography>
-      {summaryLabel ? (
-        <Typography variant="body2" color="text.secondary">
-          {summaryLabel}
-        </Typography>
-      ) : null}
-      <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75 }}>
-        {visibleItems.map((item) => (
-          <Chip key={`${title}-${item}`} size="small" label={item} />
-        ))}
-        {hiddenCount > 0 ? <Chip size="small" label={`+${hiddenCount}`} /> : null}
-        {!summaryLabel && visibleItems.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            -
-          </Typography>
-        ) : null}
-      </Stack>
-    </Stack>
   );
 }
 
@@ -211,22 +144,23 @@ function ModelSelectionSection({
   );
 }
 
-function ProviderSelectionSection({
+function AccessScopeSection({
   group,
-  providers,
+  providerGroups,
+  providerKeyGroups,
 }: {
   group: BillingGroup;
-  providers: Pick<Provider, 'id' | 'name'>[];
+  providerGroups: ProviderGroup[];
+  providerKeyGroups: ProviderKeyGroup[];
 }) {
   const { t } = useTranslate('admin');
+  const scope = accessScope(group, providerGroups, providerKeyGroups, t);
 
   return (
     <SelectionSection
-      title={t('fields.allowedProviders')}
-      summaryLabel={
-        group.allowed_provider_ids.length === 0 ? t('billingGroups.allProviders') : undefined
-      }
-      items={namedProviders(group, providers)}
+      title={t('billingGroups.accessScope')}
+      summaryLabel={scope.summaryLabel}
+      items={scope.items}
     />
   );
 }
@@ -248,9 +182,51 @@ function UserGroupSelectionSection({
           ? t('billingGroups.noVisibleUserGroups')
           : undefined
       }
-      items={namedUserGroups(group, userGroups)}
+      items={group.visible_user_group_codes.map((code) => displayUserGroup(code, userGroups))}
     />
   );
+}
+
+function SelectionSection({
+  title,
+  summaryLabel,
+  items,
+}: {
+  title: string;
+  summaryLabel?: string;
+  items: string[];
+}) {
+  const visibleItems = items.slice(0, MAX_VISIBLE_ITEMS);
+  const hiddenCount = items.length - visibleItems.length;
+
+  return (
+    <Stack spacing={1}>
+      <Typography variant="subtitle2">{title}</Typography>
+      {summaryLabel ? <Typography variant="body2" color="text.secondary">{summaryLabel}</Typography> : null}
+      <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75 }}>
+        {visibleItems.map((item) => <Chip key={`${title}-${item}`} size="small" label={item} />)}
+        {hiddenCount > 0 ? <Chip size="small" label={`+${hiddenCount}`} /> : null}
+        {!summaryLabel && visibleItems.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">-</Typography>
+        ) : null}
+      </Stack>
+    </Stack>
+  );
+}
+
+function accessScope(
+  group: BillingGroup,
+  providerGroups: ProviderGroup[],
+  providerKeyGroups: ProviderKeyGroup[],
+  t: (key: string) => string
+) {
+  if (group.allowed_provider_key_group_ids.length > 0) {
+    return { items: namedGroups(group.allowed_provider_key_group_ids, providerKeyGroups) };
+  }
+  if (group.allowed_provider_group_ids.length > 0) {
+    return { items: namedGroups(group.allowed_provider_group_ids, providerGroups) };
+  }
+  return { summaryLabel: t('billingGroups.accessModeUnrestricted'), items: [] };
 }
 
 function namedModels(
@@ -258,40 +234,13 @@ function namedModels(
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[]
 ) {
   const labels = new Map(models.map((model) => [model.id, model.display_name || model.name]));
-  if (group.allowed_model_ids.length === 0) {
-    return models.map((model) => model.display_name || model.name);
-  }
+  if (group.allowed_model_ids.length === 0) return models.map((model) => model.display_name || model.name);
   return group.allowed_model_ids.map((id) => labels.get(id) ?? id);
 }
 
-function namedProviders(group: BillingGroup, providers: Pick<Provider, 'id' | 'name'>[]) {
-  const labels = new Map(providers.map((provider) => [provider.id, provider.name]));
-  if (group.allowed_provider_ids.length === 0) {
-    return providers.map((provider) => provider.name);
-  }
-  return group.allowed_provider_ids.map((id) => labels.get(id) ?? id);
-}
-
-function namedProviderKeys(
-  group: BillingGroup,
-  providers: Pick<Provider, 'id' | 'name'>[],
-  providerKeysByProvider: Record<string, ProviderApiKey[]>
-): string[] {
-  const keys = providers.flatMap((provider) =>
-    (providerKeysByProvider[provider.id] ?? []).map((key) => [
-      key.id,
-      `${provider.name} / ${key.name}`,
-    ] as const)
-  );
-  const labels = new Map(keys);
-  if (group.allowed_provider_key_ids.length === 0) {
-    return Array.from(labels.values());
-  }
-  return group.allowed_provider_key_ids.map((id) => labels.get(id) ?? id);
-}
-
-function namedUserGroups(group: BillingGroup, userGroups: UserGroup[]) {
-  return group.visible_user_group_codes.map((code) => displayUserGroup(code, userGroups));
+function namedGroups(ids: string[], groups: NamedGroup[]) {
+  const labels = new Map(groups.map((group) => [group.id, group.name]));
+  return ids.map((id) => labels.get(id) ?? id);
 }
 
 function formatMultiplier(value: number) {

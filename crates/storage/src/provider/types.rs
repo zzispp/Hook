@@ -113,6 +113,38 @@ pub struct ProviderApiKeyPriorityRecordPatch {
     pub global_priority_by_format: BTreeMap<String, i32>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderGroupRecordInput {
+    pub name: String,
+    pub description: Option<String>,
+    pub sort_order: i64,
+    pub provider_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ProviderGroupRecordPatch {
+    pub name: Option<String>,
+    pub description: PatchField<String>,
+    pub sort_order: Option<i64>,
+    pub provider_ids: PatchField<Vec<String>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderKeyGroupRecordInput {
+    pub name: String,
+    pub description: Option<String>,
+    pub sort_order: i64,
+    pub provider_key_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ProviderKeyGroupRecordPatch {
+    pub name: Option<String>,
+    pub description: PatchField<String>,
+    pub sort_order: Option<i64>,
+    pub provider_key_ids: PatchField<Vec<String>>,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderModelRecordInput {
     pub provider_id: String,

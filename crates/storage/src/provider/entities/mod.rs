@@ -1,3 +1,5 @@
+pub mod billing_group_provider_groups;
+pub mod billing_group_provider_key_groups;
 pub mod billing_group_provider_keys;
 pub mod billing_group_providers;
 pub mod billing_rules;
@@ -6,6 +8,10 @@ pub mod provider_api_keys;
 pub mod provider_cooldown_events;
 pub mod provider_cooldowns;
 pub mod provider_endpoints;
+pub mod provider_group_providers;
+pub mod provider_groups;
+pub mod provider_key_group_keys;
+pub mod provider_key_groups;
 pub mod provider_model_costs;
 pub mod providers;
 pub mod request_candidates;

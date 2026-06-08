@@ -3,7 +3,7 @@ use sea_orm_migration::prelude::*;
 use super::iden::*;
 
 pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
-    vec![
+    let mut indices = vec![
         index("index_users_by_username", Users::Table, Users::Username, true),
         index("index_users_by_email", Users::Table, Users::Email, true),
         index("index_users_by_affiliate_code", Users::Table, Users::AffiliateCode, true),
@@ -441,7 +441,9 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             ModelStatusCheckHourlyStats::CheckId,
             ModelStatusCheckHourlyStats::BucketStartedAt,
         ),
-    ]
+    ];
+    indices.extend(super::provider_group_indices::provider_group_indices());
+    indices
 }
 
 fn provider_models_unique_index() -> IndexCreateStatement {
