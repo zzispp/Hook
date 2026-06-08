@@ -20,6 +20,13 @@ export type KeyPrioritySource = 'internal' | 'global';
 
 export type PriorityItemsByFormat = Record<string, PriorityItem[]>;
 
+type KeyPriorityCandidate = {
+  provider: Provider;
+  key: ProviderApiKey;
+  priority: number;
+  item: PriorityItem;
+};
+
 export function orderProviders(providers: Provider[]): PriorityItem[] {
   return [...providers]
     .sort((left, right) => left.priority - right.priority || left.name.localeCompare(right.name))
@@ -38,18 +45,10 @@ export function orderKeys(
   prioritySource: KeyPrioritySource,
   apiFormat: string
 ): PriorityItem[] {
-  return [...providers]
-    .sort((left, right) => left.priority - right.priority || left.name.localeCompare(right.name))
-    .flatMap((provider) =>
-      [...(keysByProvider[provider.id] ?? [])]
-        .filter((key) => key.api_formats.includes(apiFormat))
-        .sort(
-          (left, right) =>
-            keyPriority(left, prioritySource, apiFormat) -
-              keyPriority(right, prioritySource, apiFormat) || left.name.localeCompare(right.name)
-        )
-        .map((key) => keyPriorityItem(provider, key, prioritySource, apiFormat))
-    );
+  return providers
+    .flatMap((provider) => keyPriorityCandidates(provider, keysByProvider, prioritySource, apiFormat))
+    .sort(compareKeyPriorityCandidates)
+    .map((candidate) => candidate.item);
 }
 
 export function orderKeysByFormat(
@@ -83,6 +82,34 @@ function keyPriorityItem(
     priority,
     priorityText: String(priority),
   };
+}
+
+function keyPriorityCandidates(
+  provider: Provider,
+  keysByProvider: Record<string, ProviderApiKey[]>,
+  prioritySource: KeyPrioritySource,
+  apiFormat: string
+): KeyPriorityCandidate[] {
+  return (keysByProvider[provider.id] ?? [])
+    .filter((key) => key.api_formats.includes(apiFormat))
+    .map((key) => {
+      const priority = keyPriority(key, prioritySource, apiFormat);
+      return {
+        provider,
+        key,
+        priority,
+        item: keyPriorityItem(provider, key, prioritySource, apiFormat),
+      };
+    });
+}
+
+function compareKeyPriorityCandidates(left: KeyPriorityCandidate, right: KeyPriorityCandidate) {
+  return (
+    left.priority - right.priority ||
+    left.provider.priority - right.provider.priority ||
+    left.provider.id.localeCompare(right.provider.id) ||
+    left.key.id.localeCompare(right.key.id)
+  );
 }
 
 function keyPriority(key: ProviderApiKey, prioritySource: KeyPrioritySource, apiFormat: string) {
