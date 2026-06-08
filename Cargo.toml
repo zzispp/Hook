@@ -30,6 +30,13 @@ members = [
 ]
 resolver = "3"
 
+[profile.ci]
+inherits = "release"
+opt-level = 0
+debug = 0
+codegen-units = 256
+incremental = false
+
 [workspace.package]
 version = "1.0.2"
 edition = "2024"
