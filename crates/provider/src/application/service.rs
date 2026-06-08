@@ -1,11 +1,5 @@
 use async_trait::async_trait;
-use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
-    ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
-    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate,
-    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
-};
+use types::provider::*;
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
 
@@ -13,21 +7,29 @@ mod key_endpoint_scope;
 mod key_permissions;
 mod model_bindings;
 mod model_costs;
+mod provider_core;
+mod provider_groups;
 mod request_queries;
+mod upstream_models;
 
 use key_endpoint_scope::ensure_api_formats_bound;
 use key_permissions::ensure_allowed_models_bound;
 use model_bindings::{prepare_model_binding_batch_update, prepare_model_binding_create};
 use model_costs::{ensure_model_cost_delete_scope, ensure_model_cost_scope};
+use provider_core::{ensure_provider, prepare_provider_create, prepare_provider_list_request};
+use provider_groups::{
+    prepare_provider_group_create, prepare_provider_group_list_request, prepare_provider_group_update, prepare_provider_key_group_create,
+    prepare_provider_key_group_update,
+};
 use request_queries::{
     sanitize_active_request_record_request, sanitize_provider_cooldown_request, validate_provider_cooldown_request, validate_request_record_list_request,
 };
+use upstream_models::{FetchUpstreamModels, fetch_upstream_models};
 
 use super::validation::{
-    sanitize_api_key, sanitize_api_key_update, sanitize_create, sanitize_endpoint, sanitize_endpoint_update, sanitize_list_request,
-    sanitize_model_binding_update, sanitize_model_cost_batch, sanitize_update, validate_api_key, validate_api_key_priority_batch, validate_api_key_update,
-    validate_create, validate_endpoint, validate_endpoint_update, validate_list_request, validate_model_binding_update, validate_model_cost_batch,
-    validate_update,
+    sanitize_api_key, sanitize_api_key_update, sanitize_endpoint, sanitize_endpoint_update, sanitize_model_binding_update, sanitize_model_cost_batch,
+    sanitize_update, validate_api_key, validate_api_key_priority_batch, validate_api_key_update, validate_endpoint, validate_endpoint_update,
+    validate_model_binding_update, validate_model_cost_batch, validate_update,
 };
 
 pub struct ProviderService<R, M, C, F> {
@@ -63,9 +65,7 @@ where
     F: UpstreamModelFetcher,
 {
     async fn create_provider(&self, input: ProviderCreate) -> ProviderResult<Provider> {
-        let input = sanitize_create(input);
-        validate_create(&input)?;
-        reject_duplicate_provider(&self.repository, &input.name).await?;
+        let input = prepare_provider_create(&self.repository, input).await?;
         self.repository.create_provider(input).await
     }
 
@@ -84,37 +84,82 @@ where
     }
 
     async fn list_providers(&self, request: ProviderListRequest) -> ProviderResult<ProviderListResponse> {
-        let request = sanitize_list_request(request);
-        validate_list_request(&request)?;
+        let request = prepare_provider_list_request(request)?;
         self.repository.list_providers(request).await
     }
 
+    async fn create_provider_group(&self, input: ProviderGroupCreate) -> ProviderResult<ProviderGroup> {
+        let input = prepare_provider_group_create(&self.repository, input).await?;
+        self.repository.create_provider_group(input).await
+    }
+
+    async fn update_provider_group(&self, id: &str, input: ProviderGroupUpdate) -> ProviderResult<ProviderGroup> {
+        let input = prepare_provider_group_update(&self.repository, id, input).await?;
+        self.repository.update_provider_group(id, input).await
+    }
+
+    async fn delete_provider_group(&self, id: &str) -> ProviderResult<()> {
+        self.repository.delete_provider_group(id).await
+    }
+
+    async fn get_provider_group(&self, id: &str) -> ProviderResult<ProviderGroup> {
+        self.repository.find_provider_group(id).await?.ok_or(ProviderError::NotFound)
+    }
+
+    async fn list_provider_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderGroupListResponse> {
+        let request = prepare_provider_group_list_request(request)?;
+        self.repository.list_provider_groups(request).await
+    }
+
+    async fn create_provider_key_group(&self, input: ProviderKeyGroupCreate) -> ProviderResult<ProviderKeyGroup> {
+        let input = prepare_provider_key_group_create(&self.repository, input).await?;
+        self.repository.create_provider_key_group(input).await
+    }
+
+    async fn update_provider_key_group(&self, id: &str, input: ProviderKeyGroupUpdate) -> ProviderResult<ProviderKeyGroup> {
+        let input = prepare_provider_key_group_update(&self.repository, id, input).await?;
+        self.repository.update_provider_key_group(id, input).await
+    }
+
+    async fn delete_provider_key_group(&self, id: &str) -> ProviderResult<()> {
+        self.repository.delete_provider_key_group(id).await
+    }
+
+    async fn get_provider_key_group(&self, id: &str) -> ProviderResult<ProviderKeyGroup> {
+        self.repository.find_provider_key_group(id).await?.ok_or(ProviderError::NotFound)
+    }
+
+    async fn list_provider_key_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse> {
+        let request = prepare_provider_group_list_request(request)?;
+        self.repository.list_provider_key_groups(request).await
+    }
+
     async fn create_endpoint(&self, provider_id: &str, input: ProviderEndpointCreate) -> ProviderResult<ProviderEndpoint> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         let input = sanitize_endpoint(input);
         validate_endpoint(&input)?;
         self.repository.create_endpoint(provider_id, input).await
     }
 
     async fn update_endpoint(&self, provider_id: &str, endpoint_id: &str, input: ProviderEndpointUpdate) -> ProviderResult<ProviderEndpoint> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         let input = sanitize_endpoint_update(input);
         validate_endpoint_update(&input)?;
         self.repository.update_endpoint(provider_id, endpoint_id, input).await
     }
 
     async fn delete_endpoint(&self, provider_id: &str, endpoint_id: &str) -> ProviderResult<()> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         self.repository.delete_endpoint(provider_id, endpoint_id).await
     }
 
     async fn list_endpoints(&self, provider_id: &str) -> ProviderResult<Vec<ProviderEndpoint>> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         self.repository.list_endpoints(provider_id).await
     }
 
     async fn create_api_key(&self, provider_id: &str, input: ProviderApiKeyCreate) -> ProviderResult<ProviderApiKey> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         let input = sanitize_api_key(input);
         validate_api_key(&input)?;
         ensure_api_formats_bound(&self.repository, provider_id, &input.api_formats).await?;
@@ -124,39 +169,23 @@ where
     }
 
     async fn list_api_keys(&self, provider_id: &str) -> ProviderResult<Vec<ProviderApiKey>> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         self.repository.list_api_keys(provider_id).await
     }
 
     async fn fetch_upstream_models(&self, provider_id: &str) -> ProviderResult<ProviderUpstreamModelsResponse> {
-        self.ensure_provider(provider_id).await?;
-        let endpoints = active_endpoints(self.repository.list_endpoints(provider_id).await?);
-        if endpoints.is_empty() {
-            return Err(ProviderError::InvalidInput("provider has no active endpoint".into()));
-        }
-        let keys = active_api_key_secrets(self.repository.list_api_key_secrets(provider_id).await?);
-        if keys.is_empty() {
-            return Err(ProviderError::InvalidInput("provider has no active API key".into()));
-        }
-
-        let mut errors = Vec::new();
-        for endpoint in endpoints {
-            for key in keys.iter().filter(|key| key_supports_endpoint(key, &endpoint.api_format)) {
-                let decrypted = self.cipher.decrypt_provider_key(&key.encrypted_api_key)?;
-                match self.fetcher.fetch_upstream_models(&endpoint, &decrypted).await {
-                    Ok(response) => return Ok(response),
-                    Err(error) => errors.push(format!("{} / {}: {error}", endpoint.api_format, key.name)),
-                }
-            }
-        }
-        Err(ProviderError::Infrastructure(format!(
-            "failed to fetch upstream models: {}",
-            errors.join(" | ")
-        )))
+        ensure_provider(&self.repository, provider_id).await?;
+        fetch_upstream_models(FetchUpstreamModels {
+            repository: &self.repository,
+            cipher: &self.cipher,
+            fetcher: &self.fetcher,
+            provider_id,
+        })
+        .await
     }
 
     async fn update_api_key(&self, provider_id: &str, key_id: &str, input: ProviderApiKeyUpdate) -> ProviderResult<ProviderApiKey> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         let input = sanitize_api_key_update(input);
         validate_api_key_update(&input)?;
         if let Some(api_formats) = &input.api_formats {
@@ -175,7 +204,7 @@ where
     }
 
     async fn delete_api_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<()> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         self.repository.delete_api_key(provider_id, key_id).await
     }
 
@@ -190,29 +219,29 @@ where
     }
 
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         self.repository.list_model_bindings(provider_id).await
     }
 
     async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         let input = sanitize_model_binding_update(input);
         validate_model_binding_update(&input)?;
         self.repository.update_model_binding(provider_id, model_id, input).await
     }
 
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         self.repository.delete_model_binding(provider_id, model_id).await
     }
 
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         self.repository.list_model_costs(provider_id).await
     }
 
     async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         let input = sanitize_model_cost_batch(input);
         validate_model_cost_batch(&input)?;
         ensure_model_cost_scope(&self.repository, provider_id, key_id, &input).await?;
@@ -220,7 +249,7 @@ where
     }
 
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {
-        self.ensure_provider(provider_id).await?;
+        ensure_provider(&self.repository, provider_id).await?;
         ensure_model_cost_delete_scope(&self.repository, provider_id, key_id, provider_model_id).await?;
         self.repository.delete_model_cost(provider_id, key_id, provider_model_id).await
     }
@@ -262,40 +291,4 @@ where
         }
         self.repository.release_provider_cooldown(provider_id).await
     }
-}
-
-impl<R, M, C, F> ProviderService<R, M, C, F>
-where
-    R: ProviderRepository,
-    M: GlobalModelCatalog,
-    C: SecretCipher,
-    F: UpstreamModelFetcher,
-{
-    async fn ensure_provider(&self, provider_id: &str) -> ProviderResult<()> {
-        self.repository.find_provider(provider_id).await?.ok_or(ProviderError::NotFound)?;
-        Ok(())
-    }
-}
-
-async fn reject_duplicate_provider<R>(repository: &R, name: &str) -> ProviderResult<()>
-where
-    R: ProviderRepository,
-{
-    if repository.find_provider(name).await?.is_some() {
-        return Err(ProviderError::Conflict(format!("provider already exists: {name}")));
-    }
-    Ok(())
-}
-
-fn active_endpoints(endpoints: Vec<ProviderEndpoint>) -> Vec<ProviderEndpoint> {
-    endpoints.into_iter().filter(|endpoint| endpoint.is_active).collect()
-}
-
-fn active_api_key_secrets(mut keys: Vec<crate::application::ProviderApiKeySecret>) -> Vec<crate::application::ProviderApiKeySecret> {
-    keys.retain(|key| key.is_active);
-    keys
-}
-
-fn key_supports_endpoint(key: &crate::application::ProviderApiKeySecret, api_format: &str) -> bool {
-    key.api_formats.iter().any(|format| format == api_format)
 }

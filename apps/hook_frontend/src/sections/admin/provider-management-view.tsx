@@ -17,6 +17,7 @@ import { ConfirmDialog } from 'src/components/custom-dialog';
 
 import { ProviderTable } from './provider-table';
 import { ProviderFormDialog } from './provider-form-dialog';
+import { ProviderGroupsCard } from './provider-groups-card';
 import { ProviderModelDialog } from './provider-model-dialog';
 import { ProviderApiKeyDialog } from './provider-api-key-dialog';
 import { ProviderBindingsPanel } from './provider-bindings-panel';
@@ -27,6 +28,7 @@ import { ProviderPriorityDialog } from './provider-priority-dialog';
 import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
 import { useProviderManagementState } from './provider-management-page-state';
 import { ProviderCooldownPolicyDialog } from './provider-cooldown-policy-dialog';
+import { ProviderGroupAssociationDialog } from './provider-group-association-dialog';
 
 export function ProviderManagementView() {
   const state = useProviderManagementState();
@@ -37,6 +39,7 @@ export function ProviderManagementView() {
       <ProviderTabs state={state} />
       {state.errorMessage ? <ErrorAlert message={state.errorMessage} /> : null}
       {state.tab === 'providers' ? <ProviderTableCard state={state} /> : null}
+      {state.tab === 'groups' ? <ProviderGroupsCardWrapper state={state} /> : null}
       {state.tab === 'cooldowns' ? <ProviderCooldownCard state={state} /> : null}
       <ProviderDialogs state={state} />
     </DashboardContent>
@@ -44,8 +47,15 @@ export function ProviderManagementView() {
 }
 
 function ProviderHeader({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
-  const loading = state.tab === 'providers' ? state.providers.isLoading : state.cooldowns.isLoading;
-  const refresh = state.tab === 'providers' ? state.providers.refresh : state.cooldowns.refresh;
+  const loading =
+    (state.tab === 'providers' && state.providers.isLoading) ||
+    (state.tab === 'groups' && (state.providerGroups.isLoading || state.providerKeyGroups.isLoading)) ||
+    (state.tab === 'cooldowns' && state.cooldowns.isLoading);
+  const refresh = state.tab === 'providers'
+    ? state.providers.refresh
+    : state.tab === 'groups'
+      ? state.refreshProviderGroups
+      : state.cooldowns.refresh;
 
   return (
     <AdminBreadcrumbs
@@ -53,7 +63,9 @@ function ProviderHeader({ state }: { state: ReturnType<typeof useProviderManagem
       action={
         <Stack direction="row" spacing={1}>
           <RefreshButton loading={loading} onClick={() => void refresh()} />
-          <AddButton onClick={state.dialog.openCreate}>{state.t('actions.addProvider')}</AddButton>
+          {state.tab === 'providers' ? (
+            <AddButton onClick={state.dialog.openCreate}>{state.t('actions.addProvider')}</AddButton>
+          ) : null}
         </Stack>
       }
     />
@@ -64,6 +76,7 @@ function ProviderTabs({ state }: { state: ReturnType<typeof useProviderManagemen
   return (
     <Tabs value={state.tab} onChange={(_event, next: ProviderTab) => state.setTab(next)} sx={{ mb: 3 }}>
       <Tab value="providers" label={state.t('providers.providerListTab')} />
+      <Tab value="groups" label={state.t('providers.groupsTab')} />
       <Tab value="cooldowns" label={state.t('providers.cooldownsTab')} />
     </Tabs>
   );
@@ -82,6 +95,7 @@ function ProviderTableCard({ state }: { state: ReturnType<typeof useProviderMana
       />
       <ProviderTable
         rows={state.providers.items}
+        groups={state.providerGroups.items}
         total={state.providers.total}
         loading={state.providers.isLoading}
         table={state.table}
@@ -89,8 +103,20 @@ function ProviderTableCard({ state }: { state: ReturnType<typeof useProviderMana
         onSelect={state.openProviderBindings}
         onEdit={state.dialog.openEdit}
         onDelete={state.deleteDialog.setDeleteTarget}
+        onAssociateGroups={state.providerGroupAssociation.openForProvider}
       />
     </Card>
+  );
+}
+
+function ProviderGroupsCardWrapper({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
+  return (
+    <ProviderGroupsCard
+      providerGroups={state.providerGroups}
+      providerKeyGroups={state.providerKeyGroups}
+      providers={state.priorityProviders.items}
+      keysByProvider={state.priorityKeys.itemsByProvider}
+    />
   );
 }
 
@@ -132,8 +158,32 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
         open={state.bindingsOpen}
         provider={state.selectedProvider}
         models={state.models.items}
+        providerKeyGroups={state.providerKeyGroups.items}
         dialogs={state.childDialogs}
+        onAssociateKeyGroups={state.providerKeyGroupAssociation.openForKey}
         onClose={state.closeProviderBindings}
+      />
+      <ProviderGroupAssociationDialog
+        kind="provider"
+        open={state.providerGroupAssociation.open}
+        targetName={state.providerGroupAssociation.target?.name ?? ''}
+        groups={state.providerGroups.items}
+        selectedIds={state.providerGroupAssociation.selectedIds}
+        submitting={state.providerGroupAssociation.submitting}
+        onClose={state.providerGroupAssociation.close}
+        onSubmit={state.providerGroupAssociation.submit}
+        onSelectedIdsChange={state.providerGroupAssociation.setSelectedIds}
+      />
+      <ProviderGroupAssociationDialog
+        kind="key"
+        open={state.providerKeyGroupAssociation.open}
+        targetName={state.providerKeyGroupAssociation.target?.name ?? ''}
+        groups={state.providerKeyGroups.items}
+        selectedIds={state.providerKeyGroupAssociation.selectedIds}
+        submitting={state.providerKeyGroupAssociation.submitting}
+        onClose={state.providerKeyGroupAssociation.close}
+        onSubmit={state.providerKeyGroupAssociation.submit}
+        onSelectedIdsChange={state.providerKeyGroupAssociation.setSelectedIds}
       />
       <ProviderEndpointDialog dialogs={state.childDialogs} provider={state.selectedProvider} />
       <ProviderApiKeyDialog

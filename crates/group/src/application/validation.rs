@@ -16,8 +16,8 @@ pub fn sanitize_create(input: BillingGroupCreate) -> BillingGroupCreate {
         name: input.name.trim().to_owned(),
         description: input.description.and_then(trim_optional),
         allowed_model_ids: normalize_ids(input.allowed_model_ids),
-        allowed_provider_ids: normalize_ids(input.allowed_provider_ids),
-        allowed_provider_key_ids: normalize_ids(input.allowed_provider_key_ids),
+        allowed_provider_group_ids: normalize_ids(input.allowed_provider_group_ids),
+        allowed_provider_key_group_ids: normalize_ids(input.allowed_provider_key_group_ids),
         ..input
     }
 }
@@ -27,8 +27,8 @@ pub fn sanitize_update(input: BillingGroupUpdate) -> BillingGroupUpdate {
         name: input.name.map(|value| value.trim().to_owned()),
         description: sanitize_patch_string(input.description),
         allowed_model_ids: sanitize_id_patch(input.allowed_model_ids),
-        allowed_provider_ids: sanitize_id_patch(input.allowed_provider_ids),
-        allowed_provider_key_ids: sanitize_id_patch(input.allowed_provider_key_ids),
+        allowed_provider_group_ids: sanitize_id_patch(input.allowed_provider_group_ids),
+        allowed_provider_key_group_ids: sanitize_id_patch(input.allowed_provider_key_group_ids),
         ..input
     }
 }
@@ -39,8 +39,9 @@ pub fn validate_create(input: &BillingGroupCreate) -> GroupResult<()> {
     validate_description(input.description.as_deref())?;
     validate_multiplier(input.billing_multiplier)?;
     validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
-    validate_ids("allowed_provider_ids", &input.allowed_provider_ids)?;
-    validate_ids("allowed_provider_key_ids", &input.allowed_provider_key_ids)
+    validate_ids("allowed_provider_group_ids", &input.allowed_provider_group_ids)?;
+    validate_ids("allowed_provider_key_group_ids", &input.allowed_provider_key_group_ids)?;
+    validate_access_mode(&input.allowed_provider_group_ids, &input.allowed_provider_key_group_ids)
 }
 
 pub fn validate_update(input: &BillingGroupUpdate) -> GroupResult<()> {
@@ -55,8 +56,8 @@ pub fn validate_update(input: &BillingGroupUpdate) -> GroupResult<()> {
         validate_multiplier(multiplier)?;
     }
     validate_id_patch("allowed_model_ids", &input.allowed_model_ids)?;
-    validate_id_patch("allowed_provider_ids", &input.allowed_provider_ids)?;
-    validate_id_patch("allowed_provider_key_ids", &input.allowed_provider_key_ids)?;
+    validate_id_patch("allowed_provider_group_ids", &input.allowed_provider_group_ids)?;
+    validate_id_patch("allowed_provider_key_group_ids", &input.allowed_provider_key_group_ids)?;
     Ok(())
 }
 
@@ -118,6 +119,15 @@ fn validate_id_patch(field: &str, patch: &types::model::PatchField<Vec<String>>)
 fn validate_ids(field: &str, values: &[String]) -> GroupResult<()> {
     if values.iter().any(|value| value.trim().is_empty()) {
         return Err(GroupError::InvalidInput(format!("{field} cannot contain blank values")));
+    }
+    Ok(())
+}
+
+pub fn validate_access_mode(provider_group_ids: &[String], key_group_ids: &[String]) -> GroupResult<()> {
+    if !provider_group_ids.is_empty() && !key_group_ids.is_empty() {
+        return Err(GroupError::InvalidInput(
+            "allowed_provider_group_ids and allowed_provider_key_group_ids cannot both be non-empty".into(),
+        ));
     }
     Ok(())
 }

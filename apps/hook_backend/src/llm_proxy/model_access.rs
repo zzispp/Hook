@@ -106,9 +106,8 @@ pub(crate) fn ensure_user_allows_model(access: Option<&CachedUserAccess>, model_
 }
 
 pub(crate) fn provider_allowed(group: &CachedBillingGroup, user_access: Option<&CachedUserAccess>, provider: &CachedProvider) -> bool {
-    provider.is_active
-        && ids_allow(&group.allowed_provider_ids, &provider.id)
-        && user_access.is_none_or(|access| ids_allow(&access.allowed_provider_ids, &provider.id))
+    let _ = group;
+    provider.is_active && user_access.is_none_or(|access| ids_allow(&access.allowed_provider_ids, &provider.id))
 }
 
 pub(crate) fn token_user_for_snapshot<'a>(snapshot: &'a SchedulingSnapshot, token: &ApiToken) -> Result<Option<&'a CachedUserAccess>, LlmProxyError> {

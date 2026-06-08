@@ -9,6 +9,14 @@ use super::baseline;
 
 const BASELINE_VERSION: &str = "m20260605_000001_initial_stable_baseline";
 const MIGRATION_TABLE: &str = "seaql_migrations";
+const ADDITIVE_BASELINE_TABLES: &[&str] = &[
+    "provider_groups",
+    "provider_group_providers",
+    "provider_key_groups",
+    "provider_key_group_keys",
+    "billing_group_provider_groups",
+    "billing_group_provider_key_groups",
+];
 const BASELINE_TABLES: &[&str] = &[
     "user_groups",
     "users",
@@ -37,6 +45,10 @@ const BASELINE_TABLES: &[&str] = &[
     "providers",
     "provider_endpoints",
     "provider_api_keys",
+    "provider_groups",
+    "provider_group_providers",
+    "provider_key_groups",
+    "provider_key_group_keys",
     "provider_models",
     "provider_model_costs",
     "billing_rules",
@@ -45,6 +57,8 @@ const BASELINE_TABLES: &[&str] = &[
     "provider_cooldown_events",
     "billing_group_providers",
     "billing_group_provider_keys",
+    "billing_group_provider_groups",
+    "billing_group_provider_key_groups",
     "billing_group_user_groups",
     "system_settings",
     "translation_languages",
@@ -77,7 +91,7 @@ pub async fn apply(connection: &DatabaseConnection) -> Result<(), DbErr> {
             mark_baseline_applied(&manager).await
         }
         BaselineState::CompleteWithoutMarker => mark_baseline_applied(&manager).await,
-        BaselineState::Applied => Ok(()),
+        BaselineState::Applied => super::development_additive::apply(&manager).await,
         BaselineState::Inconsistent { existing_tables, total_tables } => Err(DbErr::Migration(format!(
             "inconsistent baseline state: {existing_tables}/{total_tables} baseline tables exist; run `migration status` and fix the schema before applying migrations"
         ))),
@@ -129,18 +143,33 @@ pub fn table_names() -> Vec<&'static str> {
 }
 
 async fn baseline_state(manager: &SchemaManager<'_>) -> Result<BaselineState, DbErr> {
-    let existing_tables = existing_tables(manager).await?.len();
+    let existing_tables = existing_tables(manager).await?;
     let marker_exists = baseline_marker_exists(manager).await?;
-    Ok(classify_baseline_state(existing_tables, table_names().len(), marker_exists))
+    Ok(classify_baseline_state(
+        existing_tables.len(),
+        table_names().len(),
+        marker_exists,
+        &missing_tables(&existing_tables),
+    ))
 }
 
-fn classify_baseline_state(existing_tables: usize, total_tables: usize, marker_exists: bool) -> BaselineState {
+fn classify_baseline_state(existing_tables: usize, total_tables: usize, marker_exists: bool, missing_tables: &[&str]) -> BaselineState {
     match (existing_tables, marker_exists) {
         (0, false) => BaselineState::Empty,
         (count, false) if count == total_tables => BaselineState::CompleteWithoutMarker,
         (count, true) if count == total_tables => BaselineState::Applied,
+        (_, true) if only_additive_tables_missing(missing_tables) => BaselineState::Applied,
         _ => BaselineState::Inconsistent { existing_tables, total_tables },
     }
+}
+
+fn missing_tables(existing_tables: &[&'static str]) -> Vec<&'static str> {
+    let existing = existing_tables.iter().copied().collect::<std::collections::BTreeSet<_>>();
+    BASELINE_TABLES.iter().copied().filter(|table| !existing.contains(table)).collect()
+}
+
+fn only_additive_tables_missing(missing_tables: &[&str]) -> bool {
+    !missing_tables.is_empty() && missing_tables.iter().all(|table| ADDITIVE_BASELINE_TABLES.contains(table))
 }
 
 async fn baseline_marker_exists(manager: &SchemaManager<'_>) -> Result<bool, DbErr> {
@@ -204,23 +233,31 @@ mod tests {
 
     #[test]
     fn classifies_empty_baseline_without_marker_as_empty() {
-        assert_eq!(classify_baseline_state(0, 5, false), BaselineState::Empty);
+        assert_eq!(classify_baseline_state(0, 5, false, &[]), BaselineState::Empty);
     }
 
     #[test]
     fn classifies_complete_baseline_without_marker_as_marker_pending() {
-        assert_eq!(classify_baseline_state(5, 5, false), BaselineState::CompleteWithoutMarker);
+        assert_eq!(classify_baseline_state(5, 5, false, &[]), BaselineState::CompleteWithoutMarker);
     }
 
     #[test]
     fn classifies_complete_marked_baseline_as_applied() {
-        assert_eq!(classify_baseline_state(5, 5, true), BaselineState::Applied);
+        assert_eq!(classify_baseline_state(5, 5, true, &[]), BaselineState::Applied);
+    }
+
+    #[test]
+    fn classifies_marked_baseline_missing_only_additive_tables_as_applied() {
+        assert_eq!(
+            classify_baseline_state(5, 7, true, &["provider_groups", "billing_group_provider_groups"]),
+            BaselineState::Applied
+        );
     }
 
     #[test]
     fn classifies_partial_baseline_as_inconsistent() {
         assert_eq!(
-            classify_baseline_state(3, 5, false),
+            classify_baseline_state(3, 5, false, &["providers", "api_tokens"]),
             BaselineState::Inconsistent {
                 existing_tables: 3,
                 total_tables: 5,
@@ -231,7 +268,7 @@ mod tests {
     #[test]
     fn classifies_marker_without_tables_as_inconsistent() {
         assert_eq!(
-            classify_baseline_state(0, 5, true),
+            classify_baseline_state(0, 5, true, &["providers", "api_tokens"]),
             BaselineState::Inconsistent {
                 existing_tables: 0,
                 total_tables: 5,

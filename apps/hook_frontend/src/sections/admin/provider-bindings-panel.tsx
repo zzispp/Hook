@@ -1,8 +1,9 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
-import type { Provider } from 'src/types/provider';
 import type { GlobalModelResponse } from 'src/types/model';
+import type { ProviderKeyGroup } from 'src/types/provider-group';
+import type { Provider, ProviderApiKey } from 'src/types/provider';
 import type { useProviderChildDialogs } from './provider-management-state';
 
 import { varAlpha } from 'minimal-shared/utils';
@@ -41,14 +42,18 @@ export function ProviderBindingsPanel({
   open,
   provider,
   models,
+  providerKeyGroups,
   onClose,
   dialogs,
+  onAssociateKeyGroups,
 }: {
   open: boolean;
   provider?: Provider;
   models: GlobalModelResponse[];
+  providerKeyGroups: ProviderKeyGroup[];
   onClose: () => void;
   dialogs: ReturnType<typeof useProviderChildDialogs>;
+  onAssociateKeyGroups: (apiKey: ProviderApiKey) => void;
 }) {
   const { t } = useTranslate('admin');
   const endpoints = useProviderEndpoints(provider?.id);
@@ -72,7 +77,9 @@ export function ProviderBindingsPanel({
             providerModelCostItems={providerModelCosts.items}
             providerModelCostLoading={providerModelCosts.isLoading}
             models={models}
+            providerKeyGroups={providerKeyGroups}
             dialogs={dialogs}
+            onAssociateKeyGroups={onAssociateKeyGroups}
           />
         ) : null}
       </Scrollbar>
@@ -104,7 +111,9 @@ type ProviderBindingsContentProps = {
   providerModelCostItems: ReturnType<typeof useProviderModelCosts>['items'];
   providerModelCostLoading: boolean;
   models: GlobalModelResponse[];
+  providerKeyGroups: ProviderKeyGroup[];
   dialogs: ReturnType<typeof useProviderChildDialogs>;
+  onAssociateKeyGroups: (apiKey: ProviderApiKey) => void;
 };
 
 function ProviderBindingsContent(props: ProviderBindingsContentProps) {
@@ -115,10 +124,12 @@ function ProviderBindingsContent(props: ProviderBindingsContentProps) {
         loading={props.endpointLoading}
         onAdd={() => props.dialogs.setEndpointOpen(true)}
       />
-      <ApiKeySection
+      <ProviderApiKeysSection
         items={props.apiKeyItems}
         loading={props.apiKeyLoading}
+        providerKeyGroups={props.providerKeyGroups}
         dialogs={props.dialogs}
+        onAssociateGroups={props.onAssociateKeyGroups}
       />
       <ProviderModelSection
         providerId={props.providerId}
@@ -193,18 +204,6 @@ function endpointPathSummary(
 
   const fallback = defaultEndpointPath(apiFormat);
   return fallback ? `${t('providers.defaultPath')}: ${fallback}` : t('providers.defaultWhenBlank');
-}
-
-function ApiKeySection({
-  items,
-  loading,
-  dialogs,
-}: {
-  items: ReturnType<typeof useProviderApiKeys>['items'];
-  loading: boolean;
-  dialogs: ReturnType<typeof useProviderChildDialogs>;
-}) {
-  return <ProviderApiKeysSection items={items} loading={loading} dialogs={dialogs} />;
 }
 
 function ProviderModelSection({

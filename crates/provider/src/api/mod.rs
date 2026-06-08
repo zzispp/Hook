@@ -1,4 +1,5 @@
 mod error;
+mod group_handlers;
 mod handlers;
 mod routes;
 mod state;

@@ -197,6 +197,8 @@ export async function updateProvider(id: string, payload: ProviderUpdate) {
 export async function deleteProvider(id: string) {
   await requestSuccess(axios.delete(endpoints.adminProviders.byId(id)));
   await mutateProviders();
+  await mutateProviderGroups();
+  await mutateProviderKeyGroups();
   await mutateProviderCooldowns();
 }
 
@@ -272,6 +274,7 @@ export async function fetchProviderUpstreamModels(providerId: string) {
 export async function deleteProviderApiKey(providerId: string, keyId: string) {
   await requestSuccess(axios.delete(endpoints.adminProviders.keyById(providerId, keyId)));
   await mutateProviderChildren(providerId);
+  await mutateProviderKeyGroups();
 }
 
 export async function createProviderModel(providerId: string, payload: ProviderModelBindingCreate) {
@@ -387,6 +390,14 @@ async function mutateProviders() {
 
 async function mutateProviderCooldowns() {
   await mutate((key) => isEndpointKey(key, endpoints.adminProviders.cooldowns));
+}
+
+async function mutateProviderGroups() {
+  await mutate((key) => isEndpointKey(key, endpoints.adminProviders.groups));
+}
+
+async function mutateProviderKeyGroups() {
+  await mutate((key) => isEndpointKey(key, endpoints.adminProviders.keyGroups));
 }
 
 async function mutateProviderChildren(providerId: string) {

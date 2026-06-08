@@ -3,9 +3,11 @@
 import type { Theme } from '@mui/material/styles';
 import type { ProviderApiKey } from 'src/types/provider';
 import type { IconifyProps } from 'src/components/iconify';
+import type { ProviderKeyGroup } from 'src/types/provider-group';
 import type { useProviderChildDialogs } from './provider-management-state';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
@@ -19,17 +21,23 @@ import { Iconify } from 'src/components/iconify';
 
 import { EmptyList } from './provider-bindings-shared';
 import { formatApiFormat } from './provider-management-utils';
+import { providerKeyGroupNamesByKey } from './provider-groups-utils';
 
 export function ProviderApiKeysSection({
   items,
   loading,
+  providerKeyGroups,
   dialogs,
+  onAssociateGroups,
 }: {
   items: ProviderApiKey[];
   loading: boolean;
+  providerKeyGroups: ProviderKeyGroup[];
   dialogs: ReturnType<typeof useProviderChildDialogs>;
+  onAssociateGroups: (apiKey: ProviderApiKey) => void;
 }) {
   const { t } = useTranslate('admin');
+  const groupNamesByKey = providerKeyGroupNamesByKey(providerKeyGroups);
 
   return (
     <Box sx={panelSx}>
@@ -47,7 +55,13 @@ export function ProviderApiKeysSection({
       </Stack>
       <Box sx={listSx}>
         {items.map((apiKey) => (
-          <ApiKeyRow key={apiKey.id} apiKey={apiKey} dialogs={dialogs} />
+          <ApiKeyRow
+            key={apiKey.id}
+            apiKey={apiKey}
+            groupNames={groupNamesByKey.get(apiKey.id) ?? []}
+            dialogs={dialogs}
+            onAssociateGroups={onAssociateGroups}
+          />
         ))}
         <EmptyList loading={loading} length={items.length} />
       </Box>
@@ -57,10 +71,14 @@ export function ProviderApiKeysSection({
 
 function ApiKeyRow({
   apiKey,
+  groupNames,
   dialogs,
+  onAssociateGroups,
 }: {
   apiKey: ProviderApiKey;
+  groupNames: string[];
   dialogs: ReturnType<typeof useProviderChildDialogs>;
+  onAssociateGroups: (apiKey: ProviderApiKey) => void;
 }) {
   const { t } = useTranslate('admin');
 
@@ -94,6 +112,11 @@ function ApiKeyRow({
           </Box>
         </Stack>
         <Stack direction="row" alignItems="center" spacing={0.25} sx={{ flexShrink: 0 }}>
+          <KeyActionButton
+            title={t('actions.associateProviderKeyGroups')}
+            icon="eva:link-2-fill"
+            onClick={() => onAssociateGroups(apiKey)}
+          />
           <KeyActionButton title={t('common.edit')} icon="solar:pen-bold" onClick={() => dialogs.openEditApiKey(apiKey)} />
           <KeyActionButton
             title={apiKey.is_active ? t('providers.disableKey') : t('providers.enableKey')}
@@ -127,8 +150,21 @@ function ApiKeyRow({
             </Typography>
           </>
         ) : null}
+        <KeyGroupChips groupNames={groupNames} />
       </Stack>
     </Box>
+  );
+}
+
+function KeyGroupChips({ groupNames }: { groupNames: string[] }) {
+  if (groupNames.length === 0) return null;
+  return (
+    <>
+      <MetaDivider />
+      {groupNames.map((name) => (
+        <Chip key={name} size="small" variant="outlined" label={name} sx={keyGroupChipSx} />
+      ))}
+    </>
   );
 }
 
@@ -182,3 +218,4 @@ const tinyButtonSx = { width: 16, height: 16, color: 'text.secondary' };
 const actionButtonSx = { width: 28, height: 28 };
 const metaSx = { mt: 0.5, color: 'text.secondary', fontSize: 11, flexWrap: 'wrap' };
 const prioritySx = { color: 'text.primary', fontWeight: 600, cursor: 'default' };
+const keyGroupChipSx = { height: 20, '& .MuiChip-label': { px: 0.75, fontSize: 11 } };

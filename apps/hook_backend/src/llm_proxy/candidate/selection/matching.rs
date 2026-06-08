@@ -237,7 +237,11 @@ fn endpoint_accepts_conversion(endpoint: &CachedEndpoint) -> bool {
 }
 
 fn key_allowed(key: &CachedProviderKey, group: &CachedBillingGroup, current_minute: u16) -> bool {
-    key.is_active && !key.api_formats.is_empty() && ids_allow(&group.allowed_provider_key_ids, &key.id) && key_time_range_allowed(key, current_minute)
+    key.is_active && !key.api_formats.is_empty() && key_in_group_scope(key, group) && key_time_range_allowed(key, current_minute)
+}
+
+fn key_in_group_scope(key: &CachedProviderKey, group: &CachedBillingGroup) -> bool {
+    group.allowed_provider_key_ids.as_ref().is_none_or(|ids| ids.iter().any(|id| id == &key.id))
 }
 
 fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, group: &CachedBillingGroup, current_minute: u16) -> bool {
@@ -256,10 +260,6 @@ fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool 
 
 fn key_allows_model(key: &CachedProviderKey, model_id: &str) -> bool {
     key.allowed_model_ids.is_empty() || key.allowed_model_ids.iter().any(|id| id == model_id)
-}
-
-fn ids_allow(ids: &[String], id: &str) -> bool {
-    ids.is_empty() || ids.iter().any(|item| item == id)
 }
 
 fn selected_provider_model(model: &CachedModelBinding) -> CachedModelBinding {

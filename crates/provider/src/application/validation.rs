@@ -11,9 +11,15 @@ use super::{ProviderError, ProviderResult};
 
 mod api_key;
 mod endpoint;
+mod group;
 
 pub use api_key::{sanitize_api_key, sanitize_api_key_update, validate_api_key, validate_api_key_priority_batch, validate_api_key_update};
 pub use endpoint::{sanitize_endpoint, sanitize_endpoint_update, validate_endpoint, validate_endpoint_update};
+pub use group::{
+    sanitize_provider_group, sanitize_provider_group_list_request, sanitize_provider_group_update, sanitize_provider_key_group,
+    sanitize_provider_key_group_update, validate_provider_group, validate_provider_group_list_request, validate_provider_group_update,
+    validate_provider_key_group, validate_provider_key_group_update,
+};
 
 const MAX_LIST_LIMIT: u64 = 1000;
 const MAX_NAME_LENGTH: usize = 100;
@@ -22,6 +28,7 @@ const MAX_API_FORMAT_LENGTH: usize = 50;
 const MAX_URL_LENGTH: usize = 500;
 const MAX_MODEL_ID_LENGTH: usize = 100;
 const MAX_MODEL_NAME_LENGTH: usize = 200;
+const MAX_DESCRIPTION_LENGTH: usize = 500;
 const REASONING_EFFORTS: [&str; 4] = ["minimal", "low", "medium", "high"];
 const PROVIDER_TYPES: [&str; 1] = ["custom"];
 

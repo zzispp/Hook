@@ -1,7 +1,10 @@
 'use client';
 
 import type { Provider } from 'src/types/provider';
+import type { ProviderGroup } from 'src/types/provider-group';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
+
+import { useMemo } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -25,6 +28,7 @@ import { EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
 
 export function ProviderTable({
   rows,
+  groups,
   total,
   loading,
   table,
@@ -32,8 +36,10 @@ export function ProviderTable({
   onSelect,
   onEdit,
   onDelete,
+  onAssociateGroups,
 }: {
   rows: Provider[];
+  groups: ProviderGroup[];
   total: number;
   loading: boolean;
   table: UseTableReturn;
@@ -41,9 +47,11 @@ export function ProviderTable({
   onSelect: (provider: Provider) => void;
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
+  onAssociateGroups: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
   const tableHead = providerTableHead(t);
+  const groupedRows = useMemo(() => providerRowsByGroup(rows, groups, t), [groups, rows, t]);
 
   return (
     <>
@@ -54,16 +62,20 @@ export function ProviderTable({
             {loading ? (
               <TableLoadingRows head={tableHead} rows={table.rowsPerPage} />
             ) : (
-              rows.map((row) => (
-                <ProviderTableRow
-                  key={row.id}
-                  row={row}
-                  selected={row.id === selectedId}
-                  onSelect={onSelect}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))
+              groupedRows.map((group) => [
+                <ProviderGroupHeaderRow key={group.id} name={group.name} count={group.providers.length} />,
+                ...group.providers.map((row) => (
+                  <ProviderTableRow
+                    key={`${group.id}-${row.id}`}
+                    row={row}
+                    selected={row.id === selectedId}
+                    onSelect={onSelect}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onAssociateGroups={onAssociateGroups}
+                  />
+                )),
+              ])
             )}
             <TableNoData title={t('common.noData')} notFound={!loading && rows.length === 0} />
           </TableBody>
@@ -80,18 +92,38 @@ export function ProviderTable({
   );
 }
 
+function ProviderGroupHeaderRow({ name, count }: { name: string; count: number }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <TableRow>
+      <TableCell colSpan={5} sx={{ bgcolor: 'background.neutral', py: 1.25 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Iconify width={18} icon="solar:file-bold-duotone" />
+          <Typography variant="subtitle2">{name}</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {t('providers.groupProviderCount', { count })}
+          </Typography>
+        </Box>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 function ProviderTableRow({
   row,
   selected,
   onSelect,
   onEdit,
   onDelete,
+  onAssociateGroups,
 }: {
   row: Provider;
   selected: boolean;
   onSelect: (provider: Provider) => void;
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
+  onAssociateGroups: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
 
@@ -114,6 +146,16 @@ function ProviderTableRow({
       </TableCell>
       <TableCell align="right">
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Tooltip title={t('actions.associateProviderGroups')}>
+            <IconButton
+              onClick={(event) => {
+                event.stopPropagation();
+                onAssociateGroups(row);
+              }}
+            >
+              <Iconify icon="eva:link-2-fill" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={t('common.edit')}>
             <IconButton
               onClick={(event) => {
@@ -147,10 +189,37 @@ function providerTableHead(t: (key: string, options?: Record<string, unknown>) =
     { id: 'request_config', label: t('providers.requestConfig') },
     { id: 'priority', label: t('providers.priority'), width: 100 },
     { id: 'status', label: t('common.status'), width: 120 },
-    { id: '', width: 96 },
+    { id: '', width: 136 },
   ];
 }
 
 function optionalValue(value?: number | null) {
   return value === null || value === undefined ? '-' : value;
+}
+
+function providerRowsByGroup(
+  providers: Provider[],
+  groups: ProviderGroup[],
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
+  const providersById = new Map(providers.map((provider) => [provider.id, provider]));
+  const groupedProviderIds = new Set(groups.flatMap((group) => group.provider_ids));
+  const boundGroups = sortedGroups(groups)
+    .map((group) => ({
+      id: group.id,
+      name: group.name,
+      providers: group.provider_ids.flatMap((id) => providersById.get(id) ?? []),
+    }))
+    .filter((group) => group.providers.length > 0);
+  const unboundProviders = providers.filter((provider) => !groupedProviderIds.has(provider.id));
+
+  return unboundProviders.length === 0
+    ? boundGroups
+    : [...boundGroups, { id: '__unbound_provider_group__', name: t('providers.unboundProviderGroup'), providers: unboundProviders }];
+}
+
+function sortedGroups(groups: ProviderGroup[]) {
+  return [...groups].sort(
+    (left, right) => left.sort_order - right.sort_order || left.name.localeCompare(right.name)
+  );
 }

@@ -3,15 +3,17 @@ use storage::{Database, StorageError, model::ModelStore, provider::ProviderStore
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
-    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail,
-    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupListResponse,
+    ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListResponse, ProviderKeyGroupUpdate, ProviderListRequest,
+    ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    UsageRecordListResponse,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
 use crate::infra::storage_mapping::{
     api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_batch_input, model_binding_input, model_binding_patch, model_cost_inputs,
-    provider_input, provider_patch,
+    provider_group_input, provider_group_patch, provider_input, provider_key_group_input, provider_key_group_patch, provider_patch,
 };
 
 #[derive(Clone)]
@@ -60,6 +62,56 @@ impl ProviderRepository for StorageProviderRepository {
 
     async fn list_providers(&self, request: ProviderListRequest) -> ProviderResult<ProviderListResponse> {
         self.store.list_providers(request).await.map_err(storage_error)
+    }
+
+    async fn provider_key_exists(&self, id: &str) -> ProviderResult<bool> {
+        self.store.find_api_key(id).await.map(|key| key.is_some()).map_err(storage_error)
+    }
+
+    async fn create_provider_group(&self, input: ProviderGroupCreate) -> ProviderResult<ProviderGroup> {
+        self.store.create_provider_group(provider_group_input(input)).await.map_err(storage_error)
+    }
+
+    async fn update_provider_group(&self, id: &str, input: ProviderGroupUpdate) -> ProviderResult<ProviderGroup> {
+        self.store.update_provider_group(id, provider_group_patch(input)).await.map_err(storage_error)
+    }
+
+    async fn delete_provider_group(&self, id: &str) -> ProviderResult<()> {
+        self.store.delete_provider_group(id).await.map_err(storage_error)
+    }
+
+    async fn find_provider_group(&self, id_or_name: &str) -> ProviderResult<Option<ProviderGroup>> {
+        self.store.find_provider_group(id_or_name).await.map_err(storage_error)
+    }
+
+    async fn list_provider_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderGroupListResponse> {
+        self.store.list_provider_groups(request).await.map_err(storage_error)
+    }
+
+    async fn create_provider_key_group(&self, input: ProviderKeyGroupCreate) -> ProviderResult<ProviderKeyGroup> {
+        self.store
+            .create_provider_key_group(provider_key_group_input(input))
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn update_provider_key_group(&self, id: &str, input: ProviderKeyGroupUpdate) -> ProviderResult<ProviderKeyGroup> {
+        self.store
+            .update_provider_key_group(id, provider_key_group_patch(input))
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn delete_provider_key_group(&self, id: &str) -> ProviderResult<()> {
+        self.store.delete_provider_key_group(id).await.map_err(storage_error)
+    }
+
+    async fn find_provider_key_group(&self, id_or_name: &str) -> ProviderResult<Option<ProviderKeyGroup>> {
+        self.store.find_provider_key_group(id_or_name).await.map_err(storage_error)
+    }
+
+    async fn list_provider_key_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse> {
+        self.store.list_provider_key_groups(request).await.map_err(storage_error)
     }
 
     async fn create_endpoint(&self, provider_id: &str, input: ProviderEndpointCreate) -> ProviderResult<ProviderEndpoint> {

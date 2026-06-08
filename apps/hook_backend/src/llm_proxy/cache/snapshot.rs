@@ -1,4 +1,5 @@
 mod cached_types;
+mod group_access;
 
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
 use storage::{
@@ -23,6 +24,7 @@ pub use cached_types::{
 };
 
 use crate::llm_proxy::LlmProxyError;
+use group_access::billing_group_key_scope;
 
 const SNAPSHOT_FULL_PAGE_LIMIT: u64 = i64::MAX as u64;
 
@@ -83,19 +85,18 @@ async fn load_groups(database: &Database) -> Result<Vec<CachedBillingGroup>, Llm
             search: None,
         })
         .await?;
-    Ok(response
-        .groups
-        .into_iter()
-        .map(|group| CachedBillingGroup {
+    let mut groups = Vec::with_capacity(response.groups.len());
+    for group in response.groups {
+        groups.push(CachedBillingGroup {
+            allowed_provider_key_ids: billing_group_key_scope(database, &group).await?,
             code: group.code,
             billing_multiplier: group.billing_multiplier,
             allowed_model_ids: group.allowed_model_ids,
-            allowed_provider_ids: group.allowed_provider_ids,
-            allowed_provider_key_ids: group.allowed_provider_key_ids,
             visible_user_group_codes: group.visible_user_group_codes,
             is_active: group.is_active,
-        })
-        .collect())
+        });
+    }
+    Ok(groups)
 }
 
 async fn load_users(database: &Database, system_users: &[CachedUserAccess]) -> Result<Vec<CachedUserAccess>, LlmProxyError> {

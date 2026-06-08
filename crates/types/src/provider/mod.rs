@@ -2,6 +2,7 @@ mod cooldown;
 mod core;
 mod endpoint;
 mod enums;
+mod group;
 mod key;
 mod model_binding;
 mod model_cost;
@@ -13,6 +14,10 @@ pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldo
 pub use core::{Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderUpdate};
 pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate};
 pub use enums::{ProviderPriorityMode, ProviderSchedulingMode};
+pub use group::{
+    ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupListResponse, ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate,
+    ProviderKeyGroupListResponse, ProviderKeyGroupUpdate,
+};
 pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate, ProviderApiKeyPriorityUpdate, ProviderApiKeyUpdate};
 pub use model_binding::{
     ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping,

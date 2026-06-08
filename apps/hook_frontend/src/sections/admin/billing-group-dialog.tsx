@@ -2,32 +2,36 @@
 
 import type { UserGroup } from 'src/types/user-group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { Provider, ProviderApiKey } from 'src/types/provider';
 import type { useGroupDialog } from './billing-group-management-state';
+import type { BillingAccessMode } from './billing-group-management-utils';
+import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
 
-import Stack from '@mui/material/Stack';
 import Checkbox from '@mui/material/Checkbox';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import ToggleButton from '@mui/material/ToggleButton';
 import ListItemText from '@mui/material/ListItemText';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { useTranslate } from 'src/locales/use-locales';
 
+import { SwitchRow, ManagementDialog } from './shared';
 import { userGroupSelectionLabel } from './user-group-utils';
-import { providerTypeLabel } from './provider-management-utils';
-import { SwitchRow, TextFieldRow, ManagementDialog } from './shared';
+import { BillingGroupBasicFields } from './billing-group-basic-fields';
+
+type NamedGroup = ProviderGroup | ProviderKeyGroup;
 
 export function BillingGroupDialog({
   dialog,
   models,
-  providers,
-  providerKeysByProvider,
+  providerGroups,
+  providerKeyGroups,
   userGroups,
 }: {
   dialog: ReturnType<typeof useGroupDialog>;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
-  providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
-  providerKeysByProvider: Record<string, ProviderApiKey[]>;
+  providerGroups: ProviderGroup[];
+  providerKeyGroups: ProviderKeyGroup[];
   userGroups: UserGroup[];
 }) {
   const { t } = useTranslate('admin');
@@ -40,54 +44,13 @@ export function BillingGroupDialog({
       onClose={dialog.closeDialog}
       onSubmit={dialog.submit}
     >
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        <TextFieldRow
-          required
-          disabled={!!dialog.editing}
-          label={t('common.code')}
-          value={dialog.form.code}
-          onChange={(value) => dialog.setForm((form) => ({ ...form, code: value }))}
-        />
-        <TextFieldRow
-          required
-          label={t('common.name')}
-          value={dialog.form.name}
-          onChange={(value) => dialog.setForm((form) => ({ ...form, name: value }))}
-        />
-      </Stack>
-      <TextField
-        fullWidth
-        multiline
-        minRows={3}
-        label={t('common.description')}
-        value={dialog.form.description}
-        onChange={(event) => dialog.setForm((form) => ({ ...form, description: event.target.value }))}
-      />
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        <TextFieldRow
-          required
-          type="number"
-          label={t('fields.billingMultiplier')}
-          value={dialog.form.billing_multiplier}
-          onChange={(value) => dialog.setForm((form) => ({ ...form, billing_multiplier: value }))}
-        />
-        <TextFieldRow
-          type="number"
-          label={t('common.sortOrder')}
-          value={dialog.form.sort_order}
-          onChange={(value) => dialog.setForm((form) => ({ ...form, sort_order: value }))}
-        />
-      </Stack>
+      <BillingGroupBasicFields dialog={dialog} />
       <ModelSelect dialog={dialog} models={models} />
-      <ProviderSelect
+      <AccessModeControl dialog={dialog} />
+      <AccessGroupSelect
         dialog={dialog}
-        providers={providers}
-        providerKeysByProvider={providerKeysByProvider}
-      />
-      <ProviderKeySelect
-        dialog={dialog}
-        providers={providers}
-        providerKeysByProvider={providerKeysByProvider}
+        providerGroups={providerGroups}
+        providerKeyGroups={providerKeyGroups}
       />
       <UserGroupSelect dialog={dialog} userGroups={userGroups} />
       <SwitchRow
@@ -99,49 +62,90 @@ export function BillingGroupDialog({
   );
 }
 
-function ProviderKeySelect({
+function AccessModeControl({ dialog }: { dialog: ReturnType<typeof useGroupDialog> }) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <ToggleButtonGroup
+      exclusive
+      fullWidth
+      value={dialog.form.access_mode}
+      onChange={(_event, accessMode) => accessMode && setAccessMode(dialog, accessMode)}
+    >
+      <ToggleButton value="unrestricted">{t('billingGroups.accessModeUnrestricted')}</ToggleButton>
+      <ToggleButton value="provider_groups">{t('billingGroups.accessModeProviderGroups')}</ToggleButton>
+      <ToggleButton value="provider_key_groups">{t('billingGroups.accessModeProviderKeyGroups')}</ToggleButton>
+    </ToggleButtonGroup>
+  );
+}
+
+function AccessGroupSelect({
   dialog,
-  providers,
-  providerKeysByProvider,
+  providerGroups,
+  providerKeyGroups,
 }: {
   dialog: ReturnType<typeof useGroupDialog>;
-  providers: Pick<Provider, 'id' | 'name'>[];
-  providerKeysByProvider: Record<string, ProviderApiKey[]>;
+  providerGroups: ProviderGroup[];
+  providerKeyGroups: ProviderKeyGroup[];
+}) {
+  if (dialog.form.access_mode === 'provider_groups') {
+    return (
+      <GroupSelect
+        labelKey="fields.allowedProviderGroups"
+        helperKey="helper.billingProviderGroupAccess"
+        ids={dialog.form.allowed_provider_group_ids}
+        groups={providerGroups}
+        onChange={(ids) => dialog.setForm((form) => ({ ...form, allowed_provider_group_ids: ids }))}
+      />
+    );
+  }
+  if (dialog.form.access_mode === 'provider_key_groups') {
+    return (
+      <GroupSelect
+        labelKey="fields.allowedProviderKeyGroups"
+        helperKey="helper.billingProviderKeyGroupAccess"
+        ids={dialog.form.allowed_provider_key_group_ids}
+        groups={providerKeyGroups}
+        onChange={(ids) => dialog.setForm((form) => ({ ...form, allowed_provider_key_group_ids: ids }))}
+      />
+    );
+  }
+  return null;
+}
+
+function GroupSelect({
+  labelKey,
+  helperKey,
+  ids,
+  groups,
+  onChange,
+}: {
+  labelKey: string;
+  helperKey: string;
+  ids: string[];
+  groups: NamedGroup[];
+  onChange: (ids: string[]) => void;
 }) {
   const { t } = useTranslate('admin');
-  const keys = providerKeyOptions(
-    providers,
-    dialog.form.allowed_provider_ids,
-    providerKeysByProvider
-  );
 
   return (
     <TextField
       select
       fullWidth
-      label={t('fields.allowedProviderKeys')}
-      value={dialog.form.allowed_provider_key_ids}
-      helperText={t('helper.groupProviderKeyAccess')}
+      label={t(labelKey)}
+      value={ids}
+      helperText={t(helperKey)}
       SelectProps={{
         multiple: true,
-        renderValue: (selected) => providerKeySelectionLabel(selected as string[], keys, t),
+        renderValue: (selected) => groupSelectionLabel(selected as string[], groups, t),
       }}
-      onChange={(event) =>
-        dialog.setForm((form) => ({
-          ...form,
-          allowed_provider_key_ids: selectedValues(event.target.value),
-        }))
-      }
+      onChange={(event) => onChange(selectedValues(event.target.value))}
     >
-      {keys.length === 0 ? (
-        <MenuItem disabled value="">
-          {t('providers.noApiKeys')}
-        </MenuItem>
-      ) : null}
-      {keys.map((key) => (
-        <MenuItem key={key.id} value={key.id}>
-          <Checkbox checked={dialog.form.allowed_provider_key_ids.includes(key.id)} />
-          <ListItemText primary={key.name} secondary={key.providerName} />
+      {groups.length === 0 ? <MenuItem disabled value="">{t('common.noData')}</MenuItem> : null}
+      {groups.map((group) => (
+        <MenuItem key={group.id} value={group.id}>
+          <Checkbox checked={ids.includes(group.id)} />
+          <ListItemText primary={group.name} secondary={group.description || undefined} />
         </MenuItem>
       ))}
     </TextField>
@@ -175,67 +179,11 @@ function UserGroupSelect({
         }))
       }
     >
-      {userGroups.length === 0 ? (
-        <MenuItem disabled value="">
-          {t('userGroups.noActiveGroups')}
-        </MenuItem>
-      ) : null}
+      {userGroups.length === 0 ? <MenuItem disabled value="">{t('userGroups.noActiveGroups')}</MenuItem> : null}
       {userGroups.map((group) => (
         <MenuItem key={group.code} value={group.code}>
           <Checkbox checked={dialog.form.visible_user_group_codes.includes(group.code)} />
           <ListItemText primary={group.name} secondary={group.code} />
-        </MenuItem>
-      ))}
-    </TextField>
-  );
-}
-
-function ProviderSelect({
-  dialog,
-  providers,
-  providerKeysByProvider,
-}: {
-  dialog: ReturnType<typeof useGroupDialog>;
-  providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
-  providerKeysByProvider: Record<string, ProviderApiKey[]>;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <TextField
-      select
-      fullWidth
-      label={t('fields.allowedProviders')}
-      value={dialog.form.allowed_provider_ids}
-      helperText={t('helper.groupProviderAccess')}
-      SelectProps={{
-        multiple: true,
-        renderValue: (selected) => providerSelectionLabel(selected as string[], providers, t),
-      }}
-      onChange={(event) =>
-        dialog.setForm((form) => {
-          const providerIds = selectedValues(event.target.value);
-          return {
-            ...form,
-            allowed_provider_ids: providerIds,
-            allowed_provider_key_ids: allowedProviderKeyIds(
-              form.allowed_provider_key_ids,
-              providerIds,
-              providerKeysByProvider
-            ),
-          };
-        })
-      }
-    >
-      {providers.length === 0 ? (
-        <MenuItem disabled value="">
-          {t('providers.noProviders')}
-        </MenuItem>
-      ) : null}
-      {providers.map((provider) => (
-        <MenuItem key={provider.id} value={provider.id}>
-          <Checkbox checked={dialog.form.allowed_provider_ids.includes(provider.id)} />
-          <ListItemText primary={provider.name} secondary={providerTypeLabel(provider.provider_type, t)} />
         </MenuItem>
       ))}
     </TextField>
@@ -264,11 +212,7 @@ function ModelSelect({
       }}
       onChange={(event) => dialog.setForm((form) => ({ ...form, allowed_model_ids: selectedValues(event.target.value) }))}
     >
-      {models.length === 0 ? (
-        <MenuItem disabled value="">
-          {t('tokens.noModels')}
-        </MenuItem>
-      ) : null}
+      {models.length === 0 ? <MenuItem disabled value="">{t('tokens.noModels')}</MenuItem> : null}
       {models.map((model) => (
         <MenuItem key={model.id} value={model.id}>
           <Checkbox checked={dialog.form.allowed_model_ids.includes(model.id)} />
@@ -277,6 +221,15 @@ function ModelSelect({
       ))}
     </TextField>
   );
+}
+
+function setAccessMode(dialog: ReturnType<typeof useGroupDialog>, accessMode: BillingAccessMode) {
+  dialog.setForm((form) => ({
+    ...form,
+    access_mode: accessMode,
+    allowed_provider_group_ids: accessMode === 'provider_groups' ? form.allowed_provider_group_ids : [],
+    allowed_provider_key_group_ids: accessMode === 'provider_key_groups' ? form.allowed_provider_key_group_ids : [],
+  }));
 }
 
 function selectedValues(value: string | string[]) {
@@ -288,91 +241,19 @@ function modelSelectionLabel(
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[],
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
-  if (ids.length === 0) {
-    return t('billingGroups.allModels');
-  }
-  if (ids.length > 2) {
-    return t('billingGroups.selectedModelCount', { count: ids.length });
-  }
-  return ids.map((id) => modelLabel(id, models)).join(', ');
+  if (ids.length === 0) return t('billingGroups.allModels');
+  if (ids.length > 2) return t('billingGroups.selectedModelCount', { count: ids.length });
+  const labels = new Map(models.map((model) => [model.id, model.display_name || model.name]));
+  return ids.map((id) => labels.get(id) ?? id).join(', ');
 }
 
-function modelLabel(id: string, models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[]) {
-  const model = models.find((item) => item.id === id);
-  return model?.display_name || model?.name || id;
-}
-
-function providerSelectionLabel(
+function groupSelectionLabel(
   ids: string[],
-  providers: Pick<Provider, 'id' | 'name'>[],
+  groups: NamedGroup[],
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
-  if (ids.length === 0) {
-    return t('billingGroups.allProviders');
-  }
-  if (ids.length > 2) {
-    return t('billingGroups.selectedProviderCount', { count: ids.length });
-  }
-  return ids.map((id) => providerLabel(id, providers)).join(', ');
-}
-
-function providerLabel(id: string, providers: Pick<Provider, 'id' | 'name'>[]) {
-  return providers.find((item) => item.id === id)?.name || id;
-}
-
-type ProviderKeyOption = {
-  id: string;
-  name: string;
-  providerName: string;
-};
-
-function providerKeyOptions(
-  providers: Pick<Provider, 'id' | 'name'>[],
-  allowedProviderIds: string[],
-  providerKeysByProvider: Record<string, ProviderApiKey[]>
-) {
-  const providerOptions = allowedProviderIds.length === 0
-    ? providers
-    : providers.filter((provider) => allowedProviderIds.includes(provider.id));
-
-  return providerOptions.flatMap((provider) =>
-    (providerKeysByProvider[provider.id] ?? []).map((key) => ({
-      id: key.id,
-      name: key.name,
-      providerName: provider.name,
-    }))
-  );
-}
-
-function allowedProviderKeyIds(
-  keyIds: string[],
-  providerIds: string[],
-  providerKeysByProvider: Record<string, ProviderApiKey[]>
-) {
-  if (providerIds.length === 0) {
-    return keyIds;
-  }
-  const allowedKeyIds = new Set(
-    providerIds.flatMap((providerId) => providerKeysByProvider[providerId] ?? []).map((key) => key.id)
-  );
-  return keyIds.filter((keyId) => allowedKeyIds.has(keyId));
-}
-
-function providerKeySelectionLabel(
-  ids: string[],
-  keys: ProviderKeyOption[],
-  t: (key: string, options?: Record<string, unknown>) => string
-) {
-  if (ids.length === 0) {
-    return t('billingGroups.allProviderKeys');
-  }
-  if (ids.length > 2) {
-    return t('billingGroups.selectedProviderKeyCount', { count: ids.length });
-  }
-  return ids.map((id) => providerKeyLabel(id, keys)).join(', ');
-}
-
-function providerKeyLabel(id: string, keys: ProviderKeyOption[]) {
-  const key = keys.find((item) => item.id === id);
-  return key ? `${key.providerName} / ${key.name}` : id;
+  if (ids.length === 0) return t('billingGroups.noGroupSelected');
+  if (ids.length > 2) return t('billingGroups.selectedGroupCount', { count: ids.length });
+  const labels = new Map(groups.map((group) => [group.id, group.name]));
+  return ids.map((id) => labels.get(id) ?? id).join(', ');
 }

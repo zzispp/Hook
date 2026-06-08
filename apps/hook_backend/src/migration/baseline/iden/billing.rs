@@ -46,6 +46,26 @@ pub(in crate::migration::baseline) enum BillingGroupProviderKeys {
 }
 
 #[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum BillingGroupProviderGroups {
+    Table,
+    Id,
+    GroupCode,
+    ProviderGroupId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum BillingGroupProviderKeyGroups {
+    Table,
+    Id,
+    GroupCode,
+    ProviderKeyGroupId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
 pub(in crate::migration::baseline) enum BillingGroupUserGroups {
     Table,
     Id,

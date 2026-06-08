@@ -3,7 +3,7 @@ use types::group::{BillingGroupCreate, BillingGroupListRequest, BillingGroupList
 
 use crate::application::{GroupError, GroupModelCatalog, GroupProviderCatalog, GroupRepository, GroupResult, GroupUseCase, GroupUserGroupCatalog};
 
-use super::validation::{sanitize_create, sanitize_update, validate_create, validate_list_request, validate_update};
+use super::validation::{sanitize_create, sanitize_update, validate_access_mode, validate_create, validate_list_request, validate_update};
 
 pub struct GroupService<R, M, P, U> {
     repository: R,
@@ -41,8 +41,8 @@ where
         let input = sanitize_create(input);
         validate_create(&input)?;
         ensure_models_exist(&self.models, &input.allowed_model_ids).await?;
-        ensure_providers_exist(&self.providers, &input.allowed_provider_ids).await?;
-        ensure_provider_keys_allowed(&self.providers, &input.allowed_provider_ids, &input.allowed_provider_key_ids).await?;
+        ensure_provider_groups_exist(&self.providers, &input.allowed_provider_group_ids).await?;
+        ensure_provider_key_groups_exist(&self.providers, &input.allowed_provider_key_group_ids).await?;
         ensure_user_groups_exist(&self.user_groups, &input.visible_user_group_codes).await?;
         reject_duplicate_code(&self.repository, &input.code).await?;
         self.repository.create_group(input).await
@@ -52,8 +52,9 @@ where
         let input = sanitize_update(input);
         validate_update(&input)?;
         ensure_patch_models_exist(&self.models, &input.allowed_model_ids).await?;
-        ensure_patch_providers_exist(&self.providers, &input.allowed_provider_ids).await?;
-        ensure_patch_provider_keys_allowed(&self.repository, &self.providers, id, &input).await?;
+        ensure_patch_provider_groups_exist(&self.providers, &input.allowed_provider_group_ids).await?;
+        ensure_patch_provider_key_groups_exist(&self.providers, &input.allowed_provider_key_group_ids).await?;
+        ensure_patch_access_mode(&self.repository, id, &input).await?;
         ensure_patch_user_groups_exist(&self.user_groups, &input.visible_user_group_codes).await?;
         self.repository.update_group(id, input).await
     }
@@ -104,8 +105,8 @@ fn sanitize_available_groups(groups: Vec<BillingGroupResponse>) -> Vec<BillingGr
 }
 
 fn sanitize_available_group(mut group: BillingGroupResponse) -> BillingGroupResponse {
-    group.allowed_provider_ids.clear();
-    group.allowed_provider_key_ids.clear();
+    group.allowed_provider_group_ids.clear();
+    group.allowed_provider_key_group_ids.clear();
     group
 }
 
@@ -141,56 +142,61 @@ where
     Ok(())
 }
 
-async fn ensure_patch_providers_exist<P>(providers: &P, patch: &types::model::PatchField<Vec<String>>) -> GroupResult<()>
+async fn ensure_patch_provider_groups_exist<P>(providers: &P, patch: &types::model::PatchField<Vec<String>>) -> GroupResult<()>
 where
     P: GroupProviderCatalog,
 {
     match patch {
-        types::model::PatchField::Value(value) => ensure_providers_exist(providers, value).await,
+        types::model::PatchField::Value(value) => ensure_provider_groups_exist(providers, value).await,
         types::model::PatchField::Null | types::model::PatchField::Missing => Ok(()),
     }
 }
 
-async fn ensure_providers_exist<P>(providers: &P, ids: &[String]) -> GroupResult<()>
+async fn ensure_provider_groups_exist<P>(providers: &P, ids: &[String]) -> GroupResult<()>
 where
     P: GroupProviderCatalog,
 {
     for id in ids {
-        if !providers.provider_exists(id).await? {
-            return Err(GroupError::InvalidInput(format!("provider does not exist: {id}")));
+        if !providers.provider_group_exists(id).await? {
+            return Err(GroupError::InvalidInput(format!("provider group does not exist: {id}")));
         }
     }
     Ok(())
 }
 
-async fn ensure_patch_provider_keys_allowed<R, P>(repository: &R, providers: &P, id: &str, input: &BillingGroupUpdate) -> GroupResult<()>
+async fn ensure_patch_provider_key_groups_exist<P>(providers: &P, patch: &types::model::PatchField<Vec<String>>) -> GroupResult<()>
 where
-    R: GroupRepository,
     P: GroupProviderCatalog,
 {
-    if input.allowed_provider_ids.is_missing() && input.allowed_provider_key_ids.is_missing() {
+    match patch {
+        types::model::PatchField::Value(value) => ensure_provider_key_groups_exist(providers, value).await,
+        types::model::PatchField::Null | types::model::PatchField::Missing => Ok(()),
+    }
+}
+
+async fn ensure_provider_key_groups_exist<P>(providers: &P, ids: &[String]) -> GroupResult<()>
+where
+    P: GroupProviderCatalog,
+{
+    for id in ids {
+        if !providers.provider_key_group_exists(id).await? {
+            return Err(GroupError::InvalidInput(format!("provider key group does not exist: {id}")));
+        }
+    }
+    Ok(())
+}
+
+async fn ensure_patch_access_mode<R>(repository: &R, id: &str, input: &BillingGroupUpdate) -> GroupResult<()>
+where
+    R: GroupRepository,
+{
+    if input.allowed_provider_group_ids.is_missing() && input.allowed_provider_key_group_ids.is_missing() {
         return Ok(());
     }
     let current = repository.find_group(id).await?.ok_or(GroupError::NotFound)?;
-    let provider_ids = patch_ids(&input.allowed_provider_ids, current.allowed_provider_ids);
-    let key_ids = patch_ids(&input.allowed_provider_key_ids, current.allowed_provider_key_ids);
-    ensure_provider_keys_allowed(providers, &provider_ids, &key_ids).await
-}
-
-async fn ensure_provider_keys_allowed<P>(providers: &P, provider_ids: &[String], key_ids: &[String]) -> GroupResult<()>
-where
-    P: GroupProviderCatalog,
-{
-    for key_id in key_ids {
-        let provider_id = providers
-            .provider_key_provider_id(key_id)
-            .await?
-            .ok_or_else(|| GroupError::InvalidInput(format!("provider key does not exist: {key_id}")))?;
-        if !provider_ids.is_empty() && !provider_ids.iter().any(|id| id == &provider_id) {
-            return Err(GroupError::InvalidInput(format!("provider key {key_id} does not belong to allowed providers")));
-        }
-    }
-    Ok(())
+    let provider_group_ids = patch_ids(&input.allowed_provider_group_ids, current.allowed_provider_group_ids);
+    let key_group_ids = patch_ids(&input.allowed_provider_key_group_ids, current.allowed_provider_key_group_ids);
+    validate_access_mode(&provider_group_ids, &key_group_ids)
 }
 
 fn patch_ids(patch: &types::model::PatchField<Vec<String>>, current: Vec<String>) -> Vec<String> {
@@ -256,8 +262,8 @@ mod tests {
             description: Some("default group".into()),
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: vec!["model-1".into()],
-            allowed_provider_ids: vec!["provider-1".into(), "provider-2".into()],
-            allowed_provider_key_ids: vec!["key-1".into(), "key-2".into()],
+            allowed_provider_group_ids: vec!["provider-group-1".into(), "provider-group-2".into()],
+            allowed_provider_key_group_ids: vec!["key-group-1".into(), "key-group-2".into()],
             visible_user_group_codes: vec!["default".into()],
             is_active: true,
             is_system: true,
@@ -268,8 +274,8 @@ mod tests {
 
         let sanitized = sanitize_available_group(group);
 
-        assert!(sanitized.allowed_provider_ids.is_empty());
-        assert!(sanitized.allowed_provider_key_ids.is_empty());
+        assert!(sanitized.allowed_provider_group_ids.is_empty());
+        assert!(sanitized.allowed_provider_key_group_ids.is_empty());
         assert_eq!(sanitized.allowed_model_ids, vec!["model-1".to_string()]);
     }
 }

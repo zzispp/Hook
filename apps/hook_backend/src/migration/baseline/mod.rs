@@ -7,6 +7,8 @@ mod indices;
 mod model_status_tables;
 mod operations_tables;
 mod performance_monitoring_tables;
+mod provider_group_indices;
+mod provider_group_tables;
 mod recharge_tables;
 mod request_candidate_tables;
 mod scheduler_tables;
@@ -19,9 +21,13 @@ mod translation_tables;
 mod wallet_tables;
 
 pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    create_tables(manager).await?;
-    create_indices(manager).await?;
+    apply_schema_without_seed(manager).await?;
     seed::seed_defaults(manager).await
+}
+
+pub async fn apply_schema_without_seed(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    create_tables(manager).await?;
+    create_indices(manager).await
 }
 
 async fn create_tables(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
