@@ -25,6 +25,7 @@ import { useTicketWorkspaceState } from './ticket-workspace-state';
 import { TicketStatusLabel, TicketPriorityLabel } from './operation-labels';
 
 const TICKET_EMPTY_STATE_MIN_HEIGHT = 160;
+const TICKET_WORKSPACE_MIN_HEIGHT = 480;
 
 const ticketPanelSx = {
   p: 2,
@@ -76,6 +77,12 @@ const ticketListEmptySx = {
   textAlign: 'center',
 };
 
+const ticketWorkspaceSx = {
+  flex: { xs: '0 0 auto', md: '1 1 0' },
+  minHeight: { xs: 'auto', md: TICKET_WORKSPACE_MIN_HEIGHT },
+  alignItems: { md: 'stretch' },
+};
+
 export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
   const state = useTicketWorkspaceState(admin);
 
@@ -103,7 +110,7 @@ export function TicketWorkspaceView({ admin = false }: { admin?: boolean }) {
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         spacing={3}
-        sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minHeight: { xs: 'auto', md: 0 } }}
+        sx={ticketWorkspaceSx}
       >
         <TicketListPanel state={state} />
         <Stack sx={{ flex: '1 1 auto', minWidth: 0, minHeight: { xs: 'auto', md: 0 } }}>

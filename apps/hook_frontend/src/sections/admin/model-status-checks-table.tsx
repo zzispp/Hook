@@ -21,7 +21,12 @@ import { updateModelStatusCheck } from 'src/actions/model-status';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TableHeadCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TableHeadCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { EnabledLabel } from './shared';
 import { StatusLabel } from '../model-status/model-status-view';
@@ -94,7 +99,7 @@ function CheckRow({
           </Typography>
         </Stack>
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Switch size="small" checked={row.enabled} onChange={(event) => void toggleEnabled(row, event.target.checked, t)} />
         <Tooltip title={t('common.edit')}>
           <IconButton onClick={() => onEdit(modelStatusCheckFormFromRow(row))}>
@@ -136,7 +141,7 @@ function tableHead(t: TFunction<'admin'>): TableHeadCellProps[] {
     { id: 'interval', label: t('modelStatusChecks.interval') },
     { id: 'enabled', label: t('modelStatusChecks.enabled') },
     { id: 'status', label: t('modelStatusChecks.lastStatus') },
-    { id: 'actions', label: '', align: 'right' },
+    withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), align: 'left' }),
   ];
 }
 

@@ -18,7 +18,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import { TableNoData, TablePaginationCustom, tableStickyActionCellSx } from 'src/components/table';
 
 import { MethodLabel, EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
 
@@ -144,7 +144,7 @@ function ApiTableRow({
       <TableCell>
         <EnabledLabel enabled={row.enabled} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Tooltip title={t('common.edit')}>
             <IconButton onClick={() => onEdit(row)}>

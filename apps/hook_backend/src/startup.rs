@@ -112,13 +112,29 @@ use wallet::{
     application::{SystemWalletProvider, WalletService},
     infra::{ConfigSystemWalletProvider, StorageWalletRepository},
 };
-pub async fn serve(settings: Settings) -> BackendResult<()> {
-    frontend::ensure_assets()?;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ServeMode {
+    Full,
+    ApiOnly,
+}
+
+impl ServeMode {
+    fn includes_frontend(self) -> bool {
+        matches!(self, Self::Full)
+    }
+}
+
+pub async fn serve(settings: Settings, mode: ServeMode) -> BackendResult<()> {
+    if mode.includes_frontend() {
+        frontend::ensure_assets()?;
+    }
+
     let bind_addr = settings.bind_addr();
     hook_tracing::info_with_fields!("backend starting", addr = bind_addr);
 
     let state = build_app_state(&settings).await?;
-    let app = create_app(state);
+    let app = create_app(state, mode);
     let listener = TcpListener::bind(&bind_addr).await?;
     hook_tracing::info_with_fields!("backend listening", addr = bind_addr);
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
@@ -310,7 +326,39 @@ async fn build_rbac_service(settings: &Settings, database: storage::Database) ->
     Ok(rbac)
 }
 
-fn create_app(state: AppState) -> Router {
+fn create_app(state: AppState, mode: ServeMode) -> Router {
+    let app = if mode.includes_frontend() {
+        create_backend_router(&state).merge(frontend::create_router())
+    } else {
+        create_backend_router(&state)
+    };
+
+    app.layer(cors_layer()).layer(TraceLayer::new_for_http())
+}
+
+fn create_backend_router(state: &AppState) -> Router {
+    let auth_state = create_auth_state(state);
+    let api_router = create_api_router(state);
+    let llm_v1_router = create_llm_proxy_router(state.llm_proxy.clone());
+    let gemini_router = create_v1beta_router(state.llm_proxy.clone());
+
+    system::create_router()
+        .nest("/v1", llm_v1_router)
+        .nest("/v1beta", gemini_router)
+        .nest("/api", api_router)
+        .layer(middleware::from_fn_with_state(auth_state, auth_middleware))
+}
+
+fn create_auth_state(state: &AppState) -> AuthState {
+    AuthState::new(AuthStateParts {
+        users: state.users.clone(),
+        tokens: state.tokens.clone(),
+        rbac: state.rbac.clone(),
+        authorization: state.authorization.clone(),
+    })
+}
+
+fn create_api_router(state: &AppState) -> Router {
     let user_state = ApiState::new(
         state.users.clone(),
         state.affiliates.clone(),
@@ -320,31 +368,24 @@ fn create_app(state: AppState) -> Router {
         state.captcha.clone(),
     );
     let rbac_state = RbacApiState::new(state.authorization.clone(), state.rbac.clone(), state.rbac.clone());
-    let model_state = ModelApiState::new(state.models);
-    let provider_state = ProviderApiState::new(state.providers, Arc::new(LlmProxyProviderModelTester::new(state.llm_proxy.clone())));
-    let dashboard_state = DashboardApiState::new(state.dashboard);
-    let model_status_state = ModelStatusApiState::new(state.model_status);
-    let wallet_state = WalletApiState::new(state.wallets);
-    let card_code_state = CardCodeApiState::new(state.card_codes);
-    let recharge_state = RechargeApiState::new(state.recharges, state.captcha.clone());
-    let setting_state = SettingApiState::new(state.system_settings);
-    let group_state = GroupApiState::new(state.groups);
-    let i18n_state = I18nApiState::new(state.i18n);
-    let api_token_state = ApiTokenApiState::new(state.api_tokens);
-    let operations_state = OperationsApiState::new(state.operations);
-    let captcha_state = CaptchaApiState::new(state.captcha);
+    let model_state = ModelApiState::new(state.models.clone());
+    let provider_state = ProviderApiState::new(state.providers.clone(), Arc::new(LlmProxyProviderModelTester::new(state.llm_proxy.clone())));
+    let dashboard_state = DashboardApiState::new(state.dashboard.clone());
+    let model_status_state = ModelStatusApiState::new(state.model_status.clone());
+    let wallet_state = WalletApiState::new(state.wallets.clone());
+    let card_code_state = CardCodeApiState::new(state.card_codes.clone());
+    let recharge_state = RechargeApiState::new(state.recharges.clone(), state.captcha.clone());
+    let setting_state = SettingApiState::new(state.system_settings.clone());
+    let group_state = GroupApiState::new(state.groups.clone());
+    let i18n_state = I18nApiState::new(state.i18n.clone());
+    let api_token_state = ApiTokenApiState::new(state.api_tokens.clone());
+    let operations_state = OperationsApiState::new(state.operations.clone());
+    let captcha_state = CaptchaApiState::new(state.captcha.clone());
     let performance_monitoring_state = PerformanceMonitoringApiState::new(state.database.clone(), state.performance_os_collector.clone());
-    let cache_monitoring_state = CacheMonitoringApiState::new(state.database.clone(), state.llm_proxy.clone(), state.cache_monitoring_system_owner);
-    let scheduler_state = SchedulerApiState::new(state.scheduler);
-    let llm_v1_router = create_llm_proxy_router(state.llm_proxy.clone());
-    let gemini_router = create_v1beta_router(state.llm_proxy);
-    let auth_state = AuthState::new(AuthStateParts {
-        users: state.users,
-        tokens: state.tokens,
-        rbac: state.rbac,
-        authorization: state.authorization,
-    });
-    let api_router = Router::new()
+    let cache_monitoring_state = CacheMonitoringApiState::new(state.database.clone(), state.llm_proxy.clone(), state.cache_monitoring_system_owner.clone());
+    let scheduler_state = SchedulerApiState::new(state.scheduler.clone());
+
+    Router::new()
         .merge(create_user_router(user_state))
         .merge(create_rbac_router(rbac_state))
         .merge(create_model_router(model_state))
@@ -362,16 +403,5 @@ fn create_app(state: AppState) -> Router {
         .merge(create_captcha_router(captcha_state))
         .merge(create_performance_monitoring_router(performance_monitoring_state))
         .merge(create_cache_monitoring_router(cache_monitoring_state))
-        .merge(create_scheduler_router(scheduler_state));
-
-    let backend_router = system::create_router()
-        .nest("/v1", llm_v1_router)
-        .nest("/v1beta", gemini_router)
-        .nest("/api", api_router)
-        .layer(middleware::from_fn_with_state(auth_state, auth_middleware));
-
-    backend_router
-        .merge(frontend::create_router())
-        .layer(cors_layer())
-        .layer(TraceLayer::new_for_http())
+        .merge(create_scheduler_router(scheduler_state))
 }

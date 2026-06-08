@@ -18,7 +18,12 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import {
   EnabledLabel,
@@ -137,7 +142,7 @@ function MenuItemsTableRow({
       <TableCell>
         <EnabledLabel enabled={row.enabled} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <MenuItemsTableActions row={row} onBindApis={onBindApis} onDelete={onDelete} onEdit={onEdit} />
       </TableCell>
     </TableRow>
@@ -210,7 +215,7 @@ function useMenuItemsTableHead() {
       { id: 'path', label: t('common.path') },
       { id: 'sort_order', label: t('common.sort'), width: 100 },
       { id: 'enabled', label: t('common.status'), width: 120 },
-      { id: '', width: 144 },
+      withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 144, align: 'left' }),
     ],
     [t]
   );

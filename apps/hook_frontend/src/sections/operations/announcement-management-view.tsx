@@ -30,7 +30,13 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 import { ConfirmDialog } from 'src/components/custom-dialog';
-import { useTable, TableHeadCustom, TablePaginationCustom } from 'src/components/table';
+import {
+  useTable,
+  TableHeadCustom,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { AddButton, EnabledLabel, AdminBreadcrumbs } from 'src/sections/admin/shared';
 
@@ -93,7 +99,12 @@ function AnnouncementTable({
     { id: 'priority', label: state.t('operations.announcement.table.priority'), width: 90 },
     { id: 'enabled', label: state.t('operations.announcement.table.status'), width: 100 },
     { id: 'updated_at', label: state.t('operations.announcement.table.updated'), width: 180 },
-    { id: '', width: 96 },
+    withStickyActionHeadCell({
+      id: 'actions',
+      label: state.t('common.actions'),
+      width: 96,
+      align: 'left',
+    }),
   ];
 
   return (
@@ -114,7 +125,7 @@ function AnnouncementTable({
                     <EnabledLabel enabled={row.enabled} />
                   </TableCell>
                   <TableCell>{fDateTime(row.updated_at)}</TableCell>
-                  <TableCell align="right">
+                  <TableCell align="left" sx={tableStickyActionCellSx}>
                     <IconButton onClick={() => state.openEdit(row)}>
                       <Iconify icon="solar:pen-bold" />
                     </IconButton>

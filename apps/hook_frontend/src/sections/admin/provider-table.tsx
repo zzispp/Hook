@@ -21,7 +21,12 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { providerTypeLabel } from './provider-management-utils';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
@@ -144,7 +149,7 @@ function ProviderTableRow({
       <TableCell>
         <EnabledLabel enabled={row.is_active} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Tooltip title={t('actions.associateProviderGroups')}>
             <IconButton
@@ -189,7 +194,7 @@ function providerTableHead(t: (key: string, options?: Record<string, unknown>) =
     { id: 'request_config', label: t('providers.requestConfig') },
     { id: 'priority', label: t('providers.priority'), width: 100 },
     { id: 'status', label: t('common.status'), width: 120 },
-    { id: '', width: 136 },
+    withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 136, align: 'left' }),
   ];
 }
 

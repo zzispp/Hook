@@ -24,6 +24,8 @@ import { Scrollbar } from 'src/components/scrollbar';
 import {
   TableNoData,
   TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
 } from 'src/components/table';
 
 import { formatWalletDateTime } from '../wallet/wallet-display';
@@ -69,7 +71,7 @@ export function ScheduledTaskTable({
       { id: 'last_status', label: t('scheduledTasks.fields.lastStatus'), width: 140 },
       { id: 'last_duration_ms', label: t('scheduledTasks.fields.lastDuration'), width: 140 },
       { id: 'config', label: t('scheduledTasks.fields.config'), width: 260 },
-      { id: '', width: 140 },
+      withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 140, align: 'left' }),
     ],
     [t]
   );
@@ -111,7 +113,7 @@ export function ScheduledTaskTable({
                         </Alert>
                       ) : null}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="left" sx={tableStickyActionCellSx}>
                       <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                         <Tooltip title={t('common.edit')}>
                           <IconButton onClick={() => onEdit(row)}>

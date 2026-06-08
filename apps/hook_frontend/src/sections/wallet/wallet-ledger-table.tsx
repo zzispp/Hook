@@ -15,7 +15,13 @@ import Typography from '@mui/material/Typography';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TableHeadCustom, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TableHeadCustom,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { WALLET_TABLE_MIN_WIDTH } from './wallet-constants';
 import { walletOwner, walletFromTransaction } from './wallet-owner';
@@ -195,7 +201,7 @@ function DetailActionCell({
   onOpen: (transaction: WalletTransaction) => void;
 }) {
   return (
-    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+    <TableCell align="left" sx={tableStickyActionCellSx}>
       <Button
         size="small"
         variant="outlined"
@@ -294,6 +300,11 @@ function tableHead(t: TFunction<'admin'>): TableHeadCellProps[] {
     { id: 'amount', label: t('wallet.table.amount'), width: 130 },
     { id: 'balance', label: t('wallet.table.balanceChange'), width: 260 },
     { id: 'description', label: t('wallet.table.description'), width: 240 },
-    { id: 'action', label: t('wallet.table.action'), width: 120, align: 'right' },
+    withStickyActionHeadCell({
+      id: 'action',
+      label: t('wallet.table.action'),
+      width: 120,
+      align: 'left',
+    }),
   ];
 }

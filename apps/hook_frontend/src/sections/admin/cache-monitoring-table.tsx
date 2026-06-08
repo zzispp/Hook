@@ -20,7 +20,12 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { TableLoadingRows, ManagementTableHead } from './shared';
 
@@ -94,7 +99,7 @@ function CacheMonitoringTableRow({
       </TableCell>
       <TableCell>{formatRemainingSeconds(row.ttl_seconds)}</TableCell>
       <TableCell>{row.request_count}</TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Tooltip title={t('common.delete')}>
             <IconButton color="error" onClick={() => onDelete(row)}>
@@ -142,7 +147,7 @@ function useCacheMonitoringTableHead() {
       { id: 'api_format', label: t('cacheMonitoring.columns.apiFormat'), width: 200 },
       { id: 'ttl', label: t('cacheMonitoring.columns.ttl'), width: 140 },
       { id: 'request_count', label: t('cacheMonitoring.columns.requestCount'), width: 120 },
-      { id: '', width: 88 },
+      withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 88, align: 'left' }),
     ],
     [t]
   );

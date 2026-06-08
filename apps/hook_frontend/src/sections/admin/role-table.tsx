@@ -17,7 +17,12 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import {
   EnabledLabel,
@@ -99,7 +104,7 @@ function RoleTableRow({
       <TableCell>
         <BooleanLabel enabled={row.system} trueText={t('common.system')} falseText={t('common.custom')} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <RoleTableActions row={row} onDelete={onDelete} onEdit={onEdit} onPermissions={onPermissions} />
       </TableCell>
     </TableRow>
@@ -155,7 +160,7 @@ function useRoleTableHead() {
       { id: 'sort_order', label: t('common.sort'), width: 100 },
       { id: 'enabled', label: t('common.status'), width: 120 },
       { id: 'system', label: t('common.type'), width: 120 },
-      { id: '', width: 144 },
+      withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 144, align: 'left' }),
     ],
     [t]
   );

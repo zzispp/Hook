@@ -17,7 +17,12 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { EnabledLabel, BooleanLabel, TableLoadingRows, ManagementTableHead } from './shared';
 
@@ -85,7 +90,7 @@ function TranslationLanguageTableRow({
       <TableCell>
         <BooleanLabel enabled={row.system} trueText={t('common.system')} falseText={t('common.custom')} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Tooltip title={t('common.edit')}>
             <IconButton onClick={() => onEdit(row)}>
@@ -116,9 +121,8 @@ function useTranslationLanguagesTableHead() {
       { id: 'sort_order', label: t('common.sort'), width: 100 },
       { id: 'enabled', label: t('common.status'), width: 120 },
       { id: 'system', label: t('common.type'), width: 120 },
-      { id: '', width: 120 },
+      withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 120, align: 'left' }),
     ],
     [t]
   );
 }
-

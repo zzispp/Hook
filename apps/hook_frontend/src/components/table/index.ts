@@ -10,6 +10,8 @@ export * from './table-empty-rows';
 
 export * from './table-head-custom';
 
+export * from './table-sticky-action';
+
 export * from './table-selected-action';
 
 export * from './table-pagination-custom';

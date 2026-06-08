@@ -20,7 +20,12 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { ModelCopyButton } from '../models/model-copy-button';
 import { formatUsageCount } from '../models/model-catalog-utils';
@@ -48,7 +53,7 @@ export function GlobalModelTable({ rows, total, loading, table, onDetail, onEdit
     { id: 'providers', label: t('models.providers'), width: 150 },
     { id: 'usage_count', label: t('models.usageCount'), width: 130 },
     { id: 'status', label: t('common.status'), width: 120 },
-    { id: '', width: 136 },
+    withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 136, align: 'left' }),
   ];
 
   return (
@@ -144,7 +149,7 @@ function GlobalModelTableRow({
       <TableCell>
         <EnabledLabel enabled={row.is_active} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Tooltip title={t('models.detailTitle')}>
             <IconButton onClick={() => onDetail(row)}>

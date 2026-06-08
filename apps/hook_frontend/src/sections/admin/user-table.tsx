@@ -20,7 +20,12 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { displayUserGroup } from './user-group-utils';
 import { providerColor, providerLabel } from '../profile/provider-utils';
@@ -113,7 +118,7 @@ function UserTableRow({ row, props }: { row: SystemUser; props: Props }) {
       <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
         {formatUserDateTime(row.last_login_at)}
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <RowActions row={row} props={props} />
       </TableCell>
     </TableRow>
@@ -235,6 +240,6 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
     { id: 'system', label: t('common.type'), width: 110 },
     { id: 'created_at', label: t('fields.createdAt'), width: 180 },
     { id: 'last_login_at', label: t('fields.lastLoginAt'), width: 180 },
-    { id: '', width: 184 },
+    withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 184, align: 'left' }),
   ];
 }
