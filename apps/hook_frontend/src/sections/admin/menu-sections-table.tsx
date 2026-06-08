@@ -17,7 +17,12 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import {
   EnabledLabel,
@@ -85,7 +90,7 @@ function MenuSectionsTableRow({
       <TableCell>
         <EnabledLabel enabled={row.enabled} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Tooltip title={t('common.edit')}>
             <IconButton onClick={() => onEdit(row)}>
@@ -112,7 +117,7 @@ function useMenuSectionsTableHead() {
       { id: 'code', label: t('common.code'), width: 240 },
       { id: 'sort_order', label: t('common.sort'), width: 100 },
       { id: 'enabled', label: t('common.status'), width: 120 },
-      { id: '', width: 144 },
+      withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 144, align: 'left' }),
     ],
     [t]
   );

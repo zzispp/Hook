@@ -20,7 +20,13 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+  TABLE_STICKY_ACTION_CELL_WIDTH,
+} from 'src/components/table';
 
 import { formatTime, formatInteger } from './api-token-management-utils';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from '../admin/shared';
@@ -96,7 +102,7 @@ function ApiTokenTableRow({ row, props }: { row: ApiToken; props: Props }) {
         <EnabledLabel enabled={row.is_active} />
       </TableCell>
       <TableCell>{formatTime(row.last_used_at)}</TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <RowActions
           row={row}
           onImportCcSwitch={props.onImportCcSwitch}
@@ -214,17 +220,22 @@ function tokenTableHead(
     { id: 'rate_limit_rpm', label: t('fields.rateLimitRpm'), width: 140 },
     { id: 'status', label: t('common.status'), width: 110 },
     { id: 'last_used_at', label: t('fields.lastUsedAt'), width: 180 },
-    { id: 'actions', label: t('common.actions'), width: 180, align: 'right' },
+    {
+      id: 'actions',
+      label: t('common.actions'),
+      width: TABLE_STICKY_ACTION_CELL_WIDTH,
+      align: 'left',
+    },
   ];
 
   return columns.map(withTokenHeadCellLayout);
 }
 
 function withTokenHeadCellLayout(cell: TableHeadCellProps): TableHeadCellProps {
-  return {
-    ...cell,
-    sx: { minWidth: cell.width, whiteSpace: 'nowrap' },
-  };
+  const layoutSx = { minWidth: cell.width, whiteSpace: 'nowrap' };
+  const cellWithLayout = { ...cell, sx: layoutSx };
+
+  return cell.id === 'actions' ? withStickyActionHeadCell(cellWithLayout) : cellWithLayout;
 }
 
 function tokenTableMinWidth(head: TableHeadCellProps[]) {

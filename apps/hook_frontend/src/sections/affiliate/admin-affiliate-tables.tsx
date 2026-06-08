@@ -20,7 +20,13 @@ import Typography from '@mui/material/Typography';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TableHeadCustom, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TableHeadCustom,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { formatDate, formatMoney, formatCount, formatPercent } from './admin-affiliate-format';
 
@@ -51,7 +57,7 @@ export function RelationsTable(props: PageProps & {
           <TableCell align="right">{formatMoney(row.referred_recharge_amount, props.locale)}</TableCell>
           <TableCell align="right">{formatMoney(row.commission_amount, props.locale)}</TableCell>
           <NoWrapCell>{formatDate(row.last_commission_at, props.locale)}</NoWrapCell>
-          <TableCell align="right">
+          <TableCell align="left" sx={tableStickyActionCellSx}>
             <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ flexWrap: 'nowrap' }}>
               <Button
                 size="small"
@@ -279,7 +285,12 @@ function relationHead(t: TFunction<'admin'>): TableHeadCellProps[] {
     { id: 'referred_recharge_amount', label: t('adminAffiliates.fields.referredRechargeAmount'), width: 160, align: 'right' },
     { id: 'commission_amount', label: t('adminAffiliates.fields.commissionAmount'), width: 150, align: 'right' },
     { id: 'last_commission_at', label: t('adminAffiliates.fields.lastCommissionAt'), width: 180 },
-    { id: 'actions', label: t('common.actions'), width: 260, align: 'right' },
+    withStickyActionHeadCell({
+      id: 'actions',
+      label: t('common.actions'),
+      width: 260,
+      align: 'left',
+    }),
   ];
 }
 

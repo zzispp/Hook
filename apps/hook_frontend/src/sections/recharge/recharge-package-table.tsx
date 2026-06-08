@@ -16,7 +16,13 @@ import Typography from '@mui/material/Typography';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TableHeadCustom, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TableHeadCustom,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import {
   formatCny,
@@ -114,7 +120,7 @@ function PackageRow({
       </TableCell>
       <TableCell>{row.sort_order}</TableCell>
       <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatRechargeDate(row.updated_at, locale)}</TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
           <Tooltip title={t('common.edit')}>
             <span>
@@ -181,6 +187,11 @@ function tableHead(t: TFunction<'admin'>): TableHeadCellProps[] {
     { id: 'status', label: t('common.status'), width: 120 },
     { id: 'sort_order', label: t('common.sortOrder'), width: 100 },
     { id: 'updated_at', label: t('adminRecharges.fields.updatedAt'), width: 180 },
-    { id: 'action', label: t('wallet.table.action'), width: 120, align: 'right' },
+    withStickyActionHeadCell({
+      id: 'action',
+      label: t('wallet.table.action'),
+      width: 120,
+      align: 'left',
+    }),
   ];
 }

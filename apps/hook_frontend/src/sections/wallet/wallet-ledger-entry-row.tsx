@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
+import { tableStickyActionCellSx } from 'src/components/table';
 
 import { walletOwner, walletFromTransaction } from './wallet-owner';
 import {
@@ -90,7 +91,7 @@ function DetailActionCell({
 }) {
   if (isDailyModelUsageEntry(entry)) {
     return (
-      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Button
           size="small"
           variant="outlined"
@@ -116,7 +117,7 @@ function DetailActionCell({
   }
 
   return (
-    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+    <TableCell align="left" sx={tableStickyActionCellSx}>
       <IconButton
         onClick={(event) => {
           event.stopPropagation();

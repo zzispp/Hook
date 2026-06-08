@@ -15,7 +15,13 @@ import Typography from '@mui/material/Typography';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TableHeadCustom, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TableHeadCustom,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import {
   formatCardCodeDate,
@@ -91,7 +97,7 @@ function CardCodeTypeRow({
         </Label>
       </TableCell>
       <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatCardCodeDate(row.updated_at, locale)}</TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Button size="small" variant="contained" startIcon={<Iconify icon="solar:pen-bold" />} onClick={() => onEdit(row)}>
           {t('common.edit')}
         </Button>
@@ -122,6 +128,11 @@ function tableHead(t: TFunction<'admin'>): TableHeadCellProps[] {
     { id: 'balance_type', label: t('adminCardCodes.fields.balanceType'), width: 220 },
     { id: 'status', label: t('common.status'), width: 140 },
     { id: 'updated_at', label: t('adminCardCodes.fields.updatedAt'), width: 180 },
-    { id: 'action', label: t('wallet.table.action'), width: 120, align: 'right' },
+    withStickyActionHeadCell({
+      id: 'action',
+      label: t('wallet.table.action'),
+      width: 120,
+      align: 'left',
+    }),
   ];
 }

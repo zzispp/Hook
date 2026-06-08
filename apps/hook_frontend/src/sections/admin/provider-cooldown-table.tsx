@@ -20,7 +20,12 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { TableLoadingRows, ManagementTableHead } from './shared';
 import { compactId, formatRequestDate } from './request-records-utils';
@@ -177,7 +182,7 @@ function ProviderCooldownRow({
           </Typography>
         </Stack>
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Button size="small" variant="outlined" loading={releasing} onClick={() => onRelease(row.provider_id)}>
           {t('providers.releaseCooldown')}
         </Button>
@@ -198,7 +203,7 @@ function tableHead(t: (key: string, options?: Record<string, unknown>) => string
     { id: 'endpoint', label: t('providers.cooldownEndpoint'), width: 150 },
     { id: 'key', label: t('providers.cooldownKey'), width: 150 },
     { id: 'error', label: t('providers.cooldownError'), width: 320 },
-    { id: '', width: 130 },
+    withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 130, align: 'left' }),
   ];
 }
 

@@ -15,7 +15,13 @@ import Typography from '@mui/material/Typography';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TableHeadCustom, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TableHeadCustom,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import {
   adminWalletOwner,
@@ -91,7 +97,7 @@ function AdminWalletRow({
       <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
         {formatWalletDateTime(row.updated_at, locale)}
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Stack direction="row" justifyContent="flex-end" spacing={1}>
           <Button size="small" variant="outlined" onClick={() => onOpenLedger(row)}>
             {t('adminWallets.actions.ledger')}
@@ -150,6 +156,11 @@ function tableHead(t: TFunction<'admin'>): TableHeadCellProps[] {
     { id: 'gift', label: t('wallet.metrics.giftBalance'), width: 150 },
     { id: 'status', label: t('common.status'), width: 120 },
     { id: 'updated_at', label: t('adminWallets.fields.updatedAt'), width: 180 },
-    { id: 'action', label: t('wallet.table.action'), width: 190, align: 'right' },
+    withStickyActionHeadCell({
+      id: 'action',
+      label: t('wallet.table.action'),
+      width: 190,
+      align: 'left',
+    }),
   ];
 }

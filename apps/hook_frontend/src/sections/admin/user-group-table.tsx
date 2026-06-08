@@ -17,7 +17,12 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { isDefaultUserGroup } from './user-group-management-utils';
 import {
@@ -89,7 +94,7 @@ function UserGroupTableRow({ row, props }: { row: UserGroup; props: Props }) {
       <TableCell>
         <BooleanLabel enabled={row.is_system} trueText={t('common.system')} falseText={t('common.custom')} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <UserGroupActions row={row} props={props} />
       </TableCell>
     </TableRow>
@@ -137,6 +142,6 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
     { id: 'sort_order', label: t('common.sortOrder'), width: 110 },
     { id: 'is_active', label: t('common.status'), width: 120 },
     { id: 'system', label: t('common.type'), width: 120 },
-    { id: '', width: 184 },
+    withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 184, align: 'left' }),
   ];
 }

@@ -2,7 +2,7 @@
 
 import type { BillingGroup } from 'src/types/group';
 import type { UserGroup } from 'src/types/user-group';
-import type { UseTableReturn } from 'src/components/table';
+import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
 
 import Box from '@mui/material/Box';
@@ -20,6 +20,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
+import { tableStickyActionCellSx, withStickyActionHeadCell } from 'src/components/table';
 
 import { userGroupSelectionLabel } from './user-group-utils';
 import {
@@ -130,7 +131,7 @@ function BillingGroupTableRow({
       <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
       <TableCell>{row.is_system ? t('common.system') : t('common.custom')}</TableCell>
       <TableCell>{row.sort_order}</TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <GroupActions row={row} onView={onView} onEdit={onEdit} onDelete={onDelete} />
       </TableCell>
     </TableRow>
@@ -193,7 +194,7 @@ function EmptyRow({
   );
 }
 
-function groupTableHead(t: (key: string, options?: Record<string, unknown>) => string) {
+function groupTableHead(t: (key: string, options?: Record<string, unknown>) => string): TableHeadCellProps[] {
   return [
     { id: 'code', label: t('common.code') },
     { id: 'name', label: t('common.name') },
@@ -204,7 +205,7 @@ function groupTableHead(t: (key: string, options?: Record<string, unknown>) => s
     { id: 'status', label: t('common.status') },
     { id: 'system', label: t('common.system') },
     { id: 'sort_order', label: t('common.sortOrder') },
-    { id: '', width: 144 },
+    withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 144, align: 'left' }),
   ];
 }
 

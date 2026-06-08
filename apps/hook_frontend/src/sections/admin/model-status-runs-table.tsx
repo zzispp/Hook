@@ -20,7 +20,13 @@ import DialogContent from '@mui/material/DialogContent';
 
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TableHeadCustom, TablePaginationCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TableHeadCustom,
+  TablePaginationCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
 
 import { StatusLabel } from '../model-status/model-status-view';
 import { latencyLabel } from '../model-status/model-status-timeline';
@@ -87,7 +93,7 @@ function RunRow({
       </TableCell>
       <TableCell>{latencyLabel(row.latency_ms)}</TableCell>
       <TableCell>{row.status_code ? `HTTP ${row.status_code}` : '-'}</TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Tooltip title={t('common.details')}>
           <IconButton onClick={() => onDetail(row)}>
             <Iconify icon="solar:eye-bold" />
@@ -198,7 +204,12 @@ function tableHead(t: TFunction<'admin'>): TableHeadCellProps[] {
     { id: 'status', label: t('common.status'), width: 140 },
     { id: 'latency', label: t('modelStatusChecks.lastLatency'), width: 120 },
     { id: 'status_code', label: t('modelStatusChecks.runs.statusCode'), width: 120 },
-    { id: 'actions', label: '', align: 'right', width: 96 },
+    withStickyActionHeadCell({
+      id: 'actions',
+      label: t('common.actions'),
+      align: 'left',
+      width: 96,
+    }),
   ];
 }
 

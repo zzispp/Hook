@@ -5,14 +5,18 @@ use rbac::{
 };
 use storage::connect_database;
 
-use crate::{BackendResult, migration::development, startup};
+use crate::{
+    BackendResult,
+    migration::development,
+    startup::{self, ServeMode},
+};
 
 pub async fn run() -> BackendResult<()> {
     let settings = Settings::load()?;
     init_tracing(&settings)?;
 
     match command_from_args(std::env::args().skip(1).collect())? {
-        BackendCommand::Serve => startup::serve(settings).await,
+        BackendCommand::Serve(mode) => startup::serve(settings, mode).await,
         BackendCommand::Migration(command) => run_migration(settings, command).await,
     }
 }
@@ -58,7 +62,7 @@ async fn rebuild_rbac_cache_after_migration(settings: &Settings, database: stora
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum BackendCommand {
-    Serve,
+    Serve(ServeMode),
     Migration(MigrationCommand),
 }
 
@@ -81,7 +85,8 @@ impl MigrationCommand {
 fn command_from_args(args: Vec<String>) -> BackendResult<BackendCommand> {
     let positionals = positional_args(args)?;
     match positionals.as_slice() {
-        [] => Ok(BackendCommand::Serve),
+        [] => Ok(BackendCommand::Serve(ServeMode::Full)),
+        [api] if api == "api" => Ok(BackendCommand::Serve(ServeMode::ApiOnly)),
         [migration, args @ ..] if migration == "migration" => Ok(BackendCommand::Migration(migration_command(args)?)),
         _ => Err(format!("unsupported backend command: {}", positionals.join(" ")).into()),
     }
@@ -118,10 +123,23 @@ fn positional_args(args: Vec<String>) -> BackendResult<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::{BackendCommand, MigrationCommand, command_from_args, positional_args};
+    use crate::startup::ServeMode;
 
     #[test]
     fn defaults_to_serve_command() {
-        assert_eq!(command_from_args(vec![]).unwrap(), BackendCommand::Serve);
+        assert_eq!(command_from_args(vec![]).unwrap(), BackendCommand::Serve(ServeMode::Full));
+    }
+
+    #[test]
+    fn detects_api_only_command() {
+        assert_eq!(command_from_args(vec!["api".into()]).unwrap(), BackendCommand::Serve(ServeMode::ApiOnly));
+    }
+
+    #[test]
+    fn ignores_config_path_when_detecting_api_only_command() {
+        let args = vec!["--config".into(), "config/config.yaml".into(), "api".into()];
+
+        assert_eq!(command_from_args(args).unwrap(), BackendCommand::Serve(ServeMode::ApiOnly));
     }
 
     #[test]
