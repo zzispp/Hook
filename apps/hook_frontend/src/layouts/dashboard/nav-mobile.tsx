@@ -8,11 +8,11 @@ import Drawer from '@mui/material/Drawer';
 
 import { usePathname } from 'src/routes/hooks';
 
-import { Logo } from 'src/components/logo';
 import { Scrollbar } from 'src/components/scrollbar';
 import { NavSectionVertical } from 'src/components/nav-section';
 
 import { layoutClasses } from '../core';
+import { DashboardBrand } from './dashboard-brand';
 
 // ----------------------------------------------------------------------
 
@@ -63,8 +63,8 @@ export function NavMobile({
       }}
     >
       {slots?.topArea ?? (
-        <Box sx={{ pl: 3.5, pt: 2.5, pb: 1 }}>
-          <Logo />
+        <Box sx={{ px: 3, pt: 2.5, pb: 1 }}>
+          <DashboardBrand />
         </Box>
       )}
 

@@ -1,6 +1,7 @@
 {
   "pageMetadata": {
     "title": "Hook | Unified AI Gateway",
+    "titleSuffix": "Unified AI Gateway",
     "description": "Unify OpenAI, Claude, Gemini, and CLI traffic behind one entry point, with routing, token governance, cost quotas, and health monitoring in one control plane."
   },
   "navbar": {

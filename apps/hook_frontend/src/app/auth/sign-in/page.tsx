@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { authPageMetadata } from 'src/app/auth/page-metadata';
 
 import { JwtSignInView } from 'src/auth/view/jwt';
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `Sign in | ${CONFIG.appName}` };
+export function generateMetadata(): Promise<Metadata> {
+  return authPageMetadata('signIn.title');
+}
 
 export default function Page() {
   return <JwtSignInView />;

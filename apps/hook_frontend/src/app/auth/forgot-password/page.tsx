@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { authPageMetadata } from 'src/app/auth/page-metadata';
 
 import { JwtForgotPasswordView } from 'src/auth/view/jwt';
 
-export const metadata: Metadata = { title: `Forgot password | ${CONFIG.appName}` };
+export function generateMetadata(): Promise<Metadata> {
+  return authPageMetadata('forgotPassword.title');
+}
 
 export default function Page() {
   return <JwtForgotPasswordView />;

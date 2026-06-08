@@ -8,6 +8,9 @@ import { readFile } from 'node:fs/promises';
 
 import { CONFIG } from 'src/global-config';
 import { detectLanguage } from 'src/locales/server';
+import enCommon from 'src/locales/langs/en/common.json';
+import cnCommon from 'src/locales/langs/cn/common.json';
+import { fallbackLng, type LangCode } from 'src/locales/locales-config';
 import {
   navTranslationKey,
   type DashboardMenuCode,
@@ -15,22 +18,33 @@ import {
 
 const ADMIN_NAMESPACE = 'admin';
 const ADMIN_RESOURCE_PATH = '/api/i18n/resources';
-const STATIC_EXPORT_LANG = 'en';
-const STATIC_ADMIN_RESOURCE_PATH = '../hook_backend/src/migration/defaults/i18n/admin.en.json';
+const STATIC_ADMIN_RESOURCE_DIR = '../hook_backend/src/migration/defaults/i18n';
+const DASHBOARD_TITLE_KEY = 'nav.dashboard';
+
+const STATIC_ADMIN_RESOURCE_FILES: Record<LangCode, string> = {
+  cn: 'admin.cn.json',
+  en: 'admin.en.json',
+};
+
+const STATIC_COMMON_RESOURCES: Record<LangCode, typeof cnCommon> = {
+  cn: cnCommon,
+  en: enCommon,
+};
 
 export async function dashboardPageMetadata(code: DashboardMenuCode): Promise<Metadata> {
-  const lang = CONFIG.isStaticExport ? STATIC_EXPORT_LANG : await detectLanguage();
+  const lang = CONFIG.isStaticExport ? fallbackLng : await detectLanguage();
   const resources = await getAdminResources(lang);
   const title = resourceString(resources, navTranslationKey(code));
+  const dashboardTitle = resourceString(STATIC_COMMON_RESOURCES[lang], DASHBOARD_TITLE_KEY);
 
   return {
-    title: `${title} | Dashboard - ${CONFIG.appName}`,
+    title: `${title} | ${dashboardTitle} - ${CONFIG.appName}`,
   };
 }
 
-const getAdminResources = cache(async (lang: string) => {
+const getAdminResources = cache(async (lang: LangCode) => {
   if (CONFIG.isStaticExport) {
-    return staticAdminResources();
+    return staticAdminResources(lang);
   }
 
   const serverUrl = CONFIG.serverUrl.trim();
@@ -55,17 +69,22 @@ const getAdminResources = cache(async (lang: string) => {
   return payload.data.resources;
 });
 
-async function staticAdminResources() {
-  const content = await readFile(join(process.cwd(), STATIC_ADMIN_RESOURCE_PATH), 'utf8');
+async function staticAdminResources(lang: LangCode) {
+  const content = await readFile(
+    join(process.cwd(), STATIC_ADMIN_RESOURCE_DIR, STATIC_ADMIN_RESOURCE_FILES[lang]),
+    'utf8'
+  );
 
   return JSON.parse(content) as Record<string, unknown>;
 }
 
 function resourceString(resources: Record<string, unknown>, path: string) {
-  const value = path.split('.').reduce<unknown>(
-    (current, segment) => (isRecord(current) ? current[segment] : undefined),
-    resources
-  );
+  const value = path
+    .split('.')
+    .reduce<unknown>(
+      (current, segment) => (isRecord(current) ? current[segment] : undefined),
+      resources
+    );
 
   if (typeof value !== 'string' || !value.trim()) {
     throw new Error(`Missing dashboard metadata translation: ${path}`);

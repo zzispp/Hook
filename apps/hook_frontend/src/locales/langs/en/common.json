@@ -9,6 +9,18 @@
     "signIn": "Sign in",
     "logout": "Logout"
   },
+  "metadata": {
+    "pages": {
+      "aboutUs": "About us",
+      "comingSoon": "Coming soon",
+      "maintenance": "Maintenance",
+      "payment": "Payment",
+      "pricing": "Pricing",
+      "page403": "403 forbidden",
+      "page404": "404 page not found",
+      "page500": "500 internal server error"
+    }
+  },
   "auth": {
     "logoutError": "Unable to logout"
   },

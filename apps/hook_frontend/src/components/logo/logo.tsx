@@ -14,6 +14,10 @@ import { logoClasses } from './classes';
 
 // ----------------------------------------------------------------------
 
+const LOGO_COMPACT_SIZE = 40;
+const LOGO_FULL_WIDTH = 102;
+const LOGO_FULL_HEIGHT = 36;
+
 export type LogoProps = LinkProps & {
   isSingle?: boolean;
   disabled?: boolean;
@@ -24,9 +28,13 @@ export function Logo({
   disabled,
   className,
   href = '/',
-  isSingle = true,
+  isSingle = false,
   ...other
 }: LogoProps) {
+  const logoDimensions = isSingle
+    ? { width: LOGO_COMPACT_SIZE, height: LOGO_COMPACT_SIZE }
+    : { width: LOGO_FULL_WIDTH, height: LOGO_FULL_HEIGHT };
+
   return (
     <LogoRoot
       component={RouterLink}
@@ -36,9 +44,7 @@ export function Logo({
       className={mergeClasses([logoClasses.root, className])}
       sx={[
         {
-          width: 40,
-          height: 40,
-          ...(!isSingle && { width: 102, height: 36 }),
+          ...logoDimensions,
           ...(disabled && { pointerEvents: 'none' }),
         },
         ...(Array.isArray(sx) ? sx : [sx]),
@@ -56,5 +62,8 @@ const LogoRoot = styled(Link)(() => ({
   flexShrink: 0,
   color: 'transparent',
   display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  lineHeight: 0,
   verticalAlign: 'middle',
 }));
