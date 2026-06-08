@@ -1,6 +1,7 @@
 {
   "pageMetadata": {
     "title": "Hook | 统一大模型网关",
+    "titleSuffix": "统一大模型网关",
     "description": "统一 OpenAI、Claude、Gemini 与 CLI 工具调用入口，把模型路由、令牌治理、成本配额和健康监控放进同一个控制面。"
   },
   "navbar": {

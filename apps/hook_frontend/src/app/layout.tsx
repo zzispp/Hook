@@ -10,11 +10,13 @@ import { CONFIG } from 'src/global-config';
 import { LocalizationProvider } from 'src/locales';
 import { detectLanguage } from 'src/locales/server';
 import { I18nProvider } from 'src/locales/i18n-provider';
+import { fallbackLng } from 'src/locales/locales-config';
 import { themeConfig, ThemeProvider, primary as primaryColor } from 'src/theme';
 
 import { Snackbar } from 'src/components/snackbar';
 import { ProgressBar } from 'src/components/progress-bar';
 import { MotionLazy } from 'src/components/animate/motion-lazy';
+import { PageMetadataSync } from 'src/components/page-metadata/page-metadata-sync';
 import { SettingsDrawer, defaultSettings, SettingsProvider } from 'src/components/settings';
 
 import { AuthProvider } from 'src/auth/context/jwt';
@@ -56,8 +58,8 @@ type RootLayoutProps = {
 async function getAppConfig() {
   if (CONFIG.isStaticExport) {
     return {
-      lang: 'en',
-      i18nLang: undefined,
+      lang: fallbackLng,
+      i18nLang: fallbackLng,
       dir: defaultSettings.direction,
     };
   } else {
@@ -116,6 +118,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                       defaultMode={themeConfig.defaultMode}
                     >
                       <MotionLazy>
+                        <PageMetadataSync />
                         <Snackbar />
                         <ProgressBar />
                         <SettingsDrawer defaultSettings={defaultSettings} />

@@ -6,6 +6,7 @@ use axum::{
 use rust_embed::{Embed, EmbeddedFile};
 
 const INDEX_FILE: &str = "index.html";
+const NOT_FOUND_FILE: &str = "404.html";
 const METHOD_NOT_ALLOWED_BODY: &str = "Method Not Allowed";
 const NOT_FOUND_BODY: &str = "404 Not Found";
 const RESERVED_BACKEND_PREFIXES: [&str; 3] = ["/api", "/v1", "/v1beta"];
@@ -20,9 +21,15 @@ pub fn create_router() -> Router {
 }
 
 pub fn ensure_assets() -> Result<(), &'static str> {
-    FrontendAssets::get(INDEX_FILE)
-        .map(|_| ())
-        .ok_or("embedded frontend assets are missing; run `pnpm build:frontend:embedded` before starting or packaging the backend")
+    if FrontendAssets::get(INDEX_FILE).is_none() {
+        return Err("embedded frontend index asset is missing; run `pnpm build:frontend:embedded` before starting or packaging the backend");
+    }
+
+    if FrontendAssets::get(NOT_FOUND_FILE).is_none() {
+        return Err("embedded frontend 404 asset is missing; run `pnpm build:frontend:embedded` before starting or packaging the backend");
+    }
+
+    Ok(())
 }
 
 async fn static_handler(method: Method, uri: Uri) -> Response {
@@ -40,6 +47,7 @@ async fn static_handler(method: Method, uri: Uri) -> Response {
 
     match find_asset(&path) {
         Some(file) => asset_response(file),
+        None if should_serve_frontend_not_found(&path) => frontend_not_found(),
         None => not_found(),
     }
 }
@@ -73,6 +81,10 @@ fn has_file_extension(path: &str) -> bool {
     path.rsplit('/').next().is_some_and(|segment| segment.contains('.'))
 }
 
+fn should_serve_frontend_not_found(path: &str) -> bool {
+    !has_file_extension(path)
+}
+
 fn is_reserved_backend_path(path: &str) -> bool {
     RESERVED_BACKEND_PREFIXES
         .iter()
@@ -87,9 +99,16 @@ fn not_found() -> Response {
     (StatusCode::NOT_FOUND, NOT_FOUND_BODY).into_response()
 }
 
+fn frontend_not_found() -> Response {
+    let file = FrontendAssets::get(NOT_FOUND_FILE)
+        .expect("embedded frontend 404 asset is missing; run `pnpm build:frontend:embedded` before starting or packaging the backend");
+
+    (StatusCode::NOT_FOUND, [(header::CONTENT_TYPE, file.metadata.mimetype())], file.data).into_response()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{INDEX_FILE, has_file_extension, is_reserved_backend_path, normalized_asset_path};
+    use super::{INDEX_FILE, has_file_extension, is_reserved_backend_path, normalized_asset_path, should_serve_frontend_not_found};
 
     #[test]
     fn normalizes_static_paths() {
@@ -120,5 +139,13 @@ mod tests {
         assert!(has_file_extension("_next/static/app.js"));
         assert!(!has_file_extension("dashboard/admin"));
         assert!(!has_file_extension("release.v1/dashboard"));
+    }
+
+    #[test]
+    fn serves_frontend_404_for_missing_page_routes_only() {
+        assert!(should_serve_frontend_not_found("dashboard/unknown"));
+        assert!(should_serve_frontend_not_found("release.v1/dashboard"));
+        assert!(!should_serve_frontend_not_found("_next/static/missing.js"));
+        assert!(!should_serve_frontend_not_found("favicon.ico"));
     }
 }

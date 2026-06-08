@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { commonPageMetadata } from 'src/app/page-metadata';
 
 import { ComingSoonView } from 'src/sections/coming-soon/view';
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `Coming soon - ${CONFIG.appName}` };
+export function generateMetadata(): Promise<Metadata> {
+  return commonPageMetadata('comingSoon');
+}
 
 export default function Page() {
   return <ComingSoonView />;

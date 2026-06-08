@@ -14,13 +14,13 @@ import { iconButtonClasses } from '@mui/material/IconButton';
 
 import { useNavbar } from 'src/actions/rbac';
 
-import { Logo } from 'src/components/logo';
 import { useSettingsContext } from 'src/components/settings';
 
 import { NavMobile } from './nav-mobile';
 import { VerticalDivider } from './content';
 import { NavVertical } from './nav-vertical';
 import { NavHorizontal } from './nav-horizontal';
+import { DashboardBrand } from './dashboard-brand';
 import { Searchbar } from '../components/searchbar';
 import { DashboardRouteGuard } from './route-guard';
 import { MenuButton } from '../components/menu-button';
@@ -106,7 +106,7 @@ export function DashboardLayout({
 
           {/** @slot Logo */}
           {isNavHorizontal && (
-            <Logo
+            <DashboardBrand
               sx={{
                 display: 'none',
                 [theme.breakpoints.up(layoutQuery)]: { display: 'inline-flex' },

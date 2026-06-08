@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { commonPageMetadata } from 'src/app/page-metadata';
 
 import { PaymentView } from 'src/sections/payment/view';
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `Payment - ${CONFIG.appName}` };
+export function generateMetadata(): Promise<Metadata> {
+  return commonPageMetadata('payment');
+}
 
 export default function Page() {
   return <PaymentView />;

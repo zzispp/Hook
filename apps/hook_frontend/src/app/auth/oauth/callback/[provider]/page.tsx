@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import type { IdentityProvider } from 'src/types/rbac';
 
-import { CONFIG } from 'src/global-config';
+import { authPageMetadata } from 'src/app/auth/page-metadata';
 
 import { JwtOAuthCallbackView } from 'src/auth/view/jwt';
 
-export const metadata: Metadata = { title: `OAuth callback | ${CONFIG.appName}` };
+export function generateMetadata(): Promise<Metadata> {
+  return authPageMetadata('social.oauthProcessing');
+}
 
 type OAuthProvider = Extract<IdentityProvider, 'github' | 'google'>;
 

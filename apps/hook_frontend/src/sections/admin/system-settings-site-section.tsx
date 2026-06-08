@@ -2,14 +2,14 @@
 
 import type { SystemSettingsForm } from './system-settings-utils';
 
+import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
-import { logoImageSource } from 'src/components/logo/logo-utils';
+import { logoImageSource, isMaskableLogoSource } from 'src/components/logo/logo-utils';
 
 import { TextFieldRow } from './shared';
 import { SettingsSection } from './system-settings-section';
@@ -58,7 +58,44 @@ function LogoField({ form, setForm }: Props) {
       direction={{ xs: 'column', md: 'row' }}
       sx={{ mt: 2, alignItems: 'center' }}
     >
-      <Avatar variant="rounded" src={logoSrc} sx={{ width: 64, height: 64 }} />
+      <Box
+        sx={{
+          p: 1,
+          width: 64,
+          height: 64,
+          display: 'flex',
+          borderRadius: 1,
+          overflow: 'hidden',
+          alignItems: 'center',
+          border: '1px solid',
+          borderColor: 'divider',
+          justifyContent: 'center',
+        }}
+      >
+        {logoSrc && isMaskableLogoSource(logoSrc) && (
+          <Box
+            aria-hidden
+            component="span"
+            sx={{
+              width: 1,
+              height: 1,
+              color: 'text.primary',
+              display: 'block',
+              bgcolor: 'currentColor',
+              mask: `url("${logoSrc}") center / contain no-repeat`,
+              WebkitMask: `url("${logoSrc}") center / contain no-repeat`,
+            }}
+          />
+        )}
+        {logoSrc && !isMaskableLogoSource(logoSrc) && (
+          <Box
+            component="img"
+            alt=""
+            src={logoSrc}
+            sx={{ width: 1, height: 1, display: 'block', objectFit: 'contain' }}
+          />
+        )}
+      </Box>
       <Button component="label" variant="outlined" startIcon={<Iconify icon="solar:import-bold" />}>
         {t('systemSettings.fields.siteLogoUpload')}
         <input hidden type="file" accept="image/*" onChange={(event) => readLogoFile(event, setForm)} />

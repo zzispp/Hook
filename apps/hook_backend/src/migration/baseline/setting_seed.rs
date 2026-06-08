@@ -63,7 +63,7 @@ const DEFAULT_PASSWORD_RESET_HTML: &str = r#"<!DOCTYPE html>
 </body>
 </html>"#;
 
-const DEFAULT_SITE_LOGO_BASE64: &str = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHN0eWxlPgogICAgcGF0aCB7IGZpbGw6ICMwMDAwMDA7IH0KICAgIEBtZWRpYSAocHJlZmVycy1jb2xvci1zY2hlbWU6IGRhcmspIHsKICAgICAgcGF0aCB7IGZpbGw6ICNGRkZGRkY7IH0KICAgIH0KICA8L3N0eWxlPgogIDxwYXRoIGQ9Ik0xMS4wNSA3LjAyNThIMTQuNTUyTDEzLjUxOTQgMTMuMjE4NkgxNi4zMTczTDIwLjEyMzQgMTguMjQxMUgxMi42ODE1TDExLjk2MzcgMjIuNTQ5OUg4LjQ2MTdMMTEuMDUgNy4wMjU4WiBNMjMuNDUgNy4wMjU4SDI2Ljk1MkwyNC4zNjM3IDIyLjU0OTlIMjAuODYxN0wyMS41Nzk1IDE4LjI0MTFIMjEuOTkyNkwxOC4xODY1IDEzLjIxODZIMjIuNDE3NEwyMy40NSA3LjAyNThaIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz4KPC9zdmc+Cg==";
+const DEFAULT_SITE_LOGO_SOURCE: &str = "/logo/logo.svg";
 
 pub(super) async fn seed_system_settings(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     manager.execute(system_settings_insert()).await
@@ -161,7 +161,7 @@ fn system_settings_values() -> Vec<Expr> {
         "Hook AI".into(),
         "自托管 AI API 统一网关".into(),
         "".into(),
-        DEFAULT_SITE_LOGO_BASE64.into(),
+        DEFAULT_SITE_LOGO_SOURCE.into(),
         "[]".into(),
         true.into(),
         false.into(),
@@ -251,6 +251,7 @@ mod tests {
         assert_bool_value(&columns, &values, SystemSettings::AuthGoogleEnabled, false);
         assert_string_value(&columns, &values, SystemSettings::AuthGoogleClientId, "");
         assert_string_value(&columns, &values, SystemSettings::EncryptedAuthGoogleClientSecret, "");
+        assert_string_value(&columns, &values, SystemSettings::SiteLogoBase64, DEFAULT_SITE_LOGO_SOURCE);
     }
 
     fn assert_bool_value(columns: &[SystemSettings], values: &[Expr], column: SystemSettings, expected: bool) {

@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 
-import { CONFIG } from 'src/global-config';
+import { commonPageMetadata } from 'src/app/page-metadata';
 
 import { PricingView } from 'src/sections/pricing/view';
 
 // ----------------------------------------------------------------------
 
-export const metadata: Metadata = { title: `Pricing - ${CONFIG.appName}` };
+export function generateMetadata(): Promise<Metadata> {
+  return commonPageMetadata('pricing');
+}
 
 export default function Page() {
   return <PricingView />;
