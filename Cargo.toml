@@ -31,8 +31,10 @@ members = [
 resolver = "3"
 
 [profile.ci]
-inherits = "dev"
+inherits = "release"
+opt-level = 0
 debug = 0
+codegen-units = 256
 incremental = false
 
 [workspace.package]
