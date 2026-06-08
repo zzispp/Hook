@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
 use types::provider::{Provider, ProviderListRequest, ProviderListResponse};
 
@@ -10,10 +8,10 @@ use super::{
     ProviderApiKeySecretRecord, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
     ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
     record::{
-        provider_api_keys, provider_endpoints, provider_models,
+        provider_api_keys,
         providers::{self, ActiveModel as ProviderActiveModel},
     },
-    repository_helpers::{ProviderFilterIds, apply_provider_api_key_patch, apply_provider_patch, filter_provider_records, provider_active_model},
+    repository_helpers::{apply_provider_api_key_patch, apply_provider_patch, provider_active_model},
 };
 
 #[derive(Clone)]
@@ -52,27 +50,7 @@ impl ProviderStore {
     }
 
     pub async fn list_providers(&self, request: ProviderListRequest) -> StorageResult<ProviderListResponse> {
-        let records = self.provider_records().await?;
-        let ids = self.provider_filter_ids(&request).await?;
-        let records = filter_provider_records(records, &request, ids);
-        let total = records.len() as u64;
-        let providers = records
-            .into_iter()
-            .skip(request.skip as usize)
-            .take(request.limit as usize)
-            .map(Into::into)
-            .collect();
-        Ok(ProviderListResponse { providers, total })
-    }
-
-    pub async fn active_providers_for_scheduling(&self) -> StorageResult<Vec<Provider>> {
-        Ok(self
-            .provider_records()
-            .await?
-            .into_iter()
-            .filter(|record| record.is_active)
-            .map(Into::into)
-            .collect())
+        super::provider_query::list_providers(self, request).await
     }
 
     pub async fn create_endpoint(&self, input: ProviderEndpointRecordInput) -> StorageResult<types::provider::ProviderEndpoint> {
@@ -271,40 +249,6 @@ impl ProviderStore {
 
     pub(crate) fn next_id(&self) -> String {
         self.database.next_id()
-    }
-
-    async fn provider_records(&self) -> StorageResult<Vec<super::ProviderRecord>> {
-        providers::Entity::find()
-            .order_by_asc(providers::Column::Priority)
-            .order_by_asc(providers::Column::Name)
-            .all(self.database.connection())
-            .await
-            .map_err(StorageError::from)
-    }
-
-    async fn provider_filter_ids(&self, request: &ProviderListRequest) -> StorageResult<ProviderFilterIds> {
-        Ok(ProviderFilterIds {
-            api_format: self.provider_ids_by_api_format(request.api_format.as_deref()).await?,
-            model: self.provider_ids_by_model(request.model_id.as_deref()).await?,
-        })
-    }
-
-    async fn provider_ids_by_api_format(&self, api_format: Option<&str>) -> StorageResult<Option<HashSet<String>>> {
-        let Some(api_format) = api_format else { return Ok(None) };
-        let records = provider_endpoints::Entity::find()
-            .filter(provider_endpoints::Column::ApiFormat.eq(api_format))
-            .all(self.database.connection())
-            .await?;
-        Ok(Some(records.into_iter().map(|record| record.provider_id).collect()))
-    }
-
-    async fn provider_ids_by_model(&self, model_id: Option<&str>) -> StorageResult<Option<HashSet<String>>> {
-        let Some(model_id) = model_id else { return Ok(None) };
-        let records = provider_models::Entity::find()
-            .filter(provider_models::Column::GlobalModelId.eq(model_id))
-            .all(self.database.connection())
-            .await?;
-        Ok(Some(records.into_iter().map(|record| record.provider_id).collect()))
     }
 
     async fn find_provider_record(&self, id_or_name: &str) -> StorageResult<Option<super::ProviderRecord>> {

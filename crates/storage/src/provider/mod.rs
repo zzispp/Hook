@@ -5,6 +5,7 @@ mod provider_endpoint_query;
 mod provider_model_cost_query;
 mod provider_model_query;
 mod provider_model_repository;
+mod provider_query;
 pub mod record;
 mod repository;
 mod repository_helpers;

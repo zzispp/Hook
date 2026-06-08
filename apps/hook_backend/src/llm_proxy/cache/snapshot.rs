@@ -11,7 +11,8 @@ use storage::{
 };
 use types::{
     group::BillingGroupListRequest,
-    pagination::{PageRequest, PageSliceRequest},
+    pagination::PageRequest,
+    pagination::PageSliceRequest,
     provider::parse_provider_key_time_range_minute,
     user::UserListFilters,
     user_group::{UserGroupFilters, UserGroupListRequest},
@@ -148,7 +149,18 @@ async fn load_active_user_group_codes(database: &Database) -> Result<Vec<String>
 async fn load_providers(database: &Database) -> Result<Vec<CachedProvider>, LlmProxyError> {
     let store = ProviderStore::new(database.clone());
     let mut providers = Vec::new();
-    for provider in store.active_providers_for_scheduling().await? {
+    for provider in store
+        .list_providers(types::provider::ProviderListRequest {
+            skip: 0,
+            limit: SNAPSHOT_FULL_PAGE_LIMIT,
+            is_active: None,
+            search: None,
+            api_format: None,
+            model_id: None,
+        })
+        .await?
+        .providers
+    {
         providers.push(CachedProvider {
             endpoints: load_endpoints(&store, &provider.id).await?,
             keys: load_keys(database, &provider.id).await?,
@@ -278,6 +290,10 @@ fn cached_model(record: global_models::Model) -> Result<CachedGlobalModel, LlmPr
             .map_err(|error| LlmProxyError::Infrastructure(format!("invalid model pricing config: {error}")))?,
     })
 }
+
+#[cfg(test)]
+#[path = "snapshot_tests.rs"]
+mod tests;
 
 fn json_error(error: serde_json::Error) -> LlmProxyError {
     LlmProxyError::Infrastructure(format!("proxy scheduling cache json error: {error}"))
