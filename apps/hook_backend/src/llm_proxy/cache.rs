@@ -21,6 +21,7 @@ use super::LlmProxyError;
 const AUTH_USAGE_USED_QUOTA_FIELD: &str = "used_quota";
 const AUTH_USAGE_REQUEST_COUNT_FIELD: &str = "request_count";
 const AUTH_USAGE_LAST_USED_AT_FIELD: &str = "last_used_at";
+const SCHEDULING_SNAPSHOT_CACHE_VERSION: &str = "v7";
 const SCHEDULING_REBUILD_LOCK_SECONDS: u64 = 30;
 const SCHEDULING_REBUILD_WAIT_MS: u64 = 50;
 
@@ -273,7 +274,7 @@ impl LlmProxyCache {
     }
 
     fn scheduling_snapshot_key(&self) -> String {
-        format!("{}:llm_proxy:scheduling:snapshot:v6", self.key_prefix)
+        format!("{}:llm_proxy:scheduling:snapshot:{}", self.key_prefix, SCHEDULING_SNAPSHOT_CACHE_VERSION)
     }
 
     fn scheduling_rebuild_lock_key(&self) -> String {
