@@ -86,8 +86,8 @@ fn apply_candidate_upstream_cost_patch(
             patch_string_value(&patch.upstream_cost_source, request_upstream_cost::source_value),
         );
     }
-    update = apply_candidate_upstream_prices(update, &patch);
-    apply_candidate_upstream_costs(update, &patch)
+    update = apply_candidate_upstream_prices(update, patch);
+    apply_candidate_upstream_costs(update, patch)
 }
 
 fn apply_candidate_upstream_prices(
