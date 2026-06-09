@@ -9,9 +9,11 @@ use super::{
         ErrorDistributionRow, ErrorTrendRow, PercentileRow, RecentErrorRow, UpstreamProviderRow, UpstreamSummaryRow, UpstreamTimelineRow, group_error_trend,
     },
     analytics_sql::{
-        DEFAULT_ANALYTICS_LIMIT, DEFAULT_SLOW_THRESHOLD_MS, MAX_ANALYTICS_LIMIT, RECENT_ERROR_LIMIT, UpstreamFilters, error_distribution_sql, error_trend_sql,
-        percentile_sql, plan_values, recent_errors_sql, upstream_providers_sql, upstream_summary_sql, upstream_timeline_sql,
+        DEFAULT_ANALYTICS_LIMIT, DEFAULT_SLOW_THRESHOLD_MS, MAX_ANALYTICS_LIMIT, RECENT_ERROR_LIMIT, error_distribution_sql, error_trend_sql, percentile_sql,
+        plan_bucket_values, plan_values, recent_errors_sql,
     },
+    analytics_upstream_query::UpstreamFilters,
+    analytics_upstream_sql::{upstream_providers_sql, upstream_summary_sql, upstream_timeline_sql},
     query,
     types::SnapshotQueryPlan,
 };
@@ -48,7 +50,7 @@ async fn percentiles(
     store: &PerformanceMonitoringStore,
     plan: &SnapshotQueryPlan,
 ) -> StorageResult<Vec<types::performance_monitoring::PerformancePercentilePoint>> {
-    let statement = Statement::from_sql_and_values(DbBackend::Postgres, percentile_sql(plan.granularity), plan_values(plan));
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, percentile_sql(plan.granularity), plan_bucket_values(plan));
     let rows = PercentileRow::find_by_statement(statement).all(store.connection()).await?;
     Ok(rows.into_iter().map(Into::into).collect())
 }

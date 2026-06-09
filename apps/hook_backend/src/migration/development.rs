@@ -16,6 +16,10 @@ const ADDITIVE_BASELINE_TABLES: &[&str] = &[
     "provider_key_group_keys",
     "billing_group_provider_groups",
     "billing_group_provider_key_groups",
+    "dashboard_request_metric_buckets",
+    "dashboard_latency_histogram_buckets",
+    "dashboard_recent_error_snapshots",
+    "dashboard_request_metric_sync_states",
 ];
 const BASELINE_TABLES: &[&str] = &[
     "user_groups",
@@ -76,6 +80,10 @@ const BASELINE_TABLES: &[&str] = &[
     "model_status_check_runs",
     "model_status_check_hourly_stats",
     "dashboard_user_usage_buckets",
+    "dashboard_request_metric_buckets",
+    "dashboard_latency_histogram_buckets",
+    "dashboard_recent_error_snapshots",
+    "dashboard_request_metric_sync_states",
     "announcements",
     "support_tickets",
     "support_ticket_messages",
@@ -88,7 +96,8 @@ pub async fn apply(connection: &DatabaseConnection) -> Result<(), DbErr> {
     match baseline_apply_action(baseline_state(&manager).await?) {
         BaselineApplyAction::ApplyBaseline => {
             baseline::apply(&manager).await?;
-            mark_baseline_applied(&manager).await
+            mark_baseline_applied(&manager).await?;
+            apply_additives(&manager).await
         }
         BaselineApplyAction::MarkBaselineAndApplyAdditives => {
             mark_baseline_applied(&manager).await?;
@@ -130,7 +139,8 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::request_record_payload_compression_additive::apply(manager).await?;
     super::scheduled_task_next_run_additive::apply(manager).await?;
     super::dashboard_period_i18n_additive::apply(manager).await?;
-    super::request_record_partitioning_additive::apply(manager).await
+    super::request_record_partitioning_additive::apply(manager).await?;
+    super::dashboard_request_metrics_additive::apply(manager).await
 }
 
 async fn reset(manager: &SchemaManager<'_>) -> Result<(), DbErr> {

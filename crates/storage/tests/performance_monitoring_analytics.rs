@@ -31,10 +31,16 @@ async fn analytics_maps_errors_and_upstream_rows() {
     assert_eq!(response.recent_errors[0].request_id, "req-2");
 
     let logs = connection.into_transaction_log();
+    let sql_log = joined_sql(&logs);
+    assert!(logs[0].statements()[0].sql.contains("dashboard_latency_histogram_buckets"));
     assert!(logs[0].statements()[0].sql.contains("p99_ttfb_ms"));
-    assert!(logs[0].statements()[0].sql.contains("status = 'success'"));
-    assert!(logs[3].statements()[0].sql.contains("FROM request_candidates"));
-    assert!(logs[5].statements()[0].sql.contains("bucketed AS"));
+    assert!(logs[1].statements()[0].sql.contains("dashboard_recent_error_snapshots"));
+    assert!(logs[3].statements()[0].sql.contains("FROM dashboard_request_metric_buckets b"));
+    assert!(logs[3].statements()[0].sql.contains("b.source_type = 'candidate'"));
+    assert!(logs[5].statements()[0].sql.contains("dashboard_latency_histogram_buckets h"));
+    assert!(sql_log.contains("dashboard_recent_error_snapshots"));
+    assert!(!sql_log.contains("FROM request_records"));
+    assert!(!sql_log.contains("FROM request_candidates"));
 }
 
 #[tokio::test]
@@ -167,4 +173,12 @@ fn recent_error_row(request_id: &'static str) -> BTreeMap<&'static str, Value> {
 
 fn ts(seconds: i64) -> time::OffsetDateTime {
     time::OffsetDateTime::from_unix_timestamp(seconds).unwrap()
+}
+
+fn joined_sql(logs: &[sea_orm::Transaction]) -> String {
+    logs.iter()
+        .flat_map(|log| log.statements())
+        .map(|statement| statement.sql.as_str())
+        .collect::<Vec<_>>()
+        .join("\n")
 }

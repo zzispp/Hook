@@ -12,6 +12,7 @@ use super::{
 
 pub async fn create_request_record(store: &ProviderStore, input: RequestRecordRecordInput) -> StorageResult<()> {
     let record = request_record_active_model(input)?.insert(store.connection()).await?;
+    crate::dashboard::sync_request_metric_buckets(store.connection(), None, &record).await?;
     super::request_record_partition_write::sync_request_record(store, &record.request_id).await?;
     Ok(())
 }
@@ -43,6 +44,7 @@ pub async fn update_request_record(store: &ProviderStore, input: RequestRecordRe
         .ok_or(StorageError::NotFound)?;
     crate::dashboard::sync_user_usage_buckets(store.connection(), &old_record, &updated).await?;
     crate::dashboard::sync_cost_analysis_buckets(store.connection(), &old_record, &updated).await?;
+    crate::dashboard::sync_request_metric_buckets(store.connection(), Some(&old_record), &updated).await?;
     super::request_record_partition_write::sync_request_record(store, &updated.request_id).await?;
     Ok(())
 }

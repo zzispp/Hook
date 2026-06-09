@@ -1,0 +1,11 @@
+pub(super) const SOURCE_REQUEST: &str = "request";
+pub(super) const SOURCE_CANDIDATE: &str = "candidate";
+pub(super) const METRIC_LATENCY: &str = "latency";
+pub(super) const METRIC_TTFB: &str = "ttfb";
+pub(super) const STATUS_SUCCESS: &str = "success";
+pub(super) const STATUS_FAILED: &str = "failed";
+pub(super) const STATUS_CANCELLED: &str = "cancelled";
+pub(super) const STATUS_PENDING: &str = "pending";
+pub(super) const STATUS_SCHEDULED: &str = "scheduled";
+pub(super) const STATUS_STREAMING: &str = "streaming";
+pub(super) const HISTOGRAM_BOUNDS_MS: [i64; 9] = [100, 250, 500, 1_000, 2_000, 5_000, 10_000, 30_000, 60_000];

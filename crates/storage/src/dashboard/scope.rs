@@ -46,26 +46,30 @@ pub(super) fn scope_response(scope: &DashboardScopeFilter) -> DashboardScopeResp
     }
 }
 
-pub(super) fn scoped_time_where(
+pub(super) fn scoped_metric_bucket_where(
     scope: &DashboardScopeFilter,
     started_at: time::OffsetDateTime,
     ended_at: time::OffsetDateTime,
+    granularity: &str,
     params: &mut SqlParams,
 ) -> String {
-    let mut filters = Vec::new();
-    filters.push(format!("r.created_at >= {}", params.push(started_at)));
-    filters.push(format!("r.created_at < {}", params.push(ended_at)));
-    add_scope_filter(scope, params, &mut filters);
+    let mut filters = vec![
+        "b.source_type = 'request'".into(),
+        format!("b.bucket_granularity = {}", params.push(granularity.to_owned())),
+        format!("b.bucket_started_at >= {}", params.push(started_at)),
+        format!("b.bucket_started_at < {}", params.push(ended_at)),
+    ];
+    add_metric_scope_filter(scope, params, &mut filters);
     where_clause(filters)
 }
 
-pub(super) fn add_scope_filter(scope: &DashboardScopeFilter, params: &mut SqlParams, filters: &mut Vec<String>) {
+pub(super) fn add_metric_scope_filter(scope: &DashboardScopeFilter, params: &mut SqlParams, filters: &mut Vec<String>) {
     match scope {
         DashboardScopeFilter::Me { user_id } | DashboardScopeFilter::User { user_id } => {
-            filters.push(format!("r.user_id_snapshot = {}", params.push(user_id.clone())));
+            filters.push(format!("b.user_id = {}", params.push(user_id.clone())));
         }
         DashboardScopeFilter::Token { token_id } => {
-            filters.push(format!("r.token_id = {}", params.push(token_id.clone())));
+            filters.push(format!("b.token_id = {}", params.push(token_id.clone())));
         }
         DashboardScopeFilter::Global => {}
     }

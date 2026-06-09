@@ -12,11 +12,11 @@ use crate::{StorageError, StorageResult};
 use super::{
     DashboardStore, DashboardStoreOverviewQuery,
     daily_response::{DailyAggregateView, DailyMeasure, DailyResponseOptions, day_response, model_summary, provider_summary, sort_by_cost_name},
-    scope::{SqlParams, scoped_time_where},
-    token_context::sum_total_tokens_sql,
+    scope::{SqlParams, scoped_metric_bucket_where},
 };
 
 const EXCLUSIVE_END_OFFSET_SECONDS: i64 = 1;
+const DAILY_GRANULARITY: &str = "hour";
 
 pub(super) async fn daily_stats(store: &DashboardStore, query: &DashboardStoreOverviewQuery) -> StorageResult<DashboardDailyStats> {
     let rows = daily_rows(store, query).await?;
@@ -34,21 +34,20 @@ pub(super) async fn daily_stats(store: &DashboardStore, query: &DashboardStoreOv
 async fn daily_rows(store: &DashboardStore, query: &DashboardStoreOverviewQuery) -> StorageResult<Vec<DailyRow>> {
     let mut params = SqlParams::new();
     let offset = params.push(query.tz_offset_minutes);
-    let where_sql = scoped_time_where(&query.scope, query.started_at, query.ended_at, &mut params);
+    let where_sql = scoped_metric_bucket_where(&query.scope, query.started_at, query.ended_at, DAILY_GRANULARITY, &mut params);
     let sql = format!(
-        "SELECT ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))::date AS date, \
-        COALESCE(r.model_name_snapshot, r.global_model_id, 'unknown') AS model_name, \
-        COALESCE(r.provider_name_snapshot, r.provider_id, 'unknown') AS provider_name, \
-        COUNT(*)::bigint AS request_count, \
-        {} AS total_tokens, \
-        COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
-        COALESCE(SUM(COALESCE(r.upstream_total_cost, 0)), 0) AS upstream_total_cost, \
-        COALESCE(SUM(r.total_latency_ms::double precision) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL), 0)::double precision AS latency_total_ms, \
-        COUNT(r.total_latency_ms) FILTER (WHERE r.status IN ('success', 'failed', 'cancelled') AND r.total_latency_ms IS NOT NULL)::bigint AS latency_sample_count \
-        FROM request_records r {where_sql} \
+        "SELECT ((b.bucket_started_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))::date AS date, \
+        COALESCE(b.model_name, b.global_model_id, 'unknown') AS model_name, \
+        COALESCE(b.provider_name, b.provider_id, 'unknown') AS provider_name, \
+        COALESCE(SUM(b.request_count), 0)::bigint AS request_count, \
+        COALESCE(SUM(b.total_tokens), 0)::bigint AS total_tokens, \
+        COALESCE(SUM(b.total_cost), 0) AS total_cost, \
+        COALESCE(SUM(b.upstream_total_cost), 0) AS upstream_total_cost, \
+        COALESCE(SUM(b.latency_total_ms), 0)::double precision AS latency_total_ms, \
+        COALESCE(SUM(b.latency_sample_count), 0)::bigint AS latency_sample_count \
+        FROM dashboard_request_metric_buckets b {where_sql} \
         GROUP BY date, model_name, provider_name \
-        ORDER BY date ASC",
-        sum_total_tokens_sql("r")
+        ORDER BY date ASC"
     );
     DailyRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())

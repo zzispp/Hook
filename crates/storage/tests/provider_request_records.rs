@@ -281,7 +281,8 @@ async fn request_record_storage_lists_user_usage_records_without_upstream_fields
 async fn request_record_storage_creates_main_record() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-created", "pending", false, false, false, 1, 6)]])
-        .append_exec_results([mock_exec_result()])
+        .append_query_results([empty_sync_state_rows()])
+        .append_exec_results(exec_results(6))
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -290,51 +291,66 @@ async fn request_record_storage_creates_main_record() {
     let logs = connection.into_transaction_log();
     let sql = &logs[0].statements()[0].sql;
     assert!(sql.contains("INSERT INTO \"request_records\""), "{sql}");
-    assert_request_record_partition_sync(&logs[1].statements()[0].sql);
+    assert_logged_sql(&logs, "dashboard_request_metric_buckets");
+    assert_logged_sql(&logs, "dashboard_recent_error_snapshots");
+    assert_request_record_partition_sync(&logged_statement(&logs, "request_records_partitioned").sql);
 }
 
 #[tokio::test]
 async fn request_record_storage_updates_main_record() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
-        .append_exec_results([
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-        ])
+        .append_exec_results(exec_results(21))
         .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
+        .append_query_results([[sync_state_row("req-success")]])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
     store.update_request_record(main_record_patch()).await.unwrap();
 
     let logs = connection.into_transaction_log();
-    let sql = &logs[1].statements()[0].sql;
+    let sql = &logged_statement(&logs, "UPDATE \"request_records\" SET").sql;
     assert!(sql.contains("UPDATE \"request_records\" SET"), "{sql}");
     assert!(sql.contains("\"status\" = $"), "{sql}");
     assert!(sql.contains("\"client_status_code\" = $"), "{sql}");
     assert!(sql.contains("\"client_response_body\" = $"), "{sql}");
-    assert_request_record_partition_sync(&logs.last().unwrap().statements()[0].sql);
+    assert_logged_sql(&logs, "dashboard_request_metric_buckets");
+    assert_logged_sql(&logs, "dashboard_latency_histogram_buckets");
+    assert_logged_sql(&logs, "dashboard_recent_error_snapshots");
+    assert_request_record_partition_sync(&logged_statement(&logs, "request_records_partitioned").sql);
+}
+
+#[tokio::test]
+async fn request_record_storage_skips_snapshot_delta_without_sync_state() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
+        .append_exec_results(exec_results(21))
+        .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
+        .append_query_results([empty_sync_state_rows()])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    store.update_request_record(main_record_patch()).await.unwrap();
+
+    let logs = connection.into_transaction_log();
+    let sql_log = logs
+        .iter()
+        .flat_map(|entry| entry.statements())
+        .map(|statement| statement.sql.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(!sql_log.contains("dashboard_request_metric_buckets"), "{sql_log}");
+    assert!(!sql_log.contains("dashboard_recent_error_snapshots"), "{sql_log}");
+    assert_request_record_partition_sync(&logged_statement(&logs, "request_records_partitioned").sql);
 }
 
 #[tokio::test]
 async fn request_record_storage_syncs_dashboard_tokens_with_cache_context() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
-        .append_exec_results([
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-            mock_exec_result(),
-        ])
+        .append_exec_results(exec_results(21))
         .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
+        .append_query_results([[sync_state_row("req-success")]])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -350,6 +366,8 @@ async fn request_record_storage_syncs_dashboard_tokens_with_cache_context() {
     assert!(cost_bucket_sql.contains("dashboard_cost_analysis_buckets"), "{cost_bucket_sql}");
     assert_eq!(statement_value(cost_bucket.values.as_ref().unwrap(), 12), Value::from(3_i64));
     assert_eq!(statement_value(cost_bucket.values.as_ref().unwrap(), 14), Value::from(27_i64));
+    assert_logged_sql(&logs, "dashboard_request_metric_buckets");
+    assert_logged_sql(&logs, "dashboard_latency_histogram_buckets");
 }
 
 fn mock_exec_result() -> MockExecResult {
@@ -357,6 +375,10 @@ fn mock_exec_result() -> MockExecResult {
         last_insert_id: 0,
         rows_affected: 1,
     }
+}
+
+fn exec_results(count: usize) -> Vec<MockExecResult> {
+    vec![mock_exec_result(); count]
 }
 
 fn assert_request_record_partition_sync(sql: &str) {
@@ -376,6 +398,14 @@ fn empty_payload_rows() -> Vec<BTreeMap<&'static str, Value>> {
     Vec::new()
 }
 
+fn empty_sync_state_rows() -> Vec<BTreeMap<&'static str, Value>> {
+    Vec::new()
+}
+
+fn sync_state_row(owner_id: &str) -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([("owner_id", Value::from(owner_id.to_owned()))])
+}
+
 fn statement_value(values: &sea_orm::Values, index: usize) -> Value {
     values.iter().nth(index).cloned().expect("statement value must exist")
 }
@@ -385,6 +415,10 @@ fn logged_statement<'a>(logs: &'a [sea_orm::Transaction], pattern: &str) -> &'a 
         .flat_map(|entry| entry.statements())
         .find(|statement| statement.sql.contains(pattern))
         .expect("statement must be logged")
+}
+
+fn assert_logged_sql(logs: &[sea_orm::Transaction], pattern: &str) {
+    logged_statement(logs, pattern);
 }
 
 #[tokio::test]

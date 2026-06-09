@@ -65,7 +65,10 @@ async fn range_all_queries_day_snapshot_buckets_and_live_tail() {
     assert!(sql.contains("ROW_NUMBER() OVER"), "{sql}");
     assert!(sql.contains("DISTINCT ON (sample_slot)"), "{sql}");
     assert!(sql.contains("LIMIT $2"), "{sql}");
-    assert!(logs.iter().skip(1).any(|log| log.statements()[0].sql.contains("FROM request_records")));
+    let sql_log = joined_sql(&logs);
+    assert!(sql_log.contains("FROM dashboard_request_metric_buckets"));
+    assert!(sql_log.contains("FROM dashboard_latency_histogram_buckets"));
+    assert!(!sql_log.contains("FROM request_records"));
 }
 
 #[tokio::test]
@@ -85,7 +88,10 @@ async fn range_all_appends_live_request_window_without_day_snapshots() {
     assert_eq!(response.series.len(), 1);
     assert_eq!(response.series[0].metrics.core.request_count, 3);
     let logs = connection.into_transaction_log();
-    assert!(logs.iter().any(|log| log.statements()[0].sql.contains("FROM request_records")));
+    let sql_log = joined_sql(&logs);
+    assert!(sql_log.contains("FROM dashboard_request_metric_buckets"));
+    assert!(sql_log.contains("FROM dashboard_latency_histogram_buckets"));
+    assert!(!sql_log.contains("FROM request_records"));
 }
 
 #[tokio::test]
@@ -234,4 +240,12 @@ fn count_row(count: i64) -> BTreeMap<String, Value> {
 
 fn ts(seconds: i64) -> time::OffsetDateTime {
     time::OffsetDateTime::from_unix_timestamp(seconds).unwrap()
+}
+
+fn joined_sql(logs: &[sea_orm::Transaction]) -> String {
+    logs.iter()
+        .flat_map(|log| log.statements())
+        .map(|statement| statement.sql.as_str())
+        .collect::<Vec<_>>()
+        .join("\n")
 }

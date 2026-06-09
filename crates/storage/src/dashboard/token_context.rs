@@ -1,17 +1,5 @@
 use crate::provider::record::request_records;
 
-pub(super) fn sum_cache_creation_tokens_sql(alias: &str) -> String {
-    format!("COALESCE(SUM({}), 0)::bigint", cache_creation_tokens_sql(alias))
-}
-
-pub(super) fn sum_cache_read_tokens_sql(alias: &str) -> String {
-    format!("COALESCE(SUM({}), 0)::bigint", cache_read_tokens_sql(alias))
-}
-
-pub(super) fn sum_total_tokens_sql(alias: &str) -> String {
-    format!("COALESCE(SUM({}), 0)::bigint", total_tokens_sql(alias))
-}
-
 pub(super) fn total_tokens(record: &request_records::Model) -> i64 {
     base_total_tokens(record) + cache_creation_tokens(record) + cache_read_tokens(record)
 }
@@ -27,32 +15,6 @@ pub(super) fn cache_creation_tokens(record: &request_records::Model) -> i64 {
 
 pub(super) fn cache_read_tokens(record: &request_records::Model) -> i64 {
     positive(record.cache_read_input_tokens)
-}
-
-fn total_tokens_sql(alias: &str) -> String {
-    format!(
-        "({}) + ({}) + ({})",
-        base_total_tokens_sql(alias),
-        cache_creation_tokens_sql(alias),
-        cache_read_tokens_sql(alias)
-    )
-}
-
-fn base_total_tokens_sql(alias: &str) -> String {
-    format!("GREATEST(COALESCE({alias}.total_tokens, COALESCE({alias}.prompt_tokens, 0) + COALESCE({alias}.completion_tokens, 0), 0), 0)")
-}
-
-fn cache_creation_tokens_sql(alias: &str) -> String {
-    format!(
-        "CASE WHEN COALESCE({alias}.cache_creation_input_tokens, 0) = 0 \
-        AND (COALESCE({alias}.cache_creation_5m_input_tokens, 0) + COALESCE({alias}.cache_creation_1h_input_tokens, 0)) > 0 \
-        THEN GREATEST(COALESCE({alias}.cache_creation_5m_input_tokens, 0), 0) + GREATEST(COALESCE({alias}.cache_creation_1h_input_tokens, 0), 0) \
-        ELSE GREATEST(COALESCE({alias}.cache_creation_input_tokens, 0), 0) END"
-    )
-}
-
-fn cache_read_tokens_sql(alias: &str) -> String {
-    format!("GREATEST(COALESCE({alias}.cache_read_input_tokens, 0), 0)")
 }
 
 fn base_total_tokens(record: &request_records::Model) -> i64 {

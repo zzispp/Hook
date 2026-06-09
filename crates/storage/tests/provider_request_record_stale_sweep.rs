@@ -1,5 +1,7 @@
+use std::collections::BTreeMap;
+
 use rust_decimal::Decimal;
-use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Value};
 use storage::{Database, provider::ProviderStore};
 
 macro_rules! request_record {
@@ -101,11 +103,13 @@ async fn request_record_storage_marks_stale_active_records_failed() {
         .append_query_results([vec![request_record!("req-pending", "pending", false)]])
         .append_exec_results([exec_result(2)])
         .append_query_results([[request_record!("req-pending", "failed", false)]])
-        .append_exec_results(exec_results(7))
+        .append_query_results([[sync_state_row("req-pending")]])
+        .append_exec_results(exec_results(15))
         .append_query_results([vec![request_record!("req-streaming", "streaming", true)]])
         .append_exec_results([exec_result(3)])
         .append_query_results([[request_record!("req-streaming", "failed", true)]])
-        .append_exec_results(exec_results(7))
+        .append_query_results([[sync_state_row("req-streaming")]])
+        .append_exec_results(exec_results(15))
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -123,6 +127,8 @@ async fn request_record_storage_marks_stale_active_records_failed() {
     assert!(sql.iter().any(|item| item.contains("UPDATE \"request_records\" SET")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("\"client_error_type\" = $")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("INSERT INTO dashboard_cost_analysis_buckets")), "{sql:?}");
+    assert!(sql.iter().any(|item| item.contains("INSERT INTO dashboard_request_metric_buckets")), "{sql:?}");
+    assert!(sql.iter().any(|item| item.contains("dashboard_recent_error_snapshots")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("INSERT INTO request_records_partitioned")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("INSERT INTO request_candidates_partitioned")), "{sql:?}");
 }
@@ -145,6 +151,10 @@ fn exec_result(rows_affected: u64) -> MockExecResult {
         last_insert_id: 0,
         rows_affected,
     }
+}
+
+fn sync_state_row(owner_id: &str) -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([("owner_id", Value::from(owner_id.to_owned()))])
 }
 
 fn billing_status(status: &str) -> String {

@@ -9,9 +9,10 @@ use crate::StorageResult;
 use super::{
     DashboardStore, DashboardStoreActivityQuery,
     money::admin_cost_metrics,
-    scope::{SqlParams, scope_response, scoped_time_where},
-    token_context::sum_total_tokens_sql,
+    scope::{SqlParams, scope_response, scoped_metric_bucket_where},
 };
+
+const ACTIVITY_GRANULARITY: &str = "hour";
 
 pub(super) async fn activity(store: &DashboardStore, query: DashboardStoreActivityQuery) -> StorageResult<DashboardActivityResponse> {
     let rows = activity_rows(store, &query).await?;
@@ -30,18 +31,17 @@ pub(super) async fn activity(store: &DashboardStore, query: DashboardStoreActivi
 async fn activity_rows(store: &DashboardStore, query: &DashboardStoreActivityQuery) -> StorageResult<Vec<ActivityRow>> {
     let mut params = SqlParams::new();
     let offset = params.push(query.tz_offset_minutes);
-    let where_sql = scoped_time_where(&query.scope, query.started_at, query.ended_at, &mut params);
+    let where_sql = scoped_metric_bucket_where(&query.scope, query.started_at, query.ended_at, ACTIVITY_GRANULARITY, &mut params);
     let sql = format!(
-        "SELECT ((r.created_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))::date AS date, \
-        COUNT(*)::bigint AS request_count, \
-        {} AS total_tokens, \
-        COALESCE(SUM(COALESCE(r.total_cost, 0)), 0) AS total_cost, \
-        COALESCE(SUM(COALESCE(r.base_cost, 0)), 0) AS base_cost, \
-        COALESCE(SUM(COALESCE(r.upstream_total_cost, 0)), 0) AS upstream_total_cost \
-        FROM request_records r {where_sql} \
+        "SELECT ((b.bucket_started_at AT TIME ZONE 'UTC') + ({offset}::int * INTERVAL '1 minute'))::date AS date, \
+        COALESCE(SUM(b.request_count), 0)::bigint AS request_count, \
+        COALESCE(SUM(b.total_tokens), 0)::bigint AS total_tokens, \
+        COALESCE(SUM(b.total_cost), 0) AS total_cost, \
+        COALESCE(SUM(b.base_cost), 0) AS base_cost, \
+        COALESCE(SUM(b.upstream_total_cost), 0) AS upstream_total_cost \
+        FROM dashboard_request_metric_buckets b {where_sql} \
         GROUP BY date \
-        ORDER BY date ASC",
-        sum_total_tokens_sql("r")
+        ORDER BY date ASC"
     );
     ActivityRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())

@@ -95,6 +95,7 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
     request_upstream_cost::apply_candidate_values(&mut record, input.upstream_cost);
     apply_billing_values(&mut record, input.billing)?;
     let record = record.insert(store.connection()).await?;
+    crate::dashboard::sync_candidate_metric_buckets(store.connection(), None, &record).await?;
     super::request_record_partition_write::sync_request_candidate(store, &record.id).await?;
     record.response()
 }
@@ -109,6 +110,7 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
     else {
         return Err(StorageError::NotFound);
     };
+    let old_record = record.clone();
     let record_id = record.id.clone();
     let was_started = record.started_at.is_some();
     let now = time::OffsetDateTime::now_utc();
@@ -121,6 +123,7 @@ pub async fn update_request_candidate(store: &ProviderStore, input: RequestCandi
         .one(store.connection())
         .await?
         .ok_or(StorageError::NotFound)?;
+    crate::dashboard::sync_candidate_metric_buckets(store.connection(), Some(&old_record), &record).await?;
     super::request_record_partition_write::sync_request_candidate(store, &record.id).await?;
     record.response()
 }
@@ -148,6 +151,7 @@ fn apply_billing_values(record: &mut request_candidates::ActiveModel, billing: R
 
 pub async fn mark_scheduled_request_candidates_skipped(store: &ProviderStore, request_id: &str, skip_reason: &str) -> StorageResult<u64> {
     let now = time::OffsetDateTime::now_utc();
+    let old_records = scheduled_request_candidates(store, request_id).await?;
     let result = request_candidates::Entity::update_many()
         .col_expr(request_candidates::Column::Status, Expr::val("skipped"))
         .col_expr(request_candidates::Column::SkipReason, Expr::val(skip_reason))
@@ -157,7 +161,27 @@ pub async fn mark_scheduled_request_candidates_skipped(store: &ProviderStore, re
         .exec(store.connection())
         .await?;
     if result.rows_affected > 0 {
+        sync_skipped_candidate_metrics(store, old_records).await?;
         super::request_record_partition_write::sync_request_candidates_for_request(store, request_id).await?;
     }
     Ok(result.rows_affected)
+}
+
+async fn scheduled_request_candidates(store: &ProviderStore, request_id: &str) -> StorageResult<Vec<request_candidates::Model>> {
+    request_candidates::Entity::find()
+        .filter(request_candidates::Column::RequestId.eq(request_id))
+        .filter(request_candidates::Column::Status.eq("scheduled"))
+        .all(store.connection())
+        .await
+        .map_err(Into::into)
+}
+
+async fn sync_skipped_candidate_metrics(store: &ProviderStore, old_records: Vec<request_candidates::Model>) -> StorageResult<()> {
+    for old_record in old_records {
+        let Some(new_record) = request_candidates::Entity::find_by_id(old_record.id.clone()).one(store.connection()).await? else {
+            return Err(StorageError::NotFound);
+        };
+        crate::dashboard::sync_candidate_metric_buckets(store.connection(), Some(&old_record), &new_record).await?;
+    }
+    Ok(())
 }

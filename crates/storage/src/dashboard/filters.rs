@@ -5,7 +5,7 @@ use crate::StorageResult;
 
 use super::{
     DashboardScopeFilter, DashboardStore, DashboardStoreFilterOptionsQuery,
-    scope::{SqlParams, add_scope_filter},
+    scope::{SqlParams, add_metric_scope_filter},
 };
 
 const FILTER_LIMIT: i64 = 100;
@@ -31,14 +31,15 @@ async fn user_options(store: &DashboardStore, scope: &DashboardScopeFilter) -> S
 
 async fn token_options(store: &DashboardStore, scope: &DashboardScopeFilter) -> StorageResult<Vec<DashboardFilterOption>> {
     let mut params = SqlParams::new();
-    let mut filters = vec!["r.token_id IS NOT NULL".into()];
-    add_scope_filter(scope, &mut params, &mut filters);
+    let mut filters = vec!["b.source_type = 'request'".into(), "b.token_id IS NOT NULL".into()];
+    add_metric_scope_filter(scope, &mut params, &mut filters);
     let where_sql = format!("WHERE {}", filters.join(" AND "));
     let limit = params.push(FILTER_LIMIT);
     let sql = format!(
-        "SELECT token_id AS id, COALESCE(MAX(token_name_snapshot), MAX(token_prefix_snapshot), token_id) AS name \
-        FROM request_records r {where_sql} \
-        GROUP BY token_id \
+        "SELECT b.token_id AS id, COALESCE(MAX(b.token_name), MAX(b.token_prefix), b.token_id) AS name \
+        FROM dashboard_request_metric_buckets b {where_sql} \
+        GROUP BY b.token_id \
+        HAVING COALESCE(SUM(b.request_count), 0) > 0 \
         ORDER BY name ASC \
         LIMIT {limit}"
     );

@@ -39,12 +39,13 @@ async fn dashboard_overview_casts_latency_averages_to_double_precision() {
     let summary_sql = &logs[0].statements()[0].sql;
     let timeseries_sql = &logs[3].statements()[0].sql;
     let daily_sql = &logs[4].statements()[0].sql;
-    assert!(summary_sql.contains("AVG(r.total_latency_ms::double precision)"), "{summary_sql}");
-    assert!(summary_sql.contains("AVG(r.first_byte_time_ms::double precision)"), "{summary_sql}");
-    assert!(summary_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{summary_sql}");
-    assert!(timeseries_sql.contains("AVG(r.total_latency_ms::double precision)"), "{timeseries_sql}");
-    assert!(timeseries_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{timeseries_sql}");
-    assert!(daily_sql.contains("SUM(COALESCE(r.upstream_total_cost, 0))"), "{daily_sql}");
+    assert_snapshot_metric_sql(summary_sql);
+    assert_snapshot_metric_sql(timeseries_sql);
+    assert_snapshot_metric_sql(daily_sql);
+    assert!(summary_sql.contains("SUM(b.latency_total_ms)"), "{summary_sql}");
+    assert!(summary_sql.contains("SUM(b.ttfb_total_ms)"), "{summary_sql}");
+    assert!(timeseries_sql.contains("SUM(b.latency_total_ms)"), "{timeseries_sql}");
+    assert!(daily_sql.contains("SUM(b.upstream_total_cost)"), "{daily_sql}");
 }
 
 #[tokio::test]
@@ -71,14 +72,21 @@ async fn dashboard_overview_uses_context_tokens_for_cache_usage() {
     let daily_sql = &logs[4].statements()[0].sql;
     assert_token_context_sql(summary_sql);
     assert_token_context_sql(timeseries_sql);
-    assert_token_context_sql(daily_sql);
+    assert_snapshot_metric_sql(daily_sql);
+    assert!(daily_sql.contains("b.total_tokens"), "{daily_sql}");
 }
 
 fn assert_token_context_sql(sql: &str) {
-    assert!(sql.contains("cache_creation_5m_input_tokens"), "{sql}");
-    assert!(sql.contains("cache_creation_1h_input_tokens"), "{sql}");
-    assert!(sql.contains("cache_read_input_tokens"), "{sql}");
+    assert_snapshot_metric_sql(sql);
+    assert!(sql.contains("b.cache_creation_input_tokens"), "{sql}");
+    assert!(sql.contains("b.cache_read_input_tokens"), "{sql}");
     assert!(sql.contains("AS total_tokens"), "{sql}");
+}
+
+fn assert_snapshot_metric_sql(sql: &str) {
+    assert!(sql.contains("FROM dashboard_request_metric_buckets b"), "{sql}");
+    assert!(sql.contains("b.source_type = 'request'"), "{sql}");
+    assert!(!sql.contains("FROM request_records"), "{sql}");
 }
 
 fn assert_daily_costs(daily: &types::dashboard::DashboardDailyStats) {

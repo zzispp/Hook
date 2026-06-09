@@ -46,7 +46,7 @@ async fn circuit_breaker_count(store: &PerformanceMonitoringStore, window: &Snap
     let statement = Statement::from_sql_and_values(
         DbBackend::Postgres,
         "SELECT COUNT(*)::bigint AS count FROM provider_cooldown_events WHERE triggered_at >= $1 AND triggered_at < $2",
-        window_values(window),
+        time_window_values(window),
     );
     let row = store
         .connection()
@@ -106,35 +106,55 @@ fn llm_metrics(summary: RequestSummaryRow, request_count: i64, total_tokens: i64
 }
 
 fn summary_sql() -> &'static str {
-    "SELECT \
-        COUNT(*)::bigint AS request_count, \
-        COUNT(*) FILTER (WHERE status IN ('failed', 'cancelled'))::bigint AS error_count, \
-        COUNT(*) FILTER (WHERE status IN ('pending', 'streaming'))::bigint AS concurrent_requests, \
-        COUNT(*) FILTER (WHERE termination_reason LIKE '%timeout%' OR client_error_type LIKE '%timeout%')::bigint AS timeout_count, \
-        COUNT(*) FILTER (WHERE client_status_code = 429 OR client_error_type = 'rate_limit_error')::bigint AS rate_limited_count, \
-        COUNT(*) FILTER (WHERE client_status_code >= 500)::bigint AS server_error_count, \
-        percentile_disc(0.50) WITHIN GROUP (ORDER BY total_latency_ms) AS p50_latency_ms, \
-        percentile_disc(0.90) WITHIN GROUP (ORDER BY total_latency_ms) AS p90_latency_ms, \
-        percentile_disc(0.95) WITHIN GROUP (ORDER BY total_latency_ms) AS p95_latency_ms, \
-        percentile_disc(0.99) WITHIN GROUP (ORDER BY total_latency_ms) AS p99_latency_ms, \
-        percentile_disc(0.50) WITHIN GROUP (ORDER BY first_byte_time_ms) AS p50_ttfb_ms, \
-        percentile_disc(0.90) WITHIN GROUP (ORDER BY first_byte_time_ms) AS p90_ttfb_ms, \
-        percentile_disc(0.95) WITHIN GROUP (ORDER BY first_byte_time_ms) AS p95_ttfb_ms, \
-        percentile_disc(0.99) WITHIN GROUP (ORDER BY first_byte_time_ms) AS p99_ttfb_ms, \
-        COUNT(*) FILTER (WHERE has_retry)::bigint AS retry_count, \
-        COUNT(*) FILTER (WHERE is_stream)::bigint AS stream_request_count, \
-        COALESCE(SUM(prompt_tokens), 0)::bigint AS prompt_tokens, \
-        COALESCE(SUM(completion_tokens), 0)::bigint AS completion_tokens, \
-        COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens, \
-        COUNT(*) FILTER (WHERE has_failover)::bigint AS failover_count, \
-        COALESCE(SUM(cache_read_input_tokens), 0)::bigint AS cache_read_input_tokens, \
-        COUNT(*) FILTER (WHERE client_error_type = 'hook_api_error' OR client_error_message LIKE '%quota%')::bigint AS quota_limited_count \
-        FROM request_records \
-        WHERE created_at >= $1 AND created_at < $2"
+    "WITH metric AS ( \
+        SELECT COALESCE(SUM(request_count), 0)::bigint AS request_count, \
+            COALESCE(SUM(failed_count), 0)::bigint AS error_count, \
+            COALESCE(SUM(active_count), 0)::bigint AS concurrent_requests, \
+            COALESCE(SUM(timeout_count), 0)::bigint AS timeout_count, \
+            COALESCE(SUM(rate_limited_count), 0)::bigint AS rate_limited_count, \
+            COALESCE(SUM(server_error_count), 0)::bigint AS server_error_count, \
+            COALESCE(SUM(retry_count), 0)::bigint AS retry_count, \
+            COALESCE(SUM(request_count) FILTER (WHERE is_stream IS TRUE), 0)::bigint AS stream_request_count, \
+            COALESCE(SUM(prompt_tokens), 0)::bigint AS prompt_tokens, \
+            COALESCE(SUM(completion_tokens), 0)::bigint AS completion_tokens, \
+            COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens, \
+            COALESCE(SUM(failover_count), 0)::bigint AS failover_count, \
+            COALESCE(SUM(cache_read_input_tokens), 0)::bigint AS cache_read_input_tokens, \
+            COALESCE(SUM(quota_limited_count), 0)::bigint AS quota_limited_count \
+        FROM dashboard_request_metric_buckets \
+        WHERE source_type = 'request' AND bucket_granularity = $3 AND bucket_started_at >= $1 AND bucket_started_at < $2 \
+    ), histogram_raw AS ( \
+        SELECT metric_kind, le_ms, COALESCE(SUM(sample_count), 0)::bigint AS bucket_count FROM dashboard_latency_histogram_buckets \
+        WHERE source_type = 'request' AND bucket_granularity = $3 AND bucket_started_at >= $1 AND bucket_started_at < $2 \
+        GROUP BY metric_kind, le_ms \
+    ), histogram AS ( \
+        SELECT metric_kind, le_ms, bucket_count, SUM(bucket_count) OVER (PARTITION BY metric_kind ORDER BY le_ms)::bigint AS cumulative_count \
+        FROM histogram_raw \
+    ), totals AS ( \
+        SELECT metric_kind, SUM(bucket_count)::bigint AS total_count FROM histogram GROUP BY metric_kind \
+    ) \
+    SELECT metric.*, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'latency' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.50)) AS p50_latency_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'latency' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.90)) AS p90_latency_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'latency' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.95)) AS p95_latency_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'latency' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.99)) AS p99_latency_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.50)) AS p50_ttfb_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.90)) AS p90_ttfb_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.95)) AS p95_ttfb_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.99)) AS p99_ttfb_ms \
+    FROM metric"
+}
+
+fn time_window_values(window: &SnapshotAggregationWindow) -> Vec<Value> {
+    vec![Value::from(window.started_at), Value::from(window.ended_at)]
 }
 
 fn window_values(window: &SnapshotAggregationWindow) -> Vec<Value> {
-    vec![Value::from(window.started_at), Value::from(window.ended_at)]
+    vec![
+        Value::from(window.started_at),
+        Value::from(window.ended_at),
+        Value::from(window.granularity.as_str().to_owned()),
+    ]
 }
 
 fn window_duration_seconds(window: &SnapshotAggregationWindow) -> i64 {

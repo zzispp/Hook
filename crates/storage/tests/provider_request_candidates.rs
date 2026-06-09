@@ -1,5 +1,7 @@
+use std::collections::BTreeMap;
+
 use rust_decimal::Decimal;
-use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult};
+use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Value};
 use storage::{
     Database, StorageError,
     provider::{
@@ -14,8 +16,9 @@ use types::provider::{RequestCandidateListRequest, RequestUpstreamCost};
 async fn request_candidate_storage_creates_success_record() {
     let record = request_candidate_record("record-1", "success");
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results([exec_result(1)])
+        .append_exec_results(exec_results(11))
         .append_query_results([[record.clone()]])
+        .append_query_results([empty_sync_state_rows()])
         .append_query_results([[record.clone()]])
         .append_query_results([Vec::<request_records::Model>::new()])
         .append_query_results([[summary_record("success")]])
@@ -36,7 +39,10 @@ async fn request_candidate_storage_creates_success_record() {
     assert_eq!(created.error_type, None);
     assert!(created.started_at.is_some());
     assert!(created.finished_at.is_some());
-    assert_partition_sync(&connection.into_transaction_log()[1].statements()[0].sql);
+    let logs = connection.into_transaction_log();
+    assert_logged_sql(&logs, "dashboard_request_metric_buckets");
+    assert_logged_sql(&logs, "dashboard_latency_histogram_buckets");
+    assert_partition_sync(&logged_statement(&logs, "request_candidates_partitioned").sql);
 }
 
 #[tokio::test]
@@ -83,20 +89,19 @@ async fn request_candidate_storage_lists_failed_and_no_candidate_records() {
 #[tokio::test]
 async fn request_candidate_storage_updates_existing_attempt() {
     let streaming = request_candidate_record("record-1", "streaming");
-    let database = Database::new(
-        MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([[streaming]])
-            .append_exec_results([MockExecResult {
-                last_insert_id: 0,
-                rows_affected: 1,
-            }])
-            .append_query_results([[request_candidate_record("record-1", "success")]])
-            .append_exec_results([exec_result(1)])
-            .append_query_results([Vec::<request_records::Model>::new()])
-            .append_query_results([[summary_record("success")]])
-            .into_connection(),
-    );
-    let store = ProviderStore::new(database);
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[streaming]])
+        .append_exec_results([MockExecResult {
+            last_insert_id: 0,
+            rows_affected: 1,
+        }])
+        .append_query_results([[request_candidate_record("record-1", "success")]])
+        .append_query_results([[sync_state_row("record-1")]])
+        .append_exec_results(exec_results(18))
+        .append_query_results([Vec::<request_records::Model>::new()])
+        .append_query_results([[summary_record("success")]])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
 
     let updated = store.update_request_candidate(success_patch()).await.unwrap();
 
@@ -105,12 +110,22 @@ async fn request_candidate_storage_updates_existing_attempt() {
     assert_eq!(updated.cache_creation_5m_input_tokens, Some(1));
     assert_eq!(updated.cache_creation_1h_input_tokens, Some(2));
     assert!(updated.finished_at.is_some());
+    let logs = connection.into_transaction_log();
+    let metric_statements = logged_statements(&logs, "dashboard_request_metric_buckets");
+    assert_eq!(statement_value(metric_statements[0].values.as_ref().unwrap(), 18), Value::from(-1_i64));
+    assert_eq!(statement_value(metric_statements[0].values.as_ref().unwrap(), 20), Value::from(0_i64));
+    assert_eq!(statement_value(metric_statements[0].values.as_ref().unwrap(), 21), Value::from(-1_i64));
 }
 
 #[tokio::test]
 async fn request_candidate_storage_marks_scheduled_records_skipped() {
+    let scheduled = scheduled_candidate_record("record-1");
+    let skipped = skipped_candidate_record("record-1");
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results([exec_result(2), exec_result(2)])
+        .append_query_results([vec![scheduled]])
+        .append_exec_results([exec_result(1)])
+        .append_query_results([[skipped]])
+        .append_exec_results([exec_result(1)])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -119,17 +134,17 @@ async fn request_candidate_storage_marks_scheduled_records_skipped() {
         .await
         .unwrap();
 
-    assert_eq!(rows, 2);
+    assert_eq!(rows, 1);
     let logs = connection.into_transaction_log();
     assert!(!logs.is_empty());
-    let sql = &logs[0].statements()[0].sql;
+    let sql = &logged_statement(&logs, "UPDATE \"request_candidates\" SET").sql;
     assert!(sql.contains("UPDATE \"request_candidates\" SET"), "{sql}");
     assert!(sql.contains("\"status\" = $"), "{sql}");
     assert!(sql.contains("\"skip_reason\" = $"), "{sql}");
     assert!(sql.contains("\"finished_at\" = $"), "{sql}");
     assert!(sql.contains("WHERE \"request_candidates\".\"request_id\" = $"), "{sql}");
     assert!(sql.contains("AND \"request_candidates\".\"status\" = $"), "{sql}");
-    assert_partition_sync(&logs[1].statements()[0].sql);
+    assert_partition_sync(&logged_statement(&logs, "request_candidates_partitioned").sql);
 }
 
 fn assert_partition_sync(sql: &str) {
@@ -143,6 +158,40 @@ fn exec_result(rows_affected: u64) -> MockExecResult {
         last_insert_id: 0,
         rows_affected,
     }
+}
+
+fn exec_results(count: usize) -> Vec<MockExecResult> {
+    vec![exec_result(1); count]
+}
+
+fn logged_statement<'a>(logs: &'a [sea_orm::Transaction], pattern: &str) -> &'a sea_orm::Statement {
+    logs.iter()
+        .flat_map(|entry| entry.statements())
+        .find(|statement| statement.sql.contains(pattern))
+        .expect("statement must be logged")
+}
+
+fn logged_statements<'a>(logs: &'a [sea_orm::Transaction], pattern: &str) -> Vec<&'a sea_orm::Statement> {
+    logs.iter()
+        .flat_map(|entry| entry.statements())
+        .filter(|statement| statement.sql.contains(pattern))
+        .collect()
+}
+
+fn assert_logged_sql(logs: &[sea_orm::Transaction], pattern: &str) {
+    logged_statement(logs, pattern);
+}
+
+fn statement_value(values: &sea_orm::Values, index: usize) -> Value {
+    values.iter().nth(index).cloned().expect("statement value must exist")
+}
+
+fn empty_sync_state_rows() -> Vec<BTreeMap<&'static str, Value>> {
+    Vec::new()
+}
+
+fn sync_state_row(owner_id: &str) -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([("owner_id", Value::from(owner_id.to_owned()))])
 }
 
 fn success_input() -> RequestCandidateRecordInput {
@@ -327,6 +376,24 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         started_at: Some(now()),
         finished_at: Some(now()),
     }
+}
+
+fn scheduled_candidate_record(id: &str) -> storage::provider::record::request_candidates::Model {
+    let mut record = request_candidate_record(id, "scheduled");
+    record.started_at = None;
+    record.finished_at = None;
+    record.status_code = None;
+    record.latency_ms = None;
+    record.first_byte_time_ms = None;
+    record
+}
+
+fn skipped_candidate_record(id: &str) -> storage::provider::record::request_candidates::Model {
+    let mut record = scheduled_candidate_record(id);
+    record.status = "skipped".into();
+    record.skip_reason = Some("request_terminated_before_attempt".into());
+    record.finished_at = Some(now());
+    record
 }
 
 fn no_candidate_record(mut record: storage::provider::record::request_candidates::Model) -> storage::provider::record::request_candidates::Model {

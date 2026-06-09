@@ -2,14 +2,14 @@ use rust_decimal::Decimal;
 use sea_orm::{ConnectionTrait, DbBackend, FromQueryResult, Statement};
 use types::dashboard::{DashboardBreakdownItem, DashboardBreakdowns, DashboardOverviewResponse, DashboardSummary, DashboardTimeseriesPoint, DashboardWindow};
 
-use crate::{StorageError, StorageResult, database::Database};
+use crate::{StorageError, StorageResult};
 
 use super::{
     DashboardBucketFilter, DashboardStore, DashboardStoreOverviewQuery,
     daily::daily_stats,
     money::admin_cost_metrics,
-    overview_sql::{BREAKDOWN_LIMIT, breakdown_sql, summary_sql, timeseries_group, timeseries_select},
-    scope::{SqlParams, scope_response, scoped_time_where},
+    overview_sql::{BREAKDOWN_LIMIT, SUMMARY_GRANULARITY, TIMESERIES_GRANULARITY, breakdown_sql, summary_sql, timeseries_group, timeseries_select},
+    scope::{SqlParams, scope_response, scoped_metric_bucket_where},
 };
 
 pub(super) async fn overview(store: &DashboardStore, query: DashboardStoreOverviewQuery) -> StorageResult<DashboardOverviewResponse> {
@@ -39,10 +39,11 @@ async fn load_summary(
     ended_at: time::OffsetDateTime,
 ) -> StorageResult<DashboardSummary> {
     let mut params = SqlParams::new();
-    let where_sql = scoped_time_where(&query.scope, started_at, ended_at, &mut params);
+    let where_sql = scoped_metric_bucket_where(&query.scope, started_at, ended_at, SUMMARY_GRANULARITY, &mut params);
     let sql = format!("{} {}", summary_sql(), where_sql);
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values);
-    let row = database(store)
+    let row = store
+        .database()
         .connection()
         .query_one_raw(statement)
         .await?
@@ -55,7 +56,7 @@ async fn load_summary(
 async fn timeseries(store: &DashboardStore, query: &DashboardStoreOverviewQuery) -> StorageResult<Vec<DashboardTimeseriesPoint>> {
     let mut params = SqlParams::new();
     let offset = params.push(query.tz_offset_minutes);
-    let where_sql = scoped_time_where(&query.scope, query.started_at, query.ended_at, &mut params);
+    let where_sql = scoped_metric_bucket_where(&query.scope, query.started_at, query.ended_at, TIMESERIES_GRANULARITY, &mut params);
     let sql = format!("{} {} {}", timeseries_select(query.bucket, &offset), where_sql, timeseries_group());
     let rows = TimeseriesRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())
@@ -64,29 +65,11 @@ async fn timeseries(store: &DashboardStore, query: &DashboardStoreOverviewQuery)
 }
 
 async fn breakdowns(store: &DashboardStore, query: &DashboardStoreOverviewQuery) -> StorageResult<DashboardBreakdowns> {
-    let models = breakdown_rows(
-        store,
-        query,
-        "r.global_model_id",
-        "COALESCE(r.model_name_snapshot, r.global_model_id, 'unknown')",
-    )
-    .await?;
-    let api_formats = breakdown_rows(store, query, "r.client_api_format", "r.client_api_format").await?;
-    let tokens = breakdown_rows(
-        store,
-        query,
-        "r.token_id",
-        "COALESCE(r.token_name_snapshot, r.token_prefix_snapshot, r.token_id, 'unknown')",
-    )
-    .await?;
-    let providers = admin_breakdown(store, query, "r.provider_id", "COALESCE(r.provider_name_snapshot, r.provider_id, 'unknown')").await?;
-    let users = admin_breakdown(
-        store,
-        query,
-        "r.user_id_snapshot",
-        "COALESCE(r.username_snapshot, r.user_id_snapshot, 'unknown')",
-    )
-    .await?;
+    let models = breakdown_rows(store, query, "b.global_model_id", "COALESCE(b.model_name, b.global_model_id, 'unknown')").await?;
+    let api_formats = breakdown_rows(store, query, "b.client_api_format", "b.client_api_format").await?;
+    let tokens = breakdown_rows(store, query, "b.token_id", "COALESCE(b.token_name, b.token_prefix, b.token_id, 'unknown')").await?;
+    let providers = admin_breakdown(store, query, "b.provider_id", "COALESCE(b.provider_name, b.provider_id, 'unknown')").await?;
+    let users = admin_breakdown(store, query, "b.user_id", "COALESCE(b.username, b.user_id, 'unknown')").await?;
     Ok(DashboardBreakdowns {
         models,
         api_formats,
@@ -115,7 +98,7 @@ async fn breakdown_rows(
     name_expression: &str,
 ) -> StorageResult<Vec<DashboardBreakdownItem>> {
     let mut params = SqlParams::new();
-    let where_sql = scoped_time_where(&query.scope, query.started_at, query.ended_at, &mut params);
+    let where_sql = scoped_metric_bucket_where(&query.scope, query.started_at, query.ended_at, SUMMARY_GRANULARITY, &mut params);
     let limit = params.push(BREAKDOWN_LIMIT);
     let sql = breakdown_sql(id_expression, name_expression, &where_sql, &limit);
     let rows = BreakdownRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
@@ -243,10 +226,6 @@ fn format_timestamp(value: time::OffsetDateTime) -> String {
     value
         .format(&time::format_description::well_known::Rfc3339)
         .expect("dashboard timestamp must format as RFC3339")
-}
-
-fn database(store: &DashboardStore) -> &Database {
-    store.database()
 }
 
 #[derive(Debug, FromQueryResult)]
