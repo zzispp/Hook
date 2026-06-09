@@ -25,6 +25,10 @@ type Props = {
   wallet?: WalletSummary;
   locale: string;
   rechargeOrders: RechargeOrder[];
+  rechargeOrdersTotal: number;
+  rechargeOrdersLoading: boolean;
+  rechargeOrdersPage: number;
+  rechargeOrdersRowsPerPage: number;
   loading: boolean;
   filters: WalletLedgerFilterState;
   hasFilters: boolean;
@@ -42,6 +46,8 @@ type Props = {
   onDailyUsagePageChange: (entry: WalletLedgerEntry, page: number, pageSize: number) => void;
   onPageChange: (event: unknown, newPage: number) => void;
   onRowsPerPageChange: React.ChangeEventHandler<HTMLInputElement>;
+  onRechargeOrdersPageChange: (event: unknown, newPage: number) => void;
+  onRechargeOrdersRowsPerPageChange: React.ChangeEventHandler<HTMLInputElement>;
 };
 
 export function WalletLedgerSection(props: Props) {
@@ -57,7 +63,19 @@ export function WalletLedgerSection(props: Props) {
         </Tabs>
       </Stack>
       {tab === 'ledger' ? <WalletLedgerTabPanel {...props} /> : null}
-      {tab === 'orders' ? <WalletRechargeOrdersTab t={props.t} locale={props.locale} orders={props.rechargeOrders} /> : null}
+      {tab === 'orders' ? (
+        <WalletRechargeOrdersTab
+          t={props.t}
+          locale={props.locale}
+          orders={props.rechargeOrders}
+          total={props.rechargeOrdersTotal}
+          loading={props.rechargeOrdersLoading}
+          page={props.rechargeOrdersPage}
+          rowsPerPage={props.rechargeOrdersRowsPerPage}
+          onPageChange={props.onRechargeOrdersPageChange}
+          onRowsPerPageChange={props.onRechargeOrdersRowsPerPageChange}
+        />
+      ) : null}
     </Card>
   );
 }
