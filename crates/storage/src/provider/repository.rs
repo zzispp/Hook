@@ -1,4 +1,4 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
 use types::provider::{
     Provider, ProviderGroup, ProviderGroupListRequest, ProviderGroupListResponse, ProviderKeyGroup, ProviderKeyGroupListResponse, ProviderListRequest,
     ProviderListResponse,
@@ -28,7 +28,15 @@ impl ProviderStore {
     }
 
     pub async fn create_provider(&self, input: ProviderRecordInput) -> StorageResult<Provider> {
-        let record = provider_active_model(self.database.next_id(), input).insert(self.database.connection()).await?;
+        let Some(provider_group_id) = input.provider_group_id.clone() else {
+            let record = provider_active_model(self.database.next_id(), input).insert(self.database.connection()).await?;
+            return Ok(record.into());
+        };
+
+        let tx = self.connection().begin().await?;
+        let record = provider_active_model(self.database.next_id(), input).insert(&tx).await?;
+        super::provider_group_query::insert_provider_group_members(self, &provider_group_id, vec![record.id.clone()], &tx).await?;
+        tx.commit().await?;
         Ok(record.into())
     }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ProviderGroup } from 'src/types/provider-group';
 import type { useProviderDialog } from './provider-management-state';
 
 import Stack from '@mui/material/Stack';
@@ -19,7 +20,13 @@ import {
 
 type ProviderDialogState = ReturnType<typeof useProviderDialog>;
 
-export function ProviderFormDialog({ dialog }: { dialog: ProviderDialogState }) {
+export function ProviderFormDialog({
+  dialog,
+  groups,
+}: {
+  dialog: ProviderDialogState;
+  groups: ProviderGroup[];
+}) {
   const { t } = useTranslate('admin');
 
   return (
@@ -31,10 +38,37 @@ export function ProviderFormDialog({ dialog }: { dialog: ProviderDialogState }) 
       onSubmit={dialog.submit}
     >
       <ProviderIdentityFields dialog={dialog} />
+      {!dialog.editing ? <ProviderGroupField dialog={dialog} groups={groups} /> : null}
       <ProviderRequestConfigFields dialog={dialog} />
       <ProviderPriorityField dialog={dialog} />
       <ProviderSwitchFields dialog={dialog} />
     </ManagementDialog>
+  );
+}
+
+function ProviderGroupField({
+  dialog,
+  groups,
+}: {
+  dialog: ProviderDialogState;
+  groups: ProviderGroup[];
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <TextFieldRow
+      select
+      label={t('providers.providerGroup')}
+      value={dialog.form.provider_group_id}
+      onChange={(value) => dialog.setForm((form) => ({ ...form, provider_group_id: value }))}
+    >
+      <MenuItem value="">{t('providers.unclassifiedProviderGroup')}</MenuItem>
+      {groups.map((group) => (
+        <MenuItem key={group.id} value={group.id}>
+          {group.name}
+        </MenuItem>
+      ))}
+    </TextFieldRow>
   );
 }
 

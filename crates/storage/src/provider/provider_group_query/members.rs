@@ -106,7 +106,7 @@ pub async fn replace_provider_key_group_members(
     insert_provider_key_group_members(store, group_id, key_ids, tx).await
 }
 
-async fn insert_provider_group_members(
+pub(in crate::provider) async fn insert_provider_group_members(
     store: &ProviderStore,
     group_id: &str,
     provider_ids: Vec<String>,

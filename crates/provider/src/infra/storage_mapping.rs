@@ -22,6 +22,7 @@ pub(super) fn provider_input(input: ProviderCreate) -> ProviderRecordInput {
     ProviderRecordInput {
         name: input.name,
         provider_type: input.provider_type,
+        provider_group_id: input.provider_group_id,
         max_retries: Some(input.max_retries.unwrap_or(DEFAULT_PROVIDER_MAX_RETRIES)),
         request_timeout_seconds: Some(input.request_timeout_seconds.unwrap_or(DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS)),
         stream_first_byte_timeout_seconds: Some(

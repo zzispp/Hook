@@ -153,7 +153,7 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
 
   return (
     <>
-      <ProviderFormDialog dialog={state.dialog} />
+      <ProviderFormDialog dialog={state.dialog} groups={state.providerGroups.items} />
       <ProviderBindingsPanel
         open={state.bindingsOpen}
         provider={state.selectedProvider}

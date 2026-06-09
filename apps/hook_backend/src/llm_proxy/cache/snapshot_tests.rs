@@ -2,7 +2,7 @@ use sea_orm::{DatabaseBackend, MockDatabase};
 use storage::{
     Database,
     model::provider_models,
-    provider::record::{provider_api_keys, provider_endpoints, providers},
+    provider::record::{provider_api_keys, provider_endpoints, provider_group_providers, provider_groups, providers},
 };
 
 use super::load_providers;
@@ -12,6 +12,8 @@ async fn load_providers_keeps_disabled_providers_for_admin_model_tests() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([provider_records()])
+            .append_query_results([Vec::<provider_groups::Model>::new()])
+            .append_query_results([Vec::<provider_group_providers::Model>::new()])
             .append_query_results([endpoint_records("provider-active")])
             .append_query_results([key_records("provider-active")])
             .append_query_results([model_records("provider-active")])

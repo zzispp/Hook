@@ -48,7 +48,7 @@ export function useProviderManagementState() {
   }, [priorityKeys, priorityProviders, providerGroups, providerKeyGroups]);
   const settings = useSystemSettings();
   const models = useGlobalModels(0, 1000);
-  const dialog = useProviderDialog(t);
+  const dialog = useProviderDialog({ t });
   const deleteDialog = useDeleteProviderDialog(t);
   const childDialogs = useProviderChildDialogs(t, ui.selectedProvider?.id);
   const providerGroupAssociation = useProviderGroupAssociation(t, providerGroups.items);

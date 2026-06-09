@@ -224,7 +224,8 @@ impl UserStore {
         let query = filtered_users(filters);
         let total = query.clone().count(self.database.connection()).await?;
         let items = query
-            .order_by_asc(UserColumn::CreatedAt)
+            .order_by_desc(UserColumn::CreatedAt)
+            .order_by_asc(UserColumn::Id)
             .limit(request.limit)
             .offset(request.offset)
             .all(self.database.connection())

@@ -24,6 +24,7 @@ pub use group::{
 const MAX_LIST_LIMIT: u64 = 1000;
 const MAX_NAME_LENGTH: usize = 100;
 const MAX_TYPE_LENGTH: usize = 50;
+const MAX_PROVIDER_GROUP_ID_LENGTH: usize = 100;
 const MAX_API_FORMAT_LENGTH: usize = 50;
 const MAX_URL_LENGTH: usize = 500;
 const MAX_MODEL_ID_LENGTH: usize = 100;
@@ -36,6 +37,7 @@ pub fn sanitize_create(input: ProviderCreate) -> ProviderCreate {
     ProviderCreate {
         name: input.name.trim().to_owned(),
         provider_type: input.provider_type.trim().to_owned(),
+        provider_group_id: input.provider_group_id.and_then(trim_optional),
         ..input
     }
 }
@@ -89,7 +91,11 @@ pub fn sanitize_model_cost_batch(input: ProviderModelCostBatchUpsert) -> Provide
 
 pub fn validate_create(input: &ProviderCreate) -> ProviderResult<()> {
     validate_text("name", &input.name, MAX_NAME_LENGTH)?;
-    validate_provider_type(&input.provider_type)
+    validate_provider_type(&input.provider_type)?;
+    if let Some(provider_group_id) = input.provider_group_id.as_deref() {
+        validate_text("provider_group_id", provider_group_id, MAX_PROVIDER_GROUP_ID_LENGTH)?;
+    }
+    Ok(())
 }
 
 pub fn validate_update(input: &ProviderUpdate) -> ProviderResult<()> {

@@ -24,12 +24,17 @@ import {
   apiKeyUpdatePayload,
   providerModelPayload,
   DEFAULT_API_KEY_FORM,
+  providerUpdatePayload,
   DEFAULT_PROVIDER_FORM,
   providerFormFromProvider,
   DEFAULT_PROVIDER_MODEL_FORM,
 } from './provider-management-utils';
 
-export function useProviderDialog(t: ReturnType<typeof useTranslate>['t']) {
+type ProviderDialogOptions = {
+  t: ReturnType<typeof useTranslate>['t'];
+};
+
+export function useProviderDialog({ t }: ProviderDialogOptions) {
   const [form, setForm] = useState({ ...DEFAULT_PROVIDER_FORM });
   const [editing, setEditing] = useState<Provider | null>(null);
   const [creating, setCreating] = useState(false);
@@ -56,11 +61,10 @@ export function useProviderDialog(t: ReturnType<typeof useTranslate>['t']) {
   const submit = useCallback(async () => {
     setSubmitting(true);
     try {
-      const payload = providerPayload(form);
       if (editing) {
-        await updateProvider(editing.id, payload);
+        await updateProvider(editing.id, providerUpdatePayload(form));
       } else {
-        await createProvider(payload);
+        await createProvider(providerPayload(form));
       }
       toast.success(editing ? t('messages.providerUpdated') : t('messages.providerCreated'));
       closeDialog();
