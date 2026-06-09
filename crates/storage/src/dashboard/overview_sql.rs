@@ -47,7 +47,7 @@ pub(super) fn timeseries_select(bucket: DashboardBucketFilter, offset: &str) -> 
 }
 
 pub(super) fn timeseries_group() -> &'static str {
-    "GROUP BY bucket ORDER BY bucket ASC"
+    "GROUP BY 1 ORDER BY 1 ASC"
 }
 
 pub(super) fn breakdown_sql(id_expression: &str, name_expression: &str, where_sql: &str, limit: &str) -> String {
@@ -59,7 +59,7 @@ pub(super) fn breakdown_sql(id_expression: &str, name_expression: &str, where_sq
         COALESCE(SUM(b.upstream_total_cost), 0) AS upstream_total_cost, \
         COALESCE(SUM(b.latency_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.latency_sample_count), 0), 0)::double precision AS avg_latency_ms \
         FROM dashboard_request_metric_buckets b {where_sql} \
-        GROUP BY id, name \
+        GROUP BY 1, 2 \
         ORDER BY request_count DESC, total_tokens DESC, name ASC \
         LIMIT {limit}"
     )

@@ -46,8 +46,8 @@ async fn daily_rows(store: &DashboardStore, query: &DashboardStoreOverviewQuery)
         COALESCE(SUM(b.latency_total_ms), 0)::double precision AS latency_total_ms, \
         COALESCE(SUM(b.latency_sample_count), 0)::bigint AS latency_sample_count \
         FROM dashboard_request_metric_buckets b {where_sql} \
-        GROUP BY date, model_name, provider_name \
-        ORDER BY date ASC"
+        GROUP BY 1, 2, 3 \
+        ORDER BY 1 ASC"
     );
     DailyRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())

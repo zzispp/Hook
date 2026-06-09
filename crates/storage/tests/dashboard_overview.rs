@@ -39,13 +39,18 @@ async fn dashboard_overview_casts_latency_averages_to_double_precision() {
     let summary_sql = &logs[0].statements()[0].sql;
     let timeseries_sql = &logs[3].statements()[0].sql;
     let daily_sql = &logs[4].statements()[0].sql;
+    let model_breakdown_sql = &logs[5].statements()[0].sql;
     assert_snapshot_metric_sql(summary_sql);
     assert_snapshot_metric_sql(timeseries_sql);
     assert_snapshot_metric_sql(daily_sql);
     assert!(summary_sql.contains("SUM(b.latency_total_ms)"), "{summary_sql}");
     assert!(summary_sql.contains("SUM(b.ttfb_total_ms)"), "{summary_sql}");
     assert!(timeseries_sql.contains("SUM(b.latency_total_ms)"), "{timeseries_sql}");
+    assert!(timeseries_sql.contains("GROUP BY 1 ORDER BY 1 ASC"), "{timeseries_sql}");
     assert!(daily_sql.contains("SUM(b.upstream_total_cost)"), "{daily_sql}");
+    assert!(daily_sql.contains("GROUP BY 1, 2, 3"), "{daily_sql}");
+    assert!(model_breakdown_sql.contains("GROUP BY 1, 2"), "{model_breakdown_sql}");
+    assert!(!model_breakdown_sql.contains("GROUP BY id, name"), "{model_breakdown_sql}");
 }
 
 #[tokio::test]
