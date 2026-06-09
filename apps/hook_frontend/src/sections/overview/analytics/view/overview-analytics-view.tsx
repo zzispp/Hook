@@ -88,6 +88,7 @@ export function OverviewAnalyticsView() {
         locale={locale}
         isAdmin={isAdmin}
         loading={statsLoading}
+        preset={preset}
         data={overview.data}
       />
       <PeriodSummaryGrid
