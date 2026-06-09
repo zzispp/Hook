@@ -86,6 +86,7 @@ pub struct Model {
     pub request_body: Option<String>,
     pub client_response_headers: Option<String>,
     pub client_response_body: Option<String>,
+    pub payload_compressed_at: Option<TimeDateTimeWithTimeZone>,
     pub created_at: TimeDateTimeWithTimeZone,
     pub started_at: Option<TimeDateTimeWithTimeZone>,
     pub finished_at: Option<TimeDateTimeWithTimeZone>,

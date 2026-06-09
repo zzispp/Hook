@@ -26,6 +26,7 @@ pub struct Model {
     pub provider_request_body: Option<String>,
     pub provider_response_headers: Option<String>,
     pub provider_response_body: Option<String>,
+    pub payload_compressed_at: Option<TimeDateTimeWithTimeZone>,
     pub candidate_index: i32,
     pub retry_index: i32,
     pub status: String,

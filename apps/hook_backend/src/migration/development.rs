@@ -126,7 +126,8 @@ pub async fn status(connection: &DatabaseConnection) -> Result<BaselineStatus, D
 
 async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::development_additive::apply(manager).await?;
-    super::request_record_cleanup_config_additive::apply(manager).await
+    super::request_record_cleanup_config_additive::apply(manager).await?;
+    super::request_record_payload_compression_additive::apply(manager).await
 }
 
 async fn reset(manager: &SchemaManager<'_>) -> Result<(), DbErr> {

@@ -103,6 +103,7 @@ macro_rules! summary_model {
             billing_snapshot: None,
             client_response_headers: payloads.response_headers,
             client_response_body: payloads.response_body,
+            payload_compressed_at: None,
             created_at: now(),
             started_at: Some(now()),
             finished_at: Some(now()),
@@ -136,6 +137,7 @@ macro_rules! candidate_model {
             provider_request_body: payloads.body,
             provider_response_headers: payloads.response_headers,
             provider_response_body: payloads.response_body,
+            payload_compressed_at: None,
             candidate_index: 0,
             retry_index: 0,
             status: "success".into(),
@@ -202,17 +204,15 @@ macro_rules! candidate_model {
 #[tokio::test]
 async fn request_record_storage_compresses_old_payloads() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(timeout_exec_results(10))
+        .append_exec_results(timeout_exec_results(16))
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
         .append_query_results([[summary_record("req-1", plain_payloads())]])
-        .append_query_results([[summary_record("req-1", compressed_payloads())]])
         .append_query_results([[candidate_record("candidate-1", "req-1", plain_payloads())]])
-        .append_query_results([[candidate_record("candidate-1", "req-1", compressed_payloads())]])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
-        .append_query_results([Vec::<request_records::Model>::new()])
-        .append_query_results([Vec::<request_candidates::Model>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -221,8 +221,38 @@ async fn request_record_storage_compresses_old_payloads() {
     assert_eq!(result.compressed_records, 1);
     assert_eq!(result.compressed_candidates, 1);
     let sql = logged_sql(connection);
-    assert!(sql.iter().any(|item| item.contains("UPDATE \"request_records\" SET")), "{sql:?}");
-    assert!(sql.iter().any(|item| item.contains("UPDATE \"request_candidates\" SET")), "{sql:?}");
+    assert_update_without_returning(&sql, "request_records");
+    assert_update_without_returning(&sql, "request_candidates");
+}
+
+#[tokio::test]
+async fn request_record_storage_marks_existing_compressed_payloads_without_rewriting() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_exec_results(timeout_exec_results(16))
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([[orphan_candidate_counts(0)]])
+        .append_query_results([[summary_record("req-1", compressed_payloads())]])
+        .append_query_results([[candidate_record("candidate-1", "req-1", compressed_payloads())]])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([[orphan_candidate_counts(0)]])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    let result = store.cleanup_request_records(cleanup_options()).await.unwrap();
+
+    assert_eq!(result.compressed_records, 1);
+    assert_eq!(result.compressed_candidates, 1);
+    let sql = logged_sql(connection);
+    let record_update = update_sql(&sql, "request_records");
+    let candidate_update = update_sql(&sql, "request_candidates");
+    assert!(!record_update.contains("RETURNING"), "{record_update}");
+    assert!(!candidate_update.contains("RETURNING"), "{candidate_update}");
+    assert!(record_update.contains("payload_compressed_at"), "{record_update}");
+    assert!(!record_update.contains("request_headers"), "{record_update}");
+    assert!(candidate_update.contains("payload_compressed_at"), "{candidate_update}");
+    assert!(!candidate_update.contains("provider_request_headers"), "{candidate_update}");
 }
 
 fn cleanup_options() -> RequestRecordCleanupOptions {
@@ -243,7 +273,13 @@ fn orphan_candidate_counts(deleted_candidates: i64) -> BTreeMap<&'static str, Va
 }
 
 fn timeout_exec_results(count: usize) -> Vec<MockExecResult> {
-    vec![MockExecResult::default(); count]
+    vec![
+        MockExecResult {
+            rows_affected: 1,
+            ..Default::default()
+        };
+        count
+    ]
 }
 
 fn logged_sql(connection: sea_orm::DatabaseConnection) -> Vec<String> {
@@ -253,6 +289,18 @@ fn logged_sql(connection: sea_orm::DatabaseConnection) -> Vec<String> {
         .flat_map(|entry| entry.statements())
         .map(|statement| statement.sql.clone())
         .collect()
+}
+
+fn update_sql<'a>(sql: &'a [String], table: &str) -> &'a str {
+    sql.iter()
+        .find(|item| item.contains(&format!("UPDATE \"{table}\" SET")))
+        .map(String::as_str)
+        .unwrap()
+}
+
+fn assert_update_without_returning(sql: &[String], table: &str) {
+    let update = update_sql(sql, table);
+    assert!(!update.contains("RETURNING"), "{update}");
 }
 
 fn summary_record(request_id: &str, payloads: Payloads) -> request_records::Model {

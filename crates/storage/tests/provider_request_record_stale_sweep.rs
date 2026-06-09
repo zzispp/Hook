@@ -86,6 +86,7 @@ macro_rules! request_record {
             billing_snapshot: None,
             client_response_headers: None,
             client_response_body: None,
+            payload_compressed_at: None,
             created_at: now(),
             started_at: Some(now()),
             finished_at: ($status == "failed").then_some(now()),

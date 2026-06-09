@@ -2,7 +2,7 @@ use sea_orm::{DatabaseBackend, MockDatabase, MockExecResult, Value};
 use std::{collections::BTreeMap, time::Duration};
 use storage::{
     Database,
-    provider::{ProviderStore, RequestRecordCleanupOptions, record},
+    provider::{ProviderStore, RequestRecordCleanupOptions},
 };
 
 #[tokio::test]
@@ -13,12 +13,12 @@ async fn request_record_cleanup_uses_limited_delete_batches() {
         .append_query_results([[deleted_candidates_count(3)]])
         .append_query_results([[deleted_records_count(2)]])
         .append_query_results([[orphan_candidate_counts(1)]])
-        .append_query_results([Vec::<record::request_records::Model>::new()])
-        .append_query_results([Vec::<record::request_candidates::Model>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
-        .append_query_results([Vec::<record::request_records::Model>::new()])
-        .append_query_results([Vec::<record::request_candidates::Model>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -44,13 +44,13 @@ async fn request_record_cleanup_uses_limited_delete_batches() {
 }
 
 #[tokio::test]
-async fn request_record_cleanup_excludes_compressed_payload_markers() {
+async fn request_record_cleanup_uses_indexed_payload_marker() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_exec_results(timeout_exec_results(4))
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
-        .append_query_results([Vec::<record::request_records::Model>::new()])
-        .append_query_results([Vec::<record::request_candidates::Model>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
+        .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -61,13 +61,10 @@ async fn request_record_cleanup_excludes_compressed_payload_markers() {
     let statements = logged_statements(connection);
     let sql = sql_strings(&statements);
     let string_values = bound_string_values(&statements);
-    assert!(sql.iter().any(|item| item.contains("NOT LIKE $2")), "{sql:?}");
+    assert!(sql.iter().any(|item| item.contains("payload_compressed_at IS NULL")), "{sql:?}");
+    assert!(sql.iter().all(|item| !item.contains("NOT LIKE")), "{sql:?}");
     assert!(
-        string_values.iter().any(|item| item == r#"%"__hook_compressed_payload__"%"#),
-        "{string_values:?}"
-    );
-    assert!(
-        !string_values.iter().any(|item| item == r#"%\"__hook_compressed_payload__\"%"#),
+        string_values.iter().all(|item| !item.contains("__hook_compressed_payload__")),
         "{string_values:?}"
     );
 }

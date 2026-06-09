@@ -129,6 +129,7 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         request_body: Set(json::encode_optional(&input.request_body)?),
         client_response_headers: Set(None),
         client_response_body: Set(None),
+        payload_compressed_at: Set(None),
         created_at: Set(now),
         started_at: Set(None),
         finished_at: Set(None),

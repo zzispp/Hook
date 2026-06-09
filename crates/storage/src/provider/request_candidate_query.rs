@@ -32,6 +32,7 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         provider_request_body: Set(json::encode_optional(&input.provider_request_body)?),
         provider_response_headers: Set(json::encode_optional(&input.provider_response_headers)?),
         provider_response_body: Set(json::encode_optional(&input.provider_response_body)?),
+        payload_compressed_at: Set(None),
         candidate_index: Set(input.candidate_index),
         retry_index: Set(input.retry_index),
         status: Set(input.status),

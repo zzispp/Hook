@@ -1,7 +1,4 @@
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, Condition, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set, TransactionTrait,
-    sea_query::{LockBehavior, LockType},
-};
+use sea_orm::{ColumnTrait, DbBackend, EntityTrait, FromQueryResult, QueryFilter, Statement, TransactionTrait, sea_query::Expr};
 
 use crate::StorageResult;
 
@@ -12,8 +9,6 @@ use super::{
     request_record_housekeeping_timeout::{CleanupBudget, apply_timeouts},
     request_record_payload_codec,
 };
-
-const COMPRESSED_MARKER_PATTERN: &str = r#"%"__hook_compressed_payload__"%"#;
 
 pub(super) async fn compress_record_batch(
     store: &ProviderStore,
@@ -71,22 +66,10 @@ pub(super) async fn compress_candidate_batch(
     })
 }
 
-async fn summary_payload_batch(
-    store: &ProviderStore,
-    options: &RequestRecordCleanupOptions,
-    budget: &CleanupBudget,
-) -> StorageResult<Vec<request_records::Model>> {
+async fn summary_payload_batch(store: &ProviderStore, options: &RequestRecordCleanupOptions, budget: &CleanupBudget) -> StorageResult<Vec<SummaryPayloadRow>> {
     let tx = store.connection().begin().await?;
     apply_timeouts(&tx, options, budget).await?;
-    let records = request_records::Entity::find()
-        .filter(request_records::Column::CreatedAt.lt(options.payload_cutoff))
-        .filter(uncompressed_summary_payload_exists())
-        .order_by_asc(request_records::Column::CreatedAt)
-        .order_by_asc(request_records::Column::RequestId)
-        .limit(options.compress_batch_size)
-        .lock_with_behavior(LockType::Update, LockBehavior::SkipLocked)
-        .all(&tx)
-        .await?;
+    let records = SummaryPayloadRow::find_by_statement(summary_payload_batch_statement(options)).all(&tx).await?;
     tx.commit().await?;
     Ok(records)
 }
@@ -95,16 +78,10 @@ async fn candidate_payload_batch(
     store: &ProviderStore,
     options: &RequestRecordCleanupOptions,
     budget: &CleanupBudget,
-) -> StorageResult<Vec<request_candidates::Model>> {
+) -> StorageResult<Vec<CandidatePayloadRow>> {
     let tx = store.connection().begin().await?;
     apply_timeouts(&tx, options, budget).await?;
-    let records = request_candidates::Entity::find()
-        .filter(request_candidates::Column::CreatedAt.lt(options.payload_cutoff))
-        .filter(uncompressed_candidate_payload_exists())
-        .order_by_asc(request_candidates::Column::CreatedAt)
-        .order_by_asc(request_candidates::Column::Id)
-        .limit(options.compress_batch_size)
-        .lock_with_behavior(LockType::Update, LockBehavior::SkipLocked)
+    let records = CandidatePayloadRow::find_by_statement(candidate_payload_batch_statement(options))
         .all(&tx)
         .await?;
     tx.commit().await?;
@@ -115,92 +92,96 @@ async fn update_summary_payloads(
     store: &ProviderStore,
     options: &RequestRecordCleanupOptions,
     budget: &CleanupBudget,
-    record: request_records::Model,
+    record: SummaryPayloadRow,
 ) -> StorageResult<bool> {
-    let Some(active) = compressed_summary_payloads(record)? else {
-        return Ok(false);
-    };
+    let update = compressed_summary_payloads(record)?;
     let tx = store.connection().begin().await?;
     apply_timeouts(&tx, options, budget).await?;
-    active.update(&tx).await?;
+    let rows_affected = update_summary_row(update, &tx).await?;
     tx.commit().await?;
-    Ok(true)
+    Ok(rows_affected > 0)
 }
 
 async fn update_candidate_payloads(
     store: &ProviderStore,
     options: &RequestRecordCleanupOptions,
     budget: &CleanupBudget,
-    record: request_candidates::Model,
+    record: CandidatePayloadRow,
 ) -> StorageResult<bool> {
-    let Some(active) = compressed_candidate_payloads(record)? else {
-        return Ok(false);
-    };
+    let update = compressed_candidate_payloads(record)?;
     let tx = store.connection().begin().await?;
     apply_timeouts(&tx, options, budget).await?;
-    active.update(&tx).await?;
+    let rows_affected = update_candidate_row(update, &tx).await?;
     tx.commit().await?;
-    Ok(true)
+    Ok(rows_affected > 0)
 }
 
-fn compressed_summary_payloads(record: request_records::Model) -> StorageResult<Option<request_records::ActiveModel>> {
+async fn update_summary_row(update: SummaryPayloadUpdate, tx: &sea_orm::DatabaseTransaction) -> StorageResult<u64> {
+    let now = time::OffsetDateTime::now_utc();
+    let mut query = request_records::Entity::update_many()
+        .col_expr(request_records::Column::PayloadCompressedAt, Expr::val(Some(now)))
+        .filter(request_records::Column::RequestId.eq(update.request_id))
+        .filter(request_records::Column::PayloadCompressedAt.is_null());
+    if update.payload_changed {
+        query = query
+            .col_expr(request_records::Column::RequestHeaders, Expr::val(update.request_headers))
+            .col_expr(request_records::Column::RequestBody, Expr::val(update.request_body))
+            .col_expr(request_records::Column::ClientResponseHeaders, Expr::val(update.client_response_headers))
+            .col_expr(request_records::Column::ClientResponseBody, Expr::val(update.client_response_body));
+    }
+    query.exec(tx).await.map(|result| result.rows_affected).map_err(Into::into)
+}
+
+async fn update_candidate_row(update: CandidatePayloadUpdate, tx: &sea_orm::DatabaseTransaction) -> StorageResult<u64> {
+    let now = time::OffsetDateTime::now_utc();
+    let mut query = request_candidates::Entity::update_many()
+        .col_expr(request_candidates::Column::PayloadCompressedAt, Expr::val(Some(now)))
+        .filter(request_candidates::Column::Id.eq(update.id))
+        .filter(request_candidates::Column::PayloadCompressedAt.is_null());
+    if update.payload_changed {
+        query = query
+            .col_expr(request_candidates::Column::ProviderRequestHeaders, Expr::val(update.provider_request_headers))
+            .col_expr(request_candidates::Column::ProviderRequestBody, Expr::val(update.provider_request_body))
+            .col_expr(request_candidates::Column::ProviderResponseHeaders, Expr::val(update.provider_response_headers))
+            .col_expr(request_candidates::Column::ProviderResponseBody, Expr::val(update.provider_response_body));
+    }
+    query.exec(tx).await.map(|result| result.rows_affected).map_err(Into::into)
+}
+
+fn compressed_summary_payloads(record: SummaryPayloadRow) -> StorageResult<SummaryPayloadUpdate> {
     let request_headers = request_record_payload_codec::compress_payload(record.request_headers.clone())?;
     let request_body = request_record_payload_codec::compress_payload(record.request_body.clone())?;
     let response_headers = request_record_payload_codec::compress_payload(record.client_response_headers.clone())?;
     let response_body = request_record_payload_codec::compress_payload(record.client_response_body.clone())?;
-    if summary_payloads_unchanged(&record, &request_headers, &request_body, &response_headers, &response_body) {
-        return Ok(None);
-    }
-    let mut active: request_records::ActiveModel = record.into();
-    active.request_headers = Set(request_headers);
-    active.request_body = Set(request_body);
-    active.client_response_headers = Set(response_headers);
-    active.client_response_body = Set(response_body);
-    Ok(Some(active))
+    let payload_changed = !summary_payloads_unchanged(&record, &request_headers, &request_body, &response_headers, &response_body);
+    Ok(SummaryPayloadUpdate {
+        request_id: record.request_id,
+        request_headers,
+        request_body,
+        client_response_headers: response_headers,
+        client_response_body: response_body,
+        payload_changed,
+    })
 }
 
-fn compressed_candidate_payloads(record: request_candidates::Model) -> StorageResult<Option<request_candidates::ActiveModel>> {
+fn compressed_candidate_payloads(record: CandidatePayloadRow) -> StorageResult<CandidatePayloadUpdate> {
     let request_headers = request_record_payload_codec::compress_payload(record.provider_request_headers.clone())?;
     let request_body = request_record_payload_codec::compress_payload(record.provider_request_body.clone())?;
     let response_headers = request_record_payload_codec::compress_payload(record.provider_response_headers.clone())?;
     let response_body = request_record_payload_codec::compress_payload(record.provider_response_body.clone())?;
-    if candidate_payloads_unchanged(&record, &request_headers, &request_body, &response_headers, &response_body) {
-        return Ok(None);
-    }
-    let mut active: request_candidates::ActiveModel = record.into();
-    active.provider_request_headers = Set(request_headers);
-    active.provider_request_body = Set(request_body);
-    active.provider_response_headers = Set(response_headers);
-    active.provider_response_body = Set(response_body);
-    Ok(Some(active))
-}
-
-fn uncompressed_summary_payload_exists() -> Condition {
-    Condition::any()
-        .add(uncompressed_summary_column(request_records::Column::RequestHeaders))
-        .add(uncompressed_summary_column(request_records::Column::RequestBody))
-        .add(uncompressed_summary_column(request_records::Column::ClientResponseHeaders))
-        .add(uncompressed_summary_column(request_records::Column::ClientResponseBody))
-}
-
-fn uncompressed_candidate_payload_exists() -> Condition {
-    Condition::any()
-        .add(uncompressed_candidate_column(request_candidates::Column::ProviderRequestHeaders))
-        .add(uncompressed_candidate_column(request_candidates::Column::ProviderRequestBody))
-        .add(uncompressed_candidate_column(request_candidates::Column::ProviderResponseHeaders))
-        .add(uncompressed_candidate_column(request_candidates::Column::ProviderResponseBody))
-}
-
-fn uncompressed_summary_column(column: request_records::Column) -> Condition {
-    Condition::all().add(column.is_not_null()).add(column.not_like(COMPRESSED_MARKER_PATTERN))
-}
-
-fn uncompressed_candidate_column(column: request_candidates::Column) -> Condition {
-    Condition::all().add(column.is_not_null()).add(column.not_like(COMPRESSED_MARKER_PATTERN))
+    let payload_changed = !candidate_payloads_unchanged(&record, &request_headers, &request_body, &response_headers, &response_body);
+    Ok(CandidatePayloadUpdate {
+        id: record.id,
+        provider_request_headers: request_headers,
+        provider_request_body: request_body,
+        provider_response_headers: response_headers,
+        provider_response_body: response_body,
+        payload_changed,
+    })
 }
 
 fn summary_payloads_unchanged(
-    record: &request_records::Model,
+    record: &SummaryPayloadRow,
     request_headers: &Option<String>,
     request_body: &Option<String>,
     response_headers: &Option<String>,
@@ -213,7 +194,7 @@ fn summary_payloads_unchanged(
 }
 
 fn candidate_payloads_unchanged(
-    record: &request_candidates::Model,
+    record: &CandidatePayloadRow,
     request_headers: &Option<String>,
     request_body: &Option<String>,
     response_headers: &Option<String>,
@@ -231,4 +212,68 @@ fn exhausted_batch() -> CompressBatchResult {
         changed: 0,
         time_budget_exhausted: true,
     }
+}
+
+fn summary_payload_batch_statement(options: &RequestRecordCleanupOptions) -> Statement {
+    Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        "SELECT request_id, request_headers, request_body, client_response_headers, client_response_body \
+         FROM request_records \
+         WHERE created_at < $1 \
+           AND payload_compressed_at IS NULL \
+           AND (request_headers IS NOT NULL OR request_body IS NOT NULL OR client_response_headers IS NOT NULL OR client_response_body IS NOT NULL) \
+         ORDER BY created_at ASC, request_id ASC \
+         LIMIT $2 FOR UPDATE SKIP LOCKED",
+        vec![options.payload_cutoff.into(), (options.compress_batch_size as i64).into()],
+    )
+}
+
+fn candidate_payload_batch_statement(options: &RequestRecordCleanupOptions) -> Statement {
+    Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        "SELECT id, provider_request_headers, provider_request_body, provider_response_headers, provider_response_body \
+         FROM request_candidates \
+         WHERE created_at < $1 \
+           AND payload_compressed_at IS NULL \
+           AND (provider_request_headers IS NOT NULL OR provider_request_body IS NOT NULL OR provider_response_headers IS NOT NULL OR provider_response_body IS NOT NULL) \
+         ORDER BY created_at ASC, id ASC \
+         LIMIT $2 FOR UPDATE SKIP LOCKED",
+        vec![options.payload_cutoff.into(), (options.compress_batch_size as i64).into()],
+    )
+}
+
+#[derive(Debug, FromQueryResult)]
+struct SummaryPayloadRow {
+    request_id: String,
+    request_headers: Option<String>,
+    request_body: Option<String>,
+    client_response_headers: Option<String>,
+    client_response_body: Option<String>,
+}
+
+#[derive(Debug, FromQueryResult)]
+struct CandidatePayloadRow {
+    id: String,
+    provider_request_headers: Option<String>,
+    provider_request_body: Option<String>,
+    provider_response_headers: Option<String>,
+    provider_response_body: Option<String>,
+}
+
+struct SummaryPayloadUpdate {
+    request_id: String,
+    request_headers: Option<String>,
+    request_body: Option<String>,
+    client_response_headers: Option<String>,
+    client_response_body: Option<String>,
+    payload_changed: bool,
+}
+
+struct CandidatePayloadUpdate {
+    id: String,
+    provider_request_headers: Option<String>,
+    provider_request_body: Option<String>,
+    provider_response_headers: Option<String>,
+    provider_response_body: Option<String>,
+    payload_changed: bool,
 }
