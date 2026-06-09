@@ -207,13 +207,12 @@ function providerRowsByGroup(
   groups: ProviderGroup[],
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
-  const providersById = new Map(providers.map((provider) => [provider.id, provider]));
   const groupedProviderIds = new Set(groups.flatMap((group) => group.provider_ids));
   const boundGroups = sortedGroups(groups)
     .map((group) => ({
       id: group.id,
       name: group.name,
-      providers: group.provider_ids.flatMap((id) => providersById.get(id) ?? []),
+      providers: providers.filter((provider) => group.provider_ids.includes(provider.id)),
     }))
     .filter((group) => group.providers.length > 0);
   const unboundProviders = providers.filter((provider) => !groupedProviderIds.has(provider.id));

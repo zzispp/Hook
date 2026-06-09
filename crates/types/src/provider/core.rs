@@ -42,6 +42,8 @@ pub struct ProviderCreate {
     pub name: String,
     pub provider_type: String,
     #[serde(default)]
+    pub provider_group_id: Option<String>,
+    #[serde(default)]
     pub max_retries: Option<i32>,
     #[serde(default)]
     pub request_timeout_seconds: Option<f64>,

@@ -8,6 +8,7 @@ use types::provider::{ProviderModelCostMode, ProviderModelCostSource, ProviderMo
 pub struct ProviderRecordInput {
     pub name: String,
     pub provider_type: String,
+    pub provider_group_id: Option<String>,
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,

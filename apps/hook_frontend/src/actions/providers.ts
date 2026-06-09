@@ -185,6 +185,7 @@ export function useProviderCooldowns(
 export async function createProvider(payload: ProviderCreate) {
   const provider = await requestData<Provider>(axios.post(endpoints.adminProviders.list, payload));
   await mutateProviders();
+  await mutateProviderGroups();
   return provider;
 }
 
