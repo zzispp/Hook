@@ -35,6 +35,7 @@ pub struct ScheduledTask {
     pub description_key: String,
     pub enabled: bool,
     pub interval_seconds: i64,
+    pub next_run_at: Option<String>,
     pub config: serde_json::Value,
     pub config_schema: Vec<ScheduledTaskConfigField>,
     pub last_started_at: Option<String>,

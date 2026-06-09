@@ -9,6 +9,7 @@ use storage::{
     Database,
     scheduler::{ScheduledTaskRecordPatch, SchedulerStore},
 };
+use time::format_description::well_known::Rfc3339;
 use tokio::sync::{Mutex, mpsc};
 use tokio_util::time::{DelayQueue, delay_queue::Key};
 use types::{
@@ -24,6 +25,8 @@ use crate::runtime::{
 
 const MIN_INTERVAL_SECONDS: i64 = 1;
 
+type NextRunMap = Arc<Mutex<HashMap<String, time::OffsetDateTime>>>;
+
 #[async_trait]
 pub trait SchedulerUseCase: Send + Sync + 'static {
     async fn list_tasks(&self) -> SchedulerResult<Vec<ScheduledTask>>;
@@ -34,6 +37,7 @@ pub trait SchedulerUseCase: Send + Sync + 'static {
 #[derive(Clone)]
 pub struct SchedulerHandle {
     sender: mpsc::Sender<RuntimeCommand>,
+    next_runs: NextRunMap,
 }
 
 impl SchedulerHandle {
@@ -42,6 +46,10 @@ impl SchedulerHandle {
             .send(RuntimeCommand::Reload(code))
             .await
             .map_err(|error| SchedulerError::Infrastructure(format!("scheduler reload send failed: {error}")))
+    }
+
+    async fn next_run_snapshot(&self) -> HashMap<String, time::OffsetDateTime> {
+        self.next_runs.lock().await.clone()
     }
 }
 
@@ -61,7 +69,8 @@ impl SchedulerService {
 #[async_trait]
 impl SchedulerUseCase for SchedulerService {
     async fn list_tasks(&self) -> SchedulerResult<Vec<ScheduledTask>> {
-        list_tasks(&self.store, &self.registry).await
+        let tasks = list_tasks(&self.store, &self.registry).await?;
+        with_next_run_times(tasks, self.handle.next_run_snapshot().await)
     }
 
     async fn update_task(&self, code: &str, input: ScheduledTaskUpdate) -> SchedulerResult<ScheduledTask> {
@@ -83,7 +92,11 @@ impl SchedulerUseCase for SchedulerService {
             )
             .await?;
         self.handle.reload(code.to_owned()).await?;
-        record.response(&definition).map_err(|error| SchedulerError::Infrastructure(error.to_string()))
+        let mut task = record
+            .response(&definition)
+            .map_err(|error| SchedulerError::Infrastructure(error.to_string()))?;
+        task.next_run_at = next_run_from_now(&task)?;
+        Ok(task)
     }
 
     async fn list_runs(&self, request: ScheduledTaskRunListRequest) -> SchedulerResult<Page<ScheduledTaskRun>> {
@@ -98,6 +111,7 @@ pub struct SchedulerRuntime {
     commands: mpsc::Receiver<RuntimeCommand>,
     queue: DelayQueue<String>,
     keys: HashMap<String, Key>,
+    next_runs: NextRunMap,
     running: Arc<Mutex<HashSet<String>>>,
 }
 
@@ -110,6 +124,7 @@ impl SchedulerRuntime {
     pub fn spawn(database: Database, registry: Arc<SchedulerRegistry>) -> SchedulerResult<SchedulerHandle> {
         let store = SchedulerStore::new(database.clone());
         let (sender, receiver) = mpsc::channel(128);
+        let next_runs = Arc::new(Mutex::new(HashMap::new()));
         let mut runtime = Self {
             database,
             registry,
@@ -117,6 +132,7 @@ impl SchedulerRuntime {
             commands: receiver,
             queue: DelayQueue::new(),
             keys: HashMap::new(),
+            next_runs: next_runs.clone(),
             running: Arc::new(Mutex::new(HashSet::new())),
         };
         tokio::spawn(async move {
@@ -124,7 +140,7 @@ impl SchedulerRuntime {
                 hook_tracing::error("scheduler runtime failed", &error);
             }
         });
-        Ok(SchedulerHandle { sender })
+        Ok(SchedulerHandle { sender, next_runs })
     }
 
     async fn run(&mut self) -> SchedulerResult<()> {
@@ -166,6 +182,7 @@ impl SchedulerRuntime {
         if let Some(key) = self.keys.remove(code) {
             let _ = self.queue.remove(&key);
         }
+        self.next_runs.lock().await.remove(code);
         let Some(record) = self.store.task_record(code).await? else {
             return Ok(());
         };
@@ -173,8 +190,10 @@ impl SchedulerRuntime {
             return Ok(());
         }
         let delay = interval_delay(record.interval_seconds)?;
+        let next_run_at = next_run_after_interval(record.interval_seconds);
         let key = self.queue.insert(code.to_owned(), delay);
         self.keys.insert(code.to_owned(), key);
+        self.next_runs.lock().await.insert(code.to_owned(), next_run_at);
         Ok(())
     }
 
@@ -205,6 +224,34 @@ fn validate_update(input: &ScheduledTaskUpdate) -> SchedulerResult<()> {
     Ok(())
 }
 
+fn with_next_run_times(mut tasks: Vec<ScheduledTask>, next_runs: HashMap<String, time::OffsetDateTime>) -> SchedulerResult<Vec<ScheduledTask>> {
+    for task in &mut tasks {
+        task.next_run_at = next_runs.get(&task.code).copied().map(format_next_run_at).transpose()?;
+    }
+    Ok(tasks)
+}
+
+fn next_run_from_now(task: &ScheduledTask) -> SchedulerResult<Option<String>> {
+    if !task.enabled {
+        return Ok(None);
+    }
+    format_next_run_at(next_run_after_interval(task.interval_seconds)).map(Some)
+}
+
+fn next_run_after_interval(interval_seconds: i64) -> time::OffsetDateTime {
+    time::OffsetDateTime::now_utc() + time::Duration::seconds(interval_seconds)
+}
+
+fn format_next_run_at(value: time::OffsetDateTime) -> SchedulerResult<String> {
+    value
+        .format(&Rfc3339)
+        .map_err(|error| SchedulerError::Infrastructure(format!("scheduler next_run_at format failed: {error}")))
+}
+
 fn task_runner(registry: &Arc<SchedulerRegistry>, code: &str) -> SchedulerResult<Arc<dyn ScheduledTaskLifecycle>> {
     registry.task(code).ok_or_else(|| SchedulerError::NotFound(code.to_owned()))
 }
+
+#[cfg(test)]
+#[path = "service_tests.rs"]
+mod service_tests;

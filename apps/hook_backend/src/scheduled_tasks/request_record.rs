@@ -1,11 +1,12 @@
 use std::time::Duration;
 
-use scheduler::runtime::{DurationExt, ScheduleTaskContext, ScheduledTaskLifecycle, SchedulerResult, TaskConfigValue, TaskResult};
+use scheduler::runtime::{ScheduleTaskContext, ScheduledTaskLifecycle, SchedulerResult, TaskConfigValue, TaskResult};
 use storage::provider::{ProviderStore, RequestRecordCleanupOptions, RequestRecordCleanupResult};
 
 use super::{integer_config, integer_fields, storage_error, validate_positive_integer};
 
 const STALE_SWEEP_INTERVAL_SECONDS: i64 = 300;
+const CLEANUP_INTERVAL_SECONDS: i64 = 600;
 const STALE_PENDING_TIMEOUT_MINUTES: i64 = 10;
 const STALE_STREAMING_TIMEOUT_MINUTES: i64 = 10;
 const DEFAULT_RECORD_RETENTION_DAYS: i64 = 365;
@@ -30,7 +31,7 @@ impl ScheduledTaskLifecycle for RequestRecordCleanupTask {
             "request_record_cleanup",
             "scheduledTasks.definitions.requestRecordCleanup.name",
             "scheduledTasks.definitions.requestRecordCleanup.description",
-            24_i64.hours(),
+            CLEANUP_INTERVAL_SECONDS,
             default_cleanup_config(),
             cleanup_config_fields(),
         )

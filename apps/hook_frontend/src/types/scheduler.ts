@@ -18,6 +18,7 @@ export type ScheduledTask = {
   description_key: string;
   enabled: boolean;
   interval_seconds: number;
+  next_run_at?: string | null;
   config: Record<string, unknown>;
   config_schema: ScheduledTaskConfigField[];
   last_started_at?: string | null;

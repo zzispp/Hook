@@ -66,6 +66,7 @@ export function ScheduledTaskTable({
       { id: 'code', label: t('common.code'), width: 180 },
       { id: 'status', label: t('common.status'), width: 120 },
       { id: 'interval', label: t('scheduledTasks.fields.intervalSeconds'), width: 140 },
+      { id: 'next_run_at', label: t('scheduledTasks.fields.nextRunAt'), width: 180 },
       { id: 'last_started_at', label: t('scheduledTasks.fields.lastStartedAt'), width: 180 },
       { id: 'last_finished_at', label: t('scheduledTasks.fields.lastFinishedAt'), width: 180 },
       { id: 'last_status', label: t('scheduledTasks.fields.lastStatus'), width: 140 },
@@ -99,6 +100,7 @@ export function ScheduledTaskTable({
                       <EnabledLabel enabled={row.enabled} />
                     </TableCell>
                     <TableCell>{row.interval_seconds}</TableCell>
+                    <TableCell>{formatOptionalDate(row.next_run_at, locale)}</TableCell>
                     <TableCell>{formatOptionalDate(row.last_started_at, locale)}</TableCell>
                     <TableCell>{formatOptionalDate(row.last_finished_at, locale)}</TableCell>
                     <TableCell>

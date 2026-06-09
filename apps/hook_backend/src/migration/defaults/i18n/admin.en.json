@@ -2156,6 +2156,7 @@
     "fields": {
       "task": "Task",
       "intervalSeconds": "Interval (seconds)",
+      "nextRunAt": "Next run at",
       "lastStartedAt": "Last started at",
       "lastFinishedAt": "Last finished at",
       "lastStatus": "Last status",

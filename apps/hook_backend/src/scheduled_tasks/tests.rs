@@ -7,7 +7,7 @@ fn request_record_cleanup_definition_matches_runtime_contract() {
     let definition = RequestRecordCleanupTask.definition();
 
     assert_eq!(definition.code, "request_record_cleanup");
-    assert_eq!(definition.default_interval_seconds, 86_400);
+    assert_eq!(definition.default_interval_seconds, 600);
     assert_eq!(definition.default_config["delete_batch_size"], 200);
     assert_eq!(definition.default_config["compress_batch_size"], 50);
     assert_eq!(definition.default_config["max_runtime_seconds"], 120);
