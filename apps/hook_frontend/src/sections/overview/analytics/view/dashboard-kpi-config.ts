@@ -20,7 +20,7 @@ export type KpiCardData = {
 };
 
 export type KpiCardConfig = {
-  labelKey: string;
+  label: (t: TFunction<'admin'>, period: string) => string;
   color: PaletteColorKey;
   icon: IconifyName;
   value: (summary: DashboardOverviewResponse['summary'] | undefined, locale: string) => string;
@@ -35,21 +35,21 @@ export type KpiCardConfig = {
 
 export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
   {
-    labelKey: 'dashboard.stats.today.requests',
+    label: (t, period) => t('dashboard.stats.period.requests', { period }),
     color: 'primary',
     icon: 'solar:transfer-horizontal-bold-duotone',
     value: (summary, locale) => formatInteger(summary?.request_count, locale),
     series: emptySeries,
   },
   {
-    labelKey: 'dashboard.stats.today.tokens',
+    label: (t, period) => t('dashboard.stats.period.tokens', { period }),
     color: 'warning',
     icon: 'solar:file-text-bold',
     value: (summary) => formatDashboardTokens(summary?.total_tokens),
     series: emptySeries,
   },
   {
-    labelKey: 'dashboard.stats.kpi.cacheHitRate',
+    label: (t, period) => t('dashboard.stats.period.cacheHitRate', { period }),
     color: 'info',
     icon: 'solar:chart-square-outline',
     value: (summary) => formatDashboardPercent(summary?.cache_hit_rate),
@@ -57,7 +57,7 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     adminOnly: true,
   },
   {
-    labelKey: 'dashboard.stats.today.apiKeys',
+    label: (t, period) => t('dashboard.stats.period.apiKeys', { period }),
     color: 'success',
     icon: 'solar:shield-keyhole-bold-duotone',
     value: (summary, locale) => formatInteger(summary?.token_count, locale),
@@ -65,7 +65,7 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     userOnly: true,
   },
   {
-    labelKey: 'dashboard.stats.today.cost',
+    label: (t, period) => t('dashboard.stats.period.cost', { period }),
     color: 'info',
     icon: 'solar:bill-list-bold',
     value: (summary) => formatDashboardCost(summary?.total_cost),
@@ -73,7 +73,7 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     adminOnly: true,
   },
   {
-    labelKey: 'dashboard.stats.today.cost',
+    label: (t, period) => t('dashboard.stats.period.cost', { period }),
     color: 'info',
     icon: 'solar:bill-list-bold',
     value: (summary) => formatDashboardCost(summary?.total_cost),

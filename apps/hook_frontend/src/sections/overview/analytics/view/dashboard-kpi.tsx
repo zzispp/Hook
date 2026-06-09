@@ -4,7 +4,7 @@ import type { CardProps } from '@mui/material/Card';
 import type { PaletteColorKey } from 'src/theme/core';
 import type { ChartOptions } from 'src/components/chart';
 import type { IconifyName } from 'src/components/iconify';
-import type { DashboardOverviewResponse } from 'src/types/dashboard';
+import type { DashboardPreset, DashboardOverviewResponse } from 'src/types/dashboard';
 
 import { varAlpha } from 'minimal-shared/utils';
 
@@ -20,6 +20,7 @@ import { SvgColor } from 'src/components/svg-color';
 import { Chart, useChart } from 'src/components/chart';
 
 import { formatInteger } from './dashboard-format';
+import { dashboardPeriodLabel } from './dashboard-period';
 import { KPI_CARD_CONFIGS, type KpiCardData, type KpiCardConfig } from './dashboard-kpi-config';
 
 const KPI_ICON_SIZE = 48;
@@ -57,6 +58,7 @@ type KpiConfigInput = {
   summary: DashboardOverviewResponse['summary'] | undefined;
   points: DashboardOverviewResponse['timeseries'];
   config: KpiCardConfig;
+  period: string;
 };
 
 export function KpiGrid({
@@ -65,14 +67,16 @@ export function KpiGrid({
   locale,
   isAdmin,
   loading,
+  preset,
 }: {
   t: TFunction<'admin'>;
   locale: string;
   isAdmin: boolean;
   loading: boolean;
+  preset: DashboardPreset;
   data?: DashboardOverviewResponse;
 }) {
-  const cards = kpiCards(t, locale, isAdmin, data);
+  const cards = kpiCards(t, locale, isAdmin, preset, data);
 
   return (
     <Box sx={KPI_GRID_SX}>
@@ -199,14 +203,15 @@ function kpiCards(
   t: TFunction<'admin'>,
   locale: string,
   isAdmin: boolean,
+  preset: DashboardPreset,
   data?: DashboardOverviewResponse
 ): KpiCardData[] {
   const summary = data?.summary;
-  const today = data?.today ?? summary;
-  const points: DashboardOverviewResponse['timeseries'] = [];
+  const period = dashboardPeriodLabel(t, preset);
+  const points = data?.timeseries ?? [];
   return KPI_CARD_CONFIGS
     .filter((config) => kpiVisible(config, isAdmin))
-    .map((config) => cardFromConfig({ t, locale, summary: today, points, config }));
+    .map((config) => cardFromConfig({ t, locale, summary, points, config, period }));
 }
 
 function kpiVisible(config: KpiCardConfig, isAdmin: boolean) {
@@ -226,9 +231,9 @@ function kpiCard({ label, value, detail, color, icon, series }: KpiCardInput): K
   };
 }
 
-function cardFromConfig({ t, locale, summary, points, config }: KpiConfigInput) {
+function cardFromConfig({ t, locale, summary, points, config, period }: KpiConfigInput) {
   return kpiCard({
-    label: t(config.labelKey),
+    label: config.label(t, period),
     value: config.value(summary, locale),
     detail: config.detail?.(summary, t),
     color: config.color,

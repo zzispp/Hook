@@ -582,10 +582,12 @@
         "errorRate": "{{period}}错误率",
         "failovers": "{{period}}转移次数",
         "cost": "{{period}}费用",
-        "upstreamCost": "上游 {{value}}",
+        "upstreamCost": "{{period}}上游成本",
         "cacheHitRate": "{{period}}缓存命中率",
         "cacheRead": "{{period}}缓存读取",
         "cacheCreate": "{{period}}缓存创建",
+        "activeUsers": "{{period}}活跃用户",
+        "apiKeys": "{{period}} API Keys",
         "requests": "{{period}}请求",
         "tokens": "{{period}} Tokens",
         "modelCost": "{{period}}模型成本"

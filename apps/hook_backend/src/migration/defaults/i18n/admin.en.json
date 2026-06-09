@@ -582,10 +582,12 @@
         "errorRate": "{{period}} error rate",
         "failovers": "{{period}} failovers",
         "cost": "{{period}} cost",
-        "upstreamCost": "Upstream {{value}}",
+        "upstreamCost": "{{period}} upstream cost",
         "cacheHitRate": "{{period}} cache hit rate",
         "cacheRead": "{{period}} cache read",
         "cacheCreate": "{{period}} cache create",
+        "activeUsers": "{{period}} active users",
+        "apiKeys": "{{period}} API keys",
         "requests": "{{period}} requests",
         "tokens": "{{period}} tokens",
         "modelCost": "{{period}} model cost"

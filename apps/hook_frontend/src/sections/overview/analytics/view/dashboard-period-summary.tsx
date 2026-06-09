@@ -140,13 +140,13 @@ function adminPeriodItems(
       'error'
     ),
     metric(
-      t('dashboard.stats.kpi.upstreamCost'),
+      t('dashboard.stats.period.upstreamCost', { period }),
       formatDashboardCost(summary?.upstream_total_cost),
       'solar:bill-list-bold',
       'warning'
     ),
     metric(
-      t('dashboard.stats.today.activeUsers'),
+      t('dashboard.stats.period.activeUsers', { period }),
       formatInteger(summary?.user_count, locale),
       'solar:users-group-rounded-bold',
       'success'
