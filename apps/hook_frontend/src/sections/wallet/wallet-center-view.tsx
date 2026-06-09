@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
@@ -11,13 +11,18 @@ import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useWalletDailyModelUsage } from 'src/actions/wallet';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
-import { DASHBOARD_MENU_CODES, DASHBOARD_SECTION_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
+import {
+  DASHBOARD_MENU_CODES,
+  DASHBOARD_SECTION_CODES,
+} from 'src/layouts/dashboard/dashboard-menu-values';
 import {
   useUserRechargeOrders,
   useUserPaymentChannels,
   useUserRechargePackages,
+  refreshUserRechargeOrdersPage,
 } from 'src/actions/recharge';
 
+import { useTable } from 'src/components/table';
 import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
@@ -35,19 +40,28 @@ export function WalletCenterView() {
   const [rechargeOpen, setRechargeOpen] = useState(false);
   const [cardCodeOpen, setCardCodeOpen] = useState(false);
   const state = useWalletCenterState(t);
+  const orderTable = useTable({ defaultRowsPerPage: 5, defaultOrderBy: 'created_at' });
   const packages = useUserRechargePackages();
-  const orders = useUserRechargeOrders();
+  const orders = useUserRechargeOrders(orderTable.page, orderTable.rowsPerPage);
   const paymentChannels = useUserPaymentChannels();
   const captcha = useCaptchaConfig();
   const locale = currentLang.numberFormat.code;
   const rechargeEnabled = packages.data?.recharge_enabled === true;
   const entryExpansion = useWalletLedgerExpansion();
-  const detail = useWalletDailyModelUsage(entryExpansion.date, entryExpansion.page, entryExpansion.pageSize);
+  const detail = useWalletDailyModelUsage(
+    entryExpansion.date,
+    entryExpansion.page,
+    entryExpansion.pageSize
+  );
+  const refreshLatestOrders = useCallback(async () => {
+    orderTable.setPage(0);
+    return refreshUserRechargeOrdersPage(0, orderTable.rowsPerPage);
+  }, [orderTable]);
   const deposit = useWalletDepositActions({
     t,
     rechargeOpen: rechargeOpen && rechargeEnabled,
     refreshWallet: state.refresh,
-    refreshOrders: orders.refresh,
+    refreshOrders: refreshLatestOrders,
   });
   const refreshRecharge = () => {
     void packages.refresh();
@@ -143,6 +157,12 @@ export function WalletCenterView() {
         onDailyUsagePageChange={entryExpansion.changePage}
         onPageChange={state.table.onChangePage}
         onRowsPerPageChange={state.table.onChangeRowsPerPage}
+        rechargeOrdersTotal={orders.data?.total ?? 0}
+        rechargeOrdersLoading={orders.isLoading}
+        rechargeOrdersPage={orderTable.page}
+        rechargeOrdersRowsPerPage={orderTable.rowsPerPage}
+        onRechargeOrdersPageChange={orderTable.onChangePage}
+        onRechargeOrdersRowsPerPageChange={orderTable.onChangeRowsPerPage}
       />
 
       <WalletTransactionDetailDialog

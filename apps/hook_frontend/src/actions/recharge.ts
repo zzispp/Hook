@@ -16,8 +16,8 @@ import type {
   PaymentCallbackRecordListResponse,
 } from 'src/types/recharge';
 
-import useSWR from 'swr';
 import { useMemo } from 'react';
+import useSWR, { mutate as mutateCache } from 'swr';
 
 import axios, { fetcher, endpoints } from 'src/lib/axios';
 
@@ -93,8 +93,19 @@ export function useUserRechargePackages(page = 0, pageSize = 50) {
 }
 
 export function useUserRechargeOrders(page = 0, pageSize = 5) {
-  const key = [endpoints.recharges.orders, { params: pageQuery(page, pageSize) }] as const;
+  const key = userRechargeOrdersKey(page, pageSize);
   return useRechargeResource<RechargeOrderListResponse>(key);
+}
+
+export async function refreshUserRechargeOrdersPage(page = 0, pageSize = 5) {
+  const key = userRechargeOrdersKey(page, pageSize);
+  const response = await axios.get<ApiEnvelope<RechargeOrderListResponse>>(
+    endpoints.recharges.orders,
+    { params: pageQuery(page, pageSize) }
+  );
+  const data = requireApiData(response.data);
+  await mutateCache(key, response.data, false);
+  return data;
 }
 
 export async function createRechargePackage(payload: RechargePackageInput) {
@@ -129,6 +140,10 @@ export async function createUserRechargeOrder(payload: RechargeOrderCreateInput)
   return requireApiData(response.data);
 }
 
+function userRechargeOrdersKey(page: number, pageSize: number) {
+  return [endpoints.recharges.orders, { params: pageQuery(page, pageSize) }] as const;
+}
+
 function useRechargeResource<T>(key: Key) {
   const { data, isLoading, error, isValidating, mutate } = useSWR<ApiEnvelope<T>>(
     key,
@@ -137,7 +152,8 @@ function useRechargeResource<T>(key: Key) {
   );
 
   return useMemo(() => {
-    const apiError = data && !data.success ? new Error(data.message || 'Request failed') : undefined;
+    const apiError =
+      data && !data.success ? new Error(data.message || 'Request failed') : undefined;
     return {
       data: data?.success ? requireApiData(data) : undefined,
       isLoading,
