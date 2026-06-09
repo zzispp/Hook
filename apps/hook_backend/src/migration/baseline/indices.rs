@@ -15,7 +15,6 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             UserGroupMemberships::UserId,
             false,
         ),
-        request_records_payload_cleanup_index(),
         index(
             "index_user_group_memberships_by_user_group",
             UserGroupMemberships::Table,
@@ -358,7 +357,6 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RequestCandidates::Status,
             RequestCandidates::CreatedAt,
         ),
-        request_candidates_payload_cleanup_index(),
         compound_index(
             "index_scheduled_task_runs_by_task_started",
             ScheduledTaskRuns::Table,
@@ -624,34 +622,6 @@ fn dashboard_user_usage_buckets_user_bucket_index() -> IndexCreateStatement {
         .col(DashboardUserUsageBuckets::BucketStartedAt)
         .if_not_exists()
         .to_owned()
-}
-
-fn request_records_payload_cleanup_index() -> IndexCreateStatement {
-    let mut index = Index::create();
-    index
-        .name("index_request_records_payload_cleanup")
-        .table(RequestRecords::Table)
-        .col(RequestRecords::CreatedAt)
-        .col(RequestRecords::RequestId)
-        .if_not_exists()
-        .cond_where(Expr::cust(
-            "payload_compressed_at IS NULL AND (request_headers IS NOT NULL OR request_body IS NOT NULL OR client_response_headers IS NOT NULL OR client_response_body IS NOT NULL)",
-        ));
-    index.to_owned()
-}
-
-fn request_candidates_payload_cleanup_index() -> IndexCreateStatement {
-    let mut index = Index::create();
-    index
-        .name("index_request_candidates_payload_cleanup")
-        .table(RequestCandidates::Table)
-        .col(RequestCandidates::CreatedAt)
-        .col(RequestCandidates::Id)
-        .if_not_exists()
-        .cond_where(Expr::cust(
-            "payload_compressed_at IS NULL AND (provider_request_headers IS NOT NULL OR provider_request_body IS NOT NULL OR provider_response_headers IS NOT NULL OR provider_response_body IS NOT NULL)",
-        ));
-    index.to_owned()
 }
 
 fn model_status_hourly_stats_unique_index() -> IndexCreateStatement {
