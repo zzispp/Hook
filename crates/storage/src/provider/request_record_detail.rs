@@ -72,6 +72,7 @@ pub(super) fn candidate_detail(candidate: RequestCandidateRecord) -> StorageResu
         error_message: candidate.error_message,
         error_code: candidate.error_code,
         error_param: candidate.error_param,
+        payloads: Vec::new(),
         provider_request_headers: detail_payload(candidate.provider_request_headers)?,
         provider_request_body: detail_payload(candidate.provider_request_body)?,
         provider_response_headers: detail_payload(candidate.provider_response_headers)?,

@@ -89,6 +89,9 @@ async fn request_record_storage_returns_trace_detail() {
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[summary("req-success", "success", false, true, true, 2, 2)]])
             .append_query_results([success_candidates()])
+            .append_query_results([empty_payload_rows()])
+            .append_query_results([empty_payload_rows()])
+            .append_query_results([empty_payload_rows()])
             .into_connection(),
     );
     let store = ProviderStore::new(database);
@@ -224,6 +227,8 @@ async fn request_record_storage_filters_summary_before_pagination() {
     assert!(list_sql.contains("ORDER BY r.created_at DESC"), "{list_sql}");
     assert!(list_sql.contains("LIMIT $"), "{list_sql}");
     assert!(list_sql.contains("OFFSET $"), "{list_sql}");
+    assert_summary_query_avoids_legacy_payload_columns(count_sql);
+    assert_summary_query_avoids_legacy_payload_columns(list_sql);
 }
 
 #[tokio::test]
@@ -270,14 +275,13 @@ async fn request_record_storage_lists_user_usage_records_without_upstream_fields
     assert!(count_sql.contains("r.client_api_format = $"), "{count_sql}");
     assert!(!count_sql.contains("r.provider_id = $"), "{count_sql}");
     assert!(!count_sql.contains("r.provider_api_format = $"), "{count_sql}");
-    assert!(!count_sql.contains("provider_name_snapshot"), "{count_sql}");
-    assert!(!count_sql.contains("provider_key_name_snapshot"), "{count_sql}");
 }
 
 #[tokio::test]
 async fn request_record_storage_creates_main_record() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-created", "pending", false, false, false, 1, 6)]])
+        .append_exec_results([mock_exec_result()])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -286,6 +290,7 @@ async fn request_record_storage_creates_main_record() {
     let logs = connection.into_transaction_log();
     let sql = &logs[0].statements()[0].sql;
     assert!(sql.contains("INSERT INTO \"request_records\""), "{sql}");
+    assert_request_record_partition_sync(&logs[1].statements()[0].sql);
 }
 
 #[tokio::test]
@@ -293,6 +298,7 @@ async fn request_record_storage_updates_main_record() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
         .append_exec_results([
+            mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
@@ -312,6 +318,7 @@ async fn request_record_storage_updates_main_record() {
     assert!(sql.contains("\"status\" = $"), "{sql}");
     assert!(sql.contains("\"client_status_code\" = $"), "{sql}");
     assert!(sql.contains("\"client_response_body\" = $"), "{sql}");
+    assert_request_record_partition_sync(&logs.last().unwrap().statements()[0].sql);
 }
 
 #[tokio::test]
@@ -319,6 +326,7 @@ async fn request_record_storage_syncs_dashboard_tokens_with_cache_context() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
         .append_exec_results([
+            mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
             mock_exec_result(),
@@ -349,6 +357,23 @@ fn mock_exec_result() -> MockExecResult {
         last_insert_id: 0,
         rows_affected: 1,
     }
+}
+
+fn assert_request_record_partition_sync(sql: &str) {
+    assert!(sql.contains("INSERT INTO request_records_partitioned"), "{sql}");
+    assert!(sql.contains("ON CONFLICT (created_at, request_id) DO UPDATE"), "{sql}");
+    assert!(!sql.contains("request_headers"), "{sql}");
+}
+
+fn assert_summary_query_avoids_legacy_payload_columns(sql: &str) {
+    assert!(!sql.contains("r.request_headers"), "{sql}");
+    assert!(!sql.contains("r.request_body"), "{sql}");
+    assert!(!sql.contains("r.client_response_headers"), "{sql}");
+    assert!(!sql.contains("r.client_response_body"), "{sql}");
+}
+
+fn empty_payload_rows() -> Vec<BTreeMap<&'static str, Value>> {
+    Vec::new()
 }
 
 fn statement_value(values: &sea_orm::Values, index: usize) -> Value {

@@ -1,8 +1,11 @@
 export type {
   UsageRecord,
   RequestRecord,
+  RequestPayloadMeta,
   RequestRecordDetail,
   RequestRecordStatus,
+  RequestPayloadSource,
+  RequestPayloadStatus,
   RequestCandidateDetail,
   UsageRecordListResponse,
   RequestRecordListResponse,

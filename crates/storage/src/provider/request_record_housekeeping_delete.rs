@@ -29,7 +29,7 @@ pub(super) async fn delete_record_batch(
         return Ok(DeleteRecordBatch::default());
     }
     let tx = store.connection().begin().await?;
-    apply_timeouts(&tx, options, budget).await?;
+    apply_timeouts(&tx, options).await?;
     let request_ids = RequestIdRow::find_by_statement(select_record_batch_statement(options))
         .all(&tx)
         .await?
@@ -54,7 +54,7 @@ pub(super) async fn delete_orphan_candidate_batch(store: &ProviderStore, options
         return Ok(0);
     }
     let tx = store.connection().begin().await?;
-    apply_timeouts(&tx, options, budget).await?;
+    apply_timeouts(&tx, options).await?;
     let row = DeleteOrphanCandidateBatchRow::find_by_statement(delete_orphan_candidates_statement(options))
         .one(&tx)
         .await?

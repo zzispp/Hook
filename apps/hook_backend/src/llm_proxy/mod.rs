@@ -12,6 +12,7 @@ mod model_access;
 mod model_test;
 mod proxy;
 mod rate_limit;
+mod request_payload_writer;
 mod request_record_policy;
 mod token_usage;
 mod ws;
@@ -79,6 +80,7 @@ pub struct LlmProxyState {
     http: ReqwestClient,
     affinity: redis::aio::ConnectionManager,
     cache: LlmProxyCache,
+    payload_writer: request_payload_writer::RequestPayloadWriter,
     key_prefix: String,
     system_wallet: Option<Wallet>,
 }
@@ -92,12 +94,14 @@ impl LlmProxyState {
         key_prefix: String,
         system_wallet: Option<Wallet>,
     ) -> Self {
+        let payload_writer = request_payload_writer::RequestPayloadWriter::spawn(database.clone());
         Self {
             database,
             cipher,
             http: llm_proxy_http_client(),
             affinity,
             cache,
+            payload_writer,
             key_prefix,
             system_wallet,
         }
@@ -156,6 +160,10 @@ impl LlmProxyState {
 
     fn affinity_store(&self) -> cache_affinity::CacheAffinityStore {
         cache_affinity::CacheAffinityStore::new(self.affinity.clone(), &self.key_prefix)
+    }
+
+    async fn enqueue_request_payload(&self, job: request_payload_writer::RequestPayloadJob) -> Result<(), LlmProxyError> {
+        self.payload_writer.enqueue(self.database.clone(), job).await
     }
 }
 

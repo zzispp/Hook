@@ -69,6 +69,28 @@ async fn request_record_cleanup_uses_indexed_payload_marker() {
     );
 }
 
+#[tokio::test]
+async fn request_record_cleanup_stops_when_budget_cannot_cover_statement() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    let result = store
+        .cleanup_request_records(RequestRecordCleanupOptions {
+            max_runtime: Duration::from_secs(1),
+            statement_timeout_seconds: 15,
+            ..cleanup_options()
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(result.deleted_records, 0);
+    assert_eq!(result.deleted_candidates, 0);
+    assert_eq!(result.compressed_records, 0);
+    assert_eq!(result.compressed_candidates, 0);
+    assert!(result.time_budget_exhausted);
+    assert!(logged_statements(connection).is_empty());
+}
+
 fn cleanup_options() -> RequestRecordCleanupOptions {
     RequestRecordCleanupOptions {
         record_cutoff: time::OffsetDateTime::now_utc(),

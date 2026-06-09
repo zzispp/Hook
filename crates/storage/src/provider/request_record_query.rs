@@ -1,25 +1,25 @@
-use rust_decimal::Decimal;
-use sea_orm::{ColumnTrait, ConnectionTrait, DbBackend, EntityTrait, FromQueryResult, QueryFilter, QueryOrder, Statement};
+use sea_orm::{ConnectionTrait, DbBackend, FromQueryResult, Statement, Value};
 use types::provider::{
-    ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestRecord, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-    UsageRecord, UsageRecordListResponse,
+    ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use crate::{
     StorageError, StorageResult,
-    provider::record::{RequestRecordSummaryRecord, request_candidates, request_records},
+    provider::record::{RequestCandidateRecord, RequestRecordSummaryRecord, request_candidates, request_records},
 };
 
 use super::{
-    request_record_detail::{candidate_detail, detail_payload, format_timestamp},
     request_record_filter::{FilterSql, pagination_value},
-    request_record_summary::DEFAULT_COST_CURRENCY,
-    request_upstream_cost::{self, StoredUpstreamCost},
+    request_record_partition_columns::{
+        REQUEST_CANDIDATE_MODEL_COLUMNS_LEGACY, REQUEST_CANDIDATE_MODEL_COLUMNS_PARTITIONED, REQUEST_RECORD_MODEL_COLUMNS_LEGACY,
+        REQUEST_RECORD_MODEL_COLUMNS_PARTITIONED,
+    },
+    request_record_query_mapper::{summary_record, usage_record},
+    request_record_query_payloads::{candidate_details_with_payloads, record_payloads},
 };
 
 const STATUS_PENDING: &str = "pending";
 const STATUS_STREAMING: &str = "streaming";
-const ACTIVE_REQUEST_STATUSES: [&str; 2] = [STATUS_PENDING, STATUS_STREAMING];
 
 pub async fn list_request_records(store: &super::ProviderStore, request: RequestRecordListRequest) -> StorageResult<RequestRecordListResponse> {
     let total = count_summary_records(store, &request).await?;
@@ -42,44 +42,30 @@ pub async fn list_active_request_records(store: &super::ProviderStore, request: 
 }
 
 pub async fn get_request_record(store: &super::ProviderStore, request_id: &str) -> StorageResult<RequestRecordDetail> {
-    let summary = request_records::Entity::find_by_id(request_id.to_owned())
-        .one(store.connection())
-        .await?
-        .ok_or(StorageError::NotFound)?;
-    let candidates = request_candidates::Entity::find()
-        .filter(request_candidates::Column::RequestId.eq(request_id))
-        .order_by_asc(request_candidates::Column::CandidateIndex)
-        .order_by_asc(request_candidates::Column::RetryIndex)
-        .all(store.connection())
-        .await?;
+    let summary = detail_summary_record(store, request_id).await?.ok_or(StorageError::NotFound)?;
+    let candidates = detail_candidate_records(store, request_id).await?;
     let record = summary_record(summary.clone())?;
-    let request_headers = detail_payload(summary.request_headers)?;
-    let request_body = detail_payload(summary.request_body)?;
-    let client_response_headers = detail_payload(summary.client_response_headers)?;
-    let client_response_body = detail_payload(summary.client_response_body)?;
-    let details = candidates.into_iter().map(candidate_detail).collect::<StorageResult<Vec<_>>>()?;
+    let record_payloads = record_payloads(store, &summary).await?;
+    let details = candidate_details_with_payloads(store, candidates).await?;
     Ok(RequestRecordDetail {
         record,
         candidates: details,
-        request_headers,
-        request_body,
-        client_response_headers,
-        client_response_body,
+        payloads: record_payloads.payloads,
+        request_headers: record_payloads.request_headers,
+        request_body: record_payloads.request_body,
+        client_response_headers: record_payloads.client_response_headers,
+        client_response_body: record_payloads.client_response_body,
     })
 }
 
 async fn active_summary_records(store: &super::ProviderStore, ids: &[String]) -> StorageResult<Vec<RequestRecordSummaryRecord>> {
-    if ids.is_empty() {
-        return request_records::Entity::find()
-            .filter(request_records::Column::Status.is_in(ACTIVE_REQUEST_STATUSES))
-            .order_by_desc(request_records::Column::CreatedAt)
-            .all(store.connection())
-            .await
-            .map_err(StorageError::from);
-    }
-    request_records::Entity::find()
-        .filter(request_records::Column::RequestId.is_in(ids.iter().cloned()))
-        .order_by_desc(request_records::Column::CreatedAt)
+    let mut values = Vec::new();
+    let where_clause = active_where_clause(ids, &mut values);
+    let sql = format!(
+        "SELECT r.* FROM ({}) r {where_clause} ORDER BY r.created_at DESC, r.request_id DESC",
+        request_record_summary_union_sql()
+    );
+    request_records::Model::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, values))
         .all(store.connection())
         .await
         .map_err(StorageError::from)
@@ -96,7 +82,11 @@ async fn count_user_summary_records(store: &super::ProviderStore, user_id: &str,
 }
 
 async fn count_summary_records_with_filters(store: &super::ProviderStore, filters: FilterSql) -> StorageResult<u64> {
-    let sql = format!("SELECT COUNT(*) AS total FROM request_records r {}", filters.where_clause);
+    let sql = format!(
+        "SELECT COUNT(*) AS total FROM ({}) r {}",
+        request_record_summary_union_sql(),
+        filters.where_clause
+    );
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, filters.values);
     let row = store
         .connection()
@@ -127,7 +117,8 @@ async fn list_summary_records_with_filters(
     let limit = filters.push(pagination_value("limit", request.limit)?);
     let offset = filters.push(pagination_value("skip", request.skip)?);
     let sql = format!(
-        "SELECT r.* FROM request_records r {} ORDER BY r.created_at DESC, r.request_id DESC LIMIT {limit} OFFSET {offset}",
+        "SELECT r.* FROM ({}) r {} ORDER BY r.created_at DESC, r.request_id DESC LIMIT {limit} OFFSET {offset}",
+        request_record_summary_union_sql(),
         filters.where_clause
     );
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, filters.values);
@@ -137,94 +128,60 @@ async fn list_summary_records_with_filters(
         .map_err(StorageError::from)
 }
 
-fn usage_record(record: RequestRecordSummaryRecord) -> UsageRecord {
-    UsageRecord {
-        created_at: format_timestamp(record.created_at),
-        token_name: record.token_name_snapshot,
-        token_prefix: record.token_prefix_snapshot,
-        model_name: record.model_name_snapshot.or(record.global_model_id),
-        client_api_format: record.client_api_format,
-        request_type: record.request_type,
-        is_stream: record.is_stream,
-        status: record.status,
-        prompt_tokens: record.prompt_tokens,
-        completion_tokens: record.completion_tokens,
-        total_tokens: record.total_tokens,
-        cache_creation_input_tokens: record.cache_creation_input_tokens,
-        cache_read_input_tokens: record.cache_read_input_tokens,
-        total_cost: record.total_cost.unwrap_or(Decimal::ZERO),
-        cost_currency: record.cost_currency.unwrap_or_else(|| DEFAULT_COST_CURRENCY.into()),
-        first_byte_time_ms: record.first_byte_time_ms,
-        total_latency_ms: record.total_latency_ms,
-    }
+async fn detail_summary_record(store: &super::ProviderStore, request_id: &str) -> StorageResult<Option<RequestRecordSummaryRecord>> {
+    let sql = format!("SELECT r.* FROM ({}) r WHERE r.request_id = $1 LIMIT 1", request_record_union_sql());
+    request_records::Model::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, [Value::from(request_id.to_owned())]))
+        .one(store.connection())
+        .await
+        .map_err(StorageError::from)
 }
 
-fn summary_record(record: RequestRecordSummaryRecord) -> StorageResult<RequestRecord> {
-    let upstream_cost = request_upstream_cost::response(StoredUpstreamCost::from_request_record(&record))?;
-    Ok(RequestRecord {
-        request_id: record.request_id,
-        created_at: format_timestamp(record.created_at),
-        user_id: record.user_id_snapshot,
-        username: record.username_snapshot,
-        token_id: record.token_id,
-        token_name: record.token_name_snapshot,
-        token_prefix: record.token_prefix_snapshot,
-        group_code: record.group_code,
-        global_model_id: record.global_model_id.clone(),
-        model_name: record.model_name_snapshot.or(record.global_model_id),
-        provider_id: record.provider_id,
-        provider_name: record.provider_name_snapshot,
-        provider_key_name: record.provider_key_name_snapshot,
-        provider_key_preview: record.provider_key_preview_snapshot,
-        client_api_format: record.client_api_format,
-        provider_api_format: record.provider_api_format,
-        request_type: record.request_type,
-        is_stream: record.is_stream,
-        has_failover: record.has_failover,
-        has_retry: record.has_retry,
-        status: record.status,
-        billing_status: record.billing_status,
-        client_status_code: record.client_status_code,
-        client_error_type: record.client_error_type,
-        client_error_message: record.client_error_message,
-        termination_origin: record.termination_origin,
-        termination_reason: record.termination_reason,
-        stream_end_reason: record.stream_end_reason,
-        prompt_tokens: record.prompt_tokens,
-        completion_tokens: record.completion_tokens,
-        total_tokens: record.total_tokens,
-        cache_creation_input_tokens: record.cache_creation_input_tokens,
-        cache_read_input_tokens: record.cache_read_input_tokens,
-        input_text_tokens: record.input_text_tokens,
-        input_audio_tokens: record.input_audio_tokens,
-        input_image_tokens: record.input_image_tokens,
-        output_text_tokens: record.output_text_tokens,
-        output_audio_tokens: record.output_audio_tokens,
-        output_image_tokens: record.output_image_tokens,
-        reasoning_tokens: record.reasoning_tokens,
-        cache_creation_5m_input_tokens: record.cache_creation_5m_input_tokens,
-        cache_creation_1h_input_tokens: record.cache_creation_1h_input_tokens,
-        usage_source: record.usage_source,
-        usage_semantic: record.usage_semantic,
-        service_tier: record.service_tier,
-        upstream_cost,
-        input_cost: record.input_cost,
-        output_cost: record.output_cost,
-        cache_creation_cost: record.cache_creation_cost,
-        cache_read_cost: record.cache_read_cost,
-        request_cost: record.request_cost,
-        input_price_per_million: record.input_price_per_million,
-        output_price_per_million: record.output_price_per_million,
-        cache_creation_price_per_million: record.cache_creation_price_per_million,
-        cache_read_price_per_million: record.cache_read_price_per_million,
-        total_cost: record.total_cost.unwrap_or(Decimal::ZERO),
-        token_cost: record.token_cost.unwrap_or(Decimal::ZERO),
-        base_cost: record.base_cost.unwrap_or(Decimal::ZERO),
-        billing_multiplier: record.billing_multiplier.unwrap_or(Decimal::ONE),
-        billing_snapshot: crate::json::decode_optional(record.billing_snapshot).ok().flatten(),
-        cost_currency: record.cost_currency.unwrap_or_else(|| DEFAULT_COST_CURRENCY.into()),
-        first_byte_time_ms: record.first_byte_time_ms,
-        total_latency_ms: record.total_latency_ms,
-        candidate_count: record.candidate_count.try_into().unwrap_or(0),
-    })
+async fn detail_candidate_records(store: &super::ProviderStore, request_id: &str) -> StorageResult<Vec<RequestCandidateRecord>> {
+    let sql = format!(
+        "SELECT r.* FROM ({}) r WHERE r.request_id = $1 ORDER BY r.candidate_index ASC, r.retry_index ASC",
+        request_candidate_union_sql()
+    );
+    request_candidates::Model::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, [Value::from(request_id.to_owned())]))
+        .all(store.connection())
+        .await
+        .map_err(StorageError::from)
+}
+
+fn request_record_union_sql() -> String {
+    format!(
+        "SELECT {} FROM request_records_partitioned r UNION ALL SELECT {} FROM request_records r WHERE NOT EXISTS \
+         (SELECT 1 FROM request_records_partitioned p WHERE p.request_id = r.request_id)",
+        REQUEST_RECORD_MODEL_COLUMNS_PARTITIONED, REQUEST_RECORD_MODEL_COLUMNS_LEGACY
+    )
+}
+
+fn request_record_summary_union_sql() -> String {
+    format!(
+        "SELECT {} FROM request_records_partitioned r UNION ALL SELECT {} FROM request_records r WHERE NOT EXISTS \
+         (SELECT 1 FROM request_records_partitioned p WHERE p.request_id = r.request_id)",
+        REQUEST_RECORD_MODEL_COLUMNS_PARTITIONED, REQUEST_RECORD_MODEL_COLUMNS_PARTITIONED
+    )
+}
+
+fn request_candidate_union_sql() -> String {
+    format!(
+        "SELECT {} FROM request_candidates_partitioned r UNION ALL SELECT {} FROM request_candidates r WHERE NOT EXISTS \
+         (SELECT 1 FROM request_candidates_partitioned p WHERE p.id = r.id)",
+        REQUEST_CANDIDATE_MODEL_COLUMNS_PARTITIONED, REQUEST_CANDIDATE_MODEL_COLUMNS_LEGACY
+    )
+}
+
+fn active_where_clause(ids: &[String], values: &mut Vec<Value>) -> String {
+    if ids.is_empty() {
+        let pending = push_value(values, STATUS_PENDING);
+        let streaming = push_value(values, STATUS_STREAMING);
+        return format!("WHERE r.status IN ({pending}, {streaming})");
+    }
+    let placeholders = ids.iter().map(|id| push_value(values, id.as_str())).collect::<Vec<_>>().join(", ");
+    format!("WHERE r.request_id IN ({placeholders})")
+}
+
+fn push_value(values: &mut Vec<Value>, value: &str) -> String {
+    values.push(Value::from(value.to_owned()));
+    format!("${}", values.len())
 }

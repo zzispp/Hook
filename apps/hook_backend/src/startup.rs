@@ -93,7 +93,10 @@ use setting::{
     },
 };
 use std::{net::SocketAddr, sync::Arc};
-use storage::connect_database;
+use storage::{
+    connect_database,
+    provider::{ProviderStore, RequestPartitionMaintenanceOptions},
+};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use types::api_token::ApiTokenOwnerResponse;
@@ -112,6 +115,10 @@ use wallet::{
     application::{SystemWalletProvider, WalletService},
     infra::{ConfigSystemWalletProvider, StorageWalletRepository},
 };
+
+const REQUEST_RECORD_RETENTION_DAYS: i64 = 3;
+const REQUEST_PAYLOAD_RETENTION_DAYS: i64 = 1;
+const REQUEST_PARTITION_FUTURE_DAYS: i64 = 3;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ServeMode {
@@ -142,6 +149,7 @@ pub async fn serve(settings: Settings, mode: ServeMode) -> BackendResult<()> {
 }
 async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     let database = connect_database(&settings.database_url()?).await?;
+    ensure_request_record_partitions(&database).await?;
     let performance_os_collector = Arc::new(PerformanceOsCollector::new()?);
     let rbac = build_rbac_service(settings, database.clone()).await?;
     let provider_key_cipher = ProviderKeyCipher::new(settings.provider_key_secret()?)?;
@@ -303,6 +311,18 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         scheduler,
         authorization,
     })
+}
+
+async fn ensure_request_record_partitions(database: &storage::Database) -> BackendResult<()> {
+    ProviderStore::new(database.clone())
+        .maintain_request_record_partitions(RequestPartitionMaintenanceOptions {
+            now: time::OffsetDateTime::now_utc(),
+            record_retention_days: REQUEST_RECORD_RETENTION_DAYS,
+            payload_retention_days: REQUEST_PAYLOAD_RETENTION_DAYS,
+            future_days: REQUEST_PARTITION_FUTURE_DAYS,
+        })
+        .await?;
+    Ok(())
 }
 
 fn api_token_system_owner(provider: &impl SystemUserProvider) -> Option<(String, ApiTokenOwnerResponse)> {

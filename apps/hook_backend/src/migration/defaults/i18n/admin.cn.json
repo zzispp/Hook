@@ -2193,6 +2193,18 @@
         "name": "请求记录超时扫尾",
         "description": "当活跃请求记录长时间未推进状态时，将其标记为失败。"
       },
+      "requestRecordPartitionMaintenance": {
+        "name": "请求记录分区维护",
+        "description": "创建请求记录未来分区并删除超过保留期的旧分区。"
+      },
+      "requestPayloadBackfill": {
+        "name": "请求 payload 回填",
+        "description": "小批量将 legacy 请求 payload 元数据回填到分区表。"
+      },
+      "requestPayloadStaleSweep": {
+        "name": "请求 payload 超时扫尾",
+        "description": "将长时间未完成写入的请求 payload 标记为失败。"
+      },
       "rechargeOrderExpire": {
         "name": "充值订单过期",
         "description": "定期将超过过期时间的待支付充值订单标记为已过期。"
@@ -2232,6 +2244,17 @@
       "requestRecordStaleSweep": {
         "pendingTimeoutMinutes": "等待中请求超时分钟数",
         "streamingTimeoutMinutes": "流式传输中请求超时分钟数"
+      },
+      "requestRecordPartitionMaintenance": {
+        "recordRetentionDays": "请求记录分区保留天数",
+        "payloadRetentionDays": "请求 payload 分区保留天数",
+        "futureDays": "预创建未来分区天数"
+      },
+      "requestPayloadBackfill": {
+        "batchSize": "单次回填数量"
+      },
+      "requestPayloadStaleSweep": {
+        "pendingTimeoutMinutes": "等待写入超时分钟数"
       },
       "rechargePaymentPoll": {
         "limit": "单次扫描订单数"

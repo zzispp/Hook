@@ -13,15 +13,14 @@ use types::provider::{RequestCandidateListRequest, RequestUpstreamCost};
 #[tokio::test]
 async fn request_candidate_storage_creates_success_record() {
     let record = request_candidate_record("record-1", "success");
-    let database = Database::new(
-        MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([[record.clone()]])
-            .append_query_results([[record.clone()]])
-            .append_query_results([Vec::<request_records::Model>::new()])
-            .append_query_results([[summary_record("success")]])
-            .into_connection(),
-    );
-    let store = ProviderStore::new(database);
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_exec_results([exec_result(1)])
+        .append_query_results([[record.clone()]])
+        .append_query_results([[record.clone()]])
+        .append_query_results([Vec::<request_records::Model>::new()])
+        .append_query_results([[summary_record("success")]])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
 
     let created = store.create_request_candidate(success_input()).await.unwrap();
 
@@ -37,6 +36,7 @@ async fn request_candidate_storage_creates_success_record() {
     assert_eq!(created.error_type, None);
     assert!(created.started_at.is_some());
     assert!(created.finished_at.is_some());
+    assert_partition_sync(&connection.into_transaction_log()[1].statements()[0].sql);
 }
 
 #[tokio::test]
@@ -55,12 +55,10 @@ async fn request_candidate_storage_rejects_non_accounting_cost_currency() {
 async fn request_candidate_storage_lists_failed_and_no_candidate_records() {
     let failed = request_candidate_record("record-1", "failed");
     let no_candidate = request_candidate_record("record-2", "failed");
-    let database = Database::new(
-        MockDatabase::new(DatabaseBackend::Postgres)
-            .append_query_results([[failed.clone(), no_candidate_record(no_candidate)]])
-            .into_connection(),
-    );
-    let store = ProviderStore::new(database);
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[failed.clone(), no_candidate_record(no_candidate)]])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
 
     let records = store
         .list_request_candidates(RequestCandidateListRequest {
@@ -74,6 +72,12 @@ async fn request_candidate_storage_lists_failed_and_no_candidate_records() {
     assert_eq!(records[0].error_type.as_deref(), Some("upstream_error"));
     assert_eq!(records[1].provider_id, None);
     assert_eq!(records[1].error_type.as_deref(), Some("no_candidate"));
+    let logs = connection.into_transaction_log();
+    let sql = &logs[0].statements()[0].sql;
+    assert!(!sql.contains("r.provider_request_headers"), "{sql}");
+    assert!(!sql.contains("r.provider_request_body"), "{sql}");
+    assert!(!sql.contains("r.provider_response_headers"), "{sql}");
+    assert!(!sql.contains("r.provider_response_body"), "{sql}");
 }
 
 #[tokio::test]
@@ -87,6 +91,7 @@ async fn request_candidate_storage_updates_existing_attempt() {
                 rows_affected: 1,
             }])
             .append_query_results([[request_candidate_record("record-1", "success")]])
+            .append_exec_results([exec_result(1)])
             .append_query_results([Vec::<request_records::Model>::new()])
             .append_query_results([[summary_record("success")]])
             .into_connection(),
@@ -105,10 +110,7 @@ async fn request_candidate_storage_updates_existing_attempt() {
 #[tokio::test]
 async fn request_candidate_storage_marks_scheduled_records_skipped() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results([MockExecResult {
-            last_insert_id: 0,
-            rows_affected: 2,
-        }])
+        .append_exec_results([exec_result(2), exec_result(2)])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -127,6 +129,20 @@ async fn request_candidate_storage_marks_scheduled_records_skipped() {
     assert!(sql.contains("\"finished_at\" = $"), "{sql}");
     assert!(sql.contains("WHERE \"request_candidates\".\"request_id\" = $"), "{sql}");
     assert!(sql.contains("AND \"request_candidates\".\"status\" = $"), "{sql}");
+    assert_partition_sync(&logs[1].statements()[0].sql);
+}
+
+fn assert_partition_sync(sql: &str) {
+    assert!(sql.contains("INSERT INTO request_candidates_partitioned"), "{sql}");
+    assert!(sql.contains("ON CONFLICT (created_at, id) DO UPDATE"), "{sql}");
+    assert!(!sql.contains("provider_request_headers"), "{sql}");
+}
+
+fn exec_result(rows_affected: u64) -> MockExecResult {
+    MockExecResult {
+        last_insert_id: 0,
+        rows_affected,
+    }
 }
 
 fn success_input() -> RequestCandidateRecordInput {

@@ -76,6 +76,11 @@ async fn mark_stale_request_candidates(store: &ProviderStore, request_ids: &[Str
         .filter(request_candidates::Column::RequestId.is_in(request_ids.iter().cloned()))
         .exec(store.connection())
         .await?;
+    if result.rows_affected > 0 {
+        for request_id in request_ids {
+            super::request_record_partition_write::sync_request_candidates_for_request(store, request_id).await?;
+        }
+    }
     Ok(result.rows_affected)
 }
 
@@ -114,6 +119,7 @@ async fn update_stale_request_record(
     let new_record = active.update(store.connection()).await?;
     crate::dashboard::sync_user_usage_buckets(store.connection(), &old_record, &new_record).await?;
     crate::dashboard::sync_cost_analysis_buckets(store.connection(), &old_record, &new_record).await?;
+    super::request_record_partition_write::sync_request_record(store, &new_record.request_id).await?;
     Ok(())
 }
 

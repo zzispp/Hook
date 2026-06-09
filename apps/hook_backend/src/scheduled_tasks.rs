@@ -3,6 +3,7 @@ use std::sync::Arc;
 mod model_status;
 mod performance_monitoring;
 mod recharge;
+mod request_payload;
 mod request_record;
 #[cfg(test)]
 mod tests;
@@ -19,7 +20,8 @@ use self::{
     model_status::{ModelStatusCheckDispatchTask, ModelStatusRunsCleanupTask},
     performance_monitoring::{PerformanceMonitoringCleanupTask, PerformanceMonitoringSnapshotTask},
     recharge::{RechargeOrderExpireTask, RechargePaymentPollTask},
-    request_record::{RequestRecordCleanupTask, RequestRecordStaleSweepTask},
+    request_payload::{RequestPayloadBackfillTask, RequestPayloadStaleSweepTask},
+    request_record::{RequestRecordCleanupTask, RequestRecordPartitionMaintenanceTask, RequestRecordStaleSweepTask},
 };
 use crate::{llm_proxy::LlmProxyCache, performance_monitoring_os::PerformanceOsCollector, proxy_cache_hooks::CachedApiTokenRepository};
 
@@ -33,6 +35,9 @@ pub fn scheduler_registry(
     registry.register(ApiTokenCleanupTask { cache })?;
     registry.register(RequestRecordCleanupTask)?;
     registry.register(RequestRecordStaleSweepTask)?;
+    registry.register(RequestRecordPartitionMaintenanceTask)?;
+    registry.register(RequestPayloadBackfillTask)?;
+    registry.register(RequestPayloadStaleSweepTask)?;
     registry.register(RechargeOrderExpireTask {
         recharge_service: recharge_service.clone(),
     })?;
@@ -112,6 +117,11 @@ pub(super) fn integer_config(config: &TaskConfigValue, key: &str) -> SchedulerRe
         .get(key)
         .and_then(serde_json::Value::as_i64)
         .ok_or_else(|| SchedulerError::InvalidInput(format!("missing integer config field: {key}")))
+}
+
+pub(super) fn unsigned_config(config: &TaskConfigValue, key: &str) -> SchedulerResult<u64> {
+    let value = integer_config(config, key)?;
+    u64::try_from(value).map_err(|_| SchedulerError::InvalidInput(format!("{key} must be greater than or equal to 0")))
 }
 
 fn api_token_error(error: api_token::application::ApiTokenError) -> SchedulerError {

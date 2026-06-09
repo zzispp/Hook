@@ -4,6 +4,23 @@ export type RequestUpstreamCostMode = 'per_request' | 'per_token';
 
 export type RequestUpstreamCostSource = 'configured' | 'global_default';
 
+export type RequestPayloadStatus = 'pending' | 'stored' | 'failed';
+
+export type RequestPayloadSource = 'partitioned' | 'legacy';
+
+export type RequestPayloadMeta = {
+  owner_type: string;
+  owner_id: string;
+  kind: string;
+  status: RequestPayloadStatus;
+  source: RequestPayloadSource;
+  original_size?: number | null;
+  compressed_size?: number | null;
+  sha256?: string | null;
+  error_message?: string | null;
+  updated_at: string;
+};
+
 type RequestBillingFields = {
   service_tier?: string | null;
   input_cost?: number | null;
@@ -172,6 +189,7 @@ export type RequestCandidateDetail = RequestBillingFields & RequestUpstreamCostF
   provider_request_body?: unknown | null;
   provider_response_headers?: unknown | null;
   provider_response_body?: unknown | null;
+  payloads: RequestPayloadMeta[];
   created_at: string;
   started_at?: string | null;
   finished_at?: string | null;
@@ -180,6 +198,7 @@ export type RequestCandidateDetail = RequestBillingFields & RequestUpstreamCostF
 export type RequestRecordDetail = {
   record: RequestRecord;
   candidates: RequestCandidateDetail[];
+  payloads: RequestPayloadMeta[];
   request_headers?: unknown | null;
   request_body?: unknown | null;
   client_response_headers?: unknown | null;

@@ -73,19 +73,34 @@ pub async fn cleanup_request_records(store: &ProviderStore, options: RequestReco
 }
 
 async fn cleanup_batch(store: &ProviderStore, options: &RequestRecordCleanupOptions, budget: &CleanupBudget) -> StorageResult<CleanupBatch> {
+    if !can_start_statement(options, budget) {
+        return Ok(time_exhausted_batch(CleanupBatch::default()));
+    }
     let deleted_records = request_record_housekeeping_delete::delete_record_batch(store, options, budget).await?;
-    let deleted_orphans = request_record_housekeeping_delete::delete_orphan_candidate_batch(store, options, budget).await?;
-    let compressed_records = request_record_housekeeping_payload::compress_record_batch(store, options, budget).await?;
-    let compressed_candidates = request_record_housekeeping_payload::compress_candidate_batch(store, options, budget).await?;
-    Ok(CleanupBatch {
+    let mut batch = CleanupBatch {
         deleted_records: deleted_records.deleted_records,
-        deleted_candidates: deleted_records.deleted_candidates + deleted_orphans,
-        compressed_records: compressed_records.changed,
-        compressed_candidates: compressed_candidates.changed,
-        scanned_records: compressed_records.scanned,
-        scanned_candidates: compressed_candidates.scanned,
-        time_budget_exhausted: compressed_records.time_budget_exhausted || compressed_candidates.time_budget_exhausted,
-    })
+        deleted_candidates: deleted_records.deleted_candidates,
+        ..Default::default()
+    };
+    if !can_start_statement(options, budget) {
+        return Ok(time_exhausted_batch(batch));
+    }
+    let deleted_orphans = request_record_housekeeping_delete::delete_orphan_candidate_batch(store, options, budget).await?;
+    batch.deleted_candidates += deleted_orphans;
+    if !can_start_statement(options, budget) {
+        return Ok(time_exhausted_batch(batch));
+    }
+    let compressed_records = request_record_housekeeping_payload::compress_record_batch(store, options, budget).await?;
+    batch.compressed_records = compressed_records.changed;
+    batch.scanned_records = compressed_records.scanned;
+    if compressed_records.time_budget_exhausted || !can_start_statement(options, budget) {
+        return Ok(time_exhausted_batch(batch));
+    }
+    let compressed_candidates = request_record_housekeeping_payload::compress_candidate_batch(store, options, budget).await?;
+    batch.compressed_candidates = compressed_candidates.changed;
+    batch.scanned_candidates = compressed_candidates.scanned;
+    batch.time_budget_exhausted = compressed_candidates.time_budget_exhausted;
+    Ok(batch)
 }
 
 fn validate_options(options: &RequestRecordCleanupOptions) -> StorageResult<()> {
@@ -144,4 +159,13 @@ impl CleanupBatch {
     fn is_empty(self) -> bool {
         self.deleted_records == 0 && self.deleted_candidates == 0 && self.scanned_records == 0 && self.scanned_candidates == 0
     }
+}
+
+fn can_start_statement(options: &RequestRecordCleanupOptions, budget: &CleanupBudget) -> bool {
+    budget.has_statement_headroom(options.statement_timeout_seconds)
+}
+
+fn time_exhausted_batch(mut batch: CleanupBatch) -> CleanupBatch {
+    batch.time_budget_exhausted = true;
+    batch
 }

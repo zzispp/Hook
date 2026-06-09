@@ -11,7 +11,8 @@ use super::{
 };
 
 pub async fn create_request_record(store: &ProviderStore, input: RequestRecordRecordInput) -> StorageResult<()> {
-    request_record_active_model(input)?.insert(store.connection()).await?;
+    let record = request_record_active_model(input)?.insert(store.connection()).await?;
+    super::request_record_partition_write::sync_request_record(store, &record.request_id).await?;
     Ok(())
 }
 
@@ -42,6 +43,7 @@ pub async fn update_request_record(store: &ProviderStore, input: RequestRecordRe
         .ok_or(StorageError::NotFound)?;
     crate::dashboard::sync_user_usage_buckets(store.connection(), &old_record, &updated).await?;
     crate::dashboard::sync_cost_analysis_buckets(store.connection(), &old_record, &updated).await?;
+    super::request_record_partition_write::sync_request_record(store, &updated.request_id).await?;
     Ok(())
 }
 
@@ -125,8 +127,8 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         first_byte_time_ms: Set(None),
         total_latency_ms: Set(None),
         candidate_count: Set(input.candidate_count),
-        request_headers: Set(json::encode_optional(&input.request_headers)?),
-        request_body: Set(json::encode_optional(&input.request_body)?),
+        request_headers: Set(None),
+        request_body: Set(None),
         client_response_headers: Set(None),
         client_response_body: Set(None),
         payload_compressed_at: Set(None),
@@ -207,8 +209,8 @@ fn apply_request_record_patch(
     apply_json_patch(&mut active.billing_snapshot, input.billing_snapshot)?;
     apply_i64_patch(&mut active.first_byte_time_ms, input.first_byte_time_ms);
     apply_i64_patch(&mut active.total_latency_ms, input.total_latency_ms);
-    apply_json_patch(&mut active.client_response_headers, input.client_response_headers)?;
-    apply_json_patch(&mut active.client_response_body, input.client_response_body)?;
+    apply_legacy_payload_patch(&mut active.client_response_headers, input.client_response_headers);
+    apply_legacy_payload_patch(&mut active.client_response_body, input.client_response_body);
     if input.started && !was_started {
         active.started_at = Set(Some(now));
     }
@@ -311,4 +313,10 @@ fn apply_json_patch(active: &mut sea_orm::ActiveValue<Option<String>>, patch: Pa
         PatchField::Missing => {}
     }
     Ok(())
+}
+
+fn apply_legacy_payload_patch(active: &mut sea_orm::ActiveValue<Option<String>>, patch: PatchField<Value>) {
+    if !patch.is_missing() {
+        *active = Set(None);
+    }
 }

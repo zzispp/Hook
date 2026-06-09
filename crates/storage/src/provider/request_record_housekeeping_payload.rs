@@ -15,21 +15,21 @@ pub(super) async fn compress_record_batch(
     options: &RequestRecordCleanupOptions,
     budget: &CleanupBudget,
 ) -> StorageResult<CompressBatchResult> {
-    if budget.exhausted() {
+    if !can_start_statement(options, budget) {
         return Ok(exhausted_batch());
     }
-    let records = summary_payload_batch(store, options, budget).await?;
+    let records = summary_payload_batch(store, options).await?;
     let scanned = records.len() as u64;
     let mut changed = 0;
     for record in records {
-        if budget.exhausted() {
+        if !can_start_statement(options, budget) {
             return Ok(CompressBatchResult {
                 scanned,
                 changed,
                 time_budget_exhausted: true,
             });
         }
-        changed += u64::from(update_summary_payloads(store, options, budget, record).await?);
+        changed += u64::from(update_summary_payloads(store, options, record).await?);
     }
     Ok(CompressBatchResult {
         scanned,
@@ -43,21 +43,21 @@ pub(super) async fn compress_candidate_batch(
     options: &RequestRecordCleanupOptions,
     budget: &CleanupBudget,
 ) -> StorageResult<CompressBatchResult> {
-    if budget.exhausted() {
+    if !can_start_statement(options, budget) {
         return Ok(exhausted_batch());
     }
-    let records = candidate_payload_batch(store, options, budget).await?;
+    let records = candidate_payload_batch(store, options).await?;
     let scanned = records.len() as u64;
     let mut changed = 0;
     for record in records {
-        if budget.exhausted() {
+        if !can_start_statement(options, budget) {
             return Ok(CompressBatchResult {
                 scanned,
                 changed,
                 time_budget_exhausted: true,
             });
         }
-        changed += u64::from(update_candidate_payloads(store, options, budget, record).await?);
+        changed += u64::from(update_candidate_payloads(store, options, record).await?);
     }
     Ok(CompressBatchResult {
         scanned,
@@ -66,21 +66,17 @@ pub(super) async fn compress_candidate_batch(
     })
 }
 
-async fn summary_payload_batch(store: &ProviderStore, options: &RequestRecordCleanupOptions, budget: &CleanupBudget) -> StorageResult<Vec<SummaryPayloadRow>> {
+async fn summary_payload_batch(store: &ProviderStore, options: &RequestRecordCleanupOptions) -> StorageResult<Vec<SummaryPayloadRow>> {
     let tx = store.connection().begin().await?;
-    apply_timeouts(&tx, options, budget).await?;
+    apply_timeouts(&tx, options).await?;
     let records = SummaryPayloadRow::find_by_statement(summary_payload_batch_statement(options)).all(&tx).await?;
     tx.commit().await?;
     Ok(records)
 }
 
-async fn candidate_payload_batch(
-    store: &ProviderStore,
-    options: &RequestRecordCleanupOptions,
-    budget: &CleanupBudget,
-) -> StorageResult<Vec<CandidatePayloadRow>> {
+async fn candidate_payload_batch(store: &ProviderStore, options: &RequestRecordCleanupOptions) -> StorageResult<Vec<CandidatePayloadRow>> {
     let tx = store.connection().begin().await?;
-    apply_timeouts(&tx, options, budget).await?;
+    apply_timeouts(&tx, options).await?;
     let records = CandidatePayloadRow::find_by_statement(candidate_payload_batch_statement(options))
         .all(&tx)
         .await?;
@@ -88,29 +84,19 @@ async fn candidate_payload_batch(
     Ok(records)
 }
 
-async fn update_summary_payloads(
-    store: &ProviderStore,
-    options: &RequestRecordCleanupOptions,
-    budget: &CleanupBudget,
-    record: SummaryPayloadRow,
-) -> StorageResult<bool> {
+async fn update_summary_payloads(store: &ProviderStore, options: &RequestRecordCleanupOptions, record: SummaryPayloadRow) -> StorageResult<bool> {
     let update = compressed_summary_payloads(record)?;
     let tx = store.connection().begin().await?;
-    apply_timeouts(&tx, options, budget).await?;
+    apply_timeouts(&tx, options).await?;
     let rows_affected = update_summary_row(update, &tx).await?;
     tx.commit().await?;
     Ok(rows_affected > 0)
 }
 
-async fn update_candidate_payloads(
-    store: &ProviderStore,
-    options: &RequestRecordCleanupOptions,
-    budget: &CleanupBudget,
-    record: CandidatePayloadRow,
-) -> StorageResult<bool> {
+async fn update_candidate_payloads(store: &ProviderStore, options: &RequestRecordCleanupOptions, record: CandidatePayloadRow) -> StorageResult<bool> {
     let update = compressed_candidate_payloads(record)?;
     let tx = store.connection().begin().await?;
-    apply_timeouts(&tx, options, budget).await?;
+    apply_timeouts(&tx, options).await?;
     let rows_affected = update_candidate_row(update, &tx).await?;
     tx.commit().await?;
     Ok(rows_affected > 0)
@@ -212,6 +198,10 @@ fn exhausted_batch() -> CompressBatchResult {
         changed: 0,
         time_budget_exhausted: true,
     }
+}
+
+fn can_start_statement(options: &RequestRecordCleanupOptions, budget: &CleanupBudget) -> bool {
+    budget.has_statement_headroom(options.statement_timeout_seconds)
 }
 
 fn summary_payload_batch_statement(options: &RequestRecordCleanupOptions) -> Statement {

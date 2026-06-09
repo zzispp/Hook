@@ -2193,6 +2193,18 @@
         "name": "Stale request record sweep",
         "description": "Mark active request records failed when their status has not advanced past the stale timeout."
       },
+      "requestRecordPartitionMaintenance": {
+        "name": "Request record partition maintenance",
+        "description": "Create future request record partitions and drop old partitions past the retention window."
+      },
+      "requestPayloadBackfill": {
+        "name": "Request payload backfill",
+        "description": "Backfill legacy request payload metadata into partitioned tables in small batches."
+      },
+      "requestPayloadStaleSweep": {
+        "name": "Stale request payload sweep",
+        "description": "Mark request payloads failed when pending writes exceed the stale timeout."
+      },
       "rechargeOrderExpire": {
         "name": "Recharge order expiration",
         "description": "Regularly mark pending recharge orders expired after their expiration time."
@@ -2232,6 +2244,17 @@
       "requestRecordStaleSweep": {
         "pendingTimeoutMinutes": "Pending request stale timeout minutes",
         "streamingTimeoutMinutes": "Streaming request stale timeout minutes"
+      },
+      "requestRecordPartitionMaintenance": {
+        "recordRetentionDays": "Request record partition retention days",
+        "payloadRetentionDays": "Request payload partition retention days",
+        "futureDays": "Future partition days"
+      },
+      "requestPayloadBackfill": {
+        "batchSize": "Rows per backfill"
+      },
+      "requestPayloadStaleSweep": {
+        "pendingTimeoutMinutes": "Pending write stale timeout minutes"
       },
       "rechargePaymentPoll": {
         "limit": "Orders per scan"

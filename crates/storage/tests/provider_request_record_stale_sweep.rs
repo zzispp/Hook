@@ -101,11 +101,11 @@ async fn request_record_storage_marks_stale_active_records_failed() {
         .append_query_results([vec![request_record!("req-pending", "pending", false)]])
         .append_exec_results([exec_result(2)])
         .append_query_results([[request_record!("req-pending", "failed", false)]])
-        .append_exec_results(exec_results(5))
+        .append_exec_results(exec_results(7))
         .append_query_results([vec![request_record!("req-streaming", "streaming", true)]])
         .append_exec_results([exec_result(3)])
         .append_query_results([[request_record!("req-streaming", "failed", true)]])
-        .append_exec_results(exec_results(5))
+        .append_exec_results(exec_results(7))
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -123,6 +123,8 @@ async fn request_record_storage_marks_stale_active_records_failed() {
     assert!(sql.iter().any(|item| item.contains("UPDATE \"request_records\" SET")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("\"client_error_type\" = $")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("INSERT INTO dashboard_cost_analysis_buckets")), "{sql:?}");
+    assert!(sql.iter().any(|item| item.contains("INSERT INTO request_records_partitioned")), "{sql:?}");
+    assert!(sql.iter().any(|item| item.contains("INSERT INTO request_candidates_partitioned")), "{sql:?}");
 }
 
 fn logged_sql(connection: sea_orm::DatabaseConnection) -> Vec<String> {

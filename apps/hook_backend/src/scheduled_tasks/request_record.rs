@@ -1,16 +1,20 @@
 use std::time::Duration;
 
 use scheduler::runtime::{ScheduleTaskContext, ScheduledTaskLifecycle, SchedulerResult, TaskConfigValue, TaskResult};
-use storage::provider::{ProviderStore, RequestRecordCleanupOptions, RequestRecordCleanupResult};
+use storage::provider::{
+    ProviderStore, RequestPartitionMaintenanceOptions, RequestPartitionMaintenanceResult, RequestRecordCleanupOptions, RequestRecordCleanupResult,
+};
 
-use super::{integer_config, integer_fields, storage_error, validate_positive_integer};
+use super::{integer_config, integer_fields, storage_error, unsigned_config, validate_positive_integer};
 
 const STALE_SWEEP_INTERVAL_SECONDS: i64 = 300;
 const CLEANUP_INTERVAL_SECONDS: i64 = 600;
+const PARTITION_MAINTENANCE_INTERVAL_SECONDS: i64 = 3600;
 const STALE_PENDING_TIMEOUT_MINUTES: i64 = 10;
 const STALE_STREAMING_TIMEOUT_MINUTES: i64 = 10;
-const DEFAULT_RECORD_RETENTION_DAYS: i64 = 365;
-const DEFAULT_PAYLOAD_RETENTION_DAYS: i64 = 30;
+const DEFAULT_RECORD_RETENTION_DAYS: i64 = 3;
+const DEFAULT_PAYLOAD_RETENTION_DAYS: i64 = 1;
+const DEFAULT_PARTITION_FUTURE_DAYS: i64 = 3;
 const DEFAULT_DELETE_BATCH_SIZE: i64 = 200;
 const DEFAULT_COMPRESS_BATCH_SIZE: i64 = 50;
 const DEFAULT_MAX_RUNTIME_SECONDS: i64 = 120;
@@ -23,6 +27,9 @@ pub(super) struct RequestRecordCleanupTask;
 
 #[derive(Clone, Copy)]
 pub(super) struct RequestRecordStaleSweepTask;
+
+#[derive(Clone, Copy)]
+pub(super) struct RequestRecordPartitionMaintenanceTask;
 
 #[async_trait::async_trait]
 impl ScheduledTaskLifecycle for RequestRecordCleanupTask {
@@ -97,6 +104,50 @@ impl ScheduledTaskLifecycle for RequestRecordStaleSweepTask {
     }
 }
 
+#[async_trait::async_trait]
+impl ScheduledTaskLifecycle for RequestRecordPartitionMaintenanceTask {
+    fn definition(&self) -> types::scheduler::ScheduledTaskDefinition {
+        storage::scheduler::task_definition(
+            "request_record_partition_maintenance",
+            "scheduledTasks.definitions.requestRecordPartitionMaintenance.name",
+            "scheduledTasks.definitions.requestRecordPartitionMaintenance.description",
+            PARTITION_MAINTENANCE_INTERVAL_SECONDS,
+            serde_json::json!({
+                "record_retention_days": DEFAULT_RECORD_RETENTION_DAYS,
+                "payload_retention_days": DEFAULT_PAYLOAD_RETENTION_DAYS,
+                "future_days": DEFAULT_PARTITION_FUTURE_DAYS
+            }),
+            integer_fields(&[
+                (
+                    "record_retention_days",
+                    "scheduledTasks.config.requestRecordPartitionMaintenance.recordRetentionDays",
+                    1,
+                ),
+                (
+                    "payload_retention_days",
+                    "scheduledTasks.config.requestRecordPartitionMaintenance.payloadRetentionDays",
+                    1,
+                ),
+                ("future_days", "scheduledTasks.config.requestRecordPartitionMaintenance.futureDays", 0),
+            ]),
+        )
+    }
+
+    fn validate_config(&self, config: &TaskConfigValue) -> SchedulerResult<()> {
+        validate_positive_integer(config, "record_retention_days", 1)?;
+        validate_positive_integer(config, "payload_retention_days", 1)?;
+        validate_positive_integer(config, "future_days", 0)
+    }
+
+    async fn run(&self, ctx: ScheduleTaskContext, config: TaskConfigValue) -> TaskResult {
+        let result = ProviderStore::new(ctx.database)
+            .maintain_request_record_partitions(partition_options(time::OffsetDateTime::now_utc(), &config)?)
+            .await
+            .map_err(storage_error)?;
+        Ok(Some(partition_message(result)))
+    }
+}
+
 fn default_cleanup_config() -> serde_json::Value {
     serde_json::json!({
         "record_retention_days": DEFAULT_RECORD_RETENTION_DAYS,
@@ -154,6 +205,22 @@ fn cleanup_message(result: RequestRecordCleanupResult) -> String {
     )
 }
 
+fn partition_options(now: time::OffsetDateTime, config: &TaskConfigValue) -> SchedulerResult<RequestPartitionMaintenanceOptions> {
+    Ok(RequestPartitionMaintenanceOptions {
+        now,
+        record_retention_days: integer_config(config, "record_retention_days")?,
+        payload_retention_days: integer_config(config, "payload_retention_days")?,
+        future_days: integer_config(config, "future_days")?,
+    })
+}
+
+fn partition_message(result: RequestPartitionMaintenanceResult) -> String {
+    format!(
+        "created_partitions={}, dropped_partitions={}",
+        result.created_partitions, result.dropped_partitions
+    )
+}
+
 fn cleanup_integer_specs() -> [(&'static str, i64); 8] {
     [
         ("record_retention_days", 1),
@@ -165,9 +232,4 @@ fn cleanup_integer_specs() -> [(&'static str, i64); 8] {
         ("statement_timeout_seconds", 1),
         ("lock_timeout_seconds", 1),
     ]
-}
-
-fn unsigned_config(config: &TaskConfigValue, key: &str) -> SchedulerResult<u64> {
-    let value = integer_config(config, key)?;
-    u64::try_from(value).map_err(|_| scheduler::runtime::SchedulerError::InvalidInput(format!("{key} must be greater than or equal to 0")))
 }

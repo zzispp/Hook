@@ -171,10 +171,40 @@ pub struct RequestRecord {
 pub struct RequestRecordDetail {
     pub record: RequestRecord,
     pub candidates: Vec<RequestCandidateDetail>,
+    pub payloads: Vec<RequestPayloadMeta>,
     pub request_headers: Option<serde_json::Value>,
     pub request_body: Option<serde_json::Value>,
     pub client_response_headers: Option<serde_json::Value>,
     pub client_response_body: Option<serde_json::Value>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RequestPayloadStatus {
+    Pending,
+    Stored,
+    Failed,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RequestPayloadSource {
+    Partitioned,
+    Legacy,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct RequestPayloadMeta {
+    pub owner_type: String,
+    pub owner_id: String,
+    pub kind: String,
+    pub status: RequestPayloadStatus,
+    pub source: RequestPayloadSource,
+    pub original_size: Option<i64>,
+    pub compressed_size: Option<i64>,
+    pub sha256: Option<String>,
+    pub error_message: Option<String>,
+    pub updated_at: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -255,6 +285,7 @@ pub struct RequestCandidateDetail {
     pub provider_request_body: Option<serde_json::Value>,
     pub provider_response_headers: Option<serde_json::Value>,
     pub provider_response_body: Option<serde_json::Value>,
+    pub payloads: Vec<RequestPayloadMeta>,
     pub created_at: String,
     pub started_at: Option<String>,
     pub finished_at: Option<String>,

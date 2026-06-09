@@ -2,7 +2,11 @@ use types::provider::{ActiveRequestRecordRequest, ActiveRequestRecordResponse, R
 
 use crate::StorageResult;
 
-use super::{ProviderStore, RequestRecordCleanupOptions, RequestRecordCleanupResult, StaleRequestRecordSweepResult};
+use super::{
+    ProviderStore, RequestPartitionMaintenanceOptions, RequestPartitionMaintenanceResult, RequestPayloadBackfillOptions, RequestPayloadBackfillResult,
+    RequestPayloadKey, RequestPayloadOwner, RequestPayloadPendingInput, RequestPayloadStaleSweepResult, RequestPayloadStoreInput, RequestRecordCleanupOptions,
+    RequestRecordCleanupResult, StaleRequestRecordSweepResult, StoredRequestPayload,
+};
 
 impl ProviderStore {
     pub async fn create_request_record(&self, input: super::RequestRecordRecordInput) -> StorageResult<()> {
@@ -29,7 +33,7 @@ impl ProviderStore {
         &self,
         request: types::provider::RequestCandidateListRequest,
     ) -> StorageResult<Vec<types::provider::RequestCandidate>> {
-        super::request_candidate_query::list_request_candidates(self, request).await
+        super::request_candidate_list::list_request_candidates(self, request).await
     }
 
     pub async fn list_request_records(&self, request: RequestRecordListRequest) -> StorageResult<types::provider::RequestRecordListResponse> {
@@ -50,6 +54,34 @@ impl ProviderStore {
 
     pub async fn cleanup_request_records(&self, options: RequestRecordCleanupOptions) -> StorageResult<RequestRecordCleanupResult> {
         super::request_record_housekeeping::cleanup_request_records(self, options).await
+    }
+
+    pub async fn maintain_request_record_partitions(&self, options: RequestPartitionMaintenanceOptions) -> StorageResult<RequestPartitionMaintenanceResult> {
+        super::request_record_partitions::maintain_request_partitions(self, options).await
+    }
+
+    pub async fn create_pending_request_payload(&self, input: RequestPayloadPendingInput) -> StorageResult<RequestPayloadKey> {
+        super::request_record_payload_store::create_pending_payload(self, input).await
+    }
+
+    pub async fn store_request_payload(&self, input: RequestPayloadStoreInput) -> StorageResult<()> {
+        super::request_record_payload_store::store_payload(self, input).await
+    }
+
+    pub async fn mark_request_payload_failed(&self, key: RequestPayloadKey, error: String) -> StorageResult<()> {
+        super::request_record_payload_store::mark_payload_failed(self, key, error).await
+    }
+
+    pub async fn request_payloads_for_owner(&self, owner: &RequestPayloadOwner) -> StorageResult<Vec<StoredRequestPayload>> {
+        super::request_record_payload_store::payloads_for_owner(self, owner).await
+    }
+
+    pub async fn mark_stale_request_payloads_failed(&self, cutoff: time::OffsetDateTime) -> StorageResult<RequestPayloadStaleSweepResult> {
+        super::request_record_payload_store::mark_stale_payloads_failed(self, cutoff).await
+    }
+
+    pub async fn backfill_legacy_request_payloads(&self, options: RequestPayloadBackfillOptions) -> StorageResult<RequestPayloadBackfillResult> {
+        super::request_record_payload_backfill::backfill_legacy_payloads(self, options).await
     }
 
     pub async fn mark_stale_request_records_failed(

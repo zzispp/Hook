@@ -1,6 +1,8 @@
 use scheduler::runtime::ScheduledTaskLifecycle;
 
-use super::{RequestRecordCleanupTask, RequestRecordStaleSweepTask};
+use super::{
+    RequestPayloadBackfillTask, RequestPayloadStaleSweepTask, RequestRecordCleanupTask, RequestRecordPartitionMaintenanceTask, RequestRecordStaleSweepTask,
+};
 
 #[test]
 fn request_record_cleanup_definition_matches_runtime_contract() {
@@ -8,6 +10,8 @@ fn request_record_cleanup_definition_matches_runtime_contract() {
 
     assert_eq!(definition.code, "request_record_cleanup");
     assert_eq!(definition.default_interval_seconds, 600);
+    assert_eq!(definition.default_config["record_retention_days"], 3);
+    assert_eq!(definition.default_config["payload_retention_days"], 1);
     assert_eq!(definition.default_config["delete_batch_size"], 200);
     assert_eq!(definition.default_config["compress_batch_size"], 50);
     assert_eq!(definition.default_config["max_runtime_seconds"], 120);
@@ -21,6 +25,43 @@ fn request_record_cleanup_definition_matches_runtime_contract() {
     assert_field(&definition, "batch_sleep_ms", 0);
     assert_field(&definition, "statement_timeout_seconds", 1);
     assert_field(&definition, "lock_timeout_seconds", 1);
+}
+
+#[test]
+fn request_record_partition_maintenance_definition_matches_runtime_contract() {
+    let definition = RequestRecordPartitionMaintenanceTask.definition();
+
+    assert_eq!(definition.code, "request_record_partition_maintenance");
+    assert_eq!(definition.default_interval_seconds, 3600);
+    assert_eq!(definition.default_config["record_retention_days"], 3);
+    assert_eq!(definition.default_config["payload_retention_days"], 1);
+    assert_eq!(definition.default_config["future_days"], 3);
+    assert_eq!(definition.config_schema.len(), 3);
+    assert_field(&definition, "record_retention_days", 1);
+    assert_field(&definition, "payload_retention_days", 1);
+    assert_field(&definition, "future_days", 0);
+}
+
+#[test]
+fn request_payload_backfill_definition_matches_runtime_contract() {
+    let definition = RequestPayloadBackfillTask.definition();
+
+    assert_eq!(definition.code, "request_payload_backfill");
+    assert_eq!(definition.default_interval_seconds, 600);
+    assert_eq!(definition.default_config["batch_size"], 100);
+    assert_eq!(definition.config_schema.len(), 1);
+    assert_field(&definition, "batch_size", 1);
+}
+
+#[test]
+fn request_payload_stale_sweep_definition_matches_runtime_contract() {
+    let definition = RequestPayloadStaleSweepTask.definition();
+
+    assert_eq!(definition.code, "request_payload_stale_sweep");
+    assert_eq!(definition.default_interval_seconds, 300);
+    assert_eq!(definition.default_config["pending_timeout_minutes"], 15);
+    assert_eq!(definition.config_schema.len(), 1);
+    assert_field(&definition, "pending_timeout_minutes", 1);
 }
 
 #[test]
