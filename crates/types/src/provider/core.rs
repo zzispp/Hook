@@ -4,11 +4,19 @@ use crate::model::{PatchField, deserialize_patch_value};
 
 const DEFAULT_PROVIDER_LIMIT: u64 = 100;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderOrigin {
+    Manual,
+    QuickImport,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Provider {
     pub id: String,
     pub name: String,
     pub provider_type: String,
+    pub provider_origin: ProviderOrigin,
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
@@ -103,6 +111,27 @@ impl ProviderUpdate {
             && self.keep_priority_on_conversion.is_none()
             && self.enable_format_conversion.is_none()
             && self.is_active.is_none()
+    }
+}
+
+impl ProviderOrigin {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Manual => "manual",
+            Self::QuickImport => "quick_import",
+        }
+    }
+}
+
+impl TryFrom<&str> for ProviderOrigin {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "manual" => Ok(Self::Manual),
+            "quick_import" => Ok(Self::QuickImport),
+            other => Err(format!("invalid provider_origin: {other}")),
+        }
     }
 }
 

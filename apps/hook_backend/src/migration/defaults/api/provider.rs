@@ -14,6 +14,18 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "创建提供商",
     },
     ApiDefinition {
+        code: "providers_quick_import_preview",
+        method: "POST",
+        path_pattern: "/api/admin/providers/quick-import/preview",
+        name: "预览快捷导入提供商",
+    },
+    ApiDefinition {
+        code: "providers_quick_import_commit",
+        method: "POST",
+        path_pattern: "/api/admin/providers/quick-import/commit",
+        name: "提交快捷导入提供商",
+    },
+    ApiDefinition {
         code: "providers_detail",
         method: "GET",
         path_pattern: "/api/admin/providers/{id}",

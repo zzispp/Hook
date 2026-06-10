@@ -9,8 +9,9 @@ use types::{
         ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
         ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
         ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest,
-        ProviderModelTestResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-        UsageRecordListResponse,
+        ProviderModelTestResponse, ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse, ProviderQuickImportPreviewRequest,
+        ProviderQuickImportPreviewResponse, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest,
+        RequestRecordListResponse, UsageRecordListResponse,
     },
     response::ApiResponse,
 };
@@ -26,6 +27,20 @@ pub async fn list_providers(State(state): State<ProviderApiState>, Query(query):
 
 pub async fn create_provider(State(state): State<ProviderApiState>, Json(payload): Json<ProviderCreate>) -> ApiResult<ApiJson<Provider>> {
     Ok(ok(state.providers.create_provider(payload).await?))
+}
+
+pub async fn preview_quick_import(
+    State(state): State<ProviderApiState>,
+    Json(payload): Json<ProviderQuickImportPreviewRequest>,
+) -> ApiResult<ApiJson<ProviderQuickImportPreviewResponse>> {
+    Ok(ok(state.providers.preview_quick_import(payload).await?))
+}
+
+pub async fn commit_quick_import(
+    State(state): State<ProviderApiState>,
+    Json(payload): Json<ProviderQuickImportCommitRequest>,
+) -> ApiResult<ApiJson<ProviderQuickImportCommitResponse>> {
+    Ok(ok(state.providers.commit_quick_import(payload).await?))
 }
 
 pub async fn get_provider(State(state): State<ProviderApiState>, Path(id): Path<String>) -> ApiResult<ApiJson<Provider>> {

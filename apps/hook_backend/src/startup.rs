@@ -69,7 +69,7 @@ use payment::channels::EpayChannel;
 use provider::{
     api::{ProviderApiState, create_router as create_provider_router},
     application::ProviderService,
-    infra::{ProviderKeyCipher, ReqwestUpstreamModelFetcher, StorageGlobalModelCatalog, StorageProviderRepository},
+    infra::{NewApiImportSource, ProviderKeyCipher, ReqwestUpstreamModelFetcher, StorageGlobalModelCatalog, StorageProviderRepository},
 };
 use rbac::{
     api::{RbacApiState, create_router as create_rbac_router},
@@ -175,6 +175,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         StorageGlobalModelCatalog::new(database.clone()),
         provider_key_cipher.clone(),
         ReqwestUpstreamModelFetcher::new()?,
+        NewApiImportSource::new()?,
     ));
     let dashboard = Arc::new(DashboardService::new(StorageDashboardRepository::new(database.clone())));
     let wallets = Arc::new(WalletService::with_system_wallet(

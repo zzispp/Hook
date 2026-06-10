@@ -2,6 +2,12 @@
 
 import type { ApiEnvelope } from 'src/types/rbac';
 import type {
+  ProviderQuickImportCommitRequest,
+  ProviderQuickImportCommitResponse,
+  ProviderQuickImportPreviewRequest,
+  ProviderQuickImportPreviewResponse,
+} from 'src/types/provider-quick-import';
+import type {
   Provider,
   ProviderApiKey,
   ProviderCreate,
@@ -187,6 +193,23 @@ export async function createProvider(payload: ProviderCreate) {
   await mutateProviders();
   await mutateProviderGroups();
   return provider;
+}
+
+export async function previewProviderQuickImport(payload: ProviderQuickImportPreviewRequest) {
+  return requestData<ProviderQuickImportPreviewResponse>(
+    axios.post(endpoints.adminProviders.quickImportPreview, payload)
+  );
+}
+
+export async function commitProviderQuickImport(payload: ProviderQuickImportCommitRequest) {
+  const response = await requestData<ProviderQuickImportCommitResponse>(
+    axios.post(endpoints.adminProviders.quickImportCommit, payload)
+  );
+  await mutateProviders();
+  await mutateProviderGroups();
+  await mutateProviderKeyGroups();
+  await mutateProviderChildren(response.provider.id);
+  return response;
 }
 
 export async function updateProvider(id: string, payload: ProviderUpdate) {

@@ -200,6 +200,8 @@ export const endpoints = {
   },
   adminProviders: {
     list: '/api/admin/providers',
+    quickImportPreview: '/api/admin/providers/quick-import/preview',
+    quickImportCommit: '/api/admin/providers/quick-import/commit',
     byId: (id: string) => `/api/admin/providers/${id}`,
     groups: '/api/admin/provider-groups',
     groupById: (id: string) => `/api/admin/provider-groups/${id}`,

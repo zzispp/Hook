@@ -120,6 +120,7 @@ function useProviderUiState() {
   const [selectedProvider, setSelectedProvider] = useState<Provider | undefined>();
   const [bindingsOpen, setBindingsOpen] = useState(false);
   const [priorityOpen, setPriorityOpen] = useState(false);
+  const [quickImportOpen, setQuickImportOpen] = useState(false);
   const [cooldownPolicyOpen, setCooldownPolicyOpen] = useState(false);
 
   const handleFiltersChange = useCallback((nextFilters: typeof DEFAULT_PROVIDER_FILTERS) => {
@@ -144,11 +145,13 @@ function useProviderUiState() {
     filters,
     bindingsOpen,
     priorityOpen,
+    quickImportOpen,
     cooldownTable,
     selectedProvider,
     cooldownPolicyOpen,
     setTab,
     setPriorityOpen,
+    setQuickImportOpen,
     setCooldownPolicyOpen,
     openProviderBindings,
     closeProviderBindings,

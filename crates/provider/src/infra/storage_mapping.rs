@@ -1,13 +1,16 @@
 use storage::provider::{
     ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderGroupRecordInput,
     ProviderGroupRecordPatch, ProviderKeyGroupRecordInput, ProviderKeyGroupRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
-    ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    ProviderModelRecordPatch, ProviderQuickImportApiKeyRecordInput, ProviderQuickImportEndpointRecordInput, ProviderQuickImportModelCostRecordInput,
+    ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderRecordInput, ProviderRecordPatch,
 };
 use types::provider::{
     ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroupCreate, ProviderGroupUpdate,
     ProviderKeyGroupCreate, ProviderKeyGroupUpdate, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderUpdate,
+    ProviderModelCostBatchUpsert, ProviderOrigin, ProviderUpdate,
 };
+
+use crate::application::ProviderQuickImportCreate;
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
 const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
@@ -22,6 +25,7 @@ pub(super) fn provider_input(input: ProviderCreate) -> ProviderRecordInput {
     ProviderRecordInput {
         name: input.name,
         provider_type: input.provider_type,
+        provider_origin: ProviderOrigin::Manual,
         provider_group_id: input.provider_group_id,
         max_retries: Some(input.max_retries.unwrap_or(DEFAULT_PROVIDER_MAX_RETRIES)),
         request_timeout_seconds: Some(input.request_timeout_seconds.unwrap_or(DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS)),
@@ -204,4 +208,74 @@ pub(super) fn model_cost_inputs(provider_id: &str, key_id: &str, input: Provider
             cache_read_price_per_million: cost.cache_read_price_per_million,
         })
         .collect()
+}
+
+pub(super) fn quick_import_input(input: ProviderQuickImportCreate) -> ProviderQuickImportRecordInput {
+    ProviderQuickImportRecordInput {
+        provider: provider_input(input.provider),
+        endpoints: input.endpoints.into_iter().map(quick_import_endpoint_input).collect(),
+        api_keys: input.api_keys.into_iter().map(quick_import_key_input).collect(),
+        model_bindings: input.model_bindings.into_iter().map(quick_import_model_input).collect(),
+        model_costs: input.model_costs.into_iter().map(quick_import_cost_input).collect(),
+    }
+}
+
+fn quick_import_endpoint_input(input: ProviderEndpointCreate) -> ProviderQuickImportEndpointRecordInput {
+    ProviderQuickImportEndpointRecordInput {
+        api_format: input.api_format,
+        base_url: input.base_url,
+        custom_path: input.custom_path,
+        max_retries: input.max_retries,
+        is_active: input.is_active.unwrap_or(true),
+        format_acceptance_config: input.format_acceptance_config,
+        header_rules: input.header_rules,
+        body_rules: input.body_rules,
+    }
+}
+
+fn quick_import_key_input(input: crate::application::ProviderQuickImportApiKeyCreate) -> ProviderQuickImportApiKeyRecordInput {
+    let internal_priority = input.input.internal_priority.unwrap_or(DEFAULT_PROVIDER_KEY_PRIORITY);
+    ProviderQuickImportApiKeyRecordInput {
+        upstream_token_id: input.upstream_token_id,
+        name: input.input.name,
+        global_priority_by_format: global_priority_by_format(&input.input.api_formats, internal_priority),
+        api_formats: input.input.api_formats,
+        allowed_model_ids: input.input.allowed_model_ids,
+        encrypted_api_key: input.encrypted_api_key,
+        note: input.input.note,
+        internal_priority,
+        rpm_limit: input.input.rpm_limit,
+        cache_ttl_minutes: input.input.cache_ttl_minutes.unwrap_or(DEFAULT_PROVIDER_KEY_CACHE_TTL_MINUTES),
+        max_probe_interval_minutes: input
+            .input
+            .max_probe_interval_minutes
+            .unwrap_or(DEFAULT_PROVIDER_KEY_MAX_PROBE_INTERVAL_MINUTES),
+        time_range_enabled: input.input.time_range_enabled.unwrap_or(false),
+        time_range_start: input.input.time_range_start,
+        time_range_end: input.input.time_range_end,
+        is_active: input.input.is_active.unwrap_or(true),
+    }
+}
+
+fn quick_import_model_input(input: ProviderModelBindingCreate) -> ProviderQuickImportModelRecordInput {
+    ProviderQuickImportModelRecordInput {
+        global_model_id: input.global_model_id,
+        provider_model_name: input.provider_model_name,
+        provider_model_mapping: input.provider_model_mapping,
+        is_active: true,
+        config: input.config,
+    }
+}
+
+fn quick_import_cost_input(input: crate::application::ProviderQuickImportModelCostCreate) -> ProviderQuickImportModelCostRecordInput {
+    ProviderQuickImportModelCostRecordInput {
+        upstream_token_id: input.upstream_token_id,
+        global_model_id: input.global_model_id,
+        cost_mode: input.cost.cost_mode,
+        price_per_request: input.cost.price_per_request,
+        input_price_per_million: input.cost.input_price_per_million,
+        output_price_per_million: input.cost.output_price_per_million,
+        cache_creation_price_per_million: input.cost.cache_creation_price_per_million,
+        cache_read_price_per_million: input.cost.cache_read_price_per_million,
+    }
 }

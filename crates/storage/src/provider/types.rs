@@ -3,13 +3,15 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use types::model::PatchField;
 use types::provider::{
-    ProviderGroupMemberInput, ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, RequestUpstreamCost,
+    ProviderGroupMemberInput, ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, ProviderOrigin,
+    RequestUpstreamCost,
 };
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderRecordInput {
     pub name: String,
     pub provider_type: String,
+    pub provider_origin: ProviderOrigin,
     pub provider_group_id: Option<String>,
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
@@ -210,6 +212,76 @@ pub struct ProviderModelCostRecordInput {
     pub output_price_per_million: Option<Decimal>,
     pub cache_creation_price_per_million: Option<Decimal>,
     pub cache_read_price_per_million: Option<Decimal>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportRecordInput {
+    pub provider: ProviderRecordInput,
+    pub endpoints: Vec<ProviderQuickImportEndpointRecordInput>,
+    pub api_keys: Vec<ProviderQuickImportApiKeyRecordInput>,
+    pub model_bindings: Vec<ProviderQuickImportModelRecordInput>,
+    pub model_costs: Vec<ProviderQuickImportModelCostRecordInput>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportEndpointRecordInput {
+    pub api_format: String,
+    pub base_url: String,
+    pub custom_path: Option<String>,
+    pub max_retries: Option<i32>,
+    pub is_active: bool,
+    pub format_acceptance_config: Option<serde_json::Value>,
+    pub header_rules: Option<serde_json::Value>,
+    pub body_rules: Option<serde_json::Value>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportApiKeyRecordInput {
+    pub upstream_token_id: String,
+    pub name: String,
+    pub api_formats: Vec<String>,
+    pub allowed_model_ids: Vec<String>,
+    pub encrypted_api_key: String,
+    pub note: Option<String>,
+    pub internal_priority: i32,
+    pub global_priority_by_format: BTreeMap<String, i32>,
+    pub rpm_limit: Option<i32>,
+    pub cache_ttl_minutes: i32,
+    pub max_probe_interval_minutes: i32,
+    pub time_range_enabled: bool,
+    pub time_range_start: Option<String>,
+    pub time_range_end: Option<String>,
+    pub is_active: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportModelRecordInput {
+    pub global_model_id: String,
+    pub provider_model_name: String,
+    pub provider_model_mapping: Option<ProviderModelMapping>,
+    pub is_active: bool,
+    pub config: Option<serde_json::Value>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportModelCostRecordInput {
+    pub upstream_token_id: String,
+    pub global_model_id: String,
+    pub cost_mode: ProviderModelCostMode,
+    pub price_per_request: Option<Decimal>,
+    pub input_price_per_million: Option<Decimal>,
+    pub output_price_per_million: Option<Decimal>,
+    pub cache_creation_price_per_million: Option<Decimal>,
+    pub cache_read_price_per_million: Option<Decimal>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportRecordOutput {
+    pub provider: types::provider::Provider,
+    pub endpoints: Vec<types::provider::ProviderEndpoint>,
+    pub api_keys: Vec<types::provider::ProviderApiKey>,
+    pub model_bindings: Vec<types::provider::ProviderModelBinding>,
+    pub model_costs: Vec<types::provider::ProviderModelCost>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

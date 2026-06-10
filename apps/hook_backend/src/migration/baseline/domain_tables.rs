@@ -146,6 +146,7 @@ fn providers_table() -> TableCreateStatement {
         .col(string_len(Providers::Id, 36).primary_key())
         .col(string_len(Providers::Name, 100))
         .col(string_len(Providers::ProviderType, 50))
+        .col(string_len(Providers::ProviderOrigin, 32).default("manual"))
         .col(integer_null(Providers::MaxRetries))
         .col(double_null(Providers::RequestTimeoutSeconds))
         .col(double_null(Providers::StreamFirstByteTimeoutSeconds))

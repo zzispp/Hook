@@ -7,6 +7,7 @@ mod provider_model_cost_query;
 mod provider_model_query;
 mod provider_model_repository;
 mod provider_query;
+mod quick_import_query;
 pub mod record;
 mod repository;
 mod repository_helpers;
@@ -51,9 +52,10 @@ pub use types::{
     BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyPriorityRecordPatch, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch,
     ProviderApiKeySecretRecord, ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,
     ProviderGroupRecordInput, ProviderGroupRecordPatch, ProviderKeyGroupRecordInput, ProviderKeyGroupRecordPatch, ProviderModelCostRecordInput,
-    ProviderModelRecordBatchUpdate, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch,
-    RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch,
-    RequestUpstreamCostRecordPatch,
+    ProviderModelRecordBatchUpdate, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderQuickImportApiKeyRecordInput,
+    ProviderQuickImportEndpointRecordInput, ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput,
+    ProviderQuickImportRecordOutput, ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch, RequestBillingRecordValues,
+    RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch, RequestUpstreamCostRecordPatch,
 };
 
 pub(super) use record::{ProviderEndpointRecord, ProviderModelRecord, ProviderRecord};

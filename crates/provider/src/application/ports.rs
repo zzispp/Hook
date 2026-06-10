@@ -1,13 +1,17 @@
 use async_trait::async_trait;
+use rust_decimal::Decimal;
 use std::collections::BTreeMap;
+use types::model::GlobalModelResponse;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
     ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupListResponse,
     ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListResponse, ProviderKeyGroupUpdate, ProviderListRequest,
-    ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpdate,
-    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCost,
+    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostUpsert, ProviderModelTestRequest, ProviderModelTestResponse,
+    ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse,
+    ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail,
+    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -22,6 +26,62 @@ pub struct ProviderApiKeySecret {
     pub internal_priority: i32,
     pub global_priority_by_format: BTreeMap<String, i32>,
     pub is_active: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpstreamImportData {
+    pub source_kind: ProviderQuickImportSourceKind,
+    pub tokens: Vec<UpstreamImportToken>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpstreamImportToken {
+    pub id: String,
+    pub name: String,
+    pub masked_key: String,
+    pub status: i32,
+    pub group: Option<String>,
+    pub group_ratio: Decimal,
+    pub api_key: Option<String>,
+    pub models: Vec<UpstreamImportModel>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UpstreamImportModel {
+    pub id: String,
+    pub supported_endpoint_types: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportCreate {
+    pub provider: ProviderCreate,
+    pub endpoints: Vec<ProviderEndpointCreate>,
+    pub model_bindings: Vec<ProviderModelBindingCreate>,
+    pub api_keys: Vec<ProviderQuickImportApiKeyCreate>,
+    pub model_costs: Vec<ProviderQuickImportModelCostCreate>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportApiKeyCreate {
+    pub upstream_token_id: String,
+    pub input: ProviderApiKeyCreate,
+    pub encrypted_api_key: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportModelCostCreate {
+    pub upstream_token_id: String,
+    pub global_model_id: String,
+    pub cost: ProviderModelCostUpsert,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportCreated {
+    pub provider: Provider,
+    pub endpoints: Vec<ProviderEndpoint>,
+    pub api_keys: Vec<ProviderApiKey>,
+    pub model_bindings: Vec<ProviderModelBinding>,
+    pub model_costs: Vec<ProviderModelCost>,
 }
 
 #[async_trait]
@@ -65,6 +125,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse>;
     async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse>;
+    async fn create_quick_import(&self, input: ProviderQuickImportCreate) -> ProviderResult<ProviderQuickImportCreated>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;
@@ -77,6 +138,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
 #[async_trait]
 pub trait GlobalModelCatalog: Send + Sync + 'static {
     async fn global_model_exists(&self, id: &str) -> ProviderResult<bool>;
+    async fn list_global_models(&self) -> ProviderResult<Vec<GlobalModelResponse>>;
 }
 
 pub trait SecretCipher: Send + Sync + 'static {
@@ -87,6 +149,11 @@ pub trait SecretCipher: Send + Sync + 'static {
 #[async_trait]
 pub trait UpstreamModelFetcher: Send + Sync + 'static {
     async fn fetch_upstream_models(&self, endpoint: &ProviderEndpoint, api_key: &str) -> ProviderResult<ProviderUpstreamModelsResponse>;
+}
+
+#[async_trait]
+pub trait UpstreamProviderImportSource: Send + Sync + 'static {
+    async fn fetch_import_data(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamImportData>;
 }
 
 #[async_trait]
@@ -128,6 +195,8 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse>;
     async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse>;
+    async fn preview_quick_import(&self, input: ProviderQuickImportPreviewRequest) -> ProviderResult<ProviderQuickImportPreviewResponse>;
+    async fn commit_quick_import(&self, input: ProviderQuickImportCommitRequest) -> ProviderResult<ProviderQuickImportCommitResponse>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;

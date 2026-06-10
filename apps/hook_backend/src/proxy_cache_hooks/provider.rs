@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use provider::application::{ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
+use provider::application::{ProviderQuickImportCreate, ProviderQuickImportCreated};
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
@@ -204,6 +205,12 @@ where
         let response = self.inner.upsert_model_costs(provider_id, key_id, input).await?;
         self.refresh_scheduling().await?;
         Ok(response)
+    }
+
+    async fn create_quick_import(&self, input: ProviderQuickImportCreate) -> ProviderResult<ProviderQuickImportCreated> {
+        let output = self.inner.create_quick_import(input).await?;
+        self.refresh_scheduling().await?;
+        Ok(output)
     }
 
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {

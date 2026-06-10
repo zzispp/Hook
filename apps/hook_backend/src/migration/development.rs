@@ -143,6 +143,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::request_record_partitioning_additive::apply(manager).await?;
     super::dashboard_request_metrics_additive::apply(manager).await?;
     super::provider_group_member_priority_additive::apply(manager).await?;
+    super::provider_origin_additive::apply(manager).await?;
     super::recharge_order_paid_at_index_additive::apply(manager).await
 }
 

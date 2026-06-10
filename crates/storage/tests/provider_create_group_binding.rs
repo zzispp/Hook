@@ -6,6 +6,7 @@ use storage::{
         record::{provider_group_providers, providers},
     },
 };
+use types::provider::ProviderOrigin;
 
 #[tokio::test]
 async fn create_provider_with_group_inserts_membership_in_one_transaction() {
@@ -51,6 +52,7 @@ fn provider_input(provider_group_id: Option<&str>) -> ProviderRecordInput {
     ProviderRecordInput {
         name: "Provider A".into(),
         provider_type: "custom".into(),
+        provider_origin: ProviderOrigin::Manual,
         provider_group_id: provider_group_id.map(str::to_owned),
         max_retries: Some(2),
         request_timeout_seconds: Some(300.0),
@@ -68,6 +70,7 @@ fn provider_record(id: &str) -> providers::Model {
         id: id.into(),
         name: "Provider A".into(),
         provider_type: "custom".into(),
+        provider_origin: "manual".into(),
         max_retries: Some(2),
         request_timeout_seconds: Some(300.0),
         stream_first_byte_timeout_seconds: Some(60.0),

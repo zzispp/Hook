@@ -22,6 +22,7 @@ pub(in crate::migration::baseline) enum Providers {
     Id,
     Name,
     ProviderType,
+    ProviderOrigin,
     MaxRetries,
     RequestTimeoutSeconds,
     StreamFirstByteTimeoutSeconds,

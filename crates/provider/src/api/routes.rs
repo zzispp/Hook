@@ -10,17 +10,19 @@ use crate::api::{
         list_provider_groups, list_provider_key_groups, update_provider_group, update_provider_key_group,
     },
     handlers::{
-        batch_update_api_key_priorities, batch_update_model_bindings, create_api_key, create_endpoint, create_model_binding, create_provider, delete_api_key,
-        delete_endpoint, delete_model_binding, delete_model_cost, delete_provider, fetch_upstream_models, get_provider, get_request_record,
-        list_active_request_records, list_api_keys, list_endpoints, list_model_bindings, list_model_costs, list_provider_cooldowns, list_providers,
-        list_request_records, list_usage_records, release_provider_cooldown, test_model_binding, update_api_key, update_endpoint, update_model_binding,
-        update_provider, upsert_model_costs,
+        batch_update_api_key_priorities, batch_update_model_bindings, commit_quick_import, create_api_key, create_endpoint, create_model_binding,
+        create_provider, delete_api_key, delete_endpoint, delete_model_binding, delete_model_cost, delete_provider, fetch_upstream_models, get_provider,
+        get_request_record, list_active_request_records, list_api_keys, list_endpoints, list_model_bindings, list_model_costs, list_provider_cooldowns,
+        list_providers, list_request_records, list_usage_records, preview_quick_import, release_provider_cooldown, test_model_binding, update_api_key,
+        update_endpoint, update_model_binding, update_provider, upsert_model_costs,
     },
 };
 
 pub fn create_router(state: ProviderApiState) -> Router {
     Router::new()
         .route("/admin/providers", get(list_providers).post(create_provider))
+        .route("/admin/providers/quick-import/preview", post(preview_quick_import))
+        .route("/admin/providers/quick-import/commit", post(commit_quick_import))
         .route("/admin/providers/{id}", get(get_provider).patch(update_provider).delete(delete_provider))
         .route("/admin/provider-groups", get(list_provider_groups).post(create_provider_group))
         .route(

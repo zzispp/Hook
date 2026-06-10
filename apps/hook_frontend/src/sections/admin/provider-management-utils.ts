@@ -2,6 +2,7 @@ import type { AdminT } from './shared';
 import type {
   Provider,
   ProviderType,
+  ProviderOrigin,
   ProviderApiKey,
   ProviderCreate,
   ProviderUpdate,
@@ -228,6 +229,15 @@ export function normalizeBaseUrl(value: string) {
 export function providerTypeLabel(value: ProviderType, t: AdminT) {
   const labels: Record<ProviderType, string> = {
     custom: t('providers.providerTypeCustom'),
+  };
+
+  return labels[value];
+}
+
+export function providerOriginLabel(value: ProviderOrigin, t: AdminT) {
+  const labels: Record<ProviderOrigin, string> = {
+    manual: t('providers.providerOriginManual'),
+    quick_import: t('providers.providerOriginQuickImport'),
   };
 
   return labels[value];

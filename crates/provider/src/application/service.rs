@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use types::provider::*;
 
-use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
+use crate::application::{
+    GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher, UpstreamProviderImportSource,
+};
 
 mod key_endpoint_scope;
 mod key_permissions;
@@ -9,6 +11,13 @@ mod model_bindings;
 mod model_costs;
 mod provider_core;
 mod provider_groups;
+mod quick_import;
+mod quick_import_commit;
+#[cfg(test)]
+mod quick_import_commit_tests;
+mod quick_import_costs;
+mod quick_import_preview;
+mod quick_import_shared;
 mod request_queries;
 mod upstream_models;
 
@@ -21,6 +30,7 @@ use provider_groups::{
     prepare_provider_group_create, prepare_provider_group_list_request, prepare_provider_group_update, prepare_provider_key_group_create,
     prepare_provider_key_group_update,
 };
+use quick_import::{QuickImportArgs, commit_quick_import, preview_quick_import};
 use request_queries::{
     sanitize_active_request_record_request, sanitize_provider_cooldown_request, validate_provider_cooldown_request, validate_request_record_list_request,
 };
@@ -32,37 +42,41 @@ use super::validation::{
     validate_model_binding_update, validate_model_cost_batch, validate_update,
 };
 
-pub struct ProviderService<R, M, C, F> {
+pub struct ProviderService<R, M, C, F, I> {
     repository: R,
     models: M,
     cipher: C,
     fetcher: F,
+    importer: I,
 }
 
-impl<R, M, C, F> ProviderService<R, M, C, F>
+impl<R, M, C, F, I> ProviderService<R, M, C, F, I>
 where
     R: ProviderRepository,
     M: GlobalModelCatalog,
     C: SecretCipher,
     F: UpstreamModelFetcher,
+    I: UpstreamProviderImportSource,
 {
-    pub const fn new(repository: R, models: M, cipher: C, fetcher: F) -> Self {
+    pub const fn new(repository: R, models: M, cipher: C, fetcher: F, importer: I) -> Self {
         Self {
             repository,
             models,
             cipher,
             fetcher,
+            importer,
         }
     }
 }
 
 #[async_trait]
-impl<R, M, C, F> ProviderUseCase for ProviderService<R, M, C, F>
+impl<R, M, C, F, I> ProviderUseCase for ProviderService<R, M, C, F, I>
 where
     R: ProviderRepository,
     M: GlobalModelCatalog,
     C: SecretCipher,
     F: UpstreamModelFetcher,
+    I: UpstreamProviderImportSource,
 {
     async fn create_provider(&self, input: ProviderCreate) -> ProviderResult<Provider> {
         let input = prepare_provider_create(&self.repository, input).await?;
@@ -246,6 +260,32 @@ where
         validate_model_cost_batch(&input)?;
         ensure_model_cost_scope(&self.repository, provider_id, key_id, &input).await?;
         self.repository.upsert_model_costs(provider_id, key_id, input).await
+    }
+
+    async fn preview_quick_import(&self, input: ProviderQuickImportPreviewRequest) -> ProviderResult<ProviderQuickImportPreviewResponse> {
+        preview_quick_import(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            input,
+        )
+        .await
+    }
+
+    async fn commit_quick_import(&self, input: ProviderQuickImportCommitRequest) -> ProviderResult<ProviderQuickImportCommitResponse> {
+        commit_quick_import(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            input,
+        )
+        .await
     }
 
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {

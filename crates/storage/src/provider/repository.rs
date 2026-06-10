@@ -287,6 +287,10 @@ impl ProviderStore {
         super::provider_model_cost_query::upsert_model_costs(self, inputs).await
     }
 
+    pub async fn create_quick_import(&self, input: super::ProviderQuickImportRecordInput) -> StorageResult<super::ProviderQuickImportRecordOutput> {
+        super::quick_import_query::create_quick_import(self, input).await
+    }
+
     pub async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> StorageResult<()> {
         super::provider_model_cost_query::delete_model_cost(self, provider_id, key_id, provider_model_id).await
     }

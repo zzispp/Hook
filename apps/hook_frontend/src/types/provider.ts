@@ -13,6 +13,7 @@ export type {
 } from './request-record';
 
 export type ProviderType = 'custom';
+export type ProviderOrigin = 'manual' | 'quick_import';
 
 export type ProviderSchedulingMode = 'fixed_order' | 'cache_affinity' | 'load_balance';
 export type ProviderPriorityMode = 'provider' | 'key';
@@ -33,6 +34,7 @@ export type Provider = {
   id: string;
   name: string;
   provider_type: ProviderType;
+  provider_origin: ProviderOrigin;
   max_retries?: number | null;
   request_timeout_seconds?: number | null;
   stream_first_byte_timeout_seconds?: number | null;

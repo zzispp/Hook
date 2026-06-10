@@ -10,10 +10,12 @@ use types::provider::{
     UsageRecordListResponse,
 };
 
-use crate::application::{GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
+use crate::application::{
+    GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderQuickImportCreate, ProviderQuickImportCreated, ProviderRepository, ProviderResult,
+};
 use crate::infra::storage_mapping::{
     api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_batch_input, model_binding_input, model_binding_patch, model_cost_inputs,
-    provider_group_input, provider_group_patch, provider_input, provider_key_group_input, provider_key_group_patch, provider_patch,
+    provider_group_input, provider_group_patch, provider_input, provider_key_group_input, provider_key_group_patch, provider_patch, quick_import_input,
 };
 
 #[derive(Clone)]
@@ -245,6 +247,20 @@ impl ProviderRepository for StorageProviderRepository {
             .map_err(storage_error)
     }
 
+    async fn create_quick_import(&self, input: ProviderQuickImportCreate) -> ProviderResult<ProviderQuickImportCreated> {
+        self.store
+            .create_quick_import(quick_import_input(input))
+            .await
+            .map(|output| ProviderQuickImportCreated {
+                provider: output.provider,
+                endpoints: output.endpoints,
+                api_keys: output.api_keys,
+                model_bindings: output.model_bindings,
+                model_costs: output.model_costs,
+            })
+            .map_err(storage_error)
+    }
+
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {
         self.store
             .delete_model_cost(provider_id, key_id, provider_model_id)
@@ -281,6 +297,19 @@ impl ProviderRepository for StorageProviderRepository {
 impl GlobalModelCatalog for StorageGlobalModelCatalog {
     async fn global_model_exists(&self, id: &str) -> ProviderResult<bool> {
         self.store.get_global_model(id).await.map(|model| model.is_some()).map_err(storage_error)
+    }
+
+    async fn list_global_models(&self) -> ProviderResult<Vec<types::model::GlobalModelResponse>> {
+        self.store
+            .list_global_models(types::model::GlobalModelListRequest {
+                skip: 0,
+                limit: u64::MAX,
+                is_active: Some(true),
+                search: None,
+            })
+            .await
+            .map(|response| response.models)
+            .map_err(storage_error)
     }
 }
 
