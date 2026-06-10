@@ -7,8 +7,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use storage::provider::record::{
-    billing_group_provider_groups, billing_group_provider_key_groups, billing_group_provider_keys, billing_group_providers, provider_group_providers,
-    provider_groups, provider_key_group_keys, provider_key_groups,
+    billing_group_provider_groups, billing_group_provider_key_groups, billing_group_provider_keys, billing_group_providers, provider_api_keys,
+    provider_group_providers, provider_groups, provider_key_group_keys, provider_key_groups, providers,
 };
 
 use super::baseline::seed_domain::TranslationSeed;
@@ -198,6 +198,7 @@ async fn ensure_provider_group_provider(db: &impl ConnectionTrait, group_id: &st
         id: Set(new_id()),
         provider_group_id: Set(group_id.to_owned()),
         provider_id: Set(provider_id.to_owned()),
+        priority: Set(provider_priority(db, provider_id).await?),
         created_at: Set(now),
         updated_at: Set(now),
     }
@@ -221,12 +222,29 @@ async fn ensure_provider_key_group_key(db: &impl ConnectionTrait, group_id: &str
         id: Set(new_id()),
         provider_key_group_id: Set(group_id.to_owned()),
         provider_key_id: Set(key_id.to_owned()),
+        priority: Set(provider_key_priority(db, key_id).await?),
         created_at: Set(now),
         updated_at: Set(now),
     }
     .insert(db)
     .await?;
     Ok(())
+}
+
+async fn provider_priority(db: &impl ConnectionTrait, provider_id: &str) -> Result<i32, DbErr> {
+    providers::Entity::find_by_id(provider_id.to_owned())
+        .one(db)
+        .await?
+        .map(|record| record.priority)
+        .ok_or_else(|| DbErr::Migration(format!("provider not found while creating provider group member: {provider_id}")))
+}
+
+async fn provider_key_priority(db: &impl ConnectionTrait, key_id: &str) -> Result<i32, DbErr> {
+    provider_api_keys::Entity::find_by_id(key_id.to_owned())
+        .one(db)
+        .await?
+        .map(|record| record.internal_priority)
+        .ok_or_else(|| DbErr::Migration(format!("provider key not found while creating provider key group member: {key_id}")))
 }
 
 async fn ensure_billing_provider_group(db: &impl ConnectionTrait, group_code: &str, provider_group_id: &str) -> Result<(), DbErr> {

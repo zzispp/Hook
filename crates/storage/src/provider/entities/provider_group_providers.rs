@@ -7,6 +7,7 @@ pub struct Model {
     pub id: String,
     pub provider_group_id: String,
     pub provider_id: String,
+    pub priority: i32,
     pub created_at: TimeDateTimeWithTimeZone,
     pub updated_at: TimeDateTimeWithTimeZone,
 }

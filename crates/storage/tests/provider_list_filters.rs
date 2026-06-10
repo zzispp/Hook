@@ -118,18 +118,19 @@ fn provider_group_record(id: &str, name: &str, sort_order: i64) -> provider_grou
 
 fn provider_group_member_records() -> Vec<provider_group_providers::Model> {
     vec![
-        provider_group_member_record("group-two", "group-two-fast"),
-        provider_group_member_record("group-two", "group-two-slow"),
-        provider_group_member_record("group-one", "group-one-fast"),
-        provider_group_member_record("group-one", "group-one-slow"),
+        provider_group_member_record("group-two", "group-two-fast", 1),
+        provider_group_member_record("group-two", "group-two-slow", 9),
+        provider_group_member_record("group-one", "group-one-fast", 2),
+        provider_group_member_record("group-one", "group-one-slow", 5),
     ]
 }
 
-fn provider_group_member_record(group_id: &str, provider_id: &str) -> provider_group_providers::Model {
+fn provider_group_member_record(group_id: &str, provider_id: &str, priority: i32) -> provider_group_providers::Model {
     provider_group_providers::Model {
         id: format!("{group_id}-{provider_id}"),
         provider_group_id: group_id.into(),
         provider_id: provider_id.into(),
+        priority,
         created_at: now(),
         updated_at: now(),
     }

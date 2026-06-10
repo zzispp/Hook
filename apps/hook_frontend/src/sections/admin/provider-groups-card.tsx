@@ -45,8 +45,12 @@ export function ProviderGroupsCard({
   keysByProvider,
 }: {
   providerGroups: { items: ProviderGroup[]; isLoading: boolean; refresh: () => Promise<unknown> };
-  providerKeyGroups: { items: ProviderKeyGroup[]; isLoading: boolean; refresh: () => Promise<unknown> };
-  providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
+  providerKeyGroups: {
+    items: ProviderKeyGroup[];
+    isLoading: boolean;
+    refresh: () => Promise<unknown>;
+  };
+  providers: Pick<Provider, 'id' | 'name' | 'provider_type' | 'priority'>[];
   keysByProvider: Record<string, ProviderApiKey[]>;
 }) {
   const { t } = useTranslate('admin');
@@ -135,11 +139,18 @@ function useProviderGroupDialogs(kind: ProviderGroupKind, t: (key: string) => st
     setForm({ ...DEFAULT_PROVIDER_GROUP_FORM });
   }, []);
 
-  const openEdit = useCallback((group: GroupRow) => {
-    setCreating(false);
-    setEditing(group);
-    setForm(kind === 'provider' ? formFromProviderGroup(group as ProviderGroup) : formFromProviderKeyGroup(group as ProviderKeyGroup));
-  }, [kind]);
+  const openEdit = useCallback(
+    (group: GroupRow) => {
+      setCreating(false);
+      setEditing(group);
+      setForm(
+        kind === 'provider'
+          ? formFromProviderGroup(group as ProviderGroup)
+          : formFromProviderKeyGroup(group as ProviderKeyGroup)
+      );
+    },
+    [kind]
+  );
 
   const submit = useCallback(async () => {
     setSubmitting(true);
@@ -158,14 +169,32 @@ function useProviderGroupDialogs(kind: ProviderGroupKind, t: (key: string) => st
     if (!deleting) return;
     try {
       await removeProviderGroup(kind, deleting.id);
-      toast.success(t(kind === 'provider' ? 'messages.providerGroupDeleted' : 'messages.providerKeyGroupDeleted'));
+      toast.success(
+        t(
+          kind === 'provider' ? 'messages.providerGroupDeleted' : 'messages.providerKeyGroupDeleted'
+        )
+      );
       setDeleting(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('messages.deleteFailed'));
     }
   }, [deleting, kind, t]);
 
-  return { close, confirmDelete, creating, deleting, editing, form, open: creating || !!editing, openCreate, openEdit, setDeleting, setForm, submit, submitting };
+  return {
+    close,
+    confirmDelete,
+    creating,
+    deleting,
+    editing,
+    form,
+    open: creating || !!editing,
+    openCreate,
+    openEdit,
+    setDeleting,
+    setForm,
+    submit,
+    submitting,
+  };
 }
 
 function DeleteGroupDialog({
@@ -185,7 +214,9 @@ function DeleteGroupDialog({
     <ConfirmDialog
       open={!!target}
       onClose={onClose}
-      title={t(kind === 'provider' ? 'dialogs.deleteProviderGroup' : 'dialogs.deleteProviderKeyGroup')}
+      title={t(
+        kind === 'provider' ? 'dialogs.deleteProviderGroup' : 'dialogs.deleteProviderKeyGroup'
+      )}
       content={t('dialogs.deleteContent', { name: target?.name ?? '' })}
       cancelText={t('common.cancel')}
       action={

@@ -15,8 +15,9 @@ pub use core::{Provider, ProviderCreate, ProviderListRequest, ProviderListRespon
 pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate};
 pub use enums::{ProviderPriorityMode, ProviderSchedulingMode};
 pub use group::{
-    ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupListResponse, ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate,
-    ProviderKeyGroupListResponse, ProviderKeyGroupUpdate,
+    ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupListResponse, ProviderGroupMember, ProviderGroupMemberInput,
+    ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListResponse, ProviderKeyGroupMember, ProviderKeyGroupMemberInput,
+    ProviderKeyGroupUpdate,
 };
 pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate, ProviderApiKeyPriorityUpdate, ProviderApiKeyUpdate};
 pub use model_binding::{

@@ -48,6 +48,8 @@ pub(super) fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnap
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: Vec::new(),
             allowed_provider_key_ids: None,
+            provider_priorities: Default::default(),
+            provider_key_priorities: Default::default(),
             visible_user_group_codes: vec!["default".into()],
             is_active: true,
         }],

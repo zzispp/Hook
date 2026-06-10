@@ -56,6 +56,10 @@ pub struct CachedBillingGroup {
     pub billing_multiplier: Decimal,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_key_ids: Option<Vec<String>>,
+    #[serde(default)]
+    pub provider_priorities: BTreeMap<String, i32>,
+    #[serde(default)]
+    pub provider_key_priorities: BTreeMap<String, i32>,
     pub visible_user_group_codes: Vec<String>,
     pub is_active: bool,
 }
