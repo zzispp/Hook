@@ -9,7 +9,7 @@ use types::{
 use super::{CandidatePartKey, CandidateParts};
 use crate::llm_proxy::{
     AffinitySelection, LlmProxyError,
-    cache::snapshot::{CachedBillingGroup, CachedProvider, CachedUserAccess},
+    cache::snapshot::{CachedBillingGroup, CachedProvider, CachedProviderKey, CachedUserAccess},
     candidate::CandidateRequest,
     formats,
 };
@@ -55,7 +55,7 @@ pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Resu
     let mut by_key = parts.into_iter().map(|part| (part_key(&part), part)).collect::<HashMap<_, _>>();
     let mut candidates = by_key
         .values()
-        .map(|part| scheduler_candidate(part, priority_mode))
+        .map(|part| scheduler_candidate(part, group, priority_mode))
         .collect::<Result<Vec<_>, _>>()?;
     CandidateBuilder::order(&mut candidates, &input);
     Ok(candidates.into_iter().filter_map(|candidate| ordered_part(&mut by_key, candidate)).collect())
@@ -80,7 +80,7 @@ fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmPr
         priority_mode: priority_mode(args.priority_mode),
         global_keep_priority_on_conversion: false,
         global_format_conversion_enabled: true,
-        providers: scheduler_providers(args.parts),
+        providers: scheduler_providers(args.parts, args.group),
     })
 }
 
@@ -97,7 +97,7 @@ struct SchedulerInputArgs<'a> {
     priority_mode: ProviderPriorityMode,
 }
 
-fn scheduler_candidate(parts: &CandidateParts, priority_mode: ProviderPriorityMode) -> Result<Candidate, LlmProxyError> {
+fn scheduler_candidate(parts: &CandidateParts, group: &CachedBillingGroup, priority_mode: ProviderPriorityMode) -> Result<Candidate, LlmProxyError> {
     let endpoint = primary_endpoint(parts);
     let key = primary_key(parts);
     let provider_api_format = formats::endpoint_metadata(&endpoint.api_format, false)?.data_format;
@@ -112,38 +112,50 @@ fn scheduler_candidate(parts: &CandidateParts, priority_mode: ProviderPriorityMo
         provider_api_format,
         needs_conversion,
         is_cached: parts.is_cached,
-        provider_priority: parts.provider.priority,
-        key_priority: match priority_mode {
-            ProviderPriorityMode::Provider => key.internal_priority,
-            ProviderPriorityMode::Key => key
-                .global_priority_by_format
-                .get(&endpoint.api_format)
-                .copied()
-                .unwrap_or(key.internal_priority),
-        },
+        provider_priority: provider_priority(&parts.provider, group),
+        key_priority: key_priority(key, &endpoint.api_format, group, priority_mode),
     })
 }
 
-fn scheduler_providers(parts: &[CandidateParts]) -> Vec<ProviderSnapshot> {
+fn scheduler_providers(parts: &[CandidateParts], group: &CachedBillingGroup) -> Vec<ProviderSnapshot> {
     let mut seen = HashSet::new();
     parts
         .iter()
         .filter(|part| seen.insert(part.provider.id.clone()))
-        .map(|part| provider_snapshot(&part.provider))
+        .map(|part| provider_snapshot(&part.provider, group))
         .collect()
 }
 
-fn provider_snapshot(provider: &CachedProvider) -> ProviderSnapshot {
+fn provider_snapshot(provider: &CachedProvider, group: &CachedBillingGroup) -> ProviderSnapshot {
     ProviderSnapshot {
         id: provider.id.clone(),
         name: provider.name.clone(),
-        priority: provider.priority,
+        priority: provider_priority(provider, group),
         keep_priority_on_conversion: provider.keep_priority_on_conversion,
         enable_format_conversion: provider.enable_format_conversion,
         is_active: provider.is_active,
         endpoints: Vec::new(),
         keys: Vec::new(),
         models: Vec::new(),
+    }
+}
+
+fn provider_priority(provider: &CachedProvider, group: &CachedBillingGroup) -> i32 {
+    group.provider_priorities.get(&provider.id).copied().unwrap_or(provider.priority)
+}
+
+fn key_priority(key: &CachedProviderKey, api_format: &str, group: &CachedBillingGroup, mode: ProviderPriorityMode) -> i32 {
+    group
+        .provider_key_priorities
+        .get(&key.id)
+        .copied()
+        .unwrap_or_else(|| global_key_priority(key, api_format, mode))
+}
+
+fn global_key_priority(key: &CachedProviderKey, api_format: &str, mode: ProviderPriorityMode) -> i32 {
+    match mode {
+        ProviderPriorityMode::Provider => key.internal_priority,
+        ProviderPriorityMode::Key => key.global_priority_by_format.get(api_format).copied().unwrap_or(key.internal_priority),
     }
 }
 

@@ -1,7 +1,8 @@
 use types::{
     model::PatchField,
     provider::{
-        ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupUpdate,
+        ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupMemberInput, ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate,
+        ProviderKeyGroupMemberInput, ProviderKeyGroupUpdate,
     },
 };
 
@@ -20,7 +21,7 @@ where
     let input = sanitize_provider_group(input);
     validate_provider_group(&input)?;
     reject_duplicate_provider_group(repository, &input.name).await?;
-    ensure_providers_exist(repository, &input.provider_ids).await?;
+    ensure_provider_members_exist(repository, &input.provider_members).await?;
     Ok(input)
 }
 
@@ -31,7 +32,7 @@ where
     let input = sanitize_provider_group_update(input);
     validate_provider_group_update(&input)?;
     reject_provider_group_name_conflict(repository, id, input.name.as_deref()).await?;
-    ensure_patch_providers_exist(repository, &input.provider_ids).await?;
+    ensure_patch_provider_members_exist(repository, &input.provider_members).await?;
     Ok(input)
 }
 
@@ -42,7 +43,7 @@ where
     let input = sanitize_provider_key_group(input);
     validate_provider_key_group(&input)?;
     reject_duplicate_provider_key_group(repository, &input.name).await?;
-    ensure_provider_keys_exist(repository, &input.provider_key_ids).await?;
+    ensure_provider_key_members_exist(repository, &input.provider_key_members).await?;
     Ok(input)
 }
 
@@ -53,7 +54,7 @@ where
     let input = sanitize_provider_key_group_update(input);
     validate_provider_key_group_update(&input)?;
     reject_provider_key_group_name_conflict(repository, id, input.name.as_deref()).await?;
-    ensure_patch_provider_keys_exist(repository, &input.provider_key_ids).await?;
+    ensure_patch_provider_key_members_exist(repository, &input.provider_key_members).await?;
     Ok(input)
 }
 
@@ -125,45 +126,45 @@ impl HasProviderGroupId for ProviderKeyGroup {
     }
 }
 
-async fn ensure_patch_providers_exist<R>(repository: &R, patch: &PatchField<Vec<String>>) -> ProviderResult<()>
+async fn ensure_patch_provider_members_exist<R>(repository: &R, patch: &PatchField<Vec<ProviderGroupMemberInput>>) -> ProviderResult<()>
 where
     R: ProviderRepository,
 {
     match patch {
-        PatchField::Value(value) => ensure_providers_exist(repository, value).await,
+        PatchField::Value(value) => ensure_provider_members_exist(repository, value).await,
         PatchField::Null | PatchField::Missing => Ok(()),
     }
 }
 
-async fn ensure_patch_provider_keys_exist<R>(repository: &R, patch: &PatchField<Vec<String>>) -> ProviderResult<()>
+async fn ensure_patch_provider_key_members_exist<R>(repository: &R, patch: &PatchField<Vec<ProviderKeyGroupMemberInput>>) -> ProviderResult<()>
 where
     R: ProviderRepository,
 {
     match patch {
-        PatchField::Value(value) => ensure_provider_keys_exist(repository, value).await,
+        PatchField::Value(value) => ensure_provider_key_members_exist(repository, value).await,
         PatchField::Null | PatchField::Missing => Ok(()),
     }
 }
 
-async fn ensure_providers_exist<R>(repository: &R, ids: &[String]) -> ProviderResult<()>
+async fn ensure_provider_members_exist<R>(repository: &R, members: &[ProviderGroupMemberInput]) -> ProviderResult<()>
 where
     R: ProviderRepository,
 {
-    for id in ids {
-        if repository.find_provider(id).await?.is_none() {
-            return Err(ProviderError::InvalidInput(format!("provider does not exist: {id}")));
+    for member in members {
+        if repository.find_provider(&member.provider_id).await?.is_none() {
+            return Err(ProviderError::InvalidInput(format!("provider does not exist: {}", member.provider_id)));
         }
     }
     Ok(())
 }
 
-async fn ensure_provider_keys_exist<R>(repository: &R, ids: &[String]) -> ProviderResult<()>
+async fn ensure_provider_key_members_exist<R>(repository: &R, members: &[ProviderKeyGroupMemberInput]) -> ProviderResult<()>
 where
     R: ProviderRepository,
 {
-    for id in ids {
-        if !repository.provider_key_exists(id).await? {
-            return Err(ProviderError::InvalidInput(format!("provider key does not exist: {id}")));
+    for member in members {
+        if !repository.provider_key_exists(&member.provider_key_id).await? {
+            return Err(ProviderError::InvalidInput(format!("provider key does not exist: {}", member.provider_key_id)));
         }
     }
     Ok(())

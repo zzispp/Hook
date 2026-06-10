@@ -94,6 +94,7 @@ pub(in crate::migration::baseline) enum ProviderGroupProviders {
     Id,
     ProviderGroupId,
     ProviderId,
+    Priority,
     CreatedAt,
     UpdatedAt,
 }
@@ -115,6 +116,7 @@ pub(in crate::migration::baseline) enum ProviderKeyGroupKeys {
     Id,
     ProviderKeyGroupId,
     ProviderKeyId,
+    Priority,
     CreatedAt,
     UpdatedAt,
 }

@@ -1,9 +1,19 @@
+export type ProviderGroupMember = {
+  provider_id: string;
+  priority: number;
+};
+
+export type ProviderKeyGroupMember = {
+  provider_key_id: string;
+  priority: number;
+};
+
 export type ProviderGroup = {
   id: string;
   name: string;
   description?: string | null;
   sort_order: number;
-  provider_ids: string[];
+  provider_members: ProviderGroupMember[];
   created_at: string;
   updated_at: string;
 };
@@ -13,7 +23,7 @@ export type ProviderKeyGroup = {
   name: string;
   description?: string | null;
   sort_order: number;
-  provider_key_ids: string[];
+  provider_key_members: ProviderKeyGroupMember[];
   created_at: string;
   updated_at: string;
 };
@@ -32,14 +42,14 @@ export type ProviderGroupCreate = {
   name: string;
   description?: string | null;
   sort_order?: number;
-  provider_ids?: string[];
+  provider_members?: ProviderGroupMember[];
 };
 
 export type ProviderKeyGroupCreate = {
   name: string;
   description?: string | null;
   sort_order?: number;
-  provider_key_ids?: string[];
+  provider_key_members?: ProviderKeyGroupMember[];
 };
 
 export type ProviderGroupUpdate = Partial<ProviderGroupCreate>;

@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
+
 use types::{api_token::ApiTokenType, provider::ProviderPriorityMode};
 
-use super::helpers::{api_token, provider_with_endpoints_and_keys, request, snapshot_with_provider};
+use super::helpers::{api_token, provider_b, provider_with_endpoints_and_keys, request, snapshot_with_provider};
 use crate::llm_proxy::candidate::selection::{
     matching::{MatchingCandidatePartsInput, matching_candidate_parts},
     scheduler::{OrderCandidatePartsInput, order_candidate_parts},
@@ -18,6 +20,27 @@ fn order_candidate_parts_provider_mode_uses_internal_priority() {
 fn order_candidate_parts_key_mode_uses_global_priority_snapshot() {
     let snapshot = snapshot_with_provider(provider_with_mismatched_key_priorities());
     let ordered = ordered_key_ids(&snapshot, ProviderPriorityMode::Key);
+
+    assert_eq!(ordered, vec!["key-global-first", "key-internal-first"]);
+}
+
+#[test]
+fn order_candidate_parts_uses_group_scoped_provider_priority() {
+    let mut snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
+    snapshot.providers.push(provider_b());
+    snapshot.groups[0].provider_priorities = BTreeMap::from([("provider-a".to_owned(), 100), ("provider-b".to_owned(), 1)]);
+
+    let ordered = ordered_key_ids(&snapshot, ProviderPriorityMode::Provider);
+
+    assert_eq!(ordered[0], "key-b-1");
+}
+
+#[test]
+fn order_candidate_parts_uses_group_scoped_key_priority() {
+    let mut snapshot = snapshot_with_provider(provider_with_mismatched_key_priorities());
+    snapshot.groups[0].provider_key_priorities = BTreeMap::from([("key-internal-first".to_owned(), 100), ("key-global-first".to_owned(), 1)]);
+
+    let ordered = ordered_key_ids(&snapshot, ProviderPriorityMode::Provider);
 
     assert_eq!(ordered, vec!["key-global-first", "key-internal-first"]);
 }

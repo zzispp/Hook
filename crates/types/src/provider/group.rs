@@ -5,12 +5,36 @@ use crate::model::{PatchField, deserialize_patch_value};
 const DEFAULT_PROVIDER_GROUP_LIMIT: u64 = 100;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ProviderGroupMember {
+    pub provider_id: String,
+    pub priority: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ProviderKeyGroupMember {
+    pub provider_key_id: String,
+    pub priority: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct ProviderGroupMemberInput {
+    pub provider_id: String,
+    pub priority: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+pub struct ProviderKeyGroupMemberInput {
+    pub provider_key_id: String,
+    pub priority: i32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ProviderGroup {
     pub id: String,
     pub name: String,
     pub description: Option<String>,
     pub sort_order: i64,
-    pub provider_ids: Vec<String>,
+    pub provider_members: Vec<ProviderGroupMember>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -21,7 +45,7 @@ pub struct ProviderKeyGroup {
     pub name: String,
     pub description: Option<String>,
     pub sort_order: i64,
-    pub provider_key_ids: Vec<String>,
+    pub provider_key_members: Vec<ProviderKeyGroupMember>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -44,7 +68,7 @@ pub struct ProviderGroupCreate {
     #[serde(default)]
     pub sort_order: Option<i64>,
     #[serde(default)]
-    pub provider_ids: Vec<String>,
+    pub provider_members: Vec<ProviderGroupMemberInput>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -55,7 +79,7 @@ pub struct ProviderKeyGroupCreate {
     #[serde(default)]
     pub sort_order: Option<i64>,
     #[serde(default)]
-    pub provider_key_ids: Vec<String>,
+    pub provider_key_members: Vec<ProviderKeyGroupMemberInput>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
@@ -67,7 +91,7 @@ pub struct ProviderGroupUpdate {
     #[serde(default)]
     pub sort_order: Option<i64>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
-    pub provider_ids: PatchField<Vec<String>>,
+    pub provider_members: PatchField<Vec<ProviderGroupMemberInput>>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
@@ -79,7 +103,7 @@ pub struct ProviderKeyGroupUpdate {
     #[serde(default)]
     pub sort_order: Option<i64>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
-    pub provider_key_ids: PatchField<Vec<String>>,
+    pub provider_key_members: PatchField<Vec<ProviderKeyGroupMemberInput>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -96,13 +120,13 @@ pub struct ProviderKeyGroupListResponse {
 
 impl ProviderGroupUpdate {
     pub fn is_empty(&self) -> bool {
-        self.name.is_none() && self.description.is_missing() && self.sort_order.is_none() && self.provider_ids.is_missing()
+        self.name.is_none() && self.description.is_missing() && self.sort_order.is_none() && self.provider_members.is_missing()
     }
 }
 
 impl ProviderKeyGroupUpdate {
     pub fn is_empty(&self) -> bool {
-        self.name.is_none() && self.description.is_missing() && self.sort_order.is_none() && self.provider_key_ids.is_missing()
+        self.name.is_none() && self.description.is_missing() && self.sort_order.is_none() && self.provider_key_members.is_missing()
     }
 }
 

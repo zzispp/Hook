@@ -125,7 +125,7 @@ pub(super) fn provider_group_input(input: ProviderGroupCreate) -> ProviderGroupR
         name: input.name,
         description: input.description,
         sort_order: input.sort_order.unwrap_or(0),
-        provider_ids: input.provider_ids,
+        provider_members: input.provider_members,
     }
 }
 
@@ -134,7 +134,7 @@ pub(super) fn provider_group_patch(input: ProviderGroupUpdate) -> ProviderGroupR
         name: input.name,
         description: input.description,
         sort_order: input.sort_order,
-        provider_ids: input.provider_ids,
+        provider_members: input.provider_members,
     }
 }
 
@@ -143,7 +143,7 @@ pub(super) fn provider_key_group_input(input: ProviderKeyGroupCreate) -> Provide
         name: input.name,
         description: input.description,
         sort_order: input.sort_order.unwrap_or(0),
-        provider_key_ids: input.provider_key_ids,
+        provider_key_members: input.provider_key_members,
     }
 }
 
@@ -152,7 +152,7 @@ pub(super) fn provider_key_group_patch(input: ProviderKeyGroupUpdate) -> Provide
         name: input.name,
         description: input.description,
         sort_order: input.sort_order,
-        provider_key_ids: input.provider_key_ids,
+        provider_key_members: input.provider_key_members,
     }
 }
 

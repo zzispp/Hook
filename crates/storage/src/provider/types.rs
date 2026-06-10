@@ -2,7 +2,9 @@ use rust_decimal::Decimal;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use types::model::PatchField;
-use types::provider::{ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, RequestUpstreamCost};
+use types::provider::{
+    ProviderGroupMemberInput, ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, RequestUpstreamCost,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderRecordInput {
@@ -119,7 +121,7 @@ pub struct ProviderGroupRecordInput {
     pub name: String,
     pub description: Option<String>,
     pub sort_order: i64,
-    pub provider_ids: Vec<String>,
+    pub provider_members: Vec<ProviderGroupMemberInput>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -127,7 +129,7 @@ pub struct ProviderGroupRecordPatch {
     pub name: Option<String>,
     pub description: PatchField<String>,
     pub sort_order: Option<i64>,
-    pub provider_ids: PatchField<Vec<String>>,
+    pub provider_members: PatchField<Vec<ProviderGroupMemberInput>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -135,7 +137,7 @@ pub struct ProviderKeyGroupRecordInput {
     pub name: String,
     pub description: Option<String>,
     pub sort_order: i64,
-    pub provider_key_ids: Vec<String>,
+    pub provider_key_members: Vec<ProviderKeyGroupMemberInput>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -143,7 +145,7 @@ pub struct ProviderKeyGroupRecordPatch {
     pub name: Option<String>,
     pub description: PatchField<String>,
     pub sort_order: Option<i64>,
-    pub provider_key_ids: PatchField<Vec<String>>,
+    pub provider_key_members: PatchField<Vec<ProviderKeyGroupMemberInput>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

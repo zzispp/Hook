@@ -9,27 +9,27 @@ use super::super::{
     record::{ProviderGroupRecord, provider_groups},
 };
 use super::mapping::{apply_provider_group_patch, provider_group_active_model, provider_group_response};
-use super::members::{provider_ids_by_group_ids, provider_ids_for_group, replace_provider_group_members};
+use super::members::{provider_members_by_group_ids, provider_members_for_group, replace_provider_group_members};
 
 pub async fn create_provider_group(store: &ProviderStore, input: ProviderGroupRecordInput) -> StorageResult<ProviderGroup> {
-    let provider_ids = input.provider_ids.clone();
+    let provider_members = input.provider_members.clone();
     let tx = store.connection().begin().await?;
     let record = provider_group_active_model(store.next_id(), input).insert(&tx).await?;
-    replace_provider_group_members(store, &record.id, provider_ids, &tx).await?;
+    replace_provider_group_members(store, &record.id, provider_members, &tx).await?;
     tx.commit().await?;
     find_provider_group(store, &record.id).await?.ok_or(StorageError::NotFound)
 }
 
 pub async fn update_provider_group(store: &ProviderStore, id: &str, input: ProviderGroupRecordPatch) -> StorageResult<ProviderGroup> {
     let record = find_provider_group_record(store, id).await?.ok_or(StorageError::NotFound)?;
-    let provider_patch = input.provider_ids.clone();
+    let provider_patch = input.provider_members.clone();
     let tx = store.connection().begin().await?;
     let mut active: provider_groups::ActiveModel = record.into();
     apply_provider_group_patch(&mut active, input);
     active.updated_at = Set(time::OffsetDateTime::now_utc());
     let updated = active.update(&tx).await?;
-    if let PatchField::Value(provider_ids) = provider_patch {
-        replace_provider_group_members(store, &updated.id, provider_ids, &tx).await?;
+    if let PatchField::Value(provider_members) = provider_patch {
+        replace_provider_group_members(store, &updated.id, provider_members, &tx).await?;
     }
     tx.commit().await?;
     find_provider_group(store, id).await?.ok_or(StorageError::NotFound)
@@ -86,13 +86,13 @@ async fn find_provider_group_record(store: &ProviderStore, id_or_name: &str) -> 
 }
 
 async fn provider_group_from_record(store: &ProviderStore, record: ProviderGroupRecord) -> StorageResult<ProviderGroup> {
-    let provider_ids = provider_ids_for_group(store, &record.id).await?;
-    Ok(provider_group_response(record, provider_ids))
+    let provider_members = provider_members_for_group(store, &record.id).await?;
+    Ok(provider_group_response(record, provider_members))
 }
 
 async fn provider_groups_from_records(store: &ProviderStore, records: Vec<ProviderGroupRecord>) -> StorageResult<Vec<ProviderGroup>> {
     let ids = records.iter().map(|record| record.id.clone()).collect::<Vec<_>>();
-    let members = provider_ids_by_group_ids(store, &ids).await?;
+    let members = provider_members_by_group_ids(store, &ids).await?;
     Ok(records
         .into_iter()
         .map(|record| provider_group_response(record.clone(), members.get(&record.id).cloned().unwrap_or_default()))

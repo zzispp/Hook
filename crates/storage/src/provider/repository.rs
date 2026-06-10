@@ -1,7 +1,7 @@
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
 use types::provider::{
-    Provider, ProviderGroup, ProviderGroupListRequest, ProviderGroupListResponse, ProviderKeyGroup, ProviderKeyGroupListResponse, ProviderListRequest,
-    ProviderListResponse,
+    Provider, ProviderGroup, ProviderGroupListRequest, ProviderGroupListResponse, ProviderGroupMemberInput, ProviderKeyGroup, ProviderKeyGroupListResponse,
+    ProviderListRequest, ProviderListResponse,
 };
 
 use crate::{Database, StorageError, StorageResult, json};
@@ -35,7 +35,16 @@ impl ProviderStore {
 
         let tx = self.connection().begin().await?;
         let record = provider_active_model(self.database.next_id(), input).insert(&tx).await?;
-        super::provider_group_query::insert_provider_group_members(self, &provider_group_id, vec![record.id.clone()], &tx).await?;
+        super::provider_group_query::insert_provider_group_members(
+            self,
+            &provider_group_id,
+            vec![ProviderGroupMemberInput {
+                provider_id: record.id.clone(),
+                priority: record.priority,
+            }],
+            &tx,
+        )
+        .await?;
         tx.commit().await?;
         Ok(record.into())
     }
@@ -178,6 +187,14 @@ impl ProviderStore {
 
     pub async fn provider_key_ids_for_key_groups(&self, group_ids: &[String]) -> StorageResult<Vec<String>> {
         super::provider_group_query::provider_key_ids_for_key_groups(self, group_ids).await
+    }
+
+    pub async fn provider_priorities_for_groups(&self, group_ids: &[String]) -> StorageResult<std::collections::BTreeMap<String, i32>> {
+        super::provider_group_query::provider_priorities_for_groups(self, group_ids).await
+    }
+
+    pub async fn provider_key_priorities_for_key_groups(&self, group_ids: &[String]) -> StorageResult<std::collections::BTreeMap<String, i32>> {
+        super::provider_group_query::provider_key_priorities_for_key_groups(self, group_ids).await
     }
 
     pub async fn api_key_secrets_for_provider(&self, provider_id: &str) -> StorageResult<Vec<ProviderApiKeySecretRecord>> {

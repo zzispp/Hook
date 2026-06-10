@@ -86,6 +86,7 @@ fn provider_group_member_record(group_id: &str, provider_id: &str) -> provider_g
         id: "membership-a".into(),
         provider_group_id: group_id.into(),
         provider_id: provider_id.into(),
+        priority: 100,
         created_at: now(),
         updated_at: now(),
     }

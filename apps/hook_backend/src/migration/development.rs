@@ -140,7 +140,8 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::scheduled_task_next_run_additive::apply(manager).await?;
     super::dashboard_period_i18n_additive::apply(manager).await?;
     super::request_record_partitioning_additive::apply(manager).await?;
-    super::dashboard_request_metrics_additive::apply(manager).await
+    super::dashboard_request_metrics_additive::apply(manager).await?;
+    super::provider_group_member_priority_additive::apply(manager).await
 }
 
 async fn reset(manager: &SchemaManager<'_>) -> Result<(), DbErr> {

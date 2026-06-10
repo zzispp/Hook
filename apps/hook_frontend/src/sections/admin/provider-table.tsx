@@ -29,6 +29,7 @@ import {
 } from 'src/components/table';
 
 import { providerTypeLabel } from './provider-management-utils';
+import { providerGroupMemberIds } from './provider-groups-utils';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
 
 export function ProviderTable({
@@ -68,12 +69,17 @@ export function ProviderTable({
               <TableLoadingRows head={tableHead} rows={table.rowsPerPage} />
             ) : (
               groupedRows.map((group) => [
-                <ProviderGroupHeaderRow key={group.id} name={group.name} count={group.providers.length} />,
-                ...group.providers.map((row) => (
+                <ProviderGroupHeaderRow
+                  key={group.id}
+                  name={group.name}
+                  count={group.providers.length}
+                />,
+                ...group.providers.map((entry) => (
                   <ProviderTableRow
-                    key={`${group.id}-${row.id}`}
-                    row={row}
-                    selected={row.id === selectedId}
+                    key={`${group.id}-${entry.provider.id}`}
+                    row={entry.provider}
+                    priority={entry.priority}
+                    selected={entry.provider.id === selectedId}
                     onSelect={onSelect}
                     onEdit={onEdit}
                     onDelete={onDelete}
@@ -117,6 +123,7 @@ function ProviderGroupHeaderRow({ name, count }: { name: string; count: number }
 
 function ProviderTableRow({
   row,
+  priority,
   selected,
   onSelect,
   onEdit,
@@ -124,6 +131,7 @@ function ProviderTableRow({
   onAssociateGroups,
 }: {
   row: Provider;
+  priority: number;
   selected: boolean;
   onSelect: (provider: Provider) => void;
   onEdit: (provider: Provider) => void;
@@ -142,10 +150,13 @@ function ProviderTableRow({
       </TableCell>
       <TableCell>
         <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75 }}>
-          <Chip size="small" label={`${t('providers.maxRetries')}: ${optionalValue(row.max_retries)}`} />
+          <Chip
+            size="small"
+            label={`${t('providers.maxRetries')}: ${optionalValue(row.max_retries)}`}
+          />
         </Stack>
       </TableCell>
-      <TableCell>{row.priority}</TableCell>
+      <TableCell>{priority}</TableCell>
       <TableCell>
         <EnabledLabel enabled={row.is_active} />
       </TableCell>
@@ -188,13 +199,20 @@ function ProviderTableRow({
   );
 }
 
-function providerTableHead(t: (key: string, options?: Record<string, unknown>) => string): TableHeadCellProps[] {
+function providerTableHead(
+  t: (key: string, options?: Record<string, unknown>) => string
+): TableHeadCellProps[] {
   return [
     { id: 'name', label: t('providers.name'), width: 220 },
     { id: 'request_config', label: t('providers.requestConfig') },
     { id: 'priority', label: t('providers.priority'), width: 100 },
     { id: 'status', label: t('common.status'), width: 120 },
-    withStickyActionHeadCell({ id: 'actions', label: t('common.actions'), width: 136, align: 'left' }),
+    withStickyActionHeadCell({
+      id: 'actions',
+      label: t('common.actions'),
+      width: 136,
+      align: 'left',
+    }),
   ];
 }
 
@@ -207,19 +225,54 @@ function providerRowsByGroup(
   groups: ProviderGroup[],
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
-  const groupedProviderIds = new Set(groups.flatMap((group) => group.provider_ids));
+  const providersById = new Map(providers.map((provider) => [provider.id, provider]));
+  const groupedProviderIds = new Set(groups.flatMap(providerGroupMemberIds));
   const boundGroups = sortedGroups(groups)
     .map((group) => ({
       id: group.id,
       name: group.name,
-      providers: providers.filter((provider) => group.provider_ids.includes(provider.id)),
+      providers: providerEntriesForGroup(group, providersById),
     }))
     .filter((group) => group.providers.length > 0);
-  const unboundProviders = providers.filter((provider) => !groupedProviderIds.has(provider.id));
+  const unboundProviders = sortProviderEntriesByPriority(
+    providers
+      .filter((provider) => !groupedProviderIds.has(provider.id))
+      .map((provider) => ({ provider, priority: provider.priority }))
+  );
 
   return unboundProviders.length === 0
     ? boundGroups
-    : [...boundGroups, { id: '__unbound_provider_group__', name: t('providers.unboundProviderGroup'), providers: unboundProviders }];
+    : [
+        ...boundGroups,
+        {
+          id: '__unbound_provider_group__',
+          name: t('providers.unboundProviderGroup'),
+          providers: unboundProviders,
+        },
+      ];
+}
+
+function providerEntriesForGroup(group: ProviderGroup, providersById: Map<string, Provider>) {
+  const entries = group.provider_members.flatMap((member) => {
+    const provider = providersById.get(member.provider_id);
+    return provider ? [{ provider, priority: member.priority }] : [];
+  });
+  return sortProviderEntriesByPriority(entries);
+}
+
+function sortProviderEntriesByPriority(entries: { provider: Provider; priority: number }[]) {
+  return [...entries].sort(compareProviderEntriesByPriority);
+}
+
+function compareProviderEntriesByPriority(
+  left: { provider: Provider; priority: number },
+  right: { provider: Provider; priority: number }
+) {
+  return (
+    left.priority - right.priority ||
+    left.provider.name.localeCompare(right.provider.name) ||
+    left.provider.id.localeCompare(right.provider.id)
+  );
 }
 
 function sortedGroups(groups: ProviderGroup[]) {

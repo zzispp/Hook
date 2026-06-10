@@ -1,28 +1,48 @@
+use std::collections::BTreeMap;
+
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
 use storage::{Database, provider::record::provider_api_keys};
 use types::group::BillingGroupResponse;
 
 use crate::llm_proxy::LlmProxyError;
 
-pub async fn billing_group_key_scope(database: &Database, group: &BillingGroupResponse) -> Result<Option<Vec<String>>, LlmProxyError> {
+#[derive(Debug, Default)]
+pub struct BillingGroupKeyScope {
+    pub allowed_provider_key_ids: Option<Vec<String>>,
+    pub provider_priorities: BTreeMap<String, i32>,
+    pub provider_key_priorities: BTreeMap<String, i32>,
+}
+
+pub async fn billing_group_key_scope(database: &Database, group: &BillingGroupResponse) -> Result<BillingGroupKeyScope, LlmProxyError> {
     if group.allowed_provider_group_ids.is_empty() && group.allowed_provider_key_group_ids.is_empty() {
-        return Ok(None);
+        return Ok(BillingGroupKeyScope::default());
     }
+    let store = storage::provider::ProviderStore::new(database.clone());
     if !group.allowed_provider_key_group_ids.is_empty() {
-        return key_group_scope(database, &group.allowed_provider_key_group_ids).await.map(Some);
+        return key_group_scope(&store, &group.allowed_provider_key_group_ids).await;
     }
-    provider_group_scope(database, &group.allowed_provider_group_ids).await.map(Some)
+    provider_group_scope(database, &store, &group.allowed_provider_group_ids).await
 }
 
-async fn provider_group_scope(database: &Database, group_ids: &[String]) -> Result<Vec<String>, LlmProxyError> {
-    let store = storage::provider::ProviderStore::new(database.clone());
+async fn provider_group_scope(
+    database: &Database,
+    store: &storage::provider::ProviderStore,
+    group_ids: &[String],
+) -> Result<BillingGroupKeyScope, LlmProxyError> {
     let provider_ids = store.provider_ids_for_groups(group_ids).await?;
-    key_ids_for_providers(database, provider_ids).await
+    Ok(BillingGroupKeyScope {
+        allowed_provider_key_ids: Some(key_ids_for_providers(database, provider_ids).await?),
+        provider_priorities: store.provider_priorities_for_groups(group_ids).await?,
+        provider_key_priorities: BTreeMap::new(),
+    })
 }
 
-async fn key_group_scope(database: &Database, group_ids: &[String]) -> Result<Vec<String>, LlmProxyError> {
-    let store = storage::provider::ProviderStore::new(database.clone());
-    Ok(store.provider_key_ids_for_key_groups(group_ids).await?)
+async fn key_group_scope(store: &storage::provider::ProviderStore, group_ids: &[String]) -> Result<BillingGroupKeyScope, LlmProxyError> {
+    Ok(BillingGroupKeyScope {
+        allowed_provider_key_ids: Some(store.provider_key_ids_for_key_groups(group_ids).await?),
+        provider_priorities: BTreeMap::new(),
+        provider_key_priorities: store.provider_key_priorities_for_key_groups(group_ids).await?,
+    })
 }
 
 async fn key_ids_for_providers(database: &Database, provider_ids: Vec<String>) -> Result<Vec<String>, LlmProxyError> {

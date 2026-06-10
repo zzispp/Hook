@@ -87,8 +87,11 @@ async fn load_groups(database: &Database) -> Result<Vec<CachedBillingGroup>, Llm
         .await?;
     let mut groups = Vec::with_capacity(response.groups.len());
     for group in response.groups {
+        let key_scope = billing_group_key_scope(database, &group).await?;
         groups.push(CachedBillingGroup {
-            allowed_provider_key_ids: billing_group_key_scope(database, &group).await?,
+            allowed_provider_key_ids: key_scope.allowed_provider_key_ids,
+            provider_priorities: key_scope.provider_priorities,
+            provider_key_priorities: key_scope.provider_key_priorities,
             code: group.code,
             billing_multiplier: group.billing_multiplier,
             allowed_model_ids: group.allowed_model_ids,

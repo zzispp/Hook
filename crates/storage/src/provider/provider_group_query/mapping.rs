@@ -1,7 +1,7 @@
 use sea_orm::Set;
 use types::{
     model::PatchField,
-    provider::{ProviderGroup, ProviderKeyGroup},
+    provider::{ProviderGroup, ProviderGroupMember, ProviderKeyGroup, ProviderKeyGroupMember},
 };
 
 use super::super::{
@@ -53,25 +53,25 @@ pub fn apply_provider_key_group_patch(active: &mut provider_key_groups::ActiveMo
     }
 }
 
-pub fn provider_group_response(record: ProviderGroupRecord, provider_ids: Vec<String>) -> ProviderGroup {
+pub fn provider_group_response(record: ProviderGroupRecord, provider_members: Vec<ProviderGroupMember>) -> ProviderGroup {
     ProviderGroup {
         id: record.id,
         name: record.name,
         description: record.description,
         sort_order: record.sort_order,
-        provider_ids,
+        provider_members,
         created_at: format_timestamp(record.created_at),
         updated_at: format_timestamp(record.updated_at),
     }
 }
 
-pub fn provider_key_group_response(record: ProviderKeyGroupRecord, provider_key_ids: Vec<String>) -> ProviderKeyGroup {
+pub fn provider_key_group_response(record: ProviderKeyGroupRecord, provider_key_members: Vec<ProviderKeyGroupMember>) -> ProviderKeyGroup {
     ProviderKeyGroup {
         id: record.id,
         name: record.name,
         description: record.description,
         sort_order: record.sort_order,
-        provider_key_ids,
+        provider_key_members,
         created_at: format_timestamp(record.created_at),
         updated_at: format_timestamp(record.updated_at),
     }
