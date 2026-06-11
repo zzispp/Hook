@@ -1,13 +1,15 @@
 use async_trait::async_trait;
 use rust_decimal::Decimal;
+use time::format_description::well_known::{Iso8601, Rfc3339};
 use types::{
     pagination::{Page, PageRequest},
     wallet::{
-        AdminWalletDailyUsageDetailsResponse, AdminWalletLedgerEntriesForWalletResponse, AdminWalletLedgerEntriesResponse, AdminWalletLedgerFilters,
-        AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse, AdminWalletTransactionsResponse, Wallet,
-        WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType, WalletDailyUsageDetailRequest, WalletDailyUsageDetailsResponse,
-        WalletLedgerEntriesResponse, WalletLedgerEntry, WalletLedgerEntryFilters, WalletLedgerEntryResponse, WalletRecharge, WalletSummaryResponse,
-        WalletTransaction, WalletTransactionResponse, WalletTransactionsResponse,
+        AdminWalletConsumptionSummaryResponse, AdminWalletDailyUsageDetailsResponse, AdminWalletLedgerEntriesForWalletResponse,
+        AdminWalletLedgerEntriesResponse, AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse,
+        AdminWalletResponse, AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceResponse, WalletBalanceType,
+        WalletDailyUsageDetailRequest, WalletDailyUsageDetailsResponse, WalletLedgerDateRange, WalletLedgerEntriesResponse, WalletLedgerEntry,
+        WalletLedgerEntryFilters, WalletLedgerEntryResponse, WalletLedgerRangePreset, WalletRecharge, WalletSummaryResponse, WalletTransaction,
+        WalletTransactionResponse, WalletTransactionsResponse,
     },
 };
 
@@ -111,7 +113,7 @@ where
         tz_offset_minutes: i32,
     ) -> WalletResult<WalletLedgerEntriesResponse> {
         validate_page(page)?;
-        validate_tz_offset(tz_offset_minutes)?;
+        let filters = validated_ledger_filters(filters, tz_offset_minutes)?;
         let wallet = self.user_wallet(user_id).await?;
         let entries = self.repository.page_ledger_entries(&wallet.id.0, page, filters, tz_offset_minutes).await?;
         Ok(ledger_entries_response(WalletSummaryResponse::from(wallet), entries))
@@ -162,13 +164,30 @@ where
         tz_offset_minutes: i32,
     ) -> WalletResult<AdminWalletLedgerEntriesResponse> {
         validate_page(page)?;
-        validate_tz_offset(tz_offset_minutes)?;
+        let filters = validated_ledger_filters(filters, tz_offset_minutes)?;
         let entries = self.repository.page_admin_ledger_entries(page, filters, tz_offset_minutes).await?;
         Ok(AdminWalletLedgerEntriesResponse {
             items: entries.items,
             total: entries.total,
             page: entries.page,
             page_size: entries.page_size,
+        })
+    }
+
+    async fn admin_consumption_summary(
+        &self,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+        tz_offset_minutes: i32,
+    ) -> WalletResult<AdminWalletConsumptionSummaryResponse> {
+        validate_page(page)?;
+        let filters = validated_ledger_filters(filters, tz_offset_minutes)?;
+        let summary = self.repository.page_admin_consumption_summary(page, filters).await?;
+        Ok(AdminWalletConsumptionSummaryResponse {
+            items: summary.items,
+            total: summary.total,
+            page: summary.page,
+            page_size: summary.page_size,
         })
     }
 
@@ -192,7 +211,7 @@ where
     ) -> WalletResult<AdminWalletLedgerEntriesForWalletResponse> {
         validate_page(page)?;
         validate_wallet_id(wallet_id)?;
-        validate_tz_offset(tz_offset_minutes)?;
+        let filters = validated_ledger_filters(filters, tz_offset_minutes)?;
         let wallet = self.repository.find_admin_wallet_by_id(wallet_id).await?.ok_or(WalletError::NotFound)?;
         let entries = self.repository.page_ledger_entries(wallet_id, page, filters, tz_offset_minutes).await?;
         Ok(admin_ledger_entries_for_wallet_response(wallet, entries))
@@ -317,6 +336,82 @@ fn is_iso_date(value: &str) -> bool {
         && bytes[..4].iter().all(u8::is_ascii_digit)
         && bytes[5..7].iter().all(u8::is_ascii_digit)
         && bytes[8..].iter().all(u8::is_ascii_digit)
+}
+
+fn validated_ledger_filters(filters: WalletLedgerEntryFilters, tz_offset_minutes: i32) -> WalletResult<WalletLedgerEntryFilters> {
+    validate_tz_offset(tz_offset_minutes)?;
+    let date_range = ledger_date_range(&filters, tz_offset_minutes)?;
+    Ok(WalletLedgerEntryFilters { date_range, ..filters })
+}
+
+fn ledger_date_range(filters: &WalletLedgerEntryFilters, tz_offset_minutes: i32) -> WalletResult<Option<WalletLedgerDateRange>> {
+    match filters.range_preset {
+        WalletLedgerRangePreset::All => Ok(None),
+        WalletLedgerRangePreset::Today => preset_ledger_date_range(1, tz_offset_minutes),
+        WalletLedgerRangePreset::Last7Days => preset_ledger_date_range(7, tz_offset_minutes),
+        WalletLedgerRangePreset::Last30Days => preset_ledger_date_range(30, tz_offset_minutes),
+        WalletLedgerRangePreset::Custom => custom_ledger_date_range(filters, tz_offset_minutes),
+    }
+}
+
+fn preset_ledger_date_range(days: i64, tz_offset_minutes: i32) -> WalletResult<Option<WalletLedgerDateRange>> {
+    let today = current_local_date(tz_offset_minutes)?;
+    let start = today - time::Duration::days(days - 1);
+    date_range_from_dates(start, today, tz_offset_minutes).map(Some)
+}
+
+fn custom_ledger_date_range(filters: &WalletLedgerEntryFilters, tz_offset_minutes: i32) -> WalletResult<Option<WalletLedgerDateRange>> {
+    let start = required_date(filters.start_date.as_deref(), "start_date")?;
+    let end = required_date(filters.end_date.as_deref(), "end_date")?;
+    date_range_from_dates(start, end, tz_offset_minutes).map(Some)
+}
+
+fn required_date(value: Option<&str>, field: &str) -> WalletResult<time::Date> {
+    parse_ledger_date(
+        value.ok_or_else(|| WalletError::InvalidInput(format!("{field} is required for custom range")))?,
+        field,
+    )
+}
+
+fn date_range_from_dates(start: time::Date, end: time::Date, tz_offset_minutes: i32) -> WalletResult<WalletLedgerDateRange> {
+    if start > end {
+        return Err(WalletError::InvalidInput("start_date must be before or equal to end_date".into()));
+    }
+    let next_day = end.next_day().ok_or_else(|| WalletError::InvalidInput("end_date is out of range".into()))?;
+    Ok(WalletLedgerDateRange {
+        start_date: start.to_string(),
+        end_date: end.to_string(),
+        started_at: format_timestamp(local_date_start_utc(start, tz_offset_minutes)?)?,
+        ended_at: format_timestamp(local_date_start_utc(next_day, tz_offset_minutes)?)?,
+    })
+}
+
+fn current_local_date(tz_offset_minutes: i32) -> WalletResult<time::Date> {
+    Ok(time::OffsetDateTime::now_utc().to_offset(utc_offset(tz_offset_minutes)?).date())
+}
+
+fn local_date_start_utc(date: time::Date, tz_offset_minutes: i32) -> WalletResult<time::OffsetDateTime> {
+    let offset = utc_offset(tz_offset_minutes)?;
+    date.with_hms(0, 0, 0)
+        .map(|value| value.assume_offset(offset).to_offset(time::UtcOffset::UTC))
+        .map_err(|error| WalletError::InvalidInput(format!("invalid local date boundary: {error}")))
+}
+
+fn utc_offset(tz_offset_minutes: i32) -> WalletResult<time::UtcOffset> {
+    let seconds = tz_offset_minutes
+        .checked_mul(60)
+        .ok_or_else(|| WalletError::InvalidInput("tz_offset_minutes exceeds supported range".into()))?;
+    time::UtcOffset::from_whole_seconds(seconds).map_err(|_| WalletError::InvalidInput("tz_offset_minutes must be between -1080 and 1080".into()))
+}
+
+fn parse_ledger_date(value: &str, field: &str) -> WalletResult<time::Date> {
+    time::Date::parse(value, &Iso8601::DEFAULT).map_err(|error| WalletError::InvalidInput(format!("{field} must use YYYY-MM-DD: {error}")))
+}
+
+fn format_timestamp(value: time::OffsetDateTime) -> WalletResult<String> {
+    value
+        .format(&Rfc3339)
+        .map_err(|error| WalletError::InvalidInput(format!("invalid range timestamp: {error}")))
 }
 
 fn apply_adjustment(wallet: Wallet, input: WalletAdjustment) -> WalletResult<(Wallet, WalletTransaction)> {

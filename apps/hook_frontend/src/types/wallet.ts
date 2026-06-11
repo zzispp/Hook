@@ -76,6 +76,20 @@ export type AdminWalletLedgerEntry = WalletLedgerEntry & {
   wallet_status: string;
 };
 
+export type AdminWalletConsumptionSummaryItem = {
+  user_id: string;
+  wallet_id: string;
+  owner_name: string;
+  owner_email: string;
+  owner_type: string;
+  wallet_status: string;
+  currency: string;
+  consumed_amount: number;
+  transaction_count: number;
+  first_created_at: string;
+  last_created_at: string;
+};
+
 export type WalletTransactionsResponse = {
   wallet: WalletSummary;
   items: WalletTransaction[];
@@ -108,6 +122,13 @@ export type AdminWalletLedgerResponse = {
 
 export type AdminWalletLedgerEntriesResponse = {
   items: AdminWalletLedgerEntry[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type AdminWalletConsumptionSummaryResponse = {
+  items: AdminWalletConsumptionSummaryItem[];
   total: number;
   page: number;
   page_size: number;

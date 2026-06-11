@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::{AdminWalletResponse, WalletSummaryResponse, WalletTransaction, WalletTransactionResponse};
 
@@ -11,6 +11,29 @@ pub struct WalletLedgerEntry {
     pub transaction_count: i64,
     pub first_created_at: String,
     pub last_created_at: String,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+pub enum WalletLedgerRangePreset {
+    #[default]
+    #[serde(rename = "all")]
+    All,
+    #[serde(rename = "today")]
+    Today,
+    #[serde(rename = "last7days", alias = "last7d")]
+    Last7Days,
+    #[serde(rename = "last30days", alias = "last30d")]
+    Last30Days,
+    #[serde(rename = "custom")]
+    Custom,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WalletLedgerDateRange {
+    pub start_date: String,
+    pub end_date: String,
+    pub started_at: String,
+    pub ended_at: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -51,6 +74,10 @@ pub struct WalletLedgerEntryFilters {
     pub balance_type: Option<String>,
     pub link_type: Option<String>,
     pub owner_type: Option<String>,
+    pub range_preset: WalletLedgerRangePreset,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub date_range: Option<WalletLedgerDateRange>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

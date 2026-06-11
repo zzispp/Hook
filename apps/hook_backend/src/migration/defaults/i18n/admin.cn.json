@@ -857,12 +857,23 @@
       "balanceType": "余额类型",
       "linkType": "关联类型",
       "ownerType": "归属类型",
+      "dateRange": "日期范围",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "aggregateConsumption": "聚合消费",
       "allCategories": "全部分类",
       "allReasons": "全部二级",
       "allDirections": "全部方向",
       "allBalances": "全部余额",
       "allLinkTypes": "全部关联",
-      "allOwnerTypes": "全部归属"
+      "allOwnerTypes": "全部归属",
+      "rangePresets": {
+        "all": "全部",
+        "today": "今天",
+        "last7days": "最近 7 天",
+        "last30days": "最近 30 天",
+        "custom": "自定义"
+      }
     },
     "actions": {
       "details": "详情",
@@ -948,6 +959,15 @@
     "dailyUsage": {
       "description": "{{date}} 累计 {{count}} 次模型调用",
       "emptyDetails": "暂无模型调用明细"
+    },
+    "consumptionSummary": {
+      "summary": "显示 {{shown}} 条，共 {{total}} 个归属用户",
+      "owner": "归属",
+      "amount": "消费金额",
+      "count": "消费次数",
+      "firstConsumedAt": "首次消费",
+      "lastConsumedAt": "最近消费",
+      "empty": "暂无消费汇总"
     },
     "ledgerSummary": "显示 {{shown}} / 已加载 {{loaded}} 条，共 {{total}} 条",
     "ownerSummary": "{{type}} · {{status}}",

@@ -2,11 +2,11 @@ use async_trait::async_trait;
 use types::{
     pagination::{Page, PageRequest},
     wallet::{
-        AdminWalletDailyUsageDetailsResponse, AdminWalletLedgerEntriesForWalletResponse, AdminWalletLedgerEntriesResponse, AdminWalletLedgerEntryResponse,
-        AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletListResponse,
-        AdminWalletResponse, AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletBalanceResponse, WalletDailyUsageDetailRequest,
-        WalletDailyUsageDetailsResponse, WalletLedgerEntriesResponse, WalletLedgerEntry, WalletLedgerEntryFilters, WalletRecharge, WalletTransaction,
-        WalletTransactionsResponse,
+        AdminWalletConsumptionSummaryItem, AdminWalletConsumptionSummaryResponse, AdminWalletDailyUsageDetailsResponse,
+        AdminWalletLedgerEntriesForWalletResponse, AdminWalletLedgerEntriesResponse, AdminWalletLedgerEntryResponse, AdminWalletLedgerFilters,
+        AdminWalletLedgerResponse, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletListResponse, AdminWalletResponse,
+        AdminWalletTransactionsResponse, Wallet, WalletAdjustment, WalletBalanceResponse, WalletDailyUsageDetailRequest, WalletDailyUsageDetailsResponse,
+        WalletLedgerEntriesResponse, WalletLedgerEntry, WalletLedgerEntryFilters, WalletRecharge, WalletTransaction, WalletTransactionsResponse,
     },
 };
 
@@ -45,6 +45,11 @@ pub trait WalletRepository: Send + Sync + 'static {
         filters: WalletLedgerEntryFilters,
         tz_offset_minutes: i32,
     ) -> WalletResult<Page<AdminWalletLedgerEntryResponse>>;
+    async fn page_admin_consumption_summary(
+        &self,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+    ) -> WalletResult<Page<AdminWalletConsumptionSummaryItem>>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -93,6 +98,12 @@ pub trait WalletUseCase: Send + Sync + 'static {
         filters: WalletLedgerEntryFilters,
         tz_offset_minutes: i32,
     ) -> WalletResult<AdminWalletLedgerEntriesResponse>;
+    async fn admin_consumption_summary(
+        &self,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+        tz_offset_minutes: i32,
+    ) -> WalletResult<AdminWalletConsumptionSummaryResponse>;
     async fn admin_transactions(&self, wallet_id: &str, page: PageRequest) -> WalletResult<AdminWalletTransactionsResponse>;
     async fn admin_ledger_entries_for_wallet(
         &self,

@@ -16,6 +16,7 @@ import type {
   WalletDailyUsageDetailsResponse,
   AdminWalletLedgerEntriesResponse,
   AdminWalletDailyUsageDetailsResponse,
+  AdminWalletConsumptionSummaryResponse,
   AdminWalletLedgerEntriesForWalletResponse,
 } from 'src/types/wallet';
 
@@ -99,6 +100,8 @@ export type AdminWalletLedgerFilters = {
   owner_type?: string;
 };
 
+export type WalletLedgerRangePreset = 'all' | 'today' | 'last7days' | 'last30days' | 'custom';
+
 export type WalletLedgerEntryFilters = {
   search?: string;
   category?: string;
@@ -107,6 +110,9 @@ export type WalletLedgerEntryFilters = {
   balance_type?: string;
   link_type?: string;
   owner_type?: string;
+  range_preset?: WalletLedgerRangePreset;
+  start_date?: string;
+  end_date?: string;
 };
 
 export function useAdminWallets(page: number, pageSize: number, filters: AdminWalletFilters = {}) {
@@ -119,9 +125,18 @@ export function useAdminWalletLedger(page: number, pageSize: number, filters: Ad
   return useWalletResource<AdminWalletLedgerResponse>(key);
 }
 
-export function useAdminWalletLedgerEntries(page: number, pageSize: number, filters: WalletLedgerEntryFilters = {}) {
-  const key = [endpoints.adminWallets.ledgerEntries, { params: ledgerParams(page, pageSize, filters) }] as const;
+export function useAdminWalletLedgerEntries(page: number, pageSize: number, filters: WalletLedgerEntryFilters = {}, enabled = true) {
+  const key = enabled
+    ? ([endpoints.adminWallets.ledgerEntries, { params: ledgerParams(page, pageSize, filters) }] as const)
+    : null;
   return useWalletResource<AdminWalletLedgerEntriesResponse>(key);
+}
+
+export function useAdminWalletConsumptionSummary(page: number, pageSize: number, filters: WalletLedgerEntryFilters = {}, enabled = true) {
+  const key = enabled
+    ? ([endpoints.adminWallets.consumptionSummary, { params: ledgerParams(page, pageSize, filters) }] as const)
+    : null;
+  return useWalletResource<AdminWalletConsumptionSummaryResponse>(key);
 }
 
 export function useAdminWalletTransactions(walletId: string | null, page: number, pageSize: number) {

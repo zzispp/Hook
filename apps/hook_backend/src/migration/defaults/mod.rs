@@ -343,6 +343,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "admin_wallets_read",
             "admin_wallet_ledger_read",
             "admin_wallet_ledger_entries_global_read",
+            "admin_wallet_consumption_summary_read",
             "admin_wallet_user_balance_read",
             "admin_wallet_transactions_read",
             "admin_wallet_ledger_entries_read",

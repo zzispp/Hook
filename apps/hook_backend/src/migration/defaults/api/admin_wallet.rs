@@ -55,4 +55,10 @@ pub const ADMIN_WALLET_APIS: &[ApiDefinition] = &[
         path_pattern: "/api/admin/wallets/ledger-entries",
         name: "全局聚合资金流水",
     },
+    ApiDefinition {
+        code: "admin_wallet_consumption_summary_read",
+        method: "GET",
+        path_pattern: "/api/admin/wallets/ledger-consumption-summary",
+        name: "全局钱包消费汇总",
+    },
 ];

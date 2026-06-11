@@ -6,8 +6,8 @@ use storage::{
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     wallet::{
-        AdminWalletLedgerEntryResponse, AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, Wallet,
-        WalletDailyUsageDetailRequest, WalletLedgerEntry, WalletLedgerEntryFilters, WalletTransaction,
+        AdminWalletConsumptionSummaryItem, AdminWalletLedgerEntryResponse, AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse,
+        AdminWalletListFilters, AdminWalletResponse, Wallet, WalletDailyUsageDetailRequest, WalletLedgerEntry, WalletLedgerEntryFilters, WalletTransaction,
     },
 };
 
@@ -96,6 +96,17 @@ impl WalletRepository for StorageWalletRepository {
     ) -> WalletResult<Page<AdminWalletLedgerEntryResponse>> {
         self.store
             .page_admin_ledger_entries(page_slice_request(page), filters, tz_offset_minutes)
+            .await
+            .map_err(storage_error)
+    }
+
+    async fn page_admin_consumption_summary(
+        &self,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+    ) -> WalletResult<Page<AdminWalletConsumptionSummaryItem>> {
+        self.store
+            .page_admin_consumption_summary(page_slice_request(page), filters)
             .await
             .map_err(storage_error)
     }
