@@ -5,9 +5,9 @@ use rust_decimal::Decimal;
 use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     wallet::{
-        AdminWalletLedgerEntryResponse, AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse, AdminWalletListFilters, AdminWalletResponse, Wallet,
-        WalletAdjustment, WalletAdjustmentType, WalletBalanceType, WalletDailyUsageDetailRequest, WalletId, WalletLedgerEntry, WalletLedgerEntryFilters,
-        WalletLedgerEntryKind, WalletTransaction, WalletTransactionResponse,
+        AdminWalletConsumptionSummaryItem, AdminWalletLedgerEntryResponse, AdminWalletLedgerFilters, AdminWalletLedgerTransactionResponse,
+        AdminWalletListFilters, AdminWalletResponse, Wallet, WalletAdjustment, WalletAdjustmentType, WalletBalanceType, WalletDailyUsageDetailRequest,
+        WalletId, WalletLedgerEntry, WalletLedgerEntryFilters, WalletLedgerEntryKind, WalletLedgerRangePreset, WalletTransaction, WalletTransactionResponse,
     },
 };
 
@@ -168,6 +168,71 @@ async fn daily_usage_transactions_return_detail_page() {
 }
 
 #[tokio::test]
+async fn admin_consumption_summary_all_range_leaves_date_range_empty() {
+    let repository = MemoryWalletRepository::default();
+    repository.insert_consumption_summary(consumption_summary_item("user-1", Decimal::new(12, 0)));
+    let service = WalletService::new(repository.clone());
+
+    let response = service
+        .admin_consumption_summary(
+            PageRequest { page: 1, page_size: 20 },
+            WalletLedgerEntryFilters {
+                range_preset: WalletLedgerRangePreset::All,
+                start_date: Some("2026-05-01".into()),
+                end_date: Some("2026-05-31".into()),
+                ..WalletLedgerEntryFilters::default()
+            },
+            480,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.total, 1);
+    assert_eq!(response.items[0].consumed_amount, Decimal::new(12, 0));
+    assert_eq!(repository.last_summary_filters().unwrap().date_range, None);
+}
+
+#[tokio::test]
+async fn admin_consumption_summary_custom_range_requires_dates() {
+    let repository = MemoryWalletRepository::default();
+    let service = WalletService::new(repository);
+
+    let result = service
+        .admin_consumption_summary(
+            PageRequest { page: 1, page_size: 20 },
+            WalletLedgerEntryFilters {
+                range_preset: WalletLedgerRangePreset::Custom,
+                ..WalletLedgerEntryFilters::default()
+            },
+            480,
+        )
+        .await;
+
+    assert!(matches!(result, Err(WalletError::InvalidInput(_))));
+}
+
+#[tokio::test]
+async fn admin_consumption_summary_rejects_reversed_custom_range() {
+    let repository = MemoryWalletRepository::default();
+    let service = WalletService::new(repository);
+
+    let result = service
+        .admin_consumption_summary(
+            PageRequest { page: 1, page_size: 20 },
+            WalletLedgerEntryFilters {
+                range_preset: WalletLedgerRangePreset::Custom,
+                start_date: Some("2026-05-31".into()),
+                end_date: Some("2026-05-01".into()),
+                ..WalletLedgerEntryFilters::default()
+            },
+            480,
+        )
+        .await;
+
+    assert!(matches!(result, Err(WalletError::InvalidInput(_))));
+}
+
+#[tokio::test]
 async fn adjust_recharge_balance_records_snapshots() {
     let repository = MemoryWalletRepository::default();
     repository.insert_wallet(wallet("wallet-1", "user-1", Decimal::new(10, 0), Decimal::new(2, 0)));
@@ -266,6 +331,8 @@ struct MemoryState {
     wallets: Vec<Wallet>,
     transactions: Vec<WalletTransaction>,
     ledger_entries: Vec<WalletLedgerEntry>,
+    consumption_summaries: Vec<AdminWalletConsumptionSummaryItem>,
+    last_summary_filters: Option<WalletLedgerEntryFilters>,
 }
 
 #[derive(Clone)]
@@ -290,6 +357,14 @@ impl MemoryWalletRepository {
 
     fn insert_ledger_entry(&self, entry: WalletLedgerEntry) {
         self.state.lock().unwrap().ledger_entries.push(entry);
+    }
+
+    fn insert_consumption_summary(&self, item: AdminWalletConsumptionSummaryItem) {
+        self.state.lock().unwrap().consumption_summaries.push(item);
+    }
+
+    fn last_summary_filters(&self) -> Option<WalletLedgerEntryFilters> {
+        self.state.lock().unwrap().last_summary_filters.clone()
     }
 
     fn wallets(&self) -> Vec<Wallet> {
@@ -427,6 +502,22 @@ impl WalletRepository for MemoryWalletRepository {
             page_size: page.page_size,
         })
     }
+
+    async fn page_admin_consumption_summary(
+        &self,
+        page: PageRequest,
+        filters: WalletLedgerEntryFilters,
+    ) -> WalletResult<Page<AdminWalletConsumptionSummaryItem>> {
+        let mut state = self.state.lock().unwrap();
+        state.last_summary_filters = Some(filters);
+        let items = state.consumption_summaries.clone();
+        Ok(Page {
+            total: items.len() as u64,
+            items,
+            page: page.page,
+            page_size: page.page_size,
+        })
+    }
 }
 
 fn system_wallet_provider() -> TestSystemWalletProvider {
@@ -534,6 +625,22 @@ fn ledger_entry(id: &str, wallet_id: &str, kind: WalletLedgerEntryKind, count: i
         transaction: transaction(id, wallet_id, Decimal::new(-count, 0)),
         local_date: Some("2026-05-21".into()),
         transaction_count: count,
+        first_created_at: "2026-05-21T00:00:00Z".into(),
+        last_created_at: "2026-05-21T00:01:00Z".into(),
+    }
+}
+
+fn consumption_summary_item(user_id: &str, amount: Decimal) -> AdminWalletConsumptionSummaryItem {
+    AdminWalletConsumptionSummaryItem {
+        user_id: user_id.into(),
+        wallet_id: "wallet-1".into(),
+        owner_name: "test-user".into(),
+        owner_email: "test@example.com".into(),
+        owner_type: "user".into(),
+        wallet_status: "active".into(),
+        currency: currency::DEFAULT_WALLET_CURRENCY.into(),
+        consumed_amount: amount,
+        transaction_count: 3,
         first_created_at: "2026-05-21T00:00:00Z".into(),
         last_created_at: "2026-05-21T00:01:00Z".into(),
     }

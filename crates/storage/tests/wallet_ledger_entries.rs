@@ -5,7 +5,7 @@ use sea_orm::{DatabaseBackend, MockDatabase, Value};
 use storage::{Database, wallet::WalletStore};
 use types::{
     pagination::PageSliceRequest,
-    wallet::{WalletDailyUsageDetailRequest, WalletLedgerEntryFilters, WalletLedgerEntryKind},
+    wallet::{WalletDailyUsageDetailRequest, WalletLedgerDateRange, WalletLedgerEntryFilters, WalletLedgerEntryKind},
 };
 
 #[tokio::test]
@@ -29,6 +29,7 @@ async fn wallet_ledger_entries_aggregate_model_usage_by_local_day() {
     let count_sql = &logs[0].statements()[0].sql;
     assert!(count_sql.contains("GROUP BY f.wallet_id, f.local_date"), "{count_sql}");
     assert!(count_sql.contains("INTERVAL '1 minute'"), "{count_sql}");
+    assert!(!count_sql.contains("t.created_at >="), "{count_sql}");
 }
 
 #[tokio::test]
@@ -51,6 +52,64 @@ async fn admin_ledger_entries_group_by_wallet_and_day() {
     let list_sql = &logs[1].statements()[0].sql;
     assert!(list_sql.contains("JOIN wallets w ON w.id = t.wallet_id"), "{list_sql}");
     assert!(list_sql.contains("GROUP BY f.wallet_id, f.local_date"), "{list_sql}");
+}
+
+#[tokio::test]
+async fn admin_ledger_entries_filter_by_created_at_range() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[count_row(1)]])
+        .append_query_results([vec![admin_daily_entry_row("wallet-1")]])
+        .into_connection();
+    let store = WalletStore::new(Database::new(connection.clone()));
+
+    let page = store
+        .page_admin_ledger_entries(
+            page_request(),
+            WalletLedgerEntryFilters {
+                date_range: Some(date_range()),
+                ..WalletLedgerEntryFilters::default()
+            },
+            480,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(page.total, 1);
+    let logs = connection.into_transaction_log();
+    let count_sql = &logs[0].statements()[0].sql;
+    assert!(count_sql.contains("t.created_at >= $"), "{count_sql}");
+    assert!(count_sql.contains("t.created_at < $"), "{count_sql}");
+}
+
+#[tokio::test]
+async fn admin_consumption_summary_groups_consumption_by_owner() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[count_row(1)]])
+        .append_query_results([vec![consumption_summary_row()]])
+        .into_connection();
+    let store = WalletStore::new(Database::new(connection.clone()));
+
+    let page = store
+        .page_admin_consumption_summary(
+            page_request(),
+            WalletLedgerEntryFilters {
+                date_range: Some(date_range()),
+                ..WalletLedgerEntryFilters::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(page.total, 1);
+    assert_eq!(page.items[0].user_id, "user-1");
+    assert_eq!(page.items[0].consumed_amount, Decimal::new(42, 0));
+    let logs = connection.into_transaction_log();
+    let count_sql = &logs[0].statements()[0].sql;
+    let list_sql = &logs[1].statements()[0].sql;
+    assert!(count_sql.contains("t.category = $"), "{count_sql}");
+    assert!(count_sql.contains("t.created_at >= $"), "{count_sql}");
+    assert!(count_sql.contains("GROUP BY w.user_id, w.id"), "{count_sql}");
+    assert!(list_sql.contains("ORDER BY consumed_amount DESC, last_created_at DESC"), "{list_sql}");
 }
 
 #[tokio::test]
@@ -97,6 +156,15 @@ fn count_row(total: i64) -> BTreeMap<&'static str, Value> {
     BTreeMap::from([("total", total.into())])
 }
 
+fn date_range() -> WalletLedgerDateRange {
+    WalletLedgerDateRange {
+        start_date: "2026-05-01".into(),
+        end_date: "2026-05-21".into(),
+        started_at: "2026-04-30T16:00:00Z".into(),
+        ended_at: "2026-05-21T16:00:00Z".into(),
+    }
+}
+
 fn daily_entry_row(local_date: &'static str, count: i64) -> BTreeMap<&'static str, Value> {
     base_entry_row("daily_model_usage", "daily_model_usage:wallet-1:2026-05-21", "wallet-1", local_date, count)
 }
@@ -111,6 +179,22 @@ fn admin_daily_entry_row(wallet_id: &'static str) -> BTreeMap<&'static str, Valu
         ("wallet_status", Value::from("active")),
     ]);
     row
+}
+
+fn consumption_summary_row() -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([
+        ("user_id", Value::from("user-1")),
+        ("wallet_id", Value::from("wallet-1")),
+        ("owner_name", Value::from("owner-1")),
+        ("owner_email", Value::from("owner-1@example.com")),
+        ("owner_type", Value::from("user")),
+        ("wallet_status", Value::from("active")),
+        ("currency", Value::from(currency::DEFAULT_WALLET_CURRENCY)),
+        ("consumed_amount", Value::from(Decimal::new(42, 0))),
+        ("transaction_count", Value::from(7_i64)),
+        ("first_created_at", Value::from(ts(0))),
+        ("last_created_at", Value::from(ts(60))),
+    ])
 }
 
 fn transaction_row(id: &'static str) -> storage::wallet::record::wallet_transactions::Model {

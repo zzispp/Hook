@@ -1,7 +1,7 @@
 use sea_orm::{DbBackend, FromQueryResult, Statement, Value};
 use types::{
     pagination::PageSliceRequest,
-    wallet::{WalletDailyUsageDetailRequest, WalletLedgerEntryFilters},
+    wallet::{WalletDailyUsageDetailRequest, WalletLedgerDateRange, WalletLedgerEntryFilters},
 };
 
 use crate::{StorageError, StorageResult};
@@ -108,7 +108,7 @@ impl SqlParams {
         Self { values: Vec::new() }
     }
 
-    fn from_values(values: Vec<Value>) -> Self {
+    pub(super) fn from_values(values: Vec<Value>) -> Self {
         Self { values }
     }
 
@@ -173,13 +173,25 @@ fn daily_model_usage_entries_sql() -> String {
 }
 
 fn add_entry_filters(clauses: &mut Vec<String>, params: &mut SqlParams, filters: WalletLedgerEntryFilters, include_owner: bool) {
-    add_eq_filter(clauses, params, "t.category", filters.category);
-    add_eq_filter(clauses, params, "t.reason_code", filters.reason_code);
-    add_eq_filter(clauses, params, "t.link_type", filters.link_type);
-    add_direction_filter(clauses, filters.direction.as_deref());
-    add_balance_type_filter(clauses, filters.balance_type.as_deref());
-    add_search_filter(clauses, params, filters.search, include_owner);
-    add_owner_filter(clauses, filters.owner_type.as_deref());
+    let WalletLedgerEntryFilters {
+        search,
+        category,
+        reason_code,
+        direction,
+        balance_type,
+        link_type,
+        owner_type,
+        date_range,
+        ..
+    } = filters;
+    add_eq_filter(clauses, params, "t.category", category);
+    add_eq_filter(clauses, params, "t.reason_code", reason_code);
+    add_eq_filter(clauses, params, "t.link_type", link_type);
+    add_direction_filter(clauses, direction.as_deref());
+    add_balance_type_filter(clauses, balance_type.as_deref());
+    add_date_range_filters(clauses, params, date_range.as_ref());
+    add_search_filter(clauses, params, search, include_owner);
+    add_owner_filter(clauses, owner_type.as_deref());
 }
 
 fn add_eq_filter(clauses: &mut Vec<String>, params: &mut SqlParams, column: &str, value: Option<String>) {
@@ -201,6 +213,13 @@ fn add_balance_type_filter(clauses: &mut Vec<String>, value: Option<&str>) {
         Some("recharge") => clauses.push("t.recharge_balance_before <> t.recharge_balance_after".into()),
         Some("gift") => clauses.push("t.gift_balance_before <> t.gift_balance_after".into()),
         _ => {}
+    }
+}
+
+pub(super) fn add_date_range_filters(clauses: &mut Vec<String>, params: &mut SqlParams, value: Option<&WalletLedgerDateRange>) {
+    if let Some(range) = value {
+        clauses.push(format!("t.created_at >= {}::timestamptz", params.push(range.started_at.clone())));
+        clauses.push(format!("t.created_at < {}::timestamptz", params.push(range.ended_at.clone())));
     }
 }
 
@@ -257,6 +276,6 @@ fn where_clause(clauses: Vec<String>) -> String {
     format!("WHERE {}", clauses.join(" AND "))
 }
 
-fn non_negative_total(total: i64) -> StorageResult<u64> {
+pub(super) fn non_negative_total(total: i64) -> StorageResult<u64> {
     u64::try_from(total).map_err(|_| StorageError::Database("wallet ledger count cannot be negative".into()))
 }

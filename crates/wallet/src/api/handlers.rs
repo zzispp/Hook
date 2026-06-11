@@ -8,11 +8,11 @@ use types::{
     pagination::PageRequest,
     response::ApiResponse,
     wallet::{
-        AdminWalletAdjustmentPayload, AdminWalletAdjustmentResponse, AdminWalletDailyUsageDetailsResponse, AdminWalletLedgerEntriesForWalletResponse,
-        AdminWalletLedgerEntriesResponse, AdminWalletLedgerFilters, AdminWalletLedgerResponse, AdminWalletListFilters, AdminWalletListResponse,
-        AdminWalletRechargePayload, AdminWalletRechargeResponse, AdminWalletTransactionsResponse, WalletAdjustment, WalletBalanceResponse,
-        WalletDailyUsageDetailRequest, WalletDailyUsageDetailsResponse, WalletLedgerEntriesResponse, WalletLedgerEntryFilters, WalletRecharge,
-        WalletSummaryResponse, WalletTransactionsResponse,
+        AdminWalletAdjustmentPayload, AdminWalletAdjustmentResponse, AdminWalletConsumptionSummaryResponse, AdminWalletDailyUsageDetailsResponse,
+        AdminWalletLedgerEntriesForWalletResponse, AdminWalletLedgerEntriesResponse, AdminWalletLedgerFilters, AdminWalletLedgerResponse,
+        AdminWalletListFilters, AdminWalletListResponse, AdminWalletRechargePayload, AdminWalletRechargeResponse, AdminWalletTransactionsResponse,
+        WalletAdjustment, WalletBalanceResponse, WalletDailyUsageDetailRequest, WalletDailyUsageDetailsResponse, WalletLedgerEntriesResponse,
+        WalletLedgerEntryFilters, WalletLedgerRangePreset, WalletRecharge, WalletSummaryResponse, WalletTransactionsResponse,
     },
 };
 
@@ -59,6 +59,10 @@ pub struct WalletLedgerEntriesQuery {
     pub balance_type: Option<String>,
     pub link_type: Option<String>,
     pub owner_type: Option<String>,
+    #[serde(default)]
+    pub range_preset: WalletLedgerRangePreset,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -134,6 +138,16 @@ pub async fn admin_ledger_entries(
     Ok(ok(state
         .wallets
         .admin_ledger_entries(PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
+        .await?))
+}
+
+pub async fn admin_consumption_summary(
+    State(state): State<WalletApiState>,
+    Query(query): Query<WalletLedgerEntriesQuery>,
+) -> ApiResult<ApiJson<AdminWalletConsumptionSummaryResponse>> {
+    Ok(ok(state
+        .wallets
+        .admin_consumption_summary(PageRequest::from(&query), query.clone().into(), query.tz_offset_minutes)
         .await?))
 }
 
@@ -265,6 +279,10 @@ impl From<WalletLedgerEntriesQuery> for WalletLedgerEntryFilters {
             balance_type: value.balance_type,
             link_type: value.link_type,
             owner_type: value.owner_type,
+            range_preset: value.range_preset,
+            start_date: value.start_date,
+            end_date: value.end_date,
+            date_range: None,
         }
     }
 }

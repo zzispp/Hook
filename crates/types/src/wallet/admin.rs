@@ -164,6 +164,30 @@ pub struct AdminWalletLedgerResponse {
     pub page_size: u64,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AdminWalletConsumptionSummaryItem {
+    pub user_id: String,
+    pub wallet_id: String,
+    pub owner_name: String,
+    pub owner_email: String,
+    pub owner_type: String,
+    pub wallet_status: String,
+    pub currency: String,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub consumed_amount: Decimal,
+    pub transaction_count: i64,
+    pub first_created_at: String,
+    pub last_created_at: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct AdminWalletConsumptionSummaryResponse {
+    pub items: Vec<AdminWalletConsumptionSummaryItem>,
+    pub total: u64,
+    pub page: u64,
+    pub page_size: u64,
+}
+
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct AdminWalletAdjustmentPayload {
     #[serde(with = "rust_decimal::serde::float")]

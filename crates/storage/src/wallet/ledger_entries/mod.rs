@@ -1,5 +1,6 @@
 mod query;
 mod rows;
+mod summary;
 
 use sea_orm::{DbBackend, FromQueryResult, Statement};
 use types::{

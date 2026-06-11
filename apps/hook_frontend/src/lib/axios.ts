@@ -334,6 +334,7 @@ export const endpoints = {
     list: '/api/admin/wallets',
     ledger: '/api/admin/wallets/ledger',
     ledgerEntries: '/api/admin/wallets/ledger-entries',
+    consumptionSummary: '/api/admin/wallets/ledger-consumption-summary',
     userBalance: (userId: string) => `/api/admin/wallets/users/${userId}/balance`,
     transactions: (id: string) => `/api/admin/wallets/${id}/transactions`,
     ledgerEntriesForWallet: (id: string) => `/api/admin/wallets/${id}/ledger-entries`,
