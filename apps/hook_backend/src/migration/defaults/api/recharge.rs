@@ -50,6 +50,12 @@ pub const RECHARGE_APIS: &[ApiDefinition] = &[
         name: "充值订单列表",
     },
     ApiDefinition {
+        code: "admin_recharge_order_summary_read",
+        method: "GET",
+        path_pattern: "/api/admin/recharge-orders/summary",
+        name: "充值订单用户汇总",
+    },
+    ApiDefinition {
         code: "admin_payment_callbacks_read",
         method: "GET",
         path_pattern: "/api/admin/payment-callbacks",

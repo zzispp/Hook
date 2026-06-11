@@ -15,8 +15,9 @@ use types::{
     pagination::PageRequest,
     recharge::{
         PaymentCallbackListFilters, PaymentCallbackRecordListResponse, PaymentChannelUpdatePayload, PublicPaymentChannelResponse, RechargeOrderCreatePayload,
-        RechargeOrderCreateResponse, RechargeOrderListFilters, RechargeOrderListResponse, RechargePackage, RechargePackageCreatePayload,
-        RechargePackageListFilters, RechargePackageListResponse, RechargePackageUpdatePayload, UserRechargePackageListResponse,
+        RechargeOrderCreateResponse, RechargeOrderDatePreset, RechargeOrderListFilters, RechargeOrderListResponse, RechargeOrderSummaryResponse,
+        RechargeOrderSummaryResponseTotals, RechargePackage, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageListResponse,
+        RechargePackageUpdatePayload, UserRechargePackageListResponse,
     },
 };
 
@@ -44,6 +45,28 @@ async fn trailing_slash_payment_return_route_redirects_to_wallet() {
     assert_eq!(callback.params.get("out_trade_no").map(String::as_str), Some("R1001"));
 }
 
+#[tokio::test]
+async fn order_summary_route_passes_date_filters() {
+    let recharge = Arc::new(RecordingRecharge::default());
+    let app = create_router(RechargeApiState::new(recharge.clone(), Arc::new(NoopCaptcha)));
+
+    let response = app
+        .oneshot(request(
+            "/admin/recharge-orders/summary?page=2&page_size=25&status=paid&date_preset=custom&start_date=2026-06-01&end_date=2026-06-03&tz_offset_minutes=480",
+        ))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let (page, filters) = recharge.last_summary_query();
+    assert_eq!(page, PageRequest { page: 2, page_size: 25 });
+    assert_eq!(filters.status.as_deref(), Some("paid"));
+    assert_eq!(filters.date_preset, RechargeOrderDatePreset::Custom);
+    assert_eq!(filters.start_date.as_deref(), Some("2026-06-01"));
+    assert_eq!(filters.end_date.as_deref(), Some("2026-06-03"));
+    assert_eq!(filters.tz_offset_minutes, 480);
+}
+
 fn request(uri: &str) -> Request<Body> {
     Request::builder().method(Method::GET).uri(uri).body(Body::empty()).unwrap()
 }
@@ -59,11 +82,16 @@ struct RecordedCallback {
 #[derive(Default)]
 struct RecordingRecharge {
     callback: Mutex<Option<RecordedCallback>>,
+    summary_query: Mutex<Option<(PageRequest, RechargeOrderListFilters)>>,
 }
 
 impl RecordingRecharge {
     fn last_callback(&self) -> RecordedCallback {
         self.callback.lock().unwrap().clone().unwrap()
+    }
+
+    fn last_summary_query(&self) -> (PageRequest, RechargeOrderListFilters) {
+        self.summary_query.lock().unwrap().clone().unwrap()
     }
 }
 
@@ -87,6 +115,21 @@ impl RechargeUseCase for RecordingRecharge {
 
     async fn list_orders(&self, _page: PageRequest, _filters: RechargeOrderListFilters) -> RechargeResult<RechargeOrderListResponse> {
         Err(unused())
+    }
+
+    async fn list_order_summary(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<RechargeOrderSummaryResponse> {
+        *self.summary_query.lock().unwrap() = Some((page, filters));
+        Ok(RechargeOrderSummaryResponse {
+            summary: RechargeOrderSummaryResponseTotals {
+                total_payable_amount: rust_decimal::Decimal::ZERO,
+                order_count: 0,
+                user_count: 0,
+            },
+            items: Vec::new(),
+            total: 0,
+            page: page.page,
+            page_size: page.page_size,
+        })
     }
 
     async fn list_user_orders(&self, _user_id: &str, _page: PageRequest) -> RechargeResult<RechargeOrderListResponse> {

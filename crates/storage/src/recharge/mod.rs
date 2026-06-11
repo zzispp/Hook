@@ -5,6 +5,7 @@ mod query;
 mod record;
 mod repository;
 mod settlement;
+mod summary;
 mod types;
 
 pub use repository::RechargeStore;

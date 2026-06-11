@@ -2,6 +2,7 @@
 
 import type { TFunction } from 'i18next';
 import type { TextFieldProps } from '@mui/material/TextField';
+import type { RechargeOrderDatePreset } from 'src/types/recharge';
 import type {
   RechargeOrderFilters,
   PaymentCallbackFilters,
@@ -32,6 +33,10 @@ export type RechargePackageFilterState = {
 export type RechargeOrderFilterState = {
   search: string;
   status: string;
+  datePreset: RechargeOrderDatePreset;
+  startDate: string;
+  endDate: string;
+  summaryEnabled: boolean;
 };
 
 export type PaymentCallbackFilterState = {
@@ -47,6 +52,10 @@ export const DEFAULT_RECHARGE_PACKAGE_FILTERS: RechargePackageFilterState = {
 export const DEFAULT_RECHARGE_ORDER_FILTERS: RechargeOrderFilterState = {
   search: '',
   status: EMPTY_STATUS_FILTER,
+  datePreset: 'all',
+  startDate: '',
+  endDate: '',
+  summaryEnabled: false,
 };
 
 export const DEFAULT_PAYMENT_CALLBACK_FILTERS: PaymentCallbackFilterState = {
@@ -86,7 +95,7 @@ export function RechargePackageToolbar({
         SelectProps={packageStatusSelectProps(t)}
         onChange={(event) => patchFilters({ status: event.target.value })}
       >
-        <PackageStatusOptions t={t} />
+        {packageStatusOptions(t)}
       </TextField>
       <Button
         variant="contained"
@@ -97,40 +106,6 @@ export function RechargePackageToolbar({
       >
         {t('adminRecharges.actions.createPackage')}
       </Button>
-    </Stack>
-  );
-}
-
-export function RechargeOrderToolbar({
-  t,
-  filters,
-  onChange,
-}: {
-  t: TFunction<'admin'>;
-  filters: RechargeOrderFilterState;
-  onChange: (filters: RechargeOrderFilterState) => void;
-}) {
-  const patchFilters = (patch: Partial<RechargeOrderFilterState>) =>
-    onChange({ ...filters, ...patch });
-
-  return (
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ p: 2.5 }}>
-      <SearchField
-        value={filters.search}
-        placeholder={t('adminRecharges.filters.searchOrders')}
-        onChange={(search) => patchFilters({ search })}
-      />
-      <TextField
-        select
-        label={t('common.status')}
-        value={filters.status}
-        sx={{ minWidth: 180 }}
-        InputLabelProps={{ shrink: true }}
-        SelectProps={orderStatusSelectProps(t)}
-        onChange={(event) => patchFilters({ status: event.target.value })}
-      >
-        <OrderStatusOptions t={t} />
-      </TextField>
     </Stack>
   );
 }
@@ -163,7 +138,7 @@ export function PaymentCallbackToolbar({
         SelectProps={callbackStatusSelectProps(t)}
         onChange={(event) => patchFilters({ status: event.target.value })}
       >
-        <CallbackStatusOptions t={t} />
+        {callbackStatusOptions(t)}
       </TextField>
     </Stack>
   );
@@ -182,6 +157,10 @@ export function toRechargeOrderFilters(filters: RechargeOrderFilterState): Recha
   return {
     search: filters.search.trim() || undefined,
     status: filters.status || undefined,
+    date_preset: filters.datePreset,
+    start_date: filters.datePreset === 'custom' ? filters.startDate || undefined : undefined,
+    end_date: filters.datePreset === 'custom' ? filters.endDate || undefined : undefined,
+    tz_offset_minutes: -new Date().getTimezoneOffset(),
   };
 }
 
@@ -222,39 +201,38 @@ function SearchField({
   );
 }
 
-function PackageStatusOptions({ t }: { t: TFunction<'admin'> }) {
-  return (
-    <>
-      <MenuItem value={EMPTY_STATUS_FILTER}>{t('filters.allStatuses')}</MenuItem>
-      <MenuItem value="active">{t('adminRecharges.status.package.active')}</MenuItem>
-      <MenuItem value="disabled">{t('adminRecharges.status.package.disabled')}</MenuItem>
-    </>
-  );
+function packageStatusOptions(t: TFunction<'admin'>) {
+  return [
+    <MenuItem key="all" value={EMPTY_STATUS_FILTER}>
+      {t('filters.allStatuses')}
+    </MenuItem>,
+    <MenuItem key="active" value="active">
+      {t('adminRecharges.status.package.active')}
+    </MenuItem>,
+    <MenuItem key="disabled" value="disabled">
+      {t('adminRecharges.status.package.disabled')}
+    </MenuItem>,
+  ];
 }
 
-function OrderStatusOptions({ t }: { t: TFunction<'admin'> }) {
-  return (
-    <>
-      <MenuItem value={EMPTY_STATUS_FILTER}>{t('filters.allStatuses')}</MenuItem>
-      <MenuItem value="pending">{t('adminRecharges.status.order.pending')}</MenuItem>
-      <MenuItem value="expired">{t('adminRecharges.status.order.expired')}</MenuItem>
-      <MenuItem value="paid">{t('adminRecharges.status.order.paid')}</MenuItem>
-      <MenuItem value="cancelled">{t('adminRecharges.status.order.cancelled')}</MenuItem>
-      <MenuItem value="failed">{t('adminRecharges.status.order.failed')}</MenuItem>
-    </>
-  );
-}
-
-function CallbackStatusOptions({ t }: { t: TFunction<'admin'> }) {
-  return (
-    <>
-      <MenuItem value={EMPTY_STATUS_FILTER}>{t('filters.allStatuses')}</MenuItem>
-      <MenuItem value="received">{t('adminRecharges.status.callback.received')}</MenuItem>
-      <MenuItem value="processed">{t('adminRecharges.status.callback.processed')}</MenuItem>
-      <MenuItem value="ignored">{t('adminRecharges.status.callback.ignored')}</MenuItem>
-      <MenuItem value="failed">{t('adminRecharges.status.callback.failed')}</MenuItem>
-    </>
-  );
+function callbackStatusOptions(t: TFunction<'admin'>) {
+  return [
+    <MenuItem key="all" value={EMPTY_STATUS_FILTER}>
+      {t('filters.allStatuses')}
+    </MenuItem>,
+    <MenuItem key="received" value="received">
+      {t('adminRecharges.status.callback.received')}
+    </MenuItem>,
+    <MenuItem key="processed" value="processed">
+      {t('adminRecharges.status.callback.processed')}
+    </MenuItem>,
+    <MenuItem key="ignored" value="ignored">
+      {t('adminRecharges.status.callback.ignored')}
+    </MenuItem>,
+    <MenuItem key="failed" value="failed">
+      {t('adminRecharges.status.callback.failed')}
+    </MenuItem>,
+  ];
 }
 
 function packageStatusSelectProps(t: TFunction<'admin'>): TextFieldProps['SelectProps'] {
@@ -264,14 +242,6 @@ function packageStatusSelectProps(t: TFunction<'admin'>): TextFieldProps['Select
       selected
         ? t(`adminRecharges.status.package.${String(selected)}`)
         : t('filters.allStatuses'),
-  };
-}
-
-function orderStatusSelectProps(t: TFunction<'admin'>): TextFieldProps['SelectProps'] {
-  return {
-    displayEmpty: true,
-    renderValue: (selected) =>
-      selected ? t(`adminRecharges.status.order.${String(selected)}`) : t('filters.allStatuses'),
   };
 }
 

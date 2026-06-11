@@ -1076,7 +1076,18 @@
     "filters": {
       "searchOrders": "Search order no., package, username, or email...",
       "searchPackages": "Search package name or description...",
-      "searchCallbacks": "Search order no., channel code, or provider trade no..."
+      "searchCallbacks": "Search order no., channel code, or provider trade no...",
+      "userSummary": "User summary",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "dateRange": "Date range",
+      "datePresets": {
+        "all": "All",
+        "today": "Today",
+        "last7days": "Last 7 days",
+        "last30days": "Last 30 days",
+        "custom": "Custom"
+      }
     },
     "fields": {
       "orderNo": "Order No.",
@@ -1139,12 +1150,19 @@
     "summary": {
       "orders": "Showing {{shown}} of {{total}} recharge orders",
       "packages": "Showing {{shown}} of {{total}} recharge packages",
-      "callbacks": "Showing {{shown}} of {{total}} callback records"
+      "callbacks": "Showing {{shown}} of {{total}} callback records",
+      "totalPayableAmount": "Total payable",
+      "orderCount": "Orders",
+      "userCount": "Users",
+      "lastPaidAt": "Last paid at",
+      "userSummaryTitle": "User summary",
+      "userSummaryRows": "Showing {{shown}} of {{total}} users"
     },
     "empty": {
       "orders": "No recharge orders",
       "packages": "No recharge packages",
-      "callbacks": "No payment callback records"
+      "callbacks": "No payment callback records",
+      "userSummary": "No user summary data"
     },
     "messages": {
       "packageSaved": "Recharge package saved",

@@ -8,7 +8,7 @@ use types::{
     pagination::{Page, PageRequest, PageSliceRequest},
     recharge::{
         PaymentCallbackListFilters, PaymentCallbackRecord, PaymentChannel, RECHARGE_ORDER_STATUS_PENDING, RechargeOrder, RechargeOrderListFilters,
-        RechargePackage, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageUpdatePayload,
+        RechargeOrderSummaryPage, RechargePackage, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageUpdatePayload,
     },
     system_setting::SystemSettings,
 };
@@ -57,6 +57,10 @@ impl RechargeRepository for StorageRechargeRepository {
 
     async fn list_orders(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<Page<RechargeOrder>> {
         self.store.list_orders(page_slice_request(page), filters).await.map_err(storage_error)
+    }
+
+    async fn list_order_summary(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<RechargeOrderSummaryPage> {
+        self.store.list_order_summary(page_slice_request(page), filters).await.map_err(storage_error)
     }
 
     async fn list_user_orders(&self, user_id: &str, page: PageRequest) -> RechargeResult<Page<RechargeOrder>> {

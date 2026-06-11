@@ -106,6 +106,7 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RechargeOrders::Status,
             RechargeOrders::CreatedAt,
         ),
+        index("index_recharge_orders_by_paid_at", RechargeOrders::Table, RechargeOrders::PaidAt, false),
         compound_index(
             "index_recharge_orders_by_user_created",
             RechargeOrders::Table,

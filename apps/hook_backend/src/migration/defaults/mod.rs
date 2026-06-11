@@ -369,6 +369,7 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "admin_recharge_packages_create",
             "admin_recharge_packages_update",
             "admin_recharge_orders_read",
+            "admin_recharge_order_summary_read",
             "admin_payment_channels_read",
             "admin_payment_channels_update",
             "system_settings_read",
