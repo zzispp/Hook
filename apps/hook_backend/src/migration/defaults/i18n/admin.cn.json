@@ -1096,7 +1096,18 @@
     "filters": {
       "searchOrders": "搜索订单号、套餐名、用户名或邮箱...",
       "searchPackages": "搜索套餐名或描述...",
-      "searchCallbacks": "搜索订单号、渠道编码或网关流水号..."
+      "searchCallbacks": "搜索订单号、渠道编码或网关流水号...",
+      "userSummary": "用户汇总",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "dateRange": "日期范围",
+      "datePresets": {
+        "all": "全部",
+        "today": "今天",
+        "last7days": "最近 7 天",
+        "last30days": "最近 30 天",
+        "custom": "自定义"
+      }
     },
     "fields": {
       "orderNo": "订单号",
@@ -1159,12 +1170,19 @@
     "summary": {
       "orders": "显示 {{shown}} 条，共 {{total}} 个充值订单",
       "packages": "显示 {{shown}} 条，共 {{total}} 个充值套餐",
-      "callbacks": "显示 {{shown}} 条，共 {{total}} 条回调记录"
+      "callbacks": "显示 {{shown}} 条，共 {{total}} 条回调记录",
+      "totalPayableAmount": "实付总额",
+      "orderCount": "订单数",
+      "userCount": "用户数",
+      "lastPaidAt": "最近支付时间",
+      "userSummaryTitle": "用户汇总",
+      "userSummaryRows": "显示 {{shown}} 条，共 {{total}} 个用户"
     },
     "empty": {
       "orders": "暂无充值订单",
       "packages": "暂无充值套餐",
-      "callbacks": "暂无支付回调记录"
+      "callbacks": "暂无支付回调记录",
+      "userSummary": "暂无用户汇总数据"
     },
     "messages": {
       "packageSaved": "充值套餐已保存",

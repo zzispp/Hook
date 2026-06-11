@@ -11,6 +11,7 @@ import {
   useRechargePackages,
   createRechargePackage,
   updateRechargePackage,
+  useRechargeOrderSummary,
 } from 'src/actions/recharge';
 
 import { toast } from 'src/components/snackbar';
@@ -29,6 +30,10 @@ export type RechargeTab = 'orders' | 'packages' | 'callbacks';
 
 export function useRechargeManagementState(t: ReturnType<typeof useTranslate>['t']) {
   const orderTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'created_at' });
+  const orderSummaryTable = useTable({
+    defaultRowsPerPage: 10,
+    defaultOrderBy: 'total_payable_amount',
+  });
   const packageTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'sort_order' });
   const callbackTable = useTable({ defaultRowsPerPage: 10, defaultOrderBy: 'received_at' });
   const [orderFilters, setOrderFilters] = useState(DEFAULT_RECHARGE_ORDER_FILTERS);
@@ -47,6 +52,12 @@ export function useRechargeManagementState(t: ReturnType<typeof useTranslate>['t
     [callbackFilters]
   );
   const orders = useRechargeOrders(orderTable.page, orderTable.rowsPerPage, orderQueryFilters);
+  const orderSummary = useRechargeOrderSummary(
+    orderSummaryTable.page,
+    orderSummaryTable.rowsPerPage,
+    orderQueryFilters,
+    orderFilters.summaryEnabled
+  );
   const packages = useRechargePackages(
     packageTable.page,
     packageTable.rowsPerPage,
@@ -60,18 +71,23 @@ export function useRechargeManagementState(t: ReturnType<typeof useTranslate>['t
 
   const refresh = useCallback(
     (tab: RechargeTab) => {
-      if (tab === 'orders') void orders.refresh();
+      if (tab === 'orders') {
+        void orders.refresh();
+        if (orderFilters.summaryEnabled) void orderSummary.refresh();
+      }
       if (tab === 'packages') void packages.refresh();
       if (tab === 'callbacks') void callbacks.refresh();
     },
-    [callbacks, orders, packages]
+    [callbacks, orderFilters.summaryEnabled, orderSummary, orders, packages]
   );
 
   return {
     orders,
+    orderSummary,
     packages,
     callbacks,
     orderTable,
+    orderSummaryTable,
     packageTable,
     callbackTable,
     orderFilters,
@@ -80,9 +96,13 @@ export function useRechargeManagementState(t: ReturnType<typeof useTranslate>['t
     submitting,
     dialogOpen,
     editingPackage,
-    errorMessage: orders.error?.message ?? packages.error?.message ?? callbacks.error?.message,
+    errorMessage:
+      orders.error?.message ??
+      orderSummary.error?.message ??
+      packages.error?.message ??
+      callbacks.error?.message,
     refresh,
-    changeOrderFilters: filterHandler(orderTable, setOrderFilters),
+    changeOrderFilters: orderFilterHandler(orderTable, orderSummaryTable, setOrderFilters),
     changePackageFilters: filterHandler(packageTable, setPackageFilters),
     changeCallbackFilters: filterHandler(callbackTable, setCallbackFilters),
     openCreatePackage: () => {
@@ -102,6 +122,18 @@ export function useRechargeManagementState(t: ReturnType<typeof useTranslate>['t
       packages.refresh
     ),
     togglePackageStatus: togglePackageStatusHandler(t, setSubmitting, packages.refresh),
+  };
+}
+
+function orderFilterHandler(
+  orderTable: ReturnType<typeof useTable>,
+  summaryTable: ReturnType<typeof useTable>,
+  setFilters: React.Dispatch<React.SetStateAction<typeof DEFAULT_RECHARGE_ORDER_FILTERS>>
+) {
+  return (next: typeof DEFAULT_RECHARGE_ORDER_FILTERS) => {
+    orderTable.onResetPage();
+    summaryTable.onResetPage();
+    setFilters(next);
   };
 }
 

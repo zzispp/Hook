@@ -9,8 +9,8 @@ use types::{
     pagination::PageRequest,
     recharge::{
         PaymentChannelResponse, PaymentChannelUpdatePayload, PublicPaymentChannelResponse, RechargeOrderCreatePayload, RechargeOrderCreateResponse,
-        RechargeOrderListFilters, RechargeOrderListResponse, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageListResponse,
-        RechargePackageResponse, RechargePackageUpdatePayload, UserRechargePackageListResponse,
+        RechargeOrderDatePreset, RechargeOrderListFilters, RechargeOrderListResponse, RechargeOrderSummaryResponse, RechargePackageCreatePayload,
+        RechargePackageListFilters, RechargePackageListResponse, RechargePackageResponse, RechargePackageUpdatePayload, UserRechargePackageListResponse,
     },
     response::ApiResponse,
 };
@@ -37,6 +37,14 @@ pub struct RechargeOrderListQuery {
     pub page_size: u64,
     pub search: Option<String>,
     pub status: Option<String>,
+    #[serde(default)]
+    pub date_preset: RechargeOrderDatePreset,
+    #[serde(default)]
+    pub start_date: Option<String>,
+    #[serde(default)]
+    pub end_date: Option<String>,
+    #[serde(default)]
+    pub tz_offset_minutes: i32,
 }
 
 pub async fn list_packages(
@@ -72,6 +80,13 @@ pub async fn update_package(
 
 pub async fn list_orders(State(state): State<RechargeApiState>, Query(query): Query<RechargeOrderListQuery>) -> ApiResult<ApiJson<RechargeOrderListResponse>> {
     Ok(ok(state.recharge.list_orders((&query).into(), query.into()).await?))
+}
+
+pub async fn list_order_summary(
+    State(state): State<RechargeApiState>,
+    Query(query): Query<RechargeOrderListQuery>,
+) -> ApiResult<ApiJson<RechargeOrderSummaryResponse>> {
+    Ok(ok(state.recharge.list_order_summary((&query).into(), query.into()).await?))
 }
 
 pub async fn list_user_orders(
@@ -175,6 +190,12 @@ impl From<RechargeOrderListQuery> for RechargeOrderListFilters {
         Self {
             search: value.search,
             status: value.status,
+            date_preset: value.date_preset,
+            start_date: value.start_date,
+            end_date: value.end_date,
+            tz_offset_minutes: value.tz_offset_minutes,
+            paid_at_start: None,
+            paid_at_end: None,
         }
     }
 }

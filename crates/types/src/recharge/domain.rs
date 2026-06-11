@@ -1,4 +1,10 @@
 use rust_decimal::Decimal;
+use serde::Deserialize;
+
+use super::{
+    RECHARGE_ORDER_DATE_PRESET_ALL, RECHARGE_ORDER_DATE_PRESET_CUSTOM, RECHARGE_ORDER_DATE_PRESET_LAST_7_DAYS, RECHARGE_ORDER_DATE_PRESET_LAST_30_DAYS,
+    RECHARGE_ORDER_DATE_PRESET_TODAY,
+};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct RechargePackageListFilters {
@@ -10,6 +16,48 @@ pub struct RechargePackageListFilters {
 pub struct RechargeOrderListFilters {
     pub search: Option<String>,
     pub status: Option<String>,
+    pub date_preset: RechargeOrderDatePreset,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub tz_offset_minutes: i32,
+    pub paid_at_start: Option<time::OffsetDateTime>,
+    pub paid_at_end: Option<time::OffsetDateTime>,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum RechargeOrderDatePreset {
+    #[default]
+    All,
+    Today,
+    Last7Days,
+    Last30Days,
+    Custom,
+}
+
+impl<'de> Deserialize<'de> for RechargeOrderDatePreset {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        match value.as_str() {
+            RECHARGE_ORDER_DATE_PRESET_ALL => Ok(Self::All),
+            RECHARGE_ORDER_DATE_PRESET_TODAY => Ok(Self::Today),
+            RECHARGE_ORDER_DATE_PRESET_LAST_7_DAYS | "last7d" => Ok(Self::Last7Days),
+            RECHARGE_ORDER_DATE_PRESET_LAST_30_DAYS | "last30d" => Ok(Self::Last30Days),
+            RECHARGE_ORDER_DATE_PRESET_CUSTOM => Ok(Self::Custom),
+            _ => Err(serde::de::Error::unknown_variant(
+                value.as_str(),
+                &[
+                    RECHARGE_ORDER_DATE_PRESET_ALL,
+                    RECHARGE_ORDER_DATE_PRESET_TODAY,
+                    RECHARGE_ORDER_DATE_PRESET_LAST_7_DAYS,
+                    RECHARGE_ORDER_DATE_PRESET_LAST_30_DAYS,
+                    RECHARGE_ORDER_DATE_PRESET_CUSTOM,
+                ],
+            )),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

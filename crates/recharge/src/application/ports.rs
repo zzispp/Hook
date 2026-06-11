@@ -4,8 +4,9 @@ use types::{
     pagination::{Page, PageRequest},
     recharge::{
         PaymentCallbackListFilters, PaymentCallbackRecord, PaymentCallbackRecordListResponse, PaymentChannelUpdatePayload, PublicPaymentChannelResponse,
-        RechargeOrder, RechargeOrderCreatePayload, RechargeOrderCreateResponse, RechargeOrderListFilters, RechargeOrderListResponse, RechargePackage,
-        RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageListResponse, RechargePackageUpdatePayload, UserRechargePackageListResponse,
+        RechargeOrder, RechargeOrderCreatePayload, RechargeOrderCreateResponse, RechargeOrderListFilters, RechargeOrderListResponse, RechargeOrderSummaryPage,
+        RechargeOrderSummaryResponse, RechargePackage, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageListResponse,
+        RechargePackageUpdatePayload, UserRechargePackageListResponse,
     },
     system_setting::SystemSettings,
 };
@@ -35,6 +36,7 @@ pub trait RechargeRepository: Send + Sync + 'static {
     async fn update_package(&self, id: &str, input: RechargePackageUpdatePayload) -> RechargeResult<RechargePackage>;
     async fn find_package(&self, id: &str) -> RechargeResult<Option<RechargePackage>>;
     async fn list_orders(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<Page<RechargeOrder>>;
+    async fn list_order_summary(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<RechargeOrderSummaryPage>;
     async fn list_user_orders(&self, user_id: &str, page: PageRequest) -> RechargeResult<Page<RechargeOrder>>;
     async fn list_pending_unexpired_orders(&self, limit: u64) -> RechargeResult<Vec<RechargeOrder>>;
     async fn list_payment_callbacks(&self, page: PageRequest, filters: PaymentCallbackListFilters) -> RechargeResult<Page<PaymentCallbackRecord>>;
@@ -58,6 +60,7 @@ pub trait RechargeUseCase: Send + Sync + 'static {
     async fn create_package(&self, input: RechargePackageCreatePayload) -> RechargeResult<RechargePackage>;
     async fn update_package(&self, id: &str, input: RechargePackageUpdatePayload) -> RechargeResult<RechargePackage>;
     async fn list_orders(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<RechargeOrderListResponse>;
+    async fn list_order_summary(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<RechargeOrderSummaryResponse>;
     async fn list_user_orders(&self, user_id: &str, page: PageRequest) -> RechargeResult<RechargeOrderListResponse>;
     async fn list_payment_callbacks(&self, page: PageRequest, filters: PaymentCallbackListFilters) -> RechargeResult<PaymentCallbackRecordListResponse>;
     async fn create_user_order(&self, user_id: &str, input: RechargeOrderCreatePayload) -> RechargeResult<RechargeOrderCreateResponse>;

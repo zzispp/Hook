@@ -17,16 +17,14 @@ import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-value
 import { RefreshButton, AdminBreadcrumbs } from 'src/sections/admin/shared';
 
 import { RechargeOrderTable } from './recharge-order-table';
+import { RechargeOrderToolbar } from './recharge-order-toolbar';
 import { RechargePackageTable } from './recharge-package-table';
 import { RechargeCallbackTable } from './recharge-callback-table';
 import { RechargePackageDialog } from './recharge-package-dialog';
+import { RechargeOrderSummaryPanel } from './recharge-order-summary-panel';
 import { RechargeCallbackDetailDrawer } from './recharge-callback-detail-drawer';
+import { RechargePackageToolbar, PaymentCallbackToolbar } from './recharge-filters';
 import { type RechargeTab, useRechargeManagementState } from './admin-recharge-state';
-import {
-  RechargeOrderToolbar,
-  RechargePackageToolbar,
-  PaymentCallbackToolbar,
-} from './recharge-filters';
 
 export function AdminRechargeManagementView() {
   const { t, currentLang } = useTranslate('admin');
@@ -114,6 +112,18 @@ function OrdersPanel({
         filters={state.orderFilters}
         onChange={state.changeOrderFilters}
       />
+      {state.orderFilters.summaryEnabled ? (
+        <RechargeOrderSummaryPanel
+          t={t}
+          locale={locale}
+          data={state.orderSummary.data}
+          loading={state.orderSummary.isLoading}
+          page={state.orderSummaryTable.page}
+          rowsPerPage={state.orderSummaryTable.rowsPerPage}
+          onPageChange={state.orderSummaryTable.onChangePage}
+          onRowsPerPageChange={state.orderSummaryTable.onChangeRowsPerPage}
+        />
+      ) : null}
       <RechargeOrderTable
         t={t}
         locale={locale}
@@ -203,7 +213,7 @@ function CallbacksPanel({
 }
 
 function tabLoading(tab: RechargeTab, state: ReturnType<typeof useRechargeManagementState>) {
-  if (tab === 'orders') return state.orders.isLoading;
+  if (tab === 'orders') return state.orders.isLoading || state.orderSummary.isLoading;
   if (tab === 'packages') return state.packages.isLoading;
   return state.callbacks.isLoading;
 }

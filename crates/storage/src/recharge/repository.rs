@@ -1,7 +1,7 @@
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, TransactionTrait};
 use types::{
     pagination::{Page, PageSliceRequest},
-    recharge::{PaymentChannel, RechargeOrder, RechargeOrderListFilters, RechargePackage, RechargePackageListFilters},
+    recharge::{PaymentChannel, RechargeOrder, RechargeOrderListFilters, RechargeOrderSummaryPage, RechargePackage, RechargePackageListFilters},
 };
 
 use crate::{Database, StorageError, StorageResult, json};
@@ -102,6 +102,10 @@ impl RechargeStore {
             .map(order_response)
             .collect();
         Ok(page(items, total, request))
+    }
+
+    pub async fn list_order_summary(&self, request: PageSliceRequest, filters: RechargeOrderListFilters) -> StorageResult<RechargeOrderSummaryPage> {
+        super::summary::list_order_summary(self, request, filters).await
     }
 
     pub async fn list_user_orders(&self, user_id: &str, request: PageSliceRequest) -> StorageResult<Page<RechargeOrder>> {

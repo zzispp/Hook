@@ -21,6 +21,12 @@ pub(super) fn filtered_orders(filters: RechargeOrderListFilters) -> sea_orm::Sel
     if let Some(status) = filters.status.filter(|value| !value.is_empty()) {
         query = query.filter(recharge_order_records::Column::Status.eq(status));
     }
+    if let Some(started_at) = filters.paid_at_start {
+        query = query.filter(recharge_order_records::Column::PaidAt.gte(started_at));
+    }
+    if let Some(ended_at) = filters.paid_at_end {
+        query = query.filter(recharge_order_records::Column::PaidAt.lt(ended_at));
+    }
     match filters.search {
         Some(search) if !search.is_empty() => query.filter(order_search_condition(&search)),
         _ => query,
@@ -65,4 +71,28 @@ fn payment_callback_search_condition(search: &str) -> Condition {
         .add(payment_callback_records::Column::OrderNo.contains(search))
         .add(payment_callback_records::Column::ProviderTradeNo.contains(search))
         .add(payment_callback_records::Column::PaymentChannelCode.contains(search))
+}
+
+#[cfg(test)]
+mod tests {
+    use sea_orm::{DbBackend, QueryTrait};
+
+    use super::*;
+
+    #[test]
+    fn filtered_orders_uses_paid_at_half_open_window() {
+        let query = filtered_orders(RechargeOrderListFilters {
+            paid_at_start: Some(timestamp(1)),
+            paid_at_end: Some(timestamp(2)),
+            ..Default::default()
+        });
+        let sql = query.build(DbBackend::Postgres).sql;
+
+        assert!(sql.contains("\"recharge_orders\".\"paid_at\" >= $1"), "{sql}");
+        assert!(sql.contains("\"recharge_orders\".\"paid_at\" < $2"), "{sql}");
+    }
+
+    fn timestamp(days: i64) -> time::OffsetDateTime {
+        time::OffsetDateTime::UNIX_EPOCH + time::Duration::days(days)
+    }
 }

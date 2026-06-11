@@ -127,6 +127,7 @@ async fn list_orders_passes_pagination_and_filters_to_repository() {
             RechargeOrderListFilters {
                 search: Some("PENDING".into()),
                 status: Some("pending".into()),
+                ..Default::default()
             },
         )
         .await
@@ -140,6 +141,7 @@ async fn list_orders_passes_pagination_and_filters_to_repository() {
             RechargeOrderListFilters {
                 search: Some("PENDING".into()),
                 status: Some("pending".into()),
+                ..Default::default()
             },
         )
     );
@@ -156,6 +158,7 @@ async fn list_orders_rejects_unsupported_status() {
             RechargeOrderListFilters {
                 search: None,
                 status: Some("settled".into()),
+                ..Default::default()
             },
         )
         .await;

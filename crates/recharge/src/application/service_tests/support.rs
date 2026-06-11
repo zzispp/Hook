@@ -6,8 +6,8 @@ use types::{
     pagination::{Page, PageRequest},
     recharge::{
         PaymentCallbackListFilters, PaymentCallbackRecord, PaymentChannel, RECHARGE_ORDER_STATUS_EXPIRED, RECHARGE_ORDER_STATUS_PENDING,
-        RECHARGE_PACKAGE_STATUS_ACTIVE, RechargeOrder, RechargeOrderListFilters, RechargePackage, RechargePackageCreatePayload, RechargePackageListFilters,
-        RechargePackageUpdatePayload,
+        RECHARGE_PACKAGE_STATUS_ACTIVE, RechargeOrder, RechargeOrderListFilters, RechargeOrderSummary, RechargeOrderSummaryPage, RechargeOrderUserSummary,
+        RechargePackage, RechargePackageCreatePayload, RechargePackageListFilters, RechargePackageUpdatePayload,
     },
     system_setting::SystemSettings,
 };
@@ -113,6 +113,14 @@ impl RechargeRepository for MemoryRechargeRepository {
         self.state.lock().unwrap().last_order_query = Some((page, filters.clone()));
         let items = filtered_items(&self.state.lock().unwrap().orders, filters.status.as_ref());
         Ok(page_response(items, page))
+    }
+
+    async fn list_order_summary(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<RechargeOrderSummaryPage> {
+        self.state.lock().unwrap().last_order_query = Some((page, filters));
+        Ok(RechargeOrderSummaryPage {
+            summary: RechargeOrderSummary::default(),
+            users: page_response(Vec::<RechargeOrderUserSummary>::new(), page),
+        })
     }
 
     async fn list_user_orders(&self, user_id: &str, page: PageRequest) -> RechargeResult<Page<RechargeOrder>> {

@@ -7,11 +7,13 @@ import type {
   RechargePackage,
   RechargePackageInput,
   PublicPaymentChannel,
+  RechargeOrderDatePreset,
   RechargeOrderCreateInput,
   PaymentChannelUpdateInput,
   RechargeOrderListResponse,
   RechargeOrderCreateResponse,
   RechargePackageListResponse,
+  RechargeOrderSummaryResponse,
   UserRechargePackageListResponse,
   PaymentCallbackRecordListResponse,
 } from 'src/types/recharge';
@@ -36,6 +38,10 @@ export type RechargePackageFilters = {
 export type RechargeOrderFilters = {
   search?: string;
   status?: string;
+  date_preset?: RechargeOrderDatePreset;
+  start_date?: string;
+  end_date?: string;
+  tz_offset_minutes?: number;
 };
 
 export type PaymentCallbackFilters = {
@@ -65,6 +71,21 @@ export function useRechargeOrders(
     { params: { ...pageQuery(page, pageSize), ...filters } },
   ] as const;
   return useRechargeResource<RechargeOrderListResponse>(key);
+}
+
+export function useRechargeOrderSummary(
+  page: number,
+  pageSize: number,
+  filters: RechargeOrderFilters = {},
+  enabled = false
+) {
+  const key = enabled
+    ? ([
+        endpoints.adminRecharges.orderSummary,
+        { params: { ...pageQuery(page, pageSize), ...filters } },
+      ] as const)
+    : null;
+  return useRechargeResource<RechargeOrderSummaryResponse>(key);
 }
 
 export function usePaymentCallbacks(

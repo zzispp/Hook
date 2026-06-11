@@ -17,6 +17,7 @@ const CUSTOM_RECHARGE_PACKAGE_NAME: &str = "Custom recharge";
 use crate::application::{
     NoRechargeSecretCipher, PaymentChannelUpdateRecord, RechargeError, RechargePaymentCallbackResult, RechargeRepository, RechargeResult, RechargeSecretCipher,
     RechargeUseCase,
+    order_filters::resolve_order_filters,
     validation::{
         sanitize_create, sanitize_update, validate_callback_filters, validate_create, validate_order_filters, validate_package_filters, validate_page,
         validate_update,
@@ -83,7 +84,15 @@ where
     async fn list_orders(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<RechargeOrderListResponse> {
         validate_page(page)?;
         validate_order_filters(&filters)?;
+        let filters = resolve_order_filters(filters, time::OffsetDateTime::now_utc())?;
         self.repository.list_orders(page, filters).await.map(Into::into)
+    }
+
+    async fn list_order_summary(&self, page: PageRequest, filters: RechargeOrderListFilters) -> RechargeResult<types::recharge::RechargeOrderSummaryResponse> {
+        validate_page(page)?;
+        validate_order_filters(&filters)?;
+        let filters = resolve_order_filters(filters, time::OffsetDateTime::now_utc())?;
+        self.repository.list_order_summary(page, filters).await.map(Into::into)
     }
 
     async fn list_user_orders(&self, user_id: &str, page: PageRequest) -> RechargeResult<RechargeOrderListResponse> {

@@ -1,5 +1,6 @@
 export type RechargePackageStatus = 'active' | 'disabled';
 export type RechargeOrderStatus = 'pending' | 'expired' | 'paid' | 'cancelled' | 'failed';
+export type RechargeOrderDatePreset = 'all' | 'today' | 'last7days' | 'last30days' | 'custom';
 export type PaymentCallbackStatus = 'received' | 'processed' | 'ignored' | 'failed';
 
 export type RechargePackage = {
@@ -155,6 +156,29 @@ export type UserRechargePackageListResponse = {
 
 export type RechargeOrderListResponse = {
   items: RechargeOrder[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type RechargeOrderSummary = {
+  total_payable_amount: number;
+  order_count: number;
+  user_count: number;
+};
+
+export type RechargeOrderUserSummary = {
+  user_id: string;
+  username: string;
+  user_email: string;
+  order_count: number;
+  total_payable_amount: number;
+  last_paid_at: string | null;
+};
+
+export type RechargeOrderSummaryResponse = {
+  summary: RechargeOrderSummary;
+  items: RechargeOrderUserSummary[];
   total: number;
   page: number;
   page_size: number;
