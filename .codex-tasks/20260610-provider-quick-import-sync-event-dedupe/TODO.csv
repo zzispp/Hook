@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect local sync settings and events,DONE,DB shows current group change policy and duplicate event timestamps,PGPASSWORD=123456 psql -h localhost -p 5433 -U postgres -d postgres -c "select ...",2026-06-10,0,
+2,Fix group sync event boundary,DONE,Group sync notification requires accepted group patch,cargo test -p provider quick_import_sync_policy_tests -- --nocapture,2026-06-10,0,
+3,Add regression tests,DONE,Disable-key group change emits only anomaly event,cargo test -p provider quick_import_sync_policy_tests -- --nocapture,2026-06-10,0,
+4,Run formatting and targeted tests,DONE,fmt and provider sync tests pass,cargo fmt --check && cargo test -p provider quick_import_sync -- --nocapture,2026-06-10,0,

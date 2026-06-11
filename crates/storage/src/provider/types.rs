@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use types::model::PatchField;
 use types::provider::{
     ProviderGroupMemberInput, ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, ProviderOrigin,
-    RequestUpstreamCost,
+    ProviderQuickImportSyncConfig, ProviderQuickImportSyncStatus, RequestUpstreamCost,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -217,10 +217,31 @@ pub struct ProviderModelCostRecordInput {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderQuickImportRecordInput {
     pub provider: ProviderRecordInput,
+    pub sync_source: Option<ProviderQuickImportSourceRecordInput>,
     pub endpoints: Vec<ProviderQuickImportEndpointRecordInput>,
     pub api_keys: Vec<ProviderQuickImportApiKeyRecordInput>,
     pub model_bindings: Vec<ProviderQuickImportModelRecordInput>,
     pub model_costs: Vec<ProviderQuickImportModelCostRecordInput>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportAppendRecordInput {
+    pub provider_id: String,
+    pub source_id: String,
+    pub endpoints: Vec<ProviderQuickImportEndpointRecordInput>,
+    pub api_keys: Vec<ProviderQuickImportApiKeyRecordInput>,
+    pub model_bindings: Vec<ProviderQuickImportModelRecordInput>,
+    pub model_costs: Vec<ProviderQuickImportModelCostRecordInput>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportSourceRecordInput {
+    pub source_kind: String,
+    pub base_url: String,
+    pub encrypted_system_access_token: String,
+    pub user_id: String,
+    pub recharge_multiplier: Decimal,
+    pub sync_config: ProviderQuickImportSyncConfig,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -238,6 +259,12 @@ pub struct ProviderQuickImportEndpointRecordInput {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderQuickImportApiKeyRecordInput {
     pub upstream_token_id: String,
+    pub upstream_token_name: String,
+    pub upstream_masked_key: String,
+    pub upstream_group: Option<String>,
+    pub upstream_group_ratio: Decimal,
+    pub effective_cost_multiplier: Decimal,
+    pub model_mappings: Vec<ProviderQuickImportKeyModelRecordInput>,
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
@@ -252,6 +279,95 @@ pub struct ProviderQuickImportApiKeyRecordInput {
     pub time_range_start: Option<String>,
     pub time_range_end: Option<String>,
     pub is_active: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportKeyModelRecordInput {
+    pub upstream_model_id: String,
+    pub global_model_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportSourceRecord {
+    pub id: String,
+    pub provider_id: String,
+    pub source_kind: String,
+    pub base_url: String,
+    pub encrypted_system_access_token: String,
+    pub user_id: String,
+    pub recharge_multiplier: Decimal,
+    pub sync_config: ProviderQuickImportSyncConfig,
+    pub last_status: Option<ProviderQuickImportSyncStatus>,
+    pub last_error: Option<String>,
+    pub last_synced_at: Option<time::OffsetDateTime>,
+    pub consecutive_failures: u32,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ProviderQuickImportSourceRecordPatch {
+    pub base_url: Option<String>,
+    pub encrypted_system_access_token: Option<String>,
+    pub user_id: Option<String>,
+    pub recharge_multiplier: Option<Decimal>,
+    pub sync_config: Option<ProviderQuickImportSyncConfig>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportSyncKeyRecord {
+    pub provider_id: String,
+    pub source_id: String,
+    pub key_id: String,
+    pub upstream_token_id: String,
+    pub upstream_token_name: String,
+    pub upstream_group: Option<String>,
+    pub upstream_group_ratio: Decimal,
+    pub effective_cost_multiplier: Decimal,
+    pub statuses: Vec<ProviderQuickImportSyncStatus>,
+    pub model_mappings: Vec<ProviderQuickImportSyncKeyModelRecord>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderQuickImportSyncKeyModelRecord {
+    pub upstream_model_id: String,
+    pub global_model_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportSyncKeyRecordPatch {
+    pub key_id: String,
+    pub statuses: Vec<ProviderQuickImportSyncStatus>,
+    pub upstream_group: Option<Option<String>>,
+    pub upstream_group_ratio: Option<Decimal>,
+    pub effective_cost_multiplier: Option<Decimal>,
+    pub last_error: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportKeyReplacementRecordInput {
+    pub provider_id: String,
+    pub source_id: String,
+    pub key_id: String,
+    pub upstream_token_id: String,
+    pub upstream_token_name: String,
+    pub upstream_masked_key: String,
+    pub upstream_group: Option<String>,
+    pub upstream_group_ratio: Decimal,
+    pub effective_cost_multiplier: Decimal,
+    pub model_mappings: Vec<ProviderQuickImportKeyModelRecordInput>,
+    pub key_patch: ProviderApiKeyRecordPatch,
+    pub model_bindings: Vec<ProviderQuickImportModelRecordInput>,
+    pub model_costs: Vec<ProviderQuickImportModelCostRecordInput>,
+    pub delete_provider_model_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderQuickImportSyncEventRecordInput {
+    pub provider_id: String,
+    pub source_id: String,
+    pub key_id: Option<String>,
+    pub status: ProviderQuickImportSyncStatus,
+    pub title: String,
+    pub detail: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -280,6 +396,21 @@ pub struct ProviderQuickImportRecordOutput {
     pub provider: types::provider::Provider,
     pub endpoints: Vec<types::provider::ProviderEndpoint>,
     pub api_keys: Vec<types::provider::ProviderApiKey>,
+    pub model_bindings: Vec<types::provider::ProviderModelBinding>,
+    pub model_costs: Vec<types::provider::ProviderModelCost>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportAppendRecordOutput {
+    pub endpoints: Vec<types::provider::ProviderEndpoint>,
+    pub api_keys: Vec<types::provider::ProviderApiKey>,
+    pub model_bindings: Vec<types::provider::ProviderModelBinding>,
+    pub model_costs: Vec<types::provider::ProviderModelCost>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportKeyReplacementRecordOutput {
+    pub api_key: types::provider::ProviderApiKey,
     pub model_bindings: Vec<types::provider::ProviderModelBinding>,
     pub model_costs: Vec<types::provider::ProviderModelCost>,
 }

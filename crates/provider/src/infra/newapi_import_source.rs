@@ -1,10 +1,13 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use req::ReqwestClient;
 use types::provider::{NewApiQuickImportConfig, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind};
 
-use crate::application::{ProviderError, ProviderResult, UpstreamImportData, UpstreamImportModel, UpstreamImportToken, UpstreamProviderImportSource};
+use crate::application::{
+    ProviderError, ProviderResult, UpstreamImportData, UpstreamImportModel, UpstreamImportToken, UpstreamProviderImportSource, UpstreamSyncSnapshot,
+    UpstreamSyncToken,
+};
 use crate::infra::newapi_import_types::{
     GroupMap, GroupsEnvelope, ModelsEnvelope, NewApiTokenRecord, TokenKeyEnvelope, TokenListEnvelope, client_error, decode_envelope, model_response,
     newapi_url, normalize_newapi_key, response_text, token_group_ratio, url_error,
@@ -16,18 +19,23 @@ const TOKEN_PAGE_SIZE: u64 = 100;
 #[derive(Clone)]
 pub struct NewApiImportSource {
     http: ReqwestClient,
+    upstream_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl NewApiImportSource {
     pub fn new() -> ProviderResult<Self> {
         let http = ReqwestClient::from_builder(req::builder().timeout(Duration::from_secs(FETCH_TIMEOUT_SECONDS))).map_err(client_error)?;
-        Ok(Self { http })
+        Ok(Self {
+            http,
+            upstream_lock: Arc::new(tokio::sync::Mutex::new(())),
+        })
     }
 }
 
 #[async_trait]
 impl UpstreamProviderImportSource for NewApiImportSource {
     async fn fetch_import_data(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamImportData> {
+        let _guard = self.upstream_lock.lock().await;
         let ProviderQuickImportSourceConfig::Newapi(config) = source;
         let groups = self.fetch_groups(config).await?;
         let tokens = self.fetch_tokens(config, &groups).await?;
@@ -35,6 +43,37 @@ impl UpstreamProviderImportSource for NewApiImportSource {
             source_kind: ProviderQuickImportSourceKind::Newapi,
             tokens,
         })
+    }
+
+    async fn fetch_sync_snapshot(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamSyncSnapshot> {
+        let _guard = self.upstream_lock.lock().await;
+        let ProviderQuickImportSourceConfig::Newapi(config) = source;
+        let groups = self.fetch_groups(config).await?;
+        let records = self.fetch_token_records(config).await?;
+        Ok(UpstreamSyncSnapshot {
+            source_kind: ProviderQuickImportSourceKind::Newapi,
+            groups: groups.into_iter().map(|(name, group)| (name, group.ratio())).collect(),
+            tokens: records
+                .into_iter()
+                .map(|record| UpstreamSyncToken {
+                    id: record.id.to_string(),
+                    name: record.name,
+                    masked_key: record.key,
+                    status: record.status,
+                    group: record.group,
+                })
+                .collect(),
+        })
+    }
+
+    async fn fetch_sync_token_models(&self, source: &ProviderQuickImportSourceConfig, upstream_token_id: &str) -> ProviderResult<Vec<UpstreamImportModel>> {
+        let _guard = self.upstream_lock.lock().await;
+        let ProviderQuickImportSourceConfig::Newapi(config) = source;
+        let token_id = upstream_token_id
+            .parse::<i64>()
+            .map_err(|error| ProviderError::InvalidInput(format!("invalid newapi token id: {error}")))?;
+        let key = self.fetch_token_key(config, token_id).await?;
+        self.fetch_models(config, &key).await
     }
 }
 

@@ -4,10 +4,13 @@ mod provider_cooldown_query;
 mod provider_endpoint_query;
 mod provider_group_query;
 mod provider_model_cost_query;
+mod provider_model_delete_cascade;
 mod provider_model_query;
 mod provider_model_repository;
 mod provider_query;
 mod quick_import_query;
+mod quick_import_sync_event_query;
+mod quick_import_sync_query;
 pub mod record;
 mod repository;
 mod repository_helpers;
@@ -53,9 +56,13 @@ pub use types::{
     ProviderApiKeySecretRecord, ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,
     ProviderGroupRecordInput, ProviderGroupRecordPatch, ProviderKeyGroupRecordInput, ProviderKeyGroupRecordPatch, ProviderModelCostRecordInput,
     ProviderModelRecordBatchUpdate, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderQuickImportApiKeyRecordInput,
-    ProviderQuickImportEndpointRecordInput, ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput,
-    ProviderQuickImportRecordOutput, ProviderRecordInput, ProviderRecordPatch, RequestBillingRecordPatch, RequestBillingRecordValues,
-    RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput, RequestRecordRecordPatch, RequestUpstreamCostRecordPatch,
+    ProviderQuickImportAppendRecordInput, ProviderQuickImportAppendRecordOutput, ProviderQuickImportEndpointRecordInput,
+    ProviderQuickImportKeyModelRecordInput, ProviderQuickImportKeyReplacementRecordInput, ProviderQuickImportKeyReplacementRecordOutput,
+    ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderQuickImportRecordOutput,
+    ProviderQuickImportSourceRecord, ProviderQuickImportSourceRecordInput, ProviderQuickImportSourceRecordPatch, ProviderQuickImportSyncEventRecordInput,
+    ProviderQuickImportSyncKeyModelRecord, ProviderQuickImportSyncKeyRecord, ProviderQuickImportSyncKeyRecordPatch, ProviderRecordInput, ProviderRecordPatch,
+    RequestBillingRecordPatch, RequestBillingRecordValues, RequestCandidateRecordInput, RequestCandidateRecordPatch, RequestRecordRecordInput,
+    RequestRecordRecordPatch, RequestUpstreamCostRecordPatch,
 };
 
 pub(super) use record::{ProviderEndpointRecord, ProviderModelRecord, ProviderRecord};

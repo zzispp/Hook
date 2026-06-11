@@ -13,6 +13,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { SwitchRow, TextFieldRow } from './shared';
 import { type QuickImportFormState } from './provider-quick-import-utils';
+import { ProviderQuickImportSyncConfigFields } from './provider-quick-import-sync-section';
 import {
   DEFAULT_PROVIDER_MAX_RETRIES,
   DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
@@ -40,6 +41,12 @@ export function ProviderQuickImportSourceStep({ form, groups, setForm }: Props) 
       </QuickImportSection>
       <QuickImportSection titleKey="providers.quickImportRequestSection">
         <ProviderRequestConfigFields form={form} setForm={setForm} />
+      </QuickImportSection>
+      <QuickImportSection titleKey="providers.quickImportSyncSection">
+        <ProviderQuickImportSyncConfigFields
+          form={form.sync}
+          onChange={(sync) => setForm((current) => ({ ...current, sync }))}
+        />
       </QuickImportSection>
       <QuickImportSection titleKey="providers.quickImportStateSection">
         <ProviderSwitchFields form={form} setForm={setForm} />

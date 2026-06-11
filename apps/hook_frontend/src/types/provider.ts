@@ -1,3 +1,5 @@
+import type { ProviderQuickImportKeySyncInfo } from './provider-quick-import';
+
 export type {
   UsageRecord,
   RequestRecord,
@@ -206,6 +208,7 @@ export type ProviderApiKey = {
   circuit_breaker_by_format?: Record<string, unknown> | null;
   is_active: boolean;
   has_api_key: boolean;
+  quick_import_sync?: ProviderQuickImportKeySyncInfo | null;
   created_at: string;
   updated_at: string;
 };

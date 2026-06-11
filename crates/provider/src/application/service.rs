@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use types::provider::*;
 
 use crate::application::{
-    GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher, UpstreamProviderImportSource,
+    GlobalModelCatalog, ProviderError, ProviderQuickImportSyncRunOptions, ProviderQuickImportSyncRunReport, ProviderRepository, ProviderResult,
+    ProviderUseCase, SecretCipher, UpstreamModelFetcher, UpstreamProviderImportSource,
 };
 
 mod key_endpoint_scope;
@@ -12,12 +13,30 @@ mod model_costs;
 mod provider_core;
 mod provider_groups;
 mod quick_import;
+mod quick_import_append;
 mod quick_import_commit;
+mod quick_import_commit_models;
 #[cfg(test)]
 mod quick_import_commit_tests;
 mod quick_import_costs;
 mod quick_import_preview;
+mod quick_import_resolution;
+mod quick_import_resolution_context;
+mod quick_import_resolution_models;
 mod quick_import_shared;
+mod quick_import_sync;
+mod quick_import_sync_bindings;
+mod quick_import_sync_candidates;
+mod quick_import_sync_events;
+mod quick_import_sync_model_check;
+#[cfg(test)]
+mod quick_import_sync_model_rules_tests;
+mod quick_import_sync_outcome;
+#[cfg(test)]
+mod quick_import_sync_outcome_tests;
+#[cfg(test)]
+mod quick_import_sync_policy_tests;
+mod quick_import_sync_settings;
 mod request_queries;
 mod upstream_models;
 
@@ -31,6 +50,13 @@ use provider_groups::{
     prepare_provider_key_group_update,
 };
 use quick_import::{QuickImportArgs, commit_quick_import, preview_quick_import};
+use quick_import_append::{commit_quick_import_append, preview_quick_import_append};
+use quick_import_resolution::{
+    accept_quick_import_current, quick_import_model_associations, quick_import_resolution, relink_quick_import_key, update_quick_import_model_associations,
+};
+use quick_import_resolution_models::has_hard_quick_import_status;
+use quick_import_sync::{SyncArgs, run_quick_import_sync};
+use quick_import_sync_settings::{quick_import_sync_settings, update_quick_import_sync_settings};
 use request_queries::{
     sanitize_active_request_record_request, sanitize_provider_cooldown_request, validate_provider_cooldown_request, validate_request_record_list_request,
 };
@@ -202,6 +228,14 @@ where
         ensure_provider(&self.repository, provider_id).await?;
         let input = sanitize_api_key_update(input);
         validate_api_key_update(&input)?;
+        if input.is_active == Some(true)
+            && let Some(key) = self.repository.quick_import_sync_key(provider_id, key_id).await?
+            && has_hard_quick_import_status(&key.statuses)
+        {
+            return Err(ProviderError::InvalidInput(
+                "quick import key has unresolved upstream sync anomalies; use quick import resolution".into(),
+            ));
+        }
         if let Some(api_formats) = &input.api_formats {
             ensure_api_formats_bound(&self.repository, provider_id, api_formats).await?;
         }
@@ -284,6 +318,144 @@ where
                 importer: &self.importer,
             },
             input,
+        )
+        .await
+    }
+
+    async fn preview_quick_import_append(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportAppendPreviewRequest,
+    ) -> ProviderResult<ProviderQuickImportPreviewResponse> {
+        preview_quick_import_append(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            input,
+        )
+        .await
+    }
+
+    async fn commit_quick_import_append(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportAppendCommitRequest,
+    ) -> ProviderResult<ProviderQuickImportCommitResponse> {
+        commit_quick_import_append(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            input,
+        )
+        .await
+    }
+
+    async fn quick_import_resolution(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderQuickImportResolutionResponse> {
+        quick_import_resolution(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+        )
+        .await
+    }
+
+    async fn accept_quick_import_current(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderApiKey> {
+        accept_quick_import_current(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+        )
+        .await
+    }
+
+    async fn relink_quick_import_key(&self, provider_id: &str, key_id: &str, input: ProviderQuickImportRelinkRequest) -> ProviderResult<ProviderApiKey> {
+        relink_quick_import_key(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+            input,
+        )
+        .await
+    }
+
+    async fn quick_import_model_associations(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderQuickImportModelAssociationsResponse> {
+        quick_import_model_associations(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+        )
+        .await
+    }
+
+    async fn update_quick_import_model_associations(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderQuickImportModelAssociationsUpdate,
+    ) -> ProviderResult<ProviderQuickImportModelAssociationsResponse> {
+        update_quick_import_model_associations(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+            input,
+        )
+        .await
+    }
+
+    async fn quick_import_sync_settings(&self, provider_id: &str) -> ProviderResult<ProviderQuickImportSyncSettingsResponse> {
+        quick_import_sync_settings(&self.repository, provider_id).await
+    }
+
+    async fn update_quick_import_sync_settings(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportSyncSettingsUpdate,
+    ) -> ProviderResult<ProviderQuickImportSyncSettingsResponse> {
+        update_quick_import_sync_settings(&self.repository, &self.cipher, provider_id, input).await
+    }
+
+    async fn run_quick_import_sync(&self, options: ProviderQuickImportSyncRunOptions) -> ProviderResult<ProviderQuickImportSyncRunReport> {
+        run_quick_import_sync(
+            SyncArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            options,
         )
         .await
     }

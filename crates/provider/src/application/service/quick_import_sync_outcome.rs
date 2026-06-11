@@ -1,0 +1,314 @@
+use std::collections::BTreeMap;
+
+use types::{
+    model::GlobalModelResponse,
+    provider::{
+        ProviderModelCostUpsert, ProviderQuickImportCostSyncMode, ProviderQuickImportGroupChangedAction, ProviderQuickImportSourceConfig,
+        ProviderQuickImportSyncStatus, ProviderQuickImportUpstreamAnomalyAction,
+    },
+};
+
+use crate::application::{
+    ProviderError, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource, ProviderResult, UpstreamImportModel,
+    UpstreamProviderImportSource, UpstreamSyncSnapshot, UpstreamSyncToken,
+};
+
+use super::{
+    quick_import_costs::model_cost,
+    quick_import_sync_bindings::BindingInfo,
+    quick_import_sync_candidates::candidate_model_ids,
+    quick_import_sync_model_check::{ModelCheck, check_models},
+};
+
+pub(super) struct KeyOutcome {
+    pub(super) statuses: Vec<ProviderQuickImportSyncStatus>,
+    pub(super) costs: Option<Vec<ProviderModelCostUpsert>>,
+    pub(super) disable_key: bool,
+    pub(super) observed_group: Option<Option<String>>,
+    pub(super) observed_group_ratio: Option<rust_decimal::Decimal>,
+    pub(super) observed_effective_multiplier: Option<rust_decimal::Decimal>,
+    pub(super) candidate_model_ids: Vec<String>,
+    upstream_group: Option<Option<String>>,
+    group_ratio_patch: Option<rust_decimal::Decimal>,
+    effective_multiplier_patch: Option<rust_decimal::Decimal>,
+    error: Option<String>,
+}
+
+struct OutcomeContext<'a, I> {
+    importer: &'a I,
+    source: &'a ProviderQuickImportSyncSource,
+    source_config: &'a ProviderQuickImportSourceConfig,
+    snapshot: &'a UpstreamSyncSnapshot,
+    globals: &'a BTreeMap<String, GlobalModelResponse>,
+    bindings: &'a BTreeMap<String, BindingInfo>,
+}
+
+impl KeyOutcome {
+    pub(super) fn patch(&self, key_id: String) -> ProviderQuickImportSyncKeyPatch {
+        ProviderQuickImportSyncKeyPatch {
+            key_id,
+            statuses: self.statuses.clone(),
+            upstream_group: self.upstream_group.clone(),
+            upstream_group_ratio: self.group_ratio_patch,
+            effective_cost_multiplier: self.effective_multiplier_patch,
+            last_error: self.error.clone(),
+        }
+    }
+
+    pub(super) fn synced_group(&self) -> Option<&Option<String>> {
+        self.upstream_group.as_ref()
+    }
+
+    pub(super) fn error_message(&self) -> Option<&str> {
+        self.error.as_deref()
+    }
+}
+
+pub(super) async fn key_outcome<I>(
+    importer: &I,
+    source: &ProviderQuickImportSyncSource,
+    source_config: &ProviderQuickImportSourceConfig,
+    snapshot: &UpstreamSyncSnapshot,
+    globals: &BTreeMap<String, GlobalModelResponse>,
+    bindings: &BTreeMap<String, BindingInfo>,
+    key: &ProviderQuickImportSyncKey,
+) -> KeyOutcome
+where
+    I: UpstreamProviderImportSource,
+{
+    let context = OutcomeContext {
+        importer,
+        source,
+        source_config,
+        snapshot,
+        globals,
+        bindings,
+    };
+    if key.model_mappings.is_empty() {
+        let mut outcome = status_base(ProviderQuickImportSyncStatus::NoAssociatedModels);
+        outcome.disable_key = true;
+        return outcome;
+    }
+    let Some(token) = token_by_id(snapshot, &key.upstream_token_id) else {
+        return anomaly_outcome(
+            ProviderQuickImportSyncStatus::UpstreamTokenDeleted,
+            source.sync_config.anomaly_actions.token_deleted,
+        );
+    };
+    if token.status != 1 {
+        return anomaly_outcome(
+            ProviderQuickImportSyncStatus::UpstreamTokenDisabled,
+            source.sync_config.anomaly_actions.token_disabled,
+        );
+    }
+    if token.group.as_deref() != key.upstream_group.as_deref() {
+        return group_changed_outcome(&context, key, token).await;
+    }
+    let Some(ratio) = group_ratio(snapshot, key.upstream_group.as_deref()) else {
+        return anomaly_outcome(
+            ProviderQuickImportSyncStatus::UpstreamGroupRemoved,
+            source.sync_config.anomaly_actions.group_removed,
+        );
+    };
+    match check_models(importer, source_config, key).await {
+        Ok(ModelCheck::Available(models)) => cost_outcome(source, globals, bindings, key, None, ratio, &models),
+        Ok(ModelCheck::Removed) => anomaly_outcome(
+            ProviderQuickImportSyncStatus::UpstreamModelRemoved,
+            source.sync_config.anomaly_actions.model_removed,
+        ),
+        Err(error) => anomaly_error(
+            ProviderQuickImportSyncStatus::UpstreamKeyUnavailable,
+            source.sync_config.anomaly_actions.key_unavailable,
+            error,
+        ),
+    }
+}
+
+pub(super) fn globals_by_id(models: Vec<GlobalModelResponse>) -> BTreeMap<String, GlobalModelResponse> {
+    models.into_iter().map(|model| (model.id.clone(), model)).collect()
+}
+
+async fn group_changed_outcome<I>(context: &OutcomeContext<'_, I>, key: &ProviderQuickImportSyncKey, token: &UpstreamSyncToken) -> KeyOutcome
+where
+    I: UpstreamProviderImportSource,
+{
+    if context.source.sync_config.anomaly_actions.group_changed != ProviderQuickImportGroupChangedAction::Sync {
+        return group_changed_status(context.source, token);
+    }
+    let Some(ratio) = group_ratio(context.snapshot, token.group.as_deref()) else {
+        return anomaly_outcome(
+            ProviderQuickImportSyncStatus::UpstreamGroupRemoved,
+            context.source.sync_config.anomaly_actions.group_removed,
+        );
+    };
+    match check_models(context.importer, context.source_config, key).await {
+        Ok(ModelCheck::Available(models)) => cost_outcome(
+            context.source,
+            context.globals,
+            context.bindings,
+            key,
+            Some(token.group.clone()),
+            ratio,
+            &models,
+        ),
+        Ok(ModelCheck::Removed) => anomaly_outcome(
+            ProviderQuickImportSyncStatus::UpstreamModelRemoved,
+            context.source.sync_config.anomaly_actions.model_removed,
+        ),
+        Err(error) => anomaly_error(
+            ProviderQuickImportSyncStatus::UpstreamKeyUnavailable,
+            context.source.sync_config.anomaly_actions.key_unavailable,
+            error,
+        ),
+    }
+}
+
+fn group_changed_status(source: &ProviderQuickImportSyncSource, token: &UpstreamSyncToken) -> KeyOutcome {
+    let mut outcome = status_base(ProviderQuickImportSyncStatus::UpstreamGroupChanged);
+    outcome.disable_key = source.sync_config.anomaly_actions.group_changed == ProviderQuickImportGroupChangedAction::DisableKey;
+    outcome.observed_group = Some(token.group.clone());
+    outcome
+}
+
+fn cost_outcome(
+    source: &ProviderQuickImportSyncSource,
+    globals: &BTreeMap<String, GlobalModelResponse>,
+    bindings: &BTreeMap<String, BindingInfo>,
+    key: &ProviderQuickImportSyncKey,
+    upstream_group: Option<Option<String>>,
+    group_ratio: rust_decimal::Decimal,
+    upstream_models: &[UpstreamImportModel],
+) -> KeyOutcome {
+    let effective = group_ratio / source.recharge_multiplier;
+    let costs = match costs_for_key(globals, bindings, key, effective) {
+        Ok(costs) => costs,
+        Err(error) => return cost_error(group_ratio, effective, upstream_group, error),
+    };
+    let candidates = candidate_model_ids(globals, bindings, key, upstream_models);
+    if source.sync_config.cost_sync_mode == ProviderQuickImportCostSyncMode::ReportOnly {
+        return report_only_outcome(group_ratio, effective, upstream_group, key.effective_cost_multiplier, candidates);
+    }
+    let statuses = statuses_with_candidates(vec![ProviderQuickImportSyncStatus::Ok], &candidates);
+    KeyOutcome {
+        statuses,
+        costs: Some(costs),
+        disable_key: false,
+        observed_group: upstream_group.clone(),
+        observed_group_ratio: Some(group_ratio),
+        observed_effective_multiplier: Some(effective),
+        candidate_model_ids: candidates,
+        upstream_group,
+        group_ratio_patch: Some(group_ratio),
+        effective_multiplier_patch: Some(effective),
+        error: None,
+    }
+}
+
+fn costs_for_key(
+    globals: &BTreeMap<String, GlobalModelResponse>,
+    bindings: &BTreeMap<String, BindingInfo>,
+    key: &ProviderQuickImportSyncKey,
+    multiplier: rust_decimal::Decimal,
+) -> ProviderResult<Vec<ProviderModelCostUpsert>> {
+    key.model_mappings
+        .iter()
+        .map(|mapping| {
+            let global = globals
+                .get(&mapping.global_model_id)
+                .ok_or_else(|| ProviderError::InvalidInput(format!("global model is missing: {}", mapping.global_model_id)))?;
+            let provider_model_id = bindings
+                .get(&mapping.global_model_id)
+                .ok_or_else(|| ProviderError::InvalidInput(format!("provider model binding is missing: {}", mapping.global_model_id)))?
+                .id
+                .clone();
+            let mut cost = model_cost(global, multiplier)?;
+            cost.provider_model_id = provider_model_id;
+            Ok(cost)
+        })
+        .collect()
+}
+
+fn report_only_outcome(
+    group_ratio: rust_decimal::Decimal,
+    effective: rust_decimal::Decimal,
+    upstream_group: Option<Option<String>>,
+    current: rust_decimal::Decimal,
+    candidates: Vec<String>,
+) -> KeyOutcome {
+    let base_statuses = if effective == current {
+        vec![ProviderQuickImportSyncStatus::Ok]
+    } else {
+        vec![ProviderQuickImportSyncStatus::CostPendingUpdate]
+    };
+    let statuses = statuses_with_candidates(base_statuses, &candidates);
+    KeyOutcome {
+        statuses,
+        costs: None,
+        disable_key: false,
+        observed_group: upstream_group.clone(),
+        observed_group_ratio: Some(group_ratio),
+        observed_effective_multiplier: Some(effective),
+        candidate_model_ids: candidates,
+        upstream_group,
+        group_ratio_patch: None,
+        effective_multiplier_patch: None,
+        error: None,
+    }
+}
+
+fn cost_error(
+    group_ratio: rust_decimal::Decimal,
+    effective: rust_decimal::Decimal,
+    upstream_group: Option<Option<String>>,
+    error: ProviderError,
+) -> KeyOutcome {
+    let mut outcome = status_base(ProviderQuickImportSyncStatus::CostUnavailable);
+    outcome.observed_group = upstream_group;
+    outcome.observed_group_ratio = Some(group_ratio);
+    outcome.observed_effective_multiplier = Some(effective);
+    outcome.error = Some(error.to_string());
+    outcome
+}
+
+fn anomaly_outcome(status: ProviderQuickImportSyncStatus, action: ProviderQuickImportUpstreamAnomalyAction) -> KeyOutcome {
+    let mut outcome = status_base(status);
+    outcome.disable_key = action == ProviderQuickImportUpstreamAnomalyAction::DisableKey;
+    outcome
+}
+
+fn anomaly_error(status: ProviderQuickImportSyncStatus, action: ProviderQuickImportUpstreamAnomalyAction, error: ProviderError) -> KeyOutcome {
+    let mut outcome = anomaly_outcome(status, action);
+    outcome.error = Some(error.to_string());
+    outcome
+}
+
+fn status_base(status: ProviderQuickImportSyncStatus) -> KeyOutcome {
+    KeyOutcome {
+        statuses: vec![status],
+        costs: None,
+        disable_key: false,
+        observed_group: None,
+        observed_group_ratio: None,
+        observed_effective_multiplier: None,
+        candidate_model_ids: Vec::new(),
+        upstream_group: None,
+        group_ratio_patch: None,
+        effective_multiplier_patch: None,
+        error: None,
+    }
+}
+
+fn token_by_id<'a>(snapshot: &'a UpstreamSyncSnapshot, id: &str) -> Option<&'a UpstreamSyncToken> {
+    snapshot.tokens.iter().find(|token| token.id == id)
+}
+
+fn group_ratio(snapshot: &UpstreamSyncSnapshot, group: Option<&str>) -> Option<rust_decimal::Decimal> {
+    snapshot.groups.get(group?).copied()
+}
+
+fn statuses_with_candidates(mut statuses: Vec<ProviderQuickImportSyncStatus>, candidates: &[String]) -> Vec<ProviderQuickImportSyncStatus> {
+    if !candidates.is_empty() {
+        statuses.push(ProviderQuickImportSyncStatus::ModelCandidateAvailable);
+    }
+    statuses
+}

@@ -42,6 +42,8 @@ export function ProviderTable({
   onSelect,
   onEdit,
   onDelete,
+  onAppendImport,
+  onSyncSettings,
   onAssociateGroups,
 }: {
   rows: Provider[];
@@ -53,6 +55,8 @@ export function ProviderTable({
   onSelect: (provider: Provider) => void;
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
+  onAppendImport: (provider: Provider) => void;
+  onSyncSettings: (provider: Provider) => void;
   onAssociateGroups: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -83,6 +87,8 @@ export function ProviderTable({
                     onSelect={onSelect}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onAppendImport={onAppendImport}
+                    onSyncSettings={onSyncSettings}
                     onAssociateGroups={onAssociateGroups}
                   />
                 )),
@@ -128,6 +134,8 @@ function ProviderTableRow({
   onSelect,
   onEdit,
   onDelete,
+  onAppendImport,
+  onSyncSettings,
   onAssociateGroups,
 }: {
   row: Provider;
@@ -136,6 +144,8 @@ function ProviderTableRow({
   onSelect: (provider: Provider) => void;
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
+  onAppendImport: (provider: Provider) => void;
+  onSyncSettings: (provider: Provider) => void;
   onAssociateGroups: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -179,6 +189,30 @@ function ProviderTableRow({
               <Iconify icon="eva:link-2-fill" />
             </IconButton>
           </Tooltip>
+          {row.provider_origin === 'quick_import' ? (
+            <>
+              <Tooltip title={t('actions.quickImportAppendTokens')}>
+                <IconButton
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAppendImport(row);
+                  }}
+                >
+                  <Iconify icon="solar:import-bold" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={t('providers.quickImportSyncSection')}>
+                <IconButton
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSyncSettings(row);
+                  }}
+                >
+                  <Iconify icon="solar:settings-bold" />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : null}
           <Tooltip title={t('common.edit')}>
             <IconButton
               onClick={(event) => {
@@ -218,7 +252,7 @@ function providerTableHead(
     withStickyActionHeadCell({
       id: 'actions',
       label: t('common.actions'),
-      width: 136,
+      width: 220,
       align: 'left',
     }),
   ];

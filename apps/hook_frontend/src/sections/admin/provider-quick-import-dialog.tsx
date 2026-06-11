@@ -38,6 +38,7 @@ import {
   commitPayload,
   previewPayload,
   defaultMappings,
+  validSyncConfig,
   selectedTokenRows,
   globalModelHasCost,
   defaultTokenDrafts,
@@ -79,6 +80,7 @@ export function ProviderQuickImportDialog({ open, models, groups, onClose, onImp
     selectedTokens.some((token) => tokenMappedModelCount(token, mappings) === 0) ||
     selectedTokens.some((token) => tokens[token.upstream_token_id]?.endpointFormats.length === 0) ||
     selectedTokens.some((token) => !validCostMultiplier(tokens[token.upstream_token_id]?.costMultiplier)) ||
+    !validSyncConfig(form.sync) ||
     mappingMissing ||
     costMissing;
 
@@ -88,6 +90,7 @@ export function ProviderQuickImportDialog({ open, models, groups, onClose, onImp
   };
 
   const previewImport = async () => {
+    if (submitting) return;
     setSubmitting(true);
     try {
       const next = await previewProviderQuickImport(previewPayload(form));
@@ -103,7 +106,7 @@ export function ProviderQuickImportDialog({ open, models, groups, onClose, onImp
   };
 
   const commitImport = async () => {
-    if (!preview || commitDisabled) return;
+    if (!preview || commitDisabled || submitting) return;
     setSubmitting(true);
     try {
       await commitProviderQuickImport(commitPayload(form, selectedTokens, tokens, mappings, models));

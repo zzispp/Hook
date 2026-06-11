@@ -221,6 +221,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         performance_os_collector.clone(),
         recharges.clone(),
         model_status.clone(),
+        providers.clone(),
     )?);
     let scheduler_handle = SchedulerRuntime::spawn(database.clone(), scheduler_registry.clone())?;
     let scheduler = Arc::new(SchedulerService::new(

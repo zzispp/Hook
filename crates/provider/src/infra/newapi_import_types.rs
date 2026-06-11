@@ -38,6 +38,12 @@ pub(super) struct NewApiGroup {
     ratio: Decimal,
 }
 
+impl NewApiGroup {
+    pub(super) fn ratio(&self) -> Decimal {
+        self.ratio
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub(super) struct GroupsEnvelope {
     pub(super) data: GroupMap,

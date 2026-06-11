@@ -1,8 +1,9 @@
 use storage::provider::{
     ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderGroupRecordInput,
     ProviderGroupRecordPatch, ProviderKeyGroupRecordInput, ProviderKeyGroupRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
-    ProviderModelRecordPatch, ProviderQuickImportApiKeyRecordInput, ProviderQuickImportEndpointRecordInput, ProviderQuickImportModelCostRecordInput,
-    ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderRecordInput, ProviderRecordPatch,
+    ProviderModelRecordPatch, ProviderQuickImportApiKeyRecordInput, ProviderQuickImportEndpointRecordInput, ProviderQuickImportKeyModelRecordInput,
+    ProviderQuickImportKeyReplacementRecordInput, ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput,
+    ProviderQuickImportSourceRecordInput, ProviderRecordInput, ProviderRecordPatch,
 };
 use types::provider::{
     ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroupCreate, ProviderGroupUpdate,
@@ -10,7 +11,7 @@ use types::provider::{
     ProviderModelCostBatchUpsert, ProviderOrigin, ProviderUpdate,
 };
 
-use crate::application::ProviderQuickImportCreate;
+use crate::application::{ProviderQuickImportAppend, ProviderQuickImportCreate, ProviderQuickImportKeyReplacement};
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
 const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
@@ -213,10 +214,52 @@ pub(super) fn model_cost_inputs(provider_id: &str, key_id: &str, input: Provider
 pub(super) fn quick_import_input(input: ProviderQuickImportCreate) -> ProviderQuickImportRecordInput {
     ProviderQuickImportRecordInput {
         provider: provider_input(input.provider),
+        sync_source: input.sync_source.map(quick_import_source_input),
         endpoints: input.endpoints.into_iter().map(quick_import_endpoint_input).collect(),
         api_keys: input.api_keys.into_iter().map(quick_import_key_input).collect(),
         model_bindings: input.model_bindings.into_iter().map(quick_import_model_input).collect(),
         model_costs: input.model_costs.into_iter().map(quick_import_cost_input).collect(),
+    }
+}
+
+pub(super) fn quick_import_append_input(input: ProviderQuickImportAppend) -> storage::provider::ProviderQuickImportAppendRecordInput {
+    storage::provider::ProviderQuickImportAppendRecordInput {
+        provider_id: input.provider_id,
+        source_id: input.source_id,
+        endpoints: input.endpoints.into_iter().map(quick_import_endpoint_input).collect(),
+        api_keys: input.api_keys.into_iter().map(quick_import_key_input).collect(),
+        model_bindings: input.model_bindings.into_iter().map(quick_import_model_input).collect(),
+        model_costs: input.model_costs.into_iter().map(quick_import_cost_input).collect(),
+    }
+}
+
+pub(super) fn quick_import_key_replacement_input(input: ProviderQuickImportKeyReplacement) -> ProviderQuickImportKeyReplacementRecordInput {
+    ProviderQuickImportKeyReplacementRecordInput {
+        provider_id: input.provider_id,
+        source_id: input.source_id,
+        key_id: input.key_id,
+        upstream_token_id: input.upstream_token_id,
+        upstream_token_name: input.upstream_token_name,
+        upstream_masked_key: input.upstream_masked_key,
+        upstream_group: input.upstream_group,
+        upstream_group_ratio: input.upstream_group_ratio,
+        effective_cost_multiplier: input.effective_cost_multiplier,
+        model_mappings: input.model_mappings.into_iter().map(quick_import_key_model_input).collect(),
+        key_patch: api_key_patch(input.input, input.encrypted_api_key),
+        model_bindings: input.model_bindings.into_iter().map(quick_import_model_input).collect(),
+        model_costs: input.model_costs.into_iter().map(quick_import_cost_input).collect(),
+        delete_provider_model_ids: Vec::new(),
+    }
+}
+
+fn quick_import_source_input(input: crate::application::ProviderQuickImportSyncSourceCreate) -> ProviderQuickImportSourceRecordInput {
+    ProviderQuickImportSourceRecordInput {
+        source_kind: input.source_kind.as_str().to_owned(),
+        base_url: input.base_url,
+        encrypted_system_access_token: input.encrypted_system_access_token,
+        user_id: input.user_id,
+        recharge_multiplier: input.recharge_multiplier,
+        sync_config: input.sync_config,
     }
 }
 
@@ -237,6 +280,12 @@ fn quick_import_key_input(input: crate::application::ProviderQuickImportApiKeyCr
     let internal_priority = input.input.internal_priority.unwrap_or(DEFAULT_PROVIDER_KEY_PRIORITY);
     ProviderQuickImportApiKeyRecordInput {
         upstream_token_id: input.upstream_token_id,
+        upstream_token_name: input.upstream_token_name,
+        upstream_masked_key: input.upstream_masked_key,
+        upstream_group: input.upstream_group,
+        upstream_group_ratio: input.upstream_group_ratio,
+        effective_cost_multiplier: input.effective_cost_multiplier,
+        model_mappings: input.model_mappings.into_iter().map(quick_import_key_model_input).collect(),
         name: input.input.name,
         global_priority_by_format: global_priority_by_format(&input.input.api_formats, internal_priority),
         api_formats: input.input.api_formats,
@@ -254,6 +303,13 @@ fn quick_import_key_input(input: crate::application::ProviderQuickImportApiKeyCr
         time_range_start: input.input.time_range_start,
         time_range_end: input.input.time_range_end,
         is_active: input.input.is_active.unwrap_or(true),
+    }
+}
+
+fn quick_import_key_model_input(input: crate::application::ProviderQuickImportKeyModelCreate) -> ProviderQuickImportKeyModelRecordInput {
+    ProviderQuickImportKeyModelRecordInput {
+        upstream_model_id: input.upstream_model_id,
+        global_model_id: input.global_model_id,
     }
 }
 

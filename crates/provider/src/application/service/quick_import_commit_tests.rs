@@ -1,16 +1,14 @@
-#![cfg(test)]
-
 use std::collections::BTreeMap;
 
 use rust_decimal::Decimal;
 use types::model::{GlobalModelResponse, TieredPricingConfig};
 use types::provider::{
     NewApiQuickImportConfig, ProviderQuickImportModelMappingInput, ProviderQuickImportProviderConfig, ProviderQuickImportSelectedToken,
-    ProviderQuickImportSourceConfig,
+    ProviderQuickImportSourceConfig, ProviderQuickImportSyncConfig,
 };
 
 use super::{
-    quick_import_commit::{SelectedToken, assert_no_mapping_conflicts, quick_import_create, resolved_mappings},
+    quick_import_commit::{QuickImportCreateDraft, SelectedToken, assert_no_mapping_conflicts, quick_import_create, resolved_mappings},
     quick_import_shared::provider_create,
 };
 use crate::application::{ProviderError, ProviderResult, SecretCipher, UpstreamImportModel, UpstreamImportToken};
@@ -85,17 +83,21 @@ fn quick_import_create_builds_complete_resource_set() {
     let globals = [global_model("global-1", "gpt-5")];
     let mappings = BTreeMap::from([("upstream-gpt-5".into(), "global-1".into())]);
 
-    let draft = quick_import_create(
-        provider_create("Provider A", &provider_config()),
-        &source_config(),
+    let draft = quick_import_create(QuickImportCreateDraft {
+        provider: provider_create("Provider A", &provider_config()),
+        source: &source_config(),
+        recharge_multiplier: Decimal::ONE,
+        sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
-        &globals,
+        globals: &globals,
         mappings,
-        &TestCipher,
-    )
+        cipher: &TestCipher,
+    })
     .unwrap();
 
     assert_eq!(draft.provider.name, "Provider A");
+    assert_eq!(draft.sync_source.as_ref().unwrap().recharge_multiplier, Decimal::ONE);
+    assert!(draft.sync_source.as_ref().unwrap().sync_config.auto_sync_enabled);
     assert_eq!(draft.endpoints.len(), 2);
     assert_eq!(draft.model_bindings[0].provider_model_name, "gpt-5");
     assert_eq!(draft.model_bindings[0].provider_model_mapping.as_ref().unwrap().name, "upstream-gpt-5");
@@ -120,14 +122,16 @@ fn selected_token_name_is_used_for_imported_key() {
     let globals = [global_model("global-1", "gpt-5")];
     let mappings = BTreeMap::from([("gpt-5".into(), "global-1".into())]);
 
-    let draft = quick_import_create(
-        provider_create("Provider A", &provider_config()),
-        &source_config(),
+    let draft = quick_import_create(QuickImportCreateDraft {
+        provider: provider_create("Provider A", &provider_config()),
+        source: &source_config(),
+        recharge_multiplier: Decimal::ONE,
+        sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
-        &globals,
+        globals: &globals,
         mappings,
-        &TestCipher,
-    )
+        cipher: &TestCipher,
+    })
     .unwrap();
 
     assert_eq!(draft.api_keys[0].input.name, "custom key name");
@@ -140,14 +144,16 @@ fn quick_import_create_does_not_write_mapping_for_same_model_name() {
     let globals = [global_model("global-1", "gpt-5")];
     let mappings = BTreeMap::from([("gpt-5".into(), "global-1".into())]);
 
-    let draft = quick_import_create(
-        provider_create("Provider A", &provider_config()),
-        &source_config(),
+    let draft = quick_import_create(QuickImportCreateDraft {
+        provider: provider_create("Provider A", &provider_config()),
+        source: &source_config(),
+        recharge_multiplier: Decimal::ONE,
+        sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
-        &globals,
+        globals: &globals,
         mappings,
-        &TestCipher,
-    )
+        cipher: &TestCipher,
+    })
     .unwrap();
 
     assert!(draft.model_bindings[0].provider_model_mapping.is_none());
@@ -160,14 +166,16 @@ fn quick_import_create_imports_only_mapped_token_models() {
     let globals = [global_model("global-1", "gpt-5"), global_model("global-2", "gpt-image")];
     let mappings = BTreeMap::from([("upstream-gpt-5".into(), "global-1".into())]);
 
-    let draft = quick_import_create(
-        provider_create("Provider A", &provider_config()),
-        &source_config(),
+    let draft = quick_import_create(QuickImportCreateDraft {
+        provider: provider_create("Provider A", &provider_config()),
+        source: &source_config(),
+        recharge_multiplier: Decimal::ONE,
+        sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
-        &globals,
+        globals: &globals,
         mappings,
-        &TestCipher,
-    )
+        cipher: &TestCipher,
+    })
     .unwrap();
 
     assert_eq!(draft.model_bindings.len(), 1);

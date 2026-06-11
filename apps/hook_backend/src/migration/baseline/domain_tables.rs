@@ -13,6 +13,10 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         provider_api_keys_table(),
         provider_models_table(),
         provider_model_costs_table(),
+        provider_quick_import_sources_table(),
+        provider_quick_import_keys_table(),
+        provider_quick_import_key_models_table(),
+        provider_quick_import_sync_events_table(),
         billing_rules_table(),
         dimension_collectors_table(),
         provider_cooldowns_table(),
@@ -257,6 +261,127 @@ fn provider_model_costs_table() -> TableCreateStatement {
         .to_owned()
 }
 
+fn provider_quick_import_sources_table() -> TableCreateStatement {
+    let mut provider_fk = provider_fk(
+        "fk_provider_quick_import_sources_provider",
+        ProviderQuickImportSources::Table,
+        ProviderQuickImportSources::ProviderId,
+    );
+    Table::create()
+        .table(ProviderQuickImportSources::Table)
+        .if_not_exists()
+        .col(string_len(ProviderQuickImportSources::Id, 36).primary_key())
+        .col(string_len(ProviderQuickImportSources::ProviderId, 36))
+        .col(string_len(ProviderQuickImportSources::SourceKind, 32))
+        .col(text(ProviderQuickImportSources::BaseUrl))
+        .col(text(ProviderQuickImportSources::EncryptedSystemAccessToken))
+        .col(string_len(ProviderQuickImportSources::UserId, 100))
+        .col(decimal_len(ProviderQuickImportSources::RechargeMultiplier, 20, 8))
+        .col(boolean(ProviderQuickImportSources::AutoSyncEnabled))
+        .col(string_len(ProviderQuickImportSources::CostSyncMode, 32))
+        .col(string_len(ProviderQuickImportSources::UpstreamAnomalyAction, 32))
+        .col(string_len(ProviderQuickImportSources::TokenDeletedAction, 32))
+        .col(string_len(ProviderQuickImportSources::TokenDisabledAction, 32))
+        .col(string_len(ProviderQuickImportSources::GroupRemovedAction, 32))
+        .col(string_len(ProviderQuickImportSources::GroupChangedAction, 32))
+        .col(string_len(ProviderQuickImportSources::KeyUnavailableAction, 32))
+        .col(string_len(ProviderQuickImportSources::ModelRemovedAction, 32))
+        .col(string_len(ProviderQuickImportSources::FetchFailureAction, 32))
+        .col(integer(ProviderQuickImportSources::FetchFailureDisableThreshold))
+        .col(string_len_null(ProviderQuickImportSources::LastStatus, 64))
+        .col(text_null(ProviderQuickImportSources::LastError))
+        .col(timestamp_tz_null(ProviderQuickImportSources::LastSyncedAt))
+        .col(integer(ProviderQuickImportSources::ConsecutiveFailures).default(0))
+        .col(timestamp_tz(ProviderQuickImportSources::CreatedAt))
+        .col(timestamp_tz(ProviderQuickImportSources::UpdatedAt))
+        .foreign_key(&mut provider_fk)
+        .to_owned()
+}
+
+fn provider_quick_import_keys_table() -> TableCreateStatement {
+    let mut provider_fk = provider_fk(
+        "fk_provider_quick_import_keys_provider",
+        ProviderQuickImportKeys::Table,
+        ProviderQuickImportKeys::ProviderId,
+    );
+    let mut source_fk = quick_import_key_source_fk();
+    let mut key_fk = quick_import_key_provider_key_fk();
+    Table::create()
+        .table(ProviderQuickImportKeys::Table)
+        .if_not_exists()
+        .col(string_len(ProviderQuickImportKeys::Id, 36).primary_key())
+        .col(string_len(ProviderQuickImportKeys::ProviderId, 36))
+        .col(string_len(ProviderQuickImportKeys::SourceId, 36))
+        .col(string_len(ProviderQuickImportKeys::KeyId, 36))
+        .col(string_len(ProviderQuickImportKeys::UpstreamTokenId, 100))
+        .col(string_len(ProviderQuickImportKeys::UpstreamTokenName, 100))
+        .col(string_len(ProviderQuickImportKeys::UpstreamMaskedKey, 200))
+        .col(string_len_null(ProviderQuickImportKeys::UpstreamGroup, 100))
+        .col(decimal_len(ProviderQuickImportKeys::UpstreamGroupRatio, 20, 8))
+        .col(decimal_len(ProviderQuickImportKeys::EffectiveCostMultiplier, 20, 8))
+        .col(text(ProviderQuickImportKeys::SyncStatuses))
+        .col(text_null(ProviderQuickImportKeys::LastSyncError))
+        .col(timestamp_tz_null(ProviderQuickImportKeys::LastSyncedAt))
+        .col(timestamp_tz(ProviderQuickImportKeys::CreatedAt))
+        .col(timestamp_tz(ProviderQuickImportKeys::UpdatedAt))
+        .foreign_key(&mut provider_fk)
+        .foreign_key(&mut source_fk)
+        .foreign_key(&mut key_fk)
+        .to_owned()
+}
+
+fn provider_quick_import_key_models_table() -> TableCreateStatement {
+    let mut provider_fk = provider_fk(
+        "fk_provider_quick_import_key_models_provider",
+        ProviderQuickImportKeyModels::Table,
+        ProviderQuickImportKeyModels::ProviderId,
+    );
+    let mut source_fk = quick_import_key_model_source_fk();
+    let mut key_fk = quick_import_key_model_key_fk();
+    let mut global_model_fk = quick_import_key_model_global_model_fk();
+    Table::create()
+        .table(ProviderQuickImportKeyModels::Table)
+        .if_not_exists()
+        .col(string_len(ProviderQuickImportKeyModels::Id, 36).primary_key())
+        .col(string_len(ProviderQuickImportKeyModels::ProviderId, 36))
+        .col(string_len(ProviderQuickImportKeyModels::SourceId, 36))
+        .col(string_len(ProviderQuickImportKeyModels::KeyId, 36))
+        .col(string_len(ProviderQuickImportKeyModels::UpstreamModelId, 200))
+        .col(string_len(ProviderQuickImportKeyModels::GlobalModelId, 36))
+        .col(timestamp_tz(ProviderQuickImportKeyModels::CreatedAt))
+        .col(timestamp_tz(ProviderQuickImportKeyModels::UpdatedAt))
+        .foreign_key(&mut provider_fk)
+        .foreign_key(&mut source_fk)
+        .foreign_key(&mut key_fk)
+        .foreign_key(&mut global_model_fk)
+        .to_owned()
+}
+
+fn provider_quick_import_sync_events_table() -> TableCreateStatement {
+    let mut provider_fk = provider_fk(
+        "fk_provider_quick_import_sync_events_provider",
+        ProviderQuickImportSyncEvents::Table,
+        ProviderQuickImportSyncEvents::ProviderId,
+    );
+    let mut source_fk = quick_import_sync_event_source_fk();
+    let mut key_fk = quick_import_sync_event_key_fk();
+    Table::create()
+        .table(ProviderQuickImportSyncEvents::Table)
+        .if_not_exists()
+        .col(string_len(ProviderQuickImportSyncEvents::Id, 36).primary_key())
+        .col(string_len(ProviderQuickImportSyncEvents::ProviderId, 36))
+        .col(string_len(ProviderQuickImportSyncEvents::SourceId, 36))
+        .col(string_len_null(ProviderQuickImportSyncEvents::KeyId, 36))
+        .col(string_len(ProviderQuickImportSyncEvents::Status, 64))
+        .col(text(ProviderQuickImportSyncEvents::Title))
+        .col(text(ProviderQuickImportSyncEvents::Detail))
+        .col(timestamp_tz(ProviderQuickImportSyncEvents::CreatedAt))
+        .foreign_key(&mut provider_fk)
+        .foreign_key(&mut source_fk)
+        .foreign_key(&mut key_fk)
+        .to_owned()
+}
+
 fn provider_cooldowns_table() -> TableCreateStatement {
     let mut provider_fk = provider_fk("fk_provider_cooldowns_provider", ProviderCooldowns::Table, ProviderCooldowns::ProviderId);
     Table::create()
@@ -474,6 +599,76 @@ fn provider_model_cost_model_fk() -> ForeignKeyCreateStatement {
         .from(ProviderModelCosts::Table, ProviderModelCosts::ProviderModelId)
         .to(ProviderModels::Table, ProviderModels::Id)
         .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn quick_import_key_source_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_quick_import_keys_source")
+        .from(ProviderQuickImportKeys::Table, ProviderQuickImportKeys::SourceId)
+        .to(ProviderQuickImportSources::Table, ProviderQuickImportSources::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn quick_import_key_provider_key_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_quick_import_keys_key")
+        .from(ProviderQuickImportKeys::Table, ProviderQuickImportKeys::KeyId)
+        .to(ProviderApiKeys::Table, ProviderApiKeys::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn quick_import_key_model_source_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_quick_import_key_models_source")
+        .from(ProviderQuickImportKeyModels::Table, ProviderQuickImportKeyModels::SourceId)
+        .to(ProviderQuickImportSources::Table, ProviderQuickImportSources::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn quick_import_key_model_key_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_quick_import_key_models_key")
+        .from(ProviderQuickImportKeyModels::Table, ProviderQuickImportKeyModels::KeyId)
+        .to(ProviderApiKeys::Table, ProviderApiKeys::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn quick_import_key_model_global_model_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_quick_import_key_models_global_model")
+        .from(ProviderQuickImportKeyModels::Table, ProviderQuickImportKeyModels::GlobalModelId)
+        .to(GlobalModels::Table, GlobalModels::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn quick_import_sync_event_source_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_quick_import_sync_events_source")
+        .from(ProviderQuickImportSyncEvents::Table, ProviderQuickImportSyncEvents::SourceId)
+        .to(ProviderQuickImportSources::Table, ProviderQuickImportSources::Id)
+        .on_delete(ForeignKeyAction::Cascade);
+    foreign_key
+}
+
+fn quick_import_sync_event_key_fk() -> ForeignKeyCreateStatement {
+    let mut foreign_key = ForeignKey::create();
+    foreign_key
+        .name("fk_provider_quick_import_sync_events_key")
+        .from(ProviderQuickImportSyncEvents::Table, ProviderQuickImportSyncEvents::KeyId)
+        .to(ProviderApiKeys::Table, ProviderApiKeys::Id)
+        .on_delete(ForeignKeyAction::SetNull);
     foreign_key
 }
 

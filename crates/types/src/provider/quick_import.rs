@@ -1,6 +1,7 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
+use super::quick_import_sync::ProviderQuickImportSyncConfig;
 use super::{Provider, ProviderApiKey, ProviderEndpoint, ProviderModelBinding, ProviderModelCost};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -48,6 +49,39 @@ pub struct ProviderQuickImportCommitRequest {
     pub selected_model_ids: Vec<String>,
     #[serde(default)]
     pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
+    #[serde(default)]
+    pub sync_config: ProviderQuickImportSyncConfig,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+pub struct ProviderQuickImportAppendPreviewRequest {
+    #[serde(default)]
+    pub include_linked_tokens: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct ProviderQuickImportAppendCommitRequest {
+    #[serde(default)]
+    pub selected_tokens: Vec<ProviderQuickImportSelectedToken>,
+    #[serde(default)]
+    pub selected_model_ids: Vec<String>,
+    #[serde(default)]
+    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct ProviderQuickImportRelinkRequest {
+    pub upstream_token_id: String,
+    #[serde(default)]
+    pub selected_model_ids: Vec<String>,
+    #[serde(default)]
+    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct ProviderQuickImportModelAssociationsUpdate {
+    #[serde(default)]
+    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -59,7 +93,7 @@ pub struct ProviderQuickImportSelectedToken {
     pub effective_cost_multiplier: Decimal,
 }
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ProviderQuickImportModelMappingInput {
     pub upstream_model_id: String,
     pub global_model_id: String,
@@ -89,6 +123,7 @@ pub struct ProviderQuickImportProviderConfig {
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ProviderQuickImportPreviewResponse {
+    pub provider_id: Option<String>,
     pub source_kind: ProviderQuickImportSourceKind,
     pub provider_name: String,
     #[serde(with = "rust_decimal::serde::float")]
@@ -109,8 +144,21 @@ pub struct ProviderQuickImportTokenPreview {
     #[serde(with = "rust_decimal::serde::float")]
     pub effective_cost_multiplier: Decimal,
     pub importable: bool,
+    pub already_imported: bool,
+    pub import_block_reason: Option<String>,
+    pub linked_key: Option<ProviderQuickImportLinkedKeyPreview>,
     pub models: Vec<ProviderQuickImportRemoteModel>,
     pub cost_issues: Vec<ProviderQuickImportCostIssue>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportLinkedKeyPreview {
+    pub key_id: String,
+    pub name: String,
+    pub endpoint_formats: Vec<String>,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub effective_cost_multiplier: Decimal,
+    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -145,10 +193,71 @@ pub struct ProviderQuickImportCommitResponse {
     pub imported_model_count: usize,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportResolutionResponse {
+    pub provider_id: String,
+    pub key_id: String,
+    pub key_name: String,
+    pub source_kind: ProviderQuickImportSourceKind,
+    pub current_upstream_token_id: String,
+    pub current_upstream_group: Option<String>,
+    #[serde(with = "rust_decimal::serde::float")]
+    pub current_effective_cost_multiplier: Decimal,
+    pub statuses: Vec<super::quick_import_sync::ProviderQuickImportSyncStatus>,
+    pub tokens: Vec<ProviderQuickImportTokenPreview>,
+    pub model_mappings: Vec<ProviderQuickImportModelMappingPreview>,
+    pub associated_models: Vec<ProviderQuickImportModelAssociation>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportModelAssociationsResponse {
+    pub provider_id: String,
+    pub key_id: String,
+    pub key_name: String,
+    pub source_kind: ProviderQuickImportSourceKind,
+    pub upstream_token_id: String,
+    pub associations: Vec<ProviderQuickImportModelAssociation>,
+    pub candidates: Vec<ProviderQuickImportModelAssociationCandidate>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportModelAssociation {
+    pub upstream_model_id: String,
+    pub global_model_id: String,
+    pub global_model_name: String,
+    pub global_model_display_name: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportModelAssociationCandidate {
+    pub upstream_model_id: String,
+    pub suggested_global_model_id: Option<String>,
+    pub reason: String,
+}
+
 impl ProviderQuickImportSourceConfig {
     pub fn kind(&self) -> ProviderQuickImportSourceKind {
         match self {
             Self::Newapi(_) => ProviderQuickImportSourceKind::Newapi,
+        }
+    }
+}
+
+impl ProviderQuickImportSourceKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Newapi => "newapi",
+        }
+    }
+}
+
+impl TryFrom<&str> for ProviderQuickImportSourceKind {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "newapi" => Ok(Self::Newapi),
+            other => Err(format!("invalid quick import source kind: {other}")),
         }
     }
 }

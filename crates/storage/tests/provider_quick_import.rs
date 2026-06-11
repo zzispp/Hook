@@ -6,12 +6,16 @@ use storage::{
     Database,
     model::provider_models,
     provider::{
-        ProviderQuickImportApiKeyRecordInput, ProviderQuickImportEndpointRecordInput, ProviderQuickImportModelCostRecordInput,
-        ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderRecordInput, ProviderStore,
-        record::{provider_api_keys, provider_endpoints, provider_model_costs, providers},
+        ProviderQuickImportApiKeyRecordInput, ProviderQuickImportEndpointRecordInput, ProviderQuickImportKeyModelRecordInput,
+        ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderQuickImportSourceRecordInput,
+        ProviderRecordInput, ProviderStore,
+        record::{
+            provider_api_keys, provider_endpoints, provider_model_costs, provider_quick_import_key_models, provider_quick_import_keys,
+            provider_quick_import_sources, providers,
+        },
     },
 };
-use types::provider::{ProviderModelCostMode, ProviderModelMapping, ProviderOrigin};
+use types::provider::{ProviderModelCostMode, ProviderModelMapping, ProviderOrigin, ProviderQuickImportSyncConfig};
 
 #[tokio::test]
 async fn create_quick_import_commits_complete_resource_set() {
@@ -21,6 +25,9 @@ async fn create_quick_import_commits_complete_resource_set() {
         .append_query_results([[model_record()]])
         .append_query_results([[key_record()]])
         .append_query_results([[cost_record()]])
+        .append_query_results([[sync_source_record()]])
+        .append_query_results([[sync_key_record()]])
+        .append_query_results([[sync_key_model_record()]])
         .into_connection();
     let store = ProviderStore::new(Database::new(connection.clone()));
 
@@ -53,12 +60,13 @@ async fn create_quick_import_rolls_back_when_late_insert_fails() {
     assert_eq!(statements.iter().filter(|sql| sql.contains("BEGIN")).count(), 1);
     assert_eq!(statements.iter().filter(|sql| sql.contains("ROLLBACK")).count(), 1);
     assert_eq!(statements.iter().filter(|sql| sql.contains("COMMIT")).count(), 0);
-    assert_inserted_tables(&statements);
+    assert_core_inserted_tables(&statements);
 }
 
 fn quick_import_input() -> ProviderQuickImportRecordInput {
     ProviderQuickImportRecordInput {
         provider: provider_input(),
+        sync_source: Some(sync_source_input()),
         endpoints: vec![endpoint_input()],
         api_keys: vec![key_input()],
         model_bindings: vec![model_input()],
@@ -112,6 +120,15 @@ fn model_input() -> ProviderQuickImportModelRecordInput {
 fn key_input() -> ProviderQuickImportApiKeyRecordInput {
     ProviderQuickImportApiKeyRecordInput {
         upstream_token_id: "1209".into(),
+        upstream_token_name: "codex".into(),
+        upstream_masked_key: "c7mE****9pAG".into(),
+        upstream_group: Some("plus".into()),
+        upstream_group_ratio: Decimal::new(2, 0),
+        effective_cost_multiplier: Decimal::new(2, 1),
+        model_mappings: vec![ProviderQuickImportKeyModelRecordInput {
+            upstream_model_id: "upstream-gpt-5".into(),
+            global_model_id: "global-model-a".into(),
+        }],
         name: "codex".into(),
         api_formats: vec!["openai".into()],
         allowed_model_ids: vec!["global-model-a".into()],
@@ -126,6 +143,17 @@ fn key_input() -> ProviderQuickImportApiKeyRecordInput {
         time_range_start: None,
         time_range_end: None,
         is_active: true,
+    }
+}
+
+fn sync_source_input() -> ProviderQuickImportSourceRecordInput {
+    ProviderQuickImportSourceRecordInput {
+        source_kind: "newapi".into(),
+        base_url: "https://newapi.example".into(),
+        encrypted_system_access_token: "encrypted-system-token".into(),
+        user_id: "737".into(),
+        recharge_multiplier: Decimal::new(10, 0),
+        sync_config: ProviderQuickImportSyncConfig::default(),
     }
 }
 
@@ -146,16 +174,27 @@ fn assert_committed_all_tables(statements: Vec<String>) {
     assert_eq!(statements.iter().filter(|sql| sql.contains("BEGIN")).count(), 1);
     assert_eq!(statements.iter().filter(|sql| sql.contains("COMMIT")).count(), 1);
     assert_eq!(statements.iter().filter(|sql| sql.contains("ROLLBACK")).count(), 0);
-    assert_inserted_tables(&statements);
+    assert_core_inserted_tables(&statements);
+    assert_sync_metadata_inserted_tables(&statements);
 }
 
-fn assert_inserted_tables(statements: &[String]) {
+fn assert_core_inserted_tables(statements: &[String]) {
     for table in [
         "providers",
         "provider_endpoints",
         "provider_models",
         "provider_api_keys",
         "provider_model_costs",
+    ] {
+        assert!(statements.iter().any(|sql| sql.contains(&format!("INSERT INTO \"{table}\""))), "{statements:?}");
+    }
+}
+
+fn assert_sync_metadata_inserted_tables(statements: &[String]) {
+    for table in [
+        "provider_quick_import_sources",
+        "provider_quick_import_keys",
+        "provider_quick_import_key_models",
     ] {
         assert!(statements.iter().any(|sql| sql.contains(&format!("INSERT INTO \"{table}\""))), "{statements:?}");
     }
@@ -249,6 +288,68 @@ fn cost_record() -> provider_model_costs::Model {
         output_price_per_million: Some(Decimal::new(2, 2)),
         cache_creation_price_per_million: Some(Decimal::new(125, 4)),
         cache_read_price_per_million: Some(Decimal::new(1, 3)),
+        created_at: now(),
+        updated_at: now(),
+    }
+}
+
+fn sync_source_record() -> provider_quick_import_sources::Model {
+    provider_quick_import_sources::Model {
+        id: "source-a".into(),
+        provider_id: "provider-a".into(),
+        source_kind: "newapi".into(),
+        base_url: "https://newapi.example".into(),
+        encrypted_system_access_token: "encrypted-system-token".into(),
+        user_id: "737".into(),
+        recharge_multiplier: Decimal::new(10, 0),
+        auto_sync_enabled: true,
+        cost_sync_mode: "overwrite".into(),
+        upstream_anomaly_action: "disable_key".into(),
+        token_deleted_action: "disable_key".into(),
+        token_disabled_action: "disable_key".into(),
+        group_removed_action: "disable_key".into(),
+        group_changed_action: "disable_key".into(),
+        key_unavailable_action: "disable_key".into(),
+        model_removed_action: "disable_key".into(),
+        fetch_failure_action: "report_only".into(),
+        fetch_failure_disable_threshold: 3,
+        last_status: None,
+        last_error: None,
+        last_synced_at: None,
+        consecutive_failures: 0,
+        created_at: now(),
+        updated_at: now(),
+    }
+}
+
+fn sync_key_record() -> provider_quick_import_keys::Model {
+    provider_quick_import_keys::Model {
+        id: "sync-key-a".into(),
+        provider_id: "provider-a".into(),
+        source_id: "source-a".into(),
+        key_id: "key-a".into(),
+        upstream_token_id: "1209".into(),
+        upstream_token_name: "codex".into(),
+        upstream_masked_key: "c7mE****9pAG".into(),
+        upstream_group: Some("plus".into()),
+        upstream_group_ratio: Decimal::new(2, 0),
+        effective_cost_multiplier: Decimal::new(2, 1),
+        sync_statuses: r#"["ok"]"#.into(),
+        last_sync_error: None,
+        last_synced_at: None,
+        created_at: now(),
+        updated_at: now(),
+    }
+}
+
+fn sync_key_model_record() -> provider_quick_import_key_models::Model {
+    provider_quick_import_key_models::Model {
+        id: "sync-key-model-a".into(),
+        provider_id: "provider-a".into(),
+        source_id: "source-a".into(),
+        key_id: "key-a".into(),
+        upstream_model_id: "upstream-gpt-5".into(),
+        global_model_id: "global-model-a".into(),
         created_at: now(),
         updated_at: now(),
     }

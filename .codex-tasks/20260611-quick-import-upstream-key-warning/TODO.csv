@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Confirm branch and current sync behavior,DONE,Target worktree and existing status paths identified,git worktree list --porcelain && rg upstream_key_unavailable,2026-06-11,0,
+2,Add backend tests for warning-only model fetch failure,DONE,Tests prove default model fetch failure and model candidates do not disable keys,cargo test -p provider quick_import_sync -- --nocapture,2026-06-11,1,Initial assertion ignored concurrent cost event; narrowed to candidate event presence.
+3,Clarify backend and frontend user-facing status text,DONE,Notifications and chips explain model-list fetch failure instead of vague key unavailable,pnpm lint:frontend,2026-06-11,0,
+4,Run targeted validation,DONE,Rust quick-import tests and frontend lint pass,cargo test -p provider quick_import_sync -- --nocapture && pnpm lint:frontend,2026-06-11,0,

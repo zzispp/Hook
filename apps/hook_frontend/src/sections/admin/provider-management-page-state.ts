@@ -23,6 +23,7 @@ import {
   useProviderDialog,
   useDeleteProviderDialog,
   useProviderChildDialogs,
+  useProviderQuickImportSyncDialog,
 } from './provider-management-state';
 
 const PROVIDER_PRIORITY_LIMIT = 1000;
@@ -49,6 +50,7 @@ export function useProviderManagementState() {
   const settings = useSystemSettings();
   const models = useGlobalModels(0, 1000);
   const dialog = useProviderDialog({ t });
+  const quickImportSyncDialog = useProviderQuickImportSyncDialog(t);
   const deleteDialog = useDeleteProviderDialog(t);
   const childDialogs = useProviderChildDialogs(t, ui.selectedProvider?.id);
   const providerGroupAssociation = useProviderGroupAssociation(t, providerGroups.items);
@@ -64,6 +66,7 @@ export function useProviderManagementState() {
     t,
     models,
     dialog,
+    quickImportSyncDialog,
     providers,
     settings,
     currentLang,

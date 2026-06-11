@@ -7,6 +7,7 @@ mod key;
 mod model_binding;
 mod model_cost;
 mod quick_import;
+mod quick_import_sync;
 mod request_candidate;
 mod request_record;
 mod time_range;
@@ -30,10 +31,17 @@ pub use model_cost::{
     RequestUpstreamCost,
 };
 pub use quick_import::{
-    NewApiQuickImportConfig, ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse, ProviderQuickImportCostIssue,
+    NewApiQuickImportConfig, ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportCommitRequest,
+    ProviderQuickImportCommitResponse, ProviderQuickImportCostIssue, ProviderQuickImportLinkedKeyPreview, ProviderQuickImportModelAssociation,
+    ProviderQuickImportModelAssociationCandidate, ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate,
     ProviderQuickImportModelMappingInput, ProviderQuickImportModelMappingPreview, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse,
-    ProviderQuickImportProviderConfig, ProviderQuickImportRemoteModel, ProviderQuickImportSelectedToken, ProviderQuickImportSourceConfig,
-    ProviderQuickImportSourceKind, ProviderQuickImportTokenPreview,
+    ProviderQuickImportProviderConfig, ProviderQuickImportRelinkRequest, ProviderQuickImportRemoteModel, ProviderQuickImportResolutionResponse,
+    ProviderQuickImportSelectedToken, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportTokenPreview,
+};
+pub use quick_import_sync::{
+    ProviderQuickImportAnomalyActions, ProviderQuickImportCostSyncMode, ProviderQuickImportFetchFailureAction, ProviderQuickImportGroupChangedAction,
+    ProviderQuickImportKeySyncInfo, ProviderQuickImportSyncConfig, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate,
+    ProviderQuickImportSyncStatus, ProviderQuickImportUpstreamAnomalyAction,
 };
 pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{

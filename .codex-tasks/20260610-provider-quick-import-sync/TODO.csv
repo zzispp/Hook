@@ -1,0 +1,7 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current quick import and scheduler boundaries,DONE,Relevant schemas/services/UI entrypoints identified,rg quick_import crates apps,2026-06-10,0,
+2,Add backend metadata types storage and migrations,DONE,Quick import commit persists source key and model sync metadata,cargo check -p types -p storage -p provider,2026-06-10,0,
+3,Add sync service source snapshot and scheduler task,DONE,Task updates costs and key statuses per policy,cargo test -p provider quick_import_sync -- --nocapture,2026-06-10,0,
+4,Add admin API and RBAC i18n seeds,DONE,GET/PATCH quick import sync settings work with permissions,cargo test -p provider quick_import_sync -- --nocapture,2026-06-10,0,
+5,Add frontend sync settings and key chips,DONE,Quick import drawer/edit modal/key rows expose sync settings and status,pnpm lint:frontend,2026-06-10,0,
+6,Run final validation,DONE,Frontend and backend checks pass,pnpm build:frontend && just test,2026-06-10,0,

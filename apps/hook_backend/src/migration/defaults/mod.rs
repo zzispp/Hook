@@ -276,7 +276,11 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         api_codes: &[
             "providers_read",
             "providers_create",
+            "providers_quick_import_preview",
+            "providers_quick_import_commit",
             "providers_detail",
+            "providers_quick_import_sync_read",
+            "providers_quick_import_sync_update",
             "providers_update",
             "providers_delete",
             "provider_endpoints_read",

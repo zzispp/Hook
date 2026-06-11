@@ -1,5 +1,6 @@
 'use client';
 
+import type { Dispatch, SetStateAction } from 'react';
 import type { useTranslate } from 'src/locales/use-locales';
 import type { Provider, ProviderApiKey } from 'src/types/provider';
 
@@ -13,10 +14,18 @@ import {
   createProviderApiKey,
   deleteProviderApiKey,
   updateProviderApiKey,
+  getProviderQuickImportSyncSettings,
+  updateProviderQuickImportSyncSettings,
 } from 'src/actions/providers';
 
 import { toast } from 'src/components/snackbar';
 
+import {
+  validSyncSettings,
+  syncSettingsPayload,
+  syncSettingsFormFromResponse,
+  DEFAULT_QUICK_IMPORT_SYNC_SETTINGS_FORM,
+} from './provider-quick-import-utils';
 import {
   apiKeyPayload,
   providerPayload,
@@ -75,7 +84,79 @@ export function useProviderDialog({ t }: ProviderDialogOptions) {
     }
   }, [closeDialog, editing, form, t]);
 
-  return { closeDialog, creating, editing, form, open: creating || !!editing, openCreate, openEdit, setForm, submit, submitting };
+  return {
+    closeDialog,
+    creating,
+    editing,
+    form,
+    open: creating || !!editing,
+    openCreate,
+    openEdit,
+    setForm,
+    submit,
+    submitting,
+  };
+}
+
+export function useProviderQuickImportSyncDialog(t: ReturnType<typeof useTranslate>['t']) {
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [form, setForm] = useState({ ...DEFAULT_QUICK_IMPORT_SYNC_SETTINGS_FORM });
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const close = useCallback(() => {
+    setProvider(null);
+    setForm({ ...DEFAULT_QUICK_IMPORT_SYNC_SETTINGS_FORM });
+  }, []);
+
+  const open = useCallback((target: Provider) => {
+    setProvider(target);
+    setForm({ ...DEFAULT_QUICK_IMPORT_SYNC_SETTINGS_FORM });
+    void load(target.id, setForm, setLoading, t);
+  }, [t]);
+
+  const submit = useCallback(async () => {
+    if (!provider) return;
+    setSubmitting(true);
+    try {
+      await updateProviderQuickImportSyncSettings(provider.id, syncSettingsPayload(form));
+      toast.success(t('messages.providerUpdated'));
+      close();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [close, form, provider, t]);
+
+  return {
+    close,
+    form,
+    loading,
+    open,
+    provider,
+    setForm,
+    submit,
+    submitting,
+    valid: validSyncSettings(form),
+  };
+}
+
+async function load(
+  providerId: string,
+  setForm: Dispatch<SetStateAction<typeof DEFAULT_QUICK_IMPORT_SYNC_SETTINGS_FORM>>,
+  setLoading: (value: boolean) => void,
+  t: ReturnType<typeof useTranslate>['t']
+) {
+  setLoading(true);
+  try {
+    const response = await getProviderQuickImportSyncSettings(providerId);
+    setForm(syncSettingsFormFromResponse(response));
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('messages.loadFailed'));
+  } finally {
+    setLoading(false);
+  }
 }
 
 export function useDeleteProviderDialog(t: ReturnType<typeof useTranslate>['t']) {

@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect current quick import code paths,DONE,Relevant backend/frontend/storage entrypoints identified,rg quick_import crates apps,2026-06-10T16:18:00+08:00,0,DTO service storage routes and frontend entrypoints inspected
+2,Extend backend types storage and migrations,DONE,New statuses DTOs storage methods and additive schema compile,timeout 60 cargo check -p types -p storage -p provider -p hook_backend,2026-06-10T17:10:00+08:00,0,Backend type storage and API skeleton compile
+3,Implement backend services APIs and sync behavior,DONE,Append/recovery/relink/model association/candidates/enable blocking covered by tests,timeout 60 cargo test -p provider quick_import -- --nocapture,2026-06-10T17:13:41+08:00,0,Provider quick import tests pass with append sync anomaly and model rule coverage
+4,Implement frontend append recovery and model association UI,DONE,Provider list/drawer show new actions and flows compile,pnpm lint:frontend && pnpm build:frontend,2026-06-10T17:13:41+08:00,0,Frontend lint and build pass
+5,Run validation and record results,DONE,Targeted checks pass and remaining gaps documented,just test,2026-06-10T17:13:41+08:00,0,Targeted Rust tests frontend checks and just test pass

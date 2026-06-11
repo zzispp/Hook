@@ -5,6 +5,7 @@ use types::{
 };
 
 use crate::StorageResult;
+use crate::provider::record::provider_quick_import_sync_events;
 
 use super::{
     AnnouncementColumn, AnnouncementEntity, NotificationSourceRecord, NotificationStateActiveModel, NotificationStateRecord, OperationsStore, TicketColumn,
@@ -12,10 +13,12 @@ use super::{
 };
 
 const CATEGORY_ANNOUNCEMENT: &str = "announcement";
+const CATEGORY_PROVIDER_QUICK_IMPORT_SYNC: &str = "provider_quick_import_sync";
 const CATEGORY_TICKET: &str = "ticket";
 const FILTER_READ: &str = "read";
 const FILTER_UNREAD: &str = "unread";
 const SOURCE_ANNOUNCEMENT: &str = "announcement";
+const SOURCE_PROVIDER_QUICK_IMPORT_SYNC: &str = "provider_quick_import_sync";
 const SOURCE_TICKET: &str = "ticket";
 
 impl OperationsStore {
@@ -56,7 +59,10 @@ impl OperationsStore {
 
     async fn notification_sources(&self, user_id: &str, is_admin: bool) -> StorageResult<Vec<NotificationSourceRecord>> {
         if is_admin {
-            return self.admin_ticket_sources().await;
+            let mut sources = self.admin_ticket_sources().await?;
+            sources.extend(self.provider_quick_import_sync_sources().await?);
+            sources.sort_by_key(|source| std::cmp::Reverse(source.event_at));
+            return Ok(sources);
         }
         let mut sources = self.announcement_sources().await?;
         sources.extend(self.user_ticket_sources(user_id).await?);
@@ -83,6 +89,7 @@ impl OperationsStore {
             source_type: source.source_type,
             source_id: source.source_id,
             title: source.title,
+            description: source.description,
             category: source.category,
             is_unread: unread_after_event(state.as_ref(), source.event_at),
             created_at: format_timestamp(source.event_at),
@@ -189,6 +196,7 @@ impl OperationsStore {
                 source_type: SOURCE_ANNOUNCEMENT.into(),
                 source_id: record.id.clone(),
                 title: record.title,
+                description: None,
                 category: format!("{CATEGORY_ANNOUNCEMENT}.{}", record.announcement_type),
                 event_at: record.updated_at,
                 link_path: format!("/dashboard/announcements/{}", record.id),
@@ -214,6 +222,25 @@ impl OperationsStore {
             .await?;
         Ok(records.into_iter().filter_map(|record| ticket_source(record, false)).collect())
     }
+
+    async fn provider_quick_import_sync_sources(&self) -> StorageResult<Vec<NotificationSourceRecord>> {
+        let records = provider_quick_import_sync_events::Entity::find()
+            .order_by_desc(provider_quick_import_sync_events::Column::CreatedAt)
+            .all(self.connection())
+            .await?;
+        Ok(records
+            .into_iter()
+            .map(|record| NotificationSourceRecord {
+                source_type: SOURCE_PROVIDER_QUICK_IMPORT_SYNC.into(),
+                source_id: record.id,
+                title: record.title,
+                description: Some(record.detail),
+                category: CATEGORY_PROVIDER_QUICK_IMPORT_SYNC.into(),
+                event_at: record.created_at,
+                link_path: "/dashboard/admin/providers".into(),
+            })
+            .collect())
+    }
 }
 
 fn ticket_source(record: super::TicketRecord, admin: bool) -> Option<NotificationSourceRecord> {
@@ -227,6 +254,7 @@ fn ticket_source(record: super::TicketRecord, admin: bool) -> Option<Notificatio
         source_type: SOURCE_TICKET.into(),
         source_id: record.id,
         title: record.subject,
+        description: None,
         category: CATEGORY_TICKET.into(),
         event_at,
         link_path,

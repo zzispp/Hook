@@ -63,7 +63,9 @@ function useTokenRowState({ token, draft, mappings, rechargeMultiplier, setToken
   const modelValues = token.models
     .map((model) => mappings[model.upstream_model_id])
     .filter((value) => value !== undefined);
-  const modelMappingConfigured = modelValues.length > 0 && modelValues.every(Boolean);
+  const modelMappingConfigured = token.already_imported
+    ? (token.linked_key?.model_mappings.length ?? 0) > 0
+    : modelValues.length > 0 && modelValues.every(Boolean);
   const modelMappingMissing = selected && !modelMappingConfigured;
   const onUpdate = tokenDraftUpdater(token, setTokens);
 
@@ -123,7 +125,12 @@ function TokenMainRow({
         </Typography>
       </TableCell>
       <TableCell sx={mainRowCellSx}>
-        <Chip size="small" color={token.importable ? 'success' : 'default'} variant="soft" label={token.importable ? t('common.enabled') : t('common.disabled')} />
+        <Chip
+          size="small"
+          color={statusChipColor(token)}
+          variant="soft"
+          label={statusChipLabel(token, t)}
+        />
       </TableCell>
       <TableCell sx={mainRowCellSx}>
         <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
@@ -203,7 +210,12 @@ function ModelMappingField({
   );
 }
 
-function EndpointFormatsField({ formats, selected, onUpdate }: Pick<DetailProps, 'formats' | 'selected' | 'onUpdate'>) {
+function EndpointFormatsField({
+  formats,
+  importable,
+  selected,
+  onUpdate,
+}: Pick<DetailProps, 'formats' | 'importable' | 'selected' | 'onUpdate'>) {
   const { t } = useTranslate('admin');
 
   return (
@@ -220,6 +232,7 @@ function EndpointFormatsField({ formats, selected, onUpdate }: Pick<DetailProps,
         options={API_FORMAT_OPTIONS}
         value={formats}
         getOptionLabel={formatApiFormat}
+        disabled={!importable}
         onChange={(_, values) => onUpdate({ endpointFormats: values })}
         renderInput={(params) => (
           <TextField {...params} required placeholder={t('providers.endpoints')} error={selected && formats.length === 0} />
@@ -231,6 +244,17 @@ function EndpointFormatsField({ formats, selected, onUpdate }: Pick<DetailProps,
 
 function formatMultiplierLabel(value: number) {
   return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })}x`;
+}
+
+function statusChipColor(token: ProviderQuickImportTokenPreview) {
+  if (token.already_imported) return 'info';
+  if (token.importable) return 'success';
+  return 'default';
+}
+
+function statusChipLabel(token: ProviderQuickImportTokenPreview, t: (key: string) => string) {
+  if (token.already_imported) return t('providers.quickImportLinkedToken');
+  return token.importable ? t('common.enabled') : t('common.disabled');
 }
 
 const mainRowCellSx = {

@@ -1,10 +1,28 @@
 import type { GlobalModelResponse } from 'src/types/model';
+import type { QuickImportSyncConfigForm } from './provider-quick-import-sync-utils';
 import type {
   ProviderQuickImportTokenPreview,
   ProviderQuickImportPreviewResponse,
 } from 'src/types/provider-quick-import';
 
 import { providerPayload, DEFAULT_PROVIDER_FORM } from './provider-management-utils';
+import {
+  validSyncConfig,
+  syncConfigPayload,
+  defaultQuickImportSyncConfigForm,
+} from './provider-quick-import-sync-utils';
+
+export {
+  validSyncConfig,
+  validSyncSettings,
+  syncSettingsPayload,
+  syncSettingsFormFromResponse,
+  DEFAULT_QUICK_IMPORT_SYNC_SETTINGS_FORM,
+} from './provider-quick-import-sync-utils';
+export type {
+  QuickImportSyncConfigForm,
+  QuickImportSyncSettingsForm,
+} from './provider-quick-import-sync-utils';
 
 export type QuickImportFormState = {
   providerName: string;
@@ -21,6 +39,7 @@ export type QuickImportFormState = {
   keep_priority_on_conversion: boolean;
   enable_format_conversion: boolean;
   is_active: boolean;
+  sync: QuickImportSyncConfigForm;
 };
 
 export type QuickImportTokenDraft = {
@@ -45,6 +64,7 @@ export const DEFAULT_QUICK_IMPORT_FORM: QuickImportFormState = {
   keep_priority_on_conversion: DEFAULT_PROVIDER_FORM.keep_priority_on_conversion,
   enable_format_conversion: DEFAULT_PROVIDER_FORM.enable_format_conversion,
   is_active: DEFAULT_PROVIDER_FORM.is_active,
+  sync: defaultQuickImportSyncConfigForm(),
 };
 
 export function previewPayload(form: QuickImportFormState) {
@@ -80,13 +100,42 @@ export function commitPayload(
       effective_cost_multiplier: Number(tokens[token.upstream_token_id]?.costMultiplier),
     })),
     selected_model_ids: selectedModelIds,
-    model_mappings: selectedModelIds
-      .map((upstream_model_id) => [upstream_model_id, mappings[upstream_model_id]] as const)
-      .filter(([upstream_model_id, global_model_id]) =>
-        global_model_id && mappingNeedsOverride(models, upstream_model_id, global_model_id)
-      )
-      .map(([upstream_model_id, global_model_id]) => ({ upstream_model_id, global_model_id })),
+    model_mappings: mappingInputs(selectedModelIds, mappings, models),
+    sync_config: syncConfigPayload(form.sync),
   };
+}
+
+export function appendCommitPayload(
+  selected: ProviderQuickImportTokenPreview[],
+  tokens: Record<string, QuickImportTokenDraft>,
+  mappings: Record<string, string>,
+  models: GlobalModelResponse[]
+) {
+  const selectedModelIds = selectedMappedUpstreamModels(selected, mappings);
+
+  return {
+    selected_tokens: selected.map((token) => ({
+      upstream_token_id: token.upstream_token_id,
+      name: (tokens[token.upstream_token_id]?.name ?? token.name).trim(),
+      endpoint_formats: tokens[token.upstream_token_id]?.endpointFormats ?? [],
+      effective_cost_multiplier: Number(tokens[token.upstream_token_id]?.costMultiplier),
+    })),
+    selected_model_ids: selectedModelIds,
+    model_mappings: mappingInputs(selectedModelIds, mappings, models),
+  };
+}
+
+export function mappingInputs(
+  upstreamModelIds: string[],
+  mappings: Record<string, string>,
+  models: GlobalModelResponse[]
+) {
+  return upstreamModelIds
+    .map((upstream_model_id) => [upstream_model_id, mappings[upstream_model_id]] as const)
+    .filter(([upstream_model_id, global_model_id]) =>
+      global_model_id && mappingNeedsOverride(models, upstream_model_id, global_model_id)
+    )
+    .map(([upstream_model_id, global_model_id]) => ({ upstream_model_id, global_model_id }));
 }
 
 export function sourceReady(form: QuickImportFormState) {
@@ -95,7 +144,8 @@ export function sourceReady(form: QuickImportFormState) {
       form.baseUrl.trim() &&
       form.systemAccessToken.trim() &&
       form.userId.trim() &&
-      Number(form.rechargeMultiplier) > 0
+      Number(form.rechargeMultiplier) > 0 &&
+      validSyncConfig(form.sync)
   );
 }
 
@@ -105,21 +155,23 @@ export function defaultTokenDrafts(preview: ProviderQuickImportPreviewResponse) 
       token.upstream_token_id,
       {
         selected: token.importable,
-        name: token.name,
-        endpointFormats: [],
-        costMultiplier: String(token.effective_cost_multiplier),
+        name: token.linked_key?.name ?? token.name,
+        endpointFormats: token.linked_key?.endpoint_formats ?? [],
+        costMultiplier: String(token.linked_key?.effective_cost_multiplier ?? token.effective_cost_multiplier),
       },
     ])
   );
 }
 
 export function defaultMappings(preview: ProviderQuickImportPreviewResponse) {
-  return Object.fromEntries(
-    preview.model_mappings.map((mapping) => [
+  const suggested = preview.model_mappings.map((mapping) => [
       mapping.upstream_model_id,
       mapping.suggested_global_model_id ?? '',
-    ])
+    ] as const);
+  const linked = preview.tokens.flatMap((token) =>
+    token.linked_key?.model_mappings.map((mapping) => [mapping.upstream_model_id, mapping.global_model_id] as const) ?? []
   );
+  return Object.fromEntries([...suggested, ...linked]);
 }
 
 export function selectedTokenRows(

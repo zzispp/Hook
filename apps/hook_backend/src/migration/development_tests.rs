@@ -31,6 +31,24 @@ fn classifies_marked_baseline_missing_only_additive_tables_as_applied() {
 }
 
 #[test]
+fn classifies_marked_baseline_missing_quick_import_sync_tables_as_applied() {
+    assert_eq!(
+        classify_baseline_state(
+            63,
+            67,
+            true,
+            &[
+                "provider_quick_import_sources",
+                "provider_quick_import_keys",
+                "provider_quick_import_key_models",
+                "provider_quick_import_sync_events",
+            ],
+        ),
+        BaselineState::Applied
+    );
+}
+
+#[test]
 fn classifies_partial_baseline_as_inconsistent() {
     assert_eq!(
         classify_baseline_state(3, 5, false, &["providers", "api_tokens"]),

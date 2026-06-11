@@ -175,6 +175,9 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         ),
         provider_models_unique_index(),
         provider_model_costs_unique_index(),
+        quick_import_sources_provider_unique_index(),
+        quick_import_keys_key_unique_index(),
+        quick_import_key_models_unique_index(),
         index(
             "index_provider_model_costs_by_provider",
             ProviderModelCosts::Table,
@@ -182,6 +185,24 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         index("index_provider_model_costs_by_key", ProviderModelCosts::Table, ProviderModelCosts::KeyId, false),
+        index(
+            "index_provider_quick_import_keys_by_source",
+            ProviderQuickImportKeys::Table,
+            ProviderQuickImportKeys::SourceId,
+            false,
+        ),
+        index(
+            "index_provider_quick_import_key_models_by_key",
+            ProviderQuickImportKeyModels::Table,
+            ProviderQuickImportKeyModels::KeyId,
+            false,
+        ),
+        index(
+            "index_provider_quick_import_sync_events_by_created",
+            ProviderQuickImportSyncEvents::Table,
+            ProviderQuickImportSyncEvents::CreatedAt,
+            false,
+        ),
         billing_rules_global_model_unique_index(),
         billing_rules_model_unique_index(),
         dimension_collectors_enabled_unique_index(),
@@ -464,6 +485,37 @@ fn provider_model_costs_unique_index() -> IndexCreateStatement {
         .table(ProviderModelCosts::Table)
         .col(ProviderModelCosts::KeyId)
         .col(ProviderModelCosts::ProviderModelId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn quick_import_sources_provider_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_provider_quick_import_sources_provider_unique")
+        .table(ProviderQuickImportSources::Table)
+        .col(ProviderQuickImportSources::ProviderId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn quick_import_keys_key_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_provider_quick_import_keys_key_unique")
+        .table(ProviderQuickImportKeys::Table)
+        .col(ProviderQuickImportKeys::KeyId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
+fn quick_import_key_models_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_provider_quick_import_key_models_unique")
+        .table(ProviderQuickImportKeyModels::Table)
+        .col(ProviderQuickImportKeyModels::KeyId)
+        .col(ProviderQuickImportKeyModels::UpstreamModelId)
         .unique()
         .if_not_exists()
         .to_owned()

@@ -6,6 +6,8 @@ import type {
   ProviderQuickImportCommitResponse,
   ProviderQuickImportPreviewRequest,
   ProviderQuickImportPreviewResponse,
+  ProviderQuickImportSyncSettingsUpdate,
+  ProviderQuickImportSyncSettingsResponse,
 } from 'src/types/provider-quick-import';
 import type {
   Provider,
@@ -210,6 +212,23 @@ export async function commitProviderQuickImport(payload: ProviderQuickImportComm
   await mutateProviderKeyGroups();
   await mutateProviderChildren(response.provider.id);
   return response;
+}
+
+export async function getProviderQuickImportSyncSettings(providerId: string) {
+  return requestData<ProviderQuickImportSyncSettingsResponse>(
+    axios.get(endpoints.adminProviders.quickImportSync(providerId))
+  );
+}
+
+export async function updateProviderQuickImportSyncSettings(
+  providerId: string,
+  payload: ProviderQuickImportSyncSettingsUpdate
+) {
+  const settings = await requestData<ProviderQuickImportSyncSettingsResponse>(
+    axios.patch(endpoints.adminProviders.quickImportSync(providerId), payload)
+  );
+  await mutateProviderChildren(providerId);
+  return settings;
 }
 
 export async function updateProvider(id: string, payload: ProviderUpdate) {

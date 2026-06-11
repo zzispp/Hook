@@ -1,21 +1,27 @@
 use std::collections::BTreeMap;
 
-use sea_orm::{ActiveModelTrait, DatabaseTransaction, Set, TransactionTrait};
-use types::provider::{ProviderModelCostMode, ProviderOrigin};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseTransaction, EntityTrait, QueryFilter, Set, TransactionTrait};
+use types::provider::{ProviderModelCostMode, ProviderOrigin, ProviderQuickImportSyncStatus};
 
 use crate::{StorageError, StorageResult, json};
 
 use super::{
-    ProviderQuickImportApiKeyRecordInput, ProviderQuickImportEndpointRecordInput, ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput,
-    ProviderQuickImportRecordInput, ProviderQuickImportRecordOutput, ProviderStore,
+    ProviderQuickImportApiKeyRecordInput, ProviderQuickImportAppendRecordInput, ProviderQuickImportAppendRecordOutput, ProviderQuickImportEndpointRecordInput,
+    ProviderQuickImportKeyModelRecordInput, ProviderQuickImportKeyReplacementRecordInput, ProviderQuickImportKeyReplacementRecordOutput,
+    ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderQuickImportRecordOutput,
+    ProviderQuickImportSourceRecordInput, ProviderStore,
     provider_model_cost_query::model_cost_response,
-    record::{provider_api_keys, provider_endpoints, provider_model_costs, provider_models},
-    repository_helpers::{provider_active_model, provider_model_response},
+    record::{
+        provider_api_keys, provider_endpoints, provider_model_costs, provider_models, provider_quick_import_key_models, provider_quick_import_keys,
+        provider_quick_import_sources,
+    },
+    repository_helpers::{apply_provider_api_key_patch, provider_active_model, provider_model_response},
 };
 
 pub async fn create_quick_import(store: &ProviderStore, input: ProviderQuickImportRecordInput) -> StorageResult<ProviderQuickImportRecordOutput> {
     let tx = store.connection().begin().await?;
     let provider_id = store.next_id();
+    let sync_keys = sync_key_inputs(&input.api_keys);
     let provider = provider_active_model(provider_id.clone(), quick_import_provider(input.provider))
         .insert(&tx)
         .await?
@@ -23,7 +29,10 @@ pub async fn create_quick_import(store: &ProviderStore, input: ProviderQuickImpo
     let endpoints = insert_endpoints(store, &tx, &provider_id, input.endpoints).await?;
     let (model_bindings, model_ids) = insert_models(store, &tx, &provider_id, input.model_bindings).await?;
     let (api_keys, key_ids) = insert_keys(store, &tx, &provider_id, input.api_keys).await?;
-    let model_costs = insert_costs(store, &tx, &provider_id, model_ids, key_ids, input.model_costs).await?;
+    let model_costs = insert_costs(store, &tx, &provider_id, model_ids, key_ids.clone(), input.model_costs).await?;
+    if let Some(sync_source) = input.sync_source {
+        insert_sync_metadata(store, &tx, &provider_id, sync_source, sync_keys, &key_ids).await?;
+    }
     tx.commit().await?;
     Ok(ProviderQuickImportRecordOutput {
         provider,
@@ -32,6 +41,148 @@ pub async fn create_quick_import(store: &ProviderStore, input: ProviderQuickImpo
         model_bindings,
         model_costs,
     })
+}
+
+pub async fn append_quick_import(store: &ProviderStore, input: ProviderQuickImportAppendRecordInput) -> StorageResult<ProviderQuickImportAppendRecordOutput> {
+    let tx = store.connection().begin().await?;
+    let sync_keys = sync_key_inputs(&input.api_keys);
+    let endpoints = insert_endpoints(store, &tx, &input.provider_id, input.endpoints).await?;
+    let (model_bindings, new_model_ids) = insert_models(store, &tx, &input.provider_id, input.model_bindings).await?;
+    let model_ids = merged_model_ids(store, &tx, &input.provider_id, new_model_ids).await?;
+    let (api_keys, key_ids) = insert_keys(store, &tx, &input.provider_id, input.api_keys).await?;
+    let model_costs = insert_costs(store, &tx, &input.provider_id, model_ids, key_ids.clone(), input.model_costs).await?;
+    for key in sync_keys {
+        insert_sync_key(store, &tx, &input.provider_id, &input.source_id, key, &key_ids).await?;
+    }
+    tx.commit().await?;
+    Ok(ProviderQuickImportAppendRecordOutput {
+        endpoints,
+        api_keys,
+        model_bindings,
+        model_costs,
+    })
+}
+
+pub async fn replace_quick_import_key(
+    store: &ProviderStore,
+    input: ProviderQuickImportKeyReplacementRecordInput,
+) -> StorageResult<ProviderQuickImportKeyReplacementRecordOutput> {
+    let tx = store.connection().begin().await?;
+    let model_inputs = input.model_bindings.clone();
+    let (model_bindings, new_model_ids) = insert_models(store, &tx, &input.provider_id, model_inputs).await?;
+    let model_ids = merged_model_ids(store, &tx, &input.provider_id, new_model_ids).await?;
+    delete_key_model_mappings(&tx, &input.provider_id, &input.key_id).await?;
+    insert_replacement_model_mappings(store, &tx, &input, &input.key_id).await?;
+    let api_key = update_replacement_api_key(&tx, &input).await?;
+    update_replacement_sync_key(&tx, &input).await?;
+    delete_key_costs(&tx, &input.provider_id, &input.key_id).await?;
+    let key_ids = BTreeMap::from([(input.upstream_token_id.clone(), input.key_id.clone())]);
+    let model_costs = insert_costs(store, &tx, &input.provider_id, model_ids, key_ids, input.model_costs).await?;
+    tx.commit().await?;
+    Ok(ProviderQuickImportKeyReplacementRecordOutput {
+        api_key,
+        model_bindings,
+        model_costs,
+    })
+}
+
+async fn merged_model_ids(
+    _store: &ProviderStore,
+    tx: &DatabaseTransaction,
+    provider_id: &str,
+    mut new_model_ids: BTreeMap<String, String>,
+) -> StorageResult<BTreeMap<String, String>> {
+    let records = provider_models::Entity::find()
+        .filter(provider_models::Column::ProviderId.eq(provider_id))
+        .all(tx)
+        .await?;
+    for record in records {
+        new_model_ids.entry(record.global_model_id).or_insert(record.id);
+    }
+    Ok(new_model_ids)
+}
+
+async fn delete_key_model_mappings(tx: &DatabaseTransaction, provider_id: &str, key_id: &str) -> StorageResult<()> {
+    provider_quick_import_key_models::Entity::delete_many()
+        .filter(provider_quick_import_key_models::Column::ProviderId.eq(provider_id))
+        .filter(provider_quick_import_key_models::Column::KeyId.eq(key_id))
+        .exec(tx)
+        .await?;
+    Ok(())
+}
+
+async fn insert_replacement_model_mappings(
+    store: &ProviderStore,
+    tx: &DatabaseTransaction,
+    input: &ProviderQuickImportKeyReplacementRecordInput,
+    key_id: &str,
+) -> StorageResult<()> {
+    for mapping in input.model_mappings.clone() {
+        sync_key_model_active_model(store, &input.provider_id, &input.source_id, key_id, mapping)
+            .insert(tx)
+            .await?;
+    }
+    Ok(())
+}
+
+async fn update_replacement_api_key(
+    tx: &DatabaseTransaction,
+    input: &ProviderQuickImportKeyReplacementRecordInput,
+) -> StorageResult<types::provider::ProviderApiKey> {
+    let record = provider_api_keys::Entity::find()
+        .filter(provider_api_keys::Column::ProviderId.eq(&input.provider_id))
+        .filter(provider_api_keys::Column::Id.eq(&input.key_id))
+        .one(tx)
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    let mut active: provider_api_keys::ActiveModel = record.into();
+    apply_provider_api_key_patch(&mut active, input.key_patch.clone())?;
+    active.updated_at = Set(time::OffsetDateTime::now_utc());
+    active.update(tx).await?.response()
+}
+
+async fn update_replacement_sync_key(tx: &DatabaseTransaction, input: &ProviderQuickImportKeyReplacementRecordInput) -> StorageResult<()> {
+    let record = provider_quick_import_keys::Entity::find()
+        .filter(provider_quick_import_keys::Column::ProviderId.eq(&input.provider_id))
+        .filter(provider_quick_import_keys::Column::KeyId.eq(&input.key_id))
+        .one(tx)
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    let now = time::OffsetDateTime::now_utc();
+    let mut active: provider_quick_import_keys::ActiveModel = record.into();
+    active.source_id = Set(input.source_id.clone());
+    active.upstream_token_id = Set(input.upstream_token_id.clone());
+    active.upstream_token_name = Set(input.upstream_token_name.clone());
+    active.upstream_masked_key = Set(input.upstream_masked_key.clone());
+    active.upstream_group = Set(input.upstream_group.clone());
+    active.upstream_group_ratio = Set(input.upstream_group_ratio);
+    active.effective_cost_multiplier = Set(input.effective_cost_multiplier);
+    active.sync_statuses = Set(json::encode_required(&vec![ProviderQuickImportSyncStatus::Ok])?);
+    active.last_sync_error = Set(None);
+    active.last_synced_at = Set(Some(now));
+    active.updated_at = Set(now);
+    active.update(tx).await?;
+    Ok(())
+}
+
+async fn delete_key_costs(tx: &DatabaseTransaction, provider_id: &str, key_id: &str) -> StorageResult<()> {
+    provider_model_costs::Entity::delete_many()
+        .filter(provider_model_costs::Column::ProviderId.eq(provider_id))
+        .filter(provider_model_costs::Column::KeyId.eq(key_id))
+        .exec(tx)
+        .await?;
+    Ok(())
+}
+
+#[derive(Clone)]
+struct SyncKeyInput {
+    upstream_token_id: String,
+    upstream_token_name: String,
+    upstream_masked_key: String,
+    upstream_group: Option<String>,
+    upstream_group_ratio: rust_decimal::Decimal,
+    effective_cost_multiplier: rust_decimal::Decimal,
+    model_mappings: Vec<ProviderQuickImportKeyModelRecordInput>,
 }
 
 fn quick_import_provider(input: super::ProviderRecordInput) -> super::ProviderRecordInput {
@@ -105,6 +256,53 @@ async fn insert_costs(
     Ok(output)
 }
 
+async fn insert_sync_metadata(
+    store: &ProviderStore,
+    tx: &DatabaseTransaction,
+    provider_id: &str,
+    source: ProviderQuickImportSourceRecordInput,
+    keys: Vec<SyncKeyInput>,
+    key_ids: &BTreeMap<String, String>,
+) -> StorageResult<()> {
+    let source_id = store.next_id();
+    sync_source_active_model(source_id.clone(), provider_id, source).insert(tx).await?;
+    for key in keys {
+        insert_sync_key(store, tx, provider_id, &source_id, key, key_ids).await?;
+    }
+    Ok(())
+}
+
+async fn insert_sync_key(
+    store: &ProviderStore,
+    tx: &DatabaseTransaction,
+    provider_id: &str,
+    source_id: &str,
+    input: SyncKeyInput,
+    key_ids: &BTreeMap<String, String>,
+) -> StorageResult<()> {
+    let key_id = mapped_id(key_ids, &input.upstream_token_id, "upstream token")?;
+    sync_key_active_model(store, provider_id, source_id, &key_id, &input)?.insert(tx).await?;
+    for model in input.model_mappings {
+        sync_key_model_active_model(store, provider_id, source_id, &key_id, model).insert(tx).await?;
+    }
+    Ok(())
+}
+
+fn sync_key_inputs(inputs: &[ProviderQuickImportApiKeyRecordInput]) -> Vec<SyncKeyInput> {
+    inputs
+        .iter()
+        .map(|input| SyncKeyInput {
+            upstream_token_id: input.upstream_token_id.clone(),
+            upstream_token_name: input.upstream_token_name.clone(),
+            upstream_masked_key: input.upstream_masked_key.clone(),
+            upstream_group: input.upstream_group.clone(),
+            upstream_group_ratio: input.upstream_group_ratio,
+            effective_cost_multiplier: input.effective_cost_multiplier,
+            model_mappings: input.model_mappings.clone(),
+        })
+        .collect()
+}
+
 fn endpoint_active_model(
     store: &ProviderStore,
     provider_id: &str,
@@ -169,6 +367,83 @@ fn key_active_model(store: &ProviderStore, provider_id: &str, input: ProviderQui
     })
 }
 
+fn sync_source_active_model(source_id: String, provider_id: &str, input: ProviderQuickImportSourceRecordInput) -> provider_quick_import_sources::ActiveModel {
+    let now = time::OffsetDateTime::now_utc();
+    provider_quick_import_sources::ActiveModel {
+        id: Set(source_id),
+        provider_id: Set(provider_id.to_owned()),
+        source_kind: Set(input.source_kind),
+        base_url: Set(input.base_url),
+        encrypted_system_access_token: Set(input.encrypted_system_access_token),
+        user_id: Set(input.user_id),
+        recharge_multiplier: Set(input.recharge_multiplier),
+        auto_sync_enabled: Set(input.sync_config.auto_sync_enabled),
+        cost_sync_mode: Set(cost_sync_mode_value(input.sync_config.cost_sync_mode).to_owned()),
+        upstream_anomaly_action: Set(anomaly_action_value(input.sync_config.anomaly_actions.token_deleted).to_owned()),
+        token_deleted_action: Set(anomaly_action_value(input.sync_config.anomaly_actions.token_deleted).to_owned()),
+        token_disabled_action: Set(anomaly_action_value(input.sync_config.anomaly_actions.token_disabled).to_owned()),
+        group_removed_action: Set(anomaly_action_value(input.sync_config.anomaly_actions.group_removed).to_owned()),
+        group_changed_action: Set(input.sync_config.anomaly_actions.group_changed.as_str().to_owned()),
+        key_unavailable_action: Set(anomaly_action_value(input.sync_config.anomaly_actions.key_unavailable).to_owned()),
+        model_removed_action: Set(anomaly_action_value(input.sync_config.anomaly_actions.model_removed).to_owned()),
+        fetch_failure_action: Set(fetch_failure_action_value(input.sync_config.fetch_failure_action).to_owned()),
+        fetch_failure_disable_threshold: Set(input.sync_config.fetch_failure_disable_threshold as i32),
+        last_status: Set(None),
+        last_error: Set(None),
+        last_synced_at: Set(None),
+        consecutive_failures: Set(0),
+        created_at: Set(now),
+        updated_at: Set(now),
+    }
+}
+
+fn sync_key_active_model(
+    store: &ProviderStore,
+    provider_id: &str,
+    source_id: &str,
+    key_id: &str,
+    input: &SyncKeyInput,
+) -> StorageResult<provider_quick_import_keys::ActiveModel> {
+    let now = time::OffsetDateTime::now_utc();
+    Ok(provider_quick_import_keys::ActiveModel {
+        id: Set(store.next_id()),
+        provider_id: Set(provider_id.to_owned()),
+        source_id: Set(source_id.to_owned()),
+        key_id: Set(key_id.to_owned()),
+        upstream_token_id: Set(input.upstream_token_id.clone()),
+        upstream_token_name: Set(input.upstream_token_name.clone()),
+        upstream_masked_key: Set(input.upstream_masked_key.clone()),
+        upstream_group: Set(input.upstream_group.clone()),
+        upstream_group_ratio: Set(input.upstream_group_ratio),
+        effective_cost_multiplier: Set(input.effective_cost_multiplier),
+        sync_statuses: Set(json::encode_required(&vec![ProviderQuickImportSyncStatus::Ok])?),
+        last_sync_error: Set(None),
+        last_synced_at: Set(None),
+        created_at: Set(now),
+        updated_at: Set(now),
+    })
+}
+
+fn sync_key_model_active_model(
+    store: &ProviderStore,
+    provider_id: &str,
+    source_id: &str,
+    key_id: &str,
+    input: ProviderQuickImportKeyModelRecordInput,
+) -> provider_quick_import_key_models::ActiveModel {
+    let now = time::OffsetDateTime::now_utc();
+    provider_quick_import_key_models::ActiveModel {
+        id: Set(store.next_id()),
+        provider_id: Set(provider_id.to_owned()),
+        source_id: Set(source_id.to_owned()),
+        key_id: Set(key_id.to_owned()),
+        upstream_model_id: Set(input.upstream_model_id),
+        global_model_id: Set(input.global_model_id),
+        created_at: Set(now),
+        updated_at: Set(now),
+    }
+}
+
 fn cost_active_model(
     store: &ProviderStore,
     provider_id: &str,
@@ -203,5 +478,26 @@ fn cost_mode_value(mode: &ProviderModelCostMode) -> &'static str {
     match mode {
         ProviderModelCostMode::PerRequest => "per_request",
         ProviderModelCostMode::PerToken => "per_token",
+    }
+}
+
+fn cost_sync_mode_value(value: types::provider::ProviderQuickImportCostSyncMode) -> &'static str {
+    match value {
+        types::provider::ProviderQuickImportCostSyncMode::Overwrite => "overwrite",
+        types::provider::ProviderQuickImportCostSyncMode::ReportOnly => "report_only",
+    }
+}
+
+fn anomaly_action_value(value: types::provider::ProviderQuickImportUpstreamAnomalyAction) -> &'static str {
+    match value {
+        types::provider::ProviderQuickImportUpstreamAnomalyAction::DisableKey => "disable_key",
+        types::provider::ProviderQuickImportUpstreamAnomalyAction::ReportOnly => "report_only",
+    }
+}
+
+fn fetch_failure_action_value(value: types::provider::ProviderQuickImportFetchFailureAction) -> &'static str {
+    match value {
+        types::provider::ProviderQuickImportFetchFailureAction::ReportOnly => "report_only",
+        types::provider::ProviderQuickImportFetchFailureAction::DisableAfterFailures => "disable_after_failures",
     }
 }

@@ -202,6 +202,11 @@ export const endpoints = {
     list: '/api/admin/providers',
     quickImportPreview: '/api/admin/providers/quick-import/preview',
     quickImportCommit: '/api/admin/providers/quick-import/commit',
+    quickImportAppendPreview: (id: string) =>
+      `/api/admin/providers/${id}/quick-import/append/preview`,
+    quickImportAppendCommit: (id: string) =>
+      `/api/admin/providers/${id}/quick-import/append/commit`,
+    quickImportSync: (id: string) => `/api/admin/providers/${id}/quick-import-sync`,
     byId: (id: string) => `/api/admin/providers/${id}`,
     groups: '/api/admin/provider-groups',
     groupById: (id: string) => `/api/admin/provider-groups/${id}`,
@@ -216,6 +221,14 @@ export const endpoints = {
     keyBatchPriorities: '/api/admin/providers/keys/batch-priorities',
     keyById: (providerId: string, keyId: string) =>
       `/api/admin/providers/${providerId}/keys/${keyId}`,
+    keyQuickImportResolution: (providerId: string, keyId: string) =>
+      `/api/admin/providers/${providerId}/keys/${keyId}/quick-import-resolution`,
+    keyQuickImportAcceptCurrent: (providerId: string, keyId: string) =>
+      `/api/admin/providers/${providerId}/keys/${keyId}/quick-import-resolution/accept-current`,
+    keyQuickImportRelink: (providerId: string, keyId: string) =>
+      `/api/admin/providers/${providerId}/keys/${keyId}/quick-import-resolution/relink`,
+    keyQuickImportModelAssociations: (providerId: string, keyId: string) =>
+      `/api/admin/providers/${providerId}/keys/${keyId}/quick-import-model-associations`,
     upstreamModels: (id: string) => `/api/admin/providers/${id}/upstream-models`,
     models: (id: string) => `/api/admin/providers/${id}/models`,
     modelById: (providerId: string, modelId: string) =>

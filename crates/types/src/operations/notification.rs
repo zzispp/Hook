@@ -5,6 +5,7 @@ pub struct NotificationItem {
     pub source_type: String,
     pub source_id: String,
     pub title: String,
+    pub description: Option<String>,
     pub category: String,
     pub is_unread: bool,
     pub created_at: String,

@@ -4,109 +4,119 @@ use rust_decimal::Decimal;
 use types::{
     model::GlobalModelResponse,
     provider::{
-        ProviderApiKeyCreate, ProviderCreate, ProviderEndpointCreate, ProviderModelBindingCreate, ProviderModelCostBatchUpsert, ProviderModelMapping,
-        ProviderQuickImportModelMappingInput, ProviderQuickImportSelectedToken, ProviderQuickImportSourceConfig,
+        ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderModelBindingCreate, ProviderModelCostBatchUpsert,
+        ProviderModelMapping, ProviderQuickImportSourceConfig, ProviderQuickImportSyncConfig,
     },
 };
 
 use crate::application::{
-    ProviderError, ProviderQuickImportApiKeyCreate, ProviderQuickImportCreate, ProviderQuickImportModelCostCreate, ProviderResult, SecretCipher,
-    UpstreamImportData, UpstreamImportToken,
+    ProviderError, ProviderQuickImportApiKeyCreate, ProviderQuickImportAppend, ProviderQuickImportCreate, ProviderQuickImportKeyReplacement,
+    ProviderQuickImportModelCostCreate, ProviderQuickImportSyncSourceCreate, ProviderResult, SecretCipher, UpstreamImportToken,
 };
 
+pub(super) use super::quick_import_commit_models::{SelectedToken, assert_no_mapping_conflicts, resolved_mappings, selected_tokens};
+use super::quick_import_commit_models::{allowed_model_ids, key_model_mappings};
 use super::{
     quick_import_costs::model_cost,
-    quick_import_shared::{global_model, globals_by_id, globals_by_name, source_base_url},
+    quick_import_shared::{global_model, globals_by_id, source_base_url},
 };
 use crate::application::validation::{sanitize_api_key, sanitize_endpoint, validate_api_key, validate_endpoint, validate_model_cost_batch};
 
-pub(super) fn quick_import_create<C>(
-    provider: ProviderCreate,
-    source: &ProviderQuickImportSourceConfig,
-    selected: Vec<SelectedToken<'_>>,
-    globals: &[GlobalModelResponse],
-    mappings: BTreeMap<String, String>,
-    cipher: &C,
-) -> ProviderResult<ProviderQuickImportCreate>
+pub(super) struct QuickImportCreateDraft<'a, C> {
+    pub(super) provider: ProviderCreate,
+    pub(super) source: &'a ProviderQuickImportSourceConfig,
+    pub(super) recharge_multiplier: Decimal,
+    pub(super) sync_config: ProviderQuickImportSyncConfig,
+    pub(super) selected: Vec<SelectedToken<'a>>,
+    pub(super) globals: &'a [GlobalModelResponse],
+    pub(super) mappings: BTreeMap<String, String>,
+    pub(super) cipher: &'a C,
+}
+
+pub(super) struct QuickImportAppendDraft<'a, C> {
+    pub(super) provider_id: String,
+    pub(super) source_id: String,
+    pub(super) source: &'a ProviderQuickImportSourceConfig,
+    pub(super) selected: Vec<SelectedToken<'a>>,
+    pub(super) globals: &'a [GlobalModelResponse],
+    pub(super) mappings: BTreeMap<String, String>,
+    pub(super) cipher: &'a C,
+}
+
+pub(super) struct QuickImportKeyReplacementDraft<'a> {
+    pub(super) provider_id: String,
+    pub(super) source_id: String,
+    pub(super) key_id: String,
+    pub(super) token: &'a UpstreamImportToken,
+    pub(super) effective_cost_multiplier: Decimal,
+    pub(super) globals: &'a [GlobalModelResponse],
+    pub(super) mappings: BTreeMap<String, String>,
+    pub(super) encrypted_api_key: Option<String>,
+    pub(super) existing_global_model_ids: &'a BTreeSet<String>,
+}
+
+pub(super) fn quick_import_create<C>(input: QuickImportCreateDraft<'_, C>) -> ProviderResult<ProviderQuickImportCreate>
 where
     C: SecretCipher,
 {
-    let global_by_id = globals_by_id(globals);
+    let global_by_id = globals_by_id(input.globals);
     Ok(ProviderQuickImportCreate {
-        provider,
-        endpoints: endpoint_creates(source_base_url(source), &selected)?,
-        model_bindings: binding_creates(&mappings, &global_by_id)?,
-        api_keys: key_creates(&selected, &mappings, cipher)?,
-        model_costs: cost_creates(&selected, &mappings, &global_by_id)?,
+        provider: input.provider,
+        sync_source: Some(sync_source_create(input.source, input.recharge_multiplier, input.sync_config, input.cipher)?),
+        endpoints: endpoint_creates(source_base_url(input.source), &input.selected)?,
+        model_bindings: binding_creates(&input.mappings, &global_by_id)?,
+        api_keys: key_creates(&input.selected, &input.mappings, input.cipher)?,
+        model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
     })
 }
 
-pub(super) fn selected_tokens<'a>(data: &'a UpstreamImportData, inputs: &[ProviderQuickImportSelectedToken]) -> ProviderResult<Vec<SelectedToken<'a>>> {
-    if inputs.is_empty() {
-        return Err(ProviderError::InvalidInput("selected_tokens cannot be empty".into()));
-    }
-    let by_id = data.tokens.iter().map(|token| (token.id.as_str(), token)).collect::<BTreeMap<_, _>>();
-    inputs.iter().map(|input| selected_token(&by_id, input)).collect()
+pub(super) fn quick_import_append<C>(input: QuickImportAppendDraft<'_, C>) -> ProviderResult<ProviderQuickImportAppend>
+where
+    C: SecretCipher,
+{
+    let global_by_id = globals_by_id(input.globals);
+    Ok(ProviderQuickImportAppend {
+        provider_id: input.provider_id,
+        source_id: input.source_id,
+        endpoints: endpoint_creates(source_base_url(input.source), &input.selected)?,
+        model_bindings: binding_creates(&input.mappings, &global_by_id)?,
+        api_keys: key_creates(&input.selected, &input.mappings, input.cipher)?,
+        model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
+    })
 }
 
-pub(super) fn resolved_mappings(
-    selected: &[SelectedToken<'_>],
-    globals: &[GlobalModelResponse],
-    selected_model_ids: Vec<String>,
-    inputs: Vec<ProviderQuickImportModelMappingInput>,
-) -> ProviderResult<BTreeMap<String, String>> {
-    let by_name = globals_by_name(globals);
-    let by_id = globals_by_id(globals);
-    let submitted = submitted_mappings(inputs);
-    let available = upstream_model_ids_from_selected(selected);
-    let selected_ids = normalized_selected_model_ids(selected_model_ids);
-    if selected_ids.is_empty() {
-        return Err(ProviderError::InvalidInput("selected_model_ids cannot be empty".into()));
-    }
-    validate_selected_model_ids(&selected_ids, &available)?;
-    validate_submitted_mappings_selected(&submitted, &selected_ids)?;
-
-    let mut output = BTreeMap::new();
-    for upstream_id in selected_ids {
-        let global_id = submitted
-            .get(&upstream_id)
-            .cloned()
-            .or_else(|| by_name.get(&upstream_id).map(|model| model.id.clone()));
-        let Some(global_id) = global_id else {
-            return Err(ProviderError::InvalidInput(format!("model mapping is required: {upstream_id}")));
-        };
-        global_model(&by_id, &global_id)?;
-        output.insert(upstream_id, global_id);
-    }
-    Ok(output)
-}
-
-pub(super) struct SelectedToken<'a> {
-    token: &'a UpstreamImportToken,
-    name: String,
-    endpoint_formats: Vec<String>,
-    effective_cost_multiplier: Decimal,
-}
-
-#[cfg(test)]
-impl<'a> SelectedToken<'a> {
-    pub(super) fn for_test(token: &'a UpstreamImportToken, endpoint_formats: Vec<String>) -> Self {
-        Self {
-            token,
-            name: token.name.clone(),
-            endpoint_formats,
-            effective_cost_multiplier: Decimal::ONE,
-        }
-    }
-
-    pub(super) fn for_test_with_multiplier(token: &'a UpstreamImportToken, endpoint_formats: Vec<String>, effective_cost_multiplier: Decimal) -> Self {
-        Self {
-            token,
-            name: token.name.clone(),
-            endpoint_formats,
-            effective_cost_multiplier,
-        }
-    }
+pub(super) fn quick_import_key_replacement(input: QuickImportKeyReplacementDraft<'_>) -> ProviderResult<ProviderQuickImportKeyReplacement> {
+    let global_by_id = globals_by_id(input.globals);
+    let selected = SelectedToken {
+        token: input.token,
+        name: input.token.name.clone(),
+        endpoint_formats: Vec::new(),
+        effective_cost_multiplier: input.effective_cost_multiplier,
+    };
+    let model_bindings = binding_creates(&input.mappings, &global_by_id)?
+        .into_iter()
+        .filter(|binding| !input.existing_global_model_ids.contains(&binding.global_model_id))
+        .collect();
+    Ok(ProviderQuickImportKeyReplacement {
+        provider_id: input.provider_id,
+        source_id: input.source_id,
+        key_id: input.key_id,
+        upstream_token_id: input.token.id.clone(),
+        upstream_token_name: input.token.name.clone(),
+        upstream_masked_key: input.token.masked_key.clone(),
+        upstream_group: input.token.group.clone(),
+        upstream_group_ratio: input.token.group_ratio,
+        effective_cost_multiplier: input.effective_cost_multiplier,
+        model_mappings: key_model_mappings(&selected, &input.mappings),
+        input: ProviderApiKeyUpdate {
+            allowed_model_ids: Some(allowed_model_ids(&selected, &input.mappings)?),
+            is_active: Some(true),
+            ..ProviderApiKeyUpdate::default()
+        },
+        encrypted_api_key: input.encrypted_api_key,
+        model_bindings,
+        model_costs: cost_creates(std::slice::from_ref(&selected), &input.mappings, &global_by_id)?,
+    })
 }
 
 fn endpoint_creates(base_url: String, selected: &[SelectedToken<'_>]) -> ProviderResult<Vec<ProviderEndpointCreate>> {
@@ -152,11 +162,37 @@ where
             validate_api_key(&input)?;
             Ok(ProviderQuickImportApiKeyCreate {
                 upstream_token_id: token.token.id.clone(),
+                upstream_token_name: token.token.name.clone(),
+                upstream_masked_key: token.token.masked_key.clone(),
+                upstream_group: token.token.group.clone(),
+                upstream_group_ratio: token.token.group_ratio,
+                effective_cost_multiplier: token.effective_cost_multiplier,
+                model_mappings: key_model_mappings(token, mappings),
                 encrypted_api_key: cipher.encrypt_provider_key(api_key)?,
                 input,
             })
         })
         .collect()
+}
+
+fn sync_source_create<C>(
+    source: &ProviderQuickImportSourceConfig,
+    recharge_multiplier: Decimal,
+    sync_config: ProviderQuickImportSyncConfig,
+    cipher: &C,
+) -> ProviderResult<ProviderQuickImportSyncSourceCreate>
+where
+    C: SecretCipher,
+{
+    let ProviderQuickImportSourceConfig::Newapi(config) = source;
+    Ok(ProviderQuickImportSyncSourceCreate {
+        source_kind: source.kind(),
+        base_url: source_base_url(source),
+        encrypted_system_access_token: cipher.encrypt_provider_key(config.system_access_token.trim())?,
+        user_id: config.user_id.trim().to_owned(),
+        recharge_multiplier,
+        sync_config,
+    })
 }
 
 fn cost_creates(
@@ -194,34 +230,6 @@ fn push_token_costs(
     Ok(())
 }
 
-fn selected_token<'a>(by_id: &BTreeMap<&str, &'a UpstreamImportToken>, input: &ProviderQuickImportSelectedToken) -> ProviderResult<SelectedToken<'a>> {
-    let token = by_id
-        .get(input.upstream_token_id.trim())
-        .copied()
-        .ok_or_else(|| ProviderError::InvalidInput(format!("upstream token does not exist: {}", input.upstream_token_id)))?;
-    if token.status != 1 {
-        return Err(ProviderError::InvalidInput(format!("upstream token is disabled: {}", token.id)));
-    }
-    if token.models.is_empty() {
-        return Err(ProviderError::InvalidInput(format!("upstream token has no models: {}", token.id)));
-    }
-    if input.name.trim().is_empty() {
-        return Err(ProviderError::InvalidInput(format!("selected token name cannot be blank: {}", token.id)));
-    }
-    if input.effective_cost_multiplier <= Decimal::ZERO {
-        return Err(ProviderError::InvalidInput(format!(
-            "effective_cost_multiplier must be greater than 0: {}",
-            token.id
-        )));
-    }
-    Ok(SelectedToken {
-        token,
-        name: input.name.trim().to_owned(),
-        endpoint_formats: normalized_formats(&input.endpoint_formats)?,
-        effective_cost_multiplier: input.effective_cost_multiplier,
-    })
-}
-
 fn binding_create(upstream_id: &str, global: &GlobalModelResponse) -> ProviderResult<ProviderModelBindingCreate> {
     Ok(ProviderModelBindingCreate {
         global_model_id: global.id.clone(),
@@ -250,88 +258,6 @@ fn api_key_create(token: &SelectedToken<'_>, mappings: &BTreeMap<String, String>
         time_range_end: None,
         is_active: Some(true),
     })
-}
-
-fn allowed_model_ids(token: &SelectedToken<'_>, mappings: &BTreeMap<String, String>) -> ProviderResult<Vec<String>> {
-    let mut ids = BTreeSet::new();
-    for model in &token.token.models {
-        if let Some(global_id) = mappings.get(&model.id) {
-            ids.insert(global_id.to_owned());
-        }
-    }
-    if ids.is_empty() {
-        return Err(ProviderError::InvalidInput(format!("selected token has no mapped models: {}", token.token.id)));
-    }
-    Ok(ids.into_iter().collect())
-}
-
-pub(super) fn assert_no_mapping_conflicts(mappings: &BTreeMap<String, String>) -> ProviderResult<()> {
-    let mut seen = BTreeMap::<&str, &str>::new();
-    for (upstream_id, global_id) in mappings {
-        if let Some(previous) = seen.insert(global_id, upstream_id)
-            && previous != upstream_id
-        {
-            return Err(ProviderError::InvalidInput(format!(
-                "multiple upstream models map to the same global model: {global_id}"
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn normalized_formats(values: &[String]) -> ProviderResult<Vec<String>> {
-    let formats = values
-        .iter()
-        .map(|value| value.trim().to_ascii_lowercase())
-        .filter(|value| !value.is_empty())
-        .collect::<BTreeSet<_>>();
-    if formats.is_empty() {
-        return Err(ProviderError::InvalidInput("endpoint_formats cannot be empty".into()));
-    }
-    Ok(formats.into_iter().collect())
-}
-
-fn upstream_model_ids_from_selected(tokens: &[SelectedToken<'_>]) -> BTreeSet<String> {
-    tokens
-        .iter()
-        .flat_map(|token| token.token.models.iter().map(|model| model.id.clone()))
-        .collect()
-}
-
-fn normalized_selected_model_ids(values: Vec<String>) -> BTreeSet<String> {
-    values
-        .into_iter()
-        .map(|value| value.trim().to_owned())
-        .filter(|value| !value.is_empty())
-        .collect()
-}
-
-fn validate_selected_model_ids(selected_ids: &BTreeSet<String>, available: &BTreeSet<String>) -> ProviderResult<()> {
-    for upstream_id in selected_ids {
-        if !available.contains(upstream_id) {
-            return Err(ProviderError::InvalidInput(format!(
-                "selected model does not exist on selected tokens: {upstream_id}"
-            )));
-        }
-    }
-    Ok(())
-}
-
-fn validate_submitted_mappings_selected(submitted: &BTreeMap<String, String>, selected_ids: &BTreeSet<String>) -> ProviderResult<()> {
-    for upstream_id in submitted.keys() {
-        if !selected_ids.contains(upstream_id) {
-            return Err(ProviderError::InvalidInput(format!("model mapping is not selected for import: {upstream_id}")));
-        }
-    }
-    Ok(())
-}
-
-fn submitted_mappings(inputs: Vec<ProviderQuickImportModelMappingInput>) -> BTreeMap<String, String> {
-    inputs
-        .into_iter()
-        .map(|input| (input.upstream_model_id.trim().to_owned(), input.global_model_id.trim().to_owned()))
-        .filter(|(upstream_id, global_id)| !upstream_id.is_empty() && !global_id.is_empty())
-        .collect()
 }
 
 fn missing_key_error(token_id: &str) -> ProviderError {

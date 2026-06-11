@@ -82,9 +82,10 @@ export type SupportTicketMutationResponse = {
 };
 
 export type NotificationItem = {
-  source_type: 'announcement' | 'ticket';
+  source_type: 'announcement' | 'ticket' | 'provider_quick_import_sync';
   source_id: string;
   title: string;
+  description?: string | null;
   category: string;
   is_unread: boolean;
   created_at: string;

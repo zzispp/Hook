@@ -6,7 +6,7 @@ use crate::application::{GlobalModelCatalog, ProviderRepository, ProviderResult,
 
 use super::{
     provider_core::prepare_provider_create,
-    quick_import_commit::{quick_import_create, resolved_mappings, selected_tokens},
+    quick_import_commit::{QuickImportCreateDraft, quick_import_create, resolved_mappings, selected_tokens},
     quick_import_preview::preview_response,
     quick_import_shared::{provider_create, validate_common},
 };
@@ -51,7 +51,16 @@ where
     let globals = args.models.list_global_models().await?;
     let selected = selected_tokens(&data, &input.selected_tokens)?;
     let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
-    let draft = quick_import_create(provider, &input.source, selected, &globals, mappings, args.cipher)?;
+    let draft = quick_import_create(QuickImportCreateDraft {
+        provider,
+        source: &input.source,
+        recharge_multiplier: input.recharge_multiplier,
+        sync_config: input.sync_config,
+        selected,
+        globals: &globals,
+        mappings,
+        cipher: args.cipher,
+    })?;
     let output = args.repository.create_quick_import(draft).await?;
     Ok(ProviderQuickImportCommitResponse {
         imported_token_count: output.api_keys.len(),

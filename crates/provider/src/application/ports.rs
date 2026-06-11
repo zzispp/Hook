@@ -9,9 +9,12 @@ use types::provider::{
     ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListResponse, ProviderKeyGroupUpdate, ProviderListRequest,
     ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCost,
     ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostUpsert, ProviderModelTestRequest, ProviderModelTestResponse,
-    ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse,
-    ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail,
-    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse,
+    ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate, ProviderQuickImportPreviewRequest,
+    ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest, ProviderQuickImportResolutionResponse, ProviderQuickImportSourceConfig,
+    ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate,
+    ProviderQuickImportSyncStatus, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    UsageRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -53,8 +56,25 @@ pub struct UpstreamImportModel {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct UpstreamSyncSnapshot {
+    pub source_kind: ProviderQuickImportSourceKind,
+    pub groups: BTreeMap<String, Decimal>,
+    pub tokens: Vec<UpstreamSyncToken>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UpstreamSyncToken {
+    pub id: String,
+    pub name: String,
+    pub masked_key: String,
+    pub status: i32,
+    pub group: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProviderQuickImportCreate {
     pub provider: ProviderCreate,
+    pub sync_source: Option<ProviderQuickImportSyncSourceCreate>,
     pub endpoints: Vec<ProviderEndpointCreate>,
     pub model_bindings: Vec<ProviderModelBindingCreate>,
     pub api_keys: Vec<ProviderQuickImportApiKeyCreate>,
@@ -62,10 +82,32 @@ pub struct ProviderQuickImportCreate {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportSyncSourceCreate {
+    pub source_kind: ProviderQuickImportSourceKind,
+    pub base_url: String,
+    pub encrypted_system_access_token: String,
+    pub user_id: String,
+    pub recharge_multiplier: Decimal,
+    pub sync_config: ProviderQuickImportSyncConfig,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProviderQuickImportApiKeyCreate {
     pub upstream_token_id: String,
+    pub upstream_token_name: String,
+    pub upstream_masked_key: String,
+    pub upstream_group: Option<String>,
+    pub upstream_group_ratio: Decimal,
+    pub effective_cost_multiplier: Decimal,
+    pub model_mappings: Vec<ProviderQuickImportKeyModelCreate>,
     pub input: ProviderApiKeyCreate,
     pub encrypted_api_key: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportKeyModelCreate {
+    pub upstream_model_id: String,
+    pub global_model_id: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -82,6 +124,128 @@ pub struct ProviderQuickImportCreated {
     pub api_keys: Vec<ProviderApiKey>,
     pub model_bindings: Vec<ProviderModelBinding>,
     pub model_costs: Vec<ProviderModelCost>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportAppend {
+    pub provider_id: String,
+    pub source_id: String,
+    pub endpoints: Vec<ProviderEndpointCreate>,
+    pub model_bindings: Vec<ProviderModelBindingCreate>,
+    pub api_keys: Vec<ProviderQuickImportApiKeyCreate>,
+    pub model_costs: Vec<ProviderQuickImportModelCostCreate>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportAppended {
+    pub endpoints: Vec<ProviderEndpoint>,
+    pub api_keys: Vec<ProviderApiKey>,
+    pub model_bindings: Vec<ProviderModelBinding>,
+    pub model_costs: Vec<ProviderModelCost>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportKeyReplacement {
+    pub provider_id: String,
+    pub source_id: String,
+    pub key_id: String,
+    pub upstream_token_id: String,
+    pub upstream_token_name: String,
+    pub upstream_masked_key: String,
+    pub upstream_group: Option<String>,
+    pub upstream_group_ratio: Decimal,
+    pub effective_cost_multiplier: Decimal,
+    pub model_mappings: Vec<ProviderQuickImportKeyModelCreate>,
+    pub input: ProviderApiKeyUpdate,
+    pub encrypted_api_key: Option<String>,
+    pub model_bindings: Vec<ProviderModelBindingCreate>,
+    pub model_costs: Vec<ProviderQuickImportModelCostCreate>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportKeyReplaced {
+    pub api_key: ProviderApiKey,
+    pub model_bindings: Vec<ProviderModelBinding>,
+    pub model_costs: Vec<ProviderModelCost>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportSyncSource {
+    pub id: String,
+    pub provider_id: String,
+    pub source_kind: ProviderQuickImportSourceKind,
+    pub base_url: String,
+    pub encrypted_system_access_token: String,
+    pub user_id: String,
+    pub recharge_multiplier: Decimal,
+    pub sync_config: ProviderQuickImportSyncConfig,
+    pub last_status: Option<ProviderQuickImportSyncStatus>,
+    pub last_error: Option<String>,
+    pub last_synced_at: Option<time::OffsetDateTime>,
+    pub consecutive_failures: u32,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ProviderQuickImportSyncSourcePatch {
+    pub base_url: Option<String>,
+    pub encrypted_system_access_token: Option<String>,
+    pub user_id: Option<String>,
+    pub recharge_multiplier: Option<Decimal>,
+    pub sync_config: Option<ProviderQuickImportSyncConfig>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportSyncKey {
+    pub provider_id: String,
+    pub source_id: String,
+    pub key_id: String,
+    pub upstream_token_id: String,
+    pub upstream_token_name: String,
+    pub upstream_group: Option<String>,
+    pub upstream_group_ratio: Decimal,
+    pub effective_cost_multiplier: Decimal,
+    pub statuses: Vec<ProviderQuickImportSyncStatus>,
+    pub model_mappings: Vec<ProviderQuickImportSyncKeyModel>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderQuickImportSyncKeyModel {
+    pub upstream_model_id: String,
+    pub global_model_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportSyncKeyPatch {
+    pub key_id: String,
+    pub statuses: Vec<ProviderQuickImportSyncStatus>,
+    pub upstream_group: Option<Option<String>>,
+    pub upstream_group_ratio: Option<Decimal>,
+    pub effective_cost_multiplier: Option<Decimal>,
+    pub last_error: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderQuickImportSyncEventCreate {
+    pub provider_id: String,
+    pub source_id: String,
+    pub key_id: Option<String>,
+    pub status: ProviderQuickImportSyncStatus,
+    pub title: String,
+    pub detail: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ProviderQuickImportSyncRunOptions {
+    pub limit: u64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ProviderQuickImportSyncRunReport {
+    pub scanned_count: u64,
+    pub synced_count: u64,
+    pub failed_count: u64,
+    pub disabled_key_count: u64,
+    pub updated_cost_count: u64,
 }
 
 #[async_trait]
@@ -126,6 +290,26 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse>;
     async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse>;
     async fn create_quick_import(&self, input: ProviderQuickImportCreate) -> ProviderResult<ProviderQuickImportCreated>;
+    async fn append_quick_import(&self, input: ProviderQuickImportAppend) -> ProviderResult<ProviderQuickImportAppended>;
+    async fn replace_quick_import_key(&self, input: ProviderQuickImportKeyReplacement) -> ProviderResult<ProviderQuickImportKeyReplaced>;
+    async fn quick_import_sync_source(&self, provider_id: &str) -> ProviderResult<Option<ProviderQuickImportSyncSource>>;
+    async fn list_quick_import_sync_sources(&self, limit: u64) -> ProviderResult<Vec<ProviderQuickImportSyncSource>>;
+    async fn list_quick_import_sync_keys(&self, source_id: &str) -> ProviderResult<Vec<ProviderQuickImportSyncKey>>;
+    async fn quick_import_sync_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<Option<ProviderQuickImportSyncKey>>;
+    async fn update_quick_import_sync_source(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportSyncSourcePatch,
+    ) -> ProviderResult<ProviderQuickImportSyncSource>;
+    async fn update_quick_import_sync_source_run(
+        &self,
+        source_id: &str,
+        status: Option<ProviderQuickImportSyncStatus>,
+        error: Option<String>,
+        failed: bool,
+    ) -> ProviderResult<()>;
+    async fn update_quick_import_sync_keys(&self, provider_id: &str, input: Vec<ProviderQuickImportSyncKeyPatch>) -> ProviderResult<()>;
+    async fn create_quick_import_sync_events(&self, input: Vec<ProviderQuickImportSyncEventCreate>) -> ProviderResult<()>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;
@@ -154,6 +338,8 @@ pub trait UpstreamModelFetcher: Send + Sync + 'static {
 #[async_trait]
 pub trait UpstreamProviderImportSource: Send + Sync + 'static {
     async fn fetch_import_data(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamImportData>;
+    async fn fetch_sync_snapshot(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamSyncSnapshot>;
+    async fn fetch_sync_token_models(&self, source: &ProviderQuickImportSourceConfig, upstream_token_id: &str) -> ProviderResult<Vec<UpstreamImportModel>>;
 }
 
 #[async_trait]
@@ -197,6 +383,33 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse>;
     async fn preview_quick_import(&self, input: ProviderQuickImportPreviewRequest) -> ProviderResult<ProviderQuickImportPreviewResponse>;
     async fn commit_quick_import(&self, input: ProviderQuickImportCommitRequest) -> ProviderResult<ProviderQuickImportCommitResponse>;
+    async fn preview_quick_import_append(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportAppendPreviewRequest,
+    ) -> ProviderResult<ProviderQuickImportPreviewResponse>;
+    async fn commit_quick_import_append(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportAppendCommitRequest,
+    ) -> ProviderResult<ProviderQuickImportCommitResponse>;
+    async fn quick_import_resolution(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderQuickImportResolutionResponse>;
+    async fn accept_quick_import_current(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderApiKey>;
+    async fn relink_quick_import_key(&self, provider_id: &str, key_id: &str, input: ProviderQuickImportRelinkRequest) -> ProviderResult<ProviderApiKey>;
+    async fn quick_import_model_associations(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderQuickImportModelAssociationsResponse>;
+    async fn update_quick_import_model_associations(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderQuickImportModelAssociationsUpdate,
+    ) -> ProviderResult<ProviderQuickImportModelAssociationsResponse>;
+    async fn quick_import_sync_settings(&self, provider_id: &str) -> ProviderResult<ProviderQuickImportSyncSettingsResponse>;
+    async fn update_quick_import_sync_settings(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportSyncSettingsUpdate,
+    ) -> ProviderResult<ProviderQuickImportSyncSettingsResponse>;
+    async fn run_quick_import_sync(&self, options: ProviderQuickImportSyncRunOptions) -> ProviderResult<ProviderQuickImportSyncRunReport>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;
