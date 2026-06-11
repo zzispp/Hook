@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 mod model_status;
 mod performance_monitoring;
+mod provider_quick_import;
 mod recharge;
 mod request_payload;
 mod request_record;
@@ -19,6 +20,7 @@ use types::scheduler::ScheduledTaskConfigValueType;
 use self::{
     model_status::{ModelStatusCheckDispatchTask, ModelStatusRunsCleanupTask},
     performance_monitoring::{PerformanceMonitoringCleanupTask, PerformanceMonitoringSnapshotTask},
+    provider_quick_import::ProviderQuickImportSyncTask,
     recharge::{RechargeOrderExpireTask, RechargePaymentPollTask},
     request_payload::{RequestPayloadBackfillTask, RequestPayloadStaleSweepTask},
     request_record::{RequestRecordCleanupTask, RequestRecordPartitionMaintenanceTask, RequestRecordStaleSweepTask},
@@ -30,6 +32,7 @@ pub fn scheduler_registry(
     performance_os_collector: Arc<PerformanceOsCollector>,
     recharge_service: Arc<dyn ::recharge::application::RechargeUseCase>,
     model_status_service: Arc<dyn ::model_status::application::ModelStatusUseCase>,
+    provider_service: Arc<dyn ::provider::application::ProviderUseCase>,
 ) -> SchedulerResult<SchedulerRegistry> {
     let mut registry = SchedulerRegistry::new();
     registry.register(ApiTokenCleanupTask { cache })?;
@@ -48,6 +51,7 @@ pub fn scheduler_registry(
     registry.register(PerformanceMonitoringCleanupTask)?;
     registry.register(ModelStatusCheckDispatchTask { model_status_service })?;
     registry.register(ModelStatusRunsCleanupTask)?;
+    registry.register(ProviderQuickImportSyncTask { provider_service })?;
     Ok(registry)
 }
 

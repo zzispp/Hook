@@ -1,7 +1,8 @@
+use rust_decimal::Decimal;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
 use types::provider::{
     Provider, ProviderGroup, ProviderGroupListRequest, ProviderGroupListResponse, ProviderGroupMemberInput, ProviderKeyGroup, ProviderKeyGroupListResponse,
-    ProviderListRequest, ProviderListResponse,
+    ProviderListRequest, ProviderListResponse, ProviderOrigin, ProviderQuickImportKeySyncInfo, ProviderQuickImportSourceKind, ProviderQuickImportSyncStatus,
 };
 
 use crate::{Database, StorageError, StorageResult, json};
@@ -130,7 +131,24 @@ impl ProviderStore {
             .order_by_asc(provider_api_keys::Column::InternalPriority)
             .all(self.database.connection())
             .await?;
-        records.into_iter().map(|record| record.response()).collect()
+        let sync_infos = super::quick_import_sync_query::key_sync_info_by_provider(self, provider_id).await?;
+        let source_not_configured = sync_infos.is_empty() && self.quick_import_provider(provider_id).await?;
+        records
+            .into_iter()
+            .map(|record| {
+                let mut response = record.response()?;
+                response.quick_import_sync = sync_infos
+                    .get(&response.id)
+                    .cloned()
+                    .or_else(|| source_not_configured.then(|| source_not_configured_sync_info(response.id.clone())));
+                Ok(response)
+            })
+            .collect()
+    }
+
+    async fn quick_import_provider(&self, provider_id: &str) -> StorageResult<bool> {
+        let record = providers::Entity::find_by_id(provider_id.to_owned()).one(self.database.connection()).await?;
+        Ok(record.is_some_and(|provider| provider.provider_origin == ProviderOrigin::QuickImport.as_str()))
     }
 
     pub async fn find_api_key(&self, key_id: &str) -> StorageResult<Option<types::provider::ProviderApiKey>> {
@@ -283,8 +301,65 @@ impl ProviderStore {
         super::provider_model_cost_query::list_model_costs(self, provider_id).await
     }
 
+    pub async fn quick_import_source_for_provider(&self, provider_id: &str) -> StorageResult<Option<super::ProviderQuickImportSourceRecord>> {
+        super::quick_import_sync_query::source_for_provider(self, provider_id).await
+    }
+
+    pub async fn list_quick_import_sync_sources(&self, limit: u64) -> StorageResult<Vec<super::ProviderQuickImportSourceRecord>> {
+        super::quick_import_sync_query::list_sources(self, limit).await
+    }
+
+    pub async fn quick_import_sync_keys(&self, source_id: &str) -> StorageResult<Vec<super::ProviderQuickImportSyncKeyRecord>> {
+        super::quick_import_sync_query::keys_for_source(self, source_id).await
+    }
+
+    pub async fn quick_import_sync_key(&self, provider_id: &str, key_id: &str) -> StorageResult<Option<super::ProviderQuickImportSyncKeyRecord>> {
+        super::quick_import_sync_query::key_for_provider_key(self, provider_id, key_id).await
+    }
+
+    pub async fn update_quick_import_source(
+        &self,
+        provider_id: &str,
+        patch: super::ProviderQuickImportSourceRecordPatch,
+    ) -> StorageResult<super::ProviderQuickImportSourceRecord> {
+        super::quick_import_sync_query::update_source(self, provider_id, patch).await
+    }
+
+    pub async fn update_quick_import_source_run(
+        &self,
+        source_id: &str,
+        status: Option<types::provider::ProviderQuickImportSyncStatus>,
+        error: Option<String>,
+        failed: bool,
+    ) -> StorageResult<()> {
+        super::quick_import_sync_query::update_source_run(self, source_id, status, error, failed).await
+    }
+
+    pub async fn update_quick_import_sync_keys(&self, provider_id: &str, patches: Vec<super::ProviderQuickImportSyncKeyRecordPatch>) -> StorageResult<()> {
+        super::quick_import_sync_query::update_keys(self, provider_id, patches).await
+    }
+
+    pub async fn create_quick_import_sync_events(&self, input: Vec<super::ProviderQuickImportSyncEventRecordInput>) -> StorageResult<()> {
+        super::quick_import_sync_event_query::create_events(self, input).await
+    }
+
     pub async fn upsert_model_costs(&self, inputs: Vec<ProviderModelCostRecordInput>) -> StorageResult<Vec<types::provider::ProviderModelCost>> {
         super::provider_model_cost_query::upsert_model_costs(self, inputs).await
+    }
+
+    pub async fn create_quick_import(&self, input: super::ProviderQuickImportRecordInput) -> StorageResult<super::ProviderQuickImportRecordOutput> {
+        super::quick_import_query::create_quick_import(self, input).await
+    }
+
+    pub async fn append_quick_import(&self, input: super::ProviderQuickImportAppendRecordInput) -> StorageResult<super::ProviderQuickImportAppendRecordOutput> {
+        super::quick_import_query::append_quick_import(self, input).await
+    }
+
+    pub async fn replace_quick_import_key(
+        &self,
+        input: super::ProviderQuickImportKeyReplacementRecordInput,
+    ) -> StorageResult<super::ProviderQuickImportKeyReplacementRecordOutput> {
+        super::quick_import_query::replace_quick_import_key(self, input).await
     }
 
     pub async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> StorageResult<()> {
@@ -345,5 +420,18 @@ impl ProviderStore {
             .one(self.database.connection())
             .await
             .map_err(StorageError::from)
+    }
+}
+
+fn source_not_configured_sync_info(key_id: String) -> ProviderQuickImportKeySyncInfo {
+    ProviderQuickImportKeySyncInfo {
+        source_kind: ProviderQuickImportSourceKind::Newapi,
+        upstream_token_id: key_id,
+        upstream_group: None,
+        upstream_group_ratio: Decimal::ONE,
+        effective_cost_multiplier: Decimal::ONE,
+        statuses: vec![ProviderQuickImportSyncStatus::SourceNotConfigured],
+        last_synced_at: None,
+        last_error: None,
     }
 }

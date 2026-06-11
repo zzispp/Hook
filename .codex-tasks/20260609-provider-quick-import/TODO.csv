@@ -1,0 +1,9 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Map existing backend and frontend extension points,DONE,Relevant routes DTOs storage and UI state are identified,rg -n "quick-import|ProviderQuickImport" crates apps || true,2026-06-09T16:56:00+08:00,0,
+2,Add backend quick import types source service routes and transaction,DONE,Preview and commit APIs compile and enforce import rules,cargo check -p provider -p storage -p types,2026-06-09T18:10:00+08:00,0,
+3,Add frontend quick import actions state and modal,DONE,Provider management exposes two-step import flow,pnpm lint:frontend,2026-06-09T18:13:00+08:00,0,
+4,Add RBAC and i18n seed entries,DONE,New APIs and UI copy are seeded,rg -n "quickImport|quick-import" apps/hook_backend/src/migration/defaults,2026-06-09T18:18:00+08:00,0,
+5,Run validation and fix failures,DONE,Rust and frontend checks pass,just test && pnpm build:frontend,2026-06-09T18:38:00+08:00,0,
+6,Move quick import UI to drawer and per-token mapping modal,DONE,Quick import uses provider drawer pattern and model column shows colored configured status,pnpm lint:frontend,2026-06-10T11:19:51+08:00,0,
+7,Wire provider config through quick import backend,DONE,Preview and commit accept provider_config and provider creation uses it,timeout 60 cargo check -p types -p provider,2026-06-10T11:19:51+08:00,0,
+8,Run focused validation for current changes,DONE,Frontend lint/build and focused Rust checks pass,pnpm lint:frontend && pnpm build:frontend && timeout 60 cargo test -p provider quick_import -- --nocapture,2026-06-10T11:19:51+08:00,0,

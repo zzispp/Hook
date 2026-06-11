@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect sync config provider table and notification boundaries,DONE,Relevant backend/frontend files identified,rg quick_import_sync crates apps,2026-06-10,0,
+2,Split backend anomaly policies and add notification writes,DONE,Sync supports per-condition actions and records admin notifications,cargo test -p provider quick_import_sync -- --nocapture,2026-06-10,0,
+3,Move frontend sync settings to provider action dialog,DONE,Only quick_import provider rows show sync settings action,pnpm --filter hook_frontend lint,2026-06-10,0,
+4,Update backend i18n seeds and run validation,DONE,Frontend build and backend tests pass,pnpm --filter hook_frontend build && just test,2026-06-10,0,

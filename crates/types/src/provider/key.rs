@@ -3,6 +3,8 @@ use std::collections::BTreeMap;
 
 use crate::model::{PatchField, deserialize_patch_value};
 
+use super::quick_import_sync::ProviderQuickImportKeySyncInfo;
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ProviderApiKey {
     pub id: String,
@@ -24,6 +26,7 @@ pub struct ProviderApiKey {
     pub circuit_breaker_by_format: Option<serde_json::Value>,
     pub is_active: bool,
     pub has_api_key: bool,
+    pub quick_import_sync: Option<ProviderQuickImportKeySyncInfo>,
     pub created_at: String,
     pub updated_at: String,
 }

@@ -60,6 +60,7 @@ pub struct NotificationSourceRecord {
     pub source_type: String,
     pub source_id: String,
     pub title: String,
+    pub description: Option<String>,
     pub category: String,
     pub event_at: OffsetDateTime,
     pub link_path: String,

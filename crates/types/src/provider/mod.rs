@@ -6,12 +6,14 @@ mod group;
 mod key;
 mod model_binding;
 mod model_cost;
+mod quick_import;
+mod quick_import_sync;
 mod request_candidate;
 mod request_record;
 mod time_range;
 
 pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCooldownPolicy, ProviderCooldownRule};
-pub use core::{Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderUpdate};
+pub use core::{Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderOrigin, ProviderUpdate};
 pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate};
 pub use enums::{ProviderPriorityMode, ProviderSchedulingMode};
 pub use group::{
@@ -27,6 +29,19 @@ pub use model_binding::{
 pub use model_cost::{
     ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostMode, ProviderModelCostSource, ProviderModelCostUpsert,
     RequestUpstreamCost,
+};
+pub use quick_import::{
+    NewApiQuickImportConfig, ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportCommitRequest,
+    ProviderQuickImportCommitResponse, ProviderQuickImportCostIssue, ProviderQuickImportLinkedKeyPreview, ProviderQuickImportModelAssociation,
+    ProviderQuickImportModelAssociationCandidate, ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate,
+    ProviderQuickImportModelMappingInput, ProviderQuickImportModelMappingPreview, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse,
+    ProviderQuickImportProviderConfig, ProviderQuickImportRelinkRequest, ProviderQuickImportRemoteModel, ProviderQuickImportResolutionResponse,
+    ProviderQuickImportSelectedToken, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportTokenPreview,
+};
+pub use quick_import_sync::{
+    ProviderQuickImportAnomalyActions, ProviderQuickImportCostSyncMode, ProviderQuickImportFetchFailureAction, ProviderQuickImportGroupChangedAction,
+    ProviderQuickImportKeySyncInfo, ProviderQuickImportSyncConfig, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate,
+    ProviderQuickImportSyncStatus, ProviderQuickImportUpstreamAnomalyAction,
 };
 pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{

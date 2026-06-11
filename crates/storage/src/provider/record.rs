@@ -12,7 +12,8 @@ pub(crate) use crate::model::provider_models;
 pub use entities::{
     billing_group_provider_groups, billing_group_provider_key_groups, billing_group_provider_keys, billing_group_providers, billing_rules,
     dimension_collectors, provider_api_keys, provider_cooldown_events, provider_cooldowns, provider_endpoints, provider_group_providers, provider_groups,
-    provider_key_group_keys, provider_key_groups, provider_model_costs, providers, request_candidates, request_records,
+    provider_key_group_keys, provider_key_groups, provider_model_costs, provider_quick_import_key_models, provider_quick_import_keys,
+    provider_quick_import_sources, provider_quick_import_sync_events, providers, request_candidates, request_records,
 };
 
 pub type ProviderRecord = providers::Model;
@@ -28,6 +29,10 @@ pub type ProviderCooldownRecord = provider_cooldowns::Model;
 pub type ProviderCooldownEventRecord = provider_cooldown_events::Model;
 pub type ProviderModelRecord = provider_models::Model;
 pub type ProviderModelCostRecord = provider_model_costs::Model;
+pub type ProviderQuickImportSourceRecord = provider_quick_import_sources::Model;
+pub type ProviderQuickImportKeyRecord = provider_quick_import_keys::Model;
+pub type ProviderQuickImportKeyModelRecord = provider_quick_import_key_models::Model;
+pub type ProviderQuickImportSyncEventRecord = provider_quick_import_sync_events::Model;
 pub type BillingRuleRecord = billing_rules::Model;
 pub type DimensionCollectorRecord = dimension_collectors::Model;
 pub type RequestCandidateRecord = request_candidates::Model;
@@ -74,6 +79,7 @@ impl ProviderApiKeyRecord {
             circuit_breaker_by_format: json::decode_optional(self.circuit_breaker_by_format)?,
             is_active: self.is_active,
             has_api_key: !self.encrypted_api_key.is_empty(),
+            quick_import_sync: None,
             created_at: format_timestamp(self.created_at),
             updated_at: format_timestamp(self.updated_at),
         })

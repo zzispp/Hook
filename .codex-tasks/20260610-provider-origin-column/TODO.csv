@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect provider schema and table rendering,DONE,Relevant backend/frontend files identified,rg provider_origin crates apps,2026-06-10T01:36:03Z,0,
+2,Add provider origin backend field and storage mapping,DONE,Provider create/list carries manual or quick_import,timeout 60 cargo check -p types -p storage -p provider,2026-06-10T01:36:03Z,0,
+3,Render provider origin column in admin list,DONE,Provider table displays manual/quick import labels,pnpm lint:frontend,2026-06-10T01:37:59Z,0,
+4,Run focused validation,DONE,Validation commands pass,pnpm lint:frontend && pnpm build:frontend,2026-06-10T01:40:45Z,0,

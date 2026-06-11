@@ -58,6 +58,15 @@ export function NotificationItem({ notification, onOpen, onDelete }: Notificatio
         primary={notification.title}
         secondary={
           <>
+            {notification.description ? (
+              <>
+                {notification.description}
+                <Box
+                  component="span"
+                  sx={{ width: 2, height: 2, borderRadius: '50%', bgcolor: 'currentColor' }}
+                />
+              </>
+            ) : null}
             {fToNow(notification.created_at, currentLang.adapterLocale)}
             <Box
               component="span"
@@ -72,6 +81,7 @@ export function NotificationItem({ notification, onOpen, onDelete }: Notificatio
             sx: {
               gap: 0.5,
               display: 'flex',
+              flexWrap: 'wrap',
               alignItems: 'center',
               typography: 'caption',
               color: 'text.disabled',
@@ -112,9 +122,9 @@ function UnreadBadge() {
 }
 
 function sourceIcon(sourceType: string) {
-  return sourceType === 'ticket'
-    ? 'solar:chat-round-dots-bold'
-    : 'solar:bell-bing-bold-duotone';
+  if (sourceType === 'ticket') return 'solar:chat-round-dots-bold';
+  if (sourceType === 'provider_quick_import_sync') return 'solar:settings-bold-duotone';
+  return 'solar:bell-bing-bold-duotone';
 }
 
 function categoryLabel(category: string, t: ReturnType<typeof useTranslate>['t']) {
@@ -127,6 +137,10 @@ function categoryLabel(category: string, t: ReturnType<typeof useTranslate>['t']
 
   if (category === 'ticket') {
     return t('operations.notifications.categories.ticket');
+  }
+
+  if (category === 'provider_quick_import_sync') {
+    return t('operations.notifications.categories.providerQuickImportSync');
   }
 
   return category;

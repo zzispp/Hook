@@ -22,6 +22,7 @@ pub(in crate::migration::baseline) enum Providers {
     Id,
     Name,
     ProviderType,
+    ProviderOrigin,
     MaxRetries,
     RequestTimeoutSeconds,
     StreamFirstByteTimeoutSeconds,
@@ -150,6 +151,81 @@ pub(in crate::migration::baseline) enum ProviderModelCosts {
     CacheReadPricePerMillion,
     CreatedAt,
     UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum ProviderQuickImportSources {
+    Table,
+    Id,
+    ProviderId,
+    SourceKind,
+    BaseUrl,
+    EncryptedSystemAccessToken,
+    UserId,
+    RechargeMultiplier,
+    AutoSyncEnabled,
+    CostSyncMode,
+    UpstreamAnomalyAction,
+    TokenDeletedAction,
+    TokenDisabledAction,
+    GroupRemovedAction,
+    GroupChangedAction,
+    KeyUnavailableAction,
+    ModelRemovedAction,
+    FetchFailureAction,
+    FetchFailureDisableThreshold,
+    LastStatus,
+    LastError,
+    LastSyncedAt,
+    ConsecutiveFailures,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum ProviderQuickImportKeys {
+    Table,
+    Id,
+    ProviderId,
+    SourceId,
+    KeyId,
+    UpstreamTokenId,
+    UpstreamTokenName,
+    UpstreamMaskedKey,
+    UpstreamGroup,
+    UpstreamGroupRatio,
+    EffectiveCostMultiplier,
+    SyncStatuses,
+    LastSyncError,
+    LastSyncedAt,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum ProviderQuickImportKeyModels {
+    Table,
+    Id,
+    ProviderId,
+    SourceId,
+    KeyId,
+    UpstreamModelId,
+    GlobalModelId,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum ProviderQuickImportSyncEvents {
+    Table,
+    Id,
+    ProviderId,
+    SourceId,
+    KeyId,
+    Status,
+    Title,
+    Detail,
+    CreatedAt,
 }
 
 #[derive(DeriveIden)]

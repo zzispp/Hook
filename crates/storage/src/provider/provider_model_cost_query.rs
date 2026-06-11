@@ -100,7 +100,7 @@ async fn provider_model_cost_record(
     record.ok_or(StorageError::NotFound)
 }
 
-fn model_cost_response(record: provider_model_costs::Model) -> StorageResult<ProviderModelCost> {
+pub(super) fn model_cost_response(record: provider_model_costs::Model) -> StorageResult<ProviderModelCost> {
     Ok(ProviderModelCost {
         id: record.id,
         provider_id: record.provider_id,

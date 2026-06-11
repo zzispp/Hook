@@ -1,5 +1,9 @@
 use async_trait::async_trait;
-use provider::application::{ProviderApiKeySecret, ProviderError, ProviderRepository, ProviderResult};
+use provider::application::{
+    ProviderApiKeySecret, ProviderError, ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportCreate, ProviderQuickImportCreated,
+    ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement, ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey,
+    ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource, ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderResult,
+};
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
@@ -204,6 +208,66 @@ where
         let response = self.inner.upsert_model_costs(provider_id, key_id, input).await?;
         self.refresh_scheduling().await?;
         Ok(response)
+    }
+
+    async fn create_quick_import(&self, input: ProviderQuickImportCreate) -> ProviderResult<ProviderQuickImportCreated> {
+        let output = self.inner.create_quick_import(input).await?;
+        self.refresh_scheduling().await?;
+        Ok(output)
+    }
+
+    async fn append_quick_import(&self, input: ProviderQuickImportAppend) -> ProviderResult<ProviderQuickImportAppended> {
+        let output = self.inner.append_quick_import(input).await?;
+        self.refresh_scheduling().await?;
+        Ok(output)
+    }
+
+    async fn replace_quick_import_key(&self, input: ProviderQuickImportKeyReplacement) -> ProviderResult<ProviderQuickImportKeyReplaced> {
+        let output = self.inner.replace_quick_import_key(input).await?;
+        self.refresh_scheduling().await?;
+        Ok(output)
+    }
+
+    async fn quick_import_sync_source(&self, provider_id: &str) -> ProviderResult<Option<ProviderQuickImportSyncSource>> {
+        self.inner.quick_import_sync_source(provider_id).await
+    }
+
+    async fn list_quick_import_sync_sources(&self, limit: u64) -> ProviderResult<Vec<ProviderQuickImportSyncSource>> {
+        self.inner.list_quick_import_sync_sources(limit).await
+    }
+
+    async fn list_quick_import_sync_keys(&self, source_id: &str) -> ProviderResult<Vec<ProviderQuickImportSyncKey>> {
+        self.inner.list_quick_import_sync_keys(source_id).await
+    }
+
+    async fn quick_import_sync_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<Option<ProviderQuickImportSyncKey>> {
+        self.inner.quick_import_sync_key(provider_id, key_id).await
+    }
+
+    async fn update_quick_import_sync_source(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportSyncSourcePatch,
+    ) -> ProviderResult<ProviderQuickImportSyncSource> {
+        self.inner.update_quick_import_sync_source(provider_id, input).await
+    }
+
+    async fn update_quick_import_sync_source_run(
+        &self,
+        source_id: &str,
+        status: Option<types::provider::ProviderQuickImportSyncStatus>,
+        error: Option<String>,
+        failed: bool,
+    ) -> ProviderResult<()> {
+        self.inner.update_quick_import_sync_source_run(source_id, status, error, failed).await
+    }
+
+    async fn update_quick_import_sync_keys(&self, provider_id: &str, input: Vec<ProviderQuickImportSyncKeyPatch>) -> ProviderResult<()> {
+        self.inner.update_quick_import_sync_keys(provider_id, input).await
+    }
+
+    async fn create_quick_import_sync_events(&self, input: Vec<ProviderQuickImportSyncEventCreate>) -> ProviderResult<()> {
+        self.inner.create_quick_import_sync_events(input).await
     }
 
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {

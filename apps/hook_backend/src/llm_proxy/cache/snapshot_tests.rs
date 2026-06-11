@@ -48,6 +48,7 @@ fn provider_record(id: &str, name: &str, is_active: bool, priority: i32) -> prov
         id: id.into(),
         name: name.into(),
         provider_type: "custom".into(),
+        provider_origin: "manual".into(),
         max_retries: Some(2),
         request_timeout_seconds: Some(300.0),
         stream_first_byte_timeout_seconds: Some(60.0),

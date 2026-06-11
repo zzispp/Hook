@@ -28,9 +28,9 @@ import {
   withStickyActionHeadCell,
 } from 'src/components/table';
 
-import { providerTypeLabel } from './provider-management-utils';
 import { providerGroupMemberIds } from './provider-groups-utils';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
+import { providerTypeLabel, providerOriginLabel } from './provider-management-utils';
 
 export function ProviderTable({
   rows,
@@ -42,6 +42,8 @@ export function ProviderTable({
   onSelect,
   onEdit,
   onDelete,
+  onAppendImport,
+  onSyncSettings,
   onAssociateGroups,
 }: {
   rows: Provider[];
@@ -53,6 +55,8 @@ export function ProviderTable({
   onSelect: (provider: Provider) => void;
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
+  onAppendImport: (provider: Provider) => void;
+  onSyncSettings: (provider: Provider) => void;
   onAssociateGroups: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -62,7 +66,7 @@ export function ProviderTable({
   return (
     <>
       <Scrollbar>
-        <Table sx={{ minWidth: 1180 }}>
+        <Table sx={{ minWidth: 1280 }}>
           <ManagementTableHead head={tableHead} />
           <TableBody>
             {loading ? (
@@ -83,6 +87,8 @@ export function ProviderTable({
                     onSelect={onSelect}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onAppendImport={onAppendImport}
+                    onSyncSettings={onSyncSettings}
                     onAssociateGroups={onAssociateGroups}
                   />
                 )),
@@ -108,7 +114,7 @@ function ProviderGroupHeaderRow({ name, count }: { name: string; count: number }
 
   return (
     <TableRow>
-      <TableCell colSpan={5} sx={{ bgcolor: 'background.neutral', py: 1.25 }}>
+      <TableCell colSpan={6} sx={{ bgcolor: 'background.neutral', py: 1.25 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Iconify width={18} icon="solar:file-bold-duotone" />
           <Typography variant="subtitle2">{name}</Typography>
@@ -128,6 +134,8 @@ function ProviderTableRow({
   onSelect,
   onEdit,
   onDelete,
+  onAppendImport,
+  onSyncSettings,
   onAssociateGroups,
 }: {
   row: Provider;
@@ -136,6 +144,8 @@ function ProviderTableRow({
   onSelect: (provider: Provider) => void;
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
+  onAppendImport: (provider: Provider) => void;
+  onSyncSettings: (provider: Provider) => void;
   onAssociateGroups: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -147,6 +157,13 @@ function ProviderTableRow({
         <Typography variant="caption" color="text.secondary">
           {providerTypeLabel(row.provider_type, t)}
         </Typography>
+      </TableCell>
+      <TableCell>
+        <Chip
+          size="small"
+          color={row.provider_origin === 'quick_import' ? 'info' : 'default'}
+          label={providerOriginLabel(row.provider_origin, t)}
+        />
       </TableCell>
       <TableCell>
         <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75 }}>
@@ -172,6 +189,30 @@ function ProviderTableRow({
               <Iconify icon="eva:link-2-fill" />
             </IconButton>
           </Tooltip>
+          {row.provider_origin === 'quick_import' ? (
+            <>
+              <Tooltip title={t('actions.quickImportAppendTokens')}>
+                <IconButton
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAppendImport(row);
+                  }}
+                >
+                  <Iconify icon="solar:import-bold" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={t('providers.quickImportSyncSection')}>
+                <IconButton
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSyncSettings(row);
+                  }}
+                >
+                  <Iconify icon="solar:settings-bold" />
+                </IconButton>
+              </Tooltip>
+            </>
+          ) : null}
           <Tooltip title={t('common.edit')}>
             <IconButton
               onClick={(event) => {
@@ -204,13 +245,14 @@ function providerTableHead(
 ): TableHeadCellProps[] {
   return [
     { id: 'name', label: t('providers.name'), width: 220 },
+    { id: 'provider_origin', label: t('providers.providerOrigin'), width: 130 },
     { id: 'request_config', label: t('providers.requestConfig') },
     { id: 'priority', label: t('providers.priority'), width: 100 },
     { id: 'status', label: t('common.status'), width: 120 },
     withStickyActionHeadCell({
       id: 'actions',
       label: t('common.actions'),
-      width: 136,
+      width: 220,
       align: 'left',
     }),
   ];

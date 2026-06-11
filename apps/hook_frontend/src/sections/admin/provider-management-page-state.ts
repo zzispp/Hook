@@ -23,6 +23,7 @@ import {
   useProviderDialog,
   useDeleteProviderDialog,
   useProviderChildDialogs,
+  useProviderQuickImportSyncDialog,
 } from './provider-management-state';
 
 const PROVIDER_PRIORITY_LIMIT = 1000;
@@ -49,6 +50,7 @@ export function useProviderManagementState() {
   const settings = useSystemSettings();
   const models = useGlobalModels(0, 1000);
   const dialog = useProviderDialog({ t });
+  const quickImportSyncDialog = useProviderQuickImportSyncDialog(t);
   const deleteDialog = useDeleteProviderDialog(t);
   const childDialogs = useProviderChildDialogs(t, ui.selectedProvider?.id);
   const providerGroupAssociation = useProviderGroupAssociation(t, providerGroups.items);
@@ -64,6 +66,7 @@ export function useProviderManagementState() {
     t,
     models,
     dialog,
+    quickImportSyncDialog,
     providers,
     settings,
     currentLang,
@@ -120,6 +123,7 @@ function useProviderUiState() {
   const [selectedProvider, setSelectedProvider] = useState<Provider | undefined>();
   const [bindingsOpen, setBindingsOpen] = useState(false);
   const [priorityOpen, setPriorityOpen] = useState(false);
+  const [quickImportOpen, setQuickImportOpen] = useState(false);
   const [cooldownPolicyOpen, setCooldownPolicyOpen] = useState(false);
 
   const handleFiltersChange = useCallback((nextFilters: typeof DEFAULT_PROVIDER_FILTERS) => {
@@ -144,11 +148,13 @@ function useProviderUiState() {
     filters,
     bindingsOpen,
     priorityOpen,
+    quickImportOpen,
     cooldownTable,
     selectedProvider,
     cooldownPolicyOpen,
     setTab,
     setPriorityOpen,
+    setQuickImportOpen,
     setCooldownPolicyOpen,
     openProviderBindings,
     closeProviderBindings,

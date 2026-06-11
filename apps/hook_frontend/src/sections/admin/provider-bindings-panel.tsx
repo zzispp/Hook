@@ -11,9 +11,7 @@ import { varAlpha } from 'minimal-shared/utils';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
 import Drawer from '@mui/material/Drawer';
-import Divider from '@mui/material/Divider';
 import ListItem from '@mui/material/ListItem';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
@@ -32,6 +30,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 
 import { EnabledLabel } from './shared';
 import { EmptyList } from './provider-bindings-shared';
+import { ProviderPanelSection } from './provider-panel-section';
 import { ProviderApiKeysSection } from './provider-api-keys-section';
 import { ProviderModelCostsSection } from './provider-model-costs-section';
 import { ProviderModelBindingsSection } from './provider-model-bindings-section';
@@ -46,6 +45,9 @@ export function ProviderBindingsPanel({
   onClose,
   dialogs,
   onAssociateKeyGroups,
+  onAppendQuickImport,
+  onResolveQuickImportKey,
+  onManageQuickImportModels,
 }: {
   open: boolean;
   provider?: Provider;
@@ -54,6 +56,9 @@ export function ProviderBindingsPanel({
   onClose: () => void;
   dialogs: ReturnType<typeof useProviderChildDialogs>;
   onAssociateKeyGroups: (apiKey: ProviderApiKey) => void;
+  onAppendQuickImport: (provider: Provider) => void;
+  onResolveQuickImportKey: (provider: Provider, apiKey: ProviderApiKey) => void;
+  onManageQuickImportModels: (provider: Provider, apiKey: ProviderApiKey) => void;
 }) {
   const { t } = useTranslate('admin');
   const endpoints = useProviderEndpoints(provider?.id);
@@ -67,6 +72,7 @@ export function ProviderBindingsPanel({
       <Scrollbar>
         {provider ? (
           <ProviderBindingsContent
+            provider={provider}
             providerId={provider.id}
             endpointItems={endpoints.items}
             endpointLoading={endpoints.isLoading}
@@ -80,6 +86,9 @@ export function ProviderBindingsPanel({
             providerKeyGroups={providerKeyGroups}
             dialogs={dialogs}
             onAssociateKeyGroups={onAssociateKeyGroups}
+            onAppendQuickImport={onAppendQuickImport}
+            onResolveQuickImportKey={onResolveQuickImportKey}
+            onManageQuickImportModels={onManageQuickImportModels}
           />
         ) : null}
       </Scrollbar>
@@ -101,6 +110,7 @@ function DrawerHeader({ title, onClose }: { title: string; onClose: () => void }
 }
 
 type ProviderBindingsContentProps = {
+  provider: Provider;
   providerId: string;
   endpointItems: ReturnType<typeof useProviderEndpoints>['items'];
   endpointLoading: boolean;
@@ -114,6 +124,9 @@ type ProviderBindingsContentProps = {
   providerKeyGroups: ProviderKeyGroup[];
   dialogs: ReturnType<typeof useProviderChildDialogs>;
   onAssociateKeyGroups: (apiKey: ProviderApiKey) => void;
+  onAppendQuickImport: (provider: Provider) => void;
+  onResolveQuickImportKey: (provider: Provider, apiKey: ProviderApiKey) => void;
+  onManageQuickImportModels: (provider: Provider, apiKey: ProviderApiKey) => void;
 };
 
 function ProviderBindingsContent(props: ProviderBindingsContentProps) {
@@ -125,10 +138,14 @@ function ProviderBindingsContent(props: ProviderBindingsContentProps) {
         onAdd={() => props.dialogs.setEndpointOpen(true)}
       />
       <ProviderApiKeysSection
+        provider={props.provider}
         items={props.apiKeyItems}
         loading={props.apiKeyLoading}
         providerKeyGroups={props.providerKeyGroups}
         dialogs={props.dialogs}
+        onAppendQuickImport={props.onAppendQuickImport}
+        onResolveQuickImportKey={(apiKey) => props.onResolveQuickImportKey(props.provider, apiKey)}
+        onManageQuickImportModels={(apiKey) => props.onManageQuickImportModels(props.provider, apiKey)}
         onAssociateGroups={props.onAssociateKeyGroups}
       />
       <ProviderModelSection
@@ -170,7 +187,7 @@ function EndpointSection({
   const { t } = useTranslate('admin');
 
   return (
-    <PanelSection
+    <ProviderPanelSection
       title={t('providers.endpoints')}
       actionLabel={t('actions.manageProviderEndpoints')}
       onAdd={onAdd}
@@ -190,7 +207,7 @@ function EndpointSection({
         ))}
         <EmptyList loading={loading} length={items.length} />
       </List>
-    </PanelSection>
+    </ProviderPanelSection>
   );
 }
 
@@ -233,41 +250,6 @@ function ProviderModelSection({
       models={models}
       onAssociate={onAdd}
     />
-  );
-}
-
-function PanelSection({
-  title,
-  actionLabel,
-  children,
-  onAdd,
-}: {
-  title: string;
-  actionLabel: string;
-  children: React.ReactNode;
-  onAdd: () => void;
-}) {
-  return (
-    <Box sx={{ border: (theme) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 1 }}>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ px: 2, py: 1.5 }}
-      >
-        <Typography variant="subtitle2">{title}</Typography>
-        <Button
-          color="inherit"
-          variant="contained"
-          startIcon={<Iconify icon="mingcute:add-line" />}
-          onClick={onAdd}
-        >
-          {actionLabel}
-        </Button>
-      </Stack>
-      <Divider />
-      <Box sx={{ px: 2, py: 1 }}>{children}</Box>
-    </Box>
   );
 }
 

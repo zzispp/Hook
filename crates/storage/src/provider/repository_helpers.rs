@@ -18,6 +18,7 @@ pub fn provider_active_model(id: String, input: ProviderRecordInput) -> Provider
         id: Set(id),
         name: Set(input.name),
         provider_type: Set(input.provider_type),
+        provider_origin: Set(input.provider_origin.as_str().to_owned()),
         max_retries: Set(input.max_retries),
         request_timeout_seconds: Set(input.request_timeout_seconds),
         stream_first_byte_timeout_seconds: Set(input.stream_first_byte_timeout_seconds),

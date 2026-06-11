@@ -4,6 +4,7 @@ use crate::{StorageError, StorageResult, json};
 
 use super::{
     ProviderModelRecordBatchUpdate, ProviderModelRecordInput, ProviderModelRecordPatch,
+    provider_model_delete_cascade::cascade_model_binding_delete,
     record::provider_models,
     repository::ProviderStore,
     repository_helpers::{apply_provider_model_patch, provider_model_response},
@@ -21,7 +22,7 @@ pub async fn batch_update_model_bindings(
     input: ProviderModelRecordBatchUpdate,
 ) -> StorageResult<Vec<types::provider::ProviderModelBinding>> {
     let tx = store.connection().begin().await?;
-    delete_model_bindings(&tx, &input.provider_id, input.delete_ids).await?;
+    delete_model_bindings(store, &tx, &input.provider_id, input.delete_ids).await?;
     insert_model_bindings(store, &tx, input.create).await?;
     tx.commit().await?;
     model_bindings_for_provider(store, &input.provider_id).await
@@ -52,14 +53,24 @@ pub async fn update_model_binding(
 
 pub async fn delete_model_binding(store: &ProviderStore, provider_id: &str, model_id: &str) -> StorageResult<()> {
     let record = provider_model_record(store, provider_id, model_id).await?;
+    let tx = store.connection().begin().await?;
+    cascade_model_binding_delete(store, &tx, &record).await?;
     let active: provider_models::ActiveModel = record.into();
-    active.delete(store.connection()).await?;
+    active.delete(&tx).await?;
+    tx.commit().await?;
     Ok(())
 }
 
 async fn provider_model_record(store: &ProviderStore, provider_id: &str, model_id: &str) -> StorageResult<super::record::provider_models::Model> {
+    provider_model_record_on(store.connection(), provider_id, model_id).await
+}
+
+async fn provider_model_record_on<C>(connection: &C, provider_id: &str, model_id: &str) -> StorageResult<super::record::provider_models::Model>
+where
+    C: ConnectionTrait,
+{
     let record = provider_models::Entity::find_by_id(model_id.to_owned())
-        .one(store.connection())
+        .one(connection)
         .await?
         .ok_or(StorageError::NotFound)?;
     if record.provider_id == provider_id {
@@ -68,18 +79,16 @@ async fn provider_model_record(store: &ProviderStore, provider_id: &str, model_i
     Err(StorageError::NotFound)
 }
 
-async fn delete_model_bindings<C>(connection: &C, provider_id: &str, ids: Vec<String>) -> StorageResult<()>
-where
-    C: ConnectionTrait,
-{
+async fn delete_model_bindings(store: &ProviderStore, connection: &sea_orm::DatabaseTransaction, provider_id: &str, ids: Vec<String>) -> StorageResult<()> {
     if ids.is_empty() {
         return Ok(());
     }
-    provider_models::Entity::delete_many()
-        .filter(provider_models::Column::ProviderId.eq(provider_id))
-        .filter(provider_models::Column::Id.is_in(ids))
-        .exec(connection)
-        .await?;
+    for model_id in ids {
+        let record = provider_model_record_on(connection, provider_id, &model_id).await?;
+        cascade_model_binding_delete(store, connection, &record).await?;
+        let active: provider_models::ActiveModel = record.into();
+        active.delete(connection).await?;
+    }
     Ok(())
 }
 

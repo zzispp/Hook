@@ -6,5 +6,12 @@ mod service;
 mod validation;
 
 pub use error::{ProviderError, ProviderResult};
-pub use ports::{GlobalModelCatalog, ProviderApiKeySecret, ProviderModelTester, ProviderRepository, ProviderUseCase, SecretCipher, UpstreamModelFetcher};
+pub use ports::{
+    GlobalModelCatalog, ProviderApiKeySecret, ProviderModelTester, ProviderQuickImportApiKeyCreate, ProviderQuickImportAppend, ProviderQuickImportAppended,
+    ProviderQuickImportCreate, ProviderQuickImportCreated, ProviderQuickImportKeyModelCreate, ProviderQuickImportKeyReplaced,
+    ProviderQuickImportKeyReplacement, ProviderQuickImportModelCostCreate, ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey,
+    ProviderQuickImportSyncKeyModel, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncRunOptions, ProviderQuickImportSyncRunReport,
+    ProviderQuickImportSyncSource, ProviderQuickImportSyncSourceCreate, ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderUseCase, SecretCipher,
+    UpstreamImportData, UpstreamImportModel, UpstreamImportToken, UpstreamModelFetcher, UpstreamProviderImportSource, UpstreamSyncSnapshot, UpstreamSyncToken,
+};
 pub use service::ProviderService;

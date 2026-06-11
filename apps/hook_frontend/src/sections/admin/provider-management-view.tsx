@@ -13,6 +13,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 
+import { Iconify } from 'src/components/iconify';
 import { ConfirmDialog } from 'src/components/custom-dialog';
 
 import { ProviderTable } from './provider-table';
@@ -26,22 +27,27 @@ import { ProviderEndpointDialog } from './provider-endpoint-dialog';
 import { ProviderFiltersToolbar } from './provider-filters-toolbar';
 import { ProviderPriorityDialog } from './provider-priority-dialog';
 import { AddButton, RefreshButton, AdminBreadcrumbs } from './shared';
+import { ProviderQuickImportDialog } from './provider-quick-import-dialog';
 import { useProviderManagementState } from './provider-management-page-state';
 import { ProviderCooldownPolicyDialog } from './provider-cooldown-policy-dialog';
+import { ProviderQuickImportSyncDialog } from './provider-quick-import-sync-dialog';
 import { ProviderGroupAssociationDialog } from './provider-group-association-dialog';
+import { useProviderQuickImportActionState } from './provider-quick-import-action-state';
+import { ProviderQuickImportActionDialogs } from './provider-quick-import-action-dialogs';
 
 export function ProviderManagementView() {
   const state = useProviderManagementState();
+  const quickImportActions = useProviderQuickImportActionState();
 
   return (
     <DashboardContent maxWidth="xl">
       <ProviderHeader state={state} />
       <ProviderTabs state={state} />
       {state.errorMessage ? <ErrorAlert message={state.errorMessage} /> : null}
-      {state.tab === 'providers' ? <ProviderTableCard state={state} /> : null}
+      {state.tab === 'providers' ? <ProviderTableCard state={state} quickImportActions={quickImportActions} /> : null}
       {state.tab === 'groups' ? <ProviderGroupsCardWrapper state={state} /> : null}
       {state.tab === 'cooldowns' ? <ProviderCooldownCard state={state} /> : null}
-      <ProviderDialogs state={state} />
+      <ProviderDialogs state={state} quickImportActions={quickImportActions} />
     </DashboardContent>
   );
 }
@@ -64,7 +70,12 @@ function ProviderHeader({ state }: { state: ReturnType<typeof useProviderManagem
         <Stack direction="row" spacing={1}>
           <RefreshButton loading={loading} onClick={() => void refresh()} />
           {state.tab === 'providers' ? (
-            <AddButton onClick={state.dialog.openCreate}>{state.t('actions.addProvider')}</AddButton>
+            <>
+              <Button variant="outlined" startIcon={<Iconify icon="solar:import-bold" />} onClick={() => state.setQuickImportOpen(true)}>
+                {state.t('actions.quickImportProvider')}
+              </Button>
+              <AddButton onClick={state.dialog.openCreate}>{state.t('actions.addProvider')}</AddButton>
+            </>
           ) : null}
         </Stack>
       }
@@ -82,7 +93,13 @@ function ProviderTabs({ state }: { state: ReturnType<typeof useProviderManagemen
   );
 }
 
-function ProviderTableCard({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
+function ProviderTableCard({
+  state,
+  quickImportActions,
+}: {
+  state: ReturnType<typeof useProviderManagementState>;
+  quickImportActions: ReturnType<typeof useProviderQuickImportActionState>;
+}) {
   return (
     <Card>
       <ProviderFiltersToolbar
@@ -103,6 +120,8 @@ function ProviderTableCard({ state }: { state: ReturnType<typeof useProviderMana
         onSelect={state.openProviderBindings}
         onEdit={state.dialog.openEdit}
         onDelete={state.deleteDialog.setDeleteTarget}
+        onAppendImport={quickImportActions.openAppend}
+        onSyncSettings={state.quickImportSyncDialog.open}
         onAssociateGroups={state.providerGroupAssociation.openForProvider}
       />
     </Card>
@@ -148,12 +167,33 @@ function schedulingModeLabel(value: string, t: (key: string) => string) {
   return labels[value] ?? value;
 }
 
-function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
+function ProviderDialogs({
+  state,
+  quickImportActions,
+}: {
+  state: ReturnType<typeof useProviderManagementState>;
+  quickImportActions: ReturnType<typeof useProviderQuickImportActionState>;
+}) {
   const { t } = useTranslate('admin');
 
   return (
     <>
       <ProviderFormDialog dialog={state.dialog} groups={state.providerGroups.items} />
+      <ProviderQuickImportSyncDialog dialog={state.quickImportSyncDialog} />
+      <ProviderQuickImportActionDialogs actions={quickImportActions} models={state.models.items} />
+      <ProviderQuickImportDialog
+        open={state.quickImportOpen}
+        models={state.models.items}
+        groups={state.providerGroups.items}
+        onClose={() => state.setQuickImportOpen(false)}
+        onImported={() => {
+          void state.providers.refresh();
+          void state.providerGroups.refresh();
+          void state.providerKeyGroups.refresh();
+          void state.priorityProviders.refresh();
+          void state.priorityKeys.refresh();
+        }}
+      />
       <ProviderBindingsPanel
         open={state.bindingsOpen}
         provider={state.selectedProvider}
@@ -161,6 +201,9 @@ function ProviderDialogs({ state }: { state: ReturnType<typeof useProviderManage
         providerKeyGroups={state.providerKeyGroups.items}
         dialogs={state.childDialogs}
         onAssociateKeyGroups={state.providerKeyGroupAssociation.openForKey}
+        onAppendQuickImport={quickImportActions.openAppend}
+        onResolveQuickImportKey={quickImportActions.openResolution}
+        onManageQuickImportModels={quickImportActions.openModelAssociations}
         onClose={state.closeProviderBindings}
       />
       <ProviderGroupAssociationDialog

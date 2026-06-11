@@ -1,6 +1,6 @@
 use sea_orm::entity::prelude::*;
 use time::format_description::well_known::Rfc3339;
-use types::provider::Provider;
+use types::provider::{Provider, ProviderOrigin};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "providers")]
@@ -10,6 +10,7 @@ pub struct Model {
     #[sea_orm(unique)]
     pub name: String,
     pub provider_type: String,
+    pub provider_origin: String,
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
@@ -33,6 +34,7 @@ impl From<Model> for Provider {
             id: value.id,
             name: value.name,
             provider_type: value.provider_type,
+            provider_origin: ProviderOrigin::try_from(value.provider_origin.as_str()).expect("provider_origin must be valid"),
             max_retries: value.max_retries,
             request_timeout_seconds: value.request_timeout_seconds,
             stream_first_byte_timeout_seconds: value.stream_first_byte_timeout_seconds,

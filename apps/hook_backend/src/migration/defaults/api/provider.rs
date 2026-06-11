@@ -14,10 +14,46 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "创建提供商",
     },
     ApiDefinition {
+        code: "providers_quick_import_preview",
+        method: "POST",
+        path_pattern: "/api/admin/providers/quick-import/preview",
+        name: "预览快捷导入提供商",
+    },
+    ApiDefinition {
+        code: "providers_quick_import_commit",
+        method: "POST",
+        path_pattern: "/api/admin/providers/quick-import/commit",
+        name: "提交快捷导入提供商",
+    },
+    ApiDefinition {
+        code: "providers_quick_import_append_preview",
+        method: "POST",
+        path_pattern: "/api/admin/providers/{provider_id}/quick-import/append/preview",
+        name: "预览追加导入上游令牌",
+    },
+    ApiDefinition {
+        code: "providers_quick_import_append_commit",
+        method: "POST",
+        path_pattern: "/api/admin/providers/{provider_id}/quick-import/append/commit",
+        name: "提交追加导入上游令牌",
+    },
+    ApiDefinition {
         code: "providers_detail",
         method: "GET",
         path_pattern: "/api/admin/providers/{id}",
         name: "提供商详情",
+    },
+    ApiDefinition {
+        code: "providers_quick_import_sync_read",
+        method: "GET",
+        path_pattern: "/api/admin/providers/{provider_id}/quick-import-sync",
+        name: "快捷导入同步配置",
+    },
+    ApiDefinition {
+        code: "providers_quick_import_sync_update",
+        method: "PATCH",
+        path_pattern: "/api/admin/providers/{provider_id}/quick-import-sync",
+        name: "更新快捷导入同步配置",
     },
     ApiDefinition {
         code: "providers_update",
@@ -132,6 +168,36 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         method: "DELETE",
         path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}",
         name: "删除提供商密钥",
+    },
+    ApiDefinition {
+        code: "provider_keys_quick_import_resolution_read",
+        method: "GET",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/quick-import-resolution",
+        name: "快捷导入密钥恢复信息",
+    },
+    ApiDefinition {
+        code: "provider_keys_quick_import_accept_current",
+        method: "POST",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/quick-import-resolution/accept-current",
+        name: "接受快捷导入密钥当前上游状态",
+    },
+    ApiDefinition {
+        code: "provider_keys_quick_import_relink",
+        method: "POST",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/quick-import-resolution/relink",
+        name: "重新关联快捷导入上游令牌",
+    },
+    ApiDefinition {
+        code: "provider_keys_quick_import_model_associations_read",
+        method: "GET",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/quick-import-model-associations",
+        name: "快捷导入密钥模型关联",
+    },
+    ApiDefinition {
+        code: "provider_keys_quick_import_model_associations_update",
+        method: "PUT",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/quick-import-model-associations",
+        name: "更新快捷导入密钥模型关联",
     },
     ApiDefinition {
         code: "provider_models_read",
