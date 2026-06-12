@@ -67,6 +67,7 @@ pub struct ProviderApiKeyRecordInput {
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
+    pub capabilities: Option<serde_json::Value>,
     pub encrypted_api_key: String,
     pub note: Option<String>,
     pub internal_priority: i32,
@@ -85,6 +86,7 @@ pub struct ProviderApiKeyRecordPatch {
     pub name: Option<String>,
     pub api_formats: Option<Vec<String>>,
     pub allowed_model_ids: Option<Vec<String>>,
+    pub capabilities: PatchField<serde_json::Value>,
     pub encrypted_api_key: Option<String>,
     pub note: PatchField<String>,
     pub internal_priority: Option<i32>,
@@ -98,12 +100,13 @@ pub struct ProviderApiKeyRecordPatch {
     pub is_active: Option<bool>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProviderApiKeySecretRecord {
     pub id: String,
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
+    pub capabilities: Option<serde_json::Value>,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
     pub global_priority_by_format: BTreeMap<String, i32>,
@@ -251,6 +254,7 @@ pub struct ProviderQuickImportApiKeyRecordInput {
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
+    pub capabilities: Option<serde_json::Value>,
     pub encrypted_api_key: String,
     pub note: Option<String>,
     pub internal_priority: i32,

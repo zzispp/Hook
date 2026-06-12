@@ -18,12 +18,13 @@ use types::provider::{
 
 use super::ProviderResult;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProviderApiKeySecret {
     pub id: String,
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
+    pub capabilities: Option<serde_json::Value>,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
     pub global_priority_by_format: BTreeMap<String, i32>,

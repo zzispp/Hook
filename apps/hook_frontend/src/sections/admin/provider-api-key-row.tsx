@@ -127,10 +127,24 @@ function KeyMeta({ apiKey, groupNames }: { apiKey: ProviderApiKey; groupNames: s
       <Typography component="span" variant="caption">{formatList(apiKey.api_formats, t('providers.noSupportedFormats'))}</Typography>
       <MetaDivider />
       <Typography component="span" variant="caption">{modelPermissionText(apiKey.allowed_model_ids, t)}</Typography>
+      <CapabilityMeta apiKey={apiKey} />
       {apiKey.time_range_enabled ? <TimeRangeMeta apiKey={apiKey} /> : null}
       <KeyGroupChips groupNames={groupNames} />
       <QuickImportSyncChips apiKey={apiKey} />
     </Stack>
+  );
+}
+
+function CapabilityMeta({ apiKey }: { apiKey: ProviderApiKey }) {
+  const { t } = useTranslate('admin');
+  const capabilities = capabilityKeys(apiKey);
+  if (capabilities.length === 0) return null;
+
+  return (
+    <>
+      <MetaDivider />
+      <Typography component="span" variant="caption">{capabilities.map((key) => t(`models.capability.${key}`)).join(', ')}</Typography>
+    </>
   );
 }
 
@@ -230,6 +244,12 @@ function timeRangeText(apiKey: ProviderApiKey) {
 function formatList(values: string[], emptyText: string) {
   if (!values.length) return emptyText;
   return values.map(formatApiFormat).join(', ');
+}
+
+function capabilityKeys(apiKey: ProviderApiKey) {
+  return Object.entries(apiKey.capabilities ?? {})
+    .filter(([, value]) => value === true || value === 'true' || (typeof value === 'number' && value > 0))
+    .map(([key]) => key);
 }
 
 function modelPermissionText(values: string[], t: (key: string, options?: Record<string, unknown>) => string) {

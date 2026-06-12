@@ -43,6 +43,7 @@ pub const OPENAI_CLI_FORMAT: &str = "openai:cli";
 pub const OPENAI_COMPACT_FORMAT: &str = "openai:compact";
 pub const OPENAI_IMAGE_FORMAT: &str = "openai_image";
 pub const OPENAI_IMAGE_EDIT_FORMAT: &str = "openai_image_edit";
+pub const IMAGE_GENERATION_CAPABILITY: &str = "image_generation";
 pub const OPENAI_EMBEDDING_FORMAT: &str = "openai_embedding";
 pub const OPENAI_AUDIO_TRANSCRIPTION_FORMAT: &str = "openai_audio_transcription";
 pub const OPENAI_AUDIO_TRANSLATION_FORMAT: &str = "openai_audio_translation";

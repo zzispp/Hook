@@ -236,6 +236,8 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
                 name: record.name.clone(),
                 api_formats: decode_key_api_formats(record.api_formats)?,
                 allowed_model_ids: decode_key_allowed_model_ids(record.allowed_model_ids)?,
+                capabilities: serde_json::from_str(&record.capabilities.unwrap_or_else(|| "null".to_owned()))
+                    .map_err(|error| LlmProxyError::Infrastructure(format!("provider key capabilities decode error: {error}")))?,
                 key_preview: record.name,
                 encrypted_api_key: record.encrypted_api_key,
                 internal_priority: record.internal_priority,
@@ -285,10 +287,14 @@ fn decode_key_allowed_model_ids(value: String) -> Result<Vec<String>, LlmProxyEr
 }
 
 fn cached_model(record: global_models::Model) -> Result<CachedGlobalModel, LlmProxyError> {
+    let supported_capabilities = record
+        .supported_capabilities()
+        .map_err(|error| LlmProxyError::Infrastructure(format!("invalid model supported_capabilities: {error}")))?;
     Ok(CachedGlobalModel {
         id: record.id,
         name: record.name,
         is_active: record.is_active,
+        supported_capabilities,
         default_price_per_request: record.default_price_per_request,
         default_tiered_pricing: serde_json::from_str(&record.default_tiered_pricing)
             .map_err(|error| LlmProxyError::Infrastructure(format!("invalid model pricing config: {error}")))?,

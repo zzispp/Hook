@@ -18,6 +18,7 @@ pub fn sanitize_api_key(input: ProviderApiKeyCreate) -> ProviderApiKeyCreate {
         api_key: input.api_key.trim().to_owned(),
         api_formats: normalize_api_formats(input.api_formats),
         allowed_model_ids: normalize_ids(input.allowed_model_ids),
+        capabilities: normalize_capabilities(input.capabilities),
         note: input.note.and_then(trim_optional),
         time_range_start: input.time_range_start.and_then(trim_optional),
         time_range_end: input.time_range_end.and_then(trim_optional),
@@ -31,6 +32,7 @@ pub fn sanitize_api_key_update(input: ProviderApiKeyUpdate) -> ProviderApiKeyUpd
         api_key: input.api_key.map(|value| value.trim().to_owned()),
         api_formats: input.api_formats.map(normalize_api_formats),
         allowed_model_ids: input.allowed_model_ids.map(normalize_ids),
+        capabilities: normalize_capability_patch(input.capabilities),
         note: trim_patch(input.note),
         time_range_start: trim_patch(input.time_range_start),
         time_range_end: trim_patch(input.time_range_end),
@@ -45,6 +47,7 @@ pub fn validate_api_key(input: &ProviderApiKeyCreate) -> ProviderResult<()> {
     }
     validate_api_formats(&input.api_formats)?;
     validate_ids("allowed_model_ids", &input.allowed_model_ids)?;
+    validate_capabilities(input.capabilities.as_ref())?;
     validate_create_time_range(input)
 }
 
@@ -63,6 +66,9 @@ pub fn validate_api_key_update(input: &ProviderApiKeyUpdate) -> ProviderResult<(
     }
     if let Some(allowed_model_ids) = &input.allowed_model_ids {
         validate_ids("allowed_model_ids", allowed_model_ids)?;
+    }
+    if let PatchField::Value(capabilities) = &input.capabilities {
+        validate_capabilities(Some(capabilities))?;
     }
     validate_update_time_range(input)
 }
@@ -200,11 +206,50 @@ fn normalize_ids(values: Vec<String>) -> Vec<String> {
     output
 }
 
+fn normalize_capability_patch(value: PatchField<serde_json::Value>) -> PatchField<serde_json::Value> {
+    match value {
+        PatchField::Value(value) => normalize_capabilities(Some(value)).map(PatchField::Value).unwrap_or(PatchField::Null),
+        other => other,
+    }
+}
+
+fn normalize_capabilities(value: Option<serde_json::Value>) -> Option<serde_json::Value> {
+    let value = value?;
+    let serde_json::Value::Object(object) = value else {
+        return Some(value);
+    };
+    let normalized = object
+        .into_iter()
+        .filter_map(|(key, value)| {
+            let key = key.trim().to_ascii_lowercase();
+            (!key.is_empty()).then_some((key, value))
+        })
+        .collect::<serde_json::Map<_, _>>();
+    (!normalized.is_empty()).then_some(serde_json::Value::Object(normalized))
+}
+
+fn validate_capabilities(value: Option<&serde_json::Value>) -> ProviderResult<()> {
+    let Some(value) = value else {
+        return Ok(());
+    };
+    let Some(object) = value.as_object() else {
+        return Err(ProviderError::InvalidInput("capabilities must be a JSON object".into()));
+    };
+    for (key, value) in object {
+        validate_text("capabilities key", key, MAX_API_FORMAT_LENGTH)?;
+        if !matches!(value, serde_json::Value::Bool(_) | serde_json::Value::String(_) | serde_json::Value::Number(_)) {
+            return Err(ProviderError::InvalidInput("capabilities values must be boolean, string, or number".into()));
+        }
+    }
+    Ok(())
+}
+
 fn api_key_update_is_empty(input: &ProviderApiKeyUpdate) -> bool {
     input.name.is_none()
         && input.api_key.is_none()
         && input.api_formats.is_none()
         && input.allowed_model_ids.is_none()
+        && input.capabilities.is_missing()
         && input.note.is_missing()
         && input.internal_priority.is_none()
         && input.rpm_limit.is_missing()
@@ -316,6 +361,7 @@ mod tests {
             api_key: "sk-test".to_owned(),
             api_formats: vec!["openai:chat".to_owned()],
             allowed_model_ids: Vec::new(),
+            capabilities: None,
             note: None,
             internal_priority: None,
             rpm_limit: None,

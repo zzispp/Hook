@@ -131,6 +131,7 @@ fn key_input() -> ProviderQuickImportApiKeyRecordInput {
         name: "codex".into(),
         api_formats: vec!["openai".into()],
         allowed_model_ids: vec!["global-model-a".into()],
+        capabilities: None,
         encrypted_api_key: "encrypted".into(),
         note: Some("Imported from newapi group: plus".into()),
         internal_priority: 10,

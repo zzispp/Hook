@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Establish task files,DONE,Task tracking files exist,test -f .codex-tasks/responses-custom-tool-routing/SPEC.md && test -f .codex-tasks/responses-custom-tool-routing/TODO.csv,2026-06-12,0,
+2,Add failing routing test,DONE,Test proves custom tool Responses request excludes conversion endpoint,cargo test -p hook_backend responses_custom_tool,2026-06-12,0,
+3,Implement routing constraint,DONE,Custom tool feature reaches candidate matching and blocks conversion endpoints,cargo test -p hook_backend responses_custom_tool,2026-06-12,0,
+4,Run targeted validation,DONE,Relevant Rust tests pass within 60 seconds,timeout 60 cargo test -p hook_backend responses_custom_tool,2026-06-12,0,

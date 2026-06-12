@@ -4,7 +4,7 @@ use serde_json::{Map, Value};
 use types::api_token::ApiToken;
 
 use crate::llm_proxy::{
-    LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, OPENAI_IMAGE_FORMAT,
+    IMAGE_GENERATION_CAPABILITY, LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, OPENAI_IMAGE_EDIT_FORMAT, OPENAI_IMAGE_FORMAT,
     audit::record_scheduled_candidates,
     billing::enforce_preflight_access,
     candidate::{CandidateRequest, CandidateSelection, ProxyCandidate, select_candidates},
@@ -55,6 +55,8 @@ pub(super) async fn prepare_proxy_request(
             routing_api_format,
             model_name,
             is_stream,
+            has_openai_responses_custom_tool_items: has_openai_responses_custom_tool_items(api_format, &body),
+            required_capability: required_capability_for_routing(routing_api_format),
         },
     )
     .await?;
@@ -118,6 +120,18 @@ fn required_model(body: &Value) -> Result<&str, LlmProxyError> {
         .ok_or_else(|| LlmProxyError::InvalidRequest("request body must include a non-empty model".into()))
 }
 
+fn has_openai_responses_custom_tool_items(api_format: &str, body: &Value) -> bool {
+    api_format == OPENAI_CLI_FORMAT && input_items(body).any(is_openai_responses_custom_tool_item)
+}
+
+fn input_items(body: &Value) -> impl Iterator<Item = &Value> {
+    body.get("input").and_then(Value::as_array).into_iter().flatten()
+}
+
+fn is_openai_responses_custom_tool_item(item: &Value) -> bool {
+    matches!(item.get("type").and_then(Value::as_str), Some("custom_tool_call" | "custom_tool_call_output"))
+}
+
 fn is_streaming(body: &Value) -> bool {
     body.get("stream").and_then(Value::as_bool).unwrap_or(false)
 }
@@ -127,6 +141,10 @@ fn routing_api_format(api_format: &'static str, body: &Value) -> &'static str {
         return OPENAI_IMAGE_FORMAT;
     }
     api_format
+}
+
+fn required_capability_for_routing(api_format: &str) -> Option<&'static str> {
+    matches!(api_format, OPENAI_IMAGE_FORMAT | OPENAI_IMAGE_EDIT_FORMAT).then_some(IMAGE_GENERATION_CAPABILITY)
 }
 
 fn openai_request_explicitly_selects_image_generation(api_format: &str, body: &Value) -> bool {

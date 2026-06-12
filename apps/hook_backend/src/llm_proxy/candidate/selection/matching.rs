@@ -42,6 +42,7 @@ pub(super) fn matching_candidate_parts_at(input: MatchingCandidatePartsInput<'_>
     {
         append_provider_candidate(
             AppendProviderCandidateInput {
+                snapshot: input.snapshot,
                 provider,
                 group: input.group,
                 model_id: input.model_id,
@@ -58,6 +59,7 @@ pub(super) fn matching_candidate_parts_at(input: MatchingCandidatePartsInput<'_>
 }
 
 struct AppendProviderCandidateInput<'a> {
+    snapshot: &'a SchedulingSnapshot,
     provider: &'a CachedProvider,
     group: &'a CachedBillingGroup,
     model_id: &'a str,
@@ -72,6 +74,9 @@ fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &m
     let Some(model) = provider_model(input.provider, input.model_id) else {
         return;
     };
+    if !global_model_supports_required_capability(input.request, input.snapshot, &model.global_model_id) {
+        return;
+    }
     let affinity = matching_affinity(input.provider, input.affinity);
     let endpoints = ordered_endpoints(input.provider, input.group, input.model_id, input.request, input.current_minute, affinity);
     let keys = ordered_keys(OrderedKeysInput {
@@ -100,7 +105,7 @@ fn append_key_candidates(
     for key in keys {
         let key_endpoints = endpoints
             .iter()
-            .filter(|endpoint| key_allows_model(&key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format))
+            .filter(|endpoint| key_allows_candidate(&key, model_id, endpoint, request))
             .cloned()
             .collect::<Vec<_>>();
         if key_endpoints.is_empty() {
@@ -218,6 +223,9 @@ fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, reques
 }
 
 fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
+    if request.has_openai_responses_custom_tool_items {
+        return false;
+    }
     (provider.enable_format_conversion || endpoint_accepts_conversion(endpoint))
         && formats::formats_compatible(request.routing_api_format, &endpoint.api_format, request.is_stream)
         && !endpoint_exact(endpoint, request)
@@ -248,6 +256,25 @@ fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpo
     key_allowed(key, group, current_minute) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
 }
 
+fn key_allows_candidate(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
+    key_allows_model(key, model_id) && key_allows_endpoint(key, endpoint) && key_supports_required_capability(key, request.required_capability)
+}
+
+fn key_allows_endpoint(key: &CachedProviderKey, endpoint: &CachedEndpoint) -> bool {
+    key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
+}
+
+fn global_model_supports_required_capability(request: CandidateRequest<'_>, snapshot: &SchedulingSnapshot, model_id: &str) -> bool {
+    let Some(required) = request.required_capability else {
+        return true;
+    };
+    snapshot
+        .models
+        .iter()
+        .find(|model| model.id == model_id)
+        .is_some_and(|model| capability_list_supports(model.supported_capabilities.as_deref(), required))
+}
+
 fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool {
     if !key.time_range_enabled {
         return true;
@@ -260,6 +287,48 @@ fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool 
 
 fn key_allows_model(key: &CachedProviderKey, model_id: &str) -> bool {
     key.allowed_model_ids.is_empty() || key.allowed_model_ids.iter().any(|id| id == model_id)
+}
+
+fn key_supports_required_capability(key: &CachedProviderKey, required: Option<&str>) -> bool {
+    let Some(required) = required.map(str::trim).filter(|value| !value.is_empty()) else {
+        return true;
+    };
+    candidate_supports_required_capability(key.capabilities.as_ref(), required)
+}
+
+fn capability_list_supports(capabilities: Option<&[String]>, required: &str) -> bool {
+    let required = required.trim();
+    capabilities.is_some_and(|items| items.iter().any(|value| value.eq_ignore_ascii_case(required)))
+}
+
+fn candidate_supports_required_capability(capabilities: Option<&serde_json::Value>, required: &str) -> bool {
+    let required = required.trim();
+    if required.is_empty() {
+        return true;
+    }
+    let Some(capabilities) = capabilities else {
+        return false;
+    };
+    if let Some(object) = capabilities.as_object() {
+        return object
+            .iter()
+            .any(|(key, value)| key.eq_ignore_ascii_case(required) && capability_value_enabled(value));
+    }
+    if let Some(items) = capabilities.as_array() {
+        return items
+            .iter()
+            .any(|value| value.as_str().is_some_and(|value| value.eq_ignore_ascii_case(required)));
+    }
+    false
+}
+
+fn capability_value_enabled(value: &serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::Bool(value) => *value,
+        serde_json::Value::String(value) => value.eq_ignore_ascii_case("true"),
+        serde_json::Value::Number(value) => value.as_i64().is_some_and(|value| value > 0),
+        _ => false,
+    }
 }
 
 fn selected_provider_model(model: &CachedModelBinding) -> CachedModelBinding {

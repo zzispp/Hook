@@ -84,6 +84,55 @@ fn format_conversion_openai_responses_custom_tool_round_trips() {
 }
 
 #[test]
+fn format_conversion_openai_responses_image_generation_call_input_to_openai_chat() {
+    let registry = FormatConversionRegistry;
+    let input = json!({
+        "model": "gpt-5.5",
+        "input": [
+            { "type": "message", "role": "user", "content": [{ "type": "input_text", "text": "continue from this image" }] },
+            {
+                "id": "ig_1",
+                "type": "image_generation_call",
+                "status": "completed",
+                "output_format": "png",
+                "result": "aW1hZ2U="
+            }
+        ]
+    });
+
+    let chat = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::OpenAiChat).unwrap();
+
+    assert_eq!(chat["messages"][1]["role"], "user");
+    assert_eq!(chat["messages"][1]["content"][0]["type"], "image_url");
+    assert_eq!(chat["messages"][1]["content"][0]["image_url"]["url"], "data:image/png;base64,aW1hZ2U=");
+}
+
+#[test]
+fn format_conversion_openai_responses_image_generation_call_input_to_claude() {
+    let registry = FormatConversionRegistry;
+    let input = json!({
+        "model": "gpt-5.5",
+        "input": [
+            {
+                "id": "ig_1",
+                "type": "image_generation_call",
+                "status": "completed",
+                "output_format": "png",
+                "result": "aW1hZ2U="
+            }
+        ]
+    });
+
+    let claude = registry.convert_request(&input, ApiFormat::OpenAiResponses, ApiFormat::ClaudeChat).unwrap();
+
+    assert_eq!(claude["messages"][0]["role"], "user");
+    assert_eq!(claude["messages"][0]["content"][0]["type"], "image");
+    assert_eq!(claude["messages"][0]["content"][0]["source"]["type"], "base64");
+    assert_eq!(claude["messages"][0]["content"][0]["source"]["media_type"], "image/png");
+    assert_eq!(claude["messages"][0]["content"][0]["source"]["data"], "aW1hZ2U=");
+}
+
+#[test]
 fn format_conversion_openai_responses_response_custom_tool_round_trips_to_responses() {
     let registry = FormatConversionRegistry;
     let input = json!({

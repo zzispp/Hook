@@ -348,6 +348,7 @@ fn key_active_model(store: &ProviderStore, provider_id: &str, input: ProviderQui
         name: Set(input.name),
         api_formats: Set(json::encode_required(&input.api_formats)?),
         allowed_model_ids: Set(json::encode_required(&input.allowed_model_ids)?),
+        capabilities: Set(json::encode_optional(&input.capabilities)?),
         encrypted_api_key: Set(input.encrypted_api_key),
         note: Set(input.note),
         internal_priority: Set(input.internal_priority),

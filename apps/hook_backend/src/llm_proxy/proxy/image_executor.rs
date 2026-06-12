@@ -14,7 +14,7 @@ use super::{
     timeout, transport,
 };
 use crate::llm_proxy::{
-    CurrentApiToken, OPENAI_IMAGE_EDIT_FORMAT,
+    CurrentApiToken, IMAGE_GENERATION_CAPABILITY, OPENAI_IMAGE_EDIT_FORMAT,
     audit::{SKIP_REASON_REQUEST_TERMINATED, record_scheduled_candidates, record_skipped_candidates},
     billing::enforce_preflight_access,
     candidate::{CandidateRequest, ProxyCandidate, select_candidates},
@@ -55,6 +55,8 @@ async fn prepare_image_edit_request(
             routing_api_format: OPENAI_IMAGE_EDIT_FORMAT,
             model_name: request.model(),
             is_stream: false,
+            has_openai_responses_custom_tool_items: false,
+            required_capability: Some(IMAGE_GENERATION_CAPABILITY),
         },
     )
     .await?;

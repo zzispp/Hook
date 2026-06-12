@@ -44,6 +44,8 @@ pub struct CachedGlobalModel {
     pub id: String,
     pub name: String,
     pub is_active: bool,
+    #[serde(default)]
+    pub supported_capabilities: Option<Vec<String>>,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub default_price_per_request: Option<Decimal>,
     pub default_tiered_pricing: TieredPricingConfig,
@@ -116,6 +118,8 @@ pub struct CachedProviderKey {
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
+    #[serde(default)]
+    pub capabilities: Option<serde_json::Value>,
     pub key_preview: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,

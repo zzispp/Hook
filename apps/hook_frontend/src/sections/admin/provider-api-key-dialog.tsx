@@ -13,6 +13,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { useProviderModels, useProviderEndpoints } from 'src/actions/providers';
 
 import { SwitchRow, TextFieldRow, ManagementDialog } from './shared';
+import { API_KEY_CAPABILITY_OPTIONS } from './provider-management-utils';
 import { ApiKeyFormatFields, selectedValuesOutsideOptions } from './provider-api-key-format-fields';
 import {
   selectedOptions,
@@ -65,6 +66,7 @@ export function ProviderApiKeyDialog({
         models={models}
         providerModels={providerModels.items}
       />
+      <ApiKeyCapabilityFields dialogs={dialogs} />
       <ApiKeyLimitFields dialogs={dialogs} />
       <ApiKeyTimeRangeFields dialogs={dialogs} />
       <ApiKeySwitches dialogs={dialogs} />
@@ -150,6 +152,50 @@ function ApiKeyModelFields({
           label={t('providers.modelPermission')}
           helperText={t('providers.modelPermissionHelper')}
           placeholder={t('providers.searchOrAddProviderModel')}
+        />
+      )}
+    />
+  );
+}
+
+function ApiKeyCapabilityFields({
+  dialogs,
+}: {
+  dialogs: ReturnType<typeof useProviderChildDialogs>;
+}) {
+  const { t } = useTranslate('admin');
+  const options = API_KEY_CAPABILITY_OPTIONS.map((value) => ({
+    value,
+    label: t(`models.capability.${value}`),
+    description: t(`models.capabilityDescriptions.${value}`),
+  }));
+  const selected = selectedOptions(dialogs.apiKeyForm.capabilities, options);
+
+  return (
+    <Autocomplete
+      multiple
+      disableCloseOnSelect
+      options={options}
+      value={selected}
+      getOptionLabel={(option) => option.label}
+      isOptionEqualToValue={(option, current) => option.value === current.value}
+      onChange={(_, values) =>
+        dialogs.setApiKeyForm((form) => ({
+          ...form,
+          capabilities: values.map((value) => value.value),
+        }))
+      }
+      renderOption={(props, option) => (
+        <MenuItem {...props} key={option.value} value={option.value}>
+          <ListItemText primary={option.label} secondary={option.description} />
+        </MenuItem>
+      )}
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          label={t('providers.keyCapabilities')}
+          helperText={t('providers.keyCapabilitiesHelper')}
+          placeholder={t('providers.selectKeyCapabilities')}
         />
       )}
     />

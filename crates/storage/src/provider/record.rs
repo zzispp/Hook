@@ -62,6 +62,7 @@ impl ProviderApiKeyRecord {
             name: self.name,
             api_formats: json::decode_required(self.api_formats)?,
             allowed_model_ids: json::decode_required(self.allowed_model_ids)?,
+            capabilities: json::decode_optional(self.capabilities)?,
             note: self.note,
             internal_priority: self.internal_priority,
             global_priority_by_format: json::decode_required(self.global_priority_by_format)?,
