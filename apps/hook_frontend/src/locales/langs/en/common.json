@@ -244,9 +244,6 @@
       "title": "Unify your AI traffic with Hook",
       "description": "Start with the first API token and bring providers, models, quotas, and monitoring into a visible, controllable, auditable gateway.",
       "action": "Open console"
-    },
-    "footer": {
-      "copy": "© Hook. Self-hosted AI API gateway."
     }
   }
 }

@@ -17,8 +17,6 @@ import { _socials } from 'src/_mock';
 import { Logo } from 'src/components/logo';
 import { Iconify } from 'src/components/iconify';
 
-import { HomeFooterCopy } from './home-footer-copy';
-
 // ----------------------------------------------------------------------
 
 const LINKS = [
@@ -154,28 +152,6 @@ export function Footer({
         <Typography variant="body2" sx={{ mt: 10 }}>
           © All rights reserved.
         </Typography>
-      </Container>
-    </FooterRoot>
-  );
-}
-
-// ----------------------------------------------------------------------
-
-export function HomeFooter({ sx, ...other }: FooterProps) {
-  return (
-    <FooterRoot
-      sx={[
-        {
-          py: 5,
-          textAlign: 'center',
-        },
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ]}
-      {...other}
-    >
-      <Container>
-        <Logo />
-        <HomeFooterCopy />
       </Container>
     </FooterRoot>
   );

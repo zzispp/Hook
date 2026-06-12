@@ -38,13 +38,13 @@ export const metadata: Metadata = {
   ],
 };
 
-const REACT_BITS_HOME_LIGHT_BACKGROUND = '#F8FAFC';
-const REACT_BITS_HOME_DARK_BACKGROUND = '#120F17';
+const HOME_LIGHT_BACKGROUND = '#F8FAFC';
+const HOME_DARK_BACKGROUND = '#120F17';
 
-const REACT_BITS_HOME_BACKGROUND_SCRIPT = `
+const HOME_BACKGROUND_SCRIPT = `
 (function () {
   if (window.location.pathname === '/') {
-    document.documentElement.setAttribute('data-react-bits-home', 'true');
+    document.documentElement.setAttribute('data-home', 'true');
   }
 })();
 `;
@@ -80,25 +80,25 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html lang={appConfig.lang} dir={appConfig.dir} suppressHydrationWarning>
       <head>
         <style>{`
-          html[data-react-bits-home='true'],
-          html[data-react-bits-home='true'] body {
-            background: ${REACT_BITS_HOME_LIGHT_BACKGROUND} !important;
+          html[data-home='true'],
+          html[data-home='true'] body {
+            background: ${HOME_LIGHT_BACKGROUND} !important;
           }
 
-          html[data-react-bits-home='true'][data-color-scheme='dark'],
-          html[data-react-bits-home='true'][data-color-scheme='dark'] body {
-            background: ${REACT_BITS_HOME_DARK_BACKGROUND} !important;
+          html[data-home='true'][data-color-scheme='dark'],
+          html[data-home='true'][data-color-scheme='dark'] body {
+            background: ${HOME_DARK_BACKGROUND} !important;
           }
 
-          html[data-react-bits-home='true'] {
+          html[data-home='true'] {
             color-scheme: light;
           }
 
-          html[data-react-bits-home='true'][data-color-scheme='dark'] {
+          html[data-home='true'][data-color-scheme='dark'] {
             color-scheme: dark;
           }
         `}</style>
-        <script dangerouslySetInnerHTML={{ __html: REACT_BITS_HOME_BACKGROUND_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: HOME_BACKGROUND_SCRIPT }} />
       </head>
       <body>
         <InitColorSchemeScript

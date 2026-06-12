@@ -21,10 +21,14 @@ const LOGO_FULL_HEIGHT = 36;
 export type LogoProps = LinkProps & {
   isSingle?: boolean;
   disabled?: boolean;
+  label?: string;
+  source?: string;
 };
 
 export function Logo({
   sx,
+  label,
+  source,
   disabled,
   className,
   href = '/',
@@ -51,7 +55,7 @@ export function Logo({
       ]}
       {...other}
     >
-      <SiteLogo isSingle={isSingle} />
+      <SiteLogo isSingle={isSingle} label={label} source={source} />
     </LogoRoot>
   );
 }

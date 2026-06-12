@@ -1,5 +1,6 @@
 pub mod development;
 
+mod auth_layout_site_name_i18n_additive;
 mod baseline;
 mod dashboard_period_i18n_additive;
 mod dashboard_request_metrics_additive;

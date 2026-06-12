@@ -1,8 +1,14 @@
 {
   "pageMetadata": {
-    "title": "Hook | Unified AI Gateway",
+    "title": "Unified AI Gateway",
     "titleSuffix": "Unified AI Gateway",
     "description": "Unify OpenAI, Claude, Gemini, and CLI traffic behind one entry point, with routing, token governance, cost quotas, and health monitoring in one control plane."
+  },
+  "siteInfoStatus": {
+    "loading": "Loading site information",
+    "errorTitle": "Site information failed to load",
+    "invalidSiteName": "Backend site name is empty",
+    "retry": "Retry"
   },
   "navbar": {
     "links": {
@@ -31,7 +37,6 @@
   "hero": {
     "badge": "AI Gateway",
     "badgeSuffix": "OpenAI Compatible",
-    "headlineDefaultName": "Hook AI",
     "headlineSuffix": "Unified AI Gateway",
     "description": "Unify Claude, OpenAI, Gemini, and CLI tool traffic behind one entry point, with model routing, user tokens, cost quotas, and health monitoring in a single control plane.",
     "buttons": {
@@ -42,7 +47,7 @@
     },
     "code": {
       "baseUrl": "Base URL",
-      "prompt": "Call a unified AI gateway through Hook"
+      "prompt": "Call a unified AI gateway through {{siteName}}"
     }
   },
   "features": {
@@ -77,7 +82,7 @@
       "monthly": "Monthly quota"
     },
     "monitor": {
-      "title": "Hook Gateway",
+      "title": "{{siteName}} Gateway",
       "frames": {
         "health": {
           "prompt": "check provider health",
@@ -198,11 +203,11 @@
         "badge": "Image generation"
       },
       "cursor": {
-        "models": "Point Cursor to the Hook gateway",
+        "models": "Point Cursor to the {{siteName}} gateway",
         "badge": "IDE integration"
       },
       "claudeCode": {
-        "models": "Set API Base to Hook",
+        "models": "Set API Base to {{siteName}}",
         "badge": "CLI integration"
       },
       "suno": {
@@ -220,7 +225,7 @@
     }
   },
   "liveDemo": {
-    "title": "See Hook in action",
+    "title": "See {{siteName}} in action",
     "subtitle": "Simulate multi-provider access, highly available load balancing, and automatic failover in seconds",
     "controls": {
       "modelLabel": "Select model",
@@ -232,7 +237,7 @@
       "send": "Send gateway request",
       "running": "Running simulation..."
     },
-    "terminalTitle": "Hook Trace logs",
+    "terminalTitle": "{{siteName}} Trace logs",
     "emptyState": "Waiting for a request... Click “Send gateway request” on the left to inspect the forwarding trace",
     "streamTitle": "Streaming response",
     "streamOutput": "Server Stream Output",
@@ -278,8 +283,8 @@
         "rust": "<think>\nThought process:\n1. Generate the smallest runnable Rust program.\n2. Return it in a code block.\n</think>\n```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```"
       },
       "custom": {
-        "deepseek": "<think>\nReasoning:\nThe user entered a custom prompt: \"{{prompt}}\". The gateway maps the request and forwards it to the configured {{model}} upstream.\n</think>\n[Hook Gateway] This is a simulated answer for the custom prompt. In production, Hook would route the request to your configured {{model}} provider and stream back the real result.",
-        "default": "[Hook Gateway] Received custom input: \"{{prompt}}\".\nThis is a preview environment. In production, the request would be routed safely through Hook to the configured {{model}} upstream and billed against your token and quota plan."
+        "deepseek": "<think>\nReasoning:\nThe user entered a custom prompt: \"{{prompt}}\". The gateway maps the request and forwards it to the configured {{model}} upstream.\n</think>\n[{{siteName}} Gateway] This is a simulated answer for the custom prompt. In production, {{siteName}} would route the request to your configured {{model}} provider and stream back the real result.",
+        "default": "[{{siteName}} Gateway] Received custom input: \"{{prompt}}\".\nThis is a preview environment. In production, the request would be routed safely through {{siteName}} to the configured {{model}} upstream and billed against your token and quota plan."
       }
     },
     "logs": {
@@ -349,12 +354,11 @@
   },
   "cta": {
     "title": "Take control of your AI traffic",
-    "description": "Deploy Hook in one step and run model routing, load balancing, token throttling, and observability in a secure self-hosted environment. Open source, free, and private by default.",
+    "description": "Deploy {{siteName}} in one step and run model routing, load balancing, token throttling, and observability in a secure self-hosted environment. Open source, free, and private by default.",
     "primaryAction": "Open console",
     "secondaryAction": "GitHub repository"
   },
   "footer": {
-    "fallbackTagline": "A self-hosted AI API gateway.",
     "navigation": "Navigation",
     "community": "Community",
     "console": "Open console",

@@ -1,16 +1,16 @@
 'use client';
 
-import type { ReactBitsLoaderProps } from './react-bits-loader';
+import type { HomeLoaderProps } from './home-loader';
 
 import { Fragment } from 'react';
 
 import Portal from '@mui/material/Portal';
 
-import { ReactBitsLoader } from './react-bits-loader';
+import { HomeLoader } from './home-loader';
 
 // ----------------------------------------------------------------------
 
-export type SplashScreenProps = ReactBitsLoaderProps & {
+export type SplashScreenProps = HomeLoaderProps & {
   portal?: boolean;
 };
 
@@ -19,7 +19,7 @@ export function SplashScreen({ portal = true, ...other }: SplashScreenProps) {
 
   return (
     <PortalWrapper>
-      <ReactBitsLoader {...other} />
+      <HomeLoader {...other} />
     </PortalWrapper>
   );
 }

@@ -244,9 +244,6 @@
       "title": "用 Hook 统一你的 AI 调用入口",
       "description": "从第一个 API Token 开始，把供应商、模型、额度和监控放到可见、可控、可审计的网关里。",
       "action": "进入控制台"
-    },
-    "footer": {
-      "copy": "© Hook. 自托管 AI API 网关。"
     }
   }
 }
