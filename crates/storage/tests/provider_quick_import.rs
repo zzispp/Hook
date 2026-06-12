@@ -257,6 +257,7 @@ fn key_record() -> provider_api_keys::Model {
         name: "codex".into(),
         api_formats: r#"["openai"]"#.into(),
         allowed_model_ids: r#"["global-model-a"]"#.into(),
+        capabilities: None,
         encrypted_api_key: "encrypted".into(),
         note: Some("Imported from newapi group: plus".into()),
         internal_priority: 10,

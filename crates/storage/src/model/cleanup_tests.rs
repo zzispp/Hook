@@ -127,6 +127,7 @@ fn provider_api_key(id: &str, allowed_model_ids: &str) -> provider_api_keys::Mod
         name: "key-a".to_owned(),
         api_formats: r#"["openai:chat"]"#.to_owned(),
         allowed_model_ids: allowed_model_ids.to_owned(),
+        capabilities: None,
         encrypted_api_key: "encrypted".to_owned(),
         note: None,
         internal_priority: 0,
