@@ -21,6 +21,8 @@ use crate::application::{
     UserCatalog,
 };
 
+const ADMIN_ROLE: &str = "admin";
+
 #[derive(Clone)]
 pub struct StorageApiTokenRepository {
     store: ApiTokenStore,
@@ -199,6 +201,17 @@ impl UserCatalog for StorageUserCatalog {
             return Err(ApiTokenError::InvalidInput(format!("user has no active user groups: {id}")));
         }
         Ok(Some(active_group_codes))
+    }
+
+    async fn user_role(&self, id: &str) -> ApiTokenResult<Option<String>> {
+        if system_owner_id_matches(&self.system_owner, id) {
+            return Ok(Some(ADMIN_ROLE.into()));
+        }
+        self.store
+            .find_by_id(UserId(id.to_owned()))
+            .await
+            .map(|user| user.map(|item| item.role))
+            .map_err(storage_error)
     }
 
     async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {

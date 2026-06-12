@@ -115,7 +115,7 @@ where
         let redirect_uri = social_auth::oauth_redirect_uri(&settings, provider)?;
         let profile = self.oauth_client.fetch_profile(provider, settings, &code, &redirect_uri).await?;
         reject_system_user_email(&self.system_users, &profile.email)?;
-        social_auth::oauth_callback(
+        let callback = social_auth::oauth_callback_with_creation(
             &self.repository,
             &self.auth_provider_config,
             &self.auth_ticket_store,
@@ -124,7 +124,12 @@ where
             &redirect_uri,
             profile,
         )
-        .await
+        .await?;
+        if let Some(user) = &callback.created_user {
+            let settings = self.registration_policy.registration_settings().await?;
+            grant_initial_balance(&self.initial_grants, user, settings.default_user_grant).await?;
+        }
+        Ok(callback.result)
     }
 
     async fn bind_oauth_existing(&self, provider: IdentityProvider, ticket: String) -> AppResult<User> {

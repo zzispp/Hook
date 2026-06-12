@@ -350,6 +350,8 @@ mod registration_tests;
 #[cfg(test)]
 mod social_auth_email_test_support;
 #[cfg(test)]
+mod social_auth_grant_tests;
+#[cfg(test)]
 mod social_auth_test_support;
 #[cfg(test)]
 mod social_auth_tests;

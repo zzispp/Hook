@@ -59,6 +59,7 @@ pub trait ApiTokenRepository: Send + Sync + 'static {
 pub trait UserCatalog: Send + Sync + 'static {
     async fn user_exists(&self, id: &str) -> ApiTokenResult<bool>;
     async fn user_group_codes(&self, id: &str) -> ApiTokenResult<Option<Vec<String>>>;
+    async fn user_role(&self, id: &str) -> ApiTokenResult<Option<String>>;
     async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>>;
 }
 

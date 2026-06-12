@@ -10,6 +10,11 @@ use crate::application::{
 
 use super::helpers::{OAUTH_BINDING_TTL_SECONDS, OAUTH_STATE_TTL_SECONDS, TICKET_BYTES, new_provider_user, provider_identity, random_token};
 
+pub(in crate::application::service) struct OAuthCallbackResult {
+    pub result: OAuthSignInResult,
+    pub created_user: Option<User>,
+}
+
 pub(in crate::application::service) async fn oauth_start<C, T>(
     config: &C,
     tickets: &T,
@@ -75,7 +80,7 @@ pub(in crate::application::service) fn oauth_redirect_uri(settings: &OAuthProvid
     ))
 }
 
-pub(in crate::application::service) async fn oauth_callback<R, C, T>(
+pub(in crate::application::service) async fn oauth_callback_with_creation<R, C, T>(
     repository: &R,
     config: &C,
     tickets: &T,
@@ -83,7 +88,7 @@ pub(in crate::application::service) async fn oauth_callback<R, C, T>(
     state: &str,
     redirect_uri: &str,
     profile: OAuthProfile,
-) -> AppResult<OAuthSignInResult>
+) -> AppResult<OAuthCallbackResult>
 where
     R: UserRepository,
     C: AuthProviderConfig,
@@ -170,7 +175,7 @@ async fn provider_profile_result<R, T>(
     provider: IdentityProvider,
     profile: OAuthProfile,
     aff_code: Option<String>,
-) -> AppResult<OAuthSignInResult>
+) -> AppResult<OAuthCallbackResult>
 where
     R: UserRepository,
     T: AuthTicketStore,
@@ -179,16 +184,23 @@ where
         repository.touch_identity_login(&identity.id).await?;
         let user = repository.find_by_id(UserId(identity.user_id)).await?.ok_or(AppError::NotFound)?;
         repository.record_login(user.id.clone()).await?;
-        return Ok(OAuthSignInResult::Authenticated(Box::new(user)));
+        return Ok(OAuthCallbackResult {
+            result: OAuthSignInResult::Authenticated(Box::new(user)),
+            created_user: None,
+        });
     }
     if let Some(user) = repository.find_by_email(&profile.email).await? {
-        return oauth_binding_required(repository, tickets, user, provider, profile).await;
+        let result = oauth_binding_required(repository, tickets, user, provider, profile).await?;
+        return Ok(OAuthCallbackResult { result, created_user: None });
     }
     let user = create_provider_account(repository, &profile, aff_code).await?;
     let identity = oauth_identity(provider, &profile, user.id.0.clone());
     repository.create_identity(identity).await?;
     repository.record_login(user.id.clone()).await?;
-    Ok(OAuthSignInResult::Authenticated(Box::new(user)))
+    Ok(OAuthCallbackResult {
+        result: OAuthSignInResult::Authenticated(Box::new(user.clone())),
+        created_user: Some(user),
+    })
 }
 
 async fn oauth_binding_required<R, T>(
