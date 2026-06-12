@@ -5,17 +5,14 @@ use std::{
 
 use async_trait::async_trait;
 use rust_decimal::Decimal;
-use types::api_token::{
-    AdminApiTokenCreate, ApiToken, ApiTokenCreate, ApiTokenListRequest, ApiTokenListResponse, ApiTokenOwnerResponse, ApiTokenType, ModelAccessMode,
-};
+use types::api_token::{AdminApiTokenCreate, ApiToken, ApiTokenCreate, ApiTokenListRequest, ApiTokenListResponse, ApiTokenType, ModelAccessMode};
 
 use super::{
-    ApiTokenCreateRecord, ApiTokenRepository, ApiTokenResult, ApiTokenService, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog,
-    SystemTokenPolicy, UserCatalog,
+    ApiTokenCreateRecord, ApiTokenRepository, ApiTokenResult, ApiTokenService, ApiTokenUpdateRecord, BillingGroupCatalog, ModelAccessCatalog, SystemTokenPolicy,
 };
 
-pub(super) const SYSTEM_ACTOR_ID: &str = "00000000-0000-7000-8000-000000000000";
-pub(super) const USER_ID: &str = "user-1";
+pub(super) use super::service_test_users::{ADMIN_USER_ID, ExistingUsers, SYSTEM_ACTOR_ID, USER_ID};
+
 pub(super) const RESTRICTED_BILLING_GROUP_CODE: &str = "restricted";
 
 const DEFAULT_RATE_LIMIT_RPM: i64 = 0;
@@ -255,54 +252,6 @@ pub(super) struct StaticModels;
 impl ModelAccessCatalog for StaticModels {
     async fn model_exists(&self, _id: &str) -> ApiTokenResult<bool> {
         Ok(true)
-    }
-}
-
-#[derive(Clone)]
-pub(super) struct ExistingUsers {
-    ids: Arc<Vec<String>>,
-}
-
-impl ExistingUsers {
-    pub(super) fn empty() -> Self {
-        Self { ids: Arc::new(Vec::new()) }
-    }
-
-    pub(super) fn with<const N: usize>(ids: [&str; N]) -> Self {
-        Self {
-            ids: Arc::new(ids.into_iter().map(str::to_owned).collect()),
-        }
-    }
-}
-
-#[async_trait]
-impl UserCatalog for ExistingUsers {
-    async fn user_exists(&self, id: &str) -> ApiTokenResult<bool> {
-        Ok(self.ids.iter().any(|existing| existing == id))
-    }
-
-    async fn user_group_codes(&self, id: &str) -> ApiTokenResult<Option<Vec<String>>> {
-        if id == SYSTEM_ACTOR_ID || self.ids.iter().any(|existing| existing == id) {
-            return Ok(Some(vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()]));
-        }
-        Ok(None)
-    }
-
-    async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {
-        Ok(ids
-            .iter()
-            .filter(|id| self.ids.iter().any(|existing| existing == *id))
-            .map(|id| {
-                (
-                    id.clone(),
-                    ApiTokenOwnerResponse {
-                        username: id.clone(),
-                        email: format!("{id}@example.test"),
-                        group_codes: vec![constants::user_group::DEFAULT_USER_GROUP_CODE.into()],
-                    },
-                )
-            })
-            .collect())
     }
 }
 

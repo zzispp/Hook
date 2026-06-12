@@ -1,5 +1,7 @@
 'use client';
 
+import type { TFunction } from 'i18next';
+
 import { useState, useEffect } from 'react';
 
 import Stack from '@mui/material/Stack';
@@ -96,6 +98,7 @@ export function TicketCreateDialog({
           <AuthCaptcha
             enabled={captchaConfig.enabled === true}
             resetKey={captchaResetKey}
+            labels={adminCaptchaLabels(t)}
             onTokenChange={setCaptchaToken}
           />
           {captchaConfig.errorMessage ? (
@@ -133,5 +136,14 @@ function ticketPayload(
   return {
     ...form,
     ...(config.enabled && captchaToken ? { captcha_token: captchaToken } : {}),
+  };
+}
+
+function adminCaptchaLabels(t: TFunction<'admin'>) {
+  return {
+    initial: t('captcha.initial'),
+    verifying: t('captcha.verifying'),
+    solved: t('captcha.solved'),
+    error: t('captcha.error'),
   };
 }

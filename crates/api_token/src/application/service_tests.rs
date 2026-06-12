@@ -3,8 +3,8 @@ use types::api_token::ApiTokenType;
 use super::{
     ApiTokenUseCase,
     service_test_support::{
-        ExistingUsers, MemoryTokenRepository, RESTRICTED_BILLING_GROUP_CODE, SYSTEM_ACTOR_ID, USER_ID, admin_create, record_owner, service, token_with_type,
-        user_create,
+        ADMIN_USER_ID, ExistingUsers, MemoryTokenRepository, RESTRICTED_BILLING_GROUP_CODE, SYSTEM_ACTOR_ID, USER_ID, admin_create, record_owner, service,
+        token_with_type, user_create,
     },
 };
 
@@ -103,7 +103,7 @@ async fn user_token_create_rejects_owner_limit() {
 }
 
 #[tokio::test]
-async fn admin_user_token_create_rejects_owner_limit() {
+async fn admin_user_token_create_rejects_regular_owner_limit() {
     let repository = MemoryTokenRepository::with_owner_token_count(5);
     let service = service(repository.clone(), ExistingUsers::with([USER_ID]));
 
@@ -113,6 +113,19 @@ async fn admin_user_token_create_rejects_owner_limit() {
 
     assert_eq!(result.unwrap_err().to_string(), "api token conflict: token quantity limit reached");
     assert!(repository.created_records().is_empty());
+}
+
+#[tokio::test]
+async fn admin_user_token_create_ignores_admin_owner_limit() {
+    let repository = MemoryTokenRepository::with_owner_token_count(5);
+    let service = service(repository.clone(), ExistingUsers::with_admin([ADMIN_USER_ID]));
+
+    service
+        .create_admin_token(SYSTEM_ACTOR_ID, admin_create(ApiTokenType::User, Some(ADMIN_USER_ID)))
+        .await
+        .unwrap();
+
+    assert_eq!(repository.created_records(), vec![record_owner(Some(ADMIN_USER_ID), ApiTokenType::User)]);
 }
 
 #[tokio::test]

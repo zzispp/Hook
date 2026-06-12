@@ -13,6 +13,8 @@ use crate::application::{
     validation::{sanitize_admin_create, sanitize_create, sanitize_update, validate_admin_create, validate_create, validate_list_request, validate_update},
 };
 
+const ADMIN_ROLE: &str = "admin";
+
 pub struct ApiTokenService<R, G, M, U, P> {
     repository: R,
     groups: G,
@@ -252,12 +254,19 @@ where
     }
 
     async fn ensure_owner_token_limit(&self, owner_id: &str, token_type: types::api_token::ApiTokenType) -> ApiTokenResult<()> {
+        if self.owner_is_admin(owner_id).await? {
+            return Ok(());
+        }
         let limit = self.system_policy.token_limit_per_user().await?;
         let count = self.repository.count_owner_tokens(owner_id, token_type).await?;
         if count >= u64::try_from(limit).map_err(|_| ApiTokenError::Infrastructure("token limit must fit u64".into()))? {
             return Err(ApiTokenError::Conflict("token quantity limit reached".into()));
         }
         Ok(())
+    }
+
+    async fn owner_is_admin(&self, owner_id: &str) -> ApiTokenResult<bool> {
+        Ok(self.users.user_role(owner_id).await?.is_some_and(|role| role == ADMIN_ROLE))
     }
 
     async fn ensure_model_status_unbound(&self, token: &ApiToken) -> ApiTokenResult<()> {

@@ -7,6 +7,8 @@ mod service_owner_tests;
 #[cfg(test)]
 mod service_test_support;
 #[cfg(test)]
+mod service_test_users;
+#[cfg(test)]
 mod service_tests;
 mod token;
 mod validation;

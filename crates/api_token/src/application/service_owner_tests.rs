@@ -104,6 +104,10 @@ impl UserCatalog for OwnerUsers {
         unimplemented!("not needed for list owner tests")
     }
 
+    async fn user_role(&self, _id: &str) -> ApiTokenResult<Option<String>> {
+        unimplemented!("not needed for list owner tests")
+    }
+
     async fn owners_by_id(&self, ids: &[String]) -> ApiTokenResult<BTreeMap<String, ApiTokenOwnerResponse>> {
         assert_eq!(ids, &[OWNER_ID.to_owned()]);
         Ok(BTreeMap::from([(
