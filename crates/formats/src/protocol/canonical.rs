@@ -1394,6 +1394,16 @@ pub(crate) fn openai_responses_input_to_canonical_messages(input: Option<&Value>
                             });
                         }
                     }
+                    "image_generation_call" => {
+                        messages.push(CanonicalMessage {
+                            role: CanonicalRole::User,
+                            content: vec![openai_responses_image_generation_call_to_block(item_object)?],
+                            extensions: openai_responses_extensions(
+                                item_object,
+                                &["type", "id", "status", "action", "result", "url", "output_format", "mime_type"],
+                            ),
+                        });
+                    }
                     _ => messages.push(CanonicalMessage {
                         role: CanonicalRole::Unknown,
                         content: vec![CanonicalContentBlock::Unknown {

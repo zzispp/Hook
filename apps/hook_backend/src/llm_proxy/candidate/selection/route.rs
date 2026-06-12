@@ -193,6 +193,7 @@ mod tests {
             name: format!("{id}-name"),
             api_formats: api_formats.into_iter().map(str::to_owned).collect(),
             allowed_model_ids: allowed_model_ids.into_iter().map(str::to_owned).collect(),
+            capabilities: None,
             key_preview: format!("{id}-name"),
             encrypted_api_key: "encrypted".into(),
             internal_priority: 10,

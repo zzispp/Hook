@@ -181,6 +181,7 @@ fn snapshot() -> SchedulingSnapshot {
                 name: "Key A".into(),
                 api_formats: vec!["openai:chat".into()],
                 allowed_model_ids: Vec::new(),
+                capabilities: None,
                 key_preview: "sk-***".into(),
                 encrypted_api_key: "encrypted".into(),
                 internal_priority: 0,
@@ -212,6 +213,7 @@ fn model(id: &str, name: &str) -> CachedGlobalModel {
         id: id.into(),
         name: name.into(),
         is_active: true,
+        supported_capabilities: None,
         default_price_per_request: None,
         default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
     }

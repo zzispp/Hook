@@ -4,7 +4,7 @@ import type { Theme } from '@mui/material/styles';
 import type { BillingGroup } from 'src/types/group';
 import type { UserGroup } from 'src/types/user-group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
+import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -28,12 +28,9 @@ import { displayUserGroup } from './user-group-utils';
 
 const MAX_VISIBLE_ITEMS = 20;
 
-type NamedGroup = ProviderGroup | ProviderKeyGroup;
-
 type Props = {
   group: BillingGroup | null;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
-  providerGroups: ProviderGroup[];
   providerKeyGroups: ProviderKeyGroup[];
   userGroups: UserGroup[];
   open: boolean;
@@ -43,7 +40,6 @@ type Props = {
 export function BillingGroupDetailDialog({
   group,
   models,
-  providerGroups,
   providerKeyGroups,
   userGroups,
   open,
@@ -62,7 +58,6 @@ export function BillingGroupDetailDialog({
           <ModelSelectionSection group={group} models={models} />
           <AccessScopeSection
             group={group}
-            providerGroups={providerGroups}
             providerKeyGroups={providerKeyGroups}
           />
           <UserGroupSelectionSection group={group} userGroups={userGroups} />
@@ -146,15 +141,13 @@ function ModelSelectionSection({
 
 function AccessScopeSection({
   group,
-  providerGroups,
   providerKeyGroups,
 }: {
   group: BillingGroup;
-  providerGroups: ProviderGroup[];
   providerKeyGroups: ProviderKeyGroup[];
 }) {
   const { t } = useTranslate('admin');
-  const scope = accessScope(group, providerGroups, providerKeyGroups, t);
+  const scope = accessScope(group, providerKeyGroups, t);
 
   return (
     <SelectionSection
@@ -216,15 +209,11 @@ function SelectionSection({
 
 function accessScope(
   group: BillingGroup,
-  providerGroups: ProviderGroup[],
   providerKeyGroups: ProviderKeyGroup[],
   t: (key: string) => string
 ) {
   if (group.allowed_provider_key_group_ids.length > 0) {
     return { items: namedGroups(group.allowed_provider_key_group_ids, providerKeyGroups) };
-  }
-  if (group.allowed_provider_group_ids.length > 0) {
-    return { items: namedGroups(group.allowed_provider_group_ids, providerGroups) };
   }
   return { summaryLabel: t('billingGroups.accessModeUnrestricted'), items: [] };
 }
@@ -238,7 +227,7 @@ function namedModels(
   return group.allowed_model_ids.map((id) => labels.get(id) ?? id);
 }
 
-function namedGroups(ids: string[], groups: NamedGroup[]) {
+function namedGroups(ids: string[], groups: ProviderKeyGroup[]) {
   const labels = new Map(groups.map((group) => [group.id, group.name]));
   return ids.map((id) => labels.get(id) ?? id);
 }

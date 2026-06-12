@@ -1,18 +1,16 @@
 import type { Provider, ProviderApiKey } from 'src/types/provider';
-import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
+import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 
-export type ProviderGroupKind = 'provider' | 'key';
-
-export type ProviderGroupFormMember = {
+export type ProviderKeyGroupFormMember = {
   id: string;
   priority: string;
 };
 
-export type ProviderGroupForm = {
+export type ProviderKeyGroupForm = {
   name: string;
   description: string;
   sort_order: string;
-  members: ProviderGroupFormMember[];
+  members: ProviderKeyGroupFormMember[];
 };
 
 export type MemberOption = {
@@ -21,26 +19,14 @@ export type MemberOption = {
   secondary?: string;
 };
 
-export const DEFAULT_PROVIDER_GROUP_FORM: ProviderGroupForm = {
+export const DEFAULT_PROVIDER_KEY_GROUP_FORM: ProviderKeyGroupForm = {
   name: '',
   description: '',
   sort_order: '0',
   members: [],
 };
 
-export function formFromProviderGroup(group: ProviderGroup): ProviderGroupForm {
-  return {
-    name: group.name,
-    description: group.description ?? '',
-    sort_order: String(group.sort_order),
-    members: group.provider_members.map((member) => ({
-      id: member.provider_id,
-      priority: String(member.priority),
-    })),
-  };
-}
-
-export function formFromProviderKeyGroup(group: ProviderKeyGroup): ProviderGroupForm {
+export function formFromProviderKeyGroup(group: ProviderKeyGroup): ProviderKeyGroupForm {
   return {
     name: group.name,
     description: group.description ?? '',
@@ -52,19 +38,7 @@ export function formFromProviderKeyGroup(group: ProviderKeyGroup): ProviderGroup
   };
 }
 
-export function providerGroupPayload(form: ProviderGroupForm) {
-  return {
-    name: form.name.trim(),
-    description: form.description.trim() || null,
-    sort_order: Number(form.sort_order || 0),
-    provider_members: form.members.map((member) => ({
-      provider_id: member.id,
-      priority: Number(member.priority || 0),
-    })),
-  };
-}
-
-export function providerKeyGroupPayload(form: ProviderGroupForm) {
+export function providerKeyGroupPayload(form: ProviderKeyGroupForm) {
   return {
     name: form.name.trim(),
     description: form.description.trim() || null,
@@ -74,16 +48,6 @@ export function providerKeyGroupPayload(form: ProviderGroupForm) {
       priority: Number(member.priority || 0),
     })),
   };
-}
-
-export function providerMemberOptions(
-  providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[]
-) {
-  return providers.map((provider) => ({
-    id: provider.id,
-    label: provider.name,
-    secondary: provider.provider_type,
-  }));
 }
 
 export function providerKeyMemberOptions(
@@ -103,12 +67,12 @@ export function selectedValues(value: string | string[]) {
   return Array.isArray(value) ? value : value.split(',').filter(Boolean);
 }
 
-export function formMemberIds(form: ProviderGroupForm) {
+export function formMemberIds(form: ProviderKeyGroupForm) {
   return form.members.map((member) => member.id);
 }
 
 export function updateSelectedMembers(
-  members: ProviderGroupFormMember[],
+  members: ProviderKeyGroupFormMember[],
   selectedIds: string[],
   defaultPriorityForId: (id: string) => number
 ) {
@@ -119,18 +83,11 @@ export function updateSelectedMembers(
 }
 
 export function updateMemberPriority(
-  members: ProviderGroupFormMember[],
+  members: ProviderKeyGroupFormMember[],
   memberId: string,
   priority: string
 ) {
   return members.map((member) => (member.id === memberId ? { ...member, priority } : member));
-}
-
-export function defaultProviderMemberPriority(
-  providers: Pick<Provider, 'id' | 'priority'>[],
-  providerId: string
-) {
-  return providers.find((provider) => provider.id === providerId)?.priority ?? 0;
 }
 
 export function defaultProviderKeyMemberPriority(
@@ -156,16 +113,6 @@ export function selectedMemberLabel(
   return ids.map((id) => labels.get(id) ?? id).join(', ');
 }
 
-export function groupMemberIds(group: ProviderGroup | ProviderKeyGroup, kind: ProviderGroupKind) {
-  return kind === 'provider'
-    ? providerGroupMemberIds(group as ProviderGroup)
-    : providerKeyGroupMemberIds(group as ProviderKeyGroup);
-}
-
-export function providerGroupMemberIds(group: ProviderGroup) {
-  return group.provider_members.map((member) => member.provider_id);
-}
-
 export function providerKeyGroupMemberIds(group: ProviderKeyGroup) {
   return group.provider_key_members.map((member) => member.provider_key_id);
 }
@@ -177,7 +124,7 @@ export function memberLabels(ids: string[], options: MemberOption[]) {
 
 export function selectedGroupLabel(
   ids: string[],
-  groups: Pick<ProviderGroup | ProviderKeyGroup, 'id' | 'name'>[],
+  groups: Pick<ProviderKeyGroup, 'id' | 'name'>[],
   emptyText: string,
   countText: (count: number) => string
 ) {
@@ -185,12 +132,6 @@ export function selectedGroupLabel(
   if (ids.length > 2) return countText(ids.length);
   const labels = new Map(groups.map((group) => [group.id, group.name]));
   return ids.map((id) => labels.get(id) ?? id).join(', ');
-}
-
-export function providerGroupIdsForProvider(groups: ProviderGroup[], providerId: string) {
-  return groups
-    .filter((group) => group.provider_members.some((member) => member.provider_id === providerId))
-    .map((group) => group.id);
 }
 
 export function providerKeyGroupIdsForKey(groups: ProviderKeyGroup[], keyId: string) {

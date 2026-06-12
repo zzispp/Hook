@@ -7,11 +7,10 @@ use provider::application::{
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
-    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupListResponse,
-    ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListResponse, ProviderKeyGroupUpdate, ProviderListRequest,
-    ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-    UsageRecordListResponse,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse,
+    ProviderKeyGroupUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
+    ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest,
+    RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::cache::{ProxyCacheInvalidator, combine_cache_results};
@@ -65,31 +64,6 @@ where
         self.inner.provider_key_exists(id).await
     }
 
-    async fn create_provider_group(&self, input: ProviderGroupCreate) -> ProviderResult<ProviderGroup> {
-        let group = self.inner.create_provider_group(input).await?;
-        self.refresh_scheduling().await?;
-        Ok(group)
-    }
-
-    async fn update_provider_group(&self, id: &str, input: ProviderGroupUpdate) -> ProviderResult<ProviderGroup> {
-        let group = self.inner.update_provider_group(id, input).await?;
-        self.refresh_scheduling().await?;
-        Ok(group)
-    }
-
-    async fn delete_provider_group(&self, id: &str) -> ProviderResult<()> {
-        self.inner.delete_provider_group(id).await?;
-        self.refresh_scheduling().await
-    }
-
-    async fn find_provider_group(&self, id_or_name: &str) -> ProviderResult<Option<ProviderGroup>> {
-        self.inner.find_provider_group(id_or_name).await
-    }
-
-    async fn list_provider_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderGroupListResponse> {
-        self.inner.list_provider_groups(request).await
-    }
-
     async fn create_provider_key_group(&self, input: ProviderKeyGroupCreate) -> ProviderResult<ProviderKeyGroup> {
         let group = self.inner.create_provider_key_group(input).await?;
         self.refresh_scheduling().await?;
@@ -111,7 +85,7 @@ where
         self.inner.find_provider_key_group(id_or_name).await
     }
 
-    async fn list_provider_key_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse> {
+    async fn list_provider_key_groups(&self, request: ProviderKeyGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse> {
         self.inner.list_provider_key_groups(request).await
     }
 

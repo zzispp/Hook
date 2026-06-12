@@ -203,7 +203,14 @@ fn reject_unknown_openai_responses_request_items(request: &Value, source: ApiFor
     }
     reject_unknown_items(
         request.get("input"),
-        &["message", "reasoning", "function_call", "web_search_call", "function_call_output"],
+        &[
+            "message",
+            "reasoning",
+            "function_call",
+            "web_search_call",
+            "function_call_output",
+            "image_generation_call",
+        ],
         "input",
     )
 }

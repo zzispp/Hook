@@ -25,13 +25,11 @@ pub fn group_active_model(id: String, input: BillingGroupRecordInput) -> billing
 pub fn domain_group(
     record: BillingGroupRecord,
     allowed_model_ids: Vec<String>,
-    allowed_provider_group_ids: Vec<String>,
     allowed_provider_key_group_ids: Vec<String>,
     visible_user_group_codes: Vec<String>,
 ) -> BillingGroup {
     BillingGroup {
         allowed_model_ids,
-        allowed_provider_group_ids,
         allowed_provider_key_group_ids,
         visible_user_group_codes,
         ..BillingGroup::from(record)

@@ -7,6 +7,7 @@ use types::{
 };
 
 use crate::llm_proxy::{
+    IMAGE_GENERATION_CAPABILITY,
     cache::snapshot::{
         CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
     },
@@ -40,6 +41,7 @@ pub(super) fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnap
             id: "model-a".into(),
             name: "gpt-test".into(),
             is_active: true,
+            supported_capabilities: Some(vec![IMAGE_GENERATION_CAPABILITY.into()]),
             default_price_per_request: None,
             default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
         }],
@@ -162,6 +164,8 @@ pub(super) fn request() -> CandidateRequest<'static> {
         routing_api_format: "openai:chat",
         model_name: "gpt-test",
         is_stream: false,
+        has_openai_responses_custom_tool_items: false,
+        required_capability: None,
     }
 }
 
@@ -221,6 +225,7 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
             "openai:compact".into(),
         ],
         allowed_model_ids: Vec::new(),
+        capabilities: Some(serde_json::json!({ IMAGE_GENERATION_CAPABILITY: true })),
         key_preview: format!("{id}-name"),
         encrypted_api_key: "encrypted".into(),
         internal_priority,

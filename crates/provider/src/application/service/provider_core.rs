@@ -11,7 +11,6 @@ where
     let input = sanitize_create(input);
     validate_create(&input)?;
     reject_duplicate_provider(repository, &input.name).await?;
-    ensure_provider_group(repository, input.provider_group_id.as_deref()).await?;
     Ok(input)
 }
 
@@ -37,15 +36,4 @@ where
         return Err(ProviderError::Conflict(format!("provider already exists: {name}")));
     }
     Ok(())
-}
-
-async fn ensure_provider_group<R>(repository: &R, group_id: Option<&str>) -> ProviderResult<()>
-where
-    R: ProviderRepository,
-{
-    let Some(group_id) = group_id else { return Ok(()) };
-    match repository.find_provider_group(group_id).await? {
-        Some(group) if group.id == group_id => Ok(()),
-        _ => Err(ProviderError::InvalidInput(format!("provider group does not exist: {group_id}"))),
-    }
 }

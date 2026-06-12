@@ -8,17 +8,14 @@ import { useState, useCallback } from 'react';
 import { useGlobalModels } from 'src/actions/models';
 import { useTranslate } from 'src/locales/use-locales';
 import { useSystemSettings } from 'src/actions/system-settings';
+import { useProviderKeyGroups } from 'src/actions/provider-key-groups';
 import { useProviders, useProviderPriorityKeys } from 'src/actions/providers';
-import { useProviderGroups, useProviderKeyGroups } from 'src/actions/provider-groups';
 
 import { useTable } from 'src/components/table';
 
 import { useProviderCooldownState } from './provider-cooldown-state';
+import { useProviderKeyGroupAssociation } from './provider-key-group-association-state';
 import { toProviderFilters, DEFAULT_PROVIDER_FILTERS } from './provider-filters-toolbar';
-import {
-  useProviderGroupAssociation,
-  useProviderKeyGroupAssociation,
-} from './provider-group-association-state';
 import {
   useProviderDialog,
   useDeleteProviderDialog,
@@ -37,23 +34,16 @@ export function useProviderManagementState() {
   const cooldownState = useProviderCooldownState(t, ui.cooldownTable);
   const priorityProviders = useProviders(0, PROVIDER_PRIORITY_LIMIT);
   const priorityKeys = useProviderPriorityKeys(priorityProviders.items);
-  const providerGroups = useProviderGroups(0, PROVIDER_PRIORITY_LIMIT);
   const providerKeyGroups = useProviderKeyGroups(0, PROVIDER_PRIORITY_LIMIT);
-  const refreshProviderGroups = useCallback(async () => {
-    await Promise.all([
-      providerGroups.refresh(),
-      providerKeyGroups.refresh(),
-      priorityProviders.refresh(),
-      priorityKeys.refresh(),
-    ]);
-  }, [priorityKeys, priorityProviders, providerGroups, providerKeyGroups]);
+  const refreshProviderKeyGroups = useCallback(async () => {
+    await Promise.all([providerKeyGroups.refresh(), priorityProviders.refresh(), priorityKeys.refresh()]);
+  }, [priorityKeys, priorityProviders, providerKeyGroups]);
   const settings = useSystemSettings();
   const models = useGlobalModels(0, 1000);
   const dialog = useProviderDialog({ t });
   const quickImportSyncDialog = useProviderQuickImportSyncDialog(t);
   const deleteDialog = useDeleteProviderDialog(t);
   const childDialogs = useProviderChildDialogs(t, ui.selectedProvider?.id);
-  const providerGroupAssociation = useProviderGroupAssociation(t, providerGroups.items);
   const providerKeyGroupAssociation = useProviderKeyGroupAssociation(t, providerKeyGroups.items);
   const openPriorityDialog = useOpenPriorityDialog({
     setPriorityOpen: ui.setPriorityOpen,
@@ -70,17 +60,14 @@ export function useProviderManagementState() {
     providers,
     settings,
     currentLang,
-    providerGroups,
     providerKeyGroups,
-    providerGroupAssociation,
     providerKeyGroupAssociation,
-    refreshProviderGroups,
+    refreshProviderKeyGroups,
     childDialogs,
     deleteDialog,
     cooldowns: cooldownState.cooldowns,
     errorMessage: errorMessage(
       providers.error,
-      providerGroups.error,
       providerKeyGroups.error,
       cooldownState.cooldowns.error,
       settings.error,

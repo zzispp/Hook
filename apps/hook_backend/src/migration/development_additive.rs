@@ -7,11 +7,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use storage::provider::record::{
-    billing_group_provider_groups, billing_group_provider_key_groups, billing_group_provider_keys, billing_group_providers, provider_api_keys,
-    provider_group_providers, provider_groups, provider_key_group_keys, provider_key_groups, providers,
+    billing_group_provider_key_groups, billing_group_provider_keys, provider_api_keys, provider_key_group_keys, provider_key_groups,
 };
 
-const ADDITIVE_VERSION: &str = "m20260608_000001_provider_group_additive";
+const ADDITIVE_VERSION: &str = "m20260608_000001_provider_key_group_additive";
 const MIGRATION_TABLE: &str = "seaql_migrations";
 
 pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
@@ -26,32 +25,18 @@ pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
 
 async fn migrate_legacy_bindings(db: &impl ConnectionTrait) -> Result<(), DbErr> {
     let key_bindings = legacy_key_bindings(db).await?;
-    let provider_bindings = legacy_provider_bindings(db).await?;
-    for (group_code, key_ids) in &key_bindings {
+    for (group_code, key_ids) in key_bindings {
         migrate_key_binding(db, group_code, key_ids).await?;
-    }
-    for (group_code, provider_ids) in provider_bindings {
-        if !key_bindings.contains_key(&group_code) {
-            migrate_provider_binding(db, &group_code, &provider_ids).await?;
-        }
     }
     Ok(())
 }
 
-async fn migrate_key_binding(db: &impl ConnectionTrait, group_code: &str, key_ids: &[String]) -> Result<(), DbErr> {
+async fn migrate_key_binding(db: &impl ConnectionTrait, group_code: String, key_ids: Vec<String>) -> Result<(), DbErr> {
     let group_id = ensure_provider_key_group(db, &format!("Migrated key group: {group_code}")).await?;
-    for key_id in key_ids {
+    for key_id in &key_ids {
         ensure_provider_key_group_key(db, &group_id, key_id).await?;
     }
-    ensure_billing_key_group(db, group_code, &group_id).await
-}
-
-async fn migrate_provider_binding(db: &impl ConnectionTrait, group_code: &str, provider_ids: &[String]) -> Result<(), DbErr> {
-    let group_id = ensure_provider_group(db, &format!("Migrated provider group: {group_code}")).await?;
-    for provider_id in provider_ids {
-        ensure_provider_group_provider(db, &group_id, provider_id).await?;
-    }
-    ensure_billing_provider_group(db, group_code, &group_id).await
+    ensure_billing_key_group(db, &group_code, &group_id).await
 }
 
 async fn legacy_key_bindings(db: &impl ConnectionTrait) -> Result<BTreeMap<String, Vec<String>>, DbErr> {
@@ -63,39 +48,12 @@ async fn legacy_key_bindings(db: &impl ConnectionTrait) -> Result<BTreeMap<Strin
     Ok(bindings_by_group(records.into_iter().map(|record| (record.group_code, record.provider_key_id))))
 }
 
-async fn legacy_provider_bindings(db: &impl ConnectionTrait) -> Result<BTreeMap<String, Vec<String>>, DbErr> {
-    let records = billing_group_providers::Entity::find()
-        .order_by_asc(billing_group_providers::Column::GroupCode)
-        .order_by_asc(billing_group_providers::Column::ProviderId)
-        .all(db)
-        .await?;
-    Ok(bindings_by_group(records.into_iter().map(|record| (record.group_code, record.provider_id))))
-}
-
 fn bindings_by_group(records: impl Iterator<Item = (String, String)>) -> BTreeMap<String, Vec<String>> {
     let mut bindings = BTreeMap::<String, BTreeSet<String>>::new();
     for (group_code, id) in records {
         bindings.entry(group_code).or_default().insert(id);
     }
     bindings.into_iter().map(|(group_code, ids)| (group_code, ids.into_iter().collect())).collect()
-}
-
-async fn ensure_provider_group(db: &impl ConnectionTrait, name: &str) -> Result<String, DbErr> {
-    if let Some(record) = provider_groups::Entity::find().filter(provider_groups::Column::Name.eq(name)).one(db).await? {
-        return Ok(record.id);
-    }
-    let now = time::OffsetDateTime::now_utc();
-    let record = provider_groups::ActiveModel {
-        id: Set(new_id()),
-        name: Set(name.to_owned()),
-        description: Set(None),
-        sort_order: Set(0),
-        created_at: Set(now),
-        updated_at: Set(now),
-    }
-    .insert(db)
-    .await?;
-    Ok(record.id)
 }
 
 async fn ensure_provider_key_group(db: &impl ConnectionTrait, name: &str) -> Result<String, DbErr> {
@@ -118,30 +76,6 @@ async fn ensure_provider_key_group(db: &impl ConnectionTrait, name: &str) -> Res
     .insert(db)
     .await?;
     Ok(record.id)
-}
-
-async fn ensure_provider_group_provider(db: &impl ConnectionTrait, group_id: &str, provider_id: &str) -> Result<(), DbErr> {
-    let exists = provider_group_providers::Entity::find()
-        .filter(provider_group_providers::Column::ProviderGroupId.eq(group_id))
-        .filter(provider_group_providers::Column::ProviderId.eq(provider_id))
-        .one(db)
-        .await?
-        .is_some();
-    if exists {
-        return Ok(());
-    }
-    let now = time::OffsetDateTime::now_utc();
-    provider_group_providers::ActiveModel {
-        id: Set(new_id()),
-        provider_group_id: Set(group_id.to_owned()),
-        provider_id: Set(provider_id.to_owned()),
-        priority: Set(provider_priority(db, provider_id).await?),
-        created_at: Set(now),
-        updated_at: Set(now),
-    }
-    .insert(db)
-    .await?;
-    Ok(())
 }
 
 async fn ensure_provider_key_group_key(db: &impl ConnectionTrait, group_id: &str, key_id: &str) -> Result<(), DbErr> {
@@ -168,37 +102,12 @@ async fn ensure_provider_key_group_key(db: &impl ConnectionTrait, group_id: &str
     Ok(())
 }
 
-async fn provider_priority(db: &impl ConnectionTrait, provider_id: &str) -> Result<i32, DbErr> {
-    providers::Entity::find_by_id(provider_id.to_owned())
-        .one(db)
-        .await?
-        .map(|record| record.priority)
-        .ok_or_else(|| DbErr::Migration(format!("provider not found while creating provider group member: {provider_id}")))
-}
-
 async fn provider_key_priority(db: &impl ConnectionTrait, key_id: &str) -> Result<i32, DbErr> {
     provider_api_keys::Entity::find_by_id(key_id.to_owned())
         .one(db)
         .await?
         .map(|record| record.internal_priority)
         .ok_or_else(|| DbErr::Migration(format!("provider key not found while creating provider key group member: {key_id}")))
-}
-
-async fn ensure_billing_provider_group(db: &impl ConnectionTrait, group_code: &str, provider_group_id: &str) -> Result<(), DbErr> {
-    if billing_provider_group_exists(db, group_code, provider_group_id).await? {
-        return Ok(());
-    }
-    let now = time::OffsetDateTime::now_utc();
-    billing_group_provider_groups::ActiveModel {
-        id: Set(new_id()),
-        group_code: Set(group_code.to_owned()),
-        provider_group_id: Set(provider_group_id.to_owned()),
-        created_at: Set(now),
-        updated_at: Set(now),
-    }
-    .insert(db)
-    .await?;
-    Ok(())
 }
 
 async fn ensure_billing_key_group(db: &impl ConnectionTrait, group_code: &str, provider_key_group_id: &str) -> Result<(), DbErr> {
@@ -216,15 +125,6 @@ async fn ensure_billing_key_group(db: &impl ConnectionTrait, group_code: &str, p
     .insert(db)
     .await?;
     Ok(())
-}
-
-async fn billing_provider_group_exists(db: &impl ConnectionTrait, group_code: &str, provider_group_id: &str) -> Result<bool, DbErr> {
-    billing_group_provider_groups::Entity::find()
-        .filter(billing_group_provider_groups::Column::GroupCode.eq(group_code))
-        .filter(billing_group_provider_groups::Column::ProviderGroupId.eq(provider_group_id))
-        .one(db)
-        .await
-        .map(|record| record.is_some())
 }
 
 async fn billing_key_group_exists(db: &impl ConnectionTrait, group_code: &str, provider_key_group_id: &str) -> Result<bool, DbErr> {

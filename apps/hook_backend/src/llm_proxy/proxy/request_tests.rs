@@ -2,8 +2,14 @@ use rust_decimal::Decimal;
 use serde_json::json;
 use types::model::TieredPricingConfig;
 
-use super::{apply_reasoning_effort, bridge_openai_chat_image_body, openai_request_explicitly_selects_image_generation, rewrite_upstream_body};
-use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
+use super::{
+    apply_reasoning_effort, bridge_openai_chat_image_body, has_openai_responses_custom_tool_items, openai_request_explicitly_selects_image_generation,
+    rewrite_upstream_body,
+};
+use crate::llm_proxy::{
+    OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
+    candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
+};
 use proxy::format_conversion::ApiFormat;
 
 #[test]
@@ -58,6 +64,42 @@ fn image_generation_intent_accepts_object_tool_choice() {
     });
 
     assert!(openai_request_explicitly_selects_image_generation("openai:cli", &body));
+}
+
+#[test]
+fn responses_custom_tool_feature_detects_custom_tool_input_items() {
+    let body = json!({
+        "model": "gpt-test",
+        "input": [
+            { "type": "message", "role": "user", "content": "hello" },
+            { "type": "custom_tool_call", "call_id": "call_1", "name": "apply_patch" }
+        ]
+    });
+
+    assert!(has_openai_responses_custom_tool_items(OPENAI_CLI_FORMAT, &body));
+}
+
+#[test]
+fn responses_custom_tool_feature_ignores_image_generation_call_input_items() {
+    let body = json!({
+        "model": "gpt-test",
+        "input": [
+            { "type": "message", "role": "user", "content": "continue" },
+            { "type": "image_generation_call", "id": "ig_1", "result": "aGVsbG8=" }
+        ]
+    });
+
+    assert!(!has_openai_responses_custom_tool_items(OPENAI_CLI_FORMAT, &body));
+}
+
+#[test]
+fn responses_custom_tool_feature_ignores_non_responses_requests() {
+    let body = json!({
+        "model": "gpt-test",
+        "input": [{ "type": "custom_tool_call_output", "call_id": "call_1" }]
+    });
+
+    assert!(!has_openai_responses_custom_tool_items(OPENAI_CHAT_FORMAT, &body));
 }
 
 #[test]

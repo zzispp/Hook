@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Wire capability data through storage/cache/request,DONE,"Provider key capabilities and global model capabilities reach CandidateRequest selection path","timeout 300 cargo check -p hook_backend",2026-06-12,0,
+2,Implement hard candidate filtering,DONE,"Image capability requests keep only capable model/key candidates","timeout 60 cargo test -p hook_backend matching_candidate_parts_requires && timeout 60 cargo test -p hook_backend matching_candidate_parts_routes",2026-06-12,1,"Initial broad capability test timed out during compile; targeted tests passed"
+3,Expose provider key capability configuration,DONE,"Admin provider key form sends and displays capability config","pnpm lint:frontend",2026-06-12,1,"Import order fixed after first lint run"
+4,Run verification,DONE,"Formatting, targeted tests, and backend check pass","cargo fmt --check && timeout 60 cargo test -p hook_backend matching_candidate_parts_requires && timeout 60 cargo test -p hook_backend matching_candidate_parts_routes && timeout 300 cargo check -p hook_backend && pnpm lint:frontend",2026-06-12,0,

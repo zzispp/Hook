@@ -1,8 +1,8 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
-import type { ProviderKeyGroup } from 'src/types/provider-group';
 import type { Provider, ProviderApiKey } from 'src/types/provider';
+import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 import type { useProviderChildDialogs } from './provider-management-state';
 
 import Box from '@mui/material/Box';
@@ -16,7 +16,7 @@ import { Iconify } from 'src/components/iconify';
 
 import { EmptyList } from './provider-bindings-shared';
 import { ProviderApiKeyRow } from './provider-api-key-row';
-import { providerKeyGroupNamesByKey } from './provider-groups-utils';
+import { providerKeyGroupNamesByKey } from './provider-key-groups-utils';
 
 export function ProviderApiKeysSection({
   provider,

@@ -1,7 +1,6 @@
 'use client';
 
-import type { ProviderGroupKind } from './provider-groups-utils';
-import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
+import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 
 import Checkbox from '@mui/material/Checkbox';
 import MenuItem from '@mui/material/MenuItem';
@@ -11,12 +10,9 @@ import ListItemText from '@mui/material/ListItemText';
 import { useTranslate } from 'src/locales/use-locales';
 
 import { ManagementDialog } from './shared';
-import { selectedValues, selectedGroupLabel } from './provider-groups-utils';
+import { selectedValues, selectedGroupLabel } from './provider-key-groups-utils';
 
-type AssociationGroup = ProviderGroup | ProviderKeyGroup;
-
-export function ProviderGroupAssociationDialog({
-  kind,
+export function ProviderKeyGroupAssociationDialog({
   open,
   targetName,
   groups,
@@ -26,10 +22,9 @@ export function ProviderGroupAssociationDialog({
   onSubmit,
   onSelectedIdsChange,
 }: {
-  kind: ProviderGroupKind;
   open: boolean;
   targetName: string;
-  groups: AssociationGroup[];
+  groups: ProviderKeyGroup[];
   selectedIds: string[];
   submitting: boolean;
   onClose: () => void;
@@ -37,23 +32,20 @@ export function ProviderGroupAssociationDialog({
   onSelectedIdsChange: (ids: string[]) => void;
 }) {
   const { t } = useTranslate('admin');
-  const titleKey = kind === 'provider' ? 'dialogs.associateProviderGroups' : 'dialogs.associateProviderKeyGroups';
-  const helperKey = kind === 'provider' ? 'helper.associateProviderGroups' : 'helper.associateProviderKeyGroups';
-  const labelKey = kind === 'provider' ? 'providers.providerGroups' : 'providers.providerKeyGroups';
 
   return (
     <ManagementDialog
       open={open}
-      title={t(titleKey)}
+      title={t('dialogs.associateProviderKeyGroups')}
       submitting={submitting}
-      description={t(helperKey, { name: targetName })}
+      description={t('helper.associateProviderKeyGroups', { name: targetName })}
       onClose={onClose}
       onSubmit={onSubmit}
     >
       <TextField
         select
         fullWidth
-        label={t(labelKey)}
+        label={t('providers.providerKeyGroups')}
         value={selectedIds}
         SelectProps={{
           multiple: true,

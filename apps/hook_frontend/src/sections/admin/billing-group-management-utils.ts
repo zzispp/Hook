@@ -1,6 +1,6 @@
 import type { BillingGroup } from 'src/types/group';
 
-export type BillingAccessMode = 'unrestricted' | 'provider_groups' | 'provider_key_groups';
+export type BillingAccessMode = 'unrestricted' | 'provider_key_groups';
 
 export type GroupForm = {
   code: string;
@@ -9,7 +9,6 @@ export type GroupForm = {
   billing_multiplier: string;
   allowed_model_ids: string[];
   access_mode: BillingAccessMode;
-  allowed_provider_group_ids: string[];
   allowed_provider_key_group_ids: string[];
   visible_user_group_codes: string[];
   is_active: boolean;
@@ -23,7 +22,6 @@ export const DEFAULT_GROUP_FORM: GroupForm = {
   billing_multiplier: '1',
   allowed_model_ids: [],
   access_mode: 'unrestricted',
-  allowed_provider_group_ids: [],
   allowed_provider_key_group_ids: [],
   visible_user_group_codes: ['default'],
   is_active: true,
@@ -38,7 +36,6 @@ export function formFromGroup(group: BillingGroup): GroupForm {
     billing_multiplier: String(group.billing_multiplier),
     allowed_model_ids: group.allowed_model_ids,
     access_mode: accessModeFromGroup(group),
-    allowed_provider_group_ids: group.allowed_provider_group_ids,
     allowed_provider_key_group_ids: group.allowed_provider_key_group_ids,
     visible_user_group_codes: group.visible_user_group_codes,
     is_active: group.is_active,
@@ -52,7 +49,6 @@ export function groupPayload(form: GroupForm) {
     description: form.description.trim() || null,
     billing_multiplier: Number(form.billing_multiplier),
     allowed_model_ids: form.allowed_model_ids,
-    allowed_provider_group_ids: providerGroupIdsForPayload(form),
     allowed_provider_key_group_ids: providerKeyGroupIdsForPayload(form),
     visible_user_group_codes: form.visible_user_group_codes,
     is_active: form.is_active,
@@ -62,12 +58,7 @@ export function groupPayload(form: GroupForm) {
 
 function accessModeFromGroup(group: BillingGroup): BillingAccessMode {
   if (group.allowed_provider_key_group_ids.length > 0) return 'provider_key_groups';
-  if (group.allowed_provider_group_ids.length > 0) return 'provider_groups';
   return 'unrestricted';
-}
-
-function providerGroupIdsForPayload(form: GroupForm) {
-  return form.access_mode === 'provider_groups' ? form.allowed_provider_group_ids : [];
 }
 
 function providerKeyGroupIdsForPayload(form: GroupForm) {

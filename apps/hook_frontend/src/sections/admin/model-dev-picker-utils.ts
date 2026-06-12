@@ -4,17 +4,17 @@ import { useMemo } from 'react';
 
 // ----------------------------------------------------------------------
 
-export type ProviderGroup = {
+export type ProviderBucket = {
   providerId: string;
   providerName: string;
   models: ModelsDevModelItem[];
 };
 
-export function useProviderGroups(items: ModelsDevModelItem[], query: string) {
+export function useProviderBuckets(items: ModelsDevModelItem[], query: string) {
   return useMemo(() => groupModelsByProvider(filterVisibleModels(items, query)), [items, query]);
 }
 
-export function countModels(groups: ProviderGroup[]) {
+export function countModels(groups: ProviderBucket[]) {
   return groups.reduce((total, group) => total + group.models.length, 0);
 }
 
@@ -38,7 +38,7 @@ function filterVisibleModels(items: ModelsDevModelItem[], query: string) {
 }
 
 function groupModelsByProvider(items: ModelsDevModelItem[]) {
-  const groups = new Map<string, ProviderGroup>();
+  const groups = new Map<string, ProviderBucket>();
 
   for (const item of items) {
     const group = groups.get(item.providerId);
@@ -54,7 +54,7 @@ function groupModelsByProvider(items: ModelsDevModelItem[]) {
     });
   }
 
-  return Array.from(groups.values()).sort(compareProviderGroups);
+  return Array.from(groups.values()).sort(compareProviderBuckets);
 }
 
 function matchesQuery(item: ModelsDevModelItem, query: string) {
@@ -66,6 +66,6 @@ function matchesQuery(item: ModelsDevModelItem, query: string) {
   return keywords.every((keyword) => text.includes(keyword));
 }
 
-function compareProviderGroups(left: ProviderGroup, right: ProviderGroup) {
+function compareProviderBuckets(left: ProviderBucket, right: ProviderBucket) {
   return left.providerName.localeCompare(right.providerName);
 }

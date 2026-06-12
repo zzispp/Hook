@@ -5,26 +5,26 @@ use types::model::GlobalModelResponse;
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
-    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupListResponse,
-    ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListResponse, ProviderKeyGroupUpdate, ProviderListRequest,
-    ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCost,
-    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostUpsert, ProviderModelTestRequest, ProviderModelTestResponse,
-    ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse,
-    ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate, ProviderQuickImportPreviewRequest,
-    ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest, ProviderQuickImportResolutionResponse, ProviderQuickImportSourceConfig,
-    ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate,
-    ProviderQuickImportSyncStatus, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-    UsageRecordListResponse,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse,
+    ProviderKeyGroupUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
+    ProviderModelBindingUpdate, ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostUpsert,
+    ProviderModelTestRequest, ProviderModelTestResponse, ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest,
+    ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse, ProviderQuickImportModelAssociationsResponse,
+    ProviderQuickImportModelAssociationsUpdate, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest,
+    ProviderQuickImportResolutionResponse, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig,
+    ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate, ProviderQuickImportSyncStatus, ProviderUpdate,
+    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::ProviderResult;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProviderApiKeySecret {
     pub id: String,
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
+    pub capabilities: Option<serde_json::Value>,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
     pub global_priority_by_format: BTreeMap<String, i32>,
@@ -256,16 +256,11 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn find_provider(&self, id_or_name: &str) -> ProviderResult<Option<Provider>>;
     async fn list_providers(&self, request: ProviderListRequest) -> ProviderResult<ProviderListResponse>;
     async fn provider_key_exists(&self, id: &str) -> ProviderResult<bool>;
-    async fn create_provider_group(&self, input: ProviderGroupCreate) -> ProviderResult<ProviderGroup>;
-    async fn update_provider_group(&self, id: &str, input: ProviderGroupUpdate) -> ProviderResult<ProviderGroup>;
-    async fn delete_provider_group(&self, id: &str) -> ProviderResult<()>;
-    async fn find_provider_group(&self, id_or_name: &str) -> ProviderResult<Option<ProviderGroup>>;
-    async fn list_provider_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderGroupListResponse>;
     async fn create_provider_key_group(&self, input: ProviderKeyGroupCreate) -> ProviderResult<ProviderKeyGroup>;
     async fn update_provider_key_group(&self, id: &str, input: ProviderKeyGroupUpdate) -> ProviderResult<ProviderKeyGroup>;
     async fn delete_provider_key_group(&self, id: &str) -> ProviderResult<()>;
     async fn find_provider_key_group(&self, id_or_name: &str) -> ProviderResult<Option<ProviderKeyGroup>>;
-    async fn list_provider_key_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse>;
+    async fn list_provider_key_groups(&self, request: ProviderKeyGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse>;
     async fn create_endpoint(&self, provider_id: &str, input: ProviderEndpointCreate) -> ProviderResult<ProviderEndpoint>;
     async fn update_endpoint(&self, provider_id: &str, endpoint_id: &str, input: ProviderEndpointUpdate) -> ProviderResult<ProviderEndpoint>;
     async fn delete_endpoint(&self, provider_id: &str, endpoint_id: &str) -> ProviderResult<()>;
@@ -354,16 +349,11 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn delete_provider(&self, id: &str) -> ProviderResult<()>;
     async fn get_provider(&self, id: &str) -> ProviderResult<Provider>;
     async fn list_providers(&self, request: ProviderListRequest) -> ProviderResult<ProviderListResponse>;
-    async fn create_provider_group(&self, input: ProviderGroupCreate) -> ProviderResult<ProviderGroup>;
-    async fn update_provider_group(&self, id: &str, input: ProviderGroupUpdate) -> ProviderResult<ProviderGroup>;
-    async fn delete_provider_group(&self, id: &str) -> ProviderResult<()>;
-    async fn get_provider_group(&self, id: &str) -> ProviderResult<ProviderGroup>;
-    async fn list_provider_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderGroupListResponse>;
     async fn create_provider_key_group(&self, input: ProviderKeyGroupCreate) -> ProviderResult<ProviderKeyGroup>;
     async fn update_provider_key_group(&self, id: &str, input: ProviderKeyGroupUpdate) -> ProviderResult<ProviderKeyGroup>;
     async fn delete_provider_key_group(&self, id: &str) -> ProviderResult<()>;
     async fn get_provider_key_group(&self, id: &str) -> ProviderResult<ProviderKeyGroup>;
-    async fn list_provider_key_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse>;
+    async fn list_provider_key_groups(&self, request: ProviderKeyGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse>;
     async fn create_endpoint(&self, provider_id: &str, input: ProviderEndpointCreate) -> ProviderResult<ProviderEndpoint>;
     async fn update_endpoint(&self, provider_id: &str, endpoint_id: &str, input: ProviderEndpointUpdate) -> ProviderResult<ProviderEndpoint>;
     async fn delete_endpoint(&self, provider_id: &str, endpoint_id: &str) -> ProviderResult<()>;

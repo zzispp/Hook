@@ -18,11 +18,11 @@ import { ConfirmDialog } from 'src/components/custom-dialog';
 
 import { ProviderTable } from './provider-table';
 import { ProviderFormDialog } from './provider-form-dialog';
-import { ProviderGroupsCard } from './provider-groups-card';
 import { ProviderModelDialog } from './provider-model-dialog';
 import { ProviderApiKeyDialog } from './provider-api-key-dialog';
 import { ProviderBindingsPanel } from './provider-bindings-panel';
 import { ProviderCooldownTable } from './provider-cooldown-table';
+import { ProviderKeyGroupsCard } from './provider-key-groups-card';
 import { ProviderEndpointDialog } from './provider-endpoint-dialog';
 import { ProviderFiltersToolbar } from './provider-filters-toolbar';
 import { ProviderPriorityDialog } from './provider-priority-dialog';
@@ -31,9 +31,9 @@ import { ProviderQuickImportDialog } from './provider-quick-import-dialog';
 import { useProviderManagementState } from './provider-management-page-state';
 import { ProviderCooldownPolicyDialog } from './provider-cooldown-policy-dialog';
 import { ProviderQuickImportSyncDialog } from './provider-quick-import-sync-dialog';
-import { ProviderGroupAssociationDialog } from './provider-group-association-dialog';
 import { useProviderQuickImportActionState } from './provider-quick-import-action-state';
 import { ProviderQuickImportActionDialogs } from './provider-quick-import-action-dialogs';
+import { ProviderKeyGroupAssociationDialog } from './provider-key-group-association-dialog';
 
 export function ProviderManagementView() {
   const state = useProviderManagementState();
@@ -45,7 +45,7 @@ export function ProviderManagementView() {
       <ProviderTabs state={state} />
       {state.errorMessage ? <ErrorAlert message={state.errorMessage} /> : null}
       {state.tab === 'providers' ? <ProviderTableCard state={state} quickImportActions={quickImportActions} /> : null}
-      {state.tab === 'groups' ? <ProviderGroupsCardWrapper state={state} /> : null}
+      {state.tab === 'groups' ? <ProviderKeyGroupsCardWrapper state={state} /> : null}
       {state.tab === 'cooldowns' ? <ProviderCooldownCard state={state} /> : null}
       <ProviderDialogs state={state} quickImportActions={quickImportActions} />
     </DashboardContent>
@@ -55,12 +55,12 @@ export function ProviderManagementView() {
 function ProviderHeader({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
   const loading =
     (state.tab === 'providers' && state.providers.isLoading) ||
-    (state.tab === 'groups' && (state.providerGroups.isLoading || state.providerKeyGroups.isLoading)) ||
+    (state.tab === 'groups' && state.providerKeyGroups.isLoading) ||
     (state.tab === 'cooldowns' && state.cooldowns.isLoading);
   const refresh = state.tab === 'providers'
     ? state.providers.refresh
     : state.tab === 'groups'
-      ? state.refreshProviderGroups
+      ? state.refreshProviderKeyGroups
       : state.cooldowns.refresh;
 
   return (
@@ -112,7 +112,6 @@ function ProviderTableCard({
       />
       <ProviderTable
         rows={state.providers.items}
-        groups={state.providerGroups.items}
         total={state.providers.total}
         loading={state.providers.isLoading}
         table={state.table}
@@ -122,16 +121,14 @@ function ProviderTableCard({
         onDelete={state.deleteDialog.setDeleteTarget}
         onAppendImport={quickImportActions.openAppend}
         onSyncSettings={state.quickImportSyncDialog.open}
-        onAssociateGroups={state.providerGroupAssociation.openForProvider}
       />
     </Card>
   );
 }
 
-function ProviderGroupsCardWrapper({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
+function ProviderKeyGroupsCardWrapper({ state }: { state: ReturnType<typeof useProviderManagementState> }) {
   return (
-    <ProviderGroupsCard
-      providerGroups={state.providerGroups}
+    <ProviderKeyGroupsCard
       providerKeyGroups={state.providerKeyGroups}
       providers={state.priorityProviders.items}
       keysByProvider={state.priorityKeys.itemsByProvider}
@@ -178,17 +175,15 @@ function ProviderDialogs({
 
   return (
     <>
-      <ProviderFormDialog dialog={state.dialog} groups={state.providerGroups.items} />
+      <ProviderFormDialog dialog={state.dialog} />
       <ProviderQuickImportSyncDialog dialog={state.quickImportSyncDialog} />
       <ProviderQuickImportActionDialogs actions={quickImportActions} models={state.models.items} />
       <ProviderQuickImportDialog
         open={state.quickImportOpen}
         models={state.models.items}
-        groups={state.providerGroups.items}
         onClose={() => state.setQuickImportOpen(false)}
         onImported={() => {
           void state.providers.refresh();
-          void state.providerGroups.refresh();
           void state.providerKeyGroups.refresh();
           void state.priorityProviders.refresh();
           void state.priorityKeys.refresh();
@@ -206,19 +201,7 @@ function ProviderDialogs({
         onManageQuickImportModels={quickImportActions.openModelAssociations}
         onClose={state.closeProviderBindings}
       />
-      <ProviderGroupAssociationDialog
-        kind="provider"
-        open={state.providerGroupAssociation.open}
-        targetName={state.providerGroupAssociation.target?.name ?? ''}
-        groups={state.providerGroups.items}
-        selectedIds={state.providerGroupAssociation.selectedIds}
-        submitting={state.providerGroupAssociation.submitting}
-        onClose={state.providerGroupAssociation.close}
-        onSubmit={state.providerGroupAssociation.submit}
-        onSelectedIdsChange={state.providerGroupAssociation.setSelectedIds}
-      />
-      <ProviderGroupAssociationDialog
-        kind="key"
+      <ProviderKeyGroupAssociationDialog
         open={state.providerKeyGroupAssociation.open}
         targetName={state.providerKeyGroupAssociation.target?.name ?? ''}
         groups={state.providerKeyGroups.items}

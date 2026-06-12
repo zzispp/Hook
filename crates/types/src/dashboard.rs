@@ -229,7 +229,7 @@ pub struct DashboardApiKeyLeaderboardRequest {
 pub struct DashboardProviderAggregationRequest {
     #[serde(flatten)]
     pub range: DashboardCostAnalysisRequest,
-    #[serde(default = "default_provider_group_by")]
+    #[serde(default = "default_provider_aggregation_group_by")]
     pub group_by: String,
     #[serde(default = "default_provider_aggregation_limit", deserialize_with = "deserialize_u64_query")]
     pub limit: u64,
@@ -607,7 +607,7 @@ const fn default_provider_aggregation_limit() -> u64 {
     8
 }
 
-fn default_provider_group_by() -> String {
+fn default_provider_aggregation_group_by() -> String {
     "provider".into()
 }
 

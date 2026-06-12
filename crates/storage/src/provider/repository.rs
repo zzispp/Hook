@@ -1,8 +1,8 @@
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, QueryOrder, Set};
 use types::provider::{
-    Provider, ProviderGroup, ProviderGroupListRequest, ProviderGroupListResponse, ProviderGroupMemberInput, ProviderKeyGroup, ProviderKeyGroupListResponse,
-    ProviderListRequest, ProviderListResponse, ProviderOrigin, ProviderQuickImportKeySyncInfo, ProviderQuickImportSourceKind, ProviderQuickImportSyncStatus,
+    Provider, ProviderKeyGroup, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse, ProviderListRequest, ProviderListResponse, ProviderOrigin,
+    ProviderQuickImportKeySyncInfo, ProviderQuickImportSourceKind, ProviderQuickImportSyncStatus,
 };
 
 use crate::{Database, StorageError, StorageResult, json};
@@ -29,24 +29,7 @@ impl ProviderStore {
     }
 
     pub async fn create_provider(&self, input: ProviderRecordInput) -> StorageResult<Provider> {
-        let Some(provider_group_id) = input.provider_group_id.clone() else {
-            let record = provider_active_model(self.database.next_id(), input).insert(self.database.connection()).await?;
-            return Ok(record.into());
-        };
-
-        let tx = self.connection().begin().await?;
-        let record = provider_active_model(self.database.next_id(), input).insert(&tx).await?;
-        super::provider_group_query::insert_provider_group_members(
-            self,
-            &provider_group_id,
-            vec![ProviderGroupMemberInput {
-                provider_id: record.id.clone(),
-                priority: record.priority,
-            }],
-            &tx,
-        )
-        .await?;
-        tx.commit().await?;
+        let record = provider_active_model(self.database.next_id(), input).insert(self.database.connection()).await?;
         Ok(record.into())
     }
 
@@ -103,6 +86,7 @@ impl ProviderStore {
             name: Set(input.name),
             api_formats: Set(json::encode_required(&input.api_formats)?),
             allowed_model_ids: Set(json::encode_required(&input.allowed_model_ids)?),
+            capabilities: Set(json::encode_optional(&input.capabilities)?),
             encrypted_api_key: Set(input.encrypted_api_key),
             note: Set(input.note),
             internal_priority: Set(input.internal_priority),
@@ -159,60 +143,32 @@ impl ProviderStore {
             .transpose()
     }
 
-    pub async fn create_provider_group(&self, input: super::ProviderGroupRecordInput) -> StorageResult<ProviderGroup> {
-        super::provider_group_query::create_provider_group(self, input).await
-    }
-
-    pub async fn update_provider_group(&self, id: &str, input: super::ProviderGroupRecordPatch) -> StorageResult<ProviderGroup> {
-        super::provider_group_query::update_provider_group(self, id, input).await
-    }
-
-    pub async fn delete_provider_group(&self, id: &str) -> StorageResult<()> {
-        super::provider_group_query::delete_provider_group(self, id).await
-    }
-
-    pub async fn find_provider_group(&self, id_or_name: &str) -> StorageResult<Option<ProviderGroup>> {
-        super::provider_group_query::find_provider_group(self, id_or_name).await
-    }
-
-    pub async fn list_provider_groups(&self, request: ProviderGroupListRequest) -> StorageResult<ProviderGroupListResponse> {
-        super::provider_group_query::list_provider_groups(self, request).await
-    }
-
     pub async fn create_provider_key_group(&self, input: super::ProviderKeyGroupRecordInput) -> StorageResult<ProviderKeyGroup> {
-        super::provider_group_query::create_provider_key_group(self, input).await
+        super::provider_key_group_query::create_provider_key_group(self, input).await
     }
 
     pub async fn update_provider_key_group(&self, id: &str, input: super::ProviderKeyGroupRecordPatch) -> StorageResult<ProviderKeyGroup> {
-        super::provider_group_query::update_provider_key_group(self, id, input).await
+        super::provider_key_group_query::update_provider_key_group(self, id, input).await
     }
 
     pub async fn delete_provider_key_group(&self, id: &str) -> StorageResult<()> {
-        super::provider_group_query::delete_provider_key_group(self, id).await
+        super::provider_key_group_query::delete_provider_key_group(self, id).await
     }
 
     pub async fn find_provider_key_group(&self, id_or_name: &str) -> StorageResult<Option<ProviderKeyGroup>> {
-        super::provider_group_query::find_provider_key_group(self, id_or_name).await
+        super::provider_key_group_query::find_provider_key_group(self, id_or_name).await
     }
 
-    pub async fn list_provider_key_groups(&self, request: ProviderGroupListRequest) -> StorageResult<ProviderKeyGroupListResponse> {
-        super::provider_group_query::list_provider_key_groups(self, request).await
-    }
-
-    pub async fn provider_ids_for_groups(&self, group_ids: &[String]) -> StorageResult<Vec<String>> {
-        super::provider_group_query::provider_ids_for_groups(self, group_ids).await
+    pub async fn list_provider_key_groups(&self, request: ProviderKeyGroupListRequest) -> StorageResult<ProviderKeyGroupListResponse> {
+        super::provider_key_group_query::list_provider_key_groups(self, request).await
     }
 
     pub async fn provider_key_ids_for_key_groups(&self, group_ids: &[String]) -> StorageResult<Vec<String>> {
-        super::provider_group_query::provider_key_ids_for_key_groups(self, group_ids).await
-    }
-
-    pub async fn provider_priorities_for_groups(&self, group_ids: &[String]) -> StorageResult<std::collections::BTreeMap<String, i32>> {
-        super::provider_group_query::provider_priorities_for_groups(self, group_ids).await
+        super::provider_key_group_query::provider_key_ids_for_key_groups(self, group_ids).await
     }
 
     pub async fn provider_key_priorities_for_key_groups(&self, group_ids: &[String]) -> StorageResult<std::collections::BTreeMap<String, i32>> {
-        super::provider_group_query::provider_key_priorities_for_key_groups(self, group_ids).await
+        super::provider_key_group_query::provider_key_priorities_for_key_groups(self, group_ids).await
     }
 
     pub async fn api_key_secrets_for_provider(&self, provider_id: &str) -> StorageResult<Vec<ProviderApiKeySecretRecord>> {
@@ -229,6 +185,7 @@ impl ProviderStore {
                     name: record.name,
                     api_formats: json::decode_required(record.api_formats)?,
                     allowed_model_ids: json::decode_required(record.allowed_model_ids)?,
+                    capabilities: json::decode_optional(record.capabilities)?,
                     encrypted_api_key: record.encrypted_api_key,
                     internal_priority: record.internal_priority,
                     global_priority_by_format: json::decode_required(record.global_priority_by_format)?,

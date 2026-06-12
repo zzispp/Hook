@@ -13,7 +13,6 @@ pub struct BillingGroup {
     pub description: Option<String>,
     pub billing_multiplier: Decimal,
     pub allowed_model_ids: Vec<String>,
-    pub allowed_provider_group_ids: Vec<String>,
     pub allowed_provider_key_group_ids: Vec<String>,
     pub visible_user_group_codes: Vec<String>,
     pub is_active: bool,
@@ -46,8 +45,6 @@ pub struct BillingGroupCreate {
     #[serde(default)]
     pub allowed_model_ids: Vec<String>,
     #[serde(default)]
-    pub allowed_provider_group_ids: Vec<String>,
-    #[serde(default)]
     pub allowed_provider_key_group_ids: Vec<String>,
     #[serde(default)]
     pub visible_user_group_codes: Vec<String>,
@@ -68,8 +65,6 @@ pub struct BillingGroupUpdate {
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub allowed_model_ids: PatchField<Vec<String>>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
-    pub allowed_provider_group_ids: PatchField<Vec<String>>,
-    #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub allowed_provider_key_group_ids: PatchField<Vec<String>>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub visible_user_group_codes: PatchField<Vec<String>>,
@@ -88,7 +83,6 @@ pub struct BillingGroupResponse {
     #[serde(with = "rust_decimal::serde::float")]
     pub billing_multiplier: Decimal,
     pub allowed_model_ids: Vec<String>,
-    pub allowed_provider_group_ids: Vec<String>,
     pub allowed_provider_key_group_ids: Vec<String>,
     pub visible_user_group_codes: Vec<String>,
     pub is_active: bool,
@@ -110,7 +104,6 @@ impl BillingGroupUpdate {
             && self.description.is_missing()
             && self.billing_multiplier.is_none()
             && self.allowed_model_ids.is_missing()
-            && self.allowed_provider_group_ids.is_missing()
             && self.allowed_provider_key_group_ids.is_missing()
             && self.visible_user_group_codes.is_missing()
             && self.is_active.is_none()
@@ -127,7 +120,6 @@ impl From<BillingGroup> for BillingGroupResponse {
             description: value.description,
             billing_multiplier: value.billing_multiplier,
             allowed_model_ids: value.allowed_model_ids,
-            allowed_provider_group_ids: value.allowed_provider_group_ids,
             allowed_provider_key_group_ids: value.allowed_provider_key_group_ids,
             visible_user_group_codes: value.visible_user_group_codes,
             is_active: value.is_active,

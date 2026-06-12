@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Compare Aether and Hook conversion paths,DONE,"Identify exact Hook blocker and Aether behavior","rg \"image_generation_call\" crates apps",2026-06-12T10:02:00+08:00,0,"Hook canonical already supports image_generation_call; proxy registry request whitelist and candidate feature flag block conversion."
+2,Add failing conversion and routing tests,DONE,"Tests encode Aether-aligned expected behavior","timeout 60 cargo test -p proxy image_generation_call",2026-06-12T10:08:00+08:00,0,
+3,Implement whitelist and routing feature split,DONE,"image_generation_call converts; custom_tool_call remains blocked","rg \"custom_tool|image_generation_call\" apps/hook_backend/src crates/proxy/src",2026-06-12T10:16:00+08:00,0,
+4,Run validation,DONE,"Focused proxy and hook_backend checks pass","cargo fmt --check && timeout 60 cargo test -p proxy image_generation_call && timeout 60 cargo test -p hook_backend responses_custom_tool_feature && timeout 60 cargo test -p hook_backend llm_proxy::candidate::selection::tests::matching && timeout 60 cargo check -p hook_backend",2026-06-12T10:18:00+08:00,0,

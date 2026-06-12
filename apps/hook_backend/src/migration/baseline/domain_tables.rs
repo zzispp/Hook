@@ -1,7 +1,7 @@
 use sea_orm_migration::{prelude::*, schema::*};
 
 use super::{
-    iden::*, model_status_tables, performance_monitoring_tables, provider_group_tables, request_candidate_tables, scheduler_tables, setting_tables,
+    iden::*, model_status_tables, performance_monitoring_tables, provider_key_group_tables, request_candidate_tables, scheduler_tables, setting_tables,
     translation_tables,
 };
 
@@ -34,7 +34,7 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         request_candidate_tables::request_candidates_table(),
         usage_flush_batches_table(),
     ];
-    tables.extend(provider_group_tables::provider_group_tables());
+    tables.extend(provider_key_group_tables::provider_key_group_tables());
     tables.extend(scheduler_tables::scheduler_tables());
     tables.extend(performance_monitoring_tables::performance_monitoring_tables());
     tables.extend(model_status_tables::model_status_tables());
@@ -195,6 +195,7 @@ fn provider_api_keys_table() -> TableCreateStatement {
         .col(string_len(ProviderApiKeys::Name, 100))
         .col(text(ProviderApiKeys::ApiFormats))
         .col(text(ProviderApiKeys::AllowedModelIds))
+        .col(text_null(ProviderApiKeys::Capabilities))
         .col(text(ProviderApiKeys::EncryptedApiKey))
         .col(text_null(ProviderApiKeys::Note))
         .col(integer(ProviderApiKeys::InternalPriority))
@@ -450,7 +451,7 @@ fn provider_cooldown_events_table() -> TableCreateStatement {
 }
 
 fn billing_group_providers_table() -> TableCreateStatement {
-    let mut group_fk = billing_group_provider_group_fk();
+    let mut group_fk = billing_group_provider_billing_group_fk();
     let mut provider_fk = provider_fk(
         "fk_billing_group_providers_provider",
         BillingGroupProviders::Table,
@@ -703,7 +704,7 @@ fn billing_rule_model_fk() -> ForeignKeyCreateStatement {
     foreign_key
 }
 
-fn billing_group_provider_group_fk() -> ForeignKeyCreateStatement {
+fn billing_group_provider_billing_group_fk() -> ForeignKeyCreateStatement {
     let mut foreign_key = ForeignKey::create();
     foreign_key
         .name("fk_billing_group_providers_group")

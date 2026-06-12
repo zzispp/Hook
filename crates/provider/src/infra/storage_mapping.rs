@@ -1,14 +1,13 @@
 use storage::provider::{
-    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderGroupRecordInput,
-    ProviderGroupRecordPatch, ProviderKeyGroupRecordInput, ProviderKeyGroupRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput,
-    ProviderModelRecordPatch, ProviderQuickImportApiKeyRecordInput, ProviderQuickImportEndpointRecordInput, ProviderQuickImportKeyModelRecordInput,
-    ProviderQuickImportKeyReplacementRecordInput, ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput,
-    ProviderQuickImportSourceRecordInput, ProviderRecordInput, ProviderRecordPatch,
+    ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch, ProviderEndpointRecordInput, ProviderEndpointRecordPatch, ProviderKeyGroupRecordInput,
+    ProviderKeyGroupRecordPatch, ProviderModelCostRecordInput, ProviderModelRecordInput, ProviderModelRecordPatch, ProviderQuickImportApiKeyRecordInput,
+    ProviderQuickImportEndpointRecordInput, ProviderQuickImportKeyModelRecordInput, ProviderQuickImportKeyReplacementRecordInput,
+    ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderQuickImportSourceRecordInput,
+    ProviderRecordInput, ProviderRecordPatch,
 };
 use types::provider::{
-    ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroupCreate, ProviderGroupUpdate,
-    ProviderKeyGroupCreate, ProviderKeyGroupUpdate, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderOrigin, ProviderUpdate,
+    ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyGroupCreate, ProviderKeyGroupUpdate,
+    ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderOrigin, ProviderUpdate,
 };
 
 use crate::application::{ProviderQuickImportAppend, ProviderQuickImportCreate, ProviderQuickImportKeyReplacement};
@@ -27,7 +26,6 @@ pub(super) fn provider_input(input: ProviderCreate) -> ProviderRecordInput {
         name: input.name,
         provider_type: input.provider_type,
         provider_origin: ProviderOrigin::Manual,
-        provider_group_id: input.provider_group_id,
         max_retries: Some(input.max_retries.unwrap_or(DEFAULT_PROVIDER_MAX_RETRIES)),
         request_timeout_seconds: Some(input.request_timeout_seconds.unwrap_or(DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS)),
         stream_first_byte_timeout_seconds: Some(
@@ -93,6 +91,7 @@ pub(super) fn api_key_input(provider_id: &str, input: ProviderApiKeyCreate, encr
         global_priority_by_format: global_priority_by_format(&input.api_formats, internal_priority),
         api_formats: input.api_formats,
         allowed_model_ids: input.allowed_model_ids,
+        capabilities: input.capabilities,
         encrypted_api_key,
         note: input.note,
         internal_priority,
@@ -111,6 +110,7 @@ pub(super) fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Opti
         name: input.name,
         api_formats: input.api_formats,
         allowed_model_ids: input.allowed_model_ids,
+        capabilities: input.capabilities,
         encrypted_api_key,
         note: input.note,
         internal_priority: input.internal_priority,
@@ -122,24 +122,6 @@ pub(super) fn api_key_patch(input: ProviderApiKeyUpdate, encrypted_api_key: Opti
         time_range_start: input.time_range_start,
         time_range_end: input.time_range_end,
         is_active: input.is_active,
-    }
-}
-
-pub(super) fn provider_group_input(input: ProviderGroupCreate) -> ProviderGroupRecordInput {
-    ProviderGroupRecordInput {
-        name: input.name,
-        description: input.description,
-        sort_order: input.sort_order.unwrap_or(0),
-        provider_members: input.provider_members,
-    }
-}
-
-pub(super) fn provider_group_patch(input: ProviderGroupUpdate) -> ProviderGroupRecordPatch {
-    ProviderGroupRecordPatch {
-        name: input.name,
-        description: input.description,
-        sort_order: input.sort_order,
-        provider_members: input.provider_members,
     }
 }
 
@@ -290,6 +272,7 @@ fn quick_import_key_input(input: crate::application::ProviderQuickImportApiKeyCr
         global_priority_by_format: global_priority_by_format(&input.input.api_formats, internal_priority),
         api_formats: input.input.api_formats,
         allowed_model_ids: input.input.allowed_model_ids,
+        capabilities: input.input.capabilities,
         encrypted_api_key: input.encrypted_api_key,
         note: input.input.note,
         internal_priority,

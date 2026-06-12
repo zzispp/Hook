@@ -3,11 +3,10 @@ use storage::{Database, StorageError, model::ModelStore, provider::ProviderStore
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
-    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderGroup, ProviderGroupCreate, ProviderGroupListRequest, ProviderGroupListResponse,
-    ProviderGroupUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListResponse, ProviderKeyGroupUpdate, ProviderListRequest,
-    ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
-    ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
-    UsageRecordListResponse,
+    ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse,
+    ProviderKeyGroupUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
+    ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest,
+    RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use crate::application::{
@@ -18,8 +17,8 @@ use crate::application::{
 };
 use crate::infra::storage_mapping::{
     api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_batch_input, model_binding_input, model_binding_patch, model_cost_inputs,
-    provider_group_input, provider_group_patch, provider_input, provider_key_group_input, provider_key_group_patch, provider_patch, quick_import_append_input,
-    quick_import_input, quick_import_key_replacement_input,
+    provider_input, provider_key_group_input, provider_key_group_patch, provider_patch, quick_import_append_input, quick_import_input,
+    quick_import_key_replacement_input,
 };
 
 #[derive(Clone)]
@@ -74,26 +73,6 @@ impl ProviderRepository for StorageProviderRepository {
         self.store.find_api_key(id).await.map(|key| key.is_some()).map_err(storage_error)
     }
 
-    async fn create_provider_group(&self, input: ProviderGroupCreate) -> ProviderResult<ProviderGroup> {
-        self.store.create_provider_group(provider_group_input(input)).await.map_err(storage_error)
-    }
-
-    async fn update_provider_group(&self, id: &str, input: ProviderGroupUpdate) -> ProviderResult<ProviderGroup> {
-        self.store.update_provider_group(id, provider_group_patch(input)).await.map_err(storage_error)
-    }
-
-    async fn delete_provider_group(&self, id: &str) -> ProviderResult<()> {
-        self.store.delete_provider_group(id).await.map_err(storage_error)
-    }
-
-    async fn find_provider_group(&self, id_or_name: &str) -> ProviderResult<Option<ProviderGroup>> {
-        self.store.find_provider_group(id_or_name).await.map_err(storage_error)
-    }
-
-    async fn list_provider_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderGroupListResponse> {
-        self.store.list_provider_groups(request).await.map_err(storage_error)
-    }
-
     async fn create_provider_key_group(&self, input: ProviderKeyGroupCreate) -> ProviderResult<ProviderKeyGroup> {
         self.store
             .create_provider_key_group(provider_key_group_input(input))
@@ -116,7 +95,7 @@ impl ProviderRepository for StorageProviderRepository {
         self.store.find_provider_key_group(id_or_name).await.map_err(storage_error)
     }
 
-    async fn list_provider_key_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse> {
+    async fn list_provider_key_groups(&self, request: ProviderKeyGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse> {
         self.store.list_provider_key_groups(request).await.map_err(storage_error)
     }
 
@@ -162,6 +141,7 @@ impl ProviderRepository for StorageProviderRepository {
                         name: record.name,
                         api_formats: record.api_formats,
                         allowed_model_ids: record.allowed_model_ids,
+                        capabilities: record.capabilities,
                         encrypted_api_key: record.encrypted_api_key,
                         internal_priority: record.internal_priority,
                         global_priority_by_format: record.global_priority_by_format,

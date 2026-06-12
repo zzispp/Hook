@@ -30,7 +30,6 @@ export type QuickImportFormState = {
   systemAccessToken: string;
   userId: string;
   rechargeMultiplier: string;
-  provider_group_id: string;
   max_retries: string;
   request_timeout_seconds: string;
   stream_first_byte_timeout_seconds: string;
@@ -55,7 +54,6 @@ export const DEFAULT_QUICK_IMPORT_FORM: QuickImportFormState = {
   systemAccessToken: '',
   userId: '',
   rechargeMultiplier: '1',
-  provider_group_id: DEFAULT_PROVIDER_FORM.provider_group_id,
   max_retries: DEFAULT_PROVIDER_FORM.max_retries,
   request_timeout_seconds: DEFAULT_PROVIDER_FORM.request_timeout_seconds,
   stream_first_byte_timeout_seconds: DEFAULT_PROVIDER_FORM.stream_first_byte_timeout_seconds,
@@ -210,7 +208,6 @@ function providerConfigPayload(form: QuickImportFormState) {
   const payload = providerPayload({
     name: form.providerName,
     provider_type: DEFAULT_PROVIDER_FORM.provider_type,
-    provider_group_id: form.provider_group_id,
     max_retries: form.max_retries,
     request_timeout_seconds: form.request_timeout_seconds,
     stream_first_byte_timeout_seconds: form.stream_first_byte_timeout_seconds,
@@ -221,7 +218,6 @@ function providerConfigPayload(form: QuickImportFormState) {
     is_active: form.is_active,
   });
   return {
-    provider_group_id: payload.provider_group_id,
     max_retries: payload.max_retries,
     request_timeout_seconds: payload.request_timeout_seconds,
     stream_first_byte_timeout_seconds: payload.stream_first_byte_timeout_seconds,

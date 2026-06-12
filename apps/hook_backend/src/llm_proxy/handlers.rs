@@ -269,6 +269,7 @@ mod tests {
             id: "global-model-a".into(),
             name: "gpt-5".into(),
             is_active: true,
+            supported_capabilities: None,
             default_price_per_request: Some(Decimal::ZERO),
             default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
         };

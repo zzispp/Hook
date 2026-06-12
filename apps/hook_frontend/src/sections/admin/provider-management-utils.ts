@@ -11,8 +11,6 @@ import type {
   ProviderModelBindingCreate,
 } from 'src/types/provider';
 
-type ProviderConfigPayload = Omit<ProviderCreate, 'provider_group_id'>;
-
 export const PROVIDER_TYPE_OPTIONS: ProviderType[] = ['custom'];
 export const DEFAULT_PROVIDER_MAX_RETRIES = 2;
 export const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS = 300;
@@ -29,6 +27,8 @@ export const API_FORMAT_OPTIONS = [
   'gemini:cli',
 ];
 
+export const API_KEY_CAPABILITY_OPTIONS = ['image_generation'] as const;
+
 const API_FORMAT_DEFAULT_PATHS: Record<string, string> = {
   'openai:chat': '/v1/chat/completions',
   'openai:cli': '/v1/responses',
@@ -42,7 +42,6 @@ const API_FORMAT_DEFAULT_PATHS: Record<string, string> = {
 export type ProviderForm = {
   name: string;
   provider_type: ProviderType;
-  provider_group_id: string;
   max_retries: string;
   request_timeout_seconds: string;
   stream_first_byte_timeout_seconds: string;
@@ -58,6 +57,7 @@ export type ApiKeyForm = {
   api_key: string;
   api_formats: string[];
   allowed_model_ids: string[];
+  capabilities: string[];
   note: string;
   internal_priority: string;
   rpm_limit: string;
@@ -75,7 +75,6 @@ export type ProviderModelForm = {
 export const DEFAULT_PROVIDER_FORM: ProviderForm = {
   name: '',
   provider_type: 'custom',
-  provider_group_id: '',
   max_retries: '',
   request_timeout_seconds: '',
   stream_first_byte_timeout_seconds: '',
@@ -91,6 +90,7 @@ export const DEFAULT_API_KEY_FORM: ApiKeyForm = {
   api_key: '',
   api_formats: [],
   allowed_model_ids: [],
+  capabilities: [],
   note: '',
   internal_priority: '10',
   rpm_limit: '0',
@@ -109,7 +109,6 @@ export function providerFormFromProvider(provider: Provider): ProviderForm {
   return {
     name: provider.name,
     provider_type: provider.provider_type,
-    provider_group_id: '',
     max_retries: optionalNumberText(provider.max_retries),
     request_timeout_seconds: optionalNumberText(provider.request_timeout_seconds),
     stream_first_byte_timeout_seconds: optionalNumberText(
@@ -124,17 +123,14 @@ export function providerFormFromProvider(provider: Provider): ProviderForm {
 }
 
 export function providerPayload(form: ProviderForm): ProviderCreate {
-  return {
-    ...providerConfigPayload(form),
-    provider_group_id: trimmedOrNull(form.provider_group_id),
-  };
+  return providerConfigPayload(form);
 }
 
 export function providerUpdatePayload(form: ProviderForm): ProviderUpdate {
   return providerConfigPayload(form);
 }
 
-function providerConfigPayload(form: ProviderForm): ProviderConfigPayload {
+function providerConfigPayload(form: ProviderForm): ProviderCreate {
   return {
     name: form.name,
     provider_type: form.provider_type,
@@ -159,6 +155,7 @@ export function apiKeyPayload(form: ApiKeyForm): ProviderApiKeyCreate {
     api_key: form.api_key,
     api_formats: normalizeSelectedApiFormats(form.api_formats),
     allowed_model_ids: normalizeSelectedIds(form.allowed_model_ids),
+    capabilities: capabilitiesPayload(form.capabilities),
     note: trimmedOrNull(form.note),
     internal_priority: requiredNumber(form.internal_priority),
     rpm_limit: optionalNumber(form.rpm_limit),
@@ -175,6 +172,7 @@ export function apiKeyFormFromKey(apiKey: ProviderApiKey): ApiKeyForm {
     api_key: '',
     api_formats: apiKey.api_formats,
     allowed_model_ids: apiKey.allowed_model_ids,
+    capabilities: capabilitiesFromPayload(apiKey.capabilities),
     note: apiKey.note ?? '',
     internal_priority: String(apiKey.internal_priority),
     rpm_limit: String(apiKey.rpm_limit ?? 0),
@@ -191,6 +189,7 @@ export function apiKeyUpdatePayload(form: ApiKeyForm): ProviderApiKeyUpdate {
     ...(form.api_key.trim() ? { api_key: form.api_key } : {}),
     api_formats: normalizeSelectedApiFormats(form.api_formats),
     allowed_model_ids: normalizeSelectedIds(form.allowed_model_ids),
+    capabilities: capabilitiesPayload(form.capabilities),
     note: trimmedOrNull(form.note),
     internal_priority: requiredNumber(form.internal_priority),
     rpm_limit: optionalNumber(form.rpm_limit),
@@ -268,4 +267,19 @@ function normalizeSelectedApiFormats(values: string[]) {
 
 function normalizeSelectedIds(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function capabilitiesPayload(values: string[]) {
+  const normalized = normalizeSelectedIds(values);
+  if (normalized.length === 0) return null;
+  return Object.fromEntries(normalized.map((value) => [value, true]));
+}
+
+function capabilitiesFromPayload(value?: Record<string, unknown> | null) {
+  if (!value) return [];
+  return API_KEY_CAPABILITY_OPTIONS.filter((key) => capabilityEnabled(value[key]));
+}
+
+function capabilityEnabled(value: unknown) {
+  return value === true || value === 'true' || (typeof value === 'number' && value > 0);
 }

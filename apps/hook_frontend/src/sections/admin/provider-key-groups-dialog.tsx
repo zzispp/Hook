@@ -1,7 +1,7 @@
 'use client';
 
 import type { Provider, ProviderApiKey } from 'src/types/provider';
-import type { ProviderGroupKind, ProviderGroupForm } from './provider-groups-utils';
+import type { ProviderKeyGroupForm } from './provider-key-groups-utils';
 
 import Stack from '@mui/material/Stack';
 import Checkbox from '@mui/material/Checkbox';
@@ -19,14 +19,11 @@ import {
   selectedMemberLabel,
   updateMemberPriority,
   updateSelectedMembers,
-  providerMemberOptions,
   providerKeyMemberOptions,
-  defaultProviderMemberPriority,
   defaultProviderKeyMemberPriority,
-} from './provider-groups-utils';
+} from './provider-key-groups-utils';
 
-export function ProviderGroupDialog({
-  kind,
+export function ProviderKeyGroupDialog({
   open,
   editing,
   form,
@@ -37,32 +34,29 @@ export function ProviderGroupDialog({
   onSubmit,
   onFormChange,
 }: {
-  kind: ProviderGroupKind;
   open: boolean;
   editing: boolean;
-  form: ProviderGroupForm;
+  form: ProviderKeyGroupForm;
   providers: Pick<Provider, 'id' | 'name' | 'provider_type' | 'priority'>[];
   keysByProvider: Record<string, ProviderApiKey[]>;
   submitting: boolean;
   onClose: () => void;
   onSubmit: () => void;
-  onFormChange: (form: ProviderGroupForm) => void;
+  onFormChange: (form: ProviderKeyGroupForm) => void;
 }) {
   const { t } = useTranslate('admin');
-  const titleKey = groupDialogTitleKey(kind, editing);
 
   return (
     <ManagementDialog
       open={open}
-      title={t(titleKey)}
+      title={t(editing ? 'dialogs.editProviderKeyGroup' : 'dialogs.createProviderKeyGroup')}
       submitting={submitting}
       submitDisabled={!form.name.trim()}
       onClose={onClose}
       onSubmit={onSubmit}
     >
-      <GroupBasicFields form={form} onFormChange={onFormChange} />
-      <MemberSelect
-        kind={kind}
+      <KeyGroupBasicFields form={form} onFormChange={onFormChange} />
+      <KeyMemberSelect
         form={form}
         providers={providers}
         keysByProvider={keysByProvider}
@@ -72,12 +66,12 @@ export function ProviderGroupDialog({
   );
 }
 
-function GroupBasicFields({
+function KeyGroupBasicFields({
   form,
   onFormChange,
 }: {
-  form: ProviderGroupForm;
-  onFormChange: (form: ProviderGroupForm) => void;
+  form: ProviderKeyGroupForm;
+  onFormChange: (form: ProviderKeyGroupForm) => void;
 }) {
   const { t } = useTranslate('admin');
 
@@ -109,38 +103,27 @@ function GroupBasicFields({
   );
 }
 
-function MemberSelect({
-  kind,
+function KeyMemberSelect({
   form,
   providers,
   keysByProvider,
   onFormChange,
 }: {
-  kind: ProviderGroupKind;
-  form: ProviderGroupForm;
+  form: ProviderKeyGroupForm;
   providers: Pick<Provider, 'id' | 'name' | 'provider_type' | 'priority'>[];
   keysByProvider: Record<string, ProviderApiKey[]>;
-  onFormChange: (form: ProviderGroupForm) => void;
+  onFormChange: (form: ProviderKeyGroupForm) => void;
 }) {
   const { t } = useTranslate('admin');
-  const options =
-    kind === 'provider'
-      ? providerMemberOptions(providers)
-      : providerKeyMemberOptions(providers, keysByProvider);
-  const emptyText = t(kind === 'provider' ? 'providers.noProviders' : 'providers.noApiKeys');
+  const options = providerKeyMemberOptions(providers, keysByProvider);
   const memberIds = formMemberIds(form);
-  const defaultPriorityForId = (id: string) =>
-    kind === 'provider'
-      ? defaultProviderMemberPriority(providers, id)
-      : defaultProviderKeyMemberPriority(keysByProvider, id);
+  const defaultPriorityForId = (id: string) => defaultProviderKeyMemberPriority(keysByProvider, id);
 
   return (
     <Stack spacing={1.5}>
-      <MemberSelectField
-        kind={kind}
+      <KeyMemberSelectField
         memberIds={memberIds}
         options={options}
-        emptyText={emptyText}
         onSelectedIdsChange={(selectedIds) =>
           onFormChange({
             ...form,
@@ -149,36 +132,33 @@ function MemberSelect({
         }
       />
       <MemberPriorityFields form={form} options={options} onFormChange={onFormChange} />
+      {options.length === 0 ? (
+        <Typography variant="caption" color="text.secondary">
+          {t('providers.noApiKeys')}
+        </Typography>
+      ) : null}
     </Stack>
   );
 }
 
-function MemberSelectField({
-  kind,
+function KeyMemberSelectField({
   memberIds,
   options,
-  emptyText,
   onSelectedIdsChange,
 }: {
-  kind: ProviderGroupKind;
   memberIds: string[];
   options: { id: string; label: string; secondary?: string }[];
-  emptyText: string;
   onSelectedIdsChange: (ids: string[]) => void;
 }) {
   const { t } = useTranslate('admin');
-  const labelKey =
-    kind === 'provider' ? 'providers.providerGroupMembers' : 'providers.providerKeyGroupMembers';
-  const helperKey =
-    kind === 'provider' ? 'helper.providerGroupMembers' : 'helper.providerKeyGroupMembers';
 
   return (
     <TextField
       select
       fullWidth
-      label={t(labelKey)}
+      label={t('providers.providerKeyGroupMembers')}
       value={memberIds}
-      helperText={t(helperKey)}
+      helperText={t('helper.providerKeyGroupMembers')}
       SelectProps={{
         multiple: true,
         renderValue: (selected) =>
@@ -191,7 +171,7 @@ function MemberSelectField({
       }}
       onChange={(event) => onSelectedIdsChange(selectedValues(event.target.value))}
     >
-      {options.length === 0 ? <EmptyMemberOption text={emptyText} /> : null}
+      {options.length === 0 ? <EmptyMemberOption text={t('providers.noApiKeys')} /> : null}
       {options.map((option) => (
         <MemberOptionItem key={option.id} option={option} checked={memberIds.includes(option.id)} />
       ))}
@@ -227,9 +207,9 @@ function MemberPriorityFields({
   options,
   onFormChange,
 }: {
-  form: ProviderGroupForm;
+  form: ProviderKeyGroupForm;
   options: { id: string; label: string }[];
-  onFormChange: (form: ProviderGroupForm) => void;
+  onFormChange: (form: ProviderKeyGroupForm) => void;
 }) {
   const { t } = useTranslate('admin');
   if (form.members.length === 0) return null;
@@ -265,11 +245,4 @@ function MemberPriorityFields({
       ))}
     </Stack>
   );
-}
-
-function groupDialogTitleKey(kind: ProviderGroupKind, editing: boolean) {
-  if (kind === 'provider') {
-    return editing ? 'dialogs.editProviderGroup' : 'dialogs.createProviderGroup';
-  }
-  return editing ? 'dialogs.editProviderKeyGroup' : 'dialogs.createProviderKeyGroup';
 }

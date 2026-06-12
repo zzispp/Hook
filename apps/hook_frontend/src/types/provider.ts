@@ -88,7 +88,6 @@ export type ProviderCooldownListResponse = {
 export type ProviderCreate = {
   name: string;
   provider_type: ProviderType;
-  provider_group_id?: string | null;
   max_retries?: number | null;
   request_timeout_seconds?: number | null;
   stream_first_byte_timeout_seconds?: number | null;
@@ -99,7 +98,7 @@ export type ProviderCreate = {
   is_active?: boolean;
 };
 
-export type ProviderUpdate = Partial<Omit<ProviderCreate, 'provider_group_id'>>;
+export type ProviderUpdate = Partial<ProviderCreate>;
 
 export type BodyRuleConditionOp =
   | 'eq'
@@ -194,6 +193,7 @@ export type ProviderApiKey = {
   name: string;
   api_formats: string[];
   allowed_model_ids: string[];
+  capabilities?: Record<string, unknown> | null;
   note?: string | null;
   internal_priority: number;
   global_priority_by_format: Record<string, number>;
@@ -218,6 +218,7 @@ export type ProviderApiKeyCreate = {
   api_key: string;
   api_formats: string[];
   allowed_model_ids: string[];
+  capabilities?: Record<string, unknown> | null;
   note?: string | null;
   internal_priority?: number;
   rpm_limit?: number | null;

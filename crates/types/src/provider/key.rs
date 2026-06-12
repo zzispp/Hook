@@ -12,6 +12,7 @@ pub struct ProviderApiKey {
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
+    pub capabilities: Option<serde_json::Value>,
     pub note: Option<String>,
     pub internal_priority: i32,
     pub global_priority_by_format: BTreeMap<String, i32>,
@@ -39,6 +40,8 @@ pub struct ProviderApiKeyCreate {
     pub api_formats: Vec<String>,
     #[serde(default)]
     pub allowed_model_ids: Vec<String>,
+    #[serde(default)]
+    pub capabilities: Option<serde_json::Value>,
     #[serde(default)]
     pub note: Option<String>,
     #[serde(default)]
@@ -69,6 +72,8 @@ pub struct ProviderApiKeyUpdate {
     pub api_formats: Option<Vec<String>>,
     #[serde(default)]
     pub allowed_model_ids: Option<Vec<String>>,
+    #[serde(default, deserialize_with = "deserialize_patch_value")]
+    pub capabilities: PatchField<serde_json::Value>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub note: PatchField<String>,
     #[serde(default)]

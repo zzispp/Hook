@@ -248,6 +248,7 @@ fn api_key_create(token: &SelectedToken<'_>, mappings: &BTreeMap<String, String>
         api_key: api_key.to_owned(),
         api_formats: token.endpoint_formats.clone(),
         allowed_model_ids: allowed_model_ids(token, mappings)?,
+        capabilities: None,
         note: token.token.group.as_ref().map(|group| format!("Imported from newapi group: {group}")),
         internal_priority: Some(10),
         rpm_limit: None,

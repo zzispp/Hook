@@ -107,6 +107,8 @@ pub struct CandidateRequest<'a> {
     pub routing_api_format: &'a str,
     pub model_name: &'a str,
     pub is_stream: bool,
+    pub has_openai_responses_custom_tool_items: bool,
+    pub required_capability: Option<&'a str>,
 }
 
 pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request: CandidateRequest<'_>) -> Result<CandidateSelection, LlmProxyError> {

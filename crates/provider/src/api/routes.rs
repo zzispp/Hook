@@ -5,10 +5,7 @@ use axum::{
 
 use crate::api::{
     ProviderApiState,
-    group_handlers::{
-        create_provider_group, create_provider_key_group, delete_provider_group, delete_provider_key_group, get_provider_group, get_provider_key_group,
-        list_provider_groups, list_provider_key_groups, update_provider_group, update_provider_key_group,
-    },
+    group_handlers::{create_provider_key_group, delete_provider_key_group, get_provider_key_group, list_provider_key_groups, update_provider_key_group},
     handlers::{
         accept_quick_import_current, batch_update_api_key_priorities, batch_update_model_bindings, commit_quick_import, commit_quick_import_append,
         create_api_key, create_endpoint, create_model_binding, create_provider, delete_api_key, delete_endpoint, delete_model_binding, delete_model_cost,
@@ -32,11 +29,6 @@ pub fn create_router(state: ProviderApiState) -> Router {
             get(quick_import_sync_settings).patch(update_quick_import_sync_settings),
         )
         .route("/admin/providers/{id}", get(get_provider).patch(update_provider).delete(delete_provider))
-        .route("/admin/provider-groups", get(list_provider_groups).post(create_provider_group))
-        .route(
-            "/admin/provider-groups/{id}",
-            get(get_provider_group).patch(update_provider_group).delete(delete_provider_group),
-        )
         .route("/admin/provider-key-groups", get(list_provider_key_groups).post(create_provider_key_group))
         .route(
             "/admin/provider-key-groups/{id}",

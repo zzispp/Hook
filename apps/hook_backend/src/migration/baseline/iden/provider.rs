@@ -60,6 +60,7 @@ pub(in crate::migration::baseline) enum ProviderApiKeys {
     Name,
     ApiFormats,
     AllowedModelIds,
+    Capabilities,
     EncryptedApiKey,
     Note,
     InternalPriority,
@@ -74,28 +75,6 @@ pub(in crate::migration::baseline) enum ProviderApiKeys {
     HealthByFormat,
     CircuitBreakerByFormat,
     IsActive,
-    CreatedAt,
-    UpdatedAt,
-}
-
-#[derive(DeriveIden)]
-pub(in crate::migration::baseline) enum ProviderGroups {
-    Table,
-    Id,
-    Name,
-    Description,
-    SortOrder,
-    CreatedAt,
-    UpdatedAt,
-}
-
-#[derive(DeriveIden)]
-pub(in crate::migration::baseline) enum ProviderGroupProviders {
-    Table,
-    Id,
-    ProviderGroupId,
-    ProviderId,
-    Priority,
     CreatedAt,
     UpdatedAt,
 }

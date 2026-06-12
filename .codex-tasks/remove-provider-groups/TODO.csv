@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Remove backend provider group API and storage references,DONE,Backend compiles without provider group API/types,just check,2026-06-11,0,just check passed
+2,Make billing groups and runtime key-group only,DONE,Billing groups no longer expose or use allowed_provider_group_ids,just check,2026-06-11,0,final rg only leaves destructive migration drop references
+3,Remove frontend provider group UI and request fields,DONE,Frontend compiles without provider group UI references,pnpm lint:frontend,2026-06-11,0,pnpm lint:frontend and pnpm build:frontend passed
+4,Run full validation,IN_PROGRESS,Rust and frontend validation commands pass,just test && pnpm build:frontend,,1,just test exited 124 at repo 60s timeout after executed tests passed; frontend build passed

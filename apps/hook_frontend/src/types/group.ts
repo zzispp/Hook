@@ -5,7 +5,6 @@ export type BillingGroup = {
   description?: string | null;
   billing_multiplier: number;
   allowed_model_ids: string[];
-  allowed_provider_group_ids: string[];
   allowed_provider_key_group_ids: string[];
   visible_user_group_codes: string[];
   is_active: boolean;
@@ -21,7 +20,6 @@ export type BillingGroupCreate = {
   description?: string | null;
   billing_multiplier: number;
   allowed_model_ids?: string[];
-  allowed_provider_group_ids?: string[];
   allowed_provider_key_group_ids?: string[];
   visible_user_group_codes?: string[];
   is_active?: boolean;
@@ -33,7 +31,6 @@ export type BillingGroupUpdate = {
   description?: string | null;
   billing_multiplier?: number;
   allowed_model_ids?: string[];
-  allowed_provider_group_ids?: string[];
   allowed_provider_key_group_ids?: string[];
   visible_user_group_codes?: string[];
   is_active?: boolean;
