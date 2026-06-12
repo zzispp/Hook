@@ -1,8 +1,14 @@
 {
   "pageMetadata": {
-    "title": "Hook | 统一大模型网关",
+    "title": "统一大模型网关",
     "titleSuffix": "统一大模型网关",
     "description": "统一 OpenAI、Claude、Gemini 与 CLI 工具调用入口，把模型路由、令牌治理、成本配额和健康监控放进同一个控制面。"
+  },
+  "siteInfoStatus": {
+    "loading": "正在加载站点信息",
+    "errorTitle": "站点信息加载失败",
+    "invalidSiteName": "后台站点名称为空",
+    "retry": "重试"
   },
   "navbar": {
     "links": {
@@ -31,7 +37,6 @@
   "hero": {
     "badge": "AI Gateway",
     "badgeSuffix": "OpenAI Compatible",
-    "headlineDefaultName": "Hook AI",
     "headlineSuffix": "统一大模型网关",
     "description": "统一 Claude、OpenAI、Gemini 与 CLI 工具调用入口，把模型路由、用户令牌、成本配额和健康监控放进同一个控制面。",
     "buttons": {
@@ -42,7 +47,7 @@
     },
     "code": {
       "baseUrl": "Base URL",
-      "prompt": "通过 Hook 调用统一 AI 网关"
+      "prompt": "通过 {{siteName}} 调用统一 AI 网关"
     }
   },
   "features": {
@@ -77,7 +82,7 @@
       "monthly": "月度配额"
     },
     "monitor": {
-      "title": "Hook Gateway",
+      "title": "{{siteName}} Gateway",
       "frames": {
         "health": {
           "prompt": "检查供应商健康",
@@ -198,11 +203,11 @@
         "badge": "图像生成"
       },
       "cursor": {
-        "models": "指向 Hook 网关即可",
+        "models": "指向 {{siteName}} 网关即可",
         "badge": "IDE 集成"
       },
       "claudeCode": {
-        "models": "设置 API Base 指向 Hook",
+        "models": "设置 API Base 指向 {{siteName}}",
         "badge": "CLI 集成"
       },
       "suno": {
@@ -220,7 +225,7 @@
     }
   },
   "liveDemo": {
-    "title": "查看 Hook 实时演示",
+    "title": "查看 {{siteName}} 实时演示",
     "subtitle": "模拟多提供商接入、高可用智能负载均衡与秒级自动容灾切换",
     "controls": {
       "modelLabel": "选择调用模型",
@@ -232,7 +237,7 @@
       "send": "发送网关请求",
       "running": "正在演练中..."
     },
-    "terminalTitle": "Hook Trace logs",
+    "terminalTitle": "{{siteName}} Trace logs",
     "emptyState": "等待发送请求... 点击左侧“发送网关请求”查看转发轨迹",
     "streamTitle": "流式输出响应",
     "streamOutput": "Server Stream Output",
@@ -278,8 +283,8 @@
         "rust": "<think>\n思维链：\n1. 生成最小可运行的 Rust 程序。\n2. 用代码块返回。\n</think>\n```rust\nfn main() {\n    println!(\"Hello, World!\");\n}\n```"
       },
       "custom": {
-        "deepseek": "<think>\n思考过程：用户发送了自定义提示词 \"{{prompt}}\"。通过网关进行统一模型映射，并将请求转发到真实的 {{model}} 渠道。\n</think>\n[Hook Gateway] 这是对自定义提示词的模拟回复。在生产环境中，Hook 会将请求路由到你配置的真实 {{model}} 渠道并流式返回真实结果。",
-        "default": "[Hook Gateway] 收到自定义输入: \"{{prompt}}\"。\n这是在线预览环境。在生产环境中，该请求会通过 Hook 网关安全路由至 {{model}} 对应的上游，并根据你的 Token 与配额计划扣费。"
+        "deepseek": "<think>\n思考过程：用户发送了自定义提示词 \"{{prompt}}\"。通过网关进行统一模型映射，并将请求转发到真实的 {{model}} 渠道。\n</think>\n[{{siteName}} Gateway] 这是对自定义提示词的模拟回复。在生产环境中，{{siteName}} 会将请求路由到你配置的真实 {{model}} 渠道并流式返回真实结果。",
+        "default": "[{{siteName}} Gateway] 收到自定义输入: \"{{prompt}}\"。\n这是在线预览环境。在生产环境中，该请求会通过 {{siteName}} 网关安全路由至 {{model}} 对应的上游，并根据你的 Token 与配额计划扣费。"
       }
     },
     "logs": {
@@ -349,12 +354,11 @@
   },
   "cta": {
     "title": "集中掌控你的 AI 接口链路",
-    "description": "一键部署 Hook，在自托管的安全环境下，实现跨供应商模型路由、负载均衡、令牌限流与可观测性审计。开源免费，数据私有。",
+    "description": "一键部署 {{siteName}}，在自托管的安全环境下，实现跨供应商模型路由、负载均衡、令牌限流与可观测性审计。开源免费，数据私有。",
     "primaryAction": "进入控制台",
     "secondaryAction": "GitHub 仓库"
   },
   "footer": {
-    "fallbackTagline": "自托管 AI API 统一网关。",
     "navigation": "导航",
     "community": "社区",
     "console": "进入控制台",

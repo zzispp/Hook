@@ -150,6 +150,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::provider_quick_import_sync_controls_additive::apply(manager).await?;
     super::recharge_order_paid_at_index_additive::apply(manager).await?;
     super::provider_key_capabilities_additive::apply(manager).await?;
+    super::auth_layout_site_name_i18n_additive::apply(manager).await?;
     super::provider_group_removal_destructive::apply(manager).await
 }
 

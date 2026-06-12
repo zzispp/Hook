@@ -4,6 +4,7 @@ import type { Breakpoint } from '@mui/material/styles';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 
 import { CONFIG } from 'src/global-config';
@@ -14,6 +15,7 @@ import { useTranslate } from 'src/locales/use-locales';
 export type AuthSplitSectionProps = BoxProps & {
   title?: string;
   imgUrl?: string;
+  siteName?: string;
   subtitle?: string;
   layoutQuery?: Breakpoint;
 };
@@ -22,12 +24,13 @@ export function AuthSplitSection({
   sx,
   layoutQuery = 'md',
   title,
+  siteName,
   imgUrl = `${CONFIG.assetsDir}/assets/illustrations/illustration-dashboard.webp`,
   subtitle,
   ...other
 }: AuthSplitSectionProps) {
   const { t } = useTranslate('auth');
-  const sectionTitle = title ?? t('layout.sectionTitle');
+  const sectionTitle = title ?? t('layout.sectionTitle', { siteName });
   const sectionSubtitle = subtitle ?? t('layout.sectionSubtitle');
 
   return (
@@ -77,6 +80,46 @@ export function AuthSplitSection({
         src={imgUrl}
         sx={{ width: 1, aspectRatio: '4/3', objectFit: 'cover' }}
       />
+    </Box>
+  );
+}
+
+export function AuthSplitSectionStatus({
+  error,
+  onRetry,
+}: {
+  readonly error?: Error;
+  readonly onRetry?: () => void;
+}) {
+  const { t } = useTranslate('auth');
+
+  return (
+    <Box
+      sx={{
+        py: 3,
+        width: 1,
+        gap: 2,
+        display: 'flex',
+        alignItems: 'center',
+        flexDirection: 'column',
+        justifyContent: 'center',
+      }}
+    >
+      <Typography variant="h5" sx={{ textAlign: 'center' }}>
+        {error ? t('siteInfoStatus.errorTitle') : t('siteInfoStatus.loading')}
+      </Typography>
+      {error && (
+        <>
+          <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+            {error.message}
+          </Typography>
+          {onRetry && (
+            <Button variant="outlined" onClick={onRetry}>
+              {t('siteInfoStatus.retry')}
+            </Button>
+          )}
+        </>
+      )}
     </Box>
   );
 }

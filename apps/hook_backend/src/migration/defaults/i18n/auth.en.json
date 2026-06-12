@@ -1,8 +1,14 @@
 {
   "layout": {
     "help": "Need help?",
-    "sectionTitle": "Secure access to Hook",
+    "sectionTitle": "Secure access to {{siteName}}",
     "sectionSubtitle": "Manage accounts, tokens, and model access in one place."
+  },
+  "siteInfoStatus": {
+    "loading": "Loading site information",
+    "errorTitle": "Site information failed to load",
+    "invalidSiteName": "Backend site name is empty",
+    "retry": "Retry"
   },
   "fields": {
     "username": "Username",

@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 
 import { CONFIG } from 'src/global-config';
+import LandingPage from 'src/home/pages/LandingPage';
 import enLanding from 'src/locales/langs/en/landing.json';
 import cnLanding from 'src/locales/langs/cn/landing.json';
 import { getServerTranslations } from 'src/locales/server';
-import LandingPage from 'src/react-bits/pages/LandingPage';
+import { getSiteInfo } from 'src/actions/site-info-server';
 import { fallbackLng, type LangCode } from 'src/locales/locales-config';
 
 // ----------------------------------------------------------------------
@@ -25,11 +26,30 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   const { t } = await getServerTranslations('landing');
+  const site = await loadMetadataSiteInfo();
+
+  if (!site) {
+    return {
+      title: t('siteInfoStatus.errorTitle'),
+      description: t('pageMetadata.description'),
+    };
+  }
 
   return {
-    title: t('pageMetadata.title'),
-    description: t('pageMetadata.description'),
+    title: `${site.site_name.trim()} | ${t('pageMetadata.titleSuffix')}`,
+    description: site.site_subtitle.trim() || t('pageMetadata.description'),
   };
+}
+
+async function loadMetadataSiteInfo() {
+  try {
+    const site = await getSiteInfo();
+    const siteName = site.site_name.trim();
+
+    return siteName ? site : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function Page() {

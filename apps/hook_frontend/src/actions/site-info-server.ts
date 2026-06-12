@@ -6,16 +6,9 @@ import { cache } from 'react';
 import { endpoints } from 'src/lib/axios';
 import { CONFIG } from 'src/global-config';
 
-const STATIC_SITE_INFO = {
-  site_name: 'Hook',
-  site_subtitle: 'Gateway',
-  site_logo_base64: '',
-  contact_methods: [],
-};
-
 export const getSiteInfo = cache(async (): Promise<PublicSiteInfo> => {
   if (CONFIG.isStaticExport) {
-    return STATIC_SITE_INFO;
+    throw new Error('Site info is unavailable during static export.');
   }
 
   const serverUrl = CONFIG.serverUrl.trim();

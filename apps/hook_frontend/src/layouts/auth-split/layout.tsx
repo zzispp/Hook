@@ -5,16 +5,21 @@ import type { AuthSplitSectionProps } from './section';
 import type { AuthSplitContentProps } from './content';
 import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '../core';
 
+import { useMemo } from 'react';
 import { merge } from 'es-toolkit';
 
 import Alert from '@mui/material/Alert';
 
+import { useTranslate } from 'src/locales/use-locales';
+import { useSiteInfo } from 'src/actions/system-settings';
+import { normalizePublicSiteInfo } from 'src/actions/site-info-utils';
+
 import { Logo } from 'src/components/logo';
 
-import { AuthSplitSection } from './section';
 import { AuthSplitContent } from './content';
 import { SettingsButton } from '../components/settings-button';
 import { MainSection, LayoutSection, HeaderSection } from '../core';
+import { AuthSplitSection, AuthSplitSectionStatus } from './section';
 
 // ----------------------------------------------------------------------
 
@@ -37,6 +42,21 @@ export function AuthSplitLayout({
   slotProps,
   layoutQuery = 'md',
 }: AuthSplitLayoutProps) {
+  const { t } = useTranslate('auth');
+  const site = useSiteInfo();
+  const siteInfo = useMemo(() => normalizePublicSiteInfo(site.data), [site.data]);
+  const siteError = useMemo(() => {
+    if (site.error) {
+      return site.error;
+    }
+
+    if (site.data && !siteInfo) {
+      return new Error(t('siteInfoStatus.invalidSiteName'));
+    }
+
+    return undefined;
+  }, [site.data, site.error, siteInfo, t]);
+
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
       container: { maxWidth: false },
@@ -51,7 +71,7 @@ export function AuthSplitLayout({
       leftArea: (
         <>
           {/** @slot Logo */}
-          <Logo />
+          <Logo label={siteInfo?.site_name} source={siteInfo?.site_logo_base64 ?? ''} />
         </>
       ),
       rightArea: <SettingsButton />,
@@ -74,6 +94,19 @@ export function AuthSplitLayout({
 
   const renderFooter = () => null;
 
+  const renderSection = () =>
+    siteInfo ? (
+      <AuthSplitSection layoutQuery={layoutQuery} siteName={siteInfo.site_name} {...slotProps?.section} />
+    ) : null;
+
+  const renderContent = () => {
+    if (siteError || !siteInfo) {
+      return <AuthSplitSectionStatus error={siteError} onRetry={() => void site.refresh()} />;
+    }
+
+    return children;
+  };
+
   const renderMain = () => (
     <MainSection
       {...slotProps?.main}
@@ -88,12 +121,9 @@ export function AuthSplitLayout({
         ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
       ]}
     >
-      <AuthSplitSection
-        layoutQuery={layoutQuery}
-        {...slotProps?.section}
-      />
+      {renderSection()}
       <AuthSplitContent layoutQuery={layoutQuery} {...slotProps?.content}>
-        {children}
+        {renderContent()}
       </AuthSplitContent>
     </MainSection>
   );

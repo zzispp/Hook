@@ -1,8 +1,14 @@
 {
   "layout": {
     "help": "需要帮助？",
-    "sectionTitle": "安全访问 Hook",
+    "sectionTitle": "安全访问 {{siteName}}",
     "sectionSubtitle": "统一管理账户、令牌和模型访问。"
+  },
+  "siteInfoStatus": {
+    "loading": "正在加载站点信息",
+    "errorTitle": "站点信息加载失败",
+    "invalidSiteName": "后台站点名称为空",
+    "retry": "重试"
   },
   "fields": {
     "username": "用户名",
