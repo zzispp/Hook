@@ -464,7 +464,7 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             ModelStatusCheckHourlyStats::BucketStartedAt,
         ),
     ];
-    indices.extend(super::provider_group_indices::provider_group_indices());
+    indices.extend(super::provider_key_group_indices::provider_key_group_indices());
     indices
 }
 

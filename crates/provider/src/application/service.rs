@@ -11,7 +11,7 @@ mod key_permissions;
 mod model_bindings;
 mod model_costs;
 mod provider_core;
-mod provider_groups;
+mod provider_key_groups;
 mod quick_import;
 mod quick_import_append;
 mod quick_import_commit;
@@ -45,10 +45,7 @@ use key_permissions::ensure_allowed_models_bound;
 use model_bindings::{prepare_model_binding_batch_update, prepare_model_binding_create};
 use model_costs::{ensure_model_cost_delete_scope, ensure_model_cost_scope};
 use provider_core::{ensure_provider, prepare_provider_create, prepare_provider_list_request};
-use provider_groups::{
-    prepare_provider_group_create, prepare_provider_group_list_request, prepare_provider_group_update, prepare_provider_key_group_create,
-    prepare_provider_key_group_update,
-};
+use provider_key_groups::{prepare_provider_key_group_create, prepare_provider_key_group_list_request, prepare_provider_key_group_update};
 use quick_import::{QuickImportArgs, commit_quick_import, preview_quick_import};
 use quick_import_append::{commit_quick_import_append, preview_quick_import_append};
 use quick_import_resolution::{
@@ -128,29 +125,6 @@ where
         self.repository.list_providers(request).await
     }
 
-    async fn create_provider_group(&self, input: ProviderGroupCreate) -> ProviderResult<ProviderGroup> {
-        let input = prepare_provider_group_create(&self.repository, input).await?;
-        self.repository.create_provider_group(input).await
-    }
-
-    async fn update_provider_group(&self, id: &str, input: ProviderGroupUpdate) -> ProviderResult<ProviderGroup> {
-        let input = prepare_provider_group_update(&self.repository, id, input).await?;
-        self.repository.update_provider_group(id, input).await
-    }
-
-    async fn delete_provider_group(&self, id: &str) -> ProviderResult<()> {
-        self.repository.delete_provider_group(id).await
-    }
-
-    async fn get_provider_group(&self, id: &str) -> ProviderResult<ProviderGroup> {
-        self.repository.find_provider_group(id).await?.ok_or(ProviderError::NotFound)
-    }
-
-    async fn list_provider_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderGroupListResponse> {
-        let request = prepare_provider_group_list_request(request)?;
-        self.repository.list_provider_groups(request).await
-    }
-
     async fn create_provider_key_group(&self, input: ProviderKeyGroupCreate) -> ProviderResult<ProviderKeyGroup> {
         let input = prepare_provider_key_group_create(&self.repository, input).await?;
         self.repository.create_provider_key_group(input).await
@@ -169,8 +143,8 @@ where
         self.repository.find_provider_key_group(id).await?.ok_or(ProviderError::NotFound)
     }
 
-    async fn list_provider_key_groups(&self, request: ProviderGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse> {
-        let request = prepare_provider_group_list_request(request)?;
+    async fn list_provider_key_groups(&self, request: ProviderKeyGroupListRequest) -> ProviderResult<ProviderKeyGroupListResponse> {
+        let request = prepare_provider_key_group_list_request(request)?;
         self.repository.list_provider_key_groups(request).await
     }
 

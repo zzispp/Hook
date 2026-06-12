@@ -2,7 +2,6 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { ProviderGroup } from 'src/types/provider-group';
 import type {
   ProviderQuickImportTokenPreview,
   ProviderQuickImportPreviewResponse,
@@ -51,12 +50,11 @@ import {
 type Props = {
   open: boolean;
   models: GlobalModelResponse[];
-  groups: ProviderGroup[];
   onClose: () => void;
   onImported: () => void;
 };
 
-export function ProviderQuickImportDialog({ open, models, groups, onClose, onImported }: Props) {
+export function ProviderQuickImportDialog({ open, models, onClose, onImported }: Props) {
   const { t } = useTranslate('admin');
   const [step, setStep] = useState(0);
   const [form, setForm] = useState(DEFAULT_QUICK_IMPORT_FORM);
@@ -140,7 +138,7 @@ export function ProviderQuickImportDialog({ open, models, groups, onClose, onImp
             <Step><StepLabel>{t('providers.quickImportSource')}</StepLabel></Step>
             <Step><StepLabel>{t('providers.quickImportPreview')}</StepLabel></Step>
           </Stepper>
-          {step === 0 ? <ProviderQuickImportSourceStep form={form} groups={groups} setForm={setForm} /> : null}
+          {step === 0 ? <ProviderQuickImportSourceStep form={form} setForm={setForm} /> : null}
           {step === 1 && preview ? (
             <ProviderQuickImportPreviewStep
               models={models}

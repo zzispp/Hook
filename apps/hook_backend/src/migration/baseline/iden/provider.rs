@@ -79,28 +79,6 @@ pub(in crate::migration::baseline) enum ProviderApiKeys {
 }
 
 #[derive(DeriveIden)]
-pub(in crate::migration::baseline) enum ProviderGroups {
-    Table,
-    Id,
-    Name,
-    Description,
-    SortOrder,
-    CreatedAt,
-    UpdatedAt,
-}
-
-#[derive(DeriveIden)]
-pub(in crate::migration::baseline) enum ProviderGroupProviders {
-    Table,
-    Id,
-    ProviderGroupId,
-    ProviderId,
-    Priority,
-    CreatedAt,
-    UpdatedAt,
-}
-
-#[derive(DeriveIden)]
 pub(in crate::migration::baseline) enum ProviderKeyGroups {
     Table,
     Id,

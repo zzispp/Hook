@@ -1,10 +1,7 @@
 'use client';
 
 import type { Provider } from 'src/types/provider';
-import type { ProviderGroup } from 'src/types/provider-group';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
-
-import { useMemo } from 'react';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -28,13 +25,11 @@ import {
   withStickyActionHeadCell,
 } from 'src/components/table';
 
-import { providerGroupMemberIds } from './provider-groups-utils';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
 import { providerTypeLabel, providerOriginLabel } from './provider-management-utils';
 
 export function ProviderTable({
   rows,
-  groups,
   total,
   loading,
   table,
@@ -44,10 +39,8 @@ export function ProviderTable({
   onDelete,
   onAppendImport,
   onSyncSettings,
-  onAssociateGroups,
 }: {
   rows: Provider[];
-  groups: ProviderGroup[];
   total: number;
   loading: boolean;
   table: UseTableReturn;
@@ -57,11 +50,9 @@ export function ProviderTable({
   onDelete: (provider: Provider) => void;
   onAppendImport: (provider: Provider) => void;
   onSyncSettings: (provider: Provider) => void;
-  onAssociateGroups: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
   const tableHead = providerTableHead(t);
-  const groupedRows = useMemo(() => providerRowsByGroup(rows, groups, t), [groups, rows, t]);
 
   return (
     <>
@@ -72,27 +63,18 @@ export function ProviderTable({
             {loading ? (
               <TableLoadingRows head={tableHead} rows={table.rowsPerPage} />
             ) : (
-              groupedRows.map((group) => [
-                <ProviderGroupHeaderRow
-                  key={group.id}
-                  name={group.name}
-                  count={group.providers.length}
-                />,
-                ...group.providers.map((entry) => (
-                  <ProviderTableRow
-                    key={`${group.id}-${entry.provider.id}`}
-                    row={entry.provider}
-                    priority={entry.priority}
-                    selected={entry.provider.id === selectedId}
-                    onSelect={onSelect}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onAppendImport={onAppendImport}
-                    onSyncSettings={onSyncSettings}
-                    onAssociateGroups={onAssociateGroups}
-                  />
-                )),
-              ])
+              rows.map((row) => (
+                <ProviderTableRow
+                  key={row.id}
+                  row={row}
+                  selected={row.id === selectedId}
+                  onSelect={onSelect}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onAppendImport={onAppendImport}
+                  onSyncSettings={onSyncSettings}
+                />
+              ))
             )}
             <TableNoData title={t('common.noData')} notFound={!loading && rows.length === 0} />
           </TableBody>
@@ -109,44 +91,22 @@ export function ProviderTable({
   );
 }
 
-function ProviderGroupHeaderRow({ name, count }: { name: string; count: number }) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <TableRow>
-      <TableCell colSpan={6} sx={{ bgcolor: 'background.neutral', py: 1.25 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Iconify width={18} icon="solar:file-bold-duotone" />
-          <Typography variant="subtitle2">{name}</Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {t('providers.groupProviderCount', { count })}
-          </Typography>
-        </Box>
-      </TableCell>
-    </TableRow>
-  );
-}
-
 function ProviderTableRow({
   row,
-  priority,
   selected,
   onSelect,
   onEdit,
   onDelete,
   onAppendImport,
   onSyncSettings,
-  onAssociateGroups,
 }: {
   row: Provider;
-  priority: number;
   selected: boolean;
   onSelect: (provider: Provider) => void;
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
   onAppendImport: (provider: Provider) => void;
   onSyncSettings: (provider: Provider) => void;
-  onAssociateGroups: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
 
@@ -173,22 +133,12 @@ function ProviderTableRow({
           />
         </Stack>
       </TableCell>
-      <TableCell>{priority}</TableCell>
+      <TableCell>{row.priority}</TableCell>
       <TableCell>
         <EnabledLabel enabled={row.is_active} />
       </TableCell>
       <TableCell align="left" sx={tableStickyActionCellSx}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Tooltip title={t('actions.associateProviderGroups')}>
-            <IconButton
-              onClick={(event) => {
-                event.stopPropagation();
-                onAssociateGroups(row);
-              }}
-            >
-              <Iconify icon="eva:link-2-fill" />
-            </IconButton>
-          </Tooltip>
           {row.provider_origin === 'quick_import' ? (
             <>
               <Tooltip title={t('actions.quickImportAppendTokens')}>
@@ -252,7 +202,7 @@ function providerTableHead(
     withStickyActionHeadCell({
       id: 'actions',
       label: t('common.actions'),
-      width: 220,
+      width: 180,
       align: 'left',
     }),
   ];
@@ -260,65 +210,4 @@ function providerTableHead(
 
 function optionalValue(value?: number | null) {
   return value === null || value === undefined ? '-' : value;
-}
-
-function providerRowsByGroup(
-  providers: Provider[],
-  groups: ProviderGroup[],
-  t: (key: string, options?: Record<string, unknown>) => string
-) {
-  const providersById = new Map(providers.map((provider) => [provider.id, provider]));
-  const groupedProviderIds = new Set(groups.flatMap(providerGroupMemberIds));
-  const boundGroups = sortedGroups(groups)
-    .map((group) => ({
-      id: group.id,
-      name: group.name,
-      providers: providerEntriesForGroup(group, providersById),
-    }))
-    .filter((group) => group.providers.length > 0);
-  const unboundProviders = sortProviderEntriesByPriority(
-    providers
-      .filter((provider) => !groupedProviderIds.has(provider.id))
-      .map((provider) => ({ provider, priority: provider.priority }))
-  );
-
-  return unboundProviders.length === 0
-    ? boundGroups
-    : [
-        ...boundGroups,
-        {
-          id: '__unbound_provider_group__',
-          name: t('providers.unboundProviderGroup'),
-          providers: unboundProviders,
-        },
-      ];
-}
-
-function providerEntriesForGroup(group: ProviderGroup, providersById: Map<string, Provider>) {
-  const entries = group.provider_members.flatMap((member) => {
-    const provider = providersById.get(member.provider_id);
-    return provider ? [{ provider, priority: member.priority }] : [];
-  });
-  return sortProviderEntriesByPriority(entries);
-}
-
-function sortProviderEntriesByPriority(entries: { provider: Provider; priority: number }[]) {
-  return [...entries].sort(compareProviderEntriesByPriority);
-}
-
-function compareProviderEntriesByPriority(
-  left: { provider: Provider; priority: number },
-  right: { provider: Provider; priority: number }
-) {
-  return (
-    left.priority - right.priority ||
-    left.provider.name.localeCompare(right.provider.name) ||
-    left.provider.id.localeCompare(right.provider.id)
-  );
-}
-
-function sortedGroups(groups: ProviderGroup[]) {
-  return [...groups].sort(
-    (left, right) => left.sort_order - right.sort_order || left.name.localeCompare(right.name)
-  );
 }

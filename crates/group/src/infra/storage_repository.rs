@@ -122,10 +122,6 @@ impl GroupModelCatalog for StorageGroupModelCatalog {
 
 #[async_trait]
 impl GroupProviderCatalog for StorageGroupProviderCatalog {
-    async fn provider_group_exists(&self, id: &str) -> GroupResult<bool> {
-        self.store.find_provider_group(id).await.map(|group| group.is_some()).map_err(storage_error)
-    }
-
     async fn provider_key_group_exists(&self, id: &str) -> GroupResult<bool> {
         self.store.find_provider_key_group(id).await.map(|group| group.is_some()).map_err(storage_error)
     }
@@ -145,7 +141,6 @@ fn record_input(input: BillingGroupCreate, is_system: bool) -> BillingGroupRecor
         description: input.description,
         billing_multiplier: input.billing_multiplier,
         allowed_model_ids: input.allowed_model_ids,
-        allowed_provider_group_ids: input.allowed_provider_group_ids,
         allowed_provider_key_group_ids: input.allowed_provider_key_group_ids,
         visible_user_group_codes: input.visible_user_group_codes,
         is_active: input.is_active.unwrap_or(true),
@@ -160,7 +155,6 @@ fn record_patch(input: BillingGroupUpdate) -> BillingGroupRecordPatch {
         description: input.description,
         billing_multiplier: input.billing_multiplier,
         allowed_model_ids: input.allowed_model_ids,
-        allowed_provider_group_ids: input.allowed_provider_group_ids,
         allowed_provider_key_group_ids: input.allowed_provider_key_group_ids,
         visible_user_group_codes: input.visible_user_group_codes,
         is_active: input.is_active,

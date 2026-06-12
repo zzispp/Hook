@@ -2,8 +2,8 @@
 
 import type { Theme } from '@mui/material/styles';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { ProviderKeyGroup } from 'src/types/provider-group';
 import type { Provider, ProviderApiKey } from 'src/types/provider';
+import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 import type { useProviderChildDialogs } from './provider-management-state';
 
 import { varAlpha } from 'minimal-shared/utils';

@@ -14,9 +14,8 @@ use super::{
 };
 
 use bindings::{
-    delete_group_bindings, model_ids_by_group_codes, model_ids_for_group, provider_group_ids_by_group_codes, provider_group_ids_for_group,
-    provider_key_group_ids_by_group_codes, provider_key_group_ids_for_group, replace_group_models, replace_group_provider_groups,
-    replace_group_provider_key_groups, replace_group_user_groups, user_group_codes_by_group_codes, user_group_codes_for_group,
+    delete_group_bindings, model_ids_by_group_codes, model_ids_for_group, provider_key_group_ids_by_group_codes, provider_key_group_ids_for_group,
+    replace_group_models, replace_group_provider_key_groups, replace_group_user_groups, user_group_codes_by_group_codes, user_group_codes_for_group,
 };
 use mapping::{apply_group_patch, domain_group, group_active_model};
 
@@ -137,16 +136,14 @@ impl GroupStore {
 
     async fn group_from_record(&self, record: BillingGroupRecord) -> StorageResult<BillingGroup> {
         let model_ids = model_ids_for_group(&record.code, self.database.connection()).await?;
-        let provider_group_ids = provider_group_ids_for_group(&record.code, self.database.connection()).await?;
         let key_group_ids = provider_key_group_ids_for_group(&record.code, self.database.connection()).await?;
         let user_group_codes = user_group_codes_for_group(&record.code, self.database.connection()).await?;
-        Ok(domain_group(record, model_ids, provider_group_ids, key_group_ids, user_group_codes))
+        Ok(domain_group(record, model_ids, key_group_ids, user_group_codes))
     }
 
     async fn groups_from_records(&self, records: Vec<BillingGroupRecord>) -> StorageResult<Vec<BillingGroup>> {
         let codes = records.iter().map(|record| record.code.clone()).collect::<Vec<_>>();
         let model_bindings = model_ids_by_group_codes(codes.clone(), self.database.connection()).await?;
-        let provider_group_bindings = provider_group_ids_by_group_codes(codes.clone(), self.database.connection()).await?;
         let key_group_bindings = provider_key_group_ids_by_group_codes(codes.clone(), self.database.connection()).await?;
         let user_group_bindings = user_group_codes_by_group_codes(codes, self.database.connection()).await?;
         Ok(records
@@ -156,7 +153,6 @@ impl GroupStore {
                 domain_group(
                     record,
                     model_bindings.get(&code).cloned().unwrap_or_default(),
-                    provider_group_bindings.get(&code).cloned().unwrap_or_default(),
                     key_group_bindings.get(&code).cloned().unwrap_or_default(),
                     user_group_bindings.get(&code).cloned().unwrap_or_default(),
                 )
@@ -167,14 +163,12 @@ impl GroupStore {
 
 struct GroupBindingInput {
     model_ids: Vec<String>,
-    provider_group_ids: Vec<String>,
     provider_key_group_ids: Vec<String>,
     user_group_codes: Vec<String>,
 }
 
 struct GroupBindingPatch {
     model_ids: PatchField<Vec<String>>,
-    provider_group_ids: PatchField<Vec<String>>,
     provider_key_group_ids: PatchField<Vec<String>>,
     user_group_codes: PatchField<Vec<String>>,
 }
@@ -183,7 +177,6 @@ impl From<&BillingGroupRecordInput> for GroupBindingInput {
     fn from(input: &BillingGroupRecordInput) -> Self {
         Self {
             model_ids: input.allowed_model_ids.clone(),
-            provider_group_ids: input.allowed_provider_group_ids.clone(),
             provider_key_group_ids: input.allowed_provider_key_group_ids.clone(),
             user_group_codes: input.visible_user_group_codes.clone(),
         }
@@ -194,7 +187,6 @@ impl From<&BillingGroupRecordPatch> for GroupBindingPatch {
     fn from(input: &BillingGroupRecordPatch) -> Self {
         Self {
             model_ids: input.allowed_model_ids.clone(),
-            provider_group_ids: input.allowed_provider_group_ids.clone(),
             provider_key_group_ids: input.allowed_provider_key_group_ids.clone(),
             user_group_codes: input.visible_user_group_codes.clone(),
         }
@@ -203,7 +195,6 @@ impl From<&BillingGroupRecordPatch> for GroupBindingPatch {
 
 async fn replace_all_bindings(group_code: &str, input: GroupBindingInput, store: &GroupStore, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {
     replace_group_models(group_code, input.model_ids, store, tx).await?;
-    replace_group_provider_groups(group_code, input.provider_group_ids, store, tx).await?;
     replace_group_provider_key_groups(group_code, input.provider_key_group_ids, store, tx).await?;
     replace_group_user_groups(group_code, input.user_group_codes, store, tx).await
 }
@@ -211,9 +202,6 @@ async fn replace_all_bindings(group_code: &str, input: GroupBindingInput, store:
 async fn replace_patched_bindings(group_code: &str, patch: GroupBindingPatch, store: &GroupStore, tx: &sea_orm::DatabaseTransaction) -> StorageResult<()> {
     if let PatchField::Value(model_ids) = patch.model_ids {
         replace_group_models(group_code, model_ids, store, tx).await?;
-    }
-    if let PatchField::Value(provider_group_ids) = patch.provider_group_ids {
-        replace_group_provider_groups(group_code, provider_group_ids, store, tx).await?;
     }
     if let PatchField::Value(key_group_ids) = patch.provider_key_group_ids {
         replace_group_provider_key_groups(group_code, key_group_ids, store, tx).await?;

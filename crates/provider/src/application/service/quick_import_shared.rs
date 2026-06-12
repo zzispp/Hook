@@ -19,7 +19,6 @@ pub fn provider_create(name: &str, config: &ProviderQuickImportProviderConfig) -
     ProviderCreate {
         name: name.trim().to_owned(),
         provider_type: PROVIDER_TYPE_CUSTOM.into(),
-        provider_group_id: config.provider_group_id.clone(),
         max_retries: Some(config.max_retries.unwrap_or(DEFAULT_MAX_RETRIES)),
         request_timeout_seconds: Some(config.request_timeout_seconds.unwrap_or(DEFAULT_REQUEST_TIMEOUT_SECONDS)),
         stream_first_byte_timeout_seconds: Some(config.stream_first_byte_timeout_seconds.unwrap_or(DEFAULT_STREAM_FIRST_BYTE_TIMEOUT_SECONDS)),

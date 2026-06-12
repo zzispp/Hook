@@ -5,7 +5,7 @@ use sea_orm_migration::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const ADDITIVE_VERSION: &str = "m20260610_000001_provider_group_member_priority";
+const ADDITIVE_VERSION: &str = "m20260610_000001_provider_key_group_member_priority";
 const MIGRATION_TABLE: &str = "seaql_migrations";
 
 pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
@@ -13,31 +13,13 @@ pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
         return Ok(());
     }
     add_priority_columns(manager).await?;
-    seed_provider_member_priorities(manager).await?;
     seed_key_member_priorities(manager).await?;
     enforce_priority_columns(manager).await?;
     mark_additive_applied(manager).await
 }
 
 async fn add_priority_columns(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    for sql in [
-        "ALTER TABLE provider_group_providers ADD COLUMN IF NOT EXISTS priority INTEGER",
-        "ALTER TABLE provider_key_group_keys ADD COLUMN IF NOT EXISTS priority INTEGER",
-    ] {
-        execute_sql(manager, sql).await?;
-    }
-    Ok(())
-}
-
-async fn seed_provider_member_priorities(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    execute_sql(
-        manager,
-        "UPDATE provider_group_providers AS membership \
-         SET priority = providers.priority \
-         FROM providers \
-         WHERE membership.provider_id = providers.id AND membership.priority IS NULL",
-    )
-    .await
+    execute_sql(manager, "ALTER TABLE provider_key_group_keys ADD COLUMN IF NOT EXISTS priority INTEGER").await
 }
 
 async fn seed_key_member_priorities(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
@@ -52,13 +34,7 @@ async fn seed_key_member_priorities(manager: &SchemaManager<'_>) -> Result<(), D
 }
 
 async fn enforce_priority_columns(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    for sql in [
-        "ALTER TABLE provider_group_providers ALTER COLUMN priority SET NOT NULL",
-        "ALTER TABLE provider_key_group_keys ALTER COLUMN priority SET NOT NULL",
-    ] {
-        execute_sql(manager, sql).await?;
-    }
-    Ok(())
+    execute_sql(manager, "ALTER TABLE provider_key_group_keys ALTER COLUMN priority SET NOT NULL").await
 }
 
 async fn execute_sql(manager: &SchemaManager<'_>, sql: &str) -> Result<(), DbErr> {

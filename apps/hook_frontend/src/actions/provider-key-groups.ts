@@ -2,15 +2,11 @@
 
 import type { ApiEnvelope } from 'src/types/rbac';
 import type {
-  ProviderGroup,
   ProviderKeyGroup,
-  ProviderGroupCreate,
-  ProviderGroupUpdate,
   ProviderKeyGroupCreate,
   ProviderKeyGroupUpdate,
-  ProviderGroupListResponse,
   ProviderKeyGroupListResponse,
-} from 'src/types/provider-group';
+} from 'src/types/provider-key-group';
 
 import { useMemo } from 'react';
 import useSWR, { mutate } from 'swr';
@@ -19,7 +15,7 @@ import axios, { fetcher, endpoints } from 'src/lib/axios';
 
 import { requireApiData } from './rbac';
 
-export type ProviderGroupFilters = {
+export type ProviderKeyGroupFilters = {
   search?: string;
 };
 
@@ -28,22 +24,7 @@ const swrOptions = {
   revalidateOnFocus: false,
 };
 
-export function useProviderGroups(page: number, pageSize: number, filters: ProviderGroupFilters = {}) {
-  const key = [endpoints.adminProviders.groups, { params: queryParams(page, pageSize, filters) }] as const;
-  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
-    ApiEnvelope<ProviderGroupListResponse>
-  >(key, fetcher, swrOptions);
-
-  return useMemo(() => groupListState(data, isLoading, error, isValidating, revalidate), [
-    data,
-    error,
-    isLoading,
-    isValidating,
-    revalidate,
-  ]);
-}
-
-export function useProviderKeyGroups(page: number, pageSize: number, filters: ProviderGroupFilters = {}) {
+export function useProviderKeyGroups(page: number, pageSize: number, filters: ProviderKeyGroupFilters = {}) {
   const key = [endpoints.adminProviders.keyGroups, { params: queryParams(page, pageSize, filters) }] as const;
   const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
     ApiEnvelope<ProviderKeyGroupListResponse>
@@ -56,28 +37,6 @@ export function useProviderKeyGroups(page: number, pageSize: number, filters: Pr
     isValidating,
     revalidate,
   ]);
-}
-
-export async function createProviderGroup(payload: ProviderGroupCreate) {
-  const group = await requestData<ProviderGroup>(axios.post(endpoints.adminProviders.groups, payload));
-  await mutateProviderGroups();
-  await mutateBillingGroups();
-  return group;
-}
-
-export async function updateProviderGroup(id: string, payload: ProviderGroupUpdate) {
-  const group = await requestData<ProviderGroup>(
-    axios.patch(endpoints.adminProviders.groupById(id), payload)
-  );
-  await mutateProviderGroups();
-  await mutateBillingGroups();
-  return group;
-}
-
-export async function deleteProviderGroup(id: string) {
-  await requestSuccess(axios.delete(endpoints.adminProviders.groupById(id)));
-  await mutateProviderGroups();
-  await mutateBillingGroups();
 }
 
 export async function createProviderKeyGroup(payload: ProviderKeyGroupCreate) {
@@ -102,10 +61,6 @@ export async function deleteProviderKeyGroup(id: string) {
   await requestSuccess(axios.delete(endpoints.adminProviders.keyGroupById(id)));
   await mutateProviderKeyGroups();
   await mutateBillingGroups();
-}
-
-export async function mutateProviderGroups() {
-  await mutate((key) => isProviderGroupKey(key));
 }
 
 export async function mutateProviderKeyGroups() {
@@ -143,12 +98,8 @@ async function requestSuccess(request: Promise<{ data: ApiEnvelope<unknown> }>) 
   }
 }
 
-function queryParams(page: number, pageSize: number, filters: ProviderGroupFilters) {
+function queryParams(page: number, pageSize: number, filters: ProviderKeyGroupFilters) {
   return { skip: page * pageSize, limit: pageSize, ...filters };
-}
-
-function isProviderGroupKey(key: unknown) {
-  return key === endpoints.adminProviders.groups || isEndpointArrayKey(key, endpoints.adminProviders.groups);
 }
 
 function isProviderKeyGroupKey(key: unknown) {

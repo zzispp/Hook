@@ -130,7 +130,6 @@ export type ProviderQuickImportSelectedToken = {
 };
 
 export type ProviderQuickImportProviderConfig = {
-  provider_group_id?: string | null;
   max_retries?: number | null;
   request_timeout_seconds?: number | null;
   stream_first_byte_timeout_seconds?: number | null;

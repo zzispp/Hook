@@ -193,7 +193,6 @@ export function useProviderCooldowns(
 export async function createProvider(payload: ProviderCreate) {
   const provider = await requestData<Provider>(axios.post(endpoints.adminProviders.list, payload));
   await mutateProviders();
-  await mutateProviderGroups();
   return provider;
 }
 
@@ -208,7 +207,6 @@ export async function commitProviderQuickImport(payload: ProviderQuickImportComm
     axios.post(endpoints.adminProviders.quickImportCommit, payload)
   );
   await mutateProviders();
-  await mutateProviderGroups();
   await mutateProviderKeyGroups();
   await mutateProviderChildren(response.provider.id);
   return response;
@@ -240,7 +238,6 @@ export async function updateProvider(id: string, payload: ProviderUpdate) {
 export async function deleteProvider(id: string) {
   await requestSuccess(axios.delete(endpoints.adminProviders.byId(id)));
   await mutateProviders();
-  await mutateProviderGroups();
   await mutateProviderKeyGroups();
   await mutateProviderCooldowns();
 }
@@ -433,10 +430,6 @@ async function mutateProviders() {
 
 async function mutateProviderCooldowns() {
   await mutate((key) => isEndpointKey(key, endpoints.adminProviders.cooldowns));
-}
-
-async function mutateProviderGroups() {
-  await mutate((key) => isEndpointKey(key, endpoints.adminProviders.groups));
 }
 
 async function mutateProviderKeyGroups() {

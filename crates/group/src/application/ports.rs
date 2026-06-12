@@ -23,7 +23,6 @@ pub trait GroupModelCatalog: Send + Sync + 'static {
 
 #[async_trait]
 pub trait GroupProviderCatalog: Send + Sync + 'static {
-    async fn provider_group_exists(&self, id: &str) -> GroupResult<bool>;
     async fn provider_key_group_exists(&self, id: &str) -> GroupResult<bool>;
 }
 

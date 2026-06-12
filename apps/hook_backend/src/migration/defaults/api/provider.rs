@@ -68,36 +68,6 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "删除提供商",
     },
     ApiDefinition {
-        code: "provider_groups_read",
-        method: "GET",
-        path_pattern: "/api/admin/provider-groups",
-        name: "提供商分组列表",
-    },
-    ApiDefinition {
-        code: "provider_groups_create",
-        method: "POST",
-        path_pattern: "/api/admin/provider-groups",
-        name: "创建提供商分组",
-    },
-    ApiDefinition {
-        code: "provider_groups_detail",
-        method: "GET",
-        path_pattern: "/api/admin/provider-groups/{id}",
-        name: "提供商分组详情",
-    },
-    ApiDefinition {
-        code: "provider_groups_update",
-        method: "PATCH",
-        path_pattern: "/api/admin/provider-groups/{id}",
-        name: "更新提供商分组",
-    },
-    ApiDefinition {
-        code: "provider_groups_delete",
-        method: "DELETE",
-        path_pattern: "/api/admin/provider-groups/{id}",
-        name: "删除提供商分组",
-    },
-    ApiDefinition {
         code: "provider_key_groups_read",
         method: "GET",
         path_pattern: "/api/admin/provider-key-groups",

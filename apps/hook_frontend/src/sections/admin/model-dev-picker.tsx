@@ -1,7 +1,7 @@
 'use client';
 
 import type { ModelsDevModelItem } from 'src/types/model';
-import type { ProviderGroup } from './model-dev-picker-utils';
+import type { ProviderBucket } from './model-dev-picker-utils';
 
 import { useState } from 'react';
 
@@ -28,7 +28,7 @@ import {
   countModels,
   toggleProvider,
   providerLogoUrl,
-  useProviderGroups,
+  useProviderBuckets,
 } from './model-dev-picker-utils';
 
 // ----------------------------------------------------------------------
@@ -55,7 +55,7 @@ export function ModelDevPicker({
   onRetry,
 }: Props) {
   const { t } = useTranslate('admin');
-  const groups = useProviderGroups(items, query);
+  const groups = useProviderBuckets(items, query);
   const modelCount = countModels(groups);
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
 
@@ -119,7 +119,7 @@ function ProviderSection({
   onToggle,
   onSelect,
 }: {
-  group: ProviderGroup;
+  group: ProviderBucket;
   expanded: boolean;
   selected?: ModelsDevModelItem | null;
   onToggle: () => void;

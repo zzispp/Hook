@@ -79,7 +79,6 @@ fn provider_input() -> ProviderRecordInput {
         name: "Provider A".into(),
         provider_type: "custom".into(),
         provider_origin: ProviderOrigin::Manual,
-        provider_group_id: None,
         max_retries: Some(2),
         request_timeout_seconds: Some(300.0),
         stream_first_byte_timeout_seconds: Some(60.0),

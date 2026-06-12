@@ -1,8 +1,7 @@
 'use client';
 
 import type { Provider, ProviderApiKey } from 'src/types/provider';
-import type { MemberOption, ProviderGroupKind } from './provider-groups-utils';
-import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
+import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
@@ -22,15 +21,11 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { TableLoadingRows, ManagementTableHead } from './shared';
 import {
   memberLabels,
-  groupMemberIds,
-  providerMemberOptions,
   providerKeyMemberOptions,
-} from './provider-groups-utils';
+  providerKeyGroupMemberIds,
+} from './provider-key-groups-utils';
 
-type GroupRow = ProviderGroup | ProviderKeyGroup;
-
-export function ProviderGroupsTable({
-  kind,
+export function ProviderKeyGroupsTable({
   rows,
   loading,
   providers,
@@ -38,17 +33,16 @@ export function ProviderGroupsTable({
   onEdit,
   onDelete,
 }: {
-  kind: ProviderGroupKind;
-  rows: GroupRow[];
+  rows: ProviderKeyGroup[];
   loading: boolean;
   providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[];
   keysByProvider: Record<string, ProviderApiKey[]>;
-  onEdit: (group: GroupRow) => void;
-  onDelete: (group: GroupRow) => void;
+  onEdit: (group: ProviderKeyGroup) => void;
+  onDelete: (group: ProviderKeyGroup) => void;
 }) {
   const { t } = useTranslate('admin');
-  const tableHead = groupTableHead(t, kind);
-  const memberOptions = groupMemberOptions(kind, providers, keysByProvider);
+  const tableHead = keyGroupTableHead(t);
+  const memberOptions = providerKeyMemberOptions(providers, keysByProvider);
 
   return (
     <Scrollbar>
@@ -59,9 +53,8 @@ export function ProviderGroupsTable({
             <TableLoadingRows head={tableHead} />
           ) : (
             rows.map((row) => (
-              <ProviderGroupTableRow
+              <ProviderKeyGroupTableRow
                 key={row.id}
-                kind={kind}
                 row={row}
                 memberOptions={memberOptions}
                 onEdit={onEdit}
@@ -76,21 +69,19 @@ export function ProviderGroupsTable({
   );
 }
 
-function ProviderGroupTableRow({
-  kind,
+function ProviderKeyGroupTableRow({
   row,
   memberOptions,
   onEdit,
   onDelete,
 }: {
-  kind: ProviderGroupKind;
-  row: GroupRow;
-  memberOptions: MemberOption[];
-  onEdit: (group: GroupRow) => void;
-  onDelete: (group: GroupRow) => void;
+  row: ProviderKeyGroup;
+  memberOptions: { id: string; label: string }[];
+  onEdit: (group: ProviderKeyGroup) => void;
+  onDelete: (group: ProviderKeyGroup) => void;
 }) {
   const { t } = useTranslate('admin');
-  const memberNames = memberLabels(groupMemberIds(row, kind), memberOptions);
+  const memberNames = memberLabels(providerKeyGroupMemberIds(row), memberOptions);
 
   return (
     <TableRow hover>
@@ -121,23 +112,10 @@ function ProviderGroupTableRow({
   );
 }
 
-function groupMemberOptions(
-  kind: ProviderGroupKind,
-  providers: Pick<Provider, 'id' | 'name' | 'provider_type'>[],
-  keysByProvider: Record<string, ProviderApiKey[]>
-) {
-  return kind === 'provider'
-    ? providerMemberOptions(providers)
-    : providerKeyMemberOptions(providers, keysByProvider);
-}
-
-function groupTableHead(
-  t: (key: string, options?: Record<string, unknown>) => string,
-  kind: ProviderGroupKind
-) {
+function keyGroupTableHead(t: (key: string, options?: Record<string, unknown>) => string) {
   return [
-    { id: 'name', label: t(kind === 'provider' ? 'providers.providerGroups' : 'providers.providerKeyGroups') },
-    { id: 'members', label: t(kind === 'provider' ? 'providers.providerGroupMembers' : 'providers.providerKeyGroupMembers') },
+    { id: 'name', label: t('providers.providerKeyGroups') },
+    { id: 'members', label: t('providers.providerKeyGroupMembers') },
     { id: 'sort_order', label: t('common.sortOrder'), width: 120 },
     { id: 'updated_at', label: t('fields.updatedAt'), width: 200 },
     { id: '', width: 96 },

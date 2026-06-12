@@ -102,8 +102,6 @@ pub struct ProviderQuickImportModelMappingInput {
 #[derive(Clone, Debug, Default, PartialEq, Deserialize)]
 pub struct ProviderQuickImportProviderConfig {
     #[serde(default)]
-    pub provider_group_id: Option<String>,
-    #[serde(default)]
     pub max_retries: Option<i32>,
     #[serde(default)]
     pub request_timeout_seconds: Option<f64>,

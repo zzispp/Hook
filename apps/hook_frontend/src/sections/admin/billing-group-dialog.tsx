@@ -2,9 +2,9 @@
 
 import type { UserGroup } from 'src/types/user-group';
 import type { GlobalModelResponse } from 'src/types/model';
+import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 import type { useGroupDialog } from './billing-group-management-state';
 import type { BillingAccessMode } from './billing-group-management-utils';
-import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
 
 import Checkbox from '@mui/material/Checkbox';
 import MenuItem from '@mui/material/MenuItem';
@@ -19,18 +19,14 @@ import { SwitchRow, ManagementDialog } from './shared';
 import { userGroupSelectionLabel } from './user-group-utils';
 import { BillingGroupBasicFields } from './billing-group-basic-fields';
 
-type NamedGroup = ProviderGroup | ProviderKeyGroup;
-
 export function BillingGroupDialog({
   dialog,
   models,
-  providerGroups,
   providerKeyGroups,
   userGroups,
 }: {
   dialog: ReturnType<typeof useGroupDialog>;
   models: Pick<GlobalModelResponse, 'id' | 'name' | 'display_name'>[];
-  providerGroups: ProviderGroup[];
   providerKeyGroups: ProviderKeyGroup[];
   userGroups: UserGroup[];
 }) {
@@ -47,11 +43,7 @@ export function BillingGroupDialog({
       <BillingGroupBasicFields dialog={dialog} />
       <ModelSelect dialog={dialog} models={models} />
       <AccessModeControl dialog={dialog} />
-      <AccessGroupSelect
-        dialog={dialog}
-        providerGroups={providerGroups}
-        providerKeyGroups={providerKeyGroups}
-      />
+      <AccessGroupSelect dialog={dialog} providerKeyGroups={providerKeyGroups} />
       <UserGroupSelect dialog={dialog} userGroups={userGroups} />
       <SwitchRow
         checked={dialog.form.is_active}
@@ -73,7 +65,6 @@ function AccessModeControl({ dialog }: { dialog: ReturnType<typeof useGroupDialo
       onChange={(_event, accessMode) => accessMode && setAccessMode(dialog, accessMode)}
     >
       <ToggleButton value="unrestricted">{t('billingGroups.accessModeUnrestricted')}</ToggleButton>
-      <ToggleButton value="provider_groups">{t('billingGroups.accessModeProviderGroups')}</ToggleButton>
       <ToggleButton value="provider_key_groups">{t('billingGroups.accessModeProviderKeyGroups')}</ToggleButton>
     </ToggleButtonGroup>
   );
@@ -81,24 +72,11 @@ function AccessModeControl({ dialog }: { dialog: ReturnType<typeof useGroupDialo
 
 function AccessGroupSelect({
   dialog,
-  providerGroups,
   providerKeyGroups,
 }: {
   dialog: ReturnType<typeof useGroupDialog>;
-  providerGroups: ProviderGroup[];
   providerKeyGroups: ProviderKeyGroup[];
 }) {
-  if (dialog.form.access_mode === 'provider_groups') {
-    return (
-      <GroupSelect
-        labelKey="fields.allowedProviderGroups"
-        helperKey="helper.billingProviderGroupAccess"
-        ids={dialog.form.allowed_provider_group_ids}
-        groups={providerGroups}
-        onChange={(ids) => dialog.setForm((form) => ({ ...form, allowed_provider_group_ids: ids }))}
-      />
-    );
-  }
   if (dialog.form.access_mode === 'provider_key_groups') {
     return (
       <GroupSelect
@@ -123,7 +101,7 @@ function GroupSelect({
   labelKey: string;
   helperKey: string;
   ids: string[];
-  groups: NamedGroup[];
+  groups: ProviderKeyGroup[];
   onChange: (ids: string[]) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -227,7 +205,6 @@ function setAccessMode(dialog: ReturnType<typeof useGroupDialog>, accessMode: Bi
   dialog.setForm((form) => ({
     ...form,
     access_mode: accessMode,
-    allowed_provider_group_ids: accessMode === 'provider_groups' ? form.allowed_provider_group_ids : [],
     allowed_provider_key_group_ids: accessMode === 'provider_key_groups' ? form.allowed_provider_key_group_ids : [],
   }));
 }
@@ -249,7 +226,7 @@ function modelSelectionLabel(
 
 function groupSelectionLabel(
   ids: string[],
-  groups: NamedGroup[],
+  groups: ProviderKeyGroup[],
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
   if (ids.length === 0) return t('billingGroups.noGroupSelected');

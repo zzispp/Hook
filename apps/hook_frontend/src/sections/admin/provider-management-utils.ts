@@ -11,8 +11,6 @@ import type {
   ProviderModelBindingCreate,
 } from 'src/types/provider';
 
-type ProviderConfigPayload = Omit<ProviderCreate, 'provider_group_id'>;
-
 export const PROVIDER_TYPE_OPTIONS: ProviderType[] = ['custom'];
 export const DEFAULT_PROVIDER_MAX_RETRIES = 2;
 export const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS = 300;
@@ -42,7 +40,6 @@ const API_FORMAT_DEFAULT_PATHS: Record<string, string> = {
 export type ProviderForm = {
   name: string;
   provider_type: ProviderType;
-  provider_group_id: string;
   max_retries: string;
   request_timeout_seconds: string;
   stream_first_byte_timeout_seconds: string;
@@ -75,7 +72,6 @@ export type ProviderModelForm = {
 export const DEFAULT_PROVIDER_FORM: ProviderForm = {
   name: '',
   provider_type: 'custom',
-  provider_group_id: '',
   max_retries: '',
   request_timeout_seconds: '',
   stream_first_byte_timeout_seconds: '',
@@ -109,7 +105,6 @@ export function providerFormFromProvider(provider: Provider): ProviderForm {
   return {
     name: provider.name,
     provider_type: provider.provider_type,
-    provider_group_id: '',
     max_retries: optionalNumberText(provider.max_retries),
     request_timeout_seconds: optionalNumberText(provider.request_timeout_seconds),
     stream_first_byte_timeout_seconds: optionalNumberText(
@@ -124,17 +119,14 @@ export function providerFormFromProvider(provider: Provider): ProviderForm {
 }
 
 export function providerPayload(form: ProviderForm): ProviderCreate {
-  return {
-    ...providerConfigPayload(form),
-    provider_group_id: trimmedOrNull(form.provider_group_id),
-  };
+  return providerConfigPayload(form);
 }
 
 export function providerUpdatePayload(form: ProviderForm): ProviderUpdate {
   return providerConfigPayload(form);
 }
 
-function providerConfigPayload(form: ProviderForm): ProviderConfigPayload {
+function providerConfigPayload(form: ProviderForm): ProviderCreate {
   return {
     name: form.name,
     provider_type: form.provider_type,

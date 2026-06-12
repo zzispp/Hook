@@ -13,8 +13,8 @@ import { useBillingGroups } from 'src/actions/groups';
 import { useTranslate } from 'src/locales/use-locales';
 import { useUserGroups } from 'src/actions/user-groups';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useProviderKeyGroups } from 'src/actions/provider-key-groups';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
-import { useProviderGroups, useProviderKeyGroups } from 'src/actions/provider-groups';
 
 import { useTable } from 'src/components/table';
 import { ConfirmDialog } from 'src/components/custom-dialog';
@@ -51,7 +51,6 @@ export function BillingGroupManagementView() {
         <BillingGroupTable
           rows={state.groups.items}
           userGroups={state.userGroups.items}
-          providerGroups={state.providerGroups.items}
           providerKeyGroups={state.providerKeyGroups.items}
           total={state.groups.total}
           loading={state.groups.isLoading}
@@ -73,7 +72,6 @@ function useBillingGroupManagementPage() {
   const [detailTarget, setDetailTarget] = useState<BillingGroup | null>(null);
   const groups = useBillingGroups(table.page, table.rowsPerPage, toModelFilters(filters));
   const models = useGlobalModels(0, 1000);
-  const providerGroups = useProviderGroups(0, 1000);
   const providerKeyGroups = useProviderKeyGroups(0, 1000);
   const userGroups = useUserGroups(0, USER_GROUP_MAX_PAGE_SIZE);
   const dialog = useGroupDialog(t);
@@ -93,7 +91,6 @@ function useBillingGroupManagementPage() {
     filters,
     groups,
     models,
-    providerGroups,
     providerKeyGroups,
     userGroups,
     userGroupOptions,
@@ -111,7 +108,6 @@ function BillingGroupDialogs({ state }: { state: ReturnType<typeof useBillingGro
       <BillingGroupDetailDialog
         group={state.detailTarget}
         models={state.models.items}
-        providerGroups={state.providerGroups.items}
         providerKeyGroups={state.providerKeyGroups.items}
         userGroups={state.userGroups.items}
         open={!!state.detailTarget}
@@ -120,7 +116,6 @@ function BillingGroupDialogs({ state }: { state: ReturnType<typeof useBillingGro
       <BillingGroupDialog
         dialog={state.dialog}
         models={state.models.items}
-        providerGroups={state.providerGroups.items}
         providerKeyGroups={state.providerKeyGroups.items}
         userGroups={state.userGroupOptions}
       />

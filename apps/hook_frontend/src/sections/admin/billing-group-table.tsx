@@ -2,8 +2,8 @@
 
 import type { BillingGroup } from 'src/types/group';
 import type { UserGroup } from 'src/types/user-group';
+import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
-import type { ProviderGroup, ProviderKeyGroup } from 'src/types/provider-group';
 
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
@@ -32,7 +32,6 @@ import {
 export function BillingGroupTable({
   rows,
   userGroups,
-  providerGroups,
   providerKeyGroups,
   total,
   loading,
@@ -43,7 +42,6 @@ export function BillingGroupTable({
 }: {
   rows: BillingGroup[];
   userGroups: UserGroup[];
-  providerGroups: ProviderGroup[];
   providerKeyGroups: ProviderKeyGroup[];
   total: number;
   loading: boolean;
@@ -70,7 +68,6 @@ export function BillingGroupTable({
                     key={row.id}
                     row={row}
                     userGroups={userGroups}
-                    providerGroups={providerGroups}
                     providerKeyGroups={providerKeyGroups}
                     onView={onView}
                     onEdit={onEdit}
@@ -99,7 +96,6 @@ export function BillingGroupTable({
 function BillingGroupTableRow({
   row,
   userGroups,
-  providerGroups,
   providerKeyGroups,
   onView,
   onEdit,
@@ -107,7 +103,6 @@ function BillingGroupTableRow({
 }: {
   row: BillingGroup;
   userGroups: UserGroup[];
-  providerGroups: ProviderGroup[];
   providerKeyGroups: ProviderKeyGroup[];
   onView: (group: BillingGroup) => void;
   onEdit: (group: BillingGroup) => void;
@@ -126,7 +121,7 @@ function BillingGroupTableRow({
       <TableCell>{row.name}</TableCell>
       <TableCell>{row.billing_multiplier}</TableCell>
       <TableCell>{modelAccessText(row, t)}</TableCell>
-      <TableCell>{accessScopeText(row, providerGroups, providerKeyGroups, t)}</TableCell>
+      <TableCell>{accessScopeText(row, providerKeyGroups, t)}</TableCell>
       <TableCell>{userGroupSelectionLabel(row.visible_user_group_codes, userGroups, t)}</TableCell>
       <TableCell><EnabledLabel enabled={row.is_active} /></TableCell>
       <TableCell>{row.is_system ? t('common.system') : t('common.custom')}</TableCell>
@@ -217,22 +212,18 @@ function modelAccessText(group: BillingGroup, t: (key: string, options?: Record<
 
 function accessScopeText(
   group: BillingGroup,
-  providerGroups: ProviderGroup[],
   providerKeyGroups: ProviderKeyGroup[],
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
   if (group.allowed_provider_key_group_ids.length > 0) {
     return groupNamesText(group.allowed_provider_key_group_ids, providerKeyGroups, t);
   }
-  if (group.allowed_provider_group_ids.length > 0) {
-    return groupNamesText(group.allowed_provider_group_ids, providerGroups, t);
-  }
   return t('billingGroups.accessModeUnrestricted');
 }
 
 function groupNamesText(
   ids: string[],
-  groups: Array<ProviderGroup | ProviderKeyGroup>,
+  groups: ProviderKeyGroup[],
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
   if (ids.length > 2) return t('billingGroups.selectedGroupCount', { count: ids.length });

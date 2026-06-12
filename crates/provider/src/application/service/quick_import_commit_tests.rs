@@ -187,7 +187,6 @@ fn quick_import_create_imports_only_mapped_token_models() {
 #[test]
 fn provider_create_uses_quick_import_provider_config() {
     let config = ProviderQuickImportProviderConfig {
-        provider_group_id: Some("group-1".into()),
         max_retries: Some(5),
         request_timeout_seconds: Some(120.0),
         stream_first_byte_timeout_seconds: Some(30.0),
@@ -201,7 +200,6 @@ fn provider_create_uses_quick_import_provider_config() {
     let provider = provider_create(" Provider A ", &config);
 
     assert_eq!(provider.name, "Provider A");
-    assert_eq!(provider.provider_group_id, Some("group-1".into()));
     assert_eq!(provider.max_retries, Some(5));
     assert_eq!(provider.request_timeout_seconds, Some(120.0));
     assert_eq!(provider.stream_first_byte_timeout_seconds, Some(30.0));

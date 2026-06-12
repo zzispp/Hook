@@ -25,7 +25,7 @@ fn classifies_complete_marked_baseline_as_applied() {
 #[test]
 fn classifies_marked_baseline_missing_only_additive_tables_as_applied() {
     assert_eq!(
-        classify_baseline_state(5, 7, true, &["provider_groups", "billing_group_provider_groups"]),
+        classify_baseline_state(5, 7, true, &["provider_key_groups", "billing_group_provider_key_groups"]),
         BaselineState::Applied
     );
 }
@@ -34,8 +34,8 @@ fn classifies_marked_baseline_missing_only_additive_tables_as_applied() {
 fn classifies_marked_baseline_missing_quick_import_sync_tables_as_applied() {
     assert_eq!(
         classify_baseline_state(
-            63,
-            67,
+            60,
+            64,
             true,
             &[
                 "provider_quick_import_sources",

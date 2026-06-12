@@ -3,8 +3,8 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use types::model::PatchField;
 use types::provider::{
-    ProviderGroupMemberInput, ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, ProviderOrigin,
-    ProviderQuickImportSyncConfig, ProviderQuickImportSyncStatus, RequestUpstreamCost,
+    ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, ProviderOrigin, ProviderQuickImportSyncConfig,
+    ProviderQuickImportSyncStatus, RequestUpstreamCost,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -12,7 +12,6 @@ pub struct ProviderRecordInput {
     pub name: String,
     pub provider_type: String,
     pub provider_origin: ProviderOrigin,
-    pub provider_group_id: Option<String>,
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
@@ -116,22 +115,6 @@ pub struct ProviderApiKeyPriorityRecordPatch {
     pub provider_id: String,
     pub key_id: String,
     pub global_priority_by_format: BTreeMap<String, i32>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProviderGroupRecordInput {
-    pub name: String,
-    pub description: Option<String>,
-    pub sort_order: i64,
-    pub provider_members: Vec<ProviderGroupMemberInput>,
-}
-
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct ProviderGroupRecordPatch {
-    pub name: Option<String>,
-    pub description: PatchField<String>,
-    pub sort_order: Option<i64>,
-    pub provider_members: PatchField<Vec<ProviderGroupMemberInput>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

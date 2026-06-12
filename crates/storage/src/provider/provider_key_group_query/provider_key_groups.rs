@@ -1,6 +1,6 @@
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ExprTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
 use types::model::PatchField;
-use types::provider::{ProviderGroupListRequest, ProviderKeyGroup, ProviderKeyGroupListResponse};
+use types::provider::{ProviderKeyGroup, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse};
 
 use crate::{StorageError, StorageResult};
 
@@ -49,7 +49,7 @@ pub async fn find_provider_key_group(store: &ProviderStore, id_or_name: &str) ->
     }
 }
 
-pub async fn list_provider_key_groups(store: &ProviderStore, request: ProviderGroupListRequest) -> StorageResult<ProviderKeyGroupListResponse> {
+pub async fn list_provider_key_groups(store: &ProviderStore, request: ProviderKeyGroupListRequest) -> StorageResult<ProviderKeyGroupListResponse> {
     let records = filtered_provider_key_groups(store, request.clone()).await?;
     let total = records.len() as u64;
     let page = records.into_iter().skip(request.skip as usize).take(request.limit as usize).collect();
@@ -57,7 +57,7 @@ pub async fn list_provider_key_groups(store: &ProviderStore, request: ProviderGr
     Ok(ProviderKeyGroupListResponse { groups, total })
 }
 
-async fn filtered_provider_key_groups(store: &ProviderStore, request: ProviderGroupListRequest) -> StorageResult<Vec<ProviderKeyGroupRecord>> {
+async fn filtered_provider_key_groups(store: &ProviderStore, request: ProviderKeyGroupListRequest) -> StorageResult<Vec<ProviderKeyGroupRecord>> {
     let mut query = provider_key_groups::Entity::find();
     if let Some(search) = request.search.filter(|value| !value.is_empty()) {
         query = query.filter(

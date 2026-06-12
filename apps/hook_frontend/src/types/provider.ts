@@ -88,7 +88,6 @@ export type ProviderCooldownListResponse = {
 export type ProviderCreate = {
   name: string;
   provider_type: ProviderType;
-  provider_group_id?: string | null;
   max_retries?: number | null;
   request_timeout_seconds?: number | null;
   stream_first_byte_timeout_seconds?: number | null;
@@ -99,7 +98,7 @@ export type ProviderCreate = {
   is_active?: boolean;
 };
 
-export type ProviderUpdate = Partial<Omit<ProviderCreate, 'provider_group_id'>>;
+export type ProviderUpdate = Partial<ProviderCreate>;
 
 export type BodyRuleConditionOp =
   | 'eq'

@@ -1,7 +1,6 @@
 'use client';
 
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
-import type { ProviderGroup } from 'src/types/provider-group';
 
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
@@ -23,15 +22,14 @@ import {
 
 type Props = {
   form: QuickImportFormState;
-  groups: ProviderGroup[];
   setForm: Dispatch<SetStateAction<QuickImportFormState>>;
 };
 
-export function ProviderQuickImportSourceStep({ form, groups, setForm }: Props) {
+export function ProviderQuickImportSourceStep({ form, setForm }: Props) {
   return (
     <Stack spacing={2.75} divider={<Divider flexItem />}>
       <QuickImportSection titleKey="providers.quickImportProviderSection">
-        <ProviderIdentityFields form={form} groups={groups} setForm={setForm} />
+        <ProviderIdentityFields form={form} setForm={setForm} />
       </QuickImportSection>
       <QuickImportSection
         titleKey="providers.quickImportSourceSection"
@@ -83,30 +81,17 @@ function QuickImportSection({
   );
 }
 
-function ProviderIdentityFields({ form, groups, setForm }: Props) {
+function ProviderIdentityFields({ form, setForm }: Props) {
   const { t } = useTranslate('admin');
 
   return (
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+    <Stack spacing={2}>
       <TextFieldRow
         required
         label={t('fields.providerName')}
         value={form.providerName}
         onChange={(value) => setForm((current) => ({ ...current, providerName: value }))}
       />
-      <TextFieldRow
-        select
-        label={t('providers.providerGroup')}
-        value={form.provider_group_id}
-        onChange={(value) => setForm((current) => ({ ...current, provider_group_id: value }))}
-      >
-        <MenuItem value="">{t('providers.unclassifiedProviderGroup')}</MenuItem>
-        {groups.map((group) => (
-          <MenuItem key={group.id} value={group.id}>
-            {group.name}
-          </MenuItem>
-        ))}
-      </TextFieldRow>
     </Stack>
   );
 }

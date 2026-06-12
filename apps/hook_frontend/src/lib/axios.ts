@@ -208,8 +208,6 @@ export const endpoints = {
       `/api/admin/providers/${id}/quick-import/append/commit`,
     quickImportSync: (id: string) => `/api/admin/providers/${id}/quick-import-sync`,
     byId: (id: string) => `/api/admin/providers/${id}`,
-    groups: '/api/admin/provider-groups',
-    groupById: (id: string) => `/api/admin/provider-groups/${id}`,
     keyGroups: '/api/admin/provider-key-groups',
     keyGroupById: (id: string) => `/api/admin/provider-key-groups/${id}`,
     cooldowns: '/api/admin/provider-cooldowns',

@@ -10,15 +10,12 @@ use super::baseline;
 const BASELINE_VERSION: &str = "m20260605_000001_initial_stable_baseline";
 const MIGRATION_TABLE: &str = "seaql_migrations";
 const ADDITIVE_BASELINE_TABLES: &[&str] = &[
-    "provider_groups",
-    "provider_group_providers",
     "provider_key_groups",
     "provider_key_group_keys",
     "provider_quick_import_sources",
     "provider_quick_import_keys",
     "provider_quick_import_key_models",
     "provider_quick_import_sync_events",
-    "billing_group_provider_groups",
     "billing_group_provider_key_groups",
     "dashboard_request_metric_buckets",
     "dashboard_latency_histogram_buckets",
@@ -53,8 +50,6 @@ const BASELINE_TABLES: &[&str] = &[
     "providers",
     "provider_endpoints",
     "provider_api_keys",
-    "provider_groups",
-    "provider_group_providers",
     "provider_key_groups",
     "provider_key_group_keys",
     "provider_models",
@@ -69,7 +64,6 @@ const BASELINE_TABLES: &[&str] = &[
     "provider_cooldown_events",
     "billing_group_providers",
     "billing_group_provider_keys",
-    "billing_group_provider_groups",
     "billing_group_provider_key_groups",
     "billing_group_user_groups",
     "system_settings",
@@ -150,15 +144,17 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::dashboard_period_i18n_additive::apply(manager).await?;
     super::request_record_partitioning_additive::apply(manager).await?;
     super::dashboard_request_metrics_additive::apply(manager).await?;
-    super::provider_group_member_priority_additive::apply(manager).await?;
+    super::provider_key_group_member_priority_additive::apply(manager).await?;
     super::provider_origin_additive::apply(manager).await?;
     super::provider_quick_import_sync_additive::apply(manager).await?;
     super::provider_quick_import_sync_controls_additive::apply(manager).await?;
-    super::recharge_order_paid_at_index_additive::apply(manager).await
+    super::recharge_order_paid_at_index_additive::apply(manager).await?;
+    super::provider_group_removal_destructive::apply(manager).await
 }
 
 async fn reset(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     baseline::drop_tables(manager).await?;
+    super::provider_group_removal_destructive::drop_legacy_tables(manager).await?;
     manager
         .drop_table(Table::drop().table(Alias::new(MIGRATION_TABLE)).if_exists().to_owned())
         .await

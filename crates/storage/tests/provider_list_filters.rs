@@ -4,7 +4,7 @@ use storage::{
     model::provider_models,
     provider::{
         ProviderStore,
-        record::{provider_endpoints, provider_group_providers, provider_groups, providers},
+        record::{provider_endpoints, providers},
     },
 };
 use types::provider::ProviderListRequest;
@@ -16,8 +16,6 @@ async fn provider_list_filters_by_status_search_format_and_model() {
             .append_query_results([provider_records()])
             .append_query_results([endpoint_records()])
             .append_query_results([provider_model_records()])
-            .append_query_results([Vec::<provider_groups::Model>::new()])
-            .append_query_results([Vec::<provider_group_providers::Model>::new()])
             .into_connection(),
     );
     let store = ProviderStore::new(database);
@@ -39,12 +37,10 @@ async fn provider_list_filters_by_status_search_format_and_model() {
 }
 
 #[tokio::test]
-async fn provider_list_paginates_after_group_and_priority_sorting() {
+async fn provider_list_paginates_after_priority_sorting() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([grouped_provider_records()])
-            .append_query_results([provider_group_records()])
-            .append_query_results([provider_group_member_records()])
             .into_connection(),
     );
     let store = ProviderStore::new(database);
@@ -59,7 +55,7 @@ async fn provider_list_paginates_after_group_and_priority_sorting() {
 
     let ids = response.providers.iter().map(|provider| provider.id.as_str()).collect::<Vec<_>>();
     assert_eq!(response.total, 5);
-    assert_eq!(ids, ["group-one-fast", "group-one-slow", "group-two-fast"]);
+    assert_eq!(ids, ["group-two-fast", "unbound-fast", "group-one-fast"]);
 }
 
 fn provider_records() -> Vec<providers::Model> {
@@ -94,44 +90,6 @@ fn provider_record(id: &str, name: &str, is_active: bool, priority: i32) -> prov
         keep_priority_on_conversion: false,
         enable_format_conversion: true,
         is_active,
-        created_at: now(),
-        updated_at: now(),
-    }
-}
-
-fn provider_group_records() -> Vec<provider_groups::Model> {
-    vec![
-        provider_group_record("group-two", "Group Two", 2),
-        provider_group_record("group-one", "Group One", 1),
-    ]
-}
-
-fn provider_group_record(id: &str, name: &str, sort_order: i64) -> provider_groups::Model {
-    provider_groups::Model {
-        id: id.into(),
-        name: name.into(),
-        description: None,
-        sort_order,
-        created_at: now(),
-        updated_at: now(),
-    }
-}
-
-fn provider_group_member_records() -> Vec<provider_group_providers::Model> {
-    vec![
-        provider_group_member_record("group-two", "group-two-fast", 1),
-        provider_group_member_record("group-two", "group-two-slow", 9),
-        provider_group_member_record("group-one", "group-one-fast", 2),
-        provider_group_member_record("group-one", "group-one-slow", 5),
-    ]
-}
-
-fn provider_group_member_record(group_id: &str, provider_id: &str, priority: i32) -> provider_group_providers::Model {
-    provider_group_providers::Model {
-        id: format!("{group_id}-{provider_id}"),
-        provider_group_id: group_id.into(),
-        provider_id: provider_id.into(),
-        priority,
         created_at: now(),
         updated_at: now(),
     }
