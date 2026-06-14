@@ -1,12 +1,14 @@
+use std::collections::HashMap;
+
 use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait};
 use types::model::{GlobalModelListRequest, GlobalModelResponse, GlobalModelWithStats, ModelCatalogItem, ModelCatalogResponse};
 
 use crate::{Database, StorageError, StorageResult, json, usage_flush::UsageFlushApplyReport};
 
 use super::{
-    GlobalModelRecord, GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord, ModelRecord,
+    GlobalModelRecord, GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord, GlobalModelUserUsageRecord, ModelRecord,
     cleanup::{delete_model_bindings, delete_model_status_checks, prune_model_references},
-    record::{global_models, global_models::ActiveModel as GlobalModelActiveModel, provider_models},
+    record::{global_model_user_usage_counts, global_models, global_models::ActiveModel as GlobalModelActiveModel, provider_models},
     repository_helpers::{apply_global_model_patch, capabilities, description, record_matches, unique_provider_count},
     usage,
 };
@@ -106,6 +108,21 @@ impl ModelStore {
         Ok(types::model::GlobalModelListResponse { models, total })
     }
 
+    pub async fn list_user_global_models(&self, user_id: &str, request: GlobalModelListRequest) -> StorageResult<types::model::GlobalModelListResponse> {
+        let records = self.filtered_records(&request).await?;
+        let total = records.len() as u64;
+        let page = records.into_iter().skip(request.skip as usize).take(request.limit as usize).collect::<Vec<_>>();
+        let usage_counts = self.user_usage_counts(user_id, &page).await?;
+        let mut models = Vec::new();
+        for record in page {
+            let usage_count = *usage_counts.get(&record.id).unwrap_or(&0);
+            let mut model = self.to_response(record).await?;
+            model.usage_count = Some(usage_count);
+            models.push(model);
+        }
+        Ok(types::model::GlobalModelListResponse { models, total })
+    }
+
     pub async fn global_model_providers(&self, id: &str) -> StorageResult<types::model::GlobalModelProvidersResponse> {
         let global_model = self
             .find_global_model_record(self.database.connection(), id)
@@ -140,8 +157,13 @@ impl ModelStore {
         usage::record_usage_batch(self.database.connection(), inputs).await
     }
 
-    pub async fn record_usage_batch_once(&self, batch_id: &str, inputs: &[GlobalModelUsageRecord]) -> StorageResult<UsageFlushApplyReport> {
-        usage::record_usage_batch_once(self.database.connection(), batch_id, inputs).await
+    pub async fn record_usage_batch_once(
+        &self,
+        batch_id: &str,
+        inputs: &[GlobalModelUsageRecord],
+        user_inputs: &[GlobalModelUserUsageRecord],
+    ) -> StorageResult<UsageFlushApplyReport> {
+        usage::record_usage_batch_once(self.database.connection(), batch_id, inputs, user_inputs).await
     }
 }
 
@@ -191,6 +213,19 @@ impl ModelStore {
 
     async fn active_provider_count(&self, id: &str) -> StorageResult<u64> {
         Ok(unique_provider_count(self.models_for_global_model(id).await?))
+    }
+
+    async fn user_usage_counts(&self, user_id: &str, records: &[GlobalModelRecord]) -> StorageResult<HashMap<String, i64>> {
+        if records.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let ids = records.iter().map(|record| record.id.clone()).collect::<Vec<_>>();
+        let rows = global_model_user_usage_counts::Entity::find()
+            .filter(global_model_user_usage_counts::Column::UserId.eq(user_id))
+            .filter(global_model_user_usage_counts::Column::GlobalModelId.is_in(ids))
+            .all(self.database.connection())
+            .await?;
+        Ok(rows.into_iter().map(|row| (row.global_model_id, row.usage_count)).collect())
     }
 
     async fn model_count(&self, id: &str) -> StorageResult<u64> {

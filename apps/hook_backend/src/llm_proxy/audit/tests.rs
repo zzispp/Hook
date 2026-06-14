@@ -4,7 +4,10 @@ use serde_json::json;
 use std::collections::BTreeMap;
 use types::model::TieredPricingConfig;
 
-use super::{AttemptAuditInput, AttemptRecordInput, billing_runtime::BillingAttempt, request_billing_status, token_usage_record, wallet_settlement_input};
+use super::{
+    AttemptAuditInput, AttemptRecordInput, billing_runtime::BillingAttempt, model_usage_record, request_billing_status, token_usage_record,
+    wallet_settlement_input,
+};
 use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
 #[test]
@@ -62,6 +65,54 @@ fn estimated_stream_usage_can_settle_billing() {
     assert_eq!(request_billing_status(&input, Some(&billing)), "settled");
     assert_eq!(usage_record.expect("usage record").cost, Decimal::ONE);
     assert_eq!(settlement.expect("settlement").amount.total_cost, Decimal::ONE);
+}
+
+#[test]
+fn complete_success_records_model_usage_with_user_snapshot() {
+    let candidate = candidate();
+    let input = audit_input(AttemptRecordInput::new(&candidate, 0, "success", true));
+    let billing = complete_billing();
+
+    let record = model_usage_record(&input, Some(&billing)).expect("model usage");
+
+    assert_eq!(record.model_id, "model-1");
+    assert_eq!(record.count, 1);
+    assert_eq!(record.user_id.as_deref(), Some("user-1"));
+}
+
+#[test]
+fn model_usage_without_user_snapshot_keeps_platform_usage() {
+    let mut candidate = candidate();
+    candidate.trace.user_id_snapshot = None;
+    let input = audit_input(AttemptRecordInput::new(&candidate, 0, "success", true));
+    let billing = complete_billing();
+
+    let record = model_usage_record(&input, Some(&billing)).expect("model usage");
+
+    assert_eq!(record.model_id, "model-1");
+    assert_eq!(record.user_id, None);
+}
+
+#[test]
+fn incomplete_billing_does_not_record_model_usage() {
+    let candidate = candidate();
+    let input = audit_input(AttemptRecordInput::new(&candidate, 0, "success", true));
+    let billing = incomplete_billing();
+
+    let record = model_usage_record(&input, Some(&billing));
+
+    assert_eq!(record, None);
+}
+
+#[test]
+fn unfinished_success_does_not_record_model_usage() {
+    let candidate = candidate();
+    let input = audit_input(AttemptRecordInput::new(&candidate, 0, "success", false));
+    let billing = complete_billing();
+
+    let record = model_usage_record(&input, Some(&billing));
+
+    assert_eq!(record, None);
 }
 
 #[test]

@@ -22,6 +22,7 @@ pub(super) fn baseline_tables() -> Vec<TableCreateStatement> {
         card_code_tables::card_code_types_table(),
         card_code_tables::card_codes_table(),
         global_models_table(),
+        global_model_user_usage_counts_table(),
     ];
     tables.extend(recharge_tables::recharge_tables());
     tables.extend(domain_tables::domain_tables());
@@ -327,6 +328,30 @@ fn global_models_table() -> TableCreateStatement {
         .col(big_integer(GlobalModels::UsageCount))
         .col(timestamp_tz(GlobalModels::CreatedAt))
         .col(timestamp_tz(GlobalModels::UpdatedAt))
+        .to_owned()
+}
+
+fn global_model_user_usage_counts_table() -> TableCreateStatement {
+    let mut model_fk = ForeignKey::create()
+        .name("fk_global_model_user_usage_counts_model")
+        .from(GlobalModelUserUsageCounts::Table, GlobalModelUserUsageCounts::GlobalModelId)
+        .to(GlobalModels::Table, GlobalModels::Id)
+        .on_delete(ForeignKeyAction::Cascade)
+        .to_owned();
+    Table::create()
+        .table(GlobalModelUserUsageCounts::Table)
+        .if_not_exists()
+        .col(string_len(GlobalModelUserUsageCounts::UserId, 36))
+        .col(string_len(GlobalModelUserUsageCounts::GlobalModelId, 36))
+        .col(big_integer(GlobalModelUserUsageCounts::UsageCount).default(0))
+        .col(timestamp_tz(GlobalModelUserUsageCounts::CreatedAt))
+        .col(timestamp_tz(GlobalModelUserUsageCounts::UpdatedAt))
+        .primary_key(
+            Index::create()
+                .col(GlobalModelUserUsageCounts::UserId)
+                .col(GlobalModelUserUsageCounts::GlobalModelId),
+        )
+        .foreign_key(&mut model_fk)
         .to_owned()
 }
 

@@ -77,6 +77,7 @@ pub fn reversed_tables() -> Vec<DynIden> {
         TranslationLanguages::Table.into_iden(),
         SystemSettings::Table.into_iden(),
         Providers::Table.into_iden(),
+        GlobalModelUserUsageCounts::Table.into_iden(),
         GlobalModels::Table.into_iden(),
         BillingGroups::Table.into_iden(),
         CardCodes::Table.into_iden(),

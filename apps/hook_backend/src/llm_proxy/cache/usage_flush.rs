@@ -1,5 +1,6 @@
 mod codec;
 mod keys;
+mod model_batch;
 mod report;
 
 use std::{collections::HashMap, time::Duration};
@@ -13,15 +14,18 @@ use storage::{
 use time::format_description::well_known::Rfc3339;
 use uuid::Uuid;
 
-use self::codec::{decode_model_usage_batch, decode_token_usage_batch, token_cost_units};
+use self::codec::{decode_model_usage_batch, decode_token_usage_batch, decode_user_model_usage_batch, encode_user_model_key, token_cost_units};
+use self::model_batch::{ModelProcessingBatch, model_processing_batch};
 use self::report::{FlushReport, ProcessingBatch, log_skipped_usage, merge_flush_outcome, processing_batch};
 use super::{LlmProxyCache, LlmProxyError};
 
 const USAGE_FLUSH_INTERVAL: Duration = Duration::from_secs(1);
 const USAGE_FLUSH_LOCK_SECONDS: u64 = 30;
 const TOKEN_ENQUEUE_LUA: &str = r#"redis.call('HINCRBY', KEYS[1], ARGV[1], ARGV[2]) redis.call('HINCRBY', KEYS[2], ARGV[1], ARGV[3]) local current = redis.call('HGET', KEYS[3], ARGV[1]) if (not current) or (ARGV[4] > current) then redis.call('HSET', KEYS[3], ARGV[1], ARGV[4]) end return 1"#;
+const MODEL_ENQUEUE_LUA: &str =
+    r#"redis.call('HINCRBY', KEYS[1], ARGV[1], ARGV[2]) if ARGV[3] ~= '' then redis.call('HINCRBY', KEYS[2], ARGV[3], ARGV[2]) end return 1"#;
 const TOKEN_MOVE_LUA: &str = r#"redis.call('DEL', KEYS[4], KEYS[5], KEYS[6], KEYS[7]) local moved = 0 if redis.call('EXISTS', KEYS[1]) == 1 then redis.call('RENAME', KEYS[1], KEYS[4]) moved = 1 end if redis.call('EXISTS', KEYS[2]) == 1 then redis.call('RENAME', KEYS[2], KEYS[5]) moved = 1 end if redis.call('EXISTS', KEYS[3]) == 1 then redis.call('RENAME', KEYS[3], KEYS[6]) moved = 1 end if moved == 1 then redis.call('SET', KEYS[7], ARGV[1]) end return moved"#;
-const MODEL_MOVE_LUA: &str = r#"redis.call('DEL', KEYS[2], KEYS[3]) if redis.call('EXISTS', KEYS[1]) == 1 then redis.call('RENAME', KEYS[1], KEYS[2]) redis.call('SET', KEYS[3], ARGV[1]) return 1 end return 0"#;
+const MODEL_MOVE_LUA: &str = r#"redis.call('DEL', KEYS[3], KEYS[4], KEYS[5]) local moved = 0 if redis.call('EXISTS', KEYS[1]) == 1 then redis.call('RENAME', KEYS[1], KEYS[3]) moved = 1 end if redis.call('EXISTS', KEYS[2]) == 1 then redis.call('RENAME', KEYS[2], KEYS[4]) moved = 1 end if moved == 1 then redis.call('SET', KEYS[5], ARGV[1]) end return moved"#;
 const LOCK_RELEASE_LUA: &str = r#"if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0"#;
 
 pub(super) fn spawn_usage_flush_task(cache: LlmProxyCache) {
@@ -51,9 +55,21 @@ impl LlmProxyCache {
     }
 
     pub async fn enqueue_model_usage_persist(&self, record: &GlobalModelUsageRecord) -> Result<(), LlmProxyError> {
+        let user_model_key = record
+            .user_id
+            .as_deref()
+            .map(|user_id| encode_user_model_key(user_id, &record.model_id))
+            .unwrap_or_default();
         let mut connection = self.connection.clone();
-        let _: i64 = connection
-            .hincr(self.pending_model_count_key(), record.model_id.as_str(), record.count)
+        let _: i32 = redis::cmd("EVAL")
+            .arg(MODEL_ENQUEUE_LUA)
+            .arg(2)
+            .arg(self.pending_model_count_key())
+            .arg(self.pending_user_model_count_key())
+            .arg(record.model_id.as_str())
+            .arg(record.count)
+            .arg(user_model_key)
+            .query_async(&mut connection)
             .await
             .map_err(redis_error)?;
         Ok(())
@@ -97,7 +113,7 @@ impl LlmProxyCache {
             return Ok(0);
         };
         let store = ModelStore::new(self.database.clone());
-        let report = store.record_usage_batch_once(&batch.id, &batch.records).await?;
+        let report = store.record_usage_batch_once(&batch.id, &batch.records, &batch.user_records).await?;
         log_skipped_usage("model", &batch.id, &report);
         self.clear_model_processing_usage().await?;
         self.delete_usage_flush_batch(&batch.id).await?;
@@ -106,7 +122,13 @@ impl LlmProxyCache {
 
     async fn drain_pending_usage(&self) -> Result<(), LlmProxyError> {
         self.move_token_usage(self.pending_token_keys(), self.processing_token_keys()).await?;
-        self.move_model_usage(self.pending_model_count_key(), self.processing_model_count_key()).await
+        self.move_model_usage(
+            self.pending_model_count_key(),
+            self.pending_user_model_count_key(),
+            self.processing_model_count_key(),
+            self.processing_user_model_count_key(),
+        )
+        .await
     }
 
     async fn try_usage_flush_lock(&self) -> Result<Option<String>, LlmProxyError> {
@@ -158,11 +180,12 @@ impl LlmProxyCache {
         processing_batch(id, decode_token_usage_batch(cost, count, last_used_at)?, "token")
     }
 
-    async fn read_model_usage_batch(&self) -> Result<Option<ProcessingBatch<GlobalModelUsageRecord>>, LlmProxyError> {
+    async fn read_model_usage_batch(&self) -> Result<Option<ModelProcessingBatch>, LlmProxyError> {
         let mut connection = self.connection.clone();
         let id: Option<String> = connection.get(self.processing_model_batch_id_key()).await.map_err(redis_error)?;
         let counts: HashMap<String, String> = connection.hgetall(self.processing_model_count_key()).await.map_err(redis_error)?;
-        processing_batch(id, decode_model_usage_batch(counts)?, "model")
+        let user_counts: HashMap<String, String> = connection.hgetall(self.processing_user_model_count_key()).await.map_err(redis_error)?;
+        model_processing_batch(id, decode_model_usage_batch(counts)?, decode_user_model_usage_batch(user_counts)?)
     }
 
     async fn clear_token_processing_usage(&self) -> Result<(), LlmProxyError> {
@@ -182,7 +205,11 @@ impl LlmProxyCache {
     async fn clear_model_processing_usage(&self) -> Result<(), LlmProxyError> {
         let mut connection = self.connection.clone();
         let _: i32 = connection
-            .del(&[self.processing_model_count_key(), self.processing_model_batch_id_key()])
+            .del(&[
+                self.processing_model_count_key(),
+                self.processing_user_model_count_key(),
+                self.processing_model_batch_id_key(),
+            ])
             .await
             .map_err(redis_error)?;
         Ok(())
@@ -208,14 +235,22 @@ impl LlmProxyCache {
         Ok(())
     }
 
-    async fn move_model_usage(&self, source: String, target: String) -> Result<(), LlmProxyError> {
+    async fn move_model_usage(
+        &self,
+        model_source: String,
+        user_model_source: String,
+        model_target: String,
+        user_model_target: String,
+    ) -> Result<(), LlmProxyError> {
         let mut connection = self.connection.clone();
         let batch_id = Uuid::now_v7().to_string();
         let _: i32 = redis::cmd("EVAL")
             .arg(MODEL_MOVE_LUA)
-            .arg(3)
-            .arg(source)
-            .arg(target)
+            .arg(5)
+            .arg(model_source)
+            .arg(user_model_source)
+            .arg(model_target)
+            .arg(user_model_target)
             .arg(self.processing_model_batch_id_key())
             .arg(batch_id)
             .query_async(&mut connection)

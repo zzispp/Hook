@@ -21,6 +21,7 @@ const ADDITIVE_BASELINE_TABLES: &[&str] = &[
     "dashboard_latency_histogram_buckets",
     "dashboard_recent_error_snapshots",
     "dashboard_request_metric_sync_states",
+    "global_model_user_usage_counts",
 ];
 const BASELINE_TABLES: &[&str] = &[
     "user_groups",
@@ -41,6 +42,7 @@ const BASELINE_TABLES: &[&str] = &[
     "card_code_types",
     "card_codes",
     "global_models",
+    "global_model_user_usage_counts",
     "recharge_packages",
     "recharge_orders",
     "affiliate_commissions",
@@ -151,6 +153,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::recharge_order_paid_at_index_additive::apply(manager).await?;
     super::provider_key_capabilities_additive::apply(manager).await?;
     super::auth_layout_site_name_i18n_additive::apply(manager).await?;
+    super::global_model_user_usage_counts_additive::apply(manager).await?;
     super::provider_group_removal_destructive::apply(manager).await
 }
 

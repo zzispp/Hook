@@ -1,7 +1,8 @@
 use axum::{
-    Json,
+    Extension, Json,
     extract::{Path, Query, State},
 };
+use rbac::api::CurrentUser;
 use serde_json::Value;
 use types::{
     model::{
@@ -59,13 +60,20 @@ pub async fn catalog(State(state): State<ModelApiState>) -> ApiResult<ApiJson<Mo
     Ok(ok(state.models.catalog().await?))
 }
 
-pub async fn public_catalog(State(state): State<ModelApiState>, Query(query): Query<GlobalModelListRequest>) -> ApiResult<ApiJson<GlobalModelListResponse>> {
+pub async fn public_catalog(
+    State(state): State<ModelApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<GlobalModelListRequest>,
+) -> ApiResult<ApiJson<GlobalModelListResponse>> {
     Ok(ok(state
         .models
-        .list_global_models(GlobalModelListRequest {
-            is_active: Some(true),
-            ..query
-        })
+        .list_user_global_models(
+            &current_user.id,
+            GlobalModelListRequest {
+                is_active: Some(true),
+                ..query
+            },
+        )
         .await?))
 }
 

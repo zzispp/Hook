@@ -6,6 +6,7 @@ mod dashboard_period_i18n_additive;
 mod dashboard_request_metrics_additive;
 mod defaults;
 mod development_additive;
+mod global_model_user_usage_counts_additive;
 mod provider_group_removal_destructive;
 mod provider_key_capabilities_additive;
 mod provider_key_group_member_priority_additive;

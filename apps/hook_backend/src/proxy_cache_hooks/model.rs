@@ -54,6 +54,10 @@ where
         self.inner.list_global_models(request).await
     }
 
+    async fn list_user_global_models(&self, user_id: &str, request: GlobalModelListRequest) -> ModelResult<GlobalModelListResponse> {
+        self.inner.list_user_global_models(user_id, request).await
+    }
+
     async fn global_model_providers(&self, id: &str) -> ModelResult<GlobalModelProvidersResponse> {
         self.inner.global_model_providers(id).await
     }
