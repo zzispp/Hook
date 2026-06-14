@@ -97,6 +97,7 @@ pub(crate) fn model_usage_record(input: &AttemptAuditInput, billing: Option<&Bil
     Some(GlobalModelUsageRecord {
         count: 1,
         model_id: input.candidate.trace.global_model_id.clone(),
+        user_id: input.candidate.trace.user_id_snapshot.clone(),
     })
 }
 

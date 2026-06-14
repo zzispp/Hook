@@ -17,6 +17,16 @@ pub(in crate::migration::baseline) enum GlobalModels {
 }
 
 #[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum GlobalModelUserUsageCounts {
+    Table,
+    UserId,
+    GlobalModelId,
+    UsageCount,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
 pub(in crate::migration::baseline) enum Providers {
     Table,
     Id,

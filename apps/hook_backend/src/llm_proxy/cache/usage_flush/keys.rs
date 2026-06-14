@@ -49,8 +49,16 @@ impl LlmProxyCache {
         format!("{}:llm_proxy:usage:pending:model:count", self.key_prefix)
     }
 
+    pub(super) fn pending_user_model_count_key(&self) -> String {
+        format!("{}:llm_proxy:usage:pending:user_model:count", self.key_prefix)
+    }
+
     pub(super) fn processing_model_count_key(&self) -> String {
         format!("{}:llm_proxy:usage:processing:model:count", self.key_prefix)
+    }
+
+    pub(super) fn processing_user_model_count_key(&self) -> String {
+        format!("{}:llm_proxy:usage:processing:user_model:count", self.key_prefix)
     }
 
     pub(super) fn processing_model_batch_id_key(&self) -> String {

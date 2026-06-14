@@ -15,6 +15,7 @@ pub trait ModelRepository: Send + Sync + 'static {
     async fn find_global_model_by_name(&self, name: &str) -> ModelResult<Option<GlobalModelResponse>>;
     async fn get_global_model(&self, id: &str) -> ModelResult<Option<GlobalModelWithStats>>;
     async fn list_global_models(&self, request: GlobalModelListRequest) -> ModelResult<GlobalModelListResponse>;
+    async fn list_user_global_models(&self, user_id: &str, request: GlobalModelListRequest) -> ModelResult<GlobalModelListResponse>;
     async fn global_model_providers(&self, id: &str) -> ModelResult<GlobalModelProvidersResponse>;
     async fn catalog(&self) -> ModelResult<ModelCatalogResponse>;
 }
@@ -32,6 +33,7 @@ pub trait ModelUseCase: Send + Sync + 'static {
     async fn batch_delete_global_models(&self, ids: Vec<String>) -> ModelResult<BatchDeleteGlobalModelsResponse>;
     async fn get_global_model(&self, id: &str) -> ModelResult<GlobalModelWithStats>;
     async fn list_global_models(&self, request: GlobalModelListRequest) -> ModelResult<GlobalModelListResponse>;
+    async fn list_user_global_models(&self, user_id: &str, request: GlobalModelListRequest) -> ModelResult<GlobalModelListResponse>;
     async fn global_model_providers(&self, id: &str) -> ModelResult<GlobalModelProvidersResponse>;
     async fn catalog(&self) -> ModelResult<ModelCatalogResponse>;
     async fn external_models(&self) -> ModelResult<Value>;

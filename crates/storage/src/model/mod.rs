@@ -8,7 +8,7 @@ mod types;
 mod usage;
 
 pub use repository::ModelStore;
-pub use types::{GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord};
+pub use types::{GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord, GlobalModelUserUsageRecord};
 
 pub(super) use record::{GlobalModelRecord, ModelRecord};
-pub use record::{global_models, provider_models};
+pub use record::{global_model_user_usage_counts, global_models, provider_models};

@@ -49,6 +49,10 @@ impl ModelRepository for StorageModelRepository {
         self.store.list_global_models(request).await.map_err(storage_error)
     }
 
+    async fn list_user_global_models(&self, user_id: &str, request: GlobalModelListRequest) -> ModelResult<GlobalModelListResponse> {
+        self.store.list_user_global_models(user_id, request).await.map_err(storage_error)
+    }
+
     async fn global_model_providers(&self, id: &str) -> ModelResult<GlobalModelProvidersResponse> {
         self.store.global_model_providers(id).await.map_err(storage_error)
     }

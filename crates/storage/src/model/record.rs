@@ -7,7 +7,7 @@ use crate::{StorageResult, json};
 #[path = "entities/mod.rs"]
 pub mod entities;
 
-pub use entities::{global_models, provider_models};
+pub use entities::{global_model_user_usage_counts, global_models, provider_models};
 
 pub type GlobalModelRecord = global_models::Model;
 pub type ModelRecord = provider_models::Model;
