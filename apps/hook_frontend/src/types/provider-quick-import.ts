@@ -62,6 +62,49 @@ export type ProviderQuickImportAppendCommitRequest = {
   model_mappings: ProviderQuickImportModelMappingInput[];
 };
 
+export type ProviderQuickImportBindPreviewRequest = {
+  source_kind: ProviderQuickImportSourceKind;
+  source: ProviderQuickImportSourceConfig;
+  recharge_multiplier: number;
+};
+
+export type ProviderQuickImportBindPreviewResponse = {
+  provider: Provider;
+  local_keys: ProviderQuickImportBindLocalKey[];
+  preview: ProviderQuickImportPreviewResponse;
+};
+
+export type ProviderQuickImportBindLocalKey = {
+  id: string;
+  name: string;
+  api_formats: string[];
+  allowed_model_ids: string[];
+  is_active: boolean;
+};
+
+export type ProviderQuickImportBindSelectedToken = ProviderQuickImportSelectedToken & {
+  local_key_id?: string | null;
+};
+
+export type ProviderQuickImportBindCommitRequest = ProviderQuickImportBindPreviewRequest & {
+  selected_tokens: ProviderQuickImportBindSelectedToken[];
+  selected_model_ids: string[];
+  model_mappings: ProviderQuickImportModelMappingInput[];
+  sync_config: ProviderQuickImportSyncConfig;
+};
+
+export type ProviderQuickImportBindCommitResponse = {
+  provider: Provider;
+  endpoints: ProviderEndpoint[];
+  api_keys: ProviderApiKey[];
+  model_bindings: ProviderModelBinding[];
+  model_costs: ProviderModelCost[];
+  bound_token_count: number;
+  created_key_count: number;
+  reused_key_count: number;
+  deleted_key_count: number;
+};
+
 export type ProviderQuickImportRelinkRequest = {
   upstream_token_id: string;
   selected_model_ids: string[];

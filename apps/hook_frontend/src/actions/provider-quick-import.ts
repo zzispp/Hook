@@ -6,7 +6,11 @@ import type {
   ProviderQuickImportRelinkRequest,
   ProviderQuickImportCommitResponse,
   ProviderQuickImportPreviewResponse,
+  ProviderQuickImportBindCommitRequest,
+  ProviderQuickImportBindCommitResponse,
+  ProviderQuickImportBindPreviewRequest,
   ProviderQuickImportResolutionResponse,
+  ProviderQuickImportBindPreviewResponse,
   ProviderQuickImportAppendCommitRequest,
   ProviderQuickImportAppendPreviewRequest,
   ProviderQuickImportModelAssociationsUpdate,
@@ -34,6 +38,27 @@ export async function commitProviderQuickImportAppend(
 ) {
   const response = await requestData<ProviderQuickImportCommitResponse>(
     axios.post(endpoints.adminProviders.quickImportAppendCommit(providerId), payload)
+  );
+  await mutateProviderChildren(providerId);
+  await mutateProviders();
+  return response;
+}
+
+export async function previewProviderQuickImportBind(
+  providerId: string,
+  payload: ProviderQuickImportBindPreviewRequest
+) {
+  return requestData<ProviderQuickImportBindPreviewResponse>(
+    axios.post(endpoints.adminProviders.quickImportBindPreview(providerId), payload)
+  );
+}
+
+export async function commitProviderQuickImportBind(
+  providerId: string,
+  payload: ProviderQuickImportBindCommitRequest
+) {
+  const response = await requestData<ProviderQuickImportBindCommitResponse>(
+    axios.post(endpoints.adminProviders.quickImportBindCommit(providerId), payload)
   );
   await mutateProviderChildren(providerId);
   await mutateProviders();

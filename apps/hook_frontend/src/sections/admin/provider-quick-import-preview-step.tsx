@@ -1,6 +1,6 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { GlobalModelResponse } from 'src/types/model';
 import type {
   ProviderQuickImportTokenPreview,
@@ -34,6 +34,13 @@ type PreviewStepProps = {
   setTokens: Dispatch<SetStateAction<Record<string, QuickImportTokenDraft>>>;
   setMappings: Dispatch<SetStateAction<Record<string, string>>>;
   onMapModels: (token: ProviderQuickImportTokenPreview) => void;
+  renderExtraFields?: (input: {
+    token: ProviderQuickImportTokenPreview;
+    draft?: QuickImportTokenDraft;
+    selected: boolean;
+    importable: boolean;
+    onUpdate: (patch: Partial<QuickImportTokenDraft>) => void;
+  }) => ReactNode;
 };
 
 export function ProviderQuickImportPreviewStep(props: PreviewStepProps) {
@@ -44,7 +51,7 @@ export function ProviderQuickImportPreviewStep(props: PreviewStepProps) {
   );
 }
 
-function TokenTable({ preview, tokens, mappings, setTokens, onMapModels }: PreviewStepProps) {
+function TokenTable({ preview, tokens, mappings, setTokens, onMapModels, renderExtraFields }: PreviewStepProps) {
   const { t } = useTranslate('admin');
 
   return (
@@ -73,6 +80,7 @@ function TokenTable({ preview, tokens, mappings, setTokens, onMapModels }: Previ
               rechargeMultiplier={preview.recharge_multiplier}
               setTokens={setTokens}
               onMapModels={onMapModels}
+              renderExtraFields={renderExtraFields}
             />
           ))}
         </TableBody>

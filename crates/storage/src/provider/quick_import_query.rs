@@ -175,7 +175,7 @@ async fn delete_key_costs(tx: &DatabaseTransaction, provider_id: &str, key_id: &
 }
 
 #[derive(Clone)]
-struct SyncKeyInput {
+pub(super) struct SyncKeyInput {
     upstream_token_id: String,
     upstream_token_name: String,
     upstream_masked_key: String,
@@ -192,7 +192,7 @@ fn quick_import_provider(input: super::ProviderRecordInput) -> super::ProviderRe
     }
 }
 
-async fn insert_endpoints(
+pub(super) async fn insert_endpoints(
     store: &ProviderStore,
     tx: &DatabaseTransaction,
     provider_id: &str,
@@ -206,7 +206,7 @@ async fn insert_endpoints(
     Ok(output)
 }
 
-async fn insert_models(
+pub(super) async fn insert_models(
     store: &ProviderStore,
     tx: &DatabaseTransaction,
     provider_id: &str,
@@ -223,7 +223,7 @@ async fn insert_models(
     Ok((output, ids))
 }
 
-async fn insert_keys(
+pub(super) async fn insert_keys(
     store: &ProviderStore,
     tx: &DatabaseTransaction,
     provider_id: &str,
@@ -240,7 +240,7 @@ async fn insert_keys(
     Ok((output, ids))
 }
 
-async fn insert_costs(
+pub(super) async fn insert_costs(
     store: &ProviderStore,
     tx: &DatabaseTransaction,
     provider_id: &str,
@@ -256,7 +256,7 @@ async fn insert_costs(
     Ok(output)
 }
 
-async fn insert_sync_metadata(
+pub(super) async fn insert_sync_metadata(
     store: &ProviderStore,
     tx: &DatabaseTransaction,
     provider_id: &str,
@@ -288,7 +288,7 @@ async fn insert_sync_key(
     Ok(())
 }
 
-fn sync_key_inputs(inputs: &[ProviderQuickImportApiKeyRecordInput]) -> Vec<SyncKeyInput> {
+pub(super) fn sync_key_inputs(inputs: &[ProviderQuickImportApiKeyRecordInput]) -> Vec<SyncKeyInput> {
     inputs
         .iter()
         .map(|input| SyncKeyInput {

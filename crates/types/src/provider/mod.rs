@@ -7,6 +7,7 @@ mod key;
 mod model_binding;
 mod model_cost;
 mod quick_import;
+mod quick_import_bind;
 mod quick_import_sync;
 mod request_candidate;
 mod request_record;
@@ -36,6 +37,10 @@ pub use quick_import::{
     ProviderQuickImportModelMappingInput, ProviderQuickImportModelMappingPreview, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse,
     ProviderQuickImportProviderConfig, ProviderQuickImportRelinkRequest, ProviderQuickImportRemoteModel, ProviderQuickImportResolutionResponse,
     ProviderQuickImportSelectedToken, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportTokenPreview,
+};
+pub use quick_import_bind::{
+    ProviderQuickImportBindCommitRequest, ProviderQuickImportBindCommitResponse, ProviderQuickImportBindLocalKey, ProviderQuickImportBindPreviewRequest,
+    ProviderQuickImportBindPreviewResponse, ProviderQuickImportBindSelectedToken,
 };
 pub use quick_import_sync::{
     ProviderQuickImportAnomalyActions, ProviderQuickImportCostSyncMode, ProviderQuickImportFetchFailureAction, ProviderQuickImportGroupChangedAction,

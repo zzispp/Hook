@@ -8,12 +8,12 @@ use crate::api::{
     group_handlers::{create_provider_key_group, delete_provider_key_group, get_provider_key_group, list_provider_key_groups, update_provider_key_group},
     handlers::{
         accept_quick_import_current, batch_update_api_key_priorities, batch_update_model_bindings, commit_quick_import, commit_quick_import_append,
-        create_api_key, create_endpoint, create_model_binding, create_provider, delete_api_key, delete_endpoint, delete_model_binding, delete_model_cost,
-        delete_provider, fetch_upstream_models, get_provider, get_request_record, list_active_request_records, list_api_keys, list_endpoints,
-        list_model_bindings, list_model_costs, list_provider_cooldowns, list_providers, list_request_records, list_usage_records, preview_quick_import,
-        preview_quick_import_append, quick_import_model_associations, quick_import_resolution, quick_import_sync_settings, release_provider_cooldown,
-        relink_quick_import_key, test_model_binding, update_api_key, update_endpoint, update_model_binding, update_provider,
-        update_quick_import_model_associations, update_quick_import_sync_settings, upsert_model_costs,
+        commit_quick_import_bind, create_api_key, create_endpoint, create_model_binding, create_provider, delete_api_key, delete_endpoint,
+        delete_model_binding, delete_model_cost, delete_provider, fetch_upstream_models, get_provider, get_request_record, list_active_request_records,
+        list_api_keys, list_endpoints, list_model_bindings, list_model_costs, list_provider_cooldowns, list_providers, list_request_records,
+        list_usage_records, preview_quick_import, preview_quick_import_append, preview_quick_import_bind, quick_import_model_associations,
+        quick_import_resolution, quick_import_sync_settings, release_provider_cooldown, relink_quick_import_key, test_model_binding, update_api_key,
+        update_endpoint, update_model_binding, update_provider, update_quick_import_model_associations, update_quick_import_sync_settings, upsert_model_costs,
     },
 };
 
@@ -24,6 +24,8 @@ pub fn create_router(state: ProviderApiState) -> Router {
         .route("/admin/providers/quick-import/commit", post(commit_quick_import))
         .route("/admin/providers/{provider_id}/quick-import/append/preview", post(preview_quick_import_append))
         .route("/admin/providers/{provider_id}/quick-import/append/commit", post(commit_quick_import_append))
+        .route("/admin/providers/{provider_id}/quick-import/bind/preview", post(preview_quick_import_bind))
+        .route("/admin/providers/{provider_id}/quick-import/bind/commit", post(commit_quick_import_bind))
         .route(
             "/admin/providers/{provider_id}/quick-import-sync",
             get(quick_import_sync_settings).patch(update_quick_import_sync_settings),

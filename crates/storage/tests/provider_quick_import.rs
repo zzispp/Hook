@@ -1,14 +1,14 @@
 use std::collections::BTreeMap;
 
 use rust_decimal::Decimal;
-use sea_orm::{DatabaseBackend, DbErr, MockDatabase};
+use sea_orm::{DatabaseBackend, DbErr, MockDatabase, MockExecResult};
 use storage::{
     Database,
     model::provider_models,
     provider::{
-        ProviderQuickImportApiKeyRecordInput, ProviderQuickImportEndpointRecordInput, ProviderQuickImportKeyModelRecordInput,
-        ProviderQuickImportModelCostRecordInput, ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderQuickImportSourceRecordInput,
-        ProviderRecordInput, ProviderStore,
+        ProviderQuickImportApiKeyRecordInput, ProviderQuickImportBindRecordInput, ProviderQuickImportBoundApiKeyRecordInput,
+        ProviderQuickImportEndpointRecordInput, ProviderQuickImportKeyModelRecordInput, ProviderQuickImportModelCostRecordInput,
+        ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderQuickImportSourceRecordInput, ProviderRecordInput, ProviderStore,
         record::{
             provider_api_keys, provider_endpoints, provider_model_costs, provider_quick_import_key_models, provider_quick_import_keys,
             provider_quick_import_sources, providers,
@@ -63,12 +63,83 @@ async fn create_quick_import_rolls_back_when_late_insert_fails() {
     assert_core_inserted_tables(&statements);
 }
 
+#[tokio::test]
+async fn bind_quick_import_converts_provider_and_rebuilds_resources() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[manual_provider_record()]])
+        .append_query_results([vec![existing_key_record("key-a"), existing_key_record("key-b")]])
+        .append_query_results([vec![existing_key_record("key-a"), existing_key_record("key-b")]])
+        .append_exec_results(exec_results(7))
+        .append_query_results([[endpoint_record()]])
+        .append_query_results([[model_record()]])
+        .append_query_results([[existing_key_record("key-a")]])
+        .append_query_results([[updated_key_record()]])
+        .append_query_results([[cost_record()]])
+        .append_query_results([[sync_source_record()]])
+        .append_query_results([[sync_key_record()]])
+        .append_query_results([[sync_key_model_record()]])
+        .append_query_results([[quick_import_provider_record()]])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    let output = store.bind_quick_import(bind_input()).await.unwrap();
+
+    assert_eq!(output.provider.provider_origin, ProviderOrigin::QuickImport);
+    assert_eq!(output.created_key_count, 0);
+    assert_eq!(output.reused_key_count, 1);
+    assert_eq!(output.deleted_key_count, 1);
+    assert_eq!(output.api_keys[0].id, "key-a");
+    assert_eq!(output.api_keys[0].name, "codex");
+    assert_eq!(output.api_keys[0].allowed_model_ids, vec!["global-model-a"]);
+    assert_bind_rebuilt_tables(sql_statements(connection));
+}
+
+#[tokio::test]
+async fn bind_quick_import_rolls_back_when_late_insert_fails() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[manual_provider_record()]])
+        .append_query_results([vec![existing_key_record("key-a"), existing_key_record("key-b")]])
+        .append_query_results([vec![existing_key_record("key-a"), existing_key_record("key-b")]])
+        .append_exec_results(exec_results(7))
+        .append_query_results([[endpoint_record()]])
+        .append_query_results([[model_record()]])
+        .append_query_results([[existing_key_record("key-a")]])
+        .append_query_results([[updated_key_record()]])
+        .append_query_errors([DbErr::Custom("cost insert failed".into())])
+        .into_connection();
+    let store = ProviderStore::new(Database::new(connection.clone()));
+
+    let error = store.bind_quick_import(bind_input()).await.unwrap_err();
+
+    assert!(error.to_string().contains("cost insert failed"));
+    let statements = sql_statements(connection);
+    assert_eq!(statements.iter().filter(|sql| sql.contains("BEGIN")).count(), 1);
+    assert_eq!(statements.iter().filter(|sql| sql.contains("ROLLBACK")).count(), 1);
+    assert_eq!(statements.iter().filter(|sql| sql.contains("COMMIT")).count(), 0);
+    assert!(statements.iter().any(|sql| sql.contains("DELETE FROM \"provider_api_keys\"")));
+    assert!(statements.iter().any(|sql| sql.contains("UPDATE \"provider_api_keys\"")));
+}
+
 fn quick_import_input() -> ProviderQuickImportRecordInput {
     ProviderQuickImportRecordInput {
         provider: provider_input(),
         sync_source: Some(sync_source_input()),
         endpoints: vec![endpoint_input()],
         api_keys: vec![key_input()],
+        model_bindings: vec![model_input()],
+        model_costs: vec![cost_input()],
+    }
+}
+
+fn bind_input() -> ProviderQuickImportBindRecordInput {
+    ProviderQuickImportBindRecordInput {
+        provider_id: "provider-a".into(),
+        sync_source: sync_source_input(),
+        endpoints: vec![endpoint_input()],
+        api_keys: vec![ProviderQuickImportBoundApiKeyRecordInput {
+            local_key_id: Some("key-a".into()),
+            input: key_input(),
+        }],
         model_bindings: vec![model_input()],
         model_costs: vec![cost_input()],
     }
@@ -200,6 +271,47 @@ fn assert_sync_metadata_inserted_tables(statements: &[String]) {
     }
 }
 
+fn assert_bind_rebuilt_tables(statements: Vec<String>) {
+    assert_eq!(statements.iter().filter(|sql| sql.contains("BEGIN")).count(), 1);
+    assert_eq!(statements.iter().filter(|sql| sql.contains("COMMIT")).count(), 1);
+    assert_eq!(statements.iter().filter(|sql| sql.contains("ROLLBACK")).count(), 0);
+    for table in [
+        "provider_quick_import_key_models",
+        "provider_quick_import_keys",
+        "provider_quick_import_sources",
+        "provider_model_costs",
+        "provider_models",
+        "provider_endpoints",
+    ] {
+        assert!(statements.iter().any(|sql| sql.contains(&format!("DELETE FROM \"{table}\""))), "{statements:?}");
+    }
+    assert!(statements.iter().any(|sql| sql.contains("DELETE FROM \"provider_api_keys\"")), "{statements:?}");
+    assert!(statements.iter().any(|sql| sql.contains("UPDATE \"provider_api_keys\"")), "{statements:?}");
+    assert!(statements.iter().any(|sql| sql.contains("UPDATE \"providers\"")), "{statements:?}");
+    assert_core_inserted_tables_without_provider(&statements);
+    assert_sync_metadata_inserted_tables(&statements);
+}
+
+fn assert_core_inserted_tables_without_provider(statements: &[String]) {
+    for table in ["provider_endpoints", "provider_models", "provider_model_costs"] {
+        assert!(statements.iter().any(|sql| sql.contains(&format!("INSERT INTO \"{table}\""))), "{statements:?}");
+    }
+}
+
+fn manual_provider_record() -> providers::Model {
+    providers::Model {
+        provider_origin: "manual".into(),
+        ..provider_record()
+    }
+}
+
+fn quick_import_provider_record() -> providers::Model {
+    providers::Model {
+        provider_origin: "quick_import".into(),
+        ..provider_record()
+    }
+}
+
 fn provider_record() -> providers::Model {
     providers::Model {
         id: "provider-a".into(),
@@ -274,6 +386,23 @@ fn key_record() -> provider_api_keys::Model {
         is_active: true,
         created_at: now(),
         updated_at: now(),
+    }
+}
+
+fn existing_key_record(id: &str) -> provider_api_keys::Model {
+    provider_api_keys::Model {
+        id: id.into(),
+        name: format!("existing-{id}"),
+        encrypted_api_key: "old-encrypted".into(),
+        ..key_record()
+    }
+}
+
+fn updated_key_record() -> provider_api_keys::Model {
+    provider_api_keys::Model {
+        id: "key-a".into(),
+        encrypted_api_key: "encrypted".into(),
+        ..key_record()
     }
 }
 
@@ -362,6 +491,17 @@ fn sql_statements(connection: sea_orm::DatabaseConnection) -> Vec<String> {
         .into_iter()
         .flat_map(|transaction| transaction.statements().iter().map(|statement| statement.sql.clone()).collect::<Vec<_>>())
         .collect()
+}
+
+fn exec_results(count: usize) -> Vec<MockExecResult> {
+    vec![exec_result(); count]
+}
+
+fn exec_result() -> MockExecResult {
+    MockExecResult {
+        last_insert_id: 0,
+        rows_affected: 1,
+    }
 }
 
 fn now() -> time::OffsetDateTime {

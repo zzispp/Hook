@@ -38,6 +38,18 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
         name: "提交追加导入上游令牌",
     },
     ApiDefinition {
+        code: "providers_quick_import_bind_preview",
+        method: "POST",
+        path_pattern: "/api/admin/providers/{provider_id}/quick-import/bind/preview",
+        name: "预览绑定快捷导入上游",
+    },
+    ApiDefinition {
+        code: "providers_quick_import_bind_commit",
+        method: "POST",
+        path_pattern: "/api/admin/providers/{provider_id}/quick-import/bind/commit",
+        name: "提交绑定快捷导入上游",
+    },
+    ApiDefinition {
         code: "providers_detail",
         method: "GET",
         path_pattern: "/api/admin/providers/{id}",

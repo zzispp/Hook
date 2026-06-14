@@ -206,6 +206,10 @@ export const endpoints = {
       `/api/admin/providers/${id}/quick-import/append/preview`,
     quickImportAppendCommit: (id: string) =>
       `/api/admin/providers/${id}/quick-import/append/commit`,
+    quickImportBindPreview: (id: string) =>
+      `/api/admin/providers/${id}/quick-import/bind/preview`,
+    quickImportBindCommit: (id: string) =>
+      `/api/admin/providers/${id}/quick-import/bind/commit`,
     quickImportSync: (id: string) => `/api/admin/providers/${id}/quick-import-sync`,
     byId: (id: string) => `/api/admin/providers/${id}`,
     keyGroups: '/api/admin/provider-key-groups',

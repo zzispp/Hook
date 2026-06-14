@@ -10,7 +10,7 @@ use types::provider::{
     ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderOrigin, ProviderUpdate,
 };
 
-use crate::application::{ProviderQuickImportAppend, ProviderQuickImportCreate, ProviderQuickImportKeyReplacement};
+use crate::application::{ProviderQuickImportAppend, ProviderQuickImportBind, ProviderQuickImportCreate, ProviderQuickImportKeyReplacement};
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
 const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
@@ -210,6 +210,24 @@ pub(super) fn quick_import_append_input(input: ProviderQuickImportAppend) -> sto
         source_id: input.source_id,
         endpoints: input.endpoints.into_iter().map(quick_import_endpoint_input).collect(),
         api_keys: input.api_keys.into_iter().map(quick_import_key_input).collect(),
+        model_bindings: input.model_bindings.into_iter().map(quick_import_model_input).collect(),
+        model_costs: input.model_costs.into_iter().map(quick_import_cost_input).collect(),
+    }
+}
+
+pub(super) fn quick_import_bind_input(input: ProviderQuickImportBind) -> storage::provider::ProviderQuickImportBindRecordInput {
+    storage::provider::ProviderQuickImportBindRecordInput {
+        provider_id: input.provider_id,
+        sync_source: quick_import_source_input(input.sync_source),
+        endpoints: input.endpoints.into_iter().map(quick_import_endpoint_input).collect(),
+        api_keys: input
+            .api_keys
+            .into_iter()
+            .map(|key| storage::provider::ProviderQuickImportBoundApiKeyRecordInput {
+                local_key_id: key.local_key_id,
+                input: quick_import_key_input(key.create),
+            })
+            .collect(),
         model_bindings: input.model_bindings.into_iter().map(quick_import_model_input).collect(),
         model_costs: input.model_costs.into_iter().map(quick_import_cost_input).collect(),
     }

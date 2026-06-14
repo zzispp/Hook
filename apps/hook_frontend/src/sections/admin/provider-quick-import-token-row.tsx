@@ -1,6 +1,6 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import type { ProviderQuickImportTokenPreview } from 'src/types/provider-quick-import';
 
 import Box from '@mui/material/Box';
@@ -26,6 +26,7 @@ type Props = {
   rechargeMultiplier: number;
   setTokens: Dispatch<SetStateAction<Record<string, QuickImportTokenDraft>>>;
   onMapModels: (token: ProviderQuickImportTokenPreview) => void;
+  renderExtraFields?: (input: ExtraFieldInput) => ReactNode;
 };
 
 type DetailProps = {
@@ -35,7 +36,16 @@ type DetailProps = {
   selected: boolean;
   modelMappingConfigured: boolean;
   modelMappingMissing: boolean;
+  extraFields?: ReactNode;
   onMapModels: () => void;
+  onUpdate: (patch: Partial<QuickImportTokenDraft>) => void;
+};
+
+type ExtraFieldInput = {
+  token: ProviderQuickImportTokenPreview;
+  draft?: QuickImportTokenDraft;
+  selected: boolean;
+  importable: boolean;
   onUpdate: (patch: Partial<QuickImportTokenDraft>) => void;
 };
 
@@ -55,7 +65,15 @@ export function ProviderQuickImportTokenRow(props: Props) {
   );
 }
 
-function useTokenRowState({ token, draft, mappings, rechargeMultiplier, setTokens, onMapModels }: Props) {
+function useTokenRowState({
+  token,
+  draft,
+  mappings,
+  rechargeMultiplier,
+  setTokens,
+  onMapModels,
+  renderExtraFields,
+}: Props) {
   const formats = draft?.endpointFormats ?? [];
   const name = draft?.name ?? token.name;
   const costMultiplier = draft?.costMultiplier ?? String(token.effective_cost_multiplier);
@@ -81,6 +99,13 @@ function useTokenRowState({ token, draft, mappings, rechargeMultiplier, setToken
     modelMappingMissing,
     onUpdate,
     onMapModels: () => onMapModels(token),
+    extraFields: renderExtraFields?.({
+      token,
+      draft,
+      selected,
+      importable: token.importable,
+      onUpdate,
+    }),
   };
 }
 
@@ -151,6 +176,7 @@ function TokenDetailFields(props: DetailProps) {
       <CostMultiplierField {...props} />
       <ModelMappingField {...props} />
       <EndpointFormatsField {...props} />
+      {props.extraFields}
     </Box>
   );
 }

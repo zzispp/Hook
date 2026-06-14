@@ -120,6 +120,7 @@ function ProviderTableCard({
         onEdit={state.dialog.openEdit}
         onDelete={state.deleteDialog.setDeleteTarget}
         onAppendImport={quickImportActions.openAppend}
+        onBindImport={quickImportActions.openBind}
         onSyncSettings={state.quickImportSyncDialog.open}
       />
     </Card>
@@ -177,7 +178,17 @@ function ProviderDialogs({
     <>
       <ProviderFormDialog dialog={state.dialog} />
       <ProviderQuickImportSyncDialog dialog={state.quickImportSyncDialog} />
-      <ProviderQuickImportActionDialogs actions={quickImportActions} models={state.models.items} />
+      <ProviderQuickImportActionDialogs
+        actions={quickImportActions}
+        models={state.models.items}
+        onBound={() => {
+          state.closeProviderBindings();
+          void state.providers.refresh();
+          void state.providerKeyGroups.refresh();
+          void state.priorityProviders.refresh();
+          void state.priorityKeys.refresh();
+        }}
+      />
       <ProviderQuickImportDialog
         open={state.quickImportOpen}
         models={state.models.items}

@@ -3,15 +3,17 @@ use std::collections::{BTreeMap, BTreeSet};
 use rust_decimal::Decimal;
 use types::{
     model::GlobalModelResponse,
-    provider::{ProviderQuickImportModelMappingInput, ProviderQuickImportSelectedToken},
+    provider::{ProviderQuickImportBindSelectedToken, ProviderQuickImportModelMappingInput, ProviderQuickImportSelectedToken},
 };
 
 use crate::application::{ProviderError, ProviderQuickImportKeyModelCreate, ProviderResult, UpstreamImportData, UpstreamImportToken};
 
 use super::quick_import_shared::{global_model, globals_by_id, globals_by_name};
 
+#[derive(Debug)]
 pub(super) struct SelectedToken<'a> {
     pub(super) token: &'a UpstreamImportToken,
+    pub(super) local_key_id: Option<String>,
     pub(super) name: String,
     pub(super) endpoint_formats: Vec<String>,
     pub(super) effective_cost_multiplier: Decimal,
@@ -22,6 +24,7 @@ impl<'a> SelectedToken<'a> {
     pub(super) fn for_test(token: &'a UpstreamImportToken, endpoint_formats: Vec<String>) -> Self {
         Self {
             token,
+            local_key_id: None,
             name: token.name.clone(),
             endpoint_formats,
             effective_cost_multiplier: Decimal::ONE,
@@ -31,9 +34,20 @@ impl<'a> SelectedToken<'a> {
     pub(super) fn for_test_with_multiplier(token: &'a UpstreamImportToken, endpoint_formats: Vec<String>, effective_cost_multiplier: Decimal) -> Self {
         Self {
             token,
+            local_key_id: None,
             name: token.name.clone(),
             endpoint_formats,
             effective_cost_multiplier,
+        }
+    }
+
+    pub(super) fn for_test_with_local_key(token: &'a UpstreamImportToken, local_key_id: &str, endpoint_formats: Vec<String>) -> Self {
+        Self {
+            token,
+            local_key_id: Some(local_key_id.to_owned()),
+            name: token.name.clone(),
+            endpoint_formats,
+            effective_cost_multiplier: Decimal::ONE,
         }
     }
 }
@@ -44,6 +58,17 @@ pub(super) fn selected_tokens<'a>(data: &'a UpstreamImportData, inputs: &[Provid
     }
     let by_id = data.tokens.iter().map(|token| (token.id.as_str(), token)).collect::<BTreeMap<_, _>>();
     inputs.iter().map(|input| selected_token(&by_id, input)).collect()
+}
+
+pub(super) fn selected_bind_tokens<'a>(
+    data: &'a UpstreamImportData,
+    inputs: &[ProviderQuickImportBindSelectedToken],
+) -> ProviderResult<Vec<SelectedToken<'a>>> {
+    if inputs.is_empty() {
+        return Err(ProviderError::InvalidInput("selected_tokens cannot be empty".into()));
+    }
+    let by_id = data.tokens.iter().map(|token| (token.id.as_str(), token)).collect::<BTreeMap<_, _>>();
+    inputs.iter().map(|input| selected_bind_token(&by_id, input)).collect()
 }
 
 pub(super) fn resolved_mappings(
@@ -124,6 +149,32 @@ fn selected_token<'a>(by_id: &BTreeMap<&str, &'a UpstreamImportToken>, input: &P
         .get(input.upstream_token_id.trim())
         .copied()
         .ok_or_else(|| ProviderError::InvalidInput(format!("upstream token does not exist: {}", input.upstream_token_id)))?;
+    validate_selected_token_fields(token, input.name.trim(), input.effective_cost_multiplier)?;
+    Ok(SelectedToken {
+        token,
+        local_key_id: None,
+        name: input.name.trim().to_owned(),
+        endpoint_formats: normalized_formats(&input.endpoint_formats)?,
+        effective_cost_multiplier: input.effective_cost_multiplier,
+    })
+}
+
+fn selected_bind_token<'a>(by_id: &BTreeMap<&str, &'a UpstreamImportToken>, input: &ProviderQuickImportBindSelectedToken) -> ProviderResult<SelectedToken<'a>> {
+    let token = by_id
+        .get(input.upstream_token_id.trim())
+        .copied()
+        .ok_or_else(|| ProviderError::InvalidInput(format!("upstream token does not exist: {}", input.upstream_token_id)))?;
+    validate_selected_token_fields(token, input.name.trim(), input.effective_cost_multiplier)?;
+    Ok(SelectedToken {
+        token,
+        local_key_id: input.local_key_id.as_ref().map(|id| id.trim().to_owned()).filter(|id| !id.is_empty()),
+        name: input.name.trim().to_owned(),
+        endpoint_formats: normalized_formats(&input.endpoint_formats)?,
+        effective_cost_multiplier: input.effective_cost_multiplier,
+    })
+}
+
+fn validate_selected_token_fields(token: &UpstreamImportToken, name: &str, effective_cost_multiplier: Decimal) -> ProviderResult<()> {
     if token.status != 1 {
         return Err(ProviderError::InvalidInput(format!("upstream token is disabled: {}", token.id)));
     }
@@ -133,21 +184,16 @@ fn selected_token<'a>(by_id: &BTreeMap<&str, &'a UpstreamImportToken>, input: &P
     if token.models.is_empty() {
         return Err(ProviderError::InvalidInput(format!("upstream token has no models: {}", token.id)));
     }
-    if input.name.trim().is_empty() {
+    if name.is_empty() {
         return Err(ProviderError::InvalidInput(format!("selected token name cannot be blank: {}", token.id)));
     }
-    if input.effective_cost_multiplier <= Decimal::ZERO {
+    if effective_cost_multiplier <= Decimal::ZERO {
         return Err(ProviderError::InvalidInput(format!(
             "effective_cost_multiplier must be greater than 0: {}",
             token.id
         )));
     }
-    Ok(SelectedToken {
-        token,
-        name: input.name.trim().to_owned(),
-        endpoint_formats: normalized_formats(&input.endpoint_formats)?,
-        effective_cost_multiplier: input.effective_cost_multiplier,
-    })
+    Ok(())
 }
 
 fn normalized_formats(values: &[String]) -> ProviderResult<Vec<String>> {
