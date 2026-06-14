@@ -10,11 +10,12 @@ use types::{
 };
 
 use crate::application::{
-    ProviderError, ProviderQuickImportApiKeyCreate, ProviderQuickImportAppend, ProviderQuickImportCreate, ProviderQuickImportKeyReplacement,
-    ProviderQuickImportModelCostCreate, ProviderQuickImportSyncSourceCreate, ProviderResult, SecretCipher, UpstreamImportToken,
+    ProviderError, ProviderQuickImportApiKeyCreate, ProviderQuickImportAppend, ProviderQuickImportBind, ProviderQuickImportBoundApiKey,
+    ProviderQuickImportCreate, ProviderQuickImportKeyReplacement, ProviderQuickImportModelCostCreate, ProviderQuickImportSyncSourceCreate, ProviderResult,
+    SecretCipher, UpstreamImportToken,
 };
 
-pub(super) use super::quick_import_commit_models::{SelectedToken, assert_no_mapping_conflicts, resolved_mappings, selected_tokens};
+pub(super) use super::quick_import_commit_models::{SelectedToken, assert_no_mapping_conflicts, resolved_mappings, selected_bind_tokens, selected_tokens};
 use super::quick_import_commit_models::{allowed_model_ids, key_model_mappings};
 use super::{
     quick_import_costs::model_cost,
@@ -37,6 +38,17 @@ pub(super) struct QuickImportAppendDraft<'a, C> {
     pub(super) provider_id: String,
     pub(super) source_id: String,
     pub(super) source: &'a ProviderQuickImportSourceConfig,
+    pub(super) selected: Vec<SelectedToken<'a>>,
+    pub(super) globals: &'a [GlobalModelResponse],
+    pub(super) mappings: BTreeMap<String, String>,
+    pub(super) cipher: &'a C,
+}
+
+pub(super) struct QuickImportBindDraft<'a, C> {
+    pub(super) provider_id: String,
+    pub(super) source: &'a ProviderQuickImportSourceConfig,
+    pub(super) recharge_multiplier: Decimal,
+    pub(super) sync_config: ProviderQuickImportSyncConfig,
     pub(super) selected: Vec<SelectedToken<'a>>,
     pub(super) globals: &'a [GlobalModelResponse],
     pub(super) mappings: BTreeMap<String, String>,
@@ -85,10 +97,26 @@ where
     })
 }
 
+pub(super) fn quick_import_bind<C>(input: QuickImportBindDraft<'_, C>) -> ProviderResult<ProviderQuickImportBind>
+where
+    C: SecretCipher,
+{
+    let global_by_id = globals_by_id(input.globals);
+    Ok(ProviderQuickImportBind {
+        provider_id: input.provider_id,
+        sync_source: sync_source_create(input.source, input.recharge_multiplier, input.sync_config, input.cipher)?,
+        endpoints: endpoint_creates(source_base_url(input.source), &input.selected)?,
+        model_bindings: binding_creates(&input.mappings, &global_by_id)?,
+        api_keys: bound_key_creates(&input.selected, &input.mappings, input.cipher)?,
+        model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
+    })
+}
+
 pub(super) fn quick_import_key_replacement(input: QuickImportKeyReplacementDraft<'_>) -> ProviderResult<ProviderQuickImportKeyReplacement> {
     let global_by_id = globals_by_id(input.globals);
     let selected = SelectedToken {
         token: input.token,
+        local_key_id: Some(input.key_id.clone()),
         name: input.token.name.clone(),
         endpoint_formats: Vec::new(),
         effective_cost_multiplier: input.effective_cost_multiplier,
@@ -154,25 +182,43 @@ fn key_creates<C>(selected: &[SelectedToken<'_>], mappings: &BTreeMap<String, St
 where
     C: SecretCipher,
 {
+    selected.iter().map(|token| key_create(token, mappings, cipher)).collect()
+}
+
+fn bound_key_creates<C>(selected: &[SelectedToken<'_>], mappings: &BTreeMap<String, String>, cipher: &C) -> ProviderResult<Vec<ProviderQuickImportBoundApiKey>>
+where
+    C: SecretCipher,
+{
     selected
         .iter()
         .map(|token| {
-            let api_key = token.token.api_key.as_deref().ok_or_else(|| missing_key_error(&token.token.id))?;
-            let input = sanitize_api_key(api_key_create(token, mappings, api_key)?);
-            validate_api_key(&input)?;
-            Ok(ProviderQuickImportApiKeyCreate {
-                upstream_token_id: token.token.id.clone(),
-                upstream_token_name: token.token.name.clone(),
-                upstream_masked_key: token.token.masked_key.clone(),
-                upstream_group: token.token.group.clone(),
-                upstream_group_ratio: token.token.group_ratio,
-                effective_cost_multiplier: token.effective_cost_multiplier,
-                model_mappings: key_model_mappings(token, mappings),
-                encrypted_api_key: cipher.encrypt_provider_key(api_key)?,
-                input,
+            let create = key_create(token, mappings, cipher)?;
+            Ok(ProviderQuickImportBoundApiKey {
+                local_key_id: token.local_key_id.clone(),
+                create,
             })
         })
         .collect()
+}
+
+fn key_create<C>(token: &SelectedToken<'_>, mappings: &BTreeMap<String, String>, cipher: &C) -> ProviderResult<ProviderQuickImportApiKeyCreate>
+where
+    C: SecretCipher,
+{
+    let api_key = token.token.api_key.as_deref().ok_or_else(|| missing_key_error(&token.token.id))?;
+    let input = sanitize_api_key(api_key_create(token, mappings, api_key)?);
+    validate_api_key(&input)?;
+    Ok(ProviderQuickImportApiKeyCreate {
+        upstream_token_id: token.token.id.clone(),
+        upstream_token_name: token.token.name.clone(),
+        upstream_masked_key: token.token.masked_key.clone(),
+        upstream_group: token.token.group.clone(),
+        upstream_group_ratio: token.token.group_ratio,
+        effective_cost_multiplier: token.effective_cost_multiplier,
+        model_mappings: key_model_mappings(token, mappings),
+        encrypted_api_key: cipher.encrypt_provider_key(api_key)?,
+        input,
+    })
 }
 
 fn sync_source_create<C>(

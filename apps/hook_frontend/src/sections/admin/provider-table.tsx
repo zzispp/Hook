@@ -38,6 +38,7 @@ export function ProviderTable({
   onEdit,
   onDelete,
   onAppendImport,
+  onBindImport,
   onSyncSettings,
 }: {
   rows: Provider[];
@@ -49,6 +50,7 @@ export function ProviderTable({
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
   onAppendImport: (provider: Provider) => void;
+  onBindImport: (provider: Provider) => void;
   onSyncSettings: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -72,6 +74,7 @@ export function ProviderTable({
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onAppendImport={onAppendImport}
+                  onBindImport={onBindImport}
                   onSyncSettings={onSyncSettings}
                 />
               ))
@@ -98,6 +101,7 @@ function ProviderTableRow({
   onEdit,
   onDelete,
   onAppendImport,
+  onBindImport,
   onSyncSettings,
 }: {
   row: Provider;
@@ -106,6 +110,7 @@ function ProviderTableRow({
   onEdit: (provider: Provider) => void;
   onDelete: (provider: Provider) => void;
   onAppendImport: (provider: Provider) => void;
+  onBindImport: (provider: Provider) => void;
   onSyncSettings: (provider: Provider) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -162,7 +167,18 @@ function ProviderTableRow({
                 </IconButton>
               </Tooltip>
             </>
-          ) : null}
+          ) : (
+            <Tooltip title={t('actions.quickImportBindUpstream')}>
+              <IconButton
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onBindImport(row);
+                }}
+              >
+                <Iconify icon="solar:import-bold" />
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title={t('common.edit')}>
             <IconButton
               onClick={(event) => {

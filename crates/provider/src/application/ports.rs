@@ -9,6 +9,7 @@ use types::provider::{
     ProviderKeyGroupUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
     ProviderModelBindingUpdate, ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostUpsert,
     ProviderModelTestRequest, ProviderModelTestResponse, ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest,
+    ProviderQuickImportBindCommitRequest, ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse,
     ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse, ProviderQuickImportModelAssociationsResponse,
     ProviderQuickImportModelAssociationsUpdate, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest,
     ProviderQuickImportResolutionResponse, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig,
@@ -142,6 +143,34 @@ pub struct ProviderQuickImportAppended {
     pub api_keys: Vec<ProviderApiKey>,
     pub model_bindings: Vec<ProviderModelBinding>,
     pub model_costs: Vec<ProviderModelCost>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportBoundApiKey {
+    pub local_key_id: Option<String>,
+    pub create: ProviderQuickImportApiKeyCreate,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportBind {
+    pub provider_id: String,
+    pub sync_source: ProviderQuickImportSyncSourceCreate,
+    pub endpoints: Vec<ProviderEndpointCreate>,
+    pub model_bindings: Vec<ProviderModelBindingCreate>,
+    pub api_keys: Vec<ProviderQuickImportBoundApiKey>,
+    pub model_costs: Vec<ProviderQuickImportModelCostCreate>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportBound {
+    pub provider: Provider,
+    pub endpoints: Vec<ProviderEndpoint>,
+    pub api_keys: Vec<ProviderApiKey>,
+    pub model_bindings: Vec<ProviderModelBinding>,
+    pub model_costs: Vec<ProviderModelCost>,
+    pub created_key_count: usize,
+    pub reused_key_count: usize,
+    pub deleted_key_count: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -286,6 +315,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse>;
     async fn create_quick_import(&self, input: ProviderQuickImportCreate) -> ProviderResult<ProviderQuickImportCreated>;
     async fn append_quick_import(&self, input: ProviderQuickImportAppend) -> ProviderResult<ProviderQuickImportAppended>;
+    async fn bind_quick_import(&self, input: ProviderQuickImportBind) -> ProviderResult<ProviderQuickImportBound>;
     async fn replace_quick_import_key(&self, input: ProviderQuickImportKeyReplacement) -> ProviderResult<ProviderQuickImportKeyReplaced>;
     async fn quick_import_sync_source(&self, provider_id: &str) -> ProviderResult<Option<ProviderQuickImportSyncSource>>;
     async fn list_quick_import_sync_sources(&self, limit: u64) -> ProviderResult<Vec<ProviderQuickImportSyncSource>>;
@@ -383,6 +413,16 @@ pub trait ProviderUseCase: Send + Sync + 'static {
         provider_id: &str,
         input: ProviderQuickImportAppendCommitRequest,
     ) -> ProviderResult<ProviderQuickImportCommitResponse>;
+    async fn preview_quick_import_bind(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportBindPreviewRequest,
+    ) -> ProviderResult<ProviderQuickImportBindPreviewResponse>;
+    async fn commit_quick_import_bind(
+        &self,
+        provider_id: &str,
+        input: ProviderQuickImportBindCommitRequest,
+    ) -> ProviderResult<ProviderQuickImportBindCommitResponse>;
     async fn quick_import_resolution(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderQuickImportResolutionResponse>;
     async fn accept_quick_import_current(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderApiKey>;
     async fn relink_quick_import_key(&self, provider_id: &str, key_id: &str, input: ProviderQuickImportRelinkRequest) -> ProviderResult<ProviderApiKey>;

@@ -3,6 +3,7 @@
 import type { GlobalModelResponse } from 'src/types/model';
 import type { useProviderQuickImportActionState } from './provider-quick-import-action-state';
 
+import { ProviderQuickImportBindDialog } from './provider-quick-import-bind-dialog';
 import { ProviderQuickImportAppendDialog } from './provider-quick-import-append-dialog';
 import { ProviderQuickImportResolutionDialog } from './provider-quick-import-resolution-dialog';
 import { ProviderQuickImportModelAssociationsDialog } from './provider-quick-import-model-associations-dialog';
@@ -10,9 +11,10 @@ import { ProviderQuickImportModelAssociationsDialog } from './provider-quick-imp
 type Props = {
   actions: ReturnType<typeof useProviderQuickImportActionState>;
   models: GlobalModelResponse[];
+  onBound: () => void;
 };
 
-export function ProviderQuickImportActionDialogs({ actions, models }: Props) {
+export function ProviderQuickImportActionDialogs({ actions, models, onBound }: Props) {
   return (
     <>
       <ProviderQuickImportAppendDialog
@@ -20,6 +22,13 @@ export function ProviderQuickImportActionDialogs({ actions, models }: Props) {
         provider={actions.appendProvider}
         models={models}
         onClose={actions.closeAppend}
+      />
+      <ProviderQuickImportBindDialog
+        open={!!actions.bindProvider}
+        provider={actions.bindProvider}
+        models={models}
+        onClose={actions.closeBind}
+        onBound={onBound}
       />
       <ProviderQuickImportResolutionDialog
         open={!!actions.resolutionTarget}

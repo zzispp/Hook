@@ -221,6 +221,22 @@ pub struct ProviderQuickImportAppendRecordInput {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportBoundApiKeyRecordInput {
+    pub local_key_id: Option<String>,
+    pub input: ProviderQuickImportApiKeyRecordInput,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportBindRecordInput {
+    pub provider_id: String,
+    pub sync_source: ProviderQuickImportSourceRecordInput,
+    pub endpoints: Vec<ProviderQuickImportEndpointRecordInput>,
+    pub api_keys: Vec<ProviderQuickImportBoundApiKeyRecordInput>,
+    pub model_bindings: Vec<ProviderQuickImportModelRecordInput>,
+    pub model_costs: Vec<ProviderQuickImportModelCostRecordInput>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProviderQuickImportSourceRecordInput {
     pub source_kind: String,
     pub base_url: String,
@@ -393,6 +409,18 @@ pub struct ProviderQuickImportAppendRecordOutput {
     pub api_keys: Vec<types::provider::ProviderApiKey>,
     pub model_bindings: Vec<types::provider::ProviderModelBinding>,
     pub model_costs: Vec<types::provider::ProviderModelCost>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportBindRecordOutput {
+    pub provider: types::provider::Provider,
+    pub endpoints: Vec<types::provider::ProviderEndpoint>,
+    pub api_keys: Vec<types::provider::ProviderApiKey>,
+    pub model_bindings: Vec<types::provider::ProviderModelBinding>,
+    pub model_costs: Vec<types::provider::ProviderModelCost>,
+    pub created_key_count: usize,
+    pub reused_key_count: usize,
+    pub deleted_key_count: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]

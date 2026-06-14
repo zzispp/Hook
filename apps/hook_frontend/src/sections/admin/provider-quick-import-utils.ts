@@ -46,6 +46,7 @@ export type QuickImportTokenDraft = {
   name: string;
   endpointFormats: string[];
   costMultiplier: string;
+  localKeyId?: string;
 };
 
 export const DEFAULT_QUICK_IMPORT_FORM: QuickImportFormState = {
@@ -120,6 +121,43 @@ export function appendCommitPayload(
     })),
     selected_model_ids: selectedModelIds,
     model_mappings: mappingInputs(selectedModelIds, mappings, models),
+  };
+}
+
+export function bindSourcePayload(form: QuickImportFormState) {
+  return {
+    source_kind: 'newapi' as const,
+    source: {
+      kind: 'newapi' as const,
+      base_url: trimmedBaseUrl(form.baseUrl),
+      system_access_token: form.systemAccessToken.trim(),
+      user_id: form.userId.trim(),
+    },
+    recharge_multiplier: Number(form.rechargeMultiplier),
+  };
+}
+
+export function bindCommitPayload(
+  form: QuickImportFormState,
+  selected: ProviderQuickImportTokenPreview[],
+  tokens: Record<string, QuickImportTokenDraft>,
+  mappings: Record<string, string>,
+  models: GlobalModelResponse[]
+) {
+  const selectedModelIds = selectedMappedUpstreamModels(selected, mappings);
+
+  return {
+    ...bindSourcePayload(form),
+    selected_tokens: selected.map((token) => ({
+      upstream_token_id: token.upstream_token_id,
+      local_key_id: tokens[token.upstream_token_id]?.localKeyId || null,
+      name: (tokens[token.upstream_token_id]?.name ?? token.name).trim(),
+      endpoint_formats: tokens[token.upstream_token_id]?.endpointFormats ?? [],
+      effective_cost_multiplier: Number(tokens[token.upstream_token_id]?.costMultiplier),
+    })),
+    selected_model_ids: selectedModelIds,
+    model_mappings: mappingInputs(selectedModelIds, mappings, models),
+    sync_config: syncConfigPayload(form.sync),
   };
 }
 

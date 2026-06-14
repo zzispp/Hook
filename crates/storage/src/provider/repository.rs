@@ -312,6 +312,10 @@ impl ProviderStore {
         super::quick_import_query::append_quick_import(self, input).await
     }
 
+    pub async fn bind_quick_import(&self, input: super::ProviderQuickImportBindRecordInput) -> StorageResult<super::ProviderQuickImportBindRecordOutput> {
+        super::quick_import_bind_query::bind_quick_import(self, input).await
+    }
+
     pub async fn replace_quick_import_key(
         &self,
         input: super::ProviderQuickImportKeyReplacementRecordInput,

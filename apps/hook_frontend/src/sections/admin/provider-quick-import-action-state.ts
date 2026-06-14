@@ -11,6 +11,7 @@ type KeyTarget = {
 
 export function useProviderQuickImportActionState() {
   const [appendProvider, setAppendProvider] = useState<Provider | null>(null);
+  const [bindProvider, setBindProvider] = useState<Provider | null>(null);
   const [resolutionTarget, setResolutionTarget] = useState<KeyTarget | null>(null);
   const [modelAssociationsTarget, setModelAssociationsTarget] = useState<KeyTarget | null>(null);
 
@@ -24,10 +25,13 @@ export function useProviderQuickImportActionState() {
 
   return {
     appendProvider,
+    bindProvider,
     modelAssociationsTarget,
     resolutionTarget,
     openAppend: setAppendProvider,
     closeAppend: () => setAppendProvider(null),
+    openBind: setBindProvider,
+    closeBind: () => setBindProvider(null),
     openResolution,
     closeResolution: () => setResolutionTarget(null),
     openModelAssociations,

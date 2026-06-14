@@ -10,14 +10,14 @@ use types::provider::{
 };
 
 use crate::application::{
-    GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportCreate,
-    ProviderQuickImportCreated, ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement, ProviderQuickImportSyncEventCreate,
-    ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource,
-    ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderResult,
+    GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportBind,
+    ProviderQuickImportBound, ProviderQuickImportCreate, ProviderQuickImportCreated, ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement,
+    ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, ProviderQuickImportSyncKeyPatch,
+    ProviderQuickImportSyncSource, ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderResult,
 };
 use crate::infra::storage_mapping::{
     api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_batch_input, model_binding_input, model_binding_patch, model_cost_inputs,
-    provider_input, provider_key_group_input, provider_key_group_patch, provider_patch, quick_import_append_input, quick_import_input,
+    provider_input, provider_key_group_input, provider_key_group_patch, provider_patch, quick_import_append_input, quick_import_bind_input, quick_import_input,
     quick_import_key_replacement_input,
 };
 
@@ -254,6 +254,23 @@ impl ProviderRepository for StorageProviderRepository {
                 api_keys: output.api_keys,
                 model_bindings: output.model_bindings,
                 model_costs: output.model_costs,
+            })
+            .map_err(storage_error)
+    }
+
+    async fn bind_quick_import(&self, input: ProviderQuickImportBind) -> ProviderResult<ProviderQuickImportBound> {
+        self.store
+            .bind_quick_import(quick_import_bind_input(input))
+            .await
+            .map(|output| ProviderQuickImportBound {
+                provider: output.provider,
+                endpoints: output.endpoints,
+                api_keys: output.api_keys,
+                model_bindings: output.model_bindings,
+                model_costs: output.model_costs,
+                created_key_count: output.created_key_count,
+                reused_key_count: output.reused_key_count,
+                deleted_key_count: output.deleted_key_count,
             })
             .map_err(storage_error)
     }

@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use provider::application::{
-    ProviderApiKeySecret, ProviderError, ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportCreate, ProviderQuickImportCreated,
-    ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement, ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey,
-    ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource, ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderResult,
+    ProviderApiKeySecret, ProviderError, ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportBind, ProviderQuickImportBound,
+    ProviderQuickImportCreate, ProviderQuickImportCreated, ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement,
+    ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource,
+    ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderResult,
 };
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
@@ -192,6 +193,12 @@ where
 
     async fn append_quick_import(&self, input: ProviderQuickImportAppend) -> ProviderResult<ProviderQuickImportAppended> {
         let output = self.inner.append_quick_import(input).await?;
+        self.refresh_scheduling().await?;
+        Ok(output)
+    }
+
+    async fn bind_quick_import(&self, input: ProviderQuickImportBind) -> ProviderResult<ProviderQuickImportBound> {
+        let output = self.inner.bind_quick_import(input).await?;
         self.refresh_scheduling().await?;
         Ok(output)
     }
