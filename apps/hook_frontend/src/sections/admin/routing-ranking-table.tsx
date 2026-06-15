@@ -19,7 +19,19 @@ import { fNumber } from 'src/utils/format-number';
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
-import { TableNoData, TableHeadCustom } from 'src/components/table';
+import {
+  TableNoData,
+  TableHeadCustom,
+  tableStickyActionCellSx,
+  withStickyActionHeadCell,
+} from 'src/components/table';
+
+import {
+  routeScoreReason,
+  scoreComponentLabel,
+  routingMetricSummary,
+  translatedExclusionReason,
+} from './routing-i18n';
 
 type Props = {
   rows: RouteScoreExplanation[];
@@ -41,10 +53,21 @@ const HEAD = [
 ];
 
 export function RoutingRankingTable({ rows, loading, t, onOpen }: Props) {
-  const head = HEAD.map((item) => ({
-    ...item,
-    label: item.id === 'actions' ? '' : t(`routing.table.${item.id}`),
-  }));
+  const head = HEAD.map((item) => {
+    if (item.id === 'actions') {
+      return withStickyActionHeadCell({
+        id: 'actions',
+        label: '',
+        width: 72,
+      });
+    }
+    const { minWidth, ...rest } = item;
+    return {
+      ...rest,
+      label: t(`routing.table.${item.id}`),
+      sx: minWidth ? { minWidth } : undefined,
+    };
+  });
 
   return (
     <TableContainer sx={{ position: 'relative', overflow: 'hidden' }}>
@@ -79,19 +102,19 @@ function RankingRow({ row, t, onOpen }: { row: RouteScoreExplanation; t: AdminT;
       <TableCell>{fNumber(row.final_score, { maximumFractionDigits: 1 })}</TableCell>
       <TableCell>
         <Typography variant="body2" sx={{ maxWidth: 360 }}>
-          {row.selected_reason}
+          {routeScoreReason(row, t)}
         </Typography>
       </TableCell>
       <TableCell>
-        <ScoreBreakdown row={row} />
+        <ScoreBreakdown row={row} t={t} />
       </TableCell>
       <TableCell>
-        <MetricSummary row={row} />
+        <MetricSummary row={row} t={t} />
       </TableCell>
       <TableCell>
-        <PenaltySummary row={row} />
+        <PenaltySummary row={row} t={t} />
       </TableCell>
-      <TableCell align="right">
+      <TableCell align="left" sx={tableStickyActionCellSx}>
         <Tooltip title={t('routing.actions.details')}>
           <Button size="small" color="inherit" onClick={() => onOpen(row)}>
             <Iconify icon="solar:eye-bold" />
@@ -116,14 +139,14 @@ function RouteCell({ row }: { row: RouteScoreExplanation }) {
   );
 }
 
-function ScoreBreakdown({ row }: { row: RouteScoreExplanation }) {
+function ScoreBreakdown({ row, t }: { row: RouteScoreExplanation; t: AdminT }) {
   return (
     <Stack spacing={0.75}>
       {row.components.slice(0, 5).map((component) => (
         <Stack key={component.code} spacing={0.25}>
           <Stack direction="row" justifyContent="space-between" spacing={1}>
             <Typography variant="caption" color="text.secondary">
-              {component.label}
+              {scoreComponentLabel(component, t)}
             </Typography>
             <Typography variant="caption">{component.contribution.toFixed(1)}</Typography>
           </Stack>
@@ -139,24 +162,21 @@ function ScoreBreakdown({ row }: { row: RouteScoreExplanation }) {
   );
 }
 
-function MetricSummary({ row }: { row: RouteScoreExplanation }) {
-  const metrics = row.raw_metrics;
-  const successRate = metrics.request_count
-    ? (metrics.success_count / metrics.request_count) * 100
-    : 0;
-
+function MetricSummary({ row, t }: { row: RouteScoreExplanation; t: AdminT }) {
   return (
     <Typography variant="body2" color="text.secondary">
-      {`${row.metric_window} · success ${successRate.toFixed(1)}%, avg TTFB ${formatMs(metrics.ttfb_avg_ms)}, avg latency ${formatMs(metrics.latency_avg_ms)}, TPS ${formatNumber(metrics.output_tps)}, RPM ${metrics.rpm_used}/${metrics.rpm_limit ?? '∞'}, samples ${metrics.sample_count}`}
+      {routingMetricSummary(row.metric_window, row.raw_metrics, t)}
     </Typography>
   );
 }
 
-function PenaltySummary({ row }: { row: RouteScoreExplanation }) {
+function PenaltySummary({ row, t }: { row: RouteScoreExplanation; t: AdminT }) {
   const penalties = row.components
     .filter((component) => component.contribution < 0)
-    .map((component) => `${component.label} ${component.contribution.toFixed(1)}`);
-  const text = row.exclusion_reason || penalties.join(', ') || '-';
+    .map((component) => `${scoreComponentLabel(component, t)} ${component.contribution.toFixed(1)}`);
+  const text = row.exclusion_reason
+    ? translatedExclusionReason(row.exclusion_reason, t)
+    : penalties.join(', ') || '-';
 
   return (
     <Typography variant="body2" color={row.exclusion_reason ? 'error.main' : 'text.secondary'}>
@@ -183,12 +203,4 @@ function StateLabel({ state, t }: { state: RoutingRouteState; t: AdminT }) {
 function routeKey(row: RouteScoreExplanation) {
   const route = row.route;
   return `${route.provider_id}:${route.key_id}:${route.endpoint_id}:${route.global_model_id}:${route.provider_api_format}:${route.is_stream}`;
-}
-
-function formatMs(value?: number | null) {
-  return value == null ? '-' : `${value.toFixed(0)}ms`;
-}
-
-function formatNumber(value?: number | null) {
-  return value == null ? '-' : value.toFixed(1);
 }
