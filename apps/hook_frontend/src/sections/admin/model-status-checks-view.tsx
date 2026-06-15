@@ -72,8 +72,21 @@ export function ModelStatusChecksView() {
 
 function ChecksPanel({ state, t }: { state: ReturnType<typeof useModelStatusAdminState>; t: TFunction<'admin'> }) {
   return (
-    <Card>
-      <ChecksToolbar state={state} t={t} />
+    <Stack spacing={3}>
+      <Card>
+        <ChecksToolbar
+          state={state}
+          t={t}
+          rowCount={state.checks.items.length}
+          numSelected={state.checkTable.selected.length}
+          onSelectAllRows={(checked) =>
+            state.checkTable.onSelectAllRows(
+              checked,
+              state.checks.items.map((row) => row.id)
+            )
+          }
+        />
+      </Card>
       <ModelStatusChecksTable
         rows={state.checks.items}
         loading={state.checks.isLoading}
@@ -84,7 +97,7 @@ function ChecksPanel({ state, t }: { state: ReturnType<typeof useModelStatusAdmi
         onSelectRow={state.checkTable.onSelectRow}
         onSelectAllRows={state.checkTable.onSelectAllRows}
       />
-    </Card>
+    </Stack>
   );
 }
 

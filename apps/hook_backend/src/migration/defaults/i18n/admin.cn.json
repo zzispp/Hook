@@ -80,6 +80,7 @@
     "apiFormat": "API 格式",
     "apiToken": "独立令牌",
     "interval": "探测间隔",
+    "latency": "延迟",
     "enabled": "启用",
     "lastStatus": "最新状态",
     "lastCheckedAt": "最近探测",
@@ -1453,6 +1454,13 @@
     "loading": "正在加载路由排序...",
     "empty": "当前过滤条件下没有路由候选。",
     "profileInherited": "跟随默认",
+    "cards": {
+      "simulationContextTitle": "模拟上下文",
+      "simulationContextHelper": "选择计费分组、模型和格式上下文，用于模拟并检查路由决策。",
+      "profileTuningHelper": "选择路由策略，调整基准权重，并控制自动强化学习开关。",
+      "rankingsTitle": "模拟：{{profile}}",
+      "rankingsHelper": "基于当前路由策略实时查看候选排序、打分组成和窗口指标。"
+    },
     "filters": {
       "group": "计费分组",
       "model": "模型",
@@ -1488,13 +1496,40 @@
       "samples": "样本数",
       "confidence": "置信度",
       "updatedAt": "更新时间",
-      "autoTuneDisabled": "当前 profile 未启用自动调优。"
+      "autoTuneDisabled": "当前 profile 未启用自动调优。",
+      "tableMetric": "指标",
+      "tableBaseline": "基准",
+      "tableLearned": "学习后",
+      "tableEffective": "生效",
+      "autoTuneStatus": "自动调优状态",
+      "autoTuneActive": "运行中",
+      "autoTuneInactive": "已禁用"
     },
     "profile": {
-      "editorTitle": "Profile 调参",
+      "editorTitle": "策略调参",
       "editorHelper": "这里编辑当前选中策略的自动调优开关和管理员基准权重。自动学习只会在这个基线之上做受控微调。",
-      "autoTune": "启用 Auto Tune",
+      "autoTune": "启用自动调优",
       "weightTotal": "当前权重总和：{{total}}。需要等于 1.000 才能保存。",
+      "names": {
+        "balanced": "均衡",
+        "first_byte": "首字优先",
+        "high_tps": "高吞吐",
+        "cost_optimal": "成本优先",
+        "high_availability": "高可用",
+        "cache_affinity_plus": "缓存亲和增强",
+        "fixed_priority_plus": "固定优先级增强",
+        "custom": "自定义"
+      },
+      "descriptions": {
+        "balanced": "平衡成功率、延迟、成本和余量。",
+        "first_byte": "优先优化交互式流式响应的 p90 首字时间。",
+        "high_tps": "优先输出吞吐和容量余量。",
+        "cost_optimal": "在成功率底线之上最小化预估上游成本。",
+        "high_availability": "优先成功率和低错误风险。",
+        "cache_affinity_plus": "在缓存亲和基础上加入健康度和 TTFB 打分。",
+        "fixed_priority_plus": "保留管理员优先级，同时排除不健康路由。",
+        "custom": "由管理员控制的路由策略。"
+      },
       "weightFields": {
         "success": "成功率",
         "ttfb": "首字速度",
@@ -1514,6 +1549,31 @@
       "breakdown": "权重明细",
       "metrics": "窗口指标",
       "penalty": "排除 / 扣分"
+    },
+    "metrics": {
+      "summary": "{{window}} · 成功率 {{success}}%，平均 TTFB {{ttfb}}，平均延迟 {{latency}}，TPS {{tps}}，RPM {{rpm}}，样本 {{samples}}",
+      "windowDetail": "状态 {{state}} · 来源 {{source}} · 成功率 {{success}}% · 平均 TTFB {{ttfb}} · 平均延迟 {{latency}} · TPS {{tps}} · 样本 {{samples}}",
+      "unlimited": "无限制"
+    },
+    "scoreReason": "分数 {{score}}：{{components}}",
+    "scoreComponents": {
+      "success": "成功率",
+      "ttfb": "平均 TTFB",
+      "latency": "平均延迟",
+      "tps": "输出 TPS",
+      "cost": "配置成本",
+      "headroom": "RPM 余量",
+      "priority": "管理员优先级",
+      "health_prior": "健康先验",
+      "exploration": "不确定性探索",
+      "affinity": "缓存亲和",
+      "conversion": "格式转换",
+      "stale": "过期指标",
+      "half_open": "半开探测",
+      "recent_regression": "近期窗口回退"
+    },
+    "exclusionReasons": {
+      "provider_key_rate_limit_exhausted": "提供商密钥速率额度已耗尽"
     },
     "states": {
       "eligible": "可用",

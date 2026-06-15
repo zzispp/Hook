@@ -8,8 +8,10 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { Iconify } from 'src/components/iconify';
 
@@ -19,11 +21,37 @@ const ALL_FILTER_VALUE = '';
 
 type State = ReturnType<typeof useModelStatusAdminState>;
 
-export function ChecksToolbar({ state, t }: { state: State; t: TFunction<'admin'> }) {
+export function ChecksToolbar({
+  state,
+  t,
+  rowCount = 0,
+  numSelected = 0,
+  onSelectAllRows,
+}: {
+  state: State;
+  t: TFunction<'admin'>;
+  rowCount?: number;
+  numSelected?: number;
+  onSelectAllRows?: (checked: boolean) => void;
+}) {
   const selectedCount = state.checkTable.selected.length;
   return (
     <Box sx={toolbarSx}>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'stretch', md: 'center' }}>
+        {onSelectAllRows && (
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                indeterminate={!!numSelected && numSelected < rowCount}
+                checked={!!rowCount && numSelected === rowCount}
+                onChange={(event) => onSelectAllRows(event.target.checked)}
+              />
+            }
+            label={t('common.selectAll')}
+            sx={{ mr: 1, whiteSpace: 'nowrap' }}
+          />
+        )}
         <SearchField value={state.checkFilters.search ?? ''} placeholder={t('modelStatus.searchPlaceholder')} onChange={state.changeCheckSearch} />
         <ApiFormatField value={state.checkFilters.api_format ?? ''} t={t} onChange={state.changeCheckApiFormat} />
         <Button

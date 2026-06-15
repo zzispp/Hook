@@ -80,6 +80,7 @@
     "apiFormat": "API format",
     "apiToken": "Independent token",
     "interval": "Check interval",
+    "latency": "Latency",
     "enabled": "Enabled",
     "lastStatus": "Latest status",
     "lastCheckedAt": "Last checked",
@@ -1453,6 +1454,13 @@
     "loading": "Loading routing rankings...",
     "empty": "No routing candidates match the current filters.",
     "profileInherited": "Follow default",
+    "cards": {
+      "simulationContextTitle": "Simulation context",
+      "simulationContextHelper": "Select the billing group, model, and format context to simulate and inspect routing decisions.",
+      "profileTuningHelper": "Choose a routing profile, tune baseline weights, and control automatic reinforcement learning.",
+      "rankingsTitle": "Simulation: {{profile}}",
+      "rankingsHelper": "View live candidate rankings, score components, and window metrics under the selected routing profile."
+    },
     "filters": {
       "group": "Billing group",
       "model": "Model",
@@ -1488,13 +1496,40 @@
       "samples": "Samples",
       "confidence": "Confidence",
       "updatedAt": "Updated at",
-      "autoTuneDisabled": "Auto tuning is disabled for this profile."
+      "autoTuneDisabled": "Auto tuning is disabled for this profile.",
+      "tableMetric": "Metric",
+      "tableBaseline": "Baseline",
+      "tableLearned": "Learned",
+      "tableEffective": "Effective",
+      "autoTuneStatus": "Auto-tuning status",
+      "autoTuneActive": "Active",
+      "autoTuneInactive": "Disabled"
     },
     "profile": {
       "editorTitle": "Profile tuning",
       "editorHelper": "Edit the auto tune switch and administrator baseline weights for the selected profile. Automatic learning only makes controlled adjustments on top of this baseline.",
       "autoTune": "Enable Auto Tune",
       "weightTotal": "Current weight total: {{total}}. It must equal 1.000 before saving.",
+      "names": {
+        "balanced": "Balanced",
+        "first_byte": "First Byte",
+        "high_tps": "High TPS",
+        "cost_optimal": "Cost Optimal",
+        "high_availability": "High Availability",
+        "cache_affinity_plus": "Cache Affinity Plus",
+        "fixed_priority_plus": "Fixed Priority Plus",
+        "custom": "Custom"
+      },
+      "descriptions": {
+        "balanced": "Success, latency, cost, and headroom balanced.",
+        "first_byte": "Prioritizes p90 first-byte time for interactive streams.",
+        "high_tps": "Prioritizes output throughput and capacity headroom.",
+        "cost_optimal": "Minimizes estimated upstream cost with a success floor.",
+        "high_availability": "Prioritizes success rate and low error risk.",
+        "cache_affinity_plus": "Extends cache affinity with health and TTFB scoring.",
+        "fixed_priority_plus": "Keeps administrator priority while excluding unhealthy routes.",
+        "custom": "Administrator-controlled routing profile."
+      },
       "weightFields": {
         "success": "Success",
         "ttfb": "First byte",
@@ -1514,6 +1549,31 @@
       "breakdown": "Score Breakdown",
       "metrics": "Window Metrics",
       "penalty": "Exclusion / Penalty"
+    },
+    "metrics": {
+      "summary": "{{window}} · success {{success}}%, avg TTFB {{ttfb}}, avg latency {{latency}}, TPS {{tps}}, RPM {{rpm}}, samples {{samples}}",
+      "windowDetail": "state {{state}} · source {{source}} · success {{success}}% · avg TTFB {{ttfb}} · avg latency {{latency}} · TPS {{tps}} · samples {{samples}}",
+      "unlimited": "unlimited"
+    },
+    "scoreReason": "score {{score}}: {{components}}",
+    "scoreComponents": {
+      "success": "success rate",
+      "ttfb": "avg TTFB",
+      "latency": "avg latency",
+      "tps": "output TPS",
+      "cost": "configured cost",
+      "headroom": "RPM headroom",
+      "priority": "admin priority",
+      "health_prior": "health prior",
+      "exploration": "uncertainty exploration",
+      "affinity": "cache affinity",
+      "conversion": "format conversion",
+      "stale": "stale metrics",
+      "half_open": "half-open probe",
+      "recent_regression": "recent window regression"
+    },
+    "exclusionReasons": {
+      "provider_key_rate_limit_exhausted": "Provider key rate limit exhausted"
     },
     "states": {
       "eligible": "Eligible",

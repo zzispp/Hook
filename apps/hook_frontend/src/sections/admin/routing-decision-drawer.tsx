@@ -20,6 +20,14 @@ import { fNumber } from 'src/utils/format-number';
 
 import { Iconify } from 'src/components/iconify';
 
+import {
+  routeScoreReason,
+  scoreComponentLabel,
+  routingWindowDetail,
+  routingProfileDescription,
+  translatedExclusionReason,
+} from './routing-i18n';
+
 type Props = {
   open: boolean;
   item: RouteScoreExplanation | null;
@@ -113,7 +121,7 @@ function RouteDetail({
         <Typography variant="body2" color="text.secondary">
           {item.key_name || item.route.key_id} · {item.endpoint_name || item.route.endpoint_id}
         </Typography>
-        <Typography variant="body2">{item.selected_reason}</Typography>
+        <Typography variant="body2">{routeScoreReason(item, t)}</Typography>
       </Stack>
       <StateBlock item={item} t={t} />
       <FormulaBlock profile={profile} t={t} />
@@ -132,7 +140,7 @@ function StateBlock({ item, t }: { item: RouteScoreExplanation; t: AdminT }) {
       </Typography>
       {item.exclusion_reason ? (
         <Typography variant="body2" color="error.main">
-          {`${t('routing.drawer.exclusion')}: ${item.exclusion_reason}`}
+          {`${t('routing.drawer.exclusion')}: ${translatedExclusionReason(item.exclusion_reason, t)}`}
         </Typography>
       ) : null}
     </Stack>
@@ -146,12 +154,12 @@ function FormulaBlock({ profile, t }: { profile: RoutingProfile | null; t: Admin
     <Stack spacing={1}>
       <Typography variant="subtitle2">{t('routing.drawer.formula')}</Typography>
       <Typography variant="body2" color="text.secondary">
-        {profile.description}
+        {routingProfileDescription(profile, t)}
       </Typography>
-      <WeightLine label={t('routing.summary.effectiveWeights')} weights={profile.learning?.effective_weights || profile.weights} />
-      <WeightLine label={t('routing.summary.adminWeights')} weights={profile.learning?.admin_weights || profile.weights} />
+      <WeightLine label={t('routing.summary.effectiveWeights')} weights={profile.learning?.effective_weights || profile.weights} t={t} />
+      <WeightLine label={t('routing.summary.adminWeights')} weights={profile.learning?.admin_weights || profile.weights} t={t} />
       {profile.learning?.learned_weights ? (
-        <WeightLine label={t('routing.summary.learnedWeights')} weights={profile.learning.learned_weights} />
+        <WeightLine label={t('routing.summary.learnedWeights')} weights={profile.learning.learned_weights} t={t} />
       ) : null}
     </Stack>
   );
@@ -175,10 +183,6 @@ function WindowBlock({
       <Typography variant="subtitle2">{t('routing.drawer.windowMetrics')}</Typography>
       {windows.map((window) => {
         const detail = findWindowItem(item, window as RoutingMetricWindow, windowSnapshots);
-        const metrics = detail?.raw_metrics;
-        const successRate = metrics?.request_count
-          ? (metrics.success_count / metrics.request_count) * 100
-          : 0;
 
         return (
           <Stack key={window} spacing={0.25}>
@@ -188,7 +192,7 @@ function WindowBlock({
             </Typography>
             {detail ? (
               <Typography variant="caption" color="text.secondary">
-                {`state ${detail.state} · source ${detail.metric_window} · success ${successRate.toFixed(1)}% · avg TTFB ${formatMs(metrics?.ttfb_avg_ms)} · avg latency ${formatMs(metrics?.latency_avg_ms)} · TPS ${formatNumber(metrics?.output_tps)} · samples ${metrics?.sample_count ?? 0}`}
+                {routingWindowDetail(detail, detail.raw_metrics, t)}
               </Typography>
             ) : null}
           </Stack>
@@ -205,7 +209,7 @@ function ComponentBlock({ item, t }: { item: RouteScoreExplanation; t: AdminT })
       {item.components.map((component) => (
         <Stack key={component.code} spacing={0.5}>
           <Stack direction="row" justifyContent="space-between">
-            <Typography variant="body2">{component.label}</Typography>
+            <Typography variant="body2">{scoreComponentLabel(component, t)}</Typography>
             <Typography variant="body2">{component.contribution.toFixed(2)}</Typography>
           </Stack>
           <LinearProgress
@@ -234,13 +238,15 @@ function CandidateLine({ item }: { item: RouteScoreExplanation }) {
 function WeightLine({
   label,
   weights,
+  t,
 }: {
   label: string;
   weights: RoutingProfile['weights'];
+  t: AdminT;
 }) {
   return (
     <Typography variant="caption" color="text.secondary">
-      {`${label}: success ${(weights.success * 100).toFixed(1)}%, ttfb ${(weights.ttfb * 100).toFixed(1)}%, latency ${(weights.latency * 100).toFixed(1)}%, tps ${(weights.tps * 100).toFixed(1)}%, cost ${(weights.cost * 100).toFixed(1)}%, headroom ${(weights.headroom * 100).toFixed(1)}%, priority ${(weights.priority * 100).toFixed(1)}%`}
+      {`${label}: ${t('routing.profile.weightFields.success')} ${(weights.success * 100).toFixed(1)}%, ${t('routing.profile.weightFields.ttfb')} ${(weights.ttfb * 100).toFixed(1)}%, ${t('routing.profile.weightFields.latency')} ${(weights.latency * 100).toFixed(1)}%, ${t('routing.profile.weightFields.tps')} ${(weights.tps * 100).toFixed(1)}%, ${t('routing.profile.weightFields.cost')} ${(weights.cost * 100).toFixed(1)}%, ${t('routing.profile.weightFields.headroom')} ${(weights.headroom * 100).toFixed(1)}%, ${t('routing.profile.weightFields.priority')} ${(weights.priority * 100).toFixed(1)}%`}
     </Typography>
   );
 }
@@ -260,12 +266,4 @@ function uniqueWindow(value: string, index: number, items: string[]) {
 function candidateKey(item: RouteScoreExplanation) {
   const route = item.route;
   return `${route.provider_id}:${route.key_id}:${route.endpoint_id}:${route.provider_api_format}`;
-}
-
-function formatMs(value?: number | null) {
-  return value == null ? '-' : `${value.toFixed(0)}ms`;
-}
-
-function formatNumber(value?: number | null) {
-  return value == null ? '-' : value.toFixed(2);
 }
