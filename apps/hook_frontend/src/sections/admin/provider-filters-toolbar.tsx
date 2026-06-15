@@ -32,7 +32,6 @@ export type ProviderFilterState = {
 type Props = {
   filters: ProviderFilterState;
   models: GlobalModelResponse[];
-  schedulingLabel: string;
   onChange: (filters: ProviderFilterState) => void;
   onOpenPriority: () => void;
   onOpenCooldownPolicy: () => void;
@@ -67,7 +66,6 @@ function FilterControls({
   apiFormats,
   statusOptions,
   modelOptions,
-  schedulingLabel,
   onOpenPriority,
   onOpenCooldownPolicy,
   hasActiveFilters,
@@ -111,7 +109,7 @@ function FilterControls({
           <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
         ))}
       </SelectFilter>
-      <SchedulingButton label={schedulingLabel} onClick={onOpenPriority} />
+      <PriorityButton onClick={onOpenPriority} />
       <CooldownPolicyButton onClick={onOpenCooldownPolicy} />
       {hasActiveFilters && <ResetFiltersButton onClick={() => onChange(DEFAULT_PROVIDER_FILTERS)} />}
     </Box>
@@ -166,13 +164,12 @@ function SelectFilter({
   );
 }
 
-function SchedulingButton({ label, onClick }: { label: string; onClick: () => void }) {
+function PriorityButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslate('admin');
 
   return (
     <Button color="inherit" variant="outlined" endIcon={<Iconify icon="eva:chevron-down-fill" />} onClick={onClick} sx={{ whiteSpace: 'nowrap' }}>
-      <Box component="span" sx={{ color: 'text.secondary', mr: 0.75 }}>{t('providers.scheduling')}:</Box>
-      {label}
+      {t('providers.priorityManagement')}
     </Button>
   );
 }

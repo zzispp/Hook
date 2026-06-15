@@ -216,6 +216,7 @@ mod tests {
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: vec!["model-1".into()],
             allowed_provider_key_group_ids: vec!["key-group-1".into(), "key-group-2".into()],
+            routing_profile_id: None,
             visible_user_group_codes: vec!["default".into()],
             is_active: true,
             is_system: true,

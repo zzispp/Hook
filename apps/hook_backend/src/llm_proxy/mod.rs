@@ -14,6 +14,7 @@ mod proxy;
 mod rate_limit;
 mod request_payload_writer;
 mod request_record_policy;
+pub(crate) mod routing;
 mod token_usage;
 mod ws;
 
@@ -32,6 +33,7 @@ use user::application::SystemUserProvider;
 pub(crate) use cache::snapshot::CachedUserAccess;
 pub use cache::{LlmProxyCache, LlmProxyCacheOptions};
 pub(crate) use cache_affinity::{AffinityEntry, AffinityRecord, AffinitySelection, ClearAffinityInput, InvalidateAffinityInput, SetAffinityInput};
+pub(crate) use candidate::{routing_preview, routing_rankings};
 pub use error::LlmProxyError;
 pub(crate) use model_test::LlmProxyProviderModelTester;
 pub(crate) use proxy::{ProxyJsonRequest, proxy_json};
@@ -114,6 +116,10 @@ impl LlmProxyState {
 
     pub async fn scheduling_snapshot(&self) -> Result<cache::snapshot::SchedulingSnapshot, LlmProxyError> {
         self.cache.scheduling_snapshot().await
+    }
+
+    pub(crate) fn database(&self) -> Database {
+        self.database.clone()
     }
 
     pub fn system_wallet_for_user(&self, user_id: &str) -> Option<Wallet> {

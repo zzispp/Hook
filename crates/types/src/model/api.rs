@@ -2,6 +2,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use super::{ModelPriceRange, PatchField, TieredPricingConfig, patch::deserialize_patch_value};
+use crate::provider::RoutingProfileId;
 
 const DEFAULT_GLOBAL_MODEL_LIMIT: u64 = 100;
 
@@ -29,6 +30,8 @@ pub struct GlobalModelCreate {
     #[serde(default)]
     pub config: Option<serde_json::Value>,
     #[serde(default)]
+    pub routing_profile_id: Option<RoutingProfileId>,
+    #[serde(default)]
     pub is_active: Option<bool>,
 }
 
@@ -46,6 +49,8 @@ pub struct GlobalModelUpdate {
     pub supported_capabilities: PatchField<Vec<String>>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub config: PatchField<serde_json::Value>,
+    #[serde(default, deserialize_with = "deserialize_patch_value")]
+    pub routing_profile_id: PatchField<RoutingProfileId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -59,6 +64,7 @@ pub struct GlobalModelResponse {
     pub default_tiered_pricing: TieredPricingConfig,
     pub supported_capabilities: Option<Vec<String>>,
     pub config: Option<serde_json::Value>,
+    pub routing_profile_id: Option<RoutingProfileId>,
     pub provider_count: Option<u64>,
     pub active_provider_count: Option<u64>,
     pub usage_count: Option<i64>,
@@ -106,6 +112,7 @@ impl GlobalModelUpdate {
             && self.default_tiered_pricing.is_missing()
             && self.supported_capabilities.is_missing()
             && self.config.is_missing()
+            && self.routing_profile_id.is_missing()
     }
 }
 

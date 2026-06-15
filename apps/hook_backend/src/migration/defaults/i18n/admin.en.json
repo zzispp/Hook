@@ -9,6 +9,7 @@
     "admin_cost_analysis": "Cost Analysis",
     "dashboard_model_status": "Model Status",
     "admin_performance_monitoring": "Performance Monitoring",
+    "admin_routing": "Routing Strategy",
     "dashboard_models": "Model Catalog",
     "dashboard_groups": "Price Groups",
     "wallet_center": "Wallet Center",
@@ -289,6 +290,7 @@
     "targetUserGroup": "Updated user groups",
     "userGroup": "User groups",
     "visibleUserGroups": "Visible user groups",
+    "routingProfile": "Routing profile",
     "wallet": "Wallet",
     "referrerAffCode": "Referrer aff_code"
   },
@@ -357,6 +359,8 @@
     "associateProviderKeyGroups": "Select key groups that {{name}} belongs to. Unselected groups are removed.",
     "billingProviderKeyGroupAccess": "Select one or more key groups. Scheduling expands them into keys in those groups.",
     "groupUserGroupVisibility": "Only selected user groups can see this billing group. Empty means nobody can see it.",
+    "billingRoutingProfile": "Optional override for live routing in this billing group. Empty follows the model or system default.",
+    "modelRoutingProfile": "Optional override for live routing of this model. Empty follows the billing group or system default.",
     "systemRateLimit": "0 follows the system rate; non-zero will use min(system rate, this value).",
     "unlimitedExpiresAt": "Leave empty for no time limit; entered values must be in the future.",
     "unlimitedQuota": "Leave empty for unlimited quota.",
@@ -454,6 +458,7 @@
     "providerCacheAffinityTtlInvalid": "Cache affinity duration must be an integer greater than 0",
     "providerPriorityInvalid": "Priority must be an integer",
     "providerPriorityUpdated": "Provider priority updated",
+    "routingProfileUpdated": "Routing profile updated",
     "providerUpdated": "Provider updated",
     "copyFailed": "Copy failed",
     "systemSettingsUpdated": "System settings updated"
@@ -1442,6 +1447,93 @@
       "deleteContent": "Delete cache affinity {{key}}?",
       "clearAllTitle": "Clear cache affinities",
       "clearAllContent": "Clear all cache affinity records? This takes effect immediately for subsequent scheduling."
+    }
+  },
+  "routing": {
+    "loading": "Loading routing rankings...",
+    "empty": "No routing candidates match the current filters.",
+    "profileInherited": "Follow default",
+    "filters": {
+      "group": "Billing group",
+      "model": "Model",
+      "apiFormat": "API format",
+      "window": "Window",
+      "stream": "Stream",
+      "includeExcluded": "Show excluded",
+      "autoRefresh": "Auto refresh",
+      "requestId": "Request ID"
+    },
+    "actions": {
+      "lookup": "Lookup",
+      "details": "Details"
+    },
+    "runtime": {
+      "title": "Effective routing profile",
+      "helper": "Choose the routing profile that actually applies to the current billing group or model. Provider priority management now only maintains ordering for Fixed Priority Plus and fixed-order style strategies.",
+      "scope": "Scope",
+      "scopeBillingGroup": "Billing group",
+      "scopeModel": "Model",
+      "followBillingGroup": "Follow billing group",
+      "groupRequired": "Select a billing group before changing the routing profile.",
+      "modelRequired": "No model is selected, so model-level routing cannot be changed.",
+      "modelScopeUnavailable": "The selected model could not be resolved for model-level routing.",
+      "effectiveProfile": "Effective profile: {{profile}}. Model override: {{modelScope}}; billing group override: {{groupScope}}."
+    },
+    "summary": {
+      "liveWindow": "Live routing uses 5m for fast avoidance and backfills stability from 1h / 24h / 7d windows.",
+      "effectiveWeights": "Effective weights",
+      "adminWeights": "Admin baseline",
+      "learnedWeights": "Learned weights",
+      "rewardWindow": "Reward window",
+      "samples": "Samples",
+      "confidence": "Confidence",
+      "updatedAt": "Updated at",
+      "autoTuneDisabled": "Auto tuning is disabled for this profile."
+    },
+    "profile": {
+      "editorTitle": "Profile tuning",
+      "editorHelper": "Edit the auto tune switch and administrator baseline weights for the selected profile. Automatic learning only makes controlled adjustments on top of this baseline.",
+      "autoTune": "Enable Auto Tune",
+      "weightTotal": "Current weight total: {{total}}. It must equal 1.000 before saving.",
+      "weightFields": {
+        "success": "Success",
+        "ttfb": "First byte",
+        "latency": "Latency",
+        "tps": "TPS",
+        "cost": "Cost",
+        "headroom": "Headroom",
+        "priority": "Priority"
+      }
+    },
+    "table": {
+      "rank": "Rank",
+      "route": "Provider / Key / Endpoint",
+      "state": "State",
+      "score": "Final Score",
+      "reason": "Selected Reason",
+      "breakdown": "Score Breakdown",
+      "metrics": "Window Metrics",
+      "penalty": "Exclusion / Penalty"
+    },
+    "states": {
+      "eligible": "Eligible",
+      "warming": "Warming",
+      "degraded": "Degraded",
+      "excluded": "Excluded",
+      "circuit_open": "Circuit Open"
+    },
+    "drawer": {
+      "title": "Routing Decision Detail",
+      "requestId": "Request ID",
+      "state": "State",
+      "sourceWindow": "Source window",
+      "freshness": "Freshness",
+      "exclusion": "Exclusion",
+      "formula": "Formula and weights",
+      "metrics": "Raw Metrics",
+      "windowMetrics": "Multi-window metrics",
+      "components": "Score Components",
+      "candidates": "Candidates"
     }
   },
   "userWallet": {

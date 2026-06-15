@@ -272,6 +272,7 @@ mod tests {
             supported_capabilities: None,
             default_price_per_request: Some(Decimal::ZERO),
             default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
+            routing_profile_id: None,
         };
 
         let response = openai_model(&model);

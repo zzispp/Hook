@@ -13,6 +13,7 @@ mod performance_monitoring;
 mod provider;
 mod rbac;
 mod recharge;
+mod routing;
 mod scheduler;
 mod setting;
 mod token;
@@ -47,6 +48,7 @@ const API_GROUPS: &[&[ApiDefinition]] = &[
     scheduler::SCHEDULER_APIS,
     performance_monitoring::PERFORMANCE_MONITORING_APIS,
     cache_monitoring::CACHE_MONITORING_APIS,
+    routing::ROUTING_APIS,
 ];
 
 pub fn iter_definitions() -> impl Iterator<Item = &'static ApiDefinition> {

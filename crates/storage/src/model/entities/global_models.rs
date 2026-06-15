@@ -1,5 +1,6 @@
 use rust_decimal::Decimal;
 use sea_orm::entity::prelude::*;
+use types::provider::RoutingProfileId;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "global_models")]
@@ -13,6 +14,7 @@ pub struct Model {
     pub default_tiered_pricing: String,
     pub supported_capabilities: Option<String>,
     pub config: Option<String>,
+    pub routing_profile_id: Option<String>,
     pub is_active: bool,
     pub usage_count: i64,
     pub created_at: TimeDateTimeWithTimeZone,
@@ -23,3 +25,9 @@ pub struct Model {
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl Model {
+    pub fn routing_profile_id(&self) -> Option<RoutingProfileId> {
+        self.routing_profile_id.as_deref().map(RoutingProfileId::from)
+    }
+}

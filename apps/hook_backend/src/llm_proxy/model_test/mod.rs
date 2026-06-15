@@ -70,6 +70,9 @@ impl TestRequest {
         let selection = CandidateSelection {
             request_id: Uuid::now_v7().to_string(),
             cache_affinity_ttl_minutes: snapshot.cache_affinity_ttl_minutes,
+            routing_profile_id: None,
+            routing_profile_version: None,
+            routing_explanations: Vec::new(),
             candidates: vec![candidate::proxy_candidate(&state, parts.clone(), effective_stream)?],
         };
         let primary = primary_endpoint(&selection)?;

@@ -97,6 +97,7 @@ mod tests {
             default_tiered_pricing: tiered,
             supported_capabilities: None,
             config: None,
+            routing_profile_id: None,
             provider_count: None,
             active_provider_count: None,
             usage_count: None,

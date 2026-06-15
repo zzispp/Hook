@@ -242,6 +242,7 @@ fn global_model_record(id: &str, usage_count: i64) -> global_models::Model {
         default_tiered_pricing: "{\"tiers\":[]}".into(),
         supported_capabilities: None,
         config: None,
+        routing_profile_id: None,
         is_active: true,
         usage_count,
         created_at: now(),

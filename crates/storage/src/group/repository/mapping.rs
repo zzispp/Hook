@@ -14,6 +14,7 @@ pub fn group_active_model(id: String, input: BillingGroupRecordInput) -> billing
         name: Set(input.name),
         description: Set(input.description),
         billing_multiplier: Set(input.billing_multiplier),
+        routing_profile_id: Set(input.routing_profile_id.map(|value| value.as_str().to_owned())),
         is_active: Set(input.is_active),
         is_system: Set(input.is_system),
         sort_order: Set(input.sort_order),
@@ -44,6 +45,7 @@ pub fn apply_group_patch(active: &mut billing_groups::ActiveModel, input: Billin
     if let Some(multiplier) = input.billing_multiplier {
         active.billing_multiplier = Set(multiplier);
     }
+    apply_routing_profile_patch(&mut active.routing_profile_id, input.routing_profile_id);
     if let Some(is_active) = input.is_active {
         active.is_active = Set(is_active);
     }
@@ -55,6 +57,14 @@ pub fn apply_group_patch(active: &mut billing_groups::ActiveModel, input: Billin
 fn apply_description_patch(target: &mut sea_orm::ActiveValue<Option<String>>, patch: PatchField<String>) {
     match patch {
         PatchField::Value(value) => *target = Set(Some(value)),
+        PatchField::Null => *target = Set(None),
+        PatchField::Missing => {}
+    }
+}
+
+fn apply_routing_profile_patch(target: &mut sea_orm::ActiveValue<Option<String>>, patch: PatchField<types::provider::RoutingProfileId>) {
+    match patch {
+        PatchField::Value(value) => *target = Set(Some(value.as_str().to_owned())),
         PatchField::Null => *target = Set(None),
         PatchField::Missing => {}
     }

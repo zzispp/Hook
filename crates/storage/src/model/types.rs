@@ -1,5 +1,6 @@
 use rust_decimal::Decimal;
 use types::model::{PatchField, TieredPricingConfig};
+use types::provider::RoutingProfileId;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlobalModelUsageRecord {
@@ -23,6 +24,7 @@ pub struct GlobalModelRecordInput {
     pub default_tiered_pricing: TieredPricingConfig,
     pub supported_capabilities: Option<Vec<String>>,
     pub config: Option<serde_json::Value>,
+    pub routing_profile_id: Option<RoutingProfileId>,
     pub is_active: bool,
 }
 
@@ -34,4 +36,5 @@ pub struct GlobalModelRecordPatch {
     pub default_tiered_pricing: Option<TieredPricingConfig>,
     pub supported_capabilities: PatchField<Vec<String>>,
     pub config: PatchField<serde_json::Value>,
+    pub routing_profile_id: PatchField<RoutingProfileId>,
 }

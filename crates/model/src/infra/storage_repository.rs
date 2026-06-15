@@ -70,6 +70,7 @@ fn record_input(input: GlobalModelCreate) -> GlobalModelRecordInput {
         default_tiered_pricing: input.default_tiered_pricing,
         supported_capabilities: input.supported_capabilities,
         config: input.config,
+        routing_profile_id: input.routing_profile_id,
         is_active: input.is_active.unwrap_or(true),
     }
 }
@@ -82,6 +83,7 @@ fn record_patch(input: GlobalModelUpdate) -> GlobalModelRecordPatch {
         default_tiered_pricing: tiered_pricing_patch(input.default_tiered_pricing),
         supported_capabilities: input.supported_capabilities,
         config: input.config,
+        routing_profile_id: input.routing_profile_id,
     }
 }
 

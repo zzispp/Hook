@@ -10,6 +10,7 @@ pub(in crate::migration::baseline) enum GlobalModels {
     DefaultTieredPricing,
     SupportedCapabilities,
     Config,
+    RoutingProfileId,
     IsActive,
     UsageCount,
     CreatedAt,

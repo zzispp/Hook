@@ -136,6 +136,7 @@ fn snapshot() -> SchedulingSnapshot {
             billing_multiplier: Decimal::ONE,
             allowed_model_ids: vec!["global-model-a".into(), "global-model-c".into()],
             allowed_provider_key_ids: None,
+            routing_profile_id: None,
             provider_priorities: Default::default(),
             provider_key_priorities: Default::default(),
             visible_user_group_codes: vec!["group-a".into()],
@@ -216,6 +217,7 @@ fn model(id: &str, name: &str) -> CachedGlobalModel {
         supported_capabilities: None,
         default_price_per_request: None,
         default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
+        routing_profile_id: None,
     }
 }
 

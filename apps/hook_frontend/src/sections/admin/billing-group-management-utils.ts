@@ -1,4 +1,5 @@
 import type { BillingGroup } from 'src/types/group';
+import type { RoutingProfileId } from 'src/types/routing';
 
 export type BillingAccessMode = 'unrestricted' | 'provider_key_groups';
 
@@ -10,6 +11,7 @@ export type GroupForm = {
   allowed_model_ids: string[];
   access_mode: BillingAccessMode;
   allowed_provider_key_group_ids: string[];
+  routing_profile_id: RoutingProfileId | '';
   visible_user_group_codes: string[];
   is_active: boolean;
   sort_order: string;
@@ -23,6 +25,7 @@ export const DEFAULT_GROUP_FORM: GroupForm = {
   allowed_model_ids: [],
   access_mode: 'unrestricted',
   allowed_provider_key_group_ids: [],
+  routing_profile_id: '',
   visible_user_group_codes: ['default'],
   is_active: true,
   sort_order: '0',
@@ -37,6 +40,7 @@ export function formFromGroup(group: BillingGroup): GroupForm {
     allowed_model_ids: group.allowed_model_ids,
     access_mode: accessModeFromGroup(group),
     allowed_provider_key_group_ids: group.allowed_provider_key_group_ids,
+    routing_profile_id: group.routing_profile_id ?? '',
     visible_user_group_codes: group.visible_user_group_codes,
     is_active: group.is_active,
     sort_order: String(group.sort_order),
@@ -50,6 +54,7 @@ export function groupPayload(form: GroupForm) {
     billing_multiplier: Number(form.billing_multiplier),
     allowed_model_ids: form.allowed_model_ids,
     allowed_provider_key_group_ids: providerKeyGroupIdsForPayload(form),
+    routing_profile_id: form.routing_profile_id || null,
     visible_user_group_codes: form.visible_user_group_codes,
     is_active: form.is_active,
     sort_order: Number(form.sort_order || 0),

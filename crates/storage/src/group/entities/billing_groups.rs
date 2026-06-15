@@ -1,6 +1,7 @@
 use sea_orm::entity::prelude::*;
 use time::format_description::well_known::Rfc3339;
 use types::group::BillingGroup;
+use types::provider::RoutingProfileId;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "billing_groups")]
@@ -12,6 +13,7 @@ pub struct Model {
     pub name: String,
     pub description: Option<String>,
     pub billing_multiplier: rust_decimal::Decimal,
+    pub routing_profile_id: Option<String>,
     pub is_active: bool,
     pub is_system: bool,
     pub sort_order: i64,
@@ -32,6 +34,7 @@ impl From<Model> for BillingGroup {
             name: value.name,
             description: value.description,
             billing_multiplier: value.billing_multiplier,
+            routing_profile_id: value.routing_profile_id.as_deref().map(RoutingProfileId::from),
             allowed_model_ids: Vec::new(),
             allowed_provider_key_group_ids: Vec::new(),
             visible_user_group_codes: Vec::new(),

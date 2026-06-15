@@ -256,6 +256,13 @@ export const endpoints = {
     realtime: '/api/admin/performance-monitoring/realtime',
     analytics: '/api/admin/performance-monitoring/analytics',
   },
+  routing: {
+    profiles: '/api/admin/routing/profiles',
+    profile: (id: string) => `/api/admin/routing/profiles/${id}`,
+    rankings: '/api/admin/routing/rankings',
+    decision: (requestId: string) => `/api/admin/routing/decisions/${requestId}`,
+    preview: '/api/admin/routing/preview',
+  },
   modelStatus: {
     checks: '/api/model-status/checks',
   },

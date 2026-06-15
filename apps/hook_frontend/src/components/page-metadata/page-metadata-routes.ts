@@ -30,6 +30,7 @@ const DASHBOARD_TITLE_ROUTES: readonly DashboardTitleRoute[] = [
     path: paths.dashboard.admin.performanceMonitoring,
     code: DASHBOARD_MENU_CODES.performanceMonitoring,
   },
+  { path: paths.dashboard.admin.routing, code: DASHBOARD_MENU_CODES.routing },
   { path: paths.dashboard.admin.requestRecords, code: DASHBOARD_MENU_CODES.requestRecords },
   { path: paths.dashboard.admin.userGroups, code: DASHBOARD_MENU_CODES.userGroups },
   { path: paths.dashboard.admin.userStats, code: DASHBOARD_MENU_CODES.userStats },

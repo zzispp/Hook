@@ -313,6 +313,16 @@ pub const MENU_ITEMS: &[MenuItemDefinition] = &[
         deep_match: true,
     },
     MenuItemDefinition {
+        id: "00000000-0000-7000-8000-000000000236",
+        section_id: OPERATIONS_SECTION_ID,
+        code: "admin_routing",
+        title: "路由策略",
+        path: "/dashboard/admin/routing",
+        icon: "solar:map-arrow-right-bold",
+        sort_order: 59,
+        deep_match: true,
+    },
+    MenuItemDefinition {
         id: "00000000-0000-7000-8000-000000000216",
         section_id: OPERATIONS_SECTION_ID,
         code: "admin_request_records",

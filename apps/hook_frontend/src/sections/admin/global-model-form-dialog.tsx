@@ -1,11 +1,13 @@
 'use client';
 
+import type { RoutingProfile } from 'src/types/routing';
 import type { GlobalModelForm } from './model-management-utils';
 
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -15,6 +17,7 @@ import DialogContent from '@mui/material/DialogContent';
 import { accountingCurrencyLabel } from 'src/utils/money-boundary';
 
 import { useTranslate } from 'src/locales/use-locales';
+import { useRoutingProfiles } from 'src/actions/routing';
 
 import { SwitchRow, TextFieldRow } from './shared';
 import { CAPABILITY_KEYS } from './model-management-utils';
@@ -46,6 +49,7 @@ export function GlobalModelFormDialog({
   onChange,
 }: Props) {
   const { t } = useTranslate('admin');
+  const profiles = useRoutingProfiles();
 
   return (
     <Dialog fullWidth maxWidth="lg" open={open} onClose={onClose}>
@@ -61,7 +65,7 @@ export function GlobalModelFormDialog({
         >
           {picker}
           <Stack sx={{ gap: 2.5, minWidth: 0 }}>
-            <BasicFields form={form} isEdit={isEdit} onChange={onChange} />
+            <BasicFields form={form} isEdit={isEdit} profiles={profiles.items} onChange={onChange} />
             <PricingFields form={form} onChange={onChange} />
             <MetadataFields form={form} onChange={onChange} />
             <CapabilityFields form={form} onChange={onChange} />
@@ -83,10 +87,12 @@ export function GlobalModelFormDialog({
 function BasicFields({
   form,
   isEdit,
+  profiles,
   onChange,
 }: {
   form: GlobalModelForm;
   isEdit: boolean;
+  profiles: RoutingProfile[];
   onChange: (form: GlobalModelForm) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -111,6 +117,26 @@ function BasicFields({
         value={form.description}
         onChange={(description) => onChange({ ...form, description })}
       />
+      <TextField
+        select
+        fullWidth
+        label={t('fields.routingProfile')}
+        value={form.routing_profile_id}
+        helperText={t('helper.modelRoutingProfile')}
+        onChange={(event) =>
+          onChange({
+            ...form,
+            routing_profile_id: event.target.value as GlobalModelForm['routing_profile_id'],
+          })
+        }
+      >
+        <MenuItem value="">{t('routing.profileInherited')}</MenuItem>
+        {profiles.map((profile) => (
+          <MenuItem key={profile.id} value={profile.id}>
+            {profile.name}
+          </MenuItem>
+        ))}
+      </TextField>
       <SwitchRow
         label={t('common.active')}
         checked={form.is_active}

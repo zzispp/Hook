@@ -1,3 +1,4 @@
+mod dynamic_routing;
 mod matching;
 mod proxy_candidate;
 mod route;
@@ -5,7 +6,14 @@ mod scheduler;
 #[cfg(test)]
 mod tests;
 
-use types::{api_token::ApiToken, model::TieredPricingConfig};
+use types::{
+    api_token::ApiToken,
+    model::TieredPricingConfig,
+    provider::{
+        RouteScoreExplanation, RoutingMetricWindow, RoutingPreviewRequest, RoutingPreviewResponse, RoutingProfile, RoutingProfileId, RoutingRankingResponse,
+        RoutingRankingsRequest,
+    },
+};
 use uuid::Uuid;
 
 use self::{
@@ -73,6 +81,17 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         mode: snapshot.scheduling_mode,
         priority_mode: snapshot.provider_priority_mode,
     })?;
+    let routed = dynamic_routing::rank_candidate_parts(dynamic_routing::DynamicRoutingInput {
+        state,
+        parts: ordered,
+        group,
+        request,
+        global_model: &model,
+        profile_id: effective_routing_profile_id(group, &model),
+        priority_mode: snapshot.provider_priority_mode,
+        allow_empty: false,
+    })
+    .await?;
     let candidates = proxy_candidates(ProxyCandidateBuildInput {
         state,
         token,
@@ -80,14 +99,126 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         global_model: &model,
         group,
         token_user,
-        parts: &ordered,
+        parts: &routed.parts,
     })
     .await?;
     Ok(CandidateSelection {
         request_id,
         cache_affinity_ttl_minutes: snapshot.cache_affinity_ttl_minutes,
+        routing_profile_id: Some(routed.profile.id),
+        routing_profile_version: Some(routed.profile.version),
+        routing_explanations: routed.explanations,
         candidates,
     })
+}
+
+pub(super) async fn routing_rankings(state: &LlmProxyState, request: RoutingRankingsRequest) -> Result<RoutingRankingResponse, LlmProxyError> {
+    let window = request.window;
+    let profile = crate::llm_proxy::routing::profile_by_id(state, request.profile_id).await?.profile;
+    let output = preview_output(state, PreviewInput::from_ranking(request)?, profile.clone(), window).await?;
+    Ok(RoutingRankingResponse {
+        profile,
+        window,
+        items: output,
+    })
+}
+
+pub(super) async fn routing_preview(state: &LlmProxyState, request: RoutingPreviewRequest) -> Result<RoutingPreviewResponse, LlmProxyError> {
+    let profile = crate::llm_proxy::routing::profile_by_id(state, request.profile_id).await?.profile;
+    let items = preview_output(state, PreviewInput::from_preview(request), profile.clone(), RoutingMetricWindow::default()).await?;
+    Ok(RoutingPreviewResponse { profile, items })
+}
+
+async fn preview_output(
+    state: &LlmProxyState,
+    input: PreviewInput,
+    profile: RoutingProfile,
+    window: RoutingMetricWindow,
+) -> Result<Vec<RouteScoreExplanation>, LlmProxyError> {
+    let snapshot = state.scheduling_snapshot().await?;
+    let group = snapshot
+        .groups
+        .iter()
+        .find(|group| group.code == input.group_code)
+        .ok_or_else(|| LlmProxyError::InvalidRequest(format!("billing group not found for routing preview: {}", input.group_code)))?;
+    let model = resolve_global_model(&snapshot, &input.model)?;
+    let request = CandidateRequest {
+        api_format: &input.api_format,
+        routing_api_format: &input.api_format,
+        model_name: &input.model,
+        is_stream: input.is_stream,
+        has_openai_responses_custom_tool_items: false,
+        required_capability: None,
+    };
+    let cooled_provider_ids = cooled_provider_ids(state, &snapshot).await?;
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group,
+        user_access: None,
+        model_id: &model.id,
+        request,
+        affinity: None,
+        scheduling_mode: snapshot.scheduling_mode,
+        request_id: "routing-preview",
+        cooled_provider_ids: &cooled_provider_ids,
+    });
+    let output = dynamic_routing::rank_candidate_parts_with_profile(
+        dynamic_routing::DynamicRoutingInput {
+            state,
+            parts,
+            group,
+            request,
+            global_model: &model,
+            profile_id: profile.id,
+            priority_mode: snapshot.provider_priority_mode,
+            allow_empty: true,
+        },
+        profile,
+        window,
+    )
+    .await?;
+    Ok(filter_explanations(output.explanations, input.include_excluded))
+}
+
+struct PreviewInput {
+    group_code: String,
+    model: String,
+    api_format: String,
+    is_stream: bool,
+    include_excluded: bool,
+}
+
+impl PreviewInput {
+    fn from_ranking(request: RoutingRankingsRequest) -> Result<Self, LlmProxyError> {
+        Ok(Self {
+            group_code: required_filter(request.group_code, "group_code")?,
+            model: required_filter(request.model, "model")?,
+            api_format: required_filter(request.api_format, "api_format")?,
+            is_stream: request.is_stream.unwrap_or(false),
+            include_excluded: request.include_excluded,
+        })
+    }
+
+    fn from_preview(request: RoutingPreviewRequest) -> Self {
+        Self {
+            group_code: request.group_code,
+            model: request.model,
+            api_format: request.api_format,
+            is_stream: request.is_stream,
+            include_excluded: true,
+        }
+    }
+}
+
+fn required_filter(value: Option<String>, name: &str) -> Result<String, LlmProxyError> {
+    value.ok_or_else(|| LlmProxyError::InvalidRequest(format!("routing rankings requires {name}")))
+}
+
+fn filter_explanations(items: Vec<RouteScoreExplanation>, include_excluded: bool) -> Vec<RouteScoreExplanation> {
+    if include_excluded {
+        return items;
+    }
+    items.into_iter().filter(|item| item.exclusion_reason.is_none()).collect()
 }
 
 #[derive(Clone)]
@@ -96,6 +227,7 @@ pub(super) struct GlobalModelRef {
     pub(super) name: String,
     pub(super) default_price_per_request: Option<rust_decimal::Decimal>,
     pub(super) default_tiered_pricing: TieredPricingConfig,
+    pub(super) routing_profile_id: Option<RoutingProfileId>,
 }
 
 #[derive(Clone)]
@@ -128,7 +260,12 @@ fn model_ref(model: &CachedGlobalModel) -> GlobalModelRef {
         name: model.name.clone(),
         default_price_per_request: model.default_price_per_request,
         default_tiered_pricing: model.default_tiered_pricing.clone(),
+        routing_profile_id: model.routing_profile_id,
     }
+}
+
+fn effective_routing_profile_id(group: &crate::llm_proxy::cache::snapshot::CachedBillingGroup, model: &GlobalModelRef) -> RoutingProfileId {
+    model.routing_profile_id.or(group.routing_profile_id).unwrap_or(RoutingProfileId::Balanced)
 }
 
 async fn cooled_provider_ids(state: &LlmProxyState, snapshot: &SchedulingSnapshot) -> Result<std::collections::HashSet<String>, LlmProxyError> {

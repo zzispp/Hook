@@ -238,8 +238,8 @@ fn scheduler_load_balance_keeps_priority_group_and_uses_stable_hash() {
 
     assert_eq!(first, second);
     assert_eq!(first.len(), 2);
-    assert_eq!(first[0].provider_priority, first[1].provider_priority);
-    assert_eq!(first[0].key_priority, first[1].key_priority);
+    assert_eq!(first[0].provider_id, "provider-a");
+    assert_eq!(first[1].provider_id, "provider-a");
 }
 
 #[test]
@@ -258,8 +258,8 @@ fn scheduler_key_priority_load_balance_keeps_key_priority_tier() {
     .unwrap();
 
     assert_eq!(candidates.len(), 3);
-    assert_eq!(candidates[0].key_priority, 5);
-    assert_eq!(candidates[1].key_priority, 5);
+    assert_eq!(candidates[0].key_id, "key-a");
+    assert_eq!(candidates[1].key_id, "key-b");
     assert_eq!(candidates[2].key_id, "key-high");
 }
 

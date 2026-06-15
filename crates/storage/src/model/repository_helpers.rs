@@ -18,6 +18,7 @@ pub(super) fn apply_global_model_patch(active: &mut GlobalModelActiveModel, inpu
         input.default_tiered_pricing,
         input.supported_capabilities,
         input.config,
+        input.routing_profile_id,
     )
 }
 
@@ -54,13 +55,16 @@ fn apply_patch_fields(
     tiered_pricing: Option<types::model::TieredPricingConfig>,
     supported_capabilities: PatchField<Vec<String>>,
     config: PatchField<serde_json::Value>,
+    routing_profile_id: PatchField<types::provider::RoutingProfileId>,
 ) -> StorageResult<()> {
     apply_price_patch(active, price_per_request);
     if let Some(pricing) = tiered_pricing {
         active.default_tiered_pricing = Set(json::encode_required(&pricing)?);
     }
     apply_json_patch(&mut active.supported_capabilities, supported_capabilities)?;
-    apply_json_patch(&mut active.config, config)
+    apply_json_patch(&mut active.config, config)?;
+    apply_routing_profile_patch(&mut active.routing_profile_id, routing_profile_id);
+    Ok(())
 }
 
 fn apply_price_patch(active: &mut GlobalModelActiveModel, patch: PatchField<rust_decimal::Decimal>) {
@@ -81,6 +85,14 @@ where
         PatchField::Missing => {}
     }
     Ok(())
+}
+
+fn apply_routing_profile_patch(field: &mut sea_orm::ActiveValue<Option<String>>, patch: PatchField<types::provider::RoutingProfileId>) {
+    match patch {
+        PatchField::Value(value) => *field = Set(Some(value.as_str().to_owned())),
+        PatchField::Null => *field = Set(None),
+        PatchField::Missing => {}
+    }
 }
 
 fn config_bool(config: Option<&serde_json::Value>, key: &str) -> bool {

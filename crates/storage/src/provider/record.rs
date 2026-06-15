@@ -13,7 +13,7 @@ pub use entities::{
     billing_group_provider_key_groups, billing_group_provider_keys, billing_group_providers, billing_rules, dimension_collectors, provider_api_keys,
     provider_cooldown_events, provider_cooldowns, provider_endpoints, provider_key_group_keys, provider_key_groups, provider_model_costs,
     provider_quick_import_key_models, provider_quick_import_keys, provider_quick_import_sources, provider_quick_import_sync_events, providers,
-    request_candidates, request_records,
+    request_candidates, request_records, routing_decision_samples, routing_profiles,
 };
 
 pub type ProviderRecord = providers::Model;
@@ -34,6 +34,7 @@ pub type BillingRuleRecord = billing_rules::Model;
 pub type DimensionCollectorRecord = dimension_collectors::Model;
 pub type RequestCandidateRecord = request_candidates::Model;
 pub type RequestRecordSummaryRecord = request_records::Model;
+pub type RoutingProfileRecord = routing_profiles::Model;
 
 impl ProviderEndpointRecord {
     pub fn response(self) -> StorageResult<ProviderEndpoint> {
@@ -152,6 +153,6 @@ impl RequestCandidateRecord {
     }
 }
 
-fn format_timestamp(value: sea_orm::entity::prelude::TimeDateTimeWithTimeZone) -> String {
+pub(crate) fn format_timestamp(value: sea_orm::entity::prelude::TimeDateTimeWithTimeZone) -> String {
     value.format(&Rfc3339).expect("provider timestamp must format as RFC3339")
 }

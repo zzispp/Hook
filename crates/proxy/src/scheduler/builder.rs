@@ -116,12 +116,23 @@ fn append_endpoint_candidates(context: EndpointBuildContext<'_>, output: &mut Ve
 
 fn sort_candidates(candidates: &mut Vec<Candidate>, input: &SchedulerInput) {
     set_conversion_flags(candidates, input);
-    candidates.sort_by(|left, right| stable_priority(left, right, &input.priority_mode));
+    sort_for_mode(candidates, input);
     demote_conversion(candidates, input);
     match input.scheduling_mode {
         SchedulingMode::FixedOrder => {}
         SchedulingMode::CacheAffinity => apply_cache_affinity(candidates, input),
         SchedulingMode::LoadBalance => apply_load_balance(candidates, input),
+    }
+}
+
+fn sort_for_mode(candidates: &mut [Candidate], input: &SchedulerInput) {
+    match input.scheduling_mode {
+        SchedulingMode::FixedOrder => {
+            candidates.sort_by(|left, right| stable_priority(left, right, &input.priority_mode));
+        }
+        SchedulingMode::CacheAffinity | SchedulingMode::LoadBalance => {
+            candidates.sort_by(|left, right| candidate_identity_key(left).cmp(&candidate_identity_key(right)));
+        }
     }
 }
 
@@ -237,6 +248,10 @@ fn stable_priority(left: &Candidate, right: &Candidate, mode: &PriorityMode) -> 
         PriorityMode::Provider => provider_priority_key(left).cmp(&provider_priority_key(right)),
         PriorityMode::Key => key_priority_key(left).cmp(&key_priority_key(right)),
     }
+}
+
+fn candidate_identity_key(candidate: &Candidate) -> (&str, &str, &str) {
+    (candidate.provider_id.as_str(), candidate.endpoint_id.as_str(), candidate.key_id.as_str())
 }
 
 fn provider_priority_key(candidate: &Candidate) -> (i32, i32, &str, &str, &str) {

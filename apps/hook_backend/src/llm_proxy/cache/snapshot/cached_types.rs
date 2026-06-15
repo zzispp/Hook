@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use types::{
     model::TieredPricingConfig,
-    provider::{ProviderCooldownPolicy, ProviderModelMapping, ProviderPriorityMode, ProviderSchedulingMode},
+    provider::{ProviderCooldownPolicy, ProviderModelMapping, ProviderPriorityMode, ProviderSchedulingMode, RoutingProfileId},
     system_setting::RequestRecordLevel,
 };
 
@@ -49,6 +49,8 @@ pub struct CachedGlobalModel {
     #[serde(with = "rust_decimal::serde::float_option")]
     pub default_price_per_request: Option<Decimal>,
     pub default_tiered_pricing: TieredPricingConfig,
+    #[serde(default)]
+    pub routing_profile_id: Option<RoutingProfileId>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -58,6 +60,8 @@ pub struct CachedBillingGroup {
     pub billing_multiplier: Decimal,
     pub allowed_model_ids: Vec<String>,
     pub allowed_provider_key_ids: Option<Vec<String>>,
+    #[serde(default)]
+    pub routing_profile_id: Option<RoutingProfileId>,
     #[serde(default)]
     pub provider_priorities: BTreeMap<String, i32>,
     #[serde(default)]

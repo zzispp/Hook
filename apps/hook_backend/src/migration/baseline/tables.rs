@@ -324,6 +324,7 @@ fn global_models_table() -> TableCreateStatement {
         .col(text(GlobalModels::DefaultTieredPricing))
         .col(text_null(GlobalModels::SupportedCapabilities))
         .col(text_null(GlobalModels::Config))
+        .col(string_len_null(GlobalModels::RoutingProfileId, 64))
         .col(boolean(GlobalModels::IsActive))
         .col(big_integer(GlobalModels::UsageCount))
         .col(timestamp_tz(GlobalModels::CreatedAt))

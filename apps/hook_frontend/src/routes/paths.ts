@@ -50,6 +50,7 @@ export const paths = {
       providers: `${ROOTS.DASHBOARD}/admin/providers`,
       cacheMonitoring: `${ROOTS.DASHBOARD}/admin/cache-monitoring`,
       performanceMonitoring: `${ROOTS.DASHBOARD}/admin/performance-monitoring`,
+      routing: `${ROOTS.DASHBOARD}/admin/routing`,
       userStats: `${ROOTS.DASHBOARD}/admin/user-stats`,
       costAnalysis: `${ROOTS.DASHBOARD}/admin/cost-analysis`,
       modelStatusChecks: `${ROOTS.DASHBOARD}/admin/model-status-checks`,
