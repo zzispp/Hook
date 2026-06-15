@@ -28,7 +28,7 @@ import {
   withStickyActionHeadCell,
 } from 'src/components/table';
 
-import { StatusLabel } from '../model-status/model-status-view';
+import { StatusLabel } from '../model-status/model-status-label';
 import { latencyLabel } from '../model-status/model-status-timeline';
 
 type Props = {

@@ -17,6 +17,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import { useTranslate } from 'src/locales/use-locales';
 import { useRoutingProfiles } from 'src/actions/routing';
 
+import { routingProfileName } from './routing-i18n';
 import { SwitchRow, ManagementDialog } from './shared';
 import { userGroupSelectionLabel } from './user-group-utils';
 import { BillingGroupBasicFields } from './billing-group-basic-fields';
@@ -84,7 +85,7 @@ function RoutingProfileSelect({
       <MenuItem value="">{t('routing.profileInherited')}</MenuItem>
       {profiles.map((profile) => (
         <MenuItem key={profile.id} value={profile.id}>
-          {profile.name}
+          {routingProfileName(profile, t)}
         </MenuItem>
       ))}
     </TextField>

@@ -11,13 +11,14 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { updateGlobalModel } from 'src/actions/models';
 import { updateBillingGroup } from 'src/actions/groups';
 
 import { toast } from 'src/components/snackbar';
+
+import { routingProfileName } from './routing-i18n';
 
 type Props = {
   group: BillingGroup | null;
@@ -76,14 +77,7 @@ export function RoutingProfileSettings({ group, model, profiles, loading, onSave
   }, [group, model, onSaved, scope, selectedProfileId, t]);
 
   return (
-    <Stack spacing={2}>
-      <Stack spacing={0.5}>
-        <Typography variant="subtitle1">{t('routing.runtime.title')}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t('routing.runtime.helper')}
-        </Typography>
-      </Stack>
-
+    <Stack spacing={2.5}>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
         <TextField
           select
@@ -111,7 +105,7 @@ export function RoutingProfileSettings({ group, model, profiles, loading, onSave
           </MenuItem>
           {profiles.map((profile) => (
             <MenuItem key={profile.id} value={profile.id}>
-              {profile.name}
+              {routingProfileName(profile, t)}
             </MenuItem>
           ))}
         </TextField>
@@ -133,7 +127,7 @@ export function RoutingProfileSettings({ group, model, profiles, loading, onSave
       {effectiveProfile ? (
         <Alert severity="info">
           {t('routing.runtime.effectiveProfile', {
-            profile: effectiveProfile.name,
+            profile: routingProfileName(effectiveProfile, t),
             modelScope: model?.routing_profile_id ? t('routing.runtime.scopeModel') : t('common.none'),
             groupScope: group?.routing_profile_id ? t('routing.runtime.scopeBillingGroup') : t('common.none'),
           })}

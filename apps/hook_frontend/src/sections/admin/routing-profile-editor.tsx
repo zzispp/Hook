@@ -4,6 +4,7 @@ import type { RoutingProfile, RoutingProfileWeights } from 'src/types/routing';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
+import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
@@ -79,11 +80,11 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
   }
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2.5}>
       <Divider />
       <Stack spacing={0.5}>
-        <Typography variant="subtitle1">{t('routing.profile.editorTitle')}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="subtitle2">{t('routing.profile.editorTitle')}</Typography>
+        <Typography variant="caption" color="text.secondary">
           {t('routing.profile.editorHelper')}
         </Typography>
       </Stack>
@@ -91,37 +92,45 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
       <FormControlLabel
         control={
           <Switch
+            size="small"
             checked={autoTuneEnabled}
             onChange={(event) => setAutoTuneEnabled(event.target.checked)}
           />
         }
-        label={t('routing.profile.autoTune')}
+        label={
+          <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+            {t('routing.profile.autoTune')}
+          </Typography>
+        }
       />
 
-      <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} useFlexGap flexWrap="wrap">
+      <Grid container spacing={1.5}>
         {WEIGHT_FIELDS.map((field) => (
-          <TextField
-            key={field}
-            size="small"
-            type="number"
-            label={t(`routing.profile.weightFields.${field}`)}
-            value={weights[field]}
-            onChange={(event) =>
-              setWeights((current) => ({ ...current, [field]: event.target.value }))
-            }
-            disabled={field === 'priority' && priorityLocked}
-            inputProps={{ step: 0.01, min: 0, max: 1 }}
-            sx={{ minWidth: 140 }}
-          />
+          <Grid size={{ xs: 6 }} key={field}>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label={t(`routing.profile.weightFields.${field}`)}
+              value={weights[field]}
+              onChange={(event) =>
+                setWeights((current) => ({ ...current, [field]: event.target.value }))
+              }
+              disabled={field === 'priority' && priorityLocked}
+              inputProps={{ step: 0.01, min: 0, max: 1 }}
+            />
+          </Grid>
         ))}
-      </Stack>
+      </Grid>
 
-      <Alert severity={invalidTotal ? 'warning' : 'info'}>
-        {t('routing.profile.weightTotal', { total: totalWeight.toFixed(3) })}
+      <Alert severity={invalidTotal ? 'warning' : 'info'} sx={{ py: 0.5 }}>
+        <Typography variant="caption" display="block">
+          {t('routing.profile.weightTotal', { total: totalWeight.toFixed(3) })}
+        </Typography>
       </Alert>
 
       <Stack direction="row" justifyContent="flex-end">
-        <Button variant="contained" loading={submitting} disabled={saveDisabled} onClick={save}>
+        <Button variant="contained" size="medium" loading={submitting} disabled={saveDisabled} onClick={save}>
           {t('common.save')}
         </Button>
       </Stack>
