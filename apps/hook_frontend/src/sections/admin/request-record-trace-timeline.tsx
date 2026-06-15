@@ -1,7 +1,9 @@
 'use client';
 
+import type { AdminT } from './shared';
 import type { RequestRecord, RequestCandidateDetail } from 'src/types/provider';
 import type { TraceGroup, TraceAttempt } from './request-record-trace-timeline-utils';
+import type { RouteIdentity, RouteScoreExplanation, RoutingDecisionResponse } from 'src/types/routing';
 
 import { useMemo, useState, useEffect } from 'react';
 
@@ -13,6 +15,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Label } from 'src/components/label';
 
+import { routeScoreReason } from './routing-i18n';
 import { formatDuration } from './request-records-utils';
 import { RequestCandidatePayloadPanels } from './request-record-payload-panels';
 import {
@@ -40,11 +43,17 @@ import {
 export function RequestRecordTraceTimeline({
   record,
   candidates,
+  routingDecision,
+  routingDecisionError,
+  routingDecisionLoading,
   loading,
   locale,
 }: {
   record: RequestRecord | null;
   candidates: RequestCandidateDetail[];
+  routingDecision: RoutingDecisionResponse | null;
+  routingDecisionError?: Error;
+  routingDecisionLoading: boolean;
   loading: boolean;
   locale: string;
 }) {
@@ -62,6 +71,12 @@ export function RequestRecordTraceTimeline({
     <Stack spacing={1.5} sx={panelSx}>
       <TraceHeader record={record} groups={groups} t={t} />
       {loading ? <Typography variant="body2">{t('common.loading')}</Typography> : null}
+      <RoutingSelectionSummary
+        decision={routingDecision}
+        error={routingDecisionError}
+        loading={routingDecisionLoading}
+        t={t}
+      />
       {!loading && groups.length === 0 ? <Typography variant="body2">{t('common.noData')}</Typography> : null}
       {groups.length > 0 ? (
         <>
@@ -69,6 +84,55 @@ export function RequestRecordTraceTimeline({
           <TraceAttemptDetail attempt={selectedAttempt} group={selectedGroup} locale={locale} t={t} />
         </>
       ) : null}
+    </Stack>
+  );
+}
+
+function RoutingSelectionSummary({
+  decision,
+  error,
+  loading,
+  t,
+}: {
+  decision: RoutingDecisionResponse | null;
+  error?: Error;
+  loading: boolean;
+  t: AdminT;
+}) {
+  if (loading) {
+    return <Typography variant="body2">{t('common.loading')}</Typography>;
+  }
+  if (error) {
+    return (
+      <Typography variant="caption" color="error">
+        {t('requestRecords.routingDecisionUnavailable')}: {error.message}
+      </Typography>
+    );
+  }
+
+  const selected = decision ? selectedCandidate(decision) : null;
+  if (!decision || !selected) return null;
+
+  return (
+    <Stack spacing={0.75} sx={{ p: 1.5, borderRadius: 1, bgcolor: 'background.neutral' }}>
+      <Stack direction="row" alignItems="center" spacing={1} useFlexGap flexWrap="wrap">
+        <Typography variant="subtitle2">{t('requestRecords.routingDecisionTitle')}</Typography>
+        <Label color="info" variant="soft">
+          {t(`routing.profile.names.${decision.profile_id}`)}
+        </Label>
+        <Label color="default" variant="soft">
+          {selected.final_score.toFixed(1)}
+        </Label>
+      </Stack>
+      <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+        {selectedRouteLabel(selected)}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        {routeScoreReason(selected, t)}
+      </Typography>
+      <Typography variant="caption" color="text.disabled">
+        {decision.profile_version} · {decision.created_at}
+      </Typography>
     </Stack>
   );
 }
@@ -231,6 +295,26 @@ function TraceInfo({ label, value }: { label: string; value: string }) {
       </Typography>
     </Stack>
   );
+}
+
+function selectedCandidate(decision: RoutingDecisionResponse) {
+  if (!decision.selected) return decision.candidates[0] ?? null;
+  return (
+    decision.candidates.find((candidate) => routeKey(candidate.route) === routeKey(decision.selected)) ??
+    decision.candidates[0] ??
+    null
+  );
+}
+
+function selectedRouteLabel(item: RouteScoreExplanation) {
+  const provider = item.provider_name || item.route.provider_id;
+  const key = item.key_name || item.route.key_id;
+  const endpoint = item.endpoint_name || item.route.endpoint_id;
+  return `${provider} / ${key} / ${endpoint}`;
+}
+
+function routeKey(route: RouteIdentity) {
+  return `${route.provider_id}:${route.key_id}:${route.endpoint_id}:${route.global_model_id}:${route.client_api_format}:${route.provider_api_format}:${route.is_stream}`;
 }
 
 function skipReasonLabel(t: (key: string) => string, reason: string) {

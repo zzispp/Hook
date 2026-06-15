@@ -34,6 +34,7 @@ pub(super) fn proxy_candidate(state: &LlmProxyState, parts: FixedParts, stream: 
         stream_idle_timeout_seconds: parts.provider.stream_idle_timeout_seconds,
         cache_ttl_minutes: key.cache_ttl_minutes,
         key_rpm_limit: key.rpm_limit,
+        cache_affinity_enabled: false,
         is_cached: false,
         route,
     })

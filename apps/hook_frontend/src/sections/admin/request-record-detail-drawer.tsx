@@ -3,8 +3,9 @@
 import type { Theme } from '@mui/material/styles';
 import type { RequestRecord } from 'src/types/provider';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
+import { useCopyToClipboard } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -15,9 +16,11 @@ import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
 import { useTranslate } from 'src/locales/use-locales';
+import { useRoutingDecision } from 'src/actions/routing';
 import { useRequestRecordDetail } from 'src/actions/request-records';
 
 import { Label } from 'src/components/label';
+import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
@@ -25,7 +28,6 @@ import { RequestRecordTraceTimeline } from './request-record-trace-timeline';
 import { RequestRecordPayloadPanels } from './request-record-payload-panels';
 import { RequestRecordBillingDetails } from './request-record-billing-details';
 import {
-  compactId,
   formatCost,
   userDisplay,
   formatDuration,
@@ -49,6 +51,7 @@ export function RequestRecordDetailDrawer({
   onClose: VoidFunction;
 }) {
   const detail = useRequestRecordDetail(open ? record?.request_id : null);
+  const routingDecision = useRoutingDecision(open ? record?.request_id : null);
   const displayRecord = useMemo(
     () => freshestRecord(record, detail.data?.record),
     [detail.data?.record, record]
@@ -76,6 +79,9 @@ export function RequestRecordDetailDrawer({
           <RequestRecordTraceTimeline
             record={displayRecord}
             candidates={detail.data?.candidates ?? []}
+            routingDecision={routingDecision.data ?? null}
+            routingDecisionError={routingDecision.error}
+            routingDecisionLoading={routingDecision.isLoading}
             loading={detail.isLoading}
             locale={locale}
           />
@@ -153,8 +159,12 @@ function DrawerHeader({
 
 function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string }) {
   const { t } = useTranslate('admin');
+  const { copy } = useCopyToClipboard();
+  const handleCopy = useCallback(() => {
+    copy(record.request_id);
+    toast.success(t('requestRecords.requestIdCopied'));
+  }, [copy, record.request_id, t]);
   const items = [
-    `ID: ${compactId(record.request_id)}`,
     formatRequestDate(record.created_at, locale),
     formatRequestApiFormat(record),
     `${t('requestRecords.user')}: ${userDisplay(record)}`,
@@ -162,9 +172,21 @@ function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string 
   ];
 
   return (
-    <Typography variant="caption" color="text.secondary">
-      {items.join(' | ')}
-    </Typography>
+    <Stack direction="row" alignItems="center" spacing={0.75} useFlexGap flexWrap="wrap">
+      <Stack direction="row" alignItems="center" spacing={0.25} sx={{ minWidth: 0 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>
+          ID: {record.request_id}
+        </Typography>
+        <Tooltip title={t('requestRecords.copyRequestId')}>
+          <IconButton size="small" onClick={handleCopy} sx={{ width: 24, height: 24 }}>
+            <Iconify icon="solar:copy-bold" width={14} />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+      <Typography variant="caption" color="text.secondary">
+        {items.join(' | ')}
+      </Typography>
+    </Stack>
   );
 }
 

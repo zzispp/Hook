@@ -8,6 +8,9 @@ pub(super) fn attempt_range(candidate: &ProxyCandidate) -> RangeInclusive<i32> {
 }
 
 pub(super) async fn remember(state: &LlmProxyState, candidate: &ProxyCandidate, ttl_minutes: i64) -> Result<(), LlmProxyError> {
+    if !candidate.cache_affinity_enabled {
+        return Ok(());
+    }
     let Some(input) = set_affinity_input(candidate, ttl_minutes) else {
         return Ok(());
     };
@@ -15,6 +18,9 @@ pub(super) async fn remember(state: &LlmProxyState, candidate: &ProxyCandidate, 
 }
 
 pub(super) async fn invalidate_matching(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {
+    if !candidate.cache_affinity_enabled {
+        return Ok(());
+    }
     let Some(input) = invalidate_affinity_input(candidate) else {
         return Ok(());
     };

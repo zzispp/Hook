@@ -16,6 +16,8 @@ export type RoutingRouteState =
   | 'circuit_open';
 
 export type RoutingMetricWindow = '1m' | '5m' | '15m' | '1h' | '24h' | '7d';
+export type RoutingCacheAffinityMode = 'disabled' | 'score_bonus' | 'prefer_cached';
+export type RoutingSimulationMode = 'window' | 'production';
 
 export type RouteIdentity = {
   provider_id: string;
@@ -55,8 +57,11 @@ export type RoutingProfile = {
   version: string;
   min_samples: number;
   exploration_k: number;
+  exploration_budget_percent: number;
   conversion_penalty: number;
   stale_metric_penalty: number;
+  ema_regression_penalty: number;
+  cache_affinity_mode: RoutingCacheAffinityMode;
   affinity_bonus: number;
   auto_tune_enabled: boolean;
   learning?: RoutingProfileLearningState | null;
@@ -70,8 +75,11 @@ export type RoutingProfileUpsert = {
   weights?: RoutingProfileWeights;
   min_samples?: number;
   exploration_k?: number;
+  exploration_budget_percent?: number;
   conversion_penalty?: number;
   stale_metric_penalty?: number;
+  ema_regression_penalty?: number;
+  cache_affinity_mode?: RoutingCacheAffinityMode;
   affinity_bonus?: number;
   auto_tune_enabled?: boolean;
 };
@@ -126,12 +134,25 @@ export type RoutingRankingsQuery = {
   api_format: string;
   is_stream: boolean;
   window: RoutingMetricWindow;
+  simulation_mode: RoutingSimulationMode;
+  token_id?: string;
   include_excluded: boolean;
+};
+
+export type RoutingAffinitySummary = {
+  provider_id: string;
+  endpoint_id: string;
+  key_id: string;
+  api_format: string;
+  model_id: string;
+  request_count: number;
 };
 
 export type RoutingRankingResponse = {
   profile: RoutingProfile;
   window: RoutingMetricWindow;
+  simulation_mode: RoutingSimulationMode;
+  affinity?: RoutingAffinitySummary | null;
   items: RouteScoreExplanation[];
 };
 

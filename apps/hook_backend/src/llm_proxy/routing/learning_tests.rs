@@ -1,6 +1,8 @@
-use types::provider::{RoutingProfileId, RoutingProfileWeights};
+use storage::provider::RoutingProfileVersionSnapshot;
+use time::{Duration, OffsetDateTime};
+use types::provider::{RoutingMetricWindow, RoutingProfileId, RoutingProfileWeights};
 
-use super::learning::blend_weights;
+use super::learning::{blend_weights, needs_refresh};
 
 #[test]
 fn blend_weights_keeps_fixed_priority_weight_locked() {
@@ -42,6 +44,35 @@ fn builtin_profiles_enable_auto_tune_by_default() {
     }
 }
 
+#[test]
+fn zero_sample_snapshot_does_not_force_refresh_before_interval() {
+    let profile = super::profiles::test_only_builtin_profile(RoutingProfileId::Balanced);
+    let now = OffsetDateTime::now_utc();
+    let snapshot = snapshot(&profile.weights, 0, now - Duration::minutes(5));
+
+    assert!(!needs_refresh(Some(&snapshot), &profile, now));
+}
+
+#[test]
+fn learning_refreshes_when_admin_weights_change() {
+    let mut profile = super::profiles::test_only_builtin_profile(RoutingProfileId::Balanced);
+    let now = OffsetDateTime::now_utc();
+    let snapshot = snapshot(&profile.weights, 0, now - Duration::minutes(5));
+    profile.weights.cost += 0.01;
+    profile.weights.success -= 0.01;
+
+    assert!(needs_refresh(Some(&snapshot), &profile, now));
+}
+
+#[test]
+fn learning_refreshes_after_interval() {
+    let profile = super::profiles::test_only_builtin_profile(RoutingProfileId::Balanced);
+    let now = OffsetDateTime::now_utc();
+    let snapshot = snapshot(&profile.weights, 0, now - Duration::minutes(16));
+
+    assert!(needs_refresh(Some(&snapshot), &profile, now));
+}
+
 fn built_in_balanced_weights() -> RoutingProfileWeights {
     weights(0.28, 0.19, 0.17, 0.09, 0.15, 0.12, 0.0)
 }
@@ -60,4 +91,17 @@ fn weights(success: f64, ttfb: f64, latency: f64, tps: f64, cost: f64, headroom:
 
 fn sum(weights: &RoutingProfileWeights) -> f64 {
     weights.success + weights.ttfb + weights.latency + weights.tps + weights.cost + weights.headroom + weights.priority
+}
+
+fn snapshot(admin_weights: &RoutingProfileWeights, sample_count: u64, created_at: OffsetDateTime) -> RoutingProfileVersionSnapshot {
+    RoutingProfileVersionSnapshot {
+        profile_id: "balanced".into(),
+        profile_version: "test".into(),
+        admin_weights: admin_weights.clone(),
+        learned_weights: None,
+        effective_weights: admin_weights.clone(),
+        reward_window: RoutingMetricWindow::SevenDays,
+        sample_count,
+        created_at,
+    }
 }

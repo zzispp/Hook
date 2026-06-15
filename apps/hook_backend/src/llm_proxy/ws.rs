@@ -84,6 +84,9 @@ async fn record_streaming_attempt(state: &LlmProxyState, request_id: &str, conne
 }
 
 async fn remember_affinity(state: &LlmProxyState, candidate: &ProxyCandidate, ttl_minutes: i64) -> Result<(), LlmProxyError> {
+    if !candidate.cache_affinity_enabled {
+        return Ok(());
+    }
     let Some(input) = set_affinity_input(candidate, ttl_minutes) else {
         return Ok(());
     };

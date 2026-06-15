@@ -4,6 +4,7 @@ import type {
   RoutingProfileId,
   RoutingMetricWindow,
   RouteScoreExplanation,
+  RoutingSimulationMode,
   RoutingRankingResponse,
 } from 'src/types/routing';
 
@@ -45,6 +46,8 @@ export function RoutingObservabilityView() {
   const [apiFormat, setApiFormat] = useState(DEFAULT_API_FORMAT);
   const [isStream, setIsStream] = useState(false);
   const [metricWindow, setMetricWindow] = useState<RoutingMetricWindow>('5m');
+  const [simulationMode, setSimulationMode] = useState<RoutingSimulationMode>('window');
+  const [tokenId, setTokenId] = useState('');
   const [includeExcluded, setIncludeExcluded] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [requestInput, setRequestInput] = useState('');
@@ -95,14 +98,29 @@ export function RoutingObservabilityView() {
       api_format: apiFormat,
       is_stream: isStream,
       window: metricWindow,
+      simulation_mode: simulationMode,
+      token_id: simulationMode === 'production' ? tokenId.trim() || undefined : undefined,
       include_excluded: includeExcluded,
     };
-  }, [apiFormat, groupCode, includeExcluded, isStream, metricWindow, modelName, profileId]);
+  }, [
+    apiFormat,
+    groupCode,
+    includeExcluded,
+    isStream,
+    metricWindow,
+    modelName,
+    profileId,
+    simulationMode,
+    tokenId,
+  ]);
 
   const rankings = useRoutingRankings(query, autoRefresh);
   const detailWindows = useMemo(
-    () => DETAIL_WINDOWS.filter((item) => item !== metricWindow),
-    [metricWindow]
+    () =>
+      simulationMode === 'production'
+        ? []
+        : DETAIL_WINDOWS.filter((item) => item !== metricWindow),
+    [metricWindow, simulationMode]
   );
   const windowRankings = useRoutingWindowRankings(query, detailWindows, autoRefresh);
   const decision = useRoutingDecision(decisionRequestId);
@@ -166,6 +184,8 @@ export function RoutingObservabilityView() {
           apiFormat={apiFormat}
           isStream={isStream}
           metricWindow={metricWindow}
+          simulationMode={simulationMode}
+          tokenId={tokenId}
           includeExcluded={includeExcluded}
           requestInput={requestInput}
           onGroupChange={setGroupCode}
@@ -173,6 +193,8 @@ export function RoutingObservabilityView() {
           onApiFormatChange={setApiFormat}
           onStreamChange={setIsStream}
           onWindowChange={setMetricWindow}
+          onSimulationModeChange={setSimulationMode}
+          onTokenIdChange={setTokenId}
           onIncludeExcludedChange={setIncludeExcluded}
           onRequestInputChange={setRequestInput}
           onDecisionLookup={() => {
@@ -192,6 +214,7 @@ export function RoutingObservabilityView() {
           profiles={profiles.items}
           profileId={profileId}
           selectedProfile={selectedProfile}
+          rankingResponse={rankings.data ?? null}
           rankingRows={rankings.data?.items ?? []}
           rankingsLoading={rankings.isLoading}
           onProfileChange={setProfileId}

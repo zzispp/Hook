@@ -1,10 +1,10 @@
-use rust_decimal::Decimal;
+use rust_decimal::{Decimal, prelude::ToPrimitive};
 use sea_orm::{ConnectionTrait, DbBackend, FromQueryResult, Statement, Value};
 use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricWindow};
 
-use crate::StorageResult;
+use crate::{StorageError, StorageResult};
 
-use super::routing_repository::{RoutingMetricDelta, RoutingMetricRecord};
+use super::routing_repository::{RoutingMetricDelta, RoutingMetricRecord, RoutingRouteEmaState};
 
 const BUCKET_GRANULARITY: &str = "minute";
 
@@ -45,6 +45,29 @@ where
         .all(connection)
         .await?;
     Ok(rows.into_iter().map(RoutingMetricRecord::from).collect())
+}
+
+pub(super) async fn list_route_states<C>(
+    connection: &C,
+    global_model_id: &str,
+    client_api_format: &str,
+    is_stream: bool,
+) -> StorageResult<Vec<RoutingRouteEmaState>>
+where
+    C: ConnectionTrait,
+{
+    let mut params = Vec::new();
+    let sql = format!(
+        "{} WHERE global_model_id = {} AND client_api_format = {} AND is_stream = {}",
+        route_state_select_sql(),
+        push(&mut params, Value::from(global_model_id.to_owned())),
+        push(&mut params, Value::from(client_api_format.to_owned())),
+        push(&mut params, Value::from(is_stream)),
+    );
+    let rows = RoutingRouteStateRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params))
+        .all(connection)
+        .await?;
+    rows.into_iter().map(route_state_from_row).collect()
 }
 
 async fn upsert_route_state<C>(connection: &C, delta: RoutingMetricDelta) -> StorageResult<()>
@@ -104,6 +127,11 @@ fn metric_select_sql() -> &'static str {
 
 fn metric_group_sql() -> &'static str {
     "GROUP BY provider_id, provider_name, key_id, key_name, endpoint_id, endpoint_name, global_model_id, client_api_format, provider_api_format, is_stream"
+}
+
+fn route_state_select_sql() -> &'static str {
+    "SELECT provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, ema_success_rate, ema_latency_ms, ema_ttfb_ms, \
+     ema_output_tps, sample_count, last_updated_at FROM routing_route_states"
 }
 
 fn metric_values(delta: &RoutingMetricDelta, bounds: BucketBounds, now: time::OffsetDateTime) -> Vec<Value> {
@@ -278,6 +306,23 @@ struct RoutingMetricRow {
     last_seen_at: time::OffsetDateTime,
 }
 
+#[derive(Clone, Debug, FromQueryResult)]
+struct RoutingRouteStateRow {
+    provider_id: String,
+    key_id: String,
+    endpoint_id: String,
+    global_model_id: String,
+    client_api_format: String,
+    provider_api_format: String,
+    is_stream: bool,
+    ema_success_rate: Decimal,
+    ema_latency_ms: Option<Decimal>,
+    ema_ttfb_ms: Option<Decimal>,
+    ema_output_tps: Option<Decimal>,
+    sample_count: i64,
+    last_updated_at: time::OffsetDateTime,
+}
+
 impl From<RoutingMetricRow> for RoutingMetricRecord {
     fn from(row: RoutingMetricRow) -> Self {
         let request_count = u64_value(row.request_count);
@@ -293,6 +338,32 @@ impl From<RoutingMetricRow> for RoutingMetricRecord {
 }
 
 impl RoutingMetricRow {
+    fn route(&self) -> RouteIdentity {
+        RouteIdentity {
+            provider_id: self.provider_id.clone(),
+            key_id: self.key_id.clone(),
+            endpoint_id: self.endpoint_id.clone(),
+            global_model_id: self.global_model_id.clone(),
+            client_api_format: self.client_api_format.clone(),
+            provider_api_format: self.provider_api_format.clone(),
+            is_stream: self.is_stream,
+        }
+    }
+}
+
+fn route_state_from_row(row: RoutingRouteStateRow) -> StorageResult<RoutingRouteEmaState> {
+    Ok(RoutingRouteEmaState {
+        route: row.route(),
+        ema_success_rate: decimal_to_f64(row.ema_success_rate, "ema_success_rate")?,
+        ema_latency_ms: optional_decimal_to_f64(row.ema_latency_ms, "ema_latency_ms")?,
+        ema_ttfb_ms: optional_decimal_to_f64(row.ema_ttfb_ms, "ema_ttfb_ms")?,
+        ema_output_tps: optional_decimal_to_f64(row.ema_output_tps, "ema_output_tps")?,
+        sample_count: u64_value(row.sample_count),
+        last_updated_at: row.last_updated_at,
+    })
+}
+
+impl RoutingRouteStateRow {
     fn route(&self) -> RouteIdentity {
         RouteIdentity {
             provider_id: self.provider_id.clone(),
@@ -350,4 +421,14 @@ fn tps(output_tokens: i64, latency_sum_ms: i64) -> Option<f64> {
 
 fn u64_value(value: i64) -> u64 {
     value.max(0) as u64
+}
+
+fn optional_decimal_to_f64(value: Option<Decimal>, field: &str) -> StorageResult<Option<f64>> {
+    value.map(|item| decimal_to_f64(item, field)).transpose()
+}
+
+fn decimal_to_f64(value: Decimal, field: &str) -> StorageResult<f64> {
+    value
+        .to_f64()
+        .ok_or_else(|| StorageError::Database(format!("routing route state {field} exceeds f64 range")))
 }

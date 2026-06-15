@@ -1466,10 +1466,24 @@
       "model": "Model",
       "apiFormat": "API format",
       "window": "Window",
+      "simulationMode": "Simulation mode",
       "stream": "Stream",
       "includeExcluded": "Show excluded",
       "autoRefresh": "Auto refresh",
-      "requestId": "Request ID"
+      "requestId": "Request ID",
+      "tokenId": "Token ID"
+    },
+    "simulationModes": {
+      "window": "Window analysis",
+      "production": "Production simulation"
+    },
+    "simulation": {
+      "windowSummary": "Window analysis: rankings use only the {{window}} aggregate window and do not read token cache affinity.",
+      "productionSummary": "Production simulation: uses the live fallback windows 5m → 1h → 24h → 7d and applies cache affinity according to the current profile."
+    },
+    "affinitySummary": {
+      "none": "Cache affinity: no hit or no Token ID was provided.",
+      "hit": "Cache affinity: hit {{provider}} / {{key}} / {{endpoint}}, {{count}} recorded requests."
     },
     "actions": {
       "lookup": "Lookup",
@@ -1509,7 +1523,16 @@
       "editorTitle": "Profile tuning",
       "editorHelper": "Edit the auto tune switch and administrator baseline weights for the selected profile. Automatic learning only makes controlled adjustments on top of this baseline.",
       "autoTune": "Enable Auto Tune",
+      "cacheAffinityMode": "Cache affinity mode",
+      "affinityBonus": "Cache affinity bonus",
+      "explorationBudgetPercent": "Exploration budget percent",
+      "emaRegressionPenalty": "EMA regression penalty",
       "weightTotal": "Current weight total: {{total}}. It must equal 1.000 before saving.",
+      "cacheAffinityModes": {
+        "disabled": "Disabled",
+        "score_bonus": "Score bonus only",
+        "prefer_cached": "Prefer cached"
+      },
       "names": {
         "balanced": "Balanced",
         "first_byte": "First Byte",
@@ -1570,7 +1593,8 @@
       "conversion": "format conversion",
       "stale": "stale metrics",
       "half_open": "half-open probe",
-      "recent_regression": "recent window regression"
+      "recent_regression": "recent window regression",
+      "ema_regression": "EMA recent regression"
     },
     "exclusionReasons": {
       "provider_key_rate_limit_exhausted": "Provider key rate limit exhausted"
@@ -2364,6 +2388,10 @@
     "billed": "Billed",
     "billingFormula": "Billing formula | Total = (token cost + per-request cost) × billing group multiplier",
     "traceTitle": "Request trace",
+    "copyRequestId": "Copy Request ID",
+    "requestIdCopied": "Request ID copied",
+    "routingDecisionTitle": "Routing selection",
+    "routingDecisionUnavailable": "Routing decision sample unavailable",
     "requestHeaders": "Request headers",
     "requestBody": "Request body",
     "providerRequestHeaders": "Provider request headers",

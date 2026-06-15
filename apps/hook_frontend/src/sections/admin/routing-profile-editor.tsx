@@ -1,6 +1,10 @@
 'use client';
 
-import type { RoutingProfile, RoutingProfileWeights } from 'src/types/routing';
+import type {
+  RoutingProfile,
+  RoutingProfileWeights,
+  RoutingCacheAffinityMode,
+} from 'src/types/routing';
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 
@@ -10,6 +14,7 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Switch from '@mui/material/Switch';
 import Divider from '@mui/material/Divider';
+import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -28,6 +33,11 @@ const WEIGHT_FIELDS: Array<keyof RoutingProfileWeights> = [
   'headroom',
   'priority',
 ];
+const CACHE_AFFINITY_MODES: RoutingCacheAffinityMode[] = [
+  'disabled',
+  'score_bonus',
+  'prefer_cached',
+];
 
 type Props = {
   profile: RoutingProfile | null;
@@ -38,16 +48,29 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
   const { t } = useTranslate('admin');
   const [autoTuneEnabled, setAutoTuneEnabled] = useState(false);
   const [weights, setWeights] = useState<Record<keyof RoutingProfileWeights, string>>(emptyWeights);
+  const [explorationBudgetPercent, setExplorationBudgetPercent] = useState('10');
+  const [emaRegressionPenalty, setEmaRegressionPenalty] = useState('6');
+  const [cacheAffinityMode, setCacheAffinityMode] =
+    useState<RoutingCacheAffinityMode>('score_bonus');
+  const [affinityBonus, setAffinityBonus] = useState('2');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!profile) {
       setAutoTuneEnabled(false);
       setWeights(emptyWeights);
+      setExplorationBudgetPercent('10');
+      setEmaRegressionPenalty('6');
+      setCacheAffinityMode('score_bonus');
+      setAffinityBonus('2');
       return;
     }
     setAutoTuneEnabled(profile.auto_tune_enabled);
     setWeights(toWeightForm(profile.learning?.admin_weights || profile.weights));
+    setExplorationBudgetPercent(String(profile.exploration_budget_percent));
+    setEmaRegressionPenalty(String(profile.ema_regression_penalty));
+    setCacheAffinityMode(profile.cache_affinity_mode);
+    setAffinityBonus(String(profile.affinity_bonus));
   }, [profile]);
 
   const totalWeight = useMemo(
@@ -55,7 +78,16 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
     [weights]
   );
   const invalidTotal = Math.abs(totalWeight - 1) > 0.001;
-  const saveDisabled = !profile || submitting || invalidTotal;
+  const invalidExplorationBudget = !isPercent(explorationBudgetPercent);
+  const invalidEmaRegressionPenalty = !isPercent(emaRegressionPenalty);
+  const invalidAffinityBonus = !isNonNegativeNumber(affinityBonus);
+  const saveDisabled =
+    !profile ||
+    submitting ||
+    invalidTotal ||
+    invalidExplorationBudget ||
+    invalidEmaRegressionPenalty ||
+    invalidAffinityBonus;
   const priorityLocked = !profile || profile.id !== 'fixed_priority_plus';
 
   const save = useCallback(async () => {
@@ -65,6 +97,10 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
       await updateRoutingProfile(profile.id, {
         auto_tune_enabled: autoTuneEnabled,
         weights: fromWeightForm(weights),
+        exploration_budget_percent: parseNumber(explorationBudgetPercent),
+        ema_regression_penalty: parseNumber(emaRegressionPenalty),
+        cache_affinity_mode: cacheAffinityMode,
+        affinity_bonus: parseNumber(affinityBonus),
       });
       toast.success(t('messages.routingProfileUpdated'));
       onSaved();
@@ -73,7 +109,17 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [autoTuneEnabled, onSaved, profile, t, weights]);
+  }, [
+    affinityBonus,
+    autoTuneEnabled,
+    cacheAffinityMode,
+    emaRegressionPenalty,
+    explorationBudgetPercent,
+    onSaved,
+    profile,
+    t,
+    weights,
+  ]);
 
   if (!profile) {
     return null;
@@ -129,6 +175,63 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
         </Typography>
       </Alert>
 
+      <Grid container spacing={1.5}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            select
+            size="small"
+            label={t('routing.profile.cacheAffinityMode')}
+            value={cacheAffinityMode}
+            onChange={(event) =>
+              setCacheAffinityMode(event.target.value as RoutingCacheAffinityMode)
+            }
+          >
+            {CACHE_AFFINITY_MODES.map((mode) => (
+              <MenuItem key={mode} value={mode}>
+                {t(`routing.profile.cacheAffinityModes.${mode}`)}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="number"
+            label={t('routing.profile.affinityBonus')}
+            value={affinityBonus}
+            error={invalidAffinityBonus}
+            onChange={(event) => setAffinityBonus(event.target.value)}
+            inputProps={{ step: 0.5, min: 0 }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="number"
+            label={t('routing.profile.explorationBudgetPercent')}
+            value={explorationBudgetPercent}
+            error={invalidExplorationBudget}
+            onChange={(event) => setExplorationBudgetPercent(event.target.value)}
+            inputProps={{ step: 1, min: 0, max: 100 }}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="number"
+            label={t('routing.profile.emaRegressionPenalty')}
+            value={emaRegressionPenalty}
+            error={invalidEmaRegressionPenalty}
+            onChange={(event) => setEmaRegressionPenalty(event.target.value)}
+            inputProps={{ step: 1, min: 0, max: 100 }}
+          />
+        </Grid>
+      </Grid>
+
       <Stack direction="row" justifyContent="flex-end">
         <Button variant="contained" size="medium" loading={submitting} disabled={saveDisabled} onClick={save}>
           {t('common.save')}
@@ -175,4 +278,18 @@ function fromWeightForm(weights: Record<keyof RoutingProfileWeights, string>): R
 function parseWeight(value: string) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseNumber(value: string) {
+  return Number(value);
+}
+
+function isPercent(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
+}
+
+function isNonNegativeNumber(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0;
 }

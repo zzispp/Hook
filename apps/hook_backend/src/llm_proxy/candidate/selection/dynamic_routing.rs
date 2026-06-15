@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use rust_decimal::Decimal;
-use storage::provider::{ProviderStore, RoutingMetricRecord};
+use storage::provider::{ProviderStore, RoutingMetricRecord, RoutingRouteEmaState};
 use time::OffsetDateTime;
 use types::{
     model::PricingTier,
     provider::{
         ProviderModelCost, ProviderModelCostMode, ProviderPriorityMode, RouteIdentity, RouteScoreExplanation, RoutingMetricSnapshot, RoutingMetricWindow,
-        RoutingProfile, RoutingProfileId,
+        RoutingProfile,
     },
 };
 
@@ -18,7 +18,7 @@ use crate::llm_proxy::{
     candidate::CandidateRequest,
     formats,
     rate_limit::provider_key_rate_limit_snapshot,
-    routing::{RoutingScoreCandidate, circuit, profile_by_id, score_routes},
+    routing::{RoutingEmaSnapshot, RoutingScoreCandidate, ScoreRoutesInput, circuit, score_routes},
 };
 
 const LIVE_WINDOWS: [RoutingMetricWindow; 4] = [
@@ -33,9 +33,9 @@ pub(super) struct DynamicRoutingInput<'a> {
     pub(super) state: &'a LlmProxyState,
     pub(super) parts: Vec<CandidateParts>,
     pub(super) group: &'a CachedBillingGroup,
+    pub(super) request_id: &'a str,
     pub(super) request: CandidateRequest<'a>,
     pub(super) global_model: &'a GlobalModelRef,
-    pub(super) profile_id: RoutingProfileId,
     pub(super) priority_mode: ProviderPriorityMode,
     pub(super) allow_empty: bool,
 }
@@ -46,17 +46,13 @@ pub(super) struct DynamicRoutingOutput {
     pub(super) explanations: Vec<RouteScoreExplanation>,
 }
 
-pub(super) async fn rank_candidate_parts(input: DynamicRoutingInput<'_>) -> Result<DynamicRoutingOutput, LlmProxyError> {
-    let profile = profile_by_id(input.state, input.profile_id).await?.profile;
-    rank(input, profile, RoutingMetricWindow::default(), true).await
-}
-
 pub(super) async fn rank_candidate_parts_with_profile(
     input: DynamicRoutingInput<'_>,
     profile: RoutingProfile,
     window: RoutingMetricWindow,
+    live_stable: bool,
 ) -> Result<DynamicRoutingOutput, LlmProxyError> {
-    rank(input, profile, window, false).await
+    rank(input, profile, window, live_stable).await
 }
 
 async fn rank(
@@ -66,7 +62,8 @@ async fn rank(
     live_stable: bool,
 ) -> Result<DynamicRoutingOutput, LlmProxyError> {
     let catalog = metric_catalog(input.state, requested_windows(window, live_stable)).await?;
-    let scores = score_candidates(&input, &catalog, &profile, window).await?;
+    let route_states = route_state_catalog(input.state, &input).await?;
+    let scores = score_candidates(&input, &catalog, &route_states, &profile, window).await?;
     let explanations = scores.iter().map(|item| item.explanation.clone()).collect::<Vec<_>>();
     let parts = ordered_parts(input.parts, &scores)?;
     if parts.is_empty() && !input.allow_empty {
@@ -78,19 +75,26 @@ async fn rank(
 async fn score_candidates(
     input: &DynamicRoutingInput<'_>,
     catalog: &MetricCatalog,
+    route_states: &RouteStateCatalog,
     profile: &RoutingProfile,
     requested_window: RoutingMetricWindow,
 ) -> Result<Vec<crate::llm_proxy::routing::ScoredRoute>, LlmProxyError> {
     let mut candidates = Vec::with_capacity(input.parts.len());
     for part in &input.parts {
-        candidates.push(score_candidate(input, catalog, profile, requested_window, part).await?);
+        candidates.push(score_candidate(input, catalog, route_states, profile, requested_window, part).await?);
     }
-    Ok(score_routes(profile, requested_window, candidates))
+    Ok(score_routes(ScoreRoutesInput {
+        profile,
+        window: requested_window,
+        request_id: input.request_id,
+        candidates,
+    }))
 }
 
 async fn score_candidate(
     input: &DynamicRoutingInput<'_>,
     catalog: &MetricCatalog,
+    route_states: &RouteStateCatalog,
     profile: &RoutingProfile,
     requested_window: RoutingMetricWindow,
     part: &CandidateParts,
@@ -108,11 +112,12 @@ async fn score_candidate(
         metric_window: resolved.metric_window,
         metric_freshness_seconds: resolved.metric_freshness_seconds,
         recent_metric: resolved.recent_metric,
+        ema: route_states.snapshot(&route),
         circuit_state: circuit::candidate_state(input.state, &route).await?,
         admin_priority: admin_priority(input.group, part, input.priority_mode),
         estimated_cost: estimated_cost(input.state, part, input.global_model).await?,
         needs_conversion: formats::needs_conversion(&part.routing_api_format, &endpoint.api_format, input.request.is_stream)?,
-        is_cached: part.is_cached,
+        affinity_bonus: part.affinity_bonus,
         route,
     })
 }
@@ -141,6 +146,15 @@ async fn metric_catalog(state: &LlmProxyState, windows: Vec<RoutingMetricWindow>
         });
     }
     Ok(MetricCatalog { entries })
+}
+
+async fn route_state_catalog(state: &LlmProxyState, input: &DynamicRoutingInput<'_>) -> Result<RouteStateCatalog, LlmProxyError> {
+    let states = ProviderStore::new(state.database.clone())
+        .list_routing_route_states(&input.global_model.id, input.request.api_format, input.request.is_stream)
+        .await?;
+    Ok(RouteStateCatalog {
+        records: states.into_iter().map(|state| (route_key(&state.route), state)).collect(),
+    })
 }
 
 async fn resolve_metric(
@@ -302,6 +316,21 @@ impl MetricCatalog {
 struct MetricCatalogEntry {
     window: RoutingMetricWindow,
     records: HashMap<String, RoutingMetricRecord>,
+}
+
+struct RouteStateCatalog {
+    records: HashMap<String, RoutingRouteEmaState>,
+}
+
+impl RouteStateCatalog {
+    fn snapshot(&self, route: &RouteIdentity) -> Option<RoutingEmaSnapshot> {
+        self.records.get(&route_key(route)).map(|state| RoutingEmaSnapshot {
+            success_rate: state.ema_success_rate,
+            latency_ms: state.ema_latency_ms,
+            ttfb_ms: state.ema_ttfb_ms,
+            sample_count: state.sample_count,
+        })
+    }
 }
 
 struct ResolvedMetric {

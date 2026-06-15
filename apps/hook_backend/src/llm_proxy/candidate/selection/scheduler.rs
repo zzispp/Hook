@@ -192,6 +192,7 @@ fn candidate_key(candidate: &Candidate) -> CandidatePartKey {
 fn ordered_part(by_key: &mut HashMap<CandidatePartKey, CandidateParts>, candidate: Candidate) -> Option<CandidateParts> {
     let mut part = by_key.remove(&candidate_key(&candidate))?;
     part.is_cached = candidate.is_cached;
+    part.affinity_bonus = part.affinity_bonus || candidate.is_cached;
     Some(part)
 }
 

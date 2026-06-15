@@ -118,6 +118,7 @@ fn append_key_candidates(
             model: model.clone(),
             client_api_format: request.api_format.to_owned(),
             routing_api_format: request.routing_api_format.to_owned(),
+            affinity_bonus: false,
             is_cached: false,
         });
     }

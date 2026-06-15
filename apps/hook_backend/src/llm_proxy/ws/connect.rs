@@ -90,6 +90,9 @@ fn connect_error_skips_provider(error: &req::ClientError) -> bool {
 }
 
 async fn invalidate_connect_affinity(state: &LlmProxyState, candidate: &ProxyCandidate) -> Result<(), LlmProxyError> {
+    if !candidate.cache_affinity_enabled {
+        return Ok(());
+    }
     let Some(input) = invalidate_affinity_input(candidate) else {
         return Ok(());
     };
