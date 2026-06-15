@@ -26,6 +26,7 @@ import {
   withStickyActionHeadCell,
 } from 'src/components/table';
 
+import { formatRouteApiFormat, routeNeedsConversion } from './routing-format-utils';
 import {
   routeScoreReason,
   scoreComponentLabel,
@@ -89,7 +90,15 @@ export function RoutingRankingTable({ rows, loading, t, onOpen }: Props) {
   );
 }
 
-function RankingRow({ row, t, onOpen }: { row: RouteScoreExplanation; t: AdminT; onOpen: Props['onOpen'] }) {
+function RankingRow({
+  row,
+  t,
+  onOpen,
+}: {
+  row: RouteScoreExplanation;
+  t: AdminT;
+  onOpen: Props['onOpen'];
+}) {
   return (
     <TableRow hover>
       <TableCell>{row.rank}</TableCell>
@@ -126,6 +135,9 @@ function RankingRow({ row, t, onOpen }: { row: RouteScoreExplanation; t: AdminT;
 }
 
 function RouteCell({ row }: { row: RouteScoreExplanation }) {
+  const formatLabel = formatRouteApiFormat(row.route);
+  const isConversion = routeNeedsConversion(row.route);
+
   return (
     <Stack spacing={0.25}>
       <Typography variant="subtitle2">{row.provider_name || row.route.provider_id}</Typography>
@@ -134,6 +146,9 @@ function RouteCell({ row }: { row: RouteScoreExplanation }) {
       </Typography>
       <Typography variant="caption" color="text.secondary">
         {row.endpoint_name || row.route.endpoint_id}
+      </Typography>
+      <Typography variant="caption" color={isConversion ? 'warning.main' : 'text.disabled'}>
+        {formatLabel}
       </Typography>
     </Stack>
   );
@@ -173,7 +188,9 @@ function MetricSummary({ row, t }: { row: RouteScoreExplanation; t: AdminT }) {
 function PenaltySummary({ row, t }: { row: RouteScoreExplanation; t: AdminT }) {
   const penalties = row.components
     .filter((component) => component.contribution < 0)
-    .map((component) => `${scoreComponentLabel(component, t)} ${component.contribution.toFixed(1)}`);
+    .map(
+      (component) => `${scoreComponentLabel(component, t)} ${component.contribution.toFixed(1)}`
+    );
   const text = row.exclusion_reason
     ? translatedExclusionReason(row.exclusion_reason, t)
     : penalties.join(', ') || '-';
@@ -202,5 +219,5 @@ function StateLabel({ state, t }: { state: RoutingRouteState; t: AdminT }) {
 
 function routeKey(row: RouteScoreExplanation) {
   const route = row.route;
-  return `${route.provider_id}:${route.key_id}:${route.endpoint_id}:${route.global_model_id}:${route.provider_api_format}:${route.is_stream}`;
+  return `${route.provider_id}:${route.key_id}:${route.endpoint_id}:${route.global_model_id}:${route.client_api_format}:${route.provider_api_format}:${route.is_stream}`;
 }

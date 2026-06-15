@@ -20,6 +20,7 @@ import { fNumber } from 'src/utils/format-number';
 
 import { Iconify } from 'src/components/iconify';
 
+import { formatRouteApiFormat, routeNeedsConversion } from './routing-format-utils';
 import {
   routeScoreReason,
   scoreComponentLabel,
@@ -52,7 +53,12 @@ export function RoutingDecisionDrawer({
   const active = item ?? decision?.candidates[0] ?? null;
 
   return (
-    <Drawer anchor="right" open={open} PaperProps={{ sx: { width: { xs: 1, sm: 560 } } }} onClose={onClose}>
+    <Drawer
+      anchor="right"
+      open={open}
+      PaperProps={{ sx: { width: { xs: 1, sm: 560 } } }}
+      onClose={onClose}
+    >
       <Stack spacing={2.5} sx={{ p: 3 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">{t('routing.drawer.title')}</Typography>
@@ -114,6 +120,9 @@ function RouteDetail({
   windowSnapshots: Partial<Record<RoutingMetricWindow, RoutingRankingResponse>>;
   t: AdminT;
 }) {
+  const formatLabel = formatRouteApiFormat(item.route);
+  const isConversion = routeNeedsConversion(item.route);
+
   return (
     <Stack spacing={2}>
       <Stack spacing={0.5}>
@@ -121,11 +130,19 @@ function RouteDetail({
         <Typography variant="body2" color="text.secondary">
           {item.key_name || item.route.key_id} · {item.endpoint_name || item.route.endpoint_id}
         </Typography>
+        <Typography variant="caption" color={isConversion ? 'warning.main' : 'text.disabled'}>
+          {formatLabel}
+        </Typography>
         <Typography variant="body2">{routeScoreReason(item, t)}</Typography>
       </Stack>
       <StateBlock item={item} t={t} />
       <FormulaBlock profile={profile} t={t} />
-      <WindowBlock item={item} selectedWindow={selectedWindow} windowSnapshots={windowSnapshots} t={t} />
+      <WindowBlock
+        item={item}
+        selectedWindow={selectedWindow}
+        windowSnapshots={windowSnapshots}
+        t={t}
+      />
       <ComponentBlock item={item} t={t} />
     </Stack>
   );
@@ -156,10 +173,22 @@ function FormulaBlock({ profile, t }: { profile: RoutingProfile | null; t: Admin
       <Typography variant="body2" color="text.secondary">
         {routingProfileDescription(profile, t)}
       </Typography>
-      <WeightLine label={t('routing.summary.effectiveWeights')} weights={profile.learning?.effective_weights || profile.weights} t={t} />
-      <WeightLine label={t('routing.summary.adminWeights')} weights={profile.learning?.admin_weights || profile.weights} t={t} />
+      <WeightLine
+        label={t('routing.summary.effectiveWeights')}
+        weights={profile.learning?.effective_weights || profile.weights}
+        t={t}
+      />
+      <WeightLine
+        label={t('routing.summary.adminWeights')}
+        weights={profile.learning?.admin_weights || profile.weights}
+        t={t}
+      />
       {profile.learning?.learned_weights ? (
-        <WeightLine label={t('routing.summary.learnedWeights')} weights={profile.learning.learned_weights} t={t} />
+        <WeightLine
+          label={t('routing.summary.learnedWeights')}
+          weights={profile.learning.learned_weights}
+          t={t}
+        />
       ) : null}
     </Stack>
   );
@@ -225,12 +254,22 @@ function ComponentBlock({ item, t }: { item: RouteScoreExplanation; t: AdminT })
 }
 
 function CandidateLine({ item }: { item: RouteScoreExplanation }) {
+  const formatLabel = formatRouteApiFormat(item.route);
+
   return (
     <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-      <Typography variant="body2" noWrap>
-        #{item.rank} {item.provider_name || item.route.provider_id} / {item.key_name || item.route.key_id}
+      <Stack sx={{ minWidth: 0 }} spacing={0.25}>
+        <Typography variant="body2" noWrap>
+          #{item.rank} {item.provider_name || item.route.provider_id} /{' '}
+          {item.key_name || item.route.key_id}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap>
+          {formatLabel}
+        </Typography>
+      </Stack>
+      <Typography variant="body2">
+        {fNumber(item.final_score, { maximumFractionDigits: 1 })}
       </Typography>
-      <Typography variant="body2">{fNumber(item.final_score, { maximumFractionDigits: 1 })}</Typography>
     </Stack>
   );
 }
@@ -256,7 +295,9 @@ function findWindowItem(
   window: RoutingMetricWindow,
   snapshots: Partial<Record<RoutingMetricWindow, RoutingRankingResponse>>
 ) {
-  return snapshots[window]?.items.find((candidate) => candidateKey(candidate) === candidateKey(item));
+  return snapshots[window]?.items.find(
+    (candidate) => candidateKey(candidate) === candidateKey(item)
+  );
 }
 
 function uniqueWindow(value: string, index: number, items: string[]) {
@@ -265,5 +306,5 @@ function uniqueWindow(value: string, index: number, items: string[]) {
 
 function candidateKey(item: RouteScoreExplanation) {
   const route = item.route;
-  return `${route.provider_id}:${route.key_id}:${route.endpoint_id}:${route.provider_api_format}`;
+  return `${route.provider_id}:${route.key_id}:${route.endpoint_id}:${route.global_model_id}:${route.client_api_format}:${route.provider_api_format}:${route.is_stream}`;
 }
