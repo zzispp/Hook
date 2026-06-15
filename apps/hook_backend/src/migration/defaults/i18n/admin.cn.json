@@ -9,6 +9,7 @@
     "admin_cost_analysis": "成本分析",
     "dashboard_model_status": "模型状态",
     "admin_performance_monitoring": "性能监控",
+    "admin_routing": "路由策略",
     "dashboard_models": "模型目录",
     "dashboard_groups": "价格分组",
     "wallet_center": "钱包中心",
@@ -289,6 +290,7 @@
     "targetUserGroup": "更新后的用户分组集合",
     "userGroup": "用户分组",
     "visibleUserGroups": "可见用户分组",
+    "routingProfile": "路由策略",
     "wallet": "钱包",
     "referrerAffCode": "邀请人 aff_code"
   },
@@ -357,6 +359,8 @@
     "associateProviderKeyGroups": "选择 {{name}} 归属的密钥分组；取消选中会移除关联。",
     "billingProviderKeyGroupAccess": "选择一个或多个密钥分组；调度时会展开为这些分组里的密钥。",
     "groupUserGroupVisibility": "只有选中的用户分组可见；清空表示无人可见。",
+    "billingRoutingProfile": "可选的计费分组级 live 路由覆盖策略；留空时跟随模型或系统默认。",
+    "modelRoutingProfile": "可选的模型级 live 路由覆盖策略；留空时跟随计费分组或系统默认。",
     "systemRateLimit": "0 表示跟随系统；非 0 后续运行时取 min(系统速率, 此处速率)。",
     "unlimitedExpiresAt": "不输入有效期表示无时间限制；填写时必须晚于当前时间。",
     "unlimitedQuota": "留空表示不限额度。",
@@ -454,6 +458,7 @@
     "providerCacheAffinityTtlInvalid": "缓存亲和时长必须是大于 0 的整数",
     "providerPriorityInvalid": "优先级必须是整数",
     "providerPriorityUpdated": "提供商优先级已更新",
+    "routingProfileUpdated": "路由策略已更新",
     "providerUpdated": "提供商已更新",
     "copyFailed": "复制失败",
     "systemSettingsUpdated": "系统设置已更新"
@@ -1442,6 +1447,93 @@
       "deleteContent": "确认删除缓存亲和 {{key}}？",
       "clearAllTitle": "清空缓存亲和",
       "clearAllContent": "确认清空全部缓存亲和记录？该操作会立即影响后续调度。"
+    }
+  },
+  "routing": {
+    "loading": "正在加载路由排序...",
+    "empty": "当前过滤条件下没有路由候选。",
+    "profileInherited": "跟随默认",
+    "filters": {
+      "group": "计费分组",
+      "model": "模型",
+      "apiFormat": "API 格式",
+      "window": "窗口",
+      "stream": "流式",
+      "includeExcluded": "显示排除项",
+      "autoRefresh": "自动刷新",
+      "requestId": "Request ID"
+    },
+    "actions": {
+      "lookup": "查询",
+      "details": "详情"
+    },
+    "runtime": {
+      "title": "策略生效设置",
+      "helper": "这里选择当前计费分组或模型实际生效的路由策略。Provider 页的优先级管理只负责 Fixed Priority Plus / 固定顺序类策略的顺序维护。",
+      "scope": "作用范围",
+      "scopeBillingGroup": "计费分组",
+      "scopeModel": "模型",
+      "followBillingGroup": "跟随计费分组",
+      "groupRequired": "请先选择计费分组，再调整策略。",
+      "modelRequired": "当前未选中模型，无法设置模型级策略。",
+      "modelScopeUnavailable": "当前未找到模型，无法设置模型级策略。",
+      "effectiveProfile": "当前实际生效策略：{{profile}}。模型覆盖：{{modelScope}}；计费分组覆盖：{{groupScope}}。"
+    },
+    "summary": {
+      "liveWindow": "live 路由使用 5m 作为快速避障窗口，并在 1h / 24h / 7d 上回填稳定排序。",
+      "effectiveWeights": "当前生效权重",
+      "adminWeights": "管理员基准权重",
+      "learnedWeights": "学习后权重",
+      "rewardWindow": "学习窗口",
+      "samples": "样本数",
+      "confidence": "置信度",
+      "updatedAt": "更新时间",
+      "autoTuneDisabled": "当前 profile 未启用自动调优。"
+    },
+    "profile": {
+      "editorTitle": "Profile 调参",
+      "editorHelper": "这里编辑当前选中策略的自动调优开关和管理员基准权重。自动学习只会在这个基线之上做受控微调。",
+      "autoTune": "启用 Auto Tune",
+      "weightTotal": "当前权重总和：{{total}}。需要等于 1.000 才能保存。",
+      "weightFields": {
+        "success": "成功率",
+        "ttfb": "首字速度",
+        "latency": "总延迟",
+        "tps": "吞吐",
+        "cost": "成本",
+        "headroom": "余量",
+        "priority": "优先级"
+      }
+    },
+    "table": {
+      "rank": "排序",
+      "route": "提供商 / 密钥 / 端点",
+      "state": "状态",
+      "score": "总分",
+      "reason": "选中原因",
+      "breakdown": "权重明细",
+      "metrics": "窗口指标",
+      "penalty": "排除 / 扣分"
+    },
+    "states": {
+      "eligible": "可用",
+      "warming": "预热",
+      "degraded": "降权",
+      "excluded": "排除",
+      "circuit_open": "熔断"
+    },
+    "drawer": {
+      "title": "路由决策详情",
+      "requestId": "Request ID",
+      "state": "状态",
+      "sourceWindow": "命中窗口",
+      "freshness": "指标新鲜度",
+      "exclusion": "排除原因",
+      "formula": "公式与权重",
+      "metrics": "原始指标",
+      "windowMetrics": "多窗口指标",
+      "components": "打分明细",
+      "candidates": "候选列表"
     }
   },
   "userWallet": {

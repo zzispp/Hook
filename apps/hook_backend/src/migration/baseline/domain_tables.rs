@@ -134,6 +134,7 @@ fn billing_groups_table() -> TableCreateStatement {
         .col(string_len(BillingGroups::Name, 100))
         .col(text_null(BillingGroups::Description))
         .col(decimal_len(BillingGroups::BillingMultiplier, 20, 8))
+        .col(string_len_null(BillingGroups::RoutingProfileId, 64))
         .col(boolean(BillingGroups::IsActive))
         .col(boolean(BillingGroups::IsSystem))
         .col(big_integer(BillingGroups::SortOrder))

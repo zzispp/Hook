@@ -2,6 +2,7 @@ mod billing_runtime;
 mod event;
 mod record_billing;
 mod records;
+mod routing_observability;
 #[cfg(test)]
 mod tests;
 mod upstream_cost;
@@ -70,6 +71,7 @@ async fn persist_scheduled_candidates(state: &LlmProxyState, selection: &Candida
             .create_request_candidate(records::scheduled_input(&selection.request_id, &candidate.trace, 0))
             .await?;
     }
+    routing_observability::record_decision_sample(&store, selection).await?;
     Ok(())
 }
 
@@ -89,6 +91,7 @@ async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: Attempt
     let request_payloads = request_patch_payload_jobs(request_id, &request_patch);
     store.update_request_record(request_patch).await?;
     enqueue_payload_jobs(state, request_payloads).await?;
+    routing_observability::record_finished_attempt(state, &store, &input, &upstream_cost).await?;
     let model_usage_record = model_usage_record(&input, billing.as_ref());
     let usage_record = token_usage_record(request_id, &input, billing.as_ref(), OffsetDateTime::now_utc())?;
     let settlement = wallet_settlement_input(request_id, &input, billing.as_ref())?;

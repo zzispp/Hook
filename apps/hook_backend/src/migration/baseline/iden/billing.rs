@@ -8,6 +8,7 @@ pub(in crate::migration::baseline) enum BillingGroups {
     Name,
     Description,
     BillingMultiplier,
+    RoutingProfileId,
     IsActive,
     IsSystem,
     SortOrder,

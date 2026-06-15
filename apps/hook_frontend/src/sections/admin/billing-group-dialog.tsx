@@ -1,6 +1,7 @@
 'use client';
 
 import type { UserGroup } from 'src/types/user-group';
+import type { RoutingProfile } from 'src/types/routing';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { ProviderKeyGroup } from 'src/types/provider-key-group';
 import type { useGroupDialog } from './billing-group-management-state';
@@ -14,6 +15,7 @@ import ListItemText from '@mui/material/ListItemText';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { useTranslate } from 'src/locales/use-locales';
+import { useRoutingProfiles } from 'src/actions/routing';
 
 import { SwitchRow, ManagementDialog } from './shared';
 import { userGroupSelectionLabel } from './user-group-utils';
@@ -31,6 +33,7 @@ export function BillingGroupDialog({
   userGroups: UserGroup[];
 }) {
   const { t } = useTranslate('admin');
+  const profiles = useRoutingProfiles();
 
   return (
     <ManagementDialog
@@ -44,6 +47,7 @@ export function BillingGroupDialog({
       <ModelSelect dialog={dialog} models={models} />
       <AccessModeControl dialog={dialog} />
       <AccessGroupSelect dialog={dialog} providerKeyGroups={providerKeyGroups} />
+      <RoutingProfileSelect dialog={dialog} profiles={profiles.items} />
       <UserGroupSelect dialog={dialog} userGroups={userGroups} />
       <SwitchRow
         checked={dialog.form.is_active}
@@ -51,6 +55,39 @@ export function BillingGroupDialog({
         onChange={(checked) => dialog.setForm((form) => ({ ...form, is_active: checked }))}
       />
     </ManagementDialog>
+  );
+}
+
+function RoutingProfileSelect({
+  dialog,
+  profiles,
+}: {
+  dialog: ReturnType<typeof useGroupDialog>;
+  profiles: RoutingProfile[];
+}) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <TextField
+      select
+      fullWidth
+      label={t('fields.routingProfile')}
+      value={dialog.form.routing_profile_id}
+      helperText={t('helper.billingRoutingProfile')}
+      onChange={(event) =>
+        dialog.setForm((form) => ({
+          ...form,
+          routing_profile_id: event.target.value as typeof form.routing_profile_id,
+        }))
+      }
+    >
+      <MenuItem value="">{t('routing.profileInherited')}</MenuItem>
+      {profiles.map((profile) => (
+        <MenuItem key={profile.id} value={profile.id}>
+          {profile.name}
+        </MenuItem>
+      ))}
+    </TextField>
   );
 }
 

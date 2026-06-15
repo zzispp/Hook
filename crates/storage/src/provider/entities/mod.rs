@@ -17,3 +17,5 @@ pub mod provider_quick_import_sync_events;
 pub mod providers;
 pub mod request_candidates;
 pub mod request_records;
+pub mod routing_decision_samples;
+pub mod routing_profiles;

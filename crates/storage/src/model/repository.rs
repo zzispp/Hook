@@ -33,6 +33,7 @@ impl ModelStore {
             default_tiered_pricing: Set(json::encode_required(&input.default_tiered_pricing)?),
             supported_capabilities: Set(json::encode_optional(&input.supported_capabilities)?),
             config: Set(json::encode_optional(&input.config)?),
+            routing_profile_id: Set(input.routing_profile_id.map(|value| value.as_str().to_owned())),
             is_active: Set(input.is_active),
             usage_count: Set(0),
             created_at: Set(now),

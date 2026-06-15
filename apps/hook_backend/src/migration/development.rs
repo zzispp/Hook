@@ -21,6 +21,11 @@ const ADDITIVE_BASELINE_TABLES: &[&str] = &[
     "dashboard_latency_histogram_buckets",
     "dashboard_recent_error_snapshots",
     "dashboard_request_metric_sync_states",
+    "routing_metric_buckets",
+    "routing_route_states",
+    "routing_decision_samples",
+    "routing_profiles",
+    "routing_profile_versions",
     "global_model_user_usage_counts",
 ];
 const BASELINE_TABLES: &[&str] = &[
@@ -88,6 +93,11 @@ const BASELINE_TABLES: &[&str] = &[
     "dashboard_latency_histogram_buckets",
     "dashboard_recent_error_snapshots",
     "dashboard_request_metric_sync_states",
+    "routing_metric_buckets",
+    "routing_route_states",
+    "routing_decision_samples",
+    "routing_profiles",
+    "routing_profile_versions",
     "announcements",
     "support_tickets",
     "support_ticket_messages",
@@ -139,6 +149,7 @@ pub async fn status(connection: &DatabaseConnection) -> Result<BaselineStatus, D
 
 async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::translation_seed_sync::seed_missing_translations(manager).await?;
+    super::default_seed_sync::apply(manager).await?;
     super::development_additive::apply(manager).await?;
     super::request_record_cleanup_config_additive::apply(manager).await?;
     super::request_record_payload_compression_additive::apply(manager).await?;
@@ -154,6 +165,8 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::provider_key_capabilities_additive::apply(manager).await?;
     super::auth_layout_site_name_i18n_additive::apply(manager).await?;
     super::global_model_user_usage_counts_additive::apply(manager).await?;
+    super::routing_metrics_additive::apply(manager).await?;
+    super::routing_profile_overrides_additive::apply(manager).await?;
     super::provider_group_removal_destructive::apply(manager).await
 }
 

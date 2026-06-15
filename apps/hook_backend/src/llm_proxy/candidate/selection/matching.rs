@@ -165,11 +165,12 @@ fn ordered_keys(input: OrderedKeysInput<'_>) -> Vec<CachedProviderKey> {
         .filter(|key| key_allowed(key, input.group, input.current_minute))
         .cloned()
         .collect::<Vec<_>>();
-    keys.sort_by(|left, right| (left.internal_priority, &left.id).cmp(&(right.internal_priority, &right.id)));
     match input.scheduling_mode {
+        ProviderSchedulingMode::FixedOrder => {
+            keys.sort_by(|left, right| (left.internal_priority, &left.id).cmp(&(right.internal_priority, &right.id)));
+        }
         ProviderSchedulingMode::CacheAffinity => order_keys_for_cache_affinity(&mut keys, input.affinity, input.request_id),
         ProviderSchedulingMode::LoadBalance => order_keys_for_load_balance(&mut keys, input.request_id),
-        ProviderSchedulingMode::FixedOrder => {}
     }
     keys
 }
@@ -201,13 +202,7 @@ fn promote_affinity_endpoint(endpoints: &mut Vec<CachedEndpoint>, affinity: Opti
 }
 
 fn order_keys_for_load_balance(keys: &mut [CachedProviderKey], seed: &str) {
-    keys.sort_by(|left, right| {
-        (left.internal_priority, stable_hash(&format!("{seed}:{}", left.id)), &left.id).cmp(&(
-            right.internal_priority,
-            stable_hash(&format!("{seed}:{}", right.id)),
-            &right.id,
-        ))
-    });
+    keys.sort_by(|left, right| (stable_hash(&format!("{seed}:{}", left.id)), &left.id).cmp(&(stable_hash(&format!("{seed}:{}", right.id)), &right.id)));
 }
 
 fn provider_model(provider: &CachedProvider, model_id: &str) -> Option<CachedModelBinding> {

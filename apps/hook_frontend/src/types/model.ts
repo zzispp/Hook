@@ -1,3 +1,5 @@
+import type { RoutingProfileId } from './routing';
+
 // ----------------------------------------------------------------------
 
 export type CacheTTLPricing = {
@@ -74,6 +76,7 @@ export type GlobalModelCreate = {
   default_tiered_pricing: TieredPricingConfig;
   supported_capabilities?: string[] | null;
   config?: Record<string, unknown> | null;
+  routing_profile_id?: RoutingProfileId | null;
   is_active?: boolean;
 };
 
@@ -84,6 +87,7 @@ export type GlobalModelUpdate = {
   default_tiered_pricing?: TieredPricingConfig | null;
   supported_capabilities?: string[] | null;
   config?: Record<string, unknown> | null;
+  routing_profile_id?: RoutingProfileId | null;
 };
 
 export type GlobalModelResponse = {
@@ -95,6 +99,7 @@ export type GlobalModelResponse = {
   default_tiered_pricing: TieredPricingConfig;
   supported_capabilities?: string[] | null;
   config?: Record<string, unknown> | null;
+  routing_profile_id?: RoutingProfileId | null;
   provider_count?: number | null;
   active_provider_count?: number | null;
   usage_count?: number | null;

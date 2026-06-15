@@ -1,3 +1,4 @@
+import type { RoutingProfileId } from 'src/types/routing';
 import type {
   PricingTier,
   GlobalModelCreate,
@@ -21,6 +22,7 @@ export type GlobalModelForm = {
   display_name: string;
   default_tiered_pricing: TieredPricingConfig;
   default_price_per_request: string;
+  routing_profile_id: RoutingProfileId | '';
   context_limit: string;
   output_limit: string;
   description: string;
@@ -45,6 +47,7 @@ export const DEFAULT_FORM: GlobalModelForm = {
   display_name: '',
   default_tiered_pricing: DEFAULT_PRICING,
   default_price_per_request: '',
+  routing_profile_id: '',
   context_limit: '',
   output_limit: '',
   description: '',
@@ -84,6 +87,7 @@ export function formFromModel(model: GlobalModelResponse): GlobalModelForm {
     display_name: model.display_name,
     default_tiered_pricing: normalizePricingConfig(model.default_tiered_pricing),
     default_price_per_request: optionalNumberText(model.default_price_per_request),
+    routing_profile_id: model.routing_profile_id ?? '',
     context_limit: optionalNumberText(configNumber(config, 'context_limit')),
     output_limit: optionalNumberText(configNumber(config, 'output_limit')),
     description: configString(config, 'description'),
@@ -110,6 +114,7 @@ export function formFromModelsDev(item: ModelsDevModelItem): GlobalModelForm {
     name: item.modelId,
     display_name: item.modelName,
     default_tiered_pricing: pricingFromModelsDev(item),
+    routing_profile_id: '',
     context_limit: optionalNumberText(item.contextLimit),
     output_limit: optionalNumberText(item.outputLimit),
     family: item.family ?? '',
@@ -137,6 +142,7 @@ export function toGlobalModelPayload(form: GlobalModelForm): GlobalModelCreate {
     default_tiered_pricing: pricing,
     supported_capabilities: capabilitiesForPayload(form, pricing),
     config: configFromForm(form),
+    routing_profile_id: form.routing_profile_id || null,
     is_active: form.is_active,
   };
 }

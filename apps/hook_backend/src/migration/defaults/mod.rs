@@ -41,6 +41,7 @@ pub const ADMIN_MENU_CODES: &[&str] = &[
     "admin_models",
     "admin_providers",
     "admin_cache_monitoring",
+    "admin_routing",
     "admin_request_records",
 ];
 
@@ -311,6 +312,18 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
         ],
     },
     MenuApiBindingDefinition {
+        menu_code: "admin_routing",
+        api_codes: &[
+            "routing_profiles_read",
+            "routing_profiles_update",
+            "routing_rankings_read",
+            "routing_decision_read",
+            "routing_preview",
+            "models_global_read",
+            "groups_read",
+        ],
+    },
+    MenuApiBindingDefinition {
         menu_code: "admin_request_records",
         api_codes: &["request_records_read", "request_records_active_read", "request_records_detail"],
     },
@@ -466,6 +479,7 @@ mod tests {
         assert!(ADMIN_MENU_CODES.contains(&"admin_models"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_providers"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_cache_monitoring"));
+        assert!(ADMIN_MENU_CODES.contains(&"admin_routing"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_request_records"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_wallets"));
         assert!(ADMIN_MENU_CODES.contains(&"admin_tokens"));

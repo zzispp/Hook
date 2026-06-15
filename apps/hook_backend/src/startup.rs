@@ -16,6 +16,7 @@ use crate::{
         CachedApiTokenRepository, CachedGroupRepository, CachedModelRepository, CachedProviderRepository, CachedSettingRepository, CachedUserRepository,
     },
     recharge_secret_cipher::RechargeAesSecretCipher,
+    routing_api::{RoutingApiState, create_router as create_routing_router},
     system,
 };
 use api_token::{
@@ -406,6 +407,7 @@ fn create_api_router(state: &AppState) -> Router {
     let performance_monitoring_state = PerformanceMonitoringApiState::new(state.database.clone(), state.performance_os_collector.clone());
     let cache_monitoring_state = CacheMonitoringApiState::new(state.database.clone(), state.llm_proxy.clone(), state.cache_monitoring_system_owner.clone());
     let scheduler_state = SchedulerApiState::new(state.scheduler.clone());
+    let routing_state = RoutingApiState::new(state.llm_proxy.clone());
 
     Router::new()
         .merge(create_user_router(user_state))
@@ -426,4 +428,5 @@ fn create_api_router(state: &AppState) -> Router {
         .merge(create_performance_monitoring_router(performance_monitoring_state))
         .merge(create_cache_monitoring_router(cache_monitoring_state))
         .merge(create_scheduler_router(scheduler_state))
+        .merge(create_routing_router(routing_state))
 }

@@ -11,6 +11,7 @@ mod quick_import_bind;
 mod quick_import_sync;
 mod request_candidate;
 mod request_record;
+mod routing;
 mod time_range;
 
 pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCooldownPolicy, ProviderCooldownRule};
@@ -51,5 +52,10 @@ pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestCandidateDetail, RequestPayloadMeta, RequestPayloadSource, RequestPayloadStatus,
     RequestRecord, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecord, UsageRecordListResponse,
+};
+pub use routing::{
+    RouteIdentity, RouteScoreExplanation, RoutingDecisionResponse, RoutingMetricSnapshot, RoutingMetricWindow, RoutingPreviewRequest, RoutingPreviewResponse,
+    RoutingProfile, RoutingProfileId, RoutingProfileLearningState, RoutingProfileUpsert, RoutingProfileWeights, RoutingProfilesResponse,
+    RoutingRankingResponse, RoutingRankingsRequest, RoutingRouteState, ScoreComponent,
 };
 pub use time_range::{parse_provider_key_time_range_minute, provider_key_minute_of_day, provider_key_time_range_contains};

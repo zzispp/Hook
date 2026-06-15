@@ -90,6 +90,7 @@ async fn load_groups(database: &Database) -> Result<Vec<CachedBillingGroup>, Llm
         let key_scope = billing_group_key_scope(database, &group).await?;
         groups.push(CachedBillingGroup {
             allowed_provider_key_ids: key_scope.allowed_provider_key_ids,
+            routing_profile_id: group.routing_profile_id,
             provider_priorities: key_scope.provider_priorities,
             provider_key_priorities: key_scope.provider_key_priorities,
             code: group.code,
@@ -290,6 +291,7 @@ fn cached_model(record: global_models::Model) -> Result<CachedGlobalModel, LlmPr
     let supported_capabilities = record
         .supported_capabilities()
         .map_err(|error| LlmProxyError::Infrastructure(format!("invalid model supported_capabilities: {error}")))?;
+    let routing_profile_id = record.routing_profile_id();
     Ok(CachedGlobalModel {
         id: record.id,
         name: record.name,
@@ -298,6 +300,7 @@ fn cached_model(record: global_models::Model) -> Result<CachedGlobalModel, LlmPr
         default_price_per_request: record.default_price_per_request,
         default_tiered_pricing: serde_json::from_str(&record.default_tiered_pricing)
             .map_err(|error| LlmProxyError::Infrastructure(format!("invalid model pricing config: {error}")))?,
+        routing_profile_id,
     })
 }
 

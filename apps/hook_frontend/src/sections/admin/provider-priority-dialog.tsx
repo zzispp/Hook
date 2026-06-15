@@ -1,14 +1,12 @@
 'use client';
 
+import type { ProviderPriorityMode } from 'src/types/provider';
 import type { ProviderPriorityDialogProps } from './provider-priority-state';
-import type { ProviderPriorityMode, ProviderSchedulingMode } from 'src/types/provider';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import Divider from '@mui/material/Divider';
-import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -52,12 +50,8 @@ export function ProviderPriorityDialog(props: ProviderPriorityDialogProps) {
       </DialogContent>
       <PriorityDialogActions
         kind={state.kind}
-        mode={state.mode}
         submitting={state.submitting}
-        cacheAffinityTtlMinutes={state.cacheAffinityTtlMinutes}
         onKindChange={state.changeKind}
-        onModeChange={state.setMode}
-        onCacheAffinityTtlChange={state.setCacheAffinityTtlMinutes}
         onClose={props.onClose}
         onSave={state.save}
       />
@@ -118,22 +112,14 @@ function PriorityDialogTitle({ onClose }: { onClose: () => void }) {
 
 function PriorityDialogActions({
   kind,
-  mode,
   submitting,
-  cacheAffinityTtlMinutes,
   onKindChange,
-  onModeChange,
-  onCacheAffinityTtlChange,
   onClose,
   onSave,
 }: {
   kind: ProviderPriorityMode;
-  mode: ProviderSchedulingMode;
   submitting: boolean;
-  cacheAffinityTtlMinutes: string;
   onKindChange: (kind: ProviderPriorityMode) => void;
-  onModeChange: (mode: ProviderSchedulingMode) => void;
-  onCacheAffinityTtlChange: (value: string) => void;
   onClose: () => void;
   onSave: () => void;
 }) {
@@ -144,21 +130,6 @@ function PriorityDialogActions({
       <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ md: 'center' }} justifyContent="space-between" spacing={2}>
         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} spacing={1.5}>
           <PriorityTargetPicker value={kind} onChange={onKindChange} />
-          <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', sm: 'block' } }} />
-          <Typography variant="caption" color="text.secondary">
-            {t('providers.currentMode')}:{' '}
-            <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-              {schedulingModeLabel(mode, t)}
-            </Box>
-          </Typography>
-          <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', sm: 'block' } }} />
-          <SchedulingModePicker value={mode} onChange={onModeChange} />
-          {mode === 'cache_affinity' && (
-            <CacheAffinityTtlField
-              value={cacheAffinityTtlMinutes}
-              onChange={onCacheAffinityTtlChange}
-            />
-          )}
         </Stack>
         <Stack direction="row" justifyContent="flex-end" spacing={1}>
           <Button variant="outlined" color="inherit" onClick={onClose}>
@@ -197,68 +168,6 @@ function PriorityTargetPicker({
       >
         <ToggleButton value="provider">{t('providers.priorityTargetProvider')}</ToggleButton>
         <ToggleButton value="key">{t('providers.priorityTargetKey')}</ToggleButton>
-      </ToggleButtonGroup>
-    </Stack>
-  );
-}
-
-function CacheAffinityTtlField({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <TextField
-      type="number"
-      size="small"
-      label={t('providers.cacheAffinityTtlMinutes')}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      inputProps={{ min: 1, step: 1 }}
-      sx={{ width: { xs: 1, sm: 180 } }}
-    />
-  );
-}
-
-function schedulingModeLabel(mode: ProviderSchedulingMode, t: (key: string) => string) {
-  const labels: Record<ProviderSchedulingMode, string> = {
-    cache_affinity: t('providers.schedulingCacheAffinity'),
-    fixed_order: t('providers.schedulingFixedOrder'),
-    load_balance: t('providers.schedulingLoadBalance'),
-  };
-
-  return labels[mode];
-}
-
-function SchedulingModePicker({
-  value,
-  onChange,
-}: {
-  value: ProviderSchedulingMode;
-  onChange: (mode: ProviderSchedulingMode) => void;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <Stack direction="row" alignItems="center" spacing={1}>
-      <Typography variant="caption" color="text.secondary">
-        {t('providers.scheduling')}:
-      </Typography>
-      <ToggleButtonGroup
-        exclusive
-        size="small"
-        value={value}
-        onChange={(_, nextValue: ProviderSchedulingMode | null) => {
-          if (nextValue) onChange(nextValue);
-        }}
-      >
-        <ToggleButton value="cache_affinity">{t('providers.schedulingCacheAffinity')}</ToggleButton>
-        <ToggleButton value="load_balance">{t('providers.schedulingLoadBalance')}</ToggleButton>
-        <ToggleButton value="fixed_order">{t('providers.schedulingFixedOrder')}</ToggleButton>
       </ToggleButtonGroup>
     </Stack>
   );

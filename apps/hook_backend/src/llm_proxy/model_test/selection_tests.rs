@@ -161,6 +161,7 @@ fn snapshot(provider: CachedProvider) -> SchedulingSnapshot {
             supported_capabilities: None,
             default_price_per_request: None,
             default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
+            routing_profile_id: None,
         }],
         groups: Vec::new(),
         active_user_group_codes: Vec::new(),

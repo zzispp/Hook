@@ -37,6 +37,12 @@ pub(crate) enum ProviderKeyProbeSlotClaim {
     TimedOut(LlmProxyError),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ProviderKeyRateLimitSnapshot {
+    pub(crate) used: u64,
+    pub(crate) limit: u64,
+}
+
 pub async fn enforce_request_limits(state: &LlmProxyState, token: &ApiToken) -> Result<(), LlmProxyError> {
     let snapshot = state.scheduling_snapshot().await?;
     let scopes = request_scopes(&snapshot, token);
@@ -48,6 +54,25 @@ pub async fn claim_provider_key_limit(state: &LlmProxyState, key_id: &str, rpm_l
         return Ok(());
     };
     consume_scopes(state, &[RateLimitScope::provider_key(key_id, limit)]).await
+}
+
+pub async fn provider_key_rate_limit_snapshot(
+    state: &LlmProxyState,
+    key_id: &str,
+    rpm_limit: Option<i32>,
+) -> Result<Option<ProviderKeyRateLimitSnapshot>, LlmProxyError> {
+    let Some(limit) = normalized_i64(rpm_limit.map(i64::from)) else {
+        return Ok(None);
+    };
+    let now = OffsetDateTime::now_utc();
+    let bucket = now.unix_timestamp().div_euclid(60);
+    let key = format!("{}:llm_proxy:rate_limit:provider_key:{key_id}:{bucket}", state.key_prefix);
+    let mut connection = state.affinity.clone();
+    let used: Option<i64> = redis::cmd("GET").arg(key).query_async(&mut connection).await.map_err(redis_error)?;
+    Ok(Some(ProviderKeyRateLimitSnapshot {
+        used: used.unwrap_or_default().max(0) as u64,
+        limit: limit as u64,
+    }))
 }
 
 pub async fn claim_provider_key_probe_slot(

@@ -105,7 +105,6 @@ function ProviderTableCard({
       <ProviderFiltersToolbar
         filters={state.filters}
         models={state.models.items}
-        schedulingLabel={schedulingModeLabel(state.settings.data?.scheduling_mode ?? 'cache_affinity', state.t)}
         onChange={state.handleFiltersChange}
         onOpenPriority={state.openPriorityDialog}
         onOpenCooldownPolicy={() => state.setCooldownPolicyOpen(true)}
@@ -153,16 +152,6 @@ function ProviderCooldownCard({ state }: { state: ReturnType<typeof useProviderM
       />
     </Card>
   );
-}
-
-function schedulingModeLabel(value: string, t: (key: string) => string) {
-  const labels: Record<string, string> = {
-    cache_affinity: t('providers.schedulingCacheAffinity'),
-    fixed_order: t('providers.schedulingFixedOrder'),
-    load_balance: t('providers.schedulingLoadBalance'),
-  };
-
-  return labels[value] ?? value;
 }
 
 function ProviderDialogs({
@@ -239,16 +228,13 @@ function ProviderDialogs({
         providers={state.priorityProviders.items}
         keysByProvider={state.priorityKeys.itemsByProvider}
         loading={state.priorityProviders.isLoading || state.priorityKeys.isLoading}
-        schedulingMode={state.settings.data?.scheduling_mode ?? 'cache_affinity'}
-        priorityMode={state.settings.data?.provider_priority_mode ?? 'provider'}
+        initialKind={state.settings.data?.provider_priority_mode ?? 'provider'}
         keyPrioritySnapshotInitialized={state.settings.data?.key_priority_snapshot_initialized ?? false}
-        cacheAffinityTtlMinutes={state.settings.data?.cache_affinity_ttl_minutes ?? 5}
         onClose={() => state.setPriorityOpen(false)}
         onSaved={() => {
           void state.providers.refresh();
           void state.priorityProviders.refresh();
           void state.priorityKeys.refresh();
-          void state.settings.refresh();
         }}
       />
       <ProviderCooldownPolicyDialog

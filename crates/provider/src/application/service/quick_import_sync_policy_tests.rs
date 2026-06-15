@@ -235,6 +235,7 @@ fn globals() -> BTreeMap<String, GlobalModelResponse> {
             default_tiered_pricing: TieredPricingConfig { tiers: vec![] },
             supported_capabilities: None,
             config: None,
+            routing_profile_id: None,
             provider_count: None,
             active_provider_count: None,
             usage_count: None,

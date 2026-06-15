@@ -17,6 +17,7 @@ impl GlobalModelRecord {
         let default_tiered_pricing = self.default_tiered_pricing()?;
         let supported_capabilities = self.supported_capabilities()?;
         let config = self.config()?;
+        let routing_profile_id = self.routing_profile_id();
         Ok(GlobalModelResponse {
             id: self.id,
             name: self.name,
@@ -26,6 +27,7 @@ impl GlobalModelRecord {
             default_tiered_pricing,
             supported_capabilities,
             config,
+            routing_profile_id,
             provider_count: Some(provider_count),
             active_provider_count: Some(active_provider_count),
             usage_count: Some(self.usage_count),
@@ -130,6 +132,7 @@ mod tests {
             default_tiered_pricing: "{\"tiers\":[{\"up_to\":null,\"input_price_per_1m\":0.1,\"output_price_per_1m\":0.2}]}".into(),
             supported_capabilities: Some("[\"vision\"]".into()),
             config: Some("{\"streaming\":true}".into()),
+            routing_profile_id: None,
             is_active: true,
             usage_count: 42,
             created_at,
