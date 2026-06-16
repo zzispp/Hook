@@ -1453,6 +1453,7 @@
   "routing": {
     "loading": "Loading routing rankings...",
     "empty": "No routing candidates match the current filters.",
+    "emptyBeforeQuery": "Select a user, API token, model, and format, then query routing.",
     "profileInherited": "Follow default",
     "cards": {
       "simulationContextTitle": "Real path simulation",
@@ -1462,6 +1463,7 @@
       "rankingsHelper": "View candidate rankings, score components, and window metrics under the real token context."
     },
     "filters": {
+      "user": "User",
       "apiToken": "API token",
       "group": "Billing group",
       "model": "Model",
@@ -1470,9 +1472,13 @@
       "stream": "Stream",
       "includeExcluded": "Show excluded",
       "autoRefresh": "Auto refresh",
-      "requestId": "Request ID"
+      "requestId": "Request ID",
+      "selectUserFirst": "Select a user first",
+      "selectApiTokenFirst": "Select an API token first",
+      "noAccessibleModels": "This API token has no accessible models"
     },
     "actions": {
+      "simulate": "Query routing",
       "lookup": "Lookup",
       "details": "Details"
     },

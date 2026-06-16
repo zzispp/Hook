@@ -1,9 +1,8 @@
 import type { AdminT } from './shared';
+import type { SystemUser } from 'src/types/rbac';
 import type { ApiToken } from 'src/types/api-token';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { RoutingMetricWindow } from 'src/types/routing';
-
-import { useEffect } from 'react';
 
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
@@ -28,13 +27,36 @@ export function RoutingFilters(props: FilterProps) {
           fullWidth
           select
           size="small"
+          label={props.t('routing.filters.user')}
+          value={props.userId}
+          onChange={(event) => props.onUserChange(event.target.value)}
+        >
+          <MenuItem disabled value="">
+            {props.t(props.users.length === 0 ? 'common.noData' : 'routing.filters.selectUserFirst')}
+          </MenuItem>
+          {props.users.map((user) => (
+            <MenuItem key={user.id} value={user.id}>
+              {user.username} · {user.email}
+            </MenuItem>
+          ))}
+        </TextField>
+      </Grid>
+      <Grid size={{ xs: 12, sm: 6 }}>
+        <TextField
+          fullWidth
+          select
+          size="small"
+          disabled={!props.userId}
           label={props.t('routing.filters.apiToken')}
           value={props.apiTokenId}
           onChange={(event) => props.onApiTokenChange(event.target.value)}
         >
+          <MenuItem disabled value="">
+            {props.t(props.userId && props.apiTokens.length === 0 ? 'common.noData' : 'routing.filters.selectApiTokenFirst')}
+          </MenuItem>
           {props.apiTokens.map((token) => (
             <MenuItem key={token.id} value={token.id}>
-              {token.name} · {token.token_prefix} · {token.group_code}
+              {token.name} · {token.token_prefix} · {token.group_code} · {token.token_type}
             </MenuItem>
           ))}
         </TextField>
@@ -53,10 +75,14 @@ export function RoutingFilters(props: FilterProps) {
           fullWidth
           select
           size="small"
+          disabled={!props.apiTokenId || props.models.length === 0}
           label={props.t('routing.filters.model')}
           value={props.modelName}
           onChange={(event) => props.onModelChange(event.target.value)}
         >
+          <MenuItem disabled value="">
+            {props.t(props.apiTokenId && props.models.length === 0 ? 'routing.filters.noAccessibleModels' : 'routing.filters.selectApiTokenFirst')}
+          </MenuItem>
           {props.models.map((model) => (
             <MenuItem key={model.id} value={model.name}>
               {model.name}
@@ -76,6 +102,18 @@ export function RoutingFilters(props: FilterProps) {
         label={props.t('routing.filters.includeExcluded')}
         onChange={props.onIncludeExcludedChange}
       />
+      <Grid size={{ xs: 12 }}>
+        <Button
+          fullWidth
+          variant="contained"
+          startIcon={<Iconify icon="eva:search-fill" />}
+          disabled={!props.canSimulate}
+          onClick={props.onSimulate}
+          sx={{ height: 40 }}
+        >
+          {props.t('routing.actions.simulate')}
+        </Button>
+      </Grid>
       <Grid size={{ xs: 12, sm: 8 }}>
         <TextField
           fullWidth
@@ -123,25 +161,6 @@ export function RoutingHeaderActions(props: {
       <RefreshButton loading={props.loading} onClick={props.onRefresh} />
     </Stack>
   );
-}
-
-export function useDefaultRoutingFilters(input: {
-  apiTokens: ApiToken[];
-  models: GlobalModelResponse[];
-  apiTokenId: string;
-  modelName: string;
-  onApiTokenChange: (value: string) => void;
-  onModelChange: (value: string) => void;
-}) {
-  const { apiTokenId, apiTokens, modelName, models, onApiTokenChange, onModelChange } = input;
-
-  useEffect(() => {
-    if (!apiTokenId && apiTokens[0]) onApiTokenChange(apiTokens[0].id);
-  }, [apiTokenId, apiTokens, onApiTokenChange]);
-
-  useEffect(() => {
-    if (!modelName && models[0]) onModelChange(models[0].name);
-  }, [modelName, models, onModelChange]);
 }
 
 function ApiFormatFilter(props: FilterProps) {
@@ -207,8 +226,10 @@ function SwitchFilter({
 
 type FilterProps = {
   t: AdminT;
+  users: SystemUser[];
   apiTokens: ApiToken[];
   models: GlobalModelResponse[];
+  userId: string;
   apiTokenId: string;
   groupCode: string;
   modelName: string;
@@ -217,6 +238,8 @@ type FilterProps = {
   metricWindow: RoutingMetricWindow;
   includeExcluded: boolean;
   requestInput: string;
+  canSimulate: boolean;
+  onUserChange: (value: string) => void;
   onApiTokenChange: (value: string) => void;
   onModelChange: (value: string) => void;
   onApiFormatChange: (value: string) => void;
@@ -224,5 +247,6 @@ type FilterProps = {
   onWindowChange: (value: RoutingMetricWindow) => void;
   onIncludeExcludedChange: (value: boolean) => void;
   onRequestInputChange: (value: string) => void;
+  onSimulate: VoidFunction;
   onDecisionLookup: VoidFunction;
 };

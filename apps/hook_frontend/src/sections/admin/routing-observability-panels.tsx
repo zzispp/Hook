@@ -1,4 +1,5 @@
 import type { AdminT } from './shared';
+import type { SystemUser } from 'src/types/rbac';
 import type { ApiToken } from 'src/types/api-token';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
@@ -7,6 +8,7 @@ import type { RoutingProfile, RoutingMetricWindow, RouteScoreExplanation } from 
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
 import CardHeader from '@mui/material/CardHeader';
 
 import { routingProfileName } from './routing-i18n';
@@ -18,12 +20,14 @@ import { RoutingProfileSettings } from './routing-profile-settings';
 
 type ConfigurationPanelProps = {
   t: AdminT;
+  users: SystemUser[];
   apiTokens: ApiToken[];
   models: GlobalModelResponse[];
   selectedGroup: BillingGroup | null;
   selectedModel: GlobalModelResponse | null;
   profiles: RoutingProfile[];
   settingsLoading: boolean;
+  userId: string;
   apiTokenId: string;
   groupCode: string;
   modelName: string;
@@ -32,6 +36,8 @@ type ConfigurationPanelProps = {
   metricWindow: RoutingMetricWindow;
   includeExcluded: boolean;
   requestInput: string;
+  canSimulate: boolean;
+  onUserChange: (value: string) => void;
   onApiTokenChange: (value: string) => void;
   onModelChange: (value: string) => void;
   onApiFormatChange: (value: string) => void;
@@ -39,6 +45,7 @@ type ConfigurationPanelProps = {
   onWindowChange: (value: RoutingMetricWindow) => void;
   onIncludeExcludedChange: (value: boolean) => void;
   onRequestInputChange: (value: string) => void;
+  onSimulate: VoidFunction;
   onDecisionLookup: VoidFunction;
   onSaved: VoidFunction;
 };
@@ -48,6 +55,7 @@ type RankingPanelProps = {
   selectedProfile: RoutingProfile | null;
   rankingRows: RouteScoreExplanation[];
   rankingsLoading: boolean;
+  hasSubmittedQuery: boolean;
   onOpenRanking: (item: RouteScoreExplanation) => void;
   onSaved: VoidFunction;
 };
@@ -121,12 +129,16 @@ export function RoutingRankingPanel(props: RankingPanelProps) {
             subheaderTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
           />
           <Stack sx={{ p: 2.5 }}>
-            <RoutingRankingTable
-              rows={props.rankingRows}
-              loading={props.rankingsLoading}
-              t={props.t}
-              onOpen={props.onOpenRanking}
-            />
+            {props.hasSubmittedQuery ? (
+              <RoutingRankingTable
+                rows={props.rankingRows}
+                loading={props.rankingsLoading}
+                t={props.t}
+                onOpen={props.onOpenRanking}
+              />
+            ) : (
+              <Alert severity="info">{props.t('routing.emptyBeforeQuery')}</Alert>
+            )}
           </Stack>
         </Card>
       </Grid>
