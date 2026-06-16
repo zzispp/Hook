@@ -19,6 +19,7 @@ use super::{
     quick_import_sync_group_ratio::{GroupRatioLookup, group_ratio},
     quick_import_sync_key_costs::costs_for_key,
     quick_import_sync_model_check::{ModelCheck, check_models},
+    quick_import_sync_outcome_support::{persisted_multiplier, statuses_with_candidates},
 };
 
 pub(super) struct KeyOutcome {
@@ -184,7 +185,8 @@ fn cost_outcome(
     group_ratio: rust_decimal::Decimal,
     upstream_models: &[UpstreamImportModel],
 ) -> KeyOutcome {
-    let effective = group_ratio / source.recharge_multiplier;
+    let group_ratio = persisted_multiplier(group_ratio);
+    let effective = persisted_multiplier(group_ratio / source.recharge_multiplier);
     let costs = match costs_for_key(globals, bindings, key, effective) {
         Ok(costs) => costs,
         Err(error) => return cost_error(group_ratio, effective, upstream_group, error),
@@ -288,11 +290,4 @@ fn status_base(status: ProviderQuickImportSyncStatus) -> KeyOutcome {
 
 fn token_by_id<'a>(snapshot: &'a UpstreamSyncSnapshot, id: &str) -> Option<&'a UpstreamSyncToken> {
     snapshot.tokens.iter().find(|token| token.id == id)
-}
-
-fn statuses_with_candidates(mut statuses: Vec<ProviderQuickImportSyncStatus>, candidates: &[String]) -> Vec<ProviderQuickImportSyncStatus> {
-    if !candidates.is_empty() {
-        statuses.push(ProviderQuickImportSyncStatus::ModelCandidateAvailable);
-    }
-    statuses
 }

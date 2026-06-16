@@ -8,6 +8,7 @@ use super::{OperationsError, OperationsResult};
 const ANNOUNCEMENT_TYPES: &[&str] = &["info", "warning", "maintenance", "important"];
 const EMAIL_MAX_LEN: usize = 255;
 const MAX_PAGE_SIZE: u64 = 100;
+const NOTIFICATION_SOURCE_TYPES: &[&str] = &["announcement", "ticket", "provider_quick_import_sync"];
 const TEXT_MAX_LEN: usize = 20_000;
 const PRIORITIES: &[&str] = &["normal", "high", "urgent"];
 const STATUSES: &[&str] = &["open", "in_progress", "waiting_user", "resolved", "closed"];
@@ -101,7 +102,7 @@ pub fn validate_page(page: PageRequest) -> OperationsResult<()> {
 }
 
 pub fn validate_source_type(value: &str) -> OperationsResult<()> {
-    validate_enum("source_type", value, &["announcement", "ticket"])
+    validate_enum("source_type", value, NOTIFICATION_SOURCE_TYPES)
 }
 
 pub fn validate_email(value: &str) -> OperationsResult<()> {
@@ -151,4 +152,21 @@ fn validate_len(field: &str, value: &str, max_len: usize) -> OperationsResult<()
         return Err(OperationsError::InvalidInput(format!("{field} is too long")));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn provider_quick_import_sync_is_valid_notification_source_type() {
+        assert!(validate_source_type("provider_quick_import_sync").is_ok());
+    }
+
+    #[test]
+    fn unknown_notification_source_type_is_rejected() {
+        let error = validate_source_type("provider").unwrap_err();
+
+        assert_eq!(error.to_string(), "invalid input: source_type has unsupported value");
+    }
 }
