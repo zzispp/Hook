@@ -18,6 +18,9 @@ const TTFB_GOOD_MS: f64 = 250.0;
 const TTFB_BAD_MS: f64 = 4_000.0;
 const TPS_LOW: f64 = 5.0;
 const TPS_HIGH: f64 = 120.0;
+const EXPLORATION_HASH_BUCKETS: u64 = 10_000;
+const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+const FNV_PRIME: u64 = 0x100000001b3;
 
 #[derive(Clone, Debug)]
 pub(crate) struct RoutingScoreCandidate {
@@ -30,11 +33,20 @@ pub(crate) struct RoutingScoreCandidate {
     pub(crate) metric_window: RoutingMetricWindow,
     pub(crate) metric_freshness_seconds: i64,
     pub(crate) recent_metric: Option<RoutingMetricSnapshot>,
+    pub(crate) ema: Option<RoutingEmaSnapshot>,
     pub(crate) circuit_state: CircuitCandidateState,
     pub(crate) admin_priority: i32,
     pub(crate) estimated_cost: Option<Decimal>,
     pub(crate) needs_conversion: bool,
-    pub(crate) is_cached: bool,
+    pub(crate) affinity_bonus: bool,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct RoutingEmaSnapshot {
+    pub(crate) success_rate: f64,
+    pub(crate) latency_ms: Option<f64>,
+    pub(crate) ttfb_ms: Option<f64>,
+    pub(crate) sample_count: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -44,13 +56,28 @@ pub(crate) struct ScoredRoute {
     pub(crate) excluded: bool,
 }
 
-pub(crate) fn score_routes(profile: &RoutingProfile, window: RoutingMetricWindow, candidates: Vec<RoutingScoreCandidate>) -> Vec<ScoredRoute> {
-    let total_attempts = candidates.iter().map(|item| item.metric.sample_count).sum::<u64>();
-    let cost_range = CostRange::from_candidates(&candidates);
-    let mut scored = candidates
+pub(crate) struct ScoreRoutesInput<'a> {
+    pub(crate) profile: &'a RoutingProfile,
+    pub(crate) window: RoutingMetricWindow,
+    pub(crate) request_id: &'a str,
+    pub(crate) candidates: Vec<RoutingScoreCandidate>,
+}
+
+pub(crate) fn score_routes(input: ScoreRoutesInput<'_>) -> Vec<ScoredRoute> {
+    let total_attempts = input.candidates.iter().map(|item| item.metric.sample_count).sum::<u64>();
+    let cost_range = CostRange::from_candidates(&input.candidates);
+    let context = ScoreContext {
+        profile: input.profile,
+        window: input.window,
+        total_attempts,
+        cost_range,
+        exploration_enabled: exploration_enabled(input.profile, input.request_id),
+    };
+    let mut scored = input
+        .candidates
         .into_iter()
         .enumerate()
-        .map(|(index, candidate)| score_route(index, profile, window, total_attempts, cost_range, candidate))
+        .map(|(index, candidate)| score_route(index, context, candidate))
         .collect::<Vec<_>>();
     scored.sort_by(score_order);
     for (index, item) in scored.iter_mut().enumerate() {
@@ -59,24 +86,11 @@ pub(crate) fn score_routes(profile: &RoutingProfile, window: RoutingMetricWindow
     scored
 }
 
-fn score_route(
-    index: usize,
-    profile: &RoutingProfile,
-    window: RoutingMetricWindow,
-    total_attempts: u64,
-    cost_range: CostRange,
-    candidate: RoutingScoreCandidate,
-) -> ScoredRoute {
+fn score_route(index: usize, context: ScoreContext<'_>, candidate: RoutingScoreCandidate) -> ScoredRoute {
     if let Some(excluded) = hard_exclusion(index, candidate.clone()) {
         return excluded;
     }
-    let context = ScoreContext {
-        profile,
-        window,
-        total_attempts,
-        cost_range,
-    };
-    if candidate.metric.sample_count < profile.min_samples {
+    if candidate.metric.sample_count < context.profile.min_samples {
         return warming_score(index, context, candidate);
     }
     normal_score(index, context, candidate)
@@ -106,13 +120,14 @@ fn warming_score(index: usize, context: ScoreContext<'_>, candidate: RoutingScor
     let health = provider_health_prior(&candidate.metric);
     let exploration = exploration_score(context.profile, context.total_attempts, candidate.metric.sample_count);
     let (priority_weight, cost_weight, health_weight, exploration_weight) = warming_weights(context.profile);
+    let exploration_weight = if context.exploration_enabled { exploration_weight } else { 0.0 };
     let mut components = vec![
         component("priority", "admin priority", Some(candidate.admin_priority as f64), priority, priority_weight),
         component("cost", "configured cost", candidate.estimated_cost.and_then(decimal_f64), cost, cost_weight),
         component("health_prior", "health prior", None, health, health_weight),
         component("exploration", "uncertainty exploration", Some(exploration), exploration, exploration_weight),
     ];
-    if candidate.is_cached {
+    if candidate.affinity_bonus {
         components.push(additive_component("affinity", "cache affinity", context.profile.affinity_bonus));
     }
     let score = clamp_score(components.iter().map(|item| item.contribution).sum());
@@ -195,7 +210,7 @@ fn normal_components(context: ScoreContext<'_>, candidate: &RoutingScoreCandidat
 
 fn penalty_components(profile: &RoutingProfile, window: RoutingMetricWindow, candidate: &RoutingScoreCandidate) -> Vec<ScoreComponent> {
     let mut output = Vec::new();
-    if candidate.is_cached {
+    if candidate.affinity_bonus {
         output.push(additive_component("affinity", "cache affinity", profile.affinity_bonus));
     }
     if candidate.needs_conversion {
@@ -206,6 +221,10 @@ fn penalty_components(profile: &RoutingProfile, window: RoutingMetricWindow, can
     }
     if let CircuitCandidateState::HalfOpenProbe { .. } = candidate.circuit_state {
         output.push(additive_component("half_open", "half-open probe", -profile.stale_metric_penalty));
+    }
+    let ema_penalty = ema_regression_penalty(profile, candidate);
+    if ema_penalty > 0.0 {
+        output.push(additive_component("ema_regression", "EMA regression", -ema_penalty));
     }
     let recent_penalty = recent_regression_penalty(profile, candidate, window);
     if recent_penalty > 0.0 {
@@ -220,6 +239,7 @@ struct ScoreContext<'a> {
     window: RoutingMetricWindow,
     total_attempts: u64,
     cost_range: CostRange,
+    exploration_enabled: bool,
 }
 
 fn explanation(
@@ -272,6 +292,32 @@ fn warming_weights(profile: &RoutingProfile) -> (f64, f64, f64, f64) {
     }
     let scale = 1.0 / 0.65;
     (0.0, 0.25 * scale, 0.20 * scale, 0.20 * scale)
+}
+
+fn exploration_enabled(profile: &RoutingProfile, request_id: &str) -> bool {
+    let budget = profile.exploration_budget_percent.clamp(0.0, 100.0);
+    if budget <= f64::EPSILON {
+        return false;
+    }
+    if budget >= 100.0 {
+        return true;
+    }
+    let bucket = exploration_hash(request_id, profile.id.as_str()) % EXPLORATION_HASH_BUCKETS;
+    (bucket as f64) < budget * EXPLORATION_HASH_BUCKETS as f64 / 100.0
+}
+
+fn exploration_hash(request_id: &str, profile_id: &str) -> u64 {
+    let hash = fnv1a(FNV_OFFSET_BASIS, request_id.as_bytes());
+    let hash = fnv1a(hash, b":");
+    fnv1a(hash, profile_id.as_bytes())
+}
+
+fn fnv1a(mut hash: u64, bytes: &[u8]) -> u64 {
+    for byte in bytes {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
 }
 
 fn effective_priority_weight(profile: &RoutingProfile) -> f64 {
@@ -328,6 +374,23 @@ fn recent_regression_penalty(profile: &RoutingProfile, candidate: &RoutingScoreC
     let latency_gap = gap_ratio(recent.latency_avg_ms, candidate.metric.latency_avg_ms, LATENCY_BAD_MS);
     let ttfb_gap = gap_ratio(recent.ttfb_avg_ms, candidate.metric.ttfb_avg_ms, TTFB_BAD_MS);
     let penalty = (success_gap * 0.6 + latency_gap * 0.2 + ttfb_gap * 0.2) * profile.stale_metric_penalty;
+    clamp_score(penalty)
+}
+
+fn ema_regression_penalty(profile: &RoutingProfile, candidate: &RoutingScoreCandidate) -> f64 {
+    if profile.ema_regression_penalty <= f64::EPSILON {
+        return 0.0;
+    }
+    let Some(ema) = candidate.ema.as_ref() else {
+        return 0.0;
+    };
+    if ema.sample_count < profile.min_samples {
+        return 0.0;
+    }
+    let success_gap = (success_rate(&candidate.metric) - ema.success_rate).max(0.0);
+    let latency_gap = gap_ratio(ema.latency_ms, candidate.metric.latency_avg_ms, LATENCY_BAD_MS);
+    let ttfb_gap = gap_ratio(ema.ttfb_ms, candidate.metric.ttfb_avg_ms, TTFB_BAD_MS);
+    let penalty = (success_gap * 0.6 + latency_gap * 0.2 + ttfb_gap * 0.2) * profile.ema_regression_penalty;
     clamp_score(penalty)
 }
 

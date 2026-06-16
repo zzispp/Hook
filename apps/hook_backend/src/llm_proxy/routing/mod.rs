@@ -8,4 +8,4 @@ mod scoring;
 mod scoring_tests;
 
 pub(crate) use profiles::{list_profiles, profile_by_id, profile_id_from_str, upsert_profile};
-pub(crate) use scoring::{RoutingScoreCandidate, ScoredRoute, score_routes};
+pub(crate) use scoring::{RoutingEmaSnapshot, RoutingScoreCandidate, ScoreRoutesInput, ScoredRoute, score_routes};

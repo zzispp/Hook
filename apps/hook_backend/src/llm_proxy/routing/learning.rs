@@ -35,11 +35,11 @@ pub(crate) async fn apply_profile_learning(state: &LlmProxyState, profile: Routi
     Ok(hydrate_profile(profile, snapshot))
 }
 
-fn needs_refresh(latest: Option<&RoutingProfileVersionSnapshot>, profile: &RoutingProfile, now: OffsetDateTime) -> bool {
+pub(super) fn needs_refresh(latest: Option<&RoutingProfileVersionSnapshot>, profile: &RoutingProfile, now: OffsetDateTime) -> bool {
     let Some(latest) = latest else {
         return true;
     };
-    latest.sample_count == 0 || latest.admin_weights != profile.weights || now - latest.created_at >= LEARNING_REFRESH
+    latest.admin_weights != profile.weights || now - latest.created_at >= LEARNING_REFRESH
 }
 
 async fn build_snapshot(store: &ProviderStore, profile: &RoutingProfile, now: OffsetDateTime) -> Result<RoutingProfileVersionSnapshot, LlmProxyError> {

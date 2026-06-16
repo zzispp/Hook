@@ -54,8 +54,9 @@ pub use request_record::{
     RequestRecord, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecord, UsageRecordListResponse,
 };
 pub use routing::{
-    RouteIdentity, RouteScoreExplanation, RoutingDecisionResponse, RoutingMetricSnapshot, RoutingMetricWindow, RoutingPreviewRequest, RoutingPreviewResponse,
-    RoutingProfile, RoutingProfileId, RoutingProfileLearningState, RoutingProfileUpsert, RoutingProfileWeights, RoutingProfilesResponse,
-    RoutingRankingResponse, RoutingRankingsRequest, RoutingRouteState, ScoreComponent,
+    DEFAULT_EMA_REGRESSION_PENALTY, DEFAULT_EXPLORATION_BUDGET_PERCENT, RouteIdentity, RouteScoreExplanation, RoutingAffinitySummary, RoutingCacheAffinityMode,
+    RoutingDecisionResponse, RoutingMetricSnapshot, RoutingMetricWindow, RoutingPreviewRequest, RoutingPreviewResponse, RoutingProfile, RoutingProfileId,
+    RoutingProfileLearningState, RoutingProfileUpsert, RoutingProfileWeights, RoutingProfilesResponse, RoutingRankingResponse, RoutingRankingsRequest,
+    RoutingRouteState, RoutingSimulationMode, ScoreComponent,
 };
 pub use time_range::{parse_provider_key_time_range_minute, provider_key_minute_of_day, provider_key_time_range_contains};

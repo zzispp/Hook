@@ -19,6 +19,17 @@ pub struct RoutingMetricRecord {
 }
 
 #[derive(Clone, Debug)]
+pub struct RoutingRouteEmaState {
+    pub route: RouteIdentity,
+    pub ema_success_rate: f64,
+    pub ema_latency_ms: Option<f64>,
+    pub ema_ttfb_ms: Option<f64>,
+    pub ema_output_tps: Option<f64>,
+    pub sample_count: u64,
+    pub last_updated_at: time::OffsetDateTime,
+}
+
+#[derive(Clone, Debug)]
 pub struct RoutingProfileVersionSnapshot {
     pub profile_id: String,
     pub profile_version: String,
@@ -66,6 +77,10 @@ impl ProviderStore {
 
     pub async fn list_routing_metrics(&self, window: RoutingMetricWindow) -> StorageResult<Vec<RoutingMetricRecord>> {
         super::routing_metric_repository::list_metrics(self.connection(), window).await
+    }
+
+    pub async fn list_routing_route_states(&self, global_model_id: &str, client_api_format: &str, is_stream: bool) -> StorageResult<Vec<RoutingRouteEmaState>> {
+        super::routing_metric_repository::list_route_states(self.connection(), global_model_id, client_api_format, is_stream).await
     }
 
     pub async fn upsert_routing_decision_sample(

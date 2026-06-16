@@ -1466,10 +1466,24 @@
       "model": "模型",
       "apiFormat": "API 格式",
       "window": "窗口",
+      "simulationMode": "模拟模式",
       "stream": "流式",
       "includeExcluded": "显示排除项",
       "autoRefresh": "自动刷新",
-      "requestId": "Request ID"
+      "requestId": "Request ID",
+      "tokenId": "Token ID"
+    },
+    "simulationModes": {
+      "window": "窗口分析",
+      "production": "生产模拟"
+    },
+    "simulation": {
+      "windowSummary": "窗口分析：当前排序只使用 {{window}} 聚合窗口，不读取 token 缓存亲和。",
+      "productionSummary": "生产模拟：使用 live fallback 窗口 5m → 1h → 24h → 7d，并按当前策略处理缓存亲和。"
+    },
+    "affinitySummary": {
+      "none": "缓存亲和：未命中或未提供 Token ID。",
+      "hit": "缓存亲和：命中 {{provider}} / {{key}} / {{endpoint}}，累计 {{count}} 次。"
     },
     "actions": {
       "lookup": "查询",
@@ -1509,7 +1523,16 @@
       "editorTitle": "策略调参",
       "editorHelper": "这里编辑当前选中策略的自动调优开关和管理员基准权重。自动学习只会在这个基线之上做受控微调。",
       "autoTune": "启用自动调优",
+      "cacheAffinityMode": "缓存亲和模式",
+      "affinityBonus": "缓存亲和加分",
+      "explorationBudgetPercent": "探索预算百分比",
+      "emaRegressionPenalty": "EMA 退化惩罚",
       "weightTotal": "当前权重总和：{{total}}。需要等于 1.000 才能保存。",
+      "cacheAffinityModes": {
+        "disabled": "禁用",
+        "score_bonus": "仅打分加成",
+        "prefer_cached": "优先缓存命中"
+      },
       "names": {
         "balanced": "均衡",
         "first_byte": "首字优先",
@@ -1570,7 +1593,8 @@
       "conversion": "格式转换",
       "stale": "过期指标",
       "half_open": "半开探测",
-      "recent_regression": "近期窗口回退"
+      "recent_regression": "近期窗口回退",
+      "ema_regression": "EMA 近期退化"
     },
     "exclusionReasons": {
       "provider_key_rate_limit_exhausted": "提供商密钥速率额度已耗尽"
@@ -2364,6 +2388,10 @@
     "billed": "计费",
     "billingFormula": "计费公式 | 总费用 = (Token费用 + 按次费用) × 计费分组倍率",
     "traceTitle": "请求链路追踪",
+    "copyRequestId": "复制 Request ID",
+    "requestIdCopied": "Request ID 已复制",
+    "routingDecisionTitle": "路由策略选中",
+    "routingDecisionUnavailable": "路由决策样本不可用",
     "requestHeaders": "请求头",
     "requestBody": "请求体",
     "providerRequestHeaders": "Provider 请求头",

@@ -1,13 +1,20 @@
 use std::collections::HashMap;
 
 use storage::provider::ProviderStore;
-use types::provider::{RoutingProfile, RoutingProfileId, RoutingProfileUpsert, RoutingProfileWeights};
+use types::provider::{
+    DEFAULT_EMA_REGRESSION_PENALTY, DEFAULT_EXPLORATION_BUDGET_PERCENT, RoutingCacheAffinityMode, RoutingProfile, RoutingProfileId, RoutingProfileUpsert,
+    RoutingProfileWeights,
+};
 
 use crate::llm_proxy::{LlmProxyError, LlmProxyState};
 
 use super::learning::apply_profile_learning;
 
 const BUILTIN_PROFILE_VERSION: &str = "builtin-v1";
+const PROFILE_WEIGHT_SUM: f64 = 1.0;
+const WEIGHT_SUM_TOLERANCE: f64 = 0.001;
+const PERCENT_MIN: f64 = 0.0;
+const PERCENT_MAX: f64 = 100.0;
 
 #[derive(Clone, Debug)]
 pub(crate) struct VersionedRoutingProfile {
@@ -41,6 +48,7 @@ pub(crate) async fn upsert_profile(state: &LlmProxyState, id: RoutingProfileId, 
         .unwrap_or_else(|| built_in_profile(id));
     apply_patch(&mut profile, patch);
     enforce_priority_policy(&mut profile);
+    validate_profile(&profile)?;
     profile.learning = None;
     profile.version = new_version();
     ProviderStore::new(state.database.clone())
@@ -79,11 +87,20 @@ fn apply_patch(profile: &mut RoutingProfile, patch: RoutingProfileUpsert) {
     if let Some(value) = patch.exploration_k {
         profile.exploration_k = value;
     }
+    if let Some(value) = patch.exploration_budget_percent {
+        profile.exploration_budget_percent = value;
+    }
     if let Some(value) = patch.conversion_penalty {
         profile.conversion_penalty = value;
     }
     if let Some(value) = patch.stale_metric_penalty {
         profile.stale_metric_penalty = value;
+    }
+    if let Some(value) = patch.ema_regression_penalty {
+        profile.ema_regression_penalty = value;
+    }
+    if let Some(value) = patch.cache_affinity_mode {
+        profile.cache_affinity_mode = value;
     }
     if let Some(value) = patch.affinity_bonus {
         profile.affinity_bonus = value;
@@ -109,6 +126,7 @@ fn built_in_profiles() -> Vec<RoutingProfile> {
 
 fn built_in_profile(id: RoutingProfileId) -> RoutingProfile {
     let (name, description, weights) = built_in_definition(id);
+    let (cache_affinity_mode, affinity_bonus) = built_in_affinity(id);
     let mut profile = RoutingProfile {
         id,
         name: name.into(),
@@ -117,14 +135,28 @@ fn built_in_profile(id: RoutingProfileId) -> RoutingProfile {
         version: BUILTIN_PROFILE_VERSION.into(),
         min_samples: 20,
         exploration_k: 3.0,
+        exploration_budget_percent: DEFAULT_EXPLORATION_BUDGET_PERCENT,
         conversion_penalty: 6.0,
         stale_metric_penalty: 8.0,
-        affinity_bonus: 6.0,
+        ema_regression_penalty: DEFAULT_EMA_REGRESSION_PENALTY,
+        cache_affinity_mode,
+        affinity_bonus,
         auto_tune_enabled: auto_tune_enabled(id),
         learning: None,
     };
     enforce_priority_policy(&mut profile);
     profile
+}
+
+fn built_in_affinity(id: RoutingProfileId) -> (RoutingCacheAffinityMode, f64) {
+    match id {
+        RoutingProfileId::CacheAffinityPlus => (RoutingCacheAffinityMode::PreferCached, 6.0),
+        RoutingProfileId::FirstByte => (RoutingCacheAffinityMode::ScoreBonus, 3.0),
+        RoutingProfileId::Balanced | RoutingProfileId::Custom => (RoutingCacheAffinityMode::ScoreBonus, 2.0),
+        RoutingProfileId::CostOptimal | RoutingProfileId::HighAvailability | RoutingProfileId::HighTps | RoutingProfileId::FixedPriorityPlus => {
+            (RoutingCacheAffinityMode::Disabled, 0.0)
+        }
+    }
 }
 
 fn built_in_definition(id: RoutingProfileId) -> (&'static str, &'static str, RoutingProfileWeights) {
@@ -212,7 +244,116 @@ fn auto_tune_enabled(id: RoutingProfileId) -> bool {
     true
 }
 
+fn validate_profile(profile: &RoutingProfile) -> Result<(), LlmProxyError> {
+    validate_weights(profile)?;
+    validate_score_parameter("exploration_k", profile.exploration_k)?;
+    validate_percent("exploration_budget_percent", profile.exploration_budget_percent)?;
+    validate_score_parameter("conversion_penalty", profile.conversion_penalty)?;
+    validate_score_parameter("stale_metric_penalty", profile.stale_metric_penalty)?;
+    validate_percent("ema_regression_penalty", profile.ema_regression_penalty)?;
+    validate_score_parameter("affinity_bonus", profile.affinity_bonus)
+}
+
+fn validate_weights(profile: &RoutingProfile) -> Result<(), LlmProxyError> {
+    let weights = [
+        ("success", profile.weights.success),
+        ("ttfb", profile.weights.ttfb),
+        ("latency", profile.weights.latency),
+        ("tps", profile.weights.tps),
+        ("cost", profile.weights.cost),
+        ("headroom", profile.weights.headroom),
+        ("priority", profile.weights.priority),
+    ];
+    for (name, value) in weights {
+        if !value.is_finite() || !(0.0..=1.0).contains(&value) {
+            return Err(LlmProxyError::InvalidRequest(format!("routing profile weight {name} must be between 0 and 1")));
+        }
+    }
+    let total = weights.iter().map(|(_, value)| *value).sum::<f64>();
+    if (total - PROFILE_WEIGHT_SUM).abs() > WEIGHT_SUM_TOLERANCE {
+        return Err(LlmProxyError::InvalidRequest(format!(
+            "routing profile weights must sum to 1.0; got {total:.3}"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_percent(name: &str, value: f64) -> Result<(), LlmProxyError> {
+    if value.is_finite() && (PERCENT_MIN..=PERCENT_MAX).contains(&value) {
+        return Ok(());
+    }
+    Err(LlmProxyError::InvalidRequest(format!("{name} must be between 0 and 100")))
+}
+
+fn validate_score_parameter(name: &str, value: f64) -> Result<(), LlmProxyError> {
+    if value.is_finite() && value >= 0.0 {
+        return Ok(());
+    }
+    Err(LlmProxyError::InvalidRequest(format!("{name} must be a finite non-negative number")))
+}
+
 #[cfg(test)]
 pub(super) fn test_only_builtin_profile(id: RoutingProfileId) -> RoutingProfile {
     built_in_profile(id)
+}
+
+#[cfg(test)]
+mod tests {
+    use types::provider::{DEFAULT_EMA_REGRESSION_PENALTY, DEFAULT_EXPLORATION_BUDGET_PERCENT, RoutingCacheAffinityMode};
+
+    use super::*;
+
+    #[test]
+    fn builtin_profiles_have_strategy_defaults() {
+        let profile = built_in_profile(RoutingProfileId::Balanced);
+
+        assert_eq!(profile.exploration_budget_percent, DEFAULT_EXPLORATION_BUDGET_PERCENT);
+        assert_eq!(profile.ema_regression_penalty, DEFAULT_EMA_REGRESSION_PENALTY);
+        assert_eq!(profile.cache_affinity_mode, RoutingCacheAffinityMode::ScoreBonus);
+        assert_eq!(profile.affinity_bonus, 2.0);
+        assert_eq!(
+            built_in_profile(RoutingProfileId::FirstByte).cache_affinity_mode,
+            RoutingCacheAffinityMode::ScoreBonus
+        );
+        assert_eq!(built_in_profile(RoutingProfileId::FirstByte).affinity_bonus, 3.0);
+        assert_eq!(
+            built_in_profile(RoutingProfileId::CacheAffinityPlus).cache_affinity_mode,
+            RoutingCacheAffinityMode::PreferCached
+        );
+        assert_eq!(
+            built_in_profile(RoutingProfileId::CostOptimal).cache_affinity_mode,
+            RoutingCacheAffinityMode::Disabled
+        );
+        assert_eq!(built_in_profile(RoutingProfileId::CostOptimal).affinity_bonus, 0.0);
+    }
+
+    #[test]
+    fn validation_rejects_invalid_weight_total() {
+        let mut profile = built_in_profile(RoutingProfileId::Balanced);
+        profile.weights.cost = 0.30;
+
+        let error = validate_profile(&profile).expect_err("invalid weight total should fail");
+
+        assert!(error.to_string().contains("weights must sum"));
+    }
+
+    #[test]
+    fn validation_rejects_out_of_range_exploration_budget() {
+        let mut profile = built_in_profile(RoutingProfileId::Balanced);
+        profile.exploration_budget_percent = 120.0;
+
+        let error = validate_profile(&profile).expect_err("invalid exploration budget should fail");
+
+        assert!(error.to_string().contains("exploration_budget_percent"));
+    }
+
+    #[test]
+    fn validation_rejects_negative_ema_penalty() {
+        let mut profile = built_in_profile(RoutingProfileId::Balanced);
+        profile.ema_regression_penalty = -1.0;
+
+        let error = validate_profile(&profile).expect_err("negative EMA penalty should fail");
+
+        assert!(error.to_string().contains("ema_regression_penalty"));
+    }
 }

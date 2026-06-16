@@ -163,6 +163,7 @@ fn candidate(provider_api_format: &str) -> ProxyCandidate {
         stream_idle_timeout_seconds: None,
         cache_ttl_minutes: 5,
         key_rpm_limit: None,
+        cache_affinity_enabled: false,
         is_cached: false,
         route: CandidateRoute { options: Vec::new() },
     }

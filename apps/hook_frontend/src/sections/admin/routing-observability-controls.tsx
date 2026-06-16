@@ -1,7 +1,7 @@
 import type { AdminT } from './shared';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { RoutingMetricWindow } from 'src/types/routing';
+import type { RoutingMetricWindow, RoutingSimulationMode } from 'src/types/routing';
 
 import { useEffect } from 'react';
 
@@ -19,6 +19,7 @@ import { RefreshButton } from './shared';
 import { formatApiFormat, API_FORMAT_OPTIONS } from './provider-management-utils';
 
 export const ROUTING_WINDOWS: RoutingMetricWindow[] = ['1m', '5m', '15m', '1h', '24h', '7d'];
+const SIMULATION_MODES: RoutingSimulationMode[] = ['window', 'production'];
 
 export function RoutingFilters(props: FilterProps) {
   return (
@@ -56,6 +57,7 @@ export function RoutingFilters(props: FilterProps) {
         </TextField>
       </Grid>
       <ApiFormatFilter {...props} />
+      <SimulationModeFilter {...props} />
       <WindowFilter {...props} />
       <SwitchFilter
         checked={props.isStream}
@@ -67,6 +69,17 @@ export function RoutingFilters(props: FilterProps) {
         label={props.t('routing.filters.includeExcluded')}
         onChange={props.onIncludeExcludedChange}
       />
+      {props.simulationMode === 'production' ? (
+        <Grid size={{ xs: 12 }}>
+          <TextField
+            fullWidth
+            size="small"
+            value={props.tokenId}
+            label={props.t('routing.filters.tokenId')}
+            onChange={(event) => props.onTokenIdChange(event.target.value)}
+          />
+        </Grid>
+      ) : null}
       <Grid size={{ xs: 12, sm: 8 }}>
         <TextField
           fullWidth
@@ -177,6 +190,27 @@ function WindowFilter(props: FilterProps) {
   );
 }
 
+function SimulationModeFilter(props: FilterProps) {
+  return (
+    <Grid size={{ xs: 12, sm: 6 }}>
+      <TextField
+        fullWidth
+        select
+        size="small"
+        label={props.t('routing.filters.simulationMode')}
+        value={props.simulationMode}
+        onChange={(event) => props.onSimulationModeChange(event.target.value as RoutingSimulationMode)}
+      >
+        {SIMULATION_MODES.map((item) => (
+          <MenuItem key={item} value={item}>
+            {props.t(`routing.simulationModes.${item}`)}
+          </MenuItem>
+        ))}
+      </TextField>
+    </Grid>
+  );
+}
+
 function SwitchFilter({
   checked,
   label,
@@ -205,6 +239,8 @@ type FilterProps = {
   apiFormat: string;
   isStream: boolean;
   metricWindow: RoutingMetricWindow;
+  simulationMode: RoutingSimulationMode;
+  tokenId: string;
   includeExcluded: boolean;
   requestInput: string;
   onGroupChange: (value: string) => void;
@@ -212,6 +248,8 @@ type FilterProps = {
   onApiFormatChange: (value: string) => void;
   onStreamChange: (value: boolean) => void;
   onWindowChange: (value: RoutingMetricWindow) => void;
+  onSimulationModeChange: (value: RoutingSimulationMode) => void;
+  onTokenIdChange: (value: string) => void;
   onIncludeExcludedChange: (value: boolean) => void;
   onRequestInputChange: (value: string) => void;
   onDecisionLookup: VoidFunction;

@@ -1,14 +1,23 @@
 import type { AdminT } from './shared';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { RoutingProfile, RoutingProfileId, RoutingMetricWindow, RouteScoreExplanation } from 'src/types/routing';
+import type {
+  RoutingProfile,
+  RoutingProfileId,
+  RoutingMetricWindow,
+  RoutingSimulationMode,
+  RouteScoreExplanation,
+  RoutingRankingResponse,
+} from 'src/types/routing';
 
 import Tab from '@mui/material/Tab';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
 import CardHeader from '@mui/material/CardHeader';
+import Typography from '@mui/material/Typography';
 
 import { routingProfileName } from './routing-i18n';
 import { RoutingRankingTable } from './routing-ranking-table';
@@ -30,6 +39,8 @@ type ConfigurationPanelProps = {
   apiFormat: string;
   isStream: boolean;
   metricWindow: RoutingMetricWindow;
+  simulationMode: RoutingSimulationMode;
+  tokenId: string;
   includeExcluded: boolean;
   requestInput: string;
   onGroupChange: (value: string) => void;
@@ -37,6 +48,8 @@ type ConfigurationPanelProps = {
   onApiFormatChange: (value: string) => void;
   onStreamChange: (value: boolean) => void;
   onWindowChange: (value: RoutingMetricWindow) => void;
+  onSimulationModeChange: (value: RoutingSimulationMode) => void;
+  onTokenIdChange: (value: string) => void;
   onIncludeExcludedChange: (value: boolean) => void;
   onRequestInputChange: (value: string) => void;
   onDecisionLookup: VoidFunction;
@@ -48,6 +61,7 @@ type RankingPanelProps = {
   profiles: RoutingProfile[];
   profileId: RoutingProfileId;
   selectedProfile: RoutingProfile | null;
+  rankingResponse?: RoutingRankingResponse | null;
   rankingRows: RouteScoreExplanation[];
   rankingsLoading: boolean;
   onProfileChange: (value: RoutingProfileId) => void;
@@ -125,6 +139,7 @@ export function RoutingRankingPanel(props: RankingPanelProps) {
             subheaderTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
           />
           <Stack sx={{ p: 2.5 }}>
+            <SimulationSummary response={props.rankingResponse} t={props.t} />
             <RoutingRankingTable
               rows={props.rankingRows}
               loading={props.rankingsLoading}
@@ -136,6 +151,47 @@ export function RoutingRankingPanel(props: RankingPanelProps) {
       </Grid>
     </Grid>
   );
+}
+
+function SimulationSummary({
+  response,
+  t,
+}: {
+  response?: RoutingRankingResponse | null;
+  t: AdminT;
+}) {
+  if (!response) return null;
+
+  const summary =
+    response.simulation_mode === 'production'
+      ? t('routing.simulation.productionSummary')
+      : t('routing.simulation.windowSummary', { window: response.window });
+
+  return (
+    <Alert severity="info" sx={{ mb: 2, py: 0.75 }}>
+      <Typography variant="caption" display="block">
+        {summary}
+      </Typography>
+      {response.simulation_mode === 'production' ? (
+        <Typography variant="caption" display="block" color="text.secondary">
+          {affinitySummary(response, t)}
+        </Typography>
+      ) : null}
+    </Alert>
+  );
+}
+
+function affinitySummary(response: RoutingRankingResponse, t: AdminT) {
+  const affinity = response.affinity;
+  if (!affinity) {
+    return t('routing.affinitySummary.none');
+  }
+  return t('routing.affinitySummary.hit', {
+    provider: affinity.provider_id,
+    key: affinity.key_id,
+    endpoint: affinity.endpoint_id,
+    count: affinity.request_count,
+  });
 }
 
 function ProfileTabs(props: RankingPanelProps) {

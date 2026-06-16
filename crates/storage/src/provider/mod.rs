@@ -57,7 +57,7 @@ pub use request_record_payload_store::{
     RequestPayloadKey, RequestPayloadOwner, RequestPayloadPendingInput, RequestPayloadStaleSweepResult, RequestPayloadStoreInput, StoredRequestPayload,
     compress_payload as request_payload_data,
 };
-pub use routing_repository::{RoutingMetricDelta, RoutingMetricRecord, RoutingProfileVersionSnapshot};
+pub use routing_repository::{RoutingMetricDelta, RoutingMetricRecord, RoutingProfileVersionSnapshot, RoutingRouteEmaState};
 pub use types::{
     BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyPriorityRecordPatch, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch,
     ProviderApiKeySecretRecord, ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,

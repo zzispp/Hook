@@ -14,6 +14,7 @@ pub(super) struct ProxyCandidateBuildInput<'a> {
     pub(super) global_model: &'a GlobalModelRef,
     pub(super) group: &'a CachedBillingGroup,
     pub(super) token_user: Option<&'a CachedUserAccess>,
+    pub(super) cache_affinity_enabled: bool,
     pub(super) parts: &'a [CandidateParts],
 }
 
@@ -59,6 +60,7 @@ async fn proxy_candidate(input: &ProxyCandidateBuildInput<'_>, parts: &Candidate
         stream_idle_timeout_seconds: parts.provider.stream_idle_timeout_seconds,
         cache_ttl_minutes: key.cache_ttl_minutes,
         key_rpm_limit: key.rpm_limit,
+        cache_affinity_enabled: input.cache_affinity_enabled,
         is_cached: parts.is_cached,
         route,
     })

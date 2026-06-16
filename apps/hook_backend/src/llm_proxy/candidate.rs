@@ -32,6 +32,7 @@ pub struct ProxyCandidate {
     pub stream_idle_timeout_seconds: Option<f64>,
     pub cache_ttl_minutes: i32,
     pub key_rpm_limit: Option<i32>,
+    pub cache_affinity_enabled: bool,
     pub is_cached: bool,
     pub route: CandidateRoute,
 }

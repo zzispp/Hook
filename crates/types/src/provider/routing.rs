@@ -1,6 +1,9 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+pub const DEFAULT_EXPLORATION_BUDGET_PERCENT: f64 = 10.0;
+pub const DEFAULT_EMA_REGRESSION_PENALTY: f64 = 6.0;
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RoutingProfileId {
@@ -43,6 +46,33 @@ impl From<&str> for RoutingProfileId {
             _ => Self::Balanced,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoutingCacheAffinityMode {
+    Disabled,
+    #[default]
+    ScoreBonus,
+    PreferCached,
+}
+
+impl RoutingCacheAffinityMode {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Disabled => "disabled",
+            Self::ScoreBonus => "score_bonus",
+            Self::PreferCached => "prefer_cached",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoutingSimulationMode {
+    #[default]
+    Window,
+    Production,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -198,8 +228,14 @@ pub struct RoutingProfile {
     pub version: String,
     pub min_samples: u64,
     pub exploration_k: f64,
+    #[serde(default = "default_exploration_budget_percent")]
+    pub exploration_budget_percent: f64,
     pub conversion_penalty: f64,
     pub stale_metric_penalty: f64,
+    #[serde(default = "default_ema_regression_penalty")]
+    pub ema_regression_penalty: f64,
+    #[serde(default)]
+    pub cache_affinity_mode: RoutingCacheAffinityMode,
     pub affinity_bonus: f64,
     pub auto_tune_enabled: bool,
     #[serde(default)]
@@ -211,10 +247,21 @@ pub struct RoutingProfileUpsert {
     pub weights: Option<RoutingProfileWeights>,
     pub min_samples: Option<u64>,
     pub exploration_k: Option<f64>,
+    pub exploration_budget_percent: Option<f64>,
     pub conversion_penalty: Option<f64>,
     pub stale_metric_penalty: Option<f64>,
+    pub ema_regression_penalty: Option<f64>,
+    pub cache_affinity_mode: Option<RoutingCacheAffinityMode>,
     pub affinity_bonus: Option<f64>,
     pub auto_tune_enabled: Option<bool>,
+}
+
+fn default_exploration_budget_percent() -> f64 {
+    DEFAULT_EXPLORATION_BUDGET_PERCENT
+}
+
+fn default_ema_regression_penalty() -> f64 {
+    DEFAULT_EMA_REGRESSION_PENALTY
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
@@ -248,6 +295,10 @@ pub struct RoutingRankingsRequest {
     #[serde(default)]
     pub window: RoutingMetricWindow,
     #[serde(default)]
+    pub simulation_mode: RoutingSimulationMode,
+    #[serde(default)]
+    pub token_id: Option<String>,
+    #[serde(default)]
     pub include_excluded: bool,
 }
 
@@ -264,7 +315,19 @@ pub struct RoutingPreviewRequest {
 pub struct RoutingRankingResponse {
     pub profile: RoutingProfile,
     pub window: RoutingMetricWindow,
+    pub simulation_mode: RoutingSimulationMode,
+    pub affinity: Option<RoutingAffinitySummary>,
     pub items: Vec<RouteScoreExplanation>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct RoutingAffinitySummary {
+    pub provider_id: String,
+    pub endpoint_id: String,
+    pub key_id: String,
+    pub api_format: String,
+    pub model_id: String,
+    pub request_count: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

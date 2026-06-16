@@ -145,6 +145,7 @@ async function fetchWindowRankings([
 function rankingUrl(query: RoutingRankingsQuery) {
   const params = new URLSearchParams();
   Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
     params.set(key, String(value));
   });
   return `${endpoints.routing.rankings}?${params.toString()}`;
