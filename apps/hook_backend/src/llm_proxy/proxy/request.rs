@@ -4,7 +4,7 @@ use serde_json::{Map, Value};
 use types::api_token::ApiToken;
 
 use crate::llm_proxy::{
-    IMAGE_GENERATION_CAPABILITY, LlmProxyError, LlmProxyState, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, OPENAI_IMAGE_EDIT_FORMAT, OPENAI_IMAGE_FORMAT,
+    IMAGE_GENERATION_CAPABILITY, LlmProxyError, LlmProxyState, OPENAI_CLI_FORMAT, OPENAI_IMAGE_EDIT_FORMAT, OPENAI_IMAGE_FORMAT,
     audit::record_scheduled_candidates,
     billing::enforce_preflight_access,
     candidate::{CandidateRequest, CandidateSelection, ProxyCandidate, select_candidates},
@@ -12,7 +12,13 @@ use crate::llm_proxy::{
     rate_limit::ProviderKeyProbeSlotOptions,
 };
 
-use super::{body_rules::apply_provider_body_rules, capture::RequestCapture, request_features::routing_request_features};
+use super::{
+    body_rules::apply_provider_body_rules,
+    capture::RequestCapture,
+    request_features::routing_request_features,
+    request_image::{client_is_openai_chat_or_responses, client_source_format, openai_image_bridge_body, provider_is_openai_image},
+    request_tools::{openai_request_explicitly_selects_image_generation, prune_unsupported_image_generation_tool},
+};
 
 pub(super) struct PreparedProxyRequest {
     pub(super) request_id: String,
@@ -150,23 +156,6 @@ fn required_capability_for_routing(api_format: &str) -> Option<&'static str> {
     matches!(api_format, OPENAI_IMAGE_FORMAT | OPENAI_IMAGE_EDIT_FORMAT).then_some(IMAGE_GENERATION_CAPABILITY)
 }
 
-fn openai_request_explicitly_selects_image_generation(api_format: &str, body: &Value) -> bool {
-    if !matches!(api_format, OPENAI_CHAT_FORMAT | OPENAI_CLI_FORMAT) {
-        return false;
-    }
-    let Some(object) = body.as_object() else {
-        return false;
-    };
-    match object.get("tool_choice") {
-        Some(Value::String(name)) => name.trim().eq_ignore_ascii_case("image_generation"),
-        Some(Value::Object(choice)) => choice
-            .get("type")
-            .and_then(Value::as_str)
-            .is_some_and(|kind| kind.trim().eq_ignore_ascii_case("image_generation")),
-        _ => false,
-    }
-}
-
 fn ensure_selection_format(selection: &CandidateSelection, api_format: &str, is_stream: bool) -> Result<(), LlmProxyError> {
     for candidate in &selection.candidates {
         if candidate.trace.client_api_format != api_format {
@@ -201,70 +190,9 @@ fn upstream_body(
     }
     rewrite_upstream_body(&mut body, candidate, force_non_stream, target)?;
     apply_reasoning_effort(&mut body, candidate, target)?;
+    prune_unsupported_image_generation_tool(&mut body, candidate);
     apply_provider_body_rules(&mut body, &candidate.body_rules, original_body)?;
     Ok((body, source, target))
-}
-
-fn provider_is_openai_image(candidate: &ProxyCandidate) -> bool {
-    formats::endpoint_metadata(&candidate.trace.provider_api_format, false)
-        .map(|metadata| metadata.data_format == ApiFormat::OpenAiImage)
-        .unwrap_or(false)
-}
-
-fn client_is_openai_chat_or_responses(candidate: &ProxyCandidate) -> bool {
-    matches!(candidate.trace.client_api_format.as_str(), OPENAI_CHAT_FORMAT | OPENAI_CLI_FORMAT)
-}
-
-fn client_source_format(candidate: &ProxyCandidate) -> Result<ApiFormat, LlmProxyError> {
-    formats::endpoint_metadata(&candidate.trace.client_api_format, candidate.trace.is_stream).map(|metadata| metadata.data_format)
-}
-
-fn openai_image_bridge_body(body: Value, candidate: &ProxyCandidate) -> Result<Value, LlmProxyError> {
-    if candidate.trace.client_api_format == OPENAI_CLI_FORMAT {
-        return Ok(body);
-    }
-    bridge_openai_chat_image_body(body)
-}
-
-fn bridge_openai_chat_image_body(body: Value) -> Result<Value, LlmProxyError> {
-    let object = body
-        .as_object()
-        .ok_or_else(|| LlmProxyError::InvalidRequest("request body must be a JSON object".into()))?;
-    let messages = object
-        .get("messages")
-        .cloned()
-        .ok_or_else(|| LlmProxyError::InvalidRequest("openai chat image request must include messages".into()))?;
-    let mut bridged = Map::new();
-    bridged.insert("input".to_string(), messages);
-    bridged.insert("tools".to_string(), bridge_openai_chat_image_tools(object));
-    bridged.insert("tool_choice".to_string(), Value::Object(image_tool_choice()));
-    copy_optional_field(object, &mut bridged, "user");
-    copy_optional_field(object, &mut bridged, "n");
-    Ok(Value::Object(bridged))
-}
-
-fn bridge_openai_chat_image_tools(object: &Map<String, Value>) -> Value {
-    let tools = object.get("tools").and_then(Value::as_array).cloned().unwrap_or_default();
-    if tools.iter().any(|tool| {
-        tool.get("type")
-            .and_then(Value::as_str)
-            .is_some_and(|kind| kind.trim().eq_ignore_ascii_case("image_generation"))
-    }) {
-        return Value::Array(tools);
-    }
-    let mut output = tools;
-    output.push(Value::Object(image_tool_choice()));
-    Value::Array(output)
-}
-
-fn image_tool_choice() -> Map<String, Value> {
-    Map::from_iter([("type".to_string(), Value::String("image_generation".to_string()))])
-}
-
-fn copy_optional_field(source: &Map<String, Value>, target: &mut Map<String, Value>, key: &str) {
-    if let Some(value) = source.get(key) {
-        target.insert(key.to_string(), value.clone());
-    }
 }
 
 fn rewrite_upstream_body(body: &mut Value, candidate: &ProxyCandidate, force_non_stream: bool, target: ApiFormat) -> Result<(), LlmProxyError> {

@@ -60,6 +60,7 @@ fn route_candidate() -> ProxyCandidate {
         reasoning_effort: None,
         header_rules: None,
         body_rules: None,
+        key_capabilities: None,
         price_per_request: None,
         tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
         billing_multiplier: Decimal::ONE,
@@ -140,6 +141,7 @@ fn key(id: &str, api_key: &str) -> CandidateKeyOption {
         name: format!("{id}-name"),
         key_preview: "***cret".into(),
         api_key: api_key.into(),
+        capabilities: None,
         cache_ttl_minutes: 5,
         rpm_limit: None,
     }

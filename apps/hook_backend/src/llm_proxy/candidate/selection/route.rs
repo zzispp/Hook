@@ -70,6 +70,7 @@ fn key_option(state: &LlmProxyState, key: &CachedProviderKey) -> Result<Candidat
         name: key.name.clone(),
         key_preview: key.key_preview.clone(),
         api_key: state.cipher.decrypt_provider_key(&key.encrypted_api_key)?,
+        capabilities: key.capabilities.clone(),
         cache_ttl_minutes: key.cache_ttl_minutes,
         rpm_limit: key.rpm_limit,
     })
@@ -166,6 +167,7 @@ mod tests {
             name: format!("{id}-name"),
             key_preview: "***cret".into(),
             api_key: "secret".into(),
+            capabilities: None,
             cache_ttl_minutes: 5,
             rpm_limit: None,
         }

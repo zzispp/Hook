@@ -285,6 +285,7 @@ mod tests {
             reasoning_effort: None,
             header_rules: None,
             body_rules: None,
+            key_capabilities: None,
             price_per_request: None,
             tiered_pricing,
             billing_multiplier: Decimal::ONE,
