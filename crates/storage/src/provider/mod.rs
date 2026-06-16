@@ -44,6 +44,7 @@ mod routing_metric_repository;
 mod routing_profile_repository;
 mod routing_profile_version_repository;
 mod routing_repository;
+mod routing_route_state_repository;
 mod types;
 
 pub use repository::ProviderStore;
@@ -57,7 +58,7 @@ pub use request_record_payload_store::{
     RequestPayloadKey, RequestPayloadOwner, RequestPayloadPendingInput, RequestPayloadStaleSweepResult, RequestPayloadStoreInput, StoredRequestPayload,
     compress_payload as request_payload_data,
 };
-pub use routing_repository::{RoutingMetricDelta, RoutingMetricRecord, RoutingProfileVersionSnapshot};
+pub use routing_repository::{RoutingMetricDelta, RoutingMetricRecord, RoutingProfileVersionSnapshot, RoutingRouteStateRecord};
 pub use types::{
     BillingRuleRecordInput, DimensionCollectorRecordInput, ProviderApiKeyPriorityRecordPatch, ProviderApiKeyRecordInput, ProviderApiKeyRecordPatch,
     ProviderApiKeySecretRecord, ProviderCooldownEventRecordInput, ProviderCooldownRecordInput, ProviderEndpointRecordInput, ProviderEndpointRecordPatch,

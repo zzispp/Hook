@@ -1,24 +1,19 @@
 use std::collections::HashMap;
 
-use rust_decimal::Decimal;
-use storage::provider::{ProviderStore, RoutingMetricRecord};
+use storage::provider::{ProviderStore, RoutingMetricRecord, RoutingRouteStateRecord};
 use time::OffsetDateTime;
-use types::{
-    model::PricingTier,
-    provider::{
-        ProviderModelCost, ProviderModelCostMode, ProviderPriorityMode, RouteIdentity, RouteScoreExplanation, RoutingMetricSnapshot, RoutingMetricWindow,
-        RoutingProfile, RoutingProfileId,
-    },
+use types::provider::{
+    ProviderPriorityMode, RouteIdentity, RouteScoreExplanation, RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, RoutingProfileId,
 };
 
-use super::{CandidateParts, GlobalModelRef};
+use super::{CandidateParts, GlobalModelRef, dynamic_cost::estimated_cost};
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
     cache::snapshot::{CachedBillingGroup, CachedEndpoint, CachedProviderKey},
     candidate::CandidateRequest,
     formats,
     rate_limit::provider_key_rate_limit_snapshot,
-    routing::{RoutingScoreCandidate, circuit, profile_by_id, score_routes},
+    routing::{RoutingEmaSnapshot, RoutingScoreCandidate, circuit, profile_by_id, score_routes},
 };
 
 const LIVE_WINDOWS: [RoutingMetricWindow; 4] = [
@@ -27,7 +22,6 @@ const LIVE_WINDOWS: [RoutingMetricWindow; 4] = [
     RoutingMetricWindow::OneDay,
     RoutingMetricWindow::SevenDays,
 ];
-const PRICE_SCALE: i64 = 1_000_000;
 
 pub(super) struct DynamicRoutingInput<'a> {
     pub(super) state: &'a LlmProxyState,
@@ -81,9 +75,11 @@ async fn score_candidates(
     profile: &RoutingProfile,
     requested_window: RoutingMetricWindow,
 ) -> Result<Vec<crate::llm_proxy::routing::ScoredRoute>, LlmProxyError> {
+    let routes = input.parts.iter().map(|part| route_identity(input.request, part)).collect::<Vec<_>>();
+    let route_states = route_state_catalog(input.state, &routes).await?;
     let mut candidates = Vec::with_capacity(input.parts.len());
     for part in &input.parts {
-        candidates.push(score_candidate(input, catalog, profile, requested_window, part).await?);
+        candidates.push(score_candidate(input, catalog, &route_states, profile, requested_window, part).await?);
     }
     Ok(score_routes(profile, requested_window, candidates))
 }
@@ -91,6 +87,7 @@ async fn score_candidates(
 async fn score_candidate(
     input: &DynamicRoutingInput<'_>,
     catalog: &MetricCatalog,
+    route_states: &RouteStateCatalog,
     profile: &RoutingProfile,
     requested_window: RoutingMetricWindow,
     part: &CandidateParts,
@@ -108,9 +105,10 @@ async fn score_candidate(
         metric_window: resolved.metric_window,
         metric_freshness_seconds: resolved.metric_freshness_seconds,
         recent_metric: resolved.recent_metric,
+        ema: route_states.record(&route),
         circuit_state: circuit::candidate_state(input.state, &route).await?,
         admin_priority: admin_priority(input.group, part, input.priority_mode),
-        estimated_cost: estimated_cost(input.state, part, input.global_model).await?,
+        estimated_cost: estimated_cost(input.state, &key.id, &part.model.id, input.global_model).await?,
         needs_conversion: formats::needs_conversion(&part.routing_api_format, &endpoint.api_format, input.request.is_stream)?,
         is_cached: part.is_cached,
         route,
@@ -137,7 +135,7 @@ async fn metric_catalog(state: &LlmProxyState, windows: Vec<RoutingMetricWindow>
         let records = store.list_routing_metrics(window).await?;
         entries.push(MetricCatalogEntry {
             window,
-            records: records.into_iter().map(|record| (route_key(&record.route), record)).collect(),
+            records: records.into_iter().map(|record| (record.route.clone(), record)).collect(),
         });
     }
     Ok(MetricCatalog { entries })
@@ -171,44 +169,6 @@ async fn resolve_metric(
         metric_freshness_seconds: source.map(|(_, record)| freshness_seconds(record)).unwrap_or(0),
         recent_metric,
     })
-}
-
-async fn estimated_cost(state: &LlmProxyState, part: &CandidateParts, global_model: &GlobalModelRef) -> Result<Option<Decimal>, LlmProxyError> {
-    let key_id = &primary_key(part).id;
-    let configured = ProviderStore::new(state.database.clone()).find_model_cost(key_id, &part.model.id).await?;
-    Ok(configured.as_ref().and_then(configured_cost).or_else(|| default_cost(global_model)))
-}
-
-fn configured_cost(cost: &ProviderModelCost) -> Option<Decimal> {
-    match cost.cost_mode {
-        ProviderModelCostMode::PerRequest => cost.price_per_request,
-        ProviderModelCostMode::PerToken => token_price_basis(
-            cost.input_price_per_million,
-            cost.output_price_per_million,
-            cost.cache_creation_price_per_million,
-            cost.cache_read_price_per_million,
-        ),
-    }
-}
-
-fn default_cost(model: &GlobalModelRef) -> Option<Decimal> {
-    model
-        .default_price_per_request
-        .or_else(|| model.default_tiered_pricing.tiers.first().and_then(tier_cost))
-}
-
-fn tier_cost(tier: &PricingTier) -> Option<Decimal> {
-    token_price_basis(
-        Some(tier.input_price_per_1m),
-        Some(tier.output_price_per_1m),
-        tier.cache_creation_price_per_1m,
-        tier.cache_read_price_per_1m,
-    )
-}
-
-fn token_price_basis(input: Option<Decimal>, output: Option<Decimal>, cache_write: Option<Decimal>, cache_read: Option<Decimal>) -> Option<Decimal> {
-    let total = input.unwrap_or_default() + output.unwrap_or_default() + cache_write.unwrap_or_default() + cache_read.unwrap_or_default();
-    (total > Decimal::ZERO).then(|| total / Decimal::from(PRICE_SCALE))
 }
 
 fn route_identity(request: CandidateRequest<'_>, part: &CandidateParts) -> RouteIdentity {
@@ -255,15 +215,19 @@ fn requested_windows(window: RoutingMetricWindow, live_stable: bool) -> Vec<Rout
     vec![window]
 }
 
-fn route_key(route: &RouteIdentity) -> String {
-    format!(
-        "{}:{}:{}:{}:{}:{}:{}",
-        route.provider_id, route.key_id, route.endpoint_id, route.global_model_id, route.client_api_format, route.provider_api_format, route.is_stream
-    )
-}
-
 fn freshness_seconds(record: &RoutingMetricRecord) -> i64 {
     (OffsetDateTime::now_utc() - record.last_seen_at).whole_seconds().max(0)
+}
+
+async fn route_state_catalog(state: &LlmProxyState, routes: &[RouteIdentity]) -> Result<RouteStateCatalog, LlmProxyError> {
+    let records = ProviderStore::new(state.database.clone()).list_routing_route_states_for_routes(routes).await?;
+    Ok(RouteStateCatalog {
+        records: records.into_iter().map(|record| (record.route.clone(), record)).collect(),
+    })
+}
+
+fn route_state_freshness_seconds(record: &RoutingRouteStateRecord) -> i64 {
+    (OffsetDateTime::now_utc() - record.last_updated_at).whole_seconds().max(0)
 }
 
 struct MetricCatalog {
@@ -272,36 +236,51 @@ struct MetricCatalog {
 
 impl MetricCatalog {
     fn record(&self, route: &RouteIdentity, window: RoutingMetricWindow) -> Option<(RoutingMetricWindow, &RoutingMetricRecord)> {
-        let key = route_key(route);
         self.entries
             .iter()
             .find(|entry| entry.window == window)
-            .and_then(|entry| entry.records.get(&key).map(|record| (entry.window, record)))
+            .and_then(|entry| entry.records.get(route).map(|record| (entry.window, record)))
     }
 
     fn best_record(&self, route: &RouteIdentity, min_samples: u64) -> Option<(RoutingMetricWindow, &RoutingMetricRecord)> {
-        let key = route_key(route);
         self.entries.iter().find_map(|entry| {
             entry
                 .records
-                .get(&key)
+                .get(route)
                 .filter(|record| record.snapshot.sample_count >= min_samples)
                 .map(|record| (entry.window, record))
         })
     }
 
     fn richest_record(&self, route: &RouteIdentity) -> Option<(RoutingMetricWindow, &RoutingMetricRecord)> {
-        let key = route_key(route);
         self.entries
             .iter()
-            .filter_map(|entry| entry.records.get(&key).map(|record| (entry.window, record)))
+            .filter_map(|entry| entry.records.get(route).map(|record| (entry.window, record)))
             .max_by_key(|(_, record)| record.snapshot.sample_count)
     }
 }
 
 struct MetricCatalogEntry {
     window: RoutingMetricWindow,
-    records: HashMap<String, RoutingMetricRecord>,
+    records: HashMap<RouteIdentity, RoutingMetricRecord>,
+}
+
+struct RouteStateCatalog {
+    records: HashMap<RouteIdentity, RoutingRouteStateRecord>,
+}
+
+impl RouteStateCatalog {
+    fn record(&self, route: &RouteIdentity) -> Option<RoutingEmaSnapshot> {
+        let record = self.records.get(route)?;
+        Some(RoutingEmaSnapshot {
+            success_rate: record.ema_success_rate,
+            ttfb_avg_ms: record.ema_ttfb_ms,
+            latency_avg_ms: record.ema_latency_ms,
+            output_tps: record.ema_output_tps,
+            sample_count: record.sample_count,
+            freshness_seconds: route_state_freshness_seconds(record),
+        })
+    }
 }
 
 struct ResolvedMetric {

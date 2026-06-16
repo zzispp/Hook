@@ -1570,7 +1570,8 @@
       "conversion": "格式转换",
       "stale": "过期指标",
       "half_open": "半开探测",
-      "recent_regression": "近期窗口回退"
+      "recent_regression": "近期窗口回退",
+      "ema_recent": "EMA 近期状态"
     },
     "exclusionReasons": {
       "provider_key_rate_limit_exhausted": "提供商密钥速率额度已耗尽"

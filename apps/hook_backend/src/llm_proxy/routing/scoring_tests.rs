@@ -1,6 +1,6 @@
 use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, RoutingProfileId, RoutingProfileWeights};
 
-use super::{RoutingScoreCandidate, circuit::CircuitCandidateState, score_routes};
+use super::{RoutingEmaSnapshot, RoutingScoreCandidate, circuit::CircuitCandidateState, score_routes};
 
 #[test]
 fn warming_candidates_keep_cache_affinity_bonus() {
@@ -52,6 +52,78 @@ fn recent_regression_degrades_fallback_metrics() {
             .iter()
             .any(|component| component.code == "recent_regression" && component.contribution < 0.0)
     );
+    assert!(!regressed.explanation.components.iter().any(|component| component.code == "exploration"));
+}
+
+#[test]
+fn normal_candidates_receive_capped_exploration_bonus() {
+    let profile = profile();
+    let mut explored = candidate("key-explored", false);
+    make_normal(&mut explored, 40, 40);
+
+    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![explored]);
+    let component = component(&scores[0], "exploration");
+
+    assert!(component.contribution > 0.0);
+    assert!(component.contribution <= 3.0);
+}
+
+#[test]
+fn degraded_normal_candidates_do_not_receive_exploration_bonus() {
+    let profile = profile();
+    let mut stale = candidate("key-stale", false);
+    make_normal(&mut stale, 40, 40);
+    stale.metric_freshness_seconds = 1_000;
+
+    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![stale]);
+
+    assert_eq!(scores[0].explanation.state.as_str(), "degraded");
+    assert!(!scores[0].explanation.components.iter().any(|component| component.code == "exploration"));
+}
+
+#[test]
+fn ema_recent_penalizes_worse_recent_state_with_cap() {
+    let profile = profile();
+    let mut candidate = candidate("key-ema-worse", false);
+    make_normal(&mut candidate, 40, 40);
+    candidate.ema = Some(RoutingEmaSnapshot {
+        success_rate: 0.20,
+        ttfb_avg_ms: Some(4_000.0),
+        latency_avg_ms: Some(12_000.0),
+        output_tps: Some(5.0),
+        sample_count: 40,
+        freshness_seconds: 60,
+    });
+
+    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![candidate]);
+    let component = component(&scores[0], "ema_recent");
+
+    assert!(component.contribution < 0.0);
+    assert!(component.contribution >= -6.0);
+}
+
+#[test]
+fn ema_recent_rewards_better_recent_state_with_cap() {
+    let profile = profile();
+    let mut candidate = candidate("key-ema-better", false);
+    make_normal(&mut candidate, 30, 40);
+    candidate.metric.latency_avg_ms = Some(6_000.0);
+    candidate.metric.ttfb_avg_ms = Some(2_000.0);
+    candidate.metric.output_tps = Some(8.0);
+    candidate.ema = Some(RoutingEmaSnapshot {
+        success_rate: 1.0,
+        ttfb_avg_ms: Some(150.0),
+        latency_avg_ms: Some(300.0),
+        output_tps: Some(120.0),
+        sample_count: 40,
+        freshness_seconds: 60,
+    });
+
+    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![candidate]);
+    let component = component(&scores[0], "ema_recent");
+
+    assert!(component.contribution > 0.0);
+    assert!(component.contribution <= 6.0);
 }
 
 #[test]
@@ -187,12 +259,28 @@ fn candidate(key_id: &str, is_cached: bool) -> RoutingScoreCandidate {
         metric_window: RoutingMetricWindow::FiveMinutes,
         metric_freshness_seconds: 15,
         recent_metric: None,
+        ema: None,
         circuit_state: CircuitCandidateState::Closed,
         admin_priority: 10,
         estimated_cost: None,
         needs_conversion: false,
         is_cached,
     }
+}
+
+fn make_normal(candidate: &mut RoutingScoreCandidate, success_count: u64, request_count: u64) {
+    candidate.metric.sample_count = request_count;
+    candidate.metric.request_count = request_count;
+    candidate.metric.success_count = success_count;
+}
+
+fn component<'a>(score: &'a super::ScoredRoute, code: &str) -> &'a types::provider::ScoreComponent {
+    score
+        .explanation
+        .components
+        .iter()
+        .find(|component| component.code == code)
+        .expect("score component should exist")
 }
 
 fn profile() -> RoutingProfile {
