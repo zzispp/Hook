@@ -1,6 +1,7 @@
 use storage::usage_flush::UsageFlushApplyReport;
 
 use super::super::LlmProxyError;
+use super::model_batch::ModelProcessingOrphan;
 
 #[derive(Default)]
 pub(super) struct FlushReport {
@@ -45,6 +46,23 @@ pub(super) fn log_skipped_usage(kind: &'static str, batch_id: &str, report: &Usa
         batch_id = batch_id,
         skipped_records = report.skipped_missing_count(),
         missing_ids = missing_ids,
+    );
+}
+
+pub(super) fn log_orphan_model_usage(orphan: &ModelProcessingOrphan) {
+    let batch_id = orphan.batch_id.as_deref().unwrap_or("-");
+    let missing_model_ids = if orphan.missing_user_model_ids.is_empty() {
+        "-".to_owned()
+    } else {
+        orphan.missing_user_model_ids.join(",")
+    };
+    hook_tracing::warn_with_fields!(
+        "llm proxy usage flush dropped orphan model processing batch",
+        batch_id = batch_id,
+        reason = orphan.reason,
+        model_record_count = orphan.model_record_count,
+        user_record_count = orphan.user_record_count,
+        missing_model_ids = missing_model_ids,
     );
 }
 

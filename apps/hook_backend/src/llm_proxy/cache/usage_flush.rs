@@ -1,6 +1,7 @@
 mod codec;
 mod keys;
 mod model_batch;
+mod recovery;
 mod report;
 
 use std::{collections::HashMap, time::Duration};
@@ -109,8 +110,9 @@ impl LlmProxyCache {
     }
 
     async fn flush_model_usage_batch(&self) -> Result<usize, LlmProxyError> {
-        let Some(batch) = self.read_model_usage_batch().await? else {
-            return Ok(0);
+        let batch = match self.read_model_usage_batch().await? {
+            Some(batch) => batch,
+            None => return Ok(0),
         };
         let store = ModelStore::new(self.database.clone());
         let report = store.record_usage_batch_once(&batch.id, &batch.records, &batch.user_records).await?;
@@ -185,7 +187,8 @@ impl LlmProxyCache {
         let id: Option<String> = connection.get(self.processing_model_batch_id_key()).await.map_err(redis_error)?;
         let counts: HashMap<String, String> = connection.hgetall(self.processing_model_count_key()).await.map_err(redis_error)?;
         let user_counts: HashMap<String, String> = connection.hgetall(self.processing_user_model_count_key()).await.map_err(redis_error)?;
-        model_processing_batch(id, decode_model_usage_batch(counts)?, decode_user_model_usage_batch(user_counts)?)
+        let state = model_processing_batch(id, decode_model_usage_batch(counts)?, decode_user_model_usage_batch(user_counts)?);
+        self.recover_model_processing_state(state).await
     }
 
     async fn clear_token_processing_usage(&self) -> Result<(), LlmProxyError> {
