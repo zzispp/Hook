@@ -38,10 +38,13 @@ mod quick_import_sync_model_rules_tests;
 #[cfg(test)]
 mod quick_import_sync_non_fixed_ratio_tests;
 mod quick_import_sync_outcome;
+mod quick_import_sync_outcome_support;
 #[cfg(test)]
 mod quick_import_sync_outcome_tests;
 #[cfg(test)]
 mod quick_import_sync_policy_tests;
+#[cfg(test)]
+mod quick_import_sync_precision_tests;
 mod quick_import_sync_settings;
 mod request_queries;
 mod upstream_models;
