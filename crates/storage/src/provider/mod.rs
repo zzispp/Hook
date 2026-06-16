@@ -12,6 +12,7 @@ mod quick_import_bind_query;
 mod quick_import_query;
 mod quick_import_sync_event_query;
 mod quick_import_sync_query;
+mod quick_import_sync_records;
 pub mod record;
 mod repository;
 mod repository_helpers;

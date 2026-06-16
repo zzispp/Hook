@@ -28,6 +28,7 @@ mod quick_import_shared;
 mod quick_import_sync;
 mod quick_import_sync_bindings;
 mod quick_import_sync_candidates;
+mod quick_import_sync_event_labels;
 mod quick_import_sync_events;
 mod quick_import_sync_globals;
 mod quick_import_sync_group_ratio;

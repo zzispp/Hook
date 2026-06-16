@@ -50,9 +50,29 @@ async fn key_model_fetch_failure_defaults_to_report_only_warning() {
         Some("infrastructure error: upstream /v1/models returned 429".into())
     );
     assert_eq!(events.len(), 1);
-    assert!(events[0].title.contains("上游模型列表拉取失败"));
+    assert_eq!(
+        events[0].title,
+        "快捷导入同步异常：提供商 OpenAI(provider-1) / 本地密钥 生产主 Key(key-1) / 上游令牌 codex(1209) 上游模型列表拉取失败"
+    );
+    assert_key_context(&events[0].title, &events[0].detail);
     assert!(events[0].detail.contains("/v1/models"));
     assert!(events[0].detail.contains("未禁用本地密钥"));
+}
+
+#[tokio::test]
+async fn cost_event_title_contains_full_key_context() {
+    let config = sync_config();
+    let sync_source = source(config.clone());
+    let outcome = run_outcome(config, snapshot("plus")).await;
+    let events = key_events(&sync_source, &key(), &outcome);
+    let event = events.iter().find(|event| event.title.contains("成本倍率下降")).expect("cost event must exist");
+
+    assert_eq!(
+        event.title,
+        "快捷导入同步：提供商 OpenAI(provider-1) / 本地密钥 生产主 Key(key-1) / 上游令牌 codex(1209) 成本倍率下降"
+    );
+    assert_key_context(&event.title, &event.detail);
+    assert!(event.detail.contains("最终成本倍率从 1x 已更新为 0.2x"));
 }
 
 #[tokio::test]
@@ -162,6 +182,7 @@ fn source(sync_config: ProviderQuickImportSyncConfig) -> ProviderQuickImportSync
     ProviderQuickImportSyncSource {
         id: "source-1".into(),
         provider_id: "provider-1".into(),
+        provider_name: "OpenAI".into(),
         source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
         base_url: "https://newapi.example".into(),
         encrypted_system_access_token: "enc".into(),
@@ -180,6 +201,7 @@ fn key() -> ProviderQuickImportSyncKey {
         provider_id: "provider-1".into(),
         source_id: "source-1".into(),
         key_id: "key-1".into(),
+        local_key_name: "生产主 Key".into(),
         upstream_token_id: "1209".into(),
         upstream_token_name: "codex".into(),
         upstream_group: Some("plus".into()),
@@ -250,4 +272,11 @@ fn globals() -> BTreeMap<String, GlobalModelResponse> {
 
 fn sync_config() -> ProviderQuickImportSyncConfig {
     ProviderQuickImportSyncConfig::default()
+}
+
+fn assert_key_context(title: &str, detail: &str) {
+    const LABEL: &str = "提供商 OpenAI(provider-1) / 本地密钥 生产主 Key(key-1) / 上游令牌 codex(1209)";
+
+    assert!(title.contains(LABEL), "title missing context: {title}");
+    assert!(detail.contains(&format!("上下文：{LABEL}")), "detail missing context: {detail}");
 }
