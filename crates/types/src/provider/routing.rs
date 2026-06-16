@@ -325,6 +325,8 @@ pub struct RouteScoreExplanation {
     #[serde(default)]
     pub prior_sample_count: u64,
     #[serde(default)]
+    pub effective_sample_count: u64,
+    #[serde(default)]
     pub routing_context_key: Option<String>,
     #[serde(default)]
     pub route_config_fingerprint: Option<String>,

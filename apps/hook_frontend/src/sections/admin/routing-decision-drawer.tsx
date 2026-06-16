@@ -153,7 +153,7 @@ function StateBlock({ item, t }: { item: RouteScoreExplanation; t: AdminT }) {
     <Stack spacing={0.5}>
       <Typography variant="subtitle2">{t('routing.drawer.state')}</Typography>
       <Typography variant="body2" color="text.secondary">
-        {`${t(`routing.states.${item.state}`)} · ${t('routing.drawer.sourceWindow')}: ${item.metric_window} · ${t('routing.drawer.freshness')}: ${item.metric_freshness_seconds}s`}
+        {`${t(`routing.states.${item.state}`)} · ${t('routing.drawer.sourceWindow')}: ${item.metric_window} · ${t('routing.drawer.freshness')}: ${item.metric_freshness_seconds}s · ${t('routing.drawer.effectiveSamples')}: ${item.effective_sample_count}`}
       </Typography>
       {item.exclusion_reason ? (
         <Typography variant="body2" color="error.main">

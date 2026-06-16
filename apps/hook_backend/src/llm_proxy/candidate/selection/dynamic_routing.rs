@@ -1,3 +1,6 @@
+#[path = "dynamic_routing/options.rs"]
+mod options;
+
 use types::provider::{ProviderPriorityMode, RouteIdentity, RouteScoreExplanation, RoutingMetricWindow, RoutingProfile, RoutingProfileId};
 
 use super::{
@@ -65,7 +68,7 @@ async fn rank(
     let route_states = RouteStateCatalog::from_snapshot(&snapshot);
     let context_states = ContextRouteStateCatalog::from_snapshot(&snapshot);
     let context_key = routing_context_key(&input.group.code, &input.global_model.id, &input.request.features);
-    let scores = score_candidates(ScoreCandidatesContext {
+    let scored = score_candidates(ScoreCandidatesContext {
         input: &input,
         catalog: &catalog,
         route_states: &route_states,
@@ -75,12 +78,17 @@ async fn rank(
         requested_window: window,
     })
     .await?;
-    let explanations = scores.iter().map(|item| item.explanation.clone()).collect::<Vec<_>>();
-    let parts = ordered_parts(input.parts, &scores)?;
+    let explanations = scored.scores.iter().map(|item| item.explanation.clone()).collect::<Vec<_>>();
+    let parts = options::ordered_parts(input.parts, &scored.targets, &scored.scores)?;
     if parts.is_empty() && !input.allow_empty {
         return Err(LlmProxyError::Upstream("all provider candidates are excluded by dynamic routing".into()));
     }
     Ok(DynamicRoutingOutput { parts, profile, explanations })
+}
+
+struct ScoreCandidatesOutput {
+    targets: Vec<options::ScoreTarget>,
+    scores: Vec<crate::llm_proxy::routing::ScoredRoute>,
 }
 
 struct ScoreCandidatesContext<'a, 'request> {
@@ -93,21 +101,24 @@ struct ScoreCandidatesContext<'a, 'request> {
     requested_window: RoutingMetricWindow,
 }
 
-async fn score_candidates(context: ScoreCandidatesContext<'_, '_>) -> Result<Vec<crate::llm_proxy::routing::ScoredRoute>, LlmProxyError> {
-    let mut candidates = Vec::with_capacity(context.input.parts.len());
-    for part in &context.input.parts {
-        candidates.push(score_candidate(&context, part).await?);
+async fn score_candidates(context: ScoreCandidatesContext<'_, '_>) -> Result<ScoreCandidatesOutput, LlmProxyError> {
+    let targets = options::score_targets(&context.input.parts);
+    let mut candidates = Vec::with_capacity(targets.len());
+    for target in &targets {
+        candidates.push(score_candidate(&context, *target).await?);
     }
-    Ok(score_routes(context.profile, context.requested_window, candidates))
+    let scores = score_routes(context.profile, context.requested_window, candidates);
+    Ok(ScoreCandidatesOutput { targets, scores })
 }
 
-async fn score_candidate(context: &ScoreCandidatesContext<'_, '_>, part: &CandidateParts) -> Result<RoutingScoreCandidate, LlmProxyError> {
+async fn score_candidate(context: &ScoreCandidatesContext<'_, '_>, target: options::ScoreTarget) -> Result<RoutingScoreCandidate, LlmProxyError> {
     let input = context.input;
-    let route = route_identity(&input.request, part);
-    let endpoint = primary_endpoint(part);
-    let key = primary_key(part);
+    let part = options::part(&input.parts, target)?;
+    let endpoint = options::endpoint(part, target)?;
+    let key = options::key_for_endpoint(part, endpoint)?;
+    let route = route_identity(&input.request, part, endpoint, key);
     let needs_conversion = formats::needs_conversion(&part.routing_api_format, &endpoint.api_format, input.request.is_stream)?;
-    let route_config_fingerprint = current_route_config_fingerprint(input, part, needs_conversion);
+    let route_config_fingerprint = current_route_config_fingerprint(input, part, endpoint, key, needs_conversion);
     let configured_cost = model_cost_config(input.state, &key.id, &part.model.id).await?;
     let price_config_fingerprint = current_price_config_fingerprint(input, configured_cost.as_ref());
     let fingerprints = RouteFingerprints {
@@ -119,7 +130,7 @@ async fn score_candidate(context: &ScoreCandidatesContext<'_, '_>, part: &Candid
         context.catalog,
         &route,
         fingerprints,
-        primary_key(part).rpm_limit,
+        key.rpm_limit,
         context.profile.min_samples,
         context.requested_window,
     )
@@ -145,26 +156,13 @@ async fn score_candidate(context: &ScoreCandidatesContext<'_, '_>, part: &Candid
         context_total_sample_count: context_samples.total_sample_count,
         ema,
         circuit_state: circuit::candidate_state(input.state, &route).await?,
-        admin_priority: admin_priority(input.group, part, input.priority_mode),
+        admin_priority: admin_priority(input.group, part, key, endpoint, input.priority_mode),
         estimated_cost: estimated_cost_from_config(configured_cost.as_ref(), input.global_model, &input.request.features),
         needs_conversion,
         is_cached: part.is_cached,
         request_features: input.request.features.clone(),
         route,
     })
-}
-
-fn ordered_parts(parts: Vec<CandidateParts>, scores: &[crate::llm_proxy::routing::ScoredRoute]) -> Result<Vec<CandidateParts>, LlmProxyError> {
-    let mut by_index = parts.into_iter().map(Some).collect::<Vec<_>>();
-    let mut output = Vec::new();
-    for score in scores.iter().filter(|item| !item.excluded) {
-        let part = by_index
-            .get_mut(score.original_index)
-            .and_then(Option::take)
-            .ok_or_else(|| LlmProxyError::Infrastructure("dynamic routing score referenced an invalid candidate index".into()))?;
-        output.push(part);
-    }
-    Ok(output)
 }
 
 async fn resolve_metric(
@@ -184,9 +182,13 @@ async fn resolve_metric(
     Ok(resolved)
 }
 
-fn current_route_config_fingerprint(input: &DynamicRoutingInput<'_>, part: &CandidateParts, needs_conversion: bool) -> String {
-    let endpoint = primary_endpoint(part);
-    let key = primary_key(part);
+fn current_route_config_fingerprint(
+    input: &DynamicRoutingInput<'_>,
+    part: &CandidateParts,
+    endpoint: &CachedEndpoint,
+    key: &CachedProviderKey,
+    needs_conversion: bool,
+) -> String {
     route_config_fingerprint(RouteFingerprintInput {
         provider_id: &part.provider.id,
         key_id: &key.id,
@@ -209,21 +211,21 @@ fn current_price_config_fingerprint(input: &DynamicRoutingInput<'_>, configured_
     })
 }
 
-fn route_identity(request: &CandidateRequest<'_>, part: &CandidateParts) -> RouteIdentity {
+fn route_identity(request: &CandidateRequest<'_>, part: &CandidateParts, endpoint: &CachedEndpoint, key: &CachedProviderKey) -> RouteIdentity {
     RouteIdentity {
         provider_id: part.provider.id.clone(),
-        key_id: primary_key(part).id.clone(),
-        endpoint_id: primary_endpoint(part).id.clone(),
+        key_id: key.id.clone(),
+        endpoint_id: endpoint.id.clone(),
         global_model_id: part.model.global_model_id.clone(),
         client_api_format: part.client_api_format.clone(),
-        provider_api_format: primary_endpoint(part).api_format.clone(),
+        provider_api_format: endpoint.api_format.clone(),
         is_stream: request.is_stream,
     }
 }
 
-fn admin_priority(group: &CachedBillingGroup, part: &CandidateParts, mode: ProviderPriorityMode) -> i32 {
+fn admin_priority(group: &CachedBillingGroup, part: &CandidateParts, key: &CachedProviderKey, endpoint: &CachedEndpoint, mode: ProviderPriorityMode) -> i32 {
     let provider_priority = group.provider_priorities.get(&part.provider.id).copied().unwrap_or(part.provider.priority);
-    provider_priority + key_priority(group, primary_key(part), &primary_endpoint(part).api_format, mode)
+    provider_priority + key_priority(group, key, &endpoint.api_format, mode)
 }
 
 fn key_priority(group: &CachedBillingGroup, key: &CachedProviderKey, api_format: &str, mode: ProviderPriorityMode) -> i32 {
@@ -231,19 +233,6 @@ fn key_priority(group: &CachedBillingGroup, key: &CachedProviderKey, api_format:
         ProviderPriorityMode::Provider => key.internal_priority,
         ProviderPriorityMode::Key => key.global_priority_by_format.get(api_format).copied().unwrap_or(key.internal_priority),
     })
-}
-
-fn primary_endpoint(parts: &CandidateParts) -> &CachedEndpoint {
-    &parts.endpoints[0]
-}
-
-fn primary_key(parts: &CandidateParts) -> &CachedProviderKey {
-    let endpoint = primary_endpoint(parts);
-    parts
-        .keys
-        .iter()
-        .find(|key| key.api_formats.iter().any(|format| format == &endpoint.api_format))
-        .expect("candidate parts must contain at least one key for the primary endpoint")
 }
 
 fn requested_windows(window: RoutingMetricWindow, live_stable: bool) -> Vec<RoutingMetricWindow> {

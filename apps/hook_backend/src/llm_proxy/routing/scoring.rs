@@ -70,7 +70,7 @@ pub(crate) struct ScoredRoute {
 }
 
 pub(crate) fn score_routes(profile: &RoutingProfile, window: RoutingMetricWindow, candidates: Vec<RoutingScoreCandidate>) -> Vec<ScoredRoute> {
-    let total_attempts = candidates.iter().map(|item| item.metric.sample_count).sum::<u64>();
+    let total_attempts = candidates.iter().map(|item| effective_sample_count(profile, item)).sum::<u64>();
     let cost_range = CostRange::from_candidates(&candidates);
     let mut scored = candidates
         .into_iter()
@@ -92,7 +92,7 @@ fn score_route(
     cost_range: CostRange,
     candidate: RoutingScoreCandidate,
 ) -> ScoredRoute {
-    if let Some(excluded) = hard_exclusion(index, candidate.clone()) {
+    if let Some(excluded) = hard_exclusion(index, profile, candidate.clone()) {
         return excluded;
     }
     let context = ScoreContext {
@@ -101,13 +101,13 @@ fn score_route(
         total_attempts,
         cost_range,
     };
-    if candidate.metric.sample_count < profile.min_samples {
+    if effective_sample_count(profile, &candidate) < profile.min_samples {
         return warming_score(index, context, candidate);
     }
     normal_score(index, context, candidate)
 }
 
-fn hard_exclusion(index: usize, candidate: RoutingScoreCandidate) -> Option<ScoredRoute> {
+fn hard_exclusion(index: usize, profile: &RoutingProfile, candidate: RoutingScoreCandidate) -> Option<ScoredRoute> {
     let reason = match &candidate.circuit_state {
         CircuitCandidateState::Open { reason, ttl_seconds } => Some(format!("{reason}; ttl={ttl_seconds}s")),
         CircuitCandidateState::HalfOpenBusy { reason } => Some(reason.clone()),
@@ -121,7 +121,7 @@ fn hard_exclusion(index: usize, candidate: RoutingScoreCandidate) -> Option<Scor
     Some(ScoredRoute {
         original_index: index,
         excluded: true,
-        explanation: explanation(candidate, state, 0.0, reason.clone(), Vec::new(), Some(reason)),
+        explanation: explanation(profile, candidate, state, 0.0, reason.clone(), Vec::new(), Some(reason)),
     })
 }
 
@@ -146,6 +146,7 @@ fn warming_score(index: usize, context: ScoreContext<'_>, candidate: RoutingScor
         original_index: index,
         excluded: false,
         explanation: explanation(
+            context.profile,
             candidate,
             RoutingRouteState::Warming,
             score,
@@ -174,7 +175,15 @@ fn normal_score(index: usize, context: ScoreContext<'_>, candidate: RoutingScore
     ScoredRoute {
         original_index: index,
         excluded: false,
-        explanation: explanation(candidate, state, score, selected_reason(score, &all_components), all_components, None),
+        explanation: explanation(
+            context.profile,
+            candidate,
+            state,
+            score,
+            selected_reason(score, &all_components),
+            all_components,
+            None,
+        ),
     }
 }
 
@@ -236,6 +245,7 @@ struct ScoreContext<'a> {
 }
 
 fn explanation(
+    profile: &RoutingProfile,
     candidate: RoutingScoreCandidate,
     state: RoutingRouteState,
     final_score: f64,
@@ -243,6 +253,7 @@ fn explanation(
     components: Vec<ScoreComponent>,
     exclusion_reason: Option<String>,
 ) -> RouteScoreExplanation {
+    let effective_sample_count = effective_sample_count(profile, &candidate);
     RouteScoreExplanation {
         route: candidate.route,
         provider_name: candidate.provider_name,
@@ -261,6 +272,7 @@ fn explanation(
         metric_source: candidate.metric_source,
         prior_source: candidate.prior_source,
         prior_sample_count: candidate.prior_sample_count,
+        effective_sample_count,
         routing_context_key: candidate.routing_context_key,
         route_config_fingerprint: candidate.route_config_fingerprint,
         price_config_fingerprint: candidate.price_config_fingerprint,
@@ -277,8 +289,15 @@ pub(in crate::llm_proxy::routing) fn exploration_counts(profile: &RoutingProfile
     }
     ExplorationCounts {
         total_sample_count: total_attempts,
-        route_sample_count: candidate.metric.sample_count,
+        route_sample_count: effective_sample_count(profile, candidate),
     }
+}
+
+fn effective_sample_count(profile: &RoutingProfile, candidate: &RoutingScoreCandidate) -> u64 {
+    if candidate.metric_source == RoutingMetricSource::Prior {
+        return candidate.prior_sample_count.min(profile.prior_sample_cap);
+    }
+    candidate.metric.sample_count
 }
 
 pub(in crate::llm_proxy::routing) struct ExplorationCounts {
