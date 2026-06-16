@@ -204,13 +204,15 @@ macro_rules! candidate_model {
 #[tokio::test]
 async fn request_record_storage_compresses_old_payloads() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(timeout_exec_results(16))
+        .append_exec_results(timeout_exec_results(24))
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
+        .append_query_results([[routing_decision_counts(0)]])
         .append_query_results([[summary_record("req-1", plain_payloads())]])
         .append_query_results([[candidate_record("candidate-1", "req-1", plain_payloads())]])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
+        .append_query_results([[routing_decision_counts(0)]])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .into_connection();
@@ -228,13 +230,15 @@ async fn request_record_storage_compresses_old_payloads() {
 #[tokio::test]
 async fn request_record_storage_marks_existing_compressed_payloads_without_rewriting() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(timeout_exec_results(16))
+        .append_exec_results(timeout_exec_results(24))
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
+        .append_query_results([[routing_decision_counts(0)]])
         .append_query_results([[summary_record("req-1", compressed_payloads())]])
         .append_query_results([[candidate_record("candidate-1", "req-1", compressed_payloads())]])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
+        .append_query_results([[routing_decision_counts(0)]])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .into_connection();
@@ -270,6 +274,10 @@ fn cleanup_options() -> RequestRecordCleanupOptions {
 
 fn orphan_candidate_counts(deleted_candidates: i64) -> BTreeMap<&'static str, Value> {
     BTreeMap::from([("deleted_candidates", Value::from(deleted_candidates))])
+}
+
+fn routing_decision_counts(deleted_routing_decisions: i64) -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([("deleted_routing_decisions", Value::from(deleted_routing_decisions))])
 }
 
 fn timeout_exec_results(count: usize) -> Vec<MockExecResult> {

@@ -1,5 +1,7 @@
 'use client';
 
+import type { AdminT } from './shared';
+import type { RoutingDecisionResponse } from 'src/types/routing';
 import type { RequestRecord, RequestCandidateDetail } from 'src/types/provider';
 import type { TraceGroup, TraceAttempt } from './request-record-trace-timeline-utils';
 
@@ -14,6 +16,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { Label } from 'src/components/label';
 
 import { formatDuration } from './request-records-utils';
+import { RoutingDecisionBlock } from './request-record-trace-routing-decision';
 import { RequestCandidatePayloadPanels } from './request-record-payload-panels';
 import {
   attemptKey,
@@ -40,16 +43,21 @@ import {
 export function RequestRecordTraceTimeline({
   record,
   candidates,
+  routingDecision,
   loading,
   locale,
 }: {
   record: RequestRecord | null;
   candidates: RequestCandidateDetail[];
+  routingDecision?: RoutingDecisionResponse | null;
   loading: boolean;
   locale: string;
 }) {
   const { t } = useTranslate('admin');
-  const groups = useMemo(() => buildTraceGroups(record, candidates), [record, candidates]);
+  const groups = useMemo(
+    () => buildTraceGroups(record, candidates, routingDecision),
+    [record, candidates, routingDecision]
+  );
   const [selection, setSelection] = useState({ groupIndex: 0, attemptIndex: 0 });
   const selectedGroup = groups[selection.groupIndex] ?? null;
   const selectedAttempt = selectedGroup?.attempts[selection.attemptIndex] ?? null;
@@ -62,11 +70,19 @@ export function RequestRecordTraceTimeline({
     <Stack spacing={1.5} sx={panelSx}>
       <TraceHeader record={record} groups={groups} t={t} />
       {loading ? <Typography variant="body2">{t('common.loading')}</Typography> : null}
-      {!loading && groups.length === 0 ? <Typography variant="body2">{t('common.noData')}</Typography> : null}
+      {!loading && groups.length === 0 ? (
+        <Typography variant="body2">{t('common.noData')}</Typography>
+      ) : null}
       {groups.length > 0 ? (
         <>
           <TraceTrack groups={groups} selection={selection} onSelect={setSelection} />
-          <TraceAttemptDetail attempt={selectedAttempt} group={selectedGroup} locale={locale} t={t} />
+          <TraceAttemptDetail
+            attempt={selectedAttempt}
+            group={selectedGroup}
+            routingDecision={routingDecision}
+            locale={locale}
+            t={t}
+          />
         </>
       ) : null}
     </Stack>
@@ -80,13 +96,17 @@ function TraceHeader({
 }: {
   record: RequestRecord | null;
   groups: TraceGroup[];
-  t: (key: string) => string;
+  t: AdminT;
 }) {
   return (
     <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
       <Stack direction="row" alignItems="center" spacing={1}>
         <Typography variant="subtitle2">{t('requestRecords.traceTitle')}</Typography>
-        {record ? <Label color={requestTraceLabelColor(record.status)}>{t(`requestRecords.status.${record.status}`)}</Label> : null}
+        {record ? (
+          <Label color={requestTraceLabelColor(record.status)}>
+            {t(`requestRecords.status.${record.status}`)}
+          </Label>
+        ) : null}
       </Stack>
       <Typography variant="caption" color="text.secondary">
         {groups.length} {t('requestRecords.traceProviders')}
@@ -142,7 +162,11 @@ function TraceGroupNode({
         <Typography variant="caption" noWrap sx={nodeLabelSx}>
           {group.providerName}
         </Typography>
-        <Box component="button" sx={providerDotSx(group.status, selected)} onClick={() => onSelect({ groupIndex, attemptIndex: 0 })} />
+        <Box
+          component="button"
+          sx={providerDotSx(group.status, selected)}
+          onClick={() => onSelect({ groupIndex, attemptIndex: 0 })}
+        />
         {selected && group.attempts.length > 1 ? (
           <Stack direction="row" spacing={0.75} sx={keyDotsSx}>
             {group.attempts.map((attempt, attemptIndex) => (
@@ -170,13 +194,15 @@ function TraceGroupNode({
 function TraceAttemptDetail({
   attempt,
   group,
+  routingDecision,
   locale,
   t,
 }: {
   attempt: TraceAttempt | null;
   group: TraceGroup | null;
+  routingDecision?: RoutingDecisionResponse | null;
   locale: string;
-  t: (key: string) => string;
+  t: AdminT;
 }) {
   if (!attempt || !group) return null;
   const statusLabel = t(`requestRecords.traceStatus.${attempt.traceStatus}`);
@@ -187,7 +213,9 @@ function TraceAttemptDetail({
         <Stack direction="row" alignItems="center" spacing={1}>
           <Box sx={titleDotSx(attempt.traceStatus)} />
           <Typography variant="subtitle2">{group.providerName}</Typography>
-          <Label color={requestTraceLabelColor(attempt.traceStatus)}>{attempt.status_code ?? statusLabel}</Label>
+          <Label color={requestTraceLabelColor(attempt.traceStatus)}>
+            {attempt.status_code ?? statusLabel}
+          </Label>
         </Stack>
         <Typography variant="caption" color="text.secondary">
           {attempt.candidate_index + 1} / {attempt.retry_index + 1}
@@ -195,21 +223,36 @@ function TraceAttemptDetail({
         </Typography>
       </Stack>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} useFlexGap flexWrap="wrap">
-        <TraceInfo label={t('requestRecords.traceTimeRange')} value={attemptTime(attempt, locale, t)} />
+        <TraceInfo
+          label={t('requestRecords.traceTimeRange')}
+          value={attemptTime(attempt, locale, t)}
+        />
         <TraceInfo label={t('requestRecords.apiFormat')} value={attemptFormat(attempt)} />
+        <TraceInfo label={t('requestRecords.traceEndpoint')} value={attemptEndpoint(attempt)} />
         <TraceInfo label={t('requestRecords.traceKey')} value={attemptKey(attempt)} />
-        <TraceInfo label={t('requestRecords.totalLatency')} value={formatDuration(attempt.latency_ms)} />
+        <TraceInfo
+          label={t('requestRecords.totalLatency')}
+          value={formatDuration(attempt.latency_ms)}
+        />
         {attempt.skip_reason ? (
-          <TraceInfo label={t('requestRecords.traceSkipReason')} value={skipReasonLabel(t, attempt.skip_reason)} />
+          <TraceInfo
+            label={t('requestRecords.traceSkipReason')}
+            value={skipReasonLabel(t, attempt.skip_reason)}
+          />
         ) : null}
-        {attempt.error_code ? <TraceInfo label={t('requestRecords.traceErrorCode')} value={attempt.error_code} /> : null}
-        {attempt.error_param ? <TraceInfo label={t('requestRecords.traceErrorParam')} value={attempt.error_param} /> : null}
+        {attempt.error_code ? (
+          <TraceInfo label={t('requestRecords.traceErrorCode')} value={attempt.error_code} />
+        ) : null}
+        {attempt.error_param ? (
+          <TraceInfo label={t('requestRecords.traceErrorParam')} value={attempt.error_param} />
+        ) : null}
       </Stack>
       {attempt.error_message ? (
         <Typography variant="caption" color="error">
           {attempt.error_message}
         </Typography>
       ) : null}
+      <RoutingDecisionBlock attempt={attempt} routingDecision={routingDecision} t={t} />
       <RequestCandidatePayloadPanels
         providerRequestHeaders={attempt.provider_request_headers}
         providerRequestBody={attempt.provider_request_body}
@@ -233,6 +276,10 @@ function TraceInfo({ label, value }: { label: string; value: string }) {
   );
 }
 
-function skipReasonLabel(t: (key: string) => string, reason: string) {
+function skipReasonLabel(t: AdminT, reason: string) {
   return t(`requestRecords.traceSkipReasonLabels.${reason}`);
+}
+
+function attemptEndpoint(attempt: TraceAttempt) {
+  return attempt.endpoint_name || attempt.endpoint_id || '-';
 }

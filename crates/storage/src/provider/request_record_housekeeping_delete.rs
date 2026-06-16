@@ -13,6 +13,9 @@ const SELECT_RECORD_BATCH_SQL: &str =
 const DELETE_ORPHAN_CANDIDATES_SQL: &str = "WITH orphan_candidates AS (SELECT c.id FROM request_candidates c WHERE c.created_at < $1 AND NOT EXISTS (SELECT 1 FROM request_records r WHERE r.request_id = c.request_id) ORDER BY c.created_at ASC, c.id ASC LIMIT $2 FOR UPDATE SKIP LOCKED), \
 deleted_candidates AS (DELETE FROM request_candidates c USING orphan_candidates o WHERE c.id = o.id RETURNING c.id) \
 SELECT COUNT(*) AS deleted_candidates FROM deleted_candidates";
+const DELETE_EXPIRED_ROUTING_DECISIONS_SQL: &str = "WITH expired_decisions AS (SELECT request_id FROM routing_decision_samples WHERE created_at < $1 ORDER BY created_at ASC, request_id ASC LIMIT $2 FOR UPDATE SKIP LOCKED), \
+deleted_decisions AS (DELETE FROM routing_decision_samples d USING expired_decisions e WHERE d.request_id = e.request_id RETURNING d.request_id) \
+SELECT COUNT(*) AS deleted_routing_decisions FROM deleted_decisions";
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct DeleteRecordBatch {
@@ -61,6 +64,24 @@ pub(super) async fn delete_orphan_candidate_batch(store: &ProviderStore, options
         .ok_or_else(|| StorageError::Database("delete orphan request candidates batch returned no rows".into()))?;
     tx.commit().await?;
     u64::try_from(row.deleted_candidates).map_err(count_overflow)
+}
+
+pub(super) async fn delete_expired_routing_decision_batch(
+    store: &ProviderStore,
+    options: &RequestRecordCleanupOptions,
+    budget: &CleanupBudget,
+) -> StorageResult<u64> {
+    if budget.exhausted() {
+        return Ok(0);
+    }
+    let tx = store.connection().begin().await?;
+    apply_timeouts(&tx, options).await?;
+    let row = DeleteRoutingDecisionBatchRow::find_by_statement(delete_expired_routing_decisions_statement(options))
+        .one(&tx)
+        .await?
+        .ok_or_else(|| StorageError::Database("delete expired routing decision samples batch returned no rows".into()))?;
+    tx.commit().await?;
+    u64::try_from(row.deleted_routing_decisions).map_err(count_overflow)
 }
 
 async fn delete_record_candidates(tx: &sea_orm::DatabaseTransaction, request_ids: &[String]) -> StorageResult<u64> {
@@ -117,6 +138,14 @@ fn delete_orphan_candidates_statement(options: &RequestRecordCleanupOptions) -> 
     )
 }
 
+fn delete_expired_routing_decisions_statement(options: &RequestRecordCleanupOptions) -> Statement {
+    Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        DELETE_EXPIRED_ROUTING_DECISIONS_SQL,
+        vec![options.record_cutoff.into(), batch_limit(options.delete_batch_size).into()],
+    )
+}
+
 fn batch_limit(value: u64) -> i64 {
     value.try_into().expect("request record cleanup batch size must fit into i64")
 }
@@ -151,4 +180,9 @@ struct DeleteRecordsRow {
 #[derive(Debug, FromQueryResult)]
 struct DeleteOrphanCandidateBatchRow {
     deleted_candidates: i64,
+}
+
+#[derive(Debug, FromQueryResult)]
+struct DeleteRoutingDecisionBatchRow {
+    deleted_routing_decisions: i64,
 }

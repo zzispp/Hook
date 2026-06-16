@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use super::RequestUpstreamCost;
+use super::{RequestUpstreamCost, RoutingDecisionResponse};
 
 const DEFAULT_REQUEST_RECORD_LIMIT: u64 = 20;
 
@@ -171,6 +171,7 @@ pub struct RequestRecord {
 pub struct RequestRecordDetail {
     pub record: RequestRecord,
     pub candidates: Vec<RequestCandidateDetail>,
+    pub routing_decision: Option<RoutingDecisionResponse>,
     pub payloads: Vec<RequestPayloadMeta>,
     pub request_headers: Option<serde_json::Value>,
     pub request_body: Option<serde_json::Value>,

@@ -24,6 +24,7 @@ pub struct RequestRecordCleanupOptions {
 pub struct RequestRecordCleanupResult {
     pub deleted_records: u64,
     pub deleted_candidates: u64,
+    pub deleted_routing_decisions: u64,
     pub compressed_records: u64,
     pub compressed_candidates: u64,
     pub time_budget_exhausted: bool,
@@ -40,6 +41,7 @@ pub(super) struct CompressBatchResult {
 struct CleanupBatch {
     deleted_records: u64,
     deleted_candidates: u64,
+    deleted_routing_decisions: u64,
     compressed_records: u64,
     compressed_candidates: u64,
     scanned_records: u64,
@@ -87,6 +89,10 @@ async fn cleanup_batch(store: &ProviderStore, options: &RequestRecordCleanupOpti
     }
     let deleted_orphans = request_record_housekeeping_delete::delete_orphan_candidate_batch(store, options, budget).await?;
     batch.deleted_candidates += deleted_orphans;
+    if !can_start_statement(options, budget) {
+        return Ok(time_exhausted_batch(batch));
+    }
+    batch.deleted_routing_decisions = request_record_housekeeping_delete::delete_expired_routing_decision_batch(store, options, budget).await?;
     if !can_start_statement(options, budget) {
         return Ok(time_exhausted_batch(batch));
     }
@@ -150,6 +156,7 @@ impl RequestRecordCleanupResult {
     fn add(&mut self, batch: CleanupBatch) {
         self.deleted_records += batch.deleted_records;
         self.deleted_candidates += batch.deleted_candidates;
+        self.deleted_routing_decisions += batch.deleted_routing_decisions;
         self.compressed_records += batch.compressed_records;
         self.compressed_candidates += batch.compressed_candidates;
     }
@@ -157,7 +164,11 @@ impl RequestRecordCleanupResult {
 
 impl CleanupBatch {
     fn is_empty(self) -> bool {
-        self.deleted_records == 0 && self.deleted_candidates == 0 && self.scanned_records == 0 && self.scanned_candidates == 0
+        self.deleted_records == 0
+            && self.deleted_candidates == 0
+            && self.deleted_routing_decisions == 0
+            && self.scanned_records == 0
+            && self.scanned_candidates == 0
     }
 }
 

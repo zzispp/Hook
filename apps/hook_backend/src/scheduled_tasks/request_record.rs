@@ -200,8 +200,13 @@ fn cleanup_options(now: time::OffsetDateTime, config: &TaskConfigValue) -> Sched
 
 fn cleanup_message(result: RequestRecordCleanupResult) -> String {
     format!(
-        "deleted_records={}, deleted_candidates={}, compressed_records={}, compressed_candidates={}, time_budget_exhausted={}",
-        result.deleted_records, result.deleted_candidates, result.compressed_records, result.compressed_candidates, result.time_budget_exhausted
+        "deleted_records={}, deleted_candidates={}, deleted_routing_decisions={}, compressed_records={}, compressed_candidates={}, time_budget_exhausted={}",
+        result.deleted_records,
+        result.deleted_candidates,
+        result.deleted_routing_decisions,
+        result.compressed_records,
+        result.compressed_candidates,
+        result.time_budget_exhausted
     )
 }
 
@@ -232,4 +237,23 @@ fn cleanup_integer_specs() -> [(&'static str, i64); 8] {
         ("statement_timeout_seconds", 1),
         ("lock_timeout_seconds", 1),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RequestRecordCleanupResult, cleanup_message};
+
+    #[test]
+    fn cleanup_message_reports_routing_decision_deletes() {
+        let message = cleanup_message(RequestRecordCleanupResult {
+            deleted_records: 2,
+            deleted_candidates: 3,
+            deleted_routing_decisions: 1,
+            compressed_records: 4,
+            compressed_candidates: 5,
+            time_budget_exhausted: false,
+        });
+
+        assert!(message.contains("deleted_routing_decisions=1"), "{message}");
+    }
 }
