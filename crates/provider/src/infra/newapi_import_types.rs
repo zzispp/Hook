@@ -78,7 +78,7 @@ pub(super) struct ModelsEnvelope {
     pub(super) data: Vec<NewApiModelRecord>,
     #[serde(default)]
     message: String,
-    success: bool,
+    success: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,7 +125,7 @@ impl NewApiEnvelope for TokenKeyEnvelope {
 
 impl NewApiEnvelope for ModelsEnvelope {
     fn success(&self) -> bool {
-        self.success
+        self.success.unwrap_or(true)
     }
 
     fn message(&self) -> &str {
@@ -252,6 +252,17 @@ mod tests {
 
         assert_eq!(models[0].id, "gpt-5.2");
         assert_eq!(models[0].supported_endpoint_types, vec!["openai"]);
+    }
+
+    #[test]
+    fn decode_openai_models_response_without_success_flag() {
+        let payload = r#"{"object":"list","data":[{"id":"claude-sonnet-4.5"}]}"#;
+
+        let envelope: ModelsEnvelope = decode_envelope(payload).unwrap();
+        let models = envelope.data.into_iter().map(model_response).collect::<Vec<_>>();
+
+        assert_eq!(models[0].id, "claude-sonnet-4.5");
+        assert_eq!(models[0].supported_endpoint_types, Vec::<String>::new());
     }
 
     #[test]
