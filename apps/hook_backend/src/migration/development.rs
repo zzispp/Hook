@@ -153,6 +153,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::translation_seed_sync::seed_missing_translations(manager).await?;
     super::default_seed_sync::apply(manager).await?;
     super::development_additive::apply(manager).await?;
+    super::scheduler_global_claim_additive::apply(manager).await?;
     super::request_record_cleanup_config_additive::apply(manager).await?;
     super::request_record_payload_compression_additive::apply(manager).await?;
     super::scheduled_task_next_run_additive::apply(manager).await?;

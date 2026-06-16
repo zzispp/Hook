@@ -1,47 +1,54 @@
-use std::collections::HashMap;
-
-use types::scheduler::ScheduledTask;
-
-use super::{next_run_from_now, with_next_run_times};
+use super::{next_attempt_at, next_attempt_delay};
 
 const TASK_CODE: &str = "request_record_cleanup";
 
 #[test]
-fn with_next_run_times_formats_runtime_snapshot() {
-    let task = scheduled_task(true);
-    let next_at = time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds(600);
-    let next_runs = HashMap::from([(TASK_CODE.to_owned(), next_at)]);
+fn next_attempt_at_uses_next_run_when_task_is_unlocked() {
+    let record = task_record(ts(600), None);
 
-    let tasks = with_next_run_times(vec![task], next_runs).unwrap();
+    let attempt_at = next_attempt_at(&record);
 
-    assert_eq!(tasks[0].next_run_at.as_deref(), Some("1970-01-01T00:10:00Z"));
+    assert_eq!(attempt_at, ts(600));
 }
 
 #[test]
-fn next_run_from_now_is_empty_for_disabled_task() {
-    let task = scheduled_task(false);
+fn next_attempt_at_waits_for_active_claim_lease() {
+    let record = task_record(ts(600), Some(ts(900)));
 
-    let next_run_at = next_run_from_now(&task).unwrap();
+    let attempt_at = next_attempt_at(&record);
 
-    assert_eq!(next_run_at, None);
+    assert_eq!(attempt_at, ts(900));
 }
 
-fn scheduled_task(enabled: bool) -> ScheduledTask {
-    ScheduledTask {
+#[test]
+fn next_attempt_delay_is_zero_when_task_is_due() {
+    let record = task_record(ts(600), None);
+
+    let delay = next_attempt_delay(&record, ts(601)).unwrap();
+
+    assert_eq!(delay, std::time::Duration::ZERO);
+}
+
+fn task_record(next_run_at: time::OffsetDateTime, locked_until: Option<time::OffsetDateTime>) -> storage::scheduler::entities::scheduled_tasks::Model {
+    let now = time::OffsetDateTime::UNIX_EPOCH;
+    storage::scheduler::entities::scheduled_tasks::Model {
         code: TASK_CODE.into(),
-        name_key: "name".into(),
-        description_key: "description".into(),
-        enabled,
+        enabled: true,
         interval_seconds: 600,
-        next_run_at: None,
-        config: serde_json::json!({}),
-        config_schema: Vec::new(),
+        config: "{}".into(),
+        next_run_at,
+        locked_until,
+        locked_by: None,
         last_started_at: None,
         last_finished_at: None,
         last_status: None,
         last_duration_ms: None,
         last_error: None,
-        created_at: "1970-01-01T00:00:00Z".into(),
-        updated_at: "1970-01-01T00:00:00Z".into(),
+        created_at: now,
+        updated_at: now,
     }
+}
+
+fn ts(seconds: i64) -> time::OffsetDateTime {
+    time::OffsetDateTime::UNIX_EPOCH + time::Duration::seconds(seconds)
 }
