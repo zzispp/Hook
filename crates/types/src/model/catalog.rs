@@ -10,6 +10,14 @@ pub struct ModelCapabilities {
     pub supports_streaming: bool,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+pub struct ModelCatalogProviderPriceRange {
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub min: Option<Decimal>,
+    #[serde(with = "rust_decimal::serde::float_option")]
+    pub max: Option<Decimal>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct ModelPriceRange {
     #[serde(with = "rust_decimal::serde::float_option")]
@@ -28,18 +36,27 @@ pub struct ModelCatalogProviderDetail {
     pub provider_name: String,
     pub model_id: Option<String>,
     pub target_model: String,
+    pub is_active: bool,
+    pub provider_is_active: bool,
+    pub binding_is_active: bool,
+    pub configured_cost_count: u64,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub input_price_per_1m: Option<Decimal>,
+    pub input_price_range: ModelCatalogProviderPriceRange,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub output_price_per_1m: Option<Decimal>,
+    pub output_price_range: ModelCatalogProviderPriceRange,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub cache_creation_price_per_1m: Option<Decimal>,
+    pub cache_creation_price_range: ModelCatalogProviderPriceRange,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub cache_read_price_per_1m: Option<Decimal>,
+    pub cache_read_price_range: ModelCatalogProviderPriceRange,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub cache_1h_creation_price_per_1m: Option<Decimal>,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub price_per_request: Option<Decimal>,
+    pub price_per_request_range: ModelCatalogProviderPriceRange,
     pub effective_tiered_pricing: Option<TieredPricingConfig>,
     pub tier_count: u64,
     pub supports_vision: Option<bool>,

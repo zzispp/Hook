@@ -8,6 +8,7 @@ use crate::{Database, StorageError, StorageResult, json, usage_flush::UsageFlush
 use super::{
     GlobalModelRecord, GlobalModelRecordInput, GlobalModelRecordPatch, GlobalModelUsageRecord, GlobalModelUserUsageRecord, ModelRecord,
     cleanup::{delete_model_bindings, delete_model_status_checks, prune_model_references},
+    provider_detail_query,
     record::{global_model_user_usage_counts, global_models, global_models::ActiveModel as GlobalModelActiveModel, provider_models},
     repository_helpers::{apply_global_model_patch, capabilities, description, record_matches, unique_provider_count},
     usage,
@@ -129,10 +130,8 @@ impl ModelStore {
             .find_global_model_record(self.database.connection(), id)
             .await?
             .ok_or(StorageError::NotFound)?;
-        let mut providers = Vec::new();
-        for model in self.models_for_global_model(&global_model.id).await? {
-            providers.push(model.provider_detail(&global_model)?);
-        }
+        let bindings = self.models_for_global_model(&global_model.id).await?;
+        let providers = provider_detail_query::provider_details(self.database.connection(), &global_model, bindings).await?;
         Ok(types::model::GlobalModelProvidersResponse {
             total: providers.len() as u64,
             providers,
@@ -187,11 +186,8 @@ impl ModelStore {
     }
 
     async fn active_provider_details(&self, record: &GlobalModelRecord) -> StorageResult<Vec<types::model::ModelCatalogProviderDetail>> {
-        let mut providers = Vec::new();
-        for model in self.models_for_global_model(&record.id).await? {
-            providers.push(model.provider_detail(record)?);
-        }
-        Ok(providers)
+        let bindings = self.models_for_global_model(&record.id).await?;
+        provider_detail_query::provider_details(self.database.connection(), record, bindings).await
     }
 
     async fn to_response(&self, record: GlobalModelRecord) -> StorageResult<GlobalModelResponse> {

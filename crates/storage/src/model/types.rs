@@ -1,5 +1,5 @@
 use rust_decimal::Decimal;
-use types::model::{PatchField, TieredPricingConfig};
+use types::model::{ModelCatalogProviderPriceRange, PatchField, TieredPricingConfig};
 use types::provider::RoutingProfileId;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -37,4 +37,19 @@ pub struct GlobalModelRecordPatch {
     pub supported_capabilities: PatchField<Vec<String>>,
     pub config: PatchField<serde_json::Value>,
     pub routing_profile_id: PatchField<RoutingProfileId>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderDetailPriceSummary {
+    pub configured_cost_count: u64,
+    pub input_price_per_1m: Option<Decimal>,
+    pub input_price_range: ModelCatalogProviderPriceRange,
+    pub output_price_per_1m: Option<Decimal>,
+    pub output_price_range: ModelCatalogProviderPriceRange,
+    pub cache_creation_price_per_1m: Option<Decimal>,
+    pub cache_creation_price_range: ModelCatalogProviderPriceRange,
+    pub cache_read_price_per_1m: Option<Decimal>,
+    pub cache_read_price_range: ModelCatalogProviderPriceRange,
+    pub price_per_request: Option<Decimal>,
+    pub price_per_request_range: ModelCatalogProviderPriceRange,
 }

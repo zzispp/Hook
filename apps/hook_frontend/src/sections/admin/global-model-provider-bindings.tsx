@@ -1,6 +1,6 @@
 'use client';
 
-import type { ModelCatalogProviderDetail } from 'src/types/model';
+import type { ModelCatalogProviderDetail, ModelCatalogProviderPriceRange } from 'src/types/model';
 
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
@@ -79,21 +79,26 @@ function ProviderCard({ provider }: { provider: ModelCatalogProviderDetail }) {
 
 function ProviderPrice({ provider }: { provider: ModelCatalogProviderDetail }) {
   const { t } = useTranslate('admin');
-  const rows = [
-    [
-      t('providers.inputOutputPrice'),
-      `${formatPrice(provider.input_price_per_1m)} / ${formatPrice(provider.output_price_per_1m)}`,
-    ],
-    [
-      t('providers.cachePrice'),
-      `${formatPrice(provider.cache_creation_price_per_1m)} / ${formatPrice(provider.cache_read_price_per_1m)}`,
-    ],
-  ];
+  const rows: string[][] = [];
 
-  if (provider.price_per_request && provider.price_per_request > 0) {
+  if (hasAnyRangeValue(provider.input_price_range) || hasAnyRangeValue(provider.output_price_range)) {
+    rows.push([
+      t('providers.inputOutputPrice'),
+      `${formatPriceRange(provider.input_price_range)} / ${formatPriceRange(provider.output_price_range)}`,
+    ]);
+  }
+
+  if (hasAnyRangeValue(provider.cache_creation_price_range) || hasAnyRangeValue(provider.cache_read_price_range)) {
+    rows.push([
+      t('providers.cachePrice'),
+      `${formatPriceRange(provider.cache_creation_price_range)} / ${formatPriceRange(provider.cache_read_price_range)}`,
+    ]);
+  }
+
+  if (hasPositiveRange(provider.price_per_request_range)) {
     rows.push([
       t('providers.pricePerRequest'),
-      `${formatPrice(provider.price_per_request)}/${t('providers.perRequest')}`,
+      `${formatPriceRange(provider.price_per_request_range)}/${t('providers.perRequest')}`,
     ]);
   }
 
@@ -111,6 +116,20 @@ function PriceLine({ label, value }: { label: string; value: string }) {
       <Typography variant="body2" sx={{ fontFamily: 'monospace', textAlign: 'right' }}>{value}</Typography>
     </Stack>
   );
+}
+
+function formatPriceRange(range: ModelCatalogProviderPriceRange) {
+  if (range.min === null && range.max === null) return '-';
+  if (range.min === range.max) return formatPrice(range.min);
+  return `${formatPrice(range.min)} - ${formatPrice(range.max)}`;
+}
+
+function hasAnyRangeValue(range: ModelCatalogProviderPriceRange) {
+  return range.min !== null || range.max !== null;
+}
+
+function hasPositiveRange(range: ModelCatalogProviderPriceRange) {
+  return (range.max ?? range.min ?? 0) > 0;
 }
 
 const providerCardSx = {
