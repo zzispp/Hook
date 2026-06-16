@@ -15,6 +15,8 @@ pub struct RoutingMetricRecord {
     pub key_name: Option<String>,
     pub endpoint_name: Option<String>,
     pub snapshot: RoutingMetricSnapshot,
+    pub route_config_fingerprint: Option<String>,
+    pub price_config_fingerprint: Option<String>,
     pub last_seen_at: time::OffsetDateTime,
 }
 
@@ -26,6 +28,24 @@ pub struct RoutingRouteStateRecord {
     pub ema_latency_ms: Option<f64>,
     pub ema_output_tps: Option<f64>,
     pub sample_count: u64,
+    pub route_config_fingerprint: Option<String>,
+    pub price_config_fingerprint: Option<String>,
+    pub last_updated_at: time::OffsetDateTime,
+}
+
+#[derive(Clone, Debug)]
+pub struct RoutingContextRouteStateRecord {
+    pub context_key: String,
+    pub route: RouteIdentity,
+    pub sample_count: u64,
+    pub success_count: u64,
+    pub failure_count: u64,
+    pub ema_success_rate: f64,
+    pub ema_ttfb_ms: Option<f64>,
+    pub ema_latency_ms: Option<f64>,
+    pub ema_output_tps: Option<f64>,
+    pub route_config_fingerprint: Option<String>,
+    pub price_config_fingerprint: Option<String>,
     pub last_updated_at: time::OffsetDateTime,
 }
 
@@ -47,12 +67,18 @@ pub struct RoutingMetricDelta {
     pub provider_name: Option<String>,
     pub key_name: Option<String>,
     pub endpoint_name: Option<String>,
+    pub route_config_fingerprint: Option<String>,
+    pub price_config_fingerprint: Option<String>,
     pub request_count: i64,
     pub success_count: i64,
     pub failure_count: i64,
     pub timeout_count: i64,
     pub rate_limited_count: i64,
     pub server_error_count: i64,
+    pub format_conversion_failure_count: i64,
+    pub usage_missing_count: i64,
+    pub stream_abnormal_end_count: i64,
+    pub schema_tool_call_failure_count: i64,
     pub latency_sum_ms: i64,
     pub latency_sample_count: i64,
     pub ttfb_sum_ms: i64,
@@ -62,6 +88,22 @@ pub struct RoutingMetricDelta {
     pub tps_sample_count: i64,
     pub upstream_total_cost: Decimal,
     pub total_tokens: i64,
+    pub observed_at: time::OffsetDateTime,
+}
+
+#[derive(Clone, Debug)]
+pub struct RoutingContextRouteStateDelta {
+    pub context_key: String,
+    pub route: RouteIdentity,
+    pub route_config_fingerprint: Option<String>,
+    pub price_config_fingerprint: Option<String>,
+    pub sample_count: i64,
+    pub success_count: i64,
+    pub failure_count: i64,
+    pub latency_ms: Option<i64>,
+    pub ttfb_ms: Option<i64>,
+    pub output_tokens: i64,
+    pub tps_latency_ms: i64,
     pub observed_at: time::OffsetDateTime,
 }
 
@@ -81,6 +123,18 @@ impl ProviderStore {
 
     pub async fn list_routing_route_states_for_routes(&self, routes: &[RouteIdentity]) -> StorageResult<Vec<RoutingRouteStateRecord>> {
         super::routing_route_state_repository::list_route_states_for_routes(self.connection(), routes).await
+    }
+
+    pub async fn list_routing_route_states(&self) -> StorageResult<Vec<RoutingRouteStateRecord>> {
+        super::routing_route_state_repository::list_route_states(self.connection()).await
+    }
+
+    pub async fn upsert_routing_context_route_state(&self, delta: RoutingContextRouteStateDelta) -> StorageResult<()> {
+        super::routing_context_route_state_repository::upsert_context_route_state(self.connection(), delta).await
+    }
+
+    pub async fn list_routing_context_route_states(&self) -> StorageResult<Vec<RoutingContextRouteStateRecord>> {
+        super::routing_context_route_state_repository::list_context_route_states(self.connection()).await
     }
 
     pub async fn upsert_routing_decision_sample(

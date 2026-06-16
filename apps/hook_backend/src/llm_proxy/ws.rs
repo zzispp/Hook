@@ -9,7 +9,7 @@ use axum::{
     http::HeaderMap,
     response::Response,
 };
-use types::model::PatchField;
+use types::{model::PatchField, provider::RoutingRequestFeatures};
 
 use self::{
     connect::{ConnectedUpstream, connect_first_upstream},
@@ -44,6 +44,7 @@ pub async fn realtime(
             is_stream: true,
             has_openai_responses_custom_tool_items: false,
             required_capability: None,
+            features: RoutingRequestFeatures::unknown(OPENAI_CHAT_FORMAT, true, None),
         },
     )
     .await?;

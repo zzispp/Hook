@@ -1,9 +1,11 @@
-use sea_orm::{ConnectionTrait, DbBackend, EntityTrait, Statement, Value};
+use sea_orm::{ColumnTrait, ConnectionTrait, DbBackend, EntityTrait, QueryFilter, Statement, Value};
 use types::provider::{RouteIdentity, RouteScoreExplanation, RoutingDecisionResponse};
 
 use crate::{StorageResult, json};
 
 use super::{record::routing_decision_samples, routing_repository::DecisionSamplePayload};
+
+const DECISION_RETENTION_SECONDS: i64 = 604_800;
 
 pub(super) async fn upsert_decision_sample<C>(
     connection: &C,
@@ -23,6 +25,18 @@ where
     let values = decision_values(request_id, profile_id, profile_version, selected_route, &payload)?;
     connection
         .execute_raw(Statement::from_sql_and_values(DbBackend::Postgres, upsert_sql().to_owned(), values))
+        .await?;
+    prune_decision_samples(connection, time::OffsetDateTime::now_utc()).await
+}
+
+async fn prune_decision_samples<C>(connection: &C, now: time::OffsetDateTime) -> StorageResult<()>
+where
+    C: ConnectionTrait,
+{
+    let cutoff = now - time::Duration::seconds(DECISION_RETENTION_SECONDS);
+    routing_decision_samples::Entity::delete_many()
+        .filter(routing_decision_samples::Column::CreatedAt.lt(cutoff))
+        .exec(connection)
         .await?;
     Ok(())
 }
@@ -77,4 +91,14 @@ fn upsert_sql() -> &'static str {
     "INSERT INTO routing_decision_samples (request_id, profile_id, profile_version, selected_route, candidate_scores, exclusion_reasons, created_at) \
      VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (request_id) DO UPDATE SET profile_id = EXCLUDED.profile_id, profile_version = EXCLUDED.profile_version, \
      selected_route = EXCLUDED.selected_route, candidate_scores = EXCLUDED.candidate_scores, exclusion_reasons = EXCLUDED.exclusion_reasons, created_at = EXCLUDED.created_at"
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DECISION_RETENTION_SECONDS;
+
+    #[test]
+    fn decision_sample_retention_is_seven_days() {
+        assert_eq!(DECISION_RETENTION_SECONDS, 7 * 24 * 60 * 60);
+    }
 }

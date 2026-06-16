@@ -110,6 +110,12 @@ fn candidate_trace(parts: &FixedParts, key: &CandidateKeyOption, endpoint: &Cand
         needs_conversion: endpoint.needs_conversion,
         is_stream: stream,
         is_cached: false,
+        routing_context_key: format!(
+            "group={TEST_GROUP_CODE}|model={}|format={}|stream={}|size=unknown|cap=none",
+            parts.global_model.id, parts.client_api_format, stream
+        ),
+        route_config_fingerprint: "model-test-route-fingerprint".into(),
+        price_config_fingerprint: "model-test-price-fingerprint".into(),
         candidate_index: 0,
     }
 }

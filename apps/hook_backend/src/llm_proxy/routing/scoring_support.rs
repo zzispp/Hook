@@ -136,7 +136,8 @@ fn normal_exploration_component(
     if !normal_exploration_eligible(window, candidate, recent_penalty) {
         return None;
     }
-    let score = exploration_score(profile, total_attempts, candidate.metric.sample_count);
+    let counts = super::scoring::exploration_counts(profile, total_attempts, candidate);
+    let score = exploration_score(profile, counts.total_sample_count, counts.route_sample_count);
     if score <= f64::EPSILON {
         return None;
     }

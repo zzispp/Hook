@@ -6,7 +6,7 @@ mod record;
 mod relay;
 mod status;
 mod terminal;
-mod token_estimator;
+pub(super) mod token_estimator;
 mod usage_parser;
 
 use std::{pin::Pin, time::Duration, time::Instant};

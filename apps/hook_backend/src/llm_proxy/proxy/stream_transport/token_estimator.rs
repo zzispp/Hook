@@ -26,7 +26,7 @@ enum WordType {
     Number,
 }
 
-pub(super) fn estimate_text_tokens(model: &str, text: &str) -> i64 {
+pub(in crate::llm_proxy::proxy) fn estimate_text_tokens(model: &str, text: &str) -> i64 {
     if text.is_empty() {
         return 0;
     }

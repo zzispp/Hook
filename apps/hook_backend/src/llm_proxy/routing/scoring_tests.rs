@@ -1,6 +1,10 @@
-use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, RoutingProfileId, RoutingProfileWeights};
+use types::provider::{
+    RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource, RoutingProfile, RoutingProfileId, RoutingProfileWeights,
+};
 
 use super::{RoutingEmaSnapshot, RoutingScoreCandidate, circuit::CircuitCandidateState, score_routes};
+
+mod exploration;
 
 #[test]
 fn warming_candidates_keep_cache_affinity_bonus() {
@@ -53,32 +57,6 @@ fn recent_regression_degrades_fallback_metrics() {
             .any(|component| component.code == "recent_regression" && component.contribution < 0.0)
     );
     assert!(!regressed.explanation.components.iter().any(|component| component.code == "exploration"));
-}
-
-#[test]
-fn normal_candidates_receive_capped_exploration_bonus() {
-    let profile = profile();
-    let mut explored = candidate("key-explored", false);
-    make_normal(&mut explored, 40, 40);
-
-    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![explored]);
-    let component = component(&scores[0], "exploration");
-
-    assert!(component.contribution > 0.0);
-    assert!(component.contribution <= 3.0);
-}
-
-#[test]
-fn degraded_normal_candidates_do_not_receive_exploration_bonus() {
-    let profile = profile();
-    let mut stale = candidate("key-stale", false);
-    make_normal(&mut stale, 40, 40);
-    stale.metric_freshness_seconds = 1_000;
-
-    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![stale]);
-
-    assert_eq!(scores[0].explanation.state.as_str(), "degraded");
-    assert!(!scores[0].explanation.components.iter().any(|component| component.code == "exploration"));
 }
 
 #[test]
@@ -259,12 +237,21 @@ fn candidate(key_id: &str, is_cached: bool) -> RoutingScoreCandidate {
         metric_window: RoutingMetricWindow::FiveMinutes,
         metric_freshness_seconds: 15,
         recent_metric: None,
+        metric_source: RoutingMetricSource::Exact,
+        prior_source: RoutingPriorSource::ExactRoute,
+        prior_sample_count: 8,
+        routing_context_key: Some("group=default|model=model-a|format=openai:chat|stream=false|size=unknown|cap=none".into()),
+        route_config_fingerprint: Some("route-fingerprint".into()),
+        price_config_fingerprint: Some("price-fingerprint".into()),
+        context_route_sample_count: 8,
+        context_total_sample_count: 8,
         ema: None,
         circuit_state: CircuitCandidateState::Closed,
         admin_priority: 10,
         estimated_cost: None,
         needs_conversion: false,
         is_cached,
+        request_features: types::provider::RoutingRequestFeatures::unknown("openai:chat", false, None),
     }
 }
 
@@ -272,6 +259,8 @@ fn make_normal(candidate: &mut RoutingScoreCandidate, success_count: u64, reques
     candidate.metric.sample_count = request_count;
     candidate.metric.request_count = request_count;
     candidate.metric.success_count = success_count;
+    candidate.context_route_sample_count = request_count;
+    candidate.context_total_sample_count = request_count;
 }
 
 fn component<'a>(score: &'a super::ScoredRoute, code: &str) -> &'a types::provider::ScoreComponent {
@@ -303,6 +292,8 @@ fn profile() -> RoutingProfile {
         conversion_penalty: 6.0,
         stale_metric_penalty: 8.0,
         affinity_bonus: 6.0,
+        prior_sample_cap: types::provider::default_prior_sample_cap(),
+        contextual_exploration_enabled: types::provider::default_contextual_exploration_enabled(),
         auto_tune_enabled: false,
         learning: None,
     }

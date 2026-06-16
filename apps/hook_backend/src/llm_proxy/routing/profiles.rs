@@ -88,6 +88,12 @@ fn apply_patch(profile: &mut RoutingProfile, patch: RoutingProfileUpsert) {
     if let Some(value) = patch.affinity_bonus {
         profile.affinity_bonus = value;
     }
+    if let Some(value) = patch.prior_sample_cap {
+        profile.prior_sample_cap = value;
+    }
+    if let Some(value) = patch.contextual_exploration_enabled {
+        profile.contextual_exploration_enabled = value;
+    }
     if let Some(value) = patch.auto_tune_enabled {
         profile.auto_tune_enabled = value;
     }
@@ -120,6 +126,8 @@ fn built_in_profile(id: RoutingProfileId) -> RoutingProfile {
         conversion_penalty: 6.0,
         stale_metric_penalty: 8.0,
         affinity_bonus: 6.0,
+        prior_sample_cap: types::provider::default_prior_sample_cap(),
+        contextual_exploration_enabled: types::provider::default_contextual_exploration_enabled(),
         auto_tune_enabled: auto_tune_enabled(id),
         learning: None,
     };

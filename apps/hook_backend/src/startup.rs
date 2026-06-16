@@ -167,6 +167,8 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     });
     proxy_cache.refresh_scheduling_snapshot().await?;
     proxy_cache.restore_provider_cooldowns().await?;
+    let routing_metrics = crate::llm_proxy::routing::RoutingMetricsCache::load(database.clone()).await?;
+    routing_metrics.spawn_refresh_loop();
     let models = Arc::new(ModelService::new(
         CachedModelRepository::new(StorageModelRepository::new(database.clone()), proxy_cache.clone()),
         ModelsDevClient::new(),
@@ -209,6 +211,7 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
         provider_key_cipher,
         redis_connection.clone(),
         proxy_cache.clone(),
+        routing_metrics,
         settings.redis.key_prefix.clone(),
         system_wallet_provider.system_wallet().map(|record| record.wallet),
     );

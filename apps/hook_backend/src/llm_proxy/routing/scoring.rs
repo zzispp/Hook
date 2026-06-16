@@ -1,7 +1,10 @@
 pub(super) mod math;
 
 use rust_decimal::Decimal;
-use types::provider::{RouteIdentity, RouteScoreExplanation, RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, RoutingRouteState, ScoreComponent};
+use types::provider::{
+    RouteIdentity, RouteScoreExplanation, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource, RoutingProfile,
+    RoutingRequestFeatures, RoutingRouteState, ScoreComponent,
+};
 
 use super::circuit::CircuitCandidateState;
 
@@ -42,12 +45,21 @@ pub(crate) struct RoutingScoreCandidate {
     pub(crate) metric_window: RoutingMetricWindow,
     pub(crate) metric_freshness_seconds: i64,
     pub(crate) recent_metric: Option<RoutingMetricSnapshot>,
+    pub(crate) metric_source: RoutingMetricSource,
+    pub(crate) prior_source: RoutingPriorSource,
+    pub(crate) prior_sample_count: u64,
+    pub(crate) routing_context_key: Option<String>,
+    pub(crate) route_config_fingerprint: Option<String>,
+    pub(crate) price_config_fingerprint: Option<String>,
+    pub(crate) context_route_sample_count: u64,
+    pub(crate) context_total_sample_count: u64,
     pub(crate) ema: Option<RoutingEmaSnapshot>,
     pub(crate) circuit_state: CircuitCandidateState,
     pub(crate) admin_priority: i32,
     pub(crate) estimated_cost: Option<Decimal>,
     pub(crate) needs_conversion: bool,
     pub(crate) is_cached: bool,
+    pub(crate) request_features: RoutingRequestFeatures,
 }
 
 #[derive(Clone, Debug)]
@@ -117,7 +129,8 @@ fn warming_score(index: usize, context: ScoreContext<'_>, candidate: RoutingScor
     let priority = priority_score(candidate.admin_priority);
     let cost = context.cost_range.score(candidate.estimated_cost);
     let health = provider_health_prior(&candidate.metric);
-    let exploration = exploration_score(context.profile, context.total_attempts, candidate.metric.sample_count);
+    let exploration_counts = exploration_counts(context.profile, context.total_attempts, &candidate);
+    let exploration = exploration_score(context.profile, exploration_counts.total_sample_count, exploration_counts.route_sample_count);
     let (priority_weight, cost_weight, health_weight, exploration_weight) = warming_weights(context.profile);
     let mut components = vec![
         component("priority", "admin priority", Some(candidate.admin_priority as f64), priority, priority_weight),
@@ -245,5 +258,30 @@ fn explanation(
         raw_metrics: candidate.metric,
         exclusion_reason,
         metric_freshness_seconds: candidate.metric_freshness_seconds,
+        metric_source: candidate.metric_source,
+        prior_source: candidate.prior_source,
+        prior_sample_count: candidate.prior_sample_count,
+        routing_context_key: candidate.routing_context_key,
+        route_config_fingerprint: candidate.route_config_fingerprint,
+        price_config_fingerprint: candidate.price_config_fingerprint,
+        request_features: candidate.request_features,
     }
+}
+
+pub(in crate::llm_proxy::routing) fn exploration_counts(profile: &RoutingProfile, total_attempts: u64, candidate: &RoutingScoreCandidate) -> ExplorationCounts {
+    if profile.contextual_exploration_enabled {
+        return ExplorationCounts {
+            total_sample_count: candidate.context_total_sample_count,
+            route_sample_count: candidate.context_route_sample_count,
+        };
+    }
+    ExplorationCounts {
+        total_sample_count: total_attempts,
+        route_sample_count: candidate.metric.sample_count,
+    }
+}
+
+pub(in crate::llm_proxy::routing) struct ExplorationCounts {
+    pub(in crate::llm_proxy::routing) total_sample_count: u64,
+    pub(in crate::llm_proxy::routing) route_sample_count: u64,
 }

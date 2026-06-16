@@ -41,7 +41,7 @@ pub(super) async fn token_routing_context(
     let global_model = super::resolve_global_model(&snapshot, request.model_name)?;
     ensure_token_allows_model(token, &global_model.id)?;
     let scope = token_scope(&snapshot, token, &global_model.id)?;
-    let affinity = cache_affinity(state, &snapshot, token, &global_model, request).await?;
+    let affinity = cache_affinity(state, &snapshot, token, &global_model, &request).await?;
     Ok(TokenRoutingContext {
         request_id,
         cache_affinity_ttl_minutes: snapshot.cache_affinity_ttl_minutes,
@@ -70,7 +70,7 @@ impl TokenRoutingContext {
             group: &self.group,
             user_access: self.user_access.as_ref(),
             model_id: &self.global_model.id,
-            request,
+            request: request.clone(),
             affinity: self.affinity.as_ref(),
             scheduling_mode: self.scheduling_mode,
             request_id: &self.request_id,
@@ -116,7 +116,7 @@ async fn cache_affinity(
     snapshot: &SchedulingSnapshot,
     token: &ApiToken,
     model: &GlobalModelRef,
-    request: CandidateRequest<'_>,
+    request: &CandidateRequest<'_>,
 ) -> Result<Option<AffinitySelection>, LlmProxyError> {
     if !matches!(snapshot.scheduling_mode, ProviderSchedulingMode::CacheAffinity) {
         return Ok(None);
