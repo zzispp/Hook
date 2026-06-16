@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use serde_json::{Map, Value, json};
 
 use crate::{
@@ -162,6 +164,8 @@ fn canonical_instructions_to_responses(canonical: &CanonicalRequest) -> Option<V
 
 fn canonical_messages_to_responses_input(canonical: &CanonicalRequest) -> Option<Vec<Value>> {
     let mut input = Vec::new();
+    let mut next_generated_tool_call_index = 0usize;
+    let mut pending_tool_call_ids = VecDeque::new();
     for message in &canonical.messages {
         let role = match message.role {
             CanonicalRole::Assistant => "assistant",
@@ -175,10 +179,12 @@ fn canonical_messages_to_responses_input(canonical: &CanonicalRequest) -> Option
                     id, name, input: arguments, ..
                 } => {
                     flush_responses_message(&mut input, role, &mut content);
+                    let call_id = responses_tool_call_id(id, &mut next_generated_tool_call_index);
+                    pending_tool_call_ids.push_back(call_id.clone());
                     input.push(json!({
                         "type": "function_call",
-                        "call_id": id,
-                        "name": name,
+                        "call_id": call_id,
+                        "name": responses_tool_name(name),
                         "arguments": canonicalize_tool_arguments(arguments),
                     }));
                 }
@@ -189,9 +195,10 @@ fn canonical_messages_to_responses_input(canonical: &CanonicalRequest) -> Option
                     ..
                 } => {
                     flush_responses_message(&mut input, role, &mut content);
+                    let call_id = responses_tool_result_call_id(tool_use_id, &mut pending_tool_call_ids)?;
                     input.push(json!({
                         "type": "function_call_output",
-                        "call_id": tool_use_id,
+                        "call_id": call_id,
                         "output": responses_tool_result_output(output.as_ref(), content_text.as_deref()),
                     }));
                 }
@@ -206,6 +213,32 @@ fn canonical_messages_to_responses_input(canonical: &CanonicalRequest) -> Option
         flush_responses_message(&mut input, role, &mut content);
     }
     Some(input)
+}
+
+fn responses_tool_call_id(id: &str, next_generated_tool_call_index: &mut usize) -> String {
+    let trimmed = id.trim();
+    if !trimmed.is_empty() {
+        return trimmed.to_string();
+    }
+    let generated = format!("call_auto_{next_generated_tool_call_index}");
+    *next_generated_tool_call_index += 1;
+    generated
+}
+
+fn responses_tool_result_call_id(id: &str, pending_tool_call_ids: &mut VecDeque<String>) -> Option<String> {
+    let trimmed = id.trim();
+    if !trimmed.is_empty() {
+        if let Some(position) = pending_tool_call_ids.iter().position(|pending_id| pending_id == trimmed) {
+            pending_tool_call_ids.remove(position);
+        }
+        return Some(trimmed.to_string());
+    }
+    pending_tool_call_ids.pop_front()
+}
+
+fn responses_tool_name(name: &str) -> String {
+    let trimmed = name.trim();
+    if trimmed.is_empty() { "unknown".to_string() } else { trimmed.to_string() }
 }
 
 fn flush_responses_message(input: &mut Vec<Value>, role: &str, content: &mut Vec<Value>) {
@@ -406,5 +439,56 @@ fn responses_tool_result_output(output: Option<&Value>, content_text: Option<&st
 fn insert_number(output: &mut Map<String, Value>, key: &str, value: Option<f64>) {
     if let Some(value) = value.and_then(serde_json::Number::from_f64) {
         output.insert(key.to_string(), Value::Number(value));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use crate::protocol::canonical::{CanonicalContentBlock, CanonicalMessage, CanonicalRequest, CanonicalRole};
+
+    use super::to_raw;
+
+    #[test]
+    fn responses_request_replaces_empty_tool_call_identifiers() {
+        let request = CanonicalRequest {
+            model: "gpt-5.5".to_string(),
+            messages: vec![
+                CanonicalMessage {
+                    role: CanonicalRole::Assistant,
+                    content: vec![CanonicalContentBlock::ToolUse {
+                        id: "   ".to_string(),
+                        name: "".to_string(),
+                        input: json!({"q": "rust"}),
+                        extensions: Default::default(),
+                    }],
+                    extensions: Default::default(),
+                },
+                CanonicalMessage {
+                    role: CanonicalRole::Tool,
+                    content: vec![CanonicalContentBlock::ToolResult {
+                        tool_use_id: "".to_string(),
+                        name: None,
+                        output: Some(json!({"ok": true})),
+                        content_text: None,
+                        is_error: false,
+                        extensions: Default::default(),
+                    }],
+                    extensions: Default::default(),
+                },
+            ],
+            ..Default::default()
+        };
+
+        let body = to_raw(&request, "gpt-5.5", false, false).expect("responses body");
+
+        assert_eq!(body["input"].as_array().expect("input").len(), 2);
+        assert_eq!(body["input"][0]["type"], "function_call");
+        assert_eq!(body["input"][0]["call_id"], "call_auto_0");
+        assert_eq!(body["input"][0]["name"], "unknown");
+        assert_eq!(body["input"][0]["arguments"], "{\"q\":\"rust\"}");
+        assert_eq!(body["input"][1]["type"], "function_call_output");
+        assert_eq!(body["input"][1]["call_id"], "call_auto_0");
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -1259,6 +1259,7 @@ pub(crate) fn openai_responses_input_to_canonical_messages(input: Option<&Value>
         Value::Array(items) => {
             let mut messages = Vec::new();
             let mut next_generated_tool_call_index = 0usize;
+            let mut pending_tool_call_ids = VecDeque::new();
             for item in items {
                 if let Some(text) = item.as_str() {
                     if !text.trim().is_empty() {
@@ -1311,11 +1312,8 @@ pub(crate) fn openai_responses_input_to_canonical_messages(input: Option<&Value>
                             .map(str::trim)
                             .filter(|value| !value.is_empty())
                             .map(ToOwned::to_owned)
-                            .unwrap_or_else(|| {
-                                let generated = format!("call_auto_{next_generated_tool_call_index}");
-                                next_generated_tool_call_index += 1;
-                                generated
-                            });
+                            .unwrap_or_else(|| openai_responses_generated_tool_call_id(&mut next_generated_tool_call_index));
+                        pending_tool_call_ids.push_back(id.clone());
                         messages.push(CanonicalMessage {
                             role: CanonicalRole::Assistant,
                             content: vec![CanonicalContentBlock::ToolUse {
@@ -1357,19 +1355,7 @@ pub(crate) fn openai_responses_input_to_canonical_messages(input: Option<&Value>
                         });
                     }
                     "function_call_output" => {
-                        let id = item_object
-                            .get("call_id")
-                            .or_else(|| item_object.get("tool_call_id"))
-                            .or_else(|| item_object.get("id"))
-                            .and_then(Value::as_str)
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                            .map(ToOwned::to_owned)
-                            .unwrap_or_else(|| {
-                                let generated = format!("call_auto_{next_generated_tool_call_index}");
-                                next_generated_tool_call_index += 1;
-                                generated
-                            });
+                        let id = openai_responses_tool_result_id(item_object, &mut pending_tool_call_ids, &mut next_generated_tool_call_index);
                         let raw_output = item_object.get("output");
                         let output = Some(parse_jsonish_value(raw_output));
                         messages.push(CanonicalMessage {
@@ -1419,6 +1405,38 @@ pub(crate) fn openai_responses_input_to_canonical_messages(input: Option<&Value>
         }
         _ => None,
     }
+}
+
+fn openai_responses_generated_tool_call_id(next_generated_tool_call_index: &mut usize) -> String {
+    let generated = format!("call_auto_{next_generated_tool_call_index}");
+    *next_generated_tool_call_index += 1;
+    generated
+}
+
+fn openai_responses_tool_result_id(
+    item_object: &Map<String, Value>,
+    pending_tool_call_ids: &mut VecDeque<String>,
+    next_generated_tool_call_index: &mut usize,
+) -> String {
+    let id = item_object
+        .get("call_id")
+        .or_else(|| item_object.get("tool_call_id"))
+        .or_else(|| item_object.get("id"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned);
+
+    if let Some(id) = id {
+        if let Some(position) = pending_tool_call_ids.iter().position(|pending_id| pending_id == &id) {
+            pending_tool_call_ids.remove(position);
+        }
+        return id;
+    }
+
+    pending_tool_call_ids
+        .pop_front()
+        .unwrap_or_else(|| openai_responses_generated_tool_call_id(next_generated_tool_call_index))
 }
 
 fn openai_responses_reasoning_item_to_block(item_object: &Map<String, Value>) -> Option<CanonicalContentBlock> {
@@ -4530,6 +4548,43 @@ mod tests {
         assert_eq!(rebuilt["text"]["format"]["json_schema"]["name"], "answer");
         assert_eq!(rebuilt["text"]["verbosity"], "low");
         assert_eq!(rebuilt["tool_choice"]["name"], "lookup");
+    }
+
+    #[test]
+    fn openai_responses_input_assigns_missing_tool_output_id_from_pending_tool_call() {
+        let request = json!({
+            "model": "gpt-5",
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{ "type": "input_text", "text": "lookup rust" }]
+                },
+                {
+                    "type": "function_call",
+                    "name": "lookup",
+                    "arguments": "{\"q\":\"rust\"}"
+                },
+                {
+                    "type": "function_call_output",
+                    "output": "{\"ok\":true}"
+                }
+            ]
+        });
+
+        let canonical = from_openai_responses_to_canonical_request(&request).expect("canonical request");
+        assert!(matches!(
+            canonical.messages[1].content[0],
+            CanonicalContentBlock::ToolUse { ref id, .. } if id == "call_auto_0"
+        ));
+        assert!(matches!(
+            canonical.messages[2].content[0],
+            CanonicalContentBlock::ToolResult { ref tool_use_id, .. } if tool_use_id == "call_auto_0"
+        ));
+
+        let chat = canonical_to_openai_chat_request(&canonical);
+        assert_eq!(chat["messages"][1]["tool_calls"][0]["id"], "call_auto_0");
+        assert_eq!(chat["messages"][2]["tool_call_id"], "call_auto_0");
     }
 
     #[test]
