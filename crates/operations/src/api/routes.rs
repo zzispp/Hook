@@ -7,8 +7,8 @@ use crate::api::{
     OperationsApiState,
     handlers::{
         admin_create_announcement, admin_delete_announcement, admin_get_announcement, admin_list_announcements, admin_list_tickets, admin_reply_ticket,
-        admin_ticket_detail, admin_update_announcement, create_ticket, delete_notification, get_announcement, list_announcements, list_notifications,
-        list_tickets, mark_all_notifications_read, mark_notification_read, reply_ticket, ticket_detail, update_ticket,
+        admin_ticket_detail, admin_update_announcement, create_ticket, delete_notification, delete_read_notifications, get_announcement, list_announcements,
+        list_notifications, list_tickets, mark_all_notifications_read, mark_notification_read, reply_ticket, ticket_detail, update_ticket,
     },
 };
 
@@ -29,6 +29,7 @@ pub fn create_router(state: OperationsApiState) -> Router {
         .route("/admin/tickets/{id}/messages", patch(admin_reply_ticket))
         .route("/notifications", get(list_notifications))
         .route("/notifications/read-all", patch(mark_all_notifications_read))
+        .route("/notifications/read", axum::routing::delete(delete_read_notifications))
         .route("/notifications/{source_type}/{source_id}/read", patch(mark_notification_read))
         .route("/notifications/{source_type}/{source_id}", axum::routing::delete(delete_notification))
         .with_state(state)

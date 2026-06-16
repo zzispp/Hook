@@ -199,6 +199,10 @@ where
         validate_source_type(source_type)?;
         self.repository.delete_notification(user_id, source_type, source_id).await
     }
+
+    async fn delete_read_notifications(&self, user_id: &str, is_admin: bool) -> OperationsResult<()> {
+        self.repository.delete_read_notifications(user_id, is_admin).await
+    }
 }
 
 fn admin_email(admin_email: &str, ticket: &SupportTicket, body_markdown: &str) -> TicketEmail {

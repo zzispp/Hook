@@ -115,4 +115,10 @@ pub const OPERATIONS_APIS: &[ApiDefinition] = &[
         path_pattern: "/api/notifications/{source_type}/{source_id}",
         name: "删除通知",
     },
+    ApiDefinition {
+        code: "notifications_delete_read",
+        method: "DELETE",
+        path_pattern: "/api/notifications/read",
+        name: "删除已读通知",
+    },
 ];

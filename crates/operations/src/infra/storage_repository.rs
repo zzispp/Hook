@@ -120,6 +120,10 @@ impl OperationsRepository for StorageOperationsRepository {
     async fn delete_notification(&self, user_id: &str, source_type: &str, source_id: &str) -> OperationsResult<()> {
         self.store.delete_notification(user_id, source_type, source_id).await.map_err(storage_error)
     }
+
+    async fn delete_read_notifications(&self, user_id: &str, is_admin: bool) -> OperationsResult<()> {
+        self.store.delete_read_notifications(user_id, is_admin).await.map_err(storage_error)
+    }
 }
 
 fn announcement_input(operator_id: &str, input: AnnouncementInput) -> AnnouncementRecordInput {

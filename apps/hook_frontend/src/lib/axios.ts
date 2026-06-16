@@ -342,6 +342,7 @@ export const endpoints = {
   notifications: {
     list: '/api/notifications',
     readAll: '/api/notifications/read-all',
+    deleteRead: '/api/notifications/read',
     read: (sourceType: string, sourceId: string) =>
       `/api/notifications/${sourceType}/${sourceId}/read`,
     delete: (sourceType: string, sourceId: string) =>

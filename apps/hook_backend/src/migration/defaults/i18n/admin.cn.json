@@ -2017,6 +2017,7 @@
     "notifications": {
       "title": "通知",
       "markAllRead": "全部标记为已读",
+      "deleteRead": "删除已读通知",
       "empty": "暂无通知",
       "tabs": {
         "all": "全部",

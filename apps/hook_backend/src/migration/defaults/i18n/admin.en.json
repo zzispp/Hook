@@ -2017,6 +2017,7 @@
     "notifications": {
       "title": "Notifications",
       "markAllRead": "Mark all as read",
+      "deleteRead": "Delete read notifications",
       "empty": "No notifications",
       "tabs": {
         "all": "All",

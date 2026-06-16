@@ -58,6 +58,7 @@ pub trait OperationsRepository: Send + Sync + 'static {
     async fn mark_notification_read(&self, user_id: &str, source_type: &str, source_id: &str) -> OperationsResult<()>;
     async fn mark_all_notifications_read(&self, user_id: &str, is_admin: bool) -> OperationsResult<()>;
     async fn delete_notification(&self, user_id: &str, source_type: &str, source_id: &str) -> OperationsResult<()>;
+    async fn delete_read_notifications(&self, user_id: &str, is_admin: bool) -> OperationsResult<()>;
 }
 
 #[async_trait]
@@ -83,4 +84,5 @@ pub trait OperationsUseCase: Send + Sync + 'static {
     async fn mark_notification_read(&self, user_id: &str, source_type: &str, source_id: &str) -> OperationsResult<()>;
     async fn mark_all_notifications_read(&self, user_id: &str, is_admin: bool) -> OperationsResult<()>;
     async fn delete_notification(&self, user_id: &str, source_type: &str, source_id: &str) -> OperationsResult<()>;
+    async fn delete_read_notifications(&self, user_id: &str, is_admin: bool) -> OperationsResult<()>;
 }
