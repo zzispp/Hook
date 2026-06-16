@@ -23,8 +23,6 @@ use self::{
 use super::{CandidateRequest, CandidateSelection, LlmProxyError, LlmProxyState};
 use crate::llm_proxy::cache::snapshot::{CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, SchedulingSnapshot};
 
-pub(super) use crate::llm_proxy::model_access::{token_user_for_snapshot, user_access_for_token};
-
 pub(super) const DEFAULT_MAX_RETRIES: i32 = 2;
 
 pub(super) type CandidatePartKey = (String, String, String);

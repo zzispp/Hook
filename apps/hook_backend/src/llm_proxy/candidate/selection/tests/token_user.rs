@@ -4,7 +4,7 @@ use super::helpers::{api_token, provider_with_endpoints_and_keys, snapshot_with_
 use crate::llm_proxy::{
     LlmProxyError,
     cache::snapshot::SchedulingSnapshot,
-    candidate::selection::{token_user_for_snapshot, user_access_for_token},
+    model_access::{token_user_for_snapshot, user_access_for_token},
 };
 
 #[test]
