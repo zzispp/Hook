@@ -10,6 +10,7 @@ import Button from '@mui/material/Button';
 import Switch from '@mui/material/Switch';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
 import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { Iconify } from 'src/components/iconify';
@@ -23,43 +24,39 @@ export function RoutingFilters(props: FilterProps) {
   return (
     <Grid container spacing={2}>
       <Grid size={{ xs: 12, sm: 6 }}>
-        <TextField
+        <Autocomplete<SystemUser, false, false, false>
           fullWidth
-          select
           size="small"
-          label={props.t('routing.filters.user')}
-          value={props.userId}
-          onChange={(event) => props.onUserChange(event.target.value)}
-        >
-          <MenuItem disabled value="">
-            {props.t(props.users.length === 0 ? 'common.noData' : 'routing.filters.selectUserFirst')}
-          </MenuItem>
-          {props.users.map((user) => (
-            <MenuItem key={user.id} value={user.id}>
-              {user.username} · {user.email}
-            </MenuItem>
-          ))}
-        </TextField>
+          loading={props.usersLoading}
+          options={props.users}
+          value={props.selectedUser}
+          inputValue={props.userSearch}
+          filterOptions={(items) => items}
+          getOptionLabel={userLabel}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          noOptionsText={props.t('common.noResults')}
+          onInputChange={(_event, value) => props.onUserSearchChange(value)}
+          onChange={(_event, user) => props.onUserChange(user)}
+          renderInput={(params) => <TextField {...params} label={props.t('routing.filters.user')} />}
+        />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
-        <TextField
+        <Autocomplete<ApiToken, false, false, false>
           fullWidth
-          select
           size="small"
-          disabled={!props.userId}
-          label={props.t('routing.filters.apiToken')}
-          value={props.apiTokenId}
-          onChange={(event) => props.onApiTokenChange(event.target.value)}
-        >
-          <MenuItem disabled value="">
-            {props.t(props.userId && props.apiTokens.length === 0 ? 'common.noData' : 'routing.filters.selectApiTokenFirst')}
-          </MenuItem>
-          {props.apiTokens.map((token) => (
-            <MenuItem key={token.id} value={token.id}>
-              {token.name} · {token.token_prefix} · {token.group_code} · {token.token_type}
-            </MenuItem>
-          ))}
-        </TextField>
+          disabled={!props.selectedUser}
+          loading={props.apiTokensLoading}
+          options={props.apiTokens}
+          value={props.selectedToken}
+          inputValue={props.apiTokenSearch}
+          filterOptions={(items) => items}
+          getOptionLabel={apiTokenLabel}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          noOptionsText={props.t(props.selectedUser ? 'common.noResults' : 'routing.filters.selectUserFirst')}
+          onInputChange={(_event, value) => props.onApiTokenSearchChange(value)}
+          onChange={(_event, token) => props.onApiTokenChange(token)}
+          renderInput={(params) => <TextField {...params} label={props.t('routing.filters.apiToken')} />}
+        />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
@@ -71,24 +68,22 @@ export function RoutingFilters(props: FilterProps) {
         />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
-        <TextField
+        <Autocomplete<GlobalModelResponse, false, false, false>
           fullWidth
-          select
           size="small"
-          disabled={!props.apiTokenId || props.models.length === 0}
-          label={props.t('routing.filters.model')}
-          value={props.modelName}
-          onChange={(event) => props.onModelChange(event.target.value)}
-        >
-          <MenuItem disabled value="">
-            {props.t(props.apiTokenId && props.models.length === 0 ? 'routing.filters.noAccessibleModels' : 'routing.filters.selectApiTokenFirst')}
-          </MenuItem>
-          {props.models.map((model) => (
-            <MenuItem key={model.id} value={model.name}>
-              {model.name}
-            </MenuItem>
-          ))}
-        </TextField>
+          disabled={!props.selectedToken || !props.groupCode}
+          loading={props.modelsLoading}
+          options={props.models}
+          value={props.selectedModel}
+          inputValue={props.modelSearch}
+          filterOptions={(items) => items}
+          getOptionLabel={modelLabel}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          noOptionsText={modelNoOptionsText(props)}
+          onInputChange={(_event, value) => props.onModelSearchChange(value)}
+          onChange={(_event, model) => props.onModelChange(model)}
+          renderInput={(params) => <TextField {...params} label={props.t('routing.filters.model')} />}
+        />
       </Grid>
       <ApiFormatFilter {...props} />
       <WindowFilter {...props} />
@@ -138,6 +133,24 @@ export function RoutingFilters(props: FilterProps) {
       </Grid>
     </Grid>
   );
+}
+
+function userLabel(user: SystemUser) {
+  return `${user.username} · ${user.email}`;
+}
+
+function apiTokenLabel(token: ApiToken) {
+  return `${token.name} · ${token.token_prefix} · ${token.group_code} · ${token.token_type}`;
+}
+
+function modelLabel(model: GlobalModelResponse) {
+  return model.display_name && model.display_name !== model.name ? `${model.display_name} · ${model.name}` : model.name;
+}
+
+function modelNoOptionsText(props: FilterProps) {
+  if (!props.selectedToken) return props.t('routing.filters.selectApiTokenFirst');
+  if (props.modelSearch.trim()) return props.t('common.noResults');
+  return props.t('routing.filters.noAccessibleModels');
 }
 
 export function RoutingHeaderActions(props: {
@@ -229,19 +242,28 @@ type FilterProps = {
   users: SystemUser[];
   apiTokens: ApiToken[];
   models: GlobalModelResponse[];
-  userId: string;
-  apiTokenId: string;
+  selectedUser: SystemUser | null;
+  selectedToken: ApiToken | null;
+  selectedModel: GlobalModelResponse | null;
+  userSearch: string;
+  apiTokenSearch: string;
+  modelSearch: string;
+  usersLoading: boolean;
+  apiTokensLoading: boolean;
+  modelsLoading: boolean;
   groupCode: string;
-  modelName: string;
   apiFormat: string;
   isStream: boolean;
   metricWindow: RoutingMetricWindow;
   includeExcluded: boolean;
   requestInput: string;
   canSimulate: boolean;
-  onUserChange: (value: string) => void;
-  onApiTokenChange: (value: string) => void;
-  onModelChange: (value: string) => void;
+  onUserSearchChange: (value: string) => void;
+  onApiTokenSearchChange: (value: string) => void;
+  onModelSearchChange: (value: string) => void;
+  onUserChange: (value: SystemUser | null) => void;
+  onApiTokenChange: (value: ApiToken | null) => void;
+  onModelChange: (value: GlobalModelResponse | null) => void;
   onApiFormatChange: (value: string) => void;
   onStreamChange: (value: boolean) => void;
   onWindowChange: (value: RoutingMetricWindow) => void;
@@ -250,3 +272,5 @@ type FilterProps = {
   onSimulate: VoidFunction;
   onDecisionLookup: VoidFunction;
 };
+
+export type RoutingFilterProps = FilterProps;

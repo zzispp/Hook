@@ -1,9 +1,8 @@
 import type { AdminT } from './shared';
-import type { SystemUser } from 'src/types/rbac';
-import type { ApiToken } from 'src/types/api-token';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { RoutingProfile, RoutingMetricWindow, RouteScoreExplanation } from 'src/types/routing';
+import type { RoutingFilterProps } from './routing-observability-controls';
+import type { RoutingProfile, RouteScoreExplanation } from 'src/types/routing';
 
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
@@ -20,35 +19,12 @@ import { RoutingProfileSettings } from './routing-profile-settings';
 
 type ConfigurationPanelProps = {
   t: AdminT;
-  users: SystemUser[];
-  apiTokens: ApiToken[];
-  models: GlobalModelResponse[];
   selectedGroup: BillingGroup | null;
   selectedModel: GlobalModelResponse | null;
   profiles: RoutingProfile[];
   settingsLoading: boolean;
-  userId: string;
-  apiTokenId: string;
-  groupCode: string;
-  modelName: string;
-  apiFormat: string;
-  isStream: boolean;
-  metricWindow: RoutingMetricWindow;
-  includeExcluded: boolean;
-  requestInput: string;
-  canSimulate: boolean;
-  onUserChange: (value: string) => void;
-  onApiTokenChange: (value: string) => void;
-  onModelChange: (value: string) => void;
-  onApiFormatChange: (value: string) => void;
-  onStreamChange: (value: boolean) => void;
-  onWindowChange: (value: RoutingMetricWindow) => void;
-  onIncludeExcludedChange: (value: boolean) => void;
-  onRequestInputChange: (value: string) => void;
-  onSimulate: VoidFunction;
-  onDecisionLookup: VoidFunction;
   onSaved: VoidFunction;
-};
+} & RoutingFilterProps;
 
 type RankingPanelProps = {
   t: AdminT;
