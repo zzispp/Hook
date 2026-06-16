@@ -39,13 +39,14 @@ const swrOptions = {
 };
 
 export function useGlobalModels(page: number, pageSize: number, filters: GlobalModelFilters = {}) {
+  const disabled = page < 0 || pageSize <= 0;
   const key = [
     endpoints.adminModels.global,
     { params: { skip: page * pageSize, limit: pageSize, ...filters } },
   ] as const;
 
   const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<ApiEnvelope<GlobalModelListResponse>>(
-    key,
+    disabled ? null : key,
     fetcher,
     swrOptions
   );
@@ -56,12 +57,12 @@ export function useGlobalModels(page: number, pageSize: number, filters: GlobalM
       data: pageData,
       items: pageData?.models ?? [],
       total: pageData?.total ?? 0,
-      isLoading,
+      isLoading: disabled ? false : isLoading,
       error,
-      isValidating,
+      isValidating: disabled ? false : isValidating,
       refresh: revalidate,
     };
-  }, [data, error, isLoading, isValidating, revalidate]);
+  }, [data, disabled, error, isLoading, isValidating, revalidate]);
 }
 
 export async function createGlobalModel(payload: GlobalModelCreate) {
