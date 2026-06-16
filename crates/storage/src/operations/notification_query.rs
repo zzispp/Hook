@@ -199,7 +199,7 @@ impl OperationsStore {
                 description: None,
                 category: format!("{CATEGORY_ANNOUNCEMENT}.{}", record.announcement_type),
                 event_at: record.updated_at,
-                link_path: format!("/dashboard/announcements/{}", record.id),
+                link_path: announcement_link_path(&record.id),
             })
             .collect())
     }
@@ -259,4 +259,21 @@ fn ticket_source(record: super::TicketRecord, admin: bool) -> Option<Notificatio
         event_at,
         link_path,
     })
+}
+
+fn announcement_link_path(id: &str) -> String {
+    format!("/dashboard/announcements/detail?id={id}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn announcement_link_path_targets_existing_detail_route() {
+        assert_eq!(
+            announcement_link_path("019ece5b-efcd-7a32-b447-734bda1c2b71"),
+            "/dashboard/announcements/detail?id=019ece5b-efcd-7a32-b447-734bda1c2b71"
+        );
+    }
 }
