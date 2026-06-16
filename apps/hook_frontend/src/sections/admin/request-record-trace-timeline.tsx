@@ -298,9 +298,10 @@ function TraceInfo({ label, value }: { label: string; value: string }) {
 }
 
 function selectedCandidate(decision: RoutingDecisionResponse) {
-  if (!decision.selected) return decision.candidates[0] ?? null;
+  const selected = decision.selected;
+  if (!selected) return decision.candidates[0] ?? null;
   return (
-    decision.candidates.find((candidate) => routeKey(candidate.route) === routeKey(decision.selected)) ??
+    decision.candidates.find((candidate) => routeKey(candidate.route) === routeKey(selected)) ??
     decision.candidates[0] ??
     null
   );

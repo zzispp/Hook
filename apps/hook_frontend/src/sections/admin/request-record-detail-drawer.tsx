@@ -50,8 +50,9 @@ export function RequestRecordDetailDrawer({
   locale: string;
   onClose: VoidFunction;
 }) {
-  const detail = useRequestRecordDetail(open ? record?.request_id : null);
-  const routingDecision = useRoutingDecision(open ? record?.request_id : null);
+  const requestId = open ? record?.request_id ?? null : null;
+  const detail = useRequestRecordDetail(requestId);
+  const routingDecision = useRoutingDecision(requestId);
   const displayRecord = useMemo(
     () => freshestRecord(record, detail.data?.record),
     [detail.data?.record, record]
