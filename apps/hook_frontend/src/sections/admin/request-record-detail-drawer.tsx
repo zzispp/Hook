@@ -3,8 +3,9 @@
 import type { Theme } from '@mui/material/styles';
 import type { RequestRecord } from 'src/types/provider';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
+import { useCopyToClipboard } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -18,6 +19,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { useRequestRecordDetail } from 'src/actions/request-records';
 
 import { Label } from 'src/components/label';
+import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
@@ -25,7 +27,6 @@ import { RequestRecordTraceTimeline } from './request-record-trace-timeline';
 import { RequestRecordPayloadPanels } from './request-record-payload-panels';
 import { RequestRecordBillingDetails } from './request-record-billing-details';
 import {
-  compactId,
   formatCost,
   userDisplay,
   formatDuration,
@@ -76,6 +77,7 @@ export function RequestRecordDetailDrawer({
           <RequestRecordTraceTimeline
             record={displayRecord}
             candidates={detail.data?.candidates ?? []}
+            routingDecision={detail.data?.routing_decision}
             loading={detail.isLoading}
             locale={locale}
           />
@@ -153,8 +155,16 @@ function DrawerHeader({
 
 function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string }) {
   const { t } = useTranslate('admin');
+  const { copy } = useCopyToClipboard();
+  const handleCopy = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      copy(record.request_id);
+      toast.success(t('requestRecords.requestIdCopied'));
+    },
+    [copy, record.request_id, t]
+  );
   const items = [
-    `ID: ${compactId(record.request_id)}`,
     formatRequestDate(record.created_at, locale),
     formatRequestApiFormat(record),
     `${t('requestRecords.user')}: ${userDisplay(record)}`,
@@ -162,9 +172,24 @@ function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string 
   ];
 
   return (
-    <Typography variant="caption" color="text.secondary">
-      {items.join(' | ')}
-    </Typography>
+    <Stack direction="row" spacing={0.75} alignItems="center" useFlexGap flexWrap="wrap">
+      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+        <Typography variant="caption" color="text.secondary">
+          ID:
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={requestIdSx}>
+          {record.request_id}
+        </Typography>
+        <Tooltip title={t('requestRecords.copyRequestId')}>
+          <IconButton size="small" onClick={handleCopy} sx={{ flexShrink: 0 }}>
+            <Iconify width={14} icon="solar:copy-bold" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+      <Typography variant="caption" color="text.secondary">
+        {items.join(' | ')}
+      </Typography>
+    </Stack>
   );
 }
 
@@ -245,6 +270,12 @@ const headerSx = {
   gap: 1,
   display: 'flex',
   alignItems: 'flex-start',
+};
+
+const requestIdSx = {
+  maxWidth: { xs: 1, sm: 360 },
+  fontFamily: 'monospace',
+  overflowWrap: 'anywhere',
 };
 
 const panelSx = {

@@ -1,11 +1,9 @@
-use sea_orm::{ColumnTrait, ConnectionTrait, DbBackend, EntityTrait, QueryFilter, Statement, Value};
+use sea_orm::{ConnectionTrait, DbBackend, EntityTrait, Statement, Value};
 use types::provider::{RouteIdentity, RouteScoreExplanation, RoutingDecisionResponse};
 
 use crate::{StorageResult, json};
 
 use super::{record::routing_decision_samples, routing_repository::DecisionSamplePayload};
-
-const DECISION_RETENTION_SECONDS: i64 = 86_400;
 
 pub(super) async fn upsert_decision_sample<C>(
     connection: &C,
@@ -26,7 +24,7 @@ where
     connection
         .execute_raw(Statement::from_sql_and_values(DbBackend::Postgres, upsert_sql().to_owned(), values))
         .await?;
-    prune_decision_samples(connection, time::OffsetDateTime::now_utc()).await
+    Ok(())
 }
 
 pub(super) async fn get_decision_sample<C>(connection: &C, request_id: &str) -> StorageResult<Option<RoutingDecisionResponse>>
@@ -46,18 +44,6 @@ where
         candidates: payload.candidates,
         created_at: super::record::format_timestamp(record.created_at),
     }))
-}
-
-async fn prune_decision_samples<C>(connection: &C, now: time::OffsetDateTime) -> StorageResult<()>
-where
-    C: ConnectionTrait,
-{
-    let cutoff = now - time::Duration::seconds(DECISION_RETENTION_SECONDS);
-    routing_decision_samples::Entity::delete_many()
-        .filter(routing_decision_samples::Column::CreatedAt.lt(cutoff))
-        .exec(connection)
-        .await?;
-    Ok(())
 }
 
 fn decision_values(

@@ -7,7 +7,7 @@ use storage::{
     provider::{
         ProviderStore, RequestBillingRecordPatch, RequestBillingRecordValues, RequestRecordRecordInput, RequestRecordRecordPatch,
         RequestUpstreamCostRecordPatch,
-        record::{request_candidates, request_records},
+        record::{request_candidates, request_records, routing_decision_samples},
     },
 };
 use types::model::PatchField;
@@ -89,6 +89,7 @@ async fn request_record_storage_returns_trace_detail() {
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([[summary("req-success", "success", false, true, true, 2, 2)]])
             .append_query_results([success_candidates()])
+            .append_query_results([[routing_decision_sample()]])
             .append_query_results([empty_payload_rows()])
             .append_query_results([empty_payload_rows()])
             .append_query_results([empty_payload_rows()])
@@ -101,6 +102,22 @@ async fn request_record_storage_returns_trace_detail() {
     let success = &detail.candidates[1];
 
     assert_eq!(detail.record.request_id, "req-success");
+    assert_eq!(
+        detail
+            .routing_decision
+            .as_ref()
+            .and_then(|decision| decision.selected.as_ref())
+            .map(|route| route.key_id.as_str()),
+        Some("key-1")
+    );
+    assert_eq!(
+        detail
+            .routing_decision
+            .as_ref()
+            .and_then(|decision| decision.candidates.first())
+            .map(|candidate| candidate.selected_reason.as_str()),
+        Some("score 91.5: cache affinity +15.0")
+    );
     assert_eq!(detail.record.candidate_count, 2);
     assert_eq!(detail.record.total_cost, Decimal::new(2, 4));
     assert_eq!(detail.record.service_tier.as_deref(), Some("standard"));
@@ -165,6 +182,27 @@ async fn request_record_storage_returns_trace_detail() {
             .and_then(|value| value.as_str()),
         Some("gpt-5.5")
     );
+}
+
+#[tokio::test]
+async fn request_record_storage_returns_detail_without_routing_decision() {
+    let database = Database::new(
+        MockDatabase::new(DatabaseBackend::Postgres)
+            .append_query_results([[summary("req-success", "success", false, true, true, 2, 2)]])
+            .append_query_results([success_candidates()])
+            .append_query_results([Vec::<routing_decision_samples::Model>::new()])
+            .append_query_results([empty_payload_rows()])
+            .append_query_results([empty_payload_rows()])
+            .append_query_results([empty_payload_rows()])
+            .into_connection(),
+    );
+    let store = ProviderStore::new(database);
+
+    let detail = store.get_request_record("req-success").await.unwrap();
+
+    assert_eq!(detail.record.request_id, "req-success");
+    assert!(detail.routing_decision.is_none());
+    assert_eq!(detail.candidates.len(), 2);
 }
 
 #[tokio::test]
@@ -404,6 +442,84 @@ fn empty_sync_state_rows() -> Vec<BTreeMap<&'static str, Value>> {
 
 fn sync_state_row(owner_id: &str) -> BTreeMap<&'static str, Value> {
     BTreeMap::from([("owner_id", Value::from(owner_id.to_owned()))])
+}
+
+fn routing_decision_sample() -> routing_decision_samples::Model {
+    routing_decision_samples::Model {
+        request_id: "req-success".into(),
+        profile_id: "cache_affinity_plus".into(),
+        profile_version: "test-version".into(),
+        selected_route: Some(route_json()),
+        candidate_scores: decision_candidates_json(),
+        exclusion_reasons: "[]".into(),
+        created_at: at_minute(2),
+    }
+}
+
+fn route_json() -> String {
+    serde_json::json!({
+        "provider_id": "provider-1",
+        "key_id": "key-1",
+        "endpoint_id": "endpoint-1",
+        "global_model_id": "gpt-5.5",
+        "client_api_format": "openai:cli",
+        "provider_api_format": "claude:chat",
+        "is_stream": false
+    })
+    .to_string()
+}
+
+fn decision_candidates_json() -> String {
+    serde_json::json!({ "candidates": [decision_candidate_json()] }).to_string()
+}
+
+fn decision_candidate_json() -> serde_json::Value {
+    serde_json::json!({
+        "route": serde_json::from_str::<serde_json::Value>(&route_json()).unwrap(),
+        "provider_name": "paid-channel-86",
+        "key_name": "primary-key",
+        "key_preview": "***abcd",
+        "endpoint_name": "Claude Chat",
+        "rank": 1,
+        "state": "eligible",
+        "final_score": 91.5,
+        "metric_window": "5m",
+        "selected_reason": "score 91.5: cache affinity +15.0",
+        "components": [affinity_component_json()],
+        "raw_metrics": routing_metric_json(),
+        "exclusion_reason": null,
+        "metric_freshness_seconds": 12
+    })
+}
+
+fn affinity_component_json() -> serde_json::Value {
+    serde_json::json!({
+        "code": "affinity",
+        "label": "cache affinity",
+        "raw_value": null,
+        "normalized_score": 100.0,
+        "weight": 1.0,
+        "contribution": 15.0
+    })
+}
+
+fn routing_metric_json() -> serde_json::Value {
+    serde_json::json!({
+        "request_count": 4,
+        "success_count": 4,
+        "failure_count": 0,
+        "timeout_count": 0,
+        "rate_limited_count": 0,
+        "server_error_count": 0,
+        "latency_avg_ms": 320.0,
+        "ttfb_avg_ms": 110.0,
+        "output_tps": 25.0,
+        "upstream_total_cost": 0.001,
+        "total_tokens": 80,
+        "sample_count": 4,
+        "rpm_used": 1,
+        "rpm_limit": 100
+    })
 }
 
 fn statement_value(values: &sea_orm::Values, index: usize) -> Value {

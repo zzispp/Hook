@@ -8,15 +8,17 @@ use storage::{
 #[tokio::test]
 async fn request_record_cleanup_uses_limited_delete_batches() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(timeout_exec_results(8))
+        .append_exec_results(timeout_exec_results(12))
         .append_query_results([vec![request_id_row("req-1"), request_id_row("req-2")]])
         .append_query_results([[deleted_candidates_count(3)]])
         .append_query_results([[deleted_records_count(2)]])
         .append_query_results([[orphan_candidate_counts(1)]])
+        .append_query_results([[routing_decision_counts(2)]])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
+        .append_query_results([[routing_decision_counts(0)]])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .into_connection();
@@ -26,12 +28,14 @@ async fn request_record_cleanup_uses_limited_delete_batches() {
 
     assert_eq!(result.deleted_records, 2);
     assert_eq!(result.deleted_candidates, 4);
+    assert_eq!(result.deleted_routing_decisions, 2);
     let statements = logged_statements(connection);
     let sql = sql_strings(&statements);
     assert!(sql.iter().any(|item| item.contains("set_config('statement_timeout'")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("LIMIT $2 FOR UPDATE SKIP LOCKED")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("deleted_candidates AS")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("deleted_records AS")), "{sql:?}");
+    assert!(sql.iter().any(|item| item.contains("routing_decision_samples")), "{sql:?}");
     assert!(
         statement_position(&sql, "deleted_candidates AS") < statement_position(&sql, "deleted_records AS"),
         "{sql:?}"
@@ -46,9 +50,10 @@ async fn request_record_cleanup_uses_limited_delete_batches() {
 #[tokio::test]
 async fn request_record_cleanup_uses_indexed_payload_marker() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(timeout_exec_results(4))
+        .append_exec_results(timeout_exec_results(6))
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([[orphan_candidate_counts(0)]])
+        .append_query_results([[routing_decision_counts(0)]])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .append_query_results([Vec::<BTreeMap<&'static str, Value>>::new()])
         .into_connection();
@@ -85,6 +90,7 @@ async fn request_record_cleanup_stops_when_budget_cannot_cover_statement() {
 
     assert_eq!(result.deleted_records, 0);
     assert_eq!(result.deleted_candidates, 0);
+    assert_eq!(result.deleted_routing_decisions, 0);
     assert_eq!(result.compressed_records, 0);
     assert_eq!(result.compressed_candidates, 0);
     assert!(result.time_budget_exhausted);
@@ -118,6 +124,10 @@ fn deleted_records_count(deleted_records: i64) -> BTreeMap<&'static str, Value> 
 
 fn orphan_candidate_counts(deleted_candidates: i64) -> BTreeMap<&'static str, Value> {
     BTreeMap::from([("deleted_candidates", Value::from(deleted_candidates))])
+}
+
+fn routing_decision_counts(deleted_routing_decisions: i64) -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([("deleted_routing_decisions", Value::from(deleted_routing_decisions))])
 }
 
 fn timeout_exec_results(count: usize) -> Vec<MockExecResult> {

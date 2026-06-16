@@ -1,3 +1,5 @@
+import type { RoutingDecisionResponse } from './routing';
+
 export type RequestRecordStatus = 'pending' | 'streaming' | 'success' | 'failed' | 'cancelled';
 
 export type RequestUpstreamCostMode = 'per_request' | 'per_token';
@@ -153,6 +155,7 @@ export type RequestCandidateDetail = RequestBillingFields & RequestUpstreamCostF
   provider_api_format?: string | null;
   needs_conversion: boolean;
   is_stream: boolean;
+  is_cached: boolean;
   candidate_index: number;
   retry_index: number;
   status: string;
@@ -198,6 +201,7 @@ export type RequestCandidateDetail = RequestBillingFields & RequestUpstreamCostF
 export type RequestRecordDetail = {
   record: RequestRecord;
   candidates: RequestCandidateDetail[];
+  routing_decision?: RoutingDecisionResponse | null;
   payloads: RequestPayloadMeta[];
   request_headers?: unknown | null;
   request_body?: unknown | null;

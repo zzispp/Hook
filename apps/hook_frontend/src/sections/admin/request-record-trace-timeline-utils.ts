@@ -1,4 +1,5 @@
 import type { RequestRecord, RequestCandidateDetail } from 'src/types/provider';
+import type { RouteScoreExplanation, RoutingDecisionResponse } from 'src/types/routing';
 
 import { formatRequestDate } from './request-records-utils';
 import { formatApiFormat } from './provider-management-utils';
@@ -7,6 +8,7 @@ export type TraceStatus = 'success' | 'cancelled' | 'failed' | 'active' | 'queue
 
 export type TraceAttempt = RequestCandidateDetail & {
   traceStatus: TraceStatus;
+  routingDecision?: RouteScoreExplanation | null;
 };
 
 export type TraceGroup = {
@@ -30,10 +32,15 @@ const STATUS_ORDER: Record<TraceStatus, number> = {
   success: 6,
 };
 
-export function buildTraceGroups(record: RequestRecord | null, candidates: RequestCandidateDetail[]) {
+export function buildTraceGroups(
+  record: RequestRecord | null,
+  candidates: RequestCandidateDetail[],
+  routingDecision?: RoutingDecisionResponse | null
+) {
   const attempts = candidates.map((candidate) => ({
     ...candidate,
     traceStatus: traceStatus(candidate, candidates, record),
+    routingDecision: candidateRoutingDecision(record, candidate, routingDecision),
   }));
   return groupedAttempts(attempts).map(traceGroup);
 }
@@ -164,4 +171,34 @@ function higherStatus(left: TraceStatus, right: TraceStatus) {
 
 function uniqueCount(values: string[]) {
   return new Set(values).size;
+}
+
+function candidateRoutingDecision(
+  record: RequestRecord | null,
+  candidate: RequestCandidateDetail,
+  decision?: RoutingDecisionResponse | null
+) {
+  if (!record?.global_model_id || !decision) return null;
+  return decision.candidates.find((item) => routeMatchesCandidate(record, candidate, item)) ?? null;
+}
+
+function routeMatchesCandidate(
+  record: RequestRecord,
+  candidate: RequestCandidateDetail,
+  item: RouteScoreExplanation
+) {
+  const route = item.route;
+  return (
+    route.provider_id === candidate.provider_id &&
+    route.key_id === candidate.key_id &&
+    route.endpoint_id === candidate.endpoint_id &&
+    route.global_model_id === record.global_model_id &&
+    route.client_api_format === candidate.client_api_format &&
+    route.provider_api_format === providerFormat(candidate) &&
+    route.is_stream === candidate.is_stream
+  );
+}
+
+function providerFormat(candidate: RequestCandidateDetail) {
+  return candidate.provider_api_format ?? candidate.client_api_format;
 }

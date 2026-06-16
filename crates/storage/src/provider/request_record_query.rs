@@ -44,12 +44,14 @@ pub async fn list_active_request_records(store: &super::ProviderStore, request: 
 pub async fn get_request_record(store: &super::ProviderStore, request_id: &str) -> StorageResult<RequestRecordDetail> {
     let summary = detail_summary_record(store, request_id).await?.ok_or(StorageError::NotFound)?;
     let candidates = detail_candidate_records(store, request_id).await?;
+    let routing_decision = super::routing_decision_repository::get_decision_sample(store.connection(), request_id).await?;
     let record = summary_record(summary.clone())?;
     let record_payloads = record_payloads(store, &summary).await?;
     let details = candidate_details_with_payloads(store, candidates).await?;
     Ok(RequestRecordDetail {
         record,
         candidates: details,
+        routing_decision,
         payloads: record_payloads.payloads,
         request_headers: record_payloads.request_headers,
         request_body: record_payloads.request_body,
