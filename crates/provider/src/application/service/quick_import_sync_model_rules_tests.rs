@@ -94,6 +94,7 @@ fn source() -> ProviderQuickImportSyncSource {
     ProviderQuickImportSyncSource {
         id: "source-1".into(),
         provider_id: "provider-1".into(),
+        provider_name: "OpenAI".into(),
         source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
         base_url: "https://newapi.example".into(),
         encrypted_system_access_token: "enc".into(),
@@ -134,6 +135,7 @@ fn key(model_mappings: Vec<(String, String)>) -> ProviderQuickImportSyncKey {
         provider_id: "provider-1".into(),
         source_id: "source-1".into(),
         key_id: "key-1".into(),
+        local_key_name: "生产主 Key".into(),
         upstream_token_id: "1209".into(),
         upstream_token_name: "codex".into(),
         upstream_group: Some("plus".into()),

@@ -294,6 +294,7 @@ pub struct ProviderQuickImportKeyModelRecordInput {
 pub struct ProviderQuickImportSourceRecord {
     pub id: String,
     pub provider_id: String,
+    pub provider_name: String,
     pub source_kind: String,
     pub base_url: String,
     pub encrypted_system_access_token: String,
@@ -320,6 +321,7 @@ pub struct ProviderQuickImportSyncKeyRecord {
     pub provider_id: String,
     pub source_id: String,
     pub key_id: String,
+    pub local_key_name: String,
     pub upstream_token_id: String,
     pub upstream_token_name: String,
     pub upstream_group: Option<String>,

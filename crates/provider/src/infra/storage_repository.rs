@@ -394,6 +394,7 @@ fn sync_source(record: storage::provider::ProviderQuickImportSourceRecord) -> Pr
     ProviderQuickImportSyncSource {
         id: record.id,
         provider_id: record.provider_id,
+        provider_name: record.provider_name,
         source_kind: types::provider::ProviderQuickImportSourceKind::try_from(record.source_kind.as_str()).expect("quick import source kind must be valid"),
         base_url: record.base_url,
         encrypted_system_access_token: record.encrypted_system_access_token,
@@ -422,6 +423,7 @@ fn sync_key(record: storage::provider::ProviderQuickImportSyncKeyRecord) -> Prov
         provider_id: record.provider_id,
         source_id: record.source_id,
         key_id: record.key_id,
+        local_key_name: record.local_key_name,
         upstream_token_id: record.upstream_token_id,
         upstream_token_name: record.upstream_token_name,
         upstream_group: record.upstream_group,

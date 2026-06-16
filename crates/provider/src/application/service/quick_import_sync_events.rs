@@ -3,7 +3,10 @@ use types::provider::ProviderQuickImportSyncStatus;
 
 use crate::application::{ProviderError, ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey, ProviderQuickImportSyncSource};
 
-use super::quick_import_sync_outcome::KeyOutcome;
+use super::{
+    quick_import_sync_event_labels::{key_detail, key_label, source_label},
+    quick_import_sync_outcome::KeyOutcome,
+};
 
 pub(super) fn key_events(
     source: &ProviderQuickImportSyncSource,
@@ -36,7 +39,7 @@ pub(super) fn source_failure_event(source: &ProviderQuickImportSyncSource, error
         source,
         None,
         ProviderQuickImportSyncStatus::SourceFetchFailed,
-        format!("快捷导入同步失败：提供商 {}", source.provider_id),
+        format!("快捷导入同步失败：提供商 {}", source_label(source)),
         format!("同步来源拉取失败：{}。{}", error, action),
     )
 }
@@ -46,10 +49,14 @@ pub(super) fn source_failure_key_event(source: &ProviderQuickImportSyncSource, k
         source,
         Some(key),
         ProviderQuickImportSyncStatus::SourceFetchFailed,
-        format!("快捷导入同步：{} 已因连续拉取失败禁用", key_label(key)),
-        format!(
-            "同步来源连续失败达到 {} 次，已按策略禁用本地密钥。",
-            source.sync_config.fetch_failure_disable_threshold
+        format!("快捷导入同步：{} 已因连续拉取失败禁用", key_label(source, key)),
+        key_detail(
+            source,
+            key,
+            format!(
+                "同步来源连续失败达到 {} 次，已按策略禁用本地密钥。",
+                source.sync_config.fetch_failure_disable_threshold
+            ),
         ),
     )
 }
@@ -67,12 +74,16 @@ fn group_sync_event(
         source,
         Some(key),
         ProviderQuickImportSyncStatus::UpstreamGroupChanged,
-        format!("快捷导入同步：{} 上游分组已同步", key_label(key)),
-        format!(
-            "上游令牌所属分组从 {} 变更为 {}，{}。",
-            group_label(key.upstream_group.as_deref()),
-            group_label(observed.as_deref()),
-            group_sync_action(outcome)
+        format!("快捷导入同步：{} 上游分组已同步", key_label(source, key)),
+        key_detail(
+            source,
+            key,
+            format!(
+                "上游令牌所属分组从 {} 变更为 {}，{}。",
+                group_label(key.upstream_group.as_deref()),
+                group_label(observed.as_deref()),
+                group_sync_action(outcome)
+            ),
         ),
     ))
 }
@@ -91,8 +102,8 @@ fn anomaly_event(source: &ProviderQuickImportSyncSource, key: &ProviderQuickImpo
         source,
         Some(key),
         status,
-        anomaly_title(key, status),
-        format!("{}。{}", anomaly_detail(key, outcome, status), action),
+        anomaly_title(source, key, status),
+        key_detail(source, key, format!("{}。{}", anomaly_detail(key, outcome, status), action)),
     ))
 }
 
@@ -109,14 +120,18 @@ fn cost_event(source: &ProviderQuickImportSyncSource, key: &ProviderQuickImportS
         source,
         Some(key),
         cost_event_status(outcome),
-        format!("快捷导入同步：{} 成本倍率{}", key_label(key), direction),
-        format!(
-            "原上游倍率 {}，最终成本倍率从 {} {} {}。{}",
-            multiplier_label(outcome.observed_group_ratio),
-            multiplier_label(Some(key.effective_cost_multiplier)),
-            action,
-            multiplier_label(Some(next)),
-            suffix
+        format!("快捷导入同步：{} 成本倍率{}", key_label(source, key), direction),
+        key_detail(
+            source,
+            key,
+            format!(
+                "原上游倍率 {}，最终成本倍率从 {} {} {}。{}",
+                multiplier_label(outcome.observed_group_ratio),
+                multiplier_label(Some(key.effective_cost_multiplier)),
+                action,
+                multiplier_label(Some(next)),
+                suffix
+            ),
         ),
     ))
 }
@@ -133,11 +148,15 @@ fn model_candidate_event(
         source,
         Some(key),
         ProviderQuickImportSyncStatus::ModelCandidateAvailable,
-        format!("快捷导入同步：{} 发现可关联模型", key_label(key)),
-        format!(
-            "上游令牌发现 {} 个可关联到同名全局模型的候选模型：{}。系统不会自动关联，请在密钥模型关联里确认。",
-            outcome.candidate_model_ids.len(),
-            outcome.candidate_model_ids.join("，")
+        format!("快捷导入同步：{} 发现可关联模型", key_label(source, key)),
+        key_detail(
+            source,
+            key,
+            format!(
+                "上游令牌发现 {} 个可关联到同名全局模型的候选模型：{}。系统不会自动关联，请在密钥模型关联里确认。",
+                outcome.candidate_model_ids.len(),
+                outcome.candidate_model_ids.join("，")
+            ),
         ),
     ))
 }
@@ -173,8 +192,12 @@ fn anomaly_status(status: &ProviderQuickImportSyncStatus) -> bool {
     )
 }
 
-fn anomaly_title(key: &ProviderQuickImportSyncKey, status: ProviderQuickImportSyncStatus) -> String {
-    let reason = match status {
+fn anomaly_title(source: &ProviderQuickImportSyncSource, key: &ProviderQuickImportSyncKey, status: ProviderQuickImportSyncStatus) -> String {
+    format!("快捷导入同步异常：{} {}", key_label(source, key), anomaly_reason(status))
+}
+
+fn anomaly_reason(status: ProviderQuickImportSyncStatus) -> &'static str {
+    match status {
         ProviderQuickImportSyncStatus::UpstreamTokenDeleted => "上游令牌被删除",
         ProviderQuickImportSyncStatus::UpstreamTokenDisabled => "上游令牌被禁用",
         ProviderQuickImportSyncStatus::UpstreamGroupRemoved => "上游分组被删除",
@@ -184,8 +207,7 @@ fn anomaly_title(key: &ProviderQuickImportSyncKey, status: ProviderQuickImportSy
         ProviderQuickImportSyncStatus::NoAssociatedModels => "没有关联模型",
         ProviderQuickImportSyncStatus::CostUnavailable => "成本不可计算",
         _ => "同步异常",
-    };
-    format!("快捷导入同步异常：{} {}", key_label(key), reason)
+    }
 }
 
 fn anomaly_detail(key: &ProviderQuickImportSyncKey, outcome: &KeyOutcome, status: ProviderQuickImportSyncStatus) -> String {
@@ -202,7 +224,7 @@ fn anomaly_detail(key: &ProviderQuickImportSyncKey, outcome: &KeyOutcome, status
         ),
         ProviderQuickImportSyncStatus::CostUnavailable => format!("无法计算快捷导入成本：{}", anomaly_error(outcome)),
         ProviderQuickImportSyncStatus::NoAssociatedModels => "本地密钥没有任何快捷导入模型关联".into(),
-        _ => anomaly_title(key, status).replace("快捷导入同步异常：", ""),
+        _ => anomaly_reason(status).into(),
     }
 }
 
@@ -248,8 +270,4 @@ fn multiplier_label(value: Option<Decimal>) -> String {
 
 fn group_label(value: Option<&str>) -> String {
     value.filter(|item| !item.is_empty()).unwrap_or("未设置").to_owned()
-}
-
-fn key_label(key: &ProviderQuickImportSyncKey) -> String {
-    format!("{}({})", key.upstream_token_name, key.upstream_token_id)
 }
