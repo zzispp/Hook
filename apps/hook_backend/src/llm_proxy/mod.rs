@@ -4,6 +4,7 @@ mod billing;
 mod cache;
 mod cache_affinity;
 mod candidate;
+mod capabilities;
 mod client_error;
 mod error;
 mod formats;

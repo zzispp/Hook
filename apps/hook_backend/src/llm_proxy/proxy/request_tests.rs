@@ -2,10 +2,8 @@ use rust_decimal::Decimal;
 use serde_json::json;
 use types::model::TieredPricingConfig;
 
-use super::{
-    apply_reasoning_effort, attempt_payload, bridge_openai_chat_image_body, has_openai_responses_custom_tool_items,
-    openai_request_explicitly_selects_image_generation, rewrite_upstream_body,
-};
+use super::super::{request_image::bridge_openai_chat_image_body, request_tools::openai_request_explicitly_selects_image_generation};
+use super::{apply_reasoning_effort, attempt_payload, has_openai_responses_custom_tool_items, rewrite_upstream_body};
 use crate::llm_proxy::{
     OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
     candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
@@ -68,6 +66,78 @@ fn openai_cli_to_chat_body_rule_can_drop_stream_options() {
     assert_eq!(payload.body["stream"], true);
     assert!(payload.body.get("stream_options").is_none());
     assert_eq!(payload.body["messages"][0]["role"], "user");
+}
+
+#[test]
+fn openai_cli_prunes_image_generation_tool_when_key_lacks_capability() {
+    let body = json!({
+        "model": "gpt-5.5",
+        "input": "hello",
+        "tool_choice": "auto",
+        "tools": [
+            {"type": "image_generation"},
+            {"type": "function", "name": "lookup"}
+        ]
+    });
+    let mut candidate = candidate("openai:cli");
+    candidate.trace.client_api_format = "openai:cli".into();
+    candidate.reasoning_effort = None;
+
+    let payload = attempt_payload(body, &candidate, false).unwrap();
+
+    assert_eq!(payload.body["tools"], json!([{"type": "function", "name": "lookup"}]));
+    assert_eq!(payload.body["tool_choice"], "auto");
+}
+
+#[test]
+fn openai_cli_keeps_image_generation_tool_when_key_has_capability() {
+    let body = json!({
+        "model": "gpt-5.5",
+        "input": "hello",
+        "tools": [{"type": "image_generation"}]
+    });
+    let mut candidate = candidate("openai:cli");
+    candidate.trace.client_api_format = "openai:cli".into();
+    candidate.reasoning_effort = None;
+    candidate.key_capabilities = Some(json!({"image_generation": true}));
+
+    let payload = attempt_payload(body, &candidate, false).unwrap();
+
+    assert_eq!(payload.body["tools"], json!([{"type": "image_generation"}]));
+}
+
+#[test]
+fn openai_cli_keeps_explicit_image_generation_tool_choice() {
+    let body = json!({
+        "model": "gpt-5.5",
+        "input": "draw",
+        "tools": [{"type": "image_generation"}],
+        "tool_choice": {"type": "image_generation"}
+    });
+    let mut candidate = candidate("openai:cli");
+    candidate.trace.client_api_format = "openai:cli".into();
+    candidate.reasoning_effort = None;
+
+    let payload = attempt_payload(body, &candidate, false).unwrap();
+
+    assert_eq!(payload.body["tools"], json!([{"type": "image_generation"}]));
+    assert_eq!(payload.body["tool_choice"]["type"], "image_generation");
+}
+
+#[test]
+fn openai_cli_removes_tools_field_when_only_image_generation_was_pruned() {
+    let body = json!({
+        "model": "gpt-5.5",
+        "input": "hello",
+        "tools": [{"type": "image_generation"}]
+    });
+    let mut candidate = candidate("openai:cli");
+    candidate.trace.client_api_format = "openai:cli".into();
+    candidate.reasoning_effort = None;
+
+    let payload = attempt_payload(body, &candidate, false).unwrap();
+
+    assert!(payload.body.get("tools").is_none());
 }
 
 #[test]
@@ -184,6 +254,7 @@ fn candidate(provider_api_format: &str) -> ProxyCandidate {
         reasoning_effort: Some("high".into()),
         header_rules: None,
         body_rules: None,
+        key_capabilities: None,
         price_per_request: None,
         tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
         billing_multiplier: Decimal::ONE,
