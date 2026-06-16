@@ -54,6 +54,17 @@ fn zero_sample_snapshot_does_not_force_refresh_before_interval() {
 }
 
 #[test]
+fn zero_sample_admin_profile_version_refreshes_immediately() {
+    let mut profile = super::profiles::test_only_builtin_profile(RoutingProfileId::Balanced);
+    profile.version = "profile-admin-save".into();
+    let now = OffsetDateTime::now_utc();
+    let mut snapshot = snapshot(&profile.weights, 0, now - Duration::minutes(5));
+    snapshot.profile_version = profile.version.clone();
+
+    assert!(needs_refresh(Some(&snapshot), &profile, now));
+}
+
+#[test]
 fn learning_refreshes_when_admin_weights_change() {
     let mut profile = super::profiles::test_only_builtin_profile(RoutingProfileId::Balanced);
     let now = OffsetDateTime::now_utc();

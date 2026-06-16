@@ -39,7 +39,11 @@ pub(super) fn needs_refresh(latest: Option<&RoutingProfileVersionSnapshot>, prof
     let Some(latest) = latest else {
         return true;
     };
-    latest.admin_weights != profile.weights || now - latest.created_at >= LEARNING_REFRESH
+    admin_profile_version(latest, profile) || latest.admin_weights != profile.weights || now - latest.created_at >= LEARNING_REFRESH
+}
+
+fn admin_profile_version(latest: &RoutingProfileVersionSnapshot, profile: &RoutingProfile) -> bool {
+    latest.sample_count == 0 && latest.profile_version == profile.version && latest.learned_weights.is_none()
 }
 
 async fn build_snapshot(store: &ProviderStore, profile: &RoutingProfile, now: OffsetDateTime) -> Result<RoutingProfileVersionSnapshot, LlmProxyError> {
