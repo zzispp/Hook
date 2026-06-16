@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use std::sync::{Arc, Mutex};
 use types::{
     operations::{
         Announcement, AnnouncementInput, AnnouncementListFilters, AnnouncementPatch, NotificationItem, NotificationListFilters, SupportTicket,
@@ -13,10 +14,28 @@ use crate::application::OperationsError;
 
 #[tokio::test]
 async fn create_ticket_verifies_support_ticket_captcha_before_persisting() {
-    let service = OperationsService::new(TestRepository, TestMailer, RejectingCaptcha, "admin@example.test".into());
+    let service = OperationsService::new(TestRepository::default(), TestMailer, RejectingCaptcha, "admin@example.test".into());
     let result = service.create_ticket(ticket_input()).await;
 
     assert_eq!(result.unwrap_err().to_string(), "invalid input: captcha verification is required");
+}
+
+#[tokio::test]
+async fn delete_read_notifications_uses_current_user_visibility_scope() {
+    let repository = TestRepository::default();
+    let calls = repository.delete_read_calls.clone();
+    let service = OperationsService::new(repository, TestMailer, RejectingCaptcha, "admin@example.test".into());
+
+    service.delete_read_notifications("user-1", true).await.unwrap();
+
+    let recorded = calls.lock().expect("delete read calls").clone();
+    assert_eq!(
+        recorded,
+        vec![DeleteReadCall {
+            user_id: "user-1".into(),
+            is_admin: true,
+        }]
+    );
 }
 
 fn ticket_input() -> SupportTicketCreateInput {
@@ -51,7 +70,16 @@ impl TicketMailer for TestMailer {
     }
 }
 
-struct TestRepository;
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+struct DeleteReadCall {
+    user_id: String,
+    is_admin: bool,
+}
+
+#[derive(Clone, Default)]
+struct TestRepository {
+    delete_read_calls: Arc<Mutex<Vec<DeleteReadCall>>>,
+}
 
 #[async_trait]
 impl OperationsRepository for TestRepository {
@@ -129,5 +157,13 @@ impl OperationsRepository for TestRepository {
 
     async fn delete_notification(&self, _user_id: &str, _source_type: &str, _source_id: &str) -> OperationsResult<()> {
         unimplemented!("not needed for ticket captcha tests")
+    }
+
+    async fn delete_read_notifications(&self, user_id: &str, is_admin: bool) -> OperationsResult<()> {
+        self.delete_read_calls.lock().expect("delete read calls").push(DeleteReadCall {
+            user_id: user_id.into(),
+            is_admin,
+        });
+        Ok(())
     }
 }

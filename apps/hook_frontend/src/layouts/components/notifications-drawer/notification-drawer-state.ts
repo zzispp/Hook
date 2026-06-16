@@ -13,6 +13,7 @@ import {
   useNotifications,
   deleteNotification,
   markNotificationRead,
+  deleteReadNotifications,
   markAllNotificationsRead,
 } from 'src/actions/operations';
 
@@ -90,10 +91,16 @@ function useNotificationActions({
   setBusy: Dispatch<SetStateAction<boolean>>;
 }) {
   const onMarkAllRead = useMarkAllReadAction(t, setBusy);
+  const onDeleteReadNotifications = useDeleteReadNotificationsAction(t, setBusy);
   const onOpenNotification = useOpenNotificationAction(t, router, onClose);
   const onDeleteNotification = useDeleteNotificationAction(t);
 
-  return { onMarkAllRead, onOpenNotification, onDeleteNotification };
+  return {
+    onMarkAllRead,
+    onDeleteReadNotifications,
+    onOpenNotification,
+    onDeleteNotification,
+  };
 }
 
 function useMarkAllReadAction(
@@ -131,6 +138,22 @@ function useOpenNotificationAction(
     },
     [onClose, router, t]
   );
+}
+
+function useDeleteReadNotificationsAction(
+  t: ReturnType<typeof useTranslate>['t'],
+  setBusy: Dispatch<SetStateAction<boolean>>
+) {
+  return useCallback(async () => {
+    setBusy(true);
+    try {
+      await deleteReadNotifications();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.deleteFailed'));
+    } finally {
+      setBusy(false);
+    }
+  }, [setBusy, t]);
 }
 
 function useDeleteNotificationAction(t: ReturnType<typeof useTranslate>['t']) {

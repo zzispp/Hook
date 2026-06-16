@@ -191,6 +191,14 @@ pub async fn delete_notification(
     Ok(ok(()))
 }
 
+pub async fn delete_read_notifications(State(state): State<OperationsApiState>, Extension(current_user): Extension<CurrentUser>) -> ApiResult<ApiJson<()>> {
+    state
+        .operations
+        .delete_read_notifications(&current_user.id, is_admin_role(&current_user.role))
+        .await?;
+    Ok(ok(()))
+}
+
 impl AnnouncementListQuery {
     fn page(&self) -> PageRequest {
         PageRequest {

@@ -50,6 +50,16 @@ impl OperationsStore {
         self.upsert_notification_state(user_id, source_type, source_id, StatePatch::deleted()).await
     }
 
+    pub async fn delete_read_notifications(&self, user_id: &str, is_admin: bool) -> StorageResult<()> {
+        let sources = self.notification_sources(user_id, is_admin).await?;
+        for item in self.notification_items(user_id, sources).await? {
+            if !item.is_unread {
+                self.delete_notification(user_id, &item.source_type, &item.source_id).await?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn mark_all_notifications_read(&self, user_id: &str, is_admin: bool) -> StorageResult<()> {
         for source in self.notification_sources(user_id, is_admin).await? {
             self.mark_notification_read(user_id, &source.source_type, &source.source_id).await?;

@@ -131,6 +131,11 @@ export async function markAllNotificationsRead() {
   await refreshNotifications();
 }
 
+export async function deleteReadNotifications() {
+  await requestSuccess(axios.delete(endpoints.notifications.deleteRead));
+  await refreshNotifications();
+}
+
 export async function markNotificationRead(item: NotificationItem) {
   await requestSuccess(axios.patch(endpoints.notifications.read(item.source_type, item.source_id)));
   await refreshNotifications();

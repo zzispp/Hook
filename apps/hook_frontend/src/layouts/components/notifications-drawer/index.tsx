@@ -99,6 +99,7 @@ function NotificationBell({
 
 function NotificationHead({ state }: { state: NotificationsDrawerState }) {
   const totalUnread = state.resources.unread.total;
+  const totalRead = state.resources.read.total;
 
   return (
     <Box sx={{ py: 2, pr: 1, pl: 2.5, minHeight: 68, display: 'flex', alignItems: 'center' }}>
@@ -110,6 +111,20 @@ function NotificationHead({ state }: { state: NotificationsDrawerState }) {
           <span>
             <IconButton color="primary" disabled={state.busy} onClick={state.onMarkAllRead}>
               <Iconify icon="eva:done-all-fill" />
+            </IconButton>
+          </span>
+        </Tooltip>
+      )}
+      {!!totalRead && (
+        <Tooltip title={state.t('operations.notifications.deleteRead')}>
+          <span>
+            <IconButton
+              color="error"
+              disabled={state.busy}
+              aria-label={state.t('operations.notifications.deleteRead')}
+              onClick={state.onDeleteReadNotifications}
+            >
+              <Iconify icon="solar:trash-bin-trash-bold" />
             </IconButton>
           </span>
         </Tooltip>
