@@ -1570,7 +1570,8 @@
       "conversion": "format conversion",
       "stale": "stale metrics",
       "half_open": "half-open probe",
-      "recent_regression": "recent window regression"
+      "recent_regression": "recent window regression",
+      "ema_recent": "EMA recent state"
     },
     "exclusionReasons": {
       "provider_key_rate_limit_exhausted": "Provider key rate limit exhausted"

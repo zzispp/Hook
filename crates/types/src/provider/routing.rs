@@ -167,7 +167,7 @@ impl<'de> Deserialize<'de> for RoutingMetricWindow {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct RouteIdentity {
     pub provider_id: String,
     pub key_id: String,

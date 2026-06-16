@@ -1,3 +1,4 @@
+mod dynamic_cost;
 mod dynamic_routing;
 mod matching;
 mod proxy_candidate;

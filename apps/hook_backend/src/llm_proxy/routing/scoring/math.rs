@@ -74,11 +74,11 @@ pub(super) fn final_score(components: &[ScoreComponent], penalty: &[ScoreCompone
     clamp_score(components.iter().chain(penalty).map(|item| item.contribution).sum())
 }
 
-pub(super) fn soft_degraded(candidate: &RoutingScoreCandidate, window: RoutingMetricWindow) -> bool {
+pub(in crate::llm_proxy::routing) fn soft_degraded(candidate: &RoutingScoreCandidate, window: RoutingMetricWindow) -> bool {
     matches!(candidate.circuit_state, CircuitCandidateState::HalfOpenProbe { .. }) || stale(candidate, window) || success_score(&candidate.metric) < 75.0
 }
 
-pub(super) fn stale(candidate: &RoutingScoreCandidate, window: RoutingMetricWindow) -> bool {
+pub(in crate::llm_proxy::routing) fn stale(candidate: &RoutingScoreCandidate, window: RoutingMetricWindow) -> bool {
     candidate.metric.sample_count > 0 && candidate.metric_freshness_seconds > window.seconds() * STALE_MULTIPLIER
 }
 
@@ -94,12 +94,12 @@ pub(super) fn provider_health_prior(metric: &RoutingMetricSnapshot) -> f64 {
     success_score(metric)
 }
 
-pub(super) fn exploration_score(profile: &RoutingProfile, total_attempts: u64, route_attempts: u64) -> f64 {
+pub(in crate::llm_proxy::routing) fn exploration_score(profile: &RoutingProfile, total_attempts: u64, route_attempts: u64) -> f64 {
     let bonus = profile.exploration_k * (((total_attempts + 1) as f64).ln() / (route_attempts + 1) as f64).sqrt();
     clamp_score(bonus * 20.0)
 }
 
-pub(super) fn success_score(metric: &RoutingMetricSnapshot) -> f64 {
+pub(in crate::llm_proxy::routing) fn success_score(metric: &RoutingMetricSnapshot) -> f64 {
     let success = metric.success_count as f64 + PRIOR_SUCCESS;
     let attempts = metric.request_count as f64 + PRIOR_SUCCESS + PRIOR_FAIL;
     clamp_score(100.0 * success / attempts)
@@ -112,11 +112,11 @@ pub(super) fn success_rate(metric: &RoutingMetricSnapshot) -> f64 {
     metric.success_count as f64 / metric.request_count as f64
 }
 
-pub(super) fn lower_is_better(value: Option<f64>, good: f64, bad: f64) -> f64 {
+pub(in crate::llm_proxy::routing) fn lower_is_better(value: Option<f64>, good: f64, bad: f64) -> f64 {
     value.map(|value| clamp_score((bad - value) * 100.0 / (bad - good))).unwrap_or(50.0)
 }
 
-pub(super) fn higher_is_better(value: Option<f64>, low: f64, high: f64) -> f64 {
+pub(in crate::llm_proxy::routing) fn higher_is_better(value: Option<f64>, low: f64, high: f64) -> f64 {
     value.map(|value| clamp_score((value - low) * 100.0 / (high - low))).unwrap_or(50.0)
 }
 
@@ -134,12 +134,12 @@ pub(super) fn headroom_ratio(metric: &RoutingMetricSnapshot) -> f64 {
     limit.saturating_sub(metric.rpm_used) as f64 / limit as f64
 }
 
-pub(super) fn priority_score(priority: i32) -> f64 {
+pub(in crate::llm_proxy::routing) fn priority_score(priority: i32) -> f64 {
     let value = f64::from(priority.max(0));
     clamp_score((PRIORITY_MAX - value) * 100.0 / PRIORITY_MAX)
 }
 
-pub(super) fn clamp_score(value: f64) -> f64 {
+pub(in crate::llm_proxy::routing) fn clamp_score(value: f64) -> f64 {
     value.clamp(0.0, 100.0)
 }
 
