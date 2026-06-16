@@ -5,9 +5,7 @@ use rust_decimal::Decimal;
 use serde_json::Value;
 use types::api_token::ApiToken;
 use types::model::TieredPricingConfig;
-use types::provider::{
-    RouteIdentity, RouteScoreExplanation, RoutingPreviewRequest, RoutingPreviewResponse, RoutingProfileId, RoutingRankingResponse, RoutingRankingsRequest,
-};
+use types::provider::{RouteIdentity, RouteScoreExplanation, RoutingProfileId, RoutingRankingResponse, RoutingRankingsRequest};
 
 use super::{LlmProxyError, LlmProxyState};
 
@@ -123,10 +121,6 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
 
 pub(crate) async fn routing_rankings(state: &LlmProxyState, request: RoutingRankingsRequest) -> Result<RoutingRankingResponse, LlmProxyError> {
     selection::routing_rankings(state, request).await
-}
-
-pub(crate) async fn routing_preview(state: &LlmProxyState, request: RoutingPreviewRequest) -> Result<RoutingPreviewResponse, LlmProxyError> {
-    selection::routing_preview(state, request).await
 }
 
 impl ProxyCandidate {

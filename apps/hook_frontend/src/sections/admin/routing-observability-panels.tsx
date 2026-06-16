@@ -1,12 +1,11 @@
 import type { AdminT } from './shared';
+import type { ApiToken } from 'src/types/api-token';
 import type { BillingGroup } from 'src/types/group';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { RoutingProfile, RoutingProfileId, RoutingMetricWindow, RouteScoreExplanation } from 'src/types/routing';
+import type { RoutingProfile, RoutingMetricWindow, RouteScoreExplanation } from 'src/types/routing';
 
-import Tab from '@mui/material/Tab';
 import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
-import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import CardHeader from '@mui/material/CardHeader';
 
@@ -19,12 +18,13 @@ import { RoutingProfileSettings } from './routing-profile-settings';
 
 type ConfigurationPanelProps = {
   t: AdminT;
-  groups: BillingGroup[];
+  apiTokens: ApiToken[];
   models: GlobalModelResponse[];
   selectedGroup: BillingGroup | null;
   selectedModel: GlobalModelResponse | null;
   profiles: RoutingProfile[];
   settingsLoading: boolean;
+  apiTokenId: string;
   groupCode: string;
   modelName: string;
   apiFormat: string;
@@ -32,7 +32,7 @@ type ConfigurationPanelProps = {
   metricWindow: RoutingMetricWindow;
   includeExcluded: boolean;
   requestInput: string;
-  onGroupChange: (value: string) => void;
+  onApiTokenChange: (value: string) => void;
   onModelChange: (value: string) => void;
   onApiFormatChange: (value: string) => void;
   onStreamChange: (value: boolean) => void;
@@ -45,12 +45,9 @@ type ConfigurationPanelProps = {
 
 type RankingPanelProps = {
   t: AdminT;
-  profiles: RoutingProfile[];
-  profileId: RoutingProfileId;
   selectedProfile: RoutingProfile | null;
   rankingRows: RouteScoreExplanation[];
   rankingsLoading: boolean;
-  onProfileChange: (value: RoutingProfileId) => void;
   onOpenRanking: (item: RouteScoreExplanation) => void;
   onSaved: VoidFunction;
 };
@@ -106,8 +103,7 @@ export function RoutingRankingPanel(props: RankingPanelProps) {
             titleTypographyProps={{ variant: 'subtitle1' }}
             subheaderTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
           />
-          <ProfileTabs {...props} />
-          <Stack spacing={2.5} sx={{ p: 2.5, pt: 0 }}>
+          <Stack spacing={2.5} sx={{ p: 2.5, pt: 1.5 }}>
             <RoutingProfileSummary profile={props.selectedProfile} t={props.t} />
             <RoutingProfileEditor profile={props.selectedProfile} onSaved={props.onSaved} />
           </Stack>
@@ -135,27 +131,5 @@ export function RoutingRankingPanel(props: RankingPanelProps) {
         </Card>
       </Grid>
     </Grid>
-  );
-}
-
-function ProfileTabs(props: RankingPanelProps) {
-  return (
-    <Stack sx={{ px: 2.5, pt: 1 }}>
-      <Tabs
-        value={props.profileId}
-        variant="scrollable"
-        onChange={(_, value) => props.onProfileChange(value as RoutingProfileId)}
-        sx={{
-          borderBottom: 1,
-          borderColor: 'divider',
-          mb: 2,
-          '& .MuiTab-root': { py: 1, minHeight: 38 },
-        }}
-      >
-        {props.profiles.map((profile) => (
-          <Tab key={profile.id} value={profile.id} label={routingProfileName(profile, props.t)} />
-        ))}
-      </Tabs>
-    </Stack>
   );
 }

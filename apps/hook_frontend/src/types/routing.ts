@@ -120,31 +120,20 @@ export type RouteScoreExplanation = {
 };
 
 export type RoutingRankingsQuery = {
-  profile_id: RoutingProfileId;
-  group_code: string;
+  api_token_id: string;
   model: string;
   api_format: string;
   is_stream: boolean;
   window: RoutingMetricWindow;
   include_excluded: boolean;
+  request_id_seed?: string;
 };
 
 export type RoutingRankingResponse = {
   profile: RoutingProfile;
   window: RoutingMetricWindow;
-  items: RouteScoreExplanation[];
-};
-
-export type RoutingPreviewRequest = {
-  profile_id: RoutingProfileId;
-  group_code: string;
-  model: string;
-  api_format: string;
-  is_stream: boolean;
-};
-
-export type RoutingPreviewResponse = {
-  profile: RoutingProfile;
+  selected?: RouteIdentity | null;
+  request_id_seed: string;
   items: RouteScoreExplanation[];
 };
 

@@ -1,5 +1,5 @@
 import type { AdminT } from './shared';
-import type { BillingGroup } from 'src/types/group';
+import type { ApiToken } from 'src/types/api-token';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { RoutingMetricWindow } from 'src/types/routing';
 
@@ -28,16 +28,25 @@ export function RoutingFilters(props: FilterProps) {
           fullWidth
           select
           size="small"
-          label={props.t('routing.filters.group')}
-          value={props.groupCode}
-          onChange={(event) => props.onGroupChange(event.target.value)}
+          label={props.t('routing.filters.apiToken')}
+          value={props.apiTokenId}
+          onChange={(event) => props.onApiTokenChange(event.target.value)}
         >
-          {props.groups.map((group) => (
-            <MenuItem key={group.code} value={group.code}>
-              {group.name || group.code}
+          {props.apiTokens.map((token) => (
+            <MenuItem key={token.id} value={token.id}>
+              {token.name} · {token.token_prefix} · {token.group_code}
             </MenuItem>
           ))}
         </TextField>
+      </Grid>
+      <Grid size={{ xs: 12, sm: 6 }}>
+        <TextField
+          fullWidth
+          disabled
+          size="small"
+          label={props.t('routing.filters.group')}
+          value={props.groupCode}
+        />
       </Grid>
       <Grid size={{ xs: 12, sm: 6 }}>
         <TextField
@@ -117,18 +126,18 @@ export function RoutingHeaderActions(props: {
 }
 
 export function useDefaultRoutingFilters(input: {
-  groups: BillingGroup[];
+  apiTokens: ApiToken[];
   models: GlobalModelResponse[];
-  groupCode: string;
+  apiTokenId: string;
   modelName: string;
-  onGroupChange: (value: string) => void;
+  onApiTokenChange: (value: string) => void;
   onModelChange: (value: string) => void;
 }) {
-  const { groupCode, groups, modelName, models, onGroupChange, onModelChange } = input;
+  const { apiTokenId, apiTokens, modelName, models, onApiTokenChange, onModelChange } = input;
 
   useEffect(() => {
-    if (!groupCode && groups[0]) onGroupChange(groups[0].code);
-  }, [groupCode, groups, onGroupChange]);
+    if (!apiTokenId && apiTokens[0]) onApiTokenChange(apiTokens[0].id);
+  }, [apiTokenId, apiTokens, onApiTokenChange]);
 
   useEffect(() => {
     if (!modelName && models[0]) onModelChange(models[0].name);
@@ -198,8 +207,9 @@ function SwitchFilter({
 
 type FilterProps = {
   t: AdminT;
-  groups: BillingGroup[];
+  apiTokens: ApiToken[];
   models: GlobalModelResponse[];
+  apiTokenId: string;
   groupCode: string;
   modelName: string;
   apiFormat: string;
@@ -207,7 +217,7 @@ type FilterProps = {
   metricWindow: RoutingMetricWindow;
   includeExcluded: boolean;
   requestInput: string;
-  onGroupChange: (value: string) => void;
+  onApiTokenChange: (value: string) => void;
   onModelChange: (value: string) => void;
   onApiFormatChange: (value: string) => void;
   onStreamChange: (value: boolean) => void;

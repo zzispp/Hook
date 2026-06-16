@@ -3,18 +3,15 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post, put},
+    routing::{get, put},
 };
 use storage::provider::ProviderStore;
 use types::{
-    provider::{
-        RoutingPreviewRequest, RoutingPreviewResponse, RoutingProfile, RoutingProfileUpsert, RoutingProfilesResponse, RoutingRankingResponse,
-        RoutingRankingsRequest,
-    },
+    provider::{RoutingProfile, RoutingProfileUpsert, RoutingProfilesResponse, RoutingRankingResponse, RoutingRankingsRequest},
     response::{ApiErrorResponse, ApiResponse},
 };
 
-use crate::llm_proxy::{LlmProxyError, LlmProxyState, routing, routing_preview, routing_rankings};
+use crate::llm_proxy::{LlmProxyError, LlmProxyState, routing, routing_rankings};
 
 #[derive(Clone)]
 pub struct RoutingApiState {
@@ -39,7 +36,6 @@ pub fn create_router(state: RoutingApiState) -> Router {
         .route("/admin/routing/profiles/{id}", put(upsert_profile))
         .route("/admin/routing/rankings", get(rankings))
         .route("/admin/routing/decisions/{request_id}", get(decision))
-        .route("/admin/routing/preview", post(preview))
         .with_state(state)
 }
 
@@ -68,10 +64,6 @@ async fn decision(State(state): State<RoutingApiState>, Path(request_id): Path<S
         .await?
         .ok_or_else(|| RoutingApiError(format!("routing decision not found: {request_id}")))?;
     Ok(ok(response))
-}
-
-async fn preview(State(state): State<RoutingApiState>, Json(request): Json<RoutingPreviewRequest>) -> ApiResult<ApiJson<RoutingPreviewResponse>> {
-    Ok(ok(routing_preview(&state.llm_proxy, request).await?))
 }
 
 fn ok<T>(data: T) -> ApiJson<T> {

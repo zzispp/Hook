@@ -6,8 +6,6 @@ import type {
   RoutingMetricWindow,
   RoutingRankingsQuery,
   RoutingProfileUpsert,
-  RoutingPreviewRequest,
-  RoutingPreviewResponse,
   RoutingRankingResponse,
   RoutingDecisionResponse,
   RoutingProfilesResponse,
@@ -112,14 +110,6 @@ export function useRoutingWindowRankings(
     }),
     [data, error, isLoading, isValidating, mutate]
   );
-}
-
-export async function previewRouting(payload: RoutingPreviewRequest) {
-  const response = await axios.post<ApiEnvelope<RoutingPreviewResponse>>(
-    endpoints.routing.preview,
-    payload
-  );
-  return requireApiData(response.data);
 }
 
 async function fetchWindowRankings([

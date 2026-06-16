@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Backend API and shared dry-run selection,DONE,"Rankings require api_token_id, use real token context, and preview route is removed","timeout 60 cargo test -p hook_backend routing",2026-06-16T14:20:00+08:00,0,
+2,Backend tests for affinity token validation profile and seed,DONE,"Tests cover affinity component/selected route, invalid token errors, effective profile, and seed stability","timeout 60 cargo test -p hook_backend routing",2026-06-16T14:25:00+08:00,0,
+3,Frontend token-aware routing page,DONE,"Routing UI selects active token, removes pure group/profile controls, and uses response profile","pnpm lint:frontend",2026-06-16T14:29:00+08:00,0,
+4,Final validation,DONE,"Targeted Rust checks, frontend lint, and just test are run or exact timeout is recorded","timeout 60 cargo test -p hook_backend routing && timeout 60 cargo test -p storage routing && pnpm lint:frontend && just test",2026-06-16T14:36:06+08:00,0,
