@@ -4,6 +4,9 @@ use types::model::{GlobalModelResponse, ModelCatalogProviderDetail, ModelPriceRa
 
 use crate::{StorageResult, json};
 
+use super::ProviderDetailPriceSummary;
+use crate::provider::record::ProviderRecord;
+
 #[path = "entities/mod.rs"]
 pub mod entities;
 
@@ -54,20 +57,34 @@ impl GlobalModelRecord {
 }
 
 impl ModelRecord {
-    pub fn provider_detail(self, global_model: &GlobalModelRecord) -> StorageResult<ModelCatalogProviderDetail> {
+    pub fn provider_detail(
+        self,
+        global_model: &GlobalModelRecord,
+        provider: &ProviderRecord,
+        pricing: &ProviderDetailPriceSummary,
+    ) -> StorageResult<ModelCatalogProviderDetail> {
         let tiered = global_model.default_tiered_pricing()?;
         let tier = tiered.tiers.first();
         Ok(ModelCatalogProviderDetail {
             provider_id: self.provider_id.clone(),
-            provider_name: self.provider_id,
+            provider_name: provider.name.clone(),
             model_id: Some(self.id),
             target_model: self.provider_model_name,
-            input_price_per_1m: tier.map(|item| item.input_price_per_1m),
-            output_price_per_1m: tier.map(|item| item.output_price_per_1m),
-            cache_creation_price_per_1m: tier.and_then(|item| item.cache_creation_price_per_1m),
-            cache_read_price_per_1m: tier.and_then(|item| item.cache_read_price_per_1m),
+            is_active: self.is_active && provider.is_active,
+            provider_is_active: provider.is_active,
+            binding_is_active: self.is_active,
+            configured_cost_count: pricing.configured_cost_count,
+            input_price_per_1m: pricing.input_price_per_1m,
+            input_price_range: pricing.input_price_range.clone(),
+            output_price_per_1m: pricing.output_price_per_1m,
+            output_price_range: pricing.output_price_range.clone(),
+            cache_creation_price_per_1m: pricing.cache_creation_price_per_1m,
+            cache_creation_price_range: pricing.cache_creation_price_range.clone(),
+            cache_read_price_per_1m: pricing.cache_read_price_per_1m,
+            cache_read_price_range: pricing.cache_read_price_range.clone(),
             cache_1h_creation_price_per_1m: tier.and_then(cache_1h_creation_price),
-            price_per_request: global_model.default_price_per_request,
+            price_per_request: pricing.price_per_request,
+            price_per_request_range: pricing.price_per_request_range.clone(),
             effective_tiered_pricing: Some(tiered.clone()),
             tier_count: tiered.tiers.len() as u64,
             supports_vision: Some(global_model.config_bool("vision")?),

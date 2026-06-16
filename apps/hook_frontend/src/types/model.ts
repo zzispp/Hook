@@ -34,23 +34,36 @@ export type ModelPriceRange = {
   max_output: number | null;
 };
 
+export type ModelCatalogProviderPriceRange = {
+  min: number | null;
+  max: number | null;
+};
+
 export type ModelCatalogProviderDetail = {
   provider_id: string;
   provider_name: string;
   model_id?: string | null;
   target_model: string;
+  is_active: boolean;
+  provider_is_active: boolean;
+  binding_is_active: boolean;
+  configured_cost_count: number;
   input_price_per_1m?: number | null;
+  input_price_range: ModelCatalogProviderPriceRange;
   output_price_per_1m?: number | null;
+  output_price_range: ModelCatalogProviderPriceRange;
   cache_creation_price_per_1m?: number | null;
+  cache_creation_price_range: ModelCatalogProviderPriceRange;
   cache_read_price_per_1m?: number | null;
+  cache_read_price_range: ModelCatalogProviderPriceRange;
   cache_1h_creation_price_per_1m?: number | null;
   price_per_request?: number | null;
+  price_per_request_range: ModelCatalogProviderPriceRange;
   effective_tiered_pricing?: TieredPricingConfig | null;
   tier_count: number;
   supports_vision?: boolean | null;
   supports_function_calling?: boolean | null;
   supports_streaming?: boolean | null;
-  is_active: boolean;
 };
 
 export type ModelCatalogItem = {
