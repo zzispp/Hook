@@ -1,7 +1,6 @@
 'use client';
 
 import type {
-  RoutingProfileId,
   RoutingMetricWindow,
   RouteScoreExplanation,
   RoutingRankingResponse,
@@ -16,6 +15,7 @@ import { useGlobalModels } from 'src/actions/models';
 import { useBillingGroups } from 'src/actions/groups';
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
+import { useAdminApiTokens } from 'src/actions/api-tokens';
 import { useSystemSettings } from 'src/actions/system-settings';
 import { DASHBOARD_MENU_CODES } from 'src/layouts/dashboard/dashboard-menu-values';
 import { useRoutingDecision, useRoutingProfiles, useRoutingRankings, useRoutingWindowRankings } from 'src/actions/routing';
@@ -29,7 +29,6 @@ import {
 } from './routing-observability-controls';
 
 const DETAIL_WINDOWS: RoutingMetricWindow[] = ['1h', '24h', '7d'];
-const DEFAULT_PROFILE: RoutingProfileId = 'balanced';
 const DEFAULT_API_FORMAT = 'openai:chat';
 const PAGE_SIZE = 100;
 
@@ -38,28 +37,34 @@ export function RoutingObservabilityView() {
   const profiles = useRoutingProfiles();
   const models = useGlobalModels(0, PAGE_SIZE, { is_active: true });
   const groups = useBillingGroups(0, PAGE_SIZE, { is_active: true });
+  const apiTokens = useAdminApiTokens(0, PAGE_SIZE, { is_active: true });
   const settings = useSystemSettings();
-  const [profileId, setProfileId] = useState<RoutingProfileId>(DEFAULT_PROFILE);
-  const [groupCode, setGroupCode] = useState('');
+  const [apiTokenId, setApiTokenId] = useState('');
   const [modelName, setModelName] = useState('');
   const [apiFormat, setApiFormat] = useState(DEFAULT_API_FORMAT);
   const [isStream, setIsStream] = useState(false);
   const [metricWindow, setMetricWindow] = useState<RoutingMetricWindow>('5m');
   const [includeExcluded, setIncludeExcluded] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [requestIdSeed, setRequestIdSeed] = useState(createRequestIdSeed);
   const [requestInput, setRequestInput] = useState('');
   const [decisionRequestId, setDecisionRequestId] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<RouteScoreExplanation | null>(null);
 
   useDefaultRoutingFilters({
-    groups: groups.items,
+    apiTokens: apiTokens.items,
     models: models.items,
-    groupCode,
+    apiTokenId,
     modelName,
-    onGroupChange: setGroupCode,
+    onApiTokenChange: setApiTokenId,
     onModelChange: setModelName,
   });
 
+  const selectedToken = useMemo(
+    () => apiTokens.items.find((item) => item.id === apiTokenId) ?? null,
+    [apiTokenId, apiTokens.items]
+  );
+  const groupCode = selectedToken?.group_code ?? '';
   const selectedGroup = useMemo(
     () => groups.items.find((item) => item.code === groupCode) ?? null,
     [groupCode, groups.items]
@@ -69,35 +74,22 @@ export function RoutingObservabilityView() {
     [modelName, models.items]
   );
 
-  const effectiveProfileId = useMemo(
-    () => selectedModel?.routing_profile_id ?? selectedGroup?.routing_profile_id ?? DEFAULT_PROFILE,
-    [selectedGroup?.routing_profile_id, selectedModel?.routing_profile_id]
-  );
-
   useEffect(() => {
-    if (effectiveProfileId && profiles.items.some((item) => item.id === effectiveProfileId)) {
-      setProfileId(effectiveProfileId);
-    }
-  }, [effectiveProfileId, profiles.items]);
-
-  useEffect(() => {
-    if (profiles.items.length > 0 && !profiles.items.some((item) => item.id === profileId)) {
-      setProfileId(profiles.items[0].id);
-    }
-  }, [profileId, profiles.items]);
+    setRequestIdSeed(createRequestIdSeed());
+  }, [apiTokenId, apiFormat, isStream, modelName]);
 
   const query = useMemo(() => {
-    if (!groupCode || !modelName || !apiFormat) return null;
+    if (!apiTokenId || !modelName || !apiFormat || !requestIdSeed) return null;
     return {
-      profile_id: profileId,
-      group_code: groupCode,
+      api_token_id: apiTokenId,
       model: modelName,
       api_format: apiFormat,
       is_stream: isStream,
       window: metricWindow,
       include_excluded: includeExcluded,
+      request_id_seed: requestIdSeed,
     };
-  }, [apiFormat, groupCode, includeExcluded, isStream, metricWindow, modelName, profileId]);
+  }, [apiFormat, apiTokenId, includeExcluded, isStream, metricWindow, modelName, requestIdSeed]);
 
   const rankings = useRoutingRankings(query, autoRefresh);
   const detailWindows = useMemo(
@@ -110,14 +102,12 @@ export function RoutingObservabilityView() {
     profiles.error ??
     models.error ??
     groups.error ??
+    apiTokens.error ??
     settings.error ??
     rankings.error ??
     windowRankings.error ??
     decision.error;
-  const selectedProfile = useMemo(
-    () => profiles.items.find((item) => item.id === profileId) ?? null,
-    [profileId, profiles.items]
-  );
+  const selectedProfile = rankings.data?.profile ?? null;
   const drawerProfile = useMemo(
     () =>
       (decision.data
@@ -138,11 +128,12 @@ export function RoutingObservabilityView() {
         action={
           <RoutingHeaderActions
             autoRefresh={autoRefresh}
-            loading={rankings.isValidating || profiles.isValidating}
+            loading={rankings.isValidating || profiles.isValidating || apiTokens.isValidating}
             t={t}
             onAutoRefreshChange={setAutoRefresh}
             onRefresh={() => {
               void profiles.refresh();
+              void apiTokens.refresh();
               void rankings.refresh();
               void windowRankings.refresh();
             }}
@@ -155,12 +146,13 @@ export function RoutingObservabilityView() {
 
         <RoutingConfigurationPanel
           t={t}
-          groups={groups.items}
+          apiTokens={apiTokens.items}
           models={models.items}
           selectedGroup={selectedGroup}
           selectedModel={selectedModel}
           profiles={profiles.items}
-          settingsLoading={settings.isLoading || groups.isLoading || models.isLoading}
+          settingsLoading={settings.isLoading || apiTokens.isLoading || groups.isLoading || models.isLoading}
+          apiTokenId={apiTokenId}
           groupCode={groupCode}
           modelName={modelName}
           apiFormat={apiFormat}
@@ -168,7 +160,7 @@ export function RoutingObservabilityView() {
           metricWindow={metricWindow}
           includeExcluded={includeExcluded}
           requestInput={requestInput}
-          onGroupChange={setGroupCode}
+          onApiTokenChange={setApiTokenId}
           onModelChange={setModelName}
           onApiFormatChange={setApiFormat}
           onStreamChange={setIsStream}
@@ -189,12 +181,9 @@ export function RoutingObservabilityView() {
 
         <RoutingRankingPanel
           t={t}
-          profiles={profiles.items}
-          profileId={profileId}
           selectedProfile={selectedProfile}
           rankingRows={rankings.data?.items ?? []}
           rankingsLoading={rankings.isLoading}
-          onProfileChange={setProfileId}
           onOpenRanking={(item) => {
             setDecisionRequestId(null);
             setDetailItem(item);
@@ -222,4 +211,8 @@ export function RoutingObservabilityView() {
       />
     </DashboardContent>
   );
+}
+
+function createRequestIdSeed() {
+  return globalThis.crypto.randomUUID();
 }

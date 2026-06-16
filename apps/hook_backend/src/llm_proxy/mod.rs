@@ -33,7 +33,7 @@ use user::application::SystemUserProvider;
 pub(crate) use cache::snapshot::CachedUserAccess;
 pub use cache::{LlmProxyCache, LlmProxyCacheOptions};
 pub(crate) use cache_affinity::{AffinityEntry, AffinityRecord, AffinitySelection, ClearAffinityInput, InvalidateAffinityInput, SetAffinityInput};
-pub(crate) use candidate::{routing_preview, routing_rankings};
+pub(crate) use candidate::routing_rankings;
 pub use error::LlmProxyError;
 pub(crate) use model_test::LlmProxyProviderModelTester;
 pub(crate) use proxy::{ProxyJsonRequest, proxy_json};

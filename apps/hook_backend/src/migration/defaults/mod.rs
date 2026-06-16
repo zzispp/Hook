@@ -318,7 +318,6 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "routing_profiles_update",
             "routing_rankings_read",
             "routing_decision_read",
-            "routing_preview",
             "models_global_read",
             "groups_read",
         ],

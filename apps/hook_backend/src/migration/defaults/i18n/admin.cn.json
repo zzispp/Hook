@@ -1455,13 +1455,14 @@
     "empty": "当前过滤条件下没有路由候选。",
     "profileInherited": "跟随默认",
     "cards": {
-      "simulationContextTitle": "模拟上下文",
-      "simulationContextHelper": "选择计费分组、模型和格式上下文，用于模拟并检查路由决策。",
-      "profileTuningHelper": "选择路由策略，调整基准权重，并控制自动强化学习开关。",
-      "rankingsTitle": "模拟：{{profile}}",
-      "rankingsHelper": "基于当前路由策略实时查看候选排序、打分组成和窗口指标。"
+      "simulationContextTitle": "真实链路模拟",
+      "simulationContextHelper": "选择 API Token、模型和格式，用真实权限、亲和缓存、限流与熔断状态模拟选路。",
+      "profileTuningHelper": "编辑本次真实生效的路由策略；生效顺序为模型覆盖、计费分组覆盖、默认策略。",
+      "rankingsTitle": "真实链路模拟：{{profile}}",
+      "rankingsHelper": "基于真实 token 上下文查看候选排序、打分组成和窗口指标。"
     },
     "filters": {
+      "apiToken": "API Token",
       "group": "计费分组",
       "model": "模型",
       "apiFormat": "API 格式",

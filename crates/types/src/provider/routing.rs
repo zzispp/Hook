@@ -235,41 +235,24 @@ pub struct RoutingProfileLearningState {
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct RoutingRankingsRequest {
-    #[serde(default)]
-    pub profile_id: RoutingProfileId,
-    #[serde(default)]
-    pub group_code: Option<String>,
-    #[serde(default)]
-    pub model: Option<String>,
-    #[serde(default)]
-    pub api_format: Option<String>,
-    #[serde(default)]
-    pub is_stream: Option<bool>,
+    pub api_token_id: String,
+    pub model: String,
+    pub api_format: String,
+    pub is_stream: bool,
     #[serde(default)]
     pub window: RoutingMetricWindow,
     #[serde(default)]
     pub include_excluded: bool,
-}
-
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct RoutingPreviewRequest {
-    pub profile_id: RoutingProfileId,
-    pub group_code: String,
-    pub model: String,
-    pub api_format: String,
-    pub is_stream: bool,
+    #[serde(default)]
+    pub request_id_seed: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct RoutingRankingResponse {
     pub profile: RoutingProfile,
     pub window: RoutingMetricWindow,
-    pub items: Vec<RouteScoreExplanation>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct RoutingPreviewResponse {
-    pub profile: RoutingProfile,
+    pub selected: Option<RouteIdentity>,
+    pub request_id_seed: String,
     pub items: Vec<RouteScoreExplanation>,
 }
 

@@ -25,10 +25,4 @@ pub const ROUTING_APIS: &[ApiDefinition] = &[
         path_pattern: "/api/admin/routing/decisions/{request_id}",
         name: "读取路由决策详情",
     },
-    ApiDefinition {
-        code: "routing_preview",
-        method: "POST",
-        path_pattern: "/api/admin/routing/preview",
-        name: "预览路由策略排序",
-    },
 ];

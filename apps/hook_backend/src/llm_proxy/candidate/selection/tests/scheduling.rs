@@ -1,8 +1,11 @@
 use std::collections::BTreeMap;
 
-use types::{api_token::ApiTokenType, provider::ProviderPriorityMode};
+use types::{
+    api_token::ApiTokenType,
+    provider::{ProviderPriorityMode, ProviderSchedulingMode},
+};
 
-use super::helpers::{api_token, provider_b, provider_with_endpoints_and_keys, request, snapshot_with_provider};
+use super::helpers::{api_token, provider_b, provider_key, provider_with_endpoints_and_keys, provider_with_keys, request, snapshot_with_provider};
 use crate::llm_proxy::candidate::selection::{
     matching::{MatchingCandidatePartsInput, matching_candidate_parts},
     scheduler::{OrderCandidatePartsInput, order_candidate_parts},
@@ -45,7 +48,31 @@ fn order_candidate_parts_uses_group_scoped_key_priority() {
     assert_eq!(ordered, vec!["key-global-first", "key-internal-first"]);
 }
 
+#[test]
+fn routing_order_candidate_parts_load_balance_seed_is_stable() {
+    let provider = provider_with_keys(vec![
+        provider_key("key-a-1", 10, vec!["openai:chat"]),
+        provider_key("key-a-2", 20, vec!["openai:chat"]),
+        provider_key("key-a-3", 30, vec!["openai:chat"]),
+    ]);
+    let mut snapshot = snapshot_with_provider(provider);
+    snapshot.scheduling_mode = ProviderSchedulingMode::LoadBalance;
+
+    let first = ordered_key_ids_with_seed(&snapshot, ProviderPriorityMode::Provider, "request-seed-a");
+    let second = ordered_key_ids_with_seed(&snapshot, ProviderPriorityMode::Provider, "request-seed-a");
+
+    assert_eq!(first, second);
+}
+
 fn ordered_key_ids(snapshot: &crate::llm_proxy::cache::snapshot::SchedulingSnapshot, priority_mode: ProviderPriorityMode) -> Vec<String> {
+    ordered_key_ids_with_seed(snapshot, priority_mode, "request-1")
+}
+
+fn ordered_key_ids_with_seed(
+    snapshot: &crate::llm_proxy::cache::snapshot::SchedulingSnapshot,
+    priority_mode: ProviderPriorityMode,
+    request_id: &str,
+) -> Vec<String> {
     let group = &snapshot.groups[0];
     let token = api_token(ApiTokenType::Independent, None);
     let request = request();
@@ -57,7 +84,7 @@ fn ordered_key_ids(snapshot: &crate::llm_proxy::cache::snapshot::SchedulingSnaps
         request,
         affinity: None,
         scheduling_mode: snapshot.scheduling_mode,
-        request_id: "request-1",
+        request_id,
         cooled_provider_ids: &Default::default(),
     });
     order_candidate_parts(OrderCandidatePartsInput {
@@ -67,7 +94,7 @@ fn ordered_key_ids(snapshot: &crate::llm_proxy::cache::snapshot::SchedulingSnaps
         user_access: None,
         request,
         model_id: "model-a",
-        request_id: "request-1",
+        request_id,
         affinity: None,
         mode: snapshot.scheduling_mode,
         priority_mode,

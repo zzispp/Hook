@@ -1455,13 +1455,14 @@
     "empty": "No routing candidates match the current filters.",
     "profileInherited": "Follow default",
     "cards": {
-      "simulationContextTitle": "Simulation context",
-      "simulationContextHelper": "Select the billing group, model, and format context to simulate and inspect routing decisions.",
-      "profileTuningHelper": "Choose a routing profile, tune baseline weights, and control automatic reinforcement learning.",
-      "rankingsTitle": "Simulation: {{profile}}",
-      "rankingsHelper": "View live candidate rankings, score components, and window metrics under the selected routing profile."
+      "simulationContextTitle": "Real path simulation",
+      "simulationContextHelper": "Select an API token, model, and format to simulate routing with real access, affinity, rate-limit, and circuit state.",
+      "profileTuningHelper": "Edit the routing profile that is effective for this simulation: model override, billing group override, then default.",
+      "rankingsTitle": "Real path simulation: {{profile}}",
+      "rankingsHelper": "View candidate rankings, score components, and window metrics under the real token context."
     },
     "filters": {
+      "apiToken": "API token",
       "group": "Billing group",
       "model": "Model",
       "apiFormat": "API format",
