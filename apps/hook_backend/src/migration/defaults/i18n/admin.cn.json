@@ -1453,6 +1453,7 @@
   "routing": {
     "loading": "正在加载路由排序...",
     "empty": "当前过滤条件下没有路由候选。",
+    "emptyBeforeQuery": "请选择用户、API Token、模型和格式后点击查询路由。",
     "profileInherited": "跟随默认",
     "cards": {
       "simulationContextTitle": "真实链路模拟",
@@ -1462,6 +1463,7 @@
       "rankingsHelper": "基于真实 token 上下文查看候选排序、打分组成和窗口指标。"
     },
     "filters": {
+      "user": "用户",
       "apiToken": "API Token",
       "group": "计费分组",
       "model": "模型",
@@ -1470,9 +1472,13 @@
       "stream": "流式",
       "includeExcluded": "显示排除项",
       "autoRefresh": "自动刷新",
-      "requestId": "Request ID"
+      "requestId": "Request ID",
+      "selectUserFirst": "请先选择用户",
+      "selectApiTokenFirst": "请先选择 API Token",
+      "noAccessibleModels": "该 API Token 当前无可访问模型"
     },
     "actions": {
+      "simulate": "查询路由",
       "lookup": "查询",
       "details": "详情"
     },
