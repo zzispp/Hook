@@ -1,5 +1,6 @@
 use rust_decimal::Decimal;
-use storage::provider::{ProviderStore, RoutingMetricDelta};
+use storage::provider::{ProviderStore, RoutingContextRouteStateDelta, RoutingMetricDelta};
+use types::model::PatchField;
 use types::provider::{RequestUpstreamCost, RouteIdentity};
 
 use super::{AttemptAuditInput, TokenUsage, billing_runtime::total_tokens};
@@ -32,11 +33,17 @@ pub(super) async fn record_finished_attempt(
         return Ok(());
     }
     let route = input.candidate.trace.route_identity();
-    store.upsert_routing_metric_delta(metric_delta(input, upstream_cost, route.clone())).await?;
+    let observed_at = time::OffsetDateTime::now_utc();
+    store
+        .upsert_routing_metric_delta(metric_delta(input, upstream_cost, route.clone(), observed_at))
+        .await?;
+    store
+        .upsert_routing_context_route_state(context_delta(input, route.clone(), observed_at))
+        .await?;
     circuit::record_attempt(state, circuit_event(input, &route)).await
 }
 
-fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, route: RouteIdentity) -> RoutingMetricDelta {
+fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, route: RouteIdentity, observed_at: time::OffsetDateTime) -> RoutingMetricDelta {
     let usage = input.usage;
     let output_tokens = output_tokens(usage);
     RoutingMetricDelta {
@@ -44,12 +51,18 @@ fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, 
         provider_name: Some(input.candidate.trace.provider_name_snapshot.clone()),
         key_name: Some(input.candidate.trace.key_name_snapshot.clone()),
         endpoint_name: Some(input.candidate.trace.endpoint_name_snapshot.clone()),
+        route_config_fingerprint: Some(input.candidate.trace.route_config_fingerprint.clone()),
+        price_config_fingerprint: Some(input.candidate.trace.price_config_fingerprint.clone()),
         request_count: 1,
         success_count: success_count(input),
         failure_count: failure_count(input),
         timeout_count: timeout_count(input),
         rate_limited_count: rate_limited_count(input),
         server_error_count: server_error_count(input),
+        format_conversion_failure_count: format_conversion_failure_count(input),
+        usage_missing_count: usage_missing_count(input),
+        stream_abnormal_end_count: stream_abnormal_end_count(input),
+        schema_tool_call_failure_count: schema_tool_call_failure_count(input),
         latency_sum_ms: input.latency_ms.unwrap_or_default().max(0),
         latency_sample_count: sample_count(input.latency_ms),
         ttfb_sum_ms: input.first_byte_time_ms.unwrap_or_default().max(0),
@@ -59,7 +72,25 @@ fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, 
         tps_sample_count: sample_count(input.latency_ms).min(output_tokens.signum()),
         upstream_total_cost: upstream_cost.upstream_total_cost.unwrap_or(Decimal::ZERO),
         total_tokens: total_tokens(usage).unwrap_or_default().max(0),
-        observed_at: time::OffsetDateTime::now_utc(),
+        observed_at,
+    }
+}
+
+fn context_delta(input: &AttemptAuditInput, route: RouteIdentity, observed_at: time::OffsetDateTime) -> RoutingContextRouteStateDelta {
+    let output_tokens = output_tokens(input.usage);
+    RoutingContextRouteStateDelta {
+        context_key: input.candidate.trace.routing_context_key.clone(),
+        route,
+        route_config_fingerprint: Some(input.candidate.trace.route_config_fingerprint.clone()),
+        price_config_fingerprint: Some(input.candidate.trace.price_config_fingerprint.clone()),
+        sample_count: 1,
+        success_count: success_count(input),
+        failure_count: failure_count(input),
+        latency_ms: input.latency_ms.map(|value| value.max(0)),
+        ttfb_ms: input.first_byte_time_ms.map(|value| value.max(0)),
+        output_tokens,
+        tps_latency_ms: tps_latency(input, output_tokens),
+        observed_at,
     }
 }
 
@@ -94,6 +125,46 @@ fn rate_limited_count(input: &AttemptAuditInput) -> i64 {
 
 fn server_error_count(input: &AttemptAuditInput) -> i64 {
     i64::from(input.status_code.is_some_and(|code| (500..=599).contains(&code)))
+}
+
+fn format_conversion_failure_count(input: &AttemptAuditInput) -> i64 {
+    i64::from(matches!(
+        input.error_type.as_deref(),
+        Some("request_conversion_error" | "response_conversion_error" | "format_conversion_error")
+    ))
+}
+
+fn usage_missing_count(input: &AttemptAuditInput) -> i64 {
+    i64::from(input.status == "success" && total_tokens(input.usage).is_none())
+}
+
+fn stream_abnormal_end_count(input: &AttemptAuditInput) -> i64 {
+    let abnormal_reason = matches!(&input.stream_end_reason, PatchField::Value(reason) if !normal_stream_end_reason(reason));
+    let abnormal_error = matches!(
+        input.error_type.as_deref(),
+        Some("upstream_incomplete_stream" | "upstream_eof_without_completion" | "stream_idle_timeout")
+    );
+    i64::from(input.candidate.trace.is_stream && (abnormal_reason || abnormal_error))
+}
+
+fn schema_tool_call_failure_count(input: &AttemptAuditInput) -> i64 {
+    i64::from(
+        text_has_schema_tool_failure(input.error_type.as_deref())
+            || text_has_schema_tool_failure(input.error_code.as_deref())
+            || text_has_schema_tool_failure(input.error_message.as_deref()),
+    )
+}
+
+fn normal_stream_end_reason(value: &str) -> bool {
+    matches!(value, "done" | "eof" | "handler_stop")
+}
+
+fn text_has_schema_tool_failure(value: Option<&str>) -> bool {
+    let Some(value) = value else {
+        return false;
+    };
+    let value = value.to_ascii_lowercase();
+    value.contains("schema") || value.contains("tool_call") || value.contains("tool call") || value.contains("custom_tool")
 }
 
 fn sample_count(value: Option<i64>) -> i64 {

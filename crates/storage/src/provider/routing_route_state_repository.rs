@@ -17,6 +17,16 @@ where
     Ok(rows.into_iter().map(RoutingRouteStateRecord::from).collect())
 }
 
+pub(super) async fn list_route_states<C>(connection: &C) -> StorageResult<Vec<RoutingRouteStateRecord>>
+where
+    C: ConnectionTrait,
+{
+    let rows = RoutingRouteStateRow::find_by_statement(Statement::from_string(DbBackend::Postgres, select_sql().to_owned()))
+        .all(connection)
+        .await?;
+    Ok(rows.into_iter().map(RoutingRouteStateRecord::from).collect())
+}
+
 fn select_statement(routes: &[RouteIdentity]) -> Option<Statement> {
     let mut params = Vec::new();
     let filter = route_filter_sql(routes, &mut params)?;
@@ -25,7 +35,7 @@ fn select_statement(routes: &[RouteIdentity]) -> Option<Statement> {
 }
 
 fn select_sql() -> &'static str {
-    "SELECT provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
+    "SELECT provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, \
      ema_success_rate, ema_ttfb_ms, ema_latency_ms, ema_output_tps, sample_count, last_updated_at \
      FROM routing_route_states"
 }
@@ -65,6 +75,8 @@ struct RoutingRouteStateRow {
     client_api_format: String,
     provider_api_format: String,
     is_stream: bool,
+    route_config_fingerprint: Option<String>,
+    price_config_fingerprint: Option<String>,
     ema_success_rate: Decimal,
     ema_ttfb_ms: Option<Decimal>,
     ema_latency_ms: Option<Decimal>,
@@ -82,6 +94,8 @@ impl From<RoutingRouteStateRow> for RoutingRouteStateRecord {
             ema_latency_ms: row.ema_latency_ms.and_then(decimal),
             ema_output_tps: row.ema_output_tps.and_then(decimal),
             sample_count: row.sample_count.max(0) as u64,
+            route_config_fingerprint: row.route_config_fingerprint,
+            price_config_fingerprint: row.price_config_fingerprint,
             last_updated_at: row.last_updated_at,
         }
     }

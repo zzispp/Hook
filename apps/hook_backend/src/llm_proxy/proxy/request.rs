@@ -12,7 +12,7 @@ use crate::llm_proxy::{
     rate_limit::ProviderKeyProbeSlotOptions,
 };
 
-use super::{body_rules::apply_provider_body_rules, capture::RequestCapture};
+use super::{body_rules::apply_provider_body_rules, capture::RequestCapture, request_features::routing_request_features};
 
 pub(super) struct PreparedProxyRequest {
     pub(super) request_id: String,
@@ -47,6 +47,8 @@ pub(super) async fn prepare_proxy_request(
     rate_limit::enforce_request_limits(state, token).await?;
     let is_stream = is_streaming(&body) && !force_non_stream;
     let routing_api_format = routing_api_format(api_format, &body);
+    let required_capability = required_capability_for_routing(routing_api_format);
+    let features = routing_request_features(api_format, &body, model_name, is_stream, required_capability)?;
     let selection = select_candidates(
         state,
         token,
@@ -56,7 +58,8 @@ pub(super) async fn prepare_proxy_request(
             model_name,
             is_stream,
             has_openai_responses_custom_tool_items: has_openai_responses_custom_tool_items(api_format, &body),
-            required_capability: required_capability_for_routing(routing_api_format),
+            required_capability,
+            features,
         },
     )
     .await?;

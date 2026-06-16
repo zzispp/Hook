@@ -1,4 +1,4 @@
-use types::provider::RouteScoreExplanation;
+use types::provider::{RouteScoreExplanation, RoutingMetricSource, RoutingPriorSource, RoutingRequestSizeBucket};
 
 #[test]
 fn decision_candidates_without_metric_window_deserialize_with_default_window() {
@@ -43,4 +43,8 @@ fn decision_candidates_without_metric_window_deserialize_with_default_window() {
 
     let explanation: RouteScoreExplanation = serde_json::from_str(payload).expect("legacy routing decision payload should deserialize");
     assert_eq!(explanation.metric_window.as_str(), "5m");
+    assert_eq!(explanation.metric_source, RoutingMetricSource::Unknown);
+    assert_eq!(explanation.prior_source, RoutingPriorSource::Unknown);
+    assert_eq!(explanation.prior_sample_count, 0);
+    assert_eq!(explanation.request_features.request_size_bucket, RoutingRequestSizeBucket::Unknown);
 }

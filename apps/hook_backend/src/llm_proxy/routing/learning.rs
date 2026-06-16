@@ -1,8 +1,8 @@
-use rust_decimal::{Decimal, prelude::ToPrimitive};
 use storage::provider::{ProviderStore, RoutingMetricRecord, RoutingProfileVersionSnapshot};
 use time::{Duration, OffsetDateTime};
 use types::provider::{RoutingMetricWindow, RoutingProfile, RoutingProfileLearningState, RoutingProfileWeights};
 
+use super::learning_cost::{CostRange, CurrentCostCatalog, current_costs};
 use crate::llm_proxy::{LlmProxyError, LlmProxyState};
 
 const AUTO_TUNE_STRENGTH: f64 = 0.35;
@@ -17,6 +17,7 @@ const TTFB_GOOD_MS: f64 = 250.0;
 const TTFB_BAD_MS: f64 = 4_000.0;
 const TPS_LOW: f64 = 5.0;
 const TPS_HIGH: f64 = 120.0;
+const QUALITY_PENALTY_WEIGHT: f64 = 0.20;
 
 pub(crate) async fn apply_profile_learning(state: &LlmProxyState, profile: RoutingProfile) -> Result<RoutingProfile, LlmProxyError> {
     if !profile.auto_tune_enabled {
@@ -26,7 +27,7 @@ pub(crate) async fn apply_profile_learning(state: &LlmProxyState, profile: Routi
     let now = OffsetDateTime::now_utc();
     let latest = store.get_latest_routing_profile_version(profile.id.as_str()).await?;
     let snapshot = if needs_refresh(latest.as_ref(), &profile, now) {
-        let refreshed = build_snapshot(&store, &profile, now).await?;
+        let refreshed = build_snapshot(state, &store, &profile, now).await?;
         store.insert_routing_profile_version_snapshot(&refreshed).await?;
         refreshed
     } else {
@@ -42,10 +43,16 @@ fn needs_refresh(latest: Option<&RoutingProfileVersionSnapshot>, profile: &Routi
     latest.sample_count == 0 || latest.admin_weights != profile.weights || now - latest.created_at >= LEARNING_REFRESH
 }
 
-async fn build_snapshot(store: &ProviderStore, profile: &RoutingProfile, now: OffsetDateTime) -> Result<RoutingProfileVersionSnapshot, LlmProxyError> {
+async fn build_snapshot(
+    state: &LlmProxyState,
+    store: &ProviderStore,
+    profile: &RoutingProfile,
+    now: OffsetDateTime,
+) -> Result<RoutingProfileVersionSnapshot, LlmProxyError> {
     let metrics = store.list_routing_metrics(LEARNING_WINDOW).await?;
     let sample_count = metrics.iter().map(|item| item.snapshot.sample_count).sum::<u64>();
-    let learned_weights = learn_weights(profile, &metrics);
+    let current_costs = current_costs(state, &metrics).await?;
+    let learned_weights = learn_weights(profile, &metrics, &current_costs);
     let confidence = confidence(sample_count);
     let effective_weights = learned_weights
         .as_ref()
@@ -79,7 +86,7 @@ fn hydrate_profile(mut profile: RoutingProfile, snapshot: RoutingProfileVersionS
     profile
 }
 
-fn learn_weights(profile: &RoutingProfile, metrics: &[RoutingMetricRecord]) -> Option<RoutingProfileWeights> {
+fn learn_weights(profile: &RoutingProfile, metrics: &[RoutingMetricRecord], current_costs: &CurrentCostCatalog) -> Option<RoutingProfileWeights> {
     let eligible = metrics
         .iter()
         .filter(|item| item.snapshot.sample_count >= MIN_ROUTE_SAMPLES)
@@ -87,10 +94,10 @@ fn learn_weights(profile: &RoutingProfile, metrics: &[RoutingMetricRecord]) -> O
     if eligible.is_empty() {
         return None;
     }
-    let cost_range = CostRange::from_records(&eligible);
+    let cost_range = CostRange::from_records(&eligible, current_costs);
     let mut learned = WeightVector::from_weights(&profile.weights);
     for record in eligible {
-        let signals = SignalVector::from_record(record, cost_range);
+        let signals = SignalVector::from_record(record, cost_range, current_costs.get(&record.route).copied());
         let reward = reward(profile, signals);
         learned = learned.update(signals, reward);
     }
@@ -103,8 +110,9 @@ fn reward(profile: &RoutingProfile, signals: SignalVector) -> f64 {
     let ttfb_penalty = (1.0 - signals.ttfb) * profile.weights.ttfb;
     let latency_penalty = (1.0 - signals.latency) * profile.weights.latency;
     let cost_penalty = (1.0 - signals.cost) * profile.weights.cost;
+    let quality_penalty = (1.0 - signals.quality) * QUALITY_PENALTY_WEIGHT;
     let tps_reward = signals.tps * profile.weights.tps;
-    (success_gain - failure_penalty - ttfb_penalty - latency_penalty - cost_penalty + tps_reward).clamp(-1.0, 1.0)
+    (success_gain - failure_penalty - ttfb_penalty - latency_penalty - cost_penalty - quality_penalty + tps_reward).clamp(-1.0, 1.0)
 }
 
 pub(super) fn blend_weights(admin: &RoutingProfileWeights, learned: &RoutingProfileWeights, strength: f64) -> RoutingProfileWeights {
@@ -136,16 +144,18 @@ struct SignalVector {
     latency: f64,
     tps: f64,
     cost: f64,
+    quality: f64,
 }
 
 impl SignalVector {
-    fn from_record(record: &RoutingMetricRecord, cost_range: CostRange) -> Self {
+    fn from_record(record: &RoutingMetricRecord, cost_range: CostRange, current_cost: Option<f64>) -> Self {
         Self {
             success: success_score(record),
             ttfb: lower_is_better(record.snapshot.ttfb_avg_ms, TTFB_GOOD_MS, TTFB_BAD_MS),
             latency: lower_is_better(record.snapshot.latency_avg_ms, LATENCY_GOOD_MS, LATENCY_BAD_MS),
             tps: higher_is_better(record.snapshot.output_tps, TPS_LOW, TPS_HIGH),
-            cost: cost_range.score(observed_cost(record)),
+            cost: cost_range.score(current_cost),
+            quality: quality_score(record),
         }
     }
 }
@@ -242,52 +252,19 @@ fn update_weight(weight: f64, signal: f64, reward: f64) -> f64 {
     (weight.max(0.000_1) * (LEARNING_RATE * reward * centered).exp()).max(0.000_1)
 }
 
-#[derive(Clone, Copy)]
-struct CostRange {
-    min: Option<f64>,
-    max: Option<f64>,
-}
-
-impl CostRange {
-    fn from_records(records: &[&RoutingMetricRecord]) -> Self {
-        let mut values = records.iter().filter_map(|item| observed_cost(item));
-        let Some(first) = values.next() else {
-            return Self { min: None, max: None };
-        };
-        let (min, max) = values.fold((first, first), |(min, max), value| (min.min(value), max.max(value)));
-        Self {
-            min: Some(min),
-            max: Some(max),
-        }
-    }
-
-    fn score(self, value: Option<f64>) -> f64 {
-        let Some(value) = value else {
-            return 0.5;
-        };
-        let Some(min) = self.min else {
-            return 1.0;
-        };
-        let Some(max) = self.max else {
-            return 1.0;
-        };
-        if (max - min).abs() < f64::EPSILON {
-            return 1.0;
-        }
-        ((max - value) / (max - min)).clamp(0.0, 1.0)
-    }
-}
-
-fn observed_cost(record: &RoutingMetricRecord) -> Option<f64> {
-    let request_count = record.snapshot.request_count.max(1) as i64;
-    let total = record.snapshot.upstream_total_cost?;
-    (total > Decimal::ZERO).then(|| (total / Decimal::from(request_count)).to_f64()).flatten()
-}
-
 fn success_score(record: &RoutingMetricRecord) -> f64 {
     let success = record.snapshot.success_count as f64 + 1.0;
     let attempts = record.snapshot.request_count as f64 + 2.0;
     (success / attempts).clamp(0.0, 1.0)
+}
+
+pub(super) fn quality_score(record: &RoutingMetricRecord) -> f64 {
+    let attempts = record.snapshot.request_count.max(1) as f64;
+    let failures = record.snapshot.format_conversion_failure_count
+        + record.snapshot.usage_missing_count
+        + record.snapshot.stream_abnormal_end_count
+        + record.snapshot.schema_tool_call_failure_count;
+    (1.0 - failures as f64 / attempts).clamp(0.0, 1.0)
 }
 
 fn lower_is_better(value: Option<f64>, good: f64, bad: f64) -> f64 {

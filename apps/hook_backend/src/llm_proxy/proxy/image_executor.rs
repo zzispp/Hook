@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use axum::{http::HeaderMap, response::Response};
 use proxy::format_conversion::ApiFormat;
-use types::api_token::ApiToken;
+use types::{api_token::ApiToken, provider::RoutingRequestFeatures};
 
 use super::{
     LlmProxyError, LlmProxyState, affinity,
@@ -57,6 +57,7 @@ async fn prepare_image_edit_request(
             is_stream: false,
             has_openai_responses_custom_tool_items: false,
             required_capability: Some(IMAGE_GENERATION_CAPABILITY),
+            features: RoutingRequestFeatures::unknown(OPENAI_IMAGE_EDIT_FORMAT, false, Some(IMAGE_GENERATION_CAPABILITY)),
         },
     )
     .await?;

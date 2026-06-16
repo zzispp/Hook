@@ -46,7 +46,7 @@ pub(super) fn matching_candidate_parts_at(input: MatchingCandidatePartsInput<'_>
                 provider,
                 group: input.group,
                 model_id: input.model_id,
-                request: input.request,
+                request: &input.request,
                 affinity: input.affinity,
                 scheduling_mode: input.scheduling_mode,
                 request_id: input.request_id,
@@ -63,7 +63,7 @@ struct AppendProviderCandidateInput<'a> {
     provider: &'a CachedProvider,
     group: &'a CachedBillingGroup,
     model_id: &'a str,
-    request: CandidateRequest<'a>,
+    request: &'a CandidateRequest<'a>,
     affinity: Option<&'a AffinitySelection>,
     scheduling_mode: ProviderSchedulingMode,
     request_id: &'a str,
@@ -97,7 +97,7 @@ fn append_key_candidates(
     provider: &CachedProvider,
     model: CachedModelBinding,
     model_id: &str,
-    request: CandidateRequest<'_>,
+    request: &CandidateRequest<'_>,
     endpoints: Vec<CachedEndpoint>,
     keys: Vec<CachedProviderKey>,
     output: &mut Vec<CandidateParts>,
@@ -136,7 +136,7 @@ fn ordered_endpoints(
     provider: &CachedProvider,
     group: &CachedBillingGroup,
     model_id: &str,
-    request: CandidateRequest<'_>,
+    request: &CandidateRequest<'_>,
     current_minute: u16,
     affinity: Option<&AffinitySelection>,
 ) -> Vec<CachedEndpoint> {
@@ -213,11 +213,11 @@ fn provider_model(provider: &CachedProvider, model_id: &str) -> Option<CachedMod
         .map(selected_provider_model)
 }
 
-fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
+fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: &CandidateRequest<'_>) -> bool {
     endpoint.is_active && (endpoint_exact(endpoint, request) || conversion_allowed(provider, endpoint, request))
 }
 
-fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
+fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: &CandidateRequest<'_>) -> bool {
     if request.has_openai_responses_custom_tool_items {
         return false;
     }
@@ -226,7 +226,7 @@ fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, requ
         && !endpoint_exact(endpoint, request)
 }
 
-fn endpoint_exact(endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
+fn endpoint_exact(endpoint: &CachedEndpoint, request: &CandidateRequest<'_>) -> bool {
     formats::formats_exact(request.routing_api_format, &endpoint.api_format, request.is_stream).unwrap_or(false)
 }
 
@@ -251,7 +251,7 @@ fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpo
     key_allowed(key, group, current_minute) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
 }
 
-fn key_allows_candidate(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, request: CandidateRequest<'_>) -> bool {
+fn key_allows_candidate(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, request: &CandidateRequest<'_>) -> bool {
     key_allows_model(key, model_id) && key_allows_endpoint(key, endpoint) && key_supports_required_capability(key, request.required_capability)
 }
 
@@ -259,7 +259,7 @@ fn key_allows_endpoint(key: &CachedProviderKey, endpoint: &CachedEndpoint) -> bo
     key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
 }
 
-fn global_model_supports_required_capability(request: CandidateRequest<'_>, snapshot: &SchedulingSnapshot, model_id: &str) -> bool {
+fn global_model_supports_required_capability(request: &CandidateRequest<'_>, snapshot: &SchedulingSnapshot, model_id: &str) -> bool {
     let Some(required) = request.required_capability else {
         return true;
     };

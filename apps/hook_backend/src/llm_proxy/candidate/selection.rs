@@ -3,6 +3,7 @@ mod dynamic_routing;
 mod matching;
 mod proxy_candidate;
 mod route;
+mod routing_metrics;
 mod scheduler;
 #[cfg(test)]
 mod tests;
@@ -12,7 +13,7 @@ use storage::api_token::ApiTokenStore;
 use types::{
     api_token::ApiToken,
     model::TieredPricingConfig,
-    provider::{RouteIdentity, RouteScoreExplanation, RoutingProfileId, RoutingRankingResponse, RoutingRankingsRequest},
+    provider::{RouteIdentity, RouteScoreExplanation, RoutingProfileId, RoutingRankingResponse, RoutingRankingsRequest, RoutingRequestFeatures},
 };
 use uuid::Uuid;
 
@@ -29,13 +30,13 @@ pub(super) type CandidatePartKey = (String, String, String);
 
 pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request: CandidateRequest<'_>) -> Result<CandidateSelection, LlmProxyError> {
     let request_id = Uuid::now_v7().to_string();
-    let context = token_routing_context(state, token, request, request_id.clone()).await?;
-    let ordered = context.ordered_parts(state, token, request).await?;
+    let context = token_routing_context(state, token, request.clone(), request_id.clone()).await?;
+    let ordered = context.ordered_parts(state, token, request.clone()).await?;
     let routed = dynamic_routing::rank_candidate_parts(dynamic_routing::DynamicRoutingInput {
         state,
         parts: ordered,
         group: &context.group,
-        request,
+        request: request.clone(),
         global_model: &context.global_model,
         profile_id: context.routing_profile_id,
         priority_mode: context.priority_mode,
@@ -75,10 +76,11 @@ pub(super) async fn routing_rankings(state: &LlmProxyState, request: RoutingRank
         is_stream: request.is_stream,
         has_openai_responses_custom_tool_items: false,
         required_capability: None,
+        features: RoutingRequestFeatures::unknown(&request.api_format, request.is_stream, None),
     };
-    let context = token_routing_context(state, &token, candidate_request, request_id_seed.clone()).await?;
+    let context = token_routing_context(state, &token, candidate_request.clone(), request_id_seed.clone()).await?;
     let profile = crate::llm_proxy::routing::profile_by_id(state, context.routing_profile_id).await?.profile;
-    let parts = context.ordered_parts(state, &token, candidate_request).await?;
+    let parts = context.ordered_parts(state, &token, candidate_request.clone()).await?;
     let output = dynamic_routing::rank_candidate_parts_with_profile(
         dynamic_routing::DynamicRoutingInput {
             state,

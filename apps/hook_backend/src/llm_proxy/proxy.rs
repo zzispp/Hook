@@ -12,6 +12,7 @@ mod image_form;
 mod image_response;
 mod outbound_request;
 mod request;
+mod request_features;
 mod response_model;
 mod response_payload;
 mod stream_transport;

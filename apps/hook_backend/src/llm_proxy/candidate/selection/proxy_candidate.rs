@@ -1,10 +1,12 @@
 use types::api_token::ApiToken;
+use types::provider::ProviderModelCost;
 
-use super::{CandidateParts, DEFAULT_MAX_RETRIES, GlobalModelRef, route};
+use super::{CandidateParts, DEFAULT_MAX_RETRIES, GlobalModelRef, dynamic_cost::model_cost_config, route};
 use crate::llm_proxy::{
     LlmProxyError, LlmProxyState,
     cache::snapshot::{CachedBillingGroup, CachedUserAccess},
     candidate::{CandidateEndpointOption, CandidateKeyOption, CandidateRequest, CandidateRoute, CandidateTrace, ProxyCandidate},
+    routing::{PriceFingerprintInput, RouteFingerprintInput, price_config_fingerprint, route_config_fingerprint, routing_context_key},
 };
 
 pub(super) struct ProxyCandidateBuildInput<'a> {
@@ -26,19 +28,23 @@ pub(super) async fn proxy_candidates(input: ProxyCandidateBuildInput<'_>) -> Res
 }
 
 async fn proxy_candidate(input: &ProxyCandidateBuildInput<'_>, parts: &CandidateParts, index: i32) -> Result<ProxyCandidate, LlmProxyError> {
-    let route = route::candidate_route(input.state, input.request, parts)?;
+    let route = route::candidate_route(input.state, &input.request, parts)?;
     let route = effective_route(route, parts.is_cached);
     let endpoint = &route.options[0].endpoint;
     let key = &route.options[0].key;
+    let configured_cost = model_cost_config(input.state, &key.id, &parts.model.id).await?;
     Ok(ProxyCandidate {
         trace: candidate_trace(CandidateTraceInput {
             token: input.token,
-            request: input.request,
+            request: input.request.clone(),
             global_model: input.global_model,
+            group_code: &input.group.code,
+            billing_multiplier: input.group.billing_multiplier,
             token_user: input.token_user,
             parts,
             endpoint,
             key,
+            configured_cost: configured_cost.as_ref(),
             index,
         }),
         requested_model_name: input.request.model_name.to_owned(),
@@ -76,10 +82,13 @@ struct CandidateTraceInput<'a> {
     token: &'a ApiToken,
     request: CandidateRequest<'a>,
     global_model: &'a GlobalModelRef,
+    group_code: &'a str,
+    billing_multiplier: rust_decimal::Decimal,
     token_user: Option<&'a CachedUserAccess>,
     parts: &'a CandidateParts,
     endpoint: &'a CandidateEndpointOption,
     key: &'a CandidateKeyOption,
+    configured_cost: Option<&'a ProviderModelCost>,
     index: i32,
 }
 
@@ -106,6 +115,24 @@ fn candidate_trace(input: CandidateTraceInput<'_>) -> CandidateTrace {
         needs_conversion: input.endpoint.needs_conversion,
         is_stream: input.request.is_stream,
         is_cached: input.parts.is_cached,
+        routing_context_key: routing_context_key(input.group_code, &input.global_model.id, &input.request.features),
+        route_config_fingerprint: route_config_fingerprint(RouteFingerprintInput {
+            provider_id: &input.parts.provider.id,
+            key_id: &input.key.id,
+            endpoint_id: &input.endpoint.id,
+            global_model_id: &input.parts.model.global_model_id,
+            provider_model_id: &input.parts.model.id,
+            client_api_format: &input.parts.client_api_format,
+            provider_api_format: &input.endpoint.provider_api_format,
+            is_stream: input.request.is_stream,
+            needs_conversion: input.endpoint.needs_conversion,
+        }),
+        price_config_fingerprint: price_config_fingerprint(PriceFingerprintInput {
+            configured_cost: input.configured_cost,
+            price_per_request: input.global_model.default_price_per_request,
+            tiered_pricing: &input.global_model.default_tiered_pricing,
+            billing_multiplier: input.billing_multiplier,
+        }),
         candidate_index: input.index,
     }
 }

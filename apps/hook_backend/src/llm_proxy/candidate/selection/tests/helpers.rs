@@ -168,6 +168,7 @@ pub(super) fn request() -> CandidateRequest<'static> {
         is_stream: false,
         has_openai_responses_custom_tool_items: false,
         required_capability: None,
+        features: types::provider::RoutingRequestFeatures::unknown("openai:chat", false, None),
     }
 }
 

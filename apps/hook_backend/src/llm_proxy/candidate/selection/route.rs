@@ -8,7 +8,7 @@ use crate::llm_proxy::{
     formats,
 };
 
-pub(super) fn candidate_route(state: &LlmProxyState, request: CandidateRequest<'_>, parts: &CandidateParts) -> Result<CandidateRoute, LlmProxyError> {
+pub(super) fn candidate_route(state: &LlmProxyState, request: &CandidateRequest<'_>, parts: &CandidateParts) -> Result<CandidateRoute, LlmProxyError> {
     Ok(CandidateRoute {
         options: route_options(state, request, parts)?,
     })
@@ -19,7 +19,7 @@ pub(super) fn route_retry_floor(route: &CandidateRoute) -> Result<i32, LlmProxyE
     i32::try_from(option_count.saturating_sub(1)).map_err(|_| LlmProxyError::Infrastructure("candidate route option count exceeds retry index range".into()))
 }
 
-fn route_options(state: &LlmProxyState, request: CandidateRequest<'_>, parts: &CandidateParts) -> Result<Vec<CandidateRouteOption>, LlmProxyError> {
+fn route_options(state: &LlmProxyState, request: &CandidateRequest<'_>, parts: &CandidateParts) -> Result<Vec<CandidateRouteOption>, LlmProxyError> {
     let mut output = Vec::new();
     for input in route_option_inputs(&parts.endpoints, &parts.keys, &parts.model.global_model_id) {
         output.push(CandidateRouteOption {
@@ -48,7 +48,7 @@ fn route_option_inputs<'a>(endpoints: &'a [CachedEndpoint], keys: &'a [CachedPro
     output
 }
 
-fn endpoint_option(request: CandidateRequest<'_>, parts: &CandidateParts, endpoint: &CachedEndpoint) -> Result<CandidateEndpointOption, LlmProxyError> {
+fn endpoint_option(request: &CandidateRequest<'_>, parts: &CandidateParts, endpoint: &CachedEndpoint) -> Result<CandidateEndpointOption, LlmProxyError> {
     let needs_conversion = formats::needs_conversion(&parts.routing_api_format, &endpoint.api_format, request.is_stream)?;
     Ok(CandidateEndpointOption {
         id: endpoint.id.clone(),

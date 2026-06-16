@@ -108,6 +108,9 @@ fn trace() -> CandidateTrace {
         needs_conversion: false,
         is_stream: false,
         is_cached: false,
+        routing_context_key: "group=default|model=model-a|format=openai:chat|stream=false|size=unknown|cap=none".into(),
+        route_config_fingerprint: "route-fingerprint".into(),
+        price_config_fingerprint: "price-fingerprint".into(),
         candidate_index: 0,
     }
 }

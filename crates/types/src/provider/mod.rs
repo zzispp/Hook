@@ -12,6 +12,8 @@ mod quick_import_sync;
 mod request_candidate;
 mod request_record;
 mod routing;
+mod routing_features;
+mod routing_metadata;
 mod time_range;
 
 pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCooldownPolicy, ProviderCooldownRule};
@@ -56,6 +58,8 @@ pub use request_record::{
 pub use routing::{
     RouteIdentity, RouteScoreExplanation, RoutingDecisionResponse, RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, RoutingProfileId,
     RoutingProfileLearningState, RoutingProfileUpsert, RoutingProfileWeights, RoutingProfilesResponse, RoutingRankingResponse, RoutingRankingsRequest,
-    RoutingRouteState, ScoreComponent,
+    RoutingRouteState, ScoreComponent, default_contextual_exploration_enabled, default_prior_sample_cap,
 };
+pub use routing_features::{RoutingRequestFeatures, RoutingRequestSizeBucket};
+pub use routing_metadata::{RoutingMetricSource, RoutingPriorSource};
 pub use time_range::{parse_provider_key_time_range_minute, provider_key_minute_of_day, provider_key_time_range_contains};

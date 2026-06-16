@@ -5,7 +5,7 @@ use rust_decimal::Decimal;
 use serde_json::Value;
 use types::api_token::ApiToken;
 use types::model::TieredPricingConfig;
-use types::provider::{RouteIdentity, RouteScoreExplanation, RoutingProfileId, RoutingRankingResponse, RoutingRankingsRequest};
+use types::provider::{RouteIdentity, RouteScoreExplanation, RoutingProfileId, RoutingRankingResponse, RoutingRankingsRequest, RoutingRequestFeatures};
 
 use super::{LlmProxyError, LlmProxyState};
 
@@ -92,6 +92,9 @@ pub struct CandidateTrace {
     pub needs_conversion: bool,
     pub is_stream: bool,
     pub is_cached: bool,
+    pub routing_context_key: String,
+    pub route_config_fingerprint: String,
+    pub price_config_fingerprint: String,
     pub candidate_index: i32,
 }
 
@@ -105,7 +108,7 @@ pub struct CandidateSelection {
     pub candidates: Vec<ProxyCandidate>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct CandidateRequest<'a> {
     pub api_format: &'a str,
     pub routing_api_format: &'a str,
@@ -113,6 +116,7 @@ pub struct CandidateRequest<'a> {
     pub is_stream: bool,
     pub has_openai_responses_custom_tool_items: bool,
     pub required_capability: Option<&'a str>,
+    pub features: RoutingRequestFeatures,
 }
 
 pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request: CandidateRequest<'_>) -> Result<CandidateSelection, LlmProxyError> {

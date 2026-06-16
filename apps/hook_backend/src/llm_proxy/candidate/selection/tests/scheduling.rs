@@ -81,7 +81,7 @@ fn ordered_key_ids_with_seed(
         group,
         user_access: None,
         model_id: "model-a",
-        request,
+        request: request.clone(),
         affinity: None,
         scheduling_mode: snapshot.scheduling_mode,
         request_id,

@@ -83,6 +83,7 @@ pub struct LlmProxyState {
     http: ReqwestClient,
     affinity: redis::aio::ConnectionManager,
     cache: LlmProxyCache,
+    routing_metrics: routing::RoutingMetricsCache,
     payload_writer: request_payload_writer::RequestPayloadWriter,
     key_prefix: String,
     system_wallet: Option<Wallet>,
@@ -94,6 +95,7 @@ impl LlmProxyState {
         cipher: ProviderKeyCipher,
         affinity: redis::aio::ConnectionManager,
         cache: LlmProxyCache,
+        routing_metrics: routing::RoutingMetricsCache,
         key_prefix: String,
         system_wallet: Option<Wallet>,
     ) -> Self {
@@ -104,6 +106,7 @@ impl LlmProxyState {
             http: llm_proxy_http_client(),
             affinity,
             cache,
+            routing_metrics,
             payload_writer,
             key_prefix,
             system_wallet,
@@ -116,6 +119,10 @@ impl LlmProxyState {
 
     pub async fn scheduling_snapshot(&self) -> Result<cache::snapshot::SchedulingSnapshot, LlmProxyError> {
         self.cache.scheduling_snapshot().await
+    }
+
+    pub(crate) async fn routing_metrics_snapshot(&self) -> routing::RoutingMetricsSnapshot {
+        self.routing_metrics.snapshot().await
     }
 
     pub(crate) fn database(&self) -> Database {

@@ -1,6 +1,8 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use super::{RoutingMetricSource, RoutingPriorSource, RoutingRequestFeatures};
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RoutingProfileId {
@@ -67,7 +69,7 @@ impl RoutingRouteState {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum RoutingMetricWindow {
     OneMinute,
     #[default]
@@ -201,6 +203,10 @@ pub struct RoutingProfile {
     pub conversion_penalty: f64,
     pub stale_metric_penalty: f64,
     pub affinity_bonus: f64,
+    #[serde(default = "default_prior_sample_cap")]
+    pub prior_sample_cap: u64,
+    #[serde(default = "default_contextual_exploration_enabled")]
+    pub contextual_exploration_enabled: bool,
     pub auto_tune_enabled: bool,
     #[serde(default)]
     pub learning: Option<RoutingProfileLearningState>,
@@ -214,6 +220,8 @@ pub struct RoutingProfileUpsert {
     pub conversion_penalty: Option<f64>,
     pub stale_metric_penalty: Option<f64>,
     pub affinity_bonus: Option<f64>,
+    pub prior_sample_cap: Option<u64>,
+    pub contextual_exploration_enabled: Option<bool>,
     pub auto_tune_enabled: Option<bool>,
 }
 
@@ -274,6 +282,14 @@ pub struct RoutingMetricSnapshot {
     pub timeout_count: u64,
     pub rate_limited_count: u64,
     pub server_error_count: u64,
+    #[serde(default)]
+    pub format_conversion_failure_count: u64,
+    #[serde(default)]
+    pub usage_missing_count: u64,
+    #[serde(default)]
+    pub stream_abnormal_end_count: u64,
+    #[serde(default)]
+    pub schema_tool_call_failure_count: u64,
     pub latency_avg_ms: Option<f64>,
     pub ttfb_avg_ms: Option<f64>,
     pub output_tps: Option<f64>,
@@ -302,6 +318,28 @@ pub struct RouteScoreExplanation {
     pub raw_metrics: RoutingMetricSnapshot,
     pub exclusion_reason: Option<String>,
     pub metric_freshness_seconds: i64,
+    #[serde(default)]
+    pub metric_source: RoutingMetricSource,
+    #[serde(default)]
+    pub prior_source: RoutingPriorSource,
+    #[serde(default)]
+    pub prior_sample_count: u64,
+    #[serde(default)]
+    pub routing_context_key: Option<String>,
+    #[serde(default)]
+    pub route_config_fingerprint: Option<String>,
+    #[serde(default)]
+    pub price_config_fingerprint: Option<String>,
+    #[serde(default)]
+    pub request_features: RoutingRequestFeatures,
+}
+
+pub const fn default_prior_sample_cap() -> u64 {
+    20
+}
+
+pub const fn default_contextual_exploration_enabled() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
