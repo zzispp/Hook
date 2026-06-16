@@ -5,6 +5,7 @@ use types::provider::{
 use super::{RoutingEmaSnapshot, RoutingScoreCandidate, circuit::CircuitCandidateState, score_routes};
 
 mod exploration;
+mod prior;
 
 #[test]
 fn warming_candidates_keep_cache_affinity_bonus() {

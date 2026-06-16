@@ -8,6 +8,7 @@ use crate::llm_proxy::{LlmProxyError, LlmProxyState};
 use super::learning::apply_profile_learning;
 
 const BUILTIN_PROFILE_VERSION: &str = "builtin-v1";
+const WEIGHT_SUM_TOLERANCE: f64 = 0.001;
 
 #[derive(Clone, Debug)]
 pub(crate) struct VersionedRoutingProfile {
@@ -34,6 +35,7 @@ pub(crate) async fn profile_by_id(state: &LlmProxyState, id: RoutingProfileId) -
 }
 
 pub(crate) async fn upsert_profile(state: &LlmProxyState, id: RoutingProfileId, patch: RoutingProfileUpsert) -> Result<RoutingProfile, LlmProxyError> {
+    validate_profile_upsert(id, &patch)?;
     let mut profile = raw_profiles(state)
         .await?
         .into_iter()
@@ -47,6 +49,63 @@ pub(crate) async fn upsert_profile(state: &LlmProxyState, id: RoutingProfileId, 
         .upsert_routing_profile_overlay(profile)
         .await
         .map_err(LlmProxyError::from)
+}
+
+fn validate_profile_upsert(id: RoutingProfileId, patch: &RoutingProfileUpsert) -> Result<(), LlmProxyError> {
+    if let Some(weights) = patch.weights.as_ref() {
+        validate_weights(id, weights)?;
+    }
+    if patch.min_samples == Some(0) {
+        return invalid_profile_patch("min_samples must be at least 1");
+    }
+    validate_non_negative("exploration_k", patch.exploration_k)?;
+    validate_non_negative("conversion_penalty", patch.conversion_penalty)?;
+    validate_non_negative("stale_metric_penalty", patch.stale_metric_penalty)?;
+    validate_non_negative("affinity_bonus", patch.affinity_bonus)
+}
+
+fn validate_weights(id: RoutingProfileId, weights: &RoutingProfileWeights) -> Result<(), LlmProxyError> {
+    for (name, value) in weight_values(weights) {
+        validate_finite_non_negative(name, value)?;
+    }
+    let sum = weight_values(weights).iter().map(|(_, value)| value).sum::<f64>();
+    if (sum - 1.0).abs() > WEIGHT_SUM_TOLERANCE {
+        return invalid_profile_patch("routing profile weights must sum to 1");
+    }
+    if id != RoutingProfileId::FixedPriorityPlus && weights.priority > f64::EPSILON {
+        return invalid_profile_patch("priority weight is only allowed for fixed_priority_plus");
+    }
+    Ok(())
+}
+
+fn validate_non_negative(name: &str, value: Option<f64>) -> Result<(), LlmProxyError> {
+    if let Some(value) = value {
+        validate_finite_non_negative(name, value)?;
+    }
+    Ok(())
+}
+
+fn validate_finite_non_negative(name: &str, value: f64) -> Result<(), LlmProxyError> {
+    if !value.is_finite() || value < 0.0 {
+        return invalid_profile_patch(format!("{name} must be finite and non-negative"));
+    }
+    Ok(())
+}
+
+fn weight_values(weights: &RoutingProfileWeights) -> [(&'static str, f64); 7] {
+    [
+        ("success", weights.success),
+        ("ttfb", weights.ttfb),
+        ("latency", weights.latency),
+        ("tps", weights.tps),
+        ("cost", weights.cost),
+        ("headroom", weights.headroom),
+        ("priority", weights.priority),
+    ]
+}
+
+fn invalid_profile_patch(message: impl Into<String>) -> Result<(), LlmProxyError> {
+    Err(LlmProxyError::InvalidRequest(format!("invalid routing profile patch: {}", message.into())))
 }
 
 pub(crate) fn profile_id_from_str(value: &str) -> RoutingProfileId {
@@ -224,3 +283,7 @@ fn auto_tune_enabled(id: RoutingProfileId) -> bool {
 pub(super) fn test_only_builtin_profile(id: RoutingProfileId) -> RoutingProfile {
     built_in_profile(id)
 }
+
+#[cfg(test)]
+#[path = "profiles/tests.rs"]
+mod tests;

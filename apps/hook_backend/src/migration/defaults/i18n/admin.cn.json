@@ -1484,7 +1484,7 @@
     },
     "runtime": {
       "title": "策略生效设置",
-      "helper": "这里选择当前计费分组或模型实际生效的路由策略。Provider 页的优先级管理只负责 Fixed Priority Plus / 固定顺序类策略的顺序维护。",
+      "helper": "这里选择当前计费分组或模型实际生效的路由策略。Provider 页的优先级管理负责 Fixed Priority Plus / 固定初始顺序类策略使用的初始排序。",
       "scope": "作用范围",
       "scopeBillingGroup": "计费分组",
       "scopeModel": "模型",
@@ -1514,8 +1514,9 @@
     },
     "profile": {
       "editorTitle": "策略调参",
-      "editorHelper": "这里编辑当前选中策略的自动调优开关和管理员基准权重。自动学习只会在这个基线之上做受控微调。",
+      "editorHelper": "这里编辑当前选中策略的自动调优开关、管理员基准权重和评分控制项。自动学习只会在这个基线之上做受控微调。",
       "autoTune": "启用自动调优",
+      "advancedTitle": "评分控制",
       "weightTotal": "当前权重总和：{{total}}。需要等于 1.000 才能保存。",
       "names": {
         "balanced": "均衡",
@@ -1545,6 +1546,15 @@
         "cost": "成本",
         "headroom": "余量",
         "priority": "优先级"
+      },
+      "settingFields": {
+        "minSamples": "最小样本数",
+        "explorationK": "探索 K",
+        "conversionPenalty": "转换扣分",
+        "staleMetricPenalty": "过期指标扣分",
+        "affinityBonus": "亲和加分",
+        "priorSampleCap": "先验样本上限",
+        "contextualExploration": "上下文探索"
       }
     },
     "table": {
@@ -1596,6 +1606,7 @@
       "state": "状态",
       "sourceWindow": "命中窗口",
       "freshness": "指标新鲜度",
+      "effectiveSamples": "有效样本",
       "exclusion": "排除原因",
       "formula": "公式与权重",
       "metrics": "原始指标",
@@ -1869,7 +1880,7 @@
     "providerFirst": "提供商优先",
     "cacheAffinityTtlMinutes": "缓存亲和时长(分钟)",
     "schedulingCacheAffinity": "缓存亲和",
-    "schedulingFixedOrder": "固定顺序",
+    "schedulingFixedOrder": "固定初始顺序",
     "schedulingLoadBalance": "负载均衡",
     "scheduling": "调度",
     "schedulingMode": "优先级策略",

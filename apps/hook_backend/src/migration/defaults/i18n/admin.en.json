@@ -1484,7 +1484,7 @@
     },
     "runtime": {
       "title": "Effective routing profile",
-      "helper": "Choose the routing profile that actually applies to the current billing group or model. Provider priority management now only maintains ordering for Fixed Priority Plus and fixed-order style strategies.",
+      "helper": "Choose the routing profile that actually applies to the current billing group or model. Provider priority management maintains the initial order used by Fixed Priority Plus and fixed-initial-order strategies.",
       "scope": "Scope",
       "scopeBillingGroup": "Billing group",
       "scopeModel": "Model",
@@ -1514,8 +1514,9 @@
     },
     "profile": {
       "editorTitle": "Profile tuning",
-      "editorHelper": "Edit the auto tune switch and administrator baseline weights for the selected profile. Automatic learning only makes controlled adjustments on top of this baseline.",
+      "editorHelper": "Edit the auto tune switch, administrator baseline weights, and scoring controls for the selected profile. Automatic learning only makes controlled adjustments on top of this baseline.",
       "autoTune": "Enable Auto Tune",
+      "advancedTitle": "Scoring controls",
       "weightTotal": "Current weight total: {{total}}. It must equal 1.000 before saving.",
       "names": {
         "balanced": "Balanced",
@@ -1545,6 +1546,15 @@
         "cost": "Cost",
         "headroom": "Headroom",
         "priority": "Priority"
+      },
+      "settingFields": {
+        "minSamples": "Minimum samples",
+        "explorationK": "Exploration K",
+        "conversionPenalty": "Conversion penalty",
+        "staleMetricPenalty": "Stale metric penalty",
+        "affinityBonus": "Affinity bonus",
+        "priorSampleCap": "Prior sample cap",
+        "contextualExploration": "Contextual exploration"
       }
     },
     "table": {
@@ -1596,6 +1606,7 @@
       "state": "State",
       "sourceWindow": "Source window",
       "freshness": "Freshness",
+      "effectiveSamples": "Effective samples",
       "exclusion": "Exclusion",
       "formula": "Formula and weights",
       "metrics": "Raw Metrics",
@@ -1869,7 +1880,7 @@
     "providerFirst": "Provider first",
     "cacheAffinityTtlMinutes": "Cache affinity duration (minutes)",
     "schedulingCacheAffinity": "Cache affinity",
-    "schedulingFixedOrder": "Fixed order",
+    "schedulingFixedOrder": "Fixed initial order",
     "schedulingLoadBalance": "Load balance",
     "scheduling": "Scheduling",
     "schedulingMode": "Priority strategy",

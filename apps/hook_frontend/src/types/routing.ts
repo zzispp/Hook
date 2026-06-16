@@ -17,6 +17,18 @@ export type RoutingRouteState =
 
 export type RoutingMetricWindow = '1m' | '5m' | '15m' | '1h' | '24h' | '7d';
 
+export type RoutingMetricSource = 'unknown' | 'exact' | 'window_fallback' | 'prior';
+
+export type RoutingPriorSource =
+  | 'unknown'
+  | 'exact_route'
+  | 'provider_model_format'
+  | 'provider_model'
+  | 'provider'
+  | 'neutral';
+
+export type RoutingRequestSizeBucket = 'unknown' | 'tiny' | 'small' | 'medium' | 'large' | 'huge';
+
 export type RouteIdentity = {
   provider_id: string;
   key_id: string;
@@ -25,6 +37,15 @@ export type RouteIdentity = {
   client_api_format: string;
   provider_api_format: string;
   is_stream: boolean;
+};
+
+export type RoutingRequestFeatures = {
+  client_api_format: string;
+  is_stream: boolean;
+  input_token_estimate?: number | null;
+  output_token_estimate?: number | null;
+  request_size_bucket: RoutingRequestSizeBucket;
+  required_capability?: string | null;
 };
 
 export type RoutingProfileWeights = {
@@ -58,6 +79,8 @@ export type RoutingProfile = {
   conversion_penalty: number;
   stale_metric_penalty: number;
   affinity_bonus: number;
+  prior_sample_cap: number;
+  contextual_exploration_enabled: boolean;
   auto_tune_enabled: boolean;
   learning?: RoutingProfileLearningState | null;
 };
@@ -73,6 +96,8 @@ export type RoutingProfileUpsert = {
   conversion_penalty?: number;
   stale_metric_penalty?: number;
   affinity_bonus?: number;
+  prior_sample_cap?: number;
+  contextual_exploration_enabled?: boolean;
   auto_tune_enabled?: boolean;
 };
 
@@ -92,6 +117,10 @@ export type RoutingMetricSnapshot = {
   timeout_count: number;
   rate_limited_count: number;
   server_error_count: number;
+  format_conversion_failure_count: number;
+  usage_missing_count: number;
+  stream_abnormal_end_count: number;
+  schema_tool_call_failure_count: number;
   latency_avg_ms?: number | null;
   ttfb_avg_ms?: number | null;
   output_tps?: number | null;
@@ -117,6 +146,14 @@ export type RouteScoreExplanation = {
   raw_metrics: RoutingMetricSnapshot;
   exclusion_reason?: string | null;
   metric_freshness_seconds: number;
+  metric_source: RoutingMetricSource;
+  prior_source: RoutingPriorSource;
+  prior_sample_count: number;
+  effective_sample_count: number;
+  routing_context_key?: string | null;
+  route_config_fingerprint?: string | null;
+  price_config_fingerprint?: string | null;
+  request_features: RoutingRequestFeatures;
 };
 
 export type RoutingRankingsQuery = {
