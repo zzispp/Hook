@@ -3,8 +3,8 @@ use serde_json::json;
 use types::model::TieredPricingConfig;
 
 use super::{
-    apply_reasoning_effort, bridge_openai_chat_image_body, has_openai_responses_custom_tool_items, openai_request_explicitly_selects_image_generation,
-    rewrite_upstream_body,
+    apply_reasoning_effort, attempt_payload, bridge_openai_chat_image_body, has_openai_responses_custom_tool_items,
+    openai_request_explicitly_selects_image_generation, rewrite_upstream_body,
 };
 use crate::llm_proxy::{
     OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
@@ -41,6 +41,33 @@ fn openai_chat_stream_requests_include_usage() {
     rewrite_upstream_body(&mut body, &candidate("openai:chat"), false, ApiFormat::OpenAiChat).unwrap();
 
     assert_eq!(body["stream_options"]["include_usage"], true);
+}
+
+#[test]
+fn openai_cli_to_chat_body_rule_can_drop_stream_options() {
+    let body = json!({
+        "model": "gpt-5.5",
+        "input": [{
+            "type": "message",
+            "role": "user",
+            "content": [{"type": "input_text", "text": "hello"}]
+        }],
+        "stream": true
+    });
+    let mut candidate = candidate("openai:chat");
+    candidate.trace.client_api_format = "openai:cli".into();
+    candidate.trace.needs_conversion = true;
+    candidate.trace.is_stream = true;
+    candidate.reasoning_effort = None;
+    candidate.body_rules = Some(json!([
+        {"action": "drop", "path": "stream_options"}
+    ]));
+
+    let payload = attempt_payload(body, &candidate, false).unwrap();
+
+    assert_eq!(payload.body["stream"], true);
+    assert!(payload.body.get("stream_options").is_none());
+    assert_eq!(payload.body["messages"][0]["role"], "user");
 }
 
 #[test]

@@ -213,7 +213,22 @@ fn ensure_parent_path_mut<'a>(root: &'a mut Value, path: &[PathSegment], termina
 }
 
 fn drop_at_path(root: &mut Value, path: &[PathSegment]) -> Result<(), LlmProxyError> {
-    take_at_path(root, path).map(|_| ())
+    let (last, parent_path) = path.split_last().expect("path should not be empty");
+    let Some(parent) = optional_value_at_path_mut(root, parent_path)? else {
+        return Ok(());
+    };
+    match last {
+        PathSegment::Key(key) => {
+            object_mut(parent)?.remove(key);
+        }
+        PathSegment::Index(index) => {
+            let items = array_mut(parent)?;
+            if *index < items.len() {
+                items.remove(*index);
+            }
+        }
+    }
+    Ok(())
 }
 
 fn rename_at_path(root: &mut Value, from: &[PathSegment], to: &[PathSegment]) -> Result<(), LlmProxyError> {
@@ -268,6 +283,16 @@ fn value_at_path_mut<'a>(root: &'a mut Value, path: &[PathSegment]) -> Result<&'
     value_at_path_mut(next, &path[1..])
 }
 
+fn optional_value_at_path_mut<'a>(root: &'a mut Value, path: &[PathSegment]) -> Result<Option<&'a mut Value>, LlmProxyError> {
+    if path.is_empty() {
+        return Ok(Some(root));
+    }
+    let Some(next) = optional_child_mut(root, &path[0])? else {
+        return Ok(None);
+    };
+    optional_value_at_path_mut(next, &path[1..])
+}
+
 fn child_mut<'a>(value: &'a mut Value, segment: &PathSegment) -> Result<&'a mut Value, LlmProxyError> {
     match segment {
         PathSegment::Key(key) => object_mut(value)?
@@ -276,6 +301,13 @@ fn child_mut<'a>(value: &'a mut Value, segment: &PathSegment) -> Result<&'a mut 
         PathSegment::Index(index) => array_mut(value)?
             .get_mut(*index)
             .ok_or_else(|| LlmProxyError::InvalidRequest(format!("provider body rule array index out of bounds: {index}"))),
+    }
+}
+
+fn optional_child_mut<'a>(value: &'a mut Value, segment: &PathSegment) -> Result<Option<&'a mut Value>, LlmProxyError> {
+    match segment {
+        PathSegment::Key(key) => Ok(object_mut(value)?.get_mut(key)),
+        PathSegment::Index(index) => Ok(array_mut(value)?.get_mut(*index)),
     }
 }
 
@@ -485,5 +517,40 @@ mod tests {
 
         assert_eq!(body["payload"]["copied"], original);
         assert_eq!(body["metadata"]["tenant"], "updated");
+    }
+
+    #[test]
+    fn provider_body_rules_drop_missing_path_is_noop() {
+        let mut body = json!({
+            "model": "gpt-5.5",
+            "messages": [{"role": "user", "content": "hello"}]
+        });
+        let original = body.clone();
+        let rules = json!([
+            {"action": "drop", "path": "stream_options"},
+            {"action": "drop", "path": "metadata.trace_id"},
+            {"action": "set", "path": "checked", "value": true}
+        ]);
+
+        apply_provider_body_rules(&mut body, &Some(rules), &original).unwrap();
+
+        assert!(body.get("stream_options").is_none());
+        assert!(body.get("metadata").is_none());
+        assert_eq!(body["checked"], true);
+    }
+
+    #[test]
+    fn provider_body_rules_drop_reports_wrong_parent_type() {
+        let mut body = json!({
+            "stream_options": true
+        });
+        let original = body.clone();
+        let rules = json!([
+            {"action": "drop", "path": "stream_options.include_usage"}
+        ]);
+
+        let error = apply_provider_body_rules(&mut body, &Some(rules), &original).unwrap_err();
+
+        assert!(error.to_string().contains("provider body rule path target must be an object"));
     }
 }
