@@ -12,7 +12,7 @@ pub use ports::{
     ProviderQuickImportKeyModelCreate, ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement, ProviderQuickImportModelCostCreate,
     ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, ProviderQuickImportSyncKeyPatch,
     ProviderQuickImportSyncRunOptions, ProviderQuickImportSyncRunReport, ProviderQuickImportSyncSource, ProviderQuickImportSyncSourceCreate,
-    ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderUseCase, SecretCipher, UpstreamImportData, UpstreamImportModel, UpstreamImportToken,
-    UpstreamModelFetcher, UpstreamProviderImportSource, UpstreamSyncSnapshot, UpstreamSyncToken,
+    ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderUseCase, SecretCipher, UpstreamGroupRatio, UpstreamImportData, UpstreamImportModel,
+    UpstreamImportToken, UpstreamModelFetcher, UpstreamProviderImportSource, UpstreamSyncSnapshot, UpstreamSyncToken,
 };
 pub use service::ProviderService;

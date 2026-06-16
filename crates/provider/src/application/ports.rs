@@ -59,8 +59,14 @@ pub struct UpstreamImportModel {
 #[derive(Clone, Debug, PartialEq)]
 pub struct UpstreamSyncSnapshot {
     pub source_kind: ProviderQuickImportSourceKind,
-    pub groups: BTreeMap<String, Decimal>,
+    pub groups: BTreeMap<String, UpstreamGroupRatio>,
     pub tokens: Vec<UpstreamSyncToken>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum UpstreamGroupRatio {
+    Fixed(Decimal),
+    UpstreamValue(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
