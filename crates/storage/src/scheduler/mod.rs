@@ -5,4 +5,4 @@ mod types;
 
 pub use record::{ScheduledTaskRecord, task_definition};
 pub use repository::SchedulerStore;
-pub use types::{ScheduledTaskRecordPatch, ScheduledTaskRunRecordInput, ScheduledTaskRunRecordPatch, ScheduledTaskRunStatus};
+pub use types::{ScheduledTaskClaim, ScheduledTaskRecordPatch, ScheduledTaskRunRecordInput, ScheduledTaskRunRecordPatch, ScheduledTaskRunStatus};

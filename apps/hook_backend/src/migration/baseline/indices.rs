@@ -380,6 +380,12 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             RequestCandidates::CreatedAt,
         ),
         compound_index(
+            "index_scheduled_tasks_by_due_claim",
+            ScheduledTasks::Table,
+            ScheduledTasks::Enabled,
+            ScheduledTasks::NextRunAt,
+        ),
+        compound_index(
             "index_scheduled_task_runs_by_task_started",
             ScheduledTaskRuns::Table,
             ScheduledTaskRuns::TaskCode,

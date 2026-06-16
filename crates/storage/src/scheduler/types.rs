@@ -24,6 +24,13 @@ pub struct ScheduledTaskRecordPatch {
     pub config: Option<serde_json::Value>,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct ScheduledTaskClaim {
+    pub record: super::ScheduledTaskRecord,
+    pub lock_owner: String,
+    pub started_at: time::OffsetDateTime,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ScheduledTaskRunRecordInput {
     pub task_code: String,

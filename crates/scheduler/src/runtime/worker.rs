@@ -1,9 +1,9 @@
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{collections::HashSet, sync::Arc};
 
 use sea_orm::{DbBackend, FromQueryResult, Statement, TransactionTrait};
 use storage::{
     Database,
-    scheduler::{ScheduledTaskRunRecordInput, ScheduledTaskRunRecordPatch, ScheduledTaskRunStatus, SchedulerStore},
+    scheduler::{ScheduledTaskClaim, ScheduledTaskRunRecordInput, ScheduledTaskRunRecordPatch, ScheduledTaskRunStatus, SchedulerStore},
 };
 use tokio::sync::Mutex;
 
@@ -20,19 +20,16 @@ pub async fn dispatch_task(
     code: &str,
     task: Arc<dyn ScheduledTaskLifecycle>,
     database: Database,
-    config: serde_json::Value,
 ) -> SchedulerResult<()> {
+    let Some(claim) = store.claim_due_task(code, time::OffsetDateTime::now_utc()).await? else {
+        return Ok(());
+    };
     if is_running(running.clone(), code).await {
-        record_skipped(store, code, LOCAL_RUNNING_MESSAGE).await?;
+        record_claimed_skipped(store, &claim, LOCAL_RUNNING_MESSAGE).await?;
         return Ok(());
     }
-    spawn_task(store.clone(), running, code.to_owned(), task, database, config);
+    spawn_task(store.clone(), running, task, database, claim);
     Ok(())
-}
-
-pub fn interval_delay(interval_seconds: i64) -> SchedulerResult<Duration> {
-    let seconds = u64::try_from(interval_seconds).map_err(|_| SchedulerError::InvalidInput("interval_seconds must be greater than 0".into()))?;
-    Ok(Duration::from_secs(seconds))
 }
 
 pub async fn is_running(running: Arc<Mutex<HashSet<String>>>, code: &str) -> bool {
@@ -48,103 +45,91 @@ pub async fn mark_running(running: Arc<Mutex<HashSet<String>>>, code: &str, acti
     guard.remove(code);
 }
 
-async fn record_skipped(store: &SchedulerStore, code: &str, message: &str) -> SchedulerResult<()> {
-    let started_at = time::OffsetDateTime::now_utc();
+async fn record_claimed_skipped(store: &SchedulerStore, claim: &ScheduledTaskClaim, message: &str) -> SchedulerResult<()> {
     let run_id = store
         .start_run(ScheduledTaskRunRecordInput {
-            task_code: code.to_owned(),
+            task_code: claim.record.code.clone(),
             status: ScheduledTaskRunStatus::Running,
-            started_at,
+            started_at: claim.started_at,
             message: Some(message.into()),
             error: None,
         })
         .await?;
-    let finished_at = time::OffsetDateTime::now_utc();
-    let duration_ms = duration_millis(started_at, finished_at)?;
-    let patch = ScheduledTaskRunRecordPatch {
-        status: ScheduledTaskRunStatus::SkippedRunning,
-        finished_at,
-        duration_ms,
-        message: Some(message.into()),
-        error: None,
-    };
+    let patch = skipped_patch(claim.started_at, message)?;
     store.finish_run(&run_id, patch.clone()).await?;
-    store.update_task_last_run(code, patch).await?;
+    finish_claim(store, claim, patch).await?;
     Ok(())
 }
 
 fn spawn_task(
     store: SchedulerStore,
     running: Arc<Mutex<HashSet<String>>>,
-    code: String,
     task: Arc<dyn ScheduledTaskLifecycle>,
     database: Database,
-    config: serde_json::Value,
+    claim: ScheduledTaskClaim,
 ) {
     tokio::spawn(async move {
-        execute_task_run(store, running, code, task, database, config).await;
+        execute_task_run(store, running, task, database, claim).await;
     });
 }
 
 async fn execute_task_run(
     store: SchedulerStore,
     running: Arc<Mutex<HashSet<String>>>,
-    code: String,
     task: Arc<dyn ScheduledTaskLifecycle>,
     database: Database,
-    config: serde_json::Value,
+    claim: ScheduledTaskClaim,
 ) {
+    let code = claim.record.code.clone();
     mark_running(running.clone(), &code, true).await;
-    let lock = match acquire_task_lock(&database, &code).await {
-        Ok(Some(lock)) => lock,
-        Ok(None) => {
-            record_database_lock_skip(&store, &running, &code).await;
-            return;
-        }
-        Err(error) => {
-            record_startup_failure(&store, &running, &code, error).await;
-            return;
-        }
-    };
-    let started_at = time::OffsetDateTime::now_utc();
-    if let Err(error) = store.mark_task_started(&code, started_at).await {
-        mark_running(running, &code, false).await;
-        hook_tracing::error("scheduler mark task started failed", &error);
-        return;
-    }
-    let run_id = match start_task_run(&store, &code, started_at).await {
-        Ok(id) => id,
-        Err(error) => {
-            mark_running(running, &code, false).await;
-            hook_tracing::error("scheduler start run failed", &error);
-            return;
-        }
-    };
-    let patch = finish_patch(task.run(ScheduleTaskContext { database }, config).await, started_at);
-    if let Err(error) = store.finish_run(&run_id, patch.clone()).await {
-        hook_tracing::error("scheduler finish run failed", &error);
-    }
-    if let Err(error) = store.update_task_last_run(&code, patch).await {
-        hook_tracing::error("scheduler update last run failed", &error);
-    }
-    if let Err(error) = lock.commit().await {
-        hook_tracing::error("scheduler advisory lock transaction commit failed", &error);
+    if let Err(error) = execute_claimed_task_run(&store, task, database, claim).await {
+        hook_tracing::error("scheduler execute claimed task failed", &error);
     }
     mark_running(running, &code, false).await;
 }
 
-async fn record_database_lock_skip(store: &SchedulerStore, running: &Arc<Mutex<HashSet<String>>>, code: &str) {
-    if let Err(error) = record_skipped(store, code, DATABASE_RUNNING_MESSAGE).await {
-        hook_tracing::error("scheduler record database lock skip failed", &error);
+async fn execute_claimed_task_run(
+    store: &SchedulerStore,
+    task: Arc<dyn ScheduledTaskLifecycle>,
+    database: Database,
+    claim: ScheduledTaskClaim,
+) -> SchedulerResult<()> {
+    let config = match claim.record.runtime_config() {
+        Ok(config) => config,
+        Err(error) => {
+            record_claimed_failed(store, &claim, format!("scheduler config decode failed: {error}")).await?;
+            return Ok(());
+        }
+    };
+    let code = claim.record.code.as_str();
+    let lock = match acquire_task_lock(&database, code).await {
+        Ok(Some(lock)) => lock,
+        Ok(None) => {
+            record_claimed_skipped(store, &claim, DATABASE_RUNNING_MESSAGE).await?;
+            return Ok(());
+        }
+        Err(error) => {
+            record_claimed_failed(store, &claim, format!("scheduler startup failed: {error}")).await?;
+            return Ok(());
+        }
+    };
+    let run_id = match start_claimed_task_run(store, &claim, None).await {
+        Ok(id) => id,
+        Err(error) => {
+            let finish_result = finish_claim_after_start_failure(store, &claim, error).await;
+            commit_task_lock(lock).await;
+            finish_result?;
+            return Ok(());
+        }
+    };
+    let patch = finish_patch(task.run(ScheduleTaskContext { database }, config).await, claim.started_at);
+    if let Err(error) = store.finish_run(&run_id, patch.clone()).await {
+        hook_tracing::error("scheduler finish run failed", &error);
     }
-    mark_running(running.clone(), code, false).await;
-}
-
-async fn record_startup_failure(store: &SchedulerStore, running: &Arc<Mutex<HashSet<String>>>, code: &str, error: SchedulerError) {
-    if let Err(record_error) = record_failed(store, code, format!("scheduler startup failed: {error}")).await {
-        hook_tracing::error("scheduler record startup failure failed", &record_error);
-    }
-    mark_running(running.clone(), code, false).await;
+    let finish_result = finish_claim(store, &claim, patch).await;
+    commit_task_lock(lock).await;
+    finish_result?;
+    Ok(())
 }
 
 async fn acquire_task_lock(database: &Database, code: &str) -> SchedulerResult<Option<sea_orm::DatabaseTransaction>> {
@@ -191,33 +176,72 @@ struct AdvisoryLockRow {
     acquired: bool,
 }
 
-async fn start_task_run(store: &SchedulerStore, code: &str, started_at: time::OffsetDateTime) -> SchedulerResult<String> {
+async fn start_claimed_task_run(store: &SchedulerStore, claim: &ScheduledTaskClaim, message: Option<String>) -> SchedulerResult<String> {
     store
         .start_run(ScheduledTaskRunRecordInput {
-            task_code: code.to_owned(),
+            task_code: claim.record.code.clone(),
             status: ScheduledTaskRunStatus::Running,
-            started_at,
-            message: None,
+            started_at: claim.started_at,
+            message,
             error: None,
         })
         .await
         .map_err(Into::into)
 }
 
-async fn record_failed(store: &SchedulerStore, code: &str, error: String) -> SchedulerResult<()> {
-    let started_at = time::OffsetDateTime::now_utc();
-    let run_id = start_task_run(store, code, started_at).await?;
+async fn record_claimed_failed(store: &SchedulerStore, claim: &ScheduledTaskClaim, error: String) -> SchedulerResult<()> {
+    let run_id = start_claimed_task_run(store, claim, None).await?;
+    let patch = failed_patch(claim.started_at, error)?;
+    store.finish_run(&run_id, patch.clone()).await?;
+    finish_claim(store, claim, patch).await?;
+    Ok(())
+}
+
+async fn finish_claim_after_start_failure(store: &SchedulerStore, claim: &ScheduledTaskClaim, error: SchedulerError) -> SchedulerResult<()> {
+    let patch = failed_patch(claim.started_at, format!("scheduler start run failed: {error}"))?;
+    finish_claim(store, claim, patch).await
+}
+
+fn skipped_patch(started_at: time::OffsetDateTime, message: &str) -> SchedulerResult<ScheduledTaskRunRecordPatch> {
     let finished_at = time::OffsetDateTime::now_utc();
-    let patch = ScheduledTaskRunRecordPatch {
+    Ok(ScheduledTaskRunRecordPatch {
+        status: ScheduledTaskRunStatus::SkippedRunning,
+        finished_at,
+        duration_ms: duration_millis(started_at, finished_at)?,
+        message: Some(message.into()),
+        error: None,
+    })
+}
+
+fn failed_patch(started_at: time::OffsetDateTime, error: String) -> SchedulerResult<ScheduledTaskRunRecordPatch> {
+    let finished_at = time::OffsetDateTime::now_utc();
+    Ok(ScheduledTaskRunRecordPatch {
         status: ScheduledTaskRunStatus::Failed,
         finished_at,
         duration_ms: duration_millis(started_at, finished_at)?,
         message: None,
         error: Some(error),
-    };
-    store.finish_run(&run_id, patch.clone()).await?;
-    store.update_task_last_run(code, patch).await?;
+    })
+}
+
+async fn finish_claim(store: &SchedulerStore, claim: &ScheduledTaskClaim, patch: ScheduledTaskRunRecordPatch) -> SchedulerResult<()> {
+    let updated = store.finish_claimed_task_run(&claim.record.code, &claim.lock_owner, patch).await?;
+    if !updated {
+        let task_code = claim.record.code.as_str();
+        let lock_owner = claim.lock_owner.as_str();
+        hook_tracing::warn_with_fields!(
+            "scheduler claim finish ignored because lease owner changed",
+            task_code = task_code,
+            lock_owner = lock_owner
+        );
+    }
     Ok(())
+}
+
+async fn commit_task_lock(lock: sea_orm::DatabaseTransaction) {
+    if let Err(error) = lock.commit().await {
+        hook_tracing::error("scheduler advisory lock transaction commit failed", &error);
+    }
 }
 
 fn finish_patch(result: TaskResult, started_at: time::OffsetDateTime) -> ScheduledTaskRunRecordPatch {

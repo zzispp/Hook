@@ -20,7 +20,7 @@ impl ScheduledTaskRecord {
             description_key: definition.description_key.clone(),
             enabled: self.enabled,
             interval_seconds: self.interval_seconds,
-            next_run_at: None,
+            next_run_at: self.enabled.then_some(self.next_run_at).map(format_timestamp).transpose()?,
             config: json::decode_required(self.config)?,
             config_schema: definition.config_schema.clone(),
             last_started_at: self.last_started_at.map(format_timestamp).transpose()?,

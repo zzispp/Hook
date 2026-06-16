@@ -1,43 +1,33 @@
 use sea_orm_migration::{
     prelude::*,
-    sea_orm::{ActiveModelTrait, ActiveValue, ColumnTrait, EntityTrait, QueryFilter, Schema, Set},
+    sea_orm::{ActiveValue, ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Schema, Statement},
     seaql_migrations,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
-use storage::scheduler::entities::scheduled_tasks;
 
-const ADDITIVE_VERSION: &str = "m20260609_000003_scheduled_task_next_run";
+const ADDITIVE_VERSION: &str = "m20260617_000001_scheduler_global_claim";
 const MIGRATION_TABLE: &str = "seaql_migrations";
-const REQUEST_RECORD_CLEANUP_CODE: &str = "request_record_cleanup";
-const REQUEST_RECORD_CLEANUP_INTERVAL_SECONDS: i64 = 600;
 
 pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     if additive_marker_exists(manager).await? {
         return Ok(());
     }
-    super::translation_seed_sync::seed_missing_translations(manager).await?;
-    update_request_record_cleanup_interval(manager).await?;
+    apply_schema(manager).await?;
     mark_additive_applied(manager).await
 }
 
-async fn update_request_record_cleanup_interval(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    let Some(record) = scheduled_tasks::Entity::find_by_id(REQUEST_RECORD_CLEANUP_CODE.to_owned())
-        .one(manager.get_connection())
-        .await?
-    else {
-        return Ok(());
-    };
-    if record.interval_seconds == REQUEST_RECORD_CLEANUP_INTERVAL_SECONDS {
-        return Ok(());
+async fn apply_schema(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    for sql in SCHEMA_SQL {
+        execute_sql(manager, sql).await?;
     }
-    let now = time::OffsetDateTime::now_utc();
-    let mut active: scheduled_tasks::ActiveModel = record.into();
-    active.interval_seconds = Set(REQUEST_RECORD_CLEANUP_INTERVAL_SECONDS);
-    active.next_run_at = Set(now + time::Duration::seconds(REQUEST_RECORD_CLEANUP_INTERVAL_SECONDS));
-    active.locked_until = Set(None);
-    active.locked_by = Set(None);
-    active.updated_at = Set(now);
-    active.update(manager.get_connection()).await?;
+    Ok(())
+}
+
+async fn execute_sql(manager: &SchemaManager<'_>, sql: &str) -> Result<(), DbErr> {
+    manager
+        .get_connection()
+        .execute_raw(Statement::from_string(manager.get_database_backend(), sql.to_owned()))
+        .await?;
     Ok(())
 }
 
@@ -79,3 +69,13 @@ fn current_timestamp() -> Result<i64, DbErr> {
         .map(|duration| duration.as_secs() as i64)
         .map_err(|error| DbErr::Migration(format!("system time is before UNIX epoch: {error}")))
 }
+
+const SCHEMA_SQL: &[&str] = &[
+    "ALTER TABLE scheduled_tasks ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMPTZ",
+    "ALTER TABLE scheduled_tasks ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ",
+    "ALTER TABLE scheduled_tasks ADD COLUMN IF NOT EXISTS locked_by VARCHAR(100)",
+    "UPDATE scheduled_tasks \
+     SET next_run_at = COALESCE(next_run_at, updated_at + (interval_seconds * INTERVAL '1 second'))",
+    "ALTER TABLE scheduled_tasks ALTER COLUMN next_run_at SET NOT NULL",
+    "CREATE INDEX IF NOT EXISTS index_scheduled_tasks_by_due_claim ON scheduled_tasks(enabled, next_run_at)",
+];
