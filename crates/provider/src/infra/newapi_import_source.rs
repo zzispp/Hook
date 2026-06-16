@@ -12,6 +12,7 @@ use crate::infra::newapi_import_types::{
     GroupMap, GroupsEnvelope, ModelsEnvelope, NewApiTokenRecord, TokenKeyEnvelope, TokenListEnvelope, client_error, decode_envelope, model_response,
     newapi_url, normalize_newapi_key, response_text, token_group_ratio, url_error,
 };
+use crate::infra::newapi_token_filter::skip_unimportable_group_tokens;
 
 const FETCH_TIMEOUT_SECONDS: u64 = 30;
 const TOKEN_PAGE_SIZE: u64 = 100;
@@ -52,7 +53,7 @@ impl UpstreamProviderImportSource for NewApiImportSource {
         let records = self.fetch_token_records(config).await?;
         Ok(UpstreamSyncSnapshot {
             source_kind: ProviderQuickImportSourceKind::Newapi,
-            groups: groups.into_iter().map(|(name, group)| (name, group.ratio())).collect(),
+            groups: groups.into_iter().map(|(name, group)| (name, group.into_ratio())).collect(),
             tokens: records
                 .into_iter()
                 .map(|record| UpstreamSyncToken {
@@ -79,7 +80,7 @@ impl UpstreamProviderImportSource for NewApiImportSource {
 
 impl NewApiImportSource {
     async fn fetch_tokens(&self, config: &NewApiQuickImportConfig, groups: &GroupMap) -> ProviderResult<Vec<UpstreamImportToken>> {
-        let records = self.fetch_token_records(config).await?;
+        let records = skip_unimportable_group_tokens(self.fetch_token_records(config).await?, groups);
         let mut tokens = Vec::with_capacity(records.len());
         for record in records {
             tokens.push(self.enrich_token(config, groups, record).await?);

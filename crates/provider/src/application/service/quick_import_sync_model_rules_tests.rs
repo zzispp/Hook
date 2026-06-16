@@ -12,8 +12,8 @@ use super::{
     quick_import_sync_outcome::key_outcome,
 };
 use crate::application::{
-    ProviderQuickImportSyncKey, ProviderQuickImportSyncSource, ProviderResult, UpstreamImportData, UpstreamImportModel, UpstreamProviderImportSource,
-    UpstreamSyncSnapshot, UpstreamSyncToken,
+    ProviderQuickImportSyncKey, ProviderQuickImportSyncSource, ProviderResult, UpstreamGroupRatio, UpstreamImportData, UpstreamImportModel,
+    UpstreamProviderImportSource, UpstreamSyncSnapshot, UpstreamSyncToken,
 };
 
 #[tokio::test]
@@ -118,7 +118,7 @@ fn source_config() -> ProviderQuickImportSourceConfig {
 fn snapshot() -> UpstreamSyncSnapshot {
     UpstreamSyncSnapshot {
         source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
-        groups: BTreeMap::from([("plus".into(), Decimal::new(2, 0))]),
+        groups: BTreeMap::from([("plus".into(), UpstreamGroupRatio::Fixed(Decimal::new(2, 0)))]),
         tokens: vec![UpstreamSyncToken {
             id: "1209".into(),
             name: "codex".into(),

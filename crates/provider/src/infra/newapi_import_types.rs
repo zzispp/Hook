@@ -3,7 +3,8 @@ use std::collections::BTreeMap;
 use rust_decimal::Decimal;
 use serde::Deserialize;
 
-use crate::application::{ProviderError, ProviderResult, UpstreamImportModel};
+use super::newapi_group_ratio::NewApiGroupRatio;
+use crate::application::{ProviderError, ProviderResult, UpstreamGroupRatio, UpstreamImportModel};
 
 const MAX_ERROR_BODY_CHARS: usize = 300;
 
@@ -34,13 +35,20 @@ pub(super) struct NewApiTokenRecord {
 
 #[derive(Debug, Deserialize)]
 pub(super) struct NewApiGroup {
-    #[serde(with = "rust_decimal::serde::float")]
-    ratio: Decimal,
+    ratio: NewApiGroupRatio,
 }
 
 impl NewApiGroup {
-    pub(super) fn ratio(&self) -> Decimal {
-        self.ratio
+    pub(super) fn ratio(&self, group: &str) -> ProviderResult<Decimal> {
+        self.ratio.fixed_ratio(group)
+    }
+
+    pub(super) fn has_fixed_ratio(&self) -> bool {
+        self.ratio.is_fixed()
+    }
+
+    pub(super) fn into_ratio(self) -> UpstreamGroupRatio {
+        self.ratio.into_value()
     }
 }
 
@@ -149,7 +157,8 @@ pub(super) fn token_group_ratio(groups: &GroupMap, group: Option<&str>) -> Provi
     };
     groups
         .get(group)
-        .map(|item| item.ratio)
+        .map(|item| item.ratio(group))
+        .transpose()?
         .ok_or_else(|| ProviderError::Infrastructure(format!("newapi group ratio is missing for group: {group}")))
 }
 
@@ -208,9 +217,19 @@ mod tests {
 
     #[test]
     fn token_group_ratio_requires_known_group() {
-        let groups = BTreeMap::from([("plus".into(), NewApiGroup { ratio: Decimal::new(3, 0) })]);
+        let groups = BTreeMap::from([("plus".into(), group(Decimal::new(3, 0)))]);
         assert_eq!(token_group_ratio(&groups, Some("plus")).unwrap(), Decimal::new(3, 0));
         assert!(token_group_ratio(&groups, Some("missing")).is_err());
+    }
+
+    #[test]
+    fn token_group_ratio_rejects_auto_group() {
+        let payload = r#"{"data":{"auto":{"ratio":"自动"}},"success":true}"#;
+        let envelope: GroupsEnvelope = decode_envelope(payload).unwrap();
+
+        let error = token_group_ratio(&envelope.data, Some("auto")).unwrap_err().to_string();
+
+        assert_eq!(error, "infrastructure error: newapi group ratio is not fixed for group auto: 自动");
     }
 
     #[test]
@@ -233,5 +252,23 @@ mod tests {
 
         assert_eq!(models[0].id, "gpt-5.2");
         assert_eq!(models[0].supported_endpoint_types, vec!["openai"]);
+    }
+
+    #[test]
+    fn decode_newapi_groups_response_accepts_auto_ratio() {
+        let payload = r#"{"data":{"default":{"ratio":"自动"}},"success":true}"#;
+
+        let envelope = decode_envelope::<GroupsEnvelope>(payload).unwrap();
+
+        assert!(matches!(
+            envelope.data.into_iter().next().unwrap().1.into_ratio(),
+            UpstreamGroupRatio::UpstreamValue(value) if value == "自动"
+        ));
+    }
+
+    fn group(ratio: Decimal) -> NewApiGroup {
+        NewApiGroup {
+            ratio: NewApiGroupRatio::fixed_for_test(ratio),
+        }
     }
 }

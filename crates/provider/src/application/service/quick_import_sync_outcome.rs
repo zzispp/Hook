@@ -9,14 +9,15 @@ use types::{
 };
 
 use crate::application::{
-    ProviderError, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource, ProviderResult, UpstreamImportModel,
+    ProviderError, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource, UpstreamImportModel,
     UpstreamProviderImportSource, UpstreamSyncSnapshot, UpstreamSyncToken,
 };
 
 use super::{
-    quick_import_costs::model_cost,
     quick_import_sync_bindings::BindingInfo,
     quick_import_sync_candidates::candidate_model_ids,
+    quick_import_sync_group_ratio::{GroupRatioLookup, group_ratio},
+    quick_import_sync_key_costs::costs_for_key,
     quick_import_sync_model_check::{ModelCheck, check_models},
 };
 
@@ -104,11 +105,15 @@ where
     if token.group.as_deref() != key.upstream_group.as_deref() {
         return group_changed_outcome(&context, key, token).await;
     }
-    let Some(ratio) = group_ratio(snapshot, key.upstream_group.as_deref()) else {
-        return anomaly_outcome(
-            ProviderQuickImportSyncStatus::UpstreamGroupRemoved,
-            source.sync_config.anomaly_actions.group_removed,
-        );
+    let ratio = match group_ratio(snapshot, key.upstream_group.as_deref()) {
+        GroupRatioLookup::Fixed(value) => value,
+        GroupRatioLookup::Missing => {
+            return anomaly_outcome(
+                ProviderQuickImportSyncStatus::UpstreamGroupRemoved,
+                source.sync_config.anomaly_actions.group_removed,
+            );
+        }
+        GroupRatioLookup::NonFixed(value) => return non_fixed_ratio_outcome(key.upstream_group.as_deref(), value),
     };
     match check_models(importer, source_config, key).await {
         Ok(ModelCheck::Available(models)) => cost_outcome(source, globals, bindings, key, None, ratio, &models),
@@ -124,10 +129,6 @@ where
     }
 }
 
-pub(super) fn globals_by_id(models: Vec<GlobalModelResponse>) -> BTreeMap<String, GlobalModelResponse> {
-    models.into_iter().map(|model| (model.id.clone(), model)).collect()
-}
-
 async fn group_changed_outcome<I>(context: &OutcomeContext<'_, I>, key: &ProviderQuickImportSyncKey, token: &UpstreamSyncToken) -> KeyOutcome
 where
     I: UpstreamProviderImportSource,
@@ -135,11 +136,15 @@ where
     if context.source.sync_config.anomaly_actions.group_changed != ProviderQuickImportGroupChangedAction::Sync {
         return group_changed_status(context.source, token);
     }
-    let Some(ratio) = group_ratio(context.snapshot, token.group.as_deref()) else {
-        return anomaly_outcome(
-            ProviderQuickImportSyncStatus::UpstreamGroupRemoved,
-            context.source.sync_config.anomaly_actions.group_removed,
-        );
+    let ratio = match group_ratio(context.snapshot, token.group.as_deref()) {
+        GroupRatioLookup::Fixed(value) => value,
+        GroupRatioLookup::Missing => {
+            return anomaly_outcome(
+                ProviderQuickImportSyncStatus::UpstreamGroupRemoved,
+                context.source.sync_config.anomaly_actions.group_removed,
+            );
+        }
+        GroupRatioLookup::NonFixed(value) => return non_fixed_ratio_outcome(token.group.as_deref(), value),
     };
     match check_models(context.importer, context.source_config, key).await {
         Ok(ModelCheck::Available(models)) => cost_outcome(
@@ -204,30 +209,6 @@ fn cost_outcome(
     }
 }
 
-fn costs_for_key(
-    globals: &BTreeMap<String, GlobalModelResponse>,
-    bindings: &BTreeMap<String, BindingInfo>,
-    key: &ProviderQuickImportSyncKey,
-    multiplier: rust_decimal::Decimal,
-) -> ProviderResult<Vec<ProviderModelCostUpsert>> {
-    key.model_mappings
-        .iter()
-        .map(|mapping| {
-            let global = globals
-                .get(&mapping.global_model_id)
-                .ok_or_else(|| ProviderError::InvalidInput(format!("global model is missing: {}", mapping.global_model_id)))?;
-            let provider_model_id = bindings
-                .get(&mapping.global_model_id)
-                .ok_or_else(|| ProviderError::InvalidInput(format!("provider model binding is missing: {}", mapping.global_model_id)))?
-                .id
-                .clone();
-            let mut cost = model_cost(global, multiplier)?;
-            cost.provider_model_id = provider_model_id;
-            Ok(cost)
-        })
-        .collect()
-}
-
 fn report_only_outcome(
     group_ratio: rust_decimal::Decimal,
     effective: rust_decimal::Decimal,
@@ -270,6 +251,13 @@ fn cost_error(
     outcome
 }
 
+fn non_fixed_ratio_outcome(group: Option<&str>, upstream_value: String) -> KeyOutcome {
+    let mut outcome = status_base(ProviderQuickImportSyncStatus::CostUnavailable);
+    let group = group.unwrap_or("未设置");
+    outcome.error = Some(format!("newapi group ratio is not fixed for group {group}: {upstream_value}"));
+    outcome
+}
+
 fn anomaly_outcome(status: ProviderQuickImportSyncStatus, action: ProviderQuickImportUpstreamAnomalyAction) -> KeyOutcome {
     let mut outcome = status_base(status);
     outcome.disable_key = action == ProviderQuickImportUpstreamAnomalyAction::DisableKey;
@@ -300,10 +288,6 @@ fn status_base(status: ProviderQuickImportSyncStatus) -> KeyOutcome {
 
 fn token_by_id<'a>(snapshot: &'a UpstreamSyncSnapshot, id: &str) -> Option<&'a UpstreamSyncToken> {
     snapshot.tokens.iter().find(|token| token.id == id)
-}
-
-fn group_ratio(snapshot: &UpstreamSyncSnapshot, group: Option<&str>) -> Option<rust_decimal::Decimal> {
-    snapshot.groups.get(group?).copied()
 }
 
 fn statuses_with_candidates(mut statuses: Vec<ProviderQuickImportSyncStatus>, candidates: &[String]) -> Vec<ProviderQuickImportSyncStatus> {

@@ -29,9 +29,14 @@ mod quick_import_sync;
 mod quick_import_sync_bindings;
 mod quick_import_sync_candidates;
 mod quick_import_sync_events;
+mod quick_import_sync_globals;
+mod quick_import_sync_group_ratio;
+mod quick_import_sync_key_costs;
 mod quick_import_sync_model_check;
 #[cfg(test)]
 mod quick_import_sync_model_rules_tests;
+#[cfg(test)]
+mod quick_import_sync_non_fixed_ratio_tests;
 mod quick_import_sync_outcome;
 #[cfg(test)]
 mod quick_import_sync_outcome_tests;

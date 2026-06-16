@@ -200,7 +200,7 @@ fn anomaly_detail(key: &ProviderQuickImportSyncKey, outcome: &KeyOutcome, status
             "同步器已确认上游令牌仍存在且启用，但获取该令牌的裸 key 或请求 /v1/models 失败：{}",
             anomaly_error(outcome)
         ),
-        ProviderQuickImportSyncStatus::CostUnavailable => "全局模型默认价格或映射缺失，无法计算快捷导入成本".into(),
+        ProviderQuickImportSyncStatus::CostUnavailable => format!("无法计算快捷导入成本：{}", anomaly_error(outcome)),
         ProviderQuickImportSyncStatus::NoAssociatedModels => "本地密钥没有任何快捷导入模型关联".into(),
         _ => anomaly_title(key, status).replace("快捷导入同步异常：", ""),
     }

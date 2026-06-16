@@ -17,7 +17,8 @@ use crate::application::{
 use super::{
     quick_import_sync_bindings::{BindingInfo, bindings_by_global},
     quick_import_sync_events::{key_events, source_failure_event, source_failure_key_event},
-    quick_import_sync_outcome::{globals_by_id, key_outcome},
+    quick_import_sync_globals::globals_by_id,
+    quick_import_sync_outcome::key_outcome,
 };
 
 pub struct SyncArgs<'a, R, M, C, I> {
