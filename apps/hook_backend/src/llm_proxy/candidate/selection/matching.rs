@@ -10,7 +10,7 @@ use crate::llm_proxy::{
     AffinitySelection,
     cache::snapshot::{CachedBillingGroup, CachedEndpoint, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot},
     candidate::CandidateRequest,
-    capabilities::{capability_list_enabled, json_capability_enabled},
+    capabilities::capability_list_enabled,
     formats,
     model_access::provider_allowed,
 };
@@ -234,7 +234,7 @@ fn key_supports_required_capability(key: &CachedProviderKey, required: Option<&s
     let Some(required) = required.map(str::trim).filter(|value| !value.is_empty()) else {
         return true;
     };
-    json_capability_enabled(key.capabilities.as_ref(), required)
+    required != "image_generation" || key.supports_image_generation
 }
 
 fn selected_provider_model(model: &CachedModelBinding) -> CachedModelBinding {

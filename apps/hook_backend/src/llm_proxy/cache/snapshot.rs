@@ -231,14 +231,14 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
         .into_iter()
         .map(|record| {
             let (time_range_start_minute, time_range_end_minute) = cached_key_time_range(&record)?;
+            let api_formats = decode_key_api_formats(record.api_formats)?;
+            let supports_image_generation = api_formats.iter().any(|format| format == "openai_image");
             Ok(CachedProviderKey {
                 id: record.id,
                 provider_id: record.provider_id,
                 name: record.name.clone(),
-                api_formats: decode_key_api_formats(record.api_formats)?,
+                api_formats,
                 allowed_model_ids: decode_key_allowed_model_ids(record.allowed_model_ids)?,
-                capabilities: serde_json::from_str(&record.capabilities.unwrap_or_else(|| "null".to_owned()))
-                    .map_err(|error| LlmProxyError::Infrastructure(format!("provider key capabilities decode error: {error}")))?,
                 key_preview: record.name,
                 encrypted_api_key: record.encrypted_api_key,
                 internal_priority: record.internal_priority,
@@ -249,6 +249,7 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
                 time_range_enabled: record.time_range_enabled,
                 time_range_start_minute,
                 time_range_end_minute,
+                supports_image_generation,
                 is_active: record.is_active,
             })
         })

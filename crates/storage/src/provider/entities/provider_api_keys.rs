@@ -9,7 +9,6 @@ pub struct Model {
     pub name: String,
     pub api_formats: String,
     pub allowed_model_ids: String,
-    pub capabilities: Option<String>,
     pub encrypted_api_key: String,
     pub note: Option<String>,
     pub internal_priority: i32,

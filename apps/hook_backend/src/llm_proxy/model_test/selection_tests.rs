@@ -228,7 +228,7 @@ fn key(id: &str, api_formats: Vec<&str>) -> CachedProviderKey {
         name: format!("{id}-name"),
         api_formats: api_formats.into_iter().map(str::to_owned).collect(),
         allowed_model_ids: Vec::new(),
-        capabilities: None,
+        supports_image_generation: false,
         key_preview: "sk-***".into(),
         encrypted_api_key: "encrypted".into(),
         internal_priority: 0,

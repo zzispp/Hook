@@ -245,7 +245,6 @@ mod tests {
             name: id.into(),
             api_formats: vec!["openai".into()],
             allowed_model_ids: vec!["global-model-a".into()],
-            capabilities: None,
             note: None,
             internal_priority: 10,
             global_priority_by_format: std::collections::BTreeMap::new(),
