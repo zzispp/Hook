@@ -3,7 +3,7 @@ use types::provider::RoutingProfileId;
 use super::helpers::{provider_with_endpoints_and_keys, snapshot_with_provider};
 use crate::llm_proxy::{
     LlmProxyError,
-    candidate::selection::{effective_routing_profile_id, request_id_seed, validate_rankings_request},
+    candidate::selection::{effective_routing_profile_id, ranking_context_from_snapshot, request_id_seed, validate_rankings_request},
 };
 
 #[test]
@@ -21,9 +21,9 @@ fn routing_request_id_seed_rejects_empty_seed() {
 }
 
 #[test]
-fn routing_rankings_request_requires_token_model_and_format() {
+fn routing_rankings_request_requires_group_model_and_format() {
     let request = types::provider::RoutingRankingsRequest {
-        api_token_id: String::new(),
+        group_code: String::new(),
         model: "gpt-test".into(),
         api_format: "openai:chat".into(),
         is_stream: false,
@@ -34,7 +34,7 @@ fn routing_rankings_request_requires_token_model_and_format() {
 
     let error = validate_rankings_request(&request).unwrap_err();
 
-    assert!(matches!(error, LlmProxyError::InvalidRequest(message) if message == "routing rankings requires api_token_id"));
+    assert!(matches!(error, LlmProxyError::InvalidRequest(message) if message == "routing rankings requires group_code"));
 }
 
 #[test]
@@ -49,4 +49,22 @@ fn routing_effective_profile_prefers_model_then_group_then_default() {
 
     model.routing_profile_id = Some(RoutingProfileId::FirstByte);
     assert_eq!(effective_routing_profile_id(&snapshot.groups[0], &model), RoutingProfileId::FirstByte);
+}
+
+#[test]
+fn ranking_context_uses_group_code_context() {
+    let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
+    let context = ranking_context_from_snapshot(
+        &snapshot,
+        "default",
+        super::helpers::request(),
+        "seed-1",
+        &std::collections::HashSet::new(),
+    )
+    .unwrap();
+
+    assert_eq!(context.group.code, "default");
+    assert_eq!(context.global_model.name, "gpt-test");
+    assert_eq!(context.routing_profile_id, RoutingProfileId::Balanced);
+    assert!(!context.parts.is_empty());
 }

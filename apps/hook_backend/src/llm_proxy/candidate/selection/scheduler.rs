@@ -1,10 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use proxy::scheduler::{AffinityCandidate, Candidate, CandidateBuilder, ModelAccessPolicy, PriorityMode, ProviderSnapshot, SchedulerInput, SchedulingMode};
-use types::{
-    api_token::{ApiToken, ModelAccessMode},
-    provider::{ProviderPriorityMode, ProviderSchedulingMode},
-};
+use types::provider::{ProviderPriorityMode, ProviderSchedulingMode};
 
 use super::{CandidatePartKey, CandidateParts};
 use crate::llm_proxy::{
@@ -16,9 +13,9 @@ use crate::llm_proxy::{
 
 pub(super) struct OrderCandidatePartsInput<'a> {
     pub(super) parts: Vec<CandidateParts>,
-    pub(super) token: &'a ApiToken,
     pub(super) group: &'a CachedBillingGroup,
     pub(super) user_access: Option<&'a CachedUserAccess>,
+    pub(super) model_access_policy: ModelAccessPolicy,
     pub(super) request: CandidateRequest<'a>,
     pub(super) model_id: &'a str,
     pub(super) request_id: &'a str,
@@ -30,9 +27,9 @@ pub(super) struct OrderCandidatePartsInput<'a> {
 pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Result<Vec<CandidateParts>, LlmProxyError> {
     let OrderCandidatePartsInput {
         parts,
-        token,
         group,
         user_access,
+        model_access_policy,
         request,
         model_id,
         request_id,
@@ -42,9 +39,9 @@ pub(super) fn order_candidate_parts(input: OrderCandidatePartsInput<'_>) -> Resu
     } = input;
     let input = scheduler_input(SchedulerInputArgs {
         parts: &parts,
-        token,
         group,
         user_access,
+        model_access_policy,
         request,
         model_id,
         request_id,
@@ -70,7 +67,7 @@ fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmPr
         group_allowed_provider_key_ids: args.group.allowed_provider_key_ids.clone(),
         user_allowed_model_ids: args.user_access.map(|access| access.allowed_model_ids.clone()).unwrap_or_default(),
         user_allowed_provider_ids: args.user_access.map(|access| access.allowed_provider_ids.clone()).unwrap_or_default(),
-        token_model_policy: token_model_policy(args.token),
+        token_model_policy: args.model_access_policy,
         requested_model_id: args.model_id.to_owned(),
         client_format,
         is_stream: args.request.is_stream,
@@ -86,9 +83,9 @@ fn scheduler_input(args: SchedulerInputArgs<'_>) -> Result<SchedulerInput, LlmPr
 
 struct SchedulerInputArgs<'a> {
     parts: &'a [CandidateParts],
-    token: &'a ApiToken,
     group: &'a CachedBillingGroup,
     user_access: Option<&'a CachedUserAccess>,
+    model_access_policy: ModelAccessPolicy,
     request: CandidateRequest<'a>,
     model_id: &'a str,
     request_id: &'a str,
@@ -156,13 +153,6 @@ fn global_key_priority(key: &CachedProviderKey, api_format: &str, mode: Provider
     match mode {
         ProviderPriorityMode::Provider => key.internal_priority,
         ProviderPriorityMode::Key => key.global_priority_by_format.get(api_format).copied().unwrap_or(key.internal_priority),
-    }
-}
-
-fn token_model_policy(token: &ApiToken) -> ModelAccessPolicy {
-    match token.model_access_mode {
-        ModelAccessMode::All => ModelAccessPolicy::All,
-        ModelAccessMode::Limited => ModelAccessPolicy::Limited(token.allowed_model_ids.clone()),
     }
 }
 

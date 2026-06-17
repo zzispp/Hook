@@ -157,7 +157,7 @@ export type RouteScoreExplanation = {
 };
 
 export type RoutingRankingsQuery = {
-  api_token_id: string;
+  group_code: string;
   model: string;
   api_format: string;
   is_stream: boolean;

@@ -243,7 +243,7 @@ pub struct RoutingProfileLearningState {
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct RoutingRankingsRequest {
-    pub api_token_id: String,
+    pub group_code: String,
     pub model: String,
     pub api_format: String,
     pub is_stream: bool,
