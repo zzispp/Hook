@@ -34,8 +34,8 @@ import { ProviderPanelSection } from './provider-panel-section';
 import { ProviderApiKeysSection } from './provider-api-keys-section';
 import { ProviderModelCostsSection } from './provider-model-costs-section';
 import { ProviderModelBindingsSection } from './provider-model-bindings-section';
-import { ProviderModelMappingsSection } from './provider-model-mappings-section';
 import { formatApiFormat, defaultEndpointPath } from './provider-management-utils';
+import { ProviderKeyModelMappingsSection } from './provider-key-model-mappings-section';
 
 export function ProviderBindingsPanel({
   open,
@@ -47,7 +47,7 @@ export function ProviderBindingsPanel({
   onAssociateKeyGroups,
   onAppendQuickImport,
   onResolveQuickImportKey,
-  onManageQuickImportModels,
+  onManageKeyModels,
 }: {
   open: boolean;
   provider?: Provider;
@@ -58,7 +58,7 @@ export function ProviderBindingsPanel({
   onAssociateKeyGroups: (apiKey: ProviderApiKey) => void;
   onAppendQuickImport: (provider: Provider) => void;
   onResolveQuickImportKey: (provider: Provider, apiKey: ProviderApiKey) => void;
-  onManageQuickImportModels: (provider: Provider, apiKey: ProviderApiKey) => void;
+  onManageKeyModels: (provider: Provider, apiKey: ProviderApiKey) => void;
 }) {
   const { t } = useTranslate('admin');
   const endpoints = useProviderEndpoints(provider?.id);
@@ -88,7 +88,7 @@ export function ProviderBindingsPanel({
             onAssociateKeyGroups={onAssociateKeyGroups}
             onAppendQuickImport={onAppendQuickImport}
             onResolveQuickImportKey={onResolveQuickImportKey}
-            onManageQuickImportModels={onManageQuickImportModels}
+            onManageKeyModels={onManageKeyModels}
           />
         ) : null}
       </Scrollbar>
@@ -126,7 +126,7 @@ type ProviderBindingsContentProps = {
   onAssociateKeyGroups: (apiKey: ProviderApiKey) => void;
   onAppendQuickImport: (provider: Provider) => void;
   onResolveQuickImportKey: (provider: Provider, apiKey: ProviderApiKey) => void;
-  onManageQuickImportModels: (provider: Provider, apiKey: ProviderApiKey) => void;
+  onManageKeyModels: (provider: Provider, apiKey: ProviderApiKey) => void;
 };
 
 function ProviderBindingsContent(props: ProviderBindingsContentProps) {
@@ -145,7 +145,7 @@ function ProviderBindingsContent(props: ProviderBindingsContentProps) {
         dialogs={props.dialogs}
         onAppendQuickImport={props.onAppendQuickImport}
         onResolveQuickImportKey={(apiKey) => props.onResolveQuickImportKey(props.provider, apiKey)}
-        onManageQuickImportModels={(apiKey) => props.onManageQuickImportModels(props.provider, apiKey)}
+        onManageKeyModels={(apiKey) => props.onManageKeyModels(props.provider, apiKey)}
         onAssociateGroups={props.onAssociateKeyGroups}
       />
       <ProviderModelSection
@@ -157,11 +157,11 @@ function ProviderBindingsContent(props: ProviderBindingsContentProps) {
         models={props.models}
         onAdd={() => props.dialogs.setModelOpen(true)}
       />
-      <ProviderModelMappingsSection
+      <ProviderKeyModelMappingsSection
         providerId={props.providerId}
-        items={props.providerModelItems}
-        loading={props.providerModelLoading}
+        apiKeys={props.apiKeyItems}
         models={props.models}
+        onManageKeyModels={(_providerId, apiKey) => props.onManageKeyModels(props.provider, apiKey)}
       />
       <ProviderModelCostsSection
         providerId={props.providerId}

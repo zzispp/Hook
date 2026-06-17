@@ -3,8 +3,8 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use types::model::PatchField;
 use types::provider::{
-    ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, ProviderOrigin, ProviderQuickImportSyncConfig,
-    ProviderQuickImportSyncStatus, RequestUpstreamCost,
+    ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderOrigin, ProviderQuickImportSyncConfig, ProviderQuickImportSyncStatus,
+    RequestUpstreamCost,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -140,8 +140,6 @@ pub struct ProviderKeyGroupRecordPatch {
 pub struct ProviderModelRecordInput {
     pub provider_id: String,
     pub global_model_id: String,
-    pub provider_model_name: String,
-    pub provider_model_mapping: Option<ProviderModelMapping>,
     pub is_active: bool,
     pub config: Option<serde_json::Value>,
 }
@@ -155,10 +153,54 @@ pub struct ProviderModelRecordBatchUpdate {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ProviderModelRecordPatch {
-    pub provider_model_name: Option<String>,
     pub is_active: Option<bool>,
-    pub provider_model_mapping: types::model::PatchField<ProviderModelMapping>,
     pub config: types::model::PatchField<serde_json::Value>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderKeyModelMappingRecordInput {
+    pub provider_id: String,
+    pub key_id: String,
+    pub provider_model_id: String,
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ProviderKeyModelMappingRecordPatch {
+    pub upstream_model_name: Option<String>,
+    pub reasoning_effort: PatchField<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderKeyModelMappingView {
+    pub id: String,
+    pub provider_id: String,
+    pub key_id: String,
+    pub provider_model_id: String,
+    pub global_model_id: String,
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderKeyModelMappingsForProviderRecord {
+    pub provider_id: String,
+    pub key_id: String,
+    pub key_name: String,
+    pub is_quick_import_key: bool,
+    pub mappings: Vec<ProviderKeyModelMappingView>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderKeyModelMappingsForKeyRecord {
+    pub provider_id: String,
+    pub key_id: String,
+    pub key_name: String,
+    pub is_quick_import_key: bool,
+    pub mappings: Vec<ProviderKeyModelMappingView>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -259,6 +301,13 @@ pub struct ProviderQuickImportEndpointRecordInput {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct ProviderQuickImportKeyModelRecordInput {
+    pub global_model_id: String,
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct ProviderQuickImportApiKeyRecordInput {
     pub upstream_token_id: String,
     pub upstream_token_name: String,
@@ -282,12 +331,6 @@ pub struct ProviderQuickImportApiKeyRecordInput {
     pub time_range_start: Option<String>,
     pub time_range_end: Option<String>,
     pub is_active: bool,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ProviderQuickImportKeyModelRecordInput {
-    pub upstream_model_id: String,
-    pub global_model_id: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -333,8 +376,10 @@ pub struct ProviderQuickImportSyncKeyRecord {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProviderQuickImportSyncKeyModelRecord {
-    pub upstream_model_id: String,
+    pub provider_model_id: String,
     pub global_model_id: String,
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -378,8 +423,6 @@ pub struct ProviderQuickImportSyncEventRecordInput {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderQuickImportModelRecordInput {
     pub global_model_id: String,
-    pub provider_model_name: String,
-    pub provider_model_mapping: Option<ProviderModelMapping>,
     pub is_active: bool,
     pub config: Option<serde_json::Value>,
 }

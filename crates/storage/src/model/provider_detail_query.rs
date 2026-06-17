@@ -254,13 +254,11 @@ mod tests {
         }
     }
 
-    fn model_binding(id: &str, provider_id: &str, provider_model_name: &str, is_active: bool) -> ModelRecord {
+    fn model_binding(id: &str, provider_id: &str, _provider_model_name: &str, is_active: bool) -> ModelRecord {
         provider_models::Model {
             id: id.into(),
             provider_id: provider_id.into(),
             global_model_id: "global-model-1".into(),
-            provider_model_name: provider_model_name.into(),
-            provider_model_mappings: None,
             is_active,
             config: None,
             created_at: now(),

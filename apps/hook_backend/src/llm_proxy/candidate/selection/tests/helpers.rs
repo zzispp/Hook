@@ -2,14 +2,15 @@ use rust_decimal::Decimal;
 use types::{
     api_token::{ApiToken, ApiTokenType, ModelAccessMode},
     model::TieredPricingConfig,
-    provider::{ProviderModelMapping, ProviderSchedulingMode},
+    provider::ProviderSchedulingMode,
     system_setting::RequestRecordLevel,
 };
 
 use crate::llm_proxy::{
     IMAGE_GENERATION_CAPABILITY,
     cache::snapshot::{
-        CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
+        CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedKeyModelMapping, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess,
+        SchedulingSnapshot,
     },
     candidate::CandidateRequest,
 };
@@ -98,11 +99,6 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
             id: "binding-a".into(),
             provider_id: "provider-a".into(),
             global_model_id: "model-a".into(),
-            provider_model_name: "upstream-model".into(),
-            provider_model_mapping: Some(ProviderModelMapping {
-                name: "mapped-upstream-model".into(),
-                reasoning_effort: Some("high".into()),
-            }),
             is_active: true,
         }],
     }
@@ -152,8 +148,6 @@ pub(super) fn provider_b() -> CachedProvider {
             id: "binding-b".into(),
             provider_id: "provider-b".into(),
             global_model_id: "model-a".into(),
-            provider_model_name: "provider-b-model".into(),
-            provider_model_mapping: None,
             is_active: true,
         }],
         ..provider_with_endpoints_and_keys()
@@ -247,5 +241,14 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         time_range_start_minute: None,
         time_range_end_minute: None,
         is_active: true,
+        model_mappings: std::collections::BTreeMap::from([(
+            "binding-a".to_owned(),
+            CachedKeyModelMapping {
+                provider_model_id: "binding-a".into(),
+                global_model_id: "model-a".into(),
+                upstream_model_name: "mapped-upstream-model".into(),
+                reasoning_effort: Some("high".into()),
+            },
+        )]),
     }
 }

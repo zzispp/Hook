@@ -162,6 +162,8 @@ pub(super) struct CandidateParts {
     pub(super) endpoints: Vec<CachedEndpoint>,
     pub(super) keys: Vec<CachedProviderKey>,
     pub(super) model: CachedModelBinding,
+    pub(super) effective_upstream_model_name: String,
+    pub(super) effective_reasoning_effort: Option<String>,
     pub(super) client_api_format: String,
     pub(super) routing_api_format: String,
     pub(super) is_cached: bool,

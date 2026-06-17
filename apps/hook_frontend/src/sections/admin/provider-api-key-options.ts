@@ -55,6 +55,5 @@ function modelLabels(models: GlobalModelResponse[]) {
 }
 
 function providerModelDescription(binding: ProviderModelBinding, label: string) {
-  const upstream = binding.provider_model_mapping?.name ?? binding.provider_model_name;
-  return upstream === label ? binding.global_model_id : `${upstream} · ${binding.global_model_id}`;
+  return label === binding.global_model_id ? binding.global_model_id : `${label} · ${binding.global_model_id}`;
 }

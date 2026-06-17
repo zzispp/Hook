@@ -118,10 +118,21 @@ pub(in crate::migration::baseline) enum ProviderModels {
     Id,
     ProviderId,
     GlobalModelId,
-    ProviderModelName,
-    ProviderModelMappings,
     IsActive,
     Config,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum ProviderKeyModelMappings {
+    Table,
+    Id,
+    ProviderId,
+    KeyId,
+    ProviderModelId,
+    UpstreamModelName,
+    ReasoningEffort,
     CreatedAt,
     UpdatedAt,
 }
@@ -188,19 +199,6 @@ pub(in crate::migration::baseline) enum ProviderQuickImportKeys {
     SyncStatuses,
     LastSyncError,
     LastSyncedAt,
-    CreatedAt,
-    UpdatedAt,
-}
-
-#[derive(DeriveIden)]
-pub(in crate::migration::baseline) enum ProviderQuickImportKeyModels {
-    Table,
-    Id,
-    ProviderId,
-    SourceId,
-    KeyId,
-    UpstreamModelId,
-    GlobalModelId,
     CreatedAt,
     UpdatedAt,
 }

@@ -81,7 +81,7 @@ impl TestRequest {
             headers,
             body,
             selection,
-            model_name: parts.model.provider_model_name,
+            model_name: parts.effective_upstream_model_name,
             endpoint: primary.endpoint,
             request_url: primary.request_url,
             client_api_format,

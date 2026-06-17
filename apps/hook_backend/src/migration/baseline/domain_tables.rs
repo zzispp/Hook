@@ -12,10 +12,10 @@ pub(super) fn domain_tables() -> Vec<TableCreateStatement> {
         provider_endpoints_table(),
         provider_api_keys_table(),
         provider_models_table(),
+        provider_key_model_mappings_table(),
         provider_model_costs_table(),
         provider_quick_import_sources_table(),
         provider_quick_import_keys_table(),
-        provider_quick_import_key_models_table(),
         provider_quick_import_sync_events_table(),
         billing_rules_table(),
         dimension_collectors_table(),
@@ -226,14 +226,37 @@ fn provider_models_table() -> TableCreateStatement {
         .col(string_len(ProviderModels::Id, 36).primary_key())
         .col(string_len(ProviderModels::ProviderId, 36))
         .col(string_len(ProviderModels::GlobalModelId, 36))
-        .col(string_len(ProviderModels::ProviderModelName, 200))
-        .col(text_null(ProviderModels::ProviderModelMappings))
         .col(boolean(ProviderModels::IsActive))
         .col(text_null(ProviderModels::Config))
         .col(timestamp_tz(ProviderModels::CreatedAt))
         .col(timestamp_tz(ProviderModels::UpdatedAt))
         .foreign_key(&mut provider_fk)
         .foreign_key(&mut global_model_fk)
+        .to_owned()
+}
+
+fn provider_key_model_mappings_table() -> TableCreateStatement {
+    let mut provider_fk = provider_fk(
+        "fk_provider_key_model_mappings_provider",
+        ProviderKeyModelMappings::Table,
+        ProviderKeyModelMappings::ProviderId,
+    );
+    let mut key_fk = provider_key_model_mapping_key_fk();
+    let mut provider_model_fk = provider_key_model_mapping_provider_model_fk();
+    Table::create()
+        .table(ProviderKeyModelMappings::Table)
+        .if_not_exists()
+        .col(string_len(ProviderKeyModelMappings::Id, 36).primary_key())
+        .col(string_len(ProviderKeyModelMappings::ProviderId, 36))
+        .col(string_len(ProviderKeyModelMappings::KeyId, 36))
+        .col(string_len(ProviderKeyModelMappings::ProviderModelId, 36))
+        .col(string_len(ProviderKeyModelMappings::UpstreamModelName, 200))
+        .col(string_len_null(ProviderKeyModelMappings::ReasoningEffort, 20))
+        .col(timestamp_tz(ProviderKeyModelMappings::CreatedAt))
+        .col(timestamp_tz(ProviderKeyModelMappings::UpdatedAt))
+        .foreign_key(&mut provider_fk)
+        .foreign_key(&mut key_fk)
+        .foreign_key(&mut provider_model_fk)
         .to_owned()
 }
 
@@ -329,33 +352,6 @@ fn provider_quick_import_keys_table() -> TableCreateStatement {
         .foreign_key(&mut provider_fk)
         .foreign_key(&mut source_fk)
         .foreign_key(&mut key_fk)
-        .to_owned()
-}
-
-fn provider_quick_import_key_models_table() -> TableCreateStatement {
-    let mut provider_fk = provider_fk(
-        "fk_provider_quick_import_key_models_provider",
-        ProviderQuickImportKeyModels::Table,
-        ProviderQuickImportKeyModels::ProviderId,
-    );
-    let mut source_fk = quick_import_key_model_source_fk();
-    let mut key_fk = quick_import_key_model_key_fk();
-    let mut global_model_fk = quick_import_key_model_global_model_fk();
-    Table::create()
-        .table(ProviderQuickImportKeyModels::Table)
-        .if_not_exists()
-        .col(string_len(ProviderQuickImportKeyModels::Id, 36).primary_key())
-        .col(string_len(ProviderQuickImportKeyModels::ProviderId, 36))
-        .col(string_len(ProviderQuickImportKeyModels::SourceId, 36))
-        .col(string_len(ProviderQuickImportKeyModels::KeyId, 36))
-        .col(string_len(ProviderQuickImportKeyModels::UpstreamModelId, 200))
-        .col(string_len(ProviderQuickImportKeyModels::GlobalModelId, 36))
-        .col(timestamp_tz(ProviderQuickImportKeyModels::CreatedAt))
-        .col(timestamp_tz(ProviderQuickImportKeyModels::UpdatedAt))
-        .foreign_key(&mut provider_fk)
-        .foreign_key(&mut source_fk)
-        .foreign_key(&mut key_fk)
-        .foreign_key(&mut global_model_fk)
         .to_owned()
 }
 
@@ -624,32 +620,22 @@ fn quick_import_key_provider_key_fk() -> ForeignKeyCreateStatement {
     foreign_key
 }
 
-fn quick_import_key_model_source_fk() -> ForeignKeyCreateStatement {
+fn provider_key_model_mapping_key_fk() -> ForeignKeyCreateStatement {
     let mut foreign_key = ForeignKey::create();
     foreign_key
-        .name("fk_provider_quick_import_key_models_source")
-        .from(ProviderQuickImportKeyModels::Table, ProviderQuickImportKeyModels::SourceId)
-        .to(ProviderQuickImportSources::Table, ProviderQuickImportSources::Id)
-        .on_delete(ForeignKeyAction::Cascade);
-    foreign_key
-}
-
-fn quick_import_key_model_key_fk() -> ForeignKeyCreateStatement {
-    let mut foreign_key = ForeignKey::create();
-    foreign_key
-        .name("fk_provider_quick_import_key_models_key")
-        .from(ProviderQuickImportKeyModels::Table, ProviderQuickImportKeyModels::KeyId)
+        .name("fk_provider_key_model_mappings_key")
+        .from(ProviderKeyModelMappings::Table, ProviderKeyModelMappings::KeyId)
         .to(ProviderApiKeys::Table, ProviderApiKeys::Id)
         .on_delete(ForeignKeyAction::Cascade);
     foreign_key
 }
 
-fn quick_import_key_model_global_model_fk() -> ForeignKeyCreateStatement {
+fn provider_key_model_mapping_provider_model_fk() -> ForeignKeyCreateStatement {
     let mut foreign_key = ForeignKey::create();
     foreign_key
-        .name("fk_provider_quick_import_key_models_global_model")
-        .from(ProviderQuickImportKeyModels::Table, ProviderQuickImportKeyModels::GlobalModelId)
-        .to(GlobalModels::Table, GlobalModels::Id)
+        .name("fk_provider_key_model_mappings_provider_model")
+        .from(ProviderKeyModelMappings::Table, ProviderKeyModelMappings::ProviderModelId)
+        .to(ProviderModels::Table, ProviderModels::Id)
         .on_delete(ForeignKeyAction::Cascade);
     foreign_key
 }

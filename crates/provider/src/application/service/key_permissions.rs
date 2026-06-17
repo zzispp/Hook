@@ -67,8 +67,6 @@ mod tests {
             id: format!("binding-{global_model_id}"),
             provider_id: "provider-1".to_owned(),
             global_model_id: global_model_id.to_owned(),
-            provider_model_name: global_model_id.to_owned(),
-            provider_model_mapping: None,
             is_active: true,
             config: None,
             created_at: "2026-05-17T00:00:00Z".to_owned(),

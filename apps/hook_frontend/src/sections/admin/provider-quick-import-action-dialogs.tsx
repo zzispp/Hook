@@ -38,11 +38,11 @@ export function ProviderQuickImportActionDialogs({ actions, models, onBound }: P
         onClose={actions.closeResolution}
       />
       <ProviderQuickImportModelAssociationsDialog
-        open={!!actions.modelAssociationsTarget}
-        provider={actions.modelAssociationsTarget?.provider ?? null}
-        apiKey={actions.modelAssociationsTarget?.apiKey ?? null}
+        open={!!actions.keyMappingsTarget}
+        provider={actions.keyMappingsTarget?.provider ?? null}
+        apiKey={actions.keyMappingsTarget?.apiKey ?? null}
         models={models}
-        onClose={actions.closeModelAssociations}
+        onClose={actions.closeKeyMappings}
       />
     </>
   );

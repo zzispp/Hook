@@ -100,7 +100,7 @@ fn matching_candidate_parts_keeps_all_provider_routes_without_silent_budget() {
 }
 
 #[test]
-fn matching_candidate_parts_prefers_highest_priority_mapped_provider_model_name() {
+fn matching_candidate_parts_uses_key_level_effective_provider_model() {
     let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
     let group = &snapshot.groups[0];
 
@@ -117,15 +117,8 @@ fn matching_candidate_parts_prefers_highest_priority_mapped_provider_model_name(
     });
 
     assert_eq!(parts.len(), 2);
-    assert_eq!(parts[0].model.provider_model_name, "mapped-upstream-model");
-    assert_eq!(
-        parts[0]
-            .model
-            .provider_model_mapping
-            .as_ref()
-            .and_then(|mapping| mapping.reasoning_effort.as_deref()),
-        Some("high")
-    );
+    assert_eq!(parts[0].effective_upstream_model_name, "mapped-upstream-model");
+    assert_eq!(parts[0].effective_reasoning_effort.as_deref(), Some("high"));
 }
 
 #[test]

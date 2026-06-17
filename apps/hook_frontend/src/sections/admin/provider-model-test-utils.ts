@@ -41,7 +41,7 @@ function parsedObject(parsed: unknown) {
 }
 
 function modelTestName(binding: ProviderModelBinding) {
-  return binding.provider_model_mapping?.name ?? binding.provider_model_name;
+  return binding.global_model_id;
 }
 
 function testBody(model: string, apiFormat: string) {

@@ -1,5 +1,6 @@
 'use client';
 
+import type { GlobalModelResponse } from 'src/types/model';
 import type { ProviderApiKey, ProviderEndpoint, ProviderModelBinding, ProviderModelTestResponse } from 'src/types/provider';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -51,12 +52,18 @@ type Props = {
   binding: ProviderModelBinding | null;
   endpoints: ProviderEndpoint[];
   apiKeys: ProviderApiKey[];
+  models?: GlobalModelResponse[];
   onClose: () => void;
 };
 
-export function ProviderModelTestDialog({ providerId, binding, endpoints, apiKeys, onClose }: Props) {
+export function ProviderModelTestDialog({ providerId, binding, endpoints, apiKeys, models = [], onClose }: Props) {
   const { t } = useTranslate('admin');
   const activeEndpoints = useMemo(() => testableEndpoints(endpoints), [endpoints]);
+  const bindingModelName = useMemo(() => {
+    if (!binding) return '';
+    const model = models.find((item) => item.id === binding.global_model_id);
+    return model?.display_name || model?.name || binding.global_model_id;
+  }, [binding, models]);
   const [endpointId, setEndpointId] = useState('');
   const [keyId, setKeyId] = useState('');
   const [headersDraft, setHeadersDraft] = useState(defaultModelTestHeaders);
@@ -119,7 +126,7 @@ export function ProviderModelTestDialog({ providerId, binding, endpoints, apiKey
       <DialogTitle>
         {t('providers.modelTestTitle')}
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {binding ? t('providers.modelTestDescription', { name: binding.provider_model_name }) : ''}
+          {binding ? t('providers.modelTestDescription', { name: bindingModelName }) : ''}
         </Typography>
       </DialogTitle>
       <DialogContent dividers sx={{ px: 3, py: 2 }}>

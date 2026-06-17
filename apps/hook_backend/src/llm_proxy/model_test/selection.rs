@@ -10,6 +10,8 @@ pub(super) struct FixedParts {
     pub(super) provider: CachedProvider,
     pub(super) global_model: CachedGlobalModel,
     pub(super) model: CachedModelBinding,
+    pub(super) effective_upstream_model_name: String,
+    pub(super) effective_reasoning_effort: Option<String>,
     pub(super) client_api_format: String,
     pub(super) endpoints: Vec<CachedEndpoint>,
     pub(super) keys: Vec<CachedProviderKey>,
@@ -34,12 +36,15 @@ pub(super) fn fixed_parts(
     let global_model = active_global_model(snapshot, &model.global_model_id)?;
     let endpoints = eligible_endpoints(&provider, &client_api_format, effective_stream)?;
     let key = eligible_key(&provider, &model.global_model_id, &endpoints, key_id)?;
+    let effective = key.effective_provider_model(&model, &global_model);
     let endpoints = endpoints_for_key(endpoints, &key);
     let keys = vec![key];
     Ok(FixedParts {
         provider,
         global_model,
         model,
+        effective_upstream_model_name: effective.upstream_model_name,
+        effective_reasoning_effort: effective.reasoning_effort,
         client_api_format,
         endpoints,
         keys,
@@ -72,13 +77,12 @@ fn active_endpoint(provider: &CachedProvider, endpoint_id: &str, stream: bool) -
 }
 
 fn active_model(provider: &CachedProvider, model_id: &str) -> Result<CachedModelBinding, LlmProxyError> {
-    let model = provider
+    provider
         .models
         .iter()
         .find(|model| model.id == model_id && model.is_active)
         .cloned()
-        .ok_or_else(|| LlmProxyError::InvalidRequest("selected provider model is not active or does not exist".into()))?;
-    Ok(selected_provider_model(model))
+        .ok_or_else(|| LlmProxyError::InvalidRequest("selected provider model is not active or does not exist".into()))
 }
 
 fn active_global_model(snapshot: &SchedulingSnapshot, model_id: &str) -> Result<CachedGlobalModel, LlmProxyError> {
@@ -207,13 +211,6 @@ fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool 
 fn current_utc_minute() -> u16 {
     let time = time::OffsetDateTime::now_utc().time();
     types::provider::provider_key_minute_of_day(u16::from(time.hour()), u16::from(time.minute())).expect("UTC time must have a valid minute of day")
-}
-
-fn selected_provider_model(mut model: CachedModelBinding) -> CachedModelBinding {
-    if let Some(mapping) = &model.provider_model_mapping {
-        model.provider_model_name = mapping.name.clone();
-    }
-    model
 }
 
 fn force_non_stream(api_format: &str, requested_stream: bool) -> Result<bool, LlmProxyError> {

@@ -229,8 +229,9 @@ export const endpoints = {
       `/api/admin/providers/${providerId}/keys/${keyId}/quick-import-resolution/accept-current`,
     keyQuickImportRelink: (providerId: string, keyId: string) =>
       `/api/admin/providers/${providerId}/keys/${keyId}/quick-import-resolution/relink`,
-    keyQuickImportModelAssociations: (providerId: string, keyId: string) =>
-      `/api/admin/providers/${providerId}/keys/${keyId}/quick-import-model-associations`,
+    keyModelMappings: (providerId: string) => `/api/admin/providers/${providerId}/key-model-mappings`,
+    keyModelMappingsByKey: (providerId: string, keyId: string) =>
+      `/api/admin/providers/${providerId}/keys/${keyId}/model-mappings`,
     upstreamModels: (id: string) => `/api/admin/providers/${id}/upstream-models`,
     models: (id: string) => `/api/admin/providers/${id}/models`,
     modelById: (providerId: string, modelId: string) =>

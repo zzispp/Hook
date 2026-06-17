@@ -123,8 +123,9 @@ pub(super) fn key_model_mappings(token: &SelectedToken<'_>, mappings: &BTreeMap<
         .iter()
         .filter_map(|model| {
             mappings.get(&model.id).map(|global_model_id| ProviderQuickImportKeyModelCreate {
-                upstream_model_id: model.id.clone(),
                 global_model_id: global_model_id.clone(),
+                upstream_model_name: model.id.clone(),
+                reasoning_effort: None,
             })
         })
         .collect()

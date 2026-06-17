@@ -4,6 +4,7 @@ import type {
   ProviderEndpoint,
   ProviderModelCost,
   ProviderModelBinding,
+  ProviderKeyModelMapping,
 } from './provider';
 
 export type ProviderQuickImportSourceKind = 'newapi';
@@ -108,10 +109,6 @@ export type ProviderQuickImportBindCommitResponse = {
 export type ProviderQuickImportRelinkRequest = {
   upstream_token_id: string;
   selected_model_ids: string[];
-  model_mappings: ProviderQuickImportModelMappingInput[];
-};
-
-export type ProviderQuickImportModelAssociationsUpdate = {
   model_mappings: ProviderQuickImportModelMappingInput[];
 };
 
@@ -260,28 +257,5 @@ export type ProviderQuickImportResolutionResponse = {
   statuses: ProviderQuickImportSyncStatus[];
   tokens: ProviderQuickImportTokenPreview[];
   model_mappings: ProviderQuickImportModelMappingPreview[];
-  associated_models: ProviderQuickImportModelAssociation[];
-};
-
-export type ProviderQuickImportModelAssociationsResponse = {
-  provider_id: string;
-  key_id: string;
-  key_name: string;
-  source_kind: ProviderQuickImportSourceKind;
-  upstream_token_id: string;
-  associations: ProviderQuickImportModelAssociation[];
-  candidates: ProviderQuickImportModelAssociationCandidate[];
-};
-
-export type ProviderQuickImportModelAssociation = {
-  upstream_model_id: string;
-  global_model_id: string;
-  global_model_name: string;
-  global_model_display_name: string;
-};
-
-export type ProviderQuickImportModelAssociationCandidate = {
-  upstream_model_id: string;
-  suggested_global_model_id?: string | null;
-  reason: string;
+  associated_models: ProviderKeyModelMapping[];
 };
