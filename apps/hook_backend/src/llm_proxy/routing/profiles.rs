@@ -7,7 +7,7 @@ use crate::llm_proxy::{LlmProxyError, LlmProxyState};
 
 use super::learning::apply_profile_learning;
 
-const BUILTIN_PROFILE_VERSION: &str = "builtin-v1";
+const BUILTIN_PROFILE_VERSION: &str = "builtin-v2";
 const WEIGHT_SUM_TOLERANCE: f64 = 0.001;
 
 #[derive(Clone, Debug)]
@@ -61,7 +61,14 @@ fn validate_profile_upsert(id: RoutingProfileId, patch: &RoutingProfileUpsert) -
     validate_non_negative("exploration_k", patch.exploration_k)?;
     validate_non_negative("conversion_penalty", patch.conversion_penalty)?;
     validate_non_negative("stale_metric_penalty", patch.stale_metric_penalty)?;
-    validate_non_negative("affinity_bonus", patch.affinity_bonus)
+    validate_non_negative("affinity_bonus", patch.affinity_bonus)?;
+    validate_unit_interval("ema_alpha", patch.ema_alpha)?;
+    validate_non_negative_i64("ema_max_freshness_seconds", patch.ema_max_freshness_seconds)?;
+    validate_non_negative("ema_recent_weight", patch.ema_recent_weight)?;
+    validate_non_negative("ema_recent_cap", patch.ema_recent_cap)?;
+    validate_non_negative("exploration_weight", patch.exploration_weight)?;
+    validate_non_negative("exploration_cap", patch.exploration_cap)?;
+    validate_percentage_score("exploration_min_success_score", patch.exploration_min_success_score)
 }
 
 fn validate_weights(id: RoutingProfileId, weights: &RoutingProfileWeights) -> Result<(), LlmProxyError> {
@@ -81,6 +88,33 @@ fn validate_weights(id: RoutingProfileId, weights: &RoutingProfileWeights) -> Re
 fn validate_non_negative(name: &str, value: Option<f64>) -> Result<(), LlmProxyError> {
     if let Some(value) = value {
         validate_finite_non_negative(name, value)?;
+    }
+    Ok(())
+}
+
+fn validate_non_negative_i64(name: &str, value: Option<i64>) -> Result<(), LlmProxyError> {
+    if let Some(value) = value
+        && value < 0
+    {
+        return invalid_profile_patch(format!("{name} must be non-negative"));
+    }
+    Ok(())
+}
+
+fn validate_unit_interval(name: &str, value: Option<f64>) -> Result<(), LlmProxyError> {
+    if let Some(value) = value
+        && (!value.is_finite() || !(0.0..=1.0).contains(&value))
+    {
+        return invalid_profile_patch(format!("{name} must be between 0 and 1"));
+    }
+    Ok(())
+}
+
+fn validate_percentage_score(name: &str, value: Option<f64>) -> Result<(), LlmProxyError> {
+    if let Some(value) = value
+        && (!value.is_finite() || !(0.0..=100.0).contains(&value))
+    {
+        return invalid_profile_patch(format!("{name} must be between 0 and 100"));
     }
     Ok(())
 }
@@ -153,6 +187,27 @@ fn apply_patch(profile: &mut RoutingProfile, patch: RoutingProfileUpsert) {
     if let Some(value) = patch.contextual_exploration_enabled {
         profile.contextual_exploration_enabled = value;
     }
+    if let Some(value) = patch.ema_alpha {
+        profile.ema_alpha = value;
+    }
+    if let Some(value) = patch.ema_max_freshness_seconds {
+        profile.ema_max_freshness_seconds = value;
+    }
+    if let Some(value) = patch.ema_recent_weight {
+        profile.ema_recent_weight = value;
+    }
+    if let Some(value) = patch.ema_recent_cap {
+        profile.ema_recent_cap = value;
+    }
+    if let Some(value) = patch.exploration_weight {
+        profile.exploration_weight = value;
+    }
+    if let Some(value) = patch.exploration_cap {
+        profile.exploration_cap = value;
+    }
+    if let Some(value) = patch.exploration_min_success_score {
+        profile.exploration_min_success_score = value;
+    }
     if let Some(value) = patch.auto_tune_enabled {
         profile.auto_tune_enabled = value;
     }
@@ -180,13 +235,20 @@ fn built_in_profile(id: RoutingProfileId) -> RoutingProfile {
         description: description.into(),
         weights,
         version: BUILTIN_PROFILE_VERSION.into(),
-        min_samples: 20,
-        exploration_k: 3.0,
+        min_samples: 12,
+        exploration_k: 4.5,
         conversion_penalty: 6.0,
         stale_metric_penalty: 8.0,
         affinity_bonus: 6.0,
         prior_sample_cap: types::provider::default_prior_sample_cap(),
         contextual_exploration_enabled: types::provider::default_contextual_exploration_enabled(),
+        ema_alpha: types::provider::default_ema_alpha(),
+        ema_max_freshness_seconds: types::provider::default_ema_max_freshness_seconds(),
+        ema_recent_weight: types::provider::default_ema_recent_weight(),
+        ema_recent_cap: types::provider::default_ema_recent_cap(),
+        exploration_weight: types::provider::default_exploration_weight(),
+        exploration_cap: types::provider::default_exploration_cap(),
+        exploration_min_success_score: types::provider::default_exploration_min_success_score(),
         auto_tune_enabled: auto_tune_enabled(id),
         learning: None,
     };

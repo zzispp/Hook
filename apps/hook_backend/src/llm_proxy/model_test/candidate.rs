@@ -112,6 +112,8 @@ fn candidate_trace(parts: &FixedParts, key: &CandidateKeyOption, endpoint: &Cand
         needs_conversion: endpoint.needs_conversion,
         is_stream: stream,
         is_cached: false,
+        routing_profile_id: types::provider::RoutingProfileId::Balanced,
+        routing_profile_ema_alpha: types::provider::default_ema_alpha(),
         routing_context_key: format!(
             "group={TEST_GROUP_CODE}|model={}|format={}|stream={}|size=unknown|cap=none",
             parts.global_model.id, parts.client_api_format, stream

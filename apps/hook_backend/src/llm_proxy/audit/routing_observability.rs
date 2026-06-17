@@ -47,6 +47,8 @@ fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, 
     let usage = input.usage;
     let output_tokens = output_tokens(usage);
     RoutingMetricDelta {
+        profile_id: input.candidate.trace.routing_profile_id.as_str().to_owned(),
+        ema_alpha: input.candidate.trace.routing_profile_ema_alpha,
         route,
         provider_name: Some(input.candidate.trace.provider_name_snapshot.clone()),
         key_name: Some(input.candidate.trace.key_name_snapshot.clone()),
@@ -79,6 +81,8 @@ fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, 
 fn context_delta(input: &AttemptAuditInput, route: RouteIdentity, observed_at: time::OffsetDateTime) -> RoutingContextRouteStateDelta {
     let output_tokens = output_tokens(input.usage);
     RoutingContextRouteStateDelta {
+        profile_id: input.candidate.trace.routing_profile_id.as_str().to_owned(),
+        ema_alpha: input.candidate.trace.routing_profile_ema_alpha,
         context_key: input.candidate.trace.routing_context_key.clone(),
         route,
         route_config_fingerprint: Some(input.candidate.trace.route_config_fingerprint.clone()),

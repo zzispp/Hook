@@ -240,6 +240,8 @@ fn candidate(provider_api_format: &str) -> ProxyCandidate {
             needs_conversion: false,
             is_stream: false,
             is_cached: false,
+            routing_profile_id: types::provider::RoutingProfileId::Balanced,
+            routing_profile_ema_alpha: types::provider::default_ema_alpha(),
             routing_context_key: "group=default|model=model-1|format=openai:chat|stream=false|size=unknown|cap=none".into(),
             route_config_fingerprint: "route-fingerprint".into(),
             price_config_fingerprint: "price-fingerprint".into(),

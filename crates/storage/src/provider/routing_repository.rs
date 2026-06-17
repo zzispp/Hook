@@ -22,6 +22,7 @@ pub struct RoutingMetricRecord {
 
 #[derive(Clone, Debug)]
 pub struct RoutingRouteStateRecord {
+    pub profile_id: String,
     pub route: RouteIdentity,
     pub ema_success_rate: f64,
     pub ema_ttfb_ms: Option<f64>,
@@ -35,6 +36,7 @@ pub struct RoutingRouteStateRecord {
 
 #[derive(Clone, Debug)]
 pub struct RoutingContextRouteStateRecord {
+    pub profile_id: String,
     pub context_key: String,
     pub route: RouteIdentity,
     pub sample_count: u64,
@@ -63,6 +65,8 @@ pub struct RoutingProfileVersionSnapshot {
 
 #[derive(Clone, Debug)]
 pub struct RoutingMetricDelta {
+    pub profile_id: String,
+    pub ema_alpha: f64,
     pub route: RouteIdentity,
     pub provider_name: Option<String>,
     pub key_name: Option<String>,
@@ -93,6 +97,8 @@ pub struct RoutingMetricDelta {
 
 #[derive(Clone, Debug)]
 pub struct RoutingContextRouteStateDelta {
+    pub profile_id: String,
+    pub ema_alpha: f64,
     pub context_key: String,
     pub route: RouteIdentity,
     pub route_config_fingerprint: Option<String>,
@@ -105,6 +111,14 @@ pub struct RoutingContextRouteStateDelta {
     pub output_tokens: i64,
     pub tps_latency_ms: i64,
     pub observed_at: time::OffsetDateTime,
+}
+
+pub(super) fn normalized_ema_weights(alpha: f64) -> (Decimal, Decimal) {
+    let alpha = alpha.clamp(0.0, 1.0);
+    (
+        Decimal::from_f64_retain(1.0 - alpha).unwrap_or(Decimal::ZERO),
+        Decimal::from_f64_retain(alpha).unwrap_or(Decimal::ZERO),
+    )
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

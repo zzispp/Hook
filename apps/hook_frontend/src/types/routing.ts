@@ -81,6 +81,13 @@ export type RoutingProfile = {
   affinity_bonus: number;
   prior_sample_cap: number;
   contextual_exploration_enabled: boolean;
+  ema_alpha: number;
+  ema_max_freshness_seconds: number;
+  ema_recent_weight: number;
+  ema_recent_cap: number;
+  exploration_weight: number;
+  exploration_cap: number;
+  exploration_min_success_score: number;
   auto_tune_enabled: boolean;
   learning?: RoutingProfileLearningState | null;
 };
@@ -98,6 +105,13 @@ export type RoutingProfileUpsert = {
   affinity_bonus?: number;
   prior_sample_cap?: number;
   contextual_exploration_enabled?: boolean;
+  ema_alpha?: number;
+  ema_max_freshness_seconds?: number;
+  ema_recent_weight?: number;
+  ema_recent_cap?: number;
+  exploration_weight?: number;
+  exploration_cap?: number;
+  exploration_min_success_score?: number;
   auto_tune_enabled?: boolean;
 };
 

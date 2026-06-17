@@ -59,6 +59,8 @@ pub async fn select_candidates(state: &LlmProxyState, token: &ApiToken, request:
         group: &context.group,
         token_user: context.token_user.as_ref(),
         parts: &routed.parts,
+        routing_profile_id: routed.profile.id,
+        routing_profile_ema_alpha: routed.profile.ema_alpha,
     })
     .await?;
     Ok(CandidateSelection {

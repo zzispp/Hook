@@ -1,4 +1,8 @@
-use types::provider::{RouteScoreExplanation, RoutingMetricSource, RoutingPriorSource, RoutingRequestSizeBucket};
+use types::provider::{
+    RouteScoreExplanation, RoutingMetricSource, RoutingPriorSource, RoutingProfile, RoutingProfileId, RoutingRequestSizeBucket,
+    default_contextual_exploration_enabled, default_ema_alpha, default_ema_max_freshness_seconds, default_ema_recent_cap, default_ema_recent_weight,
+    default_exploration_cap, default_exploration_min_success_score, default_exploration_weight, default_prior_sample_cap,
+};
 
 #[test]
 fn decision_candidates_without_metric_window_deserialize_with_default_window() {
@@ -47,4 +51,42 @@ fn decision_candidates_without_metric_window_deserialize_with_default_window() {
     assert_eq!(explanation.prior_source, RoutingPriorSource::Unknown);
     assert_eq!(explanation.prior_sample_count, 0);
     assert_eq!(explanation.request_features.request_size_bucket, RoutingRequestSizeBucket::Unknown);
+}
+
+#[test]
+fn legacy_routing_profile_payload_deserializes_new_tuning_defaults() {
+    let payload = r#"{
+      "id": "balanced",
+      "name": "Balanced",
+      "description": "legacy payload",
+      "weights": {
+        "success": 0.28,
+        "ttfb": 0.19,
+        "latency": 0.17,
+        "tps": 0.09,
+        "cost": 0.15,
+        "headroom": 0.12,
+        "priority": 0.0
+      },
+      "version": "legacy-v1",
+      "min_samples": 20,
+      "exploration_k": 3.0,
+      "conversion_penalty": 6.0,
+      "stale_metric_penalty": 8.0,
+      "affinity_bonus": 6.0,
+      "auto_tune_enabled": true
+    }"#;
+
+    let profile: RoutingProfile = serde_json::from_str(payload).expect("legacy profile payload should deserialize");
+
+    assert_eq!(profile.id, RoutingProfileId::Balanced);
+    assert_eq!(profile.prior_sample_cap, default_prior_sample_cap());
+    assert_eq!(profile.contextual_exploration_enabled, default_contextual_exploration_enabled());
+    assert_eq!(profile.ema_alpha, default_ema_alpha());
+    assert_eq!(profile.ema_max_freshness_seconds, default_ema_max_freshness_seconds());
+    assert_eq!(profile.ema_recent_weight, default_ema_recent_weight());
+    assert_eq!(profile.ema_recent_cap, default_ema_recent_cap());
+    assert_eq!(profile.exploration_weight, default_exploration_weight());
+    assert_eq!(profile.exploration_cap, default_exploration_cap());
+    assert_eq!(profile.exploration_min_success_score, default_exploration_min_success_score());
 }

@@ -23,6 +23,7 @@ mod request_record_partitioning_additive;
 mod request_record_payload_compression_additive;
 mod routing_metrics_additive;
 mod routing_profile_overrides_additive;
+mod routing_profile_state_partition_additive;
 mod scheduled_task_next_run_additive;
 mod scheduler_global_claim_additive;
 mod translation_seed_sync;

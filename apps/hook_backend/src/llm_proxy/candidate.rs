@@ -94,6 +94,8 @@ pub struct CandidateTrace {
     pub needs_conversion: bool,
     pub is_stream: bool,
     pub is_cached: bool,
+    pub routing_profile_id: RoutingProfileId,
+    pub routing_profile_ema_alpha: f64,
     pub routing_context_key: String,
     pub route_config_fingerprint: String,
     pub price_config_fingerprint: String,

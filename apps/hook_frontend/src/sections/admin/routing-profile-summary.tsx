@@ -33,6 +33,23 @@ const WEIGHT_KEYS: Array<keyof RoutingProfileWeights> = [
   'priority',
 ];
 
+const PARAM_KEYS = [
+  'min_samples',
+  'exploration_k',
+  'prior_sample_cap',
+  'conversion_penalty',
+  'stale_metric_penalty',
+  'affinity_bonus',
+  'contextual_exploration_enabled',
+  'ema_alpha',
+  'ema_max_freshness_seconds',
+  'ema_recent_weight',
+  'ema_recent_cap',
+  'exploration_weight',
+  'exploration_cap',
+  'exploration_min_success_score',
+] as const;
+
 export function RoutingProfileSummary({ profile, t }: Props) {
   if (!profile) return null;
 
@@ -115,6 +132,19 @@ export function RoutingProfileSummary({ profile, t }: Props) {
         </Table>
       </TableContainer>
 
+      <Grid container spacing={1}>
+        {PARAM_KEYS.map((key) => (
+          <Grid size={{ xs: 6 }} key={key}>
+            <Typography variant="caption" color="text.secondary" display="block">
+                {t(`routing.profile.${key === 'contextual_exploration_enabled' ? 'booleanFields' : 'paramFields'}.${key}`)}:{' '}
+              <Typography component="span" variant="caption" fontWeight="bold">
+                {formatProfileParam(profile, key, t)}
+              </Typography>
+            </Typography>
+          </Grid>
+        ))}
+      </Grid>
+
       <Stack
         sx={{
           p: 1.5,
@@ -183,4 +213,13 @@ export function RoutingProfileSummary({ profile, t }: Props) {
       </Stack>
     </Stack>
   );
+}
+
+function formatProfileParam(profile: RoutingProfile, key: (typeof PARAM_KEYS)[number], t: AdminT) {
+  if (key === 'contextual_exploration_enabled') {
+    return profile.contextual_exploration_enabled
+      ? t('routing.profile.booleanValues.enabled')
+      : t('routing.profile.booleanValues.disabled');
+  }
+  return String(profile[key]);
 }
