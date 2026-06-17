@@ -1,6 +1,7 @@
 pub mod development;
 
 mod announcement_menu_deep_match_additive;
+mod announcement_priority_removal_additive;
 mod auth_layout_site_name_i18n_additive;
 mod baseline;
 mod dashboard_period_i18n_additive;

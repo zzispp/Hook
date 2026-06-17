@@ -6,7 +6,7 @@ use rbac::api::CurrentUser;
 use types::provider::{
     ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportBindCommitRequest,
     ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportRelinkRequest,
-    ProviderQuickImportResolutionResponse,
+    ProviderQuickImportResolutionResponse, ProviderQuickImportSyncEventDetailResponse,
 };
 use types::{
     provider::{
@@ -98,6 +98,13 @@ pub async fn update_quick_import_sync_settings(
     Json(payload): Json<ProviderQuickImportSyncSettingsUpdate>,
 ) -> ApiResult<ApiJson<ProviderQuickImportSyncSettingsResponse>> {
     Ok(ok(state.providers.update_quick_import_sync_settings(&provider_id, payload).await?))
+}
+
+pub async fn quick_import_sync_event_detail(
+    State(state): State<ProviderApiState>,
+    Path(id): Path<String>,
+) -> ApiResult<ApiJson<ProviderQuickImportSyncEventDetailResponse>> {
+    Ok(ok(state.providers.quick_import_sync_event_detail(&id).await?))
 }
 
 pub async fn update_provider(

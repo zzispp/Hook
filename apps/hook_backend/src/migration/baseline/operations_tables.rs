@@ -21,7 +21,6 @@ fn announcements_table() -> TableCreateStatement {
         .col(text(Announcements::ContentMarkdown))
         .col(string_len(Announcements::AnnouncementType, 20))
         .col(boolean(Announcements::Pinned))
-        .col(big_integer(Announcements::Priority))
         .col(boolean(Announcements::Enabled))
         .col(string_len(Announcements::CreatedBy, 36))
         .col(string_len(Announcements::UpdatedBy, 36))

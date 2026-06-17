@@ -412,10 +412,10 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         translation_entry_unique_index(),
         index("index_announcements_by_enabled", Announcements::Table, Announcements::Enabled, false),
         compound_index(
-            "index_announcements_by_pinned_priority",
+            "index_announcements_by_pinned_created",
             Announcements::Table,
             Announcements::Pinned,
-            Announcements::Priority,
+            Announcements::CreatedAt,
         ),
         index("index_support_tickets_by_user", SupportTickets::Table, SupportTickets::UserId, false),
         compound_index(

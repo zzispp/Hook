@@ -212,6 +212,7 @@ pub(in crate::migration::baseline) enum ProviderQuickImportSyncEvents {
     Status,
     Title,
     Detail,
+    PayloadJson,
     CreatedAt,
 }
 

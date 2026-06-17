@@ -19,7 +19,6 @@ impl OperationsStore {
             content_markdown: Set(input.content_markdown),
             announcement_type: Set(input.announcement_type),
             pinned: Set(input.pinned),
-            priority: Set(input.priority),
             enabled: Set(input.enabled),
             created_by: Set(input.operator_id.clone()),
             updated_by: Set(input.operator_id),
@@ -55,7 +54,6 @@ impl OperationsStore {
         let total = query.clone().count(self.connection()).await?;
         let items = query
             .order_by_desc(AnnouncementColumn::Pinned)
-            .order_by_desc(AnnouncementColumn::Priority)
             .order_by_desc(AnnouncementColumn::CreatedAt)
             .limit(request.limit)
             .offset(request.offset)
@@ -72,9 +70,30 @@ impl OperationsStore {
         })
     }
 
+    pub async fn unread_announcements(&self, user_id: &str) -> StorageResult<Vec<Announcement>> {
+        let records = AnnouncementEntity::find()
+            .filter(AnnouncementColumn::Enabled.eq(true))
+            .order_by_desc(AnnouncementColumn::Pinned)
+            .order_by_desc(AnnouncementColumn::CreatedAt)
+            .all(self.connection())
+            .await?;
+        let mut items = Vec::new();
+        for record in records {
+            let state = self.notification_state(user_id, "announcement", &record.id).await?;
+            if notification_unread(state.as_ref(), record.updated_at) {
+                items.push(record.into());
+            }
+        }
+        Ok(items)
+    }
+
     async fn announcement_record(&self, id: &str) -> StorageResult<Option<AnnouncementRecord>> {
         AnnouncementEntity::find_by_id(id.to_owned()).one(self.connection()).await.map_err(Into::into)
     }
+}
+
+fn notification_unread(state: Option<&super::NotificationStateRecord>, event_at: time::OffsetDateTime) -> bool {
+    state.and_then(|value| value.read_at).is_none_or(|read_at| read_at < event_at)
 }
 
 fn filter_announcements(mut query: sea_orm::Select<AnnouncementEntity>, filters: AnnouncementListFilters) -> sea_orm::Select<AnnouncementEntity> {
@@ -112,9 +131,6 @@ fn apply_announcement_flags(active: &mut AnnouncementActiveModel, input: &Announ
     }
     if let Some(value) = input.pinned {
         active.pinned = Set(value);
-    }
-    if let Some(value) = input.priority {
-        active.priority = Set(value);
     }
     if let Some(value) = input.enabled {
         active.enabled = Set(value);

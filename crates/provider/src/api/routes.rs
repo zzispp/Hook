@@ -12,8 +12,9 @@ use crate::api::{
         delete_model_binding, delete_model_cost, delete_provider, fetch_upstream_models, get_provider, get_request_record, key_model_mappings,
         key_model_mappings_for_key, list_active_request_records, list_api_keys, list_endpoints, list_model_bindings, list_model_costs, list_provider_cooldowns,
         list_providers, list_request_records, list_usage_records, preview_quick_import, preview_quick_import_append, preview_quick_import_bind,
-        quick_import_resolution, quick_import_sync_settings, release_provider_cooldown, relink_quick_import_key, test_model_binding, update_api_key,
-        update_endpoint, update_key_model_mappings, update_model_binding, update_provider, update_quick_import_sync_settings, upsert_model_costs,
+        quick_import_resolution, quick_import_sync_event_detail, quick_import_sync_settings, release_provider_cooldown, relink_quick_import_key,
+        test_model_binding, update_api_key, update_endpoint, update_key_model_mappings, update_model_binding, update_provider,
+        update_quick_import_sync_settings, upsert_model_costs,
     },
 };
 
@@ -30,6 +31,7 @@ pub fn create_router(state: ProviderApiState) -> Router {
             "/admin/providers/{provider_id}/quick-import-sync",
             get(quick_import_sync_settings).patch(update_quick_import_sync_settings),
         )
+        .route("/admin/provider-quick-import-sync-events/{id}", get(quick_import_sync_event_detail))
         .route("/admin/providers/{id}", get(get_provider).patch(update_provider).delete(delete_provider))
         .route("/admin/provider-key-groups", get(list_provider_key_groups).post(create_provider_key_group))
         .route(

@@ -8,13 +8,15 @@ use crate::api::{
     handlers::{
         admin_create_announcement, admin_delete_announcement, admin_get_announcement, admin_list_announcements, admin_list_tickets, admin_reply_ticket,
         admin_ticket_detail, admin_update_announcement, create_ticket, delete_notification, delete_read_notifications, get_announcement, list_announcements,
-        list_notifications, list_tickets, mark_all_notifications_read, mark_notification_read, reply_ticket, ticket_detail, update_ticket,
+        list_notifications, list_tickets, list_unread_announcements, mark_all_notifications_read, mark_notification_read, reply_ticket, ticket_detail,
+        update_ticket,
     },
 };
 
 pub fn create_router(state: OperationsApiState) -> Router {
     Router::new()
         .route("/announcements", get(list_announcements))
+        .route("/announcements/unread", get(list_unread_announcements))
         .route("/announcements/{id}", get(get_announcement))
         .route("/admin/announcements", get(admin_list_announcements).post(admin_create_announcement))
         .route(

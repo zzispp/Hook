@@ -110,6 +110,10 @@ where
         self.repository.list_announcements(page, filters).await
     }
 
+    async fn unread_announcements(&self, user_id: &str) -> OperationsResult<Vec<Announcement>> {
+        self.repository.unread_announcements(user_id).await
+    }
+
     async fn create_ticket(&self, input: SupportTicketCreateInput) -> OperationsResult<SupportTicketMutationResponse> {
         let mut input = sanitize_ticket(input);
         validate_ticket(&input)?;

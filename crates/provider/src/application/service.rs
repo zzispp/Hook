@@ -29,7 +29,6 @@ mod quick_import_shared;
 mod quick_import_sync;
 mod quick_import_sync_bindings;
 mod quick_import_sync_candidates;
-mod quick_import_sync_event_labels;
 mod quick_import_sync_events;
 mod quick_import_sync_globals;
 mod quick_import_sync_group_ratio;
@@ -470,6 +469,13 @@ where
         input: ProviderQuickImportSyncSettingsUpdate,
     ) -> ProviderResult<ProviderQuickImportSyncSettingsResponse> {
         update_quick_import_sync_settings(&self.repository, &self.cipher, provider_id, input).await
+    }
+
+    async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<types::provider::ProviderQuickImportSyncEventDetailResponse> {
+        if id.trim().is_empty() {
+            return Err(ProviderError::InvalidInput("id cannot be blank".into()));
+        }
+        self.repository.quick_import_sync_event_detail(id).await?.ok_or(ProviderError::NotFound)
     }
 
     async fn run_quick_import_sync(&self, options: ProviderQuickImportSyncRunOptions) -> ProviderResult<ProviderQuickImportSyncRunReport> {

@@ -5,8 +5,8 @@ use types::provider::{
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
     ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse,
     ProviderKeyGroupUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
-    ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest,
-    RequestRecordListResponse, UsageRecordListResponse,
+    ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderQuickImportSyncEventDetailResponse, ProviderUpdate,
+    RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use crate::application::{
@@ -400,6 +400,10 @@ impl ProviderRepository for StorageProviderRepository {
             .map_err(storage_error)
     }
 
+    async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<Option<ProviderQuickImportSyncEventDetailResponse>> {
+        self.store.quick_import_sync_event_detail(id).await.map_err(storage_error)
+    }
+
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {
         self.store
             .delete_model_cost(provider_id, key_id, provider_model_id)
@@ -538,6 +542,7 @@ fn sync_event_input(input: ProviderQuickImportSyncEventCreate) -> storage::provi
         status: input.status,
         title: input.title,
         detail: input.detail,
+        payload: input.payload,
     }
 }
 

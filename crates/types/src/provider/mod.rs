@@ -9,6 +9,7 @@ mod model_cost;
 mod quick_import;
 mod quick_import_bind;
 mod quick_import_sync;
+mod quick_import_sync_event;
 mod request_candidate;
 mod request_record;
 mod routing;
@@ -50,6 +51,10 @@ pub use quick_import_sync::{
     ProviderQuickImportAnomalyActions, ProviderQuickImportCostSyncMode, ProviderQuickImportFetchFailureAction, ProviderQuickImportGroupChangedAction,
     ProviderQuickImportKeySyncInfo, ProviderQuickImportSyncConfig, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate,
     ProviderQuickImportSyncStatus, ProviderQuickImportUpstreamAnomalyAction,
+};
+pub use quick_import_sync_event::{
+    ProviderQuickImportSyncEventDetailResponse, ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncEventSnapshotStatus,
+    ProviderQuickImportUpstreamModelSnapshot,
 };
 pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{

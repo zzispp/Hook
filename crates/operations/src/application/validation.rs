@@ -20,7 +20,6 @@ pub fn sanitize_announcement(input: AnnouncementInput) -> AnnouncementInput {
         content_markdown: input.content_markdown.trim().into(),
         announcement_type: input.announcement_type.trim().into(),
         pinned: input.pinned,
-        priority: input.priority,
         enabled: input.enabled,
     }
 }
@@ -31,7 +30,6 @@ pub fn sanitize_announcement_patch(input: AnnouncementPatch) -> AnnouncementPatc
         content_markdown: input.content_markdown.map(|value| value.trim().into()),
         announcement_type: input.announcement_type.map(|value| value.trim().into()),
         pinned: input.pinned,
-        priority: input.priority,
         enabled: input.enabled,
     }
 }

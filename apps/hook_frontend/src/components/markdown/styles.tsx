@@ -119,16 +119,23 @@ export const MarkdownRoot = styled('div')(({ theme }) => ({
    */
   table: {
     width: '100%',
+    minWidth: 640,
     borderCollapse: 'collapse',
     fontSize: theme.typography.body2.fontSize,
     border: `1px solid ${theme.vars.palette.divider}`,
     'th, td': {
       padding: theme.spacing(1),
       border: `1px solid ${theme.vars.palette.divider}`,
+      verticalAlign: 'top',
     },
     'tbody tr:nth-of-type(odd)': {
       backgroundColor: theme.vars.palette.background.neutral,
     },
+  },
+  '& table': {
+    display: 'block',
+    overflowX: 'auto',
+    whiteSpace: 'nowrap',
   },
   /**
    * Checkbox

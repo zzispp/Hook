@@ -120,6 +120,8 @@ async fn model_fetch_failure_and_removed_model_are_distinct_statuses() {
 
     assert_eq!(unavailable.statuses, vec![ProviderQuickImportSyncStatus::UpstreamKeyUnavailable]);
     assert_eq!(removed.statuses, vec![ProviderQuickImportSyncStatus::UpstreamModelRemoved]);
+    assert_eq!(removed.missing_upstream_model_ids, vec!["upstream-gpt".to_owned()]);
+    assert!(removed.upstream_models_snapshot.iter().all(|model| model.upstream_model_id != "upstream-gpt"));
 }
 
 #[tokio::test]

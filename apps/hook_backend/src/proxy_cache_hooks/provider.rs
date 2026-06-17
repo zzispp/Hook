@@ -11,8 +11,9 @@ use types::provider::{
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
     ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse,
     ProviderKeyGroupUpdate, ProviderKeyModelMapping, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
-    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail,
-    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse,
+    ProviderQuickImportSyncEventDetailResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse,
+    UsageRecordListResponse,
 };
 
 use super::cache::{ProxyCacheInvalidator, combine_cache_results};
@@ -269,6 +270,10 @@ where
 
     async fn create_quick_import_sync_events(&self, input: Vec<ProviderQuickImportSyncEventCreate>) -> ProviderResult<()> {
         self.inner.create_quick_import_sync_events(input).await
+    }
+
+    async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<Option<ProviderQuickImportSyncEventDetailResponse>> {
+        self.inner.quick_import_sync_event_detail(id).await
     }
 
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()> {

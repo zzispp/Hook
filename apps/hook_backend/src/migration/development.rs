@@ -168,6 +168,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::provider_key_model_mappings_additive::apply(manager).await?;
     super::recharge_order_paid_at_index_additive::apply(manager).await?;
     super::provider_key_capabilities_destructive::apply(manager).await?;
+    super::announcement_priority_removal_additive::apply(manager).await?;
     super::announcement_menu_deep_match_additive::apply(manager).await?;
     super::auth_layout_site_name_i18n_additive::apply(manager).await?;
     super::global_model_user_usage_counts_additive::apply(manager).await?;

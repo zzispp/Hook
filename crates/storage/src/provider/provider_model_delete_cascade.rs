@@ -154,6 +154,7 @@ async fn insert_no_associated_models_event(
         status: Set(ProviderQuickImportSyncStatus::NoAssociatedModels.as_str().to_owned()),
         title: Set(format!("快捷导入同步异常：{}({}) 没有关联模型", key.upstream_token_name, key.upstream_token_id)),
         detail: Set("管理员删除了该密钥最后一个关联模型，系统已禁用本地密钥。".into()),
+        payload_json: Set(None),
         created_at: Set(time::OffsetDateTime::now_utc()),
     }
     .insert(tx)

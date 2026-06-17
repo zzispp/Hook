@@ -55,6 +55,13 @@ pub async fn get_announcement(State(state): State<OperationsApiState>, Path(id):
     Ok(ok(state.operations.get_announcement(&id, false).await?))
 }
 
+pub async fn list_unread_announcements(
+    State(state): State<OperationsApiState>,
+    Extension(current_user): Extension<CurrentUser>,
+) -> ApiResult<ApiJson<Vec<Announcement>>> {
+    Ok(ok(state.operations.unread_announcements(&current_user.id).await?))
+}
+
 pub async fn admin_list_announcements(
     State(state): State<OperationsApiState>,
     Query(query): Query<AnnouncementListQuery>,
