@@ -28,6 +28,8 @@ export type ProviderQuickImportSyncStatus =
   | 'cost_pending_update'
   | 'model_candidate_available';
 
+export type ProviderQuickImportSyncEventSnapshotStatus = 'available' | 'missing';
+
 export type NewApiQuickImportConfig = {
   base_url: string;
   system_access_token: string;
@@ -222,6 +224,33 @@ export type ProviderQuickImportRemoteModel = {
   upstream_model_id: string;
   suggested_global_model_id?: string | null;
   supported_endpoint_types: string[];
+};
+
+export type ProviderQuickImportUpstreamModelSnapshot = {
+  upstream_model_id: string;
+  supported_endpoint_types: string[];
+};
+
+export type ProviderQuickImportSyncEventPayload = {
+  provider_name: string;
+  local_key_name?: string | null;
+  upstream_token_name?: string | null;
+  upstream_token_id?: string | null;
+  status: ProviderQuickImportSyncStatus;
+  anomaly_summary: string;
+  action_summary: string;
+  missing_upstream_model_ids: string[];
+  upstream_models_snapshot: ProviderQuickImportUpstreamModelSnapshot[];
+};
+
+export type ProviderQuickImportSyncEventDetailResponse = {
+  id: string;
+  status: ProviderQuickImportSyncStatus;
+  title: string;
+  detail: string;
+  created_at: string;
+  snapshot_status: ProviderQuickImportSyncEventSnapshotStatus;
+  payload?: ProviderQuickImportSyncEventPayload | null;
 };
 
 export type ProviderQuickImportModelMappingPreview = {

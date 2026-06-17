@@ -7,7 +7,6 @@ pub struct Announcement {
     pub content_markdown: String,
     pub announcement_type: String,
     pub pinned: bool,
-    pub priority: i64,
     pub enabled: bool,
     pub created_by: String,
     pub updated_by: String,
@@ -21,7 +20,6 @@ pub struct AnnouncementInput {
     pub content_markdown: String,
     pub announcement_type: String,
     pub pinned: bool,
-    pub priority: i64,
     pub enabled: bool,
 }
 
@@ -31,7 +29,6 @@ pub struct AnnouncementPatch {
     pub content_markdown: Option<String>,
     pub announcement_type: Option<String>,
     pub pinned: Option<bool>,
-    pub priority: Option<i64>,
     pub enabled: Option<bool>,
 }
 

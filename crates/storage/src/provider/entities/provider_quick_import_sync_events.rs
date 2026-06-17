@@ -11,6 +11,8 @@ pub struct Model {
     pub status: String,
     pub title: String,
     pub detail: String,
+    #[sea_orm(column_type = "JsonBinary", nullable)]
+    pub payload_json: Option<Json>,
     pub created_at: TimeDateTimeWithTimeZone,
 }
 

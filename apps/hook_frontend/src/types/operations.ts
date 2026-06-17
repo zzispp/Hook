@@ -8,7 +8,6 @@ export type Announcement = {
   content_markdown: string;
   announcement_type: AnnouncementType;
   pinned: boolean;
-  priority: number;
   enabled: boolean;
   created_by: string;
   updated_by: string;
@@ -21,7 +20,6 @@ export type AnnouncementInput = {
   content_markdown: string;
   announcement_type: AnnouncementType;
   pinned: boolean;
-  priority: number;
   enabled: boolean;
 };
 
@@ -91,5 +89,7 @@ export type NotificationItem = {
   created_at: string;
   link_path: string;
 };
+
+export type UnreadAnnouncementQueue = Announcement[];
 
 export type OperationsPage<T> = PageResponse<T>;

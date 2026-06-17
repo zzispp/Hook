@@ -71,6 +71,7 @@ const COLUMN_SQL: &[&str] = &[
     "ALTER TABLE provider_quick_import_sources ADD COLUMN IF NOT EXISTS group_changed_action VARCHAR(32)",
     "ALTER TABLE provider_quick_import_sources ADD COLUMN IF NOT EXISTS key_unavailable_action VARCHAR(32)",
     "ALTER TABLE provider_quick_import_sources ADD COLUMN IF NOT EXISTS model_removed_action VARCHAR(32)",
+    "ALTER TABLE provider_quick_import_sync_events ADD COLUMN IF NOT EXISTS payload_json JSONB",
     "UPDATE provider_quick_import_sources SET token_deleted_action = upstream_anomaly_action WHERE token_deleted_action IS NULL",
     "UPDATE provider_quick_import_sources SET token_disabled_action = upstream_anomaly_action WHERE token_disabled_action IS NULL",
     "UPDATE provider_quick_import_sources SET group_removed_action = upstream_anomaly_action WHERE group_removed_action IS NULL",
@@ -93,6 +94,7 @@ const TABLE_SQL: &[&str] = &["CREATE TABLE IF NOT EXISTS provider_quick_import_s
         status VARCHAR(64) NOT NULL,\
         title TEXT NOT NULL,\
         detail TEXT NOT NULL,\
+        payload_json JSONB,\
         created_at TIMESTAMPTZ NOT NULL\
     )"];
 

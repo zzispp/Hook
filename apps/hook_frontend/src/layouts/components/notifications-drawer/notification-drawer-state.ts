@@ -9,6 +9,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'src/routes/hooks';
 
 import { useTranslate } from 'src/locales/use-locales';
+import { useNotificationModalContext } from 'src/layouts/dashboard/notification-modal-context';
 import {
   useNotifications,
   deleteNotification,
@@ -26,13 +27,14 @@ export type NotificationResources = Record<NotificationTab, NotificationResource
 export function useNotificationsDrawerState() {
   const { t } = useTranslate('admin');
   const router = useRouter();
+  const modal = useNotificationModalContext();
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
   const [currentTab, setCurrentTab] = useState<NotificationTab>('all');
   const [busy, setBusy] = useState(false);
   const resources = useNotificationResources();
   const openDrawer = useOpenDrawerAction(onOpen, resources);
   const changeTab = useNotificationTabAction(setCurrentTab, resources);
-  const actions = useNotificationActions({ t, router, onClose, setBusy });
+  const actions = useNotificationActions({ t, router, onClose, setBusy, modal });
 
   return {
     t,
@@ -84,15 +86,17 @@ function useNotificationActions({
   router,
   onClose,
   setBusy,
+  modal,
 }: {
   t: ReturnType<typeof useTranslate>['t'];
   router: ReturnType<typeof useRouter>;
   onClose: () => void;
   setBusy: Dispatch<SetStateAction<boolean>>;
+  modal: ReturnType<typeof useNotificationModalContext>;
 }) {
   const onMarkAllRead = useMarkAllReadAction(t, setBusy);
   const onDeleteReadNotifications = useDeleteReadNotificationsAction(t, setBusy);
-  const onOpenNotification = useOpenNotificationAction(t, router, onClose);
+  const onOpenNotification = useOpenNotificationAction(t, router, onClose, modal);
   const onDeleteNotification = useDeleteNotificationAction(t);
 
   return {
@@ -122,21 +126,28 @@ function useMarkAllReadAction(
 function useOpenNotificationAction(
   t: ReturnType<typeof useTranslate>['t'],
   router: ReturnType<typeof useRouter>,
-  onClose: () => void
+  onClose: () => void,
+  modal: ReturnType<typeof useNotificationModalContext>
 ) {
   return useCallback(
     async (item: OperationsNotificationItem) => {
       try {
-        if (item.is_unread) {
-          await markNotificationRead(item);
+        if (item.source_type === 'ticket') {
+          if (item.is_unread) {
+            await markNotificationRead(item);
+          }
+          onClose();
+          router.push(item.link_path);
+          return;
         }
+
         onClose();
-        router.push(item.link_path);
+        await modal.openFromNotification(item);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : t('messages.saveFailed'));
       }
     },
-    [onClose, router, t]
+    [modal, onClose, router, t]
   );
 }
 

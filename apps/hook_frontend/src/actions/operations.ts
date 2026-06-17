@@ -62,6 +62,10 @@ export function useAnnouncement(id: string, admin = false) {
   return useSingleResource<Announcement>(id ? endpoint : null);
 }
 
+export function useUnreadAnnouncements(enabled = true) {
+  return useArrayResource<Announcement>(enabled ? endpoints.announcements.unread : null);
+}
+
 export async function createAnnouncement(payload: AnnouncementInput) {
   const value = await requestData<Announcement>(axios.post(endpoints.adminAnnouncements.list, payload));
   await refreshAnnouncements();
@@ -137,7 +141,11 @@ export async function deleteReadNotifications() {
 }
 
 export async function markNotificationRead(item: NotificationItem) {
-  await requestSuccess(axios.patch(endpoints.notifications.read(item.source_type, item.source_id)));
+  await markNotificationSourceRead(item.source_type, item.source_id);
+}
+
+export async function markNotificationSourceRead(sourceType: string, sourceId: string) {
+  await requestSuccess(axios.patch(endpoints.notifications.read(sourceType, sourceId)));
   await refreshNotifications();
 }
 
@@ -182,6 +190,26 @@ function useSingleResource<T>(endpoint: string | null) {
   return useMemo(
     () => ({
       data: data?.success ? requireApiData(data) : undefined,
+      isLoading: endpoint ? isLoading : false,
+      error: error ?? apiError(data),
+      isValidating: endpoint ? isValidating : false,
+      refresh,
+    }),
+    [data, endpoint, error, isLoading, isValidating, refresh]
+  );
+}
+
+function useArrayResource<T>(endpoint: string | null) {
+  const { data, isLoading, error, isValidating, mutate: refresh } = useSWR<ApiEnvelope<T[]>>(
+    endpoint,
+    fetcher,
+    swrOptions
+  );
+
+  return useMemo(
+    () => ({
+      data: data?.success ? requireApiData(data) : undefined,
+      items: data?.success ? requireApiData(data) : [],
       isLoading: endpoint ? isLoading : false,
       error: error ?? apiError(data),
       isValidating: endpoint ? isValidating : false,

@@ -58,6 +58,10 @@ impl OperationsRepository for StorageOperationsRepository {
         self.store.page_announcements(page_slice(page), filters).await.map_err(storage_error)
     }
 
+    async fn unread_announcements(&self, user_id: &str) -> OperationsResult<Vec<Announcement>> {
+        self.store.unread_announcements(user_id).await.map_err(storage_error)
+    }
+
     async fn user_email(&self, user_id: &str) -> OperationsResult<Option<String>> {
         self.store.user_email(user_id).await.map_err(storage_error)
     }
@@ -132,7 +136,6 @@ fn announcement_input(operator_id: &str, input: AnnouncementInput) -> Announceme
         content_markdown: input.content_markdown,
         announcement_type: input.announcement_type,
         pinned: input.pinned,
-        priority: input.priority,
         enabled: input.enabled,
         operator_id: operator_id.into(),
     }
@@ -144,7 +147,6 @@ fn announcement_patch(operator_id: &str, input: AnnouncementPatch) -> Announceme
         content_markdown: input.content_markdown,
         announcement_type: input.announcement_type,
         pinned: input.pinned,
-        priority: input.priority,
         enabled: input.enabled,
         operator_id: operator_id.into(),
     }

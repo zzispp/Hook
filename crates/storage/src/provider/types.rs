@@ -3,8 +3,8 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use types::model::PatchField;
 use types::provider::{
-    ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderOrigin, ProviderQuickImportSyncConfig, ProviderQuickImportSyncStatus,
-    RequestUpstreamCost,
+    ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, ProviderOrigin, ProviderQuickImportSyncConfig,
+    ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncStatus, RequestUpstreamCost,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -414,6 +414,7 @@ pub struct ProviderQuickImportSyncEventRecordInput {
     pub status: ProviderQuickImportSyncStatus,
     pub title: String,
     pub detail: String,
+    pub payload: Option<ProviderQuickImportSyncEventPayload>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

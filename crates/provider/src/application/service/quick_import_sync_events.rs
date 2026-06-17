@@ -1,12 +1,9 @@
 use rust_decimal::Decimal;
-use types::provider::ProviderQuickImportSyncStatus;
+use types::provider::{ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncStatus};
 
 use crate::application::{ProviderError, ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey, ProviderQuickImportSyncSource};
 
-use super::{
-    quick_import_sync_event_labels::{key_detail, key_label, source_label},
-    quick_import_sync_outcome::KeyOutcome,
-};
+use super::quick_import_sync_outcome::KeyOutcome;
 
 pub(super) fn key_events(
     source: &ProviderQuickImportSyncSource,
@@ -41,6 +38,12 @@ pub(super) fn source_failure_event(source: &ProviderQuickImportSyncSource, error
         ProviderQuickImportSyncStatus::SourceFetchFailed,
         format!("快捷导入同步失败：提供商 {}", source_label(source)),
         format!("同步来源拉取失败：{}。{}", error, action),
+        Some(source_payload(
+            source,
+            ProviderQuickImportSyncStatus::SourceFetchFailed,
+            "同步来源拉取失败".into(),
+            action.into(),
+        )),
     )
 }
 
@@ -49,15 +52,18 @@ pub(super) fn source_failure_key_event(source: &ProviderQuickImportSyncSource, k
         source,
         Some(key),
         ProviderQuickImportSyncStatus::SourceFetchFailed,
-        format!("快捷导入同步：{} 已因连续拉取失败禁用", key_label(source, key)),
-        key_detail(
+        format!("{} 提供商，{} 密钥已因连续拉取失败被禁用", source.provider_name, key.local_key_name),
+        format!(
+            "同步来源连续失败达到 {} 次，已按策略禁用本地密钥。",
+            source.sync_config.fetch_failure_disable_threshold
+        ),
+        Some(base_payload(
             source,
             key,
-            format!(
-                "同步来源连续失败达到 {} 次，已按策略禁用本地密钥。",
-                source.sync_config.fetch_failure_disable_threshold
-            ),
-        ),
+            ProviderQuickImportSyncStatus::SourceFetchFailed,
+            "同步来源拉取失败".into(),
+            "已按策略禁用本地密钥".into(),
+        )),
     )
 }
 
@@ -74,17 +80,24 @@ fn group_sync_event(
         source,
         Some(key),
         ProviderQuickImportSyncStatus::UpstreamGroupChanged,
-        format!("快捷导入同步：{} 上游分组已同步", key_label(source, key)),
-        key_detail(
+        format!("{} 提供商，{} 密钥上游分组已同步", source.provider_name, key.local_key_name),
+        format!(
+            "上游令牌所属分组从 {} 变更为 {}，{}。",
+            group_label(key.upstream_group.as_deref()),
+            group_label(observed.as_deref()),
+            group_sync_action(outcome)
+        ),
+        Some(base_payload(
             source,
             key,
+            ProviderQuickImportSyncStatus::UpstreamGroupChanged,
             format!(
-                "上游令牌所属分组从 {} 变更为 {}，{}。",
+                "上游令牌所属分组从 {} 变更为 {}",
                 group_label(key.upstream_group.as_deref()),
-                group_label(observed.as_deref()),
-                group_sync_action(outcome)
+                group_label(observed.as_deref())
             ),
-        ),
+            group_sync_action(outcome).into(),
+        )),
     ))
 }
 
@@ -102,8 +115,9 @@ fn anomaly_event(source: &ProviderQuickImportSyncSource, key: &ProviderQuickImpo
         source,
         Some(key),
         status,
-        anomaly_title(source, key, status),
-        key_detail(source, key, format!("{}。{}", anomaly_detail(key, outcome, status), action)),
+        anomaly_title(source, key, status, action),
+        format!("{}。{}", anomaly_detail(key, outcome, status), action),
+        Some(anomaly_payload(source, key, outcome, status, action)),
     ))
 }
 
@@ -120,19 +134,22 @@ fn cost_event(source: &ProviderQuickImportSyncSource, key: &ProviderQuickImportS
         source,
         Some(key),
         cost_event_status(outcome),
-        format!("快捷导入同步：{} 成本倍率{}", key_label(source, key), direction),
-        key_detail(
+        format!("{} 提供商，{} 密钥成本倍率{}", source.provider_name, key.local_key_name, direction),
+        format!(
+            "原上游倍率 {}，最终成本倍率从 {} {} {}。{}",
+            multiplier_label(outcome.observed_group_ratio),
+            multiplier_label(Some(key.effective_cost_multiplier)),
+            action,
+            multiplier_label(Some(next)),
+            suffix
+        ),
+        Some(base_payload(
             source,
             key,
-            format!(
-                "原上游倍率 {}，最终成本倍率从 {} {} {}。{}",
-                multiplier_label(outcome.observed_group_ratio),
-                multiplier_label(Some(key.effective_cost_multiplier)),
-                action,
-                multiplier_label(Some(next)),
-                suffix
-            ),
-        ),
+            cost_event_status(outcome),
+            "成本倍率发生变化".into(),
+            if pending { "仅提示，未更新本地成本".into() } else { "已覆盖本地成本".into() },
+        )),
     ))
 }
 
@@ -148,16 +165,19 @@ fn model_candidate_event(
         source,
         Some(key),
         ProviderQuickImportSyncStatus::ModelCandidateAvailable,
-        format!("快捷导入同步：{} 发现可关联模型", key_label(source, key)),
-        key_detail(
+        format!("{} 提供商，{} 密钥发现可关联模型", source.provider_name, key.local_key_name),
+        format!(
+            "上游令牌发现 {} 个可关联到同名全局模型的候选模型：{}。系统不会自动关联，请在密钥模型关联里确认。",
+            outcome.candidate_model_ids.len(),
+            outcome.candidate_model_ids.join("，")
+        ),
+        Some(base_payload(
             source,
             key,
-            format!(
-                "上游令牌发现 {} 个可关联到同名全局模型的候选模型：{}。系统不会自动关联，请在密钥模型关联里确认。",
-                outcome.candidate_model_ids.len(),
-                outcome.candidate_model_ids.join("，")
-            ),
-        ),
+            ProviderQuickImportSyncStatus::ModelCandidateAvailable,
+            "发现可关联模型候选".into(),
+            "系统不会自动关联".into(),
+        )),
     ))
 }
 
@@ -167,6 +187,7 @@ fn event(
     status: ProviderQuickImportSyncStatus,
     title: String,
     detail: String,
+    payload: Option<ProviderQuickImportSyncEventPayload>,
 ) -> ProviderQuickImportSyncEventCreate {
     ProviderQuickImportSyncEventCreate {
         provider_id: source.provider_id.clone(),
@@ -175,6 +196,7 @@ fn event(
         status,
         title,
         detail,
+        payload,
     }
 }
 
@@ -192,8 +214,19 @@ fn anomaly_status(status: &ProviderQuickImportSyncStatus) -> bool {
     )
 }
 
-fn anomaly_title(source: &ProviderQuickImportSyncSource, key: &ProviderQuickImportSyncKey, status: ProviderQuickImportSyncStatus) -> String {
-    format!("快捷导入同步异常：{} {}", key_label(source, key), anomaly_reason(status))
+fn anomaly_title(
+    source: &ProviderQuickImportSyncSource,
+    key: &ProviderQuickImportSyncKey,
+    status: ProviderQuickImportSyncStatus,
+    action: &str,
+) -> String {
+    format!(
+        "{} 提供商，{} 密钥{}。{}",
+        source.provider_name,
+        key.local_key_name,
+        anomaly_reason(status),
+        action
+    )
 }
 
 fn anomaly_reason(status: ProviderQuickImportSyncStatus) -> &'static str {
@@ -222,10 +255,70 @@ fn anomaly_detail(key: &ProviderQuickImportSyncKey, outcome: &KeyOutcome, status
             "同步器已确认上游令牌仍存在且启用，但获取该令牌的裸 key 或请求 /v1/models 失败：{}",
             anomaly_error(outcome)
         ),
+        ProviderQuickImportSyncStatus::UpstreamModelRemoved => format!(
+            "已关联的上游模型缺失：{}",
+            outcome.missing_upstream_model_ids.join("，")
+        ),
         ProviderQuickImportSyncStatus::CostUnavailable => format!("无法计算快捷导入成本：{}", anomaly_error(outcome)),
         ProviderQuickImportSyncStatus::NoAssociatedModels => "本地密钥没有任何快捷导入模型关联".into(),
         _ => anomaly_reason(status).into(),
     }
+}
+
+fn anomaly_payload(
+    source: &ProviderQuickImportSyncSource,
+    key: &ProviderQuickImportSyncKey,
+    outcome: &KeyOutcome,
+    status: ProviderQuickImportSyncStatus,
+    action: &str,
+) -> ProviderQuickImportSyncEventPayload {
+    let mut payload = base_payload(source, key, status, anomaly_detail(key, outcome, status), action.to_owned());
+    payload.missing_upstream_model_ids = outcome.missing_upstream_model_ids.clone();
+    payload.upstream_models_snapshot = outcome.upstream_models_snapshot.clone();
+    payload
+}
+
+fn base_payload(
+    source: &ProviderQuickImportSyncSource,
+    key: &ProviderQuickImportSyncKey,
+    status: ProviderQuickImportSyncStatus,
+    anomaly_summary: String,
+    action_summary: String,
+) -> ProviderQuickImportSyncEventPayload {
+    ProviderQuickImportSyncEventPayload {
+        provider_name: source.provider_name.clone(),
+        local_key_name: Some(key.local_key_name.clone()),
+        upstream_token_name: Some(key.upstream_token_name.clone()),
+        upstream_token_id: Some(key.upstream_token_id.clone()),
+        status,
+        anomaly_summary,
+        action_summary,
+        missing_upstream_model_ids: Vec::new(),
+        upstream_models_snapshot: Vec::new(),
+    }
+}
+
+fn source_payload(
+    source: &ProviderQuickImportSyncSource,
+    status: ProviderQuickImportSyncStatus,
+    anomaly_summary: String,
+    action_summary: String,
+) -> ProviderQuickImportSyncEventPayload {
+    ProviderQuickImportSyncEventPayload {
+        provider_name: source.provider_name.clone(),
+        local_key_name: None,
+        upstream_token_name: None,
+        upstream_token_id: None,
+        status,
+        anomaly_summary,
+        action_summary,
+        missing_upstream_model_ids: Vec::new(),
+        upstream_models_snapshot: Vec::new(),
+    }
+}
+
+fn source_label(source: &ProviderQuickImportSyncSource) -> String {
+    format!("{}({})", source.provider_name, source.provider_id)
 }
 
 fn anomaly_error(outcome: &KeyOutcome) -> &str {

@@ -96,7 +96,6 @@ function AnnouncementTable({
   const tableHead = [
     { id: 'title', label: state.t('operations.announcement.table.title') },
     { id: 'type', label: state.t('operations.announcement.table.type'), width: 120 },
-    { id: 'priority', label: state.t('operations.announcement.table.priority'), width: 90 },
     { id: 'enabled', label: state.t('operations.announcement.table.status'), width: 100 },
     { id: 'updated_at', label: state.t('operations.announcement.table.updated'), width: 180 },
     withStickyActionHeadCell({
@@ -120,7 +119,6 @@ function AnnouncementTable({
                   <TableCell>
                     <AnnouncementTypeLabel value={row.announcement_type} />
                   </TableCell>
-                  <TableCell>{row.priority}</TableCell>
                   <TableCell>
                     <EnabledLabel enabled={row.enabled} />
                   </TableCell>

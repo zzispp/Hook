@@ -35,6 +35,7 @@ pub trait OperationsRepository: Send + Sync + 'static {
     async fn delete_announcement(&self, id: &str) -> OperationsResult<()>;
     async fn get_announcement(&self, id: &str) -> OperationsResult<Option<Announcement>>;
     async fn list_announcements(&self, page: PageRequest, filters: AnnouncementListFilters) -> OperationsResult<Page<Announcement>>;
+    async fn unread_announcements(&self, user_id: &str) -> OperationsResult<Vec<Announcement>>;
     async fn user_email(&self, user_id: &str) -> OperationsResult<Option<String>>;
     async fn create_ticket(&self, input: SupportTicketCreateInput) -> OperationsResult<(SupportTicket, SupportTicketMessage)>;
     async fn add_ticket_message(&self, input: SupportTicketMessageInput) -> OperationsResult<(SupportTicket, SupportTicketMessage)>;
@@ -68,6 +69,7 @@ pub trait OperationsUseCase: Send + Sync + 'static {
     async fn delete_announcement(&self, id: &str) -> OperationsResult<()>;
     async fn get_announcement(&self, id: &str, admin: bool) -> OperationsResult<Announcement>;
     async fn list_announcements(&self, page: PageRequest, filters: AnnouncementListFilters, admin: bool) -> OperationsResult<Page<Announcement>>;
+    async fn unread_announcements(&self, user_id: &str) -> OperationsResult<Vec<Announcement>>;
     async fn create_ticket(&self, input: SupportTicketCreateInput) -> OperationsResult<SupportTicketMutationResponse>;
     async fn user_reply_ticket(&self, input: SupportTicketMessageInput) -> OperationsResult<SupportTicketMutationResponse>;
     async fn admin_reply_ticket(&self, input: SupportTicketMessageInput) -> OperationsResult<SupportTicketMutationResponse>;

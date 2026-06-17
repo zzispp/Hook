@@ -211,6 +211,8 @@ export const endpoints = {
     quickImportBindCommit: (id: string) =>
       `/api/admin/providers/${id}/quick-import/bind/commit`,
     quickImportSync: (id: string) => `/api/admin/providers/${id}/quick-import-sync`,
+    quickImportSyncEventDetail: (id: string) =>
+      `/api/admin/provider-quick-import-sync-events/${id}`,
     byId: (id: string) => `/api/admin/providers/${id}`,
     keyGroups: '/api/admin/provider-key-groups',
     keyGroupById: (id: string) => `/api/admin/provider-key-groups/${id}`,
@@ -324,6 +326,7 @@ export const endpoints = {
   },
   announcements: {
     list: '/api/announcements',
+    unread: '/api/announcements/unread',
     byId: (id: string) => `/api/announcements/${id}`,
   },
   adminAnnouncements: {

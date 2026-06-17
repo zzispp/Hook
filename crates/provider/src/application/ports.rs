@@ -13,8 +13,9 @@ use types::provider::{
     ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportCommitRequest,
     ProviderQuickImportCommitResponse, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest,
     ProviderQuickImportResolutionResponse, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig,
-    ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate, ProviderQuickImportSyncStatus, ProviderUpdate,
-    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderQuickImportSyncEventDetailResponse, ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncSettingsResponse,
+    ProviderQuickImportSyncSettingsUpdate, ProviderQuickImportSyncStatus, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail,
+    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -271,6 +272,7 @@ pub struct ProviderQuickImportSyncEventCreate {
     pub status: ProviderQuickImportSyncStatus,
     pub title: String,
     pub detail: String,
+    pub payload: Option<ProviderQuickImportSyncEventPayload>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -380,6 +382,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
     ) -> ProviderResult<()>;
     async fn update_quick_import_sync_keys(&self, provider_id: &str, input: Vec<ProviderQuickImportSyncKeyPatch>) -> ProviderResult<()>;
     async fn create_quick_import_sync_events(&self, input: Vec<ProviderQuickImportSyncEventCreate>) -> ProviderResult<()>;
+    async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<Option<ProviderQuickImportSyncEventDetailResponse>>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;
@@ -485,6 +488,7 @@ pub trait ProviderUseCase: Send + Sync + 'static {
         provider_id: &str,
         input: ProviderQuickImportSyncSettingsUpdate,
     ) -> ProviderResult<ProviderQuickImportSyncSettingsResponse>;
+    async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<ProviderQuickImportSyncEventDetailResponse>;
     async fn run_quick_import_sync(&self, options: ProviderQuickImportSyncRunOptions) -> ProviderResult<ProviderQuickImportSyncRunReport>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;

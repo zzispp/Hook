@@ -52,11 +52,15 @@ async fn key_model_fetch_failure_defaults_to_report_only_warning() {
     assert_eq!(events.len(), 1);
     assert_eq!(
         events[0].title,
-        "快捷导入同步异常：提供商 OpenAI(provider-1) / 本地密钥 生产主 Key(key-1) / 上游令牌 codex(1209) 上游模型列表拉取失败"
+        "OpenAI 提供商，生产主 Key 密钥上游模型列表拉取失败。仅记录异常，未禁用本地密钥"
     );
-    assert_key_context(&events[0].title, &events[0].detail);
     assert!(events[0].detail.contains("/v1/models"));
     assert!(events[0].detail.contains("未禁用本地密钥"));
+    let payload = events[0].payload.as_ref().expect("payload should exist");
+    assert_eq!(payload.provider_name, "OpenAI");
+    assert_eq!(payload.local_key_name.as_deref(), Some("生产主 Key"));
+    assert_eq!(payload.upstream_token_name.as_deref(), Some("codex"));
+    assert_eq!(payload.upstream_token_id.as_deref(), Some("1209"));
 }
 
 #[tokio::test]
@@ -69,9 +73,8 @@ async fn cost_event_title_contains_full_key_context() {
 
     assert_eq!(
         event.title,
-        "快捷导入同步：提供商 OpenAI(provider-1) / 本地密钥 生产主 Key(key-1) / 上游令牌 codex(1209) 成本倍率下降"
+        "OpenAI 提供商，生产主 Key 密钥成本倍率下降"
     );
-    assert_key_context(&event.title, &event.detail);
     assert!(event.detail.contains("最终成本倍率从 1x 已更新为 0.2x"));
 }
 
@@ -96,7 +99,7 @@ async fn group_changed_disable_key_does_not_emit_group_synced_event() {
 
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].status, ProviderQuickImportSyncStatus::UpstreamGroupChanged);
-    assert!(events[0].title.contains("同步异常"));
+    assert!(events[0].title.contains("已按策略禁用本地密钥"));
     assert!(events[0].detail.contains("已按策略禁用本地密钥"));
 }
 
@@ -262,11 +265,4 @@ fn globals() -> BTreeMap<String, GlobalModelResponse> {
 
 fn sync_config() -> ProviderQuickImportSyncConfig {
     ProviderQuickImportSyncConfig::default()
-}
-
-fn assert_key_context(title: &str, detail: &str) {
-    const LABEL: &str = "提供商 OpenAI(provider-1) / 本地密钥 生产主 Key(key-1) / 上游令牌 codex(1209)";
-
-    assert!(title.contains(LABEL), "title missing context: {title}");
-    assert!(detail.contains(&format!("上下文：{LABEL}")), "detail missing context: {detail}");
 }

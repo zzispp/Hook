@@ -372,6 +372,7 @@ fn provider_quick_import_sync_events_table() -> TableCreateStatement {
         .col(string_len(ProviderQuickImportSyncEvents::Status, 64))
         .col(text(ProviderQuickImportSyncEvents::Title))
         .col(text(ProviderQuickImportSyncEvents::Detail))
+        .col(ColumnDef::new(ProviderQuickImportSyncEvents::PayloadJson).json_binary())
         .col(timestamp_tz(ProviderQuickImportSyncEvents::CreatedAt))
         .foreign_key(&mut provider_fk)
         .foreign_key(&mut source_fk)

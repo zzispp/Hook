@@ -17,6 +17,7 @@ import type {
   ProviderQuickImportBindPreviewResponse,
   ProviderQuickImportAppendCommitRequest,
   ProviderQuickImportAppendPreviewRequest,
+  ProviderQuickImportSyncEventDetailResponse,
 } from 'src/types/provider-quick-import';
 
 import { mutate } from 'swr';
@@ -109,6 +110,12 @@ export async function updateProviderKeyModelMappings(
   );
   await mutateProviderChildren(providerId);
   return response;
+}
+
+export async function getProviderQuickImportSyncEventDetail(id: string) {
+  return requestData<ProviderQuickImportSyncEventDetailResponse>(
+    axios.get(endpoints.adminProviders.quickImportSyncEventDetail(id))
+  );
 }
 
 async function requestData<T>(request: Promise<{ data: ApiEnvelope<T> }>) {

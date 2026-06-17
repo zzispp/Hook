@@ -197,6 +197,7 @@ impl OperationsStore {
     async fn announcement_sources(&self) -> StorageResult<Vec<NotificationSourceRecord>> {
         let records = AnnouncementEntity::find()
             .filter(AnnouncementColumn::Enabled.eq(true))
+            .order_by_desc(AnnouncementColumn::Pinned)
             .order_by_desc(AnnouncementColumn::CreatedAt)
             .all(self.connection())
             .await?;

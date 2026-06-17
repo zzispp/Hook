@@ -24,7 +24,6 @@ const DEFAULT_FORM: AnnouncementInput = {
   content_markdown: '',
   announcement_type: 'info',
   pinned: false,
-  priority: 0,
   enabled: true,
 };
 
@@ -84,14 +83,6 @@ export function AnnouncementFormDialog({ open, editing, submitting, onClose, onS
               setForm((current) => ({ ...current, content_markdown: event.target.value }))
             }
           />
-          <TextField
-            type="number"
-            label={t('operations.announcement.priority')}
-            value={form.priority}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, priority: Number(event.target.value) }))
-            }
-          />
           <FormControlLabel
             control={
               <Switch
@@ -132,7 +123,6 @@ function formFromAnnouncement(value: Announcement): AnnouncementInput {
     content_markdown: value.content_markdown,
     announcement_type: value.announcement_type,
     pinned: value.pinned,
-    priority: value.priority,
     enabled: value.enabled,
   };
 }
