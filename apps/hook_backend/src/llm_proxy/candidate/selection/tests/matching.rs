@@ -401,7 +401,7 @@ fn matching_candidate_parts_routes_non_chat_request_only_to_matching_data_format
 
 #[test]
 fn matching_candidate_parts_routes_image_edit_only_to_exact_edit_endpoint() {
-    let provider = provider_with_keys(vec![provider_key("key-image-edit", 10, vec!["openai_image_edit"])]);
+    let provider = provider_with_keys(vec![provider_key("key-image-edit", 10, vec!["openai_image", "openai_image_edit"])]);
     let snapshot = snapshot_with_provider(crate::llm_proxy::cache::snapshot::CachedProvider {
         endpoints: vec![endpoint("endpoint-image", "openai_image"), endpoint("endpoint-image-edit", "openai_image_edit")],
         ..provider
@@ -464,10 +464,8 @@ fn matching_candidate_parts_requires_global_model_image_generation_capability() 
 
 #[test]
 fn matching_candidate_parts_requires_provider_key_image_generation_capability() {
-    let mut capable_key = provider_key("key-capable", 10, vec!["openai_image"]);
-    capable_key.capabilities = Some(serde_json::json!({ "image_generation": true }));
-    let mut missing_capability_key = provider_key("key-missing-capability", 20, vec!["openai_image"]);
-    missing_capability_key.capabilities = None;
+    let capable_key = provider_key("key-capable", 10, vec!["openai_image"]);
+    let missing_capability_key = provider_key("key-missing-capability", 20, vec!["openai:chat"]);
     let provider = provider_with_keys(vec![missing_capability_key, capable_key]);
     let snapshot = snapshot_with_provider(provider);
     let group = &snapshot.groups[0];

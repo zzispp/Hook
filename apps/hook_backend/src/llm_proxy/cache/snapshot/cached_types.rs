@@ -122,8 +122,6 @@ pub struct CachedProviderKey {
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
-    #[serde(default)]
-    pub capabilities: Option<serde_json::Value>,
     pub key_preview: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
@@ -137,6 +135,8 @@ pub struct CachedProviderKey {
     pub time_range_start_minute: Option<u16>,
     #[serde(default)]
     pub time_range_end_minute: Option<u16>,
+    #[serde(default)]
+    pub supports_image_generation: bool,
     pub is_active: bool,
 }
 

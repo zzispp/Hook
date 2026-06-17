@@ -111,6 +111,7 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
 pub(super) fn provider_key(id: &str, internal_priority: i32, api_formats: Vec<&str>) -> CachedProviderKey {
     let mut output = key(id, internal_priority);
     output.api_formats = api_formats.into_iter().map(str::to_owned).collect();
+    output.supports_image_generation = output.api_formats.iter().any(|format| format == "openai_image");
     output
 }
 
@@ -216,19 +217,19 @@ pub(super) fn endpoint(id: &str, api_format: &str) -> CachedEndpoint {
 }
 
 fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
+    let api_formats = vec![
+        "openai:chat".to_owned(),
+        "gemini:chat".to_owned(),
+        "openai_image".to_owned(),
+        "openai_image_edit".to_owned(),
+        "openai:compact".to_owned(),
+    ];
     CachedProviderKey {
         id: id.into(),
         provider_id: "provider-a".into(),
         name: format!("{id}-name"),
-        api_formats: vec![
-            "openai:chat".into(),
-            "gemini:chat".into(),
-            "openai_image".into(),
-            "openai_image_edit".into(),
-            "openai:compact".into(),
-        ],
+        api_formats: api_formats.clone(),
         allowed_model_ids: Vec::new(),
-        capabilities: Some(serde_json::json!({ IMAGE_GENERATION_CAPABILITY: true })),
         key_preview: format!("{id}-name"),
         encrypted_api_key: "encrypted".into(),
         internal_priority,
@@ -246,6 +247,7 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         time_range_enabled: false,
         time_range_start_minute: None,
         time_range_end_minute: None,
+        supports_image_generation: api_formats.iter().any(|format| format == "openai_image"),
         is_active: true,
     }
 }

@@ -203,7 +203,7 @@ mod tests {
             name: "Key A".into(),
             api_formats: vec!["openai:chat".into()],
             allowed_model_ids: Vec::new(),
-            capabilities: None,
+            supports_image_generation: false,
             key_preview: "key-a".into(),
             encrypted_api_key: "encrypted".into(),
             internal_priority: 10,

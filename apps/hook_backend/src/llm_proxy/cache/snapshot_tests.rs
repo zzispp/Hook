@@ -84,7 +84,6 @@ fn key_records(provider_id: &str) -> Vec<provider_api_keys::Model> {
         name: "Test Key".into(),
         api_formats: "[\"openai:cli\"]".into(),
         allowed_model_ids: "[]".into(),
-        capabilities: None,
         encrypted_api_key: "encrypted".into(),
         note: None,
         internal_priority: 0,

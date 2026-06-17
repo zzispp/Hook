@@ -28,6 +28,8 @@ export function ApiKeyFormatFields({
 }) {
   const { t } = useTranslate('admin');
   const selected = selectedOptions(dialogs.apiKeyForm.api_formats, options);
+  const missingImageGeneration = missingImageGenerationFormat(dialogs.apiKeyForm.api_formats);
+  const hasError = invalidFormats.length > 0 || missingImageGeneration;
 
   return (
     <Stack spacing={1}>
@@ -66,9 +68,13 @@ export function ApiKeyFormatFields({
           <TextField
             {...params}
             required
-            error={invalidFormats.length > 0}
+            error={hasError}
             label={t('providers.supportedFormats')}
-            helperText={t('providers.supportedFormatsHelper')}
+            helperText={
+              missingImageGeneration
+                ? t('providers.imageEditRequiresImageGeneration')
+                : t('providers.supportedFormatsHelper')
+            }
             placeholder={t('providers.selectSupportedFormats')}
           />
         )}
@@ -78,6 +84,11 @@ export function ApiKeyFormatFields({
           {t('providers.unboundKeyFormats', { formats: invalidFormats.join(', ') })}
         </Alert>
       ) : null}
+      {missingImageGeneration ? (
+        <Alert severity="error">
+          {t('providers.imageEditRequiresImageGeneration')}
+        </Alert>
+      ) : null}
     </Stack>
   );
 }
@@ -85,4 +96,8 @@ export function ApiKeyFormatFields({
 export function selectedValuesOutsideOptions(values: string[], options: { value: string }[]) {
   const allowed = new Set(options.map((option) => option.value));
   return values.filter((value) => !allowed.has(value));
+}
+
+export function missingImageGenerationFormat(values: string[]) {
+  return values.includes('openai_image_edit') && !values.includes('openai_image');
 }

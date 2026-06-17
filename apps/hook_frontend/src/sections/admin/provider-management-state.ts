@@ -20,6 +20,7 @@ import {
 
 import { toast } from 'src/components/snackbar';
 
+import { missingImageGenerationFormat } from './provider-api-key-format-fields';
 import {
   validSyncSettings,
   syncSettingsPayload,
@@ -215,6 +216,10 @@ export function useProviderChildDialogs(t: ReturnType<typeof useTranslate>['t'],
 
   const submitApiKey = useCallback(async () => {
     if (!providerId) return;
+    if (missingImageGenerationFormat(apiKeyForm.api_formats)) {
+      toast.error(t('providers.imageEditRequiresImageGeneration'));
+      return;
+    }
     setSubmitting(true);
     try {
       if (editingApiKey) {

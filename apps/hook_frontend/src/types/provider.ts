@@ -193,7 +193,6 @@ export type ProviderApiKey = {
   name: string;
   api_formats: string[];
   allowed_model_ids: string[];
-  capabilities?: Record<string, unknown> | null;
   note?: string | null;
   internal_priority: number;
   global_priority_by_format: Record<string, number>;
@@ -218,7 +217,6 @@ export type ProviderApiKeyCreate = {
   api_key: string;
   api_formats: string[];
   allowed_model_ids: string[];
-  capabilities?: Record<string, unknown> | null;
   note?: string | null;
   internal_priority?: number;
   rpm_limit?: number | null;
