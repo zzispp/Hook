@@ -7,7 +7,6 @@ use types::provider::{
     ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportBindCommitRequest,
     ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportRelinkRequest,
     ProviderQuickImportResolutionResponse, ProviderQuickImportSyncEventDetailResponse,
-    ProviderQuickImportResolutionResponse,
 };
 use types::{
     provider::{

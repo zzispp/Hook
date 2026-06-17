@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 use types::model::PatchField;
 use types::provider::{
-    ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderModelMapping, ProviderOrigin, ProviderQuickImportSyncConfig,
+    ProviderKeyGroupMemberInput, ProviderModelCostMode, ProviderModelCostSource, ProviderOrigin, ProviderQuickImportSyncConfig,
     ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncStatus, RequestUpstreamCost,
 };
 
