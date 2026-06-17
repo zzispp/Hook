@@ -27,8 +27,6 @@ export const API_FORMAT_OPTIONS = [
   'gemini:cli',
 ];
 
-export const API_KEY_CAPABILITY_OPTIONS = ['image_generation'] as const;
-
 const API_FORMAT_DEFAULT_PATHS: Record<string, string> = {
   'openai:chat': '/v1/chat/completions',
   'openai:cli': '/v1/responses',
@@ -57,7 +55,6 @@ export type ApiKeyForm = {
   api_key: string;
   api_formats: string[];
   allowed_model_ids: string[];
-  capabilities: string[];
   note: string;
   internal_priority: string;
   rpm_limit: string;
@@ -89,7 +86,6 @@ export const DEFAULT_API_KEY_FORM: ApiKeyForm = {
   api_key: '',
   api_formats: [],
   allowed_model_ids: [],
-  capabilities: [],
   note: '',
   internal_priority: '10',
   rpm_limit: '0',
@@ -153,7 +149,6 @@ export function apiKeyPayload(form: ApiKeyForm): ProviderApiKeyCreate {
     api_key: form.api_key,
     api_formats: normalizeSelectedApiFormats(form.api_formats),
     allowed_model_ids: normalizeSelectedIds(form.allowed_model_ids),
-    capabilities: capabilitiesPayload(form.capabilities),
     note: trimmedOrNull(form.note),
     internal_priority: requiredNumber(form.internal_priority),
     rpm_limit: optionalNumber(form.rpm_limit),
@@ -170,7 +165,6 @@ export function apiKeyFormFromKey(apiKey: ProviderApiKey): ApiKeyForm {
     api_key: '',
     api_formats: apiKey.api_formats,
     allowed_model_ids: apiKey.allowed_model_ids,
-    capabilities: capabilitiesFromPayload(apiKey.capabilities),
     note: apiKey.note ?? '',
     internal_priority: String(apiKey.internal_priority),
     rpm_limit: String(apiKey.rpm_limit ?? 0),
@@ -187,7 +181,6 @@ export function apiKeyUpdatePayload(form: ApiKeyForm): ProviderApiKeyUpdate {
     ...(form.api_key.trim() ? { api_key: form.api_key } : {}),
     api_formats: normalizeSelectedApiFormats(form.api_formats),
     allowed_model_ids: normalizeSelectedIds(form.allowed_model_ids),
-    capabilities: capabilitiesPayload(form.capabilities),
     note: trimmedOrNull(form.note),
     internal_priority: requiredNumber(form.internal_priority),
     rpm_limit: optionalNumber(form.rpm_limit),
@@ -264,19 +257,4 @@ function normalizeSelectedApiFormats(values: string[]) {
 
 function normalizeSelectedIds(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
-}
-
-function capabilitiesPayload(values: string[]) {
-  const normalized = normalizeSelectedIds(values);
-  if (normalized.length === 0) return null;
-  return Object.fromEntries(normalized.map((value) => [value, true]));
-}
-
-function capabilitiesFromPayload(value?: Record<string, unknown> | null) {
-  if (!value) return [];
-  return API_KEY_CAPABILITY_OPTIONS.filter((key) => capabilityEnabled(value[key]));
-}
-
-function capabilityEnabled(value: unknown) {
-  return value === true || value === 'true' || (typeof value === 'number' && value > 0);
 }

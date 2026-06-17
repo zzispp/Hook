@@ -70,7 +70,7 @@ fn key_option(state: &LlmProxyState, key: &CachedProviderKey) -> Result<Candidat
         name: key.name.clone(),
         key_preview: key.key_preview.clone(),
         api_key: state.cipher.decrypt_provider_key(&key.encrypted_api_key)?,
-        capabilities: key.capabilities.clone(),
+        supports_image_generation: key.supports_image_generation,
         cache_ttl_minutes: key.cache_ttl_minutes,
         rpm_limit: key.rpm_limit,
     })
@@ -167,7 +167,7 @@ mod tests {
             name: format!("{id}-name"),
             key_preview: "***cret".into(),
             api_key: "secret".into(),
-            capabilities: None,
+            supports_image_generation: false,
             cache_ttl_minutes: 5,
             rpm_limit: None,
         }
@@ -189,13 +189,13 @@ mod tests {
     }
 
     fn cached_key(id: &str, api_formats: Vec<&str>, allowed_model_ids: Vec<&str>) -> CachedProviderKey {
+        let supports_image_generation = api_formats.contains(&"openai_image");
         CachedProviderKey {
             id: id.into(),
             provider_id: "provider-a".into(),
             name: format!("{id}-name"),
             api_formats: api_formats.into_iter().map(str::to_owned).collect(),
             allowed_model_ids: allowed_model_ids.into_iter().map(str::to_owned).collect(),
-            capabilities: None,
             key_preview: format!("{id}-name"),
             encrypted_api_key: "encrypted".into(),
             internal_priority: 10,
@@ -205,6 +205,7 @@ mod tests {
             time_range_enabled: false,
             time_range_start_minute: None,
             time_range_end_minute: None,
+            supports_image_generation,
             is_active: true,
             model_mappings: std::collections::BTreeMap::new(),
         }

@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use crate::llm_proxy::{IMAGE_GENERATION_CAPABILITY, OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, candidate::ProxyCandidate, capabilities::json_capability_enabled};
+use crate::llm_proxy::{OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT, candidate::ProxyCandidate};
 
 pub(super) fn prune_unsupported_image_generation_tool(body: &mut Value, candidate: &ProxyCandidate) {
     if !should_prune_image_generation_tool(body, candidate) {
@@ -34,7 +34,7 @@ fn provider_may_receive_tools(candidate: &ProxyCandidate) -> bool {
 }
 
 fn key_supports_image_generation(candidate: &ProxyCandidate) -> bool {
-    json_capability_enabled(candidate.key_capabilities.as_ref(), IMAGE_GENERATION_CAPABILITY)
+    candidate.key_supports_image_generation
 }
 
 pub(super) fn openai_request_explicitly_selects_image_generation(api_format: &str, body: &Value) -> bool {

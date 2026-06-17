@@ -1,5 +1,7 @@
+use proxy::scheduler::ModelAccessPolicy;
 use types::{
     api_token::ApiToken,
+    api_token::ModelAccessMode,
     provider::{ProviderPriorityMode, ProviderSchedulingMode, RoutingProfileId},
 };
 
@@ -84,9 +86,9 @@ impl TokenRoutingContext {
         }
         order_candidate_parts(OrderCandidatePartsInput {
             parts,
-            token,
             group: &self.group,
             user_access: self.user_access.as_ref(),
+            model_access_policy: token_model_policy(token),
             request,
             model_id: &self.global_model.id,
             request_id: &self.request_id,
@@ -94,6 +96,13 @@ impl TokenRoutingContext {
             mode: self.scheduling_mode,
             priority_mode: self.priority_mode,
         })
+    }
+}
+
+fn token_model_policy(token: &ApiToken) -> ModelAccessPolicy {
+    match token.model_access_mode {
+        ModelAccessMode::All => ModelAccessPolicy::All,
+        ModelAccessMode::Limited => ModelAccessPolicy::Limited(token.allowed_model_ids.clone()),
     }
 }
 

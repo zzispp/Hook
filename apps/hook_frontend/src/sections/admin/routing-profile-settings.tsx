@@ -41,9 +41,16 @@ export function RoutingProfileSettings({ group, model, profiles, loading, onSave
   }, [group, model, scope]);
 
   const effectiveProfile = useMemo(() => {
-    const profileId = model?.routing_profile_id ?? group?.routing_profile_id ?? 'balanced';
+    const hasProfileContext = Boolean(group || model);
+    const profileId =
+      model?.routing_profile_id ??
+      group?.routing_profile_id ??
+      (hasProfileContext ? 'balanced' : null);
+    if (!profileId) {
+      return null;
+    }
     return profiles.find((item) => item.id === profileId) ?? null;
-  }, [group?.routing_profile_id, model?.routing_profile_id, profiles]);
+  }, [group, model, profiles]);
 
   const scopeDisabled = !group || (scope === 'model' && !model);
   const saveDisabled = loading || submitting || scopeDisabled;

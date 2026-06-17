@@ -117,7 +117,6 @@ pub fn apply_provider_api_key_patch(active: &mut ProviderApiKeyActiveModel, inpu
     if let Some(allowed_model_ids) = input.allowed_model_ids {
         active.allowed_model_ids = Set(json::encode_required(&allowed_model_ids)?);
     }
-    apply_json_patch(&mut active.capabilities, input.capabilities)?;
     if let Some(encrypted_api_key) = input.encrypted_api_key {
         active.encrypted_api_key = Set(encrypted_api_key);
     }

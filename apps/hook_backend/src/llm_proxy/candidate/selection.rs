@@ -10,7 +10,6 @@ mod scheduler;
 mod tests;
 mod token_context;
 
-use storage::api_token::ApiTokenStore;
 use types::{
     api_token::ApiToken,
     model::TieredPricingConfig,
@@ -23,7 +22,15 @@ use self::{
     token_context::token_routing_context,
 };
 use super::{CandidateRequest, CandidateSelection, LlmProxyError, LlmProxyState};
-use crate::llm_proxy::cache::snapshot::{CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, SchedulingSnapshot};
+use crate::llm_proxy::{
+    cache::snapshot::{CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, SchedulingSnapshot},
+    candidate::selection::{
+        matching::{MatchingCandidatePartsInput, matching_candidate_parts},
+        scheduler::{OrderCandidatePartsInput, order_candidate_parts},
+    },
+    model_access::ensure_group_allows_model,
+};
+use proxy::scheduler::ModelAccessPolicy;
 
 pub(super) const DEFAULT_MAX_RETRIES: i32 = 2;
 
@@ -69,7 +76,6 @@ pub(super) async fn routing_rankings(state: &LlmProxyState, request: RoutingRank
     let request_id_seed = request_id_seed(request.request_id_seed)?;
     let window = request.window;
     let include_excluded = request.include_excluded;
-    let token = routing_token(state, &request.api_token_id).await?;
     let candidate_request = CandidateRequest {
         api_format: &request.api_format,
         routing_api_format: &request.api_format,
@@ -79,13 +85,12 @@ pub(super) async fn routing_rankings(state: &LlmProxyState, request: RoutingRank
         required_capability: None,
         features: RoutingRequestFeatures::unknown(&request.api_format, request.is_stream, None),
     };
-    let context = token_routing_context(state, &token, candidate_request.clone(), request_id_seed.clone()).await?;
+    let context = ranking_context(state, &request.group_code, candidate_request.clone(), request_id_seed.clone()).await?;
     let profile = crate::llm_proxy::routing::profile_by_id(state, context.routing_profile_id).await?.profile;
-    let parts = context.ordered_parts(state, &token, candidate_request.clone()).await?;
     let output = dynamic_routing::rank_candidate_parts_with_profile(
         dynamic_routing::DynamicRoutingInput {
             state,
-            parts,
+            parts: context.parts,
             group: &context.group,
             request: candidate_request,
             global_model: &context.global_model,
@@ -107,19 +112,19 @@ pub(super) async fn routing_rankings(state: &LlmProxyState, request: RoutingRank
     })
 }
 
+pub(super) struct RankingContext {
+    group: CachedBillingGroup,
+    global_model: GlobalModelRef,
+    routing_profile_id: RoutingProfileId,
+    priority_mode: types::provider::ProviderPriorityMode,
+    parts: Vec<CandidateParts>,
+}
+
 fn filter_explanations(items: Vec<RouteScoreExplanation>, include_excluded: bool) -> Vec<RouteScoreExplanation> {
     if include_excluded {
         return items;
     }
     items.into_iter().filter(|item| item.exclusion_reason.is_none()).collect()
-}
-
-async fn routing_token(state: &LlmProxyState, token_id: &str) -> Result<ApiToken, LlmProxyError> {
-    let token = ApiTokenStore::new(state.database())
-        .find_token(token_id)
-        .await?
-        .ok_or_else(|| LlmProxyError::InvalidRequest(format!("api token not found: {token_id}")))?;
-    crate::llm_proxy::auth::validate_token(token)
 }
 
 fn request_id_seed(value: Option<String>) -> Result<String, LlmProxyError> {
@@ -135,7 +140,7 @@ fn selected_route(items: &[RouteScoreExplanation]) -> Option<RouteIdentity> {
 }
 
 fn validate_rankings_request(request: &RoutingRankingsRequest) -> Result<(), LlmProxyError> {
-    require_non_empty(&request.api_token_id, "api_token_id")?;
+    require_non_empty(&request.group_code, "group_code")?;
     require_non_empty(&request.model, "model")?;
     require_non_empty(&request.api_format, "api_format")
 }
@@ -199,4 +204,64 @@ pub(super) fn effective_routing_profile_id(group: &crate::llm_proxy::cache::snap
 pub(super) async fn cooled_provider_ids(state: &LlmProxyState, snapshot: &SchedulingSnapshot) -> Result<std::collections::HashSet<String>, LlmProxyError> {
     let provider_ids = snapshot.providers.iter().map(|provider| provider.id.clone()).collect::<Vec<_>>();
     state.cooled_provider_ids(&provider_ids).await
+}
+
+async fn ranking_context(state: &LlmProxyState, group_code: &str, request: CandidateRequest<'_>, request_id: String) -> Result<RankingContext, LlmProxyError> {
+    let snapshot = state.scheduling_snapshot().await?;
+    let cooled_provider_ids = cooled_provider_ids(state, &snapshot).await?;
+    ranking_context_from_snapshot(&snapshot, group_code, request, &request_id, &cooled_provider_ids)
+}
+
+fn ranking_group(snapshot: &SchedulingSnapshot, group_code: &str) -> Result<CachedBillingGroup, LlmProxyError> {
+    let group = snapshot
+        .groups
+        .iter()
+        .find(|group| group.code == group_code)
+        .ok_or_else(|| LlmProxyError::InvalidRequest(format!("billing group not found: {group_code}")))?;
+    if !group.is_active {
+        return Err(LlmProxyError::Forbidden(format!("billing group is inactive: {}", group.code)));
+    }
+    Ok(group.clone())
+}
+
+pub(super) fn ranking_context_from_snapshot(
+    snapshot: &SchedulingSnapshot,
+    group_code: &str,
+    request: CandidateRequest<'_>,
+    request_id: &str,
+    cooled_provider_ids: &std::collections::HashSet<String>,
+) -> Result<RankingContext, LlmProxyError> {
+    let global_model = resolve_global_model(snapshot, request.model_name)?;
+    let group = ranking_group(snapshot, group_code)?;
+    ensure_group_allows_model(&group, &global_model.id)?;
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot,
+        group: &group,
+        user_access: None,
+        model_id: &global_model.id,
+        request: request.clone(),
+        affinity: None,
+        scheduling_mode: snapshot.scheduling_mode,
+        request_id,
+        cooled_provider_ids,
+    });
+    let parts = order_candidate_parts(OrderCandidatePartsInput {
+        parts,
+        group: &group,
+        user_access: None,
+        model_access_policy: ModelAccessPolicy::All,
+        request,
+        model_id: &global_model.id,
+        request_id,
+        affinity: None,
+        mode: snapshot.scheduling_mode,
+        priority_mode: snapshot.provider_priority_mode,
+    })?;
+    Ok(RankingContext {
+        routing_profile_id: effective_routing_profile_id(&group, &global_model),
+        priority_mode: snapshot.provider_priority_mode,
+        group,
+        global_model,
+        parts,
+    })
 }

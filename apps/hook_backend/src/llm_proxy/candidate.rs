@@ -19,9 +19,9 @@ pub struct ProxyCandidate {
     pub upstream_url: String,
     pub provider_model_name: String,
     pub reasoning_effort: Option<String>,
-    pub header_rules: Option<Value>,
-    pub body_rules: Option<Value>,
-    pub key_capabilities: Option<Value>,
+    pub header_rules: Option<serde_json::Value>,
+    pub body_rules: Option<serde_json::Value>,
+    pub key_supports_image_generation: bool,
     pub price_per_request: Option<Decimal>,
     pub tiered_pricing: TieredPricingConfig,
     pub billing_multiplier: Decimal,
@@ -66,7 +66,7 @@ pub struct CandidateKeyOption {
     pub name: String,
     pub key_preview: String,
     pub api_key: String,
-    pub capabilities: Option<Value>,
+    pub supports_image_generation: bool,
     pub cache_ttl_minutes: i32,
     pub rpm_limit: Option<i32>,
 }
@@ -171,7 +171,7 @@ impl ProxyCandidate {
         candidate.upstream_url = endpoint.upstream_url.clone();
         candidate.header_rules = endpoint.header_rules.clone();
         candidate.body_rules = endpoint.body_rules.clone();
-        candidate.key_capabilities = key.capabilities.clone();
+        candidate.key_supports_image_generation = key.supports_image_generation;
         candidate.cache_ttl_minutes = key.cache_ttl_minutes;
         candidate.key_rpm_limit = key.rpm_limit;
         candidate

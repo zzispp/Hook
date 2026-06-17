@@ -99,7 +99,7 @@ fn openai_cli_keeps_image_generation_tool_when_key_has_capability() {
     let mut candidate = candidate("openai:cli");
     candidate.trace.client_api_format = "openai:cli".into();
     candidate.reasoning_effort = None;
-    candidate.key_capabilities = Some(json!({"image_generation": true}));
+    candidate.key_supports_image_generation = true;
 
     let payload = attempt_payload(body, &candidate, false).unwrap();
 
@@ -254,7 +254,7 @@ fn candidate(provider_api_format: &str) -> ProxyCandidate {
         reasoning_effort: Some("high".into()),
         header_rules: None,
         body_rules: None,
-        key_capabilities: None,
+        key_supports_image_generation: false,
         price_per_request: None,
         tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
         billing_multiplier: Decimal::ONE,

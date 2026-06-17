@@ -142,7 +142,6 @@ impl ProviderRepository for StorageProviderRepository {
                         name: record.name,
                         api_formats: record.api_formats,
                         allowed_model_ids: record.allowed_model_ids,
-                        capabilities: record.capabilities,
                         encrypted_api_key: record.encrypted_api_key,
                         internal_priority: record.internal_priority,
                         global_priority_by_format: record.global_priority_by_format,
