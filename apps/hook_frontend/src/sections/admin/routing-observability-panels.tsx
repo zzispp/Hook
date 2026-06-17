@@ -33,10 +33,19 @@ type RankingPanelProps = {
   rankingsLoading: boolean;
   hasSubmittedQuery: boolean;
   onOpenRanking: (item: RouteScoreExplanation) => void;
-  onSaved: VoidFunction;
 };
 
 export function RoutingConfigurationPanel(props: ConfigurationPanelProps) {
+  const hasProfileContext = Boolean(props.selectedGroup || props.selectedModel);
+  const effectiveProfile =
+    props.profiles.find((item) => {
+      const profileId =
+        props.selectedModel?.routing_profile_id ??
+        props.selectedGroup?.routing_profile_id ??
+        (hasProfileContext ? 'balanced' : null);
+      return item.id === profileId;
+    }) ?? null;
+
   return (
     <Grid container spacing={3}>
       <Grid size={{ xs: 12, md: 6 }}>
@@ -47,7 +56,8 @@ export function RoutingConfigurationPanel(props: ConfigurationPanelProps) {
             titleTypographyProps={{ variant: 'subtitle1' }}
             subheaderTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
           />
-          <Stack sx={{ p: 2.5, pt: 1.5 }}>
+          <Stack spacing={2.5} sx={{ p: 2.5, pt: 1.5 }}>
+            <RoutingFilters {...props} />
             <RoutingProfileSettings
               group={props.selectedGroup}
               model={props.selectedModel}
@@ -62,13 +72,20 @@ export function RoutingConfigurationPanel(props: ConfigurationPanelProps) {
       <Grid size={{ xs: 12, md: 6 }}>
         <Card sx={{ height: 1 }}>
           <CardHeader
-            title={props.t('routing.cards.simulationContextTitle')}
-            subheader={props.t('routing.cards.simulationContextHelper')}
+            title={props.t('routing.profile.editorTitle')}
+            subheader={props.t('routing.cards.profileTuningHelper')}
             titleTypographyProps={{ variant: 'subtitle1' }}
             subheaderTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
           />
-          <Stack sx={{ p: 2.5, pt: 1.5 }}>
-            <RoutingFilters {...props} />
+          <Stack spacing={2.5} sx={{ p: 2.5, pt: 1.5 }}>
+            {effectiveProfile ? (
+              <>
+                <RoutingProfileSummary profile={effectiveProfile} t={props.t} />
+                <RoutingProfileEditor profile={effectiveProfile} onSaved={props.onSaved} />
+              </>
+            ) : (
+              <Alert severity="info">{props.t('routing.profile.selectContext')}</Alert>
+            )}
           </Stack>
         </Card>
       </Grid>
@@ -78,46 +95,29 @@ export function RoutingConfigurationPanel(props: ConfigurationPanelProps) {
 
 export function RoutingRankingPanel(props: RankingPanelProps) {
   return (
-    <Grid container spacing={3}>
-      <Grid size={{ xs: 12, lg: 4 }}>
-        <Card sx={{ height: 1 }}>
-          <CardHeader
-            title={props.t('routing.profile.editorTitle')}
-            subheader={props.t('routing.cards.profileTuningHelper')}
-            titleTypographyProps={{ variant: 'subtitle1' }}
-            subheaderTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
+    <Card sx={{ height: 1 }}>
+      <CardHeader
+        title={props.t('routing.cards.rankingsTitle', {
+          profile: props.selectedProfile
+            ? routingProfileName(props.selectedProfile, props.t)
+            : props.t('routing.cards.rankingsPlaceholderProfile'),
+        })}
+        subheader={props.t('routing.cards.rankingsHelper')}
+        titleTypographyProps={{ variant: 'subtitle1' }}
+        subheaderTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
+      />
+      <Stack sx={{ p: 2.5 }}>
+        {props.hasSubmittedQuery ? (
+          <RoutingRankingTable
+            rows={props.rankingRows}
+            loading={props.rankingsLoading}
+            t={props.t}
+            onOpen={props.onOpenRanking}
           />
-          <Stack spacing={2.5} sx={{ p: 2.5, pt: 1.5 }}>
-            <RoutingProfileSummary profile={props.selectedProfile} t={props.t} />
-            <RoutingProfileEditor profile={props.selectedProfile} onSaved={props.onSaved} />
-          </Stack>
-        </Card>
-      </Grid>
-
-      <Grid size={{ xs: 12, lg: 8 }}>
-        <Card sx={{ height: 1 }}>
-          <CardHeader
-            title={props.t('routing.cards.rankingsTitle', {
-              profile: props.selectedProfile ? routingProfileName(props.selectedProfile, props.t) : '',
-            })}
-            subheader={props.t('routing.cards.rankingsHelper')}
-            titleTypographyProps={{ variant: 'subtitle1' }}
-            subheaderTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
-          />
-          <Stack sx={{ p: 2.5 }}>
-            {props.hasSubmittedQuery ? (
-              <RoutingRankingTable
-                rows={props.rankingRows}
-                loading={props.rankingsLoading}
-                t={props.t}
-                onOpen={props.onOpenRanking}
-              />
-            ) : (
-              <Alert severity="info">{props.t('routing.emptyBeforeQuery')}</Alert>
-            )}
-          </Stack>
-        </Card>
-      </Grid>
-    </Grid>
+        ) : (
+          <Alert severity="info">{props.t('routing.emptyBeforeQuery')}</Alert>
+        )}
+      </Stack>
+    </Card>
   );
 }

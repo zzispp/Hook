@@ -1453,18 +1453,17 @@
   "routing": {
     "loading": "Loading routing rankings...",
     "empty": "No routing candidates match the current filters.",
-    "emptyBeforeQuery": "Select a user, API token, model, and format, then query routing.",
+    "emptyBeforeQuery": "Select a billing group and model to view routing rankings.",
     "profileInherited": "Follow default",
     "cards": {
-      "simulationContextTitle": "Real path simulation",
-      "simulationContextHelper": "Select an API token, model, and format to simulate routing with real access, affinity, rate-limit, and circuit state.",
+      "simulationContextTitle": "Strategy context",
+      "simulationContextHelper": "Inspect candidate rankings with billing group, model, API format, window, and streaming settings.",
       "profileTuningHelper": "Edit the routing profile that is effective for this simulation: model override, billing group override, then default.",
-      "rankingsTitle": "Real path simulation: {{profile}}",
-      "rankingsHelper": "View candidate rankings, score components, and window metrics under the real token context."
+      "rankingsTitle": "Routing rankings: {{profile}}",
+      "rankingsPlaceholderProfile": "Context pending",
+      "rankingsHelper": "View candidate rankings, score components, and window metrics under the active strategy context."
     },
     "filters": {
-      "user": "User",
-      "apiToken": "API token",
       "group": "Billing group",
       "model": "Model",
       "apiFormat": "API format",
@@ -1472,14 +1471,9 @@
       "stream": "Stream",
       "includeExcluded": "Show excluded",
       "autoRefresh": "Auto refresh",
-      "requestId": "Request ID",
-      "selectUserFirst": "Select a user first",
-      "selectApiTokenFirst": "Select an API token first",
-      "noAccessibleModels": "This API token has no accessible models"
+      "selectGroupFirst": "Select a billing group first"
     },
     "actions": {
-      "simulate": "Query routing",
-      "lookup": "Lookup",
       "details": "Details"
     },
     "runtime": {
@@ -1515,6 +1509,7 @@
     "profile": {
       "editorTitle": "Profile tuning",
       "editorHelper": "Edit the auto tune switch, administrator baseline weights, and scoring controls for the selected profile. Automatic learning only makes controlled adjustments on top of this baseline.",
+      "selectContext": "Select a billing group or model before viewing and tuning the effective profile.",
       "autoTune": "Enable Auto Tune",
       "advancedTitle": "Scoring controls",
       "weightTotal": "Current weight total: {{total}}. It must equal 1.000 before saving.",
