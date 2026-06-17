@@ -105,7 +105,7 @@ fn scheduler_candidate(parts: &CandidateParts, group: &CachedBillingGroup, prior
         endpoint_id: endpoint.id.clone(),
         key_id: key.id.clone(),
         global_model_id: parts.model.global_model_id.clone(),
-        provider_model_name: parts.model.provider_model_name.clone(),
+        provider_model_name: parts.effective_upstream_model_name.clone(),
         provider_api_format,
         needs_conversion,
         is_cached: parts.is_cached,

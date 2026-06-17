@@ -192,8 +192,6 @@ fn provider_with_keys_and_endpoints(endpoints: Vec<CachedEndpoint>, keys: Vec<Ca
             id: "binding-a".into(),
             provider_id: "provider-a".into(),
             global_model_id: "global-model-a".into(),
-            provider_model_name: "upstream-model".into(),
-            provider_model_mapping: None,
             is_active: true,
         }],
     }
@@ -239,6 +237,7 @@ fn key(id: &str, api_formats: Vec<&str>) -> CachedProviderKey {
         time_range_start_minute: None,
         time_range_end_minute: None,
         is_active: true,
+        model_mappings: std::collections::BTreeMap::new(),
     }
 }
 

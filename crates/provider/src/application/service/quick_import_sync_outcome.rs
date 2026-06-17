@@ -191,7 +191,7 @@ fn cost_outcome(
         Ok(costs) => costs,
         Err(error) => return cost_error(group_ratio, effective, upstream_group, error),
     };
-    let candidates = candidate_model_ids(globals, bindings, key, upstream_models);
+    let candidates = candidate_model_ids(globals, key, upstream_models);
     if source.sync_config.cost_sync_mode == ProviderQuickImportCostSyncMode::ReportOnly {
         return report_only_outcome(group_ratio, effective, upstream_group, key.effective_cost_multiplier, candidates);
     }

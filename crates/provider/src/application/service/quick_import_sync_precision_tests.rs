@@ -101,8 +101,10 @@ fn key(effective_cost_multiplier: Decimal) -> ProviderQuickImportSyncKey {
         effective_cost_multiplier,
         statuses: vec![ProviderQuickImportSyncStatus::Ok],
         model_mappings: vec![ProviderQuickImportSyncKeyModel {
-            upstream_model_id: "upstream-gpt".into(),
+            provider_model_id: "provider-model-1".into(),
             global_model_id: "global-gpt".into(),
+            upstream_model_name: "upstream-gpt".into(),
+            reasoning_effort: None,
         }],
     }
 }
@@ -153,13 +155,7 @@ fn global_model() -> GlobalModelResponse {
 }
 
 fn bindings() -> BTreeMap<String, BindingInfo> {
-    BTreeMap::from([(
-        "global-gpt".into(),
-        BindingInfo {
-            id: "provider-model-1".into(),
-            upstream_model_id: "upstream-gpt".into(),
-        },
-    )])
+    BTreeMap::from([("global-gpt".into(), BindingInfo { id: "provider-model-1".into() })])
 }
 
 fn stored_effective_multiplier() -> Decimal {

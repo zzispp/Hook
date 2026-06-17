@@ -198,7 +198,7 @@ function ProviderDialogs({
         onAssociateKeyGroups={state.providerKeyGroupAssociation.openForKey}
         onAppendQuickImport={quickImportActions.openAppend}
         onResolveQuickImportKey={quickImportActions.openResolution}
-        onManageQuickImportModels={quickImportActions.openModelAssociations}
+        onManageKeyModels={quickImportActions.openKeyMappings}
         onClose={state.closeProviderBindings}
       />
       <ProviderKeyGroupAssociationDialog

@@ -66,7 +66,6 @@ export type ApiKeyForm = {
 
 export type ProviderModelForm = {
   global_model_id: string;
-  provider_model_name: string;
 };
 
 export const DEFAULT_PROVIDER_FORM: ProviderForm = {
@@ -98,7 +97,6 @@ export const DEFAULT_API_KEY_FORM: ApiKeyForm = {
 
 export const DEFAULT_PROVIDER_MODEL_FORM: ProviderModelForm = {
   global_model_id: '',
-  provider_model_name: '',
 };
 
 export function providerFormFromProvider(provider: Provider): ProviderForm {
@@ -196,7 +194,6 @@ export function apiKeyUpdatePayload(form: ApiKeyForm): ProviderApiKeyUpdate {
 export function providerModelPayload(form: ProviderModelForm): ProviderModelBindingCreate {
   return {
     global_model_id: form.global_model_id,
-    provider_model_name: form.provider_model_name,
   };
 }
 

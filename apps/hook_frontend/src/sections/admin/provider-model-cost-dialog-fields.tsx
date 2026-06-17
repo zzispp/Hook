@@ -128,7 +128,7 @@ function ModelSelect({
       renderOption={(params, option, state) => (
         <MenuItem {...params} key={option.id} value={option.id}>
           <Checkbox readOnly checked={state.selected} size="small" tabIndex={-1} sx={optionCheckboxSx} />
-          <ListItemText primary={bindingLabel(option, models)} secondary={option.provider_model_name} />
+          <ListItemText primary={bindingLabel(option, models)} secondary={option.global_model_id} />
         </MenuItem>
       )}
       renderInput={(params) => <TextField {...params} label={t('providers.model')} />}
@@ -260,7 +260,7 @@ function TokenDraftRow({ binding, draft, label, onChange }: { binding: ProviderM
   const { t } = useTranslate('admin');
   return (
     <Box sx={rowSx}>
-      <TypographyLine label={label} value={binding.provider_model_name} />
+      <TypographyLine label={label} value={binding.global_model_id} />
       <Box sx={priceGridSx}>
         <PriceField label={t('requestRecords.inputPrice')} value={draft.input_price_per_million} onChange={(value) => onChange({ input_price_per_million: value })} />
         <PriceField label={t('requestRecords.outputPrice')} value={draft.output_price_per_million} onChange={(value) => onChange({ output_price_per_million: value })} />

@@ -1,17 +1,18 @@
 use async_trait::async_trait;
 use provider::application::{
-    ProviderApiKeySecret, ProviderError, ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportBind, ProviderQuickImportBound,
-    ProviderQuickImportCreate, ProviderQuickImportCreated, ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement,
-    ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource,
-    ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderResult,
+    ProviderApiKeySecret, ProviderError, ProviderKeyModelMappingWrite, ProviderKeyModelMappingsForKey, ProviderKeyModelMappingsForProvider,
+    ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportBind, ProviderQuickImportBound, ProviderQuickImportCreate,
+    ProviderQuickImportCreated, ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement, ProviderQuickImportSyncEventCreate,
+    ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource, ProviderQuickImportSyncSourcePatch, ProviderRepository,
+    ProviderResult,
 };
 use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
     ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse,
-    ProviderKeyGroupUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
-    ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail, RequestRecordListRequest,
-    RequestRecordListResponse, UsageRecordListResponse,
+    ProviderKeyGroupUpdate, ProviderKeyModelMapping, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
+    ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderUpdate, RequestRecordDetail,
+    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::cache::{ProxyCacheInvalidator, combine_cache_results};
@@ -173,6 +174,25 @@ where
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()> {
         self.inner.delete_model_binding(provider_id, model_id).await?;
         self.refresh_scheduling().await
+    }
+
+    async fn key_model_mappings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderKeyModelMappingsForProvider>> {
+        self.inner.key_model_mappings(provider_id).await
+    }
+
+    async fn key_model_mappings_for_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<Option<ProviderKeyModelMappingsForKey>> {
+        self.inner.key_model_mappings_for_key(provider_id, key_id).await
+    }
+
+    async fn replace_key_model_mappings(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: Vec<ProviderKeyModelMappingWrite>,
+    ) -> ProviderResult<Vec<ProviderKeyModelMapping>> {
+        let mappings = self.inner.replace_key_model_mappings(provider_id, key_id, input).await?;
+        self.refresh_scheduling().await?;
+        Ok(mappings)
     }
 
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse> {

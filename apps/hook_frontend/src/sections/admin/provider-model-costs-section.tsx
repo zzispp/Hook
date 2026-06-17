@@ -98,7 +98,6 @@ function useModelCostSectionState(providerId: string) {
     setHideUnconfigured(true);
     setExpandedKeyIds([]);
   }, [providerId]);
-
   return {
     dialogOpen,
     hideUnconfigured,

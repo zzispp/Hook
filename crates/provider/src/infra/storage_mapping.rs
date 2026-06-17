@@ -149,8 +149,6 @@ pub(super) fn model_binding_input(provider_id: &str, input: ProviderModelBinding
     ProviderModelRecordInput {
         provider_id: provider_id.to_owned(),
         global_model_id: input.global_model_id,
-        provider_model_name: input.provider_model_name,
-        provider_model_mapping: input.provider_model_mapping,
         is_active: true,
         config: input.config,
     }
@@ -166,9 +164,7 @@ pub(super) fn model_binding_batch_input(provider_id: &str, input: ProviderModelB
 
 pub(super) fn model_binding_patch(input: ProviderModelBindingUpdate) -> ProviderModelRecordPatch {
     ProviderModelRecordPatch {
-        provider_model_name: input.provider_model_name,
         is_active: input.is_active,
-        provider_model_mapping: input.provider_model_mapping,
         config: input.config,
     }
 }
@@ -306,16 +302,15 @@ fn quick_import_key_input(input: crate::application::ProviderQuickImportApiKeyCr
 
 fn quick_import_key_model_input(input: crate::application::ProviderQuickImportKeyModelCreate) -> ProviderQuickImportKeyModelRecordInput {
     ProviderQuickImportKeyModelRecordInput {
-        upstream_model_id: input.upstream_model_id,
         global_model_id: input.global_model_id,
+        upstream_model_name: input.upstream_model_name,
+        reasoning_effort: input.reasoning_effort,
     }
 }
 
 fn quick_import_model_input(input: ProviderModelBindingCreate) -> ProviderQuickImportModelRecordInput {
     ProviderQuickImportModelRecordInput {
         global_model_id: input.global_model_id,
-        provider_model_name: input.provider_model_name,
-        provider_model_mapping: input.provider_model_mapping,
         is_active: true,
         config: input.config,
     }

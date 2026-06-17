@@ -252,6 +252,30 @@ impl ProviderStore {
         super::provider_model_query::delete_model_binding(self, provider_id, model_id).await
     }
 
+    pub async fn key_model_mappings_for_provider(&self, provider_id: &str) -> StorageResult<Vec<super::ProviderKeyModelMappingsForProviderRecord>> {
+        super::provider_key_model_mapping_query::key_model_mappings_for_provider(self, provider_id).await
+    }
+
+    pub async fn key_model_mappings_for_key(&self, provider_id: &str, key_id: &str) -> StorageResult<Option<super::ProviderKeyModelMappingsForKeyRecord>> {
+        super::provider_key_model_mapping_query::key_model_mappings_for_key(self, provider_id, key_id).await
+    }
+
+    pub async fn replace_key_model_mappings(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        inputs: Vec<super::ProviderKeyModelMappingRecordInput>,
+    ) -> StorageResult<Vec<super::ProviderKeyModelMappingView>> {
+        super::provider_key_model_mapping_query::replace_key_model_mappings(self, provider_id, key_id, inputs).await
+    }
+
+    pub async fn key_model_mappings_by_key_id(
+        &self,
+        key_ids: &[String],
+    ) -> StorageResult<std::collections::BTreeMap<String, Vec<super::ProviderKeyModelMappingView>>> {
+        super::provider_key_model_mapping_query::model_mappings_by_key_id(self, key_ids).await
+    }
+
     pub async fn list_model_costs(&self, provider_id: &str) -> StorageResult<Vec<types::provider::ProviderModelCost>> {
         super::provider_model_cost_query::list_model_costs(self, provider_id).await
     }

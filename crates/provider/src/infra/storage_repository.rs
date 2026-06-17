@@ -10,10 +10,11 @@ use types::provider::{
 };
 
 use crate::application::{
-    GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportBind,
-    ProviderQuickImportBound, ProviderQuickImportCreate, ProviderQuickImportCreated, ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement,
-    ProviderQuickImportSyncEventCreate, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, ProviderQuickImportSyncKeyPatch,
-    ProviderQuickImportSyncSource, ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderResult,
+    GlobalModelCatalog, ProviderApiKeySecret, ProviderError, ProviderKeyModelMappingWrite, ProviderKeyModelMappingsForKey, ProviderKeyModelMappingsForProvider,
+    ProviderQuickImportAppend, ProviderQuickImportAppended, ProviderQuickImportBind, ProviderQuickImportBound, ProviderQuickImportCreate,
+    ProviderQuickImportCreated, ProviderQuickImportKeyReplaced, ProviderQuickImportKeyReplacement, ProviderQuickImportSyncEventCreate,
+    ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, ProviderQuickImportSyncKeyPatch, ProviderQuickImportSyncSource,
+    ProviderQuickImportSyncSourcePatch, ProviderRepository, ProviderResult,
 };
 use crate::infra::storage_mapping::{
     api_key_input, api_key_patch, endpoint_input, endpoint_patch, model_binding_batch_input, model_binding_input, model_binding_patch, model_cost_inputs,
@@ -212,6 +213,48 @@ impl ProviderRepository for StorageProviderRepository {
 
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()> {
         self.store.delete_model_binding(provider_id, model_id).await.map_err(storage_error)
+    }
+
+    async fn key_model_mappings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderKeyModelMappingsForProvider>> {
+        self.store
+            .key_model_mappings_for_provider(provider_id)
+            .await
+            .map(|items| items.into_iter().map(key_model_mappings_for_provider).collect())
+            .map_err(storage_error)
+    }
+
+    async fn key_model_mappings_for_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<Option<ProviderKeyModelMappingsForKey>> {
+        self.store
+            .key_model_mappings_for_key(provider_id, key_id)
+            .await
+            .map(|item| item.map(key_model_mappings_for_key))
+            .map_err(storage_error)
+    }
+
+    async fn replace_key_model_mappings(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: Vec<ProviderKeyModelMappingWrite>,
+    ) -> ProviderResult<Vec<types::provider::ProviderKeyModelMapping>> {
+        self.store
+            .replace_key_model_mappings(
+                provider_id,
+                key_id,
+                input
+                    .into_iter()
+                    .map(|item| storage::provider::ProviderKeyModelMappingRecordInput {
+                        provider_id: item.provider_id,
+                        key_id: item.key_id,
+                        provider_model_id: item.provider_model_id,
+                        upstream_model_name: item.upstream_model_name,
+                        reasoning_effort: item.reasoning_effort,
+                    })
+                    .collect(),
+            )
+            .await
+            .map(|items| items.into_iter().map(key_model_mapping).collect())
+            .map_err(storage_error)
     }
 
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse> {
@@ -435,8 +478,44 @@ fn sync_key(record: storage::provider::ProviderQuickImportSyncKeyRecord) -> Prov
 
 fn sync_key_model(record: storage::provider::ProviderQuickImportSyncKeyModelRecord) -> ProviderQuickImportSyncKeyModel {
     ProviderQuickImportSyncKeyModel {
-        upstream_model_id: record.upstream_model_id,
+        provider_model_id: record.provider_model_id,
         global_model_id: record.global_model_id,
+        upstream_model_name: record.upstream_model_name,
+        reasoning_effort: record.reasoning_effort,
+    }
+}
+
+fn key_model_mappings_for_provider(record: storage::provider::ProviderKeyModelMappingsForProviderRecord) -> ProviderKeyModelMappingsForProvider {
+    ProviderKeyModelMappingsForProvider {
+        provider_id: record.provider_id,
+        key_id: record.key_id,
+        key_name: record.key_name,
+        is_quick_import_key: record.is_quick_import_key,
+        mappings: record.mappings.into_iter().map(key_model_mapping).collect(),
+    }
+}
+
+fn key_model_mappings_for_key(record: storage::provider::ProviderKeyModelMappingsForKeyRecord) -> ProviderKeyModelMappingsForKey {
+    ProviderKeyModelMappingsForKey {
+        provider_id: record.provider_id,
+        key_id: record.key_id,
+        key_name: record.key_name,
+        is_quick_import_key: record.is_quick_import_key,
+        mappings: record.mappings.into_iter().map(key_model_mapping).collect(),
+    }
+}
+
+fn key_model_mapping(record: storage::provider::ProviderKeyModelMappingView) -> types::provider::ProviderKeyModelMapping {
+    types::provider::ProviderKeyModelMapping {
+        id: record.id,
+        provider_id: record.provider_id,
+        key_id: record.key_id,
+        provider_model_id: record.provider_model_id,
+        global_model_id: record.global_model_id,
+        upstream_model_name: record.upstream_model_name,
+        reasoning_effort: record.reasoning_effort,
+        created_at: record.created_at,
+        updated_at: record.updated_at,
     }
 }
 

@@ -172,13 +172,13 @@ pub const PROVIDER_APIS: &[ApiDefinition] = &[
     ApiDefinition {
         code: "provider_keys_quick_import_model_associations_read",
         method: "GET",
-        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/quick-import-model-associations",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/model-mappings",
         name: "快捷导入密钥模型关联",
     },
     ApiDefinition {
         code: "provider_keys_quick_import_model_associations_update",
         method: "PUT",
-        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/quick-import-model-associations",
+        path_pattern: "/api/admin/providers/{provider_id}/keys/{key_id}/model-mappings",
         name: "更新快捷导入密钥模型关联",
     },
     ApiDefinition {

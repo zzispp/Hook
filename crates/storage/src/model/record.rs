@@ -69,7 +69,7 @@ impl ModelRecord {
             provider_id: self.provider_id.clone(),
             provider_name: provider.name.clone(),
             model_id: Some(self.id),
-            target_model: self.provider_model_name,
+            target_model: global_model.name.clone(),
             is_active: self.is_active && provider.is_active,
             provider_is_active: provider.is_active,
             binding_is_active: self.is_active,

@@ -101,10 +101,10 @@ fn quick_import_create_builds_complete_resource_set() {
     assert_eq!(draft.sync_source.as_ref().unwrap().recharge_multiplier, Decimal::ONE);
     assert!(draft.sync_source.as_ref().unwrap().sync_config.auto_sync_enabled);
     assert_eq!(draft.endpoints.len(), 2);
-    assert_eq!(draft.model_bindings[0].provider_model_name, "gpt-5");
-    assert_eq!(draft.model_bindings[0].provider_model_mapping.as_ref().unwrap().name, "upstream-gpt-5");
+    assert_eq!(draft.model_bindings[0].global_model_id, "global-1");
     assert_eq!(draft.api_keys[0].encrypted_api_key, "enc:sk-test");
     assert_eq!(draft.api_keys[0].input.allowed_model_ids, vec!["global-1"]);
+    assert_eq!(draft.api_keys[0].model_mappings[0].upstream_model_name, "upstream-gpt-5");
     assert_eq!(draft.model_costs[0].cost.price_per_request, Some(Decimal::new(1, 1)));
 }
 
@@ -274,7 +274,7 @@ fn quick_import_create_does_not_write_mapping_for_same_model_name() {
     })
     .unwrap();
 
-    assert!(draft.model_bindings[0].provider_model_mapping.is_none());
+    assert_eq!(draft.model_bindings[0].global_model_id, "global-1");
 }
 
 #[test]

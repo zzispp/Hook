@@ -26,8 +26,10 @@ pub use group::{
 };
 pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate, ProviderApiKeyPriorityUpdate, ProviderApiKeyUpdate};
 pub use model_binding::{
-    ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping,
-    ProviderModelTestEndpoint, ProviderModelTestKey, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpstreamModelsResponse,
+    ProviderKeyModelMapping, ProviderKeyModelMappingCandidate, ProviderKeyModelMappingInput, ProviderKeyModelMappingsByKey,
+    ProviderKeyModelMappingsForKeyResponse, ProviderKeyModelMappingsResponse, ProviderKeyModelMappingsUpdate, ProviderModelBinding,
+    ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelTestEndpoint, ProviderModelTestKey,
+    ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpstreamModelsResponse,
 };
 pub use model_cost::{
     ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostMode, ProviderModelCostSource, ProviderModelCostUpsert,
@@ -35,11 +37,10 @@ pub use model_cost::{
 };
 pub use quick_import::{
     NewApiQuickImportConfig, ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportCommitRequest,
-    ProviderQuickImportCommitResponse, ProviderQuickImportCostIssue, ProviderQuickImportLinkedKeyPreview, ProviderQuickImportModelAssociation,
-    ProviderQuickImportModelAssociationCandidate, ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate,
-    ProviderQuickImportModelMappingInput, ProviderQuickImportModelMappingPreview, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse,
-    ProviderQuickImportProviderConfig, ProviderQuickImportRelinkRequest, ProviderQuickImportRemoteModel, ProviderQuickImportResolutionResponse,
-    ProviderQuickImportSelectedToken, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportTokenPreview,
+    ProviderQuickImportCommitResponse, ProviderQuickImportCostIssue, ProviderQuickImportLinkedKeyPreview, ProviderQuickImportModelMappingInput,
+    ProviderQuickImportModelMappingPreview, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse, ProviderQuickImportProviderConfig,
+    ProviderQuickImportRelinkRequest, ProviderQuickImportRemoteModel, ProviderQuickImportResolutionResponse, ProviderQuickImportSelectedToken,
+    ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportTokenPreview,
 };
 pub use quick_import_bind::{
     ProviderQuickImportBindCommitRequest, ProviderQuickImportBindCommitResponse, ProviderQuickImportBindLocalKey, ProviderQuickImportBindPreviewRequest,

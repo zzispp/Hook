@@ -17,7 +17,8 @@ export type TokenCostDraft = {
 };
 
 export function bindingLabel(binding: ProviderModelBinding, models: GlobalModelResponse[]) {
-  return findGlobalModel(models, binding.global_model_id)?.display_name || binding.provider_model_name;
+  const model = findGlobalModel(models, binding.global_model_id);
+  return model?.display_name || model?.name || binding.global_model_id;
 }
 
 export function bindingsAllowedForKey(key: ProviderApiKey, bindings: ProviderModelBinding[]) {

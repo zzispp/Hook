@@ -79,12 +79,6 @@ pub struct ProviderQuickImportRelinkRequest {
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
-pub struct ProviderQuickImportModelAssociationsUpdate {
-    #[serde(default)]
-    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
-}
-
-#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct ProviderQuickImportSelectedToken {
     pub upstream_token_id: String,
     pub name: String,
@@ -204,33 +198,7 @@ pub struct ProviderQuickImportResolutionResponse {
     pub statuses: Vec<super::quick_import_sync::ProviderQuickImportSyncStatus>,
     pub tokens: Vec<ProviderQuickImportTokenPreview>,
     pub model_mappings: Vec<ProviderQuickImportModelMappingPreview>,
-    pub associated_models: Vec<ProviderQuickImportModelAssociation>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ProviderQuickImportModelAssociationsResponse {
-    pub provider_id: String,
-    pub key_id: String,
-    pub key_name: String,
-    pub source_kind: ProviderQuickImportSourceKind,
-    pub upstream_token_id: String,
-    pub associations: Vec<ProviderQuickImportModelAssociation>,
-    pub candidates: Vec<ProviderQuickImportModelAssociationCandidate>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ProviderQuickImportModelAssociation {
-    pub upstream_model_id: String,
-    pub global_model_id: String,
-    pub global_model_name: String,
-    pub global_model_display_name: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct ProviderQuickImportModelAssociationCandidate {
-    pub upstream_model_id: String,
-    pub suggested_global_model_id: Option<String>,
-    pub reason: String,
+    pub associated_models: Vec<super::ProviderKeyModelMapping>,
 }
 
 impl ProviderQuickImportSourceConfig {

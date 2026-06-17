@@ -92,13 +92,13 @@ function ModelNameCell({
       <Box title={modelStatusTitle(binding, model, t)} sx={statusDotSx(active, binding.is_active)} />
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="subtitle2" noWrap>
-          {model?.display_name || binding.provider_model_name}
+          {model?.display_name || model?.name || binding.global_model_id}
         </Typography>
         <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5, minWidth: 0 }}>
           <Typography variant="caption" noWrap sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
-            {binding.provider_model_name}
+            {model?.name || binding.global_model_id}
           </Typography>
-          <IconButton size="small" title={t('models.copyModelId')} onClick={() => void copyModelId(binding.provider_model_name, t)}>
+          <IconButton size="small" title={t('models.copyModelId')} onClick={() => void copyModelId(model?.name || binding.global_model_id, t)}>
             <Iconify icon="solar:copy-bold" width={14} />
           </IconButton>
         </Stack>

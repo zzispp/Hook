@@ -52,7 +52,7 @@ export function ProviderModelCostsRow({
       <Stack direction="row" justifyContent="space-between" spacing={1.5} alignItems="flex-start">
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle2" noWrap>{row.modelLabel}</Typography>
-          <Typography variant="caption" sx={monoSx}>{row.binding.provider_model_name}</Typography>
+          <Typography variant="caption" sx={monoSx}>{row.binding.global_model_id}</Typography>
         </Box>
         <Stack direction="row" alignItems="center" spacing={0.75}>
           <Chip size="small" color={row.cost ? 'success' : 'default'} label={sourceLabel(row.source, t)} />

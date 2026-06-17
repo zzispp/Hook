@@ -171,10 +171,10 @@ mod tests {
                 id: "binding-a".into(),
                 provider_id: "provider-a".into(),
                 global_model_id: "model-a".into(),
-                provider_model_name: "upstream-model".into(),
-                provider_model_mapping: None,
                 is_active: true,
             },
+            effective_upstream_model_name: "upstream-model".into(),
+            effective_reasoning_effort: None,
             client_api_format: "openai:chat".into(),
             routing_api_format: "openai:chat".into(),
             is_cached: false,
@@ -214,6 +214,7 @@ mod tests {
             time_range_start_minute: None,
             time_range_end_minute: None,
             is_active: true,
+            model_mappings: Default::default(),
         }
     }
 

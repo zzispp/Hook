@@ -5,7 +5,7 @@ use types::{
     model::GlobalModelResponse,
     provider::{
         ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderModelBindingCreate, ProviderModelCostBatchUpsert,
-        ProviderModelMapping, ProviderQuickImportSourceConfig, ProviderQuickImportSyncConfig,
+        ProviderQuickImportSourceConfig, ProviderQuickImportSyncConfig,
     },
 };
 
@@ -276,14 +276,10 @@ fn push_token_costs(
     Ok(())
 }
 
-fn binding_create(upstream_id: &str, global: &GlobalModelResponse) -> ProviderResult<ProviderModelBindingCreate> {
+fn binding_create(_upstream_id: &str, global: &GlobalModelResponse) -> ProviderResult<ProviderModelBindingCreate> {
     Ok(ProviderModelBindingCreate {
         global_model_id: global.id.clone(),
-        provider_model_name: global.name.clone(),
-        provider_model_mapping: (upstream_id != global.name).then(|| ProviderModelMapping {
-            name: upstream_id.to_owned(),
-            reasoning_effort: None,
-        }),
+        is_active: Some(true),
         config: None,
     })
 }

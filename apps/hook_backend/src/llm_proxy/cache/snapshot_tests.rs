@@ -2,7 +2,10 @@ use sea_orm::{DatabaseBackend, MockDatabase};
 use storage::{
     Database,
     model::provider_models,
-    provider::record::{provider_api_keys, provider_endpoints, providers},
+    provider::{
+        record::provider_key_model_mappings,
+        record::{provider_api_keys, provider_endpoints, providers},
+    },
 };
 
 use super::load_providers;
@@ -12,11 +15,15 @@ async fn load_providers_keeps_disabled_providers_for_admin_model_tests() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([provider_records()])
-            .append_query_results([endpoint_records("provider-active")])
             .append_query_results([key_records("provider-active")])
+            .append_query_results([key_model_mapping_records("provider-active")])
             .append_query_results([model_records("provider-active")])
-            .append_query_results([endpoint_records("provider-disabled")])
+            .append_query_results([endpoint_records("provider-active")])
+            .append_query_results([model_records("provider-active")])
             .append_query_results([key_records("provider-disabled")])
+            .append_query_results([key_model_mapping_records("provider-disabled")])
+            .append_query_results([Vec::<provider_models::Model>::new()])
+            .append_query_results([endpoint_records("provider-disabled")])
             .append_query_results([model_records("provider-disabled")])
             .into_connection(),
     );
@@ -31,6 +38,7 @@ async fn load_providers_keeps_disabled_providers_for_admin_model_tests() {
     assert!(!providers[1].is_active);
     assert_eq!(providers[1].endpoints[0].provider_id, "provider-disabled");
     assert_eq!(providers[1].keys[0].provider_id, "provider-disabled");
+    assert!(providers[1].keys[0].model_mappings.is_empty());
     assert_eq!(providers[1].models[0].provider_id, "provider-disabled");
 }
 
@@ -108,10 +116,24 @@ fn model_records(provider_id: &str) -> Vec<provider_models::Model> {
         id: format!("{provider_id}-model"),
         provider_id: provider_id.into(),
         global_model_id: "global-model".into(),
-        provider_model_name: "gpt-test".into(),
-        provider_model_mappings: None,
         is_active: true,
         config: None,
+        created_at: now(),
+        updated_at: now(),
+    }]
+}
+
+fn key_model_mapping_records(provider_id: &str) -> Vec<provider_key_model_mappings::Model> {
+    if provider_id != "provider-active" {
+        return Vec::new();
+    }
+    vec![provider_key_model_mappings::Model {
+        id: format!("{provider_id}-mapping"),
+        provider_id: provider_id.into(),
+        key_id: format!("{provider_id}-key"),
+        provider_model_id: format!("{provider_id}-model"),
+        upstream_model_name: "upstream-model".into(),
+        reasoning_effort: Some("high".into()),
         created_at: now(),
         updated_at: now(),
     }]

@@ -56,7 +56,7 @@ fn endpoint_option(request: &CandidateRequest<'_>, parts: &CandidateParts, endpo
         provider_api_format: endpoint.api_format.clone(),
         base_url: endpoint.base_url.clone(),
         custom_path: endpoint.custom_path.clone(),
-        upstream_url: url::upstream_url_checked(endpoint, &parts.model.provider_model_name, request.is_stream)?,
+        upstream_url: url::upstream_url_checked(endpoint, &parts.effective_upstream_model_name, request.is_stream)?,
         max_retries: endpoint.max_retries,
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
@@ -207,6 +207,7 @@ mod tests {
             time_range_end_minute: None,
             supports_image_generation,
             is_active: true,
+            model_mappings: std::collections::BTreeMap::new(),
         }
     }
 }

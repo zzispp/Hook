@@ -119,26 +119,14 @@ async fn run_outcome(config: ProviderQuickImportSyncConfig, snapshot: UpstreamSy
         &source_config(),
         &snapshot,
         &globals(),
-        &BTreeMap::from([(
-            "global-gpt".into(),
-            BindingInfo {
-                id: "provider-model-1".into(),
-                upstream_model_id: "upstream-gpt".into(),
-            },
-        )]),
+        &BTreeMap::from([("global-gpt".into(), BindingInfo { id: "provider-model-1".into() })]),
         &key(),
     )
     .await
 }
 
 fn bindings() -> BTreeMap<String, BindingInfo> {
-    BTreeMap::from([(
-        "global-gpt".into(),
-        BindingInfo {
-            id: "provider-model-1".into(),
-            upstream_model_id: "upstream-gpt".into(),
-        },
-    )])
+    BTreeMap::from([("global-gpt".into(), BindingInfo { id: "provider-model-1".into() })])
 }
 
 struct TestImporter;
@@ -209,8 +197,10 @@ fn key() -> ProviderQuickImportSyncKey {
         effective_cost_multiplier: Decimal::ONE,
         statuses: vec![ProviderQuickImportSyncStatus::Ok],
         model_mappings: vec![ProviderQuickImportSyncKeyModel {
-            upstream_model_id: "upstream-gpt".into(),
+            provider_model_id: "provider-model-1".into(),
             global_model_id: "global-gpt".into(),
+            upstream_model_name: "upstream-gpt".into(),
+            reasoning_effort: None,
         }],
     }
 }

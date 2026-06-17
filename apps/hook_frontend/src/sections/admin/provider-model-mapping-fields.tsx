@@ -1,8 +1,7 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
-import type { GlobalModelResponse } from 'src/types/model';
-import type { ProviderModelBinding, ProviderModelReasoningEffort } from 'src/types/provider';
+import type { ProviderModelReasoningEffort } from 'src/types/provider';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -19,54 +18,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
-
-import { sortedBindingOptions } from './provider-model-mapping-utils';
-
-type ClientModelFieldProps = {
-  disabled: boolean;
-  items: ProviderModelBinding[];
-  models: GlobalModelResponse[];
-  value: string;
-  onChange: (value: string) => void;
-};
-
-export function ClientModelField({ disabled, items, models, value, onChange }: ClientModelFieldProps) {
-  const { t } = useTranslate('admin');
-  const placeholder = t('providers.selectClientModel');
-  const options = sortedBindingOptions(items, models);
-
-  return (
-    <TextField
-      select
-      fullWidth
-      label={t('providers.clientModel')}
-      disabled={disabled}
-      value={value}
-      InputLabelProps={{ shrink: true }}
-      SelectProps={{
-        displayEmpty: true,
-        renderValue: (selected) => {
-          if (typeof selected !== 'string' || !selected) {
-            return (
-              <Typography component="span" sx={{ color: 'text.disabled' }}>
-                {placeholder}
-              </Typography>
-            );
-          }
-          return options.find((option) => option.id === selected)?.label ?? placeholder;
-        },
-      }}
-      onChange={(event) => onChange(event.target.value)}
-    >
-      <MenuItem value="">{placeholder}</MenuItem>
-      {options.map((option) => (
-        <MenuItem key={option.id} value={option.id}>
-          {option.label}
-        </MenuItem>
-      ))}
-    </TextField>
-  );
-}
 
 export function ReasoningEffortField({
   value,

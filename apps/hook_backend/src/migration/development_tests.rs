@@ -40,7 +40,7 @@ fn classifies_marked_baseline_missing_quick_import_sync_tables_as_applied() {
             &[
                 "provider_quick_import_sources",
                 "provider_quick_import_keys",
-                "provider_quick_import_key_models",
+                "provider_key_model_mappings",
                 "provider_quick_import_sync_events",
             ],
         ),

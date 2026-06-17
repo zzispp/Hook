@@ -265,8 +265,6 @@ fn provider_model_record(id: &str, model_id: &str, provider_id: &str) -> provide
         id: id.into(),
         provider_id: provider_id.into(),
         global_model_id: model_id.into(),
-        provider_model_name: model_id.into(),
-        provider_model_mappings: None,
         is_active: true,
         config: None,
         created_at: now(),

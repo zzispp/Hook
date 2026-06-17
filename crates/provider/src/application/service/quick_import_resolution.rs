@@ -1,13 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use types::model::GlobalModelResponse;
-use types::provider::{
-    ProviderApiKey, ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate, ProviderQuickImportPreviewResponse,
-    ProviderQuickImportRelinkRequest, ProviderQuickImportResolutionResponse,
-};
+use types::provider::{ProviderApiKey, ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest, ProviderQuickImportResolutionResponse};
 
 use crate::application::{
-    GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, SecretCipher, UpstreamImportData, UpstreamImportToken, UpstreamProviderImportSource,
+    GlobalModelCatalog, ProviderRepository, ProviderResult, SecretCipher, UpstreamImportData, UpstreamImportToken, UpstreamProviderImportSource,
 };
 
 use super::{
@@ -16,8 +13,7 @@ use super::{
     quick_import_preview::{AppendPreviewInput, append_preview_response},
     quick_import_resolution_context::{KeyContext, key_context, reject_duplicate_relink, source_config, token_from_data},
     quick_import_resolution_models::{
-        associations, associations_response, existing_mappings, resolve_mappings, token_from_key, validate_associated_models, validate_existing_mappings,
-        validate_token,
+        associations, existing_mappings, resolve_mappings, validate_associated_models, validate_existing_mappings, validate_token,
     },
 };
 
@@ -38,7 +34,8 @@ where
     let globals = args.models.list_global_models().await?;
     let imported = linked_token_ids(args.repository, &context).await?;
     let preview = resolution_preview(&context, data, &globals, &imported);
-    let associated = associations(&context.key, &globals)?;
+    let by_id = globals.iter().map(|model| (model.id.as_str(), model)).collect::<BTreeMap<_, _>>();
+    let associated = associations(&context.key, &by_id)?;
     Ok(ProviderQuickImportResolutionResponse {
         provider_id: provider_id.to_owned(),
         key_id: key_id.to_owned(),
@@ -91,53 +88,6 @@ where
     let mappings = resolve_mappings(token, &globals, input.selected_model_ids, input.model_mappings)?;
     let replacement = replacement_with_globals(&args, &context, token, mappings, globals).await?;
     Ok(args.repository.replace_quick_import_key(replacement).await?.api_key)
-}
-
-pub async fn quick_import_model_associations<R, M, C, I>(
-    args: QuickImportArgs<'_, R, M, C, I>,
-    provider_id: &str,
-    key_id: &str,
-) -> ProviderResult<ProviderQuickImportModelAssociationsResponse>
-where
-    R: ProviderRepository,
-    M: GlobalModelCatalog,
-    C: SecretCipher,
-    I: UpstreamProviderImportSource,
-{
-    let context = key_context(args.repository, provider_id, key_id).await?;
-    let globals = args.models.list_global_models().await?;
-    let source_config = source_config(args.cipher, &context.source)?;
-    let upstream_models = args.importer.fetch_sync_token_models(&source_config, &context.key.upstream_token_id).await?;
-    let bindings = args.repository.list_model_bindings(provider_id).await?;
-    associations_response(&context, &globals, &upstream_models, &bindings)
-}
-
-pub async fn update_quick_import_model_associations<R, M, C, I>(
-    args: QuickImportArgs<'_, R, M, C, I>,
-    provider_id: &str,
-    key_id: &str,
-    input: ProviderQuickImportModelAssociationsUpdate,
-) -> ProviderResult<ProviderQuickImportModelAssociationsResponse>
-where
-    R: ProviderRepository,
-    M: GlobalModelCatalog,
-    C: SecretCipher,
-    I: UpstreamProviderImportSource,
-{
-    if input.model_mappings.is_empty() {
-        return Err(ProviderError::InvalidInput("model_mappings cannot be empty".into()));
-    }
-    let context = key_context(args.repository, provider_id, key_id).await?;
-    let source_config = source_config(args.cipher, &context.source)?;
-    let upstream_models = args.importer.fetch_sync_token_models(&source_config, &context.key.upstream_token_id).await?;
-    let globals = args.models.list_global_models().await?;
-    let token = token_from_key(&context.key, upstream_models.clone());
-    let selected_ids = input.model_mappings.iter().map(|item| item.upstream_model_id.clone()).collect();
-    let mappings = resolve_mappings(&token, &globals, selected_ids, input.model_mappings)?;
-    let replacement = replacement_with_globals(&args, &context, &token, mappings, globals.clone()).await?;
-    args.repository.replace_quick_import_key(replacement).await?;
-    let bindings = args.repository.list_model_bindings(provider_id).await?;
-    associations_response(&context, &globals, &upstream_models, &bindings)
 }
 
 async fn replacement<R, M, C, I>(

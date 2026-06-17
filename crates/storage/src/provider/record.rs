@@ -11,9 +11,9 @@ pub mod entities;
 pub(crate) use crate::model::provider_models;
 pub use entities::{
     billing_group_provider_key_groups, billing_group_provider_keys, billing_group_providers, billing_rules, dimension_collectors, provider_api_keys,
-    provider_cooldown_events, provider_cooldowns, provider_endpoints, provider_key_group_keys, provider_key_groups, provider_model_costs,
-    provider_quick_import_key_models, provider_quick_import_keys, provider_quick_import_sources, provider_quick_import_sync_events, providers,
-    request_candidates, request_records, routing_decision_samples, routing_profiles,
+    provider_cooldown_events, provider_cooldowns, provider_endpoints, provider_key_group_keys, provider_key_groups, provider_key_model_mappings,
+    provider_model_costs, provider_quick_import_keys, provider_quick_import_sources, provider_quick_import_sync_events, providers, request_candidates,
+    request_records, routing_decision_samples, routing_profiles,
 };
 
 pub type ProviderRecord = providers::Model;
@@ -28,7 +28,7 @@ pub type ProviderModelRecord = provider_models::Model;
 pub type ProviderModelCostRecord = provider_model_costs::Model;
 pub type ProviderQuickImportSourceRecord = provider_quick_import_sources::Model;
 pub type ProviderQuickImportKeyRecord = provider_quick_import_keys::Model;
-pub type ProviderQuickImportKeyModelRecord = provider_quick_import_key_models::Model;
+pub type ProviderKeyModelMappingRecord = provider_key_model_mappings::Model;
 pub type ProviderQuickImportSyncEventRecord = provider_quick_import_sync_events::Model;
 pub type BillingRuleRecord = billing_rules::Model;
 pub type DimensionCollectorRecord = dimension_collectors::Model;

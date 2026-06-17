@@ -195,6 +195,8 @@ fn current_route_config_fingerprint(
         endpoint_id: &endpoint.id,
         global_model_id: &part.model.global_model_id,
         provider_model_id: &part.model.id,
+        effective_upstream_model_name: &part.effective_upstream_model_name,
+        effective_reasoning_effort: part.effective_reasoning_effort.as_deref(),
         client_api_format: &part.client_api_format,
         provider_api_format: &endpoint.api_format,
         is_stream: input.request.is_stream,

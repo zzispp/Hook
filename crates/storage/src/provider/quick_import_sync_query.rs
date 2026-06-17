@@ -9,7 +9,7 @@ use super::{
     ProviderQuickImportSourceRecord, ProviderQuickImportSourceRecordPatch, ProviderQuickImportSyncKeyModelRecord, ProviderQuickImportSyncKeyRecord,
     ProviderQuickImportSyncKeyRecordPatch, ProviderStore,
     quick_import_sync_records::{active_consecutive_failures, key_sync_info, source_record, sync_key_record},
-    record::{provider_api_keys, provider_quick_import_key_models, provider_quick_import_keys, provider_quick_import_sources, providers},
+    record::{provider_api_keys, provider_key_model_mappings, provider_models, provider_quick_import_keys, provider_quick_import_sources, providers},
 };
 
 pub async fn key_sync_info_by_provider(store: &ProviderStore, provider_id: &str) -> StorageResult<BTreeMap<String, ProviderQuickImportKeySyncInfo>> {
@@ -80,19 +80,9 @@ pub async fn key_for_provider_key(store: &ProviderStore, provider_id: &str, key_
     else {
         return Ok(None);
     };
-    let models = provider_quick_import_key_models::Entity::find()
-        .filter(provider_quick_import_key_models::Column::ProviderId.eq(provider_id))
-        .filter(provider_quick_import_key_models::Column::KeyId.eq(key_id))
-        .all(store.connection())
-        .await?
-        .into_iter()
-        .map(|record| ProviderQuickImportSyncKeyModelRecord {
-            upstream_model_id: record.upstream_model_id,
-            global_model_id: record.global_model_id,
-        })
-        .collect();
+    let models = key_models_for_keys(store, std::slice::from_ref(&key.key_id)).await?;
     let local_key_name = key_name(store, provider_id, key_id).await?;
-    sync_key_record(key, local_key_name, models).map(Some)
+    sync_key_record(key.clone(), local_key_name, models.get(&key.key_id).cloned().unwrap_or_default()).map(Some)
 }
 
 pub async fn update_source(
@@ -197,15 +187,40 @@ async fn update_key(store: &ProviderStore, provider_id: &str, patch: ProviderQui
 }
 
 async fn key_models_by_key(store: &ProviderStore, source_id: &str) -> StorageResult<BTreeMap<String, Vec<ProviderQuickImportSyncKeyModelRecord>>> {
-    let records = provider_quick_import_key_models::Entity::find()
-        .filter(provider_quick_import_key_models::Column::SourceId.eq(source_id))
+    let keys = provider_quick_import_keys::Entity::find()
+        .filter(provider_quick_import_keys::Column::SourceId.eq(source_id))
         .all(store.connection())
         .await?;
+    let key_ids = keys.into_iter().map(|record| record.key_id).collect::<Vec<_>>();
+    key_models_for_keys(store, &key_ids).await
+}
+
+async fn key_models_for_keys(store: &ProviderStore, key_ids: &[String]) -> StorageResult<BTreeMap<String, Vec<ProviderQuickImportSyncKeyModelRecord>>> {
+    if key_ids.is_empty() {
+        return Ok(BTreeMap::new());
+    }
+    let records = provider_key_model_mappings::Entity::find()
+        .filter(provider_key_model_mappings::Column::KeyId.is_in(key_ids.iter().cloned()))
+        .all(store.connection())
+        .await?;
+    let provider_model_ids = records.iter().map(|record| record.provider_model_id.clone()).collect::<BTreeSet<_>>();
+    let models = provider_models::Entity::find()
+        .filter(provider_models::Column::Id.is_in(provider_model_ids))
+        .all(store.connection())
+        .await?
+        .into_iter()
+        .map(|record| (record.id, record.global_model_id))
+        .collect::<BTreeMap<_, _>>();
     let mut output: BTreeMap<String, Vec<ProviderQuickImportSyncKeyModelRecord>> = BTreeMap::new();
     for record in records {
+        let Some(global_model_id) = models.get(&record.provider_model_id).cloned() else {
+            continue;
+        };
         output.entry(record.key_id).or_default().push(ProviderQuickImportSyncKeyModelRecord {
-            upstream_model_id: record.upstream_model_id,
-            global_model_id: record.global_model_id,
+            provider_model_id: record.provider_model_id,
+            global_model_id,
+            upstream_model_name: record.upstream_model_name,
+            reasoning_effort: record.reasoning_effort,
         });
     }
     Ok(output)
