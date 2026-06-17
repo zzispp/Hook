@@ -1,9 +1,9 @@
+use proxy::scheduler::ModelAccessPolicy;
 use types::{
     api_token::ApiToken,
     api_token::ModelAccessMode,
     provider::{ProviderPriorityMode, ProviderSchedulingMode, RoutingProfileId},
 };
-use proxy::scheduler::ModelAccessPolicy;
 
 use super::{
     CandidateParts, GlobalModelRef,

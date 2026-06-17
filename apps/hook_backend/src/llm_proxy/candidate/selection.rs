@@ -204,12 +204,7 @@ pub(super) async fn cooled_provider_ids(state: &LlmProxyState, snapshot: &Schedu
     state.cooled_provider_ids(&provider_ids).await
 }
 
-async fn ranking_context(
-    state: &LlmProxyState,
-    group_code: &str,
-    request: CandidateRequest<'_>,
-    request_id: String,
-) -> Result<RankingContext, LlmProxyError> {
+async fn ranking_context(state: &LlmProxyState, group_code: &str, request: CandidateRequest<'_>, request_id: String) -> Result<RankingContext, LlmProxyError> {
     let snapshot = state.scheduling_snapshot().await?;
     let cooled_provider_ids = cooled_provider_ids(state, &snapshot).await?;
     ranking_context_from_snapshot(&snapshot, group_code, request, &request_id, &cooled_provider_ids)

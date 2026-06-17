@@ -54,14 +54,7 @@ fn routing_effective_profile_prefers_model_then_group_then_default() {
 #[test]
 fn ranking_context_uses_group_code_context() {
     let snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
-    let context = ranking_context_from_snapshot(
-        &snapshot,
-        "default",
-        super::helpers::request(),
-        "seed-1",
-        &std::collections::HashSet::new(),
-    )
-    .unwrap();
+    let context = ranking_context_from_snapshot(&snapshot, "default", super::helpers::request(), "seed-1", &std::collections::HashSet::new()).unwrap();
 
     assert_eq!(context.group.code, "default");
     assert_eq!(context.global_model.name, "gpt-test");

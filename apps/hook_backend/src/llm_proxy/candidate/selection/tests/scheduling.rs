@@ -1,9 +1,7 @@
 use proxy::scheduler::ModelAccessPolicy;
 use std::collections::BTreeMap;
 
-use types::{
-    provider::{ProviderPriorityMode, ProviderSchedulingMode},
-};
+use types::provider::{ProviderPriorityMode, ProviderSchedulingMode};
 
 use super::helpers::{provider_b, provider_key, provider_with_endpoints_and_keys, provider_with_keys, request, snapshot_with_provider};
 use crate::llm_proxy::candidate::selection::{
