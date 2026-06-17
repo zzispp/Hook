@@ -92,10 +92,7 @@ impl OperationsStore {
     }
 }
 
-fn notification_unread(
-    state: Option<&super::NotificationStateRecord>,
-    event_at: time::OffsetDateTime,
-) -> bool {
+fn notification_unread(state: Option<&super::NotificationStateRecord>, event_at: time::OffsetDateTime) -> bool {
     state.and_then(|value| value.read_at).is_none_or(|read_at| read_at < event_at)
 }
 

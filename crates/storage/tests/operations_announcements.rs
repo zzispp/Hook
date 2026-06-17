@@ -1,9 +1,7 @@
 use sea_orm::{DatabaseBackend, MockDatabase};
 use storage::{
     Database,
-    operations::{
-        AnnouncementRecord, NotificationStateRecord, OperationsStore,
-    },
+    operations::{AnnouncementRecord, NotificationStateRecord, OperationsStore},
 };
 
 #[tokio::test]
@@ -48,10 +46,11 @@ async fn mark_notification_read_writes_state_and_next_unread_query_excludes_anno
     assert!(announcements.is_empty());
 
     let logs = connection.into_transaction_log();
-    assert!(logs
-        .iter()
-        .flat_map(|tx| tx.statements())
-        .any(|statement| statement.sql.contains("INSERT INTO \"notification_states\"")));
+    assert!(
+        logs.iter()
+            .flat_map(|tx| tx.statements())
+            .any(|statement| statement.sql.contains("INSERT INTO \"notification_states\""))
+    );
 }
 
 fn announcement_record(id: &str, pinned: bool, enabled: bool, created_at: i64, updated_at: i64) -> AnnouncementRecord {

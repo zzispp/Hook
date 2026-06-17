@@ -71,10 +71,7 @@ async fn cost_event_title_contains_full_key_context() {
     let events = key_events(&sync_source, &key(), &outcome);
     let event = events.iter().find(|event| event.title.contains("成本倍率下降")).expect("cost event must exist");
 
-    assert_eq!(
-        event.title,
-        "OpenAI 提供商，生产主 Key 密钥成本倍率下降"
-    );
+    assert_eq!(event.title, "OpenAI 提供商，生产主 Key 密钥成本倍率下降");
     assert!(event.detail.contains("最终成本倍率从 1x 已更新为 0.2x"));
 }
 

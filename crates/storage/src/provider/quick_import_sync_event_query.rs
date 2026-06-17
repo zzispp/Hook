@@ -1,7 +1,5 @@
 use sea_orm::{ActiveModelTrait, EntityTrait, Set};
-use types::provider::{
-    ProviderQuickImportSyncEventDetailResponse, ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncEventSnapshotStatus,
-};
+use types::provider::{ProviderQuickImportSyncEventDetailResponse, ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncEventSnapshotStatus};
 
 use crate::{StorageError, StorageResult};
 
@@ -22,10 +20,7 @@ pub async fn event_detail(store: &ProviderStore, id: &str) -> StorageResult<Opti
         .transpose()
 }
 
-fn event_active_model(
-    store: &ProviderStore,
-    input: ProviderQuickImportSyncEventRecordInput,
-) -> StorageResult<provider_quick_import_sync_events::ActiveModel> {
+fn event_active_model(store: &ProviderStore, input: ProviderQuickImportSyncEventRecordInput) -> StorageResult<provider_quick_import_sync_events::ActiveModel> {
     Ok(provider_quick_import_sync_events::ActiveModel {
         id: Set(store.next_id()),
         provider_id: Set(input.provider_id),
@@ -40,11 +35,7 @@ fn event_active_model(
 }
 
 fn event_detail_response(record: provider_quick_import_sync_events::Model) -> StorageResult<ProviderQuickImportSyncEventDetailResponse> {
-    let status = record
-        .status
-        .as_str()
-        .try_into()
-        .map_err(|message: String| StorageError::Database(message))?;
+    let status = record.status.as_str().try_into().map_err(|message: String| StorageError::Database(message))?;
     let payload = record
         .payload_json
         .map(serde_json::from_value::<ProviderQuickImportSyncEventPayload>)

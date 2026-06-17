@@ -31,9 +31,7 @@ where
         .map(|model| model.upstream_model_name.clone())
         .collect::<Vec<_>>();
     Ok(if missing_upstream_model_ids.is_empty() {
-        ModelCheck::Available {
-            upstream_models: models,
-        }
+        ModelCheck::Available { upstream_models: models }
     } else {
         ModelCheck::Removed {
             missing_upstream_model_ids,

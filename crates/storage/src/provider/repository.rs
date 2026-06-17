@@ -322,10 +322,7 @@ impl ProviderStore {
         super::quick_import_sync_event_query::create_events(self, input).await
     }
 
-    pub async fn quick_import_sync_event_detail(
-        &self,
-        id: &str,
-    ) -> StorageResult<Option<types::provider::ProviderQuickImportSyncEventDetailResponse>> {
+    pub async fn quick_import_sync_event_detail(&self, id: &str) -> StorageResult<Option<types::provider::ProviderQuickImportSyncEventDetailResponse>> {
         super::quick_import_sync_event_query::event_detail(self, id).await
     }
 

@@ -148,7 +148,11 @@ fn cost_event(source: &ProviderQuickImportSyncSource, key: &ProviderQuickImportS
             key,
             cost_event_status(outcome),
             "成本倍率发生变化".into(),
-            if pending { "仅提示，未更新本地成本".into() } else { "已覆盖本地成本".into() },
+            if pending {
+                "仅提示，未更新本地成本".into()
+            } else {
+                "已覆盖本地成本".into()
+            },
         )),
     ))
 }
@@ -214,12 +218,7 @@ fn anomaly_status(status: &ProviderQuickImportSyncStatus) -> bool {
     )
 }
 
-fn anomaly_title(
-    source: &ProviderQuickImportSyncSource,
-    key: &ProviderQuickImportSyncKey,
-    status: ProviderQuickImportSyncStatus,
-    action: &str,
-) -> String {
+fn anomaly_title(source: &ProviderQuickImportSyncSource, key: &ProviderQuickImportSyncKey, status: ProviderQuickImportSyncStatus, action: &str) -> String {
     format!(
         "{} 提供商，{} 密钥{}。{}",
         source.provider_name,
@@ -255,10 +254,7 @@ fn anomaly_detail(key: &ProviderQuickImportSyncKey, outcome: &KeyOutcome, status
             "同步器已确认上游令牌仍存在且启用，但获取该令牌的裸 key 或请求 /v1/models 失败：{}",
             anomaly_error(outcome)
         ),
-        ProviderQuickImportSyncStatus::UpstreamModelRemoved => format!(
-            "已关联的上游模型缺失：{}",
-            outcome.missing_upstream_model_ids.join("，")
-        ),
+        ProviderQuickImportSyncStatus::UpstreamModelRemoved => format!("已关联的上游模型缺失：{}", outcome.missing_upstream_model_ids.join("，")),
         ProviderQuickImportSyncStatus::CostUnavailable => format!("无法计算快捷导入成本：{}", anomaly_error(outcome)),
         ProviderQuickImportSyncStatus::NoAssociatedModels => "本地密钥没有任何快捷导入模型关联".into(),
         _ => anomaly_reason(status).into(),

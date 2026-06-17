@@ -1,14 +1,10 @@
 use sea_orm::{DatabaseBackend, MockDatabase};
 use storage::{
     Database,
-    provider::{
-        ProviderQuickImportSyncEventRecordInput, ProviderStore,
-        record::provider_quick_import_sync_events,
-    },
+    provider::{ProviderQuickImportSyncEventRecordInput, ProviderStore, record::provider_quick_import_sync_events},
 };
 use types::provider::{
-    ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncEventSnapshotStatus, ProviderQuickImportSyncStatus,
-    ProviderQuickImportUpstreamModelSnapshot,
+    ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncEventSnapshotStatus, ProviderQuickImportSyncStatus, ProviderQuickImportUpstreamModelSnapshot,
 };
 
 #[tokio::test]
