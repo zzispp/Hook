@@ -1508,8 +1508,10 @@
     },
     "profile": {
       "editorTitle": "策略调参",
-      "editorHelper": "这里编辑当前选中策略的自动调优开关、管理员基准权重和评分控制项。自动学习只会在这个基线之上做受控微调。",
+      "editorHelper": "这里编辑当前选中策略的自动调优开关、管理员基准权重，以及 Bandit / EMA 调参项。自动学习只会在这个基线之上做受控微调。",
       "selectContext": "请选择计费分组或模型后，再查看和调整当前生效策略。",
+      "paramSection": "Bandit 与 EMA 参数",
+      "paramHelper": "这些参数控制当前 profile 的预热置信度、EMA 近期敏感度和 UCB 探索强度。",
       "autoTune": "启用自动调优",
       "advancedTitle": "评分控制",
       "weightTotal": "当前权重总和：{{total}}。需要等于 1.000 才能保存。",
@@ -1542,14 +1544,27 @@
         "headroom": "余量",
         "priority": "优先级"
       },
-      "settingFields": {
-        "minSamples": "最小样本数",
-        "explorationK": "探索 K",
-        "conversionPenalty": "转换扣分",
-        "staleMetricPenalty": "过期指标扣分",
-        "affinityBonus": "亲和加分",
-        "priorSampleCap": "先验样本上限",
-        "contextualExploration": "上下文探索"
+      "paramFields": {
+        "min_samples": "最小样本数",
+        "exploration_k": "UCB k",
+        "prior_sample_cap": "先验样本上限",
+        "conversion_penalty": "格式转换惩罚",
+        "stale_metric_penalty": "陈旧指标惩罚",
+        "affinity_bonus": "缓存亲和奖励",
+        "ema_alpha": "EMA alpha",
+        "ema_max_freshness_seconds": "EMA 新鲜度秒数",
+        "ema_recent_weight": "EMA 近期权重",
+        "ema_recent_cap": "EMA 近期上限",
+        "exploration_weight": "探索权重",
+        "exploration_cap": "探索上限",
+        "exploration_min_success_score": "探索成功率底线"
+      },
+      "booleanFields": {
+        "contextual_exploration_enabled": "启用上下文探索"
+      },
+      "booleanValues": {
+        "enabled": "开启",
+        "disabled": "关闭"
       }
     },
     "table": {
@@ -1604,6 +1619,7 @@
       "effectiveSamples": "有效样本",
       "exclusion": "排除原因",
       "formula": "公式与权重",
+      "tuningParams": "参数：min_samples {{min_samples}}，UCB k {{exploration_k}}，先验上限 {{prior_sample_cap}}，格式转换惩罚 {{conversion_penalty}}，陈旧惩罚 {{stale_metric_penalty}}，缓存亲和奖励 {{affinity_bonus}}，上下文探索 {{contextual_exploration_enabled}}，EMA alpha {{ema_alpha}}，EMA 新鲜度 {{ema_max_freshness_seconds}} 秒，EMA 权重 {{ema_recent_weight}}，EMA 上限 {{ema_recent_cap}}，探索权重 {{exploration_weight}}，探索上限 {{exploration_cap}}，成功率底线 {{exploration_min_success_score}}",
       "metrics": "原始指标",
       "windowMetrics": "多窗口指标",
       "components": "打分明细",

@@ -29,28 +29,46 @@ const WEIGHT_FIELDS: Array<keyof RoutingProfileWeights> = [
   'priority',
 ];
 
-type RoutingProfileSettingKey =
-  | 'min_samples'
-  | 'exploration_k'
-  | 'conversion_penalty'
-  | 'stale_metric_penalty'
-  | 'affinity_bonus'
-  | 'prior_sample_cap';
+const PARAM_FIELDS = [
+  'min_samples',
+  'exploration_k',
+  'prior_sample_cap',
+  'conversion_penalty',
+  'stale_metric_penalty',
+  'affinity_bonus',
+  'ema_alpha',
+  'ema_max_freshness_seconds',
+  'ema_recent_weight',
+  'ema_recent_cap',
+  'exploration_weight',
+  'exploration_cap',
+  'exploration_min_success_score',
+] as const;
 
-const SETTING_FIELDS: Array<{
-  key: RoutingProfileSettingKey;
-  label: string;
+type RoutingParamField = (typeof PARAM_FIELDS)[number];
+
+type ParamRule = {
   min: number;
-  step: number;
+  max?: number;
   integer?: boolean;
-}> = [
-  { key: 'min_samples', label: 'minSamples', min: 1, step: 1, integer: true },
-  { key: 'exploration_k', label: 'explorationK', min: 0, step: 0.1 },
-  { key: 'conversion_penalty', label: 'conversionPenalty', min: 0, step: 0.5 },
-  { key: 'stale_metric_penalty', label: 'staleMetricPenalty', min: 0, step: 0.5 },
-  { key: 'affinity_bonus', label: 'affinityBonus', min: 0, step: 0.5 },
-  { key: 'prior_sample_cap', label: 'priorSampleCap', min: 0, step: 1, integer: true },
-];
+  step: number;
+};
+
+const PARAM_RULES: Record<RoutingParamField, ParamRule> = {
+  min_samples: { min: 1, integer: true, step: 1 },
+  exploration_k: { min: 0, step: 0.1 },
+  prior_sample_cap: { min: 0, integer: true, step: 1 },
+  conversion_penalty: { min: 0, step: 0.1 },
+  stale_metric_penalty: { min: 0, step: 0.1 },
+  affinity_bonus: { min: 0, step: 0.1 },
+  ema_alpha: { min: 0, max: 1, step: 0.01 },
+  ema_max_freshness_seconds: { min: 0, integer: true, step: 1 },
+  ema_recent_weight: { min: 0, step: 0.01 },
+  ema_recent_cap: { min: 0, step: 0.01 },
+  exploration_weight: { min: 0, step: 0.01 },
+  exploration_cap: { min: 0, step: 0.01 },
+  exploration_min_success_score: { min: 0, max: 100, step: 0.1 },
+};
 
 type Props = {
   profile: RoutingProfile | null;
@@ -62,7 +80,7 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
   const [autoTuneEnabled, setAutoTuneEnabled] = useState(false);
   const [contextualExplorationEnabled, setContextualExplorationEnabled] = useState(true);
   const [weights, setWeights] = useState<Record<keyof RoutingProfileWeights, string>>(emptyWeights);
-  const [settings, setSettings] = useState<Record<RoutingProfileSettingKey, string>>(emptySettings);
+  const [params, setParams] = useState<Record<RoutingParamField, string>>(emptyParams);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -70,22 +88,25 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
       setAutoTuneEnabled(false);
       setContextualExplorationEnabled(true);
       setWeights(emptyWeights);
-      setSettings(emptySettings);
+      setParams(emptyParams);
       return;
     }
     setAutoTuneEnabled(profile.auto_tune_enabled);
     setContextualExplorationEnabled(profile.contextual_exploration_enabled);
     setWeights(toWeightForm(profile.learning?.admin_weights || profile.weights));
-    setSettings(toSettingsForm(profile));
+    setParams(toParamForm(profile));
   }, [profile]);
 
   const totalWeight = useMemo(
-    () => WEIGHT_FIELDS.reduce((sum, key) => sum + parseWeight(weights[key]), 0),
+    () => WEIGHT_FIELDS.reduce((sum, key) => sum + parseNumber(weights[key]), 0),
     [weights]
   );
   const invalidTotal = Math.abs(totalWeight - 1) > 0.001;
-  const invalidSettings = useMemo(() => SETTING_FIELDS.some((field) => invalidSetting(settings[field.key], field)), [settings]);
-  const saveDisabled = !profile || submitting || invalidTotal || invalidSettings;
+  const invalidParams = useMemo(
+    () => PARAM_FIELDS.some((field) => invalidParam(params[field], PARAM_RULES[field])),
+    [params]
+  );
+  const saveDisabled = !profile || submitting || invalidTotal || invalidParams;
   const priorityLocked = !profile || profile.id !== 'fixed_priority_plus';
 
   const save = useCallback(async () => {
@@ -96,7 +117,7 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
         auto_tune_enabled: autoTuneEnabled,
         contextual_exploration_enabled: contextualExplorationEnabled,
         weights: fromWeightForm(weights),
-        ...fromSettingsForm(settings),
+        ...fromParamForm(params),
       });
       toast.success(t('messages.routingProfileUpdated'));
       onSaved();
@@ -105,7 +126,7 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [autoTuneEnabled, contextualExplorationEnabled, onSaved, profile, settings, t, weights]);
+  }, [autoTuneEnabled, contextualExplorationEnabled, onSaved, params, profile, t, weights]);
 
   if (!profile) {
     return null;
@@ -145,9 +166,7 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
               type="number"
               label={t(`routing.profile.weightFields.${field}`)}
               value={weights[field]}
-              onChange={(event) =>
-                setWeights((current) => ({ ...current, [field]: event.target.value }))
-              }
+              onChange={(event) => setWeights((current) => ({ ...current, [field]: event.target.value }))}
               disabled={field === 'priority' && priorityLocked}
               inputProps={{ step: 0.01, min: 0, max: 1 }}
             />
@@ -155,28 +174,12 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
         ))}
       </Grid>
 
-      <Divider />
-
-      <Typography variant="subtitle2">{t('routing.profile.advancedTitle')}</Typography>
-
-      <Grid container spacing={1.5}>
-        {SETTING_FIELDS.map((field) => (
-          <Grid size={{ xs: 6 }} key={field.key}>
-            <TextField
-              fullWidth
-              size="small"
-              type="number"
-              label={t(`routing.profile.settingFields.${field.label}`)}
-              value={settings[field.key]}
-              onChange={(event) =>
-                setSettings((current) => ({ ...current, [field.key]: event.target.value }))
-              }
-              error={invalidSetting(settings[field.key], field)}
-              inputProps={{ step: field.step, min: field.min }}
-            />
-          </Grid>
-        ))}
-      </Grid>
+      <Stack spacing={0.5}>
+        <Typography variant="subtitle2">{t('routing.profile.paramSection')}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          {t('routing.profile.paramHelper')}
+        </Typography>
+      </Stack>
 
       <FormControlLabel
         control={
@@ -188,12 +191,33 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
         }
         label={
           <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-            {t('routing.profile.settingFields.contextualExploration')}
+            {t('routing.profile.booleanFields.contextual_exploration_enabled')}
           </Typography>
         }
       />
 
-      <Alert severity={invalidTotal ? 'warning' : 'info'} sx={{ py: 0.5 }}>
+      <Grid container spacing={1.5}>
+        {PARAM_FIELDS.map((field) => (
+          <Grid size={{ xs: 6 }} key={field}>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label={t(`routing.profile.paramFields.${field}`)}
+              value={params[field]}
+              onChange={(event) => setParams((current) => ({ ...current, [field]: event.target.value }))}
+              error={invalidParam(params[field], PARAM_RULES[field])}
+              inputProps={{
+                step: PARAM_RULES[field].step,
+                min: PARAM_RULES[field].min,
+                max: PARAM_RULES[field].max,
+              }}
+            />
+          </Grid>
+        ))}
+      </Grid>
+
+      <Alert severity={invalidTotal || invalidParams ? 'warning' : 'info'} sx={{ py: 0.5 }}>
         <Typography variant="caption" display="block">
           {t('routing.profile.weightTotal', { total: totalWeight.toFixed(3) })}
         </Typography>
@@ -218,13 +242,20 @@ const emptyWeights: Record<keyof RoutingProfileWeights, string> = {
   priority: '0',
 };
 
-const emptySettings: Record<RoutingProfileSettingKey, string> = {
-  min_samples: '20',
-  exploration_k: '3',
+const emptyParams: Record<RoutingParamField, string> = {
+  min_samples: '12',
+  exploration_k: '4.5',
+  prior_sample_cap: '20',
   conversion_penalty: '6',
   stale_metric_penalty: '8',
   affinity_bonus: '6',
-  prior_sample_cap: '20',
+  ema_alpha: '0.35',
+  ema_max_freshness_seconds: '300',
+  ema_recent_weight: '0.35',
+  ema_recent_cap: '8',
+  exploration_weight: '0.05',
+  exploration_cap: '5',
+  exploration_min_success_score: '65',
 };
 
 function toWeightForm(weights: RoutingProfileWeights): Record<keyof RoutingProfileWeights, string> {
@@ -241,58 +272,68 @@ function toWeightForm(weights: RoutingProfileWeights): Record<keyof RoutingProfi
 
 function fromWeightForm(weights: Record<keyof RoutingProfileWeights, string>): RoutingProfileWeights {
   return {
-    success: parseWeight(weights.success),
-    ttfb: parseWeight(weights.ttfb),
-    latency: parseWeight(weights.latency),
-    tps: parseWeight(weights.tps),
-    cost: parseWeight(weights.cost),
-    headroom: parseWeight(weights.headroom),
-    priority: parseWeight(weights.priority),
+    success: parseNumber(weights.success),
+    ttfb: parseNumber(weights.ttfb),
+    latency: parseNumber(weights.latency),
+    tps: parseNumber(weights.tps),
+    cost: parseNumber(weights.cost),
+    headroom: parseNumber(weights.headroom),
+    priority: parseNumber(weights.priority),
   };
 }
 
-function toSettingsForm(profile: RoutingProfile): Record<RoutingProfileSettingKey, string> {
+function toParamForm(profile: RoutingProfile): Record<RoutingParamField, string> {
   return {
     min_samples: String(profile.min_samples),
     exploration_k: String(profile.exploration_k),
+    prior_sample_cap: String(profile.prior_sample_cap),
     conversion_penalty: String(profile.conversion_penalty),
     stale_metric_penalty: String(profile.stale_metric_penalty),
     affinity_bonus: String(profile.affinity_bonus),
-    prior_sample_cap: String(profile.prior_sample_cap),
+    ema_alpha: String(profile.ema_alpha),
+    ema_max_freshness_seconds: String(profile.ema_max_freshness_seconds),
+    ema_recent_weight: String(profile.ema_recent_weight),
+    ema_recent_cap: String(profile.ema_recent_cap),
+    exploration_weight: String(profile.exploration_weight),
+    exploration_cap: String(profile.exploration_cap),
+    exploration_min_success_score: String(profile.exploration_min_success_score),
   };
 }
 
-function fromSettingsForm(settings: Record<RoutingProfileSettingKey, string>): RoutingProfileUpsert {
+function fromParamForm(params: Record<RoutingParamField, string>): RoutingProfileUpsert {
   return {
-    min_samples: parseInteger(settings.min_samples),
-    exploration_k: parseSetting(settings.exploration_k),
-    conversion_penalty: parseSetting(settings.conversion_penalty),
-    stale_metric_penalty: parseSetting(settings.stale_metric_penalty),
-    affinity_bonus: parseSetting(settings.affinity_bonus),
-    prior_sample_cap: parseInteger(settings.prior_sample_cap),
+    min_samples: parseInteger(params.min_samples),
+    exploration_k: parseNumber(params.exploration_k),
+    prior_sample_cap: parseInteger(params.prior_sample_cap),
+    conversion_penalty: parseNumber(params.conversion_penalty),
+    stale_metric_penalty: parseNumber(params.stale_metric_penalty),
+    affinity_bonus: parseNumber(params.affinity_bonus),
+    ema_alpha: parseNumber(params.ema_alpha),
+    ema_max_freshness_seconds: parseInteger(params.ema_max_freshness_seconds),
+    ema_recent_weight: parseNumber(params.ema_recent_weight),
+    ema_recent_cap: parseNumber(params.ema_recent_cap),
+    exploration_weight: parseNumber(params.exploration_weight),
+    exploration_cap: parseNumber(params.exploration_cap),
+    exploration_min_success_score: parseNumber(params.exploration_min_success_score),
   };
 }
 
-function invalidSetting(
-  value: string,
-  field: (typeof SETTING_FIELDS)[number]
-) {
-  const parsed = parseSetting(value);
-  if (!Number.isFinite(parsed) || parsed < field.min) {
+function invalidParam(value: string, rule: ParamRule) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < rule.min) {
     return true;
   }
-  return Boolean(field.integer && !Number.isInteger(parsed));
+  if (rule.max !== undefined && parsed > rule.max) {
+    return true;
+  }
+  return Boolean(rule.integer && !Number.isInteger(parsed));
 }
 
-function parseWeight(value: string) {
+function parseNumber(value: string) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function parseSetting(value: string) {
-  return Number(value);
-}
-
 function parseInteger(value: string) {
-  return Math.trunc(parseSetting(value));
+  return Math.trunc(parseNumber(value));
 }

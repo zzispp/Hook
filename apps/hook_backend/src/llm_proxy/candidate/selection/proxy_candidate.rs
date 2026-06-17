@@ -1,5 +1,5 @@
 use types::api_token::ApiToken;
-use types::provider::ProviderModelCost;
+use types::provider::{ProviderModelCost, RoutingProfileId};
 
 use super::{CandidateParts, DEFAULT_MAX_RETRIES, GlobalModelRef, dynamic_cost::model_cost_config, route};
 use crate::llm_proxy::{
@@ -17,6 +17,8 @@ pub(super) struct ProxyCandidateBuildInput<'a> {
     pub(super) group: &'a CachedBillingGroup,
     pub(super) token_user: Option<&'a CachedUserAccess>,
     pub(super) parts: &'a [CandidateParts],
+    pub(super) routing_profile_id: RoutingProfileId,
+    pub(super) routing_profile_ema_alpha: f64,
 }
 
 pub(super) async fn proxy_candidates(input: ProxyCandidateBuildInput<'_>) -> Result<Vec<ProxyCandidate>, LlmProxyError> {
@@ -46,6 +48,8 @@ async fn proxy_candidate(input: &ProxyCandidateBuildInput<'_>, parts: &Candidate
             key,
             configured_cost: configured_cost.as_ref(),
             index,
+            routing_profile_id: input.routing_profile_id,
+            routing_profile_ema_alpha: input.routing_profile_ema_alpha,
         }),
         requested_model_name: input.request.model_name.to_owned(),
         api_key: key.api_key.clone(),
@@ -91,6 +95,8 @@ struct CandidateTraceInput<'a> {
     key: &'a CandidateKeyOption,
     configured_cost: Option<&'a ProviderModelCost>,
     index: i32,
+    routing_profile_id: RoutingProfileId,
+    routing_profile_ema_alpha: f64,
 }
 
 fn candidate_trace(input: CandidateTraceInput<'_>) -> CandidateTrace {
@@ -116,6 +122,8 @@ fn candidate_trace(input: CandidateTraceInput<'_>) -> CandidateTrace {
         needs_conversion: input.endpoint.needs_conversion,
         is_stream: input.request.is_stream,
         is_cached: input.parts.is_cached,
+        routing_profile_id: input.routing_profile_id,
+        routing_profile_ema_alpha: input.routing_profile_ema_alpha,
         routing_context_key: routing_context_key(input.group_code, &input.global_model.id, &input.request.features),
         route_config_fingerprint: route_config_fingerprint(RouteFingerprintInput {
             provider_id: &input.parts.provider.id,

@@ -1,5 +1,5 @@
 use storage::provider::RoutingContextRouteStateRecord;
-use types::provider::RouteIdentity;
+use types::provider::{RouteIdentity, RoutingProfileId};
 
 use crate::llm_proxy::routing::RoutingMetricsSnapshot;
 
@@ -21,8 +21,17 @@ impl ContextRouteStateCatalog {
         Self { records }
     }
 
-    pub(crate) fn samples(&self, context_key: &str, route: &RouteIdentity, fingerprints: RouteFingerprints<'_>) -> ContextRouteSamples {
-        let context_records = self.records.iter().filter(|record| record.context_key == context_key);
+    pub(crate) fn samples(
+        &self,
+        profile_id: RoutingProfileId,
+        context_key: &str,
+        route: &RouteIdentity,
+        fingerprints: RouteFingerprints<'_>,
+    ) -> ContextRouteSamples {
+        let context_records = self
+            .records
+            .iter()
+            .filter(|record| record.profile_id == profile_id.as_str() && record.context_key == context_key);
         let mut samples = ContextRouteSamples::default();
         for record in context_records {
             samples.total_sample_count += record.sample_count;

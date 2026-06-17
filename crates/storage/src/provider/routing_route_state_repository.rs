@@ -35,7 +35,7 @@ fn select_statement(routes: &[RouteIdentity]) -> Option<Statement> {
 }
 
 fn select_sql() -> &'static str {
-    "SELECT provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, \
+    "SELECT profile_id, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, \
      ema_success_rate, ema_ttfb_ms, ema_latency_ms, ema_output_tps, sample_count, last_updated_at \
      FROM routing_route_states"
 }
@@ -68,6 +68,7 @@ fn push(params: &mut Vec<Value>, value: Value) -> String {
 
 #[derive(Clone, Debug, FromQueryResult)]
 struct RoutingRouteStateRow {
+    profile_id: String,
     provider_id: String,
     key_id: String,
     endpoint_id: String,
@@ -87,8 +88,10 @@ struct RoutingRouteStateRow {
 
 impl From<RoutingRouteStateRow> for RoutingRouteStateRecord {
     fn from(row: RoutingRouteStateRow) -> Self {
+        let route = row.route();
         Self {
-            route: row.route(),
+            profile_id: row.profile_id,
+            route,
             ema_success_rate: decimal(row.ema_success_rate).unwrap_or_default(),
             ema_ttfb_ms: row.ema_ttfb_ms.and_then(decimal),
             ema_latency_ms: row.ema_latency_ms.and_then(decimal),

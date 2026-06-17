@@ -92,6 +92,90 @@ fn rejects_negative_penalty_and_bonus_fields() {
     );
 }
 
+#[test]
+fn rejects_invalid_ema_alpha_range() {
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            ema_alpha: Some(-0.1),
+            ..Default::default()
+        },
+        "ema_alpha",
+    );
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            ema_alpha: Some(1.1),
+            ..Default::default()
+        },
+        "ema_alpha",
+    );
+}
+
+#[test]
+fn rejects_negative_ema_and_exploration_caps() {
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            ema_max_freshness_seconds: Some(-1),
+            ..Default::default()
+        },
+        "ema_max_freshness_seconds",
+    );
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            ema_recent_weight: Some(-0.1),
+            ..Default::default()
+        },
+        "ema_recent_weight",
+    );
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            ema_recent_cap: Some(-0.1),
+            ..Default::default()
+        },
+        "ema_recent_cap",
+    );
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            exploration_weight: Some(-0.1),
+            ..Default::default()
+        },
+        "exploration_weight",
+    );
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            exploration_cap: Some(-0.1),
+            ..Default::default()
+        },
+        "exploration_cap",
+    );
+}
+
+#[test]
+fn rejects_invalid_exploration_success_floor() {
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            exploration_min_success_score: Some(-0.1),
+            ..Default::default()
+        },
+        "exploration_min_success_score",
+    );
+    assert_invalid(
+        RoutingProfileId::Balanced,
+        RoutingProfileUpsert {
+            exploration_min_success_score: Some(100.1),
+            ..Default::default()
+        },
+        "exploration_min_success_score",
+    );
+}
+
 fn assert_invalid(id: RoutingProfileId, patch: RoutingProfileUpsert, expected: &str) {
     let error = validate_profile_upsert(id, &patch).expect_err("patch should be invalid");
     assert!(

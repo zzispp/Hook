@@ -64,7 +64,8 @@ pub use request_record::{
 pub use routing::{
     RouteIdentity, RouteScoreExplanation, RoutingDecisionResponse, RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, RoutingProfileId,
     RoutingProfileLearningState, RoutingProfileUpsert, RoutingProfileWeights, RoutingProfilesResponse, RoutingRankingResponse, RoutingRankingsRequest,
-    RoutingRouteState, ScoreComponent, default_contextual_exploration_enabled, default_prior_sample_cap,
+    RoutingRouteState, ScoreComponent, default_contextual_exploration_enabled, default_ema_alpha, default_ema_max_freshness_seconds, default_ema_recent_cap,
+    default_ema_recent_weight, default_exploration_cap, default_exploration_min_success_score, default_exploration_weight, default_prior_sample_cap,
 };
 pub use routing_features::{RoutingRequestFeatures, RoutingRequestSizeBucket};
 pub use routing_metadata::{RoutingMetricSource, RoutingPriorSource};

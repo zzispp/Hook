@@ -4,7 +4,7 @@ use types::provider::RouteIdentity;
 
 use crate::StorageResult;
 
-use super::routing_repository::{RoutingContextRouteStateDelta, RoutingContextRouteStateRecord};
+use super::routing_repository::{RoutingContextRouteStateDelta, RoutingContextRouteStateRecord, normalized_ema_weights};
 
 pub(super) async fn upsert_context_route_state<C>(connection: &C, delta: RoutingContextRouteStateDelta) -> StorageResult<()>
 where
@@ -16,10 +16,13 @@ where
         .map(|value| push(&mut params, value))
         .collect::<Vec<_>>()
         .join(", ");
+    let (current_weight, incoming_weight) = normalized_ema_weights(delta.ema_alpha);
+    let current_weight_ref = push(&mut params, Value::from(current_weight));
+    let incoming_weight_ref = push(&mut params, Value::from(incoming_weight));
     let sql = format!(
         "INSERT INTO routing_context_route_states ({}) VALUES ({values}) {}",
         context_state_columns().join(", "),
-        context_state_upsert_sql()
+        context_state_upsert_sql(&current_weight_ref, &incoming_weight_ref)
     );
     connection.execute_raw(Statement::from_sql_and_values(DbBackend::Postgres, sql, params)).await?;
     Ok(())
@@ -35,23 +38,25 @@ where
     Ok(rows.into_iter().map(RoutingContextRouteStateRecord::from).collect())
 }
 
-fn context_state_upsert_sql() -> &'static str {
-    "ON CONFLICT (context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
-     route_config_fingerprint, price_config_fingerprint) \
-     DO UPDATE SET sample_count = routing_context_route_states.sample_count + EXCLUDED.sample_count, \
-     success_count = routing_context_route_states.success_count + EXCLUDED.success_count, \
-     failure_count = routing_context_route_states.failure_count + EXCLUDED.failure_count, \
-     ema_success_rate = (routing_context_route_states.ema_success_rate * 0.8 + EXCLUDED.ema_success_rate * 0.2), \
-     ema_latency_ms = COALESCE((routing_context_route_states.ema_latency_ms * 0.8 + EXCLUDED.ema_latency_ms * 0.2), \
-     routing_context_route_states.ema_latency_ms, EXCLUDED.ema_latency_ms), \
-     ema_ttfb_ms = COALESCE((routing_context_route_states.ema_ttfb_ms * 0.8 + EXCLUDED.ema_ttfb_ms * 0.2), \
-     routing_context_route_states.ema_ttfb_ms, EXCLUDED.ema_ttfb_ms), \
-     ema_output_tps = COALESCE((routing_context_route_states.ema_output_tps * 0.8 + EXCLUDED.ema_output_tps * 0.2), \
-     routing_context_route_states.ema_output_tps, EXCLUDED.ema_output_tps), last_updated_at = EXCLUDED.last_updated_at"
+fn context_state_upsert_sql(current_weight_ref: &str, incoming_weight_ref: &str) -> String {
+    format!(
+        "ON CONFLICT (profile_id, context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
+         route_config_fingerprint, price_config_fingerprint) \
+         DO UPDATE SET sample_count = routing_context_route_states.sample_count + EXCLUDED.sample_count, \
+         success_count = routing_context_route_states.success_count + EXCLUDED.success_count, \
+         failure_count = routing_context_route_states.failure_count + EXCLUDED.failure_count, \
+         ema_success_rate = (routing_context_route_states.ema_success_rate * {current_weight_ref} + EXCLUDED.ema_success_rate * {incoming_weight_ref}), \
+         ema_latency_ms = COALESCE((routing_context_route_states.ema_latency_ms * {current_weight_ref} + EXCLUDED.ema_latency_ms * {incoming_weight_ref}), \
+         routing_context_route_states.ema_latency_ms, EXCLUDED.ema_latency_ms), \
+         ema_ttfb_ms = COALESCE((routing_context_route_states.ema_ttfb_ms * {current_weight_ref} + EXCLUDED.ema_ttfb_ms * {incoming_weight_ref}), \
+         routing_context_route_states.ema_ttfb_ms, EXCLUDED.ema_ttfb_ms), \
+         ema_output_tps = COALESCE((routing_context_route_states.ema_output_tps * {current_weight_ref} + EXCLUDED.ema_output_tps * {incoming_weight_ref}), \
+         routing_context_route_states.ema_output_tps, EXCLUDED.ema_output_tps), last_updated_at = EXCLUDED.last_updated_at"
+    )
 }
 
 fn select_sql() -> &'static str {
-    "SELECT context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
+    "SELECT profile_id, context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
      route_config_fingerprint, price_config_fingerprint, sample_count, success_count, failure_count, ema_success_rate, ema_ttfb_ms, ema_latency_ms, \
      ema_output_tps, last_updated_at \
      FROM routing_context_route_states"
@@ -59,6 +64,7 @@ fn select_sql() -> &'static str {
 
 fn context_state_values(delta: &RoutingContextRouteStateDelta) -> Vec<Value> {
     vec![
+        Value::from(delta.profile_id.clone()),
         Value::from(delta.context_key.clone()),
         Value::from(delta.route.provider_id.clone()),
         Value::from(delta.route.key_id.clone()),
@@ -80,8 +86,9 @@ fn context_state_values(delta: &RoutingContextRouteStateDelta) -> Vec<Value> {
     ]
 }
 
-fn context_state_columns() -> [&'static str; 18] {
+fn context_state_columns() -> [&'static str; 19] {
     [
+        "profile_id",
         "context_key",
         "provider_id",
         "key_id",
@@ -122,6 +129,7 @@ fn push(params: &mut Vec<Value>, value: Value) -> String {
 
 #[derive(Clone, Debug, FromQueryResult)]
 struct RoutingContextRouteStateRow {
+    profile_id: String,
     context_key: String,
     provider_id: String,
     key_id: String,
@@ -146,6 +154,7 @@ impl From<RoutingContextRouteStateRow> for RoutingContextRouteStateRecord {
     fn from(row: RoutingContextRouteStateRow) -> Self {
         let route = row.route();
         Self {
+            profile_id: row.profile_id,
             context_key: row.context_key,
             route,
             sample_count: row.sample_count.max(0) as u64,
@@ -186,11 +195,12 @@ mod tests {
 
     #[test]
     fn context_state_upsert_accumulates_counts_and_updates_ema() {
-        let sql = context_state_upsert_sql();
+        let sql = context_state_upsert_sql("$20", "$21");
 
         assert!(sql.contains("sample_count = routing_context_route_states.sample_count + EXCLUDED.sample_count"));
         assert!(sql.contains("success_count = routing_context_route_states.success_count + EXCLUDED.success_count"));
-        assert!(sql.contains("ema_success_rate = (routing_context_route_states.ema_success_rate * 0.8"));
+        assert!(sql.contains("profile_id, context_key"));
+        assert!(sql.contains("ema_success_rate = (routing_context_route_states.ema_success_rate * $20"));
         assert!(sql.contains("route_config_fingerprint, price_config_fingerprint)"));
     }
 
@@ -198,8 +208,9 @@ mod tests {
     fn context_state_insert_includes_fingerprints() {
         let columns = context_state_columns();
 
+        assert!(columns.contains(&"profile_id"));
         assert!(columns.contains(&"route_config_fingerprint"));
         assert!(columns.contains(&"price_config_fingerprint"));
-        assert_eq!(columns[0], "context_key");
+        assert_eq!(columns[0], "profile_id");
     }
 }
