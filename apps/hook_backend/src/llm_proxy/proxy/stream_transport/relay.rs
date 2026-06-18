@@ -125,6 +125,9 @@ impl StreamRelay {
     }
 
     pub(super) async fn record_streaming_started(&mut self, upstream_headers: HeaderMap, content_type: Option<&HeaderValue>) -> Result<(), LlmProxyError> {
+        if !super::should_record_streaming_started_after_prefetch(self.finished, self.recorded_terminal) {
+            return Ok(());
+        }
         super::record_stream_headers(&self.context, upstream_headers, content_type, self.first_byte_time_ms).await
     }
 

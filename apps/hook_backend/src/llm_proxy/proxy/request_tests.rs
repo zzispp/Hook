@@ -42,6 +42,38 @@ fn openai_chat_stream_requests_include_usage() {
     assert_eq!(body["stream_options"]["include_usage"], true);
 }
 
+#[test]
+fn openai_image_stream_request_keeps_stream_flag() {
+    let mut body = json!({
+        "model": "gpt-image-2",
+        "prompt": "draw a green square",
+        "stream": true,
+        "partial_images": 1
+    });
+
+    rewrite_upstream_body(&mut body, &candidate("openai_image"), false, ApiFormat::OpenAiImage).unwrap();
+
+    assert_eq!(body["stream"], true);
+    assert_eq!(body["model"], "upstream-model");
+    assert!(body.get("stream_options").is_none());
+}
+
+#[test]
+fn openai_image_force_non_stream_removes_stream_flag() {
+    let mut body = json!({
+        "model": "gpt-image-2",
+        "prompt": "draw a green square",
+        "stream": true,
+        "partial_images": 1
+    });
+
+    rewrite_upstream_body(&mut body, &candidate("openai_image"), true, ApiFormat::OpenAiImage).unwrap();
+
+    assert!(body.get("stream").is_none());
+    assert_eq!(body["model"], "upstream-model");
+    assert!(body.get("stream_options").is_none());
+}
+
 #[tokio::test]
 async fn openai_cli_to_chat_body_rule_can_drop_stream_options() {
     let body = json!({

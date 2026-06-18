@@ -154,6 +154,10 @@ fn prefetch_error_outcome(relay: &relay::StreamRelay, error: LlmProxyError) -> R
     relay.failure_response().map(PrefetchOutcome::FailureResponse).or(Err(error))
 }
 
+fn should_record_streaming_started_after_prefetch(finished: bool, recorded_terminal: bool) -> bool {
+    !finished && !recorded_terminal
+}
+
 async fn stream_status_failure(
     context: StreamAttemptContext,
     response: req::Response,
@@ -209,4 +213,19 @@ async fn record_stream_headers(
 
 fn json_error(error: serde_json::Error) -> LlmProxyError {
     LlmProxyError::Infrastructure(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_record_streaming_started_after_prefetch;
+
+    #[test]
+    fn image_stream_prefetch_terminal_skips_streaming_started_patch() {
+        assert!(!should_record_streaming_started_after_prefetch(true, true));
+    }
+
+    #[test]
+    fn active_stream_prefetch_records_streaming_started_patch() {
+        assert!(should_record_streaming_started_after_prefetch(false, false));
+    }
 }
