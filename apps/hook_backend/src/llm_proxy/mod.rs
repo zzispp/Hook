@@ -4,7 +4,6 @@ mod billing;
 mod cache;
 mod cache_affinity;
 mod candidate;
-mod capabilities;
 mod client_error;
 mod codex_chat_history;
 mod error;

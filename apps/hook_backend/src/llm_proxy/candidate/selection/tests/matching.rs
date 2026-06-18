@@ -234,7 +234,6 @@ fn matching_candidate_parts_routes_explicit_image_intent_to_image_endpoint() {
             model_name: "gpt-test",
             is_stream: false,
             has_openai_responses_custom_tool_items: false,
-            required_capability: Some("image_generation"),
             features: types::provider::RoutingRequestFeatures::unknown("openai:cli", false, Some("image_generation")),
         },
         affinity: None,
@@ -269,7 +268,6 @@ fn matching_candidate_parts_does_not_route_stream_responses_to_compact_endpoint(
             model_name: "gpt-test",
             is_stream: true,
             has_openai_responses_custom_tool_items: false,
-            required_capability: None,
             features: types::provider::RoutingRequestFeatures::unknown("openai:cli", true, None),
         },
         affinity: None,
@@ -300,7 +298,6 @@ fn matching_candidate_parts_does_not_treat_responses_compact_as_exact_route() {
             model_name: "gpt-test",
             is_stream: false,
             has_openai_responses_custom_tool_items: false,
-            required_capability: None,
             features: types::provider::RoutingRequestFeatures::unknown("openai:cli", false, None),
         },
         affinity: None,
@@ -329,7 +326,6 @@ fn matching_candidate_parts_routes_responses_request_to_chat_endpoint_through_co
             model_name: "gpt-test",
             is_stream: true,
             has_openai_responses_custom_tool_items: false,
-            required_capability: None,
             features: types::provider::RoutingRequestFeatures::unknown("openai:cli", true, None),
         },
         affinity: None,
@@ -378,7 +374,6 @@ fn matching_candidate_parts_routes_non_chat_request_only_to_matching_data_format
             model_name: "gpt-test",
             is_stream: false,
             has_openai_responses_custom_tool_items: false,
-            required_capability: Some("image_generation"),
             features: types::provider::RoutingRequestFeatures::unknown("openai_image", false, Some("image_generation")),
         },
         affinity: None,
@@ -412,7 +407,6 @@ fn matching_candidate_parts_routes_image_edit_only_to_exact_edit_endpoint() {
             model_name: "gpt-test",
             is_stream: false,
             has_openai_responses_custom_tool_items: false,
-            required_capability: Some("image_generation"),
             features: types::provider::RoutingRequestFeatures::unknown("openai_image_edit", false, Some("image_generation")),
         },
         affinity: None,
@@ -427,7 +421,7 @@ fn matching_candidate_parts_routes_image_edit_only_to_exact_edit_endpoint() {
 }
 
 #[test]
-fn matching_candidate_parts_requires_global_model_image_generation_capability() {
+fn matching_candidate_parts_routes_image_endpoint_without_global_capability() {
     let mut snapshot = snapshot_with_provider(provider_with_endpoints_and_keys());
     snapshot.models[0].supported_capabilities = None;
     let group = &snapshot.groups[0];
@@ -443,7 +437,6 @@ fn matching_candidate_parts_requires_global_model_image_generation_capability() 
             model_name: "gpt-test",
             is_stream: false,
             has_openai_responses_custom_tool_items: false,
-            required_capability: Some("image_generation"),
             features: types::provider::RoutingRequestFeatures::unknown("openai:cli", false, Some("image_generation")),
         },
         affinity: None,
@@ -452,11 +445,13 @@ fn matching_candidate_parts_requires_global_model_image_generation_capability() 
         cooled_provider_ids: &HashSet::new(),
     });
 
-    assert_eq!(parts.len(), 0);
+    assert_eq!(parts.len(), 2);
+    assert!(parts.iter().all(|part| part.routing_api_format == "openai_image"));
+    assert!(parts.iter().all(|part| part.endpoints[0].api_format == "openai_image"));
 }
 
 #[test]
-fn matching_candidate_parts_requires_provider_key_image_generation_capability() {
+fn matching_candidate_parts_requires_provider_key_to_support_image_api_format() {
     let capable_key = provider_key("key-capable", 10, vec!["openai_image"]);
     let missing_capability_key = provider_key("key-missing-capability", 20, vec!["openai:chat"]);
     let provider = provider_with_keys(vec![missing_capability_key, capable_key]);
@@ -474,7 +469,6 @@ fn matching_candidate_parts_requires_provider_key_image_generation_capability() 
             model_name: "gpt-test",
             is_stream: false,
             has_openai_responses_custom_tool_items: false,
-            required_capability: Some("image_generation"),
             features: types::provider::RoutingRequestFeatures::unknown("openai:cli", false, Some("image_generation")),
         },
         affinity: None,

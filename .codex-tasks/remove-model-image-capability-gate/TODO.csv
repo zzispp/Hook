@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect existing candidate capability tests,DONE,Relevant tests and call sites identified,rg -n "requires_global_model_image_generation_capability|key_supports_required_capability|global_model_supports_required_capability" apps/hook_backend/src,2026-06-18T15:35:00+08:00,0,
+2,Write failing behavior test,DONE,Test proves image api_format routes without global image_generation capability,cargo test -p hook_backend matching_candidate_parts_routes_image_endpoint_without_global_capability,2026-06-18T15:39:00+08:00,0,"Failed as expected before implementation: left 0 right 2"
+3,Remove model capability filter,DONE,Candidate matching no longer reads global model supported_capabilities for routing,cargo test -p hook_backend matching_candidate_parts_routes_image_endpoint_without_global_capability,2026-06-18T15:44:00+08:00,0,
+4,Run focused validation,DONE,Focused candidate tests pass,cargo test -p hook_backend matching_candidate_parts,2026-06-18T15:45:00+08:00,0,
+5,Format and review,DONE,Rust formatting applied and diff reviewed,cargo fmt --all,2026-06-18T15:48:00+08:00,0,

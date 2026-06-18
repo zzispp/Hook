@@ -78,7 +78,6 @@ pub(super) async fn prepare_proxy_request(
             model_name,
             is_stream,
             has_openai_responses_custom_tool_items: has_openai_responses_custom_tool_items(api_format, &body),
-            required_capability,
             features,
         },
     )
