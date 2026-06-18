@@ -124,9 +124,21 @@ impl StreamRelay {
 
     fn finish_usage_parsers(&mut self) -> Result<(), LlmProxyError> {
         let usage = self.usage_parser.finish()?;
+        self.finish_output_start_detector()?;
         self.merge_usage(usage.usage);
         self.protocol_completed |= usage.completed;
         self.estimate_missing_usage()
+    }
+
+    fn finish_output_start_detector(&mut self) -> Result<(), LlmProxyError> {
+        if self.client_output_started {
+            return Ok(());
+        }
+        self.client_output_started = self
+            .output_start_detector
+            .finish()
+            .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+        Ok(())
     }
 
     fn estimate_missing_usage(&mut self) -> Result<(), LlmProxyError> {

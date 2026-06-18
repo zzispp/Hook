@@ -13,10 +13,11 @@ use axum::http::{HeaderMap, HeaderValue};
 use proxy::format_conversion::{ApiFormat, StreamConversionState};
 
 use super::{
-    StreamAttemptContext, UpstreamStream,
+    StreamAttemptContext, StreamPreOutputFailure, UpstreamStream,
     body_capture::StreamBodyCapture,
     estimated_usage::StreamUsageEstimator,
     event::{render_keepalive, stream_error},
+    output_start::StreamOutputStartDetector,
     preflight::inspect_provider_error,
     record::{record_stream_attempt, response_read_error_type},
     status::{StreamEndReason, StreamStatus},
@@ -40,11 +41,13 @@ pub(super) struct StreamRelay {
     pending: VecDeque<req::Bytes>,
     usage_parser: StreamUsageParser,
     usage_estimator: StreamUsageEstimator,
+    output_start_detector: StreamOutputStartDetector,
     usage: Option<TokenUsage>,
     first_byte_time_ms: Option<i64>,
     last_upstream_item_at: Instant,
     stream_idle_timeout: Option<Duration>,
     yielded_any: bool,
+    client_output_started: bool,
     finished: bool,
     protocol_completed: bool,
     recorded_terminal: bool,
@@ -78,11 +81,13 @@ impl StreamRelay {
             pending: VecDeque::new(),
             usage_parser: StreamUsageParser::new(target_format),
             usage_estimator,
+            output_start_detector: StreamOutputStartDetector::new(target_format),
             usage: None,
             first_byte_time_ms: None,
             last_upstream_item_at,
             stream_idle_timeout,
             yielded_any: false,
+            client_output_started: false,
             finished: false,
             protocol_completed: false,
             recorded_terminal: false,
@@ -94,7 +99,7 @@ impl StreamRelay {
     }
 
     pub(super) async fn prefetch(&mut self) -> Result<(), LlmProxyError> {
-        while self.pending.is_empty() && !self.finished {
+        while !self.ready_to_commit() && !self.finished {
             let Some(item) = futures_util::StreamExt::next(&mut self.upstream).await else {
                 self.finish_success().await?;
                 break;
@@ -102,6 +107,13 @@ impl StreamRelay {
             self.handle_upstream_item(item, true).await?;
         }
         Ok(())
+    }
+
+    pub(super) fn pre_output_failure(&self) -> Result<Option<StreamPreOutputFailure>, LlmProxyError> {
+        if self.finished && self.client_failure.is_some() && !self.client_output_started {
+            return self.pre_output_failure_input().map(Some);
+        }
+        Ok(None)
     }
 
     pub(super) async fn record_first_byte_timeout(&mut self) -> Result<(), LlmProxyError> {
@@ -132,6 +144,16 @@ impl StreamRelay {
                 failure.body().map_err(|error| LlmProxyError::Infrastructure(error.to_string()))?,
             ))
             .map_err(super::super::transport::response_error)
+    }
+
+    fn pre_output_failure_input(&self) -> Result<StreamPreOutputFailure, LlmProxyError> {
+        let Some(failure) = &self.client_failure else {
+            return Err(LlmProxyError::Upstream("stream pre-output failure missing terminal client failure".into()));
+        };
+        Ok(StreamPreOutputFailure {
+            status: failure.status,
+            message: failure.message.clone(),
+        })
     }
 
     async fn next_item(&mut self) -> Option<DownstreamItem> {
@@ -169,7 +191,11 @@ impl StreamRelay {
                 }
                 self.consume_bytes(bytes, fail_before_output).await
             }
-            Err(error) => self.record_read_error(&error).await.and_then(|()| Err(error.into())),
+            Err(error) => {
+                self.record_read_error(&error).await?;
+                self.finished = true;
+                Err(error.into())
+            }
         }
     }
 
@@ -233,6 +259,10 @@ impl StreamRelay {
             return;
         }
         self.first_byte_time_ms = Some(self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
+    }
+
+    fn ready_to_commit(&self) -> bool {
+        self.client_output_started && !self.pending.is_empty()
     }
 }
 

@@ -290,6 +290,13 @@ pub fn gateway_timeout_failure() -> UpstreamFailure {
     }
 }
 
+pub fn upstream_failure(status: StatusCode) -> UpstreamFailure {
+    UpstreamFailure {
+        status,
+        cooldown_triggered: false,
+    }
+}
+
 async fn response_body(
     http: &req::ReqwestClient,
     bytes: &[u8],

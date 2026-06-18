@@ -256,83 +256,143 @@ struct StreamAttemptTaskInput {
     attempt_cancel: AttemptCancelGuard,
 }
 
+struct StreamAttemptTaskContext {
+    state: LlmProxyState,
+    request_id: String,
+    cache_affinity_ttl_minutes: i64,
+    candidate: ProxyCandidate,
+    retry_index: i32,
+    started: Instant,
+    payload: AttemptPayload,
+    attempt_cancel: AttemptCancelGuard,
+}
+
 async fn execute_stream_candidate_task(input: StreamAttemptTaskInput) -> Result<StreamAttemptTaskOutput, LlmProxyError> {
-    let response_start_timeout = timeout::response_start_timeout(&input.candidate, true);
-    let response = match execute_upstream_request(&input.state.http, input.request, response_start_timeout).await {
+    let (context, request) = stream_task_parts(input);
+    let response_start_timeout = timeout::response_start_timeout(&context.candidate, true);
+    let response = match execute_upstream_request(&context.state.http, request, response_start_timeout).await {
         Ok(response) => {
-            input.attempt_cancel.mark_response_started();
+            context.attempt_cancel.mark_response_started();
             response
         }
-        Err(error) => {
-            input.attempt_cancel.disarm();
-            let mut last_error = None;
-            let outcome = record_send_error(
-                &input.state,
-                &input.request_id,
-                &input.candidate,
-                input.retry_index,
-                input.started,
-                &error,
-                &mut last_error,
-            )
-            .await?;
-            affinity::invalidate_matching(&input.state, &input.candidate).await?;
-            return Ok(StreamAttemptTaskOutput {
-                outcome: option_response_outcome(outcome),
-                last_failure: None,
-                last_error,
-            });
-        }
+        Err(error) => return stream_send_error_task_output(&context, error).await,
     };
     if !response.status().is_success() {
-        let mut last_failure = None;
-        let outcome = handle_upstream_failure(
-            &input.state,
-            &input.request_id,
-            &input.candidate,
-            input.retry_index,
-            input.started,
-            response,
-            &mut last_failure,
-        )
-        .await;
-        input.attempt_cancel.disarm();
-        let outcome = outcome?;
-        return Ok(StreamAttemptTaskOutput {
-            outcome,
-            last_failure,
-            last_error: None,
-        });
+        return stream_status_failure_task_output(&context, response).await;
     }
-    let response = stream_transport::stream_response(
-        stream_transport::StreamResponseArgs {
-            state: input.state.clone(),
-            request_id: input.request_id.clone(),
-            response,
-            candidate: input.candidate.clone(),
-            source_format: input.payload.source_format,
-            target_format: input.payload.target_format,
-            provider_request_body: input.payload.body,
-            started: input.started,
-            retry_index: input.retry_index,
+    stream_success_task_output(context, response).await
+}
+
+fn stream_task_parts(input: StreamAttemptTaskInput) -> (StreamAttemptTaskContext, req::Request) {
+    let StreamAttemptTaskInput {
+        state,
+        request_id,
+        cache_affinity_ttl_minutes,
+        candidate,
+        retry_index,
+        started,
+        payload,
+        request,
+        attempt_cancel,
+    } = input;
+    (
+        StreamAttemptTaskContext {
+            state,
+            request_id,
+            cache_affinity_ttl_minutes,
+            candidate,
+            retry_index,
+            started,
+            payload,
+            attempt_cancel,
         },
-        &input.attempt_cancel,
+        request,
+    )
+}
+
+async fn stream_send_error_task_output(context: &StreamAttemptTaskContext, error: req::ClientError) -> Result<StreamAttemptTaskOutput, LlmProxyError> {
+    context.attempt_cancel.disarm();
+    let mut last_error = None;
+    let outcome = record_send_error(
+        &context.state,
+        &context.request_id,
+        &context.candidate,
+        context.retry_index,
+        context.started,
+        &error,
+        &mut last_error,
+    )
+    .await?;
+    affinity::invalidate_matching(&context.state, &context.candidate).await?;
+    Ok(StreamAttemptTaskOutput {
+        outcome: option_response_outcome(outcome),
+        last_failure: None,
+        last_error,
+    })
+}
+
+async fn stream_status_failure_task_output(context: &StreamAttemptTaskContext, response: UpstreamResponse) -> Result<StreamAttemptTaskOutput, LlmProxyError> {
+    let mut last_failure = None;
+    let outcome = handle_upstream_failure(
+        &context.state,
+        &context.request_id,
+        &context.candidate,
+        context.retry_index,
+        context.started,
+        response,
+        &mut last_failure,
     )
     .await;
-    match response {
-        Ok(response) => {
-            affinity::remember(&input.state, &input.candidate, input.cache_affinity_ttl_minutes).await?;
+    context.attempt_cancel.disarm();
+    Ok(StreamAttemptTaskOutput {
+        outcome: outcome?,
+        last_failure,
+        last_error: None,
+    })
+}
+
+async fn stream_success_task_output(context: StreamAttemptTaskContext, response: UpstreamResponse) -> Result<StreamAttemptTaskOutput, LlmProxyError> {
+    let stream_outcome = stream_transport::stream_response(
+        stream_transport::StreamResponseArgs {
+            state: context.state.clone(),
+            request_id: context.request_id.clone(),
+            response,
+            candidate: context.candidate.clone(),
+            source_format: context.payload.source_format,
+            target_format: context.payload.target_format,
+            provider_request_body: context.payload.body,
+            started: context.started,
+            retry_index: context.retry_index,
+        },
+        &context.attempt_cancel,
+    )
+    .await;
+    match stream_outcome {
+        Ok(stream_transport::StreamResponseOutcome::Response(response)) => {
+            affinity::remember(&context.state, &context.candidate, context.cache_affinity_ttl_minutes).await?;
             Ok(StreamAttemptTaskOutput {
                 outcome: AttemptOnceOutcome::Response(response),
                 last_failure: None,
                 last_error: None,
             })
         }
+        Ok(stream_transport::StreamResponseOutcome::PreOutputFailure(failure)) => {
+            affinity::invalidate_matching(&context.state, &context.candidate).await?;
+            Ok(stream_pre_output_failure_task_output(failure))
+        }
         Err(error) => Ok(StreamAttemptTaskOutput {
             outcome: AttemptOnceOutcome::ContinueCandidate,
             last_failure: None,
             last_error: Some(error),
         }),
+    }
+}
+
+fn stream_pre_output_failure_task_output(failure: stream_transport::StreamPreOutputFailure) -> StreamAttemptTaskOutput {
+    StreamAttemptTaskOutput {
+        outcome: AttemptOnceOutcome::ContinueCandidate,
+        last_failure: Some(transport::upstream_failure(failure.status)),
+        last_error: Some(LlmProxyError::Upstream(failure.message)),
     }
 }
 
@@ -488,24 +548,7 @@ struct SuccessResponseInput<'a> {
 }
 
 async fn success_response(input: SuccessResponseInput<'_>) -> Result<AttemptOnceOutcome, LlmProxyError> {
-    if input.prepared.is_stream {
-        return stream_transport::stream_response(
-            stream_transport::StreamResponseArgs {
-                state: input.state,
-                request_id: input.prepared.request_id.clone(),
-                response: input.response,
-                candidate: input.candidate.clone(),
-                source_format: input.payload.source_format,
-                target_format: input.payload.target_format,
-                provider_request_body: input.payload.body,
-                started: input.started,
-                retry_index: input.retry_index,
-            },
-            &input.attempt_cancel,
-        )
-        .await
-        .map(AttemptOnceOutcome::Response);
-    }
+    debug_assert!(!input.prepared.is_stream, "stream responses must use the watchdog task path");
     let response = transport::FullResponseArgs {
         state: input.state,
         request_id: input.prepared.request_id.clone(),
