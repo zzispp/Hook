@@ -11,7 +11,7 @@ use super::{
     },
     failure_classification::{FailureDecision, classify_status},
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
-    request::{AttemptPayload, PreparedProxyRequest, attempt_payload},
+    request::{AttemptContext, AttemptPayload, PreparedProxyRequest, attempt_payload},
     stream_transport, timeout, transport,
 };
 use crate::llm_proxy::{
@@ -106,7 +106,7 @@ async fn attempt_once(
         }
         Err(error) => return Err(error),
     }
-    let payload = match attempt_payload(prepared.body.clone(), candidate, prepared.force_non_stream) {
+    let payload = match attempt_payload(AttemptContext::from_state(state), prepared.body.clone(), candidate, prepared.force_non_stream).await {
         Ok(payload) => payload,
         Err(error) => {
             let outcome = record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;

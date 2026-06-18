@@ -3,10 +3,11 @@ use serde_json::json;
 use types::model::TieredPricingConfig;
 
 use super::super::{request_image::bridge_openai_chat_image_body, request_tools::openai_request_explicitly_selects_image_generation};
-use super::{apply_reasoning_effort, attempt_payload, has_openai_responses_custom_tool_items, rewrite_upstream_body};
+use super::{AttemptContext, apply_reasoning_effort, attempt_payload, has_openai_responses_custom_tool_items, rewrite_upstream_body};
 use crate::llm_proxy::{
     OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
     candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
+    codex_chat_history::{CodexChatHistoryStore, test_support::test_history},
 };
 use proxy::format_conversion::ApiFormat;
 
@@ -41,8 +42,8 @@ fn openai_chat_stream_requests_include_usage() {
     assert_eq!(body["stream_options"]["include_usage"], true);
 }
 
-#[test]
-fn openai_cli_to_chat_body_rule_can_drop_stream_options() {
+#[tokio::test]
+async fn openai_cli_to_chat_body_rule_can_drop_stream_options() {
     let body = json!({
         "model": "gpt-5.5",
         "input": [{
@@ -61,15 +62,16 @@ fn openai_cli_to_chat_body_rule_can_drop_stream_options() {
         {"action": "drop", "path": "stream_options"}
     ]));
 
-    let payload = attempt_payload(body, &candidate, false).unwrap();
+    let history = test_history().await;
+    let payload = attempt_payload(attempt_context(&history), body, &candidate, false).await.unwrap();
 
     assert_eq!(payload.body["stream"], true);
     assert!(payload.body.get("stream_options").is_none());
     assert_eq!(payload.body["messages"][0]["role"], "user");
 }
 
-#[test]
-fn openai_cli_prunes_image_generation_tool_when_key_lacks_capability() {
+#[tokio::test]
+async fn openai_cli_prunes_image_generation_tool_when_key_lacks_capability() {
     let body = json!({
         "model": "gpt-5.5",
         "input": "hello",
@@ -83,14 +85,15 @@ fn openai_cli_prunes_image_generation_tool_when_key_lacks_capability() {
     candidate.trace.client_api_format = "openai:cli".into();
     candidate.reasoning_effort = None;
 
-    let payload = attempt_payload(body, &candidate, false).unwrap();
+    let history = test_history().await;
+    let payload = attempt_payload(attempt_context(&history), body, &candidate, false).await.unwrap();
 
     assert_eq!(payload.body["tools"], json!([{"type": "function", "name": "lookup"}]));
     assert_eq!(payload.body["tool_choice"], "auto");
 }
 
-#[test]
-fn openai_cli_keeps_image_generation_tool_when_key_has_capability() {
+#[tokio::test]
+async fn openai_cli_keeps_image_generation_tool_when_key_has_capability() {
     let body = json!({
         "model": "gpt-5.5",
         "input": "hello",
@@ -101,13 +104,14 @@ fn openai_cli_keeps_image_generation_tool_when_key_has_capability() {
     candidate.reasoning_effort = None;
     candidate.key_supports_image_generation = true;
 
-    let payload = attempt_payload(body, &candidate, false).unwrap();
+    let history = test_history().await;
+    let payload = attempt_payload(attempt_context(&history), body, &candidate, false).await.unwrap();
 
     assert_eq!(payload.body["tools"], json!([{"type": "image_generation"}]));
 }
 
-#[test]
-fn openai_cli_keeps_explicit_image_generation_tool_choice() {
+#[tokio::test]
+async fn openai_cli_keeps_explicit_image_generation_tool_choice() {
     let body = json!({
         "model": "gpt-5.5",
         "input": "draw",
@@ -118,14 +122,15 @@ fn openai_cli_keeps_explicit_image_generation_tool_choice() {
     candidate.trace.client_api_format = "openai:cli".into();
     candidate.reasoning_effort = None;
 
-    let payload = attempt_payload(body, &candidate, false).unwrap();
+    let history = test_history().await;
+    let payload = attempt_payload(attempt_context(&history), body, &candidate, false).await.unwrap();
 
     assert_eq!(payload.body["tools"], json!([{"type": "image_generation"}]));
     assert_eq!(payload.body["tool_choice"]["type"], "image_generation");
 }
 
-#[test]
-fn openai_cli_removes_tools_field_when_only_image_generation_was_pruned() {
+#[tokio::test]
+async fn openai_cli_removes_tools_field_when_only_image_generation_was_pruned() {
     let body = json!({
         "model": "gpt-5.5",
         "input": "hello",
@@ -135,7 +140,8 @@ fn openai_cli_removes_tools_field_when_only_image_generation_was_pruned() {
     candidate.trace.client_api_format = "openai:cli".into();
     candidate.reasoning_effort = None;
 
-    let payload = attempt_payload(body, &candidate, false).unwrap();
+    let history = test_history().await;
+    let payload = attempt_payload(attempt_context(&history), body, &candidate, false).await.unwrap();
 
     assert!(payload.body.get("tools").is_none());
 }
@@ -269,4 +275,8 @@ fn candidate(provider_api_format: &str) -> ProxyCandidate {
         is_cached: false,
         route: CandidateRoute { options: Vec::new() },
     }
+}
+
+fn attempt_context(history: &CodexChatHistoryStore) -> AttemptContext<'_> {
+    AttemptContext { codex_chat_history: history }
 }

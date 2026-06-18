@@ -8,6 +8,7 @@ use crate::llm_proxy::{
     audit::record_scheduled_candidates,
     billing::enforce_preflight_access,
     candidate::{CandidateRequest, CandidateSelection, ProxyCandidate, select_candidates},
+    codex_chat_history::CodexChatHistoryStore,
     formats, rate_limit,
     rate_limit::ProviderKeyProbeSlotOptions,
 };
@@ -15,6 +16,7 @@ use crate::llm_proxy::{
 use super::{
     body_rules::apply_provider_body_rules,
     capture::RequestCapture,
+    request_codex_history,
     request_features::routing_request_features,
     request_image::{client_is_openai_chat_or_responses, client_source_format, openai_image_bridge_body, provider_is_openai_image},
     request_tools::{openai_request_explicitly_selects_image_generation, prune_unsupported_image_generation_tool},
@@ -37,6 +39,18 @@ pub(super) struct AttemptPayload {
     pub(super) original_body: Value,
     pub(super) source_format: ApiFormat,
     pub(super) target_format: ApiFormat,
+}
+
+pub(super) struct AttemptContext<'a> {
+    pub(super) codex_chat_history: &'a CodexChatHistoryStore,
+}
+
+impl<'a> AttemptContext<'a> {
+    pub(super) fn from_state(state: &'a LlmProxyState) -> Self {
+        Self {
+            codex_chat_history: state.codex_chat_history(),
+        }
+    }
 }
 
 pub(super) async fn prepare_proxy_request(
@@ -111,9 +125,14 @@ pub(super) async fn prepare_proxy_request_with_candidates(
     })
 }
 
-pub(super) fn attempt_payload(body: Value, candidate: &ProxyCandidate, force_non_stream: bool) -> Result<AttemptPayload, LlmProxyError> {
+pub(super) async fn attempt_payload(
+    context: AttemptContext<'_>,
+    body: Value,
+    candidate: &ProxyCandidate,
+    force_non_stream: bool,
+) -> Result<AttemptPayload, LlmProxyError> {
     let original_body = body.clone();
-    let (body, source_format, target_format) = upstream_body(body, &original_body, candidate, force_non_stream)?;
+    let (body, source_format, target_format) = upstream_body(context, body, &original_body, candidate, force_non_stream).await?;
     Ok(AttemptPayload {
         body,
         original_body,
@@ -168,7 +187,8 @@ fn ensure_selection_format(selection: &CandidateSelection, api_format: &str, is_
     Ok(())
 }
 
-fn upstream_body(
+async fn upstream_body(
+    context: AttemptContext<'_>,
     body: Value,
     original_body: &Value,
     candidate: &ProxyCandidate,
@@ -183,6 +203,7 @@ fn upstream_body(
         return Ok((body, client_source_format(candidate)?, ApiFormat::OpenAiImage));
     }
     let (source, target) = formats::conversion_formats(&candidate.trace.client_api_format, &candidate.trace.provider_api_format, is_stream)?;
+    request_codex_history::enrich_responses_chat_request(context, &mut body, source, target).await?;
     if candidate.trace.needs_conversion {
         body = FormatConversionRegistry
             .convert_request(&body, source, target)
