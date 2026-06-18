@@ -245,7 +245,7 @@ function MappingRow({
         fullWidth
         size="small"
         required
-        label={t('providers.upstreamModel')}
+        label={t('providers.upstreamModels')}
         value={draft.upstream_model_name}
         onChange={(event) => onChange({ upstream_model_name: event.target.value })}
       />

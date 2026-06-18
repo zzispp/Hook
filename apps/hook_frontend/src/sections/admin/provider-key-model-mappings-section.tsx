@@ -33,7 +33,7 @@ export function ProviderKeyModelMappingsSection({ providerId, apiKeys, models, o
     <Box sx={panelSx}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={headerSx}>
         <Box>
-          <Typography variant="subtitle2">{t('providers.modelMappings')}</Typography>
+          <Typography variant="subtitle2">{t('providers.keyModelMappingsTitle')}</Typography>
           <Typography variant="caption" color="text.secondary">
             {t('providers.reasoningEffortHelper')}
           </Typography>
@@ -125,12 +125,13 @@ function MappingRow({
   const { t } = useTranslate('admin');
   const model = models.find((entry) => entry.id === item.global_model_id);
   const title = model?.display_name || model?.name || item.global_model_id;
+  const secondary = model?.display_name && model?.name ? model.name : model?.name || item.global_model_id;
 
   return (
     <Box sx={rowSx}>
       <Typography variant="subtitle2">{title}</Typography>
-      <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace' }}>
-        {model?.name || item.global_model_id}
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        {secondary}
       </Typography>
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
         <Chip size="small" label={item.upstream_model_name} sx={{ fontFamily: 'monospace' }} />

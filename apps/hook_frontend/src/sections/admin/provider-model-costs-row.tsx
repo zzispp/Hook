@@ -22,6 +22,7 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
 import { costRatioInfo } from './provider-model-cost-ratio';
+import { bindingSecondaryLabel } from './provider-model-cost-utils';
 
 export function ProviderModelCostsRow({
   providerId,
@@ -52,7 +53,7 @@ export function ProviderModelCostsRow({
       <Stack direction="row" justifyContent="space-between" spacing={1.5} alignItems="flex-start">
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle2" noWrap>{row.modelLabel}</Typography>
-          <Typography variant="caption" sx={monoSx}>{row.binding.global_model_id}</Typography>
+          <Typography variant="caption" color="text.secondary">{bindingSecondaryLabel(row.binding, row.models)}</Typography>
         </Box>
         <Stack direction="row" alignItems="center" spacing={0.75}>
           <Chip size="small" color={row.cost ? 'success' : 'default'} label={sourceLabel(row.source, t)} />
@@ -172,6 +173,5 @@ function numberOrNull(value: string) {
 }
 
 const rowSx = { px: 2, py: 1.5, transition: (theme: Theme) => theme.transitions.create('background-color'), '&:hover': { bgcolor: 'action.hover' } };
-const monoSx = { fontFamily: 'monospace', color: 'text.secondary' };
 const metaSx = { mt: 1, alignItems: 'center', color: 'text.secondary' };
 const priceSx = { fontFamily: 'monospace', color: 'text.secondary' };

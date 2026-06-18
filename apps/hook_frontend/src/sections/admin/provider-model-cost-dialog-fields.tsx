@@ -26,6 +26,7 @@ import {
   bindingLabel,
   type TokenCostDraft,
   tokenDraftFromGlobal,
+  bindingSecondaryLabel,
 } from './provider-model-cost-utils';
 
 export type ModelCostDrafts = Record<string, TokenCostDraft>;
@@ -260,7 +261,7 @@ function TokenDraftRow({ binding, draft, label, onChange }: { binding: ProviderM
   const { t } = useTranslate('admin');
   return (
     <Box sx={rowSx}>
-      <TypographyLine label={label} value={binding.global_model_id} />
+      <TypographyLine label={label} value={bindingSecondaryLabel(binding, models)} />
       <Box sx={priceGridSx}>
         <PriceField label={t('requestRecords.inputPrice')} value={draft.input_price_per_million} onChange={(value) => onChange({ input_price_per_million: value })} />
         <PriceField label={t('requestRecords.outputPrice')} value={draft.output_price_per_million} onChange={(value) => onChange({ output_price_per_million: value })} />
