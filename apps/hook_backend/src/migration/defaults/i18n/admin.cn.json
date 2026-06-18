@@ -1849,6 +1849,7 @@
     "modelCosts": "模型成本",
     "modelCostDialogDescription": "为当前提供商的密钥和已关联模型设置上游成本",
     "modelMappings": "模型映射",
+    "keyModelMappingsTitle": "密钥模型映射",
     "modelMappingDialogDescription": "将提供商模型映射到客户端模型",
     "modelList": "模型列表",
     "modelTestDescription": "为 {{name}} 选择测试入口格式和提供商密钥，并编辑对应请求头与请求体",

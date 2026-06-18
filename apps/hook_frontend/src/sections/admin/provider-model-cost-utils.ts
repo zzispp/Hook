@@ -21,6 +21,13 @@ export function bindingLabel(binding: ProviderModelBinding, models: GlobalModelR
   return model?.display_name || model?.name || binding.global_model_id;
 }
 
+export function bindingSecondaryLabel(binding: ProviderModelBinding, models: GlobalModelResponse[]) {
+  const model = findGlobalModel(models, binding.global_model_id);
+  if (!model) return binding.global_model_id;
+  if (model.display_name && model.name) return model.name;
+  return model.name || model.id;
+}
+
 export function bindingsAllowedForKey(key: ProviderApiKey, bindings: ProviderModelBinding[]) {
   if (key.allowed_model_ids.length === 0) return bindings;
 

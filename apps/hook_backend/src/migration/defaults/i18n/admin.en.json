@@ -1849,6 +1849,7 @@
     "modelCosts": "Model costs",
     "modelCostDialogDescription": "Set upstream costs for this provider's keys and associated models",
     "modelMappings": "Model mappings",
+    "keyModelMappingsTitle": "Key model mappings",
     "modelMappingDialogDescription": "Map provider models to client models",
     "modelList": "Model list",
     "modelTestDescription": "Select a test request format and provider key for {{name}}, then edit the matching headers and body",
