@@ -249,6 +249,7 @@ function TokenPriceEditor({
             binding={binding}
             draft={drafts[binding.id] ?? tokenDraftFromGlobal(binding, models, 1)}
             label={bindingLabel(binding, models)}
+            models={models}
             onChange={(patch) => onDraftChange(binding.id, patch)}
           />
         ))}
@@ -257,7 +258,7 @@ function TokenPriceEditor({
   );
 }
 
-function TokenDraftRow({ binding, draft, label, onChange }: { binding: ProviderModelBinding; draft: TokenCostDraft; label: string; onChange: (patch: Partial<TokenCostDraft>) => void }) {
+function TokenDraftRow({ binding, draft, label, models, onChange }: { binding: ProviderModelBinding; draft: TokenCostDraft; label: string; models: GlobalModelResponse[]; onChange: (patch: Partial<TokenCostDraft>) => void }) {
   const { t } = useTranslate('admin');
   return (
     <Box sx={rowSx}>
