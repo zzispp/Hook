@@ -11,6 +11,8 @@ pub use crate::protocol::stream::{CanonicalStreamEvent, CanonicalStreamFrame};
 pub(crate) const OPENAI_RESPONSES_EXTENSION_NAMESPACE: &str = "openai_responses";
 pub(crate) const OPENAI_RESPONSES_LEGACY_EXTENSION_NAMESPACE: &str = "openai_cli";
 const AETHER_EXTENSION_NAMESPACE: &str = "aether";
+const AETHER_SOURCE_API_FORMAT_KEY: &str = "source_api_format";
+const OPENAI_RESPONSES_SOURCE_API_FORMAT: &str = "openai:responses";
 const CLAUDE_TOOL_RESULT_SOURCE_MARKER: &str = "claude_tool_result";
 const OPENAI_CHAT_TOOL_RESULT_SOURCE_MARKER: &str = "openai_chat_tool_result";
 const OPENAI_CHAT_TOOL_ERROR_PREFIX: &str = "[tool error]";
@@ -395,6 +397,23 @@ pub fn canonical_to_openai_chat_request(canonical: &CanonicalRequest) -> Value {
 
 pub fn from_openai_responses_to_canonical_request(body_json: &Value) -> Option<CanonicalRequest> {
     crate::formats::openai::responses::request::from_raw(body_json)
+}
+
+pub(crate) fn mark_openai_responses_request_source(request: &mut CanonicalRequest) {
+    canonical_extension_object_mut(&mut request.extensions, AETHER_EXTENSION_NAMESPACE).insert(
+        AETHER_SOURCE_API_FORMAT_KEY.to_string(),
+        Value::String(OPENAI_RESPONSES_SOURCE_API_FORMAT.to_string()),
+    );
+}
+
+pub(crate) fn canonical_request_is_from_openai_responses(request: &CanonicalRequest) -> bool {
+    request
+        .extensions
+        .get(AETHER_EXTENSION_NAMESPACE)
+        .and_then(Value::as_object)
+        .and_then(|object| object.get(AETHER_SOURCE_API_FORMAT_KEY))
+        .and_then(Value::as_str)
+        == Some(OPENAI_RESPONSES_SOURCE_API_FORMAT)
 }
 
 pub(crate) fn canonical_to_openai_responses_request_with_profile(
@@ -4585,6 +4604,92 @@ mod tests {
         let chat = canonical_to_openai_chat_request(&canonical);
         assert_eq!(chat["messages"][1]["tool_calls"][0]["id"], "call_auto_0");
         assert_eq!(chat["messages"][2]["tool_call_id"], "call_auto_0");
+    }
+
+    #[test]
+    fn openai_responses_to_chat_drops_unanswered_tool_calls() {
+        let request = json!({
+            "model": "gpt-5",
+            "input": [
+                {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "q"}]},
+                {"type": "function_call", "call_id": "fc_auto_0", "name": "exec", "arguments": "{}"}
+            ]
+        });
+
+        let canonical = from_openai_responses_to_canonical_request(&request).expect("canonical request");
+        let chat = canonical_to_openai_chat_request(&canonical);
+        let messages = chat["messages"].as_array().expect("messages");
+
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0]["role"], "user");
+        assert!(messages.iter().all(|message| message.get("tool_calls").is_none()));
+    }
+
+    #[test]
+    fn openai_responses_to_chat_keeps_only_answered_parallel_tool_calls() {
+        let request = json!({
+            "model": "gpt-5",
+            "input": [
+                {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "q"}]},
+                {"type": "function_call", "call_id": "call_a", "name": "exec", "arguments": "{}"},
+                {"type": "function_call", "call_id": "call_b", "name": "exec", "arguments": "{}"},
+                {"type": "function_call_output", "call_id": "call_a", "output": "ok"}
+            ]
+        });
+
+        let canonical = from_openai_responses_to_canonical_request(&request).expect("canonical request");
+        let chat = canonical_to_openai_chat_request(&canonical);
+        let messages = chat["messages"].as_array().expect("messages");
+
+        assert_eq!(messages[1]["tool_calls"].as_array().expect("tool calls").len(), 1);
+        assert_eq!(messages[1]["tool_calls"][0]["id"], "call_a");
+        assert_eq!(messages[2]["role"], "tool");
+        assert_eq!(messages[2]["tool_call_id"], "call_a");
+        assert!(
+            !serde_json::to_string(messages).expect("messages json").contains("call_b"),
+            "unanswered call_b must not be sent to OpenAI Chat"
+        );
+    }
+
+    #[test]
+    fn openai_responses_to_chat_moves_intervening_messages_after_tool_reply() {
+        let request = json!({
+            "model": "gpt-5",
+            "input": [
+                {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "q"}]},
+                {"type": "function_call", "call_id": "call_a", "name": "exec", "arguments": "{}"},
+                {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "Approved command prefix saved"}]},
+                {"type": "function_call_output", "call_id": "call_a", "output": "ok"}
+            ]
+        });
+
+        let canonical = from_openai_responses_to_canonical_request(&request).expect("canonical request");
+        let chat = canonical_to_openai_chat_request(&canonical);
+        let messages = chat["messages"].as_array().expect("messages");
+
+        assert_eq!(messages[1]["role"], "assistant");
+        assert_eq!(messages[1]["tool_calls"][0]["id"], "call_a");
+        assert_eq!(messages[2]["role"], "tool");
+        assert_eq!(messages[2]["tool_call_id"], "call_a");
+        assert_eq!(messages[3]["role"], "user");
+    }
+
+    #[test]
+    fn openai_responses_to_chat_drops_orphan_tool_results() {
+        let request = json!({
+            "model": "gpt-5",
+            "input": [
+                {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "q"}]},
+                {"type": "function_call_output", "call_id": "ghost", "output": "orphan"}
+            ]
+        });
+
+        let canonical = from_openai_responses_to_canonical_request(&request).expect("canonical request");
+        let chat = canonical_to_openai_chat_request(&canonical);
+        let messages = chat["messages"].as_array().expect("messages");
+
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0]["role"], "user");
     }
 
     #[test]

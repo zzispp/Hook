@@ -12,6 +12,7 @@ use types::model::PatchField;
 use super::{
     LlmProxyError, LlmProxyState,
     image_response::normalize_image_response_bytes,
+    response_codex_history,
     response_model::rewrite_response_model_bytes,
     response_payload::{body_value, upstream_status_error_details},
     timeout::{non_stream_total_timeout, remaining_timeout},
@@ -157,6 +158,7 @@ async fn full_success_response(input: FullResponseInput) -> Result<Response, Llm
     } else {
         body
     };
+    response_codex_history::record_non_stream_response(input.state.codex_chat_history(), input.source_format, &body).await?;
     record_attempt(
         &input.state,
         &input.request_id,
