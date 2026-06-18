@@ -12,7 +12,6 @@ use crate::llm_proxy::{
         CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
     },
     candidate::CandidateRequest,
-    capabilities::capability_list_enabled,
     formats,
     model_access::provider_allowed,
 };
@@ -79,9 +78,6 @@ fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &m
     let Some(global_model) = global_model(input.snapshot, &model.global_model_id) else {
         return;
     };
-    if !global_model_supports_required_capability(input.request, input.snapshot, &model.global_model_id) {
-        return;
-    }
     let affinity = matching_affinity(input.provider, input.affinity);
     let endpoints = ordered_endpoints(input.provider, input.group, input.model_id, input.request, input.current_minute, affinity);
     let allowed_keys = allowed_keys(input.provider, input.group, input.current_minute);
@@ -123,7 +119,7 @@ fn append_key_candidates(input: AppendKeyCandidatesInput<'_>, output: &mut Vec<C
         let key_endpoints = input
             .endpoints
             .iter()
-            .filter(|endpoint| key_allows_candidate(&key, input.model_id, endpoint, input.request))
+            .filter(|endpoint| key_allows_candidate(&key, input.model_id, endpoint))
             .cloned()
             .collect::<Vec<_>>();
         if key_endpoints.is_empty() {
@@ -219,23 +215,12 @@ fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpo
     key_allowed(key, group, current_minute) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
 }
 
-fn key_allows_candidate(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, request: &CandidateRequest<'_>) -> bool {
-    key_allows_model(key, model_id) && key_allows_endpoint(key, endpoint) && key_supports_required_capability(key, request.required_capability)
+fn key_allows_candidate(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint) -> bool {
+    key_allows_model(key, model_id) && key_allows_endpoint(key, endpoint)
 }
 
 fn key_allows_endpoint(key: &CachedProviderKey, endpoint: &CachedEndpoint) -> bool {
     key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
-}
-
-fn global_model_supports_required_capability(request: &CandidateRequest<'_>, snapshot: &SchedulingSnapshot, model_id: &str) -> bool {
-    let Some(required) = request.required_capability else {
-        return true;
-    };
-    snapshot
-        .models
-        .iter()
-        .find(|model| model.id == model_id)
-        .is_some_and(|model| capability_list_enabled(model.supported_capabilities.as_deref(), required))
 }
 
 fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool {
@@ -250,13 +235,6 @@ fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool 
 
 fn key_allows_model(key: &CachedProviderKey, model_id: &str) -> bool {
     key.allowed_model_ids.is_empty() || key.allowed_model_ids.iter().any(|id| id == model_id)
-}
-
-fn key_supports_required_capability(key: &CachedProviderKey, required: Option<&str>) -> bool {
-    let Some(required) = required.map(str::trim).filter(|value| !value.is_empty()) else {
-        return true;
-    };
-    required != "image_generation" || key.supports_image_generation
 }
 
 fn global_model<'a>(snapshot: &'a SchedulingSnapshot, model_id: &str) -> Option<&'a CachedGlobalModel> {

@@ -119,7 +119,6 @@ pub struct CandidateRequest<'a> {
     pub model_name: &'a str,
     pub is_stream: bool,
     pub has_openai_responses_custom_tool_items: bool,
-    pub required_capability: Option<&'a str>,
     pub features: RoutingRequestFeatures,
 }
 

@@ -139,7 +139,6 @@ fn matching_candidate_parts_routes_responses_image_generation_call_requests_to_c
             routing_api_format: "openai:cli",
             is_stream: true,
             has_openai_responses_custom_tool_items: false,
-            required_capability: None,
             ..request()
         },
         affinity: None,
@@ -172,7 +171,6 @@ fn matching_candidate_parts_keeps_responses_custom_tool_requests_on_responses_en
             routing_api_format: "openai:cli",
             is_stream: true,
             has_openai_responses_custom_tool_items: true,
-            required_capability: None,
             ..request()
         },
         affinity: None,

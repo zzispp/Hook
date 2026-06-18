@@ -56,7 +56,6 @@ async fn prepare_image_edit_request(
             model_name: request.model(),
             is_stream: false,
             has_openai_responses_custom_tool_items: false,
-            required_capability: Some(IMAGE_GENERATION_CAPABILITY),
             features: RoutingRequestFeatures::unknown(OPENAI_IMAGE_EDIT_FORMAT, false, Some(IMAGE_GENERATION_CAPABILITY)),
         },
     )
