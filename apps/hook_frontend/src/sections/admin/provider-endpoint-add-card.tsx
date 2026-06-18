@@ -28,6 +28,11 @@ import {
   API_FORMAT_OPTIONS,
   defaultEndpointPath,
 } from './provider-management-utils';
+import {
+  imageEndpointFormatConfig,
+  isOpenAiImageEndpointFormat,
+  ProviderEndpointImageStreamSwitch,
+} from './provider-endpoint-image-stream-config';
 
 export type AddEndpointForm = EndpointEditState & {
   apiFormat: string;
@@ -36,6 +41,37 @@ export type AddEndpointForm = EndpointEditState & {
 export type QuickAddEndpointForm = {
   apiFormats: string[];
   baseUrl: string;
+  upstreamImageNativeStream: boolean;
+};
+
+type QuickAddCardProps = {
+  form: QuickAddEndpointForm;
+  adding: boolean;
+  existingEndpoints: ProviderEndpoint[];
+  onFormChange: (form: QuickAddEndpointForm) => void;
+  onApiFormatsChange: (apiFormats: string[]) => void;
+  onAdd: () => void;
+};
+
+type SingleAddCardProps = {
+  form: AddEndpointForm;
+  rulesOpen: boolean;
+  adding: boolean;
+  existingEndpoints: ProviderEndpoint[];
+  onFormChange: (form: AddEndpointForm) => void;
+  onApiFormatChange: (apiFormat: string) => void;
+  onRulesOpenChange: (open: boolean) => void;
+  onHeaderRulesChange: (rules: EditableHeaderRule[]) => void;
+  onBodyRulesChange: (rules: EditableBodyRule[]) => void;
+  onAdd: () => void;
+};
+
+type SingleAddInnerProps = Omit<SingleAddCardProps, 'existingEndpoints'> & {
+  availableFormats: string[];
+};
+
+type QuickAddInnerProps = Omit<QuickAddCardProps, 'existingEndpoints'> & {
+  availableFormats: string[];
 };
 
 export function ProviderEndpointQuickAddCard({
@@ -45,24 +81,8 @@ export function ProviderEndpointQuickAddCard({
   onFormChange,
   onApiFormatsChange,
   onAdd,
-}: {
-  form: QuickAddEndpointForm;
-  adding: boolean;
-  existingEndpoints: ProviderEndpoint[];
-  onFormChange: (form: QuickAddEndpointForm) => void;
-  onApiFormatsChange: (apiFormats: string[]) => void;
-  onAdd: () => void;
-}) {
-  return (
-    <QuickAddCard
-      form={form}
-      adding={adding}
-      availableFormats={availableEndpointFormats(existingEndpoints)}
-      onFormChange={onFormChange}
-      onApiFormatsChange={onApiFormatsChange}
-      onAdd={onAdd}
-    />
-  );
+}: QuickAddCardProps) {
+  return <QuickAddCard form={form} adding={adding} availableFormats={availableEndpointFormats(existingEndpoints)} onFormChange={onFormChange} onApiFormatsChange={onApiFormatsChange} onAdd={onAdd} />;
 }
 
 export function ProviderEndpointSingleAddCard({
@@ -76,32 +96,8 @@ export function ProviderEndpointSingleAddCard({
   onHeaderRulesChange,
   onBodyRulesChange,
   onAdd,
-}: {
-  form: AddEndpointForm;
-  rulesOpen: boolean;
-  adding: boolean;
-  existingEndpoints: ProviderEndpoint[];
-  onFormChange: (form: AddEndpointForm) => void;
-  onApiFormatChange: (apiFormat: string) => void;
-  onRulesOpenChange: (open: boolean) => void;
-  onHeaderRulesChange: (rules: EditableHeaderRule[]) => void;
-  onBodyRulesChange: (rules: EditableBodyRule[]) => void;
-  onAdd: () => void;
-}) {
-  return (
-    <SingleAddCard
-      form={form}
-      rulesOpen={rulesOpen}
-      adding={adding}
-      availableFormats={availableEndpointFormats(existingEndpoints)}
-      onFormChange={onFormChange}
-      onApiFormatChange={onApiFormatChange}
-      onRulesOpenChange={onRulesOpenChange}
-      onHeaderRulesChange={onHeaderRulesChange}
-      onBodyRulesChange={onBodyRulesChange}
-      onAdd={onAdd}
-    />
-  );
+}: SingleAddCardProps) {
+  return <SingleAddCard form={form} rulesOpen={rulesOpen} adding={adding} availableFormats={availableEndpointFormats(existingEndpoints)} onFormChange={onFormChange} onApiFormatChange={onApiFormatChange} onRulesOpenChange={onRulesOpenChange} onHeaderRulesChange={onHeaderRulesChange} onBodyRulesChange={onBodyRulesChange} onAdd={onAdd} />;
 }
 
 function SingleAddCard({
@@ -115,18 +111,7 @@ function SingleAddCard({
   onHeaderRulesChange,
   onBodyRulesChange,
   onAdd,
-}: {
-  form: AddEndpointForm;
-  rulesOpen: boolean;
-  adding: boolean;
-  availableFormats: string[];
-  onFormChange: (form: AddEndpointForm) => void;
-  onApiFormatChange: (apiFormat: string) => void;
-  onRulesOpenChange: (open: boolean) => void;
-  onHeaderRulesChange: (rules: EditableHeaderRule[]) => void;
-  onBodyRulesChange: (rules: EditableBodyRule[]) => void;
-  onAdd: () => void;
-}) {
+}: SingleAddInnerProps) {
   const { t } = useTranslate('admin');
   const selectedPath = defaultEndpointPath(form.apiFormat);
 
@@ -181,6 +166,11 @@ function SingleAddCard({
           onHeaderRulesChange={onHeaderRulesChange}
           onBodyRulesChange={onBodyRulesChange}
         />
+        <ProviderEndpointImageStreamSwitch
+          visible={isOpenAiImageEndpointFormat(form.apiFormat)}
+          checked={form.upstreamImageNativeStream}
+          onChange={(upstreamImageNativeStream) => onFormChange({ ...form, upstreamImageNativeStream })}
+        />
       </Stack>
     </Box>
   );
@@ -193,20 +183,15 @@ function QuickAddCard({
   onFormChange,
   onApiFormatsChange,
   onAdd,
-}: {
-  form: QuickAddEndpointForm;
-  adding: boolean;
-  availableFormats: string[];
-  onFormChange: (form: QuickAddEndpointForm) => void;
-  onApiFormatsChange: (apiFormats: string[]) => void;
-  onAdd: () => void;
-}) {
+}: QuickAddInnerProps) {
   const { t } = useTranslate('admin');
 
   return (
     <Box sx={cardSx}>
       <Stack direction="row" spacing={1.5} alignItems="center" sx={headerSx}>
-        <Typography variant="caption" sx={labelSx}>{t('providers.quickAddEndpoints')}</Typography>
+        <Typography variant="caption" sx={labelSx}>
+          {t('providers.quickAddEndpoints')}
+        </Typography>
         <Box sx={{ flex: 1 }} />
         <Button size="small" variant="text" onClick={() => onApiFormatsChange(availableFormats)}>
           {t('common.selectAll')}
@@ -242,6 +227,11 @@ function QuickAddCard({
           noOptionsText={t('common.noResults')}
           onChange={onApiFormatsChange}
         />
+        <ProviderEndpointImageStreamSwitch
+          visible={form.apiFormats.some(isOpenAiImageEndpointFormat)}
+          checked={form.upstreamImageNativeStream}
+          onChange={(upstreamImageNativeStream) => onFormChange({ ...form, upstreamImageNativeStream })}
+        />
       </Stack>
     </Box>
   );
@@ -252,6 +242,7 @@ export function emptyAddEndpointForm(baseUrl = ''): AddEndpointForm {
     apiFormat: '',
     baseUrl,
     customPath: '',
+    upstreamImageNativeStream: false,
     headerRules: [],
     bodyRules: [],
   };
@@ -262,6 +253,7 @@ export function addEndpointPayload(form: AddEndpointForm): ProviderEndpointCreat
     api_format: form.apiFormat,
     base_url: normalizeBaseUrl(form.baseUrl),
     custom_path: form.customPath.trim() || null,
+    format_acceptance_config: imageEndpointFormatConfig(form.apiFormat, form.upstreamImageNativeStream),
     header_rules: editableHeaderRulesToApi(form.headerRules),
     body_rules: editableBodyRulesToApi(form.bodyRules),
     is_active: true,
@@ -272,6 +264,7 @@ export function emptyQuickAddEndpointForm(baseUrl = ''): QuickAddEndpointForm {
   return {
     apiFormats: [],
     baseUrl,
+    upstreamImageNativeStream: false,
   };
 }
 
@@ -280,6 +273,7 @@ export function quickAddEndpointPayloads(form: QuickAddEndpointForm): ProviderEn
   return form.apiFormats.map((apiFormat) => ({
     api_format: apiFormat,
     base_url: baseUrl,
+    format_acceptance_config: imageEndpointFormatConfig(apiFormat, form.upstreamImageNativeStream),
     body_rules: quickAddBodyRules(apiFormat),
     is_active: true,
   }));
@@ -295,7 +289,5 @@ const headerSx = { px: 2, py: 1.25, bgcolor: 'action.hover' };
 const labelSx = { color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 };
 
 function availableEndpointFormats(existingEndpoints: ProviderEndpoint[]) {
-  return API_FORMAT_OPTIONS.filter(
-    (format) => !existingEndpoints.some((endpoint) => endpoint.api_format === format)
-  );
+  return API_FORMAT_OPTIONS.filter((format) => !existingEndpoints.some((endpoint) => endpoint.api_format === format));
 }

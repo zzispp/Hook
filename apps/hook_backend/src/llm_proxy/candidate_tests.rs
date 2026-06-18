@@ -60,6 +60,7 @@ fn route_candidate() -> ProxyCandidate {
         reasoning_effort: None,
         header_rules: None,
         body_rules: None,
+        format_acceptance_config: None,
         key_supports_image_generation: false,
         price_per_request: None,
         tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
@@ -133,6 +134,7 @@ fn endpoint(id: &str, provider_api_format: &str, needs_conversion: bool) -> Cand
         max_retries: None,
         header_rules: None,
         body_rules: None,
+        format_acceptance_config: None,
         needs_conversion,
     }
 }

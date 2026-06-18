@@ -1622,6 +1622,7 @@ dependencies = [
  "configuration",
  "constants",
  "dashboard",
+ "formats",
  "futures-util",
  "group 1.0.2",
  "hook_tracing",

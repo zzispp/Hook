@@ -179,6 +179,7 @@ export type ProviderQuickImportProviderConfig = {
   priority?: number;
   keep_priority_on_conversion?: boolean;
   enable_format_conversion?: boolean;
+  upstream_image_native_stream?: boolean;
   is_active?: boolean;
 };
 

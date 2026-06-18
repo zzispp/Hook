@@ -60,6 +60,7 @@ fn endpoint_option(request: &CandidateRequest<'_>, parts: &CandidateParts, endpo
         max_retries: endpoint.max_retries,
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
+        format_acceptance_config: endpoint.format_acceptance_config.clone(),
         needs_conversion,
     })
 }
@@ -157,6 +158,7 @@ mod tests {
             max_retries: None,
             header_rules: None,
             body_rules: None,
+            format_acceptance_config: None,
             needs_conversion: false,
         }
     }

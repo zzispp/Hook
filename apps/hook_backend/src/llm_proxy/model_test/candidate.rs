@@ -25,6 +25,7 @@ pub(super) fn proxy_candidate(state: &LlmProxyState, parts: FixedParts, stream: 
         reasoning_effort: parts.effective_reasoning_effort.clone(),
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
+        format_acceptance_config: endpoint.format_acceptance_config.clone(),
         key_supports_image_generation: key.supports_image_generation,
         price_per_request: parts.global_model.default_price_per_request,
         tiered_pricing: parts.global_model.default_tiered_pricing,
@@ -73,6 +74,7 @@ fn endpoint_option(parts: &FixedParts, endpoint: &CachedEndpoint, stream: bool) 
         max_retries: endpoint.max_retries,
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
+        format_acceptance_config: endpoint.format_acceptance_config.clone(),
         needs_conversion,
     })
 }

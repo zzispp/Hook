@@ -231,7 +231,14 @@ function isValidEndpointForm(form: AddEndpointForm, t: ReturnType<typeof useTran
 }
 
 function isValidQuickAddForm(form: QuickAddEndpointForm, t: ReturnType<typeof useTranslate>['t']) {
-  return isValidEndpointForm({ ...form, apiFormat: form.apiFormats[0], customPath: '', headerRules: [], bodyRules: [] }, t);
+  return isValidEndpointForm({
+    ...form,
+    apiFormat: form.apiFormats[0],
+    customPath: '',
+    upstreamImageNativeStream: form.upstreamImageNativeStream,
+    headerRules: [],
+    bodyRules: [],
+  }, t);
 }
 
 function endpointHasRules(endpoint: ProviderEndpoint) {

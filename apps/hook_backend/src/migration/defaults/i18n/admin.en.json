@@ -1702,6 +1702,7 @@
     "invalidBaseUrl": "Enter a valid HTTP/HTTPS Base URL without query or fragment.",
     "invalidCustomPath": "Custom path must start with / and contain only URL path characters.",
     "keepPriorityOnConversion": "Keep priority after conversion",
+    "upstreamImageNativeStream": "Upstream image native stream",
     "keys": "Keys",
     "key": "Key",
     "keyManagement": "Key management",

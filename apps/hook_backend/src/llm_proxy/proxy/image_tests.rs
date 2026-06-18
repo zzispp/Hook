@@ -54,6 +54,19 @@ fn multipart_image_request_extracts_image_and_mask_parts() {
 }
 
 #[test]
+fn multipart_image_request_detects_stream_true() {
+    let request = MultipartImageRequest::from_fields(vec![
+        text("model", "gpt-image-1"),
+        text("prompt", "restore the photo"),
+        text("stream", "true"),
+        file("image", "input.png", "image/png", b"png-bytes"),
+    ])
+    .unwrap();
+
+    assert!(request.is_stream());
+}
+
+#[test]
 fn multipart_image_request_requires_image_file() {
     let error = MultipartImageRequest::from_fields(vec![text("model", "gpt-image-1"), text("prompt", "restore the photo")]).unwrap_err();
 

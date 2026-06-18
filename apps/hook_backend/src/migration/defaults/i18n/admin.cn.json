@@ -1702,6 +1702,7 @@
     "invalidBaseUrl": "请输入有效的 HTTP/HTTPS Base URL，不能包含 query 或 fragment。",
     "invalidCustomPath": "自定义路径必须以 / 开头，只能包含 URL path 字符。",
     "keepPriorityOnConversion": "转换后保持优先级",
+    "upstreamImageNativeStream": "上游生图原生流",
     "keys": "密钥",
     "key": "密钥",
     "keyManagement": "密钥管理",

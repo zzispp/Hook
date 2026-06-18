@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use types::provider::{
     ProviderApiKey, ProviderOrigin, ProviderQuickImportBindCommitRequest, ProviderQuickImportBindCommitResponse, ProviderQuickImportBindLocalKey,
-    ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportPreviewResponse,
+    ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportPreviewResponse, ProviderQuickImportProviderConfig,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, SecretCipher, UpstreamProviderImportSource};
@@ -55,9 +55,11 @@ where
     let globals = args.models.list_global_models().await?;
     let selected = selected_bind_tokens(&data, &input.selected_tokens)?;
     let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
+    let provider_config = ProviderQuickImportProviderConfig::default();
     let draft = quick_import_bind(QuickImportBindDraft {
         provider_id: provider.id.clone(),
         source: &input.source,
+        provider_config: &provider_config,
         recharge_multiplier: input.recharge_multiplier,
         sync_config: input.sync_config,
         selected,

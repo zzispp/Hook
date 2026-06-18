@@ -53,15 +53,24 @@ impl MultipartImageRequest {
         Ok(Self { fields, body, model })
     }
 
-    pub(super) fn build_form(&self, provider_model_name: &str) -> Result<req::multipart::Form, LlmProxyError> {
+    pub(super) fn build_form(&self, provider_model_name: &str, upstream_is_stream: bool) -> Result<req::multipart::Form, LlmProxyError> {
         self.fields
             .iter()
             .try_fold(req::multipart::Form::new().text("model", provider_model_name.to_owned()), |form, field| {
                 if field.name == "model" {
                     return Ok(form);
                 }
+                if field.name == "stream" {
+                    return Ok(append_stream_field(form, upstream_is_stream));
+                }
                 append_form_field(form, field)
             })
+    }
+
+    pub(super) fn is_stream(&self) -> bool {
+        optional_text_field(&self.fields, "stream")
+            .map(str::trim)
+            .is_some_and(|value| value.eq_ignore_ascii_case("true"))
     }
 
     pub(super) fn model(&self) -> &str {
@@ -160,6 +169,13 @@ fn append_form_field(form: req::multipart::Form, field: &MultipartField) -> Resu
             Ok(form.part(field.name.clone(), part))
         }
     }
+}
+
+fn append_stream_field(form: req::multipart::Form, upstream_is_stream: bool) -> req::multipart::Form {
+    if upstream_is_stream {
+        return form.text("stream", "true");
+    }
+    form
 }
 
 fn required_text_field<'a>(fields: &'a [MultipartField], key: &str) -> Result<&'a str, LlmProxyError> {
