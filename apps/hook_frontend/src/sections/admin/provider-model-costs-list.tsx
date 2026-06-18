@@ -8,8 +8,8 @@ import type { ProviderApiKey, ProviderModelCost, ProviderModelBinding } from 'sr
 import Box from '@mui/material/Box';
 import Accordion from '@mui/material/Accordion';
 import Typography from '@mui/material/Typography';
-import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary, { accordionSummaryClasses } from '@mui/material/AccordionSummary';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -150,6 +150,6 @@ function CostSection({
   );
 }
 
-const sectionAccordionSx = { bgcolor: 'transparent' };
+const sectionAccordionSx = { bgcolor: 'transparent', [`& .${accordionSummaryClasses.root}`]: { px: 2 } };
 const sectionDetailsSx = { p: 0 };
 const sectionListSx = { '& > * + *': { borderTop: (theme: Theme) => `1px solid ${theme.vars.palette.divider}` } };
