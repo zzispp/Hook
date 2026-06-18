@@ -1,0 +1,6 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,Inspect stream terminal persistence,DONE,Code path causing streaming status after EOF identified,rg -n "finish_success|record_stream_attempt|update_request_candidate" apps/hook_backend/src/llm_proxy crates/storage/src/provider,2026-06-18T17:29:00+08:00,0,
+2,Write regression test,DONE,Test fails before fix for OpenAI image stream EOF record status,cargo test -p hook_backend image_stream_prefetch_terminal_skips_streaming_started_patch,2026-06-18T17:32:00+08:00,0,"Failed before implementation: missing terminal-prefetch guard"
+3,Implement terminal record fix,DONE,OpenAI image stream EOF records success and finished state,cargo test -p hook_backend image_stream_prefetch,2026-06-18T17:35:00+08:00,0,
+4,Preserve OpenAI image upstream stream flag,DONE,OpenAI image generation/edit metadata keeps stream in provider body,timeout 60 cargo test -p hook_backend openai_image,2026-06-18T18:08:00+08:00,0,
+5,Run validation,DONE,Focused tests formatting clippy and diff check pass,cargo fmt --all && timeout 60 cargo test -p hook_backend openai_image && timeout 60 cargo test -p hook_backend stream_transport && timeout 60 cargo clippy -p hook_backend --all-targets -- -D warnings && git diff --check,2026-06-18T18:09:00+08:00,0,

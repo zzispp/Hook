@@ -207,7 +207,7 @@ fn openai_image_generation() -> EndpointMetadata {
         ApiFormat::OpenAiImage,
         "/v1/images/generations",
         true,
-        false,
+        true,
     )
 }
 
@@ -218,7 +218,7 @@ fn openai_image_edit() -> EndpointMetadata {
         ApiFormat::OpenAiImage,
         "/v1/images/edits",
         true,
-        false,
+        true,
     )
 }
 
@@ -452,6 +452,17 @@ mod tests {
         assert_eq!(metadata.data_format, ApiFormat::OpenAiImage);
         assert_eq!(metadata.default_path, "/v1/images/generations");
         assert!(!metadata.include_usage_for_stream);
+    }
+
+    #[test]
+    fn openai_image_metadata_preserves_stream_in_body() {
+        for format in ["openai_image", "openai_image_edit"] {
+            let metadata = endpoint_metadata(format, true).unwrap();
+
+            assert!(metadata.stream_in_body, "{format} should forward stream to upstream");
+            assert!(!metadata.include_usage_for_stream, "{format} should not add stream usage options");
+            assert_eq!(metadata.upstream_stream_policy, UpstreamStreamPolicy::MirrorClient);
+        }
     }
 
     #[test]
