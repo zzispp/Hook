@@ -1,17 +1,16 @@
 use crate::BackendResult;
-use axum::http::{HeaderValue, Method, header};
+use axum::http::{Method, header};
 use configuration::{AuthWhitelistRule as ConfigAuthRule, Settings};
 use payment::RegisteredPaymentCallbackEndpoint;
 use rbac::application::{AuthWhitelistRule, AuthorizationConfig};
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{Any, CorsLayer};
 use user::api::TokenSettings;
 
-const FRONTEND_DEV_ORIGIN: &str = "http://localhost:8082";
 const API_PATH_PREFIX: &str = "/api";
 
 pub(crate) fn cors_layer() -> CorsLayer {
     CorsLayer::new()
-        .allow_origin(HeaderValue::from_static(FRONTEND_DEV_ORIGIN))
+        .allow_origin(Any)
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::PATCH, Method::DELETE, Method::OPTIONS])
         .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
 }
