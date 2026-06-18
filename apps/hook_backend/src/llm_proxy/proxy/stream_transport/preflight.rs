@@ -35,11 +35,18 @@ fn inspect_sse_lines(bytes: &[u8]) -> Option<StreamPreflightError> {
 }
 
 fn error_from_value(value: &Value) -> Option<StreamPreflightError> {
-    let error = nested_error(value)?;
+    let error = explicit_failed_event(value).or_else(|| nested_error(value))?;
     Some(StreamPreflightError {
         error_type: "upstream_stream_error",
         message: error_message(error).unwrap_or_else(|| "upstream stream returned an error payload".into()),
     })
+}
+
+fn explicit_failed_event(value: &Value) -> Option<&Value> {
+    if value.get("type").and_then(Value::as_str) == Some("response.failed") {
+        return value.get("response").and_then(|response| response.get("error")).or_else(|| value.get("error"));
+    }
+    None
 }
 
 fn nested_error(value: &Value) -> Option<&Value> {
@@ -93,5 +100,13 @@ mod tests {
     #[test]
     fn ignores_normal_sse_frame() {
         assert!(inspect_provider_error(b"data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n").is_none());
+    }
+
+    #[test]
+    fn detects_openai_failed_event() {
+        let error =
+            inspect_provider_error(b"data: {\"type\":\"response.failed\",\"response\":{\"error\":{\"message\":\"upstream failed\"}}}\n\n").expect("error");
+
+        assert_eq!(error.message, "upstream failed");
     }
 }

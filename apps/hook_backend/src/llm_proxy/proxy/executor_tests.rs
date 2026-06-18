@@ -1,7 +1,15 @@
 use std::time::Duration;
 
-use super::{AttemptOnceOutcome, StreamWatchdogOutcome, probe_slot_timeout_outcome, run_stream_candidate_watchdog, stream_candidate_watchdog_timeout_output};
-use crate::llm_proxy::{LlmProxyError, proxy::attempt_log::AttemptCancelHandle};
+use axum::http::StatusCode;
+
+use super::{
+    AttemptOnceOutcome, StreamWatchdogOutcome, probe_slot_timeout_outcome, run_stream_candidate_watchdog, stream_candidate_watchdog_timeout_output,
+    stream_pre_output_failure_task_output,
+};
+use crate::llm_proxy::{
+    LlmProxyError,
+    proxy::{attempt_log::AttemptCancelHandle, stream_transport::StreamPreOutputFailure},
+};
 
 #[tokio::test]
 async fn stream_candidate_watchdog_returns_completed_result_before_timeout() {
@@ -42,4 +50,19 @@ fn probe_slot_timeout_continues_candidate_route() {
     let output = probe_slot_timeout_outcome();
 
     assert!(matches!(output, AttemptOnceOutcome::ContinueCandidate));
+}
+
+#[test]
+fn stream_preoutput_failure_continues_candidate_with_last_failure() {
+    let output = stream_pre_output_failure_task_output(StreamPreOutputFailure {
+        status: StatusCode::BAD_GATEWAY,
+        message: "upstream stream ended without a terminal event".into(),
+    });
+
+    assert!(matches!(output.outcome, AttemptOnceOutcome::ContinueCandidate));
+    assert!(output.last_failure.is_some());
+    assert_eq!(
+        output.last_error.map(|error| error.to_string()),
+        Some("upstream stream ended without a terminal event".into())
+    );
 }

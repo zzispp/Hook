@@ -24,6 +24,9 @@ impl StreamRelay {
         if let Err(error) = self.usage_estimator.consume(&bytes) {
             return self.handle_scanner_error(error).await;
         }
+        if let Err(error) = self.detect_client_output_start(&bytes) {
+            return self.handle_scanner_error(error).await;
+        }
         self.merge_usage(parsed.usage);
         if !self.needs_conversion && !self.rewrite_model {
             self.pending.push_back(bytes);
@@ -44,6 +47,17 @@ impl StreamRelay {
         if parsed.completed {
             self.handle_protocol_completion().await?;
         }
+        Ok(())
+    }
+
+    fn detect_client_output_start(&mut self, bytes: &[u8]) -> Result<(), LlmProxyError> {
+        if self.client_output_started {
+            return Ok(());
+        }
+        self.client_output_started = self
+            .output_start_detector
+            .consume(bytes)
+            .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         Ok(())
     }
 
