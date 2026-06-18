@@ -42,6 +42,7 @@ export type EditableBodyRule = {
 export type EndpointEditState = {
   baseUrl: string;
   customPath: string;
+  upstreamImageNativeStream: boolean;
   headerRules: EditableHeaderRule[];
   bodyRules: EditableBodyRule[];
 };

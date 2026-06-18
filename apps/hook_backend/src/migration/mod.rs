@@ -11,6 +11,7 @@ mod defaults;
 mod development_additive;
 mod global_model_user_usage_counts_additive;
 mod provider_group_removal_destructive;
+mod provider_image_stream_mode_additive;
 mod provider_key_capabilities_destructive;
 mod provider_key_group_member_priority_additive;
 mod provider_key_model_mappings_additive;

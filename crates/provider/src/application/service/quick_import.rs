@@ -53,6 +53,7 @@ where
     let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
     let draft = quick_import_create(QuickImportCreateDraft {
         provider,
+        provider_config: &input.provider_config,
         source: &input.source,
         recharge_multiplier: input.recharge_multiplier,
         sync_config: input.sync_config,

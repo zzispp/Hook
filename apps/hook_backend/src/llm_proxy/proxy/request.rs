@@ -16,6 +16,7 @@ use crate::llm_proxy::{
 use super::{
     body_rules::apply_provider_body_rules,
     capture::RequestCapture,
+    image_stream_mode::{ImageStreamMode, candidate_image_stream_mode, is_openai_image_api_format},
     request_codex_history,
     request_features::routing_request_features,
     request_image::{client_is_openai_chat_or_responses, client_source_format, openai_image_bridge_body, provider_is_openai_image},
@@ -216,6 +217,25 @@ async fn upstream_body(
 }
 
 fn rewrite_upstream_body(body: &mut Value, candidate: &ProxyCandidate, force_non_stream: bool, target: ApiFormat) -> Result<(), LlmProxyError> {
+    rewrite_upstream_body_with_stream(body, candidate, force_non_stream, target, None)
+}
+
+pub(super) fn rewrite_upstream_body_with_explicit_stream(
+    body: &mut Value,
+    candidate: &ProxyCandidate,
+    upstream_is_stream: bool,
+    target: ApiFormat,
+) -> Result<(), LlmProxyError> {
+    rewrite_upstream_body_with_stream(body, candidate, false, target, Some(upstream_is_stream))
+}
+
+fn rewrite_upstream_body_with_stream(
+    body: &mut Value,
+    candidate: &ProxyCandidate,
+    force_non_stream: bool,
+    target: ApiFormat,
+    upstream_is_stream: Option<bool>,
+) -> Result<(), LlmProxyError> {
     let object = body
         .as_object_mut()
         .ok_or_else(|| LlmProxyError::InvalidRequest("request body must be a JSON object".into()))?;
@@ -228,11 +248,56 @@ fn rewrite_upstream_body(body: &mut Value, candidate: &ProxyCandidate, force_non
     } else {
         object.remove("model");
     }
-    if !metadata.stream_in_body || force_non_stream || metadata.upstream_stream_policy == formats::UpstreamStreamPolicy::ForceNonStream {
-        object.remove("stream");
-    }
+    rewrite_stream_field(object, candidate, metadata, force_non_stream, upstream_is_stream)?;
     ensure_stream_usage(object, metadata, target, force_non_stream)?;
     Ok(())
+}
+
+fn rewrite_stream_field(
+    object: &mut Map<String, Value>,
+    candidate: &ProxyCandidate,
+    metadata: formats::EndpointMetadata,
+    force_non_stream: bool,
+    upstream_is_stream: Option<bool>,
+) -> Result<(), LlmProxyError> {
+    if !metadata.stream_in_body || force_non_stream || metadata.upstream_stream_policy == formats::UpstreamStreamPolicy::ForceNonStream {
+        object.remove("stream");
+        return Ok(());
+    }
+    if !is_openai_image_api_format(&candidate.trace.provider_api_format) {
+        return Ok(());
+    }
+    match image_stream_field_action(candidate, upstream_is_stream)? {
+        ImageStreamFieldAction::Set(value) => {
+            object.insert("stream".into(), Value::Bool(value));
+        }
+        ImageStreamFieldAction::Remove => {
+            object.remove("stream");
+        }
+        ImageStreamFieldAction::Keep => {}
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ImageStreamFieldAction {
+    Set(bool),
+    Remove,
+    Keep,
+}
+
+fn image_stream_field_action(candidate: &ProxyCandidate, upstream_is_stream: Option<bool>) -> Result<ImageStreamFieldAction, LlmProxyError> {
+    if let Some(upstream_is_stream) = upstream_is_stream {
+        return Ok(if upstream_is_stream {
+            ImageStreamFieldAction::Set(true)
+        } else {
+            ImageStreamFieldAction::Remove
+        });
+    }
+    Ok(match candidate_image_stream_mode(candidate)? {
+        ImageStreamMode::NativeStream => ImageStreamFieldAction::Keep,
+        ImageStreamMode::SyncWrappedStream => ImageStreamFieldAction::Remove,
+    })
 }
 
 fn ensure_stream_usage(

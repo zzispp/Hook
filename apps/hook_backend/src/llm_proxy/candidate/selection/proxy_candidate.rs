@@ -60,6 +60,7 @@ async fn proxy_candidate(input: &ProxyCandidateBuildInput<'_>, parts: &Candidate
         reasoning_effort: parts.effective_reasoning_effort.clone(),
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
+        format_acceptance_config: endpoint.format_acceptance_config.clone(),
         key_supports_image_generation: key.supports_image_generation,
         price_per_request: input.global_model.default_price_per_request,
         tiered_pricing: input.global_model.default_tiered_pricing.clone(),

@@ -37,6 +37,7 @@ export type QuickImportFormState = {
   priority: string;
   keep_priority_on_conversion: boolean;
   enable_format_conversion: boolean;
+  upstream_image_native_stream: boolean;
   is_active: boolean;
   sync: QuickImportSyncConfigForm;
 };
@@ -62,6 +63,7 @@ export const DEFAULT_QUICK_IMPORT_FORM: QuickImportFormState = {
   priority: DEFAULT_PROVIDER_FORM.priority,
   keep_priority_on_conversion: DEFAULT_PROVIDER_FORM.keep_priority_on_conversion,
   enable_format_conversion: DEFAULT_PROVIDER_FORM.enable_format_conversion,
+  upstream_image_native_stream: false,
   is_active: DEFAULT_PROVIDER_FORM.is_active,
   sync: defaultQuickImportSyncConfigForm(),
 };
@@ -263,6 +265,7 @@ function providerConfigPayload(form: QuickImportFormState) {
     priority: payload.priority,
     keep_priority_on_conversion: payload.keep_priority_on_conversion,
     enable_format_conversion: payload.enable_format_conversion,
+    upstream_image_native_stream: form.upstream_image_native_stream,
     is_active: payload.is_active,
   };
 }

@@ -4,8 +4,8 @@ use rust_decimal::Decimal;
 use types::{
     model::GlobalModelResponse,
     provider::{
-        ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderModelBindingCreate, ProviderModelCostBatchUpsert,
-        ProviderQuickImportSourceConfig, ProviderQuickImportSyncConfig,
+        ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderModelBindingCreate, ProviderModelCostBatchUpsert,
+        ProviderQuickImportProviderConfig, ProviderQuickImportSourceConfig, ProviderQuickImportSyncConfig,
     },
 };
 
@@ -15,16 +15,18 @@ use crate::application::{
     SecretCipher, UpstreamImportToken,
 };
 
+use super::quick_import_commit_endpoints::endpoint_creates;
 pub(super) use super::quick_import_commit_models::{SelectedToken, assert_no_mapping_conflicts, resolved_mappings, selected_bind_tokens, selected_tokens};
 use super::quick_import_commit_models::{allowed_model_ids, key_model_mappings};
 use super::{
     quick_import_costs::model_cost,
     quick_import_shared::{global_model, globals_by_id, source_base_url},
 };
-use crate::application::validation::{sanitize_api_key, sanitize_endpoint, validate_api_key, validate_endpoint, validate_model_cost_batch};
+use crate::application::validation::{sanitize_api_key, validate_api_key, validate_model_cost_batch};
 
 pub(super) struct QuickImportCreateDraft<'a, C> {
     pub(super) provider: ProviderCreate,
+    pub(super) provider_config: &'a ProviderQuickImportProviderConfig,
     pub(super) source: &'a ProviderQuickImportSourceConfig,
     pub(super) recharge_multiplier: Decimal,
     pub(super) sync_config: ProviderQuickImportSyncConfig,
@@ -47,6 +49,7 @@ pub(super) struct QuickImportAppendDraft<'a, C> {
 pub(super) struct QuickImportBindDraft<'a, C> {
     pub(super) provider_id: String,
     pub(super) source: &'a ProviderQuickImportSourceConfig,
+    pub(super) provider_config: &'a ProviderQuickImportProviderConfig,
     pub(super) recharge_multiplier: Decimal,
     pub(super) sync_config: ProviderQuickImportSyncConfig,
     pub(super) selected: Vec<SelectedToken<'a>>,
@@ -75,7 +78,11 @@ where
     Ok(ProviderQuickImportCreate {
         provider: input.provider,
         sync_source: Some(sync_source_create(input.source, input.recharge_multiplier, input.sync_config, input.cipher)?),
-        endpoints: endpoint_creates(source_base_url(input.source), &input.selected)?,
+        endpoints: endpoint_creates(
+            source_base_url(input.source),
+            &input.selected,
+            input.provider_config.upstream_image_native_stream.unwrap_or(false),
+        )?,
         model_bindings: binding_creates(&input.mappings, &global_by_id)?,
         api_keys: key_creates(&input.selected, &input.mappings, input.cipher)?,
         model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
@@ -90,7 +97,7 @@ where
     Ok(ProviderQuickImportAppend {
         provider_id: input.provider_id,
         source_id: input.source_id,
-        endpoints: endpoint_creates(source_base_url(input.source), &input.selected)?,
+        endpoints: endpoint_creates(source_base_url(input.source), &input.selected, false)?,
         model_bindings: binding_creates(&input.mappings, &global_by_id)?,
         api_keys: key_creates(&input.selected, &input.mappings, input.cipher)?,
         model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
@@ -105,7 +112,11 @@ where
     Ok(ProviderQuickImportBind {
         provider_id: input.provider_id,
         sync_source: sync_source_create(input.source, input.recharge_multiplier, input.sync_config, input.cipher)?,
-        endpoints: endpoint_creates(source_base_url(input.source), &input.selected)?,
+        endpoints: endpoint_creates(
+            source_base_url(input.source),
+            &input.selected,
+            input.provider_config.upstream_image_native_stream.unwrap_or(false),
+        )?,
         model_bindings: binding_creates(&input.mappings, &global_by_id)?,
         api_keys: bound_key_creates(&input.selected, &input.mappings, input.cipher)?,
         model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
@@ -145,26 +156,6 @@ pub(super) fn quick_import_key_replacement(input: QuickImportKeyReplacementDraft
         model_bindings,
         model_costs: cost_creates(std::slice::from_ref(&selected), &input.mappings, &global_by_id)?,
     })
-}
-
-fn endpoint_creates(base_url: String, selected: &[SelectedToken<'_>]) -> ProviderResult<Vec<ProviderEndpointCreate>> {
-    let formats = selected.iter().flat_map(|token| token.endpoint_formats.iter()).collect::<BTreeSet<_>>();
-    formats.into_iter().map(|format| endpoint_create(format, &base_url)).collect()
-}
-
-fn endpoint_create(format: &str, base_url: &str) -> ProviderResult<ProviderEndpointCreate> {
-    let endpoint = sanitize_endpoint(ProviderEndpointCreate {
-        api_format: format.to_owned(),
-        base_url: base_url.to_owned(),
-        custom_path: None,
-        max_retries: None,
-        is_active: Some(true),
-        format_acceptance_config: None,
-        header_rules: None,
-        body_rules: None,
-    });
-    validate_endpoint(&endpoint)?;
-    Ok(endpoint)
 }
 
 fn binding_creates(

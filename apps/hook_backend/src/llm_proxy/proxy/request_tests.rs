@@ -43,7 +43,7 @@ fn openai_chat_stream_requests_include_usage() {
 }
 
 #[test]
-fn openai_image_stream_request_keeps_stream_flag() {
+fn openai_image_default_stream_request_removes_upstream_stream_flag() {
     let mut body = json!({
         "model": "gpt-image-2",
         "prompt": "draw a green square",
@@ -52,6 +52,24 @@ fn openai_image_stream_request_keeps_stream_flag() {
     });
 
     rewrite_upstream_body(&mut body, &candidate("openai_image"), false, ApiFormat::OpenAiImage).unwrap();
+
+    assert!(body.get("stream").is_none());
+    assert_eq!(body["model"], "upstream-model");
+    assert!(body.get("stream_options").is_none());
+}
+
+#[test]
+fn openai_image_native_stream_request_keeps_stream_flag() {
+    let mut body = json!({
+        "model": "gpt-image-2",
+        "prompt": "draw a green square",
+        "stream": true,
+        "partial_images": 1
+    });
+    let mut candidate = candidate("openai_image");
+    candidate.format_acceptance_config = Some(json!({"upstream_image_stream_mode": "native_stream"}));
+
+    rewrite_upstream_body(&mut body, &candidate, false, ApiFormat::OpenAiImage).unwrap();
 
     assert_eq!(body["stream"], true);
     assert_eq!(body["model"], "upstream-model");
@@ -66,8 +84,10 @@ fn openai_image_force_non_stream_removes_stream_flag() {
         "stream": true,
         "partial_images": 1
     });
+    let mut candidate = candidate("openai_image");
+    candidate.format_acceptance_config = Some(json!({"upstream_image_stream_mode": "native_stream"}));
 
-    rewrite_upstream_body(&mut body, &candidate("openai_image"), true, ApiFormat::OpenAiImage).unwrap();
+    rewrite_upstream_body(&mut body, &candidate, true, ApiFormat::OpenAiImage).unwrap();
 
     assert!(body.get("stream").is_none());
     assert_eq!(body["model"], "upstream-model");
@@ -294,6 +314,7 @@ fn candidate(provider_api_format: &str) -> ProxyCandidate {
         reasoning_effort: Some("high".into()),
         header_rules: None,
         body_rules: None,
+        format_acceptance_config: None,
         key_supports_image_generation: false,
         price_per_request: None,
         tiered_pricing: TieredPricingConfig { tiers: Vec::new() },

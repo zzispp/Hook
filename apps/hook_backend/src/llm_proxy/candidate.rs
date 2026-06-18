@@ -21,6 +21,7 @@ pub struct ProxyCandidate {
     pub reasoning_effort: Option<String>,
     pub header_rules: Option<serde_json::Value>,
     pub body_rules: Option<serde_json::Value>,
+    pub format_acceptance_config: Option<serde_json::Value>,
     pub key_supports_image_generation: bool,
     pub price_per_request: Option<Decimal>,
     pub tiered_pricing: TieredPricingConfig,
@@ -57,6 +58,7 @@ pub struct CandidateEndpointOption {
     pub max_retries: Option<i32>,
     pub header_rules: Option<Value>,
     pub body_rules: Option<Value>,
+    pub format_acceptance_config: Option<Value>,
     pub needs_conversion: bool,
 }
 
@@ -172,6 +174,7 @@ impl ProxyCandidate {
         candidate.upstream_url = endpoint.upstream_url.clone();
         candidate.header_rules = endpoint.header_rules.clone();
         candidate.body_rules = endpoint.body_rules.clone();
+        candidate.format_acceptance_config = endpoint.format_acceptance_config.clone();
         candidate.key_supports_image_generation = key.supports_image_generation;
         candidate.cache_ttl_minutes = key.cache_ttl_minutes;
         candidate.key_rpm_limit = key.rpm_limit;

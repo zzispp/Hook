@@ -17,6 +17,7 @@ mod quick_import;
 mod quick_import_append;
 mod quick_import_bind;
 mod quick_import_commit;
+mod quick_import_commit_endpoints;
 mod quick_import_commit_models;
 #[cfg(test)]
 mod quick_import_commit_tests;

@@ -72,6 +72,7 @@ mod tests {
             reasoning_effort: None,
             header_rules: None,
             body_rules: None,
+            format_acceptance_config: None,
             key_supports_image_generation: false,
             price_per_request: None,
             tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
