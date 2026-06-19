@@ -44,9 +44,11 @@ pub(super) fn resolve_mappings(
     Ok(output)
 }
 
-pub(super) fn existing_mappings(key: &ProviderQuickImportSyncKey) -> BTreeMap<String, String> {
+pub(super) fn current_mappings(key: &ProviderQuickImportSyncKey, allowed_model_ids: &[String]) -> BTreeMap<String, String> {
+    let allowed = allowed_model_ids.iter().map(String::as_str).collect::<BTreeSet<_>>();
     key.model_mappings
         .iter()
+        .filter(|mapping| allowed.is_empty() || allowed.contains(mapping.global_model_id.as_str()))
         .map(|mapping| (mapping.upstream_model_name.clone(), mapping.global_model_id.clone()))
         .collect()
 }
@@ -144,4 +146,86 @@ fn assert_no_mapping_conflicts(mappings: &BTreeMap<String, String>) -> ProviderR
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+    use types::provider::ProviderQuickImportSyncStatus;
+
+    use crate::application::{ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, UpstreamImportModel, UpstreamImportToken};
+
+    use super::{current_mappings, validate_associated_models};
+
+    #[test]
+    fn current_mappings_respect_non_empty_key_allowed_models() {
+        let key = key_with_mappings(vec![("gpt-5.4", "global-gpt-54"), ("gpt-5.4-mini", "global-gpt-54-mini")]);
+        let mappings = current_mappings(&key, &["global-gpt-54".to_owned()]);
+
+        assert_eq!(mappings, std::collections::BTreeMap::from([("gpt-5.4".to_owned(), "global-gpt-54".to_owned())]));
+    }
+
+    #[test]
+    fn current_mappings_keep_existing_associations_when_key_allowed_models_are_unrestricted() {
+        let key = key_with_mappings(vec![("gpt-5.4", "global-gpt-54"), ("gpt-5.4-mini", "global-gpt-54-mini")]);
+        let mappings = current_mappings(&key, &[]);
+
+        assert_eq!(mappings.len(), 2);
+        assert_eq!(mappings["gpt-5.4"], "global-gpt-54");
+        assert_eq!(mappings["gpt-5.4-mini"], "global-gpt-54-mini");
+    }
+
+    #[test]
+    fn current_mappings_ignore_manually_removed_missing_upstream_models() {
+        let key = key_with_mappings(vec![("gpt-5.4", "global-gpt-54"), ("gpt-5.4-mini", "global-gpt-54-mini")]);
+        let token = token_with_models(vec!["gpt-5.4"]);
+        let mappings = current_mappings(&key, &["global-gpt-54".to_owned()]);
+
+        let result = validate_associated_models(&token, &mappings);
+
+        assert!(result.is_ok());
+    }
+
+    fn key_with_mappings(mappings: Vec<(&str, &str)>) -> ProviderQuickImportSyncKey {
+        ProviderQuickImportSyncKey {
+            provider_id: "provider-1".to_owned(),
+            source_id: "source-1".to_owned(),
+            key_id: "key-1".to_owned(),
+            local_key_name: "codex".to_owned(),
+            upstream_token_id: "373".to_owned(),
+            upstream_token_name: "codex".to_owned(),
+            upstream_group: Some("low-cost".to_owned()),
+            upstream_group_ratio: Decimal::ONE,
+            effective_cost_multiplier: Decimal::ONE,
+            statuses: vec![ProviderQuickImportSyncStatus::UpstreamModelRemoved],
+            model_mappings: mappings
+                .into_iter()
+                .map(|(upstream_model_name, global_model_id)| ProviderQuickImportSyncKeyModel {
+                    provider_model_id: format!("provider-{global_model_id}"),
+                    global_model_id: global_model_id.to_owned(),
+                    upstream_model_name: upstream_model_name.to_owned(),
+                    reasoning_effort: None,
+                })
+                .collect(),
+        }
+    }
+
+    fn token_with_models(models: Vec<&str>) -> UpstreamImportToken {
+        UpstreamImportToken {
+            id: "373".to_owned(),
+            name: "codex".to_owned(),
+            masked_key: "sk-***".to_owned(),
+            status: 1,
+            group: Some("low-cost".to_owned()),
+            group_ratio: Decimal::ONE,
+            api_key: Some("sk-test".to_owned()),
+            models: models
+                .into_iter()
+                .map(|id| UpstreamImportModel {
+                    id: id.to_owned(),
+                    supported_endpoint_types: vec![],
+                })
+                .collect(),
+        }
+    }
 }

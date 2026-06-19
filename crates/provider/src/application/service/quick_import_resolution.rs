@@ -13,7 +13,7 @@ use super::{
     quick_import_preview::{AppendPreviewInput, append_preview_response},
     quick_import_resolution_context::{KeyContext, key_context, reject_duplicate_relink, source_config, token_from_data},
     quick_import_resolution_models::{
-        associations, existing_mappings, resolve_mappings, validate_associated_models, validate_existing_mappings, validate_token,
+        associations, current_mappings, resolve_mappings, validate_associated_models, validate_existing_mappings, validate_token,
     },
 };
 
@@ -62,7 +62,7 @@ where
     let source_config = source_config(args.cipher, &context.source)?;
     let data = args.importer.fetch_import_data(&source_config).await?;
     let token = token_from_data(&data, &context.key.upstream_token_id)?;
-    let mappings = existing_mappings(&context.key);
+    let mappings = current_mappings(&context.key, &context.api_key.allowed_model_ids);
     let replacement = replacement(&args, &context, token, mappings).await?;
     Ok(args.repository.replace_quick_import_key(replacement).await?.api_key)
 }
