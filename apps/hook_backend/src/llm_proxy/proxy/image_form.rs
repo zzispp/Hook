@@ -4,6 +4,9 @@ use serde_json::{Map, Value};
 use super::image::{DEFAULT_GPT_IMAGE_EDIT_QUALITY, normalize_count_text, normalize_quality, normalize_size};
 use crate::llm_proxy::LlmProxyError;
 
+const PARTIAL_IMAGES_FIELD: &str = "partial_images";
+const STREAM_FIELD: &str = "stream";
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct MultipartImageRequest {
     fields: Vec<MultipartField>,
@@ -54,17 +57,16 @@ impl MultipartImageRequest {
     }
 
     pub(super) fn build_form(&self, provider_model_name: &str, upstream_is_stream: bool) -> Result<req::multipart::Form, LlmProxyError> {
-        self.fields
+        let form = self
+            .fields
             .iter()
             .try_fold(req::multipart::Form::new().text("model", provider_model_name.to_owned()), |form, field| {
-                if field.name == "model" {
+                if skip_upstream_field(&field.name, upstream_is_stream) {
                     return Ok(form);
                 }
-                if field.name == "stream" {
-                    return Ok(append_stream_field(form, upstream_is_stream));
-                }
                 append_form_field(form, field)
-            })
+            })?;
+        Ok(append_stream_field(form, upstream_is_stream))
     }
 
     pub(super) fn is_stream(&self) -> bool {
@@ -77,10 +79,11 @@ impl MultipartImageRequest {
         &self.model
     }
 
-    pub(super) fn provider_body(&self, provider_model_name: &str) -> Value {
+    pub(super) fn provider_body(&self, provider_model_name: &str, upstream_is_stream: bool) -> Value {
         let mut body = self.body.clone();
         if let Some(object) = body.as_object_mut() {
             object.insert("model".into(), Value::String(provider_model_name.to_owned()));
+            apply_upstream_stream_fields(object, upstream_is_stream);
         }
         body
     }
@@ -173,9 +176,22 @@ fn append_form_field(form: req::multipart::Form, field: &MultipartField) -> Resu
 
 fn append_stream_field(form: req::multipart::Form, upstream_is_stream: bool) -> req::multipart::Form {
     if upstream_is_stream {
-        return form.text("stream", "true");
+        return form.text(STREAM_FIELD, "true");
     }
     form
+}
+
+fn skip_upstream_field(name: &str, upstream_is_stream: bool) -> bool {
+    name == "model" || name == STREAM_FIELD || (!upstream_is_stream && name == PARTIAL_IMAGES_FIELD)
+}
+
+fn apply_upstream_stream_fields(object: &mut Map<String, Value>, upstream_is_stream: bool) {
+    if upstream_is_stream {
+        object.insert(STREAM_FIELD.into(), Value::String("true".into()));
+    } else {
+        object.remove(STREAM_FIELD);
+        object.remove(PARTIAL_IMAGES_FIELD);
+    }
 }
 
 fn required_text_field<'a>(fields: &'a [MultipartField], key: &str) -> Result<&'a str, LlmProxyError> {

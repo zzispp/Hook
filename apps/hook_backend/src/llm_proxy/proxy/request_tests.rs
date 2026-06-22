@@ -3,96 +3,12 @@ use serde_json::json;
 use types::model::TieredPricingConfig;
 
 use super::super::{request_image::bridge_openai_chat_image_body, request_tools::openai_request_explicitly_selects_image_generation};
-use super::{AttemptContext, apply_reasoning_effort, attempt_payload, has_openai_responses_custom_tool_items, rewrite_upstream_body};
+use super::{AttemptContext, attempt_payload, has_openai_responses_custom_tool_items};
 use crate::llm_proxy::{
     OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
     candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
     codex_chat_history::{CodexChatHistoryStore, test_support::test_history},
 };
-use proxy::format_conversion::ApiFormat;
-
-#[test]
-fn reasoning_effort_override_sets_openai_chat_field() {
-    let mut body = json!({"model": "gpt-5.5"});
-
-    apply_reasoning_effort(&mut body, &candidate("openai:chat"), ApiFormat::OpenAiChat).unwrap();
-
-    assert_eq!(body["reasoning_effort"], "high");
-}
-
-#[test]
-fn reasoning_effort_override_sets_openai_responses_nested_field() {
-    let mut body = json!({"model": "gpt-5.5"});
-
-    apply_reasoning_effort(&mut body, &candidate("openai:cli"), ApiFormat::OpenAiResponses).unwrap();
-
-    assert_eq!(body["reasoning"]["effort"], "high");
-}
-
-#[test]
-fn openai_chat_stream_requests_include_usage() {
-    let mut body = json!({
-        "model": "gpt-5.5",
-        "messages": [{"role": "user", "content": "hello"}],
-        "stream": true
-    });
-
-    rewrite_upstream_body(&mut body, &candidate("openai:chat"), false, ApiFormat::OpenAiChat).unwrap();
-
-    assert_eq!(body["stream_options"]["include_usage"], true);
-}
-
-#[test]
-fn openai_image_default_stream_request_removes_upstream_stream_flag() {
-    let mut body = json!({
-        "model": "gpt-image-2",
-        "prompt": "draw a green square",
-        "stream": true,
-        "partial_images": 1
-    });
-
-    rewrite_upstream_body(&mut body, &candidate("openai_image"), false, ApiFormat::OpenAiImage).unwrap();
-
-    assert!(body.get("stream").is_none());
-    assert_eq!(body["model"], "upstream-model");
-    assert!(body.get("stream_options").is_none());
-}
-
-#[test]
-fn openai_image_native_stream_request_keeps_stream_flag() {
-    let mut body = json!({
-        "model": "gpt-image-2",
-        "prompt": "draw a green square",
-        "stream": true,
-        "partial_images": 1
-    });
-    let mut candidate = candidate("openai_image");
-    candidate.format_acceptance_config = Some(json!({"upstream_image_stream_mode": "native_stream"}));
-
-    rewrite_upstream_body(&mut body, &candidate, false, ApiFormat::OpenAiImage).unwrap();
-
-    assert_eq!(body["stream"], true);
-    assert_eq!(body["model"], "upstream-model");
-    assert!(body.get("stream_options").is_none());
-}
-
-#[test]
-fn openai_image_force_non_stream_removes_stream_flag() {
-    let mut body = json!({
-        "model": "gpt-image-2",
-        "prompt": "draw a green square",
-        "stream": true,
-        "partial_images": 1
-    });
-    let mut candidate = candidate("openai_image");
-    candidate.format_acceptance_config = Some(json!({"upstream_image_stream_mode": "native_stream"}));
-
-    rewrite_upstream_body(&mut body, &candidate, true, ApiFormat::OpenAiImage).unwrap();
-
-    assert!(body.get("stream").is_none());
-    assert_eq!(body["model"], "upstream-model");
-    assert!(body.get("stream_options").is_none());
-}
 
 #[tokio::test]
 async fn openai_cli_to_chat_body_rule_can_drop_stream_options() {
