@@ -1,3 +1,4 @@
+mod api_endpoints;
 mod contact_methods;
 mod email_config;
 mod error;

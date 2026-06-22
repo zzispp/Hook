@@ -2,8 +2,9 @@ import type { UserGroup } from 'src/types/user-group';
 import type { PaymentChannel } from 'src/types/recharge';
 import type { SystemSettingsForm } from './system-settings-utils';
 
-import { emailConfigComplete } from './system-settings-utils';
+import { emailConfigComplete } from './system-settings-email-utils';
 import { publicBaseUrlIsValid } from './system-settings-url-validation';
+import { validateApiEndpoints } from './system-settings-api-endpoints-validation';
 import { validateContactMethods } from './system-settings-contact-methods-validation';
 import { validateAuthProviderFields } from './system-settings-auth-provider-validation';
 
@@ -42,6 +43,7 @@ export function validateSystemSettingsBeforeSubmit(
   return (
     validateSiteFields(form, t) ||
     validateContactMethods(form, t) ||
+    validateApiEndpoints(form, t) ||
     validateDefaultUserGroup(form, context, t) ||
     validateNumberFields(form, t) ||
     validateRequestRecordFields(form, t) ||

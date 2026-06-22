@@ -5,7 +5,7 @@ import type { TokenAccessibleModelListResponse } from 'src/types/api-token';
 
 import { ACCOUNTING_CURRENCY } from 'src/utils/money-boundary';
 
-import { CONFIG } from 'src/global-config';
+import { endpointUrl } from './api-token-endpoints-utils';
 
 export const CC_SWITCH_USAGE_AUTO_INTERVAL_MINUTES = 30;
 export const CC_SWITCH_FORMATS = ['claude', 'openai', 'gemini'] as const;
@@ -23,6 +23,7 @@ type BuildCcSwitchDeepLinkArgs = {
   modelId: string;
   rawToken: string;
   tokenName: string;
+  baseUrl: string;
   siteName?: string | null;
   homepage: string;
 };
@@ -35,13 +36,13 @@ const CC_SWITCH_APP_BY_FORMAT: Record<CcSwitchFormat, string> = {
 };
 
 const CC_SWITCH_ENDPOINT_PATH_BY_FORMAT: Record<CcSwitchFormat, string> = {
-  claude: '',
+  claude: '/v1',
   openai: '/v1',
   gemini: '/v1beta',
 };
 
-export async function fetchTokenModelIds(rawToken: string) {
-  const response = await fetch(backendUrl('/v1/models'), {
+export async function fetchTokenModelIds(rawToken: string, baseUrl: string) {
+  const response = await fetch(endpointUrl(baseUrl, '/v1/models'), {
     headers: {
       Authorization: `Bearer ${rawToken}`,
       Accept: 'application/json',
@@ -70,8 +71,7 @@ export function modelsForCcSwitchFormat(models: CcSwitchModelOption[], format: C
 }
 
 export function buildCcSwitchDeepLink(args: BuildCcSwitchDeepLinkArgs) {
-  const serverBaseUrl = backendBaseUrl();
-  const endpoint = `${serverBaseUrl}${CC_SWITCH_ENDPOINT_PATH_BY_FORMAT[args.format]}`;
+  const endpoint = endpointUrl(args.baseUrl, CC_SWITCH_ENDPOINT_PATH_BY_FORMAT[args.format]);
   const usageScript = window.btoa(ccSwitchUsageScript());
   const params = new URLSearchParams({
     resource: 'provider',
@@ -85,7 +85,7 @@ export function buildCcSwitchDeepLink(args: BuildCcSwitchDeepLinkArgs) {
     usageEnabled: 'true',
     usageScript,
     usageApiKey: args.rawToken,
-    usageBaseUrl: `${serverBaseUrl}/v1`,
+    usageBaseUrl: endpointUrl(args.baseUrl, '/v1'),
     usageAutoInterval: String(CC_SWITCH_USAGE_AUTO_INTERVAL_MINUTES),
   });
   return `ccswitch://v1/import?${params.toString()}`;
@@ -144,24 +144,6 @@ function catalogLabels(catalog: GlobalModelResponse[]) {
     labels.set(model.id, label);
   }
   return labels;
-}
-
-function backendBaseUrl() {
-  const configured = CONFIG.serverUrl.trim();
-  if (configured) return configured.replace(/\/+$/, '');
-  return window.location.origin.replace(/\/+$/, '');
-}
-
-function backendUrl(path: string) {
-  return new URL(trimmedPath(path), withTrailingSlash(backendBaseUrl())).toString();
-}
-
-function trimmedPath(path: string) {
-  return path.startsWith('/') ? path.slice(1) : path;
-}
-
-function withTrailingSlash(value: string) {
-  return value.endsWith('/') ? value : `${value}/`;
 }
 
 async function responseErrorMessage(response: Response, fallback: string) {

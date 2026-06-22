@@ -351,7 +351,8 @@
     "editProviderModelMapping": "编辑模型映射",
     "editProviderModel": "编辑模型基础价格",
     "manageProviderModels": "批量管理模型",
-    "manageProviderModelsFor": "批量管理模型 - {{name}}"
+    "manageProviderModelsFor": "批量管理模型 - {{name}}",
+    "importCcSwitch": "导入 CC Switch"
   },
   "helper": {
     "deepMatch": "深度匹配用于控制子路径高亮。",
@@ -1995,22 +1996,34 @@
   },
   "tokens": {
     "allModels": "所有模型",
+    "apiEndpoints": {
+      "title": "API 端点",
+      "defaultName": "默认端点",
+      "defaultBadge": "默认",
+      "copy": "复制端点 URL",
+      "copied": "端点 URL 已复制",
+      "speedTest": "打开测速",
+      "empty": "暂未配置 API 端点。"
+    },
     "ccSwitch": {
       "back": "返回格式选择",
-      "continue": "继续选择模型",
+      "backToEndpoint": "返回端点选择",
+      "continue": "继续",
       "formats": {
         "claude": "Claude",
         "openai": "OpenAI",
         "gemini": "Gemini"
       },
-      "incompleteSelection": "请先选择格式和模型。",
+      "incompleteSelection": "请先选择 API 端点、格式和模型。",
       "loadFailed": "加载 CC Switch 导入信息失败。",
       "modelCount": "{{count}} 个模型",
       "noAvailableModels": "该令牌当前没有可导入到 CC Switch 的可用模型。",
+      "noApiEndpoints": "暂未配置可用 API 端点，无法导入 CC Switch。",
       "noModelsForFormat": "当前格式下没有可用模型，请切换其他格式。",
       "openInCcSwitch": "打开 CC Switch",
       "retry": "重试",
-      "selectFormat": "先选择导入格式，再继续选择模型。",
+      "selectEndpoint": "先选择 API 端点，再继续选择格式。",
+      "selectFormat": "选择导入格式，再继续选择模型。",
       "selectModel": "选择该格式下要写入 CC Switch 的模型。",
       "usageSummary": "将同步令牌的已用额度、总额度和剩余额度，并每 30 分钟自动刷新。"
     },
@@ -2107,6 +2120,7 @@
   "systemSettings": {
     "sections": {
       "site": "站点信息",
+      "apiEndpoints": "API 端点设置",
       "contactMethods": "联系方式",
       "base": "基础配置",
       "registration": "注册相关",
@@ -2125,6 +2139,9 @@
       "contactIcon": "图标",
       "contactValue": "联系方式值",
       "contactQrCode": "二维码",
+      "apiEndpointName": "端点名称",
+      "apiEndpointUrl": "根地址 URL",
+      "apiEndpointDescription": "描述",
       "allowRegistration": "开放允许注册",
       "loginCaptchaEnabled": "启用登录验证码",
       "registrationCaptchaEnabled": "启用注册验证码",
@@ -2198,6 +2215,11 @@
       "contactValueRequired": "联系方式值不能为空，且不能超过 255 个字符。",
       "contactCustomTypeRequired": "自定义联系方式类型不能为空，且不能超过 255 个字符。",
       "contactQrCodeInvalid": "二维码必须是图片 data URL 或有效的 HTTP/HTTPS URL。",
+      "apiEndpointIdRequired": "API 端点 ID 不能为空，且不能超过 255 个字符。",
+      "apiEndpointNameRequired": "API 端点名称不能为空，且不能超过 255 个字符。",
+      "apiEndpointUrlRequired": "API 端点根地址不能为空，且不能超过 255 个字符。",
+      "apiEndpointDescriptionLength": "API 端点描述不能超过 255 个字符。",
+      "apiEndpointUrlInvalid": "API 端点根地址必须是有效的 HTTP/HTTPS URL。",
       "defaultUserGroupCodeInvalid": "用户注册默认分组必须是 1-64 位字母、数字、下划线或短横线。",
       "userGroupsLoadingBeforeSave": "用户组仍在加载，请稍后再保存系统设置。",
       "userGroupsUnavailableBeforeSave": "用户组列表读取失败，请先确认默认用户组状态后再保存。",
@@ -2271,6 +2293,11 @@
         "qq_group": "QQ 群",
         "custom": "自定义"
       }
+    },
+    "apiEndpoints": {
+      "description": "配置公开给用户使用的 API 服务根地址。",
+      "add": "添加 API 端点",
+      "itemTitle": "API 端点 {{index}}"
     },
     "recharge": {
       "description": "控制用户充值入口、金额换算和已注册支付渠道启禁用。",

@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use crate::provider::{ProviderCooldownPolicy, ProviderPriorityMode, ProviderSchedulingMode};
 
-use super::{ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
+use super::{ApiEndpoint, ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettings};
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct SystemSettingsResponse {
@@ -12,6 +12,7 @@ pub struct SystemSettingsResponse {
     pub public_base_url: String,
     pub site_logo_base64: String,
     pub contact_methods: Vec<ContactMethod>,
+    pub api_endpoints: Vec<ApiEndpoint>,
     pub allow_registration: bool,
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,
@@ -95,6 +96,7 @@ impl From<SystemSettings> for SystemSettingsResponse {
             public_base_url: value.public_base_url,
             site_logo_base64: value.site_logo_base64,
             contact_methods: value.contact_methods,
+            api_endpoints: value.api_endpoints,
             allow_registration: value.allow_registration,
             login_captcha_enabled: value.login_captcha_enabled,
             registration_captcha_enabled: value.registration_captcha_enabled,

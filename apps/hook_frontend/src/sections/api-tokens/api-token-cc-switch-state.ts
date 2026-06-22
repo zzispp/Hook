@@ -4,28 +4,25 @@ import type { ApiToken } from 'src/types/api-token';
 import type { GlobalModelResponse } from 'src/types/model';
 import type { TokenScope } from './api-token-management-types';
 import type { CcSwitchFormat } from './api-token-cc-switch-utils';
+import type { DisplayApiEndpoint } from './api-token-endpoints-utils';
 
 import { useMemo, useState, useEffect } from 'react';
 
-import {
-  getApiTokenSecret,
-  getAdminApiTokenSecret,
-} from 'src/actions/api-tokens';
-
+import { loadCcSwitchTokenContext } from './api-token-cc-switch-loader';
 import {
   CC_SWITCH_FORMATS,
   tokenModelOptions,
-  fetchTokenModelIds,
   buildCcSwitchDeepLink,
   modelsForCcSwitchFormat,
 } from './api-token-cc-switch-utils';
 
-type CcSwitchStep = 'format' | 'model';
+type CcSwitchStep = 'endpoint' | 'format' | 'model';
 
 type UseCcSwitchImportDialogArgs = {
   scope: TokenScope;
   t: (key: string, options?: Record<string, unknown>) => string;
   catalog: GlobalModelResponse[];
+  apiEndpoints: DisplayApiEndpoint[];
   siteName?: string | null;
 };
 
@@ -35,19 +32,25 @@ export function useCcSwitchImportDialog({
   scope,
   t,
   catalog,
+  apiEndpoints,
   siteName,
 }: UseCcSwitchImportDialogArgs) {
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<CcSwitchStep>('format');
+  const [step, setStep] = useState<CcSwitchStep>('endpoint');
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [targetToken, setTargetToken] = useState<ApiToken | null>(null);
   const [rawToken, setRawToken] = useState('');
   const [modelIds, setModelIds] = useState<string[]>([]);
+  const [selectedEndpointId, setSelectedEndpointId] = useState('');
   const [selectedFormat, setSelectedFormat] = useState<CcSwitchFormat>('claude');
   const [selectedModelId, setSelectedModelId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const selectedEndpoint = useMemo(
+    () => apiEndpoints.find((endpoint) => endpoint.id === selectedEndpointId) ?? null,
+    [apiEndpoints, selectedEndpointId]
+  );
   const modelOptions = useMemo(
     () => tokenModelOptions(modelIds, catalog),
     [catalog, modelIds]
@@ -60,6 +63,11 @@ export function useCcSwitchImportDialog({
     () => CC_SWITCH_FORMATS.filter((format) => modelsForCcSwitchFormat(modelOptions, format).length > 0),
     [modelOptions]
   );
+
+  useEffect(() => {
+    if (!open) return;
+    syncSelectedEndpoint({ apiEndpoints, selectedEndpointId, setSelectedEndpointId });
+  }, [apiEndpoints, open, selectedEndpointId]);
 
   useEffect(() => {
     if (!open) return;
@@ -79,19 +87,11 @@ export function useCcSwitchImportDialog({
     });
   }, [open, selectedFormatModels, selectedModelId]);
 
-  async function openImport(token: ApiToken) {
+  function openImport(token: ApiToken) {
     resetDialog();
     setOpen(true);
     setTargetToken(token);
-    await loadTokenContext({
-      scope,
-      tokenId: token.id,
-      setLoading,
-      setRawToken,
-      setModelIds,
-      setError,
-      t,
-    });
+    setSelectedEndpointId(apiEndpoints[0]?.id ?? '');
   }
 
   function closeDialog() {
@@ -100,19 +100,35 @@ export function useCcSwitchImportDialog({
 
   function resetDialog() {
     setOpen(false);
-    setStep('format');
+    setStep('endpoint');
     setLoading(false);
     setImporting(false);
     setTargetToken(null);
     setRawToken('');
     setModelIds([]);
+    setSelectedEndpointId('');
     setSelectedFormat('claude');
     setSelectedModelId('');
     setError(null);
   }
 
+  function backToEndpoint() {
+    setStep('endpoint');
+    setModelIds([]);
+    setRawToken('');
+    setError(null);
+  }
+
   function backToFormat() {
     setStep('format');
+  }
+
+  async function goToFormatStep() {
+    if (!targetToken || !selectedEndpoint) {
+      setError(t('tokens.ccSwitch.noApiEndpoints'));
+      return;
+    }
+    await loadTokenModels(targetToken.id, selectedEndpoint.url);
   }
 
   function goToModelStep() {
@@ -125,20 +141,12 @@ export function useCcSwitchImportDialog({
   }
 
   async function reload() {
-    if (!targetToken) return;
-    await loadTokenContext({
-      scope,
-      tokenId: targetToken.id,
-      setLoading,
-      setRawToken,
-      setModelIds,
-      setError,
-      t,
-    });
+    if (!targetToken || !selectedEndpoint) return;
+    await loadTokenModels(targetToken.id, selectedEndpoint.url);
   }
 
   function importToCcSwitch() {
-    if (!targetToken || !rawToken || !selectedModelId) {
+    if (!targetToken || !selectedEndpoint || !rawToken || !selectedModelId) {
       setError(t('tokens.ccSwitch.incompleteSelection'));
       return;
     }
@@ -150,6 +158,7 @@ export function useCcSwitchImportDialog({
         modelId: selectedModelId,
         rawToken,
         tokenName: targetToken.name,
+        baseUrl: selectedEndpoint.url,
         siteName,
         homepage: window.location.origin,
       });
@@ -162,27 +171,69 @@ export function useCcSwitchImportDialog({
 
   return {
     availableFormats,
+    apiEndpoints,
+    backToEndpoint,
     backToFormat,
+    canContinueToFormat: !!selectedEndpoint && !loading,
     canContinueToModel: selectedFormatModels.length > 0 && !loading,
-    canImport: !!rawToken && !!selectedModelId && !loading && !importing,
+    canImport: !!selectedEndpoint && !!rawToken && !!selectedModelId && !loading && !importing,
     closeDialog,
     error,
+    goToFormatStep,
+    goToModelStep,
+    importToCcSwitch,
     importing,
     loading,
     modelOptions,
     open,
     openImport,
-    goToModelStep,
     reload,
+    selectedEndpoint,
+    selectedEndpointId,
     selectedFormat,
     selectedFormatModels,
     selectedModelId,
+    setSelectedEndpointId,
     setSelectedFormat,
     setSelectedModelId,
     step,
     targetToken,
-    importToCcSwitch,
   };
+
+  async function loadTokenModels(tokenId: string, baseUrl: string) {
+    setLoading(true);
+    setError(null);
+    setRawToken('');
+    setModelIds([]);
+    try {
+      const context = await loadCcSwitchTokenContext({ scope, tokenId, baseUrl });
+      setRawToken(context.rawToken);
+      setModelIds(context.modelIds);
+      setStep('format');
+      if (context.modelIds.length === 0) {
+        setError(t('tokens.ccSwitch.noAvailableModels'));
+      }
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : t('tokens.ccSwitch.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }
+}
+
+function syncSelectedEndpoint({
+  apiEndpoints,
+  selectedEndpointId,
+  setSelectedEndpointId,
+}: {
+  apiEndpoints: DisplayApiEndpoint[];
+  selectedEndpointId: string;
+  setSelectedEndpointId: (endpointId: string) => void;
+}) {
+  if (apiEndpoints.some((endpoint) => endpoint.id === selectedEndpointId)) {
+    return;
+  }
+  setSelectedEndpointId(apiEndpoints[0]?.id ?? '');
 }
 
 function syncSelectedFormat({
@@ -213,61 +264,4 @@ function syncSelectedModel({
     return;
   }
   setSelectedModelId(selectedFormatModels[0]?.id ?? '');
-}
-
-type LoadTokenContextArgs = {
-  scope: TokenScope;
-  tokenId: string;
-  setLoading: (loading: boolean) => void;
-  setRawToken: (rawToken: string) => void;
-  setModelIds: (modelIds: string[]) => void;
-  setError: (error: string | null) => void;
-  t: (key: string, options?: Record<string, unknown>) => string;
-};
-
-async function loadTokenContext({
-  scope,
-  tokenId,
-  setLoading,
-  setRawToken,
-  setModelIds,
-  setError,
-  t,
-}: LoadTokenContextArgs) {
-  setLoading(true);
-  setError(null);
-  try {
-    const secret = await loadRawToken(scope, tokenId);
-    const ids = await fetchTokenModelIds(secret);
-    applyLoadedContext(secret, ids, setRawToken, setModelIds, setError, t);
-  } catch (error) {
-    setError(error instanceof Error ? error.message : t('tokens.ccSwitch.loadFailed'));
-    setRawToken('');
-    setModelIds([]);
-  } finally {
-    setLoading(false);
-  }
-}
-
-function applyLoadedContext(
-  secret: string,
-  modelIds: string[],
-  setRawToken: (rawToken: string) => void,
-  setModelIds: (modelIds: string[]) => void,
-  setError: (error: string | null) => void,
-  t: (key: string, options?: Record<string, unknown>) => string
-) {
-  setRawToken(secret);
-  setModelIds(modelIds);
-  if (modelIds.length === 0) {
-    setError(t('tokens.ccSwitch.noAvailableModels'));
-  }
-}
-
-async function loadRawToken(scope: TokenScope, tokenId: string) {
-  const response =
-    scope === 'admin'
-      ? await getAdminApiTokenSecret(tokenId)
-      : await getApiTokenSecret(tokenId);
-  return response.raw_token.trim();
 }
