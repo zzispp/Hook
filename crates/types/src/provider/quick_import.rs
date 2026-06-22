@@ -8,12 +8,14 @@ use super::{Provider, ProviderApiKey, ProviderEndpoint, ProviderModelBinding, Pr
 #[serde(rename_all = "snake_case")]
 pub enum ProviderQuickImportSourceKind {
     Newapi,
+    Sub2api,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ProviderQuickImportSourceConfig {
     Newapi(NewApiQuickImportConfig),
+    Sub2api(Sub2ApiQuickImportConfig),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -21,6 +23,28 @@ pub struct NewApiQuickImportConfig {
     pub base_url: String,
     pub system_access_token: String,
     pub user_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "auth_mode", rename_all = "snake_case")]
+pub enum Sub2ApiQuickImportConfig {
+    Password(Sub2ApiPasswordQuickImportConfig),
+    Token(Sub2ApiTokenQuickImportConfig),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Sub2ApiPasswordQuickImportConfig {
+    pub base_url: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Sub2ApiTokenQuickImportConfig {
+    pub base_url: String,
+    pub auth_token: String,
+    pub refresh_token: String,
+    pub token_expires_at: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -135,7 +159,8 @@ pub struct ProviderQuickImportTokenPreview {
     pub upstream_token_id: String,
     pub name: String,
     pub masked_key: String,
-    pub status: i32,
+    pub status: String,
+    pub is_active: bool,
     pub group: Option<String>,
     #[serde(with = "rust_decimal::serde::float")]
     pub group_ratio: Decimal,
@@ -237,6 +262,7 @@ impl ProviderQuickImportSourceConfig {
     pub fn kind(&self) -> ProviderQuickImportSourceKind {
         match self {
             Self::Newapi(_) => ProviderQuickImportSourceKind::Newapi,
+            Self::Sub2api(_) => ProviderQuickImportSourceKind::Sub2api,
         }
     }
 }
@@ -245,6 +271,7 @@ impl ProviderQuickImportSourceKind {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Newapi => "newapi",
+            Self::Sub2api => "sub2api",
         }
     }
 }
@@ -255,6 +282,7 @@ impl TryFrom<&str> for ProviderQuickImportSourceKind {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "newapi" => Ok(Self::Newapi),
+            "sub2api" => Ok(Self::Sub2api),
             other => Err(format!("invalid quick import source kind: {other}")),
         }
     }

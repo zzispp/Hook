@@ -1,7 +1,10 @@
 'use client';
 
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
+import type { QuickImportAuthTab } from './provider-quick-import-source';
 
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Divider from '@mui/material/Divider';
@@ -13,6 +16,7 @@ import { useTranslate } from 'src/locales/use-locales';
 import { SwitchRow, TextFieldRow } from './shared';
 import { type QuickImportFormState } from './provider-quick-import-utils';
 import { ProviderQuickImportSyncConfigFields } from './provider-quick-import-sync-section';
+import { ProviderQuickImportSub2apiTokenHelp } from './provider-quick-import-sub2api-token-help';
 import {
   DEFAULT_PROVIDER_MAX_RETRIES,
   DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
@@ -33,7 +37,6 @@ export function ProviderQuickImportSourceStep({ form, setForm }: Props) {
       </QuickImportSection>
       <QuickImportSection
         titleKey="providers.quickImportSourceSection"
-        descriptionKey="providers.quickImportNewApiSourceDescription"
       >
         <SourceCredentialFields form={form} setForm={setForm} />
       </QuickImportSection>
@@ -101,6 +104,7 @@ function SourceCredentialFields({
   setForm,
 }: Pick<Props, 'form' | 'setForm'>) {
   const { t } = useTranslate('admin');
+  const isSub2api = form.sourceKind === 'sub2api';
 
   return (
     <Stack spacing={2}>
@@ -108,12 +112,14 @@ function SourceCredentialFields({
         <TextFieldRow
           select
           label={t('providers.quickImportType')}
-          value="newapi"
-          disabled
+          value={form.sourceKind}
           sx={{ maxWidth: { md: 220 } }}
-          onChange={() => undefined}
+          onChange={(sourceKind) =>
+            setForm((current) => ({ ...current, sourceKind: sourceKind as QuickImportFormState['sourceKind'] }))
+          }
         >
           <MenuItem value="newapi">newapi</MenuItem>
+          <MenuItem value="sub2api">sub2api</MenuItem>
         </TextFieldRow>
         <TextFieldRow
           required
@@ -122,28 +128,116 @@ function SourceCredentialFields({
           onChange={(value) => setForm((current) => ({ ...current, baseUrl: value }))}
         />
       </Stack>
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-        <TextFieldRow
-          required
-          type="password"
-          label={t('providers.quickImportSystemToken')}
-          value={form.systemAccessToken}
-          onChange={(value) => setForm((current) => ({ ...current, systemAccessToken: value }))}
-        />
-        <TextFieldRow
-          required
-          label={t('providers.quickImportUserId')}
-          value={form.userId}
-          onChange={(value) => setForm((current) => ({ ...current, userId: value }))}
-        />
-        <TextFieldRow
-          required
-          type="number"
-          label={t('providers.quickImportRechargeMultiplier')}
-          value={form.rechargeMultiplier}
-          onChange={(value) => setForm((current) => ({ ...current, rechargeMultiplier: value }))}
-        />
-      </Stack>
+      {isSub2api ? (
+        <Sub2apiAuthFields form={form} setForm={setForm} />
+      ) : (
+        <>
+          <Alert severity="info" variant="outlined">
+            {t('providers.quickImportNewApiSourceDescription')}
+          </Alert>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+            <TextFieldRow
+              required
+              type="password"
+              label={t('providers.quickImportSystemToken')}
+              value={form.systemAccessToken}
+              onChange={(value) => setForm((current) => ({ ...current, systemAccessToken: value }))}
+            />
+            <TextFieldRow
+              required
+              label={t('providers.quickImportUserId')}
+              value={form.userId}
+              onChange={(value) => setForm((current) => ({ ...current, userId: value }))}
+            />
+            <TextFieldRow
+              required
+              type="number"
+              label={t('providers.quickImportRechargeMultiplier')}
+              value={form.rechargeMultiplier}
+              onChange={(value) => setForm((current) => ({ ...current, rechargeMultiplier: value }))}
+            />
+          </Stack>
+        </>
+      )}
+    </Stack>
+  );
+}
+
+function Sub2apiAuthFields({ form, setForm }: Pick<Props, 'form' | 'setForm'>) {
+  const { t } = useTranslate('admin');
+
+  return (
+    <Stack spacing={2}>
+      <Alert severity="info" variant="outlined">
+        {t('providers.quickImportSub2apiSourceDescription')}
+      </Alert>
+      <Tabs
+        value={form.sub2apiAuthTab}
+        onChange={(_event, value: QuickImportAuthTab) => setForm((current) => ({ ...current, sub2apiAuthTab: value }))}
+      >
+        <Tab value="password" label={t('providers.quickImportSub2apiPasswordImport')} />
+        <Tab value="token" label={t('providers.quickImportSub2apiTokenImport')} />
+      </Tabs>
+      {form.sub2apiAuthTab === 'token' ? (
+        <>
+          <ProviderQuickImportSub2apiTokenHelp
+            onApply={({ authToken, refreshToken, tokenExpiresAt }) =>
+              setForm((current) => ({ ...current, authToken, refreshToken, tokenExpiresAt }))
+            }
+          />
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+            <TextFieldRow
+              required
+              label={t('providers.quickImportSub2apiAuthToken')}
+              value={form.authToken}
+              onChange={(value) => setForm((current) => ({ ...current, authToken: value }))}
+            />
+            <TextFieldRow
+              required
+              type="password"
+              label={t('providers.quickImportSub2apiRefreshToken')}
+              value={form.refreshToken}
+              onChange={(value) => setForm((current) => ({ ...current, refreshToken: value }))}
+            />
+            <TextFieldRow
+              required
+              label={t('providers.quickImportSub2apiTokenExpiresAt')}
+              value={form.tokenExpiresAt}
+              onChange={(value) => setForm((current) => ({ ...current, tokenExpiresAt: value }))}
+            />
+            <TextFieldRow
+              required
+              type="number"
+              label={t('providers.quickImportRechargeMultiplier')}
+              value={form.rechargeMultiplier}
+              onChange={(value) => setForm((current) => ({ ...current, rechargeMultiplier: value }))}
+            />
+          </Stack>
+        </>
+      ) : (
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+          <TextFieldRow
+            required
+            label={t('fields.email')}
+            value={form.email}
+            onChange={(value) => setForm((current) => ({ ...current, email: value }))}
+          />
+          <TextFieldRow
+            required
+            type="password"
+            label={t('fields.password')}
+            value={form.password}
+            onChange={(value) => setForm((current) => ({ ...current, password: value }))}
+          />
+          <TextFieldRow
+            required
+            type="number"
+            label={t('providers.quickImportRechargeMultiplier')}
+            value={form.rechargeMultiplier}
+            onChange={(value) => setForm((current) => ({ ...current, rechargeMultiplier: value }))}
+          />
+        </Stack>
+      )}
     </Stack>
   );
 }

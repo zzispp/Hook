@@ -30,9 +30,14 @@ where
 {
     validate_common(input.source_kind.clone(), &input.source, &input.provider_name, input.recharge_multiplier)?;
     prepare_provider_create(args.repository, provider_create(&input.provider_name, &input.provider_config)).await?;
-    let data = args.importer.fetch_import_data(&input.source).await?;
+    let source = args.importer.refreshed_source_config(&input.source).await?.unwrap_or(input.source.clone());
+    let data = args.importer.fetch_import_data(&source).await?;
     let globals = args.models.list_global_models().await?;
-    Ok(preview_response(input, data, &globals))
+    Ok(preview_response(
+        types::provider::ProviderQuickImportPreviewRequest { source, ..input },
+        data,
+        &globals,
+    ))
 }
 
 pub async fn commit_quick_import<R, M, C, I>(
@@ -47,13 +52,14 @@ where
 {
     validate_common(input.source_kind.clone(), &input.source, &input.provider_name, input.recharge_multiplier)?;
     let provider = prepare_provider_create(args.repository, provider_create(&input.provider_name, &input.provider_config)).await?;
-    let data = args.importer.fetch_import_data(&input.source).await?;
+    let source = args.importer.refreshed_source_config(&input.source).await?.unwrap_or(input.source.clone());
+    let data = args.importer.fetch_import_data(&source).await?;
     let globals = args.models.list_global_models().await?;
     let selected = selected_tokens(&data, &input.selected_tokens)?;
     let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
     let draft = quick_import_create(QuickImportCreateDraft {
         provider,
-        source: &input.source,
+        source: &source,
         recharge_multiplier: input.recharge_multiplier,
         sync_config: input.sync_config,
         selected,

@@ -37,7 +37,8 @@ pub(super) fn token_from_key(key: &ProviderQuickImportSyncKey, models: Vec<Upstr
         id: key.upstream_token_id.clone(),
         name: key.upstream_token_name.clone(),
         masked_key: String::new(),
-        status: 1,
+        status: "active".into(),
+        is_active: true,
         group: key.upstream_group.clone(),
         group_ratio: key.upstream_group_ratio,
         api_key: None,
@@ -90,7 +91,7 @@ pub(super) fn existing_mappings(key: &ProviderQuickImportSyncKey) -> BTreeMap<St
 }
 
 pub(super) fn validate_token(token: &UpstreamImportToken) -> ProviderResult<()> {
-    if token.status != 1 {
+    if !token.is_active {
         return Err(ProviderError::InvalidInput(format!("upstream token is disabled: {}", token.id)));
     }
     if token.group.is_none() {

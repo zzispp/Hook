@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use types::provider::{
-    NewApiQuickImportConfig, Provider, ProviderApiKey, ProviderEndpoint, ProviderModelBinding, ProviderOrigin, ProviderQuickImportAppendCommitRequest,
+    Provider, ProviderApiKey, ProviderEndpoint, ProviderModelBinding, ProviderOrigin, ProviderQuickImportAppendCommitRequest,
     ProviderQuickImportAppendPreviewRequest, ProviderQuickImportCommitResponse, ProviderQuickImportLinkedKeyPreview, ProviderQuickImportModelMappingInput,
     ProviderQuickImportPreviewResponse, ProviderQuickImportSourceConfig,
 };
@@ -15,6 +15,7 @@ use super::{
     quick_import::QuickImportArgs,
     quick_import_commit::{QuickImportAppendDraft, quick_import_append, resolved_mappings, selected_tokens},
     quick_import_preview::{AppendPreviewInput, append_preview_response},
+    quick_import_shared::{refreshed_source_patch, restore_source_config},
 };
 
 pub async fn preview_quick_import_append<R, M, C, I>(
@@ -30,7 +31,11 @@ where
 {
     let context = append_context(args.repository, provider_id).await?;
     let source_config = source_config(args.cipher, &context.source)?;
-    let data = args.importer.fetch_import_data(&source_config).await?;
+    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    args.repository
+        .update_quick_import_sync_source(provider_id, refreshed_source_patch(args.cipher, &refreshed)?)
+        .await?;
+    let data = args.importer.fetch_import_data(&refreshed).await?;
     let globals = args.models.list_global_models().await?;
     let api_keys = args.repository.list_api_keys(&context.provider.id).await?;
     let imported_ids = imported_token_ids(&context.keys);
@@ -63,7 +68,11 @@ where
     let imported_ids = imported_token_ids(&context.keys);
     reject_imported_tokens(&input, &imported_ids)?;
     let source_config = source_config(args.cipher, &context.source)?;
-    let data = args.importer.fetch_import_data(&source_config).await?;
+    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    args.repository
+        .update_quick_import_sync_source(provider_id, refreshed_source_patch(args.cipher, &refreshed)?)
+        .await?;
+    let data = args.importer.fetch_import_data(&refreshed).await?;
     let globals = args.models.list_global_models().await?;
     let selected = selected_tokens(&data, &input.selected_tokens)?;
     let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
@@ -73,7 +82,7 @@ where
     let draft = quick_import_append(QuickImportAppendDraft {
         provider_id: context.provider.id.clone(),
         source_id: context.source.id,
-        source: &source_config,
+        source: &refreshed,
         selected,
         globals: &globals,
         mappings,
@@ -117,11 +126,7 @@ fn source_config<C>(cipher: &C, source: &ProviderQuickImportSyncSource) -> Provi
 where
     C: SecretCipher,
 {
-    Ok(ProviderQuickImportSourceConfig::Newapi(NewApiQuickImportConfig {
-        base_url: source.base_url.clone(),
-        system_access_token: cipher.decrypt_provider_key(&source.encrypted_system_access_token)?,
-        user_id: source.user_id.clone(),
-    }))
+    restore_source_config(cipher, source)
 }
 
 fn imported_token_ids(keys: &[ProviderQuickImportSyncKey]) -> BTreeSet<String> {

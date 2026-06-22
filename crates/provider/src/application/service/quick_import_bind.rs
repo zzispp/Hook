@@ -2,7 +2,8 @@ use std::collections::BTreeSet;
 
 use types::provider::{
     ProviderApiKey, ProviderOrigin, ProviderQuickImportBindCommitRequest, ProviderQuickImportBindCommitResponse, ProviderQuickImportBindLocalKey,
-    ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportPreviewResponse,
+    ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportPreviewResponse, ProviderQuickImportSourceConfig,
+    Sub2ApiQuickImportConfig,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, SecretCipher, UpstreamProviderImportSource};
@@ -27,10 +28,16 @@ where
     validate_bind_source(input.source_kind.clone(), &input.source, input.recharge_multiplier)?;
     let provider = bind_provider(args.repository, provider_id).await?;
     let local_keys = args.repository.list_api_keys(provider_id).await?;
-    let data = args.importer.fetch_import_data(&input.source).await?;
+    let source = args.importer.refreshed_source_config(&input.source).await?.unwrap_or(input.source.clone());
+    let data = args.importer.fetch_import_data(&source).await?;
     let globals = args.models.list_global_models().await?;
     Ok(ProviderQuickImportBindPreviewResponse {
-        preview: bind_preview(input, data, &globals, &provider.name),
+        preview: bind_preview(
+            types::provider::ProviderQuickImportBindPreviewRequest { source, ..input },
+            data,
+            &globals,
+            &provider.name,
+        ),
         provider,
         local_keys: local_keys.into_iter().map(local_key).collect(),
     })
@@ -51,13 +58,14 @@ where
     let provider = bind_provider(args.repository, provider_id).await?;
     let local_keys = args.repository.list_api_keys(provider_id).await?;
     validate_local_key_selection(&local_keys, &input)?;
-    let data = args.importer.fetch_import_data(&input.source).await?;
+    let source = args.importer.refreshed_source_config(&input.source).await?.unwrap_or(input.source.clone());
+    let data = args.importer.fetch_import_data(&source).await?;
     let globals = args.models.list_global_models().await?;
     let selected = selected_bind_tokens(&data, &input.selected_tokens)?;
     let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
     let draft = quick_import_bind(QuickImportBindDraft {
         provider_id: provider.id.clone(),
-        source: &input.source,
+        source: &source,
         recharge_multiplier: input.recharge_multiplier,
         sync_config: input.sync_config,
         selected,
@@ -126,7 +134,7 @@ fn local_key(key: ProviderApiKey) -> ProviderQuickImportBindLocalKey {
 
 fn validate_bind_source(
     source_kind: types::provider::ProviderQuickImportSourceKind,
-    source: &types::provider::ProviderQuickImportSourceConfig,
+    source: &ProviderQuickImportSourceConfig,
     recharge_multiplier: rust_decimal::Decimal,
 ) -> ProviderResult<()> {
     if source_kind != source.kind() {
@@ -135,9 +143,28 @@ fn validate_bind_source(
     if recharge_multiplier <= rust_decimal::Decimal::ZERO {
         return Err(ProviderError::InvalidInput("recharge_multiplier must be greater than 0".into()));
     }
-    let types::provider::ProviderQuickImportSourceConfig::Newapi(config) = source;
-    if config.base_url.trim().is_empty() || config.system_access_token.trim().is_empty() || config.user_id.trim().is_empty() {
-        return Err(ProviderError::InvalidInput("newapi source fields cannot be blank".into()));
+    match source {
+        ProviderQuickImportSourceConfig::Newapi(config) => {
+            if config.base_url.trim().is_empty() || config.system_access_token.trim().is_empty() || config.user_id.trim().is_empty() {
+                return Err(ProviderError::InvalidInput("newapi source fields cannot be blank".into()));
+            }
+        }
+        ProviderQuickImportSourceConfig::Sub2api(config) => match config {
+            Sub2ApiQuickImportConfig::Password(config) => {
+                if config.base_url.trim().is_empty() || config.email.trim().is_empty() || config.password.trim().is_empty() {
+                    return Err(ProviderError::InvalidInput("sub2api password source fields cannot be blank".into()));
+                }
+            }
+            Sub2ApiQuickImportConfig::Token(config) => {
+                if config.base_url.trim().is_empty()
+                    || config.auth_token.trim().is_empty()
+                    || config.refresh_token.trim().is_empty()
+                    || config.token_expires_at.trim().is_empty()
+                {
+                    return Err(ProviderError::InvalidInput("sub2api token source fields cannot be blank".into()));
+                }
+            }
+        },
     }
     Ok(())
 }
@@ -281,6 +308,7 @@ mod tests {
             name: "Provider A".into(),
             provider_type: "custom".into(),
             provider_origin: origin,
+            quick_import_source: None,
             max_retries: Some(2),
             request_timeout_seconds: Some(300.0),
             stream_first_byte_timeout_seconds: Some(60.0),

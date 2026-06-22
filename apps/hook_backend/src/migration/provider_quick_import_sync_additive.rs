@@ -9,11 +9,12 @@ const ADDITIVE_VERSION: &str = "m20260610_000002_provider_quick_import_sync";
 const MIGRATION_TABLE: &str = "seaql_migrations";
 
 pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    create_tables(manager).await?;
+    add_missing_source_columns(manager).await?;
+    create_indexes(manager).await?;
     if additive_marker_exists(manager).await? {
         return Ok(());
     }
-    create_tables(manager).await?;
-    create_indexes(manager).await?;
     mark_additive_applied(manager).await
 }
 
@@ -26,6 +27,13 @@ async fn create_tables(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
 
 async fn create_indexes(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     for sql in INDEX_SQL {
+        execute_sql(manager, sql).await?;
+    }
+    Ok(())
+}
+
+async fn add_missing_source_columns(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    for sql in ALTER_SQL {
         execute_sql(manager, sql).await?;
     }
     Ok(())
@@ -85,6 +93,11 @@ const TABLE_SQL: &[&str] = &[
         source_kind VARCHAR(32) NOT NULL,\
         base_url TEXT NOT NULL,\
         encrypted_system_access_token TEXT NOT NULL,\
+        email TEXT NOT NULL DEFAULT '',\
+        encrypted_password TEXT NOT NULL DEFAULT '',\
+        encrypted_auth_token TEXT NOT NULL DEFAULT '',\
+        encrypted_refresh_token TEXT NOT NULL DEFAULT '',\
+        token_expires_at TIMESTAMPTZ,\
         user_id VARCHAR(100) NOT NULL,\
         recharge_multiplier DECIMAL(20,8) NOT NULL,\
         auto_sync_enabled BOOLEAN NOT NULL,\
@@ -134,4 +147,12 @@ const INDEX_SQL: &[&str] = &[
     "CREATE INDEX IF NOT EXISTS index_provider_quick_import_keys_by_source ON provider_quick_import_keys(source_id)",
     "CREATE UNIQUE INDEX IF NOT EXISTS index_provider_quick_import_key_models_unique ON provider_quick_import_key_models(key_id, upstream_model_id)",
     "CREATE INDEX IF NOT EXISTS index_provider_quick_import_key_models_by_key ON provider_quick_import_key_models(key_id)",
+];
+
+const ALTER_SQL: &[&str] = &[
+    "ALTER TABLE provider_quick_import_sources ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE provider_quick_import_sources ADD COLUMN IF NOT EXISTS encrypted_password TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE provider_quick_import_sources ADD COLUMN IF NOT EXISTS encrypted_auth_token TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE provider_quick_import_sources ADD COLUMN IF NOT EXISTS encrypted_refresh_token TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE provider_quick_import_sources ADD COLUMN IF NOT EXISTS token_expires_at TIMESTAMPTZ",
 ];

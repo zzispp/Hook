@@ -11,12 +11,26 @@ pub enum ProviderOrigin {
     QuickImport,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderQuickImportAuthMode {
+    Password,
+    Token,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct ProviderQuickImportSourceSummary {
+    pub source_kind: String,
+    pub auth_mode: Option<ProviderQuickImportAuthMode>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Provider {
     pub id: String,
     pub name: String,
     pub provider_type: String,
     pub provider_origin: ProviderOrigin,
+    pub quick_import_source: Option<ProviderQuickImportSourceSummary>,
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,

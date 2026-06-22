@@ -157,7 +157,8 @@ fn selected_bind_token_keeps_local_key_id() {
 #[test]
 fn selected_bind_token_rejects_disabled_upstream_token() {
     let mut token = token_with_model("gpt-5");
-    token.status = 2;
+    token.status = "disabled".into();
+    token.is_active = false;
     let data = crate::application::UpstreamImportData {
         source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
         tokens: vec![token],
@@ -337,7 +338,8 @@ fn token_with_models(models: &[&str]) -> UpstreamImportToken {
         id: "1209".into(),
         name: "codex".into(),
         masked_key: "abcd****efgh".into(),
-        status: 1,
+        status: "active".into(),
+        is_active: true,
         group: Some("plus".into()),
         group_ratio: Decimal::ONE,
         api_key: Some("sk-test".into()),

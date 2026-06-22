@@ -1,4 +1,6 @@
+import type { QuickImportAuthTab } from './provider-quick-import-source';
 import type {
+  ProviderQuickImportSourceKind,
   ProviderQuickImportSyncConfig,
   ProviderQuickImportSyncSettingsUpdate,
   ProviderQuickImportSyncSettingsResponse,
@@ -14,18 +16,40 @@ export type QuickImportSyncConfigForm = {
 
 export type QuickImportSyncSettingsForm = {
   hasSource: boolean;
+  sourceKind: ProviderQuickImportSourceKind | '';
+  sub2apiAuthTab: QuickImportAuthTab;
   baseUrl: string;
   userId: string;
+  email: string;
+  password: string;
+  authToken: string;
+  refreshToken: string;
+  tokenExpiresAt: string;
   systemAccessToken: string;
+  hasSystemAccessToken: boolean;
+  hasPassword: boolean;
+  hasAuthToken: boolean;
+  hasRefreshToken: boolean;
   rechargeMultiplier: string;
   sync: QuickImportSyncConfigForm;
 };
 
 export const DEFAULT_QUICK_IMPORT_SYNC_SETTINGS_FORM: QuickImportSyncSettingsForm = {
   hasSource: false,
+  sourceKind: '',
+  sub2apiAuthTab: 'password',
   baseUrl: '',
   userId: '',
+  email: '',
+  password: '',
+  authToken: '',
+  refreshToken: '',
+  tokenExpiresAt: '',
   systemAccessToken: '',
+  hasSystemAccessToken: false,
+  hasPassword: false,
+  hasAuthToken: false,
+  hasRefreshToken: false,
   rechargeMultiplier: '1',
   sync: defaultQuickImportSyncConfigForm(),
 };
@@ -45,9 +69,20 @@ export function syncSettingsFormFromResponse(
 ): QuickImportSyncSettingsForm {
   return {
     hasSource: Boolean(response.source_kind),
+    sourceKind: response.source_kind ?? '',
+    sub2apiAuthTab: response.email ? 'password' : 'token',
     baseUrl: response.base_url ?? '',
     userId: response.user_id ?? '',
+    email: response.email ?? '',
+    password: '',
+    authToken: '',
+    refreshToken: '',
+    tokenExpiresAt: response.token_expires_at ?? '',
     systemAccessToken: '',
+    hasSystemAccessToken: response.has_system_access_token,
+    hasPassword: response.has_password ?? false,
+    hasAuthToken: response.has_auth_token,
+    hasRefreshToken: response.has_refresh_token,
     rechargeMultiplier: String(response.recharge_multiplier ?? 1),
     sync: syncConfigFormFromConfig(response.sync_config),
   };
@@ -56,21 +91,48 @@ export function syncSettingsFormFromResponse(
 export function syncSettingsPayload(form: QuickImportSyncSettingsForm) {
   const payload: ProviderQuickImportSyncSettingsUpdate = {
     base_url: trimmedBaseUrl(form.baseUrl),
-    user_id: form.userId.trim(),
     recharge_multiplier: Number(form.rechargeMultiplier),
     sync_config: syncConfigPayload(form.sync),
   };
-  if (form.systemAccessToken.trim()) {
-    payload.system_access_token = form.systemAccessToken.trim();
+  if (form.sourceKind === 'newapi') {
+    payload.user_id = form.userId.trim();
+    if (form.systemAccessToken.trim()) {
+      payload.system_access_token = form.systemAccessToken.trim();
+    }
+  }
+  if (form.sourceKind === 'sub2api') {
+    if (form.sub2apiAuthTab === 'password') {
+      payload.email = form.email.trim();
+      if (form.password.trim()) {
+        payload.password = form.password.trim();
+      }
+    } else {
+      if (form.authToken.trim()) {
+        payload.auth_token = form.authToken.trim();
+      }
+      if (form.refreshToken.trim()) {
+        payload.refresh_token = form.refreshToken.trim();
+      }
+      if (form.tokenExpiresAt.trim()) {
+        payload.token_expires_at = form.tokenExpiresAt.trim();
+      }
+    }
   }
   return payload;
 }
 
 export function validSyncSettings(form: QuickImportSyncSettingsForm) {
+  const sourceReady =
+    form.sourceKind === 'newapi'
+      ? Boolean(form.baseUrl.trim() && form.userId.trim())
+      : form.sourceKind === 'sub2api'
+        ? form.sub2apiAuthTab === 'password'
+          ? Boolean(form.baseUrl.trim() && form.email.trim())
+          : Boolean(form.baseUrl.trim())
+        : false;
   return Boolean(
     form.hasSource &&
-      form.baseUrl.trim() &&
-      form.userId.trim() &&
+      sourceReady &&
       Number(form.rechargeMultiplier) > 0 &&
       Number(form.sync.fetch_failure_disable_threshold) > 0
   );

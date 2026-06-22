@@ -118,6 +118,7 @@ mod tests {
                 "scheduledTasks.definitions.rechargePaymentPoll.name",
                 "scheduledTasks.definitions.rechargePaymentPoll.description",
                 60,
+                60,
                 serde_json::json!({"limit": 50}),
                 Vec::new(),
             )
@@ -138,6 +139,7 @@ mod tests {
             code: code.into(),
             enabled: true,
             interval_seconds: 60,
+            lease_seconds: 60,
             config: serde_json::json!({"limit": 50}).to_string(),
             next_run_at: now + time::Duration::seconds(60),
             locked_until: None,

@@ -150,6 +150,21 @@ fn apply_source_patch(active: &mut provider_quick_import_sources::ActiveModel, p
     if let Some(token) = patch.encrypted_system_access_token {
         active.encrypted_system_access_token = Set(token);
     }
+    if let Some(email) = patch.email {
+        active.email = Set(email);
+    }
+    if let Some(password) = patch.encrypted_password {
+        active.encrypted_password = Set(password);
+    }
+    if let Some(auth_token) = patch.encrypted_auth_token {
+        active.encrypted_auth_token = Set(auth_token);
+    }
+    if let Some(refresh_token) = patch.encrypted_refresh_token {
+        active.encrypted_refresh_token = Set(refresh_token);
+    }
+    if let Some(token_expires_at) = patch.token_expires_at {
+        active.token_expires_at = Set(token_expires_at);
+    }
     if let Some(user_id) = patch.user_id {
         active.user_id = Set(user_id);
     }

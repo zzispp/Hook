@@ -17,7 +17,10 @@ mod routing_metadata;
 mod time_range;
 
 pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCooldownPolicy, ProviderCooldownRule};
-pub use core::{Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderOrigin, ProviderUpdate};
+pub use core::{
+    Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderOrigin, ProviderQuickImportAuthMode, ProviderQuickImportSourceSummary,
+    ProviderUpdate,
+};
 pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate};
 pub use enums::{ProviderPriorityMode, ProviderSchedulingMode};
 pub use group::{
@@ -40,6 +43,7 @@ pub use quick_import::{
     ProviderQuickImportModelMappingInput, ProviderQuickImportModelMappingPreview, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse,
     ProviderQuickImportProviderConfig, ProviderQuickImportRelinkRequest, ProviderQuickImportRemoteModel, ProviderQuickImportResolutionResponse,
     ProviderQuickImportSelectedToken, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportTokenPreview,
+    Sub2ApiPasswordQuickImportConfig, Sub2ApiQuickImportConfig, Sub2ApiTokenQuickImportConfig,
 };
 pub use quick_import_bind::{
     ProviderQuickImportBindCommitRequest, ProviderQuickImportBindCommitResponse, ProviderQuickImportBindLocalKey, ProviderQuickImportBindPreviewRequest,

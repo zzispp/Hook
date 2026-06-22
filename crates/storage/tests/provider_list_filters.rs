@@ -14,6 +14,7 @@ async fn provider_list_filters_by_status_search_format_and_model() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([provider_records()])
+            .append_query_results([Vec::<storage::provider::record::provider_quick_import_sources::Model>::new()])
             .append_query_results([endpoint_records()])
             .append_query_results([provider_model_records()])
             .into_connection(),
@@ -41,6 +42,7 @@ async fn provider_list_paginates_after_priority_sorting() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([grouped_provider_records()])
+            .append_query_results([Vec::<storage::provider::record::provider_quick_import_sources::Model>::new()])
             .into_connection(),
     );
     let store = ProviderStore::new(database);

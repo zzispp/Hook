@@ -23,6 +23,7 @@ impl ScheduledTaskLifecycle for RequestPayloadBackfillTask {
             "scheduledTasks.definitions.requestPayloadBackfill.name",
             "scheduledTasks.definitions.requestPayloadBackfill.description",
             PAYLOAD_BACKFILL_INTERVAL_SECONDS,
+            PAYLOAD_BACKFILL_INTERVAL_SECONDS,
             serde_json::json!({ "batch_size": DEFAULT_PAYLOAD_BACKFILL_BATCH_SIZE }),
             integer_fields(&[("batch_size", "scheduledTasks.config.requestPayloadBackfill.batchSize", 1)]),
         )
@@ -52,6 +53,7 @@ impl ScheduledTaskLifecycle for RequestPayloadStaleSweepTask {
             "request_payload_stale_sweep",
             "scheduledTasks.definitions.requestPayloadStaleSweep.name",
             "scheduledTasks.definitions.requestPayloadStaleSweep.description",
+            PAYLOAD_STALE_SWEEP_INTERVAL_SECONDS,
             PAYLOAD_STALE_SWEEP_INTERVAL_SECONDS,
             serde_json::json!({ "pending_timeout_minutes": DEFAULT_PAYLOAD_STALE_PENDING_MINUTES }),
             integer_fields(&[(

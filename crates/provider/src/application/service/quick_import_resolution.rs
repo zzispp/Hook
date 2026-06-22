@@ -19,6 +19,7 @@ use super::{
         associations, associations_response, existing_mappings, resolve_mappings, token_from_key, validate_associated_models, validate_existing_mappings,
         validate_token,
     },
+    quick_import_shared::refreshed_source_patch,
 };
 
 pub async fn quick_import_resolution<R, M, C, I>(
@@ -34,7 +35,11 @@ where
 {
     let context = key_context(args.repository, provider_id, key_id).await?;
     let source_config = source_config(args.cipher, &context.source)?;
-    let data = args.importer.fetch_import_data(&source_config).await?;
+    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    args.repository
+        .update_quick_import_sync_source(provider_id, refreshed_source_patch(args.cipher, &refreshed)?)
+        .await?;
+    let data = args.importer.fetch_import_data(&refreshed).await?;
     let globals = args.models.list_global_models().await?;
     let imported = linked_token_ids(args.repository, &context).await?;
     let preview = resolution_preview(&context, data, &globals, &imported);
@@ -63,7 +68,11 @@ where
 {
     let context = key_context(args.repository, provider_id, key_id).await?;
     let source_config = source_config(args.cipher, &context.source)?;
-    let data = args.importer.fetch_import_data(&source_config).await?;
+    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    args.repository
+        .update_quick_import_sync_source(provider_id, refreshed_source_patch(args.cipher, &refreshed)?)
+        .await?;
+    let data = args.importer.fetch_import_data(&refreshed).await?;
     let token = token_from_data(&data, &context.key.upstream_token_id)?;
     let mappings = existing_mappings(&context.key);
     let replacement = replacement(&args, &context, token, mappings).await?;
@@ -84,7 +93,11 @@ where
 {
     let context = key_context(args.repository, provider_id, key_id).await?;
     let source_config = source_config(args.cipher, &context.source)?;
-    let data = args.importer.fetch_import_data(&source_config).await?;
+    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    args.repository
+        .update_quick_import_sync_source(provider_id, refreshed_source_patch(args.cipher, &refreshed)?)
+        .await?;
+    let data = args.importer.fetch_import_data(&refreshed).await?;
     reject_duplicate_relink(args.repository, &context, &input.upstream_token_id).await?;
     let token = token_from_data(&data, &input.upstream_token_id)?;
     let globals = args.models.list_global_models().await?;
@@ -107,7 +120,11 @@ where
     let context = key_context(args.repository, provider_id, key_id).await?;
     let globals = args.models.list_global_models().await?;
     let source_config = source_config(args.cipher, &context.source)?;
-    let upstream_models = args.importer.fetch_sync_token_models(&source_config, &context.key.upstream_token_id).await?;
+    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    args.repository
+        .update_quick_import_sync_source(provider_id, refreshed_source_patch(args.cipher, &refreshed)?)
+        .await?;
+    let upstream_models = args.importer.fetch_sync_token_models(&refreshed, &context.key.upstream_token_id).await?;
     let bindings = args.repository.list_model_bindings(provider_id).await?;
     associations_response(&context, &globals, &upstream_models, &bindings)
 }
@@ -129,7 +146,11 @@ where
     }
     let context = key_context(args.repository, provider_id, key_id).await?;
     let source_config = source_config(args.cipher, &context.source)?;
-    let upstream_models = args.importer.fetch_sync_token_models(&source_config, &context.key.upstream_token_id).await?;
+    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    args.repository
+        .update_quick_import_sync_source(provider_id, refreshed_source_patch(args.cipher, &refreshed)?)
+        .await?;
+    let upstream_models = args.importer.fetch_sync_token_models(&refreshed, &context.key.upstream_token_id).await?;
     let globals = args.models.list_global_models().await?;
     let token = token_from_key(&context.key, upstream_models.clone());
     let selected_ids = input.model_mappings.iter().map(|item| item.upstream_model_id.clone()).collect();

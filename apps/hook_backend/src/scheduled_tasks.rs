@@ -68,6 +68,7 @@ impl ScheduledTaskLifecycle for ApiTokenCleanupTask {
             "scheduledTasks.definitions.apiTokenCleanup.name",
             "scheduledTasks.definitions.apiTokenCleanup.description",
             5_i64.minutes(),
+            5_i64.minutes(),
             serde_json::json!({}),
             Vec::new(),
         )

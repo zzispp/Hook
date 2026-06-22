@@ -6,7 +6,7 @@ import type {
   ProviderModelBinding,
 } from './provider';
 
-export type ProviderQuickImportSourceKind = 'newapi';
+export type ProviderQuickImportSourceKind = 'newapi' | 'sub2api';
 export type ProviderQuickImportCostSyncMode = 'overwrite' | 'report_only';
 export type ProviderQuickImportUpstreamAnomalyAction = 'disable_key' | 'report_only';
 export type ProviderQuickImportGroupChangedAction = 'disable_key' | 'report_only' | 'sync';
@@ -33,9 +33,26 @@ export type NewApiQuickImportConfig = {
   user_id: string;
 };
 
-export type ProviderQuickImportSourceConfig = {
-  kind: 'newapi';
-} & NewApiQuickImportConfig;
+export type Sub2ApiPasswordQuickImportConfig = {
+  auth_mode: 'password';
+  base_url: string;
+  email: string;
+  password: string;
+};
+
+export type Sub2ApiTokenQuickImportConfig = {
+  auth_mode: 'token';
+  base_url: string;
+  auth_token: string;
+  refresh_token: string;
+  token_expires_at: string;
+};
+
+export type Sub2ApiQuickImportConfig = Sub2ApiPasswordQuickImportConfig | Sub2ApiTokenQuickImportConfig;
+
+export type ProviderQuickImportSourceConfig =
+  | ({ kind: 'newapi' } & NewApiQuickImportConfig)
+  | ({ kind: 'sub2api' } & Sub2ApiQuickImportConfig);
 
 export type ProviderQuickImportPreviewRequest = {
   source_kind: ProviderQuickImportSourceKind;
@@ -148,7 +165,12 @@ export type ProviderQuickImportSyncSettingsResponse = {
   source_kind?: ProviderQuickImportSourceKind | null;
   base_url?: string | null;
   user_id?: string | null;
+  email?: string | null;
+  token_expires_at?: string | null;
   has_system_access_token: boolean;
+  has_password?: boolean;
+  has_auth_token: boolean;
+  has_refresh_token: boolean;
   recharge_multiplier?: number | null;
   sync_config: ProviderQuickImportSyncConfig;
   last_status?: ProviderQuickImportSyncStatus | null;
@@ -160,7 +182,12 @@ export type ProviderQuickImportSyncSettingsResponse = {
 export type ProviderQuickImportSyncSettingsUpdate = {
   base_url?: string;
   user_id?: string;
+  email?: string;
+  password?: string;
   system_access_token?: string;
+  auth_token?: string;
+  refresh_token?: string;
+  token_expires_at?: string;
   recharge_multiplier?: number;
   sync_config?: ProviderQuickImportSyncConfig;
 };
@@ -201,7 +228,8 @@ export type ProviderQuickImportTokenPreview = {
   upstream_token_id: string;
   name: string;
   masked_key: string;
-  status: number;
+  status: string;
+  is_active: boolean;
   group?: string | null;
   group_ratio: number;
   effective_cost_multiplier: number;

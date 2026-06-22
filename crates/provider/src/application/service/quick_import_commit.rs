@@ -1,11 +1,12 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use rust_decimal::Decimal;
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use types::{
     model::GlobalModelResponse,
     provider::{
         ProviderApiKeyCreate, ProviderApiKeyUpdate, ProviderCreate, ProviderEndpointCreate, ProviderModelBindingCreate, ProviderModelCostBatchUpsert,
-        ProviderModelMapping, ProviderQuickImportSourceConfig, ProviderQuickImportSyncConfig,
+        ProviderModelMapping, ProviderQuickImportSourceConfig, ProviderQuickImportSyncConfig, Sub2ApiQuickImportConfig,
     },
 };
 
@@ -230,15 +231,58 @@ fn sync_source_create<C>(
 where
     C: SecretCipher,
 {
-    let ProviderQuickImportSourceConfig::Newapi(config) = source;
-    Ok(ProviderQuickImportSyncSourceCreate {
-        source_kind: source.kind(),
-        base_url: source_base_url(source),
-        encrypted_system_access_token: cipher.encrypt_provider_key(config.system_access_token.trim())?,
-        user_id: config.user_id.trim().to_owned(),
-        recharge_multiplier,
-        sync_config,
-    })
+    match source {
+        ProviderQuickImportSourceConfig::Newapi(config) => Ok(ProviderQuickImportSyncSourceCreate {
+            source_kind: source.kind(),
+            base_url: source_base_url(source),
+            encrypted_system_access_token: cipher.encrypt_provider_key(config.system_access_token.trim())?,
+            email: String::new(),
+            encrypted_password: String::new(),
+            encrypted_auth_token: String::new(),
+            encrypted_refresh_token: String::new(),
+            token_expires_at: None,
+            user_id: config.user_id.trim().to_owned(),
+            recharge_multiplier,
+            sync_config,
+        }),
+        ProviderQuickImportSourceConfig::Sub2api(Sub2ApiQuickImportConfig::Password(config)) => Ok(ProviderQuickImportSyncSourceCreate {
+            source_kind: source.kind(),
+            base_url: source_base_url(source),
+            encrypted_system_access_token: String::new(),
+            email: config.email.trim().to_owned(),
+            encrypted_password: cipher.encrypt_provider_key(config.password.trim())?,
+            encrypted_auth_token: String::new(),
+            encrypted_refresh_token: String::new(),
+            token_expires_at: None,
+            user_id: String::new(),
+            recharge_multiplier,
+            sync_config,
+        }),
+        ProviderQuickImportSourceConfig::Sub2api(Sub2ApiQuickImportConfig::Token(config)) => Ok(ProviderQuickImportSyncSourceCreate {
+            source_kind: source.kind(),
+            base_url: source_base_url(source),
+            encrypted_system_access_token: String::new(),
+            email: String::new(),
+            encrypted_password: String::new(),
+            encrypted_auth_token: cipher.encrypt_provider_key(config.auth_token.trim())?,
+            encrypted_refresh_token: cipher.encrypt_provider_key(config.refresh_token.trim())?,
+            token_expires_at: Some(parse_token_expires_at(&config.token_expires_at)?),
+            user_id: String::new(),
+            recharge_multiplier,
+            sync_config,
+        }),
+    }
+}
+
+fn parse_token_expires_at(value: &str) -> ProviderResult<OffsetDateTime> {
+    if let Ok(milliseconds) = value.trim().parse::<i128>() {
+        let seconds = milliseconds.div_euclid(1000) as i64;
+        let nanos = (milliseconds.rem_euclid(1000) as i64) * 1_000_000;
+        return OffsetDateTime::from_unix_timestamp(seconds)
+            .map(|value| value + time::Duration::nanoseconds(nanos))
+            .map_err(|error| ProviderError::InvalidInput(format!("invalid token_expires_at milliseconds: {error}")));
+    }
+    OffsetDateTime::parse(value.trim(), &Rfc3339).map_err(|error| ProviderError::InvalidInput(format!("invalid token_expires_at: {error}")))
 }
 
 fn cost_creates(

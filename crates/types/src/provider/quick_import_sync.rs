@@ -107,7 +107,12 @@ pub struct ProviderQuickImportSyncSettingsResponse {
     pub source_kind: Option<ProviderQuickImportSourceKind>,
     pub base_url: Option<String>,
     pub user_id: Option<String>,
+    pub email: Option<String>,
+    pub token_expires_at: Option<String>,
     pub has_system_access_token: bool,
+    pub has_password: bool,
+    pub has_auth_token: bool,
+    pub has_refresh_token: bool,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub recharge_multiplier: Option<Decimal>,
     pub sync_config: ProviderQuickImportSyncConfig,
@@ -124,7 +129,17 @@ pub struct ProviderQuickImportSyncSettingsUpdate {
     #[serde(default)]
     pub user_id: Option<String>,
     #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub password: Option<String>,
+    #[serde(default)]
     pub system_access_token: Option<String>,
+    #[serde(default)]
+    pub auth_token: Option<String>,
+    #[serde(default)]
+    pub refresh_token: Option<String>,
+    #[serde(default)]
+    pub token_expires_at: Option<String>,
     #[serde(default, with = "rust_decimal::serde::float_option")]
     pub recharge_multiplier: Option<Decimal>,
     #[serde(default)]

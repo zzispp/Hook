@@ -18,6 +18,7 @@ export type ScheduledTask = {
   description_key: string;
   enabled: boolean;
   interval_seconds: number;
+  lease_seconds: number;
   next_run_at?: string | null;
   config: Record<string, unknown>;
   config_schema: ScheduledTaskConfigField[];
@@ -44,6 +45,7 @@ export type ScheduledTaskRun = {
 export type ScheduledTaskUpdate = Partial<{
   enabled: boolean;
   interval_seconds: number;
+  lease_seconds: number;
   config: Record<string, unknown>;
 }>;
 

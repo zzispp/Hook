@@ -8,6 +8,7 @@ export type RunStatusFilter = '' | 'running' | 'succeeded' | 'failed' | 'skipped
 export type TaskFormState = {
   enabled: boolean;
   interval_seconds: string;
+  lease_seconds: string;
   config: Record<string, string>;
 };
 
@@ -23,6 +24,7 @@ export function taskPayload(task: ScheduledTask, form: TaskFormState) {
   return {
     enabled: form.enabled,
     interval_seconds: Number(form.interval_seconds || 0),
+    lease_seconds: Number(form.lease_seconds || 0),
     config: task.config_schema.reduce<Record<string, number>>((acc, field) => {
       acc[field.key] = Number(form.config[field.key] || 0);
       return acc;
@@ -34,6 +36,7 @@ export function formFromTask(task: ScheduledTask): TaskFormState {
   return {
     enabled: task.enabled,
     interval_seconds: String(task.interval_seconds),
+    lease_seconds: String(task.lease_seconds),
     config: task.config_schema.reduce<Record<string, string>>((acc, field) => {
       acc[field.key] = String(task.config[field.key] ?? '');
       return acc;

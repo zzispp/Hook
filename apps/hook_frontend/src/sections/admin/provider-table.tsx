@@ -124,11 +124,11 @@ function ProviderTableRow({
         </Typography>
       </TableCell>
       <TableCell>
-        <Chip
-          size="small"
-          color={row.provider_origin === 'quick_import' ? 'info' : 'default'}
-          label={providerOriginLabel(row.provider_origin, t)}
-        />
+          <Chip
+            size="small"
+            color={row.provider_origin === 'quick_import' ? 'info' : 'default'}
+            label={providerOriginLabel(row.provider_origin, row.quick_import_source, t)}
+          />
       </TableCell>
       <TableCell>
         <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75 }}>

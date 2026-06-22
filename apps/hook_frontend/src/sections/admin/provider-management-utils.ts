@@ -2,13 +2,14 @@ import type { AdminT } from './shared';
 import type {
   Provider,
   ProviderType,
-  ProviderOrigin,
   ProviderApiKey,
   ProviderCreate,
+  ProviderOrigin,
   ProviderUpdate,
-  ProviderApiKeyUpdate,
   ProviderApiKeyCreate,
+  ProviderApiKeyUpdate,
   ProviderModelBindingCreate,
+  ProviderQuickImportSourceSummary,
 } from 'src/types/provider';
 
 export const PROVIDER_TYPE_OPTIONS: ProviderType[] = ['custom'];
@@ -233,13 +234,17 @@ export function providerTypeLabel(value: ProviderType, t: AdminT) {
   return labels[value];
 }
 
-export function providerOriginLabel(value: ProviderOrigin, t: AdminT) {
-  const labels: Record<ProviderOrigin, string> = {
-    manual: t('providers.providerOriginManual'),
-    quick_import: t('providers.providerOriginQuickImport'),
-  };
-
-  return labels[value];
+export function providerOriginLabel(value: ProviderOrigin, summary: ProviderQuickImportSourceSummary | null | undefined, t: AdminT) {
+  if (value === 'manual') return t('providers.providerOriginManual');
+  if (!summary) return t('providers.providerOriginQuickImport');
+  if (summary.source_kind === 'newapi') return t('providers.providerOriginQuickImportNewapi');
+  if (summary.source_kind === 'sub2api' && summary.auth_mode === 'password') {
+    return t('providers.providerOriginQuickImportSub2apiPassword');
+  }
+  if (summary.source_kind === 'sub2api' && summary.auth_mode === 'token') {
+    return t('providers.providerOriginQuickImportSub2apiToken');
+  }
+  return t('providers.providerOriginQuickImport');
 }
 
 function optionalNumberText(value?: number | null) {

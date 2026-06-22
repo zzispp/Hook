@@ -280,7 +280,8 @@ function statusChipColor(token: ProviderQuickImportTokenPreview) {
 
 function statusChipLabel(token: ProviderQuickImportTokenPreview, t: (key: string) => string) {
   if (token.already_imported) return t('providers.quickImportLinkedToken');
-  return token.importable ? t('common.enabled') : t('common.disabled');
+  if (token.importable) return t('common.enabled');
+  return t(`providers.quickImportPreviewStatus.${token.status}`);
 }
 
 const mainRowCellSx = {

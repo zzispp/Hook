@@ -20,6 +20,7 @@ impl ScheduledTaskRecord {
             description_key: definition.description_key.clone(),
             enabled: self.enabled,
             interval_seconds: self.interval_seconds,
+            lease_seconds: self.lease_seconds,
             next_run_at: self.enabled.then_some(self.next_run_at).map(format_timestamp).transpose()?,
             config: json::decode_required(self.config)?,
             config_schema: definition.config_schema.clone(),
@@ -54,6 +55,7 @@ pub fn task_definition(
     name_key: impl Into<String>,
     description_key: impl Into<String>,
     default_interval_seconds: i64,
+    default_lease_seconds: i64,
     default_config: serde_json::Value,
     config_schema: Vec<ScheduledTaskConfigField>,
 ) -> ScheduledTaskDefinition {
@@ -63,6 +65,7 @@ pub fn task_definition(
         description_key: description_key.into(),
         default_enabled: true,
         default_interval_seconds,
+        default_lease_seconds,
         default_config,
         config_schema,
     }

@@ -11,6 +11,7 @@ fn request_record_cleanup_definition_matches_runtime_contract() {
 
     assert_eq!(definition.code, "request_record_cleanup");
     assert_eq!(definition.default_interval_seconds, 600);
+    assert_eq!(definition.default_lease_seconds, 600);
     assert_eq!(definition.default_config["record_retention_days"], 3);
     assert_eq!(definition.default_config["payload_retention_days"], 1);
     assert_eq!(definition.default_config["delete_batch_size"], 200);
@@ -34,6 +35,7 @@ fn request_record_partition_maintenance_definition_matches_runtime_contract() {
 
     assert_eq!(definition.code, "request_record_partition_maintenance");
     assert_eq!(definition.default_interval_seconds, 3600);
+    assert_eq!(definition.default_lease_seconds, 3600);
     assert_eq!(definition.default_config["record_retention_days"], 3);
     assert_eq!(definition.default_config["payload_retention_days"], 1);
     assert_eq!(definition.default_config["future_days"], 3);
@@ -49,6 +51,7 @@ fn request_payload_backfill_definition_matches_runtime_contract() {
 
     assert_eq!(definition.code, "request_payload_backfill");
     assert_eq!(definition.default_interval_seconds, 600);
+    assert_eq!(definition.default_lease_seconds, 600);
     assert_eq!(definition.default_config["batch_size"], 100);
     assert_eq!(definition.config_schema.len(), 1);
     assert_field(&definition, "batch_size", 1);
@@ -60,6 +63,7 @@ fn request_payload_stale_sweep_definition_matches_runtime_contract() {
 
     assert_eq!(definition.code, "request_payload_stale_sweep");
     assert_eq!(definition.default_interval_seconds, 300);
+    assert_eq!(definition.default_lease_seconds, 300);
     assert_eq!(definition.default_config["pending_timeout_minutes"], 15);
     assert_eq!(definition.config_schema.len(), 1);
     assert_field(&definition, "pending_timeout_minutes", 1);
@@ -71,6 +75,7 @@ fn provider_quick_import_sync_definition_matches_runtime_contract() {
 
     assert_eq!(definition.code, "provider_quick_import_sync");
     assert_eq!(definition.default_interval_seconds, 600);
+    assert_eq!(definition.default_lease_seconds, 1800);
     assert_eq!(definition.default_config["batch_size"], 20);
     assert_eq!(definition.default_config["max_runtime_seconds"], 300);
     assert_eq!(definition.config_schema.len(), 2);
@@ -108,6 +113,7 @@ fn request_record_stale_sweep_definition_matches_runtime_contract() {
     assert_eq!(definition.name_key, "scheduledTasks.definitions.requestRecordStaleSweep.name");
     assert_eq!(definition.description_key, "scheduledTasks.definitions.requestRecordStaleSweep.description");
     assert_eq!(definition.default_interval_seconds, 300);
+    assert_eq!(definition.default_lease_seconds, 300);
     assert_eq!(definition.default_config["pending_timeout_minutes"], 10);
     assert_eq!(definition.default_config["streaming_timeout_minutes"], 10);
     assert_eq!(definition.config_schema.len(), 2);

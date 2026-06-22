@@ -6,6 +6,7 @@ pub(in crate::migration::baseline) enum ScheduledTasks {
     Code,
     Enabled,
     IntervalSeconds,
+    LeaseSeconds,
     Config,
     NextRunAt,
     LockedUntil,

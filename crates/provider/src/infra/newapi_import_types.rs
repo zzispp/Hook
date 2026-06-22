@@ -33,6 +33,16 @@ pub(super) struct NewApiTokenRecord {
     pub(super) group: Option<String>,
 }
 
+impl NewApiTokenRecord {
+    pub(super) fn is_active(&self) -> bool {
+        self.status == 1
+    }
+
+    pub(super) fn status_label(&self) -> String {
+        if self.is_active() { "active".into() } else { "disabled".into() }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub(super) struct NewApiGroup {
     ratio: NewApiGroupRatio,

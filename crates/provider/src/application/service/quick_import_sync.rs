@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use types::{
     model::GlobalModelResponse,
     provider::{
-        NewApiQuickImportConfig, ProviderApiKeyUpdate, ProviderModelCostBatchUpsert, ProviderQuickImportFetchFailureAction, ProviderQuickImportSourceConfig,
+        ProviderApiKeyUpdate, ProviderModelCostBatchUpsert, ProviderQuickImportFetchFailureAction, ProviderQuickImportSourceConfig,
         ProviderQuickImportSyncStatus,
     },
 };
@@ -15,6 +15,7 @@ use crate::application::{
 };
 
 use super::{
+    quick_import_shared::restore_source_config,
     quick_import_sync_bindings::{BindingInfo, bindings_by_global},
     quick_import_sync_events::{key_events, source_failure_event, source_failure_key_event},
     quick_import_sync_globals::globals_by_id,
@@ -70,7 +71,14 @@ where
     I: UpstreamProviderImportSource,
 {
     let source_config = source_config(args.cipher, &source)?;
-    let snapshot = match args.importer.fetch_sync_snapshot(&source_config).await {
+    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    args.repository
+        .update_quick_import_sync_source(
+            &source.provider_id,
+            super::quick_import_shared::refreshed_source_patch(args.cipher, &refreshed)?,
+        )
+        .await?;
+    let snapshot = match args.importer.fetch_sync_snapshot(&refreshed).await {
         Ok(snapshot) => snapshot,
         Err(error) => return handle_source_failure(args.repository, source, error, report).await,
     };
@@ -80,7 +88,7 @@ where
     let context = KeySyncContext {
         args,
         source: &source,
-        source_config: &source_config,
+        source_config: &refreshed,
         snapshot: &snapshot,
         globals: &globals,
         bindings: &bindings,
@@ -225,9 +233,5 @@ fn source_config<C>(cipher: &C, source: &ProviderQuickImportSyncSource) -> Provi
 where
     C: SecretCipher,
 {
-    Ok(ProviderQuickImportSourceConfig::Newapi(NewApiQuickImportConfig {
-        base_url: source.base_url.clone(),
-        system_access_token: cipher.decrypt_provider_key(&source.encrypted_system_access_token)?,
-        user_id: source.user_id.clone(),
-    }))
+    restore_source_config(cipher, source)
 }

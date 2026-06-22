@@ -175,7 +175,7 @@ fn selected_bind_token<'a>(by_id: &BTreeMap<&str, &'a UpstreamImportToken>, inpu
 }
 
 fn validate_selected_token_fields(token: &UpstreamImportToken, name: &str, effective_cost_multiplier: Decimal) -> ProviderResult<()> {
-    if token.status != 1 {
+    if !token.is_active {
         return Err(ProviderError::InvalidInput(format!("upstream token is disabled: {}", token.id)));
     }
     if token.group.is_none() {
