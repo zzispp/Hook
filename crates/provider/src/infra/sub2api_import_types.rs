@@ -228,7 +228,7 @@ fn base64_decode(value: &str) -> Result<Vec<u8>, String> {
         table[*byte as usize] = index as u8;
     }
     let bytes = value.as_bytes();
-    if bytes.len() % 4 != 0 {
+    if !bytes.len().is_multiple_of(4) {
         return Err("invalid base64 length".into());
     }
     let mut output = Vec::with_capacity(bytes.len() / 4 * 3);
