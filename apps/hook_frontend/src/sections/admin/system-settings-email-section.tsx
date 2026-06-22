@@ -19,7 +19,7 @@ import { Iconify } from 'src/components/iconify';
 import { SwitchRow, TextFieldRow } from './shared';
 import { SettingsSection } from './system-settings-section';
 import { EmailTemplateEditor } from './system-settings-email-template-editor';
-import { smtpTestPayload, emailConfigComplete } from './system-settings-utils';
+import { smtpTestPayload, emailConfigComplete } from './system-settings-email-utils';
 
 type SystemSettingsFormProps = {
   form: SystemSettingsForm;

@@ -13,6 +13,7 @@ pub struct Model {
     pub public_base_url: String,
     pub site_logo_base64: String,
     pub contact_methods: String,
+    pub api_endpoints: String,
     pub allow_registration: bool,
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,
@@ -97,6 +98,7 @@ impl TryFrom<Model> for SystemSettings {
             public_base_url: value.public_base_url,
             site_logo_base64: value.site_logo_base64,
             contact_methods: decode_contact_methods(&value.contact_methods)?,
+            api_endpoints: decode_api_endpoints(&value.api_endpoints)?,
             allow_registration: value.allow_registration,
             login_captcha_enabled: value.login_captcha_enabled,
             registration_captcha_enabled: value.registration_captcha_enabled,
@@ -178,4 +180,40 @@ fn decode_provider_cooldown_policy(value: &str) -> Result<ProviderCooldownPolicy
 
 fn decode_contact_methods(value: &str) -> Result<Vec<types::system_setting::ContactMethod>, String> {
     serde_json::from_str(value).map_err(|error| format!("invalid contact methods: {error}"))
+}
+
+fn decode_api_endpoints(value: &str) -> Result<Vec<types::system_setting::ApiEndpoint>, String> {
+    serde_json::from_str(value).map_err(|error| format!("invalid api endpoints: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use types::system_setting::ApiEndpoint;
+
+    use super::decode_api_endpoints;
+
+    #[test]
+    fn decode_api_endpoints_reads_json() {
+        let endpoints = decode_api_endpoints(
+            r#"[{"id":"global","name":"Global","url":"https://api.example.com","description":"Primary"}]"#,
+        )
+        .expect("api endpoints JSON should decode");
+
+        assert_eq!(
+            endpoints,
+            vec![ApiEndpoint {
+                id: "global".into(),
+                name: "Global".into(),
+                url: "https://api.example.com".into(),
+                description: "Primary".into(),
+            }]
+        );
+    }
+
+    #[test]
+    fn decode_api_endpoints_rejects_invalid_json() {
+        let error = decode_api_endpoints("{invalid").unwrap_err();
+
+        assert!(error.starts_with("invalid api endpoints:"));
+    }
 }

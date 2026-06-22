@@ -14,7 +14,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { SwitchRow, TextFieldRow } from './shared';
 import { SettingsSection } from './system-settings-section';
-import { emailConfigComplete } from './system-settings-utils';
+import { emailConfigComplete } from './system-settings-email-utils';
 import { AuthProviderFields } from './system-settings-auth-provider-section';
 import { EmailTemplateEditor } from './system-settings-email-template-editor';
 

@@ -17,6 +17,7 @@ pub(super) fn system_settings_table() -> TableCreateStatement {
         .col(string_len(SystemSettings::PublicBaseUrl, 255).default(""))
         .col(text(SystemSettings::SiteLogoBase64).default(""))
         .col(text(SystemSettings::ContactMethods).default("[]"))
+        .col(text(SystemSettings::ApiEndpoints).default("[]"))
         .col(boolean(SystemSettings::AllowRegistration))
         .col(boolean(SystemSettings::LoginCaptchaEnabled).default(false))
         .col(boolean(SystemSettings::RegistrationCaptchaEnabled).default(false))

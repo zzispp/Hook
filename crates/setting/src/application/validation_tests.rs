@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use types::{
     provider::ProviderCooldownPolicy,
-    system_setting::{EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettingsResponse, SystemSettingsUpdate},
+    system_setting::{ApiEndpoint, EmailSuffixMode, RequestRecordLevel, SmtpEncryption, SystemSettingsResponse, SystemSettingsUpdate},
 };
 
 use super::{sanitize_update, validate_recharge_bounds, validate_update};
@@ -52,6 +52,70 @@ fn sanitize_update_trims_site_logo_base64() {
     let sanitized = sanitize_update(input);
 
     assert_eq!(sanitized.site_logo_base64.as_deref(), Some("data:image/png;base64,AA=="));
+}
+
+#[test]
+fn sanitize_update_trims_api_endpoint_fields() {
+    let input = SystemSettingsUpdate {
+        api_endpoints: Some(vec![api_endpoint(
+            "  endpoint-1  ",
+            "  Global  ",
+            "  https://api.example.com/  ",
+            "  public network  ",
+        )]),
+        ..Default::default()
+    };
+
+    let sanitized = sanitize_update(input);
+
+    assert_eq!(
+        sanitized.api_endpoints,
+        Some(vec![api_endpoint(
+            "endpoint-1",
+            "Global",
+            "https://api.example.com",
+            "public network",
+        )])
+    );
+}
+
+#[test]
+fn validate_update_accepts_empty_api_endpoint_list() {
+    validate_update(&SystemSettingsUpdate {
+        api_endpoints: Some(Vec::new()),
+        ..Default::default()
+    })
+    .unwrap();
+}
+
+#[test]
+fn validate_update_rejects_api_endpoint_without_url() {
+    let input = SystemSettingsUpdate {
+        api_endpoints: Some(vec![api_endpoint("endpoint-1", "Global", "", "")]),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "invalid input: api_endpoints.url length must be between 1 and 255"
+    );
+}
+
+#[test]
+fn validate_update_rejects_invalid_api_endpoint_url() {
+    let input = SystemSettingsUpdate {
+        api_endpoints: Some(vec![api_endpoint("endpoint-1", "Global", "https://", "")]),
+        ..Default::default()
+    };
+
+    let error = validate_update(&input).unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "invalid input: api_endpoints.url must be a valid HTTP or HTTPS URL"
+    );
 }
 
 #[test]
@@ -217,6 +281,7 @@ fn system_settings_response() -> SystemSettingsResponse {
         public_base_url: "https://hook.test".into(),
         site_logo_base64: String::new(),
         contact_methods: Vec::new(),
+        api_endpoints: Vec::new(),
         allow_registration: true,
         login_captcha_enabled: false,
         registration_captcha_enabled: false,
@@ -284,5 +349,14 @@ fn system_settings_response() -> SystemSettingsResponse {
         email_template_password_reset_html: "<p>{{reset_link}}</p>".into(),
         created_at: "2026-05-25T00:00:00Z".into(),
         updated_at: "2026-05-25T00:00:00Z".into(),
+    }
+}
+
+fn api_endpoint(id: &str, name: &str, url: &str, description: &str) -> ApiEndpoint {
+    ApiEndpoint {
+        id: id.into(),
+        name: name.into(),
+        url: url.into(),
+        description: description.into(),
     }
 }

@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 
 use crate::provider::{ProviderCooldownPolicy, ProviderPriorityMode, ProviderSchedulingMode};
 
-use super::{ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
+use super::{ApiEndpoint, ContactMethod, EmailSuffixMode, RequestRecordLevel, SmtpEncryption};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SystemSettings {
@@ -11,6 +11,7 @@ pub struct SystemSettings {
     pub public_base_url: String,
     pub site_logo_base64: String,
     pub contact_methods: Vec<ContactMethod>,
+    pub api_endpoints: Vec<ApiEndpoint>,
     pub allow_registration: bool,
     pub login_captcha_enabled: bool,
     pub registration_captcha_enabled: bool,

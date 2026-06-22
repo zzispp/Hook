@@ -4,7 +4,7 @@ import type { ApiTokenFilters } from 'src/actions/api-tokens';
 import type { TokenFilterState } from './api-token-filters-toolbar';
 import type { TokenScope, TokenModelOption, BillingGroupOption } from './api-token-management-types';
 
-import { useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 import Button from '@mui/material/Button';
 
@@ -20,6 +20,8 @@ import { ConfirmDialog } from 'src/components/custom-dialog';
 import { ApiTokenTable } from './api-token-table';
 import { ApiTokenDialog } from './api-token-dialog';
 import { ApiTokenCreatedDialog } from './api-token-created-dialog';
+import { effectiveApiEndpoints } from './api-token-endpoints-utils';
+import { ApiTokenEndpointsPanel } from './api-token-endpoints-panel';
 import { ApiTokenCcSwitchDialog } from './api-token-cc-switch-dialog';
 import { useCcSwitchImportDialog } from './api-token-cc-switch-state';
 import { useTokenOwnerBillingGroups } from './api-token-group-visibility';
@@ -72,10 +74,15 @@ export function useTokenManagementPanelState({
     disabled,
     scope,
   });
+  const apiEndpoints = useMemo(
+    () => effectiveApiEndpoints(site.data, t('tokens.apiEndpoints.defaultName')),
+    [site.data, t]
+  );
   const ccSwitchImport = useCcSwitchImportDialog({
     scope,
     t,
     catalog: models.items,
+    apiEndpoints,
     siteName: site.data?.site_name,
   });
   const deleteDialog = useDeleteDialog(scope, t);
@@ -97,6 +104,7 @@ export function useTokenManagementPanelState({
     fixedUserId,
     groups,
     handleFiltersChange,
+    apiEndpoints,
     models,
     scope,
     table,
@@ -115,6 +123,7 @@ export function TokenManagementPanel({ state }: Props) {
         showTokenType={state.scope === 'admin' && !state.fixedUserId}
         onChange={state.handleFiltersChange}
       />
+      <ApiTokenEndpointsPanel endpoints={state.apiEndpoints} />
       <ApiTokenTable
         rows={state.tokens.items}
         total={state.tokens.total}

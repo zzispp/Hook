@@ -14,12 +14,20 @@ export type ContactMethod = {
   qr_code: string;
 };
 
+export type ApiEndpoint = {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+};
+
 export type SystemSettings = {
   site_name: string;
   site_subtitle: string;
   public_base_url: string;
   site_logo_base64: string;
   contact_methods: ContactMethod[];
+  api_endpoints: ApiEndpoint[];
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -95,6 +103,7 @@ export type SystemSettingsUpdate = Partial<{
   public_base_url: string;
   site_logo_base64: string;
   contact_methods: ContactMethod[];
+  api_endpoints: ApiEndpoint[];
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -165,8 +174,10 @@ export type SystemSettingsUpdate = Partial<{
 export type PublicSiteInfo = {
   site_name: string;
   site_subtitle: string;
+  public_base_url: string;
   site_logo_base64: string;
   contact_methods: ContactMethod[];
+  api_endpoints: ApiEndpoint[];
 };
 
 export type SystemSettingsSmtpTestRequest = Partial<{

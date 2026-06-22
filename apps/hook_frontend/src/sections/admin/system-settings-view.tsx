@@ -29,6 +29,7 @@ import { AffiliateSettingsSection } from './system-settings-affiliate-section';
 import { RequestRecordSection } from './system-settings-request-record-section';
 import { enabledUserGroupOptions, USER_GROUP_MAX_PAGE_SIZE } from './user-group-utils';
 import { SystemSettingsRegistrationSection } from './system-settings-registration-section';
+import { SystemSettingsApiEndpointsSection } from './system-settings-api-endpoints-section';
 import { SystemSettingsContactMethodsSection } from './system-settings-contact-methods-section';
 import {
   usePaymentChannelForms,
@@ -38,6 +39,7 @@ import {
 
 type SystemSettingsTab =
   | 'site'
+  | 'apiEndpoints'
   | 'contactMethods'
   | 'registration'
   | 'email'
@@ -51,6 +53,7 @@ const SYSTEM_SETTINGS_TABS: ReadonlyArray<{
   labelKey: string;
 }> = [
   { value: 'site', labelKey: 'systemSettings.sections.site' },
+  { value: 'apiEndpoints', labelKey: 'systemSettings.sections.apiEndpoints' },
   { value: 'contactMethods', labelKey: 'systemSettings.sections.contactMethods' },
   { value: 'registration', labelKey: 'systemSettings.sections.registration' },
   { value: 'email', labelKey: 'systemSettings.sections.email' },
@@ -204,6 +207,9 @@ function SettingsTabPanel(props: {
 }) {
   if (props.tab === 'site') {
     return <SystemSettingsSiteSection form={props.form} setForm={props.setForm} />;
+  }
+  if (props.tab === 'apiEndpoints') {
+    return <SystemSettingsApiEndpointsSection form={props.form} setForm={props.setForm} />;
   }
   if (props.tab === 'registration') {
     return (

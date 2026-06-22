@@ -1,8 +1,8 @@
 import type {
+  ApiEndpoint,
   ContactMethod,
   SystemSettings,
   SystemSettingsUpdate,
-  SystemSettingsSmtpTestRequest,
 } from 'src/types/system-setting';
 
 import {
@@ -22,6 +22,7 @@ export type SystemSettingsForm = {
   public_base_url: string;
   site_logo_base64: string;
   contact_methods: ContactMethod[];
+  api_endpoints: ApiEndpoint[];
   allow_registration: boolean;
   login_captcha_enabled: boolean;
   registration_captcha_enabled: boolean;
@@ -93,6 +94,7 @@ export const DEFAULT_SETTINGS_FORM: SystemSettingsForm = {
   public_base_url: '',
   site_logo_base64: '',
   contact_methods: [],
+  api_endpoints: [],
   allow_registration: true,
   login_captcha_enabled: false,
   registration_captcha_enabled: false,
@@ -155,6 +157,7 @@ export function formFromSettings(settings: SystemSettings): SystemSettingsForm {
     public_base_url: settings.public_base_url,
     site_logo_base64: settings.site_logo_base64,
     contact_methods: settings.contact_methods,
+    api_endpoints: settings.api_endpoints,
     allow_registration: settings.allow_registration,
     login_captcha_enabled: settings.login_captcha_enabled,
     registration_captcha_enabled: settings.registration_captcha_enabled,
@@ -218,6 +221,7 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
     public_base_url: form.public_base_url,
     site_logo_base64: form.site_logo_base64,
     contact_methods: form.contact_methods,
+    api_endpoints: apiEndpointsPayload(form.api_endpoints),
     allow_registration: form.allow_registration,
     login_captcha_enabled: form.login_captcha_enabled,
     registration_captcha_enabled: form.registration_captcha_enabled,
@@ -277,29 +281,11 @@ export function settingsPayload(form: SystemSettingsForm): SystemSettingsUpdate 
   return payload;
 }
 
-export function smtpTestPayload(form: SystemSettingsForm): SystemSettingsSmtpTestRequest {
-  const payload: SystemSettingsSmtpTestRequest = {
-    smtp_host: form.smtp_host,
-    smtp_port: Number(form.smtp_port || 0),
-    smtp_username: form.smtp_username,
-    smtp_from_email: form.smtp_from_email,
-    smtp_from_name: form.smtp_from_name,
-    smtp_encryption: form.smtp_encryption,
-  };
-  if (form.smtp_password.trim()) {
-    payload.smtp_password = form.smtp_password.trim();
-  }
-  return payload;
-}
-
-const MIN_SMTP_PORT = 1;
-
-export function emailConfigComplete(form: SystemSettingsForm) {
-  return Boolean(
-    form.smtp_host.trim() &&
-    Number(form.smtp_port || 0) >= MIN_SMTP_PORT &&
-    form.smtp_username.trim() &&
-    (form.smtp_password.trim() || form.smtp_password_set) &&
-    form.smtp_from_email.trim()
-  );
+function apiEndpointsPayload(apiEndpoints: ApiEndpoint[]) {
+  return apiEndpoints.map((endpoint) => ({
+    id: endpoint.id.trim(),
+    name: endpoint.name.trim(),
+    url: endpoint.url.trim().replace(/\/+$/, ''),
+    description: endpoint.description.trim(),
+  }));
 }

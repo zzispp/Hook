@@ -2,6 +2,7 @@ use axum::http::HeaderName;
 use rust_decimal::Decimal;
 use types::system_setting::{SystemSettingsUpdate, public_base_url_is_valid};
 
+use super::api_endpoints::{sanitize_api_endpoints, validate_api_endpoints};
 use super::contact_methods::{sanitize_contact_methods, validate_contact_methods};
 use super::mail_validation::validate_mail_settings;
 use super::provider_cooldown::validate_provider_cooldown_policy;
@@ -23,6 +24,7 @@ pub fn sanitize_update(input: SystemSettingsUpdate) -> SystemSettingsUpdate {
         public_base_url: trim_optional(input.public_base_url),
         site_logo_base64: trim_optional(input.site_logo_base64),
         contact_methods: input.contact_methods.map(sanitize_contact_methods),
+        api_endpoints: input.api_endpoints.map(sanitize_api_endpoints),
         default_user_group_code: trim_optional(input.default_user_group_code),
         client_sensitive_request_headers: normalize_optional_headers(input.client_sensitive_request_headers),
         provider_sensitive_request_headers: normalize_optional_headers(input.provider_sensitive_request_headers),
@@ -52,6 +54,7 @@ pub fn validate_update(input: &SystemSettingsUpdate) -> SettingResult<()> {
     validate_site_subtitle(input.site_subtitle.as_deref())?;
     validate_public_base_url(input.public_base_url.as_deref())?;
     validate_contact_methods(input.contact_methods.as_deref())?;
+    validate_api_endpoints(input.api_endpoints.as_deref())?;
     validate_optional_code("default_user_group_code", input.default_user_group_code.as_deref())?;
     validate_positive_i64("client_max_request_body_size_kb", input.client_max_request_body_size_kb)?;
     validate_positive_i64("client_max_response_body_size_kb", input.client_max_response_body_size_kb)?;

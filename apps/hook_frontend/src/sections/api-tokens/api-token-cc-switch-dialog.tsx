@@ -57,17 +57,18 @@ export function ApiTokenCcSwitchDialog({
               {state.error}
             </Alert>
           ) : null}
-          {state.step === 'format' ? (
-            <FormatList state={state} />
-          ) : (
-            <ModelList state={state} />
-          )}
+          <CurrentStepContent state={state} />
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button variant="outlined" onClick={state.closeDialog}>
           {t('common.cancel')}
         </Button>
+        {state.step === 'format' ? (
+          <Button variant="outlined" onClick={state.backToEndpoint}>
+            {t('tokens.ccSwitch.backToEndpoint')}
+          </Button>
+        ) : null}
         {state.step === 'model' ? (
           <Button variant="outlined" onClick={state.backToFormat}>
             {t('tokens.ccSwitch.back')}
@@ -75,15 +76,60 @@ export function ApiTokenCcSwitchDialog({
         ) : null}
         <Button
           variant="contained"
-          disabled={state.step === 'format' ? !state.canContinueToModel : !state.canImport}
-          onClick={state.step === 'format' ? state.goToModelStep : state.importToCcSwitch}
+          disabled={actionDisabled(state)}
+          onClick={() => void handlePrimaryAction(state)}
         >
-          {state.step === 'format'
-            ? t('tokens.ccSwitch.continue')
-            : t('tokens.ccSwitch.openInCcSwitch')}
+          {primaryActionLabel(state.step, t)}
         </Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+function CurrentStepContent({ state }: { state: CcSwitchImportDialogState }) {
+  if (state.step === 'endpoint') {
+    return <EndpointList state={state} />;
+  }
+  if (state.step === 'format') {
+    return <FormatList state={state} />;
+  }
+  return <ModelList state={state} />;
+}
+
+function EndpointList({ state }: { state: CcSwitchImportDialogState }) {
+  const { t } = useTranslate('admin');
+
+  if (state.apiEndpoints.length === 0) {
+    return <Alert severity="warning">{t('tokens.ccSwitch.noApiEndpoints')}</Alert>;
+  }
+
+  return (
+    <List disablePadding sx={{ border: (theme) => `1px solid ${theme.vars.palette.divider}` }}>
+      {state.apiEndpoints.map((endpoint, index) => (
+        <Box key={endpoint.id}>
+          {index > 0 ? <Divider /> : null}
+          <ListItemButton
+            selected={state.selectedEndpointId === endpoint.id}
+            onClick={() => state.setSelectedEndpointId(endpoint.id)}
+          >
+            <Radio checked={state.selectedEndpointId === endpoint.id} tabIndex={-1} />
+            <ListItemText
+              primary={
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Typography variant="subtitle2">{endpoint.name}</Typography>
+                  {endpoint.isDefault ? (
+                    <Typography variant="caption" color="info.main">
+                      {t('tokens.apiEndpoints.defaultBadge')}
+                    </Typography>
+                  ) : null}
+                </Stack>
+              }
+              secondary={endpoint.url}
+            />
+          </ListItemButton>
+        </Box>
+      ))}
+    </List>
   );
 }
 
@@ -154,8 +200,38 @@ function formatLabel(
 }
 
 function stepLabel(
-  step: 'format' | 'model',
+  step: 'endpoint' | 'format' | 'model',
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
+  if (step === 'endpoint') {
+    return t('tokens.ccSwitch.selectEndpoint');
+  }
   return step === 'format' ? t('tokens.ccSwitch.selectFormat') : t('tokens.ccSwitch.selectModel');
+}
+
+function actionDisabled(state: CcSwitchImportDialogState) {
+  if (state.step === 'endpoint') {
+    return !state.canContinueToFormat;
+  }
+  if (state.step === 'format') {
+    return !state.canContinueToModel;
+  }
+  return !state.canImport;
+}
+
+function handlePrimaryAction(state: CcSwitchImportDialogState) {
+  if (state.step === 'endpoint') {
+    return state.goToFormatStep();
+  }
+  if (state.step === 'format') {
+    return state.goToModelStep();
+  }
+  return state.importToCcSwitch();
+}
+
+function primaryActionLabel(
+  step: 'endpoint' | 'format' | 'model',
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
+  return step === 'model' ? t('tokens.ccSwitch.openInCcSwitch') : t('tokens.ccSwitch.continue');
 }

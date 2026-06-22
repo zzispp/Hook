@@ -9,6 +9,7 @@ pub(in crate::migration::baseline) enum SystemSettings {
     PublicBaseUrl,
     SiteLogoBase64,
     ContactMethods,
+    ApiEndpoints,
     AllowRegistration,
     LoginCaptchaEnabled,
     RegistrationCaptchaEnabled,

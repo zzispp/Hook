@@ -351,7 +351,8 @@
     "editProviderModelMapping": "Edit model mapping",
     "editProviderModel": "Edit model base pricing",
     "manageProviderModels": "Batch manage models",
-    "manageProviderModelsFor": "Batch manage models - {{name}}"
+    "manageProviderModelsFor": "Batch manage models - {{name}}",
+    "importCcSwitch": "Import to CC Switch"
   },
   "helper": {
     "deepMatch": "Deep match controls subpath highlighting.",
@@ -1995,22 +1996,34 @@
   },
   "tokens": {
     "allModels": "All models",
+    "apiEndpoints": {
+      "title": "API endpoints",
+      "defaultName": "Default endpoint",
+      "defaultBadge": "Default",
+      "copy": "Copy endpoint URL",
+      "copied": "Endpoint URL copied",
+      "speedTest": "Open speed test",
+      "empty": "No API endpoints are configured."
+    },
     "ccSwitch": {
       "back": "Back to format",
-      "continue": "Continue to models",
+      "backToEndpoint": "Back to endpoint",
+      "continue": "Continue",
       "formats": {
         "claude": "Claude",
         "openai": "OpenAI",
         "gemini": "Gemini"
       },
-      "incompleteSelection": "Select a format and model first.",
+      "incompleteSelection": "Select an API endpoint, format, and model first.",
       "loadFailed": "Failed to load the CC Switch import data.",
       "modelCount": "{{count}} models",
       "noAvailableModels": "This token currently has no models available for CC Switch import.",
+      "noApiEndpoints": "No available API endpoints are configured, so CC Switch import cannot continue.",
       "noModelsForFormat": "No models are available for this format. Switch to another format.",
       "openInCcSwitch": "Open CC Switch",
       "retry": "Retry",
-      "selectFormat": "Choose an import format first, then continue to model selection.",
+      "selectEndpoint": "Choose an API endpoint first, then continue to format selection.",
+      "selectFormat": "Choose an import format, then continue to model selection.",
       "selectModel": "Choose the model to write into CC Switch for this format.",
       "usageSummary": "The token's used, total, and remaining quota will sync automatically every 30 minutes."
     },
@@ -2107,6 +2120,7 @@
   "systemSettings": {
     "sections": {
       "site": "Site information",
+      "apiEndpoints": "API endpoint settings",
       "contactMethods": "Contact methods",
       "base": "Base configuration",
       "registration": "Registration",
@@ -2125,6 +2139,9 @@
       "contactIcon": "Icon",
       "contactValue": "Contact value",
       "contactQrCode": "QR code",
+      "apiEndpointName": "Endpoint name",
+      "apiEndpointUrl": "Root URL",
+      "apiEndpointDescription": "Description",
       "allowRegistration": "Allow registration",
       "loginCaptchaEnabled": "Enable login CAPTCHA",
       "registrationCaptchaEnabled": "Enable registration CAPTCHA",
@@ -2198,6 +2215,11 @@
       "contactValueRequired": "Contact value is required and must be at most 255 characters.",
       "contactCustomTypeRequired": "Custom contact type is required and must be at most 255 characters.",
       "contactQrCodeInvalid": "QR code must be an image data URL or a valid HTTP/HTTPS URL.",
+      "apiEndpointIdRequired": "API endpoint ID is required and must be at most 255 characters.",
+      "apiEndpointNameRequired": "API endpoint name is required and must be at most 255 characters.",
+      "apiEndpointUrlRequired": "API endpoint root URL is required and must be at most 255 characters.",
+      "apiEndpointDescriptionLength": "API endpoint description must be at most 255 characters.",
+      "apiEndpointUrlInvalid": "API endpoint root URL must be a valid HTTP/HTTPS URL.",
       "defaultUserGroupCodeInvalid": "Default registration user group must be 1-64 letters, numbers, underscores, or hyphens.",
       "userGroupsLoadingBeforeSave": "User groups are still loading. Try saving system settings again after they finish loading.",
       "userGroupsUnavailableBeforeSave": "User groups could not be loaded. Confirm the default user group status before saving.",
@@ -2271,6 +2293,11 @@
         "qq_group": "QQ group",
         "custom": "Custom"
       }
+    },
+    "apiEndpoints": {
+      "description": "Configure public API service root URLs shown to users.",
+      "add": "Add API endpoint",
+      "itemTitle": "API endpoint {{index}}"
     },
     "recharge": {
       "description": "Controls the user recharge entry, amount conversion, and enabled state for registered payment channels.",
