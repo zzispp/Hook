@@ -14,7 +14,10 @@ impl FailureDecision {
 }
 
 pub(in crate::llm_proxy) fn classify_status(status: StatusCode) -> FailureDecision {
-    if matches!(status, StatusCode::UNAUTHORIZED | StatusCode::PAYMENT_REQUIRED | StatusCode::FORBIDDEN) {
+    if matches!(
+        status,
+        StatusCode::BAD_REQUEST | StatusCode::UNAUTHORIZED | StatusCode::PAYMENT_REQUIRED | StatusCode::FORBIDDEN
+    ) {
         return FailureDecision::NextCandidate;
     }
     if status.is_server_error() || matches!(status, StatusCode::REQUEST_TIMEOUT | StatusCode::TOO_MANY_REQUESTS) {
@@ -31,8 +34,11 @@ mod tests {
 
     #[test]
     fn auth_failures_switch_candidate_without_cooldown_recording() {
+        assert_eq!(classify_status(StatusCode::BAD_REQUEST), FailureDecision::NextCandidate);
         assert_eq!(classify_status(StatusCode::UNAUTHORIZED), FailureDecision::NextCandidate);
         assert_eq!(classify_status(StatusCode::PAYMENT_REQUIRED), FailureDecision::NextCandidate);
+        assert_eq!(classify_status(StatusCode::FORBIDDEN), FailureDecision::NextCandidate);
+        assert!(!classify_status(StatusCode::BAD_REQUEST).records_provider_cooldown());
         assert!(!classify_status(StatusCode::FORBIDDEN).records_provider_cooldown());
     }
 
@@ -44,8 +50,7 @@ mod tests {
     }
 
     #[test]
-    fn client_request_errors_return_directly() {
-        assert_eq!(classify_status(StatusCode::BAD_REQUEST), FailureDecision::ReturnResponse);
+    fn other_client_request_errors_return_directly() {
         assert_eq!(classify_status(StatusCode::NOT_FOUND), FailureDecision::ReturnResponse);
     }
 }
