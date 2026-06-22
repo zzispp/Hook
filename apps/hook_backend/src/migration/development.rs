@@ -154,6 +154,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::default_seed_sync::apply(manager).await?;
     // Must run before development_additive because that path reapplies baseline indices.
     super::scheduler_global_claim_additive::apply(manager).await?;
+    super::scheduler_lease_additive::apply(manager).await?;
     super::development_additive::apply(manager).await?;
     super::request_record_cleanup_config_additive::apply(manager).await?;
     super::request_record_payload_compression_additive::apply(manager).await?;
@@ -164,6 +165,8 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::provider_key_group_member_priority_additive::apply(manager).await?;
     super::provider_origin_additive::apply(manager).await?;
     super::provider_quick_import_sync_additive::apply(manager).await?;
+    super::provider_quick_import_sync_schedule_additive::apply(manager).await?;
+    super::provider_quick_import_source_credentials_additive::apply(manager).await?;
     super::provider_quick_import_sync_controls_additive::apply(manager).await?;
     super::provider_image_stream_mode_additive::apply(manager).await?;
     super::provider_key_model_mappings_additive::apply(manager).await?;

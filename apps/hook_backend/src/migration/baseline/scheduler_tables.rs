@@ -13,6 +13,7 @@ fn scheduled_tasks_table() -> TableCreateStatement {
         .col(string_len(ScheduledTasks::Code, 100).primary_key())
         .col(boolean(ScheduledTasks::Enabled).default(true))
         .col(big_integer(ScheduledTasks::IntervalSeconds))
+        .col(big_integer(ScheduledTasks::LeaseSeconds))
         .col(text(ScheduledTasks::Config))
         .col(timestamp_tz(ScheduledTasks::NextRunAt))
         .col(timestamp_tz_null(ScheduledTasks::LockedUntil))

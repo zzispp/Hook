@@ -7,6 +7,7 @@ pub struct Model {
     pub code: String,
     pub enabled: bool,
     pub interval_seconds: i64,
+    pub lease_seconds: i64,
     pub config: String,
     pub next_run_at: TimeDateTimeWithTimeZone,
     pub locked_until: Option<TimeDateTimeWithTimeZone>,

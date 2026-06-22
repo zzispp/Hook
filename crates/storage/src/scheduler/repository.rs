@@ -1,5 +1,6 @@
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbBackend, EntityTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, Statement, Value,
+    ActiveModelTrait, ColumnTrait, DbBackend, EntityTrait, ExprTrait, FromQueryResult, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, Set, Statement,
+    Value,
 };
 use types::{
     pagination::{Page, PageSliceRequest},
@@ -22,7 +23,7 @@ const CLAIM_DUE_TASK_SQL: &str = "WITH due AS (\
     FOR UPDATE SKIP LOCKED\
 ), updated AS (\
     UPDATE scheduled_tasks AS task \
-    SET locked_until = $2 + (task.interval_seconds * INTERVAL '1 second'), \
+    SET locked_until = $2 + (task.lease_seconds * INTERVAL '1 second'), \
         locked_by = $3, \
         last_started_at = $2, \
         next_run_at = $2 + (task.interval_seconds * INTERVAL '1 second'), \
@@ -144,6 +145,21 @@ impl SchedulerStore {
         Ok(result.rows_affected > 0)
     }
 
+    pub async fn renew_claim(&self, code: &str, lock_owner: &str, now: time::OffsetDateTime) -> StorageResult<bool> {
+        let result = scheduled_tasks::Entity::update_many()
+            .col_expr(
+                scheduled_tasks::Column::LockedUntil,
+                sea_orm::sea_query::Expr::val(Some(now + time::Duration::seconds(0)))
+                    .add(sea_orm::sea_query::Expr::cust("lease_seconds * INTERVAL '1 second'")),
+            )
+            .col_expr(scheduled_tasks::Column::UpdatedAt, sea_orm::sea_query::Expr::val(now))
+            .filter(scheduled_tasks::Column::Code.eq(code))
+            .filter(scheduled_tasks::Column::LockedBy.eq(lock_owner))
+            .exec(self.database.connection())
+            .await?;
+        Ok(result.rows_affected > 0)
+    }
+
     pub async fn page_runs(&self, request: PageSliceRequest, task_code: Option<&str>, status: Option<&str>) -> StorageResult<Page<ScheduledTaskRun>> {
         let query = run_filters(scheduled_task_runs::Entity::find(), task_code, status);
         let total = query.clone().count(self.database.connection()).await?;
@@ -176,6 +192,7 @@ async fn insert_task(store: &SchedulerStore, definition: &ScheduledTaskDefinitio
         code: Set(definition.code.clone()),
         enabled: Set(definition.default_enabled),
         interval_seconds: Set(definition.default_interval_seconds),
+        lease_seconds: Set(definition.default_lease_seconds),
         config: Set(json::encode_required(&definition.default_config)?),
         next_run_at: Set(next_run_at(now, definition.default_interval_seconds)),
         locked_until: Set(None),
@@ -210,6 +227,9 @@ fn apply_task_patch(
     }
     if let Some(value) = patch.interval_seconds {
         active.interval_seconds = Set(value);
+    }
+    if let Some(value) = patch.lease_seconds {
+        active.lease_seconds = Set(value);
     }
     if let Some(value) = patch.config {
         active.config = Set(json::encode_required(&value)?);

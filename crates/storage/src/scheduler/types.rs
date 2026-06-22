@@ -21,6 +21,7 @@ impl ScheduledTaskRunStatus {
 pub struct ScheduledTaskRecordPatch {
     pub enabled: Option<bool>,
     pub interval_seconds: Option<i64>,
+    pub lease_seconds: Option<i64>,
     pub config: Option<serde_json::Value>,
 }
 

@@ -89,13 +89,14 @@ fn token_preview(
         upstream_token_id: token.id.clone(),
         name: token.name.clone(),
         masked_key: token.masked_key.clone(),
-        status: token.status,
+        status: token.status.clone(),
+        is_active: token.is_active,
         group: token.group.clone(),
         group_ratio: token.group_ratio,
         effective_cost_multiplier: token.group_ratio / recharge_multiplier,
         importable: token_importable(token),
         already_imported: false,
-        import_block_reason: None,
+        import_block_reason: token_block_reason(token),
         linked_key: None,
         models: remote_models(token, by_name),
         cost_issues: cost_issues(token, by_name),
@@ -122,14 +123,26 @@ fn append_block_reason(token: &UpstreamImportToken, already_imported: bool) -> O
     if already_imported {
         return Some("upstream token is already linked".into());
     }
-    if token.status != 1 {
-        return Some("upstream token is disabled".into());
+    token_block_reason(token)
+}
+
+fn token_importable(token: &UpstreamImportToken) -> bool {
+    token.is_active && token.group.is_some()
+}
+
+fn token_block_reason(token: &UpstreamImportToken) -> Option<String> {
+    if !token.is_active {
+        return Some(disabled_reason(&token.status));
     }
     token.group.is_none().then(|| "upstream token group is missing".into())
 }
 
-fn token_importable(token: &UpstreamImportToken) -> bool {
-    token.status == 1 && token.group.is_some()
+fn disabled_reason(status: &str) -> String {
+    match status {
+        "quota_exhausted" => "upstream token quota is exhausted".into(),
+        "expired" => "upstream token is expired".into(),
+        _ => "upstream token is disabled".into(),
+    }
 }
 
 fn remote_models(token: &UpstreamImportToken, by_name: &BTreeMap<String, &GlobalModelResponse>) -> Vec<ProviderQuickImportRemoteModel> {

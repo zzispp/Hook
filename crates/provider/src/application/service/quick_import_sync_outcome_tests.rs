@@ -21,7 +21,7 @@ async fn overwrite_mode_updates_multiplier_and_costs() {
         &importer(&["upstream-gpt"]),
         &source(sync_config()),
         &source_config(),
-        &snapshot("plus", 1),
+        &snapshot("plus", true),
         &globals(Some(Decimal::ONE)),
         &bindings(),
         &key(Decimal::ONE),
@@ -43,7 +43,7 @@ async fn report_only_mode_marks_pending_without_updating_costs_or_multiplier() {
         &importer(&["upstream-gpt"]),
         &source(config),
         &source_config(),
-        &snapshot("plus", 1),
+        &snapshot("plus", true),
         &globals(Some(Decimal::ONE)),
         &bindings(),
         &key(Decimal::ONE),
@@ -73,7 +73,7 @@ async fn upstream_token_and_group_anomalies_are_reported() {
         &importer(&["upstream-gpt"]),
         &source(sync_config()),
         &source_config(),
-        &snapshot("other", 1),
+        &snapshot("other", true),
         &globals(Some(Decimal::ONE)),
         &bindings(),
         &key(Decimal::ONE),
@@ -101,7 +101,7 @@ async fn model_fetch_failure_and_removed_model_are_distinct_statuses() {
         &failing_importer(),
         &source(sync_config()),
         &source_config(),
-        &snapshot("plus", 1),
+        &snapshot("plus", true),
         &globals(Some(Decimal::ONE)),
         &bindings(),
         &key(Decimal::ONE),
@@ -111,7 +111,7 @@ async fn model_fetch_failure_and_removed_model_are_distinct_statuses() {
         &importer(&[]),
         &source(sync_config()),
         &source_config(),
-        &snapshot("plus", 1),
+        &snapshot("plus", true),
         &globals(Some(Decimal::ONE)),
         &bindings(),
         &key(Decimal::ONE),
@@ -130,7 +130,7 @@ async fn missing_default_cost_is_reported() {
         &importer(&["upstream-gpt"]),
         &source(sync_config()),
         &source_config(),
-        &snapshot("plus", 1),
+        &snapshot("plus", true),
         &globals(None),
         &bindings(),
         &key(Decimal::ONE),
@@ -189,6 +189,11 @@ fn source(sync_config: ProviderQuickImportSyncConfig) -> ProviderQuickImportSync
         source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
         base_url: "https://newapi.example".into(),
         encrypted_system_access_token: "enc".into(),
+        email: String::new(),
+        encrypted_password: String::new(),
+        encrypted_auth_token: String::new(),
+        encrypted_refresh_token: String::new(),
+        token_expires_at: None,
         user_id: "737".into(),
         recharge_multiplier: Decimal::new(10, 0),
         sync_config,
@@ -232,7 +237,7 @@ fn source_config() -> ProviderQuickImportSourceConfig {
     })
 }
 
-fn snapshot(group: &str, status: i32) -> UpstreamSyncSnapshot {
+fn snapshot(group: &str, is_active: bool) -> UpstreamSyncSnapshot {
     UpstreamSyncSnapshot {
         source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
         groups: BTreeMap::from([
@@ -243,7 +248,8 @@ fn snapshot(group: &str, status: i32) -> UpstreamSyncSnapshot {
             id: "1209".into(),
             name: "codex".into(),
             masked_key: "abcd****efgh".into(),
-            status,
+            status: if is_active { "active".into() } else { "disabled".into() },
+            is_active,
             group: Some(group.into()),
         }],
     }
@@ -265,7 +271,8 @@ fn snapshot_without_group() -> UpstreamSyncSnapshot {
             id: "1209".into(),
             name: "codex".into(),
             masked_key: "abcd****efgh".into(),
-            status: 1,
+            status: "active".into(),
+            is_active: true,
             group: Some("plus".into()),
         }],
     }

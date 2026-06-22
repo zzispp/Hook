@@ -5,7 +5,8 @@ use axum::{
 use rbac::api::CurrentUser;
 use types::provider::{
     ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportBindCommitRequest,
-    ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportRelinkRequest,
+    ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse,
+    ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate, ProviderQuickImportRelinkRequest,
     ProviderQuickImportResolutionResponse, ProviderQuickImportSyncEventDetailResponse,
 };
 use types::{
@@ -203,6 +204,24 @@ pub async fn relink_quick_import_key(
     Json(payload): Json<ProviderQuickImportRelinkRequest>,
 ) -> ApiResult<ApiJson<ProviderApiKey>> {
     Ok(ok(state.providers.relink_quick_import_key(&provider_id, &key_id, payload).await?))
+}
+
+pub async fn quick_import_model_associations(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, key_id)): Path<(String, String)>,
+) -> ApiResult<ApiJson<ProviderQuickImportModelAssociationsResponse>> {
+    Ok(ok(state.providers.quick_import_model_associations(&provider_id, &key_id).await?))
+}
+
+pub async fn update_quick_import_model_associations(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, key_id)): Path<(String, String)>,
+    Json(payload): Json<ProviderQuickImportModelAssociationsUpdate>,
+) -> ApiResult<ApiJson<ProviderQuickImportModelAssociationsResponse>> {
+    Ok(ok(state
+        .providers
+        .update_quick_import_model_associations(&provider_id, &key_id, payload)
+        .await?))
 }
 
 pub async fn key_model_mappings(

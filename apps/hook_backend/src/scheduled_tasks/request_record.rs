@@ -39,6 +39,7 @@ impl ScheduledTaskLifecycle for RequestRecordCleanupTask {
             "scheduledTasks.definitions.requestRecordCleanup.name",
             "scheduledTasks.definitions.requestRecordCleanup.description",
             CLEANUP_INTERVAL_SECONDS,
+            CLEANUP_INTERVAL_SECONDS,
             default_cleanup_config(),
             cleanup_config_fields(),
         )
@@ -64,6 +65,7 @@ impl ScheduledTaskLifecycle for RequestRecordStaleSweepTask {
             "request_record_stale_sweep",
             "scheduledTasks.definitions.requestRecordStaleSweep.name",
             "scheduledTasks.definitions.requestRecordStaleSweep.description",
+            STALE_SWEEP_INTERVAL_SECONDS,
             STALE_SWEEP_INTERVAL_SECONDS,
             serde_json::json!({
                 "pending_timeout_minutes": STALE_PENDING_TIMEOUT_MINUTES,
@@ -111,6 +113,7 @@ impl ScheduledTaskLifecycle for RequestRecordPartitionMaintenanceTask {
             "request_record_partition_maintenance",
             "scheduledTasks.definitions.requestRecordPartitionMaintenance.name",
             "scheduledTasks.definitions.requestRecordPartitionMaintenance.description",
+            PARTITION_MAINTENANCE_INTERVAL_SECONDS,
             PARTITION_MAINTENANCE_INTERVAL_SECONDS,
             serde_json::json!({
                 "record_retention_days": DEFAULT_RECORD_RETENTION_DAYS,

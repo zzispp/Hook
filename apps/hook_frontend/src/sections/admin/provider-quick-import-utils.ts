@@ -11,6 +11,12 @@ import {
   syncConfigPayload,
   defaultQuickImportSyncConfigForm,
 } from './provider-quick-import-sync-utils';
+import {
+  quickImportSourceReady,
+  quickImportSourceConfig,
+  type QuickImportSourceFields,
+  DEFAULT_QUICK_IMPORT_AUTH_TAB,
+} from './provider-quick-import-source';
 
 export {
   validSyncConfig,
@@ -26,9 +32,6 @@ export type {
 
 export type QuickImportFormState = {
   providerName: string;
-  baseUrl: string;
-  systemAccessToken: string;
-  userId: string;
   rechargeMultiplier: string;
   max_retries: string;
   request_timeout_seconds: string;
@@ -40,7 +43,7 @@ export type QuickImportFormState = {
   upstream_image_native_stream: boolean;
   is_active: boolean;
   sync: QuickImportSyncConfigForm;
-};
+} & QuickImportSourceFields;
 
 export type QuickImportTokenDraft = {
   selected: boolean;
@@ -52,9 +55,16 @@ export type QuickImportTokenDraft = {
 
 export const DEFAULT_QUICK_IMPORT_FORM: QuickImportFormState = {
   providerName: '',
+  sourceKind: 'newapi',
+  sub2apiAuthTab: DEFAULT_QUICK_IMPORT_AUTH_TAB,
   baseUrl: '',
   systemAccessToken: '',
   userId: '',
+  email: '',
+  password: '',
+  authToken: '',
+  refreshToken: '',
+  tokenExpiresAt: '',
   rechargeMultiplier: '1',
   max_retries: DEFAULT_PROVIDER_FORM.max_retries,
   request_timeout_seconds: DEFAULT_PROVIDER_FORM.request_timeout_seconds,
@@ -70,13 +80,8 @@ export const DEFAULT_QUICK_IMPORT_FORM: QuickImportFormState = {
 
 export function previewPayload(form: QuickImportFormState) {
   return {
-    source_kind: 'newapi' as const,
-    source: {
-      kind: 'newapi' as const,
-      base_url: trimmedBaseUrl(form.baseUrl),
-      system_access_token: form.systemAccessToken.trim(),
-      user_id: form.userId.trim(),
-    },
+    source_kind: requireSourceKind(form.sourceKind),
+    source: quickImportSourceConfig(form),
     provider_name: form.providerName.trim(),
     provider_config: providerConfigPayload(form),
     recharge_multiplier: Number(form.rechargeMultiplier),
@@ -128,13 +133,8 @@ export function appendCommitPayload(
 
 export function bindSourcePayload(form: QuickImportFormState) {
   return {
-    source_kind: 'newapi' as const,
-    source: {
-      kind: 'newapi' as const,
-      base_url: trimmedBaseUrl(form.baseUrl),
-      system_access_token: form.systemAccessToken.trim(),
-      user_id: form.userId.trim(),
-    },
+    source_kind: requireSourceKind(form.sourceKind),
+    source: quickImportSourceConfig(form),
     recharge_multiplier: Number(form.rechargeMultiplier),
   };
 }
@@ -179,9 +179,7 @@ export function mappingInputs(
 export function sourceReady(form: QuickImportFormState) {
   return Boolean(
     form.providerName.trim() &&
-      form.baseUrl.trim() &&
-      form.systemAccessToken.trim() &&
-      form.userId.trim() &&
+      quickImportSourceReady(form) &&
       Number(form.rechargeMultiplier) > 0 &&
       validSyncConfig(form.sync)
   );
@@ -240,10 +238,6 @@ export function validCostMultiplier(value?: string) {
   return Number(value) > 0;
 }
 
-function trimmedBaseUrl(value: string) {
-  return value.trim().replace(/\/+$/, '');
-}
-
 function providerConfigPayload(form: QuickImportFormState) {
   const payload = providerPayload({
     name: form.providerName,
@@ -273,4 +267,11 @@ function providerConfigPayload(form: QuickImportFormState) {
 function mappingNeedsOverride(models: GlobalModelResponse[], upstreamModelId: string, globalModelId: string) {
   const model = models.find((item) => item.id === globalModelId);
   return !model || model.name !== upstreamModelId;
+}
+
+function requireSourceKind(sourceKind: QuickImportFormState['sourceKind']) {
+  if (!sourceKind) {
+    throw new Error('source kind is not selected');
+  }
+  return sourceKind;
 }

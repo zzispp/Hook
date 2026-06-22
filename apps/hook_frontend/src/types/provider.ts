@@ -17,6 +17,13 @@ export type {
 export type ProviderType = 'custom';
 export type ProviderOrigin = 'manual' | 'quick_import';
 
+export type ProviderQuickImportAuthMode = 'password' | 'token';
+
+export type ProviderQuickImportSourceSummary = {
+  source_kind: string;
+  auth_mode?: ProviderQuickImportAuthMode | null;
+};
+
 export type ProviderSchedulingMode = 'fixed_order' | 'cache_affinity' | 'load_balance';
 export type ProviderPriorityMode = 'provider' | 'key';
 
@@ -37,6 +44,7 @@ export type Provider = {
   name: string;
   provider_type: ProviderType;
   provider_origin: ProviderOrigin;
+  quick_import_source?: ProviderQuickImportSourceSummary | null;
   max_retries?: number | null;
   request_timeout_seconds?: number | null;
   stream_first_byte_timeout_seconds?: number | null;

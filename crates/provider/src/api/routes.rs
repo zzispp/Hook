@@ -12,9 +12,9 @@ use crate::api::{
         delete_model_binding, delete_model_cost, delete_provider, fetch_upstream_models, get_provider, get_request_record, key_model_mappings,
         key_model_mappings_for_key, list_active_request_records, list_api_keys, list_endpoints, list_model_bindings, list_model_costs, list_provider_cooldowns,
         list_providers, list_request_records, list_usage_records, preview_quick_import, preview_quick_import_append, preview_quick_import_bind,
-        quick_import_resolution, quick_import_sync_event_detail, quick_import_sync_settings, release_provider_cooldown, relink_quick_import_key,
-        test_model_binding, update_api_key, update_endpoint, update_key_model_mappings, update_model_binding, update_provider,
-        update_quick_import_sync_settings, upsert_model_costs,
+        quick_import_model_associations, quick_import_resolution, quick_import_sync_event_detail, quick_import_sync_settings, release_provider_cooldown,
+        relink_quick_import_key, test_model_binding, update_api_key, update_endpoint, update_key_model_mappings, update_model_binding, update_provider,
+        update_quick_import_model_associations, update_quick_import_sync_settings, upsert_model_costs,
     },
 };
 
@@ -62,6 +62,10 @@ pub fn create_router(state: ProviderApiState) -> Router {
         .route(
             "/admin/providers/{provider_id}/keys/{key_id}/quick-import-resolution/relink",
             post(relink_quick_import_key),
+        )
+        .route(
+            "/admin/providers/{provider_id}/keys/{key_id}/quick-import-model-associations",
+            get(quick_import_model_associations).put(update_quick_import_model_associations),
         )
         .route("/admin/providers/{provider_id}/upstream-models", get(fetch_upstream_models))
         .route("/admin/providers/{provider_id}/models", get(list_model_bindings).post(create_model_binding))

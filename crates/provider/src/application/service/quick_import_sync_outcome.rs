@@ -101,7 +101,7 @@ where
             Vec::new(),
         );
     };
-    if token.status != 1 {
+    if !token.is_active {
         return anomaly_outcome(
             ProviderQuickImportSyncStatus::UpstreamTokenDisabled,
             source.sync_config.anomaly_actions.token_disabled,

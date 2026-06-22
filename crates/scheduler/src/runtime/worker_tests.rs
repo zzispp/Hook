@@ -119,7 +119,7 @@ struct TestTask {
 #[async_trait]
 impl ScheduledTaskLifecycle for TestTask {
     fn definition(&self) -> types::scheduler::ScheduledTaskDefinition {
-        storage::scheduler::task_definition(TASK_CODE, "name", "description", 60, serde_json::json!({}), Vec::new())
+        storage::scheduler::task_definition(TASK_CODE, "name", "description", 60, 60, serde_json::json!({}), Vec::new())
     }
 
     fn validate_config(&self, _config: &TaskConfigValue) -> SchedulerResult<()> {
@@ -156,6 +156,7 @@ fn task_record(last_status: Option<&str>) -> entities::scheduled_tasks::Model {
         code: TASK_CODE.into(),
         enabled: true,
         interval_seconds: 60,
+        lease_seconds: 60,
         config: "{}".into(),
         next_run_at: now + time::Duration::seconds(60),
         locked_until: Some(now + time::Duration::seconds(60)),

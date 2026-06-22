@@ -8,6 +8,7 @@ use types::scheduler::ScheduledTaskDefinition;
 use super::{integer_config, integer_fields, validate_positive_integer};
 
 const SYNC_INTERVAL_SECONDS: i64 = 600;
+const SYNC_LEASE_SECONDS: i64 = 1800;
 const SYNC_BATCH_SIZE: i64 = 20;
 const SYNC_MAX_RUNTIME_SECONDS: i64 = 300;
 
@@ -50,6 +51,7 @@ pub(super) fn provider_quick_import_sync_definition() -> ScheduledTaskDefinition
         "scheduledTasks.definitions.providerQuickImportSync.name",
         "scheduledTasks.definitions.providerQuickImportSync.description",
         SYNC_INTERVAL_SECONDS,
+        SYNC_LEASE_SECONDS,
         serde_json::json!({
             "batch_size": SYNC_BATCH_SIZE,
             "max_runtime_seconds": SYNC_MAX_RUNTIME_SECONDS

@@ -37,7 +37,9 @@ impl NewApiImportSource {
 impl UpstreamProviderImportSource for NewApiImportSource {
     async fn fetch_import_data(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamImportData> {
         let _guard = self.upstream_lock.lock().await;
-        let ProviderQuickImportSourceConfig::Newapi(config) = source;
+        let ProviderQuickImportSourceConfig::Newapi(config) = source else {
+            return Err(ProviderError::InvalidInput("newapi importer received non-newapi source".into()));
+        };
         let groups = self.fetch_groups(config).await?;
         let tokens = self.fetch_tokens(config, &groups).await?;
         Ok(UpstreamImportData {
@@ -48,7 +50,9 @@ impl UpstreamProviderImportSource for NewApiImportSource {
 
     async fn fetch_sync_snapshot(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamSyncSnapshot> {
         let _guard = self.upstream_lock.lock().await;
-        let ProviderQuickImportSourceConfig::Newapi(config) = source;
+        let ProviderQuickImportSourceConfig::Newapi(config) = source else {
+            return Err(ProviderError::InvalidInput("newapi importer received non-newapi source".into()));
+        };
         let groups = self.fetch_groups(config).await?;
         let records = self.fetch_token_records(config).await?;
         Ok(UpstreamSyncSnapshot {
@@ -56,12 +60,17 @@ impl UpstreamProviderImportSource for NewApiImportSource {
             groups: groups.into_iter().map(|(name, group)| (name, group.into_ratio())).collect(),
             tokens: records
                 .into_iter()
-                .map(|record| UpstreamSyncToken {
-                    id: record.id.to_string(),
-                    name: record.name,
-                    masked_key: record.key,
-                    status: record.status,
-                    group: record.group,
+                .map(|record| {
+                    let is_active = record.is_active();
+                    let status = record.status_label();
+                    UpstreamSyncToken {
+                        id: record.id.to_string(),
+                        name: record.name,
+                        masked_key: record.key,
+                        status,
+                        is_active,
+                        group: record.group,
+                    }
                 })
                 .collect(),
         })
@@ -69,7 +78,9 @@ impl UpstreamProviderImportSource for NewApiImportSource {
 
     async fn fetch_sync_token_models(&self, source: &ProviderQuickImportSourceConfig, upstream_token_id: &str) -> ProviderResult<Vec<UpstreamImportModel>> {
         let _guard = self.upstream_lock.lock().await;
-        let ProviderQuickImportSourceConfig::Newapi(config) = source;
+        let ProviderQuickImportSourceConfig::Newapi(config) = source else {
+            return Err(ProviderError::InvalidInput("newapi importer received non-newapi source".into()));
+        };
         let token_id = upstream_token_id
             .parse::<i64>()
             .map_err(|error| ProviderError::InvalidInput(format!("invalid newapi token id: {error}")))?;
@@ -105,8 +116,10 @@ impl NewApiImportSource {
     }
 
     async fn enrich_token(&self, config: &NewApiQuickImportConfig, groups: &GroupMap, record: NewApiTokenRecord) -> ProviderResult<UpstreamImportToken> {
+        let is_active = record.is_active();
+        let status = record.status_label();
         let group_ratio = token_group_ratio(groups, record.group.as_deref())?;
-        let (api_key, models) = if record.status == 1 {
+        let (api_key, models) = if is_active {
             let key = self.fetch_token_key(config, record.id).await?;
             let models = self.fetch_models(config, &key).await?;
             (Some(key), models)
@@ -117,7 +130,8 @@ impl NewApiImportSource {
             id: record.id.to_string(),
             name: record.name,
             masked_key: record.key,
-            status: record.status,
+            status,
+            is_active,
             group: record.group,
             group_ratio,
             api_key,

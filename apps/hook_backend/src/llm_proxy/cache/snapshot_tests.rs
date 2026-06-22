@@ -15,6 +15,7 @@ async fn load_providers_keeps_disabled_providers_for_admin_model_tests() {
     let database = Database::new(
         MockDatabase::new(DatabaseBackend::Postgres)
             .append_query_results([provider_records()])
+            .append_query_results([Vec::<storage::provider::record::provider_quick_import_sources::Model>::new()])
             .append_query_results([key_records("provider-active")])
             .append_query_results([key_model_mapping_records("provider-active")])
             .append_query_results([model_records("provider-active")])

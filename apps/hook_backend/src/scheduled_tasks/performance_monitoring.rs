@@ -26,6 +26,7 @@ impl ScheduledTaskLifecycle for PerformanceMonitoringSnapshotTask {
             "scheduledTasks.definitions.performanceMonitoringSnapshot.name",
             "scheduledTasks.definitions.performanceMonitoringSnapshot.description",
             60,
+            60,
             serde_json::json!({}),
             Vec::new(),
         )
@@ -54,6 +55,7 @@ impl ScheduledTaskLifecycle for PerformanceMonitoringCleanupTask {
             "performance_monitoring_cleanup",
             "scheduledTasks.definitions.performanceMonitoringCleanup.name",
             "scheduledTasks.definitions.performanceMonitoringCleanup.description",
+            24_i64.hours(),
             24_i64.hours(),
             serde_json::json!({
                 "retention_days": 30

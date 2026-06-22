@@ -27,6 +27,7 @@ impl ScheduledTaskLifecycle for RechargeOrderExpireTask {
             "scheduledTasks.definitions.rechargeOrderExpire.name",
             "scheduledTasks.definitions.rechargeOrderExpire.description",
             RECHARGE_ORDER_EXPIRE_INTERVAL_SECONDS,
+            RECHARGE_ORDER_EXPIRE_INTERVAL_SECONDS,
             serde_json::json!({}),
             Vec::new(),
         )
@@ -49,6 +50,7 @@ impl ScheduledTaskLifecycle for RechargePaymentPollTask {
             "recharge_payment_poll",
             "scheduledTasks.definitions.rechargePaymentPoll.name",
             "scheduledTasks.definitions.rechargePaymentPoll.description",
+            RECHARGE_PAYMENT_POLL_INTERVAL_SECONDS,
             RECHARGE_PAYMENT_POLL_INTERVAL_SECONDS,
             serde_json::json!({
                 "limit": RECHARGE_PAYMENT_POLL_LIMIT

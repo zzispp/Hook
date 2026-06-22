@@ -79,6 +79,7 @@ impl SchedulerUseCase for SchedulerService {
                 ScheduledTaskRecordPatch {
                     enabled: input.enabled,
                     interval_seconds: input.interval_seconds,
+                    lease_seconds: input.lease_seconds,
                     config: Some(next_config),
                 },
             )
@@ -188,12 +189,17 @@ impl SchedulerRuntime {
 }
 
 fn validate_update(input: &ScheduledTaskUpdate) -> SchedulerResult<()> {
-    if input.enabled.is_none() && input.interval_seconds.is_none() && input.config.is_none() {
+    if input.enabled.is_none() && input.interval_seconds.is_none() && input.lease_seconds.is_none() && input.config.is_none() {
         return Err(SchedulerError::InvalidInput("update payload is empty".into()));
     }
     if input.interval_seconds.is_some_and(|value| value < MIN_INTERVAL_SECONDS) {
         return Err(SchedulerError::InvalidInput(format!(
             "interval_seconds must be greater than or equal to {MIN_INTERVAL_SECONDS}"
+        )));
+    }
+    if input.lease_seconds.is_some_and(|value| value < MIN_INTERVAL_SECONDS) {
+        return Err(SchedulerError::InvalidInput(format!(
+            "lease_seconds must be greater than or equal to {MIN_INTERVAL_SECONDS}"
         )));
     }
     Ok(())

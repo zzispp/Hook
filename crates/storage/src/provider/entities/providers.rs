@@ -35,6 +35,7 @@ impl From<Model> for Provider {
             name: value.name,
             provider_type: value.provider_type,
             provider_origin: ProviderOrigin::try_from(value.provider_origin.as_str()).expect("provider_origin must be valid"),
+            quick_import_source: None,
             max_retries: value.max_retries,
             request_timeout_seconds: value.request_timeout_seconds,
             stream_first_byte_timeout_seconds: value.stream_first_byte_timeout_seconds,

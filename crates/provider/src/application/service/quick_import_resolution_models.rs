@@ -1,11 +1,52 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use types::model::GlobalModelResponse;
-use types::provider::{ProviderKeyModelMapping, ProviderQuickImportModelMappingInput, ProviderQuickImportSyncStatus};
+use types::provider::{
+    ProviderModelBinding, ProviderQuickImportModelAssociation, ProviderQuickImportModelAssociationCandidate, ProviderQuickImportModelAssociationsResponse,
+    ProviderQuickImportModelMappingInput, ProviderQuickImportSyncStatus,
+};
 
-use crate::application::{ProviderError, ProviderQuickImportSyncKey, ProviderResult, UpstreamImportToken};
+use crate::application::{
+    ProviderError, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, ProviderResult, UpstreamImportModel, UpstreamImportToken,
+};
 
-use super::quick_import_shared::globals_by_name;
+use super::{quick_import_costs::has_default_cost, quick_import_resolution_context::KeyContext, quick_import_shared::globals_by_name};
+
+pub(super) fn associations_response(
+    context: &KeyContext,
+    globals: &[GlobalModelResponse],
+    upstream_models: &[UpstreamImportModel],
+    bindings: &[ProviderModelBinding],
+) -> ProviderResult<ProviderQuickImportModelAssociationsResponse> {
+    Ok(ProviderQuickImportModelAssociationsResponse {
+        provider_id: context.source.provider_id.clone(),
+        key_id: context.key.key_id.clone(),
+        key_name: context.api_key.name.clone(),
+        source_kind: context.source.source_kind.clone(),
+        upstream_token_id: context.key.upstream_token_id.clone(),
+        associations: associations(&context.key, globals)?,
+        candidates: candidates(&context.key, globals, upstream_models, bindings),
+    })
+}
+
+pub(super) fn associations(key: &ProviderQuickImportSyncKey, globals: &[GlobalModelResponse]) -> ProviderResult<Vec<ProviderQuickImportModelAssociation>> {
+    let by_id = globals.iter().map(|model| (model.id.as_str(), model)).collect::<BTreeMap<_, _>>();
+    key.model_mappings.iter().map(|mapping| association(mapping, &by_id)).collect()
+}
+
+pub(super) fn token_from_key(key: &ProviderQuickImportSyncKey, models: Vec<UpstreamImportModel>) -> UpstreamImportToken {
+    UpstreamImportToken {
+        id: key.upstream_token_id.clone(),
+        name: key.upstream_token_name.clone(),
+        masked_key: String::new(),
+        status: "active".into(),
+        is_active: true,
+        group: key.upstream_group.clone(),
+        group_ratio: key.upstream_group_ratio,
+        api_key: None,
+        models,
+    }
+}
 
 pub(super) fn resolve_mappings(
     token: &UpstreamImportToken,
@@ -54,7 +95,7 @@ pub(super) fn current_mappings(key: &ProviderQuickImportSyncKey, allowed_model_i
 }
 
 pub(super) fn validate_token(token: &UpstreamImportToken) -> ProviderResult<()> {
-    if token.status != 1 {
+    if !token.is_active {
         return Err(ProviderError::InvalidInput(format!("upstream token is disabled: {}", token.id)));
     }
     if token.group.is_none() {
@@ -73,7 +114,7 @@ pub(super) fn validate_associated_models(token: &UpstreamImportToken, mappings: 
     Ok(())
 }
 
-pub(super) fn validate_existing_mappings(_bindings: &[types::provider::ProviderModelBinding], _mappings: &BTreeMap<String, String>) -> ProviderResult<()> {
+pub(super) fn validate_existing_mappings(_bindings: &[ProviderModelBinding], _mappings: &BTreeMap<String, String>) -> ProviderResult<()> {
     Ok(())
 }
 
@@ -92,28 +133,43 @@ pub(super) fn has_hard_quick_import_status(statuses: &[ProviderQuickImportSyncSt
     })
 }
 
-pub(super) fn associations(key: &ProviderQuickImportSyncKey, by_id: &BTreeMap<&str, &GlobalModelResponse>) -> ProviderResult<Vec<ProviderKeyModelMapping>> {
-    key.model_mappings.iter().map(|mapping| association(key, mapping, by_id)).collect()
-}
-
-fn association(
-    key: &ProviderQuickImportSyncKey,
-    mapping: &crate::application::ProviderQuickImportSyncKeyModel,
-    by_id: &BTreeMap<&str, &GlobalModelResponse>,
-) -> ProviderResult<ProviderKeyModelMapping> {
+fn association(mapping: &ProviderQuickImportSyncKeyModel, by_id: &BTreeMap<&str, &GlobalModelResponse>) -> ProviderResult<ProviderQuickImportModelAssociation> {
     let global = by_id
         .get(mapping.global_model_id.as_str())
         .ok_or_else(|| ProviderError::InvalidInput(format!("global model is missing: {}", mapping.global_model_id)))?;
-    Ok(ProviderKeyModelMapping {
-        id: format!("{}:{}", key.key_id, mapping.provider_model_id),
-        provider_id: key.provider_id.clone(),
-        key_id: key.key_id.clone(),
-        provider_model_id: mapping.provider_model_id.clone(),
+    Ok(ProviderQuickImportModelAssociation {
+        upstream_model_id: mapping.upstream_model_name.clone(),
         global_model_id: global.id.clone(),
-        upstream_model_name: mapping.upstream_model_name.clone(),
-        reasoning_effort: mapping.reasoning_effort.clone(),
-        created_at: String::new(),
-        updated_at: String::new(),
+        global_model_name: global.name.clone(),
+        global_model_display_name: global.display_name.clone(),
+    })
+}
+
+fn candidates(
+    key: &ProviderQuickImportSyncKey,
+    globals: &[GlobalModelResponse],
+    upstream_models: &[UpstreamImportModel],
+    bindings: &[ProviderModelBinding],
+) -> Vec<ProviderQuickImportModelAssociationCandidate> {
+    let _ = bindings;
+    let by_name = globals_by_name(globals);
+    let associated = key.model_mappings.iter().map(|item| item.upstream_model_name.as_str()).collect::<BTreeSet<_>>();
+    upstream_models
+        .iter()
+        .filter(|model| !associated.contains(model.id.as_str()))
+        .filter_map(|model| candidate(model, &by_name))
+        .collect()
+}
+
+fn candidate(model: &UpstreamImportModel, by_name: &BTreeMap<String, &GlobalModelResponse>) -> Option<ProviderQuickImportModelAssociationCandidate> {
+    let global = by_name.get(&model.id)?;
+    if !has_default_cost(global) {
+        return None;
+    }
+    Some(ProviderQuickImportModelAssociationCandidate {
+        upstream_model_id: model.id.clone(),
+        suggested_global_model_id: Some(global.id.clone()),
+        reason: "exact_name_match".into(),
     })
 }
 
@@ -215,7 +271,8 @@ mod tests {
             id: "373".to_owned(),
             name: "codex".to_owned(),
             masked_key: "sk-***".to_owned(),
-            status: 1,
+            status: "active".to_owned(),
+            is_active: true,
             group: Some("low-cost".to_owned()),
             group_ratio: Decimal::ONE,
             api_key: Some("sk-test".to_owned()),

@@ -31,6 +31,7 @@ impl ScheduledTaskLifecycle for ModelStatusCheckDispatchTask {
             "scheduledTasks.definitions.modelStatusCheckDispatch.name",
             "scheduledTasks.definitions.modelStatusCheckDispatch.description",
             DISPATCH_INTERVAL_SECONDS,
+            DISPATCH_INTERVAL_SECONDS,
             serde_json::json!({
                 "batch_size": DISPATCH_BATCH_SIZE,
                 "concurrency": DISPATCH_CONCURRENCY,
@@ -90,6 +91,7 @@ impl ScheduledTaskLifecycle for ModelStatusRunsCleanupTask {
             "model_status_runs_cleanup",
             "scheduledTasks.definitions.modelStatusRunsCleanup.name",
             "scheduledTasks.definitions.modelStatusRunsCleanup.description",
+            RUNS_CLEANUP_INTERVAL_SECONDS,
             RUNS_CLEANUP_INTERVAL_SECONDS,
             serde_json::json!({
                 "retention_days": RUNS_CLEANUP_RETENTION_DAYS

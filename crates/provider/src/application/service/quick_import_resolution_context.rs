@@ -1,9 +1,11 @@
-use types::provider::{NewApiQuickImportConfig, ProviderApiKey, ProviderOrigin, ProviderQuickImportSourceConfig};
+use types::provider::{ProviderApiKey, ProviderOrigin, ProviderQuickImportSourceConfig};
 
 use crate::application::{
     ProviderError, ProviderQuickImportSyncKey, ProviderQuickImportSyncSource, ProviderRepository, ProviderResult, SecretCipher, UpstreamImportData,
     UpstreamImportToken,
 };
+
+use super::quick_import_shared::restore_source_config;
 
 pub(super) struct KeyContext {
     pub(super) provider_name: String,
@@ -38,11 +40,7 @@ pub(super) fn source_config<C>(cipher: &C, source: &ProviderQuickImportSyncSourc
 where
     C: SecretCipher,
 {
-    Ok(ProviderQuickImportSourceConfig::Newapi(NewApiQuickImportConfig {
-        base_url: source.base_url.clone(),
-        system_access_token: cipher.decrypt_provider_key(&source.encrypted_system_access_token)?,
-        user_id: source.user_id.clone(),
-    }))
+    restore_source_config(cipher, source)
 }
 
 pub(super) async fn reject_duplicate_relink<R>(repository: &R, context: &KeyContext, upstream_token_id: &str) -> ProviderResult<()>

@@ -35,6 +35,7 @@ fn task_record(next_run_at: time::OffsetDateTime, locked_until: Option<time::Off
         code: TASK_CODE.into(),
         enabled: true,
         interval_seconds: 600,
+        lease_seconds: 600,
         config: "{}".into(),
         next_run_at,
         locked_until,

@@ -61,7 +61,9 @@ use provider_key_groups::{prepare_provider_key_group_create, prepare_provider_ke
 use quick_import::{QuickImportArgs, commit_quick_import, preview_quick_import};
 use quick_import_append::{commit_quick_import_append, preview_quick_import_append};
 use quick_import_bind::{commit_quick_import_bind, preview_quick_import_bind};
-use quick_import_resolution::{accept_quick_import_current, quick_import_resolution, relink_quick_import_key};
+use quick_import_resolution::{
+    accept_quick_import_current, quick_import_model_associations, quick_import_resolution, relink_quick_import_key, update_quick_import_model_associations,
+};
 use quick_import_resolution_models::has_hard_quick_import_status;
 use quick_import_sync::{SyncArgs, run_quick_import_sync};
 use quick_import_sync_settings::{quick_import_sync_settings, update_quick_import_sync_settings};
@@ -447,6 +449,40 @@ where
 
     async fn relink_quick_import_key(&self, provider_id: &str, key_id: &str, input: ProviderQuickImportRelinkRequest) -> ProviderResult<ProviderApiKey> {
         relink_quick_import_key(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+            input,
+        )
+        .await
+    }
+
+    async fn quick_import_model_associations(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderQuickImportModelAssociationsResponse> {
+        quick_import_model_associations(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+        )
+        .await
+    }
+
+    async fn update_quick_import_model_associations(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderQuickImportModelAssociationsUpdate,
+    ) -> ProviderResult<ProviderQuickImportModelAssociationsResponse> {
+        update_quick_import_model_associations(
             QuickImportArgs {
                 repository: &self.repository,
                 models: &self.models,

@@ -26,6 +26,7 @@ async fn claim_due_task_uses_atomic_due_window_claim() {
     assert!(sql.iter().any(|item| item.contains("FOR UPDATE SKIP LOCKED")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("next_run_at <= $2")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("(locked_until IS NULL OR locked_until <= $2)")), "{sql:?}");
+    assert!(sql.iter().any(|item| item.contains("lease_seconds * INTERVAL '1 second'")), "{sql:?}");
     assert!(sql.iter().any(|item| item.contains("locked_by = $3")), "{sql:?}");
     assert!(values.iter().any(|item| item == TASK_CODE), "{values:?}");
     assert!(values.iter().any(|item| item == &claim.lock_owner), "{values:?}");
@@ -58,6 +59,7 @@ fn task_record(now: time::OffsetDateTime) -> entities::scheduled_tasks::Model {
         code: TASK_CODE.into(),
         enabled: true,
         interval_seconds: 60,
+        lease_seconds: 180,
         config: "{}".into(),
         next_run_at: now + time::Duration::seconds(60),
         locked_until: Some(now + time::Duration::seconds(60)),

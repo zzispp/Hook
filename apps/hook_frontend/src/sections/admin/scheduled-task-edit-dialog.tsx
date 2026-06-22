@@ -58,6 +58,21 @@ export function ScheduledTaskEditor({
           )
         }
       />
+      <TextFieldRow
+        type="number"
+        label={t('scheduledTasks.fields.leaseSeconds')}
+        value={form.lease_seconds}
+        onChange={(value) =>
+          onChange((current) =>
+            current
+              ? {
+                  ...current,
+                  lease_seconds: value,
+                }
+              : current
+          )
+        }
+      />
       <Divider />
       <Stack spacing={2}>
         {task.config_schema.length ? (

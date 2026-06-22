@@ -8,12 +8,14 @@ use super::{Provider, ProviderApiKey, ProviderEndpoint, ProviderModelBinding, Pr
 #[serde(rename_all = "snake_case")]
 pub enum ProviderQuickImportSourceKind {
     Newapi,
+    Sub2api,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ProviderQuickImportSourceConfig {
     Newapi(NewApiQuickImportConfig),
+    Sub2api(Sub2ApiQuickImportConfig),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -21,6 +23,28 @@ pub struct NewApiQuickImportConfig {
     pub base_url: String,
     pub system_access_token: String,
     pub user_id: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "auth_mode", rename_all = "snake_case")]
+pub enum Sub2ApiQuickImportConfig {
+    Password(Sub2ApiPasswordQuickImportConfig),
+    Token(Sub2ApiTokenQuickImportConfig),
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Sub2ApiPasswordQuickImportConfig {
+    pub base_url: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Sub2ApiTokenQuickImportConfig {
+    pub base_url: String,
+    pub auth_token: String,
+    pub refresh_token: String,
+    pub token_expires_at: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -79,6 +103,12 @@ pub struct ProviderQuickImportRelinkRequest {
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct ProviderQuickImportModelAssociationsUpdate {
+    #[serde(default)]
+    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub struct ProviderQuickImportSelectedToken {
     pub upstream_token_id: String,
     pub name: String,
@@ -131,7 +161,8 @@ pub struct ProviderQuickImportTokenPreview {
     pub upstream_token_id: String,
     pub name: String,
     pub masked_key: String,
-    pub status: i32,
+    pub status: String,
+    pub is_active: bool,
     pub group: Option<String>,
     #[serde(with = "rust_decimal::serde::float")]
     pub group_ratio: Decimal,
@@ -200,13 +231,40 @@ pub struct ProviderQuickImportResolutionResponse {
     pub statuses: Vec<super::quick_import_sync::ProviderQuickImportSyncStatus>,
     pub tokens: Vec<ProviderQuickImportTokenPreview>,
     pub model_mappings: Vec<ProviderQuickImportModelMappingPreview>,
-    pub associated_models: Vec<super::ProviderKeyModelMapping>,
+    pub associated_models: Vec<ProviderQuickImportModelAssociation>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportModelAssociationsResponse {
+    pub provider_id: String,
+    pub key_id: String,
+    pub key_name: String,
+    pub source_kind: ProviderQuickImportSourceKind,
+    pub upstream_token_id: String,
+    pub associations: Vec<ProviderQuickImportModelAssociation>,
+    pub candidates: Vec<ProviderQuickImportModelAssociationCandidate>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportModelAssociation {
+    pub upstream_model_id: String,
+    pub global_model_id: String,
+    pub global_model_name: String,
+    pub global_model_display_name: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportModelAssociationCandidate {
+    pub upstream_model_id: String,
+    pub suggested_global_model_id: Option<String>,
+    pub reason: String,
 }
 
 impl ProviderQuickImportSourceConfig {
     pub fn kind(&self) -> ProviderQuickImportSourceKind {
         match self {
             Self::Newapi(_) => ProviderQuickImportSourceKind::Newapi,
+            Self::Sub2api(_) => ProviderQuickImportSourceKind::Sub2api,
         }
     }
 }
@@ -215,6 +273,7 @@ impl ProviderQuickImportSourceKind {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Newapi => "newapi",
+            Self::Sub2api => "sub2api",
         }
     }
 }
@@ -225,6 +284,7 @@ impl TryFrom<&str> for ProviderQuickImportSourceKind {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "newapi" => Ok(Self::Newapi),
+            "sub2api" => Ok(Self::Sub2api),
             other => Err(format!("invalid quick import source kind: {other}")),
         }
     }

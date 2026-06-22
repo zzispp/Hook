@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use sea_orm::{DbBackend, FromQueryResult, Statement, TransactionTrait};
 use storage::{
@@ -6,11 +6,13 @@ use storage::{
     scheduler::{ScheduledTaskClaim, ScheduledTaskRunRecordInput, ScheduledTaskRunRecordPatch, ScheduledTaskRunStatus, SchedulerStore},
 };
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 
 use crate::runtime::{ScheduleTaskContext, ScheduledTaskLifecycle, SchedulerError, SchedulerResult, TaskResult};
 
 const LOCAL_RUNNING_MESSAGE: &str = "task execution skipped because previous run is still active";
 const DATABASE_RUNNING_MESSAGE: &str = "task execution skipped because another scheduler instance is still active";
+const MIN_HEARTBEAT_INTERVAL_SECONDS: i64 = 5;
 const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
 const FNV_PRIME: u64 = 0x100000001b3;
 
@@ -122,7 +124,9 @@ async fn execute_claimed_task_run(
             return Ok(());
         }
     };
+    let heartbeat = ClaimHeartbeat::spawn(store.clone(), &claim);
     let patch = finish_patch(task.run(ScheduleTaskContext { database }, config).await, claim.started_at);
+    heartbeat.stop().await;
     if let Err(error) = store.finish_run(&run_id, patch.clone()).await {
         hook_tracing::error("scheduler finish run failed", &error);
     }
@@ -130,6 +134,53 @@ async fn execute_claimed_task_run(
     commit_task_lock(lock).await;
     finish_result?;
     Ok(())
+}
+
+struct ClaimHeartbeat {
+    handle: JoinHandle<()>,
+}
+
+impl ClaimHeartbeat {
+    fn spawn(store: SchedulerStore, claim: &ScheduledTaskClaim) -> Self {
+        let task_code = claim.record.code.clone();
+        let lock_owner = claim.lock_owner.clone();
+        let lease_seconds = claim.record.lease_seconds;
+        let interval = heartbeat_interval(lease_seconds);
+        let handle = tokio::spawn(async move {
+            let mut ticker = tokio::time::interval(interval);
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            ticker.tick().await;
+            loop {
+                ticker.tick().await;
+                let now = time::OffsetDateTime::now_utc();
+                match store.renew_claim(&task_code, &lock_owner, now).await {
+                    Ok(true) => {}
+                    Ok(false) => {
+                        hook_tracing::error(
+                            "scheduler claim heartbeat lost ownership",
+                            &SchedulerError::Infrastructure(format!("task_code={task_code}, lock_owner={lock_owner}")),
+                        );
+                        return;
+                    }
+                    Err(error) => {
+                        hook_tracing::error("scheduler claim heartbeat failed", &error);
+                        return;
+                    }
+                }
+            }
+        });
+        Self { handle }
+    }
+
+    async fn stop(self) {
+        self.handle.abort();
+        let _ = self.handle.await;
+    }
+}
+
+fn heartbeat_interval(lease_seconds: i64) -> Duration {
+    let seconds = (lease_seconds / 3).max(MIN_HEARTBEAT_INTERVAL_SECONDS);
+    Duration::from_secs(seconds as u64)
 }
 
 async fn acquire_task_lock(database: &Database, code: &str) -> SchedulerResult<Option<sea_orm::DatabaseTransaction>> {

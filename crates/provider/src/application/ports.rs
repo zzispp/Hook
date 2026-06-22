@@ -11,11 +11,11 @@ use types::provider::{
     ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostUpsert, ProviderModelTestRequest,
     ProviderModelTestResponse, ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportBindCommitRequest,
     ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportCommitRequest,
-    ProviderQuickImportCommitResponse, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest,
-    ProviderQuickImportResolutionResponse, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig,
-    ProviderQuickImportSyncEventDetailResponse, ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncSettingsResponse,
-    ProviderQuickImportSyncSettingsUpdate, ProviderQuickImportSyncStatus, ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail,
-    RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderQuickImportCommitResponse, ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate,
+    ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest, ProviderQuickImportResolutionResponse,
+    ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig, ProviderQuickImportSyncEventDetailResponse,
+    ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate, ProviderQuickImportSyncStatus,
+    ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -43,7 +43,8 @@ pub struct UpstreamImportToken {
     pub id: String,
     pub name: String,
     pub masked_key: String,
-    pub status: i32,
+    pub status: String,
+    pub is_active: bool,
     pub group: Option<String>,
     pub group_ratio: Decimal,
     pub api_key: Option<String>,
@@ -74,7 +75,8 @@ pub struct UpstreamSyncToken {
     pub id: String,
     pub name: String,
     pub masked_key: String,
-    pub status: i32,
+    pub status: String,
+    pub is_active: bool,
     pub group: Option<String>,
 }
 
@@ -93,6 +95,11 @@ pub struct ProviderQuickImportSyncSourceCreate {
     pub source_kind: ProviderQuickImportSourceKind,
     pub base_url: String,
     pub encrypted_system_access_token: String,
+    pub email: String,
+    pub encrypted_password: String,
+    pub encrypted_auth_token: String,
+    pub encrypted_refresh_token: String,
+    pub token_expires_at: Option<time::OffsetDateTime>,
     pub user_id: String,
     pub recharge_multiplier: Decimal,
     pub sync_config: ProviderQuickImportSyncConfig,
@@ -213,6 +220,11 @@ pub struct ProviderQuickImportSyncSource {
     pub source_kind: ProviderQuickImportSourceKind,
     pub base_url: String,
     pub encrypted_system_access_token: String,
+    pub email: String,
+    pub encrypted_password: String,
+    pub encrypted_auth_token: String,
+    pub encrypted_refresh_token: String,
+    pub token_expires_at: Option<time::OffsetDateTime>,
     pub user_id: String,
     pub recharge_multiplier: Decimal,
     pub sync_config: ProviderQuickImportSyncConfig,
@@ -226,6 +238,11 @@ pub struct ProviderQuickImportSyncSource {
 pub struct ProviderQuickImportSyncSourcePatch {
     pub base_url: Option<String>,
     pub encrypted_system_access_token: Option<String>,
+    pub email: Option<String>,
+    pub encrypted_password: Option<String>,
+    pub encrypted_auth_token: Option<String>,
+    pub encrypted_refresh_token: Option<String>,
+    pub token_expires_at: Option<Option<time::OffsetDateTime>>,
     pub user_id: Option<String>,
     pub recharge_multiplier: Option<Decimal>,
     pub sync_config: Option<ProviderQuickImportSyncConfig>,
@@ -413,6 +430,9 @@ pub trait UpstreamProviderImportSource: Send + Sync + 'static {
     async fn fetch_import_data(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamImportData>;
     async fn fetch_sync_snapshot(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<UpstreamSyncSnapshot>;
     async fn fetch_sync_token_models(&self, source: &ProviderQuickImportSourceConfig, upstream_token_id: &str) -> ProviderResult<Vec<UpstreamImportModel>>;
+    async fn refreshed_source_config(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<Option<ProviderQuickImportSourceConfig>> {
+        Ok(Some(source.clone()))
+    }
 }
 
 #[async_trait]
@@ -474,6 +494,13 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     async fn quick_import_resolution(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderQuickImportResolutionResponse>;
     async fn accept_quick_import_current(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderApiKey>;
     async fn relink_quick_import_key(&self, provider_id: &str, key_id: &str, input: ProviderQuickImportRelinkRequest) -> ProviderResult<ProviderApiKey>;
+    async fn quick_import_model_associations(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderQuickImportModelAssociationsResponse>;
+    async fn update_quick_import_model_associations(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderQuickImportModelAssociationsUpdate,
+    ) -> ProviderResult<ProviderQuickImportModelAssociationsResponse>;
     async fn key_model_mappings(&self, provider_id: &str) -> ProviderResult<ProviderKeyModelMappingsResponse>;
     async fn key_model_mappings_for_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderKeyModelMappingsForKeyResponse>;
     async fn update_key_model_mappings(

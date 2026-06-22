@@ -24,6 +24,7 @@ pub struct ScheduledTaskDefinition {
     pub description_key: String,
     pub default_enabled: bool,
     pub default_interval_seconds: i64,
+    pub default_lease_seconds: i64,
     pub default_config: serde_json::Value,
     pub config_schema: Vec<ScheduledTaskConfigField>,
 }
@@ -35,6 +36,7 @@ pub struct ScheduledTask {
     pub description_key: String,
     pub enabled: bool,
     pub interval_seconds: i64,
+    pub lease_seconds: i64,
     pub next_run_at: Option<String>,
     pub config: serde_json::Value,
     pub config_schema: Vec<ScheduledTaskConfigField>,
@@ -53,6 +55,8 @@ pub struct ScheduledTaskUpdate {
     pub enabled: Option<bool>,
     #[serde(default)]
     pub interval_seconds: Option<i64>,
+    #[serde(default)]
+    pub lease_seconds: Option<i64>,
     #[serde(default)]
     pub config: Option<serde_json::Value>,
 }
