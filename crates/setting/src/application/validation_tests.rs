@@ -70,12 +70,7 @@ fn sanitize_update_trims_api_endpoint_fields() {
 
     assert_eq!(
         sanitized.api_endpoints,
-        Some(vec![api_endpoint(
-            "endpoint-1",
-            "Global",
-            "https://api.example.com",
-            "public network",
-        )])
+        Some(vec![api_endpoint("endpoint-1", "Global", "https://api.example.com", "public network",)])
     );
 }
 
@@ -97,10 +92,7 @@ fn validate_update_rejects_api_endpoint_without_url() {
 
     let error = validate_update(&input).unwrap_err();
 
-    assert_eq!(
-        error.to_string(),
-        "invalid input: api_endpoints.url length must be between 1 and 255"
-    );
+    assert_eq!(error.to_string(), "invalid input: api_endpoints.url length must be between 1 and 255");
 }
 
 #[test]
@@ -112,10 +104,7 @@ fn validate_update_rejects_invalid_api_endpoint_url() {
 
     let error = validate_update(&input).unwrap_err();
 
-    assert_eq!(
-        error.to_string(),
-        "invalid input: api_endpoints.url must be a valid HTTP or HTTPS URL"
-    );
+    assert_eq!(error.to_string(), "invalid input: api_endpoints.url must be a valid HTTP or HTTPS URL");
 }
 
 #[test]

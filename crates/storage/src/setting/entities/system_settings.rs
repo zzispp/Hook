@@ -194,10 +194,8 @@ mod tests {
 
     #[test]
     fn decode_api_endpoints_reads_json() {
-        let endpoints = decode_api_endpoints(
-            r#"[{"id":"global","name":"Global","url":"https://api.example.com","description":"Primary"}]"#,
-        )
-        .expect("api endpoints JSON should decode");
+        let endpoints = decode_api_endpoints(r#"[{"id":"global","name":"Global","url":"https://api.example.com","description":"Primary"}]"#)
+            .expect("api endpoints JSON should decode");
 
         assert_eq!(
             endpoints,

@@ -40,9 +40,7 @@ fn validate_api_endpoint_url(value: &str) -> SettingResult<()> {
     if is_valid {
         return Ok(());
     }
-    Err(SettingError::InvalidInput(
-        "api_endpoints.url must be a valid HTTP or HTTPS URL".into(),
-    ))
+    Err(SettingError::InvalidInput("api_endpoints.url must be a valid HTTP or HTTPS URL".into()))
 }
 
 fn validate_required_length(field: &str, value: &str) -> SettingResult<()> {
@@ -78,10 +76,7 @@ mod tests {
             "  primary  ",
         )]);
 
-        assert_eq!(
-            sanitized[0],
-            api_endpoint("endpoint-1", "Global", "https://api.example.com", "primary")
-        );
+        assert_eq!(sanitized[0], api_endpoint("endpoint-1", "Global", "https://api.example.com", "primary"));
     }
 
     #[test]
@@ -94,10 +89,7 @@ mod tests {
         let endpoints = vec![api_endpoint("endpoint-1", "", "https://api.example.com", "")];
         let error = validate_api_endpoints(Some(&endpoints)).unwrap_err();
 
-        assert_eq!(
-            error.to_string(),
-            "invalid input: api_endpoints.name length must be between 1 and 255"
-        );
+        assert_eq!(error.to_string(), "invalid input: api_endpoints.name length must be between 1 and 255");
     }
 
     #[test]
@@ -105,10 +97,7 @@ mod tests {
         let endpoints = vec![api_endpoint("endpoint-1", "Global", "ftp://api.example.com", "")];
         let error = validate_api_endpoints(Some(&endpoints)).unwrap_err();
 
-        assert_eq!(
-            error.to_string(),
-            "invalid input: api_endpoints.url must be a valid HTTP or HTTPS URL"
-        );
+        assert_eq!(error.to_string(), "invalid input: api_endpoints.url must be a valid HTTP or HTTPS URL");
     }
 
     fn api_endpoint(id: &str, name: &str, url: &str, description: &str) -> ApiEndpoint {
