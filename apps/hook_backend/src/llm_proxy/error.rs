@@ -19,6 +19,7 @@ pub enum LlmProxyError {
     },
     RateLimited(String),
     InvalidRequest(String),
+    CodexChatHistoryUnavailable(String),
     NotFound(String),
     Upstream(String),
     Infrastructure(String),
@@ -52,7 +53,7 @@ impl LlmProxyError {
             Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) | Self::CodedForbidden { .. } => StatusCode::FORBIDDEN,
             Self::RateLimited(_) => StatusCode::TOO_MANY_REQUESTS,
-            Self::InvalidRequest(_) => StatusCode::BAD_REQUEST,
+            Self::InvalidRequest(_) | Self::CodexChatHistoryUnavailable(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
             Self::Upstream(_) | Self::Infrastructure(_) => StatusCode::BAD_GATEWAY,
         }
@@ -64,7 +65,7 @@ impl LlmProxyError {
             Self::Forbidden(_) => "forbidden",
             Self::CodedForbidden { error_type, .. } => error_type,
             Self::RateLimited(_) => "rate_limit_error",
-            Self::InvalidRequest(_) => "invalid_request_error",
+            Self::InvalidRequest(_) | Self::CodexChatHistoryUnavailable(_) => "invalid_request_error",
             Self::NotFound(_) => "not_found_error",
             Self::Upstream(_) | Self::Infrastructure(_) => client_error::SERVER_ERROR_TYPE,
         }
@@ -74,7 +75,11 @@ impl LlmProxyError {
         match self {
             Self::Unauthorized => "missing or invalid bearer token".into(),
             Self::CodedForbidden { message, .. } => message.clone(),
-            Self::Forbidden(message) | Self::RateLimited(message) | Self::InvalidRequest(message) | Self::NotFound(message) => message.clone(),
+            Self::Forbidden(message)
+            | Self::RateLimited(message)
+            | Self::InvalidRequest(message)
+            | Self::CodexChatHistoryUnavailable(message)
+            | Self::NotFound(message) => message.clone(),
             Self::Upstream(_) => client_error::MODEL_SERVICE_UNAVAILABLE_MESSAGE.into(),
             Self::Infrastructure(_) => client_error::SERVICE_UNAVAILABLE_MESSAGE.into(),
         }
@@ -83,13 +88,8 @@ impl LlmProxyError {
     fn internal_message(&self) -> &str {
         match self {
             Self::Unauthorized => "missing or invalid bearer token",
-            Self::Forbidden(message)
-            | Self::CodedForbidden { message, .. }
-            | Self::RateLimited(message)
-            | Self::InvalidRequest(message)
-            | Self::NotFound(message)
-            | Self::Upstream(message)
-            | Self::Infrastructure(message) => message,
+            Self::Forbidden(message) | Self::CodedForbidden { message, .. } | Self::RateLimited(message) | Self::InvalidRequest(message) => message,
+            Self::CodexChatHistoryUnavailable(message) | Self::NotFound(message) | Self::Upstream(message) | Self::Infrastructure(message) => message,
         }
     }
 
