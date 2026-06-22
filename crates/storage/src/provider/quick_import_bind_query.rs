@@ -10,7 +10,7 @@ use super::{
     ProviderStore,
     quick_import_query::{insert_costs, insert_endpoints, insert_models, insert_sync_metadata, sync_key_inputs},
     record::{
-        provider_api_keys, provider_endpoints, provider_model_costs, provider_models, provider_quick_import_key_models, provider_quick_import_keys,
+        provider_api_keys, provider_endpoints, provider_key_model_mappings, provider_model_costs, provider_models, provider_quick_import_keys,
         provider_quick_import_sources, providers,
     },
     repository_helpers::apply_provider_api_key_patch,
@@ -33,8 +33,17 @@ pub async fn bind_quick_import(store: &ProviderStore, input: ProviderQuickImport
     let endpoints = insert_endpoints(store, &tx, &input.provider_id, endpoint_inputs).await?;
     let (model_bindings, model_ids) = insert_models(store, &tx, &input.provider_id, model_inputs).await?;
     let (api_keys, key_ids) = upsert_keys(store, &tx, &input.provider_id, key_inputs).await?;
-    let model_costs = insert_costs(store, &tx, &input.provider_id, model_ids, key_ids.clone(), cost_inputs).await?;
-    insert_sync_metadata(store, &tx, &input.provider_id, input.sync_source, sync_key_inputs(&sync_key_records), &key_ids).await?;
+    let model_costs = insert_costs(store, &tx, &input.provider_id, &model_ids, key_ids.clone(), cost_inputs).await?;
+    insert_sync_metadata(
+        store,
+        &tx,
+        &input.provider_id,
+        input.sync_source,
+        sync_key_inputs(&sync_key_records),
+        &key_ids,
+        &model_ids,
+    )
+    .await?;
     let provider = update_provider_origin(&tx, provider).await?;
     let counts = key_counts(&api_keys, &reuse_key_ids, deleted_key_count);
     tx.commit().await?;
@@ -107,8 +116,8 @@ async fn delete_unselected_keys(tx: &DatabaseTransaction, provider_id: &str, reu
 }
 
 async fn delete_derived_resources(tx: &DatabaseTransaction, provider_id: &str) -> StorageResult<()> {
-    provider_quick_import_key_models::Entity::delete_many()
-        .filter(provider_quick_import_key_models::Column::ProviderId.eq(provider_id))
+    provider_key_model_mappings::Entity::delete_many()
+        .filter(provider_key_model_mappings::Column::ProviderId.eq(provider_id))
         .exec(tx)
         .await?;
     provider_quick_import_keys::Entity::delete_many()
@@ -185,7 +194,6 @@ async fn insert_new_key(
         name: Set(input.name),
         api_formats: Set(crate::json::encode_required(&input.api_formats)?),
         allowed_model_ids: Set(crate::json::encode_required(&input.allowed_model_ids)?),
-        capabilities: Set(crate::json::encode_optional(&input.capabilities)?),
         encrypted_api_key: Set(input.encrypted_api_key),
         note: Set(input.note),
         internal_priority: Set(input.internal_priority),
@@ -213,7 +221,6 @@ fn key_patch(input: super::ProviderQuickImportApiKeyRecordInput) -> super::Provi
         name: Some(input.name),
         api_formats: Some(input.api_formats),
         allowed_model_ids: Some(input.allowed_model_ids),
-        capabilities: patch_option(input.capabilities),
         encrypted_api_key: Some(input.encrypted_api_key),
         note: patch_option(input.note),
         internal_priority: Some(input.internal_priority),

@@ -1,11 +1,9 @@
+use proxy::scheduler::ModelAccessPolicy;
 use std::collections::BTreeMap;
 
-use types::{
-    api_token::ApiTokenType,
-    provider::{ProviderPriorityMode, ProviderSchedulingMode},
-};
+use types::provider::{ProviderPriorityMode, ProviderSchedulingMode};
 
-use super::helpers::{api_token, provider_b, provider_key, provider_with_endpoints_and_keys, provider_with_keys, request, snapshot_with_provider};
+use super::helpers::{provider_b, provider_key, provider_with_endpoints_and_keys, provider_with_keys, request, snapshot_with_provider};
 use crate::llm_proxy::candidate::selection::{
     matching::{MatchingCandidatePartsInput, matching_candidate_parts},
     scheduler::{OrderCandidatePartsInput, order_candidate_parts},
@@ -74,7 +72,6 @@ fn ordered_key_ids_with_seed(
     request_id: &str,
 ) -> Vec<String> {
     let group = &snapshot.groups[0];
-    let token = api_token(ApiTokenType::Independent, None);
     let request = request();
     let parts = matching_candidate_parts(MatchingCandidatePartsInput {
         snapshot,
@@ -89,9 +86,9 @@ fn ordered_key_ids_with_seed(
     });
     order_candidate_parts(OrderCandidatePartsInput {
         parts,
-        token: &token,
         group,
         user_access: None,
+        model_access_policy: ModelAccessPolicy::All,
         request,
         model_id: "model-a",
         request_id,

@@ -1,6 +1,6 @@
 use axum::http::HeaderMap;
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
-use serde_json::{Map, Value};
+use serde_json::Value;
 use types::api_token::ApiToken;
 
 use crate::llm_proxy::{
@@ -8,6 +8,7 @@ use crate::llm_proxy::{
     audit::record_scheduled_candidates,
     billing::enforce_preflight_access,
     candidate::{CandidateRequest, CandidateSelection, ProxyCandidate, select_candidates},
+    codex_chat_history::CodexChatHistoryStore,
     formats, rate_limit,
     rate_limit::ProviderKeyProbeSlotOptions,
 };
@@ -15,8 +16,10 @@ use crate::llm_proxy::{
 use super::{
     body_rules::apply_provider_body_rules,
     capture::RequestCapture,
+    request_codex_history,
     request_features::routing_request_features,
     request_image::{client_is_openai_chat_or_responses, client_source_format, openai_image_bridge_body, provider_is_openai_image},
+    request_rewrite::{apply_reasoning_effort, rewrite_upstream_body},
     request_tools::{openai_request_explicitly_selects_image_generation, prune_unsupported_image_generation_tool},
 };
 
@@ -37,6 +40,18 @@ pub(super) struct AttemptPayload {
     pub(super) original_body: Value,
     pub(super) source_format: ApiFormat,
     pub(super) target_format: ApiFormat,
+}
+
+pub(super) struct AttemptContext<'a> {
+    pub(super) codex_chat_history: &'a CodexChatHistoryStore,
+}
+
+impl<'a> AttemptContext<'a> {
+    pub(super) fn from_state(state: &'a LlmProxyState) -> Self {
+        Self {
+            codex_chat_history: state.codex_chat_history(),
+        }
+    }
 }
 
 pub(super) async fn prepare_proxy_request(
@@ -64,7 +79,6 @@ pub(super) async fn prepare_proxy_request(
             model_name,
             is_stream,
             has_openai_responses_custom_tool_items: has_openai_responses_custom_tool_items(api_format, &body),
-            required_capability,
             features,
         },
     )
@@ -111,9 +125,14 @@ pub(super) async fn prepare_proxy_request_with_candidates(
     })
 }
 
-pub(super) fn attempt_payload(body: Value, candidate: &ProxyCandidate, force_non_stream: bool) -> Result<AttemptPayload, LlmProxyError> {
+pub(super) async fn attempt_payload(
+    context: AttemptContext<'_>,
+    body: Value,
+    candidate: &ProxyCandidate,
+    force_non_stream: bool,
+) -> Result<AttemptPayload, LlmProxyError> {
     let original_body = body.clone();
-    let (body, source_format, target_format) = upstream_body(body, &original_body, candidate, force_non_stream)?;
+    let (body, source_format, target_format) = upstream_body(context, body, &original_body, candidate, force_non_stream).await?;
     Ok(AttemptPayload {
         body,
         original_body,
@@ -168,7 +187,8 @@ fn ensure_selection_format(selection: &CandidateSelection, api_format: &str, is_
     Ok(())
 }
 
-fn upstream_body(
+async fn upstream_body(
+    context: AttemptContext<'_>,
     body: Value,
     original_body: &Value,
     candidate: &ProxyCandidate,
@@ -183,6 +203,7 @@ fn upstream_body(
         return Ok((body, client_source_format(candidate)?, ApiFormat::OpenAiImage));
     }
     let (source, target) = formats::conversion_formats(&candidate.trace.client_api_format, &candidate.trace.provider_api_format, is_stream)?;
+    request_codex_history::enrich_responses_chat_request(context, &mut body, source, target).await?;
     if candidate.trace.needs_conversion {
         body = FormatConversionRegistry
             .convert_request(&body, source, target)
@@ -193,73 +214,6 @@ fn upstream_body(
     prune_unsupported_image_generation_tool(&mut body, candidate);
     apply_provider_body_rules(&mut body, &candidate.body_rules, original_body)?;
     Ok((body, source, target))
-}
-
-fn rewrite_upstream_body(body: &mut Value, candidate: &ProxyCandidate, force_non_stream: bool, target: ApiFormat) -> Result<(), LlmProxyError> {
-    let object = body
-        .as_object_mut()
-        .ok_or_else(|| LlmProxyError::InvalidRequest("request body must be a JSON object".into()))?;
-    let metadata = formats::endpoint_metadata(
-        &candidate.trace.provider_api_format,
-        object.get("stream").and_then(Value::as_bool).unwrap_or(false),
-    )?;
-    if metadata.model_in_body {
-        object.insert("model".into(), Value::String(candidate.provider_model_name.clone()));
-    } else {
-        object.remove("model");
-    }
-    if !metadata.stream_in_body || force_non_stream || metadata.upstream_stream_policy == formats::UpstreamStreamPolicy::ForceNonStream {
-        object.remove("stream");
-    }
-    ensure_stream_usage(object, metadata, target, force_non_stream)?;
-    Ok(())
-}
-
-fn ensure_stream_usage(
-    object: &mut Map<String, Value>,
-    metadata: formats::EndpointMetadata,
-    target: ApiFormat,
-    force_non_stream: bool,
-) -> Result<(), LlmProxyError> {
-    if target != metadata.data_format || !metadata.include_usage_for_stream || force_non_stream || object.get("stream").and_then(Value::as_bool) != Some(true) {
-        return Ok(());
-    }
-    let stream_options = object.entry("stream_options").or_insert_with(|| Value::Object(Map::new()));
-    let options = stream_options
-        .as_object_mut()
-        .ok_or_else(|| LlmProxyError::InvalidRequest("request field stream_options must be a JSON object".into()))?;
-    options.insert("include_usage".into(), Value::Bool(true));
-    Ok(())
-}
-
-fn apply_reasoning_effort(body: &mut Value, candidate: &ProxyCandidate, target: ApiFormat) -> Result<(), LlmProxyError> {
-    let Some(reasoning_effort) = candidate.reasoning_effort.as_deref() else {
-        return Ok(());
-    };
-    let object = body
-        .as_object_mut()
-        .ok_or_else(|| LlmProxyError::InvalidRequest("request body must be a JSON object".into()))?;
-    match target {
-        ApiFormat::OpenAiChat => {
-            object.insert("reasoning_effort".into(), Value::String(reasoning_effort.to_owned()));
-            Ok(())
-        }
-        ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact => {
-            reasoning_object(object)?.insert("effort".into(), Value::String(reasoning_effort.to_owned()));
-            Ok(())
-        }
-        _ => Err(LlmProxyError::InvalidRequest(format!(
-            "reasoning_effort override is not supported for provider format {}",
-            candidate.trace.provider_api_format
-        ))),
-    }
-}
-
-fn reasoning_object(object: &mut Map<String, Value>) -> Result<&mut Map<String, Value>, LlmProxyError> {
-    let value = object.entry("reasoning").or_insert_with(|| Value::Object(Map::new()));
-    value
-        .as_object_mut()
-        .ok_or_else(|| LlmProxyError::InvalidRequest("request field reasoning must be a JSON object".into()))
 }
 
 #[cfg(test)]

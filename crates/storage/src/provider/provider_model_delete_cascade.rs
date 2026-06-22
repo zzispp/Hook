@@ -7,8 +7,7 @@ use crate::{StorageError, StorageResult, json};
 
 use super::{
     record::{
-        provider_api_keys, provider_model_costs, provider_models, provider_quick_import_key_models, provider_quick_import_keys,
-        provider_quick_import_sync_events,
+        provider_api_keys, provider_key_model_mappings, provider_model_costs, provider_models, provider_quick_import_keys, provider_quick_import_sync_events,
     },
     repository::ProviderStore,
 };
@@ -19,7 +18,7 @@ pub(super) async fn cascade_model_binding_delete(
     record: &provider_models::Model,
 ) -> StorageResult<()> {
     delete_model_costs(tx, &record.provider_id, &record.id).await?;
-    let affected_keys = delete_quick_import_model_mappings(tx, &record.provider_id, &record.global_model_id).await?;
+    let affected_keys = delete_key_model_mappings(tx, &record.provider_id, &record.id).await?;
     remove_allowed_model_from_keys(tx, &record.provider_id, &record.id).await?;
     mark_empty_quick_import_keys(store, tx, &record.provider_id, affected_keys).await
 }
@@ -33,16 +32,16 @@ async fn delete_model_costs(tx: &sea_orm::DatabaseTransaction, provider_id: &str
     Ok(())
 }
 
-async fn delete_quick_import_model_mappings(tx: &sea_orm::DatabaseTransaction, provider_id: &str, global_model_id: &str) -> StorageResult<BTreeSet<String>> {
-    let mappings = provider_quick_import_key_models::Entity::find()
-        .filter(provider_quick_import_key_models::Column::ProviderId.eq(provider_id))
-        .filter(provider_quick_import_key_models::Column::GlobalModelId.eq(global_model_id))
+async fn delete_key_model_mappings(tx: &sea_orm::DatabaseTransaction, provider_id: &str, provider_model_id: &str) -> StorageResult<BTreeSet<String>> {
+    let mappings = provider_key_model_mappings::Entity::find()
+        .filter(provider_key_model_mappings::Column::ProviderId.eq(provider_id))
+        .filter(provider_key_model_mappings::Column::ProviderModelId.eq(provider_model_id))
         .all(tx)
         .await?;
     let affected = mappings.iter().map(|mapping| mapping.key_id.clone()).collect();
-    provider_quick_import_key_models::Entity::delete_many()
-        .filter(provider_quick_import_key_models::Column::ProviderId.eq(provider_id))
-        .filter(provider_quick_import_key_models::Column::GlobalModelId.eq(global_model_id))
+    provider_key_model_mappings::Entity::delete_many()
+        .filter(provider_key_model_mappings::Column::ProviderId.eq(provider_id))
+        .filter(provider_key_model_mappings::Column::ProviderModelId.eq(provider_model_id))
         .exec(tx)
         .await?;
     Ok(affected)
@@ -89,9 +88,9 @@ async fn mark_empty_quick_import_keys(
 }
 
 async fn quick_import_key_has_models(tx: &sea_orm::DatabaseTransaction, provider_id: &str, key_id: &str) -> StorageResult<bool> {
-    let mapping = provider_quick_import_key_models::Entity::find()
-        .filter(provider_quick_import_key_models::Column::ProviderId.eq(provider_id))
-        .filter(provider_quick_import_key_models::Column::KeyId.eq(key_id))
+    let mapping = provider_key_model_mappings::Entity::find()
+        .filter(provider_key_model_mappings::Column::ProviderId.eq(provider_id))
+        .filter(provider_key_model_mappings::Column::KeyId.eq(key_id))
         .one(tx)
         .await?;
     Ok(mapping.is_some())
@@ -155,6 +154,7 @@ async fn insert_no_associated_models_event(
         status: Set(ProviderQuickImportSyncStatus::NoAssociatedModels.as_str().to_owned()),
         title: Set(format!("快捷导入同步异常：{}({}) 没有关联模型", key.upstream_token_name, key.upstream_token_id)),
         detail: Set("管理员删除了该密钥最后一个关联模型，系统已禁用本地密钥。".into()),
+        payload_json: Set(None),
         created_at: Set(time::OffsetDateTime::now_utc()),
     }
     .insert(tx)

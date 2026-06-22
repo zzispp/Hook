@@ -21,11 +21,12 @@ pub(super) fn proxy_candidate(state: &LlmProxyState, parts: FixedParts, stream: 
         base_url: endpoint.base_url.clone(),
         custom_path: endpoint.custom_path.clone(),
         upstream_url: endpoint.upstream_url.clone(),
-        provider_model_name: parts.model.provider_model_name.clone(),
-        reasoning_effort: parts.model.provider_model_mapping.as_ref().and_then(|mapping| mapping.reasoning_effort.clone()),
+        provider_model_name: parts.effective_upstream_model_name.clone(),
+        reasoning_effort: parts.effective_reasoning_effort.clone(),
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
-        key_capabilities: key.capabilities.clone(),
+        format_acceptance_config: endpoint.format_acceptance_config.clone(),
+        key_supports_image_generation: key.supports_image_generation,
         price_per_request: parts.global_model.default_price_per_request,
         tiered_pricing: parts.global_model.default_tiered_pricing,
         billing_multiplier: Decimal::ONE,
@@ -69,10 +70,11 @@ fn endpoint_option(parts: &FixedParts, endpoint: &CachedEndpoint, stream: bool) 
         provider_api_format: endpoint.api_format.clone(),
         base_url: endpoint.base_url.clone(),
         custom_path: endpoint.custom_path.clone(),
-        upstream_url: url::upstream_url_checked(endpoint, &parts.model.provider_model_name, stream)?,
+        upstream_url: url::upstream_url_checked(endpoint, &parts.effective_upstream_model_name, stream)?,
         max_retries: endpoint.max_retries,
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
+        format_acceptance_config: endpoint.format_acceptance_config.clone(),
         needs_conversion,
     })
 }
@@ -83,7 +85,7 @@ fn key_option(state: &LlmProxyState, key: &CachedProviderKey) -> Result<Candidat
         name: key.name.clone(),
         key_preview: key.key_preview.clone(),
         api_key: state.cipher.decrypt_provider_key(&key.encrypted_api_key)?,
-        capabilities: key.capabilities.clone(),
+        supports_image_generation: key.supports_image_generation,
         cache_ttl_minutes: key.cache_ttl_minutes,
         rpm_limit: key.rpm_limit,
     })
@@ -112,6 +114,8 @@ fn candidate_trace(parts: &FixedParts, key: &CandidateKeyOption, endpoint: &Cand
         needs_conversion: endpoint.needs_conversion,
         is_stream: stream,
         is_cached: false,
+        routing_profile_id: types::provider::RoutingProfileId::Balanced,
+        routing_profile_ema_alpha: types::provider::default_ema_alpha(),
         routing_context_key: format!(
             "group={TEST_GROUP_CODE}|model={}|format={}|stream={}|size=unknown|cap=none",
             parts.global_model.id, parts.client_api_format, stream

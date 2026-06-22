@@ -86,7 +86,6 @@ impl ProviderStore {
             name: Set(input.name),
             api_formats: Set(json::encode_required(&input.api_formats)?),
             allowed_model_ids: Set(json::encode_required(&input.allowed_model_ids)?),
-            capabilities: Set(json::encode_optional(&input.capabilities)?),
             encrypted_api_key: Set(input.encrypted_api_key),
             note: Set(input.note),
             internal_priority: Set(input.internal_priority),
@@ -185,7 +184,6 @@ impl ProviderStore {
                     name: record.name,
                     api_formats: json::decode_required(record.api_formats)?,
                     allowed_model_ids: json::decode_required(record.allowed_model_ids)?,
-                    capabilities: json::decode_optional(record.capabilities)?,
                     encrypted_api_key: record.encrypted_api_key,
                     internal_priority: record.internal_priority,
                     global_priority_by_format: json::decode_required(record.global_priority_by_format)?,
@@ -254,6 +252,30 @@ impl ProviderStore {
         super::provider_model_query::delete_model_binding(self, provider_id, model_id).await
     }
 
+    pub async fn key_model_mappings_for_provider(&self, provider_id: &str) -> StorageResult<Vec<super::ProviderKeyModelMappingsForProviderRecord>> {
+        super::provider_key_model_mapping_query::key_model_mappings_for_provider(self, provider_id).await
+    }
+
+    pub async fn key_model_mappings_for_key(&self, provider_id: &str, key_id: &str) -> StorageResult<Option<super::ProviderKeyModelMappingsForKeyRecord>> {
+        super::provider_key_model_mapping_query::key_model_mappings_for_key(self, provider_id, key_id).await
+    }
+
+    pub async fn replace_key_model_mappings(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        inputs: Vec<super::ProviderKeyModelMappingRecordInput>,
+    ) -> StorageResult<Vec<super::ProviderKeyModelMappingView>> {
+        super::provider_key_model_mapping_query::replace_key_model_mappings(self, provider_id, key_id, inputs).await
+    }
+
+    pub async fn key_model_mappings_by_key_id(
+        &self,
+        key_ids: &[String],
+    ) -> StorageResult<std::collections::BTreeMap<String, Vec<super::ProviderKeyModelMappingView>>> {
+        super::provider_key_model_mapping_query::model_mappings_by_key_id(self, key_ids).await
+    }
+
     pub async fn list_model_costs(&self, provider_id: &str) -> StorageResult<Vec<types::provider::ProviderModelCost>> {
         super::provider_model_cost_query::list_model_costs(self, provider_id).await
     }
@@ -298,6 +320,10 @@ impl ProviderStore {
 
     pub async fn create_quick_import_sync_events(&self, input: Vec<super::ProviderQuickImportSyncEventRecordInput>) -> StorageResult<()> {
         super::quick_import_sync_event_query::create_events(self, input).await
+    }
+
+    pub async fn quick_import_sync_event_detail(&self, id: &str) -> StorageResult<Option<types::provider::ProviderQuickImportSyncEventDetailResponse>> {
+        super::quick_import_sync_event_query::event_detail(self, id).await
     }
 
     pub async fn upsert_model_costs(&self, inputs: Vec<ProviderModelCostRecordInput>) -> StorageResult<Vec<types::provider::ProviderModelCost>> {

@@ -6,15 +6,16 @@ use types::provider::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
     ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
     ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyGroup, ProviderKeyGroupCreate, ProviderKeyGroupListRequest, ProviderKeyGroupListResponse,
-    ProviderKeyGroupUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate,
-    ProviderModelBindingUpdate, ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostUpsert,
-    ProviderModelTestRequest, ProviderModelTestResponse, ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest,
-    ProviderQuickImportBindCommitRequest, ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse,
-    ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse, ProviderQuickImportModelAssociationsResponse,
-    ProviderQuickImportModelAssociationsUpdate, ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest,
-    ProviderQuickImportResolutionResponse, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig,
-    ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate, ProviderQuickImportSyncStatus, ProviderUpdate,
-    ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
+    ProviderKeyGroupUpdate, ProviderKeyModelMapping, ProviderKeyModelMappingsForKeyResponse, ProviderKeyModelMappingsResponse, ProviderKeyModelMappingsUpdate,
+    ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate,
+    ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostUpsert, ProviderModelTestRequest,
+    ProviderModelTestResponse, ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportBindCommitRequest,
+    ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportCommitRequest,
+    ProviderQuickImportCommitResponse, ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate,
+    ProviderQuickImportPreviewRequest, ProviderQuickImportPreviewResponse, ProviderQuickImportRelinkRequest, ProviderQuickImportResolutionResponse,
+    ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig, ProviderQuickImportSyncEventDetailResponse,
+    ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate, ProviderQuickImportSyncStatus,
+    ProviderUpdate, ProviderUpstreamModelsResponse, RequestRecordDetail, RequestRecordListRequest, RequestRecordListResponse, UsageRecordListResponse,
 };
 
 use super::ProviderResult;
@@ -25,7 +26,6 @@ pub struct ProviderApiKeySecret {
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
-    pub capabilities: Option<serde_json::Value>,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
     pub global_priority_by_format: BTreeMap<String, i32>,
@@ -120,8 +120,9 @@ pub struct ProviderQuickImportApiKeyCreate {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProviderQuickImportKeyModelCreate {
-    pub upstream_model_id: String,
     pub global_model_id: String,
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -264,8 +265,10 @@ pub struct ProviderQuickImportSyncKey {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ProviderQuickImportSyncKeyModel {
-    pub upstream_model_id: String,
+    pub provider_model_id: String,
     pub global_model_id: String,
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -286,6 +289,7 @@ pub struct ProviderQuickImportSyncEventCreate {
     pub status: ProviderQuickImportSyncStatus,
     pub title: String,
     pub detail: String,
+    pub payload: Option<ProviderQuickImportSyncEventPayload>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -300,6 +304,33 @@ pub struct ProviderQuickImportSyncRunReport {
     pub failed_count: u64,
     pub disabled_key_count: u64,
     pub updated_cost_count: u64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderKeyModelMappingsForProvider {
+    pub provider_id: String,
+    pub key_id: String,
+    pub key_name: String,
+    pub is_quick_import_key: bool,
+    pub mappings: Vec<ProviderKeyModelMapping>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ProviderKeyModelMappingsForKey {
+    pub provider_id: String,
+    pub key_id: String,
+    pub key_name: String,
+    pub is_quick_import_key: bool,
+    pub mappings: Vec<ProviderKeyModelMapping>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProviderKeyModelMappingWrite {
+    pub provider_id: String,
+    pub key_id: String,
+    pub provider_model_id: String,
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
 }
 
 #[async_trait]
@@ -336,6 +367,14 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn list_model_bindings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderModelBinding>>;
     async fn update_model_binding(&self, provider_id: &str, model_id: &str, input: ProviderModelBindingUpdate) -> ProviderResult<ProviderModelBinding>;
     async fn delete_model_binding(&self, provider_id: &str, model_id: &str) -> ProviderResult<()>;
+    async fn key_model_mappings(&self, provider_id: &str) -> ProviderResult<Vec<ProviderKeyModelMappingsForProvider>>;
+    async fn key_model_mappings_for_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<Option<ProviderKeyModelMappingsForKey>>;
+    async fn replace_key_model_mappings(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: Vec<ProviderKeyModelMappingWrite>,
+    ) -> ProviderResult<Vec<ProviderKeyModelMapping>>;
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse>;
     async fn upsert_model_costs(&self, provider_id: &str, key_id: &str, input: ProviderModelCostBatchUpsert) -> ProviderResult<ProviderModelCostListResponse>;
     async fn create_quick_import(&self, input: ProviderQuickImportCreate) -> ProviderResult<ProviderQuickImportCreated>;
@@ -360,6 +399,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
     ) -> ProviderResult<()>;
     async fn update_quick_import_sync_keys(&self, provider_id: &str, input: Vec<ProviderQuickImportSyncKeyPatch>) -> ProviderResult<()>;
     async fn create_quick_import_sync_events(&self, input: Vec<ProviderQuickImportSyncEventCreate>) -> ProviderResult<()>;
+    async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<Option<ProviderQuickImportSyncEventDetailResponse>>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;
@@ -461,12 +501,21 @@ pub trait ProviderUseCase: Send + Sync + 'static {
         key_id: &str,
         input: ProviderQuickImportModelAssociationsUpdate,
     ) -> ProviderResult<ProviderQuickImportModelAssociationsResponse>;
+    async fn key_model_mappings(&self, provider_id: &str) -> ProviderResult<ProviderKeyModelMappingsResponse>;
+    async fn key_model_mappings_for_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderKeyModelMappingsForKeyResponse>;
+    async fn update_key_model_mappings(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderKeyModelMappingsUpdate,
+    ) -> ProviderResult<ProviderKeyModelMappingsForKeyResponse>;
     async fn quick_import_sync_settings(&self, provider_id: &str) -> ProviderResult<ProviderQuickImportSyncSettingsResponse>;
     async fn update_quick_import_sync_settings(
         &self,
         provider_id: &str,
         input: ProviderQuickImportSyncSettingsUpdate,
     ) -> ProviderResult<ProviderQuickImportSyncSettingsResponse>;
+    async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<ProviderQuickImportSyncEventDetailResponse>;
     async fn run_quick_import_sync(&self, options: ProviderQuickImportSyncRunOptions) -> ProviderResult<ProviderQuickImportSyncRunReport>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;

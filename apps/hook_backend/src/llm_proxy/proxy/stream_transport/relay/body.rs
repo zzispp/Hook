@@ -19,7 +19,10 @@ impl StreamRelay {
     }
 
     pub(super) fn terminal_response_bodies(&self) -> StreamResponseBodyPatches {
-        self.body_capture.terminal_bodies(&self.pending)
+        if self.will_send_pending_terminal_bytes() {
+            return self.body_capture.terminal_bodies(&self.pending);
+        }
+        self.body_capture.cancelled_bodies()
     }
 
     pub(super) fn cancelled_response_bodies(&self) -> StreamResponseBodyPatches {
@@ -32,7 +35,7 @@ impl StreamRelay {
             latency_ms: transport::elapsed_ms(self.context.started),
             bodies: self.terminal_response_bodies(),
             provider_frame_count: self.body_capture.provider_frame_count(),
-            client_frame_count: self.body_capture.client_sent_frame_count() + self.pending.len(),
+            client_frame_count: self.terminal_client_frame_count(),
             received_response_count: self.stream_status.received_response_count(),
         }
     }
@@ -46,5 +49,17 @@ impl StreamRelay {
             client_frame_count: self.body_capture.client_sent_frame_count(),
             received_response_count: self.stream_status.received_response_count(),
         }
+    }
+
+    fn terminal_client_frame_count(&self) -> usize {
+        let sent = self.body_capture.client_sent_frame_count();
+        if self.will_send_pending_terminal_bytes() {
+            return sent + self.pending.len();
+        }
+        sent
+    }
+
+    fn will_send_pending_terminal_bytes(&self) -> bool {
+        self.client_output_started || self.client_failure.is_none()
     }
 }

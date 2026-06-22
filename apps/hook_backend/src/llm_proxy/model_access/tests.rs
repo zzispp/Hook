@@ -2,7 +2,7 @@ use rust_decimal::Decimal;
 use types::{
     api_token::{ApiToken, ApiTokenType, ModelAccessMode},
     model::TieredPricingConfig,
-    provider::{ProviderModelMapping, ProviderSchedulingMode},
+    provider::ProviderSchedulingMode,
     system_setting::RequestRecordLevel,
 };
 
@@ -182,7 +182,7 @@ fn snapshot() -> SchedulingSnapshot {
                 name: "Key A".into(),
                 api_formats: vec!["openai:chat".into()],
                 allowed_model_ids: Vec::new(),
-                capabilities: None,
+                supports_image_generation: false,
                 key_preview: "sk-***".into(),
                 encrypted_api_key: "encrypted".into(),
                 internal_priority: 0,
@@ -193,16 +193,12 @@ fn snapshot() -> SchedulingSnapshot {
                 time_range_start_minute: None,
                 time_range_end_minute: None,
                 is_active: true,
+                model_mappings: std::collections::BTreeMap::new(),
             }],
             models: vec![CachedModelBinding {
                 id: "binding-a".into(),
                 provider_id: "provider-a".into(),
                 global_model_id: "global-model-a".into(),
-                provider_model_name: "provider-model-a".into(),
-                provider_model_mapping: Some(ProviderModelMapping {
-                    name: "provider-model-a".into(),
-                    reasoning_effort: None,
-                }),
                 is_active: true,
             }],
         }],

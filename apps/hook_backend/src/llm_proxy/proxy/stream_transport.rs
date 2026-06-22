@@ -1,6 +1,7 @@
 mod body_capture;
 mod estimated_usage;
 mod event;
+mod output_start;
 mod preflight;
 mod record;
 mod relay;
@@ -56,7 +57,17 @@ pub struct StreamResponseArgs {
     pub retry_index: i32,
 }
 
-pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptCancelGuard) -> Result<Response, LlmProxyError> {
+pub(super) enum StreamResponseOutcome {
+    Response(Response),
+    PreOutputFailure(StreamPreOutputFailure),
+}
+
+pub(super) struct StreamPreOutputFailure {
+    pub(super) status: StatusCode,
+    pub(super) message: String,
+}
+
+pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptCancelGuard) -> Result<StreamResponseOutcome, LlmProxyError> {
     let StreamResponseArgs {
         state,
         request_id,
@@ -81,36 +92,70 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
         status,
     };
     if !status.is_success() {
-        return stream_status_failure(context, response, upstream_headers, content_type).await;
+        return stream_status_failure(context, response, upstream_headers, content_type)
+            .await
+            .map(StreamResponseOutcome::Response);
     }
 
     let upstream = req::response_bytes_stream(response);
     let first_byte_timeout = timeout::remaining_stream_first_byte_timeout(started, &context.candidate);
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
     attempt_cancel.disarm();
-    if let Some(response) = prefetch_with_timeout(&mut relay, first_byte_timeout).await? {
-        return Ok(response);
+    match prefetch_with_timeout(&mut relay, first_byte_timeout).await? {
+        PrefetchOutcome::Ready => {}
+        PrefetchOutcome::FailureResponse(response) => return Ok(StreamResponseOutcome::Response(response)),
+        PrefetchOutcome::PreOutputFailure(failure) => return Ok(StreamResponseOutcome::PreOutputFailure(failure)),
     }
     relay.record_streaming_started(upstream_headers, content_type.as_ref()).await?;
     let body = Body::from_stream(stream::unfold(relay, relay::next_body_item));
-    transport::response_builder(status, content_type).body(body).map_err(transport::response_error)
+    transport::response_builder(status, content_type)
+        .body(body)
+        .map(StreamResponseOutcome::Response)
+        .map_err(transport::response_error)
 }
 
-async fn prefetch_with_timeout(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<Option<Response>, LlmProxyError> {
+async fn prefetch_with_timeout(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<PrefetchOutcome, LlmProxyError> {
     match timeout {
         Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch()).await {
-            Ok(Ok(())) => relay.prefetch_failure_response(),
-            Ok(Err(error)) => relay.failure_response().map(Some).or(Err(error)),
+            Ok(Ok(())) => prefetch_outcome(relay),
+            Ok(Err(error)) => prefetch_error_outcome(relay, error),
             Err(_) => {
                 relay.record_first_byte_timeout().await?;
-                relay.failure_response().map(Some)
+                prefetch_outcome(relay)
             }
         },
         None => match relay.prefetch().await {
-            Ok(()) => relay.prefetch_failure_response(),
-            Err(error) => relay.failure_response().map(Some).or(Err(error)),
+            Ok(()) => prefetch_outcome(relay),
+            Err(error) => prefetch_error_outcome(relay, error),
         },
     }
+}
+
+enum PrefetchOutcome {
+    Ready,
+    FailureResponse(Response),
+    PreOutputFailure(StreamPreOutputFailure),
+}
+
+fn prefetch_outcome(relay: &relay::StreamRelay) -> Result<PrefetchOutcome, LlmProxyError> {
+    if let Some(failure) = relay.pre_output_failure()? {
+        return Ok(PrefetchOutcome::PreOutputFailure(failure));
+    }
+    if let Some(response) = relay.prefetch_failure_response()? {
+        return Ok(PrefetchOutcome::FailureResponse(response));
+    }
+    Ok(PrefetchOutcome::Ready)
+}
+
+fn prefetch_error_outcome(relay: &relay::StreamRelay, error: LlmProxyError) -> Result<PrefetchOutcome, LlmProxyError> {
+    if let Some(failure) = relay.pre_output_failure()? {
+        return Ok(PrefetchOutcome::PreOutputFailure(failure));
+    }
+    relay.failure_response().map(PrefetchOutcome::FailureResponse).or(Err(error))
+}
+
+fn should_record_streaming_started_after_prefetch(finished: bool, recorded_terminal: bool) -> bool {
+    !finished && !recorded_terminal
 }
 
 async fn stream_status_failure(
@@ -168,4 +213,19 @@ async fn record_stream_headers(
 
 fn json_error(error: serde_json::Error) -> LlmProxyError {
     LlmProxyError::Infrastructure(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_record_streaming_started_after_prefetch;
+
+    #[test]
+    fn image_stream_prefetch_terminal_skips_streaming_started_patch() {
+        assert!(!should_record_streaming_started_after_prefetch(true, true));
+    }
+
+    #[test]
+    fn active_stream_prefetch_records_streaming_started_patch() {
+        assert!(should_record_streaming_started_after_prefetch(false, false));
+    }
 }

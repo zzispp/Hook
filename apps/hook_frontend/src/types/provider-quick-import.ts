@@ -4,6 +4,7 @@ import type {
   ProviderEndpoint,
   ProviderModelCost,
   ProviderModelBinding,
+  ProviderKeyModelMapping,
 } from './provider';
 
 export type ProviderQuickImportSourceKind = 'newapi' | 'sub2api';
@@ -26,6 +27,8 @@ export type ProviderQuickImportSyncStatus =
   | 'cost_unavailable'
   | 'cost_pending_update'
   | 'model_candidate_available';
+
+export type ProviderQuickImportSyncEventSnapshotStatus = 'available' | 'missing';
 
 export type NewApiQuickImportConfig = {
   base_url: string;
@@ -128,10 +131,6 @@ export type ProviderQuickImportRelinkRequest = {
   model_mappings: ProviderQuickImportModelMappingInput[];
 };
 
-export type ProviderQuickImportModelAssociationsUpdate = {
-  model_mappings: ProviderQuickImportModelMappingInput[];
-};
-
 export type ProviderQuickImportSyncConfig = {
   auto_sync_enabled: boolean;
   cost_sync_mode: ProviderQuickImportCostSyncMode;
@@ -207,6 +206,7 @@ export type ProviderQuickImportProviderConfig = {
   priority?: number;
   keep_priority_on_conversion?: boolean;
   enable_format_conversion?: boolean;
+  upstream_image_native_stream?: boolean;
   is_active?: boolean;
 };
 
@@ -255,6 +255,33 @@ export type ProviderQuickImportRemoteModel = {
   supported_endpoint_types: string[];
 };
 
+export type ProviderQuickImportUpstreamModelSnapshot = {
+  upstream_model_id: string;
+  supported_endpoint_types: string[];
+};
+
+export type ProviderQuickImportSyncEventPayload = {
+  provider_name: string;
+  local_key_name?: string | null;
+  upstream_token_name?: string | null;
+  upstream_token_id?: string | null;
+  status: ProviderQuickImportSyncStatus;
+  anomaly_summary: string;
+  action_summary: string;
+  missing_upstream_model_ids: string[];
+  upstream_models_snapshot: ProviderQuickImportUpstreamModelSnapshot[];
+};
+
+export type ProviderQuickImportSyncEventDetailResponse = {
+  id: string;
+  status: ProviderQuickImportSyncStatus;
+  title: string;
+  detail: string;
+  created_at: string;
+  snapshot_status: ProviderQuickImportSyncEventSnapshotStatus;
+  payload?: ProviderQuickImportSyncEventPayload | null;
+};
+
 export type ProviderQuickImportModelMappingPreview = {
   upstream_model_id: string;
   suggested_global_model_id?: string | null;
@@ -288,28 +315,5 @@ export type ProviderQuickImportResolutionResponse = {
   statuses: ProviderQuickImportSyncStatus[];
   tokens: ProviderQuickImportTokenPreview[];
   model_mappings: ProviderQuickImportModelMappingPreview[];
-  associated_models: ProviderQuickImportModelAssociation[];
-};
-
-export type ProviderQuickImportModelAssociationsResponse = {
-  provider_id: string;
-  key_id: string;
-  key_name: string;
-  source_kind: ProviderQuickImportSourceKind;
-  upstream_token_id: string;
-  associations: ProviderQuickImportModelAssociation[];
-  candidates: ProviderQuickImportModelAssociationCandidate[];
-};
-
-export type ProviderQuickImportModelAssociation = {
-  upstream_model_id: string;
-  global_model_id: string;
-  global_model_name: string;
-  global_model_display_name: string;
-};
-
-export type ProviderQuickImportModelAssociationCandidate = {
-  upstream_model_id: string;
-  suggested_global_model_id?: string | null;
-  reason: string;
+  associated_models: ProviderKeyModelMapping[];
 };

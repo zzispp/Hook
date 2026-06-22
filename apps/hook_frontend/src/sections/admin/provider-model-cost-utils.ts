@@ -1,5 +1,9 @@
 import type { PricingTier, GlobalModelResponse } from 'src/types/model';
-import type { ProviderApiKey, ProviderModelCost, ProviderModelBinding } from 'src/types/provider';
+import type {
+  ProviderApiKey,
+  ProviderModelCost,
+  ProviderModelBinding,
+} from 'src/types/provider';
 
 import { aetherCacheReadPrice, aetherCacheCreationPrice } from 'src/utils/model-pricing';
 
@@ -13,7 +17,15 @@ export type TokenCostDraft = {
 };
 
 export function bindingLabel(binding: ProviderModelBinding, models: GlobalModelResponse[]) {
-  return findGlobalModel(models, binding.global_model_id)?.display_name || binding.provider_model_name;
+  const model = findGlobalModel(models, binding.global_model_id);
+  return model?.display_name || model?.name || binding.global_model_id;
+}
+
+export function bindingSecondaryLabel(binding: ProviderModelBinding, models: GlobalModelResponse[]) {
+  const model = findGlobalModel(models, binding.global_model_id);
+  if (!model) return binding.global_model_id;
+  if (model.display_name && model.name) return model.name;
+  return model.name || model.id;
 }
 
 export function bindingsAllowedForKey(key: ProviderApiKey, bindings: ProviderModelBinding[]) {
@@ -39,6 +51,10 @@ export function globalDefaultMode(binding: ProviderModelBinding, models: GlobalM
 
 export function globalDefaultRequestPrice(binding: ProviderModelBinding, models: GlobalModelResponse[]) {
   return findGlobalModel(models, binding.global_model_id)?.default_price_per_request ?? null;
+}
+
+export function globalDefaultTokenDraft(binding: ProviderModelBinding, models: GlobalModelResponse[]) {
+  return tokenDraftFromGlobal(binding, models, 1);
 }
 
 export function tokenDraftFromGlobal(

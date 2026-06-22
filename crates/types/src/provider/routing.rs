@@ -207,6 +207,20 @@ pub struct RoutingProfile {
     pub prior_sample_cap: u64,
     #[serde(default = "default_contextual_exploration_enabled")]
     pub contextual_exploration_enabled: bool,
+    #[serde(default = "default_ema_alpha")]
+    pub ema_alpha: f64,
+    #[serde(default = "default_ema_max_freshness_seconds")]
+    pub ema_max_freshness_seconds: i64,
+    #[serde(default = "default_ema_recent_weight")]
+    pub ema_recent_weight: f64,
+    #[serde(default = "default_ema_recent_cap")]
+    pub ema_recent_cap: f64,
+    #[serde(default = "default_exploration_weight")]
+    pub exploration_weight: f64,
+    #[serde(default = "default_exploration_cap")]
+    pub exploration_cap: f64,
+    #[serde(default = "default_exploration_min_success_score")]
+    pub exploration_min_success_score: f64,
     pub auto_tune_enabled: bool,
     #[serde(default)]
     pub learning: Option<RoutingProfileLearningState>,
@@ -222,6 +236,13 @@ pub struct RoutingProfileUpsert {
     pub affinity_bonus: Option<f64>,
     pub prior_sample_cap: Option<u64>,
     pub contextual_exploration_enabled: Option<bool>,
+    pub ema_alpha: Option<f64>,
+    pub ema_max_freshness_seconds: Option<i64>,
+    pub ema_recent_weight: Option<f64>,
+    pub ema_recent_cap: Option<f64>,
+    pub exploration_weight: Option<f64>,
+    pub exploration_cap: Option<f64>,
+    pub exploration_min_success_score: Option<f64>,
     pub auto_tune_enabled: Option<bool>,
 }
 
@@ -243,7 +264,7 @@ pub struct RoutingProfileLearningState {
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct RoutingRankingsRequest {
-    pub api_token_id: String,
+    pub group_code: String,
     pub model: String,
     pub api_format: String,
     pub is_stream: bool,
@@ -342,6 +363,34 @@ pub const fn default_prior_sample_cap() -> u64 {
 
 pub const fn default_contextual_exploration_enabled() -> bool {
     true
+}
+
+pub const fn default_ema_alpha() -> f64 {
+    0.35
+}
+
+pub const fn default_ema_max_freshness_seconds() -> i64 {
+    300
+}
+
+pub const fn default_ema_recent_weight() -> f64 {
+    0.35
+}
+
+pub const fn default_ema_recent_cap() -> f64 {
+    8.0
+}
+
+pub const fn default_exploration_weight() -> f64 {
+    0.05
+}
+
+pub const fn default_exploration_cap() -> f64 {
+    5.0
+}
+
+pub const fn default_exploration_min_success_score() -> f64 {
+    65.0
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

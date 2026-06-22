@@ -1,7 +1,11 @@
 'use client';
 
 import type { ApiEnvelope } from 'src/types/rbac';
-import type { ProviderApiKey } from 'src/types/provider';
+import type {
+  ProviderApiKey,
+  ProviderKeyModelMappingsUpdate,
+  ProviderKeyModelMappingsForKeyResponse,
+} from 'src/types/provider';
 import type {
   ProviderQuickImportRelinkRequest,
   ProviderQuickImportCommitResponse,
@@ -13,8 +17,7 @@ import type {
   ProviderQuickImportBindPreviewResponse,
   ProviderQuickImportAppendCommitRequest,
   ProviderQuickImportAppendPreviewRequest,
-  ProviderQuickImportModelAssociationsUpdate,
-  ProviderQuickImportModelAssociationsResponse,
+  ProviderQuickImportSyncEventDetailResponse,
 } from 'src/types/provider-quick-import';
 
 import { mutate } from 'swr';
@@ -91,22 +94,28 @@ export async function relinkProviderQuickImportKey(
   return apiKey;
 }
 
-export async function getProviderQuickImportModelAssociations(providerId: string, keyId: string) {
-  return requestData<ProviderQuickImportModelAssociationsResponse>(
-    axios.get(endpoints.adminProviders.keyQuickImportModelAssociations(providerId, keyId))
+export async function getProviderKeyModelMappingsForKey(providerId: string, keyId: string) {
+  return requestData<ProviderKeyModelMappingsForKeyResponse>(
+    axios.get(endpoints.adminProviders.keyModelMappingsByKey(providerId, keyId))
   );
 }
 
-export async function updateProviderQuickImportModelAssociations(
+export async function updateProviderKeyModelMappings(
   providerId: string,
   keyId: string,
-  payload: ProviderQuickImportModelAssociationsUpdate
+  payload: ProviderKeyModelMappingsUpdate
 ) {
-  const response = await requestData<ProviderQuickImportModelAssociationsResponse>(
-    axios.put(endpoints.adminProviders.keyQuickImportModelAssociations(providerId, keyId), payload)
+  const response = await requestData<ProviderKeyModelMappingsForKeyResponse>(
+    axios.put(endpoints.adminProviders.keyModelMappingsByKey(providerId, keyId), payload)
   );
   await mutateProviderChildren(providerId);
   return response;
+}
+
+export async function getProviderQuickImportSyncEventDetail(id: string) {
+  return requestData<ProviderQuickImportSyncEventDetailResponse>(
+    axios.get(endpoints.adminProviders.quickImportSyncEventDetail(id))
+  );
 }
 
 async function requestData<T>(request: Promise<{ data: ApiEnvelope<T> }>) {

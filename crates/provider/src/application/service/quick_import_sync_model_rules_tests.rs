@@ -47,7 +47,6 @@ async fn candidate_model_status_is_warning_only() {
 fn exact_name_upstream_model_is_reported_as_candidate_only() {
     let candidates = candidate_model_ids(
         &globals(),
-        &bindings(),
         &key(vec![("upstream-gpt".into(), "global-gpt".into())]),
         &[
             UpstreamImportModel {
@@ -150,9 +149,11 @@ fn key(model_mappings: Vec<(String, String)>) -> ProviderQuickImportSyncKey {
         statuses: vec![ProviderQuickImportSyncStatus::Ok],
         model_mappings: model_mappings
             .into_iter()
-            .map(|(upstream_model_id, global_model_id)| crate::application::ProviderQuickImportSyncKeyModel {
-                upstream_model_id,
+            .map(|(upstream_model_name, global_model_id)| crate::application::ProviderQuickImportSyncKeyModel {
+                provider_model_id: "provider-model-1".into(),
                 global_model_id,
+                upstream_model_name,
+                reasoning_effort: None,
             })
             .collect(),
     }
@@ -185,11 +186,5 @@ fn global_model(id: &str, name: &str) -> GlobalModelResponse {
 }
 
 fn bindings() -> BTreeMap<String, BindingInfo> {
-    BTreeMap::from([(
-        "global-gpt".into(),
-        BindingInfo {
-            id: "provider-model-1".into(),
-            upstream_model_id: "upstream-gpt".into(),
-        },
-    )])
+    BTreeMap::from([("global-gpt".into(), BindingInfo { id: "provider-model-1".into() })])
 }

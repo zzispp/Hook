@@ -1,5 +1,5 @@
 use storage::provider::{RoutingMetricRecord, RoutingRouteStateRecord};
-use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource};
+use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource, RoutingProfileId};
 
 use crate::llm_proxy::routing::{RoutingEmaSnapshot, RoutingMetricsSnapshot};
 
@@ -25,6 +25,7 @@ pub(super) struct ResolvedMetric {
     pub(super) metric_source: RoutingMetricSource,
     pub(super) prior_source: RoutingPriorSource,
     pub(super) prior_sample_count: u64,
+    pub(super) effective_sample_count: u64,
 }
 
 #[derive(Clone, Copy)]
@@ -50,6 +51,7 @@ impl MetricCatalog {
         route: &RouteIdentity,
         fingerprints: RouteFingerprints<'_>,
         min_samples: u64,
+        prior_sample_cap: u64,
         requested_window: RoutingMetricWindow,
     ) -> ResolvedMetric {
         if let Some((window, record)) = self
@@ -59,7 +61,7 @@ impl MetricCatalog {
             return self.resolved_exact(route, fingerprints, requested_window, window, record);
         }
         if let Some((window, record, source)) = self.best_prior(route, min_samples).or_else(|| self.richest_prior(route)) {
-            return resolved_prior(window, record, source);
+            return resolved_prior(window, record, source, prior_sample_cap);
         }
         resolved_neutral(requested_window)
     }
@@ -87,6 +89,7 @@ impl MetricCatalog {
             },
             prior_source: RoutingPriorSource::ExactRoute,
             prior_sample_count: record.snapshot.sample_count,
+            effective_sample_count: record.snapshot.sample_count,
         }
     }
 
@@ -150,11 +153,11 @@ impl RouteStateCatalog {
         }
     }
 
-    pub(super) fn record(&self, route: &RouteIdentity, fingerprints: RouteFingerprints<'_>) -> Option<RoutingEmaSnapshot> {
+    pub(super) fn record(&self, profile_id: RoutingProfileId, route: &RouteIdentity, fingerprints: RouteFingerprints<'_>) -> Option<RoutingEmaSnapshot> {
         let record = self
             .records
             .iter()
-            .find(|record| record.route == *route && route_state_fingerprint_matches(record, fingerprints))?;
+            .find(|record| record.profile_id == profile_id.as_str() && record.route == *route && route_state_fingerprint_matches(record, fingerprints))?;
         Some(RoutingEmaSnapshot {
             success_rate: record.ema_success_rate,
             ttfb_avg_ms: record.ema_ttfb_ms,
@@ -190,7 +193,8 @@ impl MetricCatalogEntry {
     }
 }
 
-fn resolved_prior(window: RoutingMetricWindow, record: &AggregateMetricRecord, source: RoutingPriorSource) -> ResolvedMetric {
+fn resolved_prior(window: RoutingMetricWindow, record: &AggregateMetricRecord, source: RoutingPriorSource, prior_sample_cap: u64) -> ResolvedMetric {
+    let effective_sample_count = record.snapshot.sample_count.min(prior_sample_cap);
     ResolvedMetric {
         snapshot: record.snapshot.clone(),
         metric_window: window,
@@ -199,6 +203,7 @@ fn resolved_prior(window: RoutingMetricWindow, record: &AggregateMetricRecord, s
         metric_source: RoutingMetricSource::Prior,
         prior_source: source,
         prior_sample_count: record.snapshot.sample_count,
+        effective_sample_count,
     }
 }
 
@@ -211,6 +216,7 @@ fn resolved_neutral(window: RoutingMetricWindow) -> ResolvedMetric {
         metric_source: RoutingMetricSource::Prior,
         prior_source: RoutingPriorSource::Neutral,
         prior_sample_count: 0,
+        effective_sample_count: 0,
     }
 }
 

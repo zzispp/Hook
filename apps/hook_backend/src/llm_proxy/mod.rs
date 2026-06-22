@@ -4,8 +4,8 @@ mod billing;
 mod cache;
 mod cache_affinity;
 mod candidate;
-mod capabilities;
 mod client_error;
+mod codex_chat_history;
 mod error;
 mod formats;
 mod handlers;
@@ -85,6 +85,7 @@ pub struct LlmProxyState {
     affinity: redis::aio::ConnectionManager,
     cache: LlmProxyCache,
     routing_metrics: routing::RoutingMetricsCache,
+    codex_chat_history: codex_chat_history::CodexChatHistoryStore,
     payload_writer: request_payload_writer::RequestPayloadWriter,
     key_prefix: String,
     system_wallet: Option<Wallet>,
@@ -105,9 +106,10 @@ impl LlmProxyState {
             database,
             cipher,
             http: llm_proxy_http_client(),
-            affinity,
+            affinity: affinity.clone(),
             cache,
             routing_metrics,
+            codex_chat_history: codex_chat_history::CodexChatHistoryStore::new(affinity.clone(), key_prefix.clone()),
             payload_writer,
             key_prefix,
             system_wallet,
@@ -124,6 +126,10 @@ impl LlmProxyState {
 
     pub(crate) async fn routing_metrics_snapshot(&self) -> routing::RoutingMetricsSnapshot {
         self.routing_metrics.snapshot().await
+    }
+
+    pub(crate) fn codex_chat_history(&self) -> &codex_chat_history::CodexChatHistoryStore {
+        &self.codex_chat_history
     }
 
     pub(crate) fn database(&self) -> Database {

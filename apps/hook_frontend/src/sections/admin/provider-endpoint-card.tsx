@@ -29,6 +29,13 @@ import {
   editableBodyRulesToApi,
   editableHeaderRulesToApi,
 } from './provider-endpoint-rule-types';
+import {
+  formatConfigChanged,
+  imageEndpointFormatConfig,
+  isOpenAiImageEndpointFormat,
+  endpointNativeImageStreamEnabled,
+  ProviderEndpointImageStreamSwitch,
+} from './provider-endpoint-image-stream-config';
 
 export function ProviderEndpointCard({
   endpoint,
@@ -63,6 +70,7 @@ export function ProviderEndpointCard({
       <EndpointCardHeader endpoint={endpoint} deleting={deleting} toggling={toggling} onDelete={onDelete} onToggle={onToggle} />
       <Stack spacing={2} sx={{ p: 2 }}>
         <EndpointUrlFields endpoint={endpoint} editState={editState} onEditStateChange={onEditStateChange} />
+        <EndpointImageStreamSwitch endpoint={endpoint} editState={editState} onEditStateChange={onEditStateChange} />
         <ProviderEndpointRuleList
           open={expanded}
           headerRules={editState.headerRules}
@@ -90,9 +98,28 @@ export function editStateFromEndpoint(endpoint: ProviderEndpoint): EndpointEditS
   return {
     baseUrl: endpoint.base_url,
     customPath: endpoint.custom_path ?? '',
+    upstreamImageNativeStream: endpointNativeImageStreamEnabled(endpoint),
     headerRules: headerRulesToEditable(endpoint.header_rules),
     bodyRules: bodyRulesToEditable(endpoint.body_rules),
   };
+}
+
+function EndpointImageStreamSwitch({
+  endpoint,
+  editState,
+  onEditStateChange,
+}: {
+  endpoint: ProviderEndpoint;
+  editState: EndpointEditState;
+  onEditStateChange: (state: EndpointEditState) => void;
+}) {
+  return (
+    <ProviderEndpointImageStreamSwitch
+      visible={isOpenAiImageEndpointFormat(endpoint.api_format)}
+      checked={editState.upstreamImageNativeStream}
+      onChange={(upstreamImageNativeStream) => onEditStateChange({ ...editState, upstreamImageNativeStream })}
+    />
+  );
 }
 
 export function endpointRuleCount(endpoint: ProviderEndpoint) {
@@ -163,7 +190,12 @@ function EndpointUrlFields({
 }
 
 function endpointChanged(endpoint: ProviderEndpoint, state: EndpointEditState) {
-  return urlChanged(endpoint, state) || headerRulesChanged(endpoint.header_rules, state.headerRules) || bodyRulesChanged(endpoint.body_rules, state.bodyRules);
+  return (
+    urlChanged(endpoint, state) ||
+    formatConfigChanged(endpoint, state.upstreamImageNativeStream) ||
+    headerRulesChanged(endpoint.header_rules, state.headerRules) ||
+    bodyRulesChanged(endpoint.body_rules, state.bodyRules)
+  );
 }
 
 function urlChanged(endpoint: ProviderEndpoint, state: EndpointEditState) {
@@ -175,6 +207,9 @@ function buildPatch(endpoint: ProviderEndpoint, state: EndpointEditState): Provi
   const baseUrl = normalizeBaseUrl(state.baseUrl);
   if (baseUrl !== endpoint.base_url) patch.base_url = baseUrl;
   if (state.customPath !== (endpoint.custom_path ?? '')) patch.custom_path = state.customPath.trim() || null;
+  if (formatConfigChanged(endpoint, state.upstreamImageNativeStream)) {
+    patch.format_acceptance_config = imageEndpointFormatConfig(endpoint.api_format, state.upstreamImageNativeStream);
+  }
   if (headerRulesChanged(endpoint.header_rules, state.headerRules)) patch.header_rules = editableHeaderRulesToApi(state.headerRules);
   if (bodyRulesChanged(endpoint.body_rules, state.bodyRules)) patch.body_rules = editableBodyRulesToApi(state.bodyRules);
   return patch;

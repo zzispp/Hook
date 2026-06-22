@@ -71,7 +71,6 @@ pub(in crate::migration::baseline) enum ProviderApiKeys {
     Name,
     ApiFormats,
     AllowedModelIds,
-    Capabilities,
     EncryptedApiKey,
     Note,
     InternalPriority,
@@ -118,10 +117,21 @@ pub(in crate::migration::baseline) enum ProviderModels {
     Id,
     ProviderId,
     GlobalModelId,
-    ProviderModelName,
-    ProviderModelMappings,
     IsActive,
     Config,
+    CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub(in crate::migration::baseline) enum ProviderKeyModelMappings {
+    Table,
+    Id,
+    ProviderId,
+    KeyId,
+    ProviderModelId,
+    UpstreamModelName,
+    ReasoningEffort,
     CreatedAt,
     UpdatedAt,
 }
@@ -198,19 +208,6 @@ pub(in crate::migration::baseline) enum ProviderQuickImportKeys {
 }
 
 #[derive(DeriveIden)]
-pub(in crate::migration::baseline) enum ProviderQuickImportKeyModels {
-    Table,
-    Id,
-    ProviderId,
-    SourceId,
-    KeyId,
-    UpstreamModelId,
-    GlobalModelId,
-    CreatedAt,
-    UpdatedAt,
-}
-
-#[derive(DeriveIden)]
 pub(in crate::migration::baseline) enum ProviderQuickImportSyncEvents {
     Table,
     Id,
@@ -220,6 +217,7 @@ pub(in crate::migration::baseline) enum ProviderQuickImportSyncEvents {
     Status,
     Title,
     Detail,
+    PayloadJson,
     CreatedAt,
 }
 

@@ -8,7 +8,6 @@ pub enum Announcements {
     ContentMarkdown,
     AnnouncementType,
     Pinned,
-    Priority,
     Enabled,
     CreatedBy,
     UpdatedBy,

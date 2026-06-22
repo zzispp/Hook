@@ -87,6 +87,7 @@ fn quick_import_create_builds_complete_resource_set() {
 
     let draft = quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &provider_config()),
+        provider_config: &provider_config(),
         source: &source_config(),
         recharge_multiplier: Decimal::ONE,
         sync_config: ProviderQuickImportSyncConfig::default(),
@@ -101,10 +102,10 @@ fn quick_import_create_builds_complete_resource_set() {
     assert_eq!(draft.sync_source.as_ref().unwrap().recharge_multiplier, Decimal::ONE);
     assert!(draft.sync_source.as_ref().unwrap().sync_config.auto_sync_enabled);
     assert_eq!(draft.endpoints.len(), 2);
-    assert_eq!(draft.model_bindings[0].provider_model_name, "gpt-5");
-    assert_eq!(draft.model_bindings[0].provider_model_mapping.as_ref().unwrap().name, "upstream-gpt-5");
+    assert_eq!(draft.model_bindings[0].global_model_id, "global-1");
     assert_eq!(draft.api_keys[0].encrypted_api_key, "enc:sk-test");
     assert_eq!(draft.api_keys[0].input.allowed_model_ids, vec!["global-1"]);
+    assert_eq!(draft.api_keys[0].model_mappings[0].upstream_model_name, "upstream-gpt-5");
     assert_eq!(draft.model_costs[0].cost.price_per_request, Some(Decimal::new(1, 1)));
 }
 
@@ -118,6 +119,7 @@ fn quick_import_bind_builds_bound_resource_set() {
     let draft = quick_import_bind(QuickImportBindDraft {
         provider_id: "provider-a".into(),
         source: &source_config(),
+        provider_config: &provider_config(),
         recharge_multiplier: Decimal::ONE,
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
@@ -181,6 +183,7 @@ fn selected_bind_token_rejects_missing_upstream_key_during_draft_build() {
     let error = quick_import_bind(QuickImportBindDraft {
         provider_id: "provider-a".into(),
         source: &source_config(),
+        provider_config: &provider_config(),
         recharge_multiplier: Decimal::ONE,
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
@@ -213,6 +216,7 @@ fn quick_import_bind_rejects_missing_cost() {
     let error = quick_import_bind(QuickImportBindDraft {
         provider_id: "provider-a".into(),
         source: &source_config(),
+        provider_config: &provider_config(),
         recharge_multiplier: Decimal::ONE,
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
@@ -243,6 +247,7 @@ fn selected_token_name_is_used_for_imported_key() {
 
     let draft = quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &provider_config()),
+        provider_config: &provider_config(),
         source: &source_config(),
         recharge_multiplier: Decimal::ONE,
         sync_config: ProviderQuickImportSyncConfig::default(),
@@ -265,6 +270,7 @@ fn quick_import_create_does_not_write_mapping_for_same_model_name() {
 
     let draft = quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &provider_config()),
+        provider_config: &provider_config(),
         source: &source_config(),
         recharge_multiplier: Decimal::ONE,
         sync_config: ProviderQuickImportSyncConfig::default(),
@@ -275,7 +281,7 @@ fn quick_import_create_does_not_write_mapping_for_same_model_name() {
     })
     .unwrap();
 
-    assert!(draft.model_bindings[0].provider_model_mapping.is_none());
+    assert_eq!(draft.model_bindings[0].global_model_id, "global-1");
 }
 
 #[test]
@@ -287,6 +293,7 @@ fn quick_import_create_imports_only_mapped_token_models() {
 
     let draft = quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &provider_config()),
+        provider_config: &provider_config(),
         source: &source_config(),
         recharge_multiplier: Decimal::ONE,
         sync_config: ProviderQuickImportSyncConfig::default(),
@@ -314,6 +321,7 @@ fn provider_create_uses_quick_import_provider_config() {
         keep_priority_on_conversion: Some(true),
         enable_format_conversion: Some(false),
         is_active: Some(false),
+        upstream_image_native_stream: Some(false),
     };
 
     let provider = provider_create(" Provider A ", &config);
@@ -327,6 +335,50 @@ fn provider_create_uses_quick_import_provider_config() {
     assert_eq!(provider.keep_priority_on_conversion, Some(true));
     assert_eq!(provider.enable_format_conversion, Some(false));
     assert_eq!(provider.is_active, Some(false));
+}
+
+#[test]
+fn quick_import_image_endpoint_defaults_to_sync_wrapped_stream() {
+    let draft = quick_import_create_image_endpoint(provider_config());
+
+    assert_eq!(
+        draft.endpoints[0].format_acceptance_config,
+        Some(serde_json::json!({"upstream_image_stream_mode": "sync_wrapped_stream"}))
+    );
+}
+
+#[test]
+fn quick_import_image_endpoint_can_enable_native_stream() {
+    let config = ProviderQuickImportProviderConfig {
+        upstream_image_native_stream: Some(true),
+        ..ProviderQuickImportProviderConfig::default()
+    };
+    let draft = quick_import_create_image_endpoint(config);
+
+    assert_eq!(
+        draft.endpoints[0].format_acceptance_config,
+        Some(serde_json::json!({"upstream_image_stream_mode": "native_stream"}))
+    );
+}
+
+fn quick_import_create_image_endpoint(config: ProviderQuickImportProviderConfig) -> crate::application::ProviderQuickImportCreate {
+    let token = token_with_model("gpt-image-1");
+    let selected = vec![SelectedToken::for_test(&token, vec!["openai_image".into()])];
+    let globals = [global_model("global-image", "gpt-image-1")];
+    let mappings = BTreeMap::from([("gpt-image-1".into(), "global-image".into())]);
+
+    quick_import_create(QuickImportCreateDraft {
+        provider: provider_create("Provider A", &config),
+        provider_config: &config,
+        source: &source_config(),
+        recharge_multiplier: Decimal::ONE,
+        sync_config: ProviderQuickImportSyncConfig::default(),
+        selected,
+        globals: &globals,
+        mappings,
+        cipher: &TestCipher,
+    })
+    .unwrap()
 }
 
 fn token_with_model(model: &str) -> UpstreamImportToken {

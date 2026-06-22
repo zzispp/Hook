@@ -1,8 +1,11 @@
 use axum::{extract::Multipart, http::HeaderMap, response::Response};
 use serde_json::{Map, Number, Value};
 
-use super::{ProxyJsonRequest, image_executor::execute_image_edit_request, image_form::MultipartImageRequest, proxy_json};
-use crate::llm_proxy::{CurrentApiToken, LlmProxyError, LlmProxyState, OPENAI_IMAGE_FORMAT};
+use super::{
+    image_executor::{execute_image_edit_request, execute_image_generation_request},
+    image_form::MultipartImageRequest,
+};
+use crate::llm_proxy::{CurrentApiToken, LlmProxyError, LlmProxyState};
 
 pub(super) const DEFAULT_IMAGE_COUNT: u64 = 1;
 pub(super) const DEFAULT_IMAGE_SIZE: &str = "1024x1024";
@@ -14,7 +17,7 @@ const DALLE_3_SIZES: &[&str] = &["1024x1024", "1024x1792", "1792x1024"];
 
 pub(crate) async fn proxy_image_generation(state: LlmProxyState, token: CurrentApiToken, headers: HeaderMap, body: Value) -> Result<Response, LlmProxyError> {
     let body = validate_image_json(body)?;
-    proxy_json(ProxyJsonRequest::new(state, token, headers, body, OPENAI_IMAGE_FORMAT, false)).await
+    execute_image_generation_request(state, token, headers, body).await
 }
 
 pub(crate) async fn proxy_image_edit(

@@ -20,7 +20,8 @@ use types::{
 };
 
 pub use cached_types::{
-    CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
+    CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedKeyModelMapping, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess,
+    SchedulingSnapshot,
 };
 
 use crate::llm_proxy::LlmProxyError;
@@ -166,9 +167,10 @@ async fn load_providers(database: &Database) -> Result<Vec<CachedProvider>, LlmP
         .await?
         .providers
     {
+        let keys = load_keys(&store, database, &provider.id).await?;
         providers.push(CachedProvider {
             endpoints: load_endpoints(&store, &provider.id).await?,
-            keys: load_keys(database, &provider.id).await?,
+            keys,
             models: load_model_bindings(&store, &provider.id).await?,
             id: provider.id,
             name: provider.name,
@@ -194,8 +196,6 @@ async fn load_model_bindings(store: &ProviderStore, provider_id: &str) -> Result
             id: model.id,
             provider_id: model.provider_id,
             global_model_id: model.global_model_id,
-            provider_model_name: model.provider_model_name,
-            provider_model_mapping: model.provider_model_mapping,
             is_active: model.is_active,
         })
         .collect())
@@ -221,24 +221,27 @@ async fn load_endpoints(store: &ProviderStore, provider_id: &str) -> Result<Vec<
         .collect())
 }
 
-async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedProviderKey>, LlmProxyError> {
+async fn load_keys(store: &ProviderStore, database: &Database, provider_id: &str) -> Result<Vec<CachedProviderKey>, LlmProxyError> {
     let records = provider_api_keys::Entity::find()
         .filter(provider_api_keys::Column::ProviderId.eq(provider_id))
         .order_by_asc(provider_api_keys::Column::InternalPriority)
         .all(database.connection())
         .await?;
+    let key_ids = records.iter().map(|record| record.id.clone()).collect::<Vec<_>>();
+    let mapping_records = store.key_model_mappings_by_key_id(&key_ids).await?;
     records
         .into_iter()
         .map(|record| {
+            let key_id = record.id.clone();
             let (time_range_start_minute, time_range_end_minute) = cached_key_time_range(&record)?;
+            let api_formats = decode_key_api_formats(record.api_formats)?;
+            let supports_image_generation = api_formats.iter().any(|format| format == "openai_image");
             Ok(CachedProviderKey {
                 id: record.id,
                 provider_id: record.provider_id,
                 name: record.name.clone(),
-                api_formats: decode_key_api_formats(record.api_formats)?,
+                api_formats,
                 allowed_model_ids: decode_key_allowed_model_ids(record.allowed_model_ids)?,
-                capabilities: serde_json::from_str(&record.capabilities.unwrap_or_else(|| "null".to_owned()))
-                    .map_err(|error| LlmProxyError::Infrastructure(format!("provider key capabilities decode error: {error}")))?,
                 key_preview: record.name,
                 encrypted_api_key: record.encrypted_api_key,
                 internal_priority: record.internal_priority,
@@ -249,10 +252,27 @@ async fn load_keys(database: &Database, provider_id: &str) -> Result<Vec<CachedP
                 time_range_enabled: record.time_range_enabled,
                 time_range_start_minute,
                 time_range_end_minute,
+                supports_image_generation,
                 is_active: record.is_active,
+                model_mappings: mapping_records
+                    .get(&key_id)
+                    .into_iter()
+                    .flat_map(|items| items.iter())
+                    .map(cached_key_model_mapping)
+                    .map(|mapping| (mapping.provider_model_id.clone(), mapping))
+                    .collect(),
             })
         })
         .collect()
+}
+
+fn cached_key_model_mapping(record: &storage::provider::ProviderKeyModelMappingView) -> CachedKeyModelMapping {
+    CachedKeyModelMapping {
+        provider_model_id: record.provider_model_id.clone(),
+        global_model_id: record.global_model_id.clone(),
+        upstream_model_name: record.upstream_model_name.clone(),
+        reasoning_effort: record.reasoning_effort.clone(),
+    }
 }
 
 fn cached_key_time_range(record: &provider_api_keys::Model) -> Result<(Option<u16>, Option<u16>), LlmProxyError> {

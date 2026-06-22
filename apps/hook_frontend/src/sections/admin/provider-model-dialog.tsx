@@ -209,7 +209,7 @@ function filterModels(models: GlobalModelResponse[], query: string) {
 function providerModelCreates(models: GlobalModelResponse[], ids: string[]) {
   return ids.flatMap((id) => {
     const model = models.find((item) => item.id === id);
-    return model ? [{ global_model_id: id, provider_model_name: model.name }] : [];
+    return model ? [{ global_model_id: id }] : [];
   });
 }
 

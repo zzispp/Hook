@@ -2,8 +2,8 @@ use std::collections::BTreeSet;
 
 use types::provider::{
     ProviderApiKey, ProviderOrigin, ProviderQuickImportBindCommitRequest, ProviderQuickImportBindCommitResponse, ProviderQuickImportBindLocalKey,
-    ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportPreviewResponse, ProviderQuickImportSourceConfig,
-    Sub2ApiQuickImportConfig,
+    ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse, ProviderQuickImportPreviewResponse, ProviderQuickImportProviderConfig,
+    ProviderQuickImportSourceConfig, Sub2ApiQuickImportConfig,
 };
 
 use crate::application::{GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, SecretCipher, UpstreamProviderImportSource};
@@ -63,9 +63,11 @@ where
     let globals = args.models.list_global_models().await?;
     let selected = selected_bind_tokens(&data, &input.selected_tokens)?;
     let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
+    let provider_config = ProviderQuickImportProviderConfig::default();
     let draft = quick_import_bind(QuickImportBindDraft {
         provider_id: provider.id.clone(),
         source: &source,
+        provider_config: &provider_config,
         recharge_multiplier: input.recharge_multiplier,
         sync_config: input.sync_config,
         selected,
@@ -272,7 +274,6 @@ mod tests {
             name: id.into(),
             api_formats: vec!["openai".into()],
             allowed_model_ids: vec!["global-model-a".into()],
-            capabilities: None,
             note: None,
             internal_priority: 10,
             global_priority_by_format: std::collections::BTreeMap::new(),

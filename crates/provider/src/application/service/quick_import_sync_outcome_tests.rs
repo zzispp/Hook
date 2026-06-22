@@ -120,6 +120,8 @@ async fn model_fetch_failure_and_removed_model_are_distinct_statuses() {
 
     assert_eq!(unavailable.statuses, vec![ProviderQuickImportSyncStatus::UpstreamKeyUnavailable]);
     assert_eq!(removed.statuses, vec![ProviderQuickImportSyncStatus::UpstreamModelRemoved]);
+    assert_eq!(removed.missing_upstream_model_ids, vec!["upstream-gpt".to_owned()]);
+    assert!(removed.upstream_models_snapshot.iter().all(|model| model.upstream_model_id != "upstream-gpt"));
 }
 
 #[tokio::test]
@@ -219,8 +221,10 @@ fn key(effective_cost_multiplier: Decimal) -> ProviderQuickImportSyncKey {
         effective_cost_multiplier,
         statuses: vec![ProviderQuickImportSyncStatus::Ok],
         model_mappings: vec![ProviderQuickImportSyncKeyModel {
-            upstream_model_id: "upstream-gpt".into(),
+            provider_model_id: "provider-model-1".into(),
             global_model_id: "global-gpt".into(),
+            upstream_model_name: "upstream-gpt".into(),
+            reasoning_effort: None,
         }],
     }
 }
@@ -297,11 +301,5 @@ fn global_model(default_price_per_request: Option<Decimal>) -> GlobalModelRespon
 }
 
 fn bindings() -> BTreeMap<String, BindingInfo> {
-    BTreeMap::from([(
-        "global-gpt".into(),
-        BindingInfo {
-            id: "provider-model-1".into(),
-            upstream_model_id: "upstream-gpt".into(),
-        },
-    )])
+    BTreeMap::from([("global-gpt".into(), BindingInfo { id: "provider-model-1".into() })])
 }

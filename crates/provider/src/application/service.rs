@@ -7,6 +7,7 @@ use crate::application::{
 };
 
 mod key_endpoint_scope;
+mod key_model_mappings;
 mod key_permissions;
 mod model_bindings;
 mod model_costs;
@@ -16,6 +17,7 @@ mod quick_import;
 mod quick_import_append;
 mod quick_import_bind;
 mod quick_import_commit;
+mod quick_import_commit_endpoints;
 mod quick_import_commit_models;
 #[cfg(test)]
 mod quick_import_commit_tests;
@@ -28,7 +30,6 @@ mod quick_import_shared;
 mod quick_import_sync;
 mod quick_import_sync_bindings;
 mod quick_import_sync_candidates;
-mod quick_import_sync_event_labels;
 mod quick_import_sync_events;
 mod quick_import_sync_globals;
 mod quick_import_sync_group_ratio;
@@ -51,6 +52,7 @@ mod request_queries;
 mod upstream_models;
 
 use key_endpoint_scope::ensure_api_formats_bound;
+use key_model_mappings::{key_model_mappings, key_model_mappings_for_key, update_key_model_mappings};
 use key_permissions::ensure_allowed_models_bound;
 use model_bindings::{prepare_model_binding_batch_update, prepare_model_binding_create};
 use model_costs::{ensure_model_cost_delete_scope, ensure_model_cost_scope};
@@ -268,6 +270,44 @@ where
         self.repository.delete_model_binding(provider_id, model_id).await
     }
 
+    async fn key_model_mappings(&self, provider_id: &str) -> ProviderResult<ProviderKeyModelMappingsResponse> {
+        key_model_mappings(&self.repository, provider_id).await
+    }
+
+    async fn key_model_mappings_for_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<ProviderKeyModelMappingsForKeyResponse> {
+        key_model_mappings_for_key(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+        )
+        .await
+    }
+
+    async fn update_key_model_mappings(
+        &self,
+        provider_id: &str,
+        key_id: &str,
+        input: ProviderKeyModelMappingsUpdate,
+    ) -> ProviderResult<ProviderKeyModelMappingsForKeyResponse> {
+        update_key_model_mappings(
+            QuickImportArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            provider_id,
+            key_id,
+            input,
+        )
+        .await
+    }
+
     async fn list_model_costs(&self, provider_id: &str) -> ProviderResult<ProviderModelCostListResponse> {
         ensure_provider(&self.repository, provider_id).await?;
         self.repository.list_model_costs(provider_id).await
@@ -466,6 +506,13 @@ where
         input: ProviderQuickImportSyncSettingsUpdate,
     ) -> ProviderResult<ProviderQuickImportSyncSettingsResponse> {
         update_quick_import_sync_settings(&self.repository, &self.cipher, provider_id, input).await
+    }
+
+    async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<types::provider::ProviderQuickImportSyncEventDetailResponse> {
+        if id.trim().is_empty() {
+            return Err(ProviderError::InvalidInput("id cannot be blank".into()));
+        }
+        self.repository.quick_import_sync_event_detail(id).await?.ok_or(ProviderError::NotFound)
     }
 
     async fn run_quick_import_sync(&self, options: ProviderQuickImportSyncRunOptions) -> ProviderResult<ProviderQuickImportSyncRunReport> {

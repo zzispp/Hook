@@ -1,6 +1,6 @@
 use proxy::format_conversion::{ApiFormat, FormatConversionRegistry};
 
-use super::StreamRelay;
+use super::{StreamRelay, consume::record_client_event_for_history};
 use crate::llm_proxy::{
     LlmProxyError,
     proxy::{
@@ -86,7 +86,7 @@ impl StreamRelay {
     async fn flush_output(&mut self) -> Result<(), LlmProxyError> {
         if self.needs_conversion || self.rewrite_model {
             self.flush_remaining_buffer().await?;
-            self.flush_conversion_state()?;
+            self.flush_conversion_state().await?;
             self.queue_openai_done();
         }
         Ok(())
@@ -97,11 +97,11 @@ impl StreamRelay {
             return Ok(());
         }
         let line = String::from_utf8(std::mem::take(&mut self.buffer)).map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
-        self.consume_converted_line(&line)?;
+        self.consume_converted_line(&line).await?;
         Ok(())
     }
 
-    fn flush_conversion_state(&mut self) -> Result<(), LlmProxyError> {
+    async fn flush_conversion_state(&mut self) -> Result<(), LlmProxyError> {
         if !self.needs_conversion {
             return Ok(());
         }
@@ -110,6 +110,7 @@ impl StreamRelay {
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         for mut event in converted {
             rewrite_response_model_value(&mut event, &self.context.candidate.requested_model_name);
+            record_client_event_for_history(self.context.state.codex_chat_history().clone(), self.source_format, &event).await?;
             self.pending.push_back(render_stream_event(&event, self.source_format));
         }
         Ok(())
@@ -124,9 +125,21 @@ impl StreamRelay {
 
     fn finish_usage_parsers(&mut self) -> Result<(), LlmProxyError> {
         let usage = self.usage_parser.finish()?;
+        self.finish_output_start_detector()?;
         self.merge_usage(usage.usage);
         self.protocol_completed |= usage.completed;
         self.estimate_missing_usage()
+    }
+
+    fn finish_output_start_detector(&mut self) -> Result<(), LlmProxyError> {
+        if self.client_output_started {
+            return Ok(());
+        }
+        self.client_output_started = self
+            .output_start_detector
+            .finish()
+            .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+        Ok(())
     }
 
     fn estimate_missing_usage(&mut self) -> Result<(), LlmProxyError> {

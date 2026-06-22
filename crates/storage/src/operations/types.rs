@@ -6,7 +6,6 @@ pub struct AnnouncementRecordInput {
     pub content_markdown: String,
     pub announcement_type: String,
     pub pinned: bool,
-    pub priority: i64,
     pub enabled: bool,
     pub operator_id: String,
 }
@@ -17,7 +16,6 @@ pub struct AnnouncementRecordPatch {
     pub content_markdown: Option<String>,
     pub announcement_type: Option<String>,
     pub pinned: Option<bool>,
-    pub priority: Option<i64>,
     pub enabled: Option<bool>,
     pub operator_id: String,
 }

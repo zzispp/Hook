@@ -14,7 +14,7 @@ const ADDITIVE_BASELINE_TABLES: &[&str] = &[
     "provider_key_group_keys",
     "provider_quick_import_sources",
     "provider_quick_import_keys",
-    "provider_quick_import_key_models",
+    "provider_key_model_mappings",
     "provider_quick_import_sync_events",
     "billing_group_provider_key_groups",
     "dashboard_request_metric_buckets",
@@ -61,10 +61,10 @@ const BASELINE_TABLES: &[&str] = &[
     "provider_key_groups",
     "provider_key_group_keys",
     "provider_models",
+    "provider_key_model_mappings",
     "provider_model_costs",
     "provider_quick_import_sources",
     "provider_quick_import_keys",
-    "provider_quick_import_key_models",
     "provider_quick_import_sync_events",
     "billing_rules",
     "dimension_collectors",
@@ -168,12 +168,16 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::provider_quick_import_sync_schedule_additive::apply(manager).await?;
     super::provider_quick_import_source_credentials_additive::apply(manager).await?;
     super::provider_quick_import_sync_controls_additive::apply(manager).await?;
+    super::provider_image_stream_mode_additive::apply(manager).await?;
+    super::provider_key_model_mappings_additive::apply(manager).await?;
     super::recharge_order_paid_at_index_additive::apply(manager).await?;
-    super::provider_key_capabilities_additive::apply(manager).await?;
+    super::provider_key_capabilities_destructive::apply(manager).await?;
+    super::announcement_priority_removal_additive::apply(manager).await?;
     super::announcement_menu_deep_match_additive::apply(manager).await?;
     super::auth_layout_site_name_i18n_additive::apply(manager).await?;
     super::global_model_user_usage_counts_additive::apply(manager).await?;
     super::routing_metrics_additive::apply(manager).await?;
+    super::routing_profile_state_partition_additive::apply(manager).await?;
     super::routing_profile_overrides_additive::apply(manager).await?;
     super::provider_group_removal_destructive::apply(manager).await
 }

@@ -48,6 +48,14 @@ pub fn record_attempt<'a>(
     persist_attempt(state, request_id, AttemptAuditInput::from(input))
 }
 
+pub fn record_candidate_attempt<'a>(
+    state: &'a LlmProxyState,
+    request_id: &'a str,
+    input: AttemptRecordInput<'_>,
+) -> impl Future<Output = Result<(), LlmProxyError>> + 'a {
+    persist_candidate_attempt(state, request_id, AttemptAuditInput::from(input))
+}
+
 pub async fn record_skipped_candidates(state: &LlmProxyState, request_id: &str, skip_reason: &str) -> Result<(), LlmProxyError> {
     persist_event(state, AuditEvent::SkippedCandidates { request_id, skip_reason }).await
 }
@@ -80,13 +88,7 @@ async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: Attempt
     let billing = attempt_billing(&store, request_id, &input).await?;
     let upstream_cost = upstream_cost::request_upstream_cost(&store, &input).await?;
     let policies = request_record_policies(state).await?;
-    let candidate_patch = records::attempt_patch(request_id, &input, billing.as_ref(), &upstream_cost, &policies)?;
-    let candidate_payload_seeds = candidate_patch_payload_jobs(&candidate_patch);
-    match store.update_request_candidate(candidate_patch).await {
-        Ok(candidate) => enqueue_payload_jobs(state, candidate_payloads(&candidate.id, candidate_payload_seeds)).await?,
-        Err(StorageError::NotFound) => create_missing_attempt(state, &store, request_id, &input, billing.as_ref(), &upstream_cost, &policies).await?,
-        Err(error) => return Err(error.into()),
-    }
+    persist_candidate_record(state, &store, request_id, &input, billing.as_ref(), &upstream_cost, &policies).await?;
     let request_patch = records::request_record_patch(request_id, &input, billing.as_ref(), &upstream_cost, &policies)?;
     let request_payloads = request_patch_payload_jobs(request_id, &request_patch);
     store.update_request_record(request_patch).await?;
@@ -96,6 +98,32 @@ async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: Attempt
     let usage_record = token_usage_record(request_id, &input, billing.as_ref(), OffsetDateTime::now_utc())?;
     let settlement = wallet_settlement_input(request_id, &input, billing.as_ref())?;
     record_success_usage(state, usage_record, settlement, model_usage_record).await
+}
+
+async fn persist_candidate_attempt(state: &LlmProxyState, request_id: &str, input: AttemptAuditInput) -> Result<(), LlmProxyError> {
+    let store = ProviderStore::new(state.database.clone());
+    let billing = attempt_billing(&store, request_id, &input).await?;
+    let upstream_cost = upstream_cost::request_upstream_cost(&store, &input).await?;
+    let policies = request_record_policies(state).await?;
+    persist_candidate_record(state, &store, request_id, &input, billing.as_ref(), &upstream_cost, &policies).await
+}
+
+async fn persist_candidate_record(
+    state: &LlmProxyState,
+    store: &ProviderStore,
+    request_id: &str,
+    input: &AttemptAuditInput,
+    billing: Option<&BillingAttempt>,
+    upstream_cost: &types::provider::RequestUpstreamCost,
+    policies: &RequestRecordPolicies,
+) -> Result<(), LlmProxyError> {
+    let candidate_patch = records::attempt_patch(request_id, input, billing, upstream_cost, policies)?;
+    let candidate_payload_seeds = candidate_patch_payload_jobs(&candidate_patch);
+    match store.update_request_candidate(candidate_patch).await {
+        Ok(candidate) => enqueue_payload_jobs(state, candidate_payloads(&candidate.id, candidate_payload_seeds)).await,
+        Err(StorageError::NotFound) => create_missing_attempt(state, store, request_id, input, billing, upstream_cost, policies).await,
+        Err(error) => Err(error.into()),
+    }
 }
 
 async fn persist_skipped_candidates(state: &LlmProxyState, request_id: &str, skip_reason: &str) -> Result<(), LlmProxyError> {

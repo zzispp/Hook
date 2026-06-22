@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use types::{
     model::TieredPricingConfig,
-    provider::{ProviderCooldownPolicy, ProviderModelMapping, ProviderPriorityMode, ProviderSchedulingMode, RoutingProfileId},
+    provider::{ProviderCooldownPolicy, ProviderPriorityMode, ProviderSchedulingMode, RoutingProfileId},
     system_setting::RequestRecordLevel,
 };
 
@@ -122,8 +122,6 @@ pub struct CachedProviderKey {
     pub name: String,
     pub api_formats: Vec<String>,
     pub allowed_model_ids: Vec<String>,
-    #[serde(default)]
-    pub capabilities: Option<serde_json::Value>,
     pub key_preview: String,
     pub encrypted_api_key: String,
     pub internal_priority: i32,
@@ -137,7 +135,11 @@ pub struct CachedProviderKey {
     pub time_range_start_minute: Option<u16>,
     #[serde(default)]
     pub time_range_end_minute: Option<u16>,
+    #[serde(default)]
+    pub supports_image_generation: bool,
     pub is_active: bool,
+    #[serde(default)]
+    pub model_mappings: BTreeMap<String, CachedKeyModelMapping>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -145,7 +147,34 @@ pub struct CachedModelBinding {
     pub id: String,
     pub provider_id: String,
     pub global_model_id: String,
-    pub provider_model_name: String,
-    pub provider_model_mapping: Option<ProviderModelMapping>,
     pub is_active: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct CachedKeyModelMapping {
+    pub provider_model_id: String,
+    pub global_model_id: String,
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EffectiveProviderModel {
+    pub upstream_model_name: String,
+    pub reasoning_effort: Option<String>,
+}
+
+impl CachedProviderKey {
+    pub fn effective_provider_model(&self, binding: &CachedModelBinding, global_model: &CachedGlobalModel) -> EffectiveProviderModel {
+        self.model_mappings
+            .get(&binding.id)
+            .map(|mapping| EffectiveProviderModel {
+                upstream_model_name: mapping.upstream_model_name.clone(),
+                reasoning_effort: mapping.reasoning_effort.clone(),
+            })
+            .unwrap_or_else(|| EffectiveProviderModel {
+                upstream_model_name: global_model.name.clone(),
+                reasoning_effort: None,
+            })
+    }
 }

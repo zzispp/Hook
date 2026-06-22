@@ -26,12 +26,12 @@ type Props = {
   groupNames: string[];
   dialogs: ReturnType<typeof useProviderChildDialogs>;
   onResolveQuickImportKey: (apiKey: ProviderApiKey) => void;
-  onManageQuickImportModels: (apiKey: ProviderApiKey) => void;
+  onManageKeyModels: (apiKey: ProviderApiKey) => void;
   onAssociateGroups: (apiKey: ProviderApiKey) => void;
 };
 
 export function ProviderApiKeyRow(props: Props) {
-  const { apiKey, groupNames, dialogs, onResolveQuickImportKey, onManageQuickImportModels, onAssociateGroups } = props;
+  const { apiKey, groupNames, dialogs, onResolveQuickImportKey, onManageKeyModels, onAssociateGroups } = props;
   const hardAnomaly = hasHardQuickImportStatus(apiKey.quick_import_sync?.statuses ?? []);
 
   return (
@@ -47,7 +47,7 @@ export function ProviderApiKeyRow(props: Props) {
           dialogs={dialogs}
           onAssociateGroups={onAssociateGroups}
           onResolveQuickImportKey={onResolveQuickImportKey}
-          onManageQuickImportModels={onManageQuickImportModels}
+          onManageKeyModels={onManageKeyModels}
         />
       </Stack>
       <KeyMeta apiKey={apiKey} groupNames={groupNames} />
@@ -78,7 +78,7 @@ function KeyIdentity({ apiKey }: { apiKey: ProviderApiKey }) {
 
 type KeyActionsProps = Pick<
   Props,
-  'apiKey' | 'dialogs' | 'onAssociateGroups' | 'onResolveQuickImportKey' | 'onManageQuickImportModels'
+  'apiKey' | 'dialogs' | 'onAssociateGroups' | 'onResolveQuickImportKey' | 'onManageKeyModels'
 > & {
   hardAnomaly: boolean;
 };
@@ -89,7 +89,7 @@ function KeyActions({
   dialogs,
   onAssociateGroups,
   onResolveQuickImportKey,
-  onManageQuickImportModels,
+  onManageKeyModels,
 }: KeyActionsProps) {
   const { t } = useTranslate('admin');
   const powerTitle = hardAnomaly && !apiKey.is_active
@@ -105,7 +105,7 @@ function KeyActions({
           {hardAnomaly ? (
             <KeyActionButton title={t('providers.quickImportResolveKey')} icon="solar:restart-bold" onClick={() => onResolveQuickImportKey(apiKey)} />
           ) : null}
-          <KeyActionButton title={t('providers.quickImportModelAssociationsTitle')} icon="solar:settings-bold" onClick={() => onManageQuickImportModels(apiKey)} />
+          <KeyActionButton title={t('providers.keyModelMappingsTitle')} icon="solar:settings-bold" onClick={() => onManageKeyModels(apiKey)} />
         </>
       ) : null}
       <KeyActionButton title={t('actions.associateProviderKeyGroups')} icon="eva:link-2-fill" onClick={() => onAssociateGroups(apiKey)} />
@@ -127,24 +127,10 @@ function KeyMeta({ apiKey, groupNames }: { apiKey: ProviderApiKey; groupNames: s
       <Typography component="span" variant="caption">{formatList(apiKey.api_formats, t('providers.noSupportedFormats'))}</Typography>
       <MetaDivider />
       <Typography component="span" variant="caption">{modelPermissionText(apiKey.allowed_model_ids, t)}</Typography>
-      <CapabilityMeta apiKey={apiKey} />
       {apiKey.time_range_enabled ? <TimeRangeMeta apiKey={apiKey} /> : null}
       <KeyGroupChips groupNames={groupNames} />
       <QuickImportSyncChips apiKey={apiKey} />
     </Stack>
-  );
-}
-
-function CapabilityMeta({ apiKey }: { apiKey: ProviderApiKey }) {
-  const { t } = useTranslate('admin');
-  const capabilities = capabilityKeys(apiKey);
-  if (capabilities.length === 0) return null;
-
-  return (
-    <>
-      <MetaDivider />
-      <Typography component="span" variant="caption">{capabilities.map((key) => t(`models.capability.${key}`)).join(', ')}</Typography>
-    </>
   );
 }
 
@@ -244,12 +230,6 @@ function timeRangeText(apiKey: ProviderApiKey) {
 function formatList(values: string[], emptyText: string) {
   if (!values.length) return emptyText;
   return values.map(formatApiFormat).join(', ');
-}
-
-function capabilityKeys(apiKey: ProviderApiKey) {
-  return Object.entries(apiKey.capabilities ?? {})
-    .filter(([, value]) => value === true || value === 'true' || (typeof value === 'number' && value > 0))
-    .map(([key]) => key);
 }
 
 function modelPermissionText(values: string[], t: (key: string, options?: Record<string, unknown>) => string) {

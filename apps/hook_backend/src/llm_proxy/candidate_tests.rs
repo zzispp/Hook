@@ -60,7 +60,8 @@ fn route_candidate() -> ProxyCandidate {
         reasoning_effort: None,
         header_rules: None,
         body_rules: None,
-        key_capabilities: None,
+        format_acceptance_config: None,
+        key_supports_image_generation: false,
         price_per_request: None,
         tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
         billing_multiplier: Decimal::ONE,
@@ -109,6 +110,8 @@ fn trace() -> CandidateTrace {
         needs_conversion: false,
         is_stream: false,
         is_cached: false,
+        routing_profile_id: types::provider::RoutingProfileId::Balanced,
+        routing_profile_ema_alpha: types::provider::default_ema_alpha(),
         routing_context_key: "group=default|model=model-a|format=openai:chat|stream=false|size=unknown|cap=none".into(),
         route_config_fingerprint: "route-fingerprint".into(),
         price_config_fingerprint: "price-fingerprint".into(),
@@ -131,6 +134,7 @@ fn endpoint(id: &str, provider_api_format: &str, needs_conversion: bool) -> Cand
         max_retries: None,
         header_rules: None,
         body_rules: None,
+        format_acceptance_config: None,
         needs_conversion,
     }
 }
@@ -141,7 +145,7 @@ fn key(id: &str, api_key: &str) -> CandidateKeyOption {
         name: format!("{id}-name"),
         key_preview: "***cret".into(),
         api_key: api_key.into(),
-        capabilities: None,
+        supports_image_generation: false,
         cache_ttl_minutes: 5,
         rpm_limit: None,
     }

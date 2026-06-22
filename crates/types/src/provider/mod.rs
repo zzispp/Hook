@@ -9,6 +9,7 @@ mod model_cost;
 mod quick_import;
 mod quick_import_bind;
 mod quick_import_sync;
+mod quick_import_sync_event;
 mod request_candidate;
 mod request_record;
 mod routing;
@@ -29,8 +30,10 @@ pub use group::{
 };
 pub use key::{ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate, ProviderApiKeyPriorityUpdate, ProviderApiKeyUpdate};
 pub use model_binding::{
-    ProviderModelBinding, ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelMapping,
-    ProviderModelTestEndpoint, ProviderModelTestKey, ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpstreamModelsResponse,
+    ProviderKeyModelMapping, ProviderKeyModelMappingCandidate, ProviderKeyModelMappingInput, ProviderKeyModelMappingsByKey,
+    ProviderKeyModelMappingsForKeyResponse, ProviderKeyModelMappingsResponse, ProviderKeyModelMappingsUpdate, ProviderModelBinding,
+    ProviderModelBindingBatchUpdate, ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelTestEndpoint, ProviderModelTestKey,
+    ProviderModelTestRequest, ProviderModelTestResponse, ProviderUpstreamModelsResponse,
 };
 pub use model_cost::{
     ProviderModelCost, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelCostMode, ProviderModelCostSource, ProviderModelCostUpsert,
@@ -54,6 +57,10 @@ pub use quick_import_sync::{
     ProviderQuickImportKeySyncInfo, ProviderQuickImportSyncConfig, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate,
     ProviderQuickImportSyncStatus, ProviderQuickImportUpstreamAnomalyAction,
 };
+pub use quick_import_sync_event::{
+    ProviderQuickImportSyncEventDetailResponse, ProviderQuickImportSyncEventPayload, ProviderQuickImportSyncEventSnapshotStatus,
+    ProviderQuickImportUpstreamModelSnapshot,
+};
 pub use request_candidate::{RequestCandidate, RequestCandidateListRequest};
 pub use request_record::{
     ActiveRequestRecordRequest, ActiveRequestRecordResponse, RequestCandidateDetail, RequestPayloadMeta, RequestPayloadSource, RequestPayloadStatus,
@@ -62,7 +69,8 @@ pub use request_record::{
 pub use routing::{
     RouteIdentity, RouteScoreExplanation, RoutingDecisionResponse, RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, RoutingProfileId,
     RoutingProfileLearningState, RoutingProfileUpsert, RoutingProfileWeights, RoutingProfilesResponse, RoutingRankingResponse, RoutingRankingsRequest,
-    RoutingRouteState, ScoreComponent, default_contextual_exploration_enabled, default_prior_sample_cap,
+    RoutingRouteState, ScoreComponent, default_contextual_exploration_enabled, default_ema_alpha, default_ema_max_freshness_seconds, default_ema_recent_cap,
+    default_ema_recent_weight, default_exploration_cap, default_exploration_min_success_score, default_exploration_weight, default_prior_sample_cap,
 };
 pub use routing_features::{RoutingRequestFeatures, RoutingRequestSizeBucket};
 pub use routing_metadata::{RoutingMetricSource, RoutingPriorSource};

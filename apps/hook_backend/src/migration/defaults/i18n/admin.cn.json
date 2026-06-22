@@ -1455,18 +1455,17 @@
   "routing": {
     "loading": "正在加载路由排序...",
     "empty": "当前过滤条件下没有路由候选。",
-    "emptyBeforeQuery": "请选择用户、API Token、模型和格式后点击查询路由。",
+    "emptyBeforeQuery": "请选择计费分组和模型后查看策略排序。",
     "profileInherited": "跟随默认",
     "cards": {
-      "simulationContextTitle": "真实链路模拟",
-      "simulationContextHelper": "选择 API Token、模型和格式，用真实权限、亲和缓存、限流与熔断状态模拟选路。",
+      "simulationContextTitle": "策略上下文",
+      "simulationContextHelper": "按计费分组、模型、API 格式、窗口和流式参数查看当前策略下的候选排序。",
       "profileTuningHelper": "编辑本次真实生效的路由策略；生效顺序为模型覆盖、计费分组覆盖、默认策略。",
-      "rankingsTitle": "真实链路模拟：{{profile}}",
-      "rankingsHelper": "基于真实 token 上下文查看候选排序、打分组成和窗口指标。"
+      "rankingsTitle": "策略排序：{{profile}}",
+      "rankingsPlaceholderProfile": "待选择上下文",
+      "rankingsHelper": "查看当前策略上下文下的候选排序、打分组成和窗口指标。"
     },
     "filters": {
-      "user": "用户",
-      "apiToken": "API Token",
       "group": "计费分组",
       "model": "模型",
       "apiFormat": "API 格式",
@@ -1474,14 +1473,9 @@
       "stream": "流式",
       "includeExcluded": "显示排除项",
       "autoRefresh": "自动刷新",
-      "requestId": "Request ID",
-      "selectUserFirst": "请先选择用户",
-      "selectApiTokenFirst": "请先选择 API Token",
-      "noAccessibleModels": "该 API Token 当前无可访问模型"
+      "selectGroupFirst": "请先选择计费分组"
     },
     "actions": {
-      "simulate": "查询路由",
-      "lookup": "查询",
       "details": "详情"
     },
     "runtime": {
@@ -1516,7 +1510,10 @@
     },
     "profile": {
       "editorTitle": "策略调参",
-      "editorHelper": "这里编辑当前选中策略的自动调优开关、管理员基准权重和评分控制项。自动学习只会在这个基线之上做受控微调。",
+      "editorHelper": "这里编辑当前选中策略的自动调优开关、管理员基准权重，以及 Bandit / EMA 调参项。自动学习只会在这个基线之上做受控微调。",
+      "selectContext": "请选择计费分组或模型后，再查看和调整当前生效策略。",
+      "paramSection": "Bandit 与 EMA 参数",
+      "paramHelper": "这些参数控制当前 profile 的预热置信度、EMA 近期敏感度和 UCB 探索强度。",
       "autoTune": "启用自动调优",
       "advancedTitle": "评分控制",
       "weightTotal": "当前权重总和：{{total}}。需要等于 1.000 才能保存。",
@@ -1549,14 +1546,27 @@
         "headroom": "余量",
         "priority": "优先级"
       },
-      "settingFields": {
-        "minSamples": "最小样本数",
-        "explorationK": "探索 K",
-        "conversionPenalty": "转换扣分",
-        "staleMetricPenalty": "过期指标扣分",
-        "affinityBonus": "亲和加分",
-        "priorSampleCap": "先验样本上限",
-        "contextualExploration": "上下文探索"
+      "paramFields": {
+        "min_samples": "最小样本数",
+        "exploration_k": "UCB k",
+        "prior_sample_cap": "先验样本上限",
+        "conversion_penalty": "格式转换惩罚",
+        "stale_metric_penalty": "陈旧指标惩罚",
+        "affinity_bonus": "缓存亲和奖励",
+        "ema_alpha": "EMA alpha",
+        "ema_max_freshness_seconds": "EMA 新鲜度秒数",
+        "ema_recent_weight": "EMA 近期权重",
+        "ema_recent_cap": "EMA 近期上限",
+        "exploration_weight": "探索权重",
+        "exploration_cap": "探索上限",
+        "exploration_min_success_score": "探索成功率底线"
+      },
+      "booleanFields": {
+        "contextual_exploration_enabled": "启用上下文探索"
+      },
+      "booleanValues": {
+        "enabled": "开启",
+        "disabled": "关闭"
       }
     },
     "table": {
@@ -1611,6 +1621,7 @@
       "effectiveSamples": "有效样本",
       "exclusion": "排除原因",
       "formula": "公式与权重",
+      "tuningParams": "参数：min_samples {{min_samples}}，UCB k {{exploration_k}}，先验上限 {{prior_sample_cap}}，格式转换惩罚 {{conversion_penalty}}，陈旧惩罚 {{stale_metric_penalty}}，缓存亲和奖励 {{affinity_bonus}}，上下文探索 {{contextual_exploration_enabled}}，EMA alpha {{ema_alpha}}，EMA 新鲜度 {{ema_max_freshness_seconds}} 秒，EMA 权重 {{ema_recent_weight}}，EMA 上限 {{ema_recent_cap}}，探索权重 {{exploration_weight}}，探索上限 {{exploration_cap}}，成功率底线 {{exploration_min_success_score}}",
       "metrics": "原始指标",
       "windowMetrics": "多窗口指标",
       "components": "打分明细",
@@ -1693,13 +1704,12 @@
     "invalidBaseUrl": "请输入有效的 HTTP/HTTPS Base URL，不能包含 query 或 fragment。",
     "invalidCustomPath": "自定义路径必须以 / 开头，只能包含 URL path 字符。",
     "keepPriorityOnConversion": "转换后保持优先级",
+    "upstreamImageNativeStream": "上游生图原生流",
     "keys": "密钥",
     "key": "密钥",
     "keyManagement": "密钥管理",
     "keyMasked": "sk-***",
     "keyUpdateSecretHint": "留空则不更换密钥",
-    "keyCapabilities": "密钥能力",
-    "keyCapabilitiesHelper": "选择当前提供商密钥真实支持的能力。图片请求必须具备图像生成能力。",
     "quickAddEndpoints": "快捷添加多个端点",
     "quickImportBaseUrl": "站点 Base URL",
     "quickImportAcceptCurrent": "接受当前上游状态",
@@ -1783,6 +1793,14 @@
     "quickImportSourceSection": "快捷导入来源",
     "quickImportSyncSection": "快捷导入自动同步",
     "quickImportSyncSettingsTitle": "同步设置：{{name}}",
+    "quickImportEventNoSnapshot": "该历史事件未记录模型快照。",
+    "quickImportEventUpstreamToken": "上游令牌",
+    "quickImportEventAnomalySummary": "异常说明",
+    "quickImportEventActionSummary": "策略动作",
+    "quickImportEventMissingModels": "缺失模型",
+    "quickImportEventMissingModelId": "upstream_model_id",
+    "quickImportEventUpstreamModelsSnapshot": "上游模型快照",
+    "quickImportEventSupportedEndpointTypes": "supported_endpoint_types",
     "quickImportSystemTokenUpdateHint": "留空则不更换系统访问令牌",
     "quickImportPasswordUpdateHint": "留空则不更换密码",
     "quickImportPreviewStatus": {
@@ -1816,7 +1834,7 @@
     "supportedFormats": "支持的端点格式",
     "supportedFormatsHelper": "只能选择当前提供商已绑定的端点格式",
     "selectFormats": "选择端点格式...",
-    "selectKeyCapabilities": "选择能力...",
+    "imageEditRequiresImageGeneration": "选择图片编辑端点时，必须同时选择图片生成端点。",
     "selectSupportedFormats": "选择端点格式...",
     "noSupportedFormats": "未配置端点格式",
     "noApiKeys": "未配置密钥",
@@ -1857,6 +1875,7 @@
     "modelCosts": "模型成本",
     "modelCostDialogDescription": "为当前提供商的密钥和已关联模型设置上游成本",
     "modelMappings": "模型映射",
+    "keyModelMappingsTitle": "密钥模型映射",
     "modelMappingDialogDescription": "将提供商模型映射到客户端模型",
     "modelList": "模型列表",
     "modelTestDescription": "为 {{name}} 选择测试入口格式和提供商密钥，并编辑对应请求头与请求体",
@@ -1881,6 +1900,19 @@
     "configuredCost": "已配置",
     "globalDefaultCost": "全局默认",
     "costMultiplier": "成本倍率",
+    "hideUnconfiguredModelCosts": "隐藏未配置模型",
+    "noConfiguredModelCosts": "当前没有已配置成本的模型",
+    "customCostMultiplier": "自定义",
+    "multiplierApprox": "~{{ratio}}x",
+    "multiplierConflictReason": "各价格项倍率不一致，因此显示为自定义近似值",
+    "multiplierUnavailableReason": "当前无法从现有价格推导出统一倍率",
+    "multiplierDetail": "全局价格 {{globalPrice}}，成本配置 {{configuredPrice}}，推导结果 {{ratio}}",
+    "multiplierUnavailableReasons": {
+      "missing_global": "全局价格缺失",
+      "missing_configured": "成本配置价格为空",
+      "non_positive_global": "全局价格不大于 0",
+      "non_positive_configured": "成本配置价格不大于 0"
+    },
     "applyGlobalPriceMultiplier": "按全局价格填充",
     "perRequest": "次",
     "blankClearsPrice": "留空清空",

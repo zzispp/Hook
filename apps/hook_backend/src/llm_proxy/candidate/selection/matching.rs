@@ -8,9 +8,10 @@ use super::{
 };
 use crate::llm_proxy::{
     AffinitySelection,
-    cache::snapshot::{CachedBillingGroup, CachedEndpoint, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot},
+    cache::snapshot::{
+        CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
+    },
     candidate::CandidateRequest,
-    capabilities::{capability_list_enabled, json_capability_enabled},
     formats,
     model_access::provider_allowed,
 };
@@ -74,9 +75,9 @@ fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &m
     let Some(model) = provider_model(input.provider, input.model_id) else {
         return;
     };
-    if !global_model_supports_required_capability(input.request, input.snapshot, &model.global_model_id) {
+    let Some(global_model) = global_model(input.snapshot, &model.global_model_id) else {
         return;
-    }
+    };
     let affinity = matching_affinity(input.provider, input.affinity);
     let endpoints = ordered_endpoints(input.provider, input.group, input.model_id, input.request, input.current_minute, affinity);
     let allowed_keys = allowed_keys(input.provider, input.group, input.current_minute);
@@ -89,34 +90,51 @@ fn append_provider_candidate(input: AppendProviderCandidateInput<'_>, output: &m
     if endpoints.is_empty() || keys.is_empty() {
         return;
     }
-    append_key_candidates(input.provider, model, input.model_id, input.request, endpoints, keys, output);
+    append_key_candidates(
+        AppendKeyCandidatesInput {
+            provider: input.provider,
+            global_model,
+            model,
+            model_id: input.model_id,
+            request: input.request,
+            endpoints,
+            keys,
+        },
+        output,
+    );
 }
 
-fn append_key_candidates(
-    provider: &CachedProvider,
+struct AppendKeyCandidatesInput<'a> {
+    provider: &'a CachedProvider,
+    global_model: &'a CachedGlobalModel,
     model: CachedModelBinding,
-    model_id: &str,
-    request: &CandidateRequest<'_>,
+    model_id: &'a str,
+    request: &'a CandidateRequest<'a>,
     endpoints: Vec<CachedEndpoint>,
     keys: Vec<CachedProviderKey>,
-    output: &mut Vec<CandidateParts>,
-) {
-    for key in keys {
-        let key_endpoints = endpoints
+}
+
+fn append_key_candidates(input: AppendKeyCandidatesInput<'_>, output: &mut Vec<CandidateParts>) {
+    for key in input.keys {
+        let key_endpoints = input
+            .endpoints
             .iter()
-            .filter(|endpoint| key_allows_candidate(&key, model_id, endpoint, request))
+            .filter(|endpoint| key_allows_candidate(&key, input.model_id, endpoint))
             .cloned()
             .collect::<Vec<_>>();
         if key_endpoints.is_empty() {
             continue;
         }
+        let effective = key.effective_provider_model(&input.model, input.global_model);
         output.push(CandidateParts {
-            provider: provider.clone(),
+            provider: input.provider.clone(),
             endpoints: key_endpoints,
             keys: vec![key],
-            model: model.clone(),
-            client_api_format: request.api_format.to_owned(),
-            routing_api_format: request.routing_api_format.to_owned(),
+            model: input.model.clone(),
+            effective_upstream_model_name: effective.upstream_model_name,
+            effective_reasoning_effort: effective.reasoning_effort,
+            client_api_format: input.request.api_format.to_owned(),
+            routing_api_format: input.request.routing_api_format.to_owned(),
             is_cached: false,
         });
     }
@@ -156,7 +174,7 @@ fn provider_model(provider: &CachedProvider, model_id: &str) -> Option<CachedMod
         .models
         .iter()
         .find(|model| model.global_model_id == model_id && model.is_active)
-        .map(selected_provider_model)
+        .cloned()
 }
 
 fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: &CandidateRequest<'_>) -> bool {
@@ -197,23 +215,12 @@ fn key_allowed_for_model_endpoint(key: &CachedProviderKey, model_id: &str, endpo
     key_allowed(key, group, current_minute) && key_allows_model(key, model_id) && key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
 }
 
-fn key_allows_candidate(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint, request: &CandidateRequest<'_>) -> bool {
-    key_allows_model(key, model_id) && key_allows_endpoint(key, endpoint) && key_supports_required_capability(key, request.required_capability)
+fn key_allows_candidate(key: &CachedProviderKey, model_id: &str, endpoint: &CachedEndpoint) -> bool {
+    key_allows_model(key, model_id) && key_allows_endpoint(key, endpoint)
 }
 
 fn key_allows_endpoint(key: &CachedProviderKey, endpoint: &CachedEndpoint) -> bool {
     key.api_formats.iter().any(|api_format| api_format == &endpoint.api_format)
-}
-
-fn global_model_supports_required_capability(request: &CandidateRequest<'_>, snapshot: &SchedulingSnapshot, model_id: &str) -> bool {
-    let Some(required) = request.required_capability else {
-        return true;
-    };
-    snapshot
-        .models
-        .iter()
-        .find(|model| model.id == model_id)
-        .is_some_and(|model| capability_list_enabled(model.supported_capabilities.as_deref(), required))
 }
 
 fn key_time_range_allowed(key: &CachedProviderKey, current_minute: u16) -> bool {
@@ -230,27 +237,10 @@ fn key_allows_model(key: &CachedProviderKey, model_id: &str) -> bool {
     key.allowed_model_ids.is_empty() || key.allowed_model_ids.iter().any(|id| id == model_id)
 }
 
-fn key_supports_required_capability(key: &CachedProviderKey, required: Option<&str>) -> bool {
-    let Some(required) = required.map(str::trim).filter(|value| !value.is_empty()) else {
-        return true;
-    };
-    json_capability_enabled(key.capabilities.as_ref(), required)
-}
-
-fn selected_provider_model(model: &CachedModelBinding) -> CachedModelBinding {
-    let mut selected = model.clone();
-    selected.provider_model_name = selected_provider_model_name(model);
-    selected
+fn global_model<'a>(snapshot: &'a SchedulingSnapshot, model_id: &str) -> Option<&'a CachedGlobalModel> {
+    snapshot.models.iter().find(|model| model.id == model_id)
 }
 
 fn matching_affinity<'a>(provider: &CachedProvider, affinity: Option<&'a AffinitySelection>) -> Option<&'a AffinitySelection> {
     affinity.filter(|record| record.provider_id == provider.id)
-}
-
-fn selected_provider_model_name(model: &CachedModelBinding) -> String {
-    model
-        .provider_model_mapping
-        .as_ref()
-        .map(|mapping| mapping.name.clone())
-        .unwrap_or_else(|| model.provider_model_name.clone())
 }

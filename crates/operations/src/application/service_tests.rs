@@ -103,6 +103,10 @@ impl OperationsRepository for TestRepository {
         unimplemented!("not needed for ticket captcha tests")
     }
 
+    async fn unread_announcements(&self, _user_id: &str) -> OperationsResult<Vec<Announcement>> {
+        unimplemented!("not needed for ticket captcha tests")
+    }
+
     async fn user_email(&self, _user_id: &str) -> OperationsResult<Option<String>> {
         unimplemented!("captcha must fail before user email lookup")
     }

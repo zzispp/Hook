@@ -91,6 +91,7 @@ export function ProviderModelBindingsSection({
         binding={testingBinding}
         endpoints={endpoints}
         apiKeys={apiKeys}
+        models={models}
         onClose={() => setTestingBinding(null)}
       />
     </Box>
@@ -104,7 +105,7 @@ function compareBindings(models: GlobalModelResponse[]) {
 
 function modelName(binding: ProviderModelBinding, models: GlobalModelResponse[]) {
   const model = findGlobalModel(models, binding.global_model_id);
-  return model?.display_name || binding.provider_model_name;
+  return model?.display_name || model?.name || binding.global_model_id;
 }
 
 function findGlobalModel(models: GlobalModelResponse[], id: string) {

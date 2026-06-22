@@ -6,13 +6,6 @@ use super::{
     scoring::{LATENCY_BAD_MS, LATENCY_GOOD_MS, RoutingEmaSnapshot, RoutingScoreCandidate, TPS_HIGH, TPS_LOW, TTFB_BAD_MS, TTFB_GOOD_MS},
 };
 
-const EMA_MAX_FRESHNESS_SECONDS: i64 = 600;
-const EMA_RECENT_WEIGHT: f64 = 0.25;
-const EMA_RECENT_CAP: f64 = 6.0;
-const NORMAL_EXPLORATION_WEIGHT: f64 = 0.03;
-const NORMAL_EXPLORATION_CAP: f64 = 3.0;
-const NORMAL_EXPLORATION_MIN_SUCCESS_SCORE: f64 = 75.0;
-
 pub(super) fn normal_adjustment_components(
     profile: &RoutingProfile,
     window: RoutingMetricWindow,
@@ -133,7 +126,7 @@ fn normal_exploration_component(
     candidate: &RoutingScoreCandidate,
     recent_penalty: f64,
 ) -> Option<ScoreComponent> {
-    if !normal_exploration_eligible(window, candidate, recent_penalty) {
+    if !normal_exploration_eligible(profile, window, candidate, recent_penalty) {
         return None;
     }
     let counts = super::scoring::exploration_counts(profile, total_attempts, candidate);
@@ -141,26 +134,26 @@ fn normal_exploration_component(
     if score <= f64::EPSILON {
         return None;
     }
-    let contribution = (score * NORMAL_EXPLORATION_WEIGHT).min(NORMAL_EXPLORATION_CAP);
+    let contribution = (score * profile.exploration_weight).min(profile.exploration_cap);
     Some(capped_component(
         "exploration",
         "uncertainty exploration",
         Some(score),
         score,
-        NORMAL_EXPLORATION_WEIGHT,
+        profile.exploration_weight,
         contribution,
     ))
 }
 
 fn ema_recent_component(profile: &RoutingProfile, candidate: &RoutingScoreCandidate) -> Option<ScoreComponent> {
     let ema = candidate.ema?;
-    if ema.sample_count < profile.min_samples || ema.freshness_seconds > EMA_MAX_FRESHNESS_SECONDS {
+    if ema.sample_count < profile.min_samples || ema.freshness_seconds > profile.ema_max_freshness_seconds {
         return None;
     }
     let ema_score = ema_composite_score(&profile.weights, ema)?;
     let window_score = window_composite_score(&profile.weights, &candidate.metric)?;
     let delta = ema_score - window_score;
-    let contribution = (delta * EMA_RECENT_WEIGHT).clamp(-EMA_RECENT_CAP, EMA_RECENT_CAP);
+    let contribution = (delta * profile.ema_recent_weight).clamp(-profile.ema_recent_cap, profile.ema_recent_cap);
     if contribution.abs() <= f64::EPSILON {
         return None;
     }
@@ -169,16 +162,16 @@ fn ema_recent_component(profile: &RoutingProfile, candidate: &RoutingScoreCandid
         "EMA recent signal",
         Some(ema_score),
         delta,
-        EMA_RECENT_WEIGHT,
+        profile.ema_recent_weight,
         contribution,
     ))
 }
 
-fn normal_exploration_eligible(window: RoutingMetricWindow, candidate: &RoutingScoreCandidate, recent_penalty: f64) -> bool {
+fn normal_exploration_eligible(profile: &RoutingProfile, window: RoutingMetricWindow, candidate: &RoutingScoreCandidate, recent_penalty: f64) -> bool {
     recent_penalty <= 0.0
         && !stale(candidate, window)
         && !matches!(candidate.circuit_state, CircuitCandidateState::HalfOpenProbe { .. })
-        && success_score(&candidate.metric) >= NORMAL_EXPLORATION_MIN_SUCCESS_SCORE
+        && success_score(&candidate.metric) >= profile.exploration_min_success_score
 }
 
 fn ema_composite_score(weights: &RoutingProfileWeights, ema: RoutingEmaSnapshot) -> Option<f64> {

@@ -141,6 +141,8 @@ pub struct ProviderQuickImportProviderConfig {
     pub enable_format_conversion: Option<bool>,
     #[serde(default)]
     pub is_active: Option<bool>,
+    #[serde(default)]
+    pub upstream_image_native_stream: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]

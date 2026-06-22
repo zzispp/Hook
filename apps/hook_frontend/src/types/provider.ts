@@ -201,7 +201,6 @@ export type ProviderApiKey = {
   name: string;
   api_formats: string[];
   allowed_model_ids: string[];
-  capabilities?: Record<string, unknown> | null;
   note?: string | null;
   internal_priority: number;
   global_priority_by_format: Record<string, number>;
@@ -226,7 +225,6 @@ export type ProviderApiKeyCreate = {
   api_key: string;
   api_formats: string[];
   allowed_model_ids: string[];
-  capabilities?: Record<string, unknown> | null;
   note?: string | null;
   internal_priority?: number;
   rpm_limit?: number | null;
@@ -254,17 +252,10 @@ export type ProviderApiKeyPriorityBatchUpdate = {
 
 export type ProviderModelReasoningEffort = 'minimal' | 'low' | 'medium' | 'high';
 
-export type ProviderModelMapping = {
-  name: string;
-  reasoning_effort?: ProviderModelReasoningEffort | null;
-};
-
 export type ProviderModelBinding = {
   id: string;
   provider_id: string;
   global_model_id: string;
-  provider_model_name: string;
-  provider_model_mapping?: ProviderModelMapping | null;
   is_active: boolean;
   config?: Record<string, unknown> | null;
   created_at: string;
@@ -273,8 +264,7 @@ export type ProviderModelBinding = {
 
 export type ProviderModelBindingCreate = {
   global_model_id: string;
-  provider_model_name: string;
-  provider_model_mapping?: ProviderModelMapping | null;
+  is_active?: boolean;
   config?: Record<string, unknown> | null;
 };
 
@@ -284,10 +274,58 @@ export type ProviderModelBindingBatchUpdate = {
 };
 
 export type ProviderModelBindingUpdate = {
-  provider_model_name?: string;
   is_active?: boolean;
-  provider_model_mapping?: ProviderModelMapping | null;
   config?: Record<string, unknown> | null;
+};
+
+export type ProviderKeyModelMapping = {
+  id: string;
+  provider_id: string;
+  key_id: string;
+  provider_model_id: string;
+  global_model_id: string;
+  upstream_model_name: string;
+  reasoning_effort?: ProviderModelReasoningEffort | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProviderKeyModelMappingsByKey = {
+  provider_id: string;
+  key_id: string;
+  key_name: string;
+  is_quick_import_key: boolean;
+  mappings: ProviderKeyModelMapping[];
+};
+
+export type ProviderKeyModelMappingsResponse = {
+  provider_id: string;
+  keys: ProviderKeyModelMappingsByKey[];
+};
+
+export type ProviderKeyModelMappingCandidate = {
+  upstream_model_name: string;
+  suggested_global_model_id?: string | null;
+  reason: string;
+};
+
+export type ProviderKeyModelMappingsForKeyResponse = {
+  provider_id: string;
+  key_id: string;
+  key_name: string;
+  is_quick_import_key: boolean;
+  mappings: ProviderKeyModelMapping[];
+  candidates: ProviderKeyModelMappingCandidate[];
+};
+
+export type ProviderKeyModelMappingInput = {
+  global_model_id: string;
+  upstream_model_name: string;
+  reasoning_effort?: ProviderModelReasoningEffort | null;
+};
+
+export type ProviderKeyModelMappingsUpdate = {
+  model_mappings: ProviderKeyModelMappingInput[];
 };
 
 export type ProviderModelCostMode = 'per_request' | 'per_token';

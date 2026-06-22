@@ -1,5 +1,5 @@
 use types::api_token::ApiToken;
-use types::provider::ProviderModelCost;
+use types::provider::{ProviderModelCost, RoutingProfileId};
 
 use super::{CandidateParts, DEFAULT_MAX_RETRIES, GlobalModelRef, dynamic_cost::model_cost_config, route};
 use crate::llm_proxy::{
@@ -17,6 +17,8 @@ pub(super) struct ProxyCandidateBuildInput<'a> {
     pub(super) group: &'a CachedBillingGroup,
     pub(super) token_user: Option<&'a CachedUserAccess>,
     pub(super) parts: &'a [CandidateParts],
+    pub(super) routing_profile_id: RoutingProfileId,
+    pub(super) routing_profile_ema_alpha: f64,
 }
 
 pub(super) async fn proxy_candidates(input: ProxyCandidateBuildInput<'_>) -> Result<Vec<ProxyCandidate>, LlmProxyError> {
@@ -46,17 +48,20 @@ async fn proxy_candidate(input: &ProxyCandidateBuildInput<'_>, parts: &Candidate
             key,
             configured_cost: configured_cost.as_ref(),
             index,
+            routing_profile_id: input.routing_profile_id,
+            routing_profile_ema_alpha: input.routing_profile_ema_alpha,
         }),
         requested_model_name: input.request.model_name.to_owned(),
         api_key: key.api_key.clone(),
         base_url: endpoint.base_url.clone(),
         custom_path: endpoint.custom_path.clone(),
         upstream_url: endpoint.upstream_url.clone(),
-        provider_model_name: parts.model.provider_model_name.clone(),
-        reasoning_effort: parts.model.provider_model_mapping.as_ref().and_then(|mapping| mapping.reasoning_effort.clone()),
+        provider_model_name: parts.effective_upstream_model_name.clone(),
+        reasoning_effort: parts.effective_reasoning_effort.clone(),
         header_rules: endpoint.header_rules.clone(),
         body_rules: endpoint.body_rules.clone(),
-        key_capabilities: key.capabilities.clone(),
+        format_acceptance_config: endpoint.format_acceptance_config.clone(),
+        key_supports_image_generation: key.supports_image_generation,
         price_per_request: input.global_model.default_price_per_request,
         tiered_pricing: input.global_model.default_tiered_pricing.clone(),
         billing_multiplier: input.group.billing_multiplier,
@@ -91,6 +96,8 @@ struct CandidateTraceInput<'a> {
     key: &'a CandidateKeyOption,
     configured_cost: Option<&'a ProviderModelCost>,
     index: i32,
+    routing_profile_id: RoutingProfileId,
+    routing_profile_ema_alpha: f64,
 }
 
 fn candidate_trace(input: CandidateTraceInput<'_>) -> CandidateTrace {
@@ -116,6 +123,8 @@ fn candidate_trace(input: CandidateTraceInput<'_>) -> CandidateTrace {
         needs_conversion: input.endpoint.needs_conversion,
         is_stream: input.request.is_stream,
         is_cached: input.parts.is_cached,
+        routing_profile_id: input.routing_profile_id,
+        routing_profile_ema_alpha: input.routing_profile_ema_alpha,
         routing_context_key: routing_context_key(input.group_code, &input.global_model.id, &input.request.features),
         route_config_fingerprint: route_config_fingerprint(RouteFingerprintInput {
             provider_id: &input.parts.provider.id,
@@ -123,6 +132,8 @@ fn candidate_trace(input: CandidateTraceInput<'_>) -> CandidateTrace {
             endpoint_id: &input.endpoint.id,
             global_model_id: &input.parts.model.global_model_id,
             provider_model_id: &input.parts.model.id,
+            effective_upstream_model_name: &input.parts.effective_upstream_model_name,
+            effective_reasoning_effort: input.parts.effective_reasoning_effort.as_deref(),
             client_api_format: &input.parts.client_api_format,
             provider_api_format: &input.endpoint.provider_api_format,
             is_stream: input.request.is_stream,

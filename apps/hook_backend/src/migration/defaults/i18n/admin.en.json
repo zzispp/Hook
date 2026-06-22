@@ -1455,18 +1455,17 @@
   "routing": {
     "loading": "Loading routing rankings...",
     "empty": "No routing candidates match the current filters.",
-    "emptyBeforeQuery": "Select a user, API token, model, and format, then query routing.",
+    "emptyBeforeQuery": "Select a billing group and model to view routing rankings.",
     "profileInherited": "Follow default",
     "cards": {
-      "simulationContextTitle": "Real path simulation",
-      "simulationContextHelper": "Select an API token, model, and format to simulate routing with real access, affinity, rate-limit, and circuit state.",
+      "simulationContextTitle": "Strategy context",
+      "simulationContextHelper": "Inspect candidate rankings with billing group, model, API format, window, and streaming settings.",
       "profileTuningHelper": "Edit the routing profile that is effective for this simulation: model override, billing group override, then default.",
-      "rankingsTitle": "Real path simulation: {{profile}}",
-      "rankingsHelper": "View candidate rankings, score components, and window metrics under the real token context."
+      "rankingsTitle": "Routing rankings: {{profile}}",
+      "rankingsPlaceholderProfile": "Context pending",
+      "rankingsHelper": "View candidate rankings, score components, and window metrics under the active strategy context."
     },
     "filters": {
-      "user": "User",
-      "apiToken": "API token",
       "group": "Billing group",
       "model": "Model",
       "apiFormat": "API format",
@@ -1474,14 +1473,9 @@
       "stream": "Stream",
       "includeExcluded": "Show excluded",
       "autoRefresh": "Auto refresh",
-      "requestId": "Request ID",
-      "selectUserFirst": "Select a user first",
-      "selectApiTokenFirst": "Select an API token first",
-      "noAccessibleModels": "This API token has no accessible models"
+      "selectGroupFirst": "Select a billing group first"
     },
     "actions": {
-      "simulate": "Query routing",
-      "lookup": "Lookup",
       "details": "Details"
     },
     "runtime": {
@@ -1516,7 +1510,10 @@
     },
     "profile": {
       "editorTitle": "Profile tuning",
-      "editorHelper": "Edit the auto tune switch, administrator baseline weights, and scoring controls for the selected profile. Automatic learning only makes controlled adjustments on top of this baseline.",
+      "editorHelper": "Edit the auto tune switch, administrator baseline weights, and Bandit / EMA tuning parameters for the selected profile. Automatic learning only makes controlled adjustments on top of this baseline.",
+      "selectContext": "Select a billing group or model before viewing and tuning the effective profile.",
+      "paramSection": "Bandit and EMA tuning",
+      "paramHelper": "These parameters control warmup confidence, EMA recency sensitivity, and UCB exploration strength for this profile.",
       "autoTune": "Enable Auto Tune",
       "advancedTitle": "Scoring controls",
       "weightTotal": "Current weight total: {{total}}. It must equal 1.000 before saving.",
@@ -1549,14 +1546,27 @@
         "headroom": "Headroom",
         "priority": "Priority"
       },
-      "settingFields": {
-        "minSamples": "Minimum samples",
-        "explorationK": "Exploration K",
-        "conversionPenalty": "Conversion penalty",
-        "staleMetricPenalty": "Stale metric penalty",
-        "affinityBonus": "Affinity bonus",
-        "priorSampleCap": "Prior sample cap",
-        "contextualExploration": "Contextual exploration"
+      "paramFields": {
+        "min_samples": "Min samples",
+        "exploration_k": "UCB k",
+        "prior_sample_cap": "Prior sample cap",
+        "conversion_penalty": "Conversion penalty",
+        "stale_metric_penalty": "Stale penalty",
+        "affinity_bonus": "Affinity bonus",
+        "ema_alpha": "EMA alpha",
+        "ema_max_freshness_seconds": "EMA freshness (s)",
+        "ema_recent_weight": "EMA recent weight",
+        "ema_recent_cap": "EMA recent cap",
+        "exploration_weight": "Exploration weight",
+        "exploration_cap": "Exploration cap",
+        "exploration_min_success_score": "Exploration success floor"
+      },
+      "booleanFields": {
+        "contextual_exploration_enabled": "Enable contextual exploration"
+      },
+      "booleanValues": {
+        "enabled": "Enabled",
+        "disabled": "Disabled"
       }
     },
     "table": {
@@ -1611,6 +1621,7 @@
       "effectiveSamples": "Effective samples",
       "exclusion": "Exclusion",
       "formula": "Formula and weights",
+      "tuningParams": "Tuning: min_samples {{min_samples}}, UCB k {{exploration_k}}, prior cap {{prior_sample_cap}}, conversion penalty {{conversion_penalty}}, stale penalty {{stale_metric_penalty}}, affinity bonus {{affinity_bonus}}, contextual exploration {{contextual_exploration_enabled}}, EMA alpha {{ema_alpha}}, EMA freshness {{ema_max_freshness_seconds}}s, EMA weight {{ema_recent_weight}}, EMA cap {{ema_recent_cap}}, exploration weight {{exploration_weight}}, exploration cap {{exploration_cap}}, success floor {{exploration_min_success_score}}",
       "metrics": "Raw Metrics",
       "windowMetrics": "Multi-window metrics",
       "components": "Score Components",
@@ -1693,13 +1704,12 @@
     "invalidBaseUrl": "Enter a valid HTTP/HTTPS Base URL without query or fragment.",
     "invalidCustomPath": "Custom path must start with / and contain only URL path characters.",
     "keepPriorityOnConversion": "Keep priority after conversion",
+    "upstreamImageNativeStream": "Upstream image native stream",
     "keys": "Keys",
     "key": "Key",
     "keyManagement": "Key management",
     "keyMasked": "sk-***",
     "keyUpdateSecretHint": "Leave blank to keep the current key",
-    "keyCapabilities": "Key capabilities",
-    "keyCapabilitiesHelper": "Select capabilities this provider key actually supports. Image requests require image generation.",
     "quickAddEndpoints": "Quick add endpoints",
     "quickImportBaseUrl": "Site Base URL",
     "quickImportAcceptCurrent": "Accept current upstream state",
@@ -1783,6 +1793,14 @@
     "quickImportSourceSection": "Quick import source",
     "quickImportSyncSection": "Quick import automatic sync",
     "quickImportSyncSettingsTitle": "Sync settings: {{name}}",
+    "quickImportEventNoSnapshot": "This historical event did not record a model snapshot.",
+    "quickImportEventUpstreamToken": "Upstream token",
+    "quickImportEventAnomalySummary": "Anomaly summary",
+    "quickImportEventActionSummary": "Policy action",
+    "quickImportEventMissingModels": "Missing models",
+    "quickImportEventMissingModelId": "upstream_model_id",
+    "quickImportEventUpstreamModelsSnapshot": "Upstream model snapshot",
+    "quickImportEventSupportedEndpointTypes": "supported_endpoint_types",
     "quickImportSystemTokenUpdateHint": "Leave blank to keep the current system access token",
     "quickImportPasswordUpdateHint": "Leave blank to keep the current password",
     "quickImportPreviewStatus": {
@@ -1816,7 +1834,7 @@
     "supportedFormats": "Supported endpoint formats",
     "supportedFormatsHelper": "Only endpoint formats bound to this provider can be selected.",
     "selectFormats": "Select endpoint formats...",
-    "selectKeyCapabilities": "Select capabilities...",
+    "imageEditRequiresImageGeneration": "Selecting the image edit endpoint also requires selecting the image generation endpoint.",
     "selectSupportedFormats": "Select endpoint formats...",
     "noSupportedFormats": "No endpoint formats configured",
     "noApiKeys": "No keys configured",
@@ -1857,6 +1875,7 @@
     "modelCosts": "Model costs",
     "modelCostDialogDescription": "Set upstream costs for this provider's keys and associated models",
     "modelMappings": "Model mappings",
+    "keyModelMappingsTitle": "Key model mappings",
     "modelMappingDialogDescription": "Map provider models to client models",
     "modelList": "Model list",
     "modelTestDescription": "Select a test request format and provider key for {{name}}, then edit the matching headers and body",
@@ -1881,6 +1900,19 @@
     "configuredCost": "Configured",
     "globalDefaultCost": "Global default",
     "costMultiplier": "Cost multiplier",
+    "hideUnconfiguredModelCosts": "Hide unconfigured models",
+    "noConfiguredModelCosts": "No models have configured costs",
+    "customCostMultiplier": "Custom",
+    "multiplierApprox": "~{{ratio}}x",
+    "multiplierConflictReason": "Price fields resolve to different ratios, so this is shown as a custom approximation",
+    "multiplierUnavailableReason": "A unified ratio cannot be derived from the current prices",
+    "multiplierDetail": "Global price {{globalPrice}}, configured price {{configuredPrice}}, derived result {{ratio}}",
+    "multiplierUnavailableReasons": {
+      "missing_global": "Global price is missing",
+      "missing_configured": "Configured cost is empty",
+      "non_positive_global": "Global price is not greater than 0",
+      "non_positive_configured": "Configured cost is not greater than 0"
+    },
     "applyGlobalPriceMultiplier": "Fill from global prices",
     "perRequest": "request",
     "blankClearsPrice": "Leave blank to clear",

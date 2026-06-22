@@ -4,7 +4,7 @@ use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricWindow}
 
 use crate::StorageResult;
 
-use super::routing_repository::{RoutingMetricDelta, RoutingMetricRecord};
+use super::routing_repository::{RoutingMetricDelta, RoutingMetricRecord, normalized_ema_weights};
 use sql::{
     average_decimal, metric_columns, metric_group_sql, metric_select_sql, metric_upsert_sql, metric_values, minute_bounds, output_tps, push,
     route_state_columns, route_state_upsert_sql, route_state_values, success_rate,
@@ -65,10 +65,13 @@ where
         .map(|value| push(&mut params, value))
         .collect::<Vec<_>>()
         .join(", ");
+    let (current_weight, incoming_weight) = normalized_ema_weights(delta.ema_alpha);
+    let current_weight_ref = push(&mut params, Value::from(current_weight));
+    let incoming_weight_ref = push(&mut params, Value::from(incoming_weight));
     let sql = format!(
         "INSERT INTO routing_route_states ({}) VALUES ({values}) {}",
         route_state_columns().join(", "),
-        route_state_upsert_sql()
+        route_state_upsert_sql(&current_weight_ref, &incoming_weight_ref)
     );
     connection.execute_raw(Statement::from_sql_and_values(DbBackend::Postgres, sql, params)).await?;
     Ok(())

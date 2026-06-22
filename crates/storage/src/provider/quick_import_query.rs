@@ -12,7 +12,7 @@ use super::{
     ProviderQuickImportSourceRecordInput, ProviderStore,
     provider_model_cost_query::model_cost_response,
     record::{
-        provider_api_keys, provider_endpoints, provider_model_costs, provider_models, provider_quick_import_key_models, provider_quick_import_keys,
+        provider_api_keys, provider_endpoints, provider_key_model_mappings, provider_model_costs, provider_models, provider_quick_import_keys,
         provider_quick_import_sources,
     },
     repository_helpers::{apply_provider_api_key_patch, provider_active_model, provider_model_response},
@@ -29,9 +29,9 @@ pub async fn create_quick_import(store: &ProviderStore, input: ProviderQuickImpo
     let endpoints = insert_endpoints(store, &tx, &provider_id, input.endpoints).await?;
     let (model_bindings, model_ids) = insert_models(store, &tx, &provider_id, input.model_bindings).await?;
     let (api_keys, key_ids) = insert_keys(store, &tx, &provider_id, input.api_keys).await?;
-    let model_costs = insert_costs(store, &tx, &provider_id, model_ids, key_ids.clone(), input.model_costs).await?;
+    let model_costs = insert_costs(store, &tx, &provider_id, &model_ids, key_ids.clone(), input.model_costs).await?;
     if let Some(sync_source) = input.sync_source {
-        insert_sync_metadata(store, &tx, &provider_id, sync_source, sync_keys, &key_ids).await?;
+        insert_sync_metadata(store, &tx, &provider_id, sync_source, sync_keys, &key_ids, &model_ids).await?;
     }
     tx.commit().await?;
     Ok(ProviderQuickImportRecordOutput {
@@ -50,9 +50,9 @@ pub async fn append_quick_import(store: &ProviderStore, input: ProviderQuickImpo
     let (model_bindings, new_model_ids) = insert_models(store, &tx, &input.provider_id, input.model_bindings).await?;
     let model_ids = merged_model_ids(store, &tx, &input.provider_id, new_model_ids).await?;
     let (api_keys, key_ids) = insert_keys(store, &tx, &input.provider_id, input.api_keys).await?;
-    let model_costs = insert_costs(store, &tx, &input.provider_id, model_ids, key_ids.clone(), input.model_costs).await?;
+    let model_costs = insert_costs(store, &tx, &input.provider_id, &model_ids, key_ids.clone(), input.model_costs).await?;
     for key in sync_keys {
-        insert_sync_key(store, &tx, &input.provider_id, &input.source_id, key, &key_ids).await?;
+        insert_sync_key(store, &tx, &input.provider_id, &input.source_id, key, &key_ids, &model_ids).await?;
     }
     tx.commit().await?;
     Ok(ProviderQuickImportAppendRecordOutput {
@@ -72,12 +72,12 @@ pub async fn replace_quick_import_key(
     let (model_bindings, new_model_ids) = insert_models(store, &tx, &input.provider_id, model_inputs).await?;
     let model_ids = merged_model_ids(store, &tx, &input.provider_id, new_model_ids).await?;
     delete_key_model_mappings(&tx, &input.provider_id, &input.key_id).await?;
-    insert_replacement_model_mappings(store, &tx, &input, &input.key_id).await?;
+    insert_replacement_model_mappings(store, &tx, &input, &input.key_id, &model_ids).await?;
     let api_key = update_replacement_api_key(&tx, &input).await?;
     update_replacement_sync_key(&tx, &input).await?;
     delete_key_costs(&tx, &input.provider_id, &input.key_id).await?;
     let key_ids = BTreeMap::from([(input.upstream_token_id.clone(), input.key_id.clone())]);
-    let model_costs = insert_costs(store, &tx, &input.provider_id, model_ids, key_ids, input.model_costs).await?;
+    let model_costs = insert_costs(store, &tx, &input.provider_id, &model_ids, key_ids, input.model_costs).await?;
     tx.commit().await?;
     Ok(ProviderQuickImportKeyReplacementRecordOutput {
         api_key,
@@ -103,9 +103,9 @@ async fn merged_model_ids(
 }
 
 async fn delete_key_model_mappings(tx: &DatabaseTransaction, provider_id: &str, key_id: &str) -> StorageResult<()> {
-    provider_quick_import_key_models::Entity::delete_many()
-        .filter(provider_quick_import_key_models::Column::ProviderId.eq(provider_id))
-        .filter(provider_quick_import_key_models::Column::KeyId.eq(key_id))
+    provider_key_model_mappings::Entity::delete_many()
+        .filter(provider_key_model_mappings::Column::ProviderId.eq(provider_id))
+        .filter(provider_key_model_mappings::Column::KeyId.eq(key_id))
         .exec(tx)
         .await?;
     Ok(())
@@ -116,9 +116,10 @@ async fn insert_replacement_model_mappings(
     tx: &DatabaseTransaction,
     input: &ProviderQuickImportKeyReplacementRecordInput,
     key_id: &str,
+    model_ids: &BTreeMap<String, String>,
 ) -> StorageResult<()> {
     for mapping in input.model_mappings.clone() {
-        sync_key_model_active_model(store, &input.provider_id, &input.source_id, key_id, mapping)
+        key_model_mapping_active_model(store, &input.provider_id, key_id, model_ids, mapping)?
             .insert(tx)
             .await?;
     }
@@ -244,13 +245,13 @@ pub(super) async fn insert_costs(
     store: &ProviderStore,
     tx: &DatabaseTransaction,
     provider_id: &str,
-    model_ids: BTreeMap<String, String>,
+    model_ids: &BTreeMap<String, String>,
     key_ids: BTreeMap<String, String>,
     inputs: Vec<ProviderQuickImportModelCostRecordInput>,
 ) -> StorageResult<Vec<types::provider::ProviderModelCost>> {
     let mut output = Vec::with_capacity(inputs.len());
     for input in inputs {
-        let active = cost_active_model(store, provider_id, &model_ids, &key_ids, input)?;
+        let active = cost_active_model(store, provider_id, model_ids, &key_ids, input)?;
         output.push(model_cost_response(active.insert(tx).await?)?);
     }
     Ok(output)
@@ -263,11 +264,12 @@ pub(super) async fn insert_sync_metadata(
     source: ProviderQuickImportSourceRecordInput,
     keys: Vec<SyncKeyInput>,
     key_ids: &BTreeMap<String, String>,
+    model_ids: &BTreeMap<String, String>,
 ) -> StorageResult<()> {
     let source_id = store.next_id();
     sync_source_active_model(source_id.clone(), provider_id, source).insert(tx).await?;
     for key in keys {
-        insert_sync_key(store, tx, provider_id, &source_id, key, key_ids).await?;
+        insert_sync_key(store, tx, provider_id, &source_id, key, key_ids, model_ids).await?;
     }
     Ok(())
 }
@@ -279,11 +281,14 @@ async fn insert_sync_key(
     source_id: &str,
     input: SyncKeyInput,
     key_ids: &BTreeMap<String, String>,
+    model_ids: &BTreeMap<String, String>,
 ) -> StorageResult<()> {
     let key_id = mapped_id(key_ids, &input.upstream_token_id, "upstream token")?;
     sync_key_active_model(store, provider_id, source_id, &key_id, &input)?.insert(tx).await?;
     for model in input.model_mappings {
-        sync_key_model_active_model(store, provider_id, source_id, &key_id, model).insert(tx).await?;
+        key_model_mapping_active_model(store, provider_id, &key_id, model_ids, model)?
+            .insert(tx)
+            .await?;
     }
     Ok(())
 }
@@ -331,8 +336,6 @@ fn model_active_model(store: &ProviderStore, provider_id: &str, input: ProviderQ
         id: Set(store.next_id()),
         provider_id: Set(provider_id.to_owned()),
         global_model_id: Set(input.global_model_id),
-        provider_model_name: Set(input.provider_model_name),
-        provider_model_mappings: Set(json::encode_optional(&input.provider_model_mapping)?),
         is_active: Set(input.is_active),
         config: Set(json::encode_optional(&input.config)?),
         created_at: Set(now),
@@ -348,7 +351,6 @@ fn key_active_model(store: &ProviderStore, provider_id: &str, input: ProviderQui
         name: Set(input.name),
         api_formats: Set(json::encode_required(&input.api_formats)?),
         allowed_model_ids: Set(json::encode_required(&input.allowed_model_ids)?),
-        capabilities: Set(json::encode_optional(&input.capabilities)?),
         encrypted_api_key: Set(input.encrypted_api_key),
         note: Set(input.note),
         internal_priority: Set(input.internal_priority),
@@ -430,24 +432,24 @@ fn sync_key_active_model(
     })
 }
 
-fn sync_key_model_active_model(
+fn key_model_mapping_active_model(
     store: &ProviderStore,
     provider_id: &str,
-    source_id: &str,
     key_id: &str,
+    model_ids: &BTreeMap<String, String>,
     input: ProviderQuickImportKeyModelRecordInput,
-) -> provider_quick_import_key_models::ActiveModel {
+) -> StorageResult<provider_key_model_mappings::ActiveModel> {
     let now = time::OffsetDateTime::now_utc();
-    provider_quick_import_key_models::ActiveModel {
+    Ok(provider_key_model_mappings::ActiveModel {
         id: Set(store.next_id()),
         provider_id: Set(provider_id.to_owned()),
-        source_id: Set(source_id.to_owned()),
         key_id: Set(key_id.to_owned()),
-        upstream_model_id: Set(input.upstream_model_id),
-        global_model_id: Set(input.global_model_id),
+        provider_model_id: Set(mapped_id(model_ids, &input.global_model_id, "global model")?),
+        upstream_model_name: Set(input.upstream_model_name),
+        reasoning_effort: Set(input.reasoning_effort),
         created_at: Set(now),
         updated_at: Set(now),
-    }
+    })
 }
 
 fn cost_active_model(

@@ -2,14 +2,14 @@ use rust_decimal::Decimal;
 use types::{
     api_token::{ApiToken, ApiTokenType, ModelAccessMode},
     model::TieredPricingConfig,
-    provider::{ProviderModelMapping, ProviderSchedulingMode},
+    provider::ProviderSchedulingMode,
     system_setting::RequestRecordLevel,
 };
 
 use crate::llm_proxy::{
-    IMAGE_GENERATION_CAPABILITY,
     cache::snapshot::{
-        CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess, SchedulingSnapshot,
+        CachedBillingGroup, CachedEndpoint, CachedGlobalModel, CachedKeyModelMapping, CachedModelBinding, CachedProvider, CachedProviderKey, CachedUserAccess,
+        SchedulingSnapshot,
     },
     candidate::CandidateRequest,
 };
@@ -41,7 +41,7 @@ pub(super) fn snapshot_with_provider(provider: CachedProvider) -> SchedulingSnap
             id: "model-a".into(),
             name: "gpt-test".into(),
             is_active: true,
-            supported_capabilities: Some(vec![IMAGE_GENERATION_CAPABILITY.into()]),
+            supported_capabilities: None,
             default_price_per_request: None,
             default_tiered_pricing: TieredPricingConfig { tiers: Vec::new() },
             routing_profile_id: None,
@@ -98,11 +98,6 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
             id: "binding-a".into(),
             provider_id: "provider-a".into(),
             global_model_id: "model-a".into(),
-            provider_model_name: "upstream-model".into(),
-            provider_model_mapping: Some(ProviderModelMapping {
-                name: "mapped-upstream-model".into(),
-                reasoning_effort: Some("high".into()),
-            }),
             is_active: true,
         }],
     }
@@ -111,6 +106,7 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
 pub(super) fn provider_key(id: &str, internal_priority: i32, api_formats: Vec<&str>) -> CachedProviderKey {
     let mut output = key(id, internal_priority);
     output.api_formats = api_formats.into_iter().map(str::to_owned).collect();
+    output.supports_image_generation = output.api_formats.iter().any(|format| format == "openai_image");
     output
 }
 
@@ -152,8 +148,6 @@ pub(super) fn provider_b() -> CachedProvider {
             id: "binding-b".into(),
             provider_id: "provider-b".into(),
             global_model_id: "model-a".into(),
-            provider_model_name: "provider-b-model".into(),
-            provider_model_mapping: None,
             is_active: true,
         }],
         ..provider_with_endpoints_and_keys()
@@ -167,7 +161,6 @@ pub(super) fn request() -> CandidateRequest<'static> {
         model_name: "gpt-test",
         is_stream: false,
         has_openai_responses_custom_tool_items: false,
-        required_capability: None,
         features: types::provider::RoutingRequestFeatures::unknown("openai:chat", false, None),
     }
 }
@@ -216,19 +209,19 @@ pub(super) fn endpoint(id: &str, api_format: &str) -> CachedEndpoint {
 }
 
 fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
+    let api_formats = vec![
+        "openai:chat".to_owned(),
+        "gemini:chat".to_owned(),
+        "openai_image".to_owned(),
+        "openai_image_edit".to_owned(),
+        "openai:compact".to_owned(),
+    ];
     CachedProviderKey {
         id: id.into(),
         provider_id: "provider-a".into(),
         name: format!("{id}-name"),
-        api_formats: vec![
-            "openai:chat".into(),
-            "gemini:chat".into(),
-            "openai_image".into(),
-            "openai_image_edit".into(),
-            "openai:compact".into(),
-        ],
+        api_formats: api_formats.clone(),
         allowed_model_ids: Vec::new(),
-        capabilities: Some(serde_json::json!({ IMAGE_GENERATION_CAPABILITY: true })),
         key_preview: format!("{id}-name"),
         encrypted_api_key: "encrypted".into(),
         internal_priority,
@@ -246,6 +239,16 @@ fn key(id: &str, internal_priority: i32) -> CachedProviderKey {
         time_range_enabled: false,
         time_range_start_minute: None,
         time_range_end_minute: None,
+        supports_image_generation: api_formats.iter().any(|format| format == "openai_image"),
         is_active: true,
+        model_mappings: std::collections::BTreeMap::from([(
+            "binding-a".to_owned(),
+            CachedKeyModelMapping {
+                provider_model_id: "binding-a".into(),
+                global_model_id: "model-a".into(),
+                upstream_model_name: "mapped-upstream-model".into(),
+                reasoning_effort: Some("high".into()),
+            },
+        )]),
     }
 }

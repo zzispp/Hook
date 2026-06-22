@@ -31,6 +31,7 @@ fn recent_regression_degrades_fallback_metrics() {
     regressed.metric.sample_count = 120;
     regressed.metric.success_count = 118;
     regressed.metric.request_count = 120;
+    regressed.effective_sample_count = 120;
     regressed.metric.latency_avg_ms = Some(420.0);
     regressed.metric.ttfb_avg_ms = Some(180.0);
     regressed.recent_metric = Some(RoutingMetricSnapshot {
@@ -78,7 +79,7 @@ fn ema_recent_penalizes_worse_recent_state_with_cap() {
     let component = component(&scores[0], "ema_recent");
 
     assert!(component.contribution < 0.0);
-    assert!(component.contribution >= -6.0);
+    assert!(component.contribution >= -profile.ema_recent_cap);
 }
 
 #[test]
@@ -102,7 +103,71 @@ fn ema_recent_rewards_better_recent_state_with_cap() {
     let component = component(&scores[0], "ema_recent");
 
     assert!(component.contribution > 0.0);
-    assert!(component.contribution <= 6.0);
+    assert!(component.contribution <= profile.ema_recent_cap);
+}
+
+#[test]
+fn ema_recent_uses_profile_weight_and_cap() {
+    let mut profile = profile();
+    profile.ema_recent_weight = 0.7;
+    profile.ema_recent_cap = 2.5;
+    profile.ema_max_freshness_seconds = 30;
+    let mut candidate = candidate("key-ema-profile-weight", false);
+    make_normal(&mut candidate, 40, 40);
+    candidate.ema = Some(RoutingEmaSnapshot {
+        success_rate: 0.0,
+        ttfb_avg_ms: Some(4_000.0),
+        latency_avg_ms: Some(12_000.0),
+        output_tps: Some(1.0),
+        sample_count: 40,
+        freshness_seconds: 20,
+    });
+
+    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![candidate]);
+    let component = component(&scores[0], "ema_recent");
+
+    assert_eq!(component.weight, 0.7);
+    assert!(component.contribution >= -2.5);
+}
+
+#[test]
+fn ema_recent_respects_profile_freshness_threshold() {
+    let mut profile = profile();
+    profile.ema_max_freshness_seconds = 10;
+    let mut candidate = candidate("key-ema-stale-threshold", false);
+    make_normal(&mut candidate, 40, 40);
+    candidate.ema = Some(RoutingEmaSnapshot {
+        success_rate: 1.0,
+        ttfb_avg_ms: Some(150.0),
+        latency_avg_ms: Some(300.0),
+        output_tps: Some(120.0),
+        sample_count: 40,
+        freshness_seconds: 11,
+    });
+
+    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![candidate]);
+
+    assert!(!scores[0].explanation.components.iter().any(|component| component.code == "ema_recent"));
+}
+
+#[test]
+fn prior_sample_cap_keeps_prior_only_candidate_in_warming_state() {
+    let mut profile = profile();
+    profile.min_samples = 12;
+    profile.prior_sample_cap = 5;
+    let mut candidate = candidate("key-prior-capped", false);
+    make_normal(&mut candidate, 100, 100);
+    candidate.metric_source = RoutingMetricSource::Prior;
+    candidate.prior_source = RoutingPriorSource::ProviderModelFormat;
+    candidate.prior_sample_count = 100;
+    candidate.metric.sample_count = 100;
+    candidate.metric.request_count = 100;
+    candidate.metric.success_count = 99;
+    candidate.effective_sample_count = 5;
+
+    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![candidate]);
+
+    assert_eq!(scores[0].explanation.state, types::provider::RoutingRouteState::Warming);
 }
 
 #[test]
@@ -113,11 +178,13 @@ fn balanced_profile_ignores_priority_contribution() {
     low_priority.metric.sample_count = 40;
     low_priority.metric.request_count = 40;
     low_priority.metric.success_count = 40;
+    low_priority.effective_sample_count = 40;
     let mut high_priority = candidate("key-high-priority", false);
     high_priority.admin_priority = 900;
     high_priority.metric.sample_count = 40;
     high_priority.metric.request_count = 40;
     high_priority.metric.success_count = 40;
+    high_priority.effective_sample_count = 40;
 
     let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![low_priority, high_priority]);
     let low = scores
@@ -241,6 +308,7 @@ fn candidate(key_id: &str, is_cached: bool) -> RoutingScoreCandidate {
         metric_source: RoutingMetricSource::Exact,
         prior_source: RoutingPriorSource::ExactRoute,
         prior_sample_count: 8,
+        effective_sample_count: 8,
         routing_context_key: Some("group=default|model=model-a|format=openai:chat|stream=false|size=unknown|cap=none".into()),
         route_config_fingerprint: Some("route-fingerprint".into()),
         price_config_fingerprint: Some("price-fingerprint".into()),
@@ -260,6 +328,7 @@ fn make_normal(candidate: &mut RoutingScoreCandidate, success_count: u64, reques
     candidate.metric.sample_count = request_count;
     candidate.metric.request_count = request_count;
     candidate.metric.success_count = success_count;
+    candidate.effective_sample_count = request_count;
     candidate.context_route_sample_count = request_count;
     candidate.context_total_sample_count = request_count;
 }
@@ -288,13 +357,20 @@ fn profile() -> RoutingProfile {
             priority: 0.0,
         },
         version: "test".into(),
-        min_samples: 20,
-        exploration_k: 3.0,
+        min_samples: 12,
+        exploration_k: 4.5,
         conversion_penalty: 6.0,
         stale_metric_penalty: 8.0,
         affinity_bonus: 6.0,
         prior_sample_cap: types::provider::default_prior_sample_cap(),
         contextual_exploration_enabled: types::provider::default_contextual_exploration_enabled(),
+        ema_alpha: types::provider::default_ema_alpha(),
+        ema_max_freshness_seconds: types::provider::default_ema_max_freshness_seconds(),
+        ema_recent_weight: types::provider::default_ema_recent_weight(),
+        ema_recent_cap: types::provider::default_ema_recent_cap(),
+        exploration_weight: types::provider::default_exploration_weight(),
+        exploration_cap: types::provider::default_exploration_cap(),
+        exploration_min_success_score: types::provider::default_exploration_min_success_score(),
         auto_tune_enabled: false,
         learning: None,
     }

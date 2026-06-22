@@ -4,7 +4,7 @@ use types::{
     model::GlobalModelResponse,
     provider::{
         ProviderModelCostUpsert, ProviderQuickImportCostSyncMode, ProviderQuickImportGroupChangedAction, ProviderQuickImportSourceConfig,
-        ProviderQuickImportSyncStatus, ProviderQuickImportUpstreamAnomalyAction,
+        ProviderQuickImportSyncStatus, ProviderQuickImportUpstreamAnomalyAction, ProviderQuickImportUpstreamModelSnapshot,
     },
 };
 
@@ -30,6 +30,8 @@ pub(super) struct KeyOutcome {
     pub(super) observed_group_ratio: Option<rust_decimal::Decimal>,
     pub(super) observed_effective_multiplier: Option<rust_decimal::Decimal>,
     pub(super) candidate_model_ids: Vec<String>,
+    pub(super) missing_upstream_model_ids: Vec<String>,
+    pub(super) upstream_models_snapshot: Vec<ProviderQuickImportUpstreamModelSnapshot>,
     upstream_group: Option<Option<String>>,
     group_ratio_patch: Option<rust_decimal::Decimal>,
     effective_multiplier_patch: Option<rust_decimal::Decimal>,
@@ -95,12 +97,16 @@ where
         return anomaly_outcome(
             ProviderQuickImportSyncStatus::UpstreamTokenDeleted,
             source.sync_config.anomaly_actions.token_deleted,
+            Vec::new(),
+            Vec::new(),
         );
     };
     if !token.is_active {
         return anomaly_outcome(
             ProviderQuickImportSyncStatus::UpstreamTokenDisabled,
             source.sync_config.anomaly_actions.token_disabled,
+            Vec::new(),
+            Vec::new(),
         );
     }
     if token.group.as_deref() != key.upstream_group.as_deref() {
@@ -112,15 +118,22 @@ where
             return anomaly_outcome(
                 ProviderQuickImportSyncStatus::UpstreamGroupRemoved,
                 source.sync_config.anomaly_actions.group_removed,
+                Vec::new(),
+                Vec::new(),
             );
         }
         GroupRatioLookup::NonFixed(value) => return non_fixed_ratio_outcome(key.upstream_group.as_deref(), value),
     };
     match check_models(importer, source_config, key).await {
-        Ok(ModelCheck::Available(models)) => cost_outcome(source, globals, bindings, key, None, ratio, &models),
-        Ok(ModelCheck::Removed) => anomaly_outcome(
+        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(source, globals, bindings, key, None, ratio, &upstream_models),
+        Ok(ModelCheck::Removed {
+            missing_upstream_model_ids,
+            upstream_models,
+        }) => anomaly_outcome(
             ProviderQuickImportSyncStatus::UpstreamModelRemoved,
             source.sync_config.anomaly_actions.model_removed,
+            missing_upstream_model_ids,
+            models_snapshot(&upstream_models),
         ),
         Err(error) => anomaly_error(
             ProviderQuickImportSyncStatus::UpstreamKeyUnavailable,
@@ -143,23 +156,30 @@ where
             return anomaly_outcome(
                 ProviderQuickImportSyncStatus::UpstreamGroupRemoved,
                 context.source.sync_config.anomaly_actions.group_removed,
+                Vec::new(),
+                Vec::new(),
             );
         }
         GroupRatioLookup::NonFixed(value) => return non_fixed_ratio_outcome(token.group.as_deref(), value),
     };
     match check_models(context.importer, context.source_config, key).await {
-        Ok(ModelCheck::Available(models)) => cost_outcome(
+        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(
             context.source,
             context.globals,
             context.bindings,
             key,
             Some(token.group.clone()),
             ratio,
-            &models,
+            &upstream_models,
         ),
-        Ok(ModelCheck::Removed) => anomaly_outcome(
+        Ok(ModelCheck::Removed {
+            missing_upstream_model_ids,
+            upstream_models,
+        }) => anomaly_outcome(
             ProviderQuickImportSyncStatus::UpstreamModelRemoved,
             context.source.sync_config.anomaly_actions.model_removed,
+            missing_upstream_model_ids,
+            models_snapshot(&upstream_models),
         ),
         Err(error) => anomaly_error(
             ProviderQuickImportSyncStatus::UpstreamKeyUnavailable,
@@ -191,9 +211,16 @@ fn cost_outcome(
         Ok(costs) => costs,
         Err(error) => return cost_error(group_ratio, effective, upstream_group, error),
     };
-    let candidates = candidate_model_ids(globals, bindings, key, upstream_models);
+    let candidates = candidate_model_ids(globals, key, upstream_models);
     if source.sync_config.cost_sync_mode == ProviderQuickImportCostSyncMode::ReportOnly {
-        return report_only_outcome(group_ratio, effective, upstream_group, key.effective_cost_multiplier, candidates);
+        return report_only_outcome(
+            group_ratio,
+            effective,
+            upstream_group,
+            key.effective_cost_multiplier,
+            candidates,
+            models_snapshot(upstream_models),
+        );
     }
     let statuses = statuses_with_candidates(vec![ProviderQuickImportSyncStatus::Ok], &candidates);
     KeyOutcome {
@@ -204,6 +231,8 @@ fn cost_outcome(
         observed_group_ratio: Some(group_ratio),
         observed_effective_multiplier: Some(effective),
         candidate_model_ids: candidates,
+        missing_upstream_model_ids: Vec::new(),
+        upstream_models_snapshot: models_snapshot(upstream_models),
         upstream_group,
         group_ratio_patch: Some(group_ratio),
         effective_multiplier_patch: Some(effective),
@@ -217,6 +246,7 @@ fn report_only_outcome(
     upstream_group: Option<Option<String>>,
     current: rust_decimal::Decimal,
     candidates: Vec<String>,
+    upstream_models_snapshot: Vec<ProviderQuickImportUpstreamModelSnapshot>,
 ) -> KeyOutcome {
     let base_statuses = if effective == current {
         vec![ProviderQuickImportSyncStatus::Ok]
@@ -232,6 +262,8 @@ fn report_only_outcome(
         observed_group_ratio: Some(group_ratio),
         observed_effective_multiplier: Some(effective),
         candidate_model_ids: candidates,
+        missing_upstream_model_ids: Vec::new(),
+        upstream_models_snapshot,
         upstream_group,
         group_ratio_patch: None,
         effective_multiplier_patch: None,
@@ -260,14 +292,21 @@ fn non_fixed_ratio_outcome(group: Option<&str>, upstream_value: String) -> KeyOu
     outcome
 }
 
-fn anomaly_outcome(status: ProviderQuickImportSyncStatus, action: ProviderQuickImportUpstreamAnomalyAction) -> KeyOutcome {
+fn anomaly_outcome(
+    status: ProviderQuickImportSyncStatus,
+    action: ProviderQuickImportUpstreamAnomalyAction,
+    missing_upstream_model_ids: Vec<String>,
+    upstream_models_snapshot: Vec<ProviderQuickImportUpstreamModelSnapshot>,
+) -> KeyOutcome {
     let mut outcome = status_base(status);
     outcome.disable_key = action == ProviderQuickImportUpstreamAnomalyAction::DisableKey;
+    outcome.missing_upstream_model_ids = missing_upstream_model_ids;
+    outcome.upstream_models_snapshot = upstream_models_snapshot;
     outcome
 }
 
 fn anomaly_error(status: ProviderQuickImportSyncStatus, action: ProviderQuickImportUpstreamAnomalyAction, error: ProviderError) -> KeyOutcome {
-    let mut outcome = anomaly_outcome(status, action);
+    let mut outcome = anomaly_outcome(status, action, Vec::new(), Vec::new());
     outcome.error = Some(error.to_string());
     outcome
 }
@@ -281,11 +320,23 @@ fn status_base(status: ProviderQuickImportSyncStatus) -> KeyOutcome {
         observed_group_ratio: None,
         observed_effective_multiplier: None,
         candidate_model_ids: Vec::new(),
+        missing_upstream_model_ids: Vec::new(),
+        upstream_models_snapshot: Vec::new(),
         upstream_group: None,
         group_ratio_patch: None,
         effective_multiplier_patch: None,
         error: None,
     }
+}
+
+fn models_snapshot(upstream_models: &[UpstreamImportModel]) -> Vec<ProviderQuickImportUpstreamModelSnapshot> {
+    upstream_models
+        .iter()
+        .map(|model| ProviderQuickImportUpstreamModelSnapshot {
+            upstream_model_id: model.id.clone(),
+            supported_endpoint_types: model.supported_endpoint_types.clone(),
+        })
+        .collect()
 }
 
 fn token_by_id<'a>(snapshot: &'a UpstreamSyncSnapshot, id: &str) -> Option<&'a UpstreamSyncToken> {

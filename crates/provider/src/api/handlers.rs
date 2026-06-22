@@ -7,13 +7,14 @@ use types::provider::{
     ProviderQuickImportAppendCommitRequest, ProviderQuickImportAppendPreviewRequest, ProviderQuickImportBindCommitRequest,
     ProviderQuickImportBindCommitResponse, ProviderQuickImportBindPreviewRequest, ProviderQuickImportBindPreviewResponse,
     ProviderQuickImportModelAssociationsResponse, ProviderQuickImportModelAssociationsUpdate, ProviderQuickImportRelinkRequest,
-    ProviderQuickImportResolutionResponse,
+    ProviderQuickImportResolutionResponse, ProviderQuickImportSyncEventDetailResponse,
 };
 use types::{
     provider::{
         ActiveRequestRecordRequest, ActiveRequestRecordResponse, Provider, ProviderApiKey, ProviderApiKeyCreate, ProviderApiKeyPriorityBatchUpdate,
         ProviderApiKeyUpdate, ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCreate, ProviderEndpoint,
-        ProviderEndpointCreate, ProviderEndpointUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
+        ProviderEndpointCreate, ProviderEndpointUpdate, ProviderKeyModelMappingsForKeyResponse, ProviderKeyModelMappingsResponse,
+        ProviderKeyModelMappingsUpdate, ProviderListRequest, ProviderListResponse, ProviderModelBinding, ProviderModelBindingBatchUpdate,
         ProviderModelBindingCreate, ProviderModelBindingUpdate, ProviderModelCostBatchUpsert, ProviderModelCostListResponse, ProviderModelTestRequest,
         ProviderModelTestResponse, ProviderQuickImportCommitRequest, ProviderQuickImportCommitResponse, ProviderQuickImportPreviewRequest,
         ProviderQuickImportPreviewResponse, ProviderQuickImportSyncSettingsResponse, ProviderQuickImportSyncSettingsUpdate, ProviderUpdate,
@@ -98,6 +99,13 @@ pub async fn update_quick_import_sync_settings(
     Json(payload): Json<ProviderQuickImportSyncSettingsUpdate>,
 ) -> ApiResult<ApiJson<ProviderQuickImportSyncSettingsResponse>> {
     Ok(ok(state.providers.update_quick_import_sync_settings(&provider_id, payload).await?))
+}
+
+pub async fn quick_import_sync_event_detail(
+    State(state): State<ProviderApiState>,
+    Path(id): Path<String>,
+) -> ApiResult<ApiJson<ProviderQuickImportSyncEventDetailResponse>> {
+    Ok(ok(state.providers.quick_import_sync_event_detail(&id).await?))
 }
 
 pub async fn update_provider(
@@ -214,6 +222,28 @@ pub async fn update_quick_import_model_associations(
         .providers
         .update_quick_import_model_associations(&provider_id, &key_id, payload)
         .await?))
+}
+
+pub async fn key_model_mappings(
+    State(state): State<ProviderApiState>,
+    Path(provider_id): Path<String>,
+) -> ApiResult<ApiJson<ProviderKeyModelMappingsResponse>> {
+    Ok(ok(state.providers.key_model_mappings(&provider_id).await?))
+}
+
+pub async fn key_model_mappings_for_key(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, key_id)): Path<(String, String)>,
+) -> ApiResult<ApiJson<ProviderKeyModelMappingsForKeyResponse>> {
+    Ok(ok(state.providers.key_model_mappings_for_key(&provider_id, &key_id).await?))
+}
+
+pub async fn update_key_model_mappings(
+    State(state): State<ProviderApiState>,
+    Path((provider_id, key_id)): Path<(String, String)>,
+    Json(payload): Json<ProviderKeyModelMappingsUpdate>,
+) -> ApiResult<ApiJson<ProviderKeyModelMappingsForKeyResponse>> {
+    Ok(ok(state.providers.update_key_model_mappings(&provider_id, &key_id, payload).await?))
 }
 
 pub async fn batch_update_api_key_priorities(

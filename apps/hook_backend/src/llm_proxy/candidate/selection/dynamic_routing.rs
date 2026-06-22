@@ -130,13 +130,16 @@ async fn score_candidate(context: &ScoreCandidatesContext<'_, '_>, target: optio
         context.catalog,
         &route,
         fingerprints,
-        key.rpm_limit,
-        context.profile.min_samples,
-        context.requested_window,
+        ResolveMetricOptions {
+            rpm_limit: key.rpm_limit,
+            min_samples: context.profile.min_samples,
+            prior_sample_cap: context.profile.prior_sample_cap,
+            requested_window: context.requested_window,
+        },
     )
     .await?;
-    let context_samples = context.context_states.samples(context.context_key, &route, fingerprints);
-    let ema = context.route_states.record(&route, fingerprints);
+    let context_samples = context.context_states.samples(context.profile.id, context.context_key, &route, fingerprints);
+    let ema = context.route_states.record(context.profile.id, &route, fingerprints);
     Ok(RoutingScoreCandidate {
         provider_name: Some(part.provider.name.clone()),
         key_name: Some(key.name.clone()),
@@ -149,6 +152,7 @@ async fn score_candidate(context: &ScoreCandidatesContext<'_, '_>, target: optio
         metric_source: resolved.metric_source,
         prior_source: resolved.prior_source,
         prior_sample_count: resolved.prior_sample_count,
+        effective_sample_count: resolved.effective_sample_count,
         routing_context_key: Some(context.context_key.to_owned()),
         route_config_fingerprint: Some(route_config_fingerprint),
         price_config_fingerprint: Some(price_config_fingerprint),
@@ -165,17 +169,23 @@ async fn score_candidate(context: &ScoreCandidatesContext<'_, '_>, target: optio
     })
 }
 
+#[derive(Clone, Copy)]
+struct ResolveMetricOptions {
+    rpm_limit: Option<i32>,
+    min_samples: u64,
+    prior_sample_cap: u64,
+    requested_window: RoutingMetricWindow,
+}
+
 async fn resolve_metric(
     state: &LlmProxyState,
     catalog: &MetricCatalog,
     route: &RouteIdentity,
     fingerprints: RouteFingerprints<'_>,
-    rpm_limit: Option<i32>,
-    min_samples: u64,
-    requested_window: RoutingMetricWindow,
+    options: ResolveMetricOptions,
 ) -> Result<ResolvedMetric, LlmProxyError> {
-    let mut resolved = catalog.resolve(route, fingerprints, min_samples, requested_window);
-    if let Some(rate) = provider_key_rate_limit_snapshot(state, &route.key_id, rpm_limit).await? {
+    let mut resolved = catalog.resolve(route, fingerprints, options.min_samples, options.prior_sample_cap, options.requested_window);
+    if let Some(rate) = provider_key_rate_limit_snapshot(state, &route.key_id, options.rpm_limit).await? {
         resolved.snapshot.rpm_used = rate.used;
         resolved.snapshot.rpm_limit = Some(rate.limit);
     }
@@ -195,6 +205,8 @@ fn current_route_config_fingerprint(
         endpoint_id: &endpoint.id,
         global_model_id: &part.model.global_model_id,
         provider_model_id: &part.model.id,
+        effective_upstream_model_name: &part.effective_upstream_model_name,
+        effective_reasoning_effort: part.effective_reasoning_effort.as_deref(),
         client_api_format: &part.client_api_format,
         provider_api_format: &endpoint.api_format,
         is_stream: input.request.is_stream,

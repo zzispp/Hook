@@ -8,9 +8,9 @@ use crate::{
     protocol::canonical::{
         CanonicalContentBlock, CanonicalInstruction, CanonicalRequest, CanonicalRole, CanonicalThinkingConfig, CanonicalToolChoice, CanonicalToolDefinition,
         OPENAI_RESPONSES_EXTENSION_NAMESPACE, OPENAI_RESPONSES_LEGACY_EXTENSION_NAMESPACE, canonical_response_format_to_openai, canonicalize_tool_arguments,
-        media_data_or_url, namespace_extension_object, openai_content_text, openai_extensions, openai_response_format_to_canonical, openai_responses_extension,
-        openai_responses_generation_config, openai_responses_input_to_canonical_messages, openai_responses_tool_choice_to_canonical,
-        openai_responses_tools_to_canonical,
+        mark_openai_responses_request_source, media_data_or_url, namespace_extension_object, openai_content_text, openai_extensions,
+        openai_response_format_to_canonical, openai_responses_extension, openai_responses_generation_config, openai_responses_input_to_canonical_messages,
+        openai_responses_tool_choice_to_canonical, openai_responses_tools_to_canonical,
     },
 };
 
@@ -93,6 +93,7 @@ pub fn from_raw(body_json: &Value) -> Option<CanonicalRequest> {
             object.insert("verbosity".to_string(), verbosity);
         }
     }
+    mark_openai_responses_request_source(&mut canonical);
     Some(canonical)
 }
 

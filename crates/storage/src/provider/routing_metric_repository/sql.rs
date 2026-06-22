@@ -24,14 +24,16 @@ pub(super) fn metric_upsert_sql() -> &'static str {
      total_tokens = routing_metric_buckets.total_tokens + EXCLUDED.total_tokens, last_seen_at = EXCLUDED.last_seen_at, updated_at = EXCLUDED.updated_at"
 }
 
-pub(super) fn route_state_upsert_sql() -> &'static str {
-    "ON CONFLICT (provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
-     route_config_fingerprint, price_config_fingerprint) \
-     DO UPDATE SET ema_success_rate = (routing_route_states.ema_success_rate * 0.8 + EXCLUDED.ema_success_rate * 0.2), \
-     ema_latency_ms = COALESCE((routing_route_states.ema_latency_ms * 0.8 + EXCLUDED.ema_latency_ms * 0.2), routing_route_states.ema_latency_ms, EXCLUDED.ema_latency_ms), \
-     ema_ttfb_ms = COALESCE((routing_route_states.ema_ttfb_ms * 0.8 + EXCLUDED.ema_ttfb_ms * 0.2), routing_route_states.ema_ttfb_ms, EXCLUDED.ema_ttfb_ms), \
-     ema_output_tps = COALESCE((routing_route_states.ema_output_tps * 0.8 + EXCLUDED.ema_output_tps * 0.2), routing_route_states.ema_output_tps, EXCLUDED.ema_output_tps), \
-     sample_count = routing_route_states.sample_count + EXCLUDED.sample_count, state = EXCLUDED.state, last_updated_at = EXCLUDED.last_updated_at"
+pub(super) fn route_state_upsert_sql(current_weight_ref: &str, incoming_weight_ref: &str) -> String {
+    format!(
+        "ON CONFLICT (profile_id, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
+         route_config_fingerprint, price_config_fingerprint) \
+         DO UPDATE SET ema_success_rate = (routing_route_states.ema_success_rate * {current_weight_ref} + EXCLUDED.ema_success_rate * {incoming_weight_ref}), \
+         ema_latency_ms = COALESCE((routing_route_states.ema_latency_ms * {current_weight_ref} + EXCLUDED.ema_latency_ms * {incoming_weight_ref}), routing_route_states.ema_latency_ms, EXCLUDED.ema_latency_ms), \
+         ema_ttfb_ms = COALESCE((routing_route_states.ema_ttfb_ms * {current_weight_ref} + EXCLUDED.ema_ttfb_ms * {incoming_weight_ref}), routing_route_states.ema_ttfb_ms, EXCLUDED.ema_ttfb_ms), \
+         ema_output_tps = COALESCE((routing_route_states.ema_output_tps * {current_weight_ref} + EXCLUDED.ema_output_tps * {incoming_weight_ref}), routing_route_states.ema_output_tps, EXCLUDED.ema_output_tps), \
+         sample_count = routing_route_states.sample_count + EXCLUDED.sample_count, state = EXCLUDED.state, last_updated_at = EXCLUDED.last_updated_at"
+    )
 }
 
 pub(super) fn metric_select_sql() -> &'static str {
@@ -104,6 +106,7 @@ pub(super) fn route_state_values(
     now: time::OffsetDateTime,
 ) -> Vec<Value> {
     vec![
+        Value::from(delta.profile_id.clone()),
         Value::from(delta.route.provider_id.clone()),
         Value::from(delta.route.key_id.clone()),
         Value::from(delta.route.endpoint_id.clone()),
@@ -167,8 +170,9 @@ pub(super) fn metric_columns() -> [&'static str; 38] {
     ]
 }
 
-pub(super) fn route_state_columns() -> [&'static str; 17] {
+pub(super) fn route_state_columns() -> [&'static str; 18] {
     [
+        "profile_id",
         "provider_id",
         "key_id",
         "endpoint_id",
@@ -238,8 +242,10 @@ mod tests {
 
     #[test]
     fn route_state_upsert_conflict_includes_fingerprints() {
-        let sql = route_state_upsert_sql();
+        let sql = route_state_upsert_sql("$19", "$20");
 
+        assert!(sql.contains("profile_id, provider_id"));
         assert!(sql.contains("is_stream, route_config_fingerprint, price_config_fingerprint)"));
+        assert!(sql.contains("ema_success_rate * $19 + EXCLUDED.ema_success_rate * $20"));
     }
 }

@@ -19,9 +19,10 @@ pub struct ProxyCandidate {
     pub upstream_url: String,
     pub provider_model_name: String,
     pub reasoning_effort: Option<String>,
-    pub header_rules: Option<Value>,
-    pub body_rules: Option<Value>,
-    pub key_capabilities: Option<Value>,
+    pub header_rules: Option<serde_json::Value>,
+    pub body_rules: Option<serde_json::Value>,
+    pub format_acceptance_config: Option<serde_json::Value>,
+    pub key_supports_image_generation: bool,
     pub price_per_request: Option<Decimal>,
     pub tiered_pricing: TieredPricingConfig,
     pub billing_multiplier: Decimal,
@@ -57,6 +58,7 @@ pub struct CandidateEndpointOption {
     pub max_retries: Option<i32>,
     pub header_rules: Option<Value>,
     pub body_rules: Option<Value>,
+    pub format_acceptance_config: Option<Value>,
     pub needs_conversion: bool,
 }
 
@@ -66,7 +68,7 @@ pub struct CandidateKeyOption {
     pub name: String,
     pub key_preview: String,
     pub api_key: String,
-    pub capabilities: Option<Value>,
+    pub supports_image_generation: bool,
     pub cache_ttl_minutes: i32,
     pub rpm_limit: Option<i32>,
 }
@@ -94,6 +96,8 @@ pub struct CandidateTrace {
     pub needs_conversion: bool,
     pub is_stream: bool,
     pub is_cached: bool,
+    pub routing_profile_id: RoutingProfileId,
+    pub routing_profile_ema_alpha: f64,
     pub routing_context_key: String,
     pub route_config_fingerprint: String,
     pub price_config_fingerprint: String,
@@ -117,7 +121,6 @@ pub struct CandidateRequest<'a> {
     pub model_name: &'a str,
     pub is_stream: bool,
     pub has_openai_responses_custom_tool_items: bool,
-    pub required_capability: Option<&'a str>,
     pub features: RoutingRequestFeatures,
 }
 
@@ -171,7 +174,8 @@ impl ProxyCandidate {
         candidate.upstream_url = endpoint.upstream_url.clone();
         candidate.header_rules = endpoint.header_rules.clone();
         candidate.body_rules = endpoint.body_rules.clone();
-        candidate.key_capabilities = key.capabilities.clone();
+        candidate.format_acceptance_config = endpoint.format_acceptance_config.clone();
+        candidate.key_supports_image_generation = key.supports_image_generation;
         candidate.cache_ttl_minutes = key.cache_ttl_minutes;
         candidate.key_rpm_limit = key.rpm_limit;
         candidate

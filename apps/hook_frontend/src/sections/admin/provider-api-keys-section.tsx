@@ -26,7 +26,7 @@ export function ProviderApiKeysSection({
   dialogs,
   onAppendQuickImport,
   onResolveQuickImportKey,
-  onManageQuickImportModels,
+  onManageKeyModels,
   onAssociateGroups,
 }: {
   provider: Provider;
@@ -36,7 +36,7 @@ export function ProviderApiKeysSection({
   dialogs: ReturnType<typeof useProviderChildDialogs>;
   onAppendQuickImport: (provider: Provider) => void;
   onResolveQuickImportKey: (apiKey: ProviderApiKey) => void;
-  onManageQuickImportModels: (apiKey: ProviderApiKey) => void;
+  onManageKeyModels: (apiKey: ProviderApiKey) => void;
   onAssociateGroups: (apiKey: ProviderApiKey) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -56,7 +56,7 @@ export function ProviderApiKeysSection({
             groupNames={groupNamesByKey.get(apiKey.id) ?? []}
             dialogs={dialogs}
             onResolveQuickImportKey={onResolveQuickImportKey}
-            onManageQuickImportModels={onManageQuickImportModels}
+            onManageKeyModels={onManageKeyModels}
             onAssociateGroups={onAssociateGroups}
           />
         ))}

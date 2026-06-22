@@ -7,8 +7,6 @@ pub struct Model {
     pub id: String,
     pub provider_id: String,
     pub global_model_id: String,
-    pub provider_model_name: String,
-    pub provider_model_mappings: Option<String>,
     pub is_active: bool,
     pub config: Option<String>,
     pub created_at: TimeDateTimeWithTimeZone,

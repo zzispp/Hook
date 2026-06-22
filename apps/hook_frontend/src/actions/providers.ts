@@ -30,6 +30,7 @@ import type {
   ProviderCooldownListResponse,
   ProviderModelCostListResponse,
   ProviderUpstreamModelsResponse,
+  ProviderKeyModelMappingsResponse,
   ProviderApiKeyPriorityBatchUpdate,
 } from 'src/types/provider';
 
@@ -139,6 +140,25 @@ export function useProviderKeysByProvider(providers: Pick<Provider, 'id'>[]) {
 
 export function useProviderModels(providerId?: string | null) {
   return useProviderChildResource<ProviderModelBinding>(providerId, endpoints.adminProviders.models);
+}
+
+export function useProviderKeyModelMappings(providerId?: string | null) {
+  const key = providerId ? endpoints.adminProviders.keyModelMappings(providerId) : null;
+  const { data, isLoading, error, isValidating, mutate: revalidate } = useSWR<
+    ApiEnvelope<ProviderKeyModelMappingsResponse>
+  >(key, fetcher, swrOptions);
+
+  return useMemo(() => {
+    const pageData = data ? requireApiData(data) : undefined;
+    return {
+      data: pageData,
+      items: pageData?.keys ?? [],
+      isLoading: providerId ? isLoading : false,
+      error,
+      isValidating: providerId ? isValidating : false,
+      refresh: revalidate,
+    };
+  }, [data, error, isLoading, isValidating, providerId, revalidate]);
 }
 
 export function useProviderModelCosts(providerId?: string | null) {

@@ -10,12 +10,12 @@ use storage::{
         ProviderQuickImportEndpointRecordInput, ProviderQuickImportKeyModelRecordInput, ProviderQuickImportModelCostRecordInput,
         ProviderQuickImportModelRecordInput, ProviderQuickImportRecordInput, ProviderQuickImportSourceRecordInput, ProviderRecordInput, ProviderStore,
         record::{
-            provider_api_keys, provider_endpoints, provider_model_costs, provider_quick_import_key_models, provider_quick_import_keys,
+            provider_api_keys, provider_endpoints, provider_key_model_mappings, provider_model_costs, provider_quick_import_keys,
             provider_quick_import_sources, providers,
         },
     },
 };
-use types::provider::{ProviderModelCostMode, ProviderModelMapping, ProviderOrigin, ProviderQuickImportSyncConfig};
+use types::provider::{ProviderModelCostMode, ProviderOrigin, ProviderQuickImportSyncConfig};
 
 #[tokio::test]
 async fn create_quick_import_commits_complete_resource_set() {
@@ -177,11 +177,6 @@ fn endpoint_input() -> ProviderQuickImportEndpointRecordInput {
 fn model_input() -> ProviderQuickImportModelRecordInput {
     ProviderQuickImportModelRecordInput {
         global_model_id: "global-model-a".into(),
-        provider_model_name: "gpt-5".into(),
-        provider_model_mapping: Some(ProviderModelMapping {
-            name: "upstream-gpt-5".into(),
-            reasoning_effort: None,
-        }),
         is_active: true,
         config: None,
     }
@@ -196,13 +191,13 @@ fn key_input() -> ProviderQuickImportApiKeyRecordInput {
         upstream_group_ratio: Decimal::new(2, 0),
         effective_cost_multiplier: Decimal::new(2, 1),
         model_mappings: vec![ProviderQuickImportKeyModelRecordInput {
-            upstream_model_id: "upstream-gpt-5".into(),
+            upstream_model_name: "upstream-gpt-5".into(),
             global_model_id: "global-model-a".into(),
+            reasoning_effort: None,
         }],
         name: "codex".into(),
         api_formats: vec!["openai".into()],
         allowed_model_ids: vec!["global-model-a".into()],
-        capabilities: None,
         encrypted_api_key: "encrypted".into(),
         note: Some("Imported from newapi group: plus".into()),
         internal_priority: 10,
@@ -267,11 +262,7 @@ fn assert_core_inserted_tables(statements: &[String]) {
 }
 
 fn assert_sync_metadata_inserted_tables(statements: &[String]) {
-    for table in [
-        "provider_quick_import_sources",
-        "provider_quick_import_keys",
-        "provider_quick_import_key_models",
-    ] {
+    for table in ["provider_quick_import_sources", "provider_quick_import_keys", "provider_key_model_mappings"] {
         assert!(statements.iter().any(|sql| sql.contains(&format!("INSERT INTO \"{table}\""))), "{statements:?}");
     }
 }
@@ -281,7 +272,7 @@ fn assert_bind_rebuilt_tables(statements: Vec<String>) {
     assert_eq!(statements.iter().filter(|sql| sql.contains("COMMIT")).count(), 1);
     assert_eq!(statements.iter().filter(|sql| sql.contains("ROLLBACK")).count(), 0);
     for table in [
-        "provider_quick_import_key_models",
+        "provider_key_model_mappings",
         "provider_quick_import_keys",
         "provider_quick_import_sources",
         "provider_model_costs",
@@ -358,8 +349,6 @@ fn model_record() -> provider_models::Model {
         id: "provider-model-a".into(),
         provider_id: "provider-a".into(),
         global_model_id: "global-model-a".into(),
-        provider_model_name: "gpt-5".into(),
-        provider_model_mappings: Some(r#"{"name":"upstream-gpt-5","reasoning_effort":null}"#.into()),
         is_active: true,
         config: None,
         created_at: now(),
@@ -374,7 +363,6 @@ fn key_record() -> provider_api_keys::Model {
         name: "codex".into(),
         api_formats: r#"["openai"]"#.into(),
         allowed_model_ids: r#"["global-model-a"]"#.into(),
-        capabilities: None,
         encrypted_api_key: "encrypted".into(),
         note: Some("Imported from newapi group: plus".into()),
         internal_priority: 10,
@@ -482,14 +470,14 @@ fn sync_key_record() -> provider_quick_import_keys::Model {
     }
 }
 
-fn sync_key_model_record() -> provider_quick_import_key_models::Model {
-    provider_quick_import_key_models::Model {
-        id: "sync-key-model-a".into(),
+fn sync_key_model_record() -> provider_key_model_mappings::Model {
+    provider_key_model_mappings::Model {
+        id: "key-model-mapping-a".into(),
         provider_id: "provider-a".into(),
-        source_id: "source-a".into(),
         key_id: "key-a".into(),
-        upstream_model_id: "upstream-gpt-5".into(),
-        global_model_id: "global-model-a".into(),
+        provider_model_id: "provider-model-a".into(),
+        upstream_model_name: "upstream-gpt-5".into(),
+        reasoning_effort: None,
         created_at: now(),
         updated_at: now(),
     }

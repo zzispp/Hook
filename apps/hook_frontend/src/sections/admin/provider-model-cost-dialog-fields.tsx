@@ -26,6 +26,7 @@ import {
   bindingLabel,
   type TokenCostDraft,
   tokenDraftFromGlobal,
+  bindingSecondaryLabel,
 } from './provider-model-cost-utils';
 
 export type ModelCostDrafts = Record<string, TokenCostDraft>;
@@ -128,7 +129,7 @@ function ModelSelect({
       renderOption={(params, option, state) => (
         <MenuItem {...params} key={option.id} value={option.id}>
           <Checkbox readOnly checked={state.selected} size="small" tabIndex={-1} sx={optionCheckboxSx} />
-          <ListItemText primary={bindingLabel(option, models)} secondary={option.provider_model_name} />
+          <ListItemText primary={bindingLabel(option, models)} secondary={option.global_model_id} />
         </MenuItem>
       )}
       renderInput={(params) => <TextField {...params} label={t('providers.model')} />}
@@ -248,6 +249,7 @@ function TokenPriceEditor({
             binding={binding}
             draft={drafts[binding.id] ?? tokenDraftFromGlobal(binding, models, 1)}
             label={bindingLabel(binding, models)}
+            models={models}
             onChange={(patch) => onDraftChange(binding.id, patch)}
           />
         ))}
@@ -256,11 +258,11 @@ function TokenPriceEditor({
   );
 }
 
-function TokenDraftRow({ binding, draft, label, onChange }: { binding: ProviderModelBinding; draft: TokenCostDraft; label: string; onChange: (patch: Partial<TokenCostDraft>) => void }) {
+function TokenDraftRow({ binding, draft, label, models, onChange }: { binding: ProviderModelBinding; draft: TokenCostDraft; label: string; models: GlobalModelResponse[]; onChange: (patch: Partial<TokenCostDraft>) => void }) {
   const { t } = useTranslate('admin');
   return (
     <Box sx={rowSx}>
-      <TypographyLine label={label} value={binding.provider_model_name} />
+      <TypographyLine label={label} value={bindingSecondaryLabel(binding, models)} />
       <Box sx={priceGridSx}>
         <PriceField label={t('requestRecords.inputPrice')} value={draft.input_price_per_million} onChange={(value) => onChange({ input_price_per_million: value })} />
         <PriceField label={t('requestRecords.outputPrice')} value={draft.output_price_per_million} onChange={(value) => onChange({ output_price_per_million: value })} />

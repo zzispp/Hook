@@ -174,10 +174,10 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         provider_models_unique_index(),
+        provider_key_model_mappings_unique_index(),
         provider_model_costs_unique_index(),
         quick_import_sources_provider_unique_index(),
         quick_import_keys_key_unique_index(),
-        quick_import_key_models_unique_index(),
         index(
             "index_provider_model_costs_by_provider",
             ProviderModelCosts::Table,
@@ -192,9 +192,15 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
             false,
         ),
         index(
-            "index_provider_quick_import_key_models_by_key",
-            ProviderQuickImportKeyModels::Table,
-            ProviderQuickImportKeyModels::KeyId,
+            "index_provider_key_model_mappings_by_key",
+            ProviderKeyModelMappings::Table,
+            ProviderKeyModelMappings::KeyId,
+            false,
+        ),
+        index(
+            "index_provider_key_model_mappings_by_provider_model",
+            ProviderKeyModelMappings::Table,
+            ProviderKeyModelMappings::ProviderModelId,
             false,
         ),
         index(
@@ -406,10 +412,10 @@ pub(super) fn baseline_indices() -> Vec<IndexCreateStatement> {
         translation_entry_unique_index(),
         index("index_announcements_by_enabled", Announcements::Table, Announcements::Enabled, false),
         compound_index(
-            "index_announcements_by_pinned_priority",
+            "index_announcements_by_pinned_created",
             Announcements::Table,
             Announcements::Pinned,
-            Announcements::Priority,
+            Announcements::CreatedAt,
         ),
         index("index_support_tickets_by_user", SupportTickets::Table, SupportTickets::UserId, false),
         compound_index(
@@ -496,6 +502,17 @@ fn provider_model_costs_unique_index() -> IndexCreateStatement {
         .to_owned()
 }
 
+fn provider_key_model_mappings_unique_index() -> IndexCreateStatement {
+    Index::create()
+        .name("index_provider_key_model_mappings_unique")
+        .table(ProviderKeyModelMappings::Table)
+        .col(ProviderKeyModelMappings::KeyId)
+        .col(ProviderKeyModelMappings::ProviderModelId)
+        .unique()
+        .if_not_exists()
+        .to_owned()
+}
+
 fn quick_import_sources_provider_unique_index() -> IndexCreateStatement {
     Index::create()
         .name("index_provider_quick_import_sources_provider_unique")
@@ -511,17 +528,6 @@ fn quick_import_keys_key_unique_index() -> IndexCreateStatement {
         .name("index_provider_quick_import_keys_key_unique")
         .table(ProviderQuickImportKeys::Table)
         .col(ProviderQuickImportKeys::KeyId)
-        .unique()
-        .if_not_exists()
-        .to_owned()
-}
-
-fn quick_import_key_models_unique_index() -> IndexCreateStatement {
-    Index::create()
-        .name("index_provider_quick_import_key_models_unique")
-        .table(ProviderQuickImportKeyModels::Table)
-        .col(ProviderQuickImportKeyModels::KeyId)
-        .col(ProviderQuickImportKeyModels::UpstreamModelId)
         .unique()
         .if_not_exists()
         .to_owned()

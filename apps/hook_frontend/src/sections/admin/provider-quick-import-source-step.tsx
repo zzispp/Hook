@@ -291,6 +291,11 @@ function ProviderRequestConfigFields({
           helperText={t('providers.defaultWhenBlank')}
           onChange={(value) => setForm((current) => ({ ...current, stream_idle_timeout_seconds: value }))}
         />
+        <SwitchRow
+          checked={form.upstream_image_native_stream}
+          label={t('providers.upstreamImageNativeStream')}
+          onChange={(checked) => setForm((current) => ({ ...current, upstream_image_native_stream: checked }))}
+        />
       </Stack>
     </Stack>
   );

@@ -4,7 +4,7 @@ use storage::{
     model::provider_models,
     provider::{
         ProviderModelRecordBatchUpdate, ProviderModelRecordInput, ProviderStore,
-        record::{provider_api_keys, provider_quick_import_key_models},
+        record::{provider_api_keys, provider_key_model_mappings},
     },
 };
 
@@ -12,7 +12,7 @@ use storage::{
 async fn batch_update_model_bindings_commits_deletes_and_creates_in_one_transaction() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[deleted_model_record()]])
-        .append_query_results([Vec::<provider_quick_import_key_models::Model>::new()])
+        .append_query_results([Vec::<provider_key_model_mappings::Model>::new()])
         .append_query_results([Vec::<provider_api_keys::Model>::new()])
         .append_query_results([Vec::<provider_models::Model>::new()])
         .append_exec_results([exec_result(), exec_result(), exec_result(), exec_result()])
@@ -27,7 +27,7 @@ async fn batch_update_model_bindings_commits_deletes_and_creates_in_one_transact
     assert_eq!(statements.iter().filter(|sql| sql.contains("COMMIT")).count(), 1);
     assert!(statements.iter().any(|sql| sql.contains("DELETE FROM \"provider_models\"")));
     assert!(statements.iter().any(|sql| sql.contains("DELETE FROM \"provider_model_costs\"")));
-    assert!(statements.iter().any(|sql| sql.contains("DELETE FROM \"provider_quick_import_key_models\"")));
+    assert!(statements.iter().any(|sql| sql.contains("DELETE FROM \"provider_key_model_mappings\"")));
     assert!(statements.iter().any(|sql| sql.contains("INSERT INTO \"provider_models\"")));
 }
 
@@ -35,7 +35,7 @@ async fn batch_update_model_bindings_commits_deletes_and_creates_in_one_transact
 async fn batch_update_model_bindings_rolls_back_when_create_fails() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[deleted_model_record()]])
-        .append_query_results([Vec::<provider_quick_import_key_models::Model>::new()])
+        .append_query_results([Vec::<provider_key_model_mappings::Model>::new()])
         .append_query_results([Vec::<provider_api_keys::Model>::new()])
         .append_exec_results([exec_result(), exec_result(), exec_result()])
         .append_exec_errors([DbErr::Custom("insert failed".into())])
@@ -57,8 +57,6 @@ fn batch_update() -> ProviderModelRecordBatchUpdate {
         create: vec![ProviderModelRecordInput {
             provider_id: "provider-a".into(),
             global_model_id: "model-b".into(),
-            provider_model_name: "upstream-model-b".into(),
-            provider_model_mapping: None,
             is_active: true,
             config: None,
         }],
@@ -78,8 +76,6 @@ fn deleted_model_record() -> provider_models::Model {
         id: "binding-a".into(),
         provider_id: "provider-a".into(),
         global_model_id: "model-a".into(),
-        provider_model_name: "upstream-model-a".into(),
-        provider_model_mappings: None,
         is_active: true,
         config: None,
         created_at: now(),

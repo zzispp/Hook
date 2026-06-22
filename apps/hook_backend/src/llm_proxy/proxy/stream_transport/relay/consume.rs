@@ -5,6 +5,7 @@ use super::StreamRelay;
 use crate::llm_proxy::{
     LlmProxyError,
     audit::TokenUsage,
+    codex_chat_history::CodexChatHistoryStore,
     proxy::{
         response_model::rewrite_response_model_value,
         stream_transport::{
@@ -24,6 +25,9 @@ impl StreamRelay {
         if let Err(error) = self.usage_estimator.consume(&bytes) {
             return self.handle_scanner_error(error).await;
         }
+        if let Err(error) = self.detect_client_output_start(&bytes) {
+            return self.handle_scanner_error(error).await;
+        }
         self.merge_usage(parsed.usage);
         if !self.needs_conversion && !self.rewrite_model {
             self.pending.push_back(bytes);
@@ -37,7 +41,7 @@ impl StreamRelay {
             Ok(line) => line,
             Err(error) => return self.handle_conversion_error(error, fail_before_output).await,
         } {
-            if let Err(error) = self.consume_converted_line(&line) {
+            if let Err(error) = self.consume_converted_line(&line).await {
                 return self.handle_conversion_error(error, fail_before_output).await;
             }
         }
@@ -47,7 +51,18 @@ impl StreamRelay {
         Ok(())
     }
 
-    pub(super) fn consume_converted_line(&mut self, line: &str) -> Result<(), LlmProxyError> {
+    fn detect_client_output_start(&mut self, bytes: &[u8]) -> Result<(), LlmProxyError> {
+        if self.client_output_started {
+            return Ok(());
+        }
+        self.client_output_started = self
+            .output_start_detector
+            .consume(bytes)
+            .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+        Ok(())
+    }
+
+    pub(super) async fn consume_converted_line(&mut self, line: &str) -> Result<(), LlmProxyError> {
         let Some(payload) = line.trim_end_matches(['\r', '\n']).strip_prefix("data:") else {
             return Ok(());
         };
@@ -64,10 +79,11 @@ impl StreamRelay {
         self.merge_usage(usage::from_stream_chunk(&chunk, self.target_format));
         if !self.needs_conversion {
             rewrite_response_model_value(&mut chunk, &self.context.candidate.requested_model_name);
+            record_client_event_for_history(self.context.state.codex_chat_history().clone(), self.source_format, &chunk).await?;
             self.pending.push_back(render_stream_event(&chunk, self.source_format));
             return Ok(());
         }
-        self.push_converted_chunk(&chunk)
+        self.push_converted_chunk(&chunk).await
     }
 
     pub(super) fn merge_usage(&mut self, incoming: Option<TokenUsage>) {
@@ -118,7 +134,7 @@ impl StreamRelay {
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))
     }
 
-    fn push_converted_chunk(&mut self, chunk: &Value) -> Result<(), LlmProxyError> {
+    async fn push_converted_chunk(&mut self, chunk: &Value) -> Result<(), LlmProxyError> {
         let converted = FormatConversionRegistry
             .convert_stream_chunk(StreamChunkConversion {
                 chunk,
@@ -129,8 +145,17 @@ impl StreamRelay {
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
         for mut event in converted {
             rewrite_response_model_value(&mut event, &self.context.candidate.requested_model_name);
+            record_client_event_for_history(self.context.state.codex_chat_history().clone(), self.source_format, &event).await?;
             self.pending.push_back(render_stream_event(&event, self.source_format));
         }
         Ok(())
     }
+}
+
+pub(super) async fn record_client_event_for_history(history: CodexChatHistoryStore, source_format: ApiFormat, event: &Value) -> Result<(), LlmProxyError> {
+    if !matches!(source_format, ApiFormat::OpenAiResponses | ApiFormat::OpenAiResponsesCompact) {
+        return Ok(());
+    }
+    history.record_stream_event(event).await?;
+    Ok(())
 }

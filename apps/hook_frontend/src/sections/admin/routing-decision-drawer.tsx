@@ -183,6 +183,26 @@ function FormulaBlock({ profile, t }: { profile: RoutingProfile | null; t: Admin
         weights={profile.learning?.admin_weights || profile.weights}
         t={t}
       />
+      <Typography variant="caption" color="text.secondary">
+        {t('routing.drawer.tuningParams', {
+          min_samples: profile.min_samples,
+          exploration_k: profile.exploration_k,
+          prior_sample_cap: profile.prior_sample_cap,
+          conversion_penalty: profile.conversion_penalty,
+          stale_metric_penalty: profile.stale_metric_penalty,
+          affinity_bonus: profile.affinity_bonus,
+          contextual_exploration_enabled: profile.contextual_exploration_enabled
+            ? t('routing.profile.booleanValues.enabled')
+            : t('routing.profile.booleanValues.disabled'),
+          ema_alpha: profile.ema_alpha,
+          ema_max_freshness_seconds: profile.ema_max_freshness_seconds,
+          ema_recent_weight: profile.ema_recent_weight,
+          ema_recent_cap: profile.ema_recent_cap,
+          exploration_weight: profile.exploration_weight,
+          exploration_cap: profile.exploration_cap,
+          exploration_min_success_score: profile.exploration_min_success_score,
+        })}
+      </Typography>
       {profile.learning?.learned_weights ? (
         <WeightLine
           label={t('routing.summary.learnedWeights')}

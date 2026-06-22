@@ -31,7 +31,7 @@ pub async fn batch_update_model_bindings(
 pub async fn model_bindings_for_provider(store: &ProviderStore, provider_id: &str) -> StorageResult<Vec<types::provider::ProviderModelBinding>> {
     let records = provider_models::Entity::find()
         .filter(provider_models::Column::ProviderId.eq(provider_id))
-        .order_by_asc(provider_models::Column::ProviderModelName)
+        .order_by_asc(provider_models::Column::GlobalModelId)
         .all(store.connection())
         .await?;
     records.into_iter().map(provider_model_response).collect()
@@ -114,8 +114,6 @@ fn model_binding_active_model(
         id: Set(store.next_id()),
         provider_id: Set(input.provider_id),
         global_model_id: Set(input.global_model_id),
-        provider_model_name: Set(input.provider_model_name),
-        provider_model_mappings: Set(json::encode_optional(&input.provider_model_mapping)?),
         is_active: Set(input.is_active),
         config: Set(json::encode_optional(&input.config)?),
         created_at: Set(now),

@@ -81,6 +81,13 @@ export type RoutingProfile = {
   affinity_bonus: number;
   prior_sample_cap: number;
   contextual_exploration_enabled: boolean;
+  ema_alpha: number;
+  ema_max_freshness_seconds: number;
+  ema_recent_weight: number;
+  ema_recent_cap: number;
+  exploration_weight: number;
+  exploration_cap: number;
+  exploration_min_success_score: number;
   auto_tune_enabled: boolean;
   learning?: RoutingProfileLearningState | null;
 };
@@ -98,6 +105,13 @@ export type RoutingProfileUpsert = {
   affinity_bonus?: number;
   prior_sample_cap?: number;
   contextual_exploration_enabled?: boolean;
+  ema_alpha?: number;
+  ema_max_freshness_seconds?: number;
+  ema_recent_weight?: number;
+  ema_recent_cap?: number;
+  exploration_weight?: number;
+  exploration_cap?: number;
+  exploration_min_success_score?: number;
   auto_tune_enabled?: boolean;
 };
 
@@ -157,7 +171,7 @@ export type RouteScoreExplanation = {
 };
 
 export type RoutingRankingsQuery = {
-  api_token_id: string;
+  group_code: string;
   model: string;
   api_format: string;
   is_stream: boolean;

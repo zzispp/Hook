@@ -8,7 +8,7 @@ use types::model::PatchField;
 
 use super::{LlmProxyError, LlmProxyState};
 use crate::llm_proxy::{
-    audit::{AttemptRecordInput, record_attempt},
+    audit::{AttemptRecordInput, record_attempt, record_candidate_attempt},
     candidate::ProxyCandidate,
 };
 
@@ -112,6 +112,15 @@ pub(super) struct StartedAttemptInput<'a> {
     pub(super) provider_body: &'a serde_json::Value,
 }
 
+pub(super) struct SkippedAttemptInput<'a> {
+    pub(super) state: &'a LlmProxyState,
+    pub(super) request_id: &'a str,
+    pub(super) candidate: &'a ProxyCandidate,
+    pub(super) retry_index: i32,
+    pub(super) skip_reason: &'static str,
+    pub(super) error: &'a LlmProxyError,
+}
+
 pub(super) async fn record_attempt_error(
     state: &LlmProxyState,
     request_id: &str,
@@ -123,6 +132,25 @@ pub(super) async fn record_attempt_error(
     record_failed_attempt(state, request_id, candidate, retry_index, "request_conversion_error", &error).await?;
     *last_error = Some(error);
     Ok(None)
+}
+
+pub(super) async fn record_skipped_attempt(input: SkippedAttemptInput<'_>) -> Result<(), LlmProxyError> {
+    let error_message = input.error.to_string();
+    record_attempt(input.state, input.request_id, skipped_attempt_record(&input, &error_message)).await
+}
+
+pub(super) async fn record_candidate_skipped_attempt(input: SkippedAttemptInput<'_>) -> Result<(), LlmProxyError> {
+    let error_message = input.error.to_string();
+    record_candidate_attempt(input.state, input.request_id, skipped_attempt_record(&input, &error_message)).await
+}
+
+fn skipped_attempt_record<'a>(input: &SkippedAttemptInput<'a>, error_message: &'a str) -> AttemptRecordInput<'a> {
+    AttemptRecordInput {
+        skip_reason: Some(input.skip_reason),
+        error_type: Some(input.skip_reason),
+        error_message: Some(error_message),
+        ..AttemptRecordInput::new(input.candidate, input.retry_index, "skipped", true)
+    }
 }
 
 pub(super) async fn record_rate_limit_rejection(

@@ -1,6 +1,7 @@
 pub mod development;
 
 mod announcement_menu_deep_match_additive;
+mod announcement_priority_removal_additive;
 mod auth_layout_site_name_i18n_additive;
 mod baseline;
 mod dashboard_period_i18n_additive;
@@ -10,8 +11,10 @@ mod defaults;
 mod development_additive;
 mod global_model_user_usage_counts_additive;
 mod provider_group_removal_destructive;
-mod provider_key_capabilities_additive;
+mod provider_image_stream_mode_additive;
+mod provider_key_capabilities_destructive;
 mod provider_key_group_member_priority_additive;
+mod provider_key_model_mappings_additive;
 mod provider_origin_additive;
 mod provider_quick_import_source_credentials_additive;
 mod provider_quick_import_sync_additive;
@@ -23,6 +26,7 @@ mod request_record_partitioning_additive;
 mod request_record_payload_compression_additive;
 mod routing_metrics_additive;
 mod routing_profile_overrides_additive;
+mod routing_profile_state_partition_additive;
 mod scheduled_task_next_run_additive;
 mod scheduler_global_claim_additive;
 mod scheduler_lease_additive;

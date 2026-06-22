@@ -6,7 +6,9 @@ use types::provider::{
     ProviderQuickImportModelMappingInput, ProviderQuickImportSyncStatus,
 };
 
-use crate::application::{ProviderError, ProviderQuickImportSyncKey, ProviderResult, UpstreamImportModel, UpstreamImportToken};
+use crate::application::{
+    ProviderError, ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, ProviderResult, UpstreamImportModel, UpstreamImportToken,
+};
 
 use super::{quick_import_costs::has_default_cost, quick_import_resolution_context::KeyContext, quick_import_shared::globals_by_name};
 
@@ -83,10 +85,12 @@ pub(super) fn resolve_mappings(
     Ok(output)
 }
 
-pub(super) fn existing_mappings(key: &ProviderQuickImportSyncKey) -> BTreeMap<String, String> {
+pub(super) fn current_mappings(key: &ProviderQuickImportSyncKey, allowed_model_ids: &[String]) -> BTreeMap<String, String> {
+    let allowed = allowed_model_ids.iter().map(String::as_str).collect::<BTreeSet<_>>();
     key.model_mappings
         .iter()
-        .map(|mapping| (mapping.upstream_model_id.clone(), mapping.global_model_id.clone()))
+        .filter(|mapping| allowed.is_empty() || allowed.contains(mapping.global_model_id.as_str()))
+        .map(|mapping| (mapping.upstream_model_name.clone(), mapping.global_model_id.clone()))
         .collect()
 }
 
@@ -110,14 +114,7 @@ pub(super) fn validate_associated_models(token: &UpstreamImportToken, mappings: 
     Ok(())
 }
 
-pub(super) fn validate_existing_mappings(bindings: &[ProviderModelBinding], mappings: &BTreeMap<String, String>) -> ProviderResult<()> {
-    for (upstream_id, global_id) in mappings {
-        if mapping_conflicts(bindings, global_id, upstream_id) {
-            return Err(ProviderError::InvalidInput(format!(
-                "provider model mapping conflict for global model: {global_id}"
-            )));
-        }
-    }
+pub(super) fn validate_existing_mappings(_bindings: &[ProviderModelBinding], _mappings: &BTreeMap<String, String>) -> ProviderResult<()> {
     Ok(())
 }
 
@@ -136,15 +133,12 @@ pub(super) fn has_hard_quick_import_status(statuses: &[ProviderQuickImportSyncSt
     })
 }
 
-fn association(
-    mapping: &crate::application::ProviderQuickImportSyncKeyModel,
-    by_id: &BTreeMap<&str, &GlobalModelResponse>,
-) -> ProviderResult<ProviderQuickImportModelAssociation> {
+fn association(mapping: &ProviderQuickImportSyncKeyModel, by_id: &BTreeMap<&str, &GlobalModelResponse>) -> ProviderResult<ProviderQuickImportModelAssociation> {
     let global = by_id
         .get(mapping.global_model_id.as_str())
         .ok_or_else(|| ProviderError::InvalidInput(format!("global model is missing: {}", mapping.global_model_id)))?;
     Ok(ProviderQuickImportModelAssociation {
-        upstream_model_id: mapping.upstream_model_id.clone(),
+        upstream_model_id: mapping.upstream_model_name.clone(),
         global_model_id: global.id.clone(),
         global_model_name: global.name.clone(),
         global_model_display_name: global.display_name.clone(),
@@ -157,22 +151,19 @@ fn candidates(
     upstream_models: &[UpstreamImportModel],
     bindings: &[ProviderModelBinding],
 ) -> Vec<ProviderQuickImportModelAssociationCandidate> {
+    let _ = bindings;
     let by_name = globals_by_name(globals);
-    let associated = key.model_mappings.iter().map(|item| item.upstream_model_id.as_str()).collect::<BTreeSet<_>>();
+    let associated = key.model_mappings.iter().map(|item| item.upstream_model_name.as_str()).collect::<BTreeSet<_>>();
     upstream_models
         .iter()
         .filter(|model| !associated.contains(model.id.as_str()))
-        .filter_map(|model| candidate(model, &by_name, bindings))
+        .filter_map(|model| candidate(model, &by_name))
         .collect()
 }
 
-fn candidate(
-    model: &UpstreamImportModel,
-    by_name: &BTreeMap<String, &GlobalModelResponse>,
-    bindings: &[ProviderModelBinding],
-) -> Option<ProviderQuickImportModelAssociationCandidate> {
+fn candidate(model: &UpstreamImportModel, by_name: &BTreeMap<String, &GlobalModelResponse>) -> Option<ProviderQuickImportModelAssociationCandidate> {
     let global = by_name.get(&model.id)?;
-    if !has_default_cost(global) || mapping_conflicts(bindings, &global.id, &model.id) {
+    if !has_default_cost(global) {
         return None;
     }
     Some(ProviderQuickImportModelAssociationCandidate {
@@ -199,20 +190,6 @@ fn validate_available_model(available: &BTreeSet<String>, upstream_id: &str) -> 
     )))
 }
 
-fn mapping_conflicts(bindings: &[ProviderModelBinding], global_id: &str, upstream_id: &str) -> bool {
-    bindings
-        .iter()
-        .find(|binding| binding.global_model_id == global_id)
-        .is_some_and(|binding| upstream_model_name(binding) != upstream_id)
-}
-
-fn upstream_model_name(binding: &ProviderModelBinding) -> &str {
-    binding
-        .provider_model_mapping
-        .as_ref()
-        .map_or(binding.provider_model_name.as_str(), |mapping| mapping.name.as_str())
-}
-
 fn assert_no_mapping_conflicts(mappings: &BTreeMap<String, String>) -> ProviderResult<()> {
     let mut seen = BTreeMap::<&str, &str>::new();
     for (upstream_id, global_id) in mappings {
@@ -225,4 +202,87 @@ fn assert_no_mapping_conflicts(mappings: &BTreeMap<String, String>) -> ProviderR
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+    use types::provider::ProviderQuickImportSyncStatus;
+
+    use crate::application::{ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, UpstreamImportModel, UpstreamImportToken};
+
+    use super::{current_mappings, validate_associated_models};
+
+    #[test]
+    fn current_mappings_respect_non_empty_key_allowed_models() {
+        let key = key_with_mappings(vec![("gpt-5.4", "global-gpt-54"), ("gpt-5.4-mini", "global-gpt-54-mini")]);
+        let mappings = current_mappings(&key, &["global-gpt-54".to_owned()]);
+
+        assert_eq!(mappings, std::collections::BTreeMap::from([("gpt-5.4".to_owned(), "global-gpt-54".to_owned())]));
+    }
+
+    #[test]
+    fn current_mappings_keep_existing_associations_when_key_allowed_models_are_unrestricted() {
+        let key = key_with_mappings(vec![("gpt-5.4", "global-gpt-54"), ("gpt-5.4-mini", "global-gpt-54-mini")]);
+        let mappings = current_mappings(&key, &[]);
+
+        assert_eq!(mappings.len(), 2);
+        assert_eq!(mappings["gpt-5.4"], "global-gpt-54");
+        assert_eq!(mappings["gpt-5.4-mini"], "global-gpt-54-mini");
+    }
+
+    #[test]
+    fn current_mappings_ignore_manually_removed_missing_upstream_models() {
+        let key = key_with_mappings(vec![("gpt-5.4", "global-gpt-54"), ("gpt-5.4-mini", "global-gpt-54-mini")]);
+        let token = token_with_models(vec!["gpt-5.4"]);
+        let mappings = current_mappings(&key, &["global-gpt-54".to_owned()]);
+
+        let result = validate_associated_models(&token, &mappings);
+
+        assert!(result.is_ok());
+    }
+
+    fn key_with_mappings(mappings: Vec<(&str, &str)>) -> ProviderQuickImportSyncKey {
+        ProviderQuickImportSyncKey {
+            provider_id: "provider-1".to_owned(),
+            source_id: "source-1".to_owned(),
+            key_id: "key-1".to_owned(),
+            local_key_name: "codex".to_owned(),
+            upstream_token_id: "373".to_owned(),
+            upstream_token_name: "codex".to_owned(),
+            upstream_group: Some("low-cost".to_owned()),
+            upstream_group_ratio: Decimal::ONE,
+            effective_cost_multiplier: Decimal::ONE,
+            statuses: vec![ProviderQuickImportSyncStatus::UpstreamModelRemoved],
+            model_mappings: mappings
+                .into_iter()
+                .map(|(upstream_model_name, global_model_id)| ProviderQuickImportSyncKeyModel {
+                    provider_model_id: format!("provider-{global_model_id}"),
+                    global_model_id: global_model_id.to_owned(),
+                    upstream_model_name: upstream_model_name.to_owned(),
+                    reasoning_effort: None,
+                })
+                .collect(),
+        }
+    }
+
+    fn token_with_models(models: Vec<&str>) -> UpstreamImportToken {
+        UpstreamImportToken {
+            id: "373".to_owned(),
+            name: "codex".to_owned(),
+            masked_key: "sk-***".to_owned(),
+            status: "active".to_owned(),
+            is_active: true,
+            group: Some("low-cost".to_owned()),
+            group_ratio: Decimal::ONE,
+            api_key: Some("sk-test".to_owned()),
+            models: models
+                .into_iter()
+                .map(|id| UpstreamImportModel {
+                    id: id.to_owned(),
+                    supported_endpoint_types: vec![],
+                })
+                .collect(),
+        }
+    }
 }
