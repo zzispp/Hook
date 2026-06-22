@@ -6,8 +6,9 @@ use req::Response as UpstreamResponse;
 use super::{
     LlmProxyError, LlmProxyState, affinity,
     attempt_log::{
-        AttemptCancelGuard, AttemptCancelHandle, StartedAttemptInput, record_attempt_error, record_probe_slot_timeout, record_rate_limit_rejection,
-        record_send_error, record_started_attempt, record_stream_candidate_watchdog_timeout,
+        AttemptCancelGuard, AttemptCancelHandle, SkippedAttemptInput, StartedAttemptInput, record_attempt_error, record_candidate_skipped_attempt,
+        record_probe_slot_timeout, record_rate_limit_rejection, record_send_error, record_skipped_attempt, record_started_attempt,
+        record_stream_candidate_watchdog_timeout,
     },
     failure_classification::{FailureDecision, classify_status},
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
@@ -15,10 +16,13 @@ use super::{
     stream_transport, timeout, transport,
 };
 use crate::llm_proxy::{
+    OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
     audit::{SKIP_REASON_REQUEST_TERMINATED, record_skipped_candidates},
     candidate::ProxyCandidate,
     rate_limit,
 };
+
+const SKIP_REASON_CODEX_CHAT_HISTORY_UNAVAILABLE: &str = "codex_chat_history_unavailable";
 
 enum AttemptCandidateOutcome {
     Continue,
@@ -33,11 +37,17 @@ enum AttemptOnceOutcome {
     FullResponse(Box<transport::FullResponseArgs>, Box<AttemptCancelGuard>),
 }
 
+#[derive(Default)]
+struct AttemptExecutionState {
+    codex_chat_history_unavailable_message: Option<String>,
+}
+
 pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: PreparedProxyRequest) -> Result<Response, LlmProxyError> {
+    let mut execution_state = AttemptExecutionState::default();
     let mut last_failure = None;
     let mut last_error = None;
     for candidate in &prepared.candidates {
-        let outcome = attempt_candidate(&state, &prepared, candidate, &mut last_failure, &mut last_error).await?;
+        let outcome = attempt_candidate(&state, &prepared, candidate, &mut execution_state, &mut last_failure, &mut last_error).await?;
         match outcome {
             AttemptCandidateOutcome::Continue => {}
             AttemptCandidateOutcome::Response(response) => {
@@ -66,12 +76,13 @@ async fn attempt_candidate(
     state: &LlmProxyState,
     prepared: &PreparedProxyRequest,
     candidate: &ProxyCandidate,
+    execution_state: &mut AttemptExecutionState,
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<AttemptCandidateOutcome, LlmProxyError> {
     for retry_index in affinity::attempt_range(candidate) {
         let attempt = candidate.for_attempt(retry_index);
-        match attempt_once(state, prepared, &attempt, retry_index, last_failure, last_error).await? {
+        match attempt_once(state, prepared, &attempt, retry_index, execution_state, last_failure, last_error).await? {
             AttemptOnceOutcome::ContinueCandidate => {}
             AttemptOnceOutcome::NextCandidate => return Ok(AttemptCandidateOutcome::Continue),
             AttemptOnceOutcome::Response(response) => return Ok(AttemptCandidateOutcome::Response(response)),
@@ -86,9 +97,23 @@ async fn attempt_once(
     prepared: &PreparedProxyRequest,
     candidate: &ProxyCandidate,
     retry_index: i32,
+    execution_state: &mut AttemptExecutionState,
     last_failure: &mut Option<transport::UpstreamFailure>,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<AttemptOnceOutcome, LlmProxyError> {
+    if should_skip_codex_history_candidate(execution_state, candidate) {
+        let error = codex_history_skip_error(execution_state);
+        record_candidate_skipped_attempt(SkippedAttemptInput {
+            state,
+            request_id: &prepared.request_id,
+            candidate,
+            retry_index,
+            skip_reason: SKIP_REASON_CODEX_CHAT_HISTORY_UNAVAILABLE,
+            error: &error,
+        })
+        .await?;
+        return Ok(AttemptOnceOutcome::ContinueCandidate);
+    }
     if let Some(options) = prepared.provider_key_probe_slot_options {
         match rate_limit::claim_provider_key_probe_slot(state, &candidate.trace.key_id, options).await? {
             rate_limit::ProviderKeyProbeSlotClaim::Claimed => {}
@@ -109,6 +134,20 @@ async fn attempt_once(
     let payload = match attempt_payload(AttemptContext::from_state(state), prepared.body.clone(), candidate, prepared.force_non_stream).await {
         Ok(payload) => payload,
         Err(error) => {
+            if should_skip_codex_history_after_error(candidate, &error) {
+                execution_state.codex_chat_history_unavailable_message = Some(error.to_string());
+                record_skipped_attempt(SkippedAttemptInput {
+                    state,
+                    request_id: &prepared.request_id,
+                    candidate,
+                    retry_index,
+                    skip_reason: SKIP_REASON_CODEX_CHAT_HISTORY_UNAVAILABLE,
+                    error: &error,
+                })
+                .await?;
+                *last_error = Some(error);
+                return Ok(AttemptOnceOutcome::ContinueCandidate);
+            }
             let outcome = record_attempt_error(state, &prepared.request_id, candidate, retry_index, error, last_error).await?;
             return Ok(option_response_outcome(outcome));
         }
@@ -429,6 +468,26 @@ fn stream_candidate_watchdog_timeout_output() -> StreamAttemptTaskOutput {
 
 fn probe_slot_timeout_outcome() -> AttemptOnceOutcome {
     AttemptOnceOutcome::ContinueCandidate
+}
+
+fn should_skip_codex_history_candidate(execution_state: &AttemptExecutionState, candidate: &ProxyCandidate) -> bool {
+    execution_state.codex_chat_history_unavailable_message.is_some() && is_openai_cli_to_chat_candidate(candidate)
+}
+
+fn should_skip_codex_history_after_error(candidate: &ProxyCandidate, error: &LlmProxyError) -> bool {
+    matches!(error, LlmProxyError::CodexChatHistoryUnavailable(_)) && is_openai_cli_to_chat_candidate(candidate)
+}
+
+fn is_openai_cli_to_chat_candidate(candidate: &ProxyCandidate) -> bool {
+    candidate.trace.client_api_format == OPENAI_CLI_FORMAT && candidate.trace.provider_api_format == OPENAI_CHAT_FORMAT
+}
+
+fn codex_history_skip_error(execution_state: &AttemptExecutionState) -> LlmProxyError {
+    let message = execution_state
+        .codex_chat_history_unavailable_message
+        .clone()
+        .unwrap_or_else(|| "Codex chat history is unavailable for openai:cli to openai:chat conversion".into());
+    LlmProxyError::CodexChatHistoryUnavailable(message)
 }
 
 async fn execute_upstream_request(

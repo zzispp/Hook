@@ -19,7 +19,7 @@ pub(super) async fn enrich_responses_chat_request(
 fn history_error(error: CodexChatHistoryError) -> LlmProxyError {
     match error {
         CodexChatHistoryError::Infrastructure(message) => LlmProxyError::Infrastructure(message),
-        CodexChatHistoryError::Missing { .. } | CodexChatHistoryError::Ambiguous { .. } => LlmProxyError::InvalidRequest(error.to_string()),
+        CodexChatHistoryError::Missing { .. } | CodexChatHistoryError::Ambiguous { .. } => LlmProxyError::CodexChatHistoryUnavailable(error.to_string()),
     }
 }
 

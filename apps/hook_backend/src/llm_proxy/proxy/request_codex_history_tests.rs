@@ -49,7 +49,7 @@ async fn openai_cli_to_chat_errors_when_history_is_missing() {
         Err(error) => error,
     };
 
-    assert!(matches!(error, LlmProxyError::InvalidRequest(message) if message.contains("missing Codex chat history")));
+    assert!(matches!(error, LlmProxyError::CodexChatHistoryUnavailable(message) if message.contains("missing Codex chat history")));
 }
 
 fn tool_output_body() -> serde_json::Value {
