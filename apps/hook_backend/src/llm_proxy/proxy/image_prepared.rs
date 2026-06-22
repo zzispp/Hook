@@ -1,7 +1,7 @@
 use proxy::format_conversion::ApiFormat;
 use serde_json::{Value, json};
 
-use super::{LlmProxyError, image_form::MultipartImageRequest, request::rewrite_upstream_body_with_explicit_stream};
+use super::{LlmProxyError, image_form::MultipartImageRequest, request_rewrite::rewrite_upstream_body_with_explicit_stream};
 use crate::llm_proxy::candidate::ProxyCandidate;
 
 pub(super) const OPENAI_IMAGE_API_FORMAT: &str = "openai:image";
@@ -86,15 +86,7 @@ fn json_provider_body(body: &Value, candidate: &ProxyCandidate, upstream_is_stre
 }
 
 fn multipart_provider_body(request: &MultipartImageRequest, candidate: &ProxyCandidate, upstream_is_stream: bool) -> Value {
-    let mut body = request.provider_body(&candidate.provider_model_name);
-    if let Some(object) = body.as_object_mut() {
-        if upstream_is_stream {
-            object.insert("stream".into(), Value::String("true".into()));
-        } else {
-            object.remove("stream");
-        }
-    }
-    body
+    request.provider_body(&candidate.provider_model_name, upstream_is_stream)
 }
 
 fn image_request_context(body: &Value, operation: &str) -> Value {

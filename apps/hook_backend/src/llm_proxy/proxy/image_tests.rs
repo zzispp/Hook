@@ -67,6 +67,41 @@ fn multipart_image_request_detects_stream_true() {
 }
 
 #[test]
+fn multipart_image_request_provider_body_removes_partial_images_for_non_stream_upstream() {
+    let request = MultipartImageRequest::from_fields(vec![
+        text("model", "gpt-image-1"),
+        text("prompt", "restore the photo"),
+        text("stream", "true"),
+        text("partial_images", "1"),
+        file("image", "input.png", "image/png", b"png-bytes"),
+    ])
+    .unwrap();
+
+    let body = request.provider_body("upstream-model", false);
+
+    assert_eq!(body["model"], "upstream-model");
+    assert!(body.get("stream").is_none());
+    assert!(body.get("partial_images").is_none());
+}
+
+#[test]
+fn multipart_image_request_provider_body_keeps_partial_images_for_stream_upstream() {
+    let request = MultipartImageRequest::from_fields(vec![
+        text("model", "gpt-image-1"),
+        text("prompt", "restore the photo"),
+        text("partial_images", "1"),
+        file("image", "input.png", "image/png", b"png-bytes"),
+    ])
+    .unwrap();
+
+    let body = request.provider_body("upstream-model", true);
+
+    assert_eq!(body["model"], "upstream-model");
+    assert_eq!(body["stream"], "true");
+    assert_eq!(body["partial_images"], "1");
+}
+
+#[test]
 fn multipart_image_request_requires_image_file() {
     let error = MultipartImageRequest::from_fields(vec![text("model", "gpt-image-1"), text("prompt", "restore the photo")]).unwrap_err();
 

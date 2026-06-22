@@ -21,6 +21,7 @@ mod request;
 mod request_codex_history;
 mod request_features;
 mod request_image;
+mod request_rewrite;
 mod request_tools;
 mod response_codex_history;
 mod response_model;
