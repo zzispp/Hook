@@ -8,6 +8,9 @@ mod storage_mapping;
 mod storage_repository;
 mod sub2api_import_source;
 mod sub2api_import_types;
+#[cfg(test)]
+mod sub2api_import_types_tests;
+mod sub2api_token_filter;
 mod upstream_model_fetcher;
 mod upstream_model_list;
 

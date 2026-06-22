@@ -75,6 +75,12 @@ pub(super) struct Sub2ApiGroupRecord {
     pub(super) status: String,
 }
 
+impl Sub2ApiGroupRecord {
+    pub(super) fn is_active(&self) -> bool {
+        self.status == ACTIVE_STATUS
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub(super) struct Sub2ApiModelEnvelope {
     pub(super) data: Vec<Sub2ApiModelRecord>,
@@ -157,7 +163,7 @@ pub(super) fn group_ratio(record: &Sub2ApiKeyRecord, user_group_rates: &UserGrou
     let Some(group) = record.group.as_ref() else {
         return Ok(None);
     };
-    if group.status != ACTIVE_STATUS {
+    if !group.is_active() {
         return Err(ProviderError::Infrastructure(format!("sub2api group is inactive: {}", group.name)));
     }
     let user_ratio = user_group_rates.get(&group.id.to_string()).copied();
