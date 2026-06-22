@@ -16,6 +16,7 @@ use crate::infra::sub2api_import_types::{
     PaginatedKeys, Sub2ApiGroupRecord, Sub2ApiKeyRecord, TokenRefreshResponse, UserGroupRates, client_error, decode_envelope, decode_models, group_ratio,
     key_is_active, key_status, masked_key, response_text, sub2api_url, sync_token, url_error,
 };
+use crate::infra::sub2api_token_filter::skip_inactive_group_tokens;
 
 const FETCH_TIMEOUT_SECONDS: u64 = 30;
 const TOKEN_PAGE_SIZE: u64 = 100;
@@ -53,7 +54,7 @@ impl UpstreamProviderImportSource for Sub2ApiImportSource {
         };
         let token = self.token_for_config(config).await?;
         let user_group_rates = self.fetch_user_group_rates(config, &token.access_token).await?;
-        let records = self.fetch_keys(config, &token.access_token).await?;
+        let records = skip_inactive_group_tokens(self.fetch_keys(config, &token.access_token).await?);
         let mut tokens = Vec::with_capacity(records.len());
         for record in records {
             tokens.push(self.enrich_token(config, &user_group_rates, record).await?);
