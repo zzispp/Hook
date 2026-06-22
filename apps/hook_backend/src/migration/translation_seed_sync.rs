@@ -104,23 +104,30 @@ mod tests {
     use crate::migration::baseline::seed_domain::ADMIN_NAMESPACE;
 
     const RECHARGE_GROUP: &str = "adminRecharges";
+    const FIELDS_GROUP: &str = "fields";
     const ALL_PRESET_ITEM: &str = "filters.datePresets.all";
     const TODAY_PRESET_ITEM: &str = "filters.datePresets.today";
+    const EMAIL_ITEM: &str = "email";
+    const PASSWORD_ITEM: &str = "password";
 
     #[test]
     fn translation_seeds_include_recharge_date_presets() {
-        let entries: BTreeSet<_> = super::super::baseline::seed_domain::translation_seeds()
-            .unwrap()
-            .into_iter()
-            .filter(|seed| seed.namespace == ADMIN_NAMESPACE && seed.group_key == RECHARGE_GROUP)
-            .filter(|seed| seed.item_key.starts_with("filters.datePresets."))
-            .map(|seed| (seed.lang_code, seed.item_key, seed.value))
-            .collect();
+        let entries = admin_seed_entries(RECHARGE_GROUP);
 
         assert!(entries.contains(&("cn", ALL_PRESET_ITEM.to_owned(), "全部".to_owned())));
         assert!(entries.contains(&("cn", TODAY_PRESET_ITEM.to_owned(), "今天".to_owned())));
         assert!(entries.contains(&("en", ALL_PRESET_ITEM.to_owned(), "All".to_owned())));
         assert!(entries.contains(&("en", TODAY_PRESET_ITEM.to_owned(), "Today".to_owned())));
+    }
+
+    #[test]
+    fn translation_seeds_include_admin_email_and_password_fields() {
+        let entries = admin_seed_entries(FIELDS_GROUP);
+
+        assert!(entries.contains(&("cn", EMAIL_ITEM.to_owned(), "邮箱地址".to_owned())));
+        assert!(entries.contains(&("cn", PASSWORD_ITEM.to_owned(), "密码".to_owned())));
+        assert!(entries.contains(&("en", EMAIL_ITEM.to_owned(), "Email address".to_owned())));
+        assert!(entries.contains(&("en", PASSWORD_ITEM.to_owned(), "Password".to_owned())));
     }
 
     #[tokio::test]
@@ -166,6 +173,15 @@ mod tests {
             item_key: TODAY_PRESET_ITEM.to_owned(),
             value: "今天".to_owned(),
         }
+    }
+
+    fn admin_seed_entries(group_key: &str) -> BTreeSet<(&'static str, String, String)> {
+        super::super::baseline::seed_domain::translation_seeds()
+            .unwrap()
+            .into_iter()
+            .filter(|seed| seed.namespace == ADMIN_NAMESPACE && seed.group_key == group_key)
+            .map(|seed| (seed.lang_code, seed.item_key, seed.value))
+            .collect()
     }
 
     fn one_query_row() -> Vec<BTreeMap<&'static str, Value>> {
