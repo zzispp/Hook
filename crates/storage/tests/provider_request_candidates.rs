@@ -391,13 +391,13 @@ fn scheduled_candidate_record(id: &str) -> storage::provider::record::request_ca
     let mut record = request_candidate_record(id, "scheduled");
     record.started_at = None;
     record.finished_at = None;
-        record.status_code = None;
-        record.latency_ms = None;
-        record.response_headers_time_ms = None;
-        record.first_sse_event_time_ms = None;
-        record.first_output_time_ms = None;
-        record.first_byte_time_ms = None;
-        record
+    record.status_code = None;
+    record.latency_ms = None;
+    record.response_headers_time_ms = None;
+    record.first_sse_event_time_ms = None;
+    record.first_output_time_ms = None;
+    record.first_byte_time_ms = None;
+    record
 }
 
 fn skipped_candidate_record(id: &str) -> storage::provider::record::request_candidates::Model {

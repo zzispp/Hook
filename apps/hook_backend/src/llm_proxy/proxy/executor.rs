@@ -175,9 +175,7 @@ async fn execute_hedged_stream_candidates(state: LlmProxyState, prepared: Prepar
     })
 }
 
-async fn wait_candidate_task(
-    task: &mut StartedCandidateTask,
-) -> Result<Result<CandidateTaskOutput, LlmProxyError>, tokio::task::JoinError> {
+async fn wait_candidate_task(task: &mut StartedCandidateTask) -> Result<Result<CandidateTaskOutput, LlmProxyError>, tokio::task::JoinError> {
     (&mut task.join_handle).await
 }
 
@@ -223,11 +221,7 @@ fn candidate_task_result(output: CandidateTaskOutput) -> Result<CandidateTaskRes
     }
 }
 
-fn merge_candidate_task_result(
-    result: CandidateTaskResult,
-    last_failure: &mut Option<transport::UpstreamFailure>,
-    last_error: &mut Option<LlmProxyError>,
-) {
+fn merge_candidate_task_result(result: CandidateTaskResult, last_failure: &mut Option<transport::UpstreamFailure>, last_error: &mut Option<LlmProxyError>) {
     if let Some(failure) = result.last_failure {
         *last_failure = Some(failure);
     }

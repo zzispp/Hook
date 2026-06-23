@@ -1,12 +1,10 @@
 use super::StreamRelay;
+use crate::llm_proxy::proxy::attempt_log::{AttemptCancelReason, take_candidate_cancel_reason};
 use crate::llm_proxy::proxy::stream_transport::{
-    record::{
-        StreamAttemptRecord, StreamCancelledReason, StreamCancelledRecordInput, StreamTerminalRecordInput, cancelled_record, terminal_stream_record,
-    },
+    record::{StreamAttemptRecord, StreamCancelledReason, StreamCancelledRecordInput, StreamTerminalRecordInput, cancelled_record, terminal_stream_record},
     status::{StreamEndReason, StreamStatus},
     terminal::StreamTerminalSummary,
 };
-use crate::llm_proxy::proxy::attempt_log::{AttemptCancelReason, take_candidate_cancel_reason};
 
 pub(super) fn drop_terminal_record(relay: &mut StreamRelay) -> StreamAttemptRecord {
     match drop_record_kind(relay.protocol_completed, &relay.stream_status) {

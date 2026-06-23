@@ -61,9 +61,7 @@ pub(super) fn stream_candidate_watchdog_timeout(candidate: &ProxyCandidate) -> O
 }
 
 pub(super) fn stream_hedge_delay(candidate: &ProxyCandidate) -> Duration {
-    let budget = proxy_timeouts(candidate)
-        .stream_first_byte
-        .unwrap_or(STREAM_HEDGE_DELAY_MAX);
+    let budget = proxy_timeouts(candidate).stream_first_byte.unwrap_or(STREAM_HEDGE_DELAY_MAX);
     let scaled = Duration::from_secs_f64((budget.as_secs_f64() * STREAM_HEDGE_DELAY_RATIO).max(0.0));
     scaled.max(STREAM_HEDGE_DELAY_MIN).min(STREAM_HEDGE_DELAY_MAX)
 }

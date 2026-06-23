@@ -84,10 +84,7 @@ impl AttemptCancelHandle {
     }
 
     pub(super) fn reason(&self) -> AttemptCancelReason {
-        self.shared
-            .lock()
-            .map(|shared| shared.reason)
-            .unwrap_or(AttemptCancelReason::ClientDisconnect)
+        self.shared.lock().map(|shared| shared.reason).unwrap_or(AttemptCancelReason::ClientDisconnect)
     }
 
     #[cfg(test)]
@@ -306,9 +303,7 @@ async fn record_cancelled_attempt(input: CancelledAttemptInput) -> Result<(), Ll
             AttemptCancelPhase::AwaitingTerminal => cancelled_after_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
         },
         AttemptCancelReason::HedgedBackupSuperseded => match input.phase {
-            AttemptCancelPhase::WaitingUpstreamResponseStart => {
-                hedged_before_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms)
-            }
+            AttemptCancelPhase::WaitingUpstreamResponseStart => hedged_before_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
             AttemptCancelPhase::AwaitingTerminal => hedged_after_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
         },
     };
