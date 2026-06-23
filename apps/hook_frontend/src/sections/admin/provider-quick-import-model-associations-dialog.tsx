@@ -1,13 +1,10 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
 import type { GlobalModelResponse } from 'src/types/model';
 import type {
   Provider,
   ProviderApiKey,
-  ProviderModelReasoningEffort,
   ProviderKeyModelMappingsUpdate,
-  ProviderKeyModelMappingCandidate,
   ProviderKeyModelMappingsForKeyResponse,
 } from 'src/types/provider';
 
@@ -37,6 +34,15 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 
 import { ReasoningEffortField } from './provider-model-mapping-fields';
+import {
+  addManualMapping,
+  visibleCandidates,
+  type MappingDraft,
+  associationPayload,
+  removeMappingDraft,
+  addCandidateMapping,
+  associationMappings,
+} from './provider-quick-import-model-associations-utils';
 
 type Props = {
   open: boolean;
@@ -119,6 +125,16 @@ export function ProviderQuickImportModelAssociationsDialog(props: Props) {
         {!loading && response ? (
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography variant="subtitle2">{t('providers.quickImportAssociatedModels')}</Typography>
+            <Stack direction="row" justifyContent="flex-end">
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<Iconify icon="mingcute:add-line" />}
+                onClick={() => setMappings((current) => addManualMapping(current))}
+              >
+                {t('common.add')}
+              </Button>
+            </Stack>
             {Object.keys(mappings).map((providerModelId) => (
               <MappingRow
                 key={providerModelId}
@@ -131,7 +147,9 @@ export function ProviderQuickImportModelAssociationsDialog(props: Props) {
                     [providerModelId]: { ...current[providerModelId], ...patch },
                   }))
                 }
-                onRemove={() => removeMapping(providerModelId, setMappings)}
+                onRemove={() =>
+                  setMappings((current) => removeMappingDraft(providerModelId, current))
+                }
               />
             ))}
             {Object.keys(mappings).length === 0 ? (
@@ -147,7 +165,9 @@ export function ProviderQuickImportModelAssociationsDialog(props: Props) {
                   size="small"
                   variant="outlined"
                   startIcon={<Iconify icon="mingcute:add-line" />}
-                  onClick={() => addCandidate(candidate, setMappings)}
+                  onClick={() =>
+                    setMappings((current) => addCandidateMapping(candidate, current))
+                  }
                 >
                   {candidate.upstream_model_name}
                 </Button>
@@ -260,67 +280,4 @@ function LoadingState() {
       <CircularProgress size={24} />
     </Stack>
   );
-}
-
-type MappingDraft = {
-  global_model_id: string;
-  upstream_model_name: string;
-  reasoning_effort?: ProviderModelReasoningEffort | null;
-};
-
-function associationMappings(response: ProviderKeyModelMappingsForKeyResponse) {
-  return Object.fromEntries(
-    response.mappings.map((item) => [
-      item.provider_model_id,
-      {
-        global_model_id: item.global_model_id,
-        upstream_model_name: item.upstream_model_name,
-        reasoning_effort: item.reasoning_effort ?? null,
-      },
-    ])
-  );
-}
-
-function associationPayload(mappings: Record<string, MappingDraft>) {
-  return Object.values(mappings).map((item) => ({
-    global_model_id: item.global_model_id,
-    upstream_model_name: item.upstream_model_name.trim(),
-    reasoning_effort: item.reasoning_effort ?? null,
-  }));
-}
-
-function visibleCandidates(
-  response: ProviderKeyModelMappingsForKeyResponse | null,
-  mappings: Record<string, MappingDraft>
-) {
-  return response?.candidates.filter((candidate) => !candidateUsed(candidate, mappings)) ?? [];
-}
-
-function addCandidate(
-  candidate: ProviderKeyModelMappingCandidate,
-  setMappings: Dispatch<SetStateAction<Record<string, MappingDraft>>>
-) {
-  setMappings((current) => ({
-    ...current,
-    [`candidate:${candidate.upstream_model_name}`]: {
-      global_model_id: candidate.suggested_global_model_id ?? '',
-      upstream_model_name: candidate.upstream_model_name,
-      reasoning_effort: null,
-    },
-  }));
-}
-
-function removeMapping(
-  providerModelId: string,
-  setMappings: Dispatch<SetStateAction<Record<string, MappingDraft>>>
-) {
-  setMappings((current) => {
-    const next = { ...current };
-    delete next[providerModelId];
-    return next;
-  });
-}
-
-function candidateUsed(candidate: ProviderKeyModelMappingCandidate, mappings: Record<string, MappingDraft>) {
-  return Object.values(mappings).some((item) => item.upstream_model_name === candidate.upstream_model_name);
 }
