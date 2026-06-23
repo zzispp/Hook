@@ -2635,6 +2635,10 @@
       "providerQuickImportSync": {
         "name": "Quick import provider sync",
         "description": "Synchronize upstream group ratios, costs, and key statuses for quick import providers on schedule."
+      },
+      "providerQuickImportSub2apiTokenRefresh": {
+        "name": "Sub2api quick import token refresh",
+        "description": "Refresh authentication tokens for Sub2api token-based quick import sources on schedule."
       }
     },
     "config": {
@@ -2680,6 +2684,11 @@
       },
       "providerQuickImportSync": {
         "batchSize": "Sources per scan",
+        "maxRuntimeSeconds": "Maximum runtime seconds"
+      },
+      "providerQuickImportSub2apiTokenRefresh": {
+        "batchSize": "Sources per scan",
+        "refreshThresholdMinutes": "Early refresh threshold minutes",
         "maxRuntimeSeconds": "Maximum runtime seconds"
       }
     }

@@ -107,6 +107,21 @@ where
     }
 }
 
+pub fn refreshed_sub2api_token_patch<C>(cipher: &C, source: &ProviderQuickImportSourceConfig) -> ProviderResult<ProviderQuickImportSyncSourcePatch>
+where
+    C: SecretCipher,
+{
+    let ProviderQuickImportSourceConfig::Sub2api(Sub2ApiQuickImportConfig::Token(config)) = source else {
+        return Err(ProviderError::InvalidInput("sub2api token source is required".into()));
+    };
+    Ok(ProviderQuickImportSyncSourcePatch {
+        encrypted_auth_token: Some(cipher.encrypt_provider_key(config.auth_token.trim())?),
+        encrypted_refresh_token: Some(cipher.encrypt_provider_key(config.refresh_token.trim())?),
+        token_expires_at: Some(Some(parse_token_expires_at(&config.token_expires_at)?)),
+        ..ProviderQuickImportSyncSourcePatch::default()
+    })
+}
+
 pub fn restore_source_config<C>(cipher: &C, source: &ProviderQuickImportSyncSource) -> ProviderResult<ProviderQuickImportSourceConfig>
 where
     C: SecretCipher,

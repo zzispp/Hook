@@ -288,6 +288,10 @@ impl ProviderStore {
         super::quick_import_sync_query::list_sources(self, limit).await
     }
 
+    pub async fn list_sub2api_token_refresh_sources(&self, limit: u64) -> StorageResult<Vec<super::ProviderQuickImportSourceRecord>> {
+        super::quick_import_sync_query::list_sub2api_token_refresh_sources(self, limit).await
+    }
+
     pub async fn quick_import_sync_keys(&self, source_id: &str) -> StorageResult<Vec<super::ProviderQuickImportSyncKeyRecord>> {
         super::quick_import_sync_query::keys_for_source(self, source_id).await
     }

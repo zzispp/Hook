@@ -345,6 +345,14 @@ impl ProviderRepository for StorageProviderRepository {
             .map_err(storage_error)
     }
 
+    async fn list_sub2api_token_refresh_sources(&self, limit: u64) -> ProviderResult<Vec<ProviderQuickImportSyncSource>> {
+        self.store
+            .list_sub2api_token_refresh_sources(limit)
+            .await
+            .map(|items| items.into_iter().map(sync_source).collect())
+            .map_err(storage_error)
+    }
+
     async fn list_quick_import_sync_keys(&self, source_id: &str) -> ProviderResult<Vec<ProviderQuickImportSyncKey>> {
         self.store
             .quick_import_sync_keys(source_id)

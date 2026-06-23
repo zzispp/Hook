@@ -42,4 +42,22 @@ impl UpstreamProviderImportSource for ProviderImportSource {
             ProviderQuickImportSourceConfig::Sub2api(_) => self.sub2api.fetch_sync_token_models(source, upstream_token_id).await,
         }
     }
+
+    async fn refreshed_source_config(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<Option<ProviderQuickImportSourceConfig>> {
+        match source {
+            ProviderQuickImportSourceConfig::Newapi(_) => self.newapi.refreshed_source_config(source).await,
+            ProviderQuickImportSourceConfig::Sub2api(_) => self.sub2api.refreshed_source_config(source).await,
+        }
+    }
+
+    async fn refreshed_source_config_with_threshold(
+        &self,
+        source: &ProviderQuickImportSourceConfig,
+        refresh_threshold_minutes: i64,
+    ) -> ProviderResult<Option<ProviderQuickImportSourceConfig>> {
+        match source {
+            ProviderQuickImportSourceConfig::Newapi(_) => self.newapi.refreshed_source_config_with_threshold(source, refresh_threshold_minutes).await,
+            ProviderQuickImportSourceConfig::Sub2api(_) => self.sub2api.refreshed_source_config_with_threshold(source, refresh_threshold_minutes).await,
+        }
+    }
 }
