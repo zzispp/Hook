@@ -84,6 +84,7 @@ pub(super) async fn routing_rankings(state: &LlmProxyState, request: RoutingRank
         model_name: &request.model,
         is_stream: request.is_stream,
         has_openai_responses_custom_tool_items: false,
+        has_openai_responses_tool_outputs_without_previous_response_id: false,
         features: RoutingRequestFeatures::unknown(&request.api_format, request.is_stream, None),
     };
     let context = ranking_context(state, &request.group_code, candidate_request.clone(), request_id_seed.clone()).await?;

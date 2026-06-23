@@ -139,6 +139,7 @@ fn matching_candidate_parts_routes_responses_image_generation_call_requests_to_c
             routing_api_format: "openai:cli",
             is_stream: true,
             has_openai_responses_custom_tool_items: false,
+            has_openai_responses_tool_outputs_without_previous_response_id: false,
             ..request()
         },
         affinity: None,
@@ -171,6 +172,39 @@ fn matching_candidate_parts_keeps_responses_custom_tool_requests_on_responses_en
             routing_api_format: "openai:cli",
             is_stream: true,
             has_openai_responses_custom_tool_items: true,
+            has_openai_responses_tool_outputs_without_previous_response_id: false,
+            ..request()
+        },
+        affinity: None,
+        scheduling_mode: ProviderSchedulingMode::FixedOrder,
+        request_id: "request-1",
+        cooled_provider_ids: &HashSet::new(),
+    });
+
+    assert_eq!(parts.len(), 1);
+    assert_eq!(parts[0].endpoints.len(), 1);
+    assert_eq!(parts[0].endpoints[0].api_format, "openai:cli");
+}
+
+#[test]
+fn matching_candidate_parts_keeps_responses_tool_output_requests_without_history_on_responses_endpoint() {
+    let provider = crate::llm_proxy::cache::snapshot::CachedProvider {
+        endpoints: vec![endpoint("endpoint-chat", "openai:chat"), endpoint("endpoint-cli", "openai:cli")],
+        keys: vec![provider_key("key-both", 10, vec!["openai:cli", "openai:chat"])],
+        ..provider_with_endpoints_and_keys()
+    };
+    let snapshot = snapshot_with_provider(provider);
+    let parts = matching_candidate_parts(MatchingCandidatePartsInput {
+        snapshot: &snapshot,
+        group: &snapshot.groups[0],
+        user_access: None,
+        model_id: "model-a",
+        request: CandidateRequest {
+            api_format: "openai:cli",
+            routing_api_format: "openai:cli",
+            is_stream: true,
+            has_openai_responses_custom_tool_items: false,
+            has_openai_responses_tool_outputs_without_previous_response_id: true,
             ..request()
         },
         affinity: None,

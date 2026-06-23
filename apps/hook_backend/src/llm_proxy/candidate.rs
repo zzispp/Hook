@@ -121,6 +121,7 @@ pub struct CandidateRequest<'a> {
     pub model_name: &'a str,
     pub is_stream: bool,
     pub has_openai_responses_custom_tool_items: bool,
+    pub has_openai_responses_tool_outputs_without_previous_response_id: bool,
     pub features: RoutingRequestFeatures,
 }
 

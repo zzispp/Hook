@@ -3,7 +3,7 @@ use serde_json::json;
 use types::model::TieredPricingConfig;
 
 use super::super::{request_image::bridge_openai_chat_image_body, request_tools::openai_request_explicitly_selects_image_generation};
-use super::{AttemptContext, attempt_payload, has_openai_responses_custom_tool_items};
+use super::{AttemptContext, attempt_payload, has_openai_responses_custom_tool_items, has_openai_responses_tool_outputs_without_previous_response_id};
 use crate::llm_proxy::{
     OPENAI_CHAT_FORMAT, OPENAI_CLI_FORMAT,
     candidate::{CandidateRoute, CandidateTrace, ProxyCandidate},
@@ -171,6 +171,37 @@ fn responses_custom_tool_feature_ignores_non_responses_requests() {
     });
 
     assert!(!has_openai_responses_custom_tool_items(OPENAI_CHAT_FORMAT, &body));
+}
+
+#[test]
+fn responses_tool_output_feature_detects_missing_previous_response_id() {
+    let body = json!({
+        "model": "gpt-test",
+        "input": [{ "type": "function_call_output", "call_id": "call_1", "output": "ok" }]
+    });
+
+    assert!(has_openai_responses_tool_outputs_without_previous_response_id(OPENAI_CLI_FORMAT, &body));
+}
+
+#[test]
+fn responses_tool_output_feature_ignores_requests_with_previous_response_id() {
+    let body = json!({
+        "model": "gpt-test",
+        "previous_response_id": "resp_1",
+        "input": [{ "type": "function_call_output", "call_id": "call_1", "output": "ok" }]
+    });
+
+    assert!(!has_openai_responses_tool_outputs_without_previous_response_id(OPENAI_CLI_FORMAT, &body));
+}
+
+#[test]
+fn responses_tool_output_feature_detects_single_input_object() {
+    let body = json!({
+        "model": "gpt-test",
+        "input": { "type": "function_call_output", "call_id": "call_1", "output": "ok" }
+    });
+
+    assert!(has_openai_responses_tool_outputs_without_previous_response_id(OPENAI_CLI_FORMAT, &body));
 }
 
 #[test]

@@ -79,6 +79,7 @@ pub(super) async fn prepare_proxy_request(
             model_name,
             is_stream,
             has_openai_responses_custom_tool_items: has_openai_responses_custom_tool_items(api_format, &body),
+            has_openai_responses_tool_outputs_without_previous_response_id: has_openai_responses_tool_outputs_without_previous_response_id(api_format, &body),
             features,
         },
     )
@@ -149,15 +150,36 @@ fn required_model(body: &Value) -> Result<&str, LlmProxyError> {
 }
 
 fn has_openai_responses_custom_tool_items(api_format: &str, body: &Value) -> bool {
-    api_format == OPENAI_CLI_FORMAT && input_items(body).any(is_openai_responses_custom_tool_item)
+    api_format == OPENAI_CLI_FORMAT && input_contains_item(body, is_openai_responses_custom_tool_item)
 }
 
-fn input_items(body: &Value) -> impl Iterator<Item = &Value> {
-    body.get("input").and_then(Value::as_array).into_iter().flatten()
+fn has_openai_responses_tool_outputs_without_previous_response_id(api_format: &str, body: &Value) -> bool {
+    api_format == OPENAI_CLI_FORMAT && !has_previous_response_id(body) && input_contains_item(body, is_openai_responses_tool_output_item)
 }
 
 fn is_openai_responses_custom_tool_item(item: &Value) -> bool {
     matches!(item.get("type").and_then(Value::as_str), Some("custom_tool_call" | "custom_tool_call_output"))
+}
+
+fn has_previous_response_id(body: &Value) -> bool {
+    body.get("previous_response_id")
+        .and_then(Value::as_str)
+        .is_some_and(|value| !value.trim().is_empty())
+}
+
+fn input_contains_item(body: &Value, predicate: fn(&Value) -> bool) -> bool {
+    match body.get("input") {
+        Some(Value::Array(items)) => items.iter().any(predicate),
+        Some(item @ Value::Object(_)) => predicate(item),
+        _ => false,
+    }
+}
+
+fn is_openai_responses_tool_output_item(item: &Value) -> bool {
+    matches!(
+        item.get("type").and_then(Value::as_str),
+        Some("function_call_output" | "custom_tool_call_output")
+    )
 }
 
 fn is_streaming(body: &Value) -> bool {
