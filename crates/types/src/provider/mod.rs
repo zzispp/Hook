@@ -20,7 +20,7 @@ mod time_range;
 pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCooldownPolicy, ProviderCooldownRule};
 pub use core::{
     Provider, ProviderCreate, ProviderListRequest, ProviderListResponse, ProviderOrigin, ProviderQuickImportAuthMode, ProviderQuickImportSourceSummary,
-    ProviderUpdate,
+    ProviderQuickImportSyncIssue, ProviderQuickImportSyncIssueScope, ProviderQuickImportSyncIssueSeverity, ProviderQuickImportSyncSummary, ProviderUpdate,
 };
 pub use endpoint::{ProviderEndpoint, ProviderEndpointCreate, ProviderEndpointUpdate};
 pub use enums::{ProviderPriorityMode, ProviderSchedulingMode};

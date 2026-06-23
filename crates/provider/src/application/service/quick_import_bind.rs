@@ -318,6 +318,7 @@ mod tests {
             keep_priority_on_conversion: false,
             enable_format_conversion: true,
             is_active: true,
+            quick_import_sync_summary: None,
             created_at: String::new(),
             updated_at: String::new(),
         }

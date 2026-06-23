@@ -44,6 +44,7 @@ impl From<Model> for Provider {
             keep_priority_on_conversion: value.keep_priority_on_conversion,
             enable_format_conversion: value.enable_format_conversion,
             is_active: value.is_active,
+            quick_import_sync_summary: None,
             created_at: format_timestamp(value.created_at),
             updated_at: format_timestamp(value.updated_at),
         }

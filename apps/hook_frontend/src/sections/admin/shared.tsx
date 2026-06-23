@@ -1,16 +1,13 @@
 'use client';
 
 import type { TextFieldProps } from '@mui/material/TextField';
-import type { TableHeadCellProps } from 'src/components/table';
 import type { DashboardMenuCode } from 'src/layouts/dashboard/dashboard-menu-values';
 
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
-import TableRow from '@mui/material/TableRow';
 import MenuItem from '@mui/material/MenuItem';
-import TableCell from '@mui/material/TableCell';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -23,12 +20,12 @@ import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-bre
 
 import { Label } from 'src/components/label';
 import { Iconify } from 'src/components/iconify';
-import { TableHeadCustom } from 'src/components/table';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 // ----------------------------------------------------------------------
 
 export { NAV_ICON_OPTIONS } from './nav-metadata';
+export { TableLoadingRows, ManagementTableHead } from './management-table-parts';
 
 export const METHOD_OPTIONS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -126,37 +123,6 @@ export function MethodLabel({ method }: { method: string }) {
       {method}
     </Label>
   );
-}
-
-export function TableLoadingRows({
-  head,
-  rows = 5,
-}: {
-  head: TableHeadCellProps[];
-  rows?: number;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <>
-      {Array.from({ length: rows }).map((_, rowIndex) => (
-        <TableRow key={rowIndex}>
-          {head.map((cell) => (
-            <TableCell
-              key={cell.id || cell.label?.toString() || 'action'}
-              sx={{ color: 'text.disabled' }}
-            >
-              {t('common.loading')}
-            </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </>
-  );
-}
-
-export function ManagementTableHead({ head }: { head: TableHeadCellProps[] }) {
-  return <TableHeadCustom headCells={head} />;
 }
 
 export function TextFieldRow({
