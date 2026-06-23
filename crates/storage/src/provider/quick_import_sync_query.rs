@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set};
+use sea_orm::{ActiveModelTrait, ActiveValue::Unchanged, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set};
 use types::provider::{ProviderQuickImportKeySyncInfo, ProviderQuickImportSyncStatus};
 
 use crate::{StorageError, StorageResult, json};
@@ -8,8 +8,9 @@ use crate::{StorageError, StorageResult, json};
 use super::{
     ProviderQuickImportSourceRecord, ProviderQuickImportSourceRecordPatch, ProviderQuickImportSyncKeyModelRecord, ProviderQuickImportSyncKeyRecord,
     ProviderQuickImportSyncKeyRecordPatch, ProviderStore,
+    quick_import_sync_lookup::{key_name, key_names, provider_name, provider_names, require_key_name, require_provider_name},
     quick_import_sync_records::{active_consecutive_failures, key_sync_info, source_record, sync_key_record},
-    record::{provider_api_keys, provider_key_model_mappings, provider_models, provider_quick_import_keys, provider_quick_import_sources, providers},
+    record::{provider_key_model_mappings, provider_models, provider_quick_import_keys, provider_quick_import_sources},
 };
 
 pub async fn key_sync_info_by_provider(store: &ProviderStore, provider_id: &str) -> StorageResult<BTreeMap<String, ProviderQuickImportKeySyncInfo>> {
@@ -42,6 +43,26 @@ pub async fn list_sources(store: &ProviderStore, limit: u64) -> StorageResult<Ve
     let records = provider_quick_import_sources::Entity::find()
         .filter(provider_quick_import_sources::Column::AutoSyncEnabled.eq(true))
         .order_by_asc(provider_quick_import_sources::Column::LastSyncedAt)
+        .limit(limit)
+        .all(store.connection())
+        .await?;
+    let names = provider_names(store, records.iter().map(|record| record.provider_id.clone()).collect()).await?;
+    records
+        .into_iter()
+        .map(|record| {
+            let provider_name = require_provider_name(&names, &record.provider_id)?;
+            source_record(record, provider_name)
+        })
+        .collect()
+}
+
+pub async fn list_sub2api_token_refresh_sources(store: &ProviderStore, limit: u64) -> StorageResult<Vec<ProviderQuickImportSourceRecord>> {
+    let records = provider_quick_import_sources::Entity::find()
+        .filter(provider_quick_import_sources::Column::SourceKind.eq("sub2api"))
+        .filter(provider_quick_import_sources::Column::EncryptedAuthToken.ne(""))
+        .filter(provider_quick_import_sources::Column::EncryptedRefreshToken.ne(""))
+        .filter(provider_quick_import_sources::Column::TokenExpiresAt.is_not_null())
+        .order_by_asc(provider_quick_import_sources::Column::TokenExpiresAt)
         .limit(limit)
         .all(store.connection())
         .await?;
@@ -97,10 +118,13 @@ pub async fn update_source(
     else {
         return Err(StorageError::NotFound);
     };
-    let mut active: provider_quick_import_sources::ActiveModel = record.into();
+    let mut active = provider_quick_import_sources::ActiveModel {
+        id: Unchanged(record.id),
+        ..Default::default()
+    };
     apply_source_patch(&mut active, patch);
     let updated = active.update(store.connection()).await?;
-    let provider_name = provider_name(store, &updated.provider_id).await?;
+    let provider_name = provider_name(store, provider_id).await?;
     source_record(updated, provider_name)
 }
 
@@ -239,89 +263,4 @@ async fn key_models_for_keys(store: &ProviderStore, key_ids: &[String]) -> Stora
         });
     }
     Ok(output)
-}
-
-async fn provider_name(store: &ProviderStore, provider_id: &str) -> StorageResult<String> {
-    providers::Entity::find_by_id(provider_id.to_owned())
-        .one(store.connection())
-        .await?
-        .map(|record| record.name)
-        .ok_or_else(|| missing_provider(provider_id))
-}
-
-async fn provider_names(store: &ProviderStore, provider_ids: BTreeSet<String>) -> StorageResult<BTreeMap<String, String>> {
-    if provider_ids.is_empty() {
-        return Ok(BTreeMap::new());
-    }
-    let records = providers::Entity::find()
-        .filter(providers::Column::Id.is_in(provider_ids))
-        .all(store.connection())
-        .await?;
-    Ok(records.into_iter().map(|record| (record.id, record.name)).collect())
-}
-
-async fn key_name(store: &ProviderStore, provider_id: &str, key_id: &str) -> StorageResult<String> {
-    provider_api_keys::Entity::find()
-        .filter(provider_api_keys::Column::ProviderId.eq(provider_id))
-        .filter(provider_api_keys::Column::Id.eq(key_id))
-        .one(store.connection())
-        .await?
-        .map(|record| record.name)
-        .ok_or_else(|| missing_key(provider_id, key_id))
-}
-
-async fn key_names(store: &ProviderStore, keys: &[provider_quick_import_keys::Model]) -> StorageResult<BTreeMap<(String, String), String>> {
-    let provider_ids = keys.iter().map(|key| key.provider_id.clone()).collect::<BTreeSet<_>>();
-    let key_ids = keys.iter().map(|key| key.key_id.clone()).collect::<BTreeSet<_>>();
-    if provider_ids.is_empty() || key_ids.is_empty() {
-        return Ok(BTreeMap::new());
-    }
-    let records = provider_api_keys::Entity::find()
-        .filter(provider_api_keys::Column::ProviderId.is_in(provider_ids))
-        .filter(provider_api_keys::Column::Id.is_in(key_ids))
-        .all(store.connection())
-        .await?;
-    Ok(records.into_iter().map(|record| ((record.provider_id, record.id), record.name)).collect())
-}
-
-fn require_provider_name(names: &BTreeMap<String, String>, provider_id: &str) -> StorageResult<String> {
-    names.get(provider_id).cloned().ok_or_else(|| missing_provider(provider_id))
-}
-
-fn require_key_name(names: &BTreeMap<(String, String), String>, provider_id: &str, key_id: &str) -> StorageResult<String> {
-    names
-        .get(&(provider_id.to_owned(), key_id.to_owned()))
-        .cloned()
-        .ok_or_else(|| missing_key(provider_id, key_id))
-}
-
-fn missing_provider(provider_id: &str) -> StorageError {
-    StorageError::Database(format!("quick import sync source provider missing: {provider_id}"))
-}
-
-fn missing_key(provider_id: &str, key_id: &str) -> StorageError {
-    StorageError::Database(format!("quick import sync local api key missing: {provider_id}/{key_id}"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn missing_provider_name_is_explicit() {
-        let error = require_provider_name(&BTreeMap::new(), "provider-1").unwrap_err();
-        assert_database_error(error, "quick import sync source provider missing: provider-1");
-    }
-
-    #[test]
-    fn missing_key_name_is_explicit() {
-        let error = require_key_name(&BTreeMap::new(), "provider-1", "key-1").unwrap_err();
-        assert_database_error(error, "quick import sync local api key missing: provider-1/key-1");
-    }
-
-    fn assert_database_error(error: StorageError, expected: &str) {
-        match error {
-            StorageError::Database(message) => assert_eq!(message, expected),
-            other => panic!("expected database error, got {other:?}"),
-        }
-    }
 }

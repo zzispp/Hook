@@ -238,6 +238,10 @@ where
         self.inner.list_quick_import_sync_sources(limit).await
     }
 
+    async fn list_sub2api_token_refresh_sources(&self, limit: u64) -> ProviderResult<Vec<ProviderQuickImportSyncSource>> {
+        self.inner.list_sub2api_token_refresh_sources(limit).await
+    }
+
     async fn list_quick_import_sync_keys(&self, source_id: &str) -> ProviderResult<Vec<ProviderQuickImportSyncKey>> {
         self.inner.list_quick_import_sync_keys(source_id).await
     }

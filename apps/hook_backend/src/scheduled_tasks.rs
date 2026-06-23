@@ -20,7 +20,7 @@ use types::scheduler::ScheduledTaskConfigValueType;
 use self::{
     model_status::{ModelStatusCheckDispatchTask, ModelStatusRunsCleanupTask},
     performance_monitoring::{PerformanceMonitoringCleanupTask, PerformanceMonitoringSnapshotTask},
-    provider_quick_import::ProviderQuickImportSyncTask,
+    provider_quick_import::{ProviderQuickImportSub2apiTokenRefreshTask, ProviderQuickImportSyncTask},
     recharge::{RechargeOrderExpireTask, RechargePaymentPollTask},
     request_payload::{RequestPayloadBackfillTask, RequestPayloadStaleSweepTask},
     request_record::{RequestRecordCleanupTask, RequestRecordPartitionMaintenanceTask, RequestRecordStaleSweepTask},
@@ -51,7 +51,10 @@ pub fn scheduler_registry(
     registry.register(PerformanceMonitoringCleanupTask)?;
     registry.register(ModelStatusCheckDispatchTask { model_status_service })?;
     registry.register(ModelStatusRunsCleanupTask)?;
-    registry.register(ProviderQuickImportSyncTask { provider_service })?;
+    registry.register(ProviderQuickImportSyncTask {
+        provider_service: provider_service.clone(),
+    })?;
+    registry.register(ProviderQuickImportSub2apiTokenRefreshTask { provider_service })?;
     Ok(registry)
 }
 

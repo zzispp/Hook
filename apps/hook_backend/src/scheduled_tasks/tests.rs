@@ -2,7 +2,10 @@ use scheduler::runtime::ScheduledTaskLifecycle;
 
 use super::{
     RequestPayloadBackfillTask, RequestPayloadStaleSweepTask, RequestRecordCleanupTask, RequestRecordPartitionMaintenanceTask, RequestRecordStaleSweepTask,
-    provider_quick_import::{provider_quick_import_sync_definition, validate_provider_quick_import_sync_config},
+    provider_quick_import::{
+        provider_quick_import_sub2api_token_refresh_definition, provider_quick_import_sync_definition,
+        validate_provider_quick_import_sub2api_token_refresh_config, validate_provider_quick_import_sync_config,
+    },
 };
 
 #[test]
@@ -93,6 +96,40 @@ fn provider_quick_import_sync_config_requires_positive_integers() {
     assert!(validate_provider_quick_import_sync_config(&valid).is_ok());
     assert!(validate_provider_quick_import_sync_config(&serde_json::json!({"batch_size": 0, "max_runtime_seconds": 300})).is_err());
     assert!(validate_provider_quick_import_sync_config(&serde_json::json!({"batch_size": 20})).is_err());
+}
+
+#[test]
+fn provider_quick_import_sub2api_token_refresh_definition_matches_runtime_contract() {
+    let definition = provider_quick_import_sub2api_token_refresh_definition();
+
+    assert_eq!(definition.code, "provider_quick_import_sub2api_token_refresh");
+    assert_eq!(definition.default_interval_seconds, 300);
+    assert_eq!(definition.default_lease_seconds, 900);
+    assert_eq!(definition.default_config["batch_size"], 20);
+    assert_eq!(definition.default_config["refresh_threshold_minutes"], 60);
+    assert_eq!(definition.default_config["max_runtime_seconds"], 300);
+    assert_eq!(definition.config_schema.len(), 3);
+    assert_field(&definition, "batch_size", 1);
+    assert_field(&definition, "refresh_threshold_minutes", 1);
+    assert_field(&definition, "max_runtime_seconds", 1);
+}
+
+#[test]
+fn provider_quick_import_sub2api_token_refresh_config_requires_positive_integers() {
+    let valid = serde_json::json!({
+        "batch_size": 20,
+        "refresh_threshold_minutes": 60,
+        "max_runtime_seconds": 300
+    });
+
+    assert!(validate_provider_quick_import_sub2api_token_refresh_config(&valid).is_ok());
+    assert!(
+        validate_provider_quick_import_sub2api_token_refresh_config(
+            &serde_json::json!({"batch_size": 20, "refresh_threshold_minutes": 0, "max_runtime_seconds": 300})
+        )
+        .is_err()
+    );
+    assert!(validate_provider_quick_import_sub2api_token_refresh_config(&serde_json::json!({"batch_size": 20, "refresh_threshold_minutes": 60})).is_err());
 }
 
 #[test]

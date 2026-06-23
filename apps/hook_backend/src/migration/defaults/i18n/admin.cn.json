@@ -2635,6 +2635,10 @@
       "providerQuickImportSync": {
         "name": "快捷导入提供商同步",
         "description": "定期同步快捷导入提供商的上游分组倍率、成本和密钥状态。"
+      },
+      "providerQuickImportSub2apiTokenRefresh": {
+        "name": "Sub2api 快捷导入令牌刷新",
+        "description": "定期刷新快捷导入来源中 Sub2api Token 模式的认证令牌。"
       }
     },
     "config": {
@@ -2680,6 +2684,11 @@
       },
       "providerQuickImportSync": {
         "batchSize": "单次扫描来源数",
+        "maxRuntimeSeconds": "最大运行秒数"
+      },
+      "providerQuickImportSub2apiTokenRefresh": {
+        "batchSize": "单次扫描来源数",
+        "refreshThresholdMinutes": "提前刷新阈值（分钟）",
         "maxRuntimeSeconds": "最大运行秒数"
       }
     }

@@ -115,7 +115,31 @@ impl UpstreamProviderImportSource for Sub2ApiImportSource {
         match config {
             Sub2ApiQuickImportConfig::Password(_) => Ok(Some(source.clone())),
             Sub2ApiQuickImportConfig::Token(config) => {
-                let token = self.active_token(config).await?;
+                let token = self.active_token(config, REFRESH_THRESHOLD_MINUTES).await?;
+                Ok(Some(ProviderQuickImportSourceConfig::Sub2api(Sub2ApiQuickImportConfig::Token(
+                    Sub2ApiTokenQuickImportConfig {
+                        base_url: config.base_url.clone(),
+                        auth_token: token.access_token,
+                        refresh_token: token.refresh_token,
+                        token_expires_at: token.token_expires_at,
+                    },
+                ))))
+            }
+        }
+    }
+
+    async fn refreshed_source_config_with_threshold(
+        &self,
+        source: &ProviderQuickImportSourceConfig,
+        refresh_threshold_minutes: i64,
+    ) -> ProviderResult<Option<ProviderQuickImportSourceConfig>> {
+        let ProviderQuickImportSourceConfig::Sub2api(config) = source else {
+            return Ok(Some(source.clone()));
+        };
+        match config {
+            Sub2ApiQuickImportConfig::Password(_) => Ok(Some(source.clone())),
+            Sub2ApiQuickImportConfig::Token(config) => {
+                let token = self.active_token(config, refresh_threshold_minutes).await?;
                 Ok(Some(ProviderQuickImportSourceConfig::Sub2api(Sub2ApiQuickImportConfig::Token(
                     Sub2ApiTokenQuickImportConfig {
                         base_url: config.base_url.clone(),
@@ -130,9 +154,9 @@ impl UpstreamProviderImportSource for Sub2ApiImportSource {
 }
 
 impl Sub2ApiImportSource {
-    async fn active_token(&self, config: &Sub2ApiTokenQuickImportConfig) -> ProviderResult<ActiveToken> {
+    async fn active_token(&self, config: &Sub2ApiTokenQuickImportConfig, refresh_threshold_minutes: i64) -> ProviderResult<ActiveToken> {
         let expires_at = parse_token_expires_at(&config.token_expires_at)?;
-        if expires_at - OffsetDateTime::now_utc() > TimeDuration::minutes(REFRESH_THRESHOLD_MINUTES) {
+        if expires_at - OffsetDateTime::now_utc() > TimeDuration::minutes(refresh_threshold_minutes) {
             return Ok(ActiveToken {
                 access_token: config.auth_token.trim().to_owned(),
                 refresh_token: config.refresh_token.trim().to_owned(),
@@ -176,7 +200,7 @@ impl Sub2ApiImportSource {
     async fn token_for_config(&self, config: &Sub2ApiQuickImportConfig) -> ProviderResult<ActiveToken> {
         match config {
             Sub2ApiQuickImportConfig::Password(config) => self.password_login(config).await,
-            Sub2ApiQuickImportConfig::Token(config) => self.active_token(config).await,
+            Sub2ApiQuickImportConfig::Token(config) => self.active_token(config, REFRESH_THRESHOLD_MINUTES).await,
         }
     }
 

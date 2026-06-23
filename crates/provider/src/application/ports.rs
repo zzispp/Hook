@@ -297,6 +297,12 @@ pub struct ProviderQuickImportSyncRunOptions {
     pub limit: u64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ProviderQuickImportTokenRefreshRunOptions {
+    pub limit: u64,
+    pub refresh_threshold_minutes: i64,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProviderQuickImportSyncRunReport {
     pub scanned_count: u64,
@@ -304,6 +310,14 @@ pub struct ProviderQuickImportSyncRunReport {
     pub failed_count: u64,
     pub disabled_key_count: u64,
     pub updated_cost_count: u64,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct ProviderQuickImportTokenRefreshRunReport {
+    pub scanned_count: u64,
+    pub refreshed_count: u64,
+    pub skipped_count: u64,
+    pub failed_count: u64,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -383,6 +397,7 @@ pub trait ProviderRepository: Send + Sync + 'static {
     async fn replace_quick_import_key(&self, input: ProviderQuickImportKeyReplacement) -> ProviderResult<ProviderQuickImportKeyReplaced>;
     async fn quick_import_sync_source(&self, provider_id: &str) -> ProviderResult<Option<ProviderQuickImportSyncSource>>;
     async fn list_quick_import_sync_sources(&self, limit: u64) -> ProviderResult<Vec<ProviderQuickImportSyncSource>>;
+    async fn list_sub2api_token_refresh_sources(&self, limit: u64) -> ProviderResult<Vec<ProviderQuickImportSyncSource>>;
     async fn list_quick_import_sync_keys(&self, source_id: &str) -> ProviderResult<Vec<ProviderQuickImportSyncKey>>;
     async fn quick_import_sync_key(&self, provider_id: &str, key_id: &str) -> ProviderResult<Option<ProviderQuickImportSyncKey>>;
     async fn update_quick_import_sync_source(
@@ -432,6 +447,13 @@ pub trait UpstreamProviderImportSource: Send + Sync + 'static {
     async fn fetch_sync_token_models(&self, source: &ProviderQuickImportSourceConfig, upstream_token_id: &str) -> ProviderResult<Vec<UpstreamImportModel>>;
     async fn refreshed_source_config(&self, source: &ProviderQuickImportSourceConfig) -> ProviderResult<Option<ProviderQuickImportSourceConfig>> {
         Ok(Some(source.clone()))
+    }
+    async fn refreshed_source_config_with_threshold(
+        &self,
+        source: &ProviderQuickImportSourceConfig,
+        _refresh_threshold_minutes: i64,
+    ) -> ProviderResult<Option<ProviderQuickImportSourceConfig>> {
+        self.refreshed_source_config(source).await
     }
 }
 
@@ -517,6 +539,10 @@ pub trait ProviderUseCase: Send + Sync + 'static {
     ) -> ProviderResult<ProviderQuickImportSyncSettingsResponse>;
     async fn quick_import_sync_event_detail(&self, id: &str) -> ProviderResult<ProviderQuickImportSyncEventDetailResponse>;
     async fn run_quick_import_sync(&self, options: ProviderQuickImportSyncRunOptions) -> ProviderResult<ProviderQuickImportSyncRunReport>;
+    async fn run_quick_import_token_refresh(
+        &self,
+        options: ProviderQuickImportTokenRefreshRunOptions,
+    ) -> ProviderResult<ProviderQuickImportTokenRefreshRunReport>;
     async fn delete_model_cost(&self, provider_id: &str, key_id: &str, provider_model_id: &str) -> ProviderResult<()>;
     async fn list_request_records(&self, request: RequestRecordListRequest) -> ProviderResult<RequestRecordListResponse>;
     async fn list_usage_records(&self, user_id: &str, request: RequestRecordListRequest) -> ProviderResult<UsageRecordListResponse>;

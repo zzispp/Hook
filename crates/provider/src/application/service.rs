@@ -2,8 +2,9 @@ use async_trait::async_trait;
 use types::provider::*;
 
 use crate::application::{
-    GlobalModelCatalog, ProviderError, ProviderQuickImportSyncRunOptions, ProviderQuickImportSyncRunReport, ProviderRepository, ProviderResult,
-    ProviderUseCase, SecretCipher, UpstreamModelFetcher, UpstreamProviderImportSource,
+    GlobalModelCatalog, ProviderError, ProviderQuickImportSyncRunOptions, ProviderQuickImportSyncRunReport, ProviderQuickImportTokenRefreshRunOptions,
+    ProviderQuickImportTokenRefreshRunReport, ProviderRepository, ProviderResult, ProviderUseCase, SecretCipher, UpstreamModelFetcher,
+    UpstreamProviderImportSource,
 };
 
 mod key_endpoint_scope;
@@ -48,6 +49,11 @@ mod quick_import_sync_policy_tests;
 #[cfg(test)]
 mod quick_import_sync_precision_tests;
 mod quick_import_sync_settings;
+mod quick_import_token_refresh;
+#[cfg(test)]
+mod quick_import_token_refresh_test_support;
+#[cfg(test)]
+mod quick_import_token_refresh_tests;
 mod request_queries;
 mod upstream_models;
 
@@ -67,6 +73,7 @@ use quick_import_resolution::{
 use quick_import_resolution_models::has_hard_quick_import_status;
 use quick_import_sync::{SyncArgs, run_quick_import_sync};
 use quick_import_sync_settings::{quick_import_sync_settings, update_quick_import_sync_settings};
+use quick_import_token_refresh::run_quick_import_token_refresh;
 use request_queries::{
     sanitize_active_request_record_request, sanitize_provider_cooldown_request, validate_provider_cooldown_request, validate_request_record_list_request,
 };
@@ -517,6 +524,22 @@ where
 
     async fn run_quick_import_sync(&self, options: ProviderQuickImportSyncRunOptions) -> ProviderResult<ProviderQuickImportSyncRunReport> {
         run_quick_import_sync(
+            SyncArgs {
+                repository: &self.repository,
+                models: &self.models,
+                cipher: &self.cipher,
+                importer: &self.importer,
+            },
+            options,
+        )
+        .await
+    }
+
+    async fn run_quick_import_token_refresh(
+        &self,
+        options: ProviderQuickImportTokenRefreshRunOptions,
+    ) -> ProviderResult<ProviderQuickImportTokenRefreshRunReport> {
+        run_quick_import_token_refresh(
             SyncArgs {
                 repository: &self.repository,
                 models: &self.models,

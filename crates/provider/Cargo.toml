@@ -21,5 +21,7 @@ thiserror.workspace = true
 time.workspace = true
 tokio.workspace = true
 types.workspace = true
+hook_tracing.workspace = true
 
 [dev-dependencies]
+sea-orm.workspace = true
