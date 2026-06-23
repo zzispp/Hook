@@ -4,9 +4,8 @@ use rust_decimal::Decimal;
 use types::{model::PatchField, model::TieredPricingConfig};
 
 use super::{
-    AttemptCancelGuard, AttemptCancelHandle, AttemptCancelPhase, AttemptCancelReason, AttemptCancelShared, cancelled_after_upstream_response_record,
-    cancelled_before_upstream_response_record, hedged_after_upstream_response_record, hedged_before_upstream_response_record,
-    stream_candidate_watchdog_timeout_record, take_cancel_state,
+    AttemptCancelGuard, AttemptCancelHandle, AttemptCancelPhase, AttemptCancelShared, cancelled_after_upstream_response_record,
+    cancelled_before_upstream_response_record, stream_candidate_watchdog_timeout_record, take_cancel_phase,
 };
 use crate::llm_proxy::{
     audit::{AttemptAuditInput, request_billing_status},
@@ -24,10 +23,7 @@ fn disarm_keeps_guard_owned_by_caller() {
 fn armed_awaiting_terminal_guard_records_cancel_phase() {
     let shared = cancel_shared(AttemptCancelPhase::AwaitingTerminal, true);
 
-    assert!(matches!(
-        take_cancel_state(&shared),
-        Some((AttemptCancelPhase::AwaitingTerminal, AttemptCancelReason::ClientDisconnect))
-    ));
+    assert!(matches!(take_cancel_phase(&shared), Some(AttemptCancelPhase::AwaitingTerminal)));
 }
 
 #[test]
@@ -37,7 +33,7 @@ fn disarmed_awaiting_terminal_guard_records_no_cancel_phase() {
 
     handle.disarm();
 
-    assert!(take_cancel_state(&shared).is_none());
+    assert!(take_cancel_phase(&shared).is_none());
 }
 
 #[test]
@@ -88,38 +84,8 @@ fn stream_candidate_watchdog_timeout_is_explicit_failed_record() {
     assert_eq!(request_billing_status(&AttemptAuditInput::from(input), None), "void");
 }
 
-#[test]
-fn hedged_cancel_before_upstream_response_is_explicit_terminal_record() {
-    let candidate = candidate();
-    let input = hedged_before_upstream_response_record(&candidate, 0, 42);
-
-    assert_eq!(input.status, "cancelled");
-    assert_eq!(input.status_code, None);
-    assert_eq!(input.error_type, Some("hedge_cancelled"));
-    assert_eq!(input.termination_origin, PatchField::Value("gateway".into()));
-    assert_eq!(input.termination_reason, PatchField::Value("hedge_loser".into()));
-    assert_eq!(input.stream_end_reason, PatchField::Value("hedge_cancelled".into()));
-}
-
-#[test]
-fn hedged_cancel_after_upstream_response_is_explicit_terminal_record() {
-    let candidate = candidate();
-    let input = hedged_after_upstream_response_record(&candidate, 0, 42);
-
-    assert_eq!(input.status, "cancelled");
-    assert_eq!(input.status_code, None);
-    assert_eq!(input.error_type, Some("hedge_cancelled"));
-    assert_eq!(input.termination_origin, PatchField::Value("gateway".into()));
-    assert_eq!(input.termination_reason, PatchField::Value("hedge_loser".into()));
-    assert_eq!(input.stream_end_reason, PatchField::Value("hedge_cancelled".into()));
-}
-
 fn cancel_shared(phase: AttemptCancelPhase, armed: bool) -> Arc<Mutex<AttemptCancelShared>> {
-    Arc::new(Mutex::new(AttemptCancelShared {
-        phase,
-        armed,
-        reason: AttemptCancelReason::ClientDisconnect,
-    }))
+    Arc::new(Mutex::new(AttemptCancelShared { phase, armed }))
 }
 
 fn candidate() -> ProxyCandidate {

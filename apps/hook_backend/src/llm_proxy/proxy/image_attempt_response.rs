@@ -84,7 +84,6 @@ async fn handle_upstream_stream_success(input: HandleResponseInput<'_>) -> Resul
                 provider_request_body: input.prepared.body.provider_body(input.candidate, true)?,
                 started: input.started,
                 retry_index: input.retry_index,
-                cancel_handle: input.attempt_cancel.handle(),
             },
             input.attempt_cancel,
         )

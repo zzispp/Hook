@@ -92,44 +92,21 @@ pub(super) struct StreamCancelledRecordInput<'a> {
     pub(super) usage: Option<TokenUsage>,
     pub(super) status: &'a StreamStatus,
     pub(super) observability: StreamTerminalObservability,
-    pub(super) reason: StreamCancelledReason,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum StreamCancelledReason {
-    ClientDisconnected,
-    HedgedBackupSuperseded,
 }
 
 pub(super) fn cancelled_record(input: StreamCancelledRecordInput<'_>) -> StreamAttemptRecord {
-    let (status_code, error_type, error_message, termination_origin, termination_reason) = match input.reason {
-        StreamCancelledReason::ClientDisconnected => (
-            Some(499),
-            "client_disconnected",
-            "client disconnected before stream completed",
-            "client",
-            "disconnected",
-        ),
-        StreamCancelledReason::HedgedBackupSuperseded => (
-            None,
-            "hedge_cancelled",
-            "stream attempt cancelled because backup stream won",
-            "gateway",
-            "hedge_loser",
-        ),
-    };
     StreamAttemptRecord {
-        termination_origin: PatchField::Value(termination_origin.into()),
-        termination_reason: PatchField::Value(termination_reason.into()),
+        termination_origin: PatchField::Value("client".into()),
+        termination_reason: PatchField::Value("disconnected".into()),
         stream_end_reason: input.status.stream_end_reason_patch(),
         ..terminal_record(TerminalRecordInput {
             context: input.context,
             status: "cancelled",
-            status_code,
+            status_code: Some(499),
             usage: input.usage,
             observability: input.observability,
-            error_type: Some(error_type),
-            error_message: Some(error_message.into()),
+            error_type: Some("client_disconnected"),
+            error_message: Some("client disconnected before stream completed".into()),
         })
     }
 }
