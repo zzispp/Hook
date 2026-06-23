@@ -25,6 +25,9 @@ pub(super) struct StreamCooldownFailure {
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(super) struct StreamTerminalObservability {
+    pub(super) response_headers_time_ms: Option<i64>,
+    pub(super) first_sse_event_time_ms: Option<i64>,
+    pub(super) first_output_time_ms: Option<i64>,
     pub(super) first_byte_time_ms: Option<i64>,
     pub(super) latency_ms: i64,
     pub(super) bodies: StreamResponseBodyPatches,

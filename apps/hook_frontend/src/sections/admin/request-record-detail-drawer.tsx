@@ -23,6 +23,7 @@ import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
 import { Scrollbar } from 'src/components/scrollbar';
 
+import { formatRequestTiming } from './request-record-timing';
 import { RequestRecordTraceTimeline } from './request-record-trace-timeline';
 import { RequestRecordPayloadPanels } from './request-record-payload-panels';
 import { RequestRecordBillingDetails } from './request-record-billing-details';
@@ -200,6 +201,9 @@ function CostSummary({ record }: { record: RequestRecord | null }) {
     [t('requestRecords.actualCost'), formatCost(record?.upstream_total_cost)],
     [t('requestRecords.profit'), formatCost(profit(record))],
     [t('requestRecords.profitRate'), profitRate(record)],
+    [t('requestRecords.responseHeaders'), record ? formatRequestTiming(record, 'response_headers') : 'N/A'],
+    [t('requestRecords.firstSseEvent'), record ? formatRequestTiming(record, 'first_sse_event') : 'N/A'],
+    [t('requestRecords.firstOutput'), record ? formatRequestTiming(record, 'first_output') : 'N/A'],
     [t('requestRecords.responseTime'), formatDuration(record?.total_latency_ms)],
   ];
 

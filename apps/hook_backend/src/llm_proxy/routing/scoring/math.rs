@@ -100,16 +100,18 @@ pub(in crate::llm_proxy::routing) fn exploration_score(profile: &RoutingProfile,
 }
 
 pub(in crate::llm_proxy::routing) fn success_score(metric: &RoutingMetricSnapshot) -> f64 {
-    let success = metric.success_count as f64 + PRIOR_SUCCESS;
-    let attempts = metric.request_count as f64 + PRIOR_SUCCESS + PRIOR_FAIL;
+    let (success_count, request_count) = effective_success_counts(metric);
+    let success = success_count as f64 + PRIOR_SUCCESS;
+    let attempts = request_count as f64 + PRIOR_SUCCESS + PRIOR_FAIL;
     clamp_score(100.0 * success / attempts)
 }
 
 pub(super) fn success_rate(metric: &RoutingMetricSnapshot) -> f64 {
-    if metric.request_count == 0 {
+    let (success_count, request_count) = effective_success_counts(metric);
+    if request_count == 0 {
         return 0.0;
     }
-    metric.success_count as f64 / metric.request_count as f64
+    success_count as f64 / request_count as f64
 }
 
 pub(in crate::llm_proxy::routing) fn lower_is_better(value: Option<f64>, good: f64, bad: f64) -> f64 {
@@ -145,4 +147,12 @@ pub(in crate::llm_proxy::routing) fn clamp_score(value: f64) -> f64 {
 
 pub(super) fn decimal_f64(value: Decimal) -> Option<f64> {
     value.to_f64()
+}
+
+fn effective_success_counts(metric: &RoutingMetricSnapshot) -> (u64, u64) {
+    let first_output_attempts = metric.first_output_success_count.saturating_add(metric.first_output_failure_count);
+    if first_output_attempts > 0 {
+        return (metric.first_output_success_count, first_output_attempts);
+    }
+    (metric.success_count, metric.request_count)
 }

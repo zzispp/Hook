@@ -31,7 +31,10 @@ impl StreamRelay {
 
     pub(super) fn terminal_observability(&self) -> StreamTerminalObservability {
         StreamTerminalObservability {
-            first_byte_time_ms: self.first_byte_time_ms,
+            response_headers_time_ms: Some(self.context.response_headers_time_ms),
+            first_sse_event_time_ms: self.first_sse_event_time_ms,
+            first_output_time_ms: self.first_output_time_ms,
+            first_byte_time_ms: self.compat_first_byte_time_ms(),
             latency_ms: transport::elapsed_ms(self.context.started),
             bodies: self.terminal_response_bodies(),
             provider_frame_count: self.body_capture.provider_frame_count(),
@@ -42,7 +45,10 @@ impl StreamRelay {
 
     pub(super) fn cancelled_observability(&self) -> StreamTerminalObservability {
         StreamTerminalObservability {
-            first_byte_time_ms: self.first_byte_time_ms,
+            response_headers_time_ms: Some(self.context.response_headers_time_ms),
+            first_sse_event_time_ms: self.first_sse_event_time_ms,
+            first_output_time_ms: self.first_output_time_ms,
+            first_byte_time_ms: self.compat_first_byte_time_ms(),
             latency_ms: transport::elapsed_ms(self.context.started),
             bodies: self.cancelled_response_bodies(),
             provider_frame_count: self.body_capture.provider_frame_count(),

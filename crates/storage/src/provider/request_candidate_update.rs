@@ -58,6 +58,9 @@ fn apply_error_and_timing(
 ) -> UpdateMany<request_candidates::Entity> {
     let mut update = update
         .col_expr(request_candidates::Column::LatencyMs, Expr::val(input.latency_ms))
+        .col_expr(request_candidates::Column::ResponseHeadersTimeMs, Expr::val(input.response_headers_time_ms))
+        .col_expr(request_candidates::Column::FirstSseEventTimeMs, Expr::val(input.first_sse_event_time_ms))
+        .col_expr(request_candidates::Column::FirstOutputTimeMs, Expr::val(input.first_output_time_ms))
         .col_expr(request_candidates::Column::FirstByteTimeMs, Expr::val(input.first_byte_time_ms))
         .col_expr(request_candidates::Column::ErrorType, Expr::val(input.error_type))
         .col_expr(request_candidates::Column::ErrorMessage, Expr::val(input.error_message))

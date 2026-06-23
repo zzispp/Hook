@@ -22,6 +22,9 @@ pub(super) struct StreamAttemptRecord {
     pub(super) status_code: Option<i32>,
     pub(super) usage: Option<TokenUsage>,
     pub(super) latency_ms: Option<i64>,
+    pub(super) response_headers_time_ms: Option<i64>,
+    pub(super) first_sse_event_time_ms: Option<i64>,
+    pub(super) first_output_time_ms: Option<i64>,
     pub(super) first_byte_time_ms: Option<i64>,
     pub(super) error_type: Option<&'static str>,
     pub(super) error_message: Option<String>,
@@ -44,6 +47,9 @@ pub(super) async fn record_stream_attempt(input: StreamAttemptRecord) -> Result<
             status_code: input.status_code,
             usage: input.usage,
             latency_ms: input.latency_ms,
+            response_headers_time_ms: input.response_headers_time_ms,
+            first_sse_event_time_ms: input.first_sse_event_time_ms,
+            first_output_time_ms: input.first_output_time_ms,
             first_byte_time_ms: input.first_byte_time_ms,
             error_type: input.error_type,
             error_message: input.error_message.as_deref(),
@@ -86,21 +92,44 @@ pub(super) struct StreamCancelledRecordInput<'a> {
     pub(super) usage: Option<TokenUsage>,
     pub(super) status: &'a StreamStatus,
     pub(super) observability: StreamTerminalObservability,
+    pub(super) reason: StreamCancelledReason,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum StreamCancelledReason {
+    ClientDisconnected,
+    HedgedBackupSuperseded,
 }
 
 pub(super) fn cancelled_record(input: StreamCancelledRecordInput<'_>) -> StreamAttemptRecord {
+    let (status_code, error_type, error_message, termination_origin, termination_reason) = match input.reason {
+        StreamCancelledReason::ClientDisconnected => (
+            Some(499),
+            "client_disconnected",
+            "client disconnected before stream completed",
+            "client",
+            "disconnected",
+        ),
+        StreamCancelledReason::HedgedBackupSuperseded => (
+            None,
+            "hedge_cancelled",
+            "stream attempt cancelled because backup stream won",
+            "gateway",
+            "hedge_loser",
+        ),
+    };
     StreamAttemptRecord {
-        termination_origin: PatchField::Value("client".into()),
-        termination_reason: PatchField::Value("disconnected".into()),
+        termination_origin: PatchField::Value(termination_origin.into()),
+        termination_reason: PatchField::Value(termination_reason.into()),
         stream_end_reason: input.status.stream_end_reason_patch(),
         ..terminal_record(TerminalRecordInput {
             context: input.context,
             status: "cancelled",
-            status_code: Some(499),
+            status_code,
             usage: input.usage,
             observability: input.observability,
-            error_type: Some("client_disconnected"),
-            error_message: Some("client disconnected before stream completed".into()),
+            error_type: Some(error_type),
+            error_message: Some(error_message.into()),
         })
     }
 }
@@ -125,6 +154,9 @@ fn terminal_record(input: TerminalRecordInput<'_>) -> StreamAttemptRecord {
         status_code: input.status_code,
         usage: input.usage,
         latency_ms: Some(input.observability.latency_ms),
+        response_headers_time_ms: input.observability.response_headers_time_ms,
+        first_sse_event_time_ms: input.observability.first_sse_event_time_ms,
+        first_output_time_ms: input.observability.first_output_time_ms,
         first_byte_time_ms: input.observability.first_byte_time_ms,
         error_type: input.error_type,
         error_message: input.error_message,

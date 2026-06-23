@@ -23,7 +23,7 @@ use types::model::PatchField;
 
 use super::{
     LlmProxyError, LlmProxyState,
-    attempt_log::AttemptCancelGuard,
+    attempt_log::{AttemptCancelGuard, AttemptCancelHandle},
     response_payload::{body_value, upstream_status_error_details},
     timeout, transport,
 };
@@ -42,6 +42,8 @@ pub(super) struct StreamAttemptContext {
     provider_request_body: serde_json::Value,
     retry_index: i32,
     started: Instant,
+    response_headers_time_ms: i64,
+    cancel_handle: AttemptCancelHandle,
     status: StatusCode,
 }
 
@@ -55,6 +57,7 @@ pub struct StreamResponseArgs {
     pub provider_request_body: serde_json::Value,
     pub started: Instant,
     pub retry_index: i32,
+    pub cancel_handle: AttemptCancelHandle,
 }
 
 pub(super) enum StreamResponseOutcome {
@@ -64,7 +67,9 @@ pub(super) enum StreamResponseOutcome {
 
 pub(super) struct StreamPreOutputFailure {
     pub(super) status: StatusCode,
+    pub(super) error_type: &'static str,
     pub(super) message: String,
+    pub(super) advance_candidate: bool,
 }
 
 pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptCancelGuard) -> Result<StreamResponseOutcome, LlmProxyError> {
@@ -78,6 +83,7 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
         provider_request_body,
         started,
         retry_index,
+        cancel_handle,
     } = args;
     let status = transport::status_code(response.status())?;
     let content_type = transport::response_content_type(&response);
@@ -89,6 +95,8 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
         provider_request_body,
         retry_index,
         started,
+        response_headers_time_ms: transport::elapsed_ms(started),
+        cancel_handle,
         status,
     };
     if !status.is_success() {
@@ -194,6 +202,9 @@ async fn record_stream_headers(
     context: &StreamAttemptContext,
     upstream_headers: HeaderMap,
     content_type: Option<&HeaderValue>,
+    response_headers_time_ms: i64,
+    first_sse_event_time_ms: Option<i64>,
+    first_output_time_ms: Option<i64>,
     first_byte_time_ms: Option<i64>,
 ) -> Result<(), LlmProxyError> {
     record_attempt(
@@ -201,6 +212,9 @@ async fn record_stream_headers(
         &context.request_id,
         AttemptRecordInput {
             status_code: Some(context.status.as_u16() as i32),
+            response_headers_time_ms: Some(response_headers_time_ms),
+            first_sse_event_time_ms,
+            first_output_time_ms,
             first_byte_time_ms,
             provider_response_headers: PatchField::Value(upstream_headers),
             client_response_headers: transport::content_type_headers(content_type),

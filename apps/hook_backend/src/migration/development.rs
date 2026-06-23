@@ -177,6 +177,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::auth_layout_site_name_i18n_additive::apply(manager).await?;
     super::global_model_user_usage_counts_additive::apply(manager).await?;
     super::routing_metrics_additive::apply(manager).await?;
+    super::stream_tail_latency_additive::apply(manager).await?;
     super::routing_profile_state_partition_additive::apply(manager).await?;
     super::routing_profile_overrides_additive::apply(manager).await?;
     super::system_settings_api_endpoints_additive::apply(manager).await?;

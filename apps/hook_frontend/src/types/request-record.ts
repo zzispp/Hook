@@ -102,6 +102,9 @@ export type RequestRecord = RequestBillingFields & RequestUpstreamCostFields & {
   base_cost: number;
   billing_multiplier: number;
   cost_currency: string;
+  response_headers_time_ms?: number | null;
+  first_sse_event_time_ms?: number | null;
+  first_output_time_ms?: number | null;
   first_byte_time_ms?: number | null;
   total_latency_ms?: number | null;
   candidate_count: number;
@@ -128,6 +131,9 @@ export type UsageRecord = {
   cache_read_input_tokens?: number | null;
   total_cost: number;
   cost_currency: string;
+  response_headers_time_ms?: number | null;
+  first_sse_event_time_ms?: number | null;
+  first_output_time_ms?: number | null;
   first_byte_time_ms?: number | null;
   total_latency_ms?: number | null;
 };
@@ -183,6 +189,9 @@ export type RequestCandidateDetail = RequestBillingFields & RequestUpstreamCostF
   billing_multiplier?: number | null;
   cost_currency?: string | null;
   latency_ms?: number | null;
+  response_headers_time_ms?: number | null;
+  first_sse_event_time_ms?: number | null;
+  first_output_time_ms?: number | null;
   first_byte_time_ms?: number | null;
   error_type?: string | null;
   error_message?: string | null;

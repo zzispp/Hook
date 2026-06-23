@@ -52,6 +52,9 @@ pub(super) fn attempt_patch(
         billing: record_billing::billing_values(input.service_tier.clone(), billing.map(|item| &item.amount)),
         billing_snapshot: billing_snapshot_patch(billing),
         latency_ms: input.latency_ms,
+        response_headers_time_ms: input.response_headers_time_ms,
+        first_sse_event_time_ms: input.first_sse_event_time_ms,
+        first_output_time_ms: input.first_output_time_ms,
         first_byte_time_ms: input.first_byte_time_ms,
         error_type: input.error_type.clone(),
         error_message: input.error_message.clone(),
@@ -83,6 +86,9 @@ pub(super) fn attempt_input(
     record.billing = record_billing::billing_values(input.service_tier.clone(), billing.map(|item| &item.amount));
     record.billing_snapshot = billing.map(|item| item.snapshot.clone());
     record.latency_ms = input.latency_ms;
+    record.response_headers_time_ms = input.response_headers_time_ms;
+    record.first_sse_event_time_ms = input.first_sse_event_time_ms;
+    record.first_output_time_ms = input.first_output_time_ms;
     record.first_byte_time_ms = input.first_byte_time_ms;
     record.error_type = input.error_type.clone();
     record.error_message = input.error_message.clone();
@@ -192,6 +198,9 @@ pub(super) fn request_record_patch(
         upstream_cost: upstream_cost_patch(upstream_cost),
         billing: record_billing::billing_patch(billing.map(|item| &item.amount)),
         billing_snapshot: billing_snapshot_patch(billing),
+        response_headers_time_ms: option_patch(input.response_headers_time_ms),
+        first_sse_event_time_ms: option_patch(input.first_sse_event_time_ms),
+        first_output_time_ms: option_patch(input.first_output_time_ms),
         first_byte_time_ms: option_patch(input.first_byte_time_ms),
         total_latency_ms: option_patch(input.latency_ms),
         client_response_headers: payload::response_header_patch(input.client_response_headers.clone(), policy)?,
@@ -250,6 +259,9 @@ fn base_input(request_id: &str, trace: &CandidateTrace, retry_index: i32, status
         billing: RequestBillingRecordValues::default(),
         billing_snapshot: None,
         latency_ms: None,
+        response_headers_time_ms: None,
+        first_sse_event_time_ms: None,
+        first_output_time_ms: None,
         first_byte_time_ms: None,
         error_type: None,
         error_message: None,

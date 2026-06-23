@@ -126,7 +126,7 @@ function UsageRecordRow({
       <TableCell align="right">{formatCacheHitRate(row)}</TableCell>
       <TableCell>{formatCost(row.total_cost)}</TableCell>
       <TableCell>
-        <RequestRecordDurationText record={row} metric="first_byte" now={durationNow} />
+        <RequestRecordDurationText record={row} metric="first_output" now={durationNow} />
       </TableCell>
       <TableCell>
         <RequestRecordDurationText record={row} metric="total_latency" now={durationNow} />
@@ -192,7 +192,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
     { id: 'tokens', label: t('requestRecords.tokens'), width: 140, align: 'right' },
     { id: 'cache_hit_rate', label: t('requestRecords.cacheHitRate'), width: 120, align: 'right' },
     { id: 'cost', label: t('requestRecords.cost'), width: 120 },
-    { id: 'first_byte', label: t('requestRecords.firstByte'), width: 110 },
+    { id: 'first_output', label: t('requestRecords.firstOutput'), width: 110 },
     { id: 'latency', label: t('requestRecords.totalLatency'), width: 120 },
   ];
 }

@@ -111,15 +111,24 @@ fn context_state_columns() -> [&'static str; 19] {
 }
 
 fn success_rate(delta: &RoutingContextRouteStateDelta) -> Decimal {
-    if delta.sample_count <= 0 {
+    let (success_count, sample_count) = effective_success_counts(delta);
+    if sample_count <= 0 {
         return Decimal::ZERO;
     }
-    Decimal::from(delta.success_count.max(0)) / Decimal::from(delta.sample_count.max(1))
+    Decimal::from(success_count.max(0)) / Decimal::from(sample_count.max(1))
 }
 
 fn output_tps(delta: &RoutingContextRouteStateDelta) -> Option<Decimal> {
     (delta.tps_latency_ms > 0 && delta.output_tokens > 0)
         .then(|| Decimal::from(delta.output_tokens.max(0)) * Decimal::from(1000) / Decimal::from(delta.tps_latency_ms.max(1)))
+}
+
+fn effective_success_counts(delta: &RoutingContextRouteStateDelta) -> (i64, i64) {
+    let first_output_attempts = delta.first_output_success_count + delta.first_output_failure_count;
+    if first_output_attempts > 0 {
+        return (delta.first_output_success_count, first_output_attempts);
+    }
+    (delta.success_count, delta.sample_count)
 }
 
 fn push(params: &mut Vec<Value>, value: Value) -> String {

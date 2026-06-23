@@ -55,10 +55,14 @@ impl StreamRelay {
         if self.client_output_started {
             return Ok(());
         }
-        self.client_output_started = self
+        let started = self
             .output_start_detector
             .consume(bytes)
             .map_err(|error| LlmProxyError::InvalidRequest(error.to_string()))?;
+        if started {
+            self.first_output_time_ms = Some(self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
+        }
+        self.client_output_started = started;
         Ok(())
     }
 

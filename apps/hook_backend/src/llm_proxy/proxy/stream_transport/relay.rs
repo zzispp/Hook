@@ -43,7 +43,8 @@ pub(super) struct StreamRelay {
     usage_estimator: StreamUsageEstimator,
     output_start_detector: StreamOutputStartDetector,
     usage: Option<TokenUsage>,
-    first_byte_time_ms: Option<i64>,
+    first_sse_event_time_ms: Option<i64>,
+    first_output_time_ms: Option<i64>,
     last_upstream_item_at: Instant,
     stream_idle_timeout: Option<Duration>,
     yielded_any: bool,
@@ -83,7 +84,8 @@ impl StreamRelay {
             usage_estimator,
             output_start_detector: StreamOutputStartDetector::new(target_format),
             usage: None,
-            first_byte_time_ms: None,
+            first_sse_event_time_ms: None,
+            first_output_time_ms: None,
             last_upstream_item_at,
             stream_idle_timeout,
             yielded_any: false,
@@ -128,7 +130,16 @@ impl StreamRelay {
         if !super::should_record_streaming_started_after_prefetch(self.finished, self.recorded_terminal) {
             return Ok(());
         }
-        super::record_stream_headers(&self.context, upstream_headers, content_type, self.first_byte_time_ms).await
+        super::record_stream_headers(
+            &self.context,
+            upstream_headers,
+            content_type,
+            self.context.response_headers_time_ms,
+            self.first_sse_event_time_ms,
+            self.first_output_time_ms,
+            self.compat_first_byte_time_ms(),
+        )
+        .await
     }
 
     pub(super) fn prefetch_failure_response(&self) -> Result<Option<axum::response::Response>, LlmProxyError> {
@@ -155,7 +166,9 @@ impl StreamRelay {
         };
         Ok(StreamPreOutputFailure {
             status: failure.status,
+            error_type: failure.error_type,
             message: failure.message.clone(),
+            advance_candidate: failure.error_type == "first_byte_timeout",
         })
     }
 
@@ -184,7 +197,7 @@ impl StreamRelay {
         match item {
             Ok(bytes) => {
                 self.last_upstream_item_at = Instant::now();
-                self.record_provider_first_byte();
+                self.record_first_sse_event();
                 self.record_provider_body(&bytes);
                 if fail_before_output && let Some(error) = inspect_provider_error(&bytes) {
                     self.stream_status.set_end_reason(StreamEndReason::ScannerError, Some(error.message.clone()));
@@ -257,11 +270,15 @@ impl StreamRelay {
         self.record_failure(response_read_error_type(error), &error_message).await
     }
 
-    fn record_provider_first_byte(&mut self) {
-        if self.first_byte_time_ms.is_some() {
+    fn record_first_sse_event(&mut self) {
+        if self.first_sse_event_time_ms.is_some() {
             return;
         }
-        self.first_byte_time_ms = Some(self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
+        self.first_sse_event_time_ms = Some(self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
+    }
+
+    pub(super) fn compat_first_byte_time_ms(&self) -> Option<i64> {
+        self.first_output_time_ms
     }
 
     fn ready_to_commit(&self) -> bool {

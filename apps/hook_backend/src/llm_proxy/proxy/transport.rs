@@ -46,6 +46,7 @@ pub struct FullResponseArgs {
     pub source_format: ApiFormat,
     pub target_format: ApiFormat,
     pub started: Instant,
+    pub response_headers_time_ms: i64,
     pub retry_index: i32,
     pub request_timeout: Option<std::time::Duration>,
 }
@@ -60,6 +61,7 @@ pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyE
         source_format,
         target_format,
         started,
+        response_headers_time_ms,
         retry_index,
         request_timeout,
     } = args;
@@ -73,6 +75,8 @@ pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyE
         candidate: &candidate,
         retry_index,
         started,
+        response_headers_time_ms: Some(response_headers_time_ms),
+        first_output_time_ms: None,
         first_byte_time_ms: None,
         read_timeout,
         response,
@@ -93,6 +97,7 @@ pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyE
             upstream_headers,
             bytes,
             elapsed,
+            response_headers_time_ms,
         })
         .await;
     }
@@ -104,6 +109,8 @@ pub async fn full_response(args: FullResponseArgs) -> Result<Response, LlmProxyE
         AttemptRecordInput {
             status_code: Some(status.as_u16() as i32),
             latency_ms: Some(elapsed),
+            response_headers_time_ms: Some(response_headers_time_ms),
+            first_output_time_ms: Some(elapsed),
             first_byte_time_ms: Some(elapsed),
             error_type: Some("upstream_status"),
             error_message: Some(error.message.as_str()),
@@ -135,6 +142,7 @@ struct FullResponseInput {
     upstream_headers: HeaderMap,
     bytes: Vec<u8>,
     elapsed: i64,
+    response_headers_time_ms: i64,
 }
 
 async fn full_success_response(input: FullResponseInput) -> Result<Response, LlmProxyError> {
@@ -167,6 +175,8 @@ async fn full_success_response(input: FullResponseInput) -> Result<Response, Llm
             usage: usage::from_response_bytes(&input.bytes, input.target_format),
             service_tier: input.service_tier.clone(),
             latency_ms: Some(input.elapsed),
+            response_headers_time_ms: Some(input.response_headers_time_ms),
+            first_output_time_ms: Some(input.elapsed),
             first_byte_time_ms: Some(input.elapsed),
             provider_response_headers: PatchField::Value(input.upstream_headers.clone()),
             provider_response_body: PatchField::Value(body_value(&input.bytes)),
@@ -189,6 +199,7 @@ async fn record_response_conversion_failure(input: &FullResponseInput, error: &L
         AttemptRecordInput {
             status_code: Some(input.status.as_u16() as i32),
             latency_ms: Some(input.elapsed),
+            response_headers_time_ms: Some(input.response_headers_time_ms),
             first_byte_time_ms: Some(input.elapsed),
             error_type: Some("response_conversion_error"),
             error_message: Some(error_message.as_str()),
@@ -221,6 +232,8 @@ pub async fn record_upstream_failure(
         candidate,
         retry_index,
         started,
+        response_headers_time_ms: Some(elapsed_ms(started)),
+        first_output_time_ms: None,
         first_byte_time_ms: None,
         read_timeout,
         response,
@@ -235,6 +248,7 @@ pub async fn record_upstream_failure(
         AttemptRecordInput {
             status_code: Some(status.as_u16() as i32),
             latency_ms: Some(elapsed_ms(started)),
+            response_headers_time_ms: Some(elapsed_ms(started)),
             error_type: Some(error_type),
             error_message: Some(error.message.as_str()),
             error_code: error.code.as_deref(),

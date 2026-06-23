@@ -11,7 +11,10 @@ pub(super) fn metric_upsert_sql() -> &'static str {
      DO UPDATE SET provider_name = COALESCE(EXCLUDED.provider_name, routing_metric_buckets.provider_name), \
      key_name = COALESCE(EXCLUDED.key_name, routing_metric_buckets.key_name), endpoint_name = COALESCE(EXCLUDED.endpoint_name, routing_metric_buckets.endpoint_name), \
      request_count = routing_metric_buckets.request_count + EXCLUDED.request_count, success_count = routing_metric_buckets.success_count + EXCLUDED.success_count, \
-     failure_count = routing_metric_buckets.failure_count + EXCLUDED.failure_count, timeout_count = routing_metric_buckets.timeout_count + EXCLUDED.timeout_count, \
+     failure_count = routing_metric_buckets.failure_count + EXCLUDED.failure_count, \
+     first_output_success_count = routing_metric_buckets.first_output_success_count + EXCLUDED.first_output_success_count, \
+     first_output_failure_count = routing_metric_buckets.first_output_failure_count + EXCLUDED.first_output_failure_count, \
+     timeout_count = routing_metric_buckets.timeout_count + EXCLUDED.timeout_count, \
      rate_limited_count = routing_metric_buckets.rate_limited_count + EXCLUDED.rate_limited_count, server_error_count = routing_metric_buckets.server_error_count + EXCLUDED.server_error_count, \
      format_conversion_failure_count = routing_metric_buckets.format_conversion_failure_count + EXCLUDED.format_conversion_failure_count, \
      usage_missing_count = routing_metric_buckets.usage_missing_count + EXCLUDED.usage_missing_count, \
@@ -40,6 +43,7 @@ pub(super) fn metric_select_sql() -> &'static str {
     "SELECT provider_id, provider_name, key_id, key_name, endpoint_id, endpoint_name, global_model_id, client_api_format, provider_api_format, is_stream, \
      route_config_fingerprint, price_config_fingerprint, \
      SUM(request_count)::BIGINT AS request_count, SUM(success_count)::BIGINT AS success_count, SUM(failure_count)::BIGINT AS failure_count, \
+     SUM(first_output_success_count)::BIGINT AS first_output_success_count, SUM(first_output_failure_count)::BIGINT AS first_output_failure_count, \
      SUM(timeout_count)::BIGINT AS timeout_count, SUM(rate_limited_count)::BIGINT AS rate_limited_count, SUM(server_error_count)::BIGINT AS server_error_count, \
      SUM(format_conversion_failure_count)::BIGINT AS format_conversion_failure_count, SUM(usage_missing_count)::BIGINT AS usage_missing_count, \
      SUM(stream_abnormal_end_count)::BIGINT AS stream_abnormal_end_count, SUM(schema_tool_call_failure_count)::BIGINT AS schema_tool_call_failure_count, \
@@ -72,6 +76,8 @@ pub(super) fn metric_values(delta: &RoutingMetricDelta, bounds: BucketBounds, no
         Value::from(delta.request_count),
         Value::from(delta.success_count),
         Value::from(delta.failure_count),
+        Value::from(delta.first_output_success_count),
+        Value::from(delta.first_output_failure_count),
         Value::from(delta.timeout_count),
         Value::from(delta.rate_limited_count),
         Value::from(delta.server_error_count),
@@ -127,7 +133,7 @@ pub(super) fn route_state_values(
     ]
 }
 
-pub(super) fn metric_columns() -> [&'static str; 38] {
+pub(super) fn metric_columns() -> [&'static str; 40] {
     [
         "id",
         "bucket_granularity",
@@ -146,6 +152,8 @@ pub(super) fn metric_columns() -> [&'static str; 38] {
         "request_count",
         "success_count",
         "failure_count",
+        "first_output_success_count",
+        "first_output_failure_count",
         "timeout_count",
         "rate_limited_count",
         "server_error_count",
@@ -194,10 +202,11 @@ pub(super) fn route_state_columns() -> [&'static str; 18] {
 }
 
 pub(super) fn success_rate(delta: &RoutingMetricDelta) -> Decimal {
-    if delta.request_count <= 0 {
+    let (success_count, request_count) = effective_success_counts(delta);
+    if request_count <= 0 {
         return Decimal::ZERO;
     }
-    Decimal::from(delta.success_count.max(0)) / Decimal::from(delta.request_count.max(1))
+    Decimal::from(success_count.max(0)) / Decimal::from(request_count.max(1))
 }
 
 pub(super) fn output_tps(delta: &RoutingMetricDelta) -> Option<Decimal> {
@@ -207,6 +216,14 @@ pub(super) fn output_tps(delta: &RoutingMetricDelta) -> Option<Decimal> {
 
 pub(super) fn average_decimal(sum: i64, count: i64) -> Option<Decimal> {
     (count > 0).then(|| Decimal::from(sum.max(0)) / Decimal::from(count))
+}
+
+fn effective_success_counts(delta: &RoutingMetricDelta) -> (i64, i64) {
+    let first_output_attempts = delta.first_output_success_count + delta.first_output_failure_count;
+    if first_output_attempts > 0 {
+        return (delta.first_output_success_count, first_output_attempts);
+    }
+    (delta.success_count, delta.request_count)
 }
 
 pub(super) fn push(params: &mut Vec<Value>, value: Value) -> String {
