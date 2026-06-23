@@ -17,8 +17,11 @@ import TableHead from '@mui/material/TableHead';
 
 import { useTranslate } from 'src/locales/use-locales';
 
-import { type QuickImportTokenDraft } from './provider-quick-import-utils';
 import { ProviderQuickImportTokenRow } from './provider-quick-import-token-row';
+import {
+  type QuickImportTokenDraft,
+  type QuickImportMappingsByToken,
+} from './provider-quick-import-utils';
 
 const CHECKBOX_COLUMN_WIDTH = 56;
 const KEY_COLUMN_WIDTH = '38%';
@@ -30,9 +33,8 @@ type PreviewStepProps = {
   preview: ProviderQuickImportPreviewResponse;
   models: GlobalModelResponse[];
   tokens: Record<string, QuickImportTokenDraft>;
-  mappings: Record<string, string>;
+  mappings: QuickImportMappingsByToken;
   setTokens: Dispatch<SetStateAction<Record<string, QuickImportTokenDraft>>>;
-  setMappings: Dispatch<SetStateAction<Record<string, string>>>;
   onMapModels: (token: ProviderQuickImportTokenPreview) => void;
   renderExtraFields?: (input: {
     token: ProviderQuickImportTokenPreview;
@@ -76,7 +78,7 @@ function TokenTable({ preview, tokens, mappings, setTokens, onMapModels, renderE
               key={token.upstream_token_id}
               token={token}
               draft={tokens[token.upstream_token_id]}
-              mappings={mappings}
+              mappings={mappings[token.upstream_token_id] ?? {}}
               rechargeMultiplier={preview.recharge_multiplier}
               setTokens={setTokens}
               onMapModels={onMapModels}

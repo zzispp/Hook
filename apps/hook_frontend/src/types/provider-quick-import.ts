@@ -67,8 +67,6 @@ export type ProviderQuickImportPreviewRequest = {
 
 export type ProviderQuickImportCommitRequest = ProviderQuickImportPreviewRequest & {
   selected_tokens: ProviderQuickImportSelectedToken[];
-  selected_model_ids: string[];
-  model_mappings: ProviderQuickImportModelMappingInput[];
   sync_config: ProviderQuickImportSyncConfig;
 };
 
@@ -78,8 +76,6 @@ export type ProviderQuickImportAppendPreviewRequest = {
 
 export type ProviderQuickImportAppendCommitRequest = {
   selected_tokens: ProviderQuickImportSelectedToken[];
-  selected_model_ids: string[];
-  model_mappings: ProviderQuickImportModelMappingInput[];
 };
 
 export type ProviderQuickImportBindPreviewRequest = {
@@ -108,8 +104,6 @@ export type ProviderQuickImportBindSelectedToken = ProviderQuickImportSelectedTo
 
 export type ProviderQuickImportBindCommitRequest = ProviderQuickImportBindPreviewRequest & {
   selected_tokens: ProviderQuickImportBindSelectedToken[];
-  selected_model_ids: string[];
-  model_mappings: ProviderQuickImportModelMappingInput[];
   sync_config: ProviderQuickImportSyncConfig;
 };
 
@@ -196,6 +190,7 @@ export type ProviderQuickImportSelectedToken = {
   name: string;
   endpoint_formats: string[];
   effective_cost_multiplier: number;
+  model_mappings: ProviderQuickImportModelMappingInput[];
 };
 
 export type ProviderQuickImportProviderConfig = {

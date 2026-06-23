@@ -55,8 +55,7 @@ where
     let source = args.importer.refreshed_source_config(&input.source).await?.unwrap_or(input.source.clone());
     let data = args.importer.fetch_import_data(&source).await?;
     let globals = args.models.list_global_models().await?;
-    let selected = selected_tokens(&data, &input.selected_tokens)?;
-    let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
+    let selected = resolved_mappings(selected_tokens(&data, &input.selected_tokens)?, &globals)?;
     let draft = quick_import_create(QuickImportCreateDraft {
         provider,
         provider_config: &input.provider_config,
@@ -65,7 +64,6 @@ where
         sync_config: input.sync_config,
         selected,
         globals: &globals,
-        mappings,
         cipher: args.cipher,
     })?;
     let output = args.repository.create_quick_import(draft).await?;
