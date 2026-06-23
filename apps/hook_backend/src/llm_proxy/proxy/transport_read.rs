@@ -22,21 +22,33 @@ pub(super) struct ResponseBytesInput<'a> {
     pub(super) response: req::Response,
 }
 
+struct ResponseReadErrorInput<'a> {
+    state: &'a LlmProxyState,
+    request_id: &'a str,
+    candidate: &'a ProxyCandidate,
+    retry_index: i32,
+    started: Instant,
+    response_headers_time_ms: Option<i64>,
+    first_output_time_ms: Option<i64>,
+    first_byte_time_ms: Option<i64>,
+    error: &'a req::ClientError,
+}
+
 pub(super) async fn response_bytes(input: ResponseBytesInput<'_>) -> Result<Vec<u8>, LlmProxyError> {
     match read_response_bytes(req::response_bytes(input.response), input.read_timeout).await {
         Ok(bytes) => Ok(bytes),
         Err(error) => {
-            record_response_read_error(
-                input.state,
-                input.request_id,
-                input.candidate,
-                input.retry_index,
-                input.started,
-                input.response_headers_time_ms,
-                input.first_output_time_ms,
-                input.first_byte_time_ms,
-                &error,
-            )
+            record_response_read_error(ResponseReadErrorInput {
+                state: input.state,
+                request_id: input.request_id,
+                candidate: input.candidate,
+                retry_index: input.retry_index,
+                started: input.started,
+                response_headers_time_ms: input.response_headers_time_ms,
+                first_output_time_ms: input.first_output_time_ms,
+                first_byte_time_ms: input.first_byte_time_ms,
+                error: &error,
+            })
             .await?;
             Err(error.into())
         }
@@ -53,29 +65,19 @@ where
     }
 }
 
-async fn record_response_read_error(
-    state: &LlmProxyState,
-    request_id: &str,
-    candidate: &ProxyCandidate,
-    retry_index: i32,
-    started: Instant,
-    response_headers_time_ms: Option<i64>,
-    first_output_time_ms: Option<i64>,
-    first_byte_time_ms: Option<i64>,
-    error: &req::ClientError,
-) -> Result<(), LlmProxyError> {
-    let error_message = error.to_string();
+async fn record_response_read_error(input: ResponseReadErrorInput<'_>) -> Result<(), LlmProxyError> {
+    let error_message = input.error.to_string();
     record_attempt(
-        state,
-        request_id,
+        input.state,
+        input.request_id,
         AttemptRecordInput {
-            latency_ms: Some(elapsed_ms(started)),
-            response_headers_time_ms,
-            first_output_time_ms,
-            first_byte_time_ms,
-            error_type: Some(response_read_error_type(error)),
+            latency_ms: Some(elapsed_ms(input.started)),
+            response_headers_time_ms: input.response_headers_time_ms,
+            first_output_time_ms: input.first_output_time_ms,
+            first_byte_time_ms: input.first_byte_time_ms,
+            error_type: Some(response_read_error_type(input.error)),
             error_message: Some(error_message.as_str()),
-            ..AttemptRecordInput::new(candidate, retry_index, "failed", true)
+            ..AttemptRecordInput::new(input.candidate, input.retry_index, "failed", true)
         },
     )
     .await
