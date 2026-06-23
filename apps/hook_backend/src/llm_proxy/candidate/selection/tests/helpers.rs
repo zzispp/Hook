@@ -161,6 +161,7 @@ pub(super) fn request() -> CandidateRequest<'static> {
         model_name: "gpt-test",
         is_stream: false,
         has_openai_responses_custom_tool_items: false,
+        has_openai_responses_tool_outputs_without_previous_response_id: false,
         features: types::provider::RoutingRequestFeatures::unknown("openai:chat", false, None),
     }
 }

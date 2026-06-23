@@ -91,6 +91,7 @@ async fn prepare_image_request(
             model_name: body.model(),
             is_stream,
             has_openai_responses_custom_tool_items: false,
+            has_openai_responses_tool_outputs_without_previous_response_id: false,
             features: RoutingRequestFeatures::unknown(api_format, is_stream, Some(IMAGE_GENERATION_CAPABILITY)),
         },
     )

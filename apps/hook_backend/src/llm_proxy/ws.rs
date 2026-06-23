@@ -43,6 +43,7 @@ pub async fn realtime(
             model_name,
             is_stream: true,
             has_openai_responses_custom_tool_items: false,
+            has_openai_responses_tool_outputs_without_previous_response_id: false,
             features: RoutingRequestFeatures::unknown(OPENAI_CHAT_FORMAT, true, None),
         },
     )

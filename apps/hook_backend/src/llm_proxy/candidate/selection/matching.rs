@@ -182,7 +182,7 @@ fn endpoint_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, reques
 }
 
 fn conversion_allowed(provider: &CachedProvider, endpoint: &CachedEndpoint, request: &CandidateRequest<'_>) -> bool {
-    if request.has_openai_responses_custom_tool_items {
+    if request.has_openai_responses_custom_tool_items || request.has_openai_responses_tool_outputs_without_previous_response_id {
         return false;
     }
     (provider.enable_format_conversion || endpoint_accepts_conversion(endpoint))
