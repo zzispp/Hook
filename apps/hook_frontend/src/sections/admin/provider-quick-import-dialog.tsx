@@ -1,6 +1,7 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
+import type { Dispatch, SetStateAction } from 'react';
 import type { GlobalModelResponse } from 'src/types/model';
 import type {
   ProviderQuickImportTokenPreview,
@@ -45,6 +46,7 @@ import {
   DEFAULT_QUICK_IMPORT_FORM,
   type QuickImportTokenDraft,
   selectedMappedUpstreamModels,
+  type QuickImportMappingsByToken,
 } from './provider-quick-import-utils';
 
 type Props = {
@@ -60,22 +62,25 @@ export function ProviderQuickImportDialog({ open, models, onClose, onImported }:
   const [form, setForm] = useState(DEFAULT_QUICK_IMPORT_FORM);
   const [preview, setPreview] = useState<ProviderQuickImportPreviewResponse | null>(null);
   const [tokens, setTokens] = useState<Record<string, QuickImportTokenDraft>>({});
-  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [mappings, setMappings] = useState<QuickImportMappingsByToken>({});
   const [mappingTokenId, setMappingTokenId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const selectedTokens = useMemo(() => selectedTokenRows(preview, tokens), [preview, tokens]);
-  const selectedModelIds = useMemo(() => selectedMappedUpstreamModels(selectedTokens, mappings), [selectedTokens, mappings]);
   const mappingToken = useMemo(
     () => preview?.tokens.find((token) => token.upstream_token_id === mappingTokenId),
     [mappingTokenId, preview]
   );
-  const mappingMissing = selectedModelIds.some((id) => !mappings[id]);
-  const costMissing = selectedModelIds.some((id) => !globalModelHasCost(models, mappings[id]));
+  const selectedGlobalModelIds = useMemo(
+    () => mappedGlobalModelIds(selectedTokens, mappings),
+    [mappings, selectedTokens]
+  );
+  const mappingMissing = selectedTokens.some((token) => tokenHasBlankMappings(token, mappings));
+  const costMissing = selectedGlobalModelIds.some((id) => !globalModelHasCost(models, id));
   const commitDisabled =
     selectedTokens.length === 0 ||
-    selectedModelIds.length === 0 ||
+    selectedGlobalModelIds.length === 0 ||
     selectedTokens.some((token) => !(tokens[token.upstream_token_id]?.name ?? token.name).trim()) ||
-    selectedTokens.some((token) => tokenMappedModelCount(token, mappings) === 0) ||
+    selectedTokens.some((token) => tokenMappedModelCount(token, mappings[token.upstream_token_id] ?? {}) === 0) ||
     selectedTokens.some((token) => tokens[token.upstream_token_id]?.endpointFormats.length === 0) ||
     selectedTokens.some((token) => !validCostMultiplier(tokens[token.upstream_token_id]?.costMultiplier)) ||
     !validSyncConfig(form.sync) ||
@@ -146,7 +151,6 @@ export function ProviderQuickImportDialog({ open, models, onClose, onImported }:
               tokens={tokens}
               mappings={mappings}
               setTokens={setTokens}
-              setMappings={setMappings}
               onMapModels={(token) => setMappingTokenId(token.upstream_token_id)}
             />
           ) : null}
@@ -173,8 +177,8 @@ export function ProviderQuickImportDialog({ open, models, onClose, onImported }:
           preview={preview}
           token={mappingToken}
           models={models}
-          mappings={mappings}
-          setMappings={setMappings}
+          mappings={mappingToken ? mappings[mappingToken.upstream_token_id] ?? {} : {}}
+          setMappings={tokenMappingsSetter(mappingToken, setMappings)}
           onClose={() => setMappingTokenId(null)}
         />
       ) : null}
@@ -197,6 +201,34 @@ function QuickImportDrawerHeader({ title, onClose }: { title: string; onClose: (
 
 function tokenMappedModelCount(token: ProviderQuickImportTokenPreview, mappings: Record<string, string>) {
   return token.models.filter((model) => model.upstream_model_id in mappings).length;
+}
+
+function tokenHasBlankMappings(token: ProviderQuickImportTokenPreview, mappingsByToken: QuickImportMappingsByToken) {
+  return selectedMappedUpstreamModels([token], mappingsByToken[token.upstream_token_id] ?? {}).some(
+    (id) => !(mappingsByToken[token.upstream_token_id] ?? {})[id]
+  );
+}
+
+function mappedGlobalModelIds(tokens: ProviderQuickImportTokenPreview[], mappingsByToken: QuickImportMappingsByToken) {
+  return [...new Set(tokens.flatMap((token) => Object.values(mappingsByToken[token.upstream_token_id] ?? {}).filter(Boolean)))];
+}
+
+function tokenMappingsSetter(
+  token: ProviderQuickImportTokenPreview | undefined,
+  setMappings: Dispatch<SetStateAction<QuickImportMappingsByToken>>
+) {
+  return (updater: SetStateAction<Record<string, string>>) => {
+    if (!token) return;
+    setMappings((current) => {
+      const currentTokenMappings = current[token.upstream_token_id] ?? {};
+      const nextTokenMappings =
+        typeof updater === 'function' ? updater(currentTokenMappings) : updater;
+      return {
+        ...current,
+        [token.upstream_token_id]: nextTokenMappings,
+      };
+    });
+  };
 }
 
 const drawerSlotProps = {

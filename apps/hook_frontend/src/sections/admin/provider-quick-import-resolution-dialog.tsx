@@ -34,8 +34,8 @@ import { toast } from 'src/components/snackbar';
 import { ProviderQuickImportMappingDialog } from './provider-quick-import-mapping-table';
 import {
   mappingInputs,
-  defaultMappings,
   globalModelHasCost,
+  defaultTokenMappings,
   selectedMappedUpstreamModels,
 } from './provider-quick-import-utils';
 import {
@@ -248,6 +248,5 @@ function tokenById(response: ProviderQuickImportResolutionResponse | null, id: s
 }
 
 function tokenMappings(preview: ProviderQuickImportPreviewResponse, token: ProviderQuickImportTokenPreview) {
-  const defaults = defaultMappings(preview);
-  return Object.fromEntries(token.models.map((model) => [model.upstream_model_id, defaults[model.upstream_model_id] ?? '']));
+  return defaultTokenMappings(preview, token);
 }

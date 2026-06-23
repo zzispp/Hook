@@ -53,6 +53,9 @@ export type QuickImportTokenDraft = {
   localKeyId?: string;
 };
 
+export type QuickImportTokenMappings = Record<string, string>;
+export type QuickImportMappingsByToken = Record<string, QuickImportTokenMappings>;
+
 export const DEFAULT_QUICK_IMPORT_FORM: QuickImportFormState = {
   providerName: '',
   sourceKind: 'newapi',
@@ -92,11 +95,9 @@ export function commitPayload(
   form: QuickImportFormState,
   selected: ProviderQuickImportTokenPreview[],
   tokens: Record<string, QuickImportTokenDraft>,
-  mappings: Record<string, string>,
+  mappingsByToken: QuickImportMappingsByToken,
   models: GlobalModelResponse[]
 ) {
-  const selectedModelIds = selectedMappedUpstreamModels(selected, mappings);
-
   return {
     ...previewPayload(form),
     selected_tokens: selected.map((token) => ({
@@ -104,9 +105,8 @@ export function commitPayload(
       name: (tokens[token.upstream_token_id]?.name ?? token.name).trim(),
       endpoint_formats: tokens[token.upstream_token_id]?.endpointFormats ?? [],
       effective_cost_multiplier: Number(tokens[token.upstream_token_id]?.costMultiplier),
+      model_mappings: tokenMappingInputs(token, mappingsByToken[token.upstream_token_id] ?? {}, models),
     })),
-    selected_model_ids: selectedModelIds,
-    model_mappings: mappingInputs(selectedModelIds, mappings, models),
     sync_config: syncConfigPayload(form.sync),
   };
 }
@@ -114,20 +114,17 @@ export function commitPayload(
 export function appendCommitPayload(
   selected: ProviderQuickImportTokenPreview[],
   tokens: Record<string, QuickImportTokenDraft>,
-  mappings: Record<string, string>,
+  mappingsByToken: QuickImportMappingsByToken,
   models: GlobalModelResponse[]
 ) {
-  const selectedModelIds = selectedMappedUpstreamModels(selected, mappings);
-
   return {
     selected_tokens: selected.map((token) => ({
       upstream_token_id: token.upstream_token_id,
       name: (tokens[token.upstream_token_id]?.name ?? token.name).trim(),
       endpoint_formats: tokens[token.upstream_token_id]?.endpointFormats ?? [],
       effective_cost_multiplier: Number(tokens[token.upstream_token_id]?.costMultiplier),
+      model_mappings: tokenMappingInputs(token, mappingsByToken[token.upstream_token_id] ?? {}, models),
     })),
-    selected_model_ids: selectedModelIds,
-    model_mappings: mappingInputs(selectedModelIds, mappings, models),
   };
 }
 
@@ -143,11 +140,9 @@ export function bindCommitPayload(
   form: QuickImportFormState,
   selected: ProviderQuickImportTokenPreview[],
   tokens: Record<string, QuickImportTokenDraft>,
-  mappings: Record<string, string>,
+  mappingsByToken: QuickImportMappingsByToken,
   models: GlobalModelResponse[]
 ) {
-  const selectedModelIds = selectedMappedUpstreamModels(selected, mappings);
-
   return {
     ...bindSourcePayload(form),
     selected_tokens: selected.map((token) => ({
@@ -156,9 +151,8 @@ export function bindCommitPayload(
       name: (tokens[token.upstream_token_id]?.name ?? token.name).trim(),
       endpoint_formats: tokens[token.upstream_token_id]?.endpointFormats ?? [],
       effective_cost_multiplier: Number(tokens[token.upstream_token_id]?.costMultiplier),
+      model_mappings: tokenMappingInputs(token, mappingsByToken[token.upstream_token_id] ?? {}, models),
     })),
-    selected_model_ids: selectedModelIds,
-    model_mappings: mappingInputs(selectedModelIds, mappings, models),
     sync_config: syncConfigPayload(form.sync),
   };
 }
@@ -173,6 +167,17 @@ export function mappingInputs(
     .filter(([upstream_model_id, global_model_id]) =>
       global_model_id && mappingNeedsOverride(models, upstream_model_id, global_model_id)
     )
+    .map(([upstream_model_id, global_model_id]) => ({ upstream_model_id, global_model_id }));
+}
+
+export function tokenMappingInputs(
+  token: ProviderQuickImportTokenPreview,
+  mappings: QuickImportTokenMappings,
+  _models: GlobalModelResponse[]
+) {
+  return token.models
+    .map((model) => [model.upstream_model_id, mappings[model.upstream_model_id]] as const)
+    .filter(([, global_model_id]) => !!global_model_id)
     .map(([upstream_model_id, global_model_id]) => ({ upstream_model_id, global_model_id }));
 }
 
@@ -200,14 +205,20 @@ export function defaultTokenDrafts(preview: ProviderQuickImportPreviewResponse) 
 }
 
 export function defaultMappings(preview: ProviderQuickImportPreviewResponse) {
-  const suggested = preview.model_mappings.map((mapping) => [
-      mapping.upstream_model_id,
-      mapping.suggested_global_model_id ?? '',
-    ] as const);
-  const linked = preview.tokens.flatMap((token) =>
+  return Object.fromEntries(preview.tokens.map((token) => [token.upstream_token_id, defaultTokenMappings(preview, token)]));
+}
+
+export function defaultTokenMappings(preview: ProviderQuickImportPreviewResponse, token: ProviderQuickImportTokenPreview) {
+  const suggested = Object.fromEntries(
+    token.models.map((model) => {
+      const previewMapping = preview.model_mappings.find((mapping) => mapping.upstream_model_id === model.upstream_model_id);
+      return [model.upstream_model_id, previewMapping?.suggested_global_model_id ?? ''];
+    })
+  );
+  const linked = Object.fromEntries(
     token.linked_key?.model_mappings.map((mapping) => [mapping.upstream_model_id, mapping.global_model_id] as const) ?? []
   );
-  return Object.fromEntries([...suggested, ...linked]);
+  return { ...suggested, ...linked };
 }
 
 export function selectedTokenRows(
@@ -227,6 +238,22 @@ export function selectedMappedUpstreamModels(
 ) {
   const selected = new Set(selectedUpstreamModels(tokens));
   return Object.keys(mappings).filter((id) => selected.has(id));
+}
+
+export function flattenSelectedMappings(
+  tokens: ProviderQuickImportTokenPreview[],
+  mappingsByToken: QuickImportMappingsByToken
+) {
+  return tokens.reduce<Record<string, string>>((output, token) => {
+    const tokenMappings = mappingsByToken[token.upstream_token_id] ?? {};
+    for (const model of token.models) {
+      const globalModelId = tokenMappings[model.upstream_model_id];
+      if (globalModelId) {
+        output[`${token.upstream_token_id}:${model.upstream_model_id}`] = globalModelId;
+      }
+    }
+    return output;
+  }, {});
 }
 
 export function globalModelHasCost(models: GlobalModelResponse[], id?: string) {

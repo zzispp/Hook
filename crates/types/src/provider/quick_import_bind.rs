@@ -1,9 +1,7 @@
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use super::quick_import::{
-    ProviderQuickImportModelMappingInput, ProviderQuickImportPreviewResponse, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind,
-};
+use super::quick_import::{ProviderQuickImportPreviewResponse, ProviderQuickImportSourceConfig, ProviderQuickImportSourceKind};
 use super::quick_import_sync::ProviderQuickImportSyncConfig;
 use super::{Provider, ProviderApiKey, ProviderEndpoint, ProviderModelBinding, ProviderModelCost};
 
@@ -40,6 +38,8 @@ pub struct ProviderQuickImportBindSelectedToken {
     pub endpoint_formats: Vec<String>,
     #[serde(with = "rust_decimal::serde::float")]
     pub effective_cost_multiplier: Decimal,
+    #[serde(default)]
+    pub model_mappings: Vec<super::quick_import::ProviderQuickImportModelMappingInput>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -50,10 +50,6 @@ pub struct ProviderQuickImportBindCommitRequest {
     pub recharge_multiplier: Decimal,
     #[serde(default)]
     pub selected_tokens: Vec<ProviderQuickImportBindSelectedToken>,
-    #[serde(default)]
-    pub selected_model_ids: Vec<String>,
-    #[serde(default)]
-    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
     #[serde(default)]
     pub sync_config: ProviderQuickImportSyncConfig,
 }

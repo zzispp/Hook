@@ -25,7 +25,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 
-import { defaultMappings } from './provider-quick-import-utils';
+import { defaultTokenMappings } from './provider-quick-import-utils';
 
 type Props = {
   open: boolean;
@@ -64,7 +64,7 @@ export function ProviderQuickImportMappingDialog({ open, preview, token, models,
       </DialogTitle>
       <DialogContent>
         <Stack spacing={1.5} sx={{ pt: 1 }}>
-          <MappingActions preview={preview} tokenModelIds={tokenModelIds} setMappings={setMappings} />
+          <MappingActions preview={preview} token={token} tokenModelIds={tokenModelIds} setMappings={setMappings} />
           {visibleMappings.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               {t('common.noData')}
@@ -92,10 +92,12 @@ export function ProviderQuickImportMappingDialog({ open, preview, token, models,
 
 function MappingActions({
   preview,
+  token,
   tokenModelIds,
   setMappings,
 }: {
   preview: ProviderQuickImportPreviewResponse;
+  token?: ProviderQuickImportTokenPreview;
   tokenModelIds: string[];
   setMappings: Dispatch<SetStateAction<Record<string, string>>>;
 }) {
@@ -103,13 +105,17 @@ function MappingActions({
 
   return (
     <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
-      <Button size="small" color="inherit" onClick={() => setMappings((current) => resetTokenMappings(preview, tokenModelIds, current))}>
+      <Button
+        size="small"
+        color="inherit"
+        onClick={() => setMappings((current) => resetTokenMappings(preview, token, tokenModelIds, current))}
+      >
         {t('providers.quickImportResetMappings')}
       </Button>
       <Button
         size="small"
         variant="outlined"
-        onClick={() => setMappings((current) => mergeMissingMappings(preview, tokenModelIds, current))}
+        onClick={() => setMappings((current) => mergeMissingMappings(preview, token, tokenModelIds, current))}
       >
         {t('providers.quickImportFetchModels')}
       </Button>
@@ -172,10 +178,12 @@ function MappingRow({
 
 function resetTokenMappings(
   preview: ProviderQuickImportPreviewResponse,
+  token: ProviderQuickImportTokenPreview | undefined,
   tokenModelIds: string[],
   current: Record<string, string>
 ) {
-  const defaults = defaultMappings(preview);
+  if (!token) return current;
+  const defaults = defaultTokenMappings(preview, token);
   const next = { ...current };
   for (const id of tokenModelIds) {
     next[id] = defaults[id] ?? '';
@@ -185,10 +193,12 @@ function resetTokenMappings(
 
 function mergeMissingMappings(
   preview: ProviderQuickImportPreviewResponse,
+  token: ProviderQuickImportTokenPreview | undefined,
   tokenModelIds: string[],
   current: Record<string, string>
 ) {
-  const defaults = defaultMappings(preview);
+  if (!token) return current;
+  const defaults = defaultTokenMappings(preview, token);
   const additions = Object.fromEntries(
     tokenModelIds.filter((id) => !(id in current)).map((id) => [id, defaults[id] ?? ''])
   );

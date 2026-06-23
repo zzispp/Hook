@@ -70,10 +70,6 @@ pub struct ProviderQuickImportCommitRequest {
     #[serde(default)]
     pub selected_tokens: Vec<ProviderQuickImportSelectedToken>,
     #[serde(default)]
-    pub selected_model_ids: Vec<String>,
-    #[serde(default)]
-    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
-    #[serde(default)]
     pub sync_config: ProviderQuickImportSyncConfig,
 }
 
@@ -87,10 +83,6 @@ pub struct ProviderQuickImportAppendPreviewRequest {
 pub struct ProviderQuickImportAppendCommitRequest {
     #[serde(default)]
     pub selected_tokens: Vec<ProviderQuickImportSelectedToken>,
-    #[serde(default)]
-    pub selected_model_ids: Vec<String>,
-    #[serde(default)]
-    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -115,6 +107,8 @@ pub struct ProviderQuickImportSelectedToken {
     pub endpoint_formats: Vec<String>,
     #[serde(with = "rust_decimal::serde::float")]
     pub effective_cost_multiplier: Decimal,
+    #[serde(default)]
+    pub model_mappings: Vec<ProviderQuickImportModelMappingInput>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

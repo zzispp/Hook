@@ -74,8 +74,7 @@ where
         .await?;
     let data = args.importer.fetch_import_data(&refreshed).await?;
     let globals = args.models.list_global_models().await?;
-    let selected = selected_tokens(&data, &input.selected_tokens)?;
-    let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
+    let selected = resolved_mappings(selected_tokens(&data, &input.selected_tokens)?, &globals)?;
     let existing_endpoints = args.repository.list_endpoints(&context.provider.id).await?;
     let existing_bindings = args.repository.list_model_bindings(&context.provider.id).await?;
     let draft = quick_import_append(QuickImportAppendDraft {
@@ -84,7 +83,6 @@ where
         source: &refreshed,
         selected,
         globals: &globals,
-        mappings,
         cipher: args.cipher,
     })?;
     let draft = filter_existing_resources(draft, &existing_endpoints, &existing_bindings);

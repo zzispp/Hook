@@ -1,9 +1,13 @@
 'use client';
 
 import type { Theme } from '@mui/material/styles';
+import type { Dispatch, SetStateAction } from 'react';
 import type { Provider } from 'src/types/provider';
 import type { GlobalModelResponse } from 'src/types/model';
-import type { ProviderQuickImportBindPreviewResponse } from 'src/types/provider-quick-import';
+import type {
+  ProviderQuickImportTokenPreview,
+  ProviderQuickImportBindPreviewResponse,
+} from 'src/types/provider-quick-import';
 
 import { useMemo, useState } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
@@ -52,7 +56,7 @@ import {
   validCostMultiplier,
   DEFAULT_QUICK_IMPORT_FORM,
   type QuickImportTokenDraft,
-  selectedMappedUpstreamModels,
+  type QuickImportMappingsByToken,
 } from './provider-quick-import-utils';
 
 type Props = {
@@ -69,24 +73,27 @@ export function ProviderQuickImportBindDialog({ open, provider, models, onClose,
   const [form, setForm] = useState(DEFAULT_QUICK_IMPORT_FORM);
   const [preview, setPreview] = useState<ProviderQuickImportBindPreviewResponse | null>(null);
   const [tokens, setTokens] = useState<Record<string, QuickImportTokenDraft>>({});
-  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [mappings, setMappings] = useState<QuickImportMappingsByToken>({});
   const [mappingTokenId, setMappingTokenId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const selectedTokens = useMemo(() => selectedTokenRows(preview?.preview ?? null, tokens), [preview, tokens]);
-  const selectedModelIds = useMemo(() => selectedMappedUpstreamModels(selectedTokens, mappings), [mappings, selectedTokens]);
   const mappingToken = useMemo(
     () => preview?.preview.tokens.find((token) => token.upstream_token_id === mappingTokenId),
     [mappingTokenId, preview]
   );
-  const mappingMissing = selectedModelIds.some((id) => !mappings[id]);
-  const costMissing = selectedModelIds.some((id) => !globalModelHasCost(models, mappings[id]));
+  const selectedGlobalModelIds = useMemo(
+    () => mappedGlobalModelIds(selectedTokens, mappings),
+    [mappings, selectedTokens]
+  );
+  const mappingMissing = selectedTokens.some((token) => tokenHasBlankMappings(token, mappings));
+  const costMissing = selectedGlobalModelIds.some((id) => !globalModelHasCost(models, id));
   const duplicateLocalKey = hasDuplicateLocalKey(selectedTokens, tokens);
   const disabled =
     selectedTokens.length === 0 ||
-    selectedModelIds.length === 0 ||
+    selectedGlobalModelIds.length === 0 ||
     selectedTokens.some((token) => !(tokens[token.upstream_token_id]?.name ?? token.name).trim()) ||
-    selectedTokens.some((token) => token.models.every((model) => !(model.upstream_model_id in mappings))) ||
+    selectedTokens.some((token) => token.models.every((model) => !(model.upstream_model_id in (mappings[token.upstream_token_id] ?? {})))) ||
     selectedTokens.some((token) => tokens[token.upstream_token_id]?.endpointFormats.length === 0) ||
     selectedTokens.some((token) => !validCostMultiplier(tokens[token.upstream_token_id]?.costMultiplier)) ||
     !validSyncConfig(form.sync) ||
@@ -161,7 +168,6 @@ export function ProviderQuickImportBindDialog({ open, provider, models, onClose,
               tokens={tokens}
               mappings={mappings}
               setTokens={setTokens}
-              setMappings={setMappings}
               onMapModels={(token) => setMappingTokenId(token.upstream_token_id)}
               renderExtraFields={(input) => (
                 <LocalKeyField
@@ -197,8 +203,8 @@ export function ProviderQuickImportBindDialog({ open, provider, models, onClose,
           preview={preview.preview}
           token={mappingToken}
           models={models}
-          mappings={mappings}
-          setMappings={setMappings}
+          mappings={mappingToken ? mappings[mappingToken.upstream_token_id] ?? {} : {}}
+          setMappings={tokenMappingsSetter(mappingToken, setMappings)}
           onClose={() => setMappingTokenId(null)}
         />
       ) : null}
@@ -253,3 +259,30 @@ const headerSx = {
   display: 'flex',
   alignItems: 'center',
 };
+
+function tokenHasBlankMappings(token: ProviderQuickImportTokenPreview, mappingsByToken: QuickImportMappingsByToken) {
+  const mappings = mappingsByToken[token.upstream_token_id] ?? {};
+  return Object.keys(mappings).some((id) => token.models.some((model) => model.upstream_model_id === id) && !mappings[id]);
+}
+
+function mappedGlobalModelIds(tokens: ProviderQuickImportTokenPreview[], mappingsByToken: QuickImportMappingsByToken) {
+  return [...new Set(tokens.flatMap((token) => Object.values(mappingsByToken[token.upstream_token_id] ?? {}).filter(Boolean)))];
+}
+
+function tokenMappingsSetter(
+  token: ProviderQuickImportTokenPreview | undefined,
+  setMappings: Dispatch<SetStateAction<QuickImportMappingsByToken>>
+) {
+  return (updater: SetStateAction<Record<string, string>>) => {
+    if (!token) return;
+    setMappings((current) => {
+      const currentTokenMappings = current[token.upstream_token_id] ?? {};
+      const nextTokenMappings =
+        typeof updater === 'function' ? updater(currentTokenMappings) : updater;
+      return {
+        ...current,
+        [token.upstream_token_id]: nextTokenMappings,
+      };
+    });
+  };
+}

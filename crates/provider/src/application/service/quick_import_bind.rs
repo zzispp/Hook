@@ -61,8 +61,7 @@ where
     let source = args.importer.refreshed_source_config(&input.source).await?.unwrap_or(input.source.clone());
     let data = args.importer.fetch_import_data(&source).await?;
     let globals = args.models.list_global_models().await?;
-    let selected = selected_bind_tokens(&data, &input.selected_tokens)?;
-    let mappings = resolved_mappings(&selected, &globals, input.selected_model_ids, input.model_mappings)?;
+    let selected = resolved_mappings(selected_bind_tokens(&data, &input.selected_tokens)?, &globals)?;
     let provider_config = ProviderQuickImportProviderConfig::default();
     let draft = quick_import_bind(QuickImportBindDraft {
         provider_id: provider.id.clone(),
@@ -72,7 +71,6 @@ where
         sync_config: input.sync_config,
         selected,
         globals: &globals,
-        mappings,
         cipher: args.cipher,
     })?;
     let output = args.repository.bind_quick_import(draft).await?;
@@ -251,8 +249,6 @@ mod tests {
             }),
             recharge_multiplier: Decimal::ONE,
             selected_tokens,
-            selected_model_ids: vec!["gpt-5".into()],
-            model_mappings: vec![],
             sync_config: ProviderQuickImportSyncConfig::default(),
         }
     }
@@ -264,6 +260,10 @@ mod tests {
             name: "codex".into(),
             endpoint_formats: vec!["openai".into()],
             effective_cost_multiplier: Decimal::ONE,
+            model_mappings: vec![types::provider::ProviderQuickImportModelMappingInput {
+                upstream_model_id: "gpt-5".into(),
+                global_model_id: "global-model-a".into(),
+            }],
         }
     }
 

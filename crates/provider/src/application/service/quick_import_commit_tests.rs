@@ -8,9 +8,8 @@ use types::provider::{
 };
 
 use super::{
-    quick_import_commit::{
-        QuickImportBindDraft, QuickImportCreateDraft, SelectedToken, assert_no_mapping_conflicts, quick_import_bind, quick_import_create, resolved_mappings,
-    },
+    quick_import_commit::{QuickImportBindDraft, QuickImportCreateDraft, SelectedToken, quick_import_bind, quick_import_create, resolved_mappings},
+    quick_import_commit_models::assert_no_mapping_conflicts,
     quick_import_shared::provider_create,
 };
 use crate::application::{ProviderError, ProviderResult, SecretCipher, UpstreamImportModel, UpstreamImportToken};
@@ -18,10 +17,13 @@ use crate::application::{ProviderError, ProviderResult, SecretCipher, UpstreamIm
 #[test]
 fn resolved_mappings_uses_exact_global_model_name() {
     let token = token_with_model("gpt-5");
-    let selected = vec![SelectedToken::for_test(&token, vec!["openai:chat".into()])];
-    let mappings = resolved_mappings(&selected, &[global_model("global-1", "gpt-5")], vec!["gpt-5".into()], vec![]).unwrap();
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test(&token, vec!["openai:chat".into()]),
+        &[("gpt-5", "global-1")],
+    )];
+    let mappings = resolved_mappings(selected, &[global_model("global-1", "gpt-5")]).unwrap();
 
-    assert_eq!(mappings.get("gpt-5"), Some(&"global-1".to_owned()));
+    assert_eq!(mappings[0].resolved_mappings.get("gpt-5"), Some(&"global-1".to_owned()));
 }
 
 #[test]
@@ -36,21 +38,26 @@ fn missing_mapping_is_rejected() {
     let token = token_with_model("upstream-only");
     let selected = vec![SelectedToken::for_test(&token, vec!["openai".into()])];
 
-    let error = resolved_mappings(&selected, &[global_model("global-1", "gpt-5")], vec!["upstream-only".into()], vec![]).unwrap_err();
+    let error = resolved_mappings(selected, &[global_model("global-1", "gpt-5")]).unwrap_err();
 
-    assert!(error.to_string().contains("model mapping is required: upstream-only"));
+    assert!(error.to_string().contains("selected token has no model mappings: 1209"));
 }
 
 #[test]
 fn unselected_mapping_is_rejected() {
     let token = token_with_models(&["upstream-only", "other-upstream"]);
-    let selected = vec![SelectedToken::for_test(&token, vec!["openai".into()])];
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test(&token, vec!["openai".into()]),
+        &[("missing-upstream", "global-2")],
+    )];
     let globals = [global_model("global-1", "upstream-only"), global_model("global-2", "other")];
-    let inputs = vec![mapping_input("other-upstream", "global-2")];
+    let error = resolved_mappings(selected, &globals).unwrap_err();
 
-    let error = resolved_mappings(&selected, &globals, vec!["upstream-only".into()], inputs).unwrap_err();
-
-    assert!(error.to_string().contains("model mapping is not selected for import: other-upstream"));
+    assert!(
+        error
+            .to_string()
+            .contains("selected model does not exist on selected token 1209: missing-upstream")
+    );
 }
 
 #[test]
@@ -64,6 +71,7 @@ fn selected_token_rejects_non_positive_effective_multiplier() {
         name: "codex".into(),
         endpoint_formats: vec!["openai".into()],
         effective_cost_multiplier: Decimal::ZERO,
+        model_mappings: vec![mapping_input("gpt-5", "global-1")],
     }];
 
     let error = match super::quick_import_commit::selected_tokens(&data, &inputs) {
@@ -77,13 +85,11 @@ fn selected_token_rejects_non_positive_effective_multiplier() {
 #[test]
 fn quick_import_create_builds_complete_resource_set() {
     let token = token_with_model("upstream-gpt-5");
-    let selected = vec![SelectedToken::for_test_with_multiplier(
-        &token,
-        vec!["openai".into(), "codex".into()],
-        Decimal::new(1, 1),
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test_with_multiplier(&token, vec!["openai".into(), "codex".into()], Decimal::new(1, 1)),
+        &[("upstream-gpt-5", "global-1")],
     )];
     let globals = [global_model("global-1", "gpt-5")];
-    let mappings = BTreeMap::from([("upstream-gpt-5".into(), "global-1".into())]);
 
     let draft = quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &provider_config()),
@@ -93,7 +99,6 @@ fn quick_import_create_builds_complete_resource_set() {
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
         globals: &globals,
-        mappings,
         cipher: &TestCipher,
     })
     .unwrap();
@@ -112,9 +117,11 @@ fn quick_import_create_builds_complete_resource_set() {
 #[test]
 fn quick_import_bind_builds_bound_resource_set() {
     let token = token_with_model("upstream-gpt-5");
-    let selected = vec![SelectedToken::for_test_with_local_key(&token, "key-existing", vec!["openai".into()])];
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test_with_local_key(&token, "key-existing", vec!["openai".into()]),
+        &[("upstream-gpt-5", "global-1")],
+    )];
     let globals = [global_model("global-1", "gpt-5")];
-    let mappings = BTreeMap::from([("upstream-gpt-5".into(), "global-1".into())]);
 
     let draft = quick_import_bind(QuickImportBindDraft {
         provider_id: "provider-a".into(),
@@ -124,7 +131,6 @@ fn quick_import_bind_builds_bound_resource_set() {
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
         globals: &globals,
-        mappings,
         cipher: &TestCipher,
     })
     .unwrap();
@@ -149,6 +155,7 @@ fn selected_bind_token_keeps_local_key_id() {
         name: "codex".into(),
         endpoint_formats: vec!["openai".into()],
         effective_cost_multiplier: Decimal::ONE,
+        model_mappings: vec![mapping_input("gpt-5", "global-1")],
     }];
 
     let selected = super::quick_import_commit::selected_bind_tokens(&data, &inputs).unwrap();
@@ -176,9 +183,11 @@ fn selected_bind_token_rejects_disabled_upstream_token() {
 fn selected_bind_token_rejects_missing_upstream_key_during_draft_build() {
     let mut token = token_with_model("gpt-5");
     token.api_key = None;
-    let selected = vec![SelectedToken::for_test_with_local_key(&token, "key-a", vec!["openai".into()])];
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test_with_local_key(&token, "key-a", vec!["openai".into()]),
+        &[("gpt-5", "global-1")],
+    )];
     let globals = [global_model("global-1", "gpt-5")];
-    let mappings = BTreeMap::from([("gpt-5".into(), "global-1".into())]);
 
     let error = quick_import_bind(QuickImportBindDraft {
         provider_id: "provider-a".into(),
@@ -188,7 +197,6 @@ fn selected_bind_token_rejects_missing_upstream_key_during_draft_build() {
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
         globals: &globals,
-        mappings,
         cipher: &TestCipher,
     })
     .unwrap_err();
@@ -201,17 +209,19 @@ fn selected_bind_token_rejects_missing_mapping() {
     let token = token_with_model("upstream-only");
     let selected = vec![SelectedToken::for_test_with_local_key(&token, "key-a", vec!["openai".into()])];
 
-    let error = resolved_mappings(&selected, &[global_model("global-1", "gpt-5")], vec!["upstream-only".into()], vec![]).unwrap_err();
+    let error = resolved_mappings(selected, &[global_model("global-1", "gpt-5")]).unwrap_err();
 
-    assert!(error.to_string().contains("model mapping is required: upstream-only"));
+    assert!(error.to_string().contains("selected token has no model mappings: 1209"));
 }
 
 #[test]
 fn quick_import_bind_rejects_missing_cost() {
     let token = token_with_model("gpt-5");
-    let selected = vec![SelectedToken::for_test_with_local_key(&token, "key-a", vec!["openai".into()])];
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test_with_local_key(&token, "key-a", vec!["openai".into()]),
+        &[("gpt-5", "global-1")],
+    )];
     let globals = [global_model_without_cost("global-1", "gpt-5")];
-    let mappings = BTreeMap::from([("gpt-5".into(), "global-1".into())]);
 
     let error = quick_import_bind(QuickImportBindDraft {
         provider_id: "provider-a".into(),
@@ -221,7 +231,6 @@ fn quick_import_bind_rejects_missing_cost() {
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
         globals: &globals,
-        mappings,
         cipher: &TestCipher,
     })
     .unwrap_err();
@@ -240,10 +249,14 @@ fn selected_token_name_is_used_for_imported_key() {
         name: "custom key name".into(),
         endpoint_formats: vec!["openai:chat".into()],
         effective_cost_multiplier: Decimal::ONE,
+        model_mappings: vec![mapping_input("gpt-5", "global-1")],
     }];
-    let selected = super::quick_import_commit::selected_tokens(&data, &inputs).unwrap();
+    let selected = resolved_mappings(
+        super::quick_import_commit::selected_tokens(&data, &inputs).unwrap(),
+        &[global_model("global-1", "gpt-5")],
+    )
+    .unwrap();
     let globals = [global_model("global-1", "gpt-5")];
-    let mappings = BTreeMap::from([("gpt-5".into(), "global-1".into())]);
 
     let draft = quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &provider_config()),
@@ -253,7 +266,6 @@ fn selected_token_name_is_used_for_imported_key() {
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
         globals: &globals,
-        mappings,
         cipher: &TestCipher,
     })
     .unwrap();
@@ -264,9 +276,11 @@ fn selected_token_name_is_used_for_imported_key() {
 #[test]
 fn quick_import_create_does_not_write_mapping_for_same_model_name() {
     let token = token_with_model("gpt-5");
-    let selected = vec![SelectedToken::for_test(&token, vec!["openai".into()])];
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test(&token, vec!["openai".into()]),
+        &[("gpt-5", "global-1")],
+    )];
     let globals = [global_model("global-1", "gpt-5")];
-    let mappings = BTreeMap::from([("gpt-5".into(), "global-1".into())]);
 
     let draft = quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &provider_config()),
@@ -276,7 +290,6 @@ fn quick_import_create_does_not_write_mapping_for_same_model_name() {
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
         globals: &globals,
-        mappings,
         cipher: &TestCipher,
     })
     .unwrap();
@@ -287,9 +300,11 @@ fn quick_import_create_does_not_write_mapping_for_same_model_name() {
 #[test]
 fn quick_import_create_imports_only_mapped_token_models() {
     let token = token_with_models(&["upstream-gpt-5", "upstream-gpt-image"]);
-    let selected = vec![SelectedToken::for_test_with_multiplier(&token, vec!["openai".into()], Decimal::new(1, 1))];
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test_with_multiplier(&token, vec!["openai".into()], Decimal::new(1, 1)),
+        &[("upstream-gpt-5", "global-1")],
+    )];
     let globals = [global_model("global-1", "gpt-5"), global_model("global-2", "gpt-image")];
-    let mappings = BTreeMap::from([("upstream-gpt-5".into(), "global-1".into())]);
 
     let draft = quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &provider_config()),
@@ -299,7 +314,6 @@ fn quick_import_create_imports_only_mapped_token_models() {
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
         globals: &globals,
-        mappings,
         cipher: &TestCipher,
     })
     .unwrap();
@@ -308,6 +322,36 @@ fn quick_import_create_imports_only_mapped_token_models() {
     assert_eq!(draft.api_keys[0].input.allowed_model_ids, vec!["global-1"]);
     assert_eq!(draft.model_costs.len(), 1);
     assert_eq!(draft.model_costs[0].global_model_id, "global-1");
+}
+
+#[test]
+fn quick_import_create_keeps_same_upstream_model_independent_per_token() {
+    let token_a = token_with_id_and_models("token-a", &["shared-model"]);
+    let token_b = token_with_id_and_models("token-b", &["shared-model"]);
+    let selected = vec![
+        with_resolved_mappings(SelectedToken::for_test(&token_a, vec!["openai".into()]), &[("shared-model", "global-1")]),
+        with_resolved_mappings(SelectedToken::for_test(&token_b, vec!["openai".into()]), &[("shared-model", "global-2")]),
+    ];
+    let globals = [global_model("global-1", "global-a"), global_model("global-2", "global-b")];
+
+    let draft = quick_import_create(QuickImportCreateDraft {
+        provider: provider_create("Provider A", &provider_config()),
+        provider_config: &provider_config(),
+        source: &source_config(),
+        recharge_multiplier: Decimal::ONE,
+        sync_config: ProviderQuickImportSyncConfig::default(),
+        selected,
+        globals: &globals,
+        cipher: &TestCipher,
+    })
+    .unwrap();
+
+    assert_eq!(draft.model_bindings.len(), 2);
+    assert_eq!(draft.api_keys.len(), 2);
+    assert_eq!(draft.api_keys[0].input.allowed_model_ids, vec!["global-1"]);
+    assert_eq!(draft.api_keys[1].input.allowed_model_ids, vec!["global-2"]);
+    assert_eq!(draft.api_keys[0].model_mappings[0].global_model_id, "global-1");
+    assert_eq!(draft.api_keys[1].model_mappings[0].global_model_id, "global-2");
 }
 
 #[test]
@@ -363,9 +407,11 @@ fn quick_import_image_endpoint_can_enable_native_stream() {
 
 fn quick_import_create_image_endpoint(config: ProviderQuickImportProviderConfig) -> crate::application::ProviderQuickImportCreate {
     let token = token_with_model("gpt-image-1");
-    let selected = vec![SelectedToken::for_test(&token, vec!["openai_image".into()])];
+    let selected = vec![with_resolved_mappings(
+        SelectedToken::for_test(&token, vec!["openai_image".into()]),
+        &[("gpt-image-1", "global-image")],
+    )];
     let globals = [global_model("global-image", "gpt-image-1")];
-    let mappings = BTreeMap::from([("gpt-image-1".into(), "global-image".into())]);
 
     quick_import_create(QuickImportCreateDraft {
         provider: provider_create("Provider A", &config),
@@ -375,7 +421,6 @@ fn quick_import_create_image_endpoint(config: ProviderQuickImportProviderConfig)
         sync_config: ProviderQuickImportSyncConfig::default(),
         selected,
         globals: &globals,
-        mappings,
         cipher: &TestCipher,
     })
     .unwrap()
@@ -386,8 +431,12 @@ fn token_with_model(model: &str) -> UpstreamImportToken {
 }
 
 fn token_with_models(models: &[&str]) -> UpstreamImportToken {
+    token_with_id_and_models("1209", models)
+}
+
+fn token_with_id_and_models(id: &str, models: &[&str]) -> UpstreamImportToken {
     UpstreamImportToken {
-        id: "1209".into(),
+        id: id.into(),
         name: "codex".into(),
         masked_key: "abcd****efgh".into(),
         status: "active".into(),
@@ -412,6 +461,14 @@ fn mapping_input(upstream_model_id: &str, global_model_id: &str) -> ProviderQuic
     }
 }
 
+fn with_resolved_mappings<'a>(mut selected: SelectedToken<'a>, mappings: &[(&str, &str)]) -> SelectedToken<'a> {
+    selected.resolved_mappings = mappings
+        .iter()
+        .map(|(upstream_model_id, global_model_id)| ((*upstream_model_id).to_owned(), (*global_model_id).to_owned()))
+        .collect();
+    selected
+}
+
 fn bind_token_input(upstream_token_id: &str) -> ProviderQuickImportBindSelectedToken {
     ProviderQuickImportBindSelectedToken {
         upstream_token_id: upstream_token_id.into(),
@@ -419,6 +476,7 @@ fn bind_token_input(upstream_token_id: &str) -> ProviderQuickImportBindSelectedT
         name: "codex".into(),
         endpoint_formats: vec!["openai".into()],
         effective_cost_multiplier: Decimal::ONE,
+        model_mappings: vec![mapping_input("gpt-5", "global-1")],
     }
 }
 

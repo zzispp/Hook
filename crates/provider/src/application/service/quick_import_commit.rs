@@ -17,8 +17,8 @@ use crate::application::{
 };
 
 use super::quick_import_commit_endpoints::endpoint_creates;
-pub(super) use super::quick_import_commit_models::{SelectedToken, assert_no_mapping_conflicts, resolved_mappings, selected_bind_tokens, selected_tokens};
-use super::quick_import_commit_models::{allowed_model_ids, key_model_mappings};
+pub(super) use super::quick_import_commit_models::{SelectedToken, resolved_mappings, selected_bind_tokens, selected_tokens};
+use super::quick_import_commit_models::{allowed_model_ids, key_model_mappings, provider_level_global_model_ids};
 use super::{
     quick_import_costs::model_cost,
     quick_import_shared::{global_model, globals_by_id, source_base_url},
@@ -33,7 +33,6 @@ pub(super) struct QuickImportCreateDraft<'a, C> {
     pub(super) sync_config: ProviderQuickImportSyncConfig,
     pub(super) selected: Vec<SelectedToken<'a>>,
     pub(super) globals: &'a [GlobalModelResponse],
-    pub(super) mappings: BTreeMap<String, String>,
     pub(super) cipher: &'a C,
 }
 
@@ -43,7 +42,6 @@ pub(super) struct QuickImportAppendDraft<'a, C> {
     pub(super) source: &'a ProviderQuickImportSourceConfig,
     pub(super) selected: Vec<SelectedToken<'a>>,
     pub(super) globals: &'a [GlobalModelResponse],
-    pub(super) mappings: BTreeMap<String, String>,
     pub(super) cipher: &'a C,
 }
 
@@ -55,7 +53,6 @@ pub(super) struct QuickImportBindDraft<'a, C> {
     pub(super) sync_config: ProviderQuickImportSyncConfig,
     pub(super) selected: Vec<SelectedToken<'a>>,
     pub(super) globals: &'a [GlobalModelResponse],
-    pub(super) mappings: BTreeMap<String, String>,
     pub(super) cipher: &'a C,
 }
 
@@ -84,9 +81,9 @@ where
             &input.selected,
             input.provider_config.upstream_image_native_stream.unwrap_or(false),
         )?,
-        model_bindings: binding_creates(&input.mappings, &global_by_id)?,
-        api_keys: key_creates(&input.selected, &input.mappings, input.cipher)?,
-        model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
+        model_bindings: binding_creates(&input.selected, &global_by_id)?,
+        api_keys: key_creates(&input.selected, input.cipher)?,
+        model_costs: cost_creates(&input.selected, &global_by_id)?,
     })
 }
 
@@ -99,9 +96,9 @@ where
         provider_id: input.provider_id,
         source_id: input.source_id,
         endpoints: endpoint_creates(source_base_url(input.source), &input.selected, false)?,
-        model_bindings: binding_creates(&input.mappings, &global_by_id)?,
-        api_keys: key_creates(&input.selected, &input.mappings, input.cipher)?,
-        model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
+        model_bindings: binding_creates(&input.selected, &global_by_id)?,
+        api_keys: key_creates(&input.selected, input.cipher)?,
+        model_costs: cost_creates(&input.selected, &global_by_id)?,
     })
 }
 
@@ -118,9 +115,9 @@ where
             &input.selected,
             input.provider_config.upstream_image_native_stream.unwrap_or(false),
         )?,
-        model_bindings: binding_creates(&input.mappings, &global_by_id)?,
-        api_keys: bound_key_creates(&input.selected, &input.mappings, input.cipher)?,
-        model_costs: cost_creates(&input.selected, &input.mappings, &global_by_id)?,
+        model_bindings: binding_creates(&input.selected, &global_by_id)?,
+        api_keys: bound_key_creates(&input.selected, input.cipher)?,
+        model_costs: cost_creates(&input.selected, &global_by_id)?,
     })
 }
 
@@ -132,8 +129,9 @@ pub(super) fn quick_import_key_replacement(input: QuickImportKeyReplacementDraft
         name: input.token.name.clone(),
         endpoint_formats: Vec::new(),
         effective_cost_multiplier: input.effective_cost_multiplier,
+        resolved_mappings: input.mappings.clone(),
     };
-    let model_bindings = binding_creates(&input.mappings, &global_by_id)?
+    let model_bindings = binding_creates(std::slice::from_ref(&selected), &global_by_id)?
         .into_iter()
         .filter(|binding| !input.existing_global_model_ids.contains(&binding.global_model_id))
         .collect();
@@ -147,44 +145,40 @@ pub(super) fn quick_import_key_replacement(input: QuickImportKeyReplacementDraft
         upstream_group: input.token.group.clone(),
         upstream_group_ratio: input.token.group_ratio,
         effective_cost_multiplier: input.effective_cost_multiplier,
-        model_mappings: key_model_mappings(&selected, &input.mappings),
+        model_mappings: key_model_mappings(&selected),
         input: ProviderApiKeyUpdate {
-            allowed_model_ids: Some(allowed_model_ids(&selected, &input.mappings)?),
+            allowed_model_ids: Some(allowed_model_ids(&selected)?),
             is_active: Some(true),
             ..ProviderApiKeyUpdate::default()
         },
         encrypted_api_key: input.encrypted_api_key,
         model_bindings,
-        model_costs: cost_creates(std::slice::from_ref(&selected), &input.mappings, &global_by_id)?,
+        model_costs: cost_creates(std::slice::from_ref(&selected), &global_by_id)?,
     })
 }
 
-fn binding_creates(
-    mappings: &BTreeMap<String, String>,
-    global_by_id: &BTreeMap<String, &GlobalModelResponse>,
-) -> ProviderResult<Vec<ProviderModelBindingCreate>> {
-    assert_no_mapping_conflicts(mappings)?;
-    mappings
-        .iter()
-        .map(|(upstream_id, global_id)| binding_create(upstream_id, global_model(global_by_id, global_id)?))
+fn binding_creates(selected: &[SelectedToken<'_>], global_by_id: &BTreeMap<String, &GlobalModelResponse>) -> ProviderResult<Vec<ProviderModelBindingCreate>> {
+    provider_level_global_model_ids(selected)
+        .into_iter()
+        .map(|global_id| binding_create(global_model(global_by_id, &global_id)?))
         .collect()
 }
 
-fn key_creates<C>(selected: &[SelectedToken<'_>], mappings: &BTreeMap<String, String>, cipher: &C) -> ProviderResult<Vec<ProviderQuickImportApiKeyCreate>>
+fn key_creates<C>(selected: &[SelectedToken<'_>], cipher: &C) -> ProviderResult<Vec<ProviderQuickImportApiKeyCreate>>
 where
     C: SecretCipher,
 {
-    selected.iter().map(|token| key_create(token, mappings, cipher)).collect()
+    selected.iter().map(|token| key_create(token, cipher)).collect()
 }
 
-fn bound_key_creates<C>(selected: &[SelectedToken<'_>], mappings: &BTreeMap<String, String>, cipher: &C) -> ProviderResult<Vec<ProviderQuickImportBoundApiKey>>
+fn bound_key_creates<C>(selected: &[SelectedToken<'_>], cipher: &C) -> ProviderResult<Vec<ProviderQuickImportBoundApiKey>>
 where
     C: SecretCipher,
 {
     selected
         .iter()
         .map(|token| {
-            let create = key_create(token, mappings, cipher)?;
+            let create = key_create(token, cipher)?;
             Ok(ProviderQuickImportBoundApiKey {
                 local_key_id: token.local_key_id.clone(),
                 create,
@@ -193,12 +187,12 @@ where
         .collect()
 }
 
-fn key_create<C>(token: &SelectedToken<'_>, mappings: &BTreeMap<String, String>, cipher: &C) -> ProviderResult<ProviderQuickImportApiKeyCreate>
+fn key_create<C>(token: &SelectedToken<'_>, cipher: &C) -> ProviderResult<ProviderQuickImportApiKeyCreate>
 where
     C: SecretCipher,
 {
     let api_key = token.token.api_key.as_deref().ok_or_else(|| missing_key_error(&token.token.id))?;
-    let input = sanitize_api_key(api_key_create(token, mappings, api_key)?);
+    let input = sanitize_api_key(api_key_create(token, api_key)?);
     validate_api_key(&input)?;
     Ok(ProviderQuickImportApiKeyCreate {
         upstream_token_id: token.token.id.clone(),
@@ -207,7 +201,7 @@ where
         upstream_group: token.token.group.clone(),
         upstream_group_ratio: token.token.group_ratio,
         effective_cost_multiplier: token.effective_cost_multiplier,
-        model_mappings: key_model_mappings(token, mappings),
+        model_mappings: key_model_mappings(token),
         encrypted_api_key: cipher.encrypt_provider_key(api_key)?,
         input,
     })
@@ -278,12 +272,11 @@ fn parse_token_expires_at(value: &str) -> ProviderResult<OffsetDateTime> {
 
 fn cost_creates(
     selected: &[SelectedToken<'_>],
-    mappings: &BTreeMap<String, String>,
     global_by_id: &BTreeMap<String, &GlobalModelResponse>,
 ) -> ProviderResult<Vec<ProviderQuickImportModelCostCreate>> {
     let mut costs = Vec::new();
     for token in selected {
-        push_token_costs(&mut costs, token, mappings, global_by_id)?;
+        push_token_costs(&mut costs, token, global_by_id)?;
     }
     validate_model_cost_batch(&ProviderModelCostBatchUpsert {
         costs: costs.iter().map(|item| item.cost.clone()).collect(),
@@ -294,11 +287,10 @@ fn cost_creates(
 fn push_token_costs(
     costs: &mut Vec<ProviderQuickImportModelCostCreate>,
     token: &SelectedToken<'_>,
-    mappings: &BTreeMap<String, String>,
     global_by_id: &BTreeMap<String, &GlobalModelResponse>,
 ) -> ProviderResult<()> {
     for model in &token.token.models {
-        let Some(global_id) = mappings.get(&model.id) else {
+        let Some(global_id) = token.resolved_mappings.get(&model.id) else {
             continue;
         };
         let global = global_model(global_by_id, global_id)?;
@@ -311,7 +303,7 @@ fn push_token_costs(
     Ok(())
 }
 
-fn binding_create(_upstream_id: &str, global: &GlobalModelResponse) -> ProviderResult<ProviderModelBindingCreate> {
+fn binding_create(global: &GlobalModelResponse) -> ProviderResult<ProviderModelBindingCreate> {
     Ok(ProviderModelBindingCreate {
         global_model_id: global.id.clone(),
         is_active: Some(true),
@@ -319,12 +311,12 @@ fn binding_create(_upstream_id: &str, global: &GlobalModelResponse) -> ProviderR
     })
 }
 
-fn api_key_create(token: &SelectedToken<'_>, mappings: &BTreeMap<String, String>, api_key: &str) -> ProviderResult<ProviderApiKeyCreate> {
+fn api_key_create(token: &SelectedToken<'_>, api_key: &str) -> ProviderResult<ProviderApiKeyCreate> {
     Ok(ProviderApiKeyCreate {
         name: token.name.clone(),
         api_key: api_key.to_owned(),
         api_formats: token.endpoint_formats.clone(),
-        allowed_model_ids: allowed_model_ids(token, mappings)?,
+        allowed_model_ids: allowed_model_ids(token)?,
         note: token.token.group.as_ref().map(|group| format!("Imported from newapi group: {group}")),
         internal_priority: Some(10),
         rpm_limit: None,
