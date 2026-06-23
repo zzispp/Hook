@@ -17,7 +17,7 @@ use crate::application::{
 };
 
 use super::quick_import_commit_endpoints::endpoint_creates;
-pub(super) use super::quick_import_commit_models::{SelectedToken, assert_no_mapping_conflicts, resolved_mappings, selected_bind_tokens, selected_tokens};
+pub(super) use super::quick_import_commit_models::{SelectedToken, resolved_mappings, selected_bind_tokens, selected_tokens};
 use super::quick_import_commit_models::{allowed_model_ids, key_model_mappings, provider_level_global_model_ids};
 use super::{
     quick_import_costs::model_cost,

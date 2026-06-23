@@ -9,8 +9,9 @@ use types::provider::{
 
 use super::{
     quick_import_commit::{
-        QuickImportBindDraft, QuickImportCreateDraft, SelectedToken, assert_no_mapping_conflicts, quick_import_bind, quick_import_create, resolved_mappings,
+        QuickImportBindDraft, QuickImportCreateDraft, SelectedToken, quick_import_bind, quick_import_create, resolved_mappings,
     },
+    quick_import_commit_models::assert_no_mapping_conflicts,
     quick_import_shared::provider_create,
 };
 use crate::application::{ProviderError, ProviderResult, SecretCipher, UpstreamImportModel, UpstreamImportToken};
