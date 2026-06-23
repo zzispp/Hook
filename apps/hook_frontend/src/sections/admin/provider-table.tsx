@@ -25,6 +25,7 @@ import {
   withStickyActionHeadCell,
 } from 'src/components/table';
 
+import { ProviderSyncSummaryCell } from './provider-sync-summary-cell';
 import { EnabledLabel, TableLoadingRows, ManagementTableHead } from './shared';
 import { providerTypeLabel, providerOriginLabel } from './provider-management-utils';
 
@@ -131,6 +132,9 @@ function ProviderTableRow({
           />
       </TableCell>
       <TableCell>
+        <ProviderSyncSummaryCell provider={row} />
+      </TableCell>
+      <TableCell>
         <Stack direction="row" flexWrap="wrap" sx={{ gap: 0.75 }}>
           <Chip
             size="small"
@@ -212,6 +216,7 @@ function providerTableHead(
   return [
     { id: 'name', label: t('providers.name'), width: 220 },
     { id: 'provider_origin', label: t('providers.providerOrigin'), width: 130 },
+    { id: 'quick_import_sync_summary', label: t('providers.quickImportSyncSummary'), width: 220 },
     { id: 'request_config', label: t('providers.requestConfig') },
     { id: 'priority', label: t('providers.priority'), width: 100 },
     { id: 'status', label: t('common.status'), width: 120 },

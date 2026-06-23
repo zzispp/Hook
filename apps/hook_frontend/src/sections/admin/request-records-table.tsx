@@ -19,10 +19,8 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { TableNoData, TablePaginationCustom } from 'src/components/table';
 
 import { TableLoadingRows, ManagementTableHead } from './shared';
-import {
-  RequestRecordDurationText,
-  useRequestRecordDurationNow,
-} from './request-record-duration-text';
+import { useRequestRecordDurationNow } from './request-record-duration-text';
+import { RequestRecordTimingCells, requestRecordTimingHeadCells } from './request-record-timing-columns';
 import {
   formatCost,
   userDisplay,
@@ -59,7 +57,7 @@ export function RequestRecordsTable({
   return (
     <>
       <Scrollbar>
-        <Table sx={{ minWidth: 1480 }}>
+        <Table sx={{ minWidth: 1510 }}>
           <ManagementTableHead head={head} />
           <TableBody>
             {loading ? <TableLoadingRows head={head} rows={table.rowsPerPage} /> : null}
@@ -142,18 +140,7 @@ function RequestRecordRow({
       </TableCell>
       <TableCell align="right">{formatCacheHitRate(row)}</TableCell>
       <TableCell>{formatCost(row.total_cost)}</TableCell>
-      <TableCell>
-        <RequestRecordDurationText record={row} metric="response_headers" now={durationNow} />
-      </TableCell>
-      <TableCell>
-        <RequestRecordDurationText record={row} metric="first_sse_event" now={durationNow} />
-      </TableCell>
-      <TableCell>
-        <RequestRecordDurationText record={row} metric="first_output" now={durationNow} />
-      </TableCell>
-      <TableCell>
-        <RequestRecordDurationText record={row} metric="total_latency" now={durationNow} />
-      </TableCell>
+      <RequestRecordTimingCells record={row} now={durationNow} />
     </TableRow>
   );
 }
@@ -276,10 +263,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
       sx: { whiteSpace: 'nowrap' },
     },
     { id: 'cost', label: t('requestRecords.cost'), width: 120 },
-    { id: 'response_headers', label: t('requestRecords.responseHeaders'), width: 110 },
-    { id: 'first_sse_event', label: t('requestRecords.firstSseEvent'), width: 110 },
-    { id: 'first_output', label: t('requestRecords.firstOutput'), width: 110 },
-    { id: 'latency', label: t('requestRecords.totalLatency'), width: 120 },
+    ...requestRecordTimingHeadCells(t),
   ];
 }
 

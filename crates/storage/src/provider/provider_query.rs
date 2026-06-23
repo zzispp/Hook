@@ -18,12 +18,16 @@ pub async fn list_providers(store: &ProviderStore, request: ProviderListRequest)
     let mut records = filter_provider_records(records, &request, ids);
     let total = records.len() as u64;
     sort_provider_records(&mut records);
-    let providers = records
+    let mut providers: Vec<_> = records
         .into_iter()
         .skip(request.skip as usize)
         .take(request.limit as usize)
         .map(|record| provider_response(record, &quick_import_sources))
         .collect();
+    let summaries = super::quick_import_sync_summary::summaries_by_provider(store, &providers).await?;
+    for provider in &mut providers {
+        provider.quick_import_sync_summary = summaries.get(&provider.id).cloned();
+    }
     Ok(ProviderListResponse { providers, total })
 }
 

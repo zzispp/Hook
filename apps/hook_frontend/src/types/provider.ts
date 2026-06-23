@@ -1,4 +1,5 @@
 import type { ProviderQuickImportKeySyncInfo } from './provider-quick-import';
+import type { ProviderQuickImportSyncSummary } from './provider-quick-import-summary';
 
 export type {
   UsageRecord,
@@ -53,6 +54,7 @@ export type Provider = {
   keep_priority_on_conversion: boolean;
   enable_format_conversion: boolean;
   is_active: boolean;
+  quick_import_sync_summary?: ProviderQuickImportSyncSummary | null;
   created_at: string;
   updated_at: string;
 };

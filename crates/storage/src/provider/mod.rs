@@ -17,6 +17,7 @@ mod quick_import_sync_query;
 #[cfg(test)]
 mod quick_import_sync_query_tests;
 mod quick_import_sync_records;
+mod quick_import_sync_summary;
 pub mod record;
 mod repository;
 mod repository_helpers;

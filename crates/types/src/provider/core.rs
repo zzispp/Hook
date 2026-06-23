@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::{PatchField, deserialize_patch_value};
 
+use super::quick_import_sync::ProviderQuickImportSyncStatus;
+
 const DEFAULT_PROVIDER_LIMIT: u64 = 100;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,8 +41,44 @@ pub struct Provider {
     pub keep_priority_on_conversion: bool,
     pub enable_format_conversion: bool,
     pub is_active: bool,
+    pub quick_import_sync_summary: Option<ProviderQuickImportSyncSummary>,
     pub created_at: String,
     pub updated_at: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderQuickImportSyncIssueScope {
+    Source,
+    Key,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProviderQuickImportSyncIssueSeverity {
+    Info,
+    Warning,
+    Error,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportSyncIssue {
+    pub scope: ProviderQuickImportSyncIssueScope,
+    pub status: ProviderQuickImportSyncStatus,
+    pub severity: ProviderQuickImportSyncIssueSeverity,
+    pub key_id: Option<String>,
+    pub key_name: Option<String>,
+    pub message: Option<String>,
+    pub last_synced_at: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct ProviderQuickImportSyncSummary {
+    pub severity: ProviderQuickImportSyncIssueSeverity,
+    pub issue_count: u32,
+    pub affected_key_count: u32,
+    pub last_synced_at: Option<String>,
+    pub issues: Vec<ProviderQuickImportSyncIssue>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]

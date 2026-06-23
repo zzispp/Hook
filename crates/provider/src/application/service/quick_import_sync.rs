@@ -54,9 +54,27 @@ where
         ..ProviderQuickImportSyncRunReport::default()
     };
     for source in sources {
-        sync_source(&args, source, &mut report).await?;
+        let error_context = source_error_context(&source);
+        sync_source(&args, source, &mut report)
+            .await
+            .map_err(|error| sync_source_error(error_context, error))?;
     }
     Ok(report)
+}
+
+fn source_error_context(source: &ProviderQuickImportSyncSource) -> String {
+    format!(
+        "provider \"{}\" (provider_id={}, source_id={})",
+        source.provider_name, source.provider_id, source.id
+    )
+}
+
+fn sync_source_error(context: String, error: ProviderError) -> ProviderError {
+    let message = match error {
+        ProviderError::Infrastructure(message) => message,
+        other => other.to_string(),
+    };
+    ProviderError::Infrastructure(format!("provider quick import sync failed for {context}: {message}"))
 }
 
 async fn sync_source<R, M, C, I>(
@@ -234,4 +252,49 @@ where
     C: SecretCipher,
 {
     restore_source_config(cipher, source)
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_decimal::Decimal;
+    use types::provider::{ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig};
+
+    use super::*;
+
+    #[test]
+    fn sync_source_error_includes_source_identity_and_original_error() {
+        let source = sync_source_record();
+        let error = sync_source_error(
+            source_error_context(&source),
+            ProviderError::Infrastructure("sub2api returned 401 Unauthorized: {\"code\":401,\"message\":\"invalid refresh token\"}".into()),
+        );
+
+        assert_eq!(
+            error.to_string(),
+            "infrastructure error: provider quick import sync failed for provider \"OpenAI\" (provider_id=provider-1, source_id=source-1): sub2api returned 401 Unauthorized: {\"code\":401,\"message\":\"invalid refresh token\"}"
+        );
+    }
+
+    fn sync_source_record() -> ProviderQuickImportSyncSource {
+        ProviderQuickImportSyncSource {
+            id: "source-1".into(),
+            provider_id: "provider-1".into(),
+            provider_name: "OpenAI".into(),
+            source_kind: ProviderQuickImportSourceKind::Newapi,
+            base_url: "https://newapi.example".into(),
+            encrypted_system_access_token: "enc".into(),
+            email: String::new(),
+            encrypted_password: String::new(),
+            encrypted_auth_token: String::new(),
+            encrypted_refresh_token: String::new(),
+            token_expires_at: None,
+            user_id: "737".into(),
+            recharge_multiplier: Decimal::ONE,
+            sync_config: ProviderQuickImportSyncConfig::default(),
+            last_status: None,
+            last_error: None,
+            last_synced_at: None,
+            consecutive_failures: u32::default(),
+        }
+    }
 }

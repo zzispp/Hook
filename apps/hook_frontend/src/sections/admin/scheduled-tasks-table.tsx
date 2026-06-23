@@ -6,7 +6,6 @@ import type { UseTableReturn, TableHeadCellProps } from 'src/components/table';
 
 import { useMemo } from 'react';
 
-import Alert from '@mui/material/Alert';
 import Table from '@mui/material/Table';
 import Stack from '@mui/material/Stack';
 import Switch from '@mui/material/Switch';
@@ -111,11 +110,6 @@ export function ScheduledTaskTable({
                     <TableCell>{formatTaskDuration(row.last_duration_ms)}</TableCell>
                     <TableCell>
                       <TaskConfigSummary task={row} t={t} />
-                      {row.last_error ? (
-                        <Alert severity="error" sx={{ mt: 1, py: 0 }}>
-                          {row.last_error}
-                        </Alert>
-                      ) : null}
                     </TableCell>
                     <TableCell align="left" sx={tableStickyActionCellSx}>
                       <Stack direction="row" spacing={0.5} justifyContent="flex-end">
