@@ -1,7 +1,6 @@
 use super::StreamRelay;
-use crate::llm_proxy::proxy::attempt_log::{AttemptCancelReason, take_candidate_cancel_reason};
 use crate::llm_proxy::proxy::stream_transport::{
-    record::{StreamAttemptRecord, StreamCancelledReason, StreamCancelledRecordInput, StreamTerminalRecordInput, cancelled_record, terminal_stream_record},
+    record::{StreamAttemptRecord, StreamCancelledRecordInput, StreamTerminalRecordInput, cancelled_record, terminal_stream_record},
     status::{StreamEndReason, StreamStatus},
     terminal::StreamTerminalSummary,
 };
@@ -24,26 +23,14 @@ fn completed_drop_record(relay: &mut StreamRelay) -> StreamAttemptRecord {
 }
 
 fn cancelled_drop_record(relay: &mut StreamRelay) -> StreamAttemptRecord {
-    let reason = stream_cancel_reason(relay);
-    let (end_reason, message, record_reason) = match reason {
-        AttemptCancelReason::ClientDisconnect => (
-            StreamEndReason::ClientGone,
-            "client disconnected before stream completed",
-            StreamCancelledReason::ClientDisconnected,
-        ),
-        AttemptCancelReason::HedgedBackupSuperseded => (
-            StreamEndReason::HedgeCancelled,
-            "stream attempt cancelled because backup stream won",
-            StreamCancelledReason::HedgedBackupSuperseded,
-        ),
-    };
-    relay.stream_status.set_end_reason(end_reason, Some(message.into()));
+    relay
+        .stream_status
+        .set_end_reason(StreamEndReason::ClientGone, Some("client disconnected before stream completed".into()));
     cancelled_record(StreamCancelledRecordInput {
         context: &relay.context,
         usage: relay.usage,
         status: &relay.stream_status,
         observability: relay.cancelled_observability(),
-        reason: record_reason,
     })
 }
 
@@ -59,11 +46,6 @@ fn drop_record_kind(protocol_completed: bool, status: &StreamStatus) -> StreamDr
         None if protocol_completed => StreamDropRecordKind::Completed,
         _ => StreamDropRecordKind::Cancelled,
     }
-}
-
-fn stream_cancel_reason(relay: &StreamRelay) -> AttemptCancelReason {
-    take_candidate_cancel_reason(&relay.context.request_id, relay.context.candidate.trace.candidate_index)
-        .unwrap_or_else(|| relay.context.cancel_handle.reason())
 }
 
 #[cfg(test)]

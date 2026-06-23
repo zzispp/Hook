@@ -3,9 +3,6 @@ use std::time::{Duration, Instant};
 use crate::llm_proxy::candidate::ProxyCandidate;
 
 const STREAM_CANDIDATE_WATCHDOG_SLACK: Duration = Duration::from_secs(1);
-const STREAM_HEDGE_DELAY_RATIO: f64 = 0.25;
-const STREAM_HEDGE_DELAY_MIN: Duration = Duration::from_millis(250);
-const STREAM_HEDGE_DELAY_MAX: Duration = Duration::from_millis(1_500);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct ProxyTimeouts {
@@ -60,12 +57,6 @@ pub(super) fn stream_candidate_watchdog_timeout(candidate: &ProxyCandidate) -> O
         .map(|timeout| timeout.saturating_add(STREAM_CANDIDATE_WATCHDOG_SLACK))
 }
 
-pub(super) fn stream_hedge_delay(candidate: &ProxyCandidate) -> Duration {
-    let budget = proxy_timeouts(candidate).stream_first_byte.unwrap_or(STREAM_HEDGE_DELAY_MAX);
-    let scaled = Duration::from_secs_f64((budget.as_secs_f64() * STREAM_HEDGE_DELAY_RATIO).max(0.0));
-    scaled.max(STREAM_HEDGE_DELAY_MIN).min(STREAM_HEDGE_DELAY_MAX)
-}
-
 pub(super) fn timeout_duration(seconds: f64) -> Option<Duration> {
     (seconds.is_finite() && seconds > 0.0).then(|| Duration::from_secs_f64(seconds))
 }
@@ -79,7 +70,7 @@ mod tests {
 
     use super::{
         non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout_after, remaining_timeout_after, response_start_timeout,
-        stream_candidate_watchdog_timeout, stream_hedge_delay,
+        stream_candidate_watchdog_timeout,
     };
     use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
@@ -165,15 +156,6 @@ mod tests {
         let timeout = stream_candidate_watchdog_timeout(&candidate);
 
         assert_eq!(timeout, Some(Duration::from_secs(31)));
-    }
-
-    #[test]
-    fn stream_hedge_delay_uses_bounded_fraction_of_first_byte_budget() {
-        let candidate = candidate();
-
-        let timeout = stream_hedge_delay(&candidate);
-
-        assert_eq!(timeout, Duration::from_millis(1_500));
     }
 
     #[test]

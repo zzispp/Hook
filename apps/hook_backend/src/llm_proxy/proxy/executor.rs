@@ -6,9 +6,9 @@ use req::Response as UpstreamResponse;
 use super::{
     LlmProxyError, LlmProxyState, affinity,
     attempt_log::{
-        AttemptCancelGuard, AttemptCancelHandle, AttemptCancelReason, SkippedAttemptInput, StartedAttemptInput, clear_candidate_cancel_reason,
-        mark_candidate_cancel_reason, record_attempt_error, record_candidate_skipped_attempt, record_probe_slot_timeout, record_rate_limit_rejection,
-        record_send_error, record_skipped_attempt, record_started_attempt, record_stream_candidate_watchdog_timeout,
+        AttemptCancelGuard, AttemptCancelHandle, SkippedAttemptInput, StartedAttemptInput, record_attempt_error, record_candidate_skipped_attempt,
+        record_probe_slot_timeout, record_rate_limit_rejection, record_send_error, record_skipped_attempt, record_started_attempt,
+        record_stream_candidate_watchdog_timeout,
     },
     failure_classification::{FailureDecision, classify_status},
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
@@ -37,30 +37,6 @@ enum AttemptOnceOutcome {
     FullResponse(Box<transport::FullResponseArgs>, Box<AttemptCancelGuard>),
 }
 
-struct CandidateTaskOutput {
-    outcome: AttemptCandidateOutcome,
-    last_failure: Option<transport::UpstreamFailure>,
-    last_error: Option<LlmProxyError>,
-}
-
-struct CandidateTaskResult {
-    response: Option<Response>,
-    last_failure: Option<transport::UpstreamFailure>,
-    last_error: Option<LlmProxyError>,
-}
-
-struct StartedCandidateTask {
-    candidate: ProxyCandidate,
-    join_handle: tokio::task::JoinHandle<Result<CandidateTaskOutput, LlmProxyError>>,
-}
-
-struct HedgedStreamOutcome {
-    response: Option<Response>,
-    next_candidate_index: usize,
-    last_failure: Option<transport::UpstreamFailure>,
-    last_error: Option<LlmProxyError>,
-}
-
 #[derive(Default)]
 struct AttemptExecutionState {
     codex_chat_history_unavailable_message: Option<String>,
@@ -69,19 +45,8 @@ struct AttemptExecutionState {
 pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: PreparedProxyRequest) -> Result<Response, LlmProxyError> {
     let mut last_failure = None;
     let mut last_error = None;
-    let mut next_candidate_index = 0;
-    if prepared.is_stream && prepared.candidates.len() >= 2 {
-        let hedged = execute_hedged_stream_candidates(state.clone(), prepared.clone()).await?;
-        if let Some(response) = hedged.response {
-            record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
-            return Ok(response);
-        }
-        next_candidate_index = hedged.next_candidate_index;
-        last_failure = hedged.last_failure;
-        last_error = hedged.last_error;
-    }
     let mut execution_state = AttemptExecutionState::default();
-    for candidate in prepared.candidates.iter().skip(next_candidate_index) {
+    for candidate in &prepared.candidates {
         let outcome = attempt_candidate(&state, &prepared, candidate, &mut execution_state, &mut last_failure, &mut last_error).await?;
         match outcome {
             AttemptCandidateOutcome::Continue => {}
@@ -105,138 +70,6 @@ pub(super) async fn execute_proxy_request(state: LlmProxyState, prepared: Prepar
     }
     record_skipped_candidates(&state, &prepared.request_id, SKIP_REASON_REQUEST_TERMINATED).await?;
     Err(last_error.unwrap_or_else(|| LlmProxyError::Upstream("all provider candidates failed".into())))
-}
-
-async fn execute_hedged_stream_candidates(state: LlmProxyState, prepared: PreparedProxyRequest) -> Result<HedgedStreamOutcome, LlmProxyError> {
-    let request_id = prepared.request_id.clone();
-    let primary_index = prepared.candidates[0].trace.candidate_index;
-    let backup_index = prepared.candidates[1].trace.candidate_index;
-    let mut primary = spawn_candidate_task(state.clone(), prepared.clone(), prepared.candidates[0].clone());
-    let hedge_sleep = tokio::time::sleep(timeout::stream_hedge_delay(&prepared.candidates[0]));
-    tokio::pin!(hedge_sleep);
-    tokio::select! {
-        join = &mut primary.join_handle => {
-            let result = resolve_candidate_join(join, &request_id, primary_index)?;
-            return Ok(HedgedStreamOutcome {
-                response: result.response,
-                next_candidate_index: 1,
-                last_failure: result.last_failure,
-                last_error: result.last_error,
-            });
-        }
-        _ = &mut hedge_sleep => {}
-    }
-    let mut backup = spawn_candidate_task(state, prepared.clone(), prepared.candidates[1].clone());
-    let mut primary_done = false;
-    let mut backup_done = false;
-    let mut last_failure = None;
-    let mut last_error = None;
-    while !primary_done || !backup_done {
-        tokio::select! {
-            join = wait_candidate_task(&mut primary), if !primary_done => {
-                let result = resolve_candidate_join(join, &request_id, primary_index)?;
-                primary_done = true;
-                if let Some(response) = result.response {
-                    if !backup_done {
-                        cancel_hedged_loser(&request_id, backup).await;
-                    }
-                    return Ok(HedgedStreamOutcome {
-                        response: Some(response),
-                        next_candidate_index: 2,
-                        last_failure,
-                        last_error,
-                    });
-                }
-                merge_candidate_task_result(result, &mut last_failure, &mut last_error);
-            }
-            join = wait_candidate_task(&mut backup), if !backup_done => {
-                let result = resolve_candidate_join(join, &request_id, backup_index)?;
-                backup_done = true;
-                if let Some(response) = result.response {
-                    if !primary_done {
-                        cancel_hedged_loser(&request_id, primary).await;
-                    }
-                    return Ok(HedgedStreamOutcome {
-                        response: Some(response),
-                        next_candidate_index: 2,
-                        last_failure,
-                        last_error,
-                    });
-                }
-                merge_candidate_task_result(result, &mut last_failure, &mut last_error);
-            }
-        }
-    }
-    Ok(HedgedStreamOutcome {
-        response: None,
-        next_candidate_index: 2,
-        last_failure,
-        last_error,
-    })
-}
-
-async fn wait_candidate_task(task: &mut StartedCandidateTask) -> Result<Result<CandidateTaskOutput, LlmProxyError>, tokio::task::JoinError> {
-    (&mut task.join_handle).await
-}
-
-fn spawn_candidate_task(state: LlmProxyState, prepared: PreparedProxyRequest, candidate: ProxyCandidate) -> StartedCandidateTask {
-    let task_candidate = candidate.clone();
-    let join_handle = tokio::spawn(async move {
-        let mut execution_state = AttemptExecutionState::default();
-        let mut last_failure = None;
-        let mut last_error = None;
-        let outcome = attempt_candidate(&state, &prepared, &task_candidate, &mut execution_state, &mut last_failure, &mut last_error).await?;
-        Ok(CandidateTaskOutput {
-            outcome,
-            last_failure,
-            last_error,
-        })
-    });
-    StartedCandidateTask { candidate, join_handle }
-}
-
-fn resolve_candidate_join(
-    join: Result<Result<CandidateTaskOutput, LlmProxyError>, tokio::task::JoinError>,
-    request_id: &str,
-    candidate_index: i32,
-) -> Result<CandidateTaskResult, LlmProxyError> {
-    clear_candidate_cancel_reason(request_id, candidate_index);
-    let output = join.map_err(|error| LlmProxyError::Infrastructure(format!("hedged candidate task join failed: {error}")))??;
-    candidate_task_result(output)
-}
-
-fn candidate_task_result(output: CandidateTaskOutput) -> Result<CandidateTaskResult, LlmProxyError> {
-    match output.outcome {
-        AttemptCandidateOutcome::Continue => Ok(CandidateTaskResult {
-            response: None,
-            last_failure: output.last_failure,
-            last_error: output.last_error,
-        }),
-        AttemptCandidateOutcome::Response(response) => Ok(CandidateTaskResult {
-            response: Some(response),
-            last_failure: output.last_failure,
-            last_error: output.last_error,
-        }),
-        AttemptCandidateOutcome::FullResponse(_, _) => Err(LlmProxyError::Infrastructure("hedged stream task returned full non-stream response".into())),
-    }
-}
-
-fn merge_candidate_task_result(result: CandidateTaskResult, last_failure: &mut Option<transport::UpstreamFailure>, last_error: &mut Option<LlmProxyError>) {
-    if let Some(failure) = result.last_failure {
-        *last_failure = Some(failure);
-    }
-    if let Some(error) = result.last_error {
-        *last_error = Some(error);
-    }
-}
-
-async fn cancel_hedged_loser(request_id: &str, task: StartedCandidateTask) {
-    let candidate_index = task.candidate.trace.candidate_index;
-    mark_candidate_cancel_reason(request_id, candidate_index, AttemptCancelReason::HedgedBackupSuperseded);
-    let join_handle = task.join_handle;
-    join_handle.abort();
-    let _ = join_handle.await;
-    clear_candidate_cancel_reason(request_id, candidate_index);
 }
 
 async fn attempt_candidate(
@@ -569,7 +402,6 @@ async fn stream_success_task_output(context: StreamAttemptTaskContext, response:
             provider_request_body: context.payload.body,
             started: context.started,
             retry_index: context.retry_index,
-            cancel_handle: context.attempt_cancel.handle(),
         },
         &context.attempt_cancel,
     )

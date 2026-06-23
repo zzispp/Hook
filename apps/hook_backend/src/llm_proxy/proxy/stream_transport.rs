@@ -23,7 +23,7 @@ use types::model::PatchField;
 
 use super::{
     LlmProxyError, LlmProxyState,
-    attempt_log::{AttemptCancelGuard, AttemptCancelHandle},
+    attempt_log::AttemptCancelGuard,
     response_payload::{body_value, upstream_status_error_details},
     timeout, transport,
 };
@@ -43,7 +43,6 @@ pub(super) struct StreamAttemptContext {
     retry_index: i32,
     started: Instant,
     response_headers_time_ms: i64,
-    cancel_handle: AttemptCancelHandle,
     status: StatusCode,
 }
 
@@ -57,7 +56,6 @@ pub struct StreamResponseArgs {
     pub provider_request_body: serde_json::Value,
     pub started: Instant,
     pub retry_index: i32,
-    pub cancel_handle: AttemptCancelHandle,
 }
 
 pub(super) enum StreamResponseOutcome {
@@ -83,7 +81,6 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
         provider_request_body,
         started,
         retry_index,
-        cancel_handle,
     } = args;
     let status = transport::status_code(response.status())?;
     let content_type = transport::response_content_type(&response);
@@ -96,7 +93,6 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
         retry_index,
         started,
         response_headers_time_ms: transport::elapsed_ms(started),
-        cancel_handle,
         status,
     };
     if !status.is_success() {
