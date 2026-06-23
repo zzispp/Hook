@@ -54,7 +54,11 @@ fn unselected_mapping_is_rejected() {
     let globals = [global_model("global-1", "upstream-only"), global_model("global-2", "other")];
     let error = resolved_mappings(selected, &globals).unwrap_err();
 
-    assert!(error.to_string().contains("selected model does not exist on selected token 1209: missing-upstream"));
+    assert!(
+        error
+            .to_string()
+            .contains("selected model does not exist on selected token 1209: missing-upstream")
+    );
 }
 
 #[test]

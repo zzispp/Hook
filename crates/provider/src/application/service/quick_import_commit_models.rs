@@ -75,10 +75,7 @@ pub(super) fn selected_bind_tokens<'a>(
     inputs.iter().map(|input| selected_bind_token(&by_id, input)).collect()
 }
 
-pub(super) fn resolved_mappings<'a>(
-    selected: Vec<SelectedToken<'a>>,
-    globals: &[GlobalModelResponse],
-) -> ProviderResult<Vec<SelectedToken<'a>>> {
+pub(super) fn resolved_mappings<'a>(selected: Vec<SelectedToken<'a>>, globals: &[GlobalModelResponse]) -> ProviderResult<Vec<SelectedToken<'a>>> {
     let by_name = globals_by_name(globals);
     let by_id = globals_by_id(globals);
     selected
@@ -88,10 +85,7 @@ pub(super) fn resolved_mappings<'a>(
 }
 
 pub(super) fn provider_level_global_model_ids(selected: &[SelectedToken<'_>]) -> BTreeSet<String> {
-    selected
-        .iter()
-        .flat_map(|token| token.resolved_mappings.values().cloned())
-        .collect()
+    selected.iter().flat_map(|token| token.resolved_mappings.values().cloned()).collect()
 }
 
 pub(super) fn allowed_model_ids(token: &SelectedToken<'_>) -> ProviderResult<Vec<String>> {
@@ -208,10 +202,7 @@ fn resolve_selected_token_mappings<'a>(
     by_id: &BTreeMap<String, &GlobalModelResponse>,
 ) -> ProviderResult<SelectedToken<'a>> {
     if token.resolved_mappings.is_empty() {
-        return Err(ProviderError::InvalidInput(format!(
-            "selected token has no model mappings: {}",
-            token.token.id
-        )));
+        return Err(ProviderError::InvalidInput(format!("selected token has no model mappings: {}", token.token.id)));
     }
     let available = token.token.models.iter().map(|model| model.id.as_str()).collect::<BTreeSet<_>>();
     let submitted = std::mem::take(&mut token.resolved_mappings);
