@@ -15,6 +15,8 @@ pub(super) struct ResponseBytesInput<'a> {
     pub(super) candidate: &'a ProxyCandidate,
     pub(super) retry_index: i32,
     pub(super) started: Instant,
+    pub(super) response_headers_time_ms: Option<i64>,
+    pub(super) first_output_time_ms: Option<i64>,
     pub(super) first_byte_time_ms: Option<i64>,
     pub(super) read_timeout: Option<Duration>,
     pub(super) response: req::Response,
@@ -30,6 +32,8 @@ pub(super) async fn response_bytes(input: ResponseBytesInput<'_>) -> Result<Vec<
                 input.candidate,
                 input.retry_index,
                 input.started,
+                input.response_headers_time_ms,
+                input.first_output_time_ms,
                 input.first_byte_time_ms,
                 &error,
             )
@@ -55,6 +59,8 @@ async fn record_response_read_error(
     candidate: &ProxyCandidate,
     retry_index: i32,
     started: Instant,
+    response_headers_time_ms: Option<i64>,
+    first_output_time_ms: Option<i64>,
     first_byte_time_ms: Option<i64>,
     error: &req::ClientError,
 ) -> Result<(), LlmProxyError> {
@@ -64,6 +70,8 @@ async fn record_response_read_error(
         request_id,
         AttemptRecordInput {
             latency_ms: Some(elapsed_ms(started)),
+            response_headers_time_ms,
+            first_output_time_ms,
             first_byte_time_ms,
             error_type: Some(response_read_error_type(error)),
             error_message: Some(error_message.as_str()),

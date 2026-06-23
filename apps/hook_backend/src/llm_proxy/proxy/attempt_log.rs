@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     sync::{Arc, Mutex},
     time::Instant,
 };
@@ -11,6 +12,14 @@ use crate::llm_proxy::{
     audit::{AttemptRecordInput, record_attempt, record_candidate_attempt},
     candidate::ProxyCandidate,
 };
+
+static CANDIDATE_CANCEL_REASONS: std::sync::OnceLock<Mutex<HashMap<(String, i32), AttemptCancelReason>>> = std::sync::OnceLock::new();
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum AttemptCancelReason {
+    ClientDisconnect,
+    HedgedBackupSuperseded,
+}
 
 pub(super) struct AttemptCancelGuard {
     state: LlmProxyState,
@@ -41,9 +50,10 @@ impl AttemptCancelGuard {
 
 impl Drop for AttemptCancelGuard {
     fn drop(&mut self) {
-        let Some(phase) = take_cancel_phase(&self.shared) else {
+        let Some((phase, reason)) = take_cancel_state(&self.shared) else {
             return;
         };
+        let reason = take_candidate_cancel_reason(&self.request_id, self.candidate.trace.candidate_index).unwrap_or(reason);
         let input = CancelledAttemptInput {
             state: self.state.clone(),
             request_id: self.request_id.clone(),
@@ -51,6 +61,7 @@ impl Drop for AttemptCancelGuard {
             retry_index: self.retry_index,
             latency_ms: elapsed_ms(self.started),
             phase,
+            reason,
         };
         tokio::spawn(async move {
             if let Err(error) = record_cancelled_attempt(input).await {
@@ -60,6 +71,7 @@ impl Drop for AttemptCancelGuard {
     }
 }
 
+#[derive(Clone)]
 pub(super) struct AttemptCancelHandle {
     shared: Arc<Mutex<AttemptCancelShared>>,
 }
@@ -71,12 +83,20 @@ impl AttemptCancelHandle {
         });
     }
 
+    pub(super) fn reason(&self) -> AttemptCancelReason {
+        self.shared
+            .lock()
+            .map(|shared| shared.reason)
+            .unwrap_or(AttemptCancelReason::ClientDisconnect)
+    }
+
     #[cfg(test)]
     pub(super) fn noop_for_test() -> Self {
         Self {
             shared: Arc::new(Mutex::new(AttemptCancelShared {
                 phase: AttemptCancelPhase::WaitingUpstreamResponseStart,
                 armed: false,
+                reason: AttemptCancelReason::ClientDisconnect,
             })),
         }
     }
@@ -89,6 +109,7 @@ struct CancelledAttemptInput {
     retry_index: i32,
     latency_ms: i64,
     phase: AttemptCancelPhase,
+    reason: AttemptCancelReason,
 }
 
 #[derive(Clone, Copy)]
@@ -100,6 +121,7 @@ enum AttemptCancelPhase {
 struct AttemptCancelShared {
     phase: AttemptCancelPhase,
     armed: bool,
+    reason: AttemptCancelReason,
 }
 
 pub(super) struct StartedAttemptInput<'a> {
@@ -223,6 +245,7 @@ pub(super) async fn record_started_attempt(input: StartedAttemptInput<'_>) -> Re
         shared: Arc::new(Mutex::new(AttemptCancelShared {
             phase: AttemptCancelPhase::WaitingUpstreamResponseStart,
             armed: true,
+            reason: AttemptCancelReason::ClientDisconnect,
         })),
     })
 }
@@ -275,11 +298,42 @@ fn send_error_type(error: &req::ClientError) -> &'static str {
 }
 
 async fn record_cancelled_attempt(input: CancelledAttemptInput) -> Result<(), LlmProxyError> {
-    let record = match input.phase {
-        AttemptCancelPhase::WaitingUpstreamResponseStart => cancelled_before_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
-        AttemptCancelPhase::AwaitingTerminal => cancelled_after_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
+    let record = match input.reason {
+        AttemptCancelReason::ClientDisconnect => match input.phase {
+            AttemptCancelPhase::WaitingUpstreamResponseStart => {
+                cancelled_before_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms)
+            }
+            AttemptCancelPhase::AwaitingTerminal => cancelled_after_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
+        },
+        AttemptCancelReason::HedgedBackupSuperseded => match input.phase {
+            AttemptCancelPhase::WaitingUpstreamResponseStart => {
+                hedged_before_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms)
+            }
+            AttemptCancelPhase::AwaitingTerminal => hedged_after_upstream_response_record(&input.candidate, input.retry_index, input.latency_ms),
+        },
     };
     record_attempt(&input.state, &input.request_id, record).await
+}
+
+pub(super) fn mark_candidate_cancel_reason(request_id: &str, candidate_index: i32, reason: AttemptCancelReason) {
+    let map = CANDIDATE_CANCEL_REASONS.get_or_init(|| Mutex::new(HashMap::new()));
+    if let Ok(mut map) = map.lock() {
+        map.insert((request_id.to_owned(), candidate_index), reason);
+    }
+}
+
+pub(super) fn take_candidate_cancel_reason(request_id: &str, candidate_index: i32) -> Option<AttemptCancelReason> {
+    let map = CANDIDATE_CANCEL_REASONS.get_or_init(|| Mutex::new(HashMap::new()));
+    map.lock().ok()?.remove(&(request_id.to_owned(), candidate_index))
+}
+
+pub(super) fn clear_candidate_cancel_reason(request_id: &str, candidate_index: i32) {
+    let Some(map) = CANDIDATE_CANCEL_REASONS.get() else {
+        return;
+    };
+    if let Ok(mut map) = map.lock() {
+        map.remove(&(request_id.to_owned(), candidate_index));
+    }
 }
 
 fn cancelled_before_upstream_response_record(candidate: &ProxyCandidate, retry_index: i32, latency_ms: i64) -> AttemptRecordInput<'_> {
@@ -308,6 +362,30 @@ fn cancelled_after_upstream_response_record(candidate: &ProxyCandidate, retry_in
     }
 }
 
+fn hedged_before_upstream_response_record(candidate: &ProxyCandidate, retry_index: i32, latency_ms: i64) -> AttemptRecordInput<'_> {
+    AttemptRecordInput {
+        latency_ms: Some(latency_ms),
+        error_type: Some("hedge_cancelled"),
+        error_message: Some("attempt cancelled before upstream response started because backup stream won"),
+        termination_origin: PatchField::Value("gateway".into()),
+        termination_reason: PatchField::Value("hedge_loser".into()),
+        stream_end_reason: PatchField::Value("hedge_cancelled".into()),
+        ..AttemptRecordInput::new(candidate, retry_index, "cancelled", true)
+    }
+}
+
+fn hedged_after_upstream_response_record(candidate: &ProxyCandidate, retry_index: i32, latency_ms: i64) -> AttemptRecordInput<'_> {
+    AttemptRecordInput {
+        latency_ms: Some(latency_ms),
+        error_type: Some("hedge_cancelled"),
+        error_message: Some("attempt cancelled after upstream response started because backup stream won"),
+        termination_origin: PatchField::Value("gateway".into()),
+        termination_reason: PatchField::Value("hedge_loser".into()),
+        stream_end_reason: PatchField::Value("hedge_cancelled".into()),
+        ..AttemptRecordInput::new(candidate, retry_index, "cancelled", true)
+    }
+}
+
 fn stream_candidate_watchdog_timeout_record(candidate: &ProxyCandidate, retry_index: i32, latency_ms: i64) -> AttemptRecordInput<'_> {
     AttemptRecordInput {
         status_code: Some(504),
@@ -330,13 +408,13 @@ fn update_cancel_shared(shared: &Arc<Mutex<AttemptCancelShared>>, update: impl F
     }
 }
 
-fn take_cancel_phase(shared: &Arc<Mutex<AttemptCancelShared>>) -> Option<AttemptCancelPhase> {
+fn take_cancel_state(shared: &Arc<Mutex<AttemptCancelShared>>) -> Option<(AttemptCancelPhase, AttemptCancelReason)> {
     let mut shared = shared.lock().ok()?;
     if !shared.armed {
         return None;
     }
     shared.armed = false;
-    Some(shared.phase)
+    Some((shared.phase, shared.reason))
 }
 
 #[cfg(test)]

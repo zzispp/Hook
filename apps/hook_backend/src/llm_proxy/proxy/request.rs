@@ -23,6 +23,7 @@ use super::{
     request_tools::{openai_request_explicitly_selects_image_generation, prune_unsupported_image_generation_tool},
 };
 
+#[derive(Clone)]
 pub(super) struct PreparedProxyRequest {
     pub(super) request_id: String,
     pub(super) cache_affinity_ttl_minutes: i64,
@@ -35,6 +36,7 @@ pub(super) struct PreparedProxyRequest {
     pub(super) provider_headers: HeaderMap,
 }
 
+#[derive(Clone)]
 pub(super) struct AttemptPayload {
     pub(super) body: Value,
     pub(super) original_body: Value,

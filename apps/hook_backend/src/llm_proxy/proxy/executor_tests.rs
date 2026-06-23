@@ -7,7 +7,7 @@ use types::model::TieredPricingConfig;
 use super::{
     AttemptExecutionState, AttemptOnceOutcome, StreamWatchdogOutcome, is_openai_cli_to_chat_candidate, probe_slot_timeout_outcome,
     run_stream_candidate_watchdog, should_skip_codex_history_after_error, should_skip_codex_history_candidate, stream_candidate_watchdog_timeout_output,
-    stream_pre_output_failure_task_output,
+    stream_pre_output_failure_task_output, stream_send_error_last_failure, stream_send_error_outcome,
 };
 use crate::llm_proxy::{
     LlmProxyError,
@@ -60,15 +60,50 @@ fn probe_slot_timeout_continues_candidate_route() {
 fn stream_preoutput_failure_continues_candidate_with_last_failure() {
     let output = stream_pre_output_failure_task_output(StreamPreOutputFailure {
         status: StatusCode::BAD_GATEWAY,
+        error_type: "upstream_stream_incomplete",
         message: "upstream stream ended without a terminal event".into(),
+        advance_candidate: false,
     });
 
     assert!(matches!(output.outcome, AttemptOnceOutcome::ContinueCandidate));
     assert!(output.last_failure.is_some());
     assert_eq!(
         output.last_error.map(|error| error.to_string()),
-        Some("upstream stream ended without a terminal event".into())
+        Some("upstream_stream_incomplete: upstream stream ended without a terminal event".into())
     );
+}
+
+#[test]
+fn stream_preoutput_first_byte_timeout_advances_to_next_candidate() {
+    let output = stream_pre_output_failure_task_output(StreamPreOutputFailure {
+        status: StatusCode::GATEWAY_TIMEOUT,
+        error_type: "first_byte_timeout",
+        message: "stream first byte timeout".into(),
+        advance_candidate: true,
+    });
+
+    assert!(matches!(output.outcome, AttemptOnceOutcome::NextCandidate));
+    assert!(output.last_failure.is_some());
+    assert_eq!(
+        output.last_error.map(|error| error.to_string()),
+        Some("first_byte_timeout: stream first byte timeout".into())
+    );
+}
+
+#[test]
+fn stream_timeout_send_error_advances_to_next_candidate() {
+    let outcome = stream_send_error_outcome(&req::ClientError::Timeout, None);
+
+    assert!(matches!(outcome, AttemptOnceOutcome::NextCandidate));
+    assert!(stream_send_error_last_failure(&req::ClientError::Timeout).is_some());
+}
+
+#[test]
+fn non_timeout_send_error_keeps_current_candidate_retry_path() {
+    let outcome = stream_send_error_outcome(&req::ClientError::Network("reset".into()), None);
+
+    assert!(matches!(outcome, AttemptOnceOutcome::ContinueCandidate));
+    assert!(stream_send_error_last_failure(&req::ClientError::Network("reset".into())).is_none());
 }
 
 #[test]

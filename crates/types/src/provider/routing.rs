@@ -300,6 +300,10 @@ pub struct RoutingMetricSnapshot {
     pub request_count: u64,
     pub success_count: u64,
     pub failure_count: u64,
+    #[serde(default)]
+    pub first_output_success_count: u64,
+    #[serde(default)]
+    pub first_output_failure_count: u64,
     pub timeout_count: u64,
     pub rate_limited_count: u64,
     pub server_error_count: u64,

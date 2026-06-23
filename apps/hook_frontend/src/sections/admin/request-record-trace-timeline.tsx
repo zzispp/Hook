@@ -15,7 +15,7 @@ import { useTranslate } from 'src/locales/use-locales';
 
 import { Label } from 'src/components/label';
 
-import { formatDuration } from './request-records-utils';
+import { formatAttemptTiming } from './request-record-timing';
 import { RoutingDecisionBlock } from './request-record-trace-routing-decision';
 import { RequestCandidatePayloadPanels } from './request-record-payload-panels';
 import {
@@ -231,8 +231,20 @@ function TraceAttemptDetail({
         <TraceInfo label={t('requestRecords.traceEndpoint')} value={attemptEndpoint(attempt)} />
         <TraceInfo label={t('requestRecords.traceKey')} value={attemptKey(attempt)} />
         <TraceInfo
+          label={t('requestRecords.responseHeaders')}
+          value={formatAttemptTiming(attempt, 'response_headers')}
+        />
+        <TraceInfo
+          label={t('requestRecords.firstSseEvent')}
+          value={formatAttemptTiming(attempt, 'first_sse_event')}
+        />
+        <TraceInfo
+          label={t('requestRecords.firstOutput')}
+          value={formatAttemptTiming(attempt, 'first_output')}
+        />
+        <TraceInfo
           label={t('requestRecords.totalLatency')}
-          value={formatDuration(attempt.latency_ms)}
+          value={formatAttemptTiming(attempt, 'total_latency')}
         />
         {attempt.skip_reason ? (
           <TraceInfo

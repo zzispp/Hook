@@ -138,6 +138,12 @@ function mergeRequestRecord(item: RequestRecord, update?: RequestRecord) {
     provider_key_name: update.provider_key_name ?? item.provider_key_name,
     provider_key_preview: update.provider_key_preview ?? item.provider_key_preview,
     provider_api_format: update.provider_api_format ?? item.provider_api_format,
+    response_headers_time_ms:
+      update.response_headers_time_ms ?? item.response_headers_time_ms,
+    first_sse_event_time_ms:
+      update.first_sse_event_time_ms ?? item.first_sse_event_time_ms,
+    first_output_time_ms:
+      update.first_output_time_ms ?? item.first_output_time_ms,
     first_byte_time_ms: update.first_byte_time_ms ?? item.first_byte_time_ms,
     total_latency_ms: update.total_latency_ms ?? item.total_latency_ms,
     prompt_tokens: update.prompt_tokens ?? item.prompt_tokens,

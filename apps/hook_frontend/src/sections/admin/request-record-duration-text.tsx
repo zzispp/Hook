@@ -6,13 +6,16 @@ import { useMemo, useState, useEffect } from 'react';
 
 import Typography from '@mui/material/Typography';
 
-import { formatDuration } from './request-records-utils';
+import { isLiveTiming, formatRequestTiming } from './request-record-timing';
 
-type DurationMetric = 'first_byte' | 'total_latency';
+type DurationMetric = 'response_headers' | 'first_sse_event' | 'first_output' | 'total_latency';
 
 type DurationRecord = Readonly<{
   created_at: string;
   status: RequestRecordStatus;
+  response_headers_time_ms?: number | null;
+  first_sse_event_time_ms?: number | null;
+  first_output_time_ms?: number | null;
   first_byte_time_ms?: number | null;
   total_latency_ms?: number | null;
 }>;
@@ -48,9 +51,8 @@ export function RequestRecordDurationText({
   metric: DurationMetric;
   now: number;
 }) {
-  const live = isLiveDuration(record, metric);
-  const value = durationValue(record, metric);
-  const text = live ? formatLiveDuration(record.created_at, now) : formatDuration(value);
+  const live = isLiveTiming(record, metric);
+  const text = formatRequestTiming(record, metric, now);
 
   return (
     <Typography component="span" variant="body2" sx={live ? liveDurationTextSx : durationTextSx}>
@@ -60,34 +62,11 @@ export function RequestRecordDurationText({
 }
 
 function recordNeedsLiveDuration(record: DurationRecord) {
-  return isLiveDuration(record, 'first_byte') || isLiveDuration(record, 'total_latency');
-}
-
-function isLiveDuration(record: DurationRecord, metric: DurationMetric) {
-  if (!isActiveStatus(record.status)) return false;
-  if (metric === 'total_latency') return true;
-  return record.first_byte_time_ms === null || record.first_byte_time_ms === undefined;
-}
-
-function isActiveStatus(status: RequestRecordStatus) {
-  return status === 'pending' || status === 'streaming';
-}
-
-function durationValue(record: DurationRecord, metric: DurationMetric) {
-  return metric === 'first_byte' ? record.first_byte_time_ms : record.total_latency_ms;
-}
-
-function formatLiveDuration(createdAt: string, now: number) {
-  const createdAtMs = parseRequestTimestampMs(createdAt);
-  if (Number.isNaN(createdAtMs)) return 'N/A';
-
-  const elapsedMs = Math.max(0, now - createdAtMs);
-  return formatDuration(elapsedMs);
-}
-
-function parseRequestTimestampMs(value: string) {
-  const normalized = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`;
-  return new Date(normalized).getTime();
+  return (
+    isLiveTiming(record, 'response_headers') ||
+    isLiveTiming(record, 'first_output') ||
+    isLiveTiming(record, 'total_latency')
+  );
 }
 
 const durationTextSx = {

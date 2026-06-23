@@ -8,6 +8,7 @@ pub(super) enum StreamEndReason {
     Done,
     Timeout,
     ClientGone,
+    HedgeCancelled,
     ScannerError,
     HandlerStop,
     Eof,
@@ -20,6 +21,7 @@ impl StreamEndReason {
             Self::Done => "done",
             Self::Timeout => "timeout",
             Self::ClientGone => "client_gone",
+            Self::HedgeCancelled => "hedge_cancelled",
             Self::ScannerError => "scanner_error",
             Self::HandlerStop => "handler_stop",
             Self::Eof => "eof",
@@ -146,6 +148,7 @@ mod tests {
         for reason in [
             StreamEndReason::Timeout,
             StreamEndReason::ClientGone,
+            StreamEndReason::HedgeCancelled,
             StreamEndReason::ScannerError,
             StreamEndReason::UpstreamEofWithoutCompletion,
         ] {
@@ -185,6 +188,7 @@ mod tests {
             (StreamEndReason::Done, "done"),
             (StreamEndReason::Timeout, "timeout"),
             (StreamEndReason::ClientGone, "client_gone"),
+            (StreamEndReason::HedgeCancelled, "hedge_cancelled"),
             (StreamEndReason::ScannerError, "scanner_error"),
             (StreamEndReason::HandlerStop, "handler_stop"),
             (StreamEndReason::Eof, "eof"),

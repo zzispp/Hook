@@ -241,6 +241,9 @@ fn success_input() -> RequestCandidateRecordInput {
         billing: success_billing_values(),
         billing_snapshot: None,
         latency_ms: Some(42),
+        response_headers_time_ms: Some(10),
+        first_sse_event_time_ms: Some(11),
+        first_output_time_ms: Some(12),
         first_byte_time_ms: Some(12),
         error_type: None,
         error_message: None,
@@ -279,6 +282,9 @@ fn success_patch() -> RequestCandidateRecordPatch {
         billing: success_billing_values(),
         billing_snapshot: PatchField::Missing,
         latency_ms: Some(42),
+        response_headers_time_ms: Some(10),
+        first_sse_event_time_ms: Some(11),
+        first_output_time_ms: Some(12),
         first_byte_time_ms: Some(12),
         error_type: None,
         error_message: None,
@@ -367,6 +373,9 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         billing_multiplier: Some(Decimal::new(2, 0)),
         billing_snapshot: None,
         latency_ms: Some(42),
+        response_headers_time_ms: Some(10),
+        first_sse_event_time_ms: Some(11),
+        first_output_time_ms: Some(12),
         first_byte_time_ms: Some(12),
         error_type: failed_error_type(status),
         error_message: failed_error_message(status),
@@ -382,10 +391,13 @@ fn scheduled_candidate_record(id: &str) -> storage::provider::record::request_ca
     let mut record = request_candidate_record(id, "scheduled");
     record.started_at = None;
     record.finished_at = None;
-    record.status_code = None;
-    record.latency_ms = None;
-    record.first_byte_time_ms = None;
-    record
+        record.status_code = None;
+        record.latency_ms = None;
+        record.response_headers_time_ms = None;
+        record.first_sse_event_time_ms = None;
+        record.first_output_time_ms = None;
+        record.first_byte_time_ms = None;
+        record
 }
 
 fn skipped_candidate_record(id: &str) -> storage::provider::record::request_candidates::Model {
@@ -505,6 +517,9 @@ fn summary_record(status: &str) -> request_records::Model {
         total_cost: Some(Decimal::new(2, 4)),
         billing_multiplier: Some(Decimal::new(2, 0)),
         billing_snapshot: None,
+        response_headers_time_ms: Some(10),
+        first_sse_event_time_ms: Some(11),
+        first_output_time_ms: Some(12),
         first_byte_time_ms: Some(12),
         total_latency_ms: Some(42),
         candidate_count: 1,

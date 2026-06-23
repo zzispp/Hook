@@ -31,4 +31,5 @@ mod scheduled_task_next_run_additive;
 mod scheduler_global_claim_additive;
 mod scheduler_lease_additive;
 mod system_settings_api_endpoints_additive;
+mod stream_tail_latency_additive;
 mod translation_seed_sync;
