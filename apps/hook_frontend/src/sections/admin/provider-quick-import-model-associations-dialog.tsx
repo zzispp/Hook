@@ -138,7 +138,6 @@ export function ProviderQuickImportModelAssociationsDialog(props: Props) {
             {Object.keys(mappings).map((providerModelId) => (
               <MappingRow
                 key={providerModelId}
-                providerModelId={providerModelId}
                 draft={mappings[providerModelId]}
                 models={models}
                 onChange={(patch) =>
@@ -212,13 +211,11 @@ function Header({ title, subtitle, onClose }: { title: string; subtitle?: string
 }
 
 function MappingRow({
-  providerModelId,
   draft,
   models,
   onChange,
   onRemove,
 }: {
-  providerModelId: string;
   draft: MappingDraft;
   models: GlobalModelResponse[];
   onChange: (patch: Partial<MappingDraft>) => void;
@@ -229,9 +226,6 @@ function MappingRow({
 
   return (
     <Stack spacing={1.5} sx={{ border: (theme) => `1px solid ${theme.vars.palette.divider}`, borderRadius: 1.5, p: 1.5 }}>
-      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-        {providerModelId}
-      </Typography>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }}>
         <Autocomplete
           fullWidth

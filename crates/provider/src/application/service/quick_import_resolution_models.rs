@@ -94,6 +94,18 @@ pub(super) fn current_mappings(key: &ProviderQuickImportSyncKey, allowed_model_i
         .collect()
 }
 
+pub(super) fn current_mappings_for_token(
+    key: &ProviderQuickImportSyncKey,
+    allowed_model_ids: &[String],
+    token: &UpstreamImportToken,
+) -> BTreeMap<String, String> {
+    let available = token.models.iter().map(|model| model.id.as_str()).collect::<BTreeSet<_>>();
+    current_mappings(key, allowed_model_ids)
+        .into_iter()
+        .filter(|(upstream_model_id, _)| available.contains(upstream_model_id.as_str()))
+        .collect()
+}
+
 pub(super) fn validate_token(token: &UpstreamImportToken) -> ProviderResult<()> {
     if !token.is_active {
         return Err(ProviderError::InvalidInput(format!("upstream token is disabled: {}", token.id)));
@@ -211,7 +223,7 @@ mod tests {
 
     use crate::application::{ProviderQuickImportSyncKey, ProviderQuickImportSyncKeyModel, UpstreamImportModel, UpstreamImportToken};
 
-    use super::{current_mappings, validate_associated_models};
+    use super::{current_mappings, current_mappings_for_token};
 
     #[test]
     fn current_mappings_respect_non_empty_key_allowed_models() {
@@ -235,11 +247,9 @@ mod tests {
     fn current_mappings_ignore_manually_removed_missing_upstream_models() {
         let key = key_with_mappings(vec![("gpt-5.4", "global-gpt-54"), ("gpt-5.4-mini", "global-gpt-54-mini")]);
         let token = token_with_models(vec!["gpt-5.4"]);
-        let mappings = current_mappings(&key, &["global-gpt-54".to_owned()]);
+        let mappings = current_mappings_for_token(&key, &[], &token);
 
-        let result = validate_associated_models(&token, &mappings);
-
-        assert!(result.is_ok());
+        assert_eq!(mappings, std::collections::BTreeMap::from([("gpt-5.4".to_owned(), "global-gpt-54".to_owned())]));
     }
 
     fn key_with_mappings(mappings: Vec<(&str, &str)>) -> ProviderQuickImportSyncKey {

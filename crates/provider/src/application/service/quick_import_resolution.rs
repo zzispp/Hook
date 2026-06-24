@@ -7,7 +7,8 @@ use types::provider::{
 };
 
 use crate::application::{
-    GlobalModelCatalog, ProviderError, ProviderRepository, ProviderResult, SecretCipher, UpstreamImportData, UpstreamImportToken, UpstreamProviderImportSource,
+    GlobalModelCatalog, ProviderError, ProviderQuickImportSyncKey, ProviderRepository, ProviderResult, SecretCipher, UpstreamImportData,
+    UpstreamImportToken, UpstreamProviderImportSource,
 };
 
 use super::{
@@ -16,8 +17,8 @@ use super::{
     quick_import_preview::{AppendPreviewInput, append_preview_response},
     quick_import_resolution_context::{KeyContext, key_context, reject_duplicate_relink, source_config, token_from_data},
     quick_import_resolution_models::{
-        associations, associations_response, current_mappings, resolve_mappings, token_from_key, validate_associated_models, validate_existing_mappings,
-        validate_token,
+        associations, associations_response, current_mappings_for_token, resolve_mappings, token_from_key, validate_associated_models,
+        validate_existing_mappings, validate_token,
     },
     quick_import_shared::refreshed_source_patch,
 };
@@ -66,7 +67,7 @@ where
     let source = refreshed_source(&args, provider_id, &context).await?;
     let data = args.importer.fetch_import_data(&source).await?;
     let token = token_from_data(&data, &context.key.upstream_token_id)?;
-    let mappings = current_mappings(&context.key, &context.api_key.allowed_model_ids);
+    let mappings = accept_current_mappings(&context.key, &context.api_key.allowed_model_ids, token);
     let replacement = replacement(&args, &context, token, mappings).await?;
     Ok(args.repository.replace_quick_import_key(replacement).await?.api_key)
 }
@@ -238,4 +239,12 @@ fn resolution_preview(
         linked_keys: &BTreeMap::new(),
         include_linked_tokens: true,
     })
+}
+
+pub(super) fn accept_current_mappings(
+    key: &ProviderQuickImportSyncKey,
+    allowed_model_ids: &[String],
+    token: &UpstreamImportToken,
+) -> BTreeMap<String, String> {
+    current_mappings_for_token(key, allowed_model_ids, token)
 }
