@@ -41,6 +41,7 @@ export function RequestRecordsTable({
   table,
   locale,
   loading,
+  timingExpanded,
   onOpen,
 }: {
   rows: RequestRecord[];
@@ -48,16 +49,17 @@ export function RequestRecordsTable({
   table: UseTableReturn;
   locale: string;
   loading: boolean;
+  timingExpanded: boolean;
   onOpen: (record: RequestRecord) => void;
 }) {
   const { t } = useTranslate('admin');
-  const head = tableHead(t);
+  const head = tableHead(t, timingExpanded);
   const durationNow = useRequestRecordDurationNow(rows);
 
   return (
     <>
       <Scrollbar>
-        <Table sx={{ minWidth: 1510 }}>
+        <Table sx={{ minWidth: timingExpanded ? 1510 : 1166 }}>
           <ManagementTableHead head={head} />
           <TableBody>
             {loading ? <TableLoadingRows head={head} rows={table.rowsPerPage} /> : null}
@@ -68,6 +70,7 @@ export function RequestRecordsTable({
                     row={row}
                     locale={locale}
                     durationNow={durationNow}
+                    timingExpanded={timingExpanded}
                     onOpen={onOpen}
                   />
                 ))
@@ -92,11 +95,13 @@ function RequestRecordRow({
   row,
   locale,
   durationNow,
+  timingExpanded,
   onOpen,
 }: {
   row: RequestRecord;
   locale: string;
   durationNow: number;
+  timingExpanded: boolean;
   onOpen: (record: RequestRecord) => void;
 }) {
   const { t } = useTranslate('admin');
@@ -140,7 +145,7 @@ function RequestRecordRow({
       </TableCell>
       <TableCell align="right">{formatCacheHitRate(row)}</TableCell>
       <TableCell>{formatCost(row.total_cost)}</TableCell>
-      <RequestRecordTimingCells record={row} now={durationNow} />
+      <RequestRecordTimingCells record={row} now={durationNow} expanded={timingExpanded} />
     </TableRow>
   );
 }
@@ -245,7 +250,7 @@ function RequestTokensCell({ record }: { record: RequestRecord }) {
   );
 }
 
-function tableHead(t: (key: string) => string): TableHeadCellProps[] {
+function tableHead(t: (key: string) => string, timingExpanded: boolean): TableHeadCellProps[] {
   return [
     { id: 'time', label: t('requestRecords.time'), width: 190 },
     { id: 'user', label: t('requestRecords.user'), width: 140 },
@@ -263,7 +268,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
       sx: { whiteSpace: 'nowrap' },
     },
     { id: 'cost', label: t('requestRecords.cost'), width: 120 },
-    ...requestRecordTimingHeadCells(t),
+    ...requestRecordTimingHeadCells(t, timingExpanded),
   ];
 }
 

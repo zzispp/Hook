@@ -47,6 +47,7 @@ function useRequestRecordsViewProps() {
   });
   const { filters, handleFiltersChange } = useRequestRecordFilters(table.onResetPage);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [timingExpanded, setTimingExpanded] = useState(false);
   const models = useGlobalModels(0, 1000);
   const providers = useProviders(0, 1000);
   const records = useRequestRecords(
@@ -76,12 +77,14 @@ function useRequestRecordsViewProps() {
     records,
     providers: providers.items,
     autoRefresh,
+    timingExpanded,
     manualRefreshing: refresh.manualRefreshing,
     displaySelectedRecord: selection.displaySelectedRecord,
     locale,
     onOpenRecord: selection.handleOpenRecord,
     onFiltersChange: handleFiltersChange,
     onAutoRefreshChange: setAutoRefresh,
+    onTimingExpandedChange: setTimingExpanded,
     onManualRefresh: refresh.handleManualRefresh,
     onCloseRecord: selection.handleCloseRecord,
   };
@@ -156,8 +159,10 @@ function RequestRecordsContent(props: RequestRecordsContentProps) {
           models={props.models}
           providers={props.providers}
           autoRefresh={props.autoRefresh}
+          timingExpanded={props.timingExpanded}
           onChange={props.onFiltersChange}
           onAutoRefreshChange={props.onAutoRefreshChange}
+          onTimingExpandedChange={props.onTimingExpandedChange}
         />
         <RequestRecordsTable
           rows={props.records.items}
@@ -165,6 +170,7 @@ function RequestRecordsContent(props: RequestRecordsContentProps) {
           table={props.table}
           locale={props.locale}
           loading={props.records.isLoading}
+          timingExpanded={props.timingExpanded}
           onOpen={props.onOpenRecord}
         />
       </Card>
