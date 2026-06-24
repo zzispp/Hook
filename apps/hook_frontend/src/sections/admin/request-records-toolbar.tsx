@@ -7,20 +7,17 @@ import type { RequestRecordFilters } from 'src/actions/request-records';
 import { useMemo, useCallback } from 'react';
 
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import Switch from '@mui/material/Switch';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
 import InputAdornment from '@mui/material/InputAdornment';
-import FormControlLabel from '@mui/material/FormControlLabel';
 
 import { useTranslate } from 'src/locales/use-locales';
 
 import { Iconify } from 'src/components/iconify';
 
 import { formatApiFormat, API_FORMAT_OPTIONS } from './provider-management-utils';
+import { RequestRecordsToolbarSwitches } from './request-records-toolbar-switches';
 import { requestStatusLabel, REQUEST_RECORD_STATUS_OPTIONS } from './request-records-utils';
 
 const ALL_FILTER_VALUE = 'all';
@@ -53,15 +50,19 @@ export function RequestRecordsToolbar({
   models,
   providers,
   autoRefresh,
+  timingExpanded,
   onChange,
   onAutoRefreshChange,
+  onTimingExpandedChange,
 }: {
   filters: RequestRecordFilterState;
   models: GlobalModelResponse[];
   providers: Provider[];
   autoRefresh: boolean;
+  timingExpanded: boolean;
   onChange: (filters: RequestRecordFilterState) => void;
   onAutoRefreshChange: (value: boolean) => void;
+  onTimingExpandedChange: (value: boolean) => void;
 }) {
   const options = useRequestRecordFilterOptions(models, providers);
   const updateFilters = useRequestRecordFilterUpdater(filters, onChange);
@@ -111,7 +112,14 @@ export function RequestRecordsToolbar({
           options={options.statuses}
           onChange={(status) => updateFilters({ status })}
         />
-        <AutoRefreshSwitch value={autoRefresh} onChange={onAutoRefreshChange} />
+        <RequestRecordsToolbarSwitches
+          autoRefresh={autoRefresh}
+          timingExpanded={timingExpanded}
+          autoRefreshLabel={options.labels.autoRefresh}
+          timingExpandedLabel={options.labels.expandTiming}
+          onAutoRefreshChange={onAutoRefreshChange}
+          onTimingExpandedChange={onTimingExpandedChange}
+        />
       </Box>
     </Box>
   );
@@ -206,26 +214,6 @@ function SelectFilter({
   );
 }
 
-function AutoRefreshSwitch({
-  value,
-  onChange,
-}: {
-  value: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  const { t } = useTranslate('admin');
-
-  return (
-    <Stack direction="row" alignItems="center">
-      <FormControlLabel
-        control={<Switch checked={value} onChange={(event) => onChange(event.target.checked)} />}
-        label={<Typography variant="body2">{t('requestRecords.autoRefresh')}</Typography>}
-        sx={{ whiteSpace: 'nowrap' }}
-      />
-    </Stack>
-  );
-}
-
 function useRequestRecordFilterOptions(models: GlobalModelResponse[], providers: Provider[]) {
   const { t } = useTranslate('admin');
 
@@ -237,6 +225,8 @@ function useRequestRecordFilterOptions(models: GlobalModelResponse[], providers:
         provider: t('requestRecords.provider'),
         apiFormat: t('requestRecords.apiFormat'),
         type: t('requestRecords.type'),
+        autoRefresh: t('requestRecords.autoRefresh'),
+        expandTiming: t('requestRecords.expandTiming'),
       },
       statuses: [
         { value: ALL_FILTER_VALUE, label: t('filters.allStatuses') },
