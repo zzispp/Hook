@@ -7,8 +7,8 @@ use types::provider::{
 };
 
 use crate::application::{
-    GlobalModelCatalog, ProviderError, ProviderQuickImportSyncKey, ProviderRepository, ProviderResult, SecretCipher, UpstreamImportData,
-    UpstreamImportToken, UpstreamProviderImportSource,
+    GlobalModelCatalog, ProviderError, ProviderQuickImportSyncKey, ProviderRepository, ProviderResult, SecretCipher, UpstreamImportData, UpstreamImportToken,
+    UpstreamProviderImportSource,
 };
 
 use super::{
@@ -241,10 +241,6 @@ fn resolution_preview(
     })
 }
 
-pub(super) fn accept_current_mappings(
-    key: &ProviderQuickImportSyncKey,
-    allowed_model_ids: &[String],
-    token: &UpstreamImportToken,
-) -> BTreeMap<String, String> {
+pub(super) fn accept_current_mappings(key: &ProviderQuickImportSyncKey, allowed_model_ids: &[String], token: &UpstreamImportToken) -> BTreeMap<String, String> {
     current_mappings_for_token(key, allowed_model_ids, token)
 }

@@ -51,8 +51,5 @@ fn accept_current_mappings_drop_missing_upstream_models() {
 
     let mappings = accept_current_mappings(&key, &[], &token);
 
-    assert_eq!(
-        mappings,
-        BTreeMap::from([("claude-sonnet-4-5-20251001".to_owned(), "global-1".to_owned())])
-    );
+    assert_eq!(mappings, BTreeMap::from([("claude-sonnet-4-5-20251001".to_owned(), "global-1".to_owned())]));
 }
