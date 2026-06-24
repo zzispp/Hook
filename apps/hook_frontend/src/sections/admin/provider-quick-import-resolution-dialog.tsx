@@ -240,7 +240,12 @@ function responsePreview(response: ProviderQuickImportResolutionResponse | null)
 }
 
 function relinkCandidates(response: ProviderQuickImportResolutionResponse | null) {
-  return response?.tokens.filter((token) => token.importable && token.group && token.upstream_token_id !== response.current_upstream_token_id) ?? [];
+  if (!response) return [];
+  return response.tokens.filter((token) => {
+    if (!token.group) return false;
+    if (token.upstream_token_id === response.current_upstream_token_id) return token.is_active;
+    return token.importable;
+  });
 }
 
 function tokenById(response: ProviderQuickImportResolutionResponse | null, id: string) {

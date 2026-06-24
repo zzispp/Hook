@@ -27,6 +27,8 @@ mod quick_import_preview;
 mod quick_import_resolution;
 mod quick_import_resolution_context;
 mod quick_import_resolution_models;
+#[cfg(test)]
+mod quick_import_resolution_tests;
 mod quick_import_shared;
 mod quick_import_sync;
 mod quick_import_sync_bindings;
