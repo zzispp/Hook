@@ -49,9 +49,9 @@ export function RequestRecordTimingCells({
 function timingCellSx(metric: RequestTimingMetric, head: boolean): SxProps<Theme> {
   const column = timingColumn(metric);
   return {
-    position: 'sticky',
-    right: timingRightOffset(metric),
-    zIndex: head ? TIMING_HEAD_CELL_Z_INDEX : TIMING_CELL_Z_INDEX,
+    position: { xs: 'static', lg: 'sticky' },
+    right: { lg: timingRightOffset(metric) },
+    zIndex: { lg: head ? TIMING_HEAD_CELL_Z_INDEX : TIMING_CELL_Z_INDEX },
     width: column.width,
     minWidth: column.width,
     maxWidth: column.width,
