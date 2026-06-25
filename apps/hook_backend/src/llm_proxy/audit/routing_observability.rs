@@ -4,7 +4,7 @@ use types::model::PatchField;
 use types::provider::{RequestUpstreamCost, RouteIdentity};
 
 use super::{AttemptAuditInput, TokenUsage, billing_runtime::total_tokens};
-use crate::llm_proxy::{LlmProxyError, candidate::CandidateSelection, routing::circuit};
+use crate::llm_proxy::{LlmProxyError, candidate::CandidateSelection};
 
 pub(super) async fn record_decision_sample(store: &ProviderStore, selection: &CandidateSelection) -> Result<(), LlmProxyError> {
     let (Some(profile_id), Some(profile_version)) = (selection.routing_profile_id, selection.routing_profile_version.as_deref()) else {
@@ -24,7 +24,6 @@ pub(super) async fn record_decision_sample(store: &ProviderStore, selection: &Ca
 }
 
 pub(super) async fn record_finished_attempt(
-    state: &crate::llm_proxy::LlmProxyState,
     store: &ProviderStore,
     input: &AttemptAuditInput,
     upstream_cost: &RequestUpstreamCost,
@@ -40,7 +39,7 @@ pub(super) async fn record_finished_attempt(
     store
         .upsert_routing_context_route_state(context_delta(input, route.clone(), observed_at))
         .await?;
-    circuit::record_attempt(state, circuit_event(input, &route)).await
+    Ok(())
 }
 
 fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, route: RouteIdentity, observed_at: time::OffsetDateTime) -> RoutingMetricDelta {
@@ -99,18 +98,6 @@ fn context_delta(input: &AttemptAuditInput, route: RouteIdentity, observed_at: t
         output_tokens,
         tps_latency_ms: tps_latency(input, output_tokens),
         observed_at,
-    }
-}
-
-fn circuit_event<'a>(input: &'a AttemptAuditInput, route: &'a RouteIdentity) -> circuit::CircuitAttemptEvent<'a> {
-    circuit::CircuitAttemptEvent {
-        route,
-        success: input.status == "success",
-        status_code: input.status_code,
-        error_type: input.error_type.as_deref(),
-        error_code: input.error_code.as_deref(),
-        error_message: input.error_message.as_deref(),
-        now_seconds: time::OffsetDateTime::now_utc().unix_timestamp(),
     }
 }
 

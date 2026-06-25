@@ -6,8 +6,6 @@ use types::provider::{
     RoutingRequestFeatures, RoutingRouteState, ScoreComponent,
 };
 
-use super::circuit::CircuitCandidateState;
-
 use self::math::{
     CostRange, clamp_score, decimal_f64, exploration_score, final_score, headroom_ratio, headroom_score, higher_is_better, lower_is_better, priority_score,
     provider_health_prior, rate_limit_reason, score_order, success_rate, success_score,
@@ -55,7 +53,6 @@ pub(crate) struct RoutingScoreCandidate {
     pub(crate) context_route_sample_count: u64,
     pub(crate) context_total_sample_count: u64,
     pub(crate) ema: Option<RoutingEmaSnapshot>,
-    pub(crate) circuit_state: CircuitCandidateState,
     pub(crate) admin_priority: i32,
     pub(crate) estimated_cost: Option<Decimal>,
     pub(crate) needs_conversion: bool,
@@ -109,20 +106,11 @@ fn score_route(
 }
 
 fn hard_exclusion(index: usize, candidate: RoutingScoreCandidate) -> Option<ScoredRoute> {
-    let reason = match &candidate.circuit_state {
-        CircuitCandidateState::Open { reason, ttl_seconds } => Some(format!("{reason}; ttl={ttl_seconds}s")),
-        CircuitCandidateState::HalfOpenBusy { reason } => Some(reason.clone()),
-        CircuitCandidateState::Closed | CircuitCandidateState::HalfOpenProbe { .. } => rate_limit_reason(&candidate.metric),
-    }?;
-    let state = if matches!(candidate.circuit_state, CircuitCandidateState::Open { .. }) {
-        RoutingRouteState::CircuitOpen
-    } else {
-        RoutingRouteState::Excluded
-    };
+    let reason = rate_limit_reason(&candidate.metric)?;
     Some(ScoredRoute {
         original_index: index,
         excluded: true,
-        explanation: explanation(candidate, state, 0.0, reason.clone(), Vec::new(), Some(reason)),
+        explanation: explanation(candidate, RoutingRouteState::Excluded, 0.0, reason.clone(), Vec::new(), Some(reason)),
     })
 }
 

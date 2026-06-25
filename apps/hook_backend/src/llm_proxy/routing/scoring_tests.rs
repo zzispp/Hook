@@ -1,8 +1,9 @@
 use types::provider::{
-    RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource, RoutingProfile, RoutingProfileId, RoutingProfileWeights,
+    RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource, RoutingProfile, RoutingProfileId,
+    RoutingProfileWeights, RoutingRouteState,
 };
 
-use super::{RoutingEmaSnapshot, RoutingScoreCandidate, circuit::CircuitCandidateState, score_routes};
+use super::{RoutingEmaSnapshot, RoutingScoreCandidate, score_routes};
 
 mod exploration;
 mod prior;
@@ -167,7 +168,32 @@ fn prior_sample_cap_keeps_prior_only_candidate_in_warming_state() {
 
     let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![candidate]);
 
-    assert_eq!(scores[0].explanation.state, types::provider::RoutingRouteState::Warming);
+    assert_eq!(scores[0].explanation.state, RoutingRouteState::Warming);
+}
+
+#[test]
+fn rpm_exhaustion_remains_a_hard_exclusion() {
+    let profile = profile();
+    let healthy = candidate("key-healthy", false);
+    let mut exhausted = candidate("key-exhausted", false);
+    exhausted.metric.rpm_limit = Some(10);
+    exhausted.metric.rpm_used = 10;
+
+    let scores = score_routes(&profile, RoutingMetricWindow::FiveMinutes, vec![exhausted, healthy]);
+    let excluded = scores
+        .iter()
+        .find(|item| item.explanation.route.key_id == "key-exhausted")
+        .expect("exhausted route should be present");
+    let selected = scores
+        .iter()
+        .find(|item| item.explanation.route.key_id == "key-healthy")
+        .expect("healthy route should be present");
+
+    assert!(excluded.excluded);
+    assert!(!selected.excluded);
+    assert_eq!(excluded.explanation.state, RoutingRouteState::Excluded);
+    assert_eq!(excluded.explanation.final_score, 0.0);
+    assert_eq!(excluded.explanation.exclusion_reason.as_deref(), Some("provider_key_rate_limit_exhausted"));
 }
 
 #[test]
@@ -315,7 +341,6 @@ fn candidate(key_id: &str, is_cached: bool) -> RoutingScoreCandidate {
         context_route_sample_count: 8,
         context_total_sample_count: 8,
         ema: None,
-        circuit_state: CircuitCandidateState::Closed,
         admin_priority: 10,
         estimated_cost: None,
         needs_conversion: false,

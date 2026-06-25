@@ -93,7 +93,7 @@ async fn persist_attempt(state: &LlmProxyState, request_id: &str, input: Attempt
     let request_payloads = request_patch_payload_jobs(request_id, &request_patch);
     store.update_request_record(request_patch).await?;
     enqueue_payload_jobs(state, request_payloads).await?;
-    routing_observability::record_finished_attempt(state, &store, &input, &upstream_cost).await?;
+    routing_observability::record_finished_attempt(&store, &input, &upstream_cost).await?;
     let model_usage_record = model_usage_record(&input, billing.as_ref());
     let usage_record = token_usage_record(request_id, &input, billing.as_ref(), OffsetDateTime::now_utc())?;
     let settlement = wallet_settlement_input(request_id, &input, billing.as_ref())?;
