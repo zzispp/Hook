@@ -1,7 +1,6 @@
 use types::provider::{RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, RoutingProfileId, RoutingProfileWeights, RoutingRouteState, ScoreComponent};
 
 use super::{
-    circuit::CircuitCandidateState,
     scoring::math::{clamp_score, exploration_score, higher_is_better, lower_is_better, priority_score, soft_degraded, stale, success_score},
     scoring::{LATENCY_BAD_MS, LATENCY_GOOD_MS, RoutingEmaSnapshot, RoutingScoreCandidate, TPS_HIGH, TPS_LOW, TTFB_BAD_MS, TTFB_GOOD_MS},
 };
@@ -38,9 +37,6 @@ pub(super) fn penalty_components(
     }
     if stale(candidate, window) {
         output.push(additive_component("stale", "stale metrics", -profile.stale_metric_penalty));
-    }
-    if let CircuitCandidateState::HalfOpenProbe { .. } = candidate.circuit_state {
-        output.push(additive_component("half_open", "half-open probe", -profile.stale_metric_penalty));
     }
     if recent_penalty > 0.0 {
         output.push(additive_component("recent_regression", "recent window regression", -recent_penalty));
@@ -168,10 +164,7 @@ fn ema_recent_component(profile: &RoutingProfile, candidate: &RoutingScoreCandid
 }
 
 fn normal_exploration_eligible(profile: &RoutingProfile, window: RoutingMetricWindow, candidate: &RoutingScoreCandidate, recent_penalty: f64) -> bool {
-    recent_penalty <= 0.0
-        && !stale(candidate, window)
-        && !matches!(candidate.circuit_state, CircuitCandidateState::HalfOpenProbe { .. })
-        && success_score(&candidate.metric) >= profile.exploration_min_success_score
+    recent_penalty <= 0.0 && !stale(candidate, window) && success_score(&candidate.metric) >= profile.exploration_min_success_score
 }
 
 fn ema_composite_score(weights: &RoutingProfileWeights, ema: RoutingEmaSnapshot) -> Option<f64> {

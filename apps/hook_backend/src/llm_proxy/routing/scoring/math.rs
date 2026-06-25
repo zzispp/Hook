@@ -2,7 +2,6 @@ use rust_decimal::{Decimal, prelude::ToPrimitive};
 use types::provider::{RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile, ScoreComponent};
 
 use super::{RoutingScoreCandidate, ScoredRoute};
-use crate::llm_proxy::routing::circuit::CircuitCandidateState;
 
 const PRIOR_SUCCESS: f64 = 1.0;
 const PRIOR_FAIL: f64 = 1.0;
@@ -75,7 +74,7 @@ pub(super) fn final_score(components: &[ScoreComponent], penalty: &[ScoreCompone
 }
 
 pub(in crate::llm_proxy::routing) fn soft_degraded(candidate: &RoutingScoreCandidate, window: RoutingMetricWindow) -> bool {
-    matches!(candidate.circuit_state, CircuitCandidateState::HalfOpenProbe { .. }) || stale(candidate, window) || success_score(&candidate.metric) < 75.0
+    stale(candidate, window) || success_score(&candidate.metric) < 75.0
 }
 
 pub(in crate::llm_proxy::routing) fn stale(candidate: &RoutingScoreCandidate, window: RoutingMetricWindow) -> bool {

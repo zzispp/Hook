@@ -15,7 +15,7 @@ use crate::llm_proxy::{
     formats,
     rate_limit::provider_key_rate_limit_snapshot,
     routing::{
-        PriceFingerprintInput, RouteFingerprintInput, RoutingScoreCandidate, circuit, price_config_fingerprint, profile_by_id, route_config_fingerprint,
+        PriceFingerprintInput, RouteFingerprintInput, RoutingScoreCandidate, price_config_fingerprint, profile_by_id, route_config_fingerprint,
         routing_context_key, score_routes,
     },
 };
@@ -159,7 +159,6 @@ async fn score_candidate(context: &ScoreCandidatesContext<'_, '_>, target: optio
         context_route_sample_count: context_samples.route_sample_count,
         context_total_sample_count: context_samples.total_sample_count,
         ema,
-        circuit_state: circuit::candidate_state(input.state, &route).await?,
         admin_priority: admin_priority(input.group, part, key, endpoint, input.priority_mode),
         estimated_cost: estimated_cost_from_config(configured_cost.as_ref(), input.global_model, &input.request.features),
         needs_conversion,

@@ -1,4 +1,3 @@
-pub(crate) mod circuit;
 mod context;
 mod fingerprint;
 mod learning;
