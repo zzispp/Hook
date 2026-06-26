@@ -139,7 +139,6 @@ impl StreamRelay {
             "streaming",
             upstream_headers,
             content_type,
-            self.context.response_headers_time_ms,
             self.first_sse_event_time_ms,
             self.first_output_time_ms,
             self.compat_first_byte_time_ms(),

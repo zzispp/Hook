@@ -105,17 +105,7 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
     let upstream = req::response_bytes_stream(response);
     let first_byte_timeout = timeout::remaining_stream_first_byte_timeout(started, &context.candidate);
     attempt_cancel.disarm();
-    record_stream_headers(
-        &context,
-        "pending",
-        upstream_headers.clone(),
-        content_type.as_ref(),
-        context.response_headers_time_ms,
-        None,
-        None,
-        None,
-    )
-    .await?;
+    record_stream_headers(&context, "pending", upstream_headers.clone(), content_type.as_ref(), None, None, None).await?;
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
     match prefetch_with_timeout(&mut relay, first_byte_timeout).await? {
         PrefetchOutcome::Ready => {}
@@ -211,7 +201,6 @@ async fn record_stream_headers(
     status: &'static str,
     upstream_headers: HeaderMap,
     content_type: Option<&HeaderValue>,
-    response_headers_time_ms: i64,
     first_sse_event_time_ms: Option<i64>,
     first_output_time_ms: Option<i64>,
     first_byte_time_ms: Option<i64>,
@@ -221,7 +210,7 @@ async fn record_stream_headers(
         &context.request_id,
         AttemptRecordInput {
             status_code: Some(context.status.as_u16() as i32),
-            response_headers_time_ms: Some(response_headers_time_ms),
+            response_headers_time_ms: Some(context.response_headers_time_ms),
             first_sse_event_time_ms,
             first_output_time_ms,
             first_byte_time_ms,
