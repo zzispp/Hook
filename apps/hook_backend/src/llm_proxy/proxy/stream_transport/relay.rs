@@ -20,6 +20,7 @@ use super::{
     output_start::StreamOutputStartDetector,
     preflight::inspect_provider_error,
     record::{record_stream_attempt, response_read_error_type},
+    sse_event::FirstSseEventDetector,
     status::{StreamEndReason, StreamStatus},
     terminal::StreamClientFailure,
     usage_parser::StreamUsageParser,
@@ -41,6 +42,7 @@ pub(super) struct StreamRelay {
     usage_parser: StreamUsageParser,
     usage_estimator: StreamUsageEstimator,
     output_start_detector: StreamOutputStartDetector,
+    first_sse_event_detector: FirstSseEventDetector,
     usage: Option<TokenUsage>,
     first_sse_event_time_ms: Option<i64>,
     first_output_time_ms: Option<i64>,
@@ -83,6 +85,7 @@ impl StreamRelay {
             usage_parser: StreamUsageParser::new(target_format),
             usage_estimator,
             output_start_detector: StreamOutputStartDetector::new(target_format),
+            first_sse_event_detector: FirstSseEventDetector::new(),
             usage: None,
             first_sse_event_time_ms: None,
             first_output_time_ms: None,
@@ -133,6 +136,7 @@ impl StreamRelay {
         }
         super::record_stream_headers(
             &self.context,
+            "streaming",
             upstream_headers,
             content_type,
             self.context.response_headers_time_ms,
@@ -199,7 +203,7 @@ impl StreamRelay {
             Ok(bytes) => {
                 self.last_upstream_item_at = Instant::now();
                 self.record_first_byte();
-                self.record_first_sse_event();
+                self.record_first_sse_event(&bytes);
                 self.record_provider_body(&bytes);
                 if fail_before_output && let Some(error) = inspect_provider_error(&bytes) {
                     self.stream_status.set_end_reason(StreamEndReason::ScannerError, Some(error.message.clone()));

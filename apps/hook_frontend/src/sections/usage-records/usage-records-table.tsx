@@ -192,7 +192,7 @@ function tableHead(t: (key: string) => string): TableHeadCellProps[] {
     { id: 'tokens', label: t('requestRecords.tokens'), width: 140, align: 'right' },
     { id: 'cache_hit_rate', label: t('requestRecords.cacheHitRate'), width: 120, align: 'right' },
     { id: 'cost', label: t('requestRecords.cost'), width: 120 },
-    { id: 'first_output', label: t('requestRecords.firstOutput'), width: 110 },
+    { id: 'first_output', label: t('requestRecords.firstToken'), width: 110 },
     { id: 'latency', label: t('requestRecords.totalLatency'), width: 120 },
   ];
 }

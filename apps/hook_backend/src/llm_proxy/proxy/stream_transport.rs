@@ -5,6 +5,7 @@ mod output_start;
 mod preflight;
 mod record;
 mod relay;
+mod sse_event;
 mod status;
 mod terminal;
 pub(super) mod token_estimator;
@@ -103,8 +104,19 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
 
     let upstream = req::response_bytes_stream(response);
     let first_byte_timeout = timeout::remaining_stream_first_byte_timeout(started, &context.candidate);
-    let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
     attempt_cancel.disarm();
+    record_stream_headers(
+        &context,
+        "pending",
+        upstream_headers.clone(),
+        content_type.as_ref(),
+        context.response_headers_time_ms,
+        None,
+        None,
+        None,
+    )
+        .await?;
+    let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
     match prefetch_with_timeout(&mut relay, first_byte_timeout).await? {
         PrefetchOutcome::Ready => {}
         PrefetchOutcome::FailureResponse(response) => return Ok(StreamResponseOutcome::Response(response)),
@@ -196,6 +208,7 @@ async fn stream_status_failure(
 
 async fn record_stream_headers(
     context: &StreamAttemptContext,
+    status: &'static str,
     upstream_headers: HeaderMap,
     content_type: Option<&HeaderValue>,
     response_headers_time_ms: i64,
@@ -215,7 +228,7 @@ async fn record_stream_headers(
             provider_response_headers: PatchField::Value(upstream_headers),
             client_response_headers: transport::content_type_headers(content_type),
             client_response_body: PatchField::Null,
-            ..AttemptRecordInput::new(&context.candidate, context.retry_index, "streaming", false)
+            ..AttemptRecordInput::new(&context.candidate, context.retry_index, status, false)
         },
     )
     .await

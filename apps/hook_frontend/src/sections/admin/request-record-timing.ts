@@ -9,7 +9,6 @@ type TimingRecord = Pick<
   | 'response_headers_time_ms'
   | 'first_sse_event_time_ms'
   | 'first_output_time_ms'
-  | 'first_byte_time_ms'
   | 'total_latency_ms'
 >;
 
@@ -18,7 +17,6 @@ type TimingAttempt = Pick<
   | 'response_headers_time_ms'
   | 'first_sse_event_time_ms'
   | 'first_output_time_ms'
-  | 'first_byte_time_ms'
   | 'latency_ms'
 >;
 
@@ -37,16 +35,16 @@ export function formatAttemptTiming(attempt: TimingAttempt, metric: RequestTimin
 }
 
 export function requestTimingValue(record: TimingRecord, metric: RequestTimingMetric) {
-  if (metric === 'response_headers') return coalesce(record.response_headers_time_ms, record.first_byte_time_ms);
-  if (metric === 'first_sse_event') return coalesce(record.first_sse_event_time_ms, record.first_byte_time_ms);
-  if (metric === 'first_output') return coalesce(record.first_output_time_ms, record.first_byte_time_ms);
+  if (metric === 'response_headers') return record.response_headers_time_ms;
+  if (metric === 'first_sse_event') return record.first_sse_event_time_ms;
+  if (metric === 'first_output') return record.first_output_time_ms;
   return record.total_latency_ms;
 }
 
 export function attemptTimingValue(attempt: TimingAttempt, metric: RequestTimingMetric) {
-  if (metric === 'response_headers') return coalesce(attempt.response_headers_time_ms, attempt.first_byte_time_ms);
-  if (metric === 'first_sse_event') return coalesce(attempt.first_sse_event_time_ms, attempt.first_byte_time_ms);
-  if (metric === 'first_output') return coalesce(attempt.first_output_time_ms, attempt.first_byte_time_ms);
+  if (metric === 'response_headers') return attempt.response_headers_time_ms;
+  if (metric === 'first_sse_event') return attempt.first_sse_event_time_ms;
+  if (metric === 'first_output') return attempt.first_output_time_ms;
   return attempt.latency_ms;
 }
 
@@ -69,8 +67,4 @@ function liveDurationMs(createdAt: string, now: number) {
 function parseRequestTimestampMs(value: string) {
   const normalized = /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`;
   return new Date(normalized).getTime();
-}
-
-function coalesce<T>(left: T | null | undefined, right: T | null | undefined) {
-  return left ?? right;
 }

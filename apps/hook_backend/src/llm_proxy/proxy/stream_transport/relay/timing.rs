@@ -46,8 +46,11 @@ impl StreamRelay {
         compat_first_byte_time_ms(self.first_byte_time_ms, self.first_output_time_ms)
     }
 
-    pub(super) fn record_first_sse_event(&mut self) {
+    pub(super) fn record_first_sse_event(&mut self, bytes: &[u8]) {
         if self.first_sse_event_time_ms.is_some() {
+            return;
+        }
+        if !self.first_sse_event_detector.consume(bytes) {
             return;
         }
         self.first_sse_event_time_ms = Some(self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
