@@ -51,6 +51,10 @@ mod quick_import_sync_policy_tests;
 #[cfg(test)]
 mod quick_import_sync_precision_tests;
 mod quick_import_sync_settings;
+#[cfg(test)]
+mod quick_import_sync_test_support;
+#[cfg(test)]
+mod quick_import_sync_tests;
 mod quick_import_token_refresh;
 #[cfg(test)]
 mod quick_import_token_refresh_test_support;

@@ -235,11 +235,11 @@ function TraceAttemptDetail({
           value={formatAttemptTiming(attempt, 'response_headers')}
         />
         <TraceInfo
-          label={t('requestRecords.firstSseEvent')}
+          label={t('requestRecords.firstChar')}
           value={formatAttemptTiming(attempt, 'first_sse_event')}
         />
         <TraceInfo
-          label={t('requestRecords.firstOutput')}
+          label={t('requestRecords.firstToken')}
           value={formatAttemptTiming(attempt, 'first_output')}
         />
         <TraceInfo

@@ -23,8 +23,8 @@ const COMPACT_TIMING_COLUMNS: readonly TimingColumn[] = [
 
 const EXPANDED_TIMING_COLUMNS: readonly TimingColumn[] = [
   { metric: 'response_headers', labelKey: 'requestRecords.responseHeadersShort', width: 112 },
-  { metric: 'first_sse_event', labelKey: 'requestRecords.firstSseEventShort', width: 112 },
-  { metric: 'first_output', labelKey: 'requestRecords.firstOutputShort', width: 112 },
+  { metric: 'first_sse_event', labelKey: 'requestRecords.firstCharShort', width: 112 },
+  { metric: 'first_output', labelKey: 'requestRecords.firstTokenShort', width: 112 },
   { metric: 'total_latency', labelKey: 'requestRecords.totalLatencyShort', width: 120 },
 ];
 

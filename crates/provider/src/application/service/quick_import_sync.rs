@@ -89,7 +89,10 @@ where
     I: UpstreamProviderImportSource,
 {
     let source_config = source_config(args.cipher, &source)?;
-    let refreshed = args.importer.refreshed_source_config(&source_config).await?.unwrap_or(source_config.clone());
+    let refreshed = match args.importer.refreshed_source_config(&source_config).await {
+        Ok(refreshed) => refreshed.unwrap_or(source_config.clone()),
+        Err(error) => return handle_source_failure(args.repository, source, error, report).await,
+    };
     args.repository
         .update_quick_import_sync_source(
             &source.provider_id,
@@ -256,10 +259,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use rust_decimal::Decimal;
-    use types::provider::{ProviderQuickImportSourceKind, ProviderQuickImportSyncConfig};
+    use crate::application::{ProviderError, ProviderQuickImportSyncSource};
 
-    use super::*;
+    use super::{source_error_context, sync_source_error};
 
     #[test]
     fn sync_source_error_includes_source_identity_and_original_error() {
@@ -280,7 +282,7 @@ mod tests {
             id: "source-1".into(),
             provider_id: "provider-1".into(),
             provider_name: "OpenAI".into(),
-            source_kind: ProviderQuickImportSourceKind::Newapi,
+            source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
             base_url: "https://newapi.example".into(),
             encrypted_system_access_token: "enc".into(),
             email: String::new(),
@@ -289,8 +291,8 @@ mod tests {
             encrypted_refresh_token: String::new(),
             token_expires_at: None,
             user_id: "737".into(),
-            recharge_multiplier: Decimal::ONE,
-            sync_config: ProviderQuickImportSyncConfig::default(),
+            recharge_multiplier: rust_decimal::Decimal::ONE,
+            sync_config: types::provider::ProviderQuickImportSyncConfig::default(),
             last_status: None,
             last_error: None,
             last_synced_at: None,

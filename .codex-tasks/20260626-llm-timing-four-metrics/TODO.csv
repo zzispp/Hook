@@ -1,0 +1,5 @@
+id,task,status,acceptance_criteria,validation_command,completed_at,retry_count,notes
+1,核对并落盘任务真值文件,DONE,任务目录与三份任务文件已创建,test -f .codex-tasks/20260626-llm-timing-four-metrics/SPEC.md && test -f .codex-tasks/20260626-llm-timing-four-metrics/TODO.csv && test -f .codex-tasks/20260626-llm-timing-four-metrics/PROGRESS.md,,0,已完成初始化
+2,改造后端流式 timing 记录语义,DONE,响应头独立提前写入且首字改为有效 SSE data 事件,cargo test -p hook_backend llm_proxy::proxy::stream_transport -- --nocapture,2026-06-26,0,已新增 SSE data detector 并提前写入响应头 patch
+3,改造前端 timing formatter 与文案,DONE,Admin 请求记录与 usage records 展示为四指标新文案,CI=true corepack pnpm lint:frontend && CI=true corepack pnpm build:frontend,2026-06-26,0,已去除 first_byte 展示回退并统一首字/首 Token 文案
+4,运行验证并整理结果,DONE,Rust 测试与前端检查完成并记录结果,cargo test -p hook_backend llm_proxy::proxy::stream_transport -- --nocapture && CI=true corepack pnpm lint:frontend && CI=true corepack pnpm build:frontend,2026-06-26,0,验证通过
