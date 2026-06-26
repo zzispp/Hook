@@ -69,11 +69,29 @@ fn chunk_starts_output(format: ApiFormat, chunk: &Value, gemini_previous_output:
 }
 
 fn responses_starts_output(chunk: &Value) -> bool {
-    matches!(
-        chunk.get("type").and_then(Value::as_str),
-        Some("response.output_text.delta" | "response.reasoning_summary_text.delta" | "response.function_call_arguments.delta")
-    ) && chunk.get("delta").and_then(non_empty_str).is_some()
-        || function_call_item_text(chunk.get("item")).is_some()
+    match chunk.get("type").and_then(Value::as_str) {
+        Some("response.output_text.delta" | "response.reasoning_summary_text.delta" | "response.function_call_arguments.delta") => {
+            chunk.get("delta").and_then(non_empty_str).is_some()
+        }
+        Some("response.content_part.added" | "response.content_part.done") => {
+            content_part_text(chunk.get("part")).is_some() || content_part_refusal(chunk.get("part")).is_some()
+        }
+        Some("response.reasoning_summary_text.done") => {
+            chunk.get("text").and_then(non_empty_str).is_some()
+                || chunk
+                    .get("part")
+                    .and_then(Value::as_object)
+                    .and_then(|part| part.get("text"))
+                    .and_then(non_empty_str)
+                    .is_some()
+        }
+        Some("response.output_item.added" | "response.output_item.done" | "response.function_call_arguments.done") => {
+            function_call_item_text(chunk.get("item")).is_some()
+                || reasoning_item_text(chunk.get("item")).is_some()
+                || message_item_text(chunk.get("item")).is_some()
+        }
+        _ => false,
+    }
 }
 
 fn openai_starts_output(chunk: &Value) -> bool {
@@ -123,6 +141,47 @@ fn function_call_item_text(item: Option<&Value>) -> Option<&str> {
         .and_then(non_empty_str)
         .or_else(|| item.get("arguments_json").and_then(non_empty_str))
         .or_else(|| item.get("name").and_then(non_empty_str))
+}
+
+fn message_item_text(item: Option<&Value>) -> Option<&str> {
+    let item = item?;
+    if item.get("type").and_then(Value::as_str) != Some("message") {
+        return None;
+    }
+    item.get("content").and_then(Value::as_array)?.iter().find_map(|part| {
+        let part = part.as_object()?;
+        if matches!(part.get("type").and_then(Value::as_str), Some("output_text" | "text")) {
+            return part.get("text").and_then(non_empty_str);
+        }
+        part.get("refusal").and_then(non_empty_str)
+    })
+}
+
+fn reasoning_item_text(item: Option<&Value>) -> Option<&str> {
+    let item = item?;
+    if item.get("type").and_then(Value::as_str) != Some("reasoning") {
+        return None;
+    }
+    item.get("summary").and_then(Value::as_array)?.iter().find_map(|part| {
+        let part = part.as_object()?;
+        if part.get("type").and_then(Value::as_str) != Some("summary_text") {
+            return None;
+        }
+        part.get("text").and_then(non_empty_str)
+    })
+}
+
+fn content_part_text(part: Option<&Value>) -> Option<&str> {
+    let part = part?.as_object()?;
+    if !matches!(part.get("type").and_then(Value::as_str), Some("output_text" | "text")) {
+        return None;
+    }
+    part.get("text").and_then(non_empty_str)
+}
+
+fn content_part_refusal(part: Option<&Value>) -> Option<&str> {
+    let part = part?.as_object()?;
+    part.get("refusal").and_then(non_empty_str)
 }
 
 fn tool_calls_text(value: &Value) -> Option<&str> {
@@ -187,41 +246,4 @@ fn append_json_text(value: Option<&Value>, output: &mut String) {
 }
 
 #[cfg(test)]
-mod tests {
-    use proxy::format_conversion::ApiFormat;
-
-    use super::StreamOutputStartDetector;
-
-    #[test]
-    fn stream_preoutput_openai_responses_preamble_does_not_start_output() {
-        let mut detector = StreamOutputStartDetector::new(ApiFormat::OpenAiResponses);
-
-        let started = detector
-            .consume(b"data: {\"type\":\"response.created\"}\n\ndata: {\"type\":\"response.in_progress\"}\n\n")
-            .unwrap();
-
-        assert!(!started);
-    }
-
-    #[test]
-    fn stream_preoutput_openai_responses_delta_starts_output() {
-        let mut detector = StreamOutputStartDetector::new(ApiFormat::OpenAiResponses);
-
-        let started = detector
-            .consume(b"data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\"}\n\n")
-            .unwrap();
-
-        assert!(started);
-    }
-
-    #[test]
-    fn stream_preoutput_openai_responses_failed_event_does_not_start_output() {
-        let mut detector = StreamOutputStartDetector::new(ApiFormat::OpenAiResponses);
-
-        let started = detector
-            .consume(b"data: {\"type\":\"response.failed\",\"response\":{\"error\":{\"message\":\"bad\"}}}\n\n")
-            .unwrap();
-
-        assert!(!started);
-    }
-}
+mod tests;

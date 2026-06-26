@@ -16,7 +16,7 @@ use super::{
     StreamAttemptContext, StreamPreOutputFailure, UpstreamStream,
     body_capture::StreamBodyCapture,
     estimated_usage::StreamUsageEstimator,
-    event::{render_keepalive, stream_error},
+    event::stream_error,
     output_start::StreamOutputStartDetector,
     preflight::inspect_provider_error,
     record::{record_stream_attempt, response_read_error_type},
@@ -25,7 +25,6 @@ use super::{
     usage_parser::StreamUsageParser,
 };
 use crate::llm_proxy::{LlmProxyError, audit::TokenUsage};
-use timing::next_upstream_wait_timeout;
 
 type DownstreamItem = Result<req::Bytes, std::io::Error>;
 
@@ -45,6 +44,7 @@ pub(super) struct StreamRelay {
     usage: Option<TokenUsage>,
     first_sse_event_time_ms: Option<i64>,
     first_output_time_ms: Option<i64>,
+    first_byte_time_ms: Option<i64>,
     last_upstream_item_at: Instant,
     stream_idle_timeout: Option<Duration>,
     yielded_any: bool,
@@ -86,6 +86,7 @@ impl StreamRelay {
             usage: None,
             first_sse_event_time_ms: None,
             first_output_time_ms: None,
+            first_byte_time_ms: None,
             last_upstream_item_at,
             stream_idle_timeout,
             yielded_any: false,
@@ -197,6 +198,7 @@ impl StreamRelay {
         match item {
             Ok(bytes) => {
                 self.last_upstream_item_at = Instant::now();
+                self.record_first_byte();
                 self.record_first_sse_event();
                 self.record_provider_body(&bytes);
                 if fail_before_output && let Some(error) = inspect_provider_error(&bytes) {
@@ -212,16 +214,6 @@ impl StreamRelay {
                 self.finished = true;
                 Err(error.into())
             }
-        }
-    }
-
-    async fn next_upstream_item(&mut self) -> NextUpstreamItem {
-        let timeout = next_upstream_wait_timeout(self.last_upstream_item_at, self.stream_idle_timeout);
-        match tokio::time::timeout(timeout.wait, futures_util::StreamExt::next(&mut self.upstream)).await {
-            Ok(Some(item)) => NextUpstreamItem::Chunk(item),
-            Ok(None) => NextUpstreamItem::End,
-            Err(_) if timeout.idle_deadline => NextUpstreamItem::IdleTimeout,
-            Err(_) => NextUpstreamItem::Keepalive(render_keepalive()),
         }
     }
 
@@ -270,30 +262,19 @@ impl StreamRelay {
         self.record_failure(response_read_error_type(error), &error_message).await
     }
 
-    fn record_first_sse_event(&mut self) {
-        if self.first_sse_event_time_ms.is_some() {
-            return;
-        }
-        self.first_sse_event_time_ms = Some(self.context.started.elapsed().as_millis().try_into().unwrap_or(i64::MAX));
-    }
-
-    pub(super) fn compat_first_byte_time_ms(&self) -> Option<i64> {
-        self.first_output_time_ms
-    }
-
     fn ready_to_commit(&self) -> bool {
         self.client_output_started && !self.pending.is_empty()
     }
 }
 
-enum NextUpstreamItem {
+pub(super) enum NextUpstreamItem {
     Chunk(Result<req::Bytes, req::ClientError>),
     Keepalive(req::Bytes),
     IdleTimeout,
     End,
 }
 
-struct UpstreamWaitTimeout {
+pub(super) struct UpstreamWaitTimeout {
     wait: Duration,
     idle_deadline: bool,
 }
