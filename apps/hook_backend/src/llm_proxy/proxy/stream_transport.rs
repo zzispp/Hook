@@ -115,7 +115,7 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
         None,
         None,
     )
-        .await?;
+    .await?;
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
     match prefetch_with_timeout(&mut relay, first_byte_timeout).await? {
         PrefetchOutcome::Ready => {}
