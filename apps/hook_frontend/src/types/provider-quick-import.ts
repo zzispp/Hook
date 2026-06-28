@@ -197,6 +197,7 @@ export type ProviderQuickImportProviderConfig = {
   max_retries?: number | null;
   request_timeout_seconds?: number | null;
   stream_first_byte_timeout_seconds?: number | null;
+  stream_first_output_timeout_seconds?: number | null;
   stream_idle_timeout_seconds?: number | null;
   priority?: number;
   keep_priority_on_conversion?: boolean;

@@ -169,6 +169,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::provider_quick_import_source_credentials_additive::apply(manager).await?;
     super::provider_quick_import_sync_controls_additive::apply(manager).await?;
     super::provider_image_stream_mode_additive::apply(manager).await?;
+    super::provider_stream_first_output_timeout_additive::apply(manager).await?;
     super::provider_key_model_mappings_additive::apply(manager).await?;
     super::recharge_order_paid_at_index_additive::apply(manager).await?;
     super::provider_key_capabilities_destructive::apply(manager).await?;

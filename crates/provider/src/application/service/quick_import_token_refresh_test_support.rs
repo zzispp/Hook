@@ -200,6 +200,7 @@ pub(super) fn provider_record(id: &str, name: &str) -> providers::Model {
         max_retries: Some(2),
         request_timeout_seconds: Some(300.0),
         stream_first_byte_timeout_seconds: Some(60.0),
+        stream_first_output_timeout_seconds: Some(45.0),
         stream_idle_timeout_seconds: Some(300.0),
         priority: 100,
         keep_priority_on_conversion: false,

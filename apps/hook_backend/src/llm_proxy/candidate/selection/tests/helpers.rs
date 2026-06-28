@@ -83,6 +83,7 @@ pub(super) fn provider_with_endpoints_and_keys() -> CachedProvider {
         max_retries: Some(2),
         request_timeout_seconds: None,
         stream_first_byte_timeout_seconds: None,
+        stream_first_output_timeout_seconds: None,
         stream_idle_timeout_seconds: None,
         priority: 10,
         keep_priority_on_conversion: false,

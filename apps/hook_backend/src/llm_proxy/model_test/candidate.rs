@@ -33,6 +33,7 @@ pub(super) fn proxy_candidate(state: &LlmProxyState, parts: FixedParts, stream: 
         max_retries: route_retry_floor(&route)?,
         request_timeout_seconds: parts.provider.request_timeout_seconds,
         stream_first_byte_timeout_seconds: parts.provider.stream_first_byte_timeout_seconds,
+        stream_first_output_timeout_seconds: parts.provider.stream_first_output_timeout_seconds,
         stream_idle_timeout_seconds: parts.provider.stream_idle_timeout_seconds,
         cache_ttl_minutes: key.cache_ttl_minutes,
         key_rpm_limit: key.rpm_limit,

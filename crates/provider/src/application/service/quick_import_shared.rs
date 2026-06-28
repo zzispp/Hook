@@ -15,7 +15,8 @@ use crate::application::{ProviderError, ProviderQuickImportSyncSource, ProviderQ
 const PROVIDER_TYPE_CUSTOM: &str = "custom";
 const DEFAULT_MAX_RETRIES: i32 = 2;
 const DEFAULT_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
-const DEFAULT_STREAM_FIRST_BYTE_TIMEOUT_SECONDS: f64 = 60.0;
+const DEFAULT_STREAM_FIRST_BYTE_TIMEOUT_SECONDS: f64 = 12.0;
+const DEFAULT_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS: f64 = 45.0;
 const DEFAULT_STREAM_IDLE_TIMEOUT_SECONDS: f64 = 300.0;
 const DEFAULT_PRIORITY: i32 = 100;
 
@@ -26,6 +27,11 @@ pub fn provider_create(name: &str, config: &ProviderQuickImportProviderConfig) -
         max_retries: Some(config.max_retries.unwrap_or(DEFAULT_MAX_RETRIES)),
         request_timeout_seconds: Some(config.request_timeout_seconds.unwrap_or(DEFAULT_REQUEST_TIMEOUT_SECONDS)),
         stream_first_byte_timeout_seconds: Some(config.stream_first_byte_timeout_seconds.unwrap_or(DEFAULT_STREAM_FIRST_BYTE_TIMEOUT_SECONDS)),
+        stream_first_output_timeout_seconds: Some(
+            config
+                .stream_first_output_timeout_seconds
+                .unwrap_or(DEFAULT_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS),
+        ),
         stream_idle_timeout_seconds: Some(config.stream_idle_timeout_seconds.unwrap_or(DEFAULT_STREAM_IDLE_TIMEOUT_SECONDS)),
         priority: Some(config.priority.unwrap_or(DEFAULT_PRIORITY)),
         keep_priority_on_conversion: Some(config.keep_priority_on_conversion.unwrap_or(false)),

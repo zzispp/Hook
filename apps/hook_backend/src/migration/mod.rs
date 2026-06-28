@@ -20,6 +20,7 @@ mod provider_quick_import_source_credentials_additive;
 mod provider_quick_import_sync_additive;
 mod provider_quick_import_sync_controls_additive;
 mod provider_quick_import_sync_schedule_additive;
+mod provider_stream_first_output_timeout_additive;
 mod recharge_order_paid_at_index_additive;
 mod request_record_cleanup_config_additive;
 mod request_record_partitioning_additive;

@@ -360,6 +360,7 @@ fn provider_create_uses_quick_import_provider_config() {
         max_retries: Some(5),
         request_timeout_seconds: Some(120.0),
         stream_first_byte_timeout_seconds: Some(30.0),
+        stream_first_output_timeout_seconds: Some(45.0),
         stream_idle_timeout_seconds: Some(90.0),
         priority: Some(80),
         keep_priority_on_conversion: Some(true),
@@ -374,6 +375,7 @@ fn provider_create_uses_quick_import_provider_config() {
     assert_eq!(provider.max_retries, Some(5));
     assert_eq!(provider.request_timeout_seconds, Some(120.0));
     assert_eq!(provider.stream_first_byte_timeout_seconds, Some(30.0));
+    assert_eq!(provider.stream_first_output_timeout_seconds, Some(45.0));
     assert_eq!(provider.stream_idle_timeout_seconds, Some(90.0));
     assert_eq!(provider.priority, Some(80));
     assert_eq!(provider.keep_priority_on_conversion, Some(true));

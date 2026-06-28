@@ -125,14 +125,14 @@ impl StreamClientFailure {
 
 fn failure_status_code(error_type: &str) -> i32 {
     match error_type {
-        "first_byte_timeout" | "stream_idle_timeout" | "upstream_timeout" => GATEWAY_TIMEOUT,
+        "first_byte_timeout" | "first_output_timeout" | "stream_idle_timeout" | "upstream_timeout" => GATEWAY_TIMEOUT,
         _ => BAD_GATEWAY,
     }
 }
 
 fn cooldown_failure(error_type: &'static str) -> Option<StreamCooldownFailure> {
     let status_code = match error_type {
-        "first_byte_timeout" | "stream_idle_timeout" | "upstream_timeout" => GATEWAY_TIMEOUT,
+        "first_byte_timeout" | "first_output_timeout" | "stream_idle_timeout" | "upstream_timeout" => GATEWAY_TIMEOUT,
         "upstream_response_read_error" => BAD_GATEWAY,
         _ => return None,
     };
@@ -160,6 +160,7 @@ mod tests {
     #[test]
     fn timeout_failures_use_gateway_timeout() {
         assert_eq!(failure_status_code("first_byte_timeout"), 504);
+        assert_eq!(failure_status_code("first_output_timeout"), 504);
         assert_eq!(failure_status_code("stream_idle_timeout"), 504);
     }
 
@@ -171,6 +172,13 @@ mod tests {
                 StreamCooldownFailure {
                     status_code: 504,
                     error_type: "first_byte_timeout",
+                },
+            ),
+            (
+                "first_output_timeout",
+                StreamCooldownFailure {
+                    status_code: 504,
+                    error_type: "first_output_timeout",
                 },
             ),
             (
