@@ -42,11 +42,7 @@ impl From<Model> for Provider {
             max_retries: value.max_retries,
             request_timeout_seconds: value.request_timeout_seconds,
             stream_first_byte_timeout_seconds: value.stream_first_byte_timeout_seconds,
-            stream_first_output_timeout_seconds: Some(
-                value
-                    .stream_first_output_timeout_seconds
-                    .unwrap_or(DEFAULT_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS),
-            ),
+            stream_first_output_timeout_seconds: Some(value.stream_first_output_timeout_seconds.unwrap_or(DEFAULT_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS)),
             stream_idle_timeout_seconds: value.stream_idle_timeout_seconds,
             priority: value.priority,
             keep_priority_on_conversion: value.keep_priority_on_conversion,

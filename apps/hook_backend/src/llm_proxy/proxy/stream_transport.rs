@@ -120,11 +120,7 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
         .map_err(transport::response_error)
 }
 
-async fn prefetch_until_ready(
-    relay: &mut relay::StreamRelay,
-    candidate: &ProxyCandidate,
-    started: Instant,
-) -> Result<PrefetchOutcome, LlmProxyError> {
+async fn prefetch_until_ready(relay: &mut relay::StreamRelay, candidate: &ProxyCandidate, started: Instant) -> Result<PrefetchOutcome, LlmProxyError> {
     let first_event_timeout = timeout::remaining_stream_first_byte_timeout(started, candidate);
     if !prefetch_first_event(relay, first_event_timeout).await? {
         relay.record_first_byte_timeout().await?;

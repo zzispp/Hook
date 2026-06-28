@@ -42,10 +42,7 @@ pub fn apply_provider_patch(active: &mut ProviderActiveModel, input: ProviderRec
     apply_i32_patch(&mut active.max_retries, input.max_retries);
     apply_f64_patch(&mut active.request_timeout_seconds, input.request_timeout_seconds);
     apply_f64_patch(&mut active.stream_first_byte_timeout_seconds, input.stream_first_byte_timeout_seconds);
-    apply_f64_patch(
-        &mut active.stream_first_output_timeout_seconds,
-        input.stream_first_output_timeout_seconds,
-    );
+    apply_f64_patch(&mut active.stream_first_output_timeout_seconds, input.stream_first_output_timeout_seconds);
     apply_f64_patch(&mut active.stream_idle_timeout_seconds, input.stream_idle_timeout_seconds);
     if let Some(priority) = input.priority {
         active.priority = Set(priority);

@@ -75,8 +75,8 @@ mod tests {
     use types::model::TieredPricingConfig;
 
     use super::{
-        non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout_after, remaining_timeout_after,
-        response_start_timeout, stream_candidate_watchdog_timeout,
+        non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout_after, remaining_timeout_after, response_start_timeout,
+        stream_candidate_watchdog_timeout,
     };
     use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
