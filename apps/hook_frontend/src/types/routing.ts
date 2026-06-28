@@ -128,6 +128,8 @@ export type RoutingMetricSnapshot = {
   request_count: number;
   success_count: number;
   failure_count: number;
+  first_output_success_count: number;
+  first_output_failure_count: number;
   timeout_count: number;
   rate_limited_count: number;
   server_error_count: number;

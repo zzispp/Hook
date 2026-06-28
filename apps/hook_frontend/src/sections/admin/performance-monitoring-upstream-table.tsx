@@ -37,7 +37,7 @@ export function UpstreamPerformanceTable({
         </Typography>
       ) : (
         <TableContainer component={Scrollbar} sx={{ maxHeight: 460 }}>
-          <Table size="small" stickyHeader sx={{ minWidth: 1200 }}>
+          <Table size="small" stickyHeader sx={{ minWidth: 1560 }}>
             <TableHead>
               <TableRow>
                 <TableCell>{t('performanceMonitoring.columns.upstreamService')}</TableCell>
@@ -45,6 +45,10 @@ export function UpstreamPerformanceTable({
                 <TableCell align="right">{t('performanceMonitoring.columns.successRate')}</TableCell>
                 <TableCell align="right">{t('performanceMonitoring.columns.errorRate')}</TableCell>
                 <TableCell align="right">{t('performanceMonitoring.columns.outputTps')}</TableCell>
+                <TableCell align="right">{t('performanceMonitoring.columns.responseHeaders')}</TableCell>
+                <TableCell align="right">{t('performanceMonitoring.columns.firstSse')}</TableCell>
+                <TableCell align="right">{t('performanceMonitoring.columns.firstOutput')}</TableCell>
+                <TableCell align="right">{t('performanceMonitoring.columns.sseToOutput')}</TableCell>
                 <TableCell align="right">{t('performanceMonitoring.columns.avgTtfb')}</TableCell>
                 <TableCell align="right">{t('performanceMonitoring.columns.avgLatency')}</TableCell>
                 <TableCell align="right">{t('performanceMonitoring.columns.p90P99Latency')}</TableCell>
@@ -80,6 +84,10 @@ function ProviderRow({ provider }: { provider: UpstreamPerformanceProvider }) {
       <TableCell align="right">{formatRatio(provider.success_rate)}</TableCell>
       <TableCell align="right">{formatRatio(provider.error_rate)}</TableCell>
       <TableCell align="right">{outputTps(provider.avg_output_tps)}</TableCell>
+      <TableCell align="right">{formatMs(provider.avg_response_headers_ms)}</TableCell>
+      <TableCell align="right">{formatMs(provider.avg_first_sse_event_ms)}</TableCell>
+      <TableCell align="right">{formatMs(provider.avg_first_output_ms)}</TableCell>
+      <TableCell align="right">{formatMs(provider.avg_sse_to_output_ms)}</TableCell>
       <TableCell align="right">{formatMs(provider.avg_ttfb_ms)}</TableCell>
       <TableCell align="right">{formatMs(provider.avg_latency_ms)}</TableCell>
       <TableCell align="right">
@@ -103,5 +111,6 @@ function sampleCoverage(provider: UpstreamPerformanceProvider) {
     `${provider.tps_sample_count} TPS`,
     `${provider.latency_sample_count} latency`,
     `${provider.ttfb_sample_count} TTFB`,
+    `${provider.first_output_sample_count} first output`,
   ].join(' / ');
 }

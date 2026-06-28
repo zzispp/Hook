@@ -4,6 +4,7 @@ mod daily;
 mod daily_response;
 pub mod entities;
 mod filters;
+mod latency_stage;
 mod money;
 mod overview;
 mod overview_sql;

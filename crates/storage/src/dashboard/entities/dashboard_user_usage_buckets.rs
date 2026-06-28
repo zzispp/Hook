@@ -17,6 +17,8 @@ pub struct Model {
     pub total_tokens: i64,
     pub total_cost: Decimal,
     pub total_latency_ms: i64,
+    pub first_output_total_ms: i64,
+    pub first_output_sample_count: i64,
     pub created_at: TimeDateTimeWithTimeZone,
     pub updated_at: TimeDateTimeWithTimeZone,
 }

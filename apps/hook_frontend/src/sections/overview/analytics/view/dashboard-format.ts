@@ -37,7 +37,7 @@ export function formatDashboardPercent(value: number | undefined) {
 }
 
 export function formatMs(value?: number | null) {
-  if (value === null || value === undefined) return '0ms';
+  if (value === null || value === undefined) return '-';
   if (value < 1000) return `${Math.round(value)}ms`;
   return `${(value / 1000).toFixed(2)}s`;
 }

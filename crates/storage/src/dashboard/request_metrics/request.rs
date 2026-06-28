@@ -1,6 +1,9 @@
 use rust_decimal::Decimal;
 
-use crate::{dashboard::token_context, provider::record::request_records};
+use crate::{
+    dashboard::{latency_stage::StageLatencyContribution, token_context},
+    provider::record::request_records,
+};
 
 use super::{
     common::{clean_optional, is_active_status, is_failed_status, is_terminal_status, positive, request_is_quota_limited, request_is_timeout},
@@ -12,6 +15,9 @@ pub(super) fn metric(record: &request_records::Model) -> MetricContribution {
     let terminal = is_terminal_status(&record.status);
     let latency = terminal.then_some(record.total_latency_ms).flatten();
     let ttfb = terminal.then_some(record.first_byte_time_ms).flatten();
+    let stage = terminal
+        .then(|| StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms))
+        .unwrap_or_default();
     MetricContribution {
         source_type: SOURCE_REQUEST.into(),
         created_at: record.created_at,
@@ -47,6 +53,14 @@ pub(super) fn metric(record: &request_records::Model) -> MetricContribution {
         latency_sample_count: i64::from(latency.is_some()),
         ttfb_total_ms: ttfb.unwrap_or_default(),
         ttfb_sample_count: i64::from(ttfb.is_some()),
+        response_headers_total_ms: StageLatencyContribution::total(stage.response_headers_ms),
+        response_headers_sample_count: StageLatencyContribution::sample_count(stage.response_headers_ms),
+        first_sse_event_total_ms: StageLatencyContribution::total(stage.first_sse_event_ms),
+        first_sse_event_sample_count: StageLatencyContribution::sample_count(stage.first_sse_event_ms),
+        first_output_total_ms: StageLatencyContribution::total(stage.first_output_ms),
+        first_output_sample_count: StageLatencyContribution::sample_count(stage.first_output_ms),
+        sse_to_output_total_ms: StageLatencyContribution::total(stage.sse_to_output_ms),
+        sse_to_output_sample_count: StageLatencyContribution::sample_count(stage.sse_to_output_ms),
         tps_latency_total_ms: 0,
         tps_output_tokens: 0,
         tps_sample_count: 0,
@@ -61,6 +75,9 @@ pub(super) fn metric(record: &request_records::Model) -> MetricContribution {
 }
 
 pub(super) fn histogram(record: &request_records::Model, success: bool) -> HistogramContribution {
+    let stage = success
+        .then(|| StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms))
+        .unwrap_or_default();
     HistogramContribution {
         source_type: SOURCE_REQUEST.into(),
         created_at: record.created_at,
@@ -72,5 +89,9 @@ pub(super) fn histogram(record: &request_records::Model, success: bool) -> Histo
         needs_conversion: None,
         latency_ms: success.then_some(record.total_latency_ms).flatten(),
         ttfb_ms: success.then_some(record.first_byte_time_ms).flatten(),
+        response_headers_ms: stage.response_headers_ms,
+        first_sse_event_ms: stage.first_sse_event_ms,
+        first_output_ms: stage.first_output_ms,
+        sse_to_output_ms: stage.sse_to_output_ms,
     }
 }

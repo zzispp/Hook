@@ -26,17 +26,24 @@ async fn analytics_maps_errors_and_upstream_rows() {
     assert_eq!(response.upstream_performance.summary.success_rate, 0.75);
     assert_eq!(response.upstream_performance.summary.error_rate, 0.25);
     assert_eq!(response.upstream_performance.summary.avg_output_tps, Some(25.5));
+    assert_eq!(response.upstream_performance.summary.avg_first_output_ms, Some(360.0));
+    assert_eq!(response.upstream_performance.summary.first_output_sample_count, 3);
+    assert_eq!(response.percentiles[0].p90_first_output_ms, Some(700));
     assert_eq!(response.upstream_performance.providers[0].ttfb_sample_count, 3);
+    assert_eq!(response.upstream_performance.providers[0].avg_sse_to_output_ms, Some(270.0));
     assert_eq!(response.upstream_performance.timeline[0].avg_ttfb_ms, Some(45.0));
+    assert_eq!(response.upstream_performance.timeline[0].avg_first_output_ms, Some(355.0));
     assert_eq!(response.recent_errors[0].request_id, "req-2");
 
     let logs = connection.into_transaction_log();
     let sql_log = joined_sql(&logs);
     assert!(logs[0].statements()[0].sql.contains("dashboard_latency_histogram_buckets"));
     assert!(logs[0].statements()[0].sql.contains("p99_ttfb_ms"));
+    assert!(logs[0].statements()[0].sql.contains("p99_first_output_ms"));
     assert!(logs[1].statements()[0].sql.contains("dashboard_recent_error_snapshots"));
     assert!(logs[3].statements()[0].sql.contains("FROM dashboard_request_metric_buckets b"));
     assert!(logs[3].statements()[0].sql.contains("b.source_type = 'candidate'"));
+    assert!(logs[3].statements()[0].sql.contains("first_output_total_ms"));
     assert!(logs[5].statements()[0].sql.contains("dashboard_latency_histogram_buckets h"));
     assert!(sql_log.contains("dashboard_recent_error_snapshots"));
     assert!(!sql_log.contains("FROM request_records"));
@@ -87,6 +94,18 @@ fn percentile_row() -> BTreeMap<&'static str, Value> {
         ("p50_ttfb_ms", Value::from(30_i64)),
         ("p90_ttfb_ms", Value::from(80_i64)),
         ("p99_ttfb_ms", Value::from(140_i64)),
+        ("p50_response_headers_ms", Value::from(20_i64)),
+        ("p90_response_headers_ms", Value::from(50_i64)),
+        ("p99_response_headers_ms", Value::from(90_i64)),
+        ("p50_first_sse_event_ms", Value::from(60_i64)),
+        ("p90_first_sse_event_ms", Value::from(160_i64)),
+        ("p99_first_sse_event_ms", Value::from(220_i64)),
+        ("p50_first_output_ms", Value::from(240_i64)),
+        ("p90_first_output_ms", Value::from(700_i64)),
+        ("p99_first_output_ms", Value::from(1_100_i64)),
+        ("p50_sse_to_output_ms", Value::from(180_i64)),
+        ("p90_sse_to_output_ms", Value::from(540_i64)),
+        ("p99_sse_to_output_ms", Value::from(880_i64)),
     ])
 }
 
@@ -109,6 +128,14 @@ fn upstream_summary_row() -> BTreeMap<&'static str, Value> {
     row.insert("error_count", Value::from(1_i64));
     row.insert("avg_output_tps", Value::from(25.5_f64));
     row.insert("ttfb_sample_count", Value::from(3_i64));
+    row.insert("avg_response_headers_ms", Value::from(40.0_f64));
+    row.insert("avg_first_sse_event_ms", Value::from(90.0_f64));
+    row.insert("avg_first_output_ms", Value::from(360.0_f64));
+    row.insert("avg_sse_to_output_ms", Value::from(270.0_f64));
+    row.insert("response_headers_sample_count", Value::from(3_i64));
+    row.insert("first_sse_event_sample_count", Value::from(3_i64));
+    row.insert("first_output_sample_count", Value::from(3_i64));
+    row.insert("sse_to_output_sample_count", Value::from(3_i64));
     row
 }
 
@@ -121,13 +148,29 @@ fn empty_upstream_summary_row() -> BTreeMap<&'static str, Value> {
         ("avg_output_tps", Value::Double(None)),
         ("avg_ttfb_ms", Value::Double(None)),
         ("avg_latency_ms", Value::Double(None)),
+        ("avg_response_headers_ms", Value::Double(None)),
+        ("avg_first_sse_event_ms", Value::Double(None)),
+        ("avg_first_output_ms", Value::Double(None)),
+        ("avg_sse_to_output_ms", Value::Double(None)),
         ("p90_latency_ms", Value::BigInt(None)),
         ("p99_latency_ms", Value::BigInt(None)),
         ("p90_ttfb_ms", Value::BigInt(None)),
         ("p99_ttfb_ms", Value::BigInt(None)),
+        ("p90_response_headers_ms", Value::BigInt(None)),
+        ("p99_response_headers_ms", Value::BigInt(None)),
+        ("p90_first_sse_event_ms", Value::BigInt(None)),
+        ("p99_first_sse_event_ms", Value::BigInt(None)),
+        ("p90_first_output_ms", Value::BigInt(None)),
+        ("p99_first_output_ms", Value::BigInt(None)),
+        ("p90_sse_to_output_ms", Value::BigInt(None)),
+        ("p99_sse_to_output_ms", Value::BigInt(None)),
         ("tps_sample_count", Value::from(0_i64)),
         ("latency_sample_count", Value::from(0_i64)),
         ("ttfb_sample_count", Value::from(0_i64)),
+        ("response_headers_sample_count", Value::from(0_i64)),
+        ("first_sse_event_sample_count", Value::from(0_i64)),
+        ("first_output_sample_count", Value::from(0_i64)),
+        ("sse_to_output_sample_count", Value::from(0_i64)),
         ("slow_request_count", Value::from(0_i64)),
     ])
 }
@@ -152,6 +195,10 @@ fn upstream_timeline_row() -> BTreeMap<&'static str, Value> {
         ("avg_output_tps", Value::from(25.5_f64)),
         ("avg_ttfb_ms", Value::from(45.0_f64)),
         ("avg_latency_ms", Value::from(320.0_f64)),
+        ("avg_response_headers_ms", Value::from(35.0_f64)),
+        ("avg_first_sse_event_ms", Value::from(75.0_f64)),
+        ("avg_first_output_ms", Value::from(355.0_f64)),
+        ("avg_sse_to_output_ms", Value::from(280.0_f64)),
         ("slow_request_count", Value::from(1_i64)),
     ])
 }

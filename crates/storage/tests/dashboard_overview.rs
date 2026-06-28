@@ -28,9 +28,11 @@ async fn dashboard_overview_casts_latency_averages_to_double_precision() {
 
     assert_eq!(response.summary.avg_latency_ms, Some(125.5));
     assert_eq!(response.summary.avg_ttfb_ms, Some(42.25));
+    assert_eq!(response.summary.avg_first_output_ms, Some(360.0));
     assert_eq!(response.summary.upstream_total_cost, Decimal::new(3, 2));
     assert_eq!(response.summary.profit, Decimal::new(9, 2));
     assert_eq!(response.timeseries[0].avg_latency_ms, Some(130.0));
+    assert_eq!(response.timeseries[0].avg_first_output_ms, Some(365.0));
     assert_eq!(response.timeseries[0].upstream_total_cost, Decimal::new(3, 2));
     assert_eq!(response.daily.day_page.total, 1);
     assert_eq!(response.daily.day_page.items.len(), 1);
@@ -45,7 +47,9 @@ async fn dashboard_overview_casts_latency_averages_to_double_precision() {
     assert_snapshot_metric_sql(daily_sql);
     assert!(summary_sql.contains("SUM(b.latency_total_ms)"), "{summary_sql}");
     assert!(summary_sql.contains("SUM(b.ttfb_total_ms)"), "{summary_sql}");
+    assert!(summary_sql.contains("SUM(b.first_output_total_ms)"), "{summary_sql}");
     assert!(timeseries_sql.contains("SUM(b.latency_total_ms)"), "{timeseries_sql}");
+    assert!(timeseries_sql.contains("SUM(b.first_output_total_ms)"), "{timeseries_sql}");
     assert!(timeseries_sql.contains("GROUP BY 1 ORDER BY 1 ASC"), "{timeseries_sql}");
     assert!(daily_sql.contains("SUM(b.upstream_total_cost)"), "{daily_sql}");
     assert!(daily_sql.contains("GROUP BY 1, 2, 3"), "{daily_sql}");
@@ -143,6 +147,10 @@ fn summary_row() -> BTreeMap<&'static str, Value> {
         ("upstream_total_cost", Value::from(Decimal::new(3, 2))),
         ("avg_latency_ms", Value::from(125.5_f64)),
         ("avg_ttfb_ms", Value::from(42.25_f64)),
+        ("avg_response_headers_ms", Value::from(38.0_f64)),
+        ("avg_first_sse_event_ms", Value::from(88.0_f64)),
+        ("avg_first_output_ms", Value::from(360.0_f64)),
+        ("avg_sse_to_output_ms", Value::from(272.0_f64)),
         ("model_count", Value::from(1_i64)),
         ("provider_count", Value::from(1_i64)),
         ("user_count", Value::from(1_i64)),
@@ -164,6 +172,10 @@ fn timeseries_row() -> BTreeMap<&'static str, Value> {
         ("upstream_total_cost", Value::from(Decimal::new(3, 2))),
         ("avg_latency_ms", Value::from(130.0_f64)),
         ("avg_ttfb_ms", Value::from(40.0_f64)),
+        ("avg_response_headers_ms", Value::from(36.0_f64)),
+        ("avg_first_sse_event_ms", Value::from(84.0_f64)),
+        ("avg_first_output_ms", Value::from(365.0_f64)),
+        ("avg_sse_to_output_ms", Value::from(281.0_f64)),
     ])
 }
 

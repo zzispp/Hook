@@ -17,7 +17,7 @@ export function PercentileChart({
   points,
 }: {
   title: string;
-  mode: 'latency' | 'ttfb';
+  mode: PercentileMode;
   points: PerformancePercentilePoint[];
 }) {
   const { t } = useTranslate('admin');
@@ -42,7 +42,9 @@ export function PercentileChart({
   );
 }
 
-function percentileSeries(points: PerformancePercentilePoint[], mode: 'latency' | 'ttfb') {
+type PercentileMode = 'latency' | 'ttfb' | 'response_headers' | 'first_sse_event' | 'first_output' | 'sse_to_output';
+
+function percentileSeries(points: PerformancePercentilePoint[], mode: PercentileMode) {
   return [
     { name: 'P50', data: points.map((point) => percentileValue(point, mode, 'p50')) },
     { name: 'P90', data: points.map((point) => percentileValue(point, mode, 'p90')) },
@@ -52,11 +54,12 @@ function percentileSeries(points: PerformancePercentilePoint[], mode: 'latency' 
 
 function percentileValue(
   point: PerformancePercentilePoint,
-  mode: 'latency' | 'ttfb',
+  mode: PercentileMode,
   percentile: 'p50' | 'p90' | 'p99'
 ) {
-  const key = `${percentile}_${mode === 'latency' ? 'latency' : 'ttfb'}_ms` as const;
-  return point[key] ?? null;
+  const key = `${percentile}_${mode}_ms` as keyof PerformancePercentilePoint;
+  const value = point[key];
+  return typeof value === 'number' ? value : null;
 }
 
 function usePercentileOptions(points: PerformancePercentilePoint[]): ChartOptions {

@@ -20,8 +20,9 @@ pub(super) fn plan_bucket_values(plan: &SnapshotQueryPlan) -> Vec<Value> {
     ]
 }
 
-pub(super) fn percentile_sql(_granularity: SnapshotGranularity) -> &'static str {
-    "WITH histogram_raw AS ( \
+pub(super) fn percentile_sql(_granularity: SnapshotGranularity) -> String {
+    format!(
+        "WITH histogram_raw AS ( \
         SELECT bucket_started_at, bucket_ended_at, metric_kind, le_ms, COALESCE(SUM(sample_count), 0)::bigint AS bucket_count \
         FROM dashboard_latency_histogram_buckets \
         WHERE source_type = 'request' AND bucket_granularity = $3 AND bucket_started_at >= $1 AND bucket_started_at < $2 \
@@ -36,13 +37,10 @@ pub(super) fn percentile_sql(_granularity: SnapshotGranularity) -> &'static str 
         SELECT DISTINCT bucket_started_at, bucket_ended_at FROM histogram \
     ) \
     SELECT b.bucket_started_at, b.bucket_ended_at, \
-        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.bucket_started_at = h.bucket_started_at AND t.metric_kind = h.metric_kind WHERE h.bucket_started_at = b.bucket_started_at AND h.metric_kind = 'latency' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.50)) AS p50_latency_ms, \
-        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.bucket_started_at = h.bucket_started_at AND t.metric_kind = h.metric_kind WHERE h.bucket_started_at = b.bucket_started_at AND h.metric_kind = 'latency' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.90)) AS p90_latency_ms, \
-        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.bucket_started_at = h.bucket_started_at AND t.metric_kind = h.metric_kind WHERE h.bucket_started_at = b.bucket_started_at AND h.metric_kind = 'latency' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.99)) AS p99_latency_ms, \
-        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.bucket_started_at = h.bucket_started_at AND t.metric_kind = h.metric_kind WHERE h.bucket_started_at = b.bucket_started_at AND h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.50)) AS p50_ttfb_ms, \
-        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.bucket_started_at = h.bucket_started_at AND t.metric_kind = h.metric_kind WHERE h.bucket_started_at = b.bucket_started_at AND h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.90)) AS p90_ttfb_ms, \
-        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.bucket_started_at = h.bucket_started_at AND t.metric_kind = h.metric_kind WHERE h.bucket_started_at = b.bucket_started_at AND h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.99)) AS p99_ttfb_ms \
-    FROM buckets b ORDER BY b.bucket_started_at ASC"
+        {} \
+    FROM buckets b ORDER BY b.bucket_started_at ASC",
+        percentile_selects().join(", ")
+    )
 }
 
 pub(super) fn error_distribution_sql() -> &'static str {
@@ -71,4 +69,30 @@ pub(super) fn recent_errors_sql() -> &'static str {
 
 fn bucket_expr(column: &str, granularity: SnapshotGranularity) -> String {
     format!("date_trunc('{}', {column})", granularity.as_str())
+}
+
+fn percentile_selects() -> Vec<String> {
+    [
+        ("latency", "latency"),
+        ("ttfb", "ttfb"),
+        ("response_headers", "response_headers"),
+        ("first_sse_event", "first_sse_event"),
+        ("first_output", "first_output"),
+        ("sse_to_output", "sse_to_output"),
+    ]
+    .into_iter()
+    .flat_map(|(kind, suffix)| {
+        [
+            percentile_expr(kind, "0.50", &format!("p50_{suffix}_ms")),
+            percentile_expr(kind, "0.90", &format!("p90_{suffix}_ms")),
+            percentile_expr(kind, "0.99", &format!("p99_{suffix}_ms")),
+        ]
+    })
+    .collect()
+}
+
+fn percentile_expr(metric_kind: &str, quantile: &str, alias: &str) -> String {
+    format!(
+        "(SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.bucket_started_at = h.bucket_started_at AND t.metric_kind = h.metric_kind WHERE h.bucket_started_at = b.bucket_started_at AND h.metric_kind = '{metric_kind}' AND h.cumulative_count >= CEIL(t.total_count::numeric * {quantile})) AS {alias}"
+    )
 }

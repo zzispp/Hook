@@ -35,6 +35,10 @@ export type DashboardSummary = {
   profit_rate: number;
   avg_latency_ms?: number | null;
   avg_ttfb_ms?: number | null;
+  avg_response_headers_ms?: number | null;
+  avg_first_sse_event_ms?: number | null;
+  avg_first_output_ms?: number | null;
+  avg_sse_to_output_ms?: number | null;
   model_count: number;
   provider_count: number;
   user_count: number;
@@ -54,6 +58,10 @@ export type DashboardTimeseriesPoint = {
   profit_rate: number;
   avg_latency_ms?: number | null;
   avg_ttfb_ms?: number | null;
+  avg_response_headers_ms?: number | null;
+  avg_first_sse_event_ms?: number | null;
+  avg_first_output_ms?: number | null;
+  avg_sse_to_output_ms?: number | null;
   cache_hit_rate: number;
 };
 
@@ -67,6 +75,10 @@ export type DashboardBreakdownItem = {
   profit: number;
   profit_rate: number;
   avg_latency_ms?: number | null;
+  avg_response_headers_ms?: number | null;
+  avg_first_sse_event_ms?: number | null;
+  avg_first_output_ms?: number | null;
+  avg_sse_to_output_ms?: number | null;
 };
 
 export type DashboardBreakdowns = {
@@ -216,6 +228,7 @@ export type DashboardUserUsageStatsResponse = {
   total_tokens: number;
   total_cost: number;
   error_rate: number;
+  avg_first_output_ms?: number | null;
 };
 
 export type DashboardUserStatsTimeSeriesPoint = {
@@ -223,6 +236,7 @@ export type DashboardUserStatsTimeSeriesPoint = {
   total_cost: number;
   total_requests: number;
   total_tokens: number;
+  avg_first_output_ms?: number | null;
 };
 
 export type DashboardCostForecastPoint = {
@@ -262,6 +276,10 @@ export type DashboardProviderAggregationItem = {
   total_cost: number;
   actual_cost: number;
   avg_response_time_ms: number;
+  avg_response_headers_ms?: number | null;
+  avg_first_sse_event_ms?: number | null;
+  avg_first_output_ms?: number | null;
+  avg_sse_to_output_ms?: number | null;
   success_rate: number;
   error_count: number;
   cache_creation_tokens: number;

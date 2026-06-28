@@ -222,6 +222,7 @@ function detailText(
   ];
   if (showLatency) {
     parts.push(`${t('dashboard.stats.columns.avgLatency')}: ${formatMs(item.avg_latency_ms)}`);
+    parts.push(`${t('dashboard.stats.columns.firstOutput')}: ${formatMs(item.avg_first_output_ms)}`);
   }
   parts.push(`${t('dashboard.stats.columns.cost')}: ${formatDashboardCost(item.total_cost)}`);
   if (isAdmin) {

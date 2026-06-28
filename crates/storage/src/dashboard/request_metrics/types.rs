@@ -1,6 +1,8 @@
 use rust_decimal::Decimal;
 
-use super::constants::{HISTOGRAM_BOUNDS_MS, METRIC_LATENCY, METRIC_TTFB};
+use super::constants::{
+    HISTOGRAM_BOUNDS_MS, METRIC_FIRST_OUTPUT, METRIC_FIRST_SSE_EVENT, METRIC_LATENCY, METRIC_RESPONSE_HEADERS, METRIC_SSE_TO_OUTPUT, METRIC_TTFB,
+};
 
 pub(super) struct MetricContribution {
     pub(super) source_type: String,
@@ -37,6 +39,14 @@ pub(super) struct MetricContribution {
     pub(super) latency_sample_count: i64,
     pub(super) ttfb_total_ms: i64,
     pub(super) ttfb_sample_count: i64,
+    pub(super) response_headers_total_ms: i64,
+    pub(super) response_headers_sample_count: i64,
+    pub(super) first_sse_event_total_ms: i64,
+    pub(super) first_sse_event_sample_count: i64,
+    pub(super) first_output_total_ms: i64,
+    pub(super) first_output_sample_count: i64,
+    pub(super) sse_to_output_total_ms: i64,
+    pub(super) sse_to_output_sample_count: i64,
     pub(super) tps_latency_total_ms: i64,
     pub(super) tps_output_tokens: i64,
     pub(super) tps_sample_count: i64,
@@ -60,6 +70,10 @@ pub(super) struct HistogramContribution {
     pub(super) needs_conversion: Option<bool>,
     pub(super) latency_ms: Option<i64>,
     pub(super) ttfb_ms: Option<i64>,
+    pub(super) response_headers_ms: Option<i64>,
+    pub(super) first_sse_event_ms: Option<i64>,
+    pub(super) first_output_ms: Option<i64>,
+    pub(super) sse_to_output_ms: Option<i64>,
 }
 
 pub(super) struct HistogramSample {
@@ -72,6 +86,10 @@ impl HistogramContribution {
         let mut output = Vec::new();
         append_samples(&mut output, METRIC_LATENCY, self.latency_ms);
         append_samples(&mut output, METRIC_TTFB, self.ttfb_ms);
+        append_samples(&mut output, METRIC_RESPONSE_HEADERS, self.response_headers_ms);
+        append_samples(&mut output, METRIC_FIRST_SSE_EVENT, self.first_sse_event_ms);
+        append_samples(&mut output, METRIC_FIRST_OUTPUT, self.first_output_ms);
+        append_samples(&mut output, METRIC_SSE_TO_OUTPUT, self.sse_to_output_ms);
         output
     }
 }

@@ -1,6 +1,6 @@
 use rust_decimal::Decimal;
 
-use crate::provider::record::request_candidates;
+use crate::{dashboard::latency_stage::StageLatencyContribution, provider::record::request_candidates};
 
 use super::{
     common::{clean_optional, positive},
@@ -20,6 +20,9 @@ pub(super) fn metric(record: &request_candidates::Model, success: bool) -> Metri
     let output_tokens = output_tokens(record);
     let latency = record.latency_ms.unwrap_or_default().max(0);
     let tps_sample = i64::from(success && record.latency_ms.is_some() && output_tokens > 0);
+    let stage = success
+        .then(|| StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms))
+        .unwrap_or_default();
     MetricContribution {
         source_type: SOURCE_CANDIDATE.into(),
         created_at: record.created_at,
@@ -55,6 +58,14 @@ pub(super) fn metric(record: &request_candidates::Model, success: bool) -> Metri
         latency_sample_count: i64::from(success && record.latency_ms.is_some()),
         ttfb_total_ms: success.then_some(record.first_byte_time_ms).flatten().unwrap_or_default(),
         ttfb_sample_count: i64::from(success && record.first_byte_time_ms.is_some()),
+        response_headers_total_ms: StageLatencyContribution::total(stage.response_headers_ms),
+        response_headers_sample_count: StageLatencyContribution::sample_count(stage.response_headers_ms),
+        first_sse_event_total_ms: StageLatencyContribution::total(stage.first_sse_event_ms),
+        first_sse_event_sample_count: StageLatencyContribution::sample_count(stage.first_sse_event_ms),
+        first_output_total_ms: StageLatencyContribution::total(stage.first_output_ms),
+        first_output_sample_count: StageLatencyContribution::sample_count(stage.first_output_ms),
+        sse_to_output_total_ms: StageLatencyContribution::total(stage.sse_to_output_ms),
+        sse_to_output_sample_count: StageLatencyContribution::sample_count(stage.sse_to_output_ms),
         tps_latency_total_ms: latency * tps_sample,
         tps_output_tokens: output_tokens * tps_sample,
         tps_sample_count: tps_sample,
@@ -73,6 +84,9 @@ fn is_active(record: &request_candidates::Model) -> bool {
 }
 
 pub(super) fn histogram(record: &request_candidates::Model, success: bool) -> HistogramContribution {
+    let stage = success
+        .then(|| StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms))
+        .unwrap_or_default();
     HistogramContribution {
         source_type: SOURCE_CANDIDATE.into(),
         created_at: record.created_at,
@@ -84,6 +98,10 @@ pub(super) fn histogram(record: &request_candidates::Model, success: bool) -> Hi
         needs_conversion: Some(record.needs_conversion),
         latency_ms: success.then_some(record.latency_ms).flatten(),
         ttfb_ms: success.then_some(record.first_byte_time_ms).flatten(),
+        response_headers_ms: stage.response_headers_ms,
+        first_sse_event_ms: stage.first_sse_event_ms,
+        first_output_ms: stage.first_output_ms,
+        sse_to_output_ms: stage.sse_to_output_ms,
     }
 }
 
