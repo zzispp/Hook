@@ -2,6 +2,8 @@ use sea_orm::entity::prelude::*;
 use time::format_description::well_known::Rfc3339;
 use types::provider::{Provider, ProviderOrigin};
 
+const DEFAULT_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS: f64 = 45.0;
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "providers")]
 pub struct Model {
@@ -14,6 +16,7 @@ pub struct Model {
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
+    pub stream_first_output_timeout_seconds: Option<f64>,
     pub stream_idle_timeout_seconds: Option<f64>,
     pub priority: i32,
     pub keep_priority_on_conversion: bool,
@@ -39,6 +42,7 @@ impl From<Model> for Provider {
             max_retries: value.max_retries,
             request_timeout_seconds: value.request_timeout_seconds,
             stream_first_byte_timeout_seconds: value.stream_first_byte_timeout_seconds,
+            stream_first_output_timeout_seconds: Some(value.stream_first_output_timeout_seconds.unwrap_or(DEFAULT_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS)),
             stream_idle_timeout_seconds: value.stream_idle_timeout_seconds,
             priority: value.priority,
             keep_priority_on_conversion: value.keep_priority_on_conversion,

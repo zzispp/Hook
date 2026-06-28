@@ -87,6 +87,7 @@ fn provider_record(id: &str, name: &str, is_active: bool, priority: i32) -> prov
         max_retries: Some(2),
         request_timeout_seconds: Some(300.0),
         stream_first_byte_timeout_seconds: Some(60.0),
+        stream_first_output_timeout_seconds: Some(45.0),
         stream_idle_timeout_seconds: Some(30.0),
         priority,
         keep_priority_on_conversion: false,

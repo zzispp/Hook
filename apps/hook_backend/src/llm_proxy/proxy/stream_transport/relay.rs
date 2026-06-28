@@ -104,7 +104,18 @@ impl StreamRelay {
         }
     }
 
-    pub(super) async fn prefetch(&mut self) -> Result<(), LlmProxyError> {
+    pub(super) async fn prefetch_until_first_event(&mut self) -> Result<(), LlmProxyError> {
+        while !self.has_first_sse_event() && !self.finished {
+            let Some(item) = futures_util::StreamExt::next(&mut self.upstream).await else {
+                self.finish_success().await?;
+                break;
+            };
+            self.handle_upstream_item(item, true).await?;
+        }
+        Ok(())
+    }
+
+    pub(super) async fn prefetch_until_first_output(&mut self) -> Result<(), LlmProxyError> {
         while !self.ready_to_commit() && !self.finished {
             let Some(item) = futures_util::StreamExt::next(&mut self.upstream).await else {
                 self.finish_success().await?;
@@ -126,6 +137,14 @@ impl StreamRelay {
         self.stream_status
             .set_end_reason(StreamEndReason::Timeout, Some("stream first byte timeout".into()));
         self.record_failure("first_byte_timeout", "stream first byte timeout").await?;
+        self.finished = true;
+        Ok(())
+    }
+
+    pub(super) async fn record_first_output_timeout(&mut self) -> Result<(), LlmProxyError> {
+        self.stream_status
+            .set_end_reason(StreamEndReason::Timeout, Some("stream first output timeout".into()));
+        self.record_failure("first_output_timeout", "stream first output timeout").await?;
         self.finished = true;
         Ok(())
     }
@@ -172,7 +191,7 @@ impl StreamRelay {
             status: failure.status,
             error_type: failure.error_type,
             message: failure.message.clone(),
-            advance_candidate: failure.error_type == "first_byte_timeout",
+            advance_candidate: matches!(failure.error_type, "first_byte_timeout"),
         })
     }
 
@@ -265,6 +284,13 @@ impl StreamRelay {
         self.record_failure(response_read_error_type(error), &error_message).await
     }
 
+    pub(super) fn has_first_sse_event(&self) -> bool {
+        self.first_sse_event_time_ms.is_some()
+    }
+
+    pub(super) fn has_first_output(&self) -> bool {
+        self.client_output_started
+    }
     fn ready_to_commit(&self) -> bool {
         self.client_output_started && !self.pending.is_empty()
     }

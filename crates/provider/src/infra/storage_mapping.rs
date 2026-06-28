@@ -14,7 +14,8 @@ use crate::application::{ProviderQuickImportAppend, ProviderQuickImportBind, Pro
 
 const DEFAULT_PROVIDER_MAX_RETRIES: i32 = 2;
 const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS: f64 = 300.0;
-const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS: f64 = 60.0;
+const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS: f64 = 12.0;
+const DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS: f64 = 45.0;
 const DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS: f64 = 300.0;
 const DEFAULT_PROVIDER_PRIORITY: i32 = 100;
 const DEFAULT_PROVIDER_KEY_PRIORITY: i32 = 10;
@@ -33,6 +34,11 @@ pub(super) fn provider_input(input: ProviderCreate) -> ProviderRecordInput {
                 .stream_first_byte_timeout_seconds
                 .unwrap_or(DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS),
         ),
+        stream_first_output_timeout_seconds: Some(
+            input
+                .stream_first_output_timeout_seconds
+                .unwrap_or(DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS),
+        ),
         stream_idle_timeout_seconds: Some(input.stream_idle_timeout_seconds.unwrap_or(DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS)),
         priority: input.priority.unwrap_or(DEFAULT_PROVIDER_PRIORITY),
         keep_priority_on_conversion: input.keep_priority_on_conversion.unwrap_or(false),
@@ -48,6 +54,7 @@ pub(super) fn provider_patch(input: ProviderUpdate) -> ProviderRecordPatch {
         max_retries: input.max_retries,
         request_timeout_seconds: input.request_timeout_seconds,
         stream_first_byte_timeout_seconds: input.stream_first_byte_timeout_seconds,
+        stream_first_output_timeout_seconds: input.stream_first_output_timeout_seconds,
         stream_idle_timeout_seconds: input.stream_idle_timeout_seconds,
         priority: input.priority,
         keep_priority_on_conversion: input.keep_priority_on_conversion,

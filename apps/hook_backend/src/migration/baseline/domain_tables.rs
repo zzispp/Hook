@@ -155,6 +155,7 @@ fn providers_table() -> TableCreateStatement {
         .col(integer_null(Providers::MaxRetries))
         .col(double_null(Providers::RequestTimeoutSeconds))
         .col(double_null(Providers::StreamFirstByteTimeoutSeconds))
+        .col(double_null(Providers::StreamFirstOutputTimeoutSeconds))
         .col(double_null(Providers::StreamIdleTimeoutSeconds))
         .col(integer(Providers::Priority))
         .col(boolean(Providers::KeepPriorityOnConversion))

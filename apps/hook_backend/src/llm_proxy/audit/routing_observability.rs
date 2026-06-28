@@ -151,7 +151,7 @@ fn stream_abnormal_end_count(input: &AttemptAuditInput) -> i64 {
     let abnormal_reason = matches!(&input.stream_end_reason, PatchField::Value(reason) if !normal_stream_end_reason(reason));
     let abnormal_error = matches!(
         input.error_type.as_deref(),
-        Some("upstream_incomplete_stream" | "upstream_eof_without_completion" | "stream_idle_timeout")
+        Some("upstream_incomplete_stream" | "upstream_eof_without_completion" | "stream_idle_timeout" | "first_output_timeout")
     );
     i64::from(input.candidate.trace.is_stream && (abnormal_reason || abnormal_error))
 }

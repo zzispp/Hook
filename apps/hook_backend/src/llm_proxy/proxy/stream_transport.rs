@@ -102,12 +102,12 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
             .map(StreamResponseOutcome::Response);
     }
 
+    let first_event_candidate = context.candidate.clone();
     let upstream = req::response_bytes_stream(response);
-    let first_byte_timeout = timeout::remaining_stream_first_byte_timeout(started, &context.candidate);
     attempt_cancel.disarm();
     record_stream_headers(&context, "pending", upstream_headers.clone(), content_type.as_ref(), None, None, None).await?;
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
-    match prefetch_with_timeout(&mut relay, first_byte_timeout).await? {
+    match prefetch_until_ready(&mut relay, &first_event_candidate, started).await? {
         PrefetchOutcome::Ready => {}
         PrefetchOutcome::FailureResponse(response) => return Ok(StreamResponseOutcome::Response(response)),
         PrefetchOutcome::PreOutputFailure(failure) => return Ok(StreamResponseOutcome::PreOutputFailure(failure)),
@@ -120,19 +120,60 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
         .map_err(transport::response_error)
 }
 
-async fn prefetch_with_timeout(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<PrefetchOutcome, LlmProxyError> {
+async fn prefetch_until_ready(relay: &mut relay::StreamRelay, candidate: &ProxyCandidate, started: Instant) -> Result<PrefetchOutcome, LlmProxyError> {
+    let first_event_timeout = timeout::remaining_stream_first_byte_timeout(started, candidate);
+    if !prefetch_first_event(relay, first_event_timeout).await? {
+        relay.record_first_byte_timeout().await?;
+        return prefetch_outcome(relay);
+    }
+
+    if relay.has_first_output() || relay.prefetch_failure_response()?.is_some() || relay.pre_output_failure()?.is_some() {
+        return prefetch_outcome(relay);
+    }
+
+    let first_output_timeout = timeout::proxy_timeouts(candidate).stream_first_output;
+    if !prefetch_first_output(relay, first_output_timeout).await? {
+        relay.record_first_output_timeout().await?;
+    }
+    prefetch_outcome(relay)
+}
+
+async fn prefetch_first_event(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<bool, LlmProxyError> {
     match timeout {
-        Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch()).await {
-            Ok(Ok(())) => prefetch_outcome(relay),
-            Ok(Err(error)) => prefetch_error_outcome(relay, error),
-            Err(_) => {
-                relay.record_first_byte_timeout().await?;
-                prefetch_outcome(relay)
+        Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch_until_first_event()).await {
+            Ok(Ok(())) => Ok(true),
+            Ok(Err(error)) => {
+                prefetch_error_outcome(relay, error)?;
+                Ok(true)
+            }
+            Err(_) => Ok(false),
+        },
+        None => match relay.prefetch_until_first_event().await {
+            Ok(()) => Ok(true),
+            Err(error) => {
+                prefetch_error_outcome(relay, error)?;
+                Ok(true)
             }
         },
-        None => match relay.prefetch().await {
-            Ok(()) => prefetch_outcome(relay),
-            Err(error) => prefetch_error_outcome(relay, error),
+    }
+}
+
+async fn prefetch_first_output(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<bool, LlmProxyError> {
+    match timeout {
+        Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch_until_first_output()).await {
+            Ok(Ok(())) => Ok(true),
+            Ok(Err(error)) => {
+                prefetch_error_outcome(relay, error)?;
+                Ok(true)
+            }
+            Err(_) => Ok(false),
+        },
+        None => match relay.prefetch_until_first_output().await {
+            Ok(()) => Ok(true),
+            Err(error) => {
+                prefetch_error_outcome(relay, error)?;
+                Ok(true)
+            }
         },
     }
 }

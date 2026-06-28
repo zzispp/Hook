@@ -293,6 +293,7 @@ mod tests {
             max_retries: 0,
             request_timeout_seconds: Some(300.0),
             stream_first_byte_timeout_seconds: Some(30.0),
+            stream_first_output_timeout_seconds: Some(45.0),
             stream_idle_timeout_seconds: Some(30.0),
             cache_ttl_minutes: 5,
             key_rpm_limit: None,

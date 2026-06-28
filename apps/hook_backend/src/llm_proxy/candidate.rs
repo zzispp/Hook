@@ -29,6 +29,7 @@ pub struct ProxyCandidate {
     pub max_retries: i32,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
+    pub stream_first_output_timeout_seconds: Option<f64>,
     pub stream_idle_timeout_seconds: Option<f64>,
     pub cache_ttl_minutes: i32,
     pub key_rpm_limit: Option<i32>,

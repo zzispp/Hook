@@ -36,6 +36,7 @@ pub struct Provider {
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
+    pub stream_first_output_timeout_seconds: Option<f64>,
     pub stream_idle_timeout_seconds: Option<f64>,
     pub priority: i32,
     pub keep_priority_on_conversion: bool,
@@ -108,6 +109,8 @@ pub struct ProviderCreate {
     #[serde(default)]
     pub stream_first_byte_timeout_seconds: Option<f64>,
     #[serde(default)]
+    pub stream_first_output_timeout_seconds: Option<f64>,
+    #[serde(default)]
     pub stream_idle_timeout_seconds: Option<f64>,
     #[serde(default)]
     pub priority: Option<i32>,
@@ -131,6 +134,8 @@ pub struct ProviderUpdate {
     pub request_timeout_seconds: PatchField<f64>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub stream_first_byte_timeout_seconds: PatchField<f64>,
+    #[serde(default, deserialize_with = "deserialize_patch_value")]
+    pub stream_first_output_timeout_seconds: PatchField<f64>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub stream_idle_timeout_seconds: PatchField<f64>,
     #[serde(default)]
@@ -156,6 +161,7 @@ impl ProviderUpdate {
             && self.max_retries.is_missing()
             && self.request_timeout_seconds.is_missing()
             && self.stream_first_byte_timeout_seconds.is_missing()
+            && self.stream_first_output_timeout_seconds.is_missing()
             && self.stream_idle_timeout_seconds.is_missing()
             && self.priority.is_none()
             && self.keep_priority_on_conversion.is_none()

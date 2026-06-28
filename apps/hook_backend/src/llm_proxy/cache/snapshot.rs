@@ -177,6 +177,7 @@ async fn load_providers(database: &Database) -> Result<Vec<CachedProvider>, LlmP
             max_retries: provider.max_retries,
             request_timeout_seconds: provider.request_timeout_seconds,
             stream_first_byte_timeout_seconds: provider.stream_first_byte_timeout_seconds,
+            stream_first_output_timeout_seconds: provider.stream_first_output_timeout_seconds,
             stream_idle_timeout_seconds: provider.stream_idle_timeout_seconds,
             priority: provider.priority,
             keep_priority_on_conversion: provider.keep_priority_on_conversion,

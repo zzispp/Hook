@@ -80,6 +80,7 @@ mod tests {
             max_retries: 0,
             request_timeout_seconds: None,
             stream_first_byte_timeout_seconds: None,
+            stream_first_output_timeout_seconds: None,
             stream_idle_timeout_seconds: None,
             cache_ttl_minutes: 5,
             key_rpm_limit: None,

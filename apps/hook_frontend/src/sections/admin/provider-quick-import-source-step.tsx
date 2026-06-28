@@ -22,6 +22,7 @@ import {
   DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
   DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS,
   DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS,
+  DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS,
 } from './provider-management-utils';
 
 type Props = {
@@ -282,6 +283,14 @@ function ProviderRequestConfigFields({
           placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS)}
           helperText={t('providers.defaultWhenBlank')}
           onChange={(value) => setForm((current) => ({ ...current, stream_first_byte_timeout_seconds: value }))}
+        />
+        <TextFieldRow
+          type="number"
+          label={t('providers.streamFirstOutputTimeoutSeconds')}
+          value={form.stream_first_output_timeout_seconds}
+          placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS)}
+          helperText={t('providers.defaultWhenBlank')}
+          onChange={(value) => setForm((current) => ({ ...current, stream_first_output_timeout_seconds: value }))}
         />
         <TextFieldRow
           type="number"
