@@ -135,6 +135,20 @@ function AnalyticsCharts({
         />
       </Grid>
       <Grid size={{ xs: 12, lg: 6 }}>
+        <PercentileChart
+          mode="first_output"
+          points={percentiles}
+          title={t('performanceMonitoring.charts.firstOutputPercentiles')}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 6 }}>
+        <PercentileChart
+          mode="sse_to_output"
+          points={percentiles}
+          title={t('performanceMonitoring.charts.sseToOutputPercentiles')}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 6 }}>
         <ErrorDistributionChart items={errorDistribution} />
       </Grid>
       <Grid size={{ xs: 12, lg: 6 }}>

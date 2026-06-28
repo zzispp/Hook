@@ -6,6 +6,7 @@ mod auth_layout_site_name_i18n_additive;
 mod baseline;
 mod dashboard_period_i18n_additive;
 mod dashboard_request_metrics_additive;
+mod dashboard_stage_latency_additive;
 mod default_seed_sync;
 mod defaults;
 mod development_additive;

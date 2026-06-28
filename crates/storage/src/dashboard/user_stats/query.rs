@@ -37,7 +37,8 @@ pub(in crate::dashboard) async fn summary(store: &DashboardStore, query: Dashboa
         COALESCE(SUM(request_count), 0)::bigint AS total_requests, \
         COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens, \
         COALESCE(SUM(total_cost), 0) AS total_cost, \
-        COALESCE(SUM(failed_count), 0)::bigint AS failed_count \
+        COALESCE(SUM(failed_count), 0)::bigint AS failed_count, \
+        COALESCE(SUM(first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms \
         FROM dashboard_user_usage_buckets {where_sql}"
     );
     let row = SummaryRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
@@ -57,7 +58,8 @@ pub(in crate::dashboard) async fn time_series(
         "SELECT to_char(bucket_started_at AT TIME ZONE 'UTC', {}) AS date, \
         COALESCE(SUM(total_cost), 0) AS total_cost, \
         COALESCE(SUM(request_count), 0)::bigint AS total_requests, \
-        COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens \
+        COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens, \
+        COALESCE(SUM(first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms \
         FROM dashboard_user_usage_buckets {where_sql} \
         GROUP BY date \
         ORDER BY date ASC",
@@ -144,6 +146,7 @@ fn summary_response(row: SummaryRow) -> DashboardUserUsageStatsResponse {
         total_tokens: row.total_tokens.unwrap_or_default(),
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
         error_rate: error_rate(failed_count, total_requests),
+        avg_first_output_ms: row.avg_first_output_ms,
     }
 }
 
@@ -153,6 +156,7 @@ fn time_series_point(row: TimeSeriesRow) -> DashboardUserStatsTimeSeriesPoint {
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
         total_requests: row.total_requests.unwrap_or_default(),
         total_tokens: row.total_tokens.unwrap_or_default(),
+        avg_first_output_ms: row.avg_first_output_ms,
     }
 }
 
@@ -215,6 +219,7 @@ struct SummaryRow {
     total_tokens: Option<i64>,
     total_cost: Option<Decimal>,
     failed_count: Option<i64>,
+    avg_first_output_ms: Option<f64>,
 }
 
 #[derive(Clone, Debug, FromQueryResult)]
@@ -223,4 +228,5 @@ struct TimeSeriesRow {
     total_cost: Option<Decimal>,
     total_requests: Option<i64>,
     total_tokens: Option<i64>,
+    avg_first_output_ms: Option<f64>,
 }

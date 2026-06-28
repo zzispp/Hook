@@ -4,6 +4,7 @@ import type { IconifyName } from 'src/components/iconify';
 import type { DashboardOverviewResponse } from 'src/types/dashboard';
 
 import {
+  formatMs,
   formatInteger,
   formatDashboardCost,
   formatDashboardTokens,
@@ -55,6 +56,17 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     value: (summary) => formatDashboardPercent(summary?.cache_hit_rate),
     series: emptySeries,
     adminOnly: true,
+  },
+  {
+    label: (t, period) => t('dashboard.stats.period.firstOutput', { period }),
+    color: 'secondary',
+    icon: 'solar:clock-circle-bold',
+    value: (summary) => formatMs(summary?.avg_first_output_ms),
+    detail: (summary, t) =>
+      t('dashboard.stats.period.firstOutputDetail', {
+        value: formatMs(summary?.avg_sse_to_output_ms),
+      }),
+    series: (points) => points.map((point) => point.avg_first_output_ms ?? 0),
   },
   {
     label: (t, period) => t('dashboard.stats.period.apiKeys', { period }),

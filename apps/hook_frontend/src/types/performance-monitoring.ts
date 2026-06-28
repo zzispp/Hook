@@ -124,6 +124,18 @@ export type PerformancePercentilePoint = {
   p50_ttfb_ms?: number | null;
   p90_ttfb_ms?: number | null;
   p99_ttfb_ms?: number | null;
+  p50_response_headers_ms?: number | null;
+  p90_response_headers_ms?: number | null;
+  p99_response_headers_ms?: number | null;
+  p50_first_sse_event_ms?: number | null;
+  p90_first_sse_event_ms?: number | null;
+  p99_first_sse_event_ms?: number | null;
+  p50_first_output_ms?: number | null;
+  p90_first_output_ms?: number | null;
+  p99_first_output_ms?: number | null;
+  p50_sse_to_output_ms?: number | null;
+  p90_sse_to_output_ms?: number | null;
+  p99_sse_to_output_ms?: number | null;
 };
 
 export type ErrorDistributionItem = {
@@ -148,13 +160,29 @@ export type UpstreamPerformanceSummary = {
   avg_output_tps?: number | null;
   avg_ttfb_ms?: number | null;
   avg_latency_ms?: number | null;
+  avg_response_headers_ms?: number | null;
+  avg_first_sse_event_ms?: number | null;
+  avg_first_output_ms?: number | null;
+  avg_sse_to_output_ms?: number | null;
   p90_latency_ms?: number | null;
   p99_latency_ms?: number | null;
   p90_ttfb_ms?: number | null;
   p99_ttfb_ms?: number | null;
+  p90_response_headers_ms?: number | null;
+  p99_response_headers_ms?: number | null;
+  p90_first_sse_event_ms?: number | null;
+  p99_first_sse_event_ms?: number | null;
+  p90_first_output_ms?: number | null;
+  p99_first_output_ms?: number | null;
+  p90_sse_to_output_ms?: number | null;
+  p99_sse_to_output_ms?: number | null;
   tps_sample_count: number;
   latency_sample_count: number;
   ttfb_sample_count: number;
+  response_headers_sample_count: number;
+  first_sse_event_sample_count: number;
+  first_output_sample_count: number;
+  sse_to_output_sample_count: number;
   slow_request_count: number;
 };
 
@@ -177,6 +205,10 @@ export type UpstreamPerformanceTimelinePoint = {
   avg_output_tps?: number | null;
   avg_ttfb_ms?: number | null;
   avg_latency_ms?: number | null;
+  avg_response_headers_ms?: number | null;
+  avg_first_sse_event_ms?: number | null;
+  avg_first_output_ms?: number | null;
+  avg_sse_to_output_ms?: number | null;
   slow_request_count: number;
 };
 

@@ -9,7 +9,7 @@ use crate::{StorageError, StorageResult, provider::record::request_records};
 
 use super::{
     DashboardApiKeyLeaderboardQuery, DashboardCostForecastQuery, DashboardCostSavingsQuery, DashboardProviderAggregationQuery, DashboardStore,
-    scope::SqlParams, token_context,
+    latency_stage::StageLatencyContribution, scope::SqlParams, token_context,
 };
 
 const DIMENSION_GLOBAL: &str = "global";
@@ -178,8 +178,9 @@ where
         "INSERT INTO dashboard_cost_analysis_buckets \
         (id, bucket_started_at, bucket_ended_at, dimension_kind, dimension_id, dimension_name, shard, request_count, success_count, failed_count, \
         input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, total_tokens, total_cost, upstream_total_cost, cache_read_cost, cache_creation_cost, \
-        estimated_full_cost, total_latency_ms, latency_sample_count, created_at, updated_at) \
-        VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
+        estimated_full_cost, total_latency_ms, latency_sample_count, response_headers_total_ms, response_headers_sample_count, first_sse_event_total_ms, \
+        first_sse_event_sample_count, first_output_total_ms, first_output_sample_count, sse_to_output_total_ms, sse_to_output_sample_count, created_at, updated_at) \
+        VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
         ON CONFLICT (bucket_started_at, dimension_kind, dimension_id, shard) DO UPDATE SET \
         dimension_name = COALESCE(EXCLUDED.dimension_name, dashboard_cost_analysis_buckets.dimension_name), \
         request_count = dashboard_cost_analysis_buckets.request_count + EXCLUDED.request_count, \
@@ -197,6 +198,14 @@ where
         estimated_full_cost = dashboard_cost_analysis_buckets.estimated_full_cost + EXCLUDED.estimated_full_cost, \
         total_latency_ms = dashboard_cost_analysis_buckets.total_latency_ms + EXCLUDED.total_latency_ms, \
         latency_sample_count = dashboard_cost_analysis_buckets.latency_sample_count + EXCLUDED.latency_sample_count, \
+        response_headers_total_ms = dashboard_cost_analysis_buckets.response_headers_total_ms + EXCLUDED.response_headers_total_ms, \
+        response_headers_sample_count = dashboard_cost_analysis_buckets.response_headers_sample_count + EXCLUDED.response_headers_sample_count, \
+        first_sse_event_total_ms = dashboard_cost_analysis_buckets.first_sse_event_total_ms + EXCLUDED.first_sse_event_total_ms, \
+        first_sse_event_sample_count = dashboard_cost_analysis_buckets.first_sse_event_sample_count + EXCLUDED.first_sse_event_sample_count, \
+        first_output_total_ms = dashboard_cost_analysis_buckets.first_output_total_ms + EXCLUDED.first_output_total_ms, \
+        first_output_sample_count = dashboard_cost_analysis_buckets.first_output_sample_count + EXCLUDED.first_output_sample_count, \
+        sse_to_output_total_ms = dashboard_cost_analysis_buckets.sse_to_output_total_ms + EXCLUDED.sse_to_output_total_ms, \
+        sse_to_output_sample_count = dashboard_cost_analysis_buckets.sse_to_output_sample_count + EXCLUDED.sse_to_output_sample_count, \
         updated_at = EXCLUDED.updated_at",
         params.push(uuid::Uuid::now_v7().to_string()),
         params.push(bounds.started_at),
@@ -220,6 +229,14 @@ where
         params.push(contribution.estimated_full_cost * Decimal::from(multiplier)),
         params.push(contribution.total_latency_ms * multiplier),
         params.push(contribution.latency_sample_count * multiplier),
+        params.push(contribution.response_headers_total_ms * multiplier),
+        params.push(contribution.response_headers_sample_count * multiplier),
+        params.push(contribution.first_sse_event_total_ms * multiplier),
+        params.push(contribution.first_sse_event_sample_count * multiplier),
+        params.push(contribution.first_output_total_ms * multiplier),
+        params.push(contribution.first_output_sample_count * multiplier),
+        params.push(contribution.sse_to_output_total_ms * multiplier),
+        params.push(contribution.sse_to_output_sample_count * multiplier),
         params.push(now),
         params.push(now)
     );
@@ -335,9 +352,15 @@ async fn provider_rows(store: &DashboardStore, query: &DashboardProviderAggregat
         COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens, COALESCE(SUM(cache_creation_tokens), 0)::bigint AS cache_creation_tokens, \
         COALESCE(SUM(cache_read_tokens), 0)::bigint AS cache_read_tokens, COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens, \
         COALESCE(SUM(total_cost), 0) AS total_cost, COALESCE(SUM(upstream_total_cost), 0) AS upstream_total_cost, \
-        COALESCE(SUM(total_latency_ms), 0)::bigint AS total_latency_ms, COALESCE(SUM(latency_sample_count), 0)::bigint AS latency_sample_count \
-        FROM dashboard_cost_analysis_buckets {} GROUP BY dimension_id ORDER BY request_count DESC, total_cost DESC, provider ASC LIMIT {limit}",
-        base_dimension_where(&query.window, DIMENSION_PROVIDER, &mut params)
+        COALESCE(SUM(total_latency_ms), 0)::bigint AS total_latency_ms, COALESCE(SUM(latency_sample_count), 0)::bigint AS latency_sample_count, \
+        {avg_response_headers} AS avg_response_headers_ms, {avg_first_sse_event} AS avg_first_sse_event_ms, \
+        {avg_first_output} AS avg_first_output_ms, {avg_sse_to_output} AS avg_sse_to_output_ms \
+        FROM dashboard_cost_analysis_buckets {where_sql} GROUP BY dimension_id ORDER BY request_count DESC, total_cost DESC, provider ASC LIMIT {limit}",
+        avg_response_headers = avg_expr("response_headers_total_ms", "response_headers_sample_count"),
+        avg_first_sse_event = avg_expr("first_sse_event_total_ms", "first_sse_event_sample_count"),
+        avg_first_output = avg_expr("first_output_total_ms", "first_output_sample_count"),
+        avg_sse_to_output = avg_expr("sse_to_output_total_ms", "sse_to_output_sample_count"),
+        where_sql = base_dimension_where(&query.window, DIMENSION_PROVIDER, &mut params)
     );
     ProviderRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
         .all(store.database().connection())
@@ -386,6 +409,10 @@ fn provider_item(row: ProviderRow) -> DashboardProviderAggregationItem {
         total_cost: round_cost(row.total_cost.unwrap_or(Decimal::ZERO), COST_RESPONSE_SCALE),
         actual_cost: round_cost(row.upstream_total_cost.unwrap_or(Decimal::ZERO), COST_RESPONSE_SCALE),
         avg_response_time_ms: round_float(average(row.total_latency_ms.unwrap_or_default(), latency_samples), 2),
+        avg_response_headers_ms: row.avg_response_headers_ms.map(|value| round_float(value, 2)),
+        avg_first_sse_event_ms: row.avg_first_sse_event_ms.map(|value| round_float(value, 2)),
+        avg_first_output_ms: row.avg_first_output_ms.map(|value| round_float(value, 2)),
+        avg_sse_to_output_ms: row.avg_sse_to_output_ms.map(|value| round_float(value, 2)),
         success_rate: round_float(percent(success_count, request_count), 2),
         error_count: failed_count,
         cache_creation_tokens: row.cache_creation_tokens.unwrap_or_default(),
@@ -470,6 +497,10 @@ fn average(total: i64, count: i64) -> f64 {
     total as f64 / count as f64
 }
 
+fn avg_expr(total_column: &str, count_column: &str) -> String {
+    format!("COALESCE(SUM({total_column}), 0)::double precision / NULLIF(COALESCE(SUM({count_column}), 0), 0)::double precision")
+}
+
 fn percent(numerator: i64, denominator: i64) -> f64 {
     if denominator <= 0 {
         return 0.0;
@@ -542,6 +573,14 @@ struct BucketContribution {
     estimated_full_cost: Decimal,
     total_latency_ms: i64,
     latency_sample_count: i64,
+    response_headers_total_ms: i64,
+    response_headers_sample_count: i64,
+    first_sse_event_total_ms: i64,
+    first_sse_event_sample_count: i64,
+    first_output_total_ms: i64,
+    first_output_sample_count: i64,
+    sse_to_output_total_ms: i64,
+    sse_to_output_sample_count: i64,
     created_at: time::OffsetDateTime,
 }
 
@@ -553,6 +592,7 @@ impl BucketContribution {
         let cache_read_tokens = token_context::cache_read_tokens(record);
         let input_price = record.input_price_per_million.unwrap_or(Decimal::ZERO);
         let estimated_full_cost = input_price * Decimal::from(cache_read_tokens) / Decimal::from(1_000_000_i64);
+        let stage = StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms);
         Some(Self {
             request_id: record.request_id.clone(),
             token_id: clean_optional(record.token_id.clone()),
@@ -573,6 +613,14 @@ impl BucketContribution {
             estimated_full_cost,
             total_latency_ms: record.total_latency_ms.unwrap_or_default(),
             latency_sample_count: i64::from(record.total_latency_ms.is_some()),
+            response_headers_total_ms: StageLatencyContribution::total(stage.response_headers_ms),
+            response_headers_sample_count: StageLatencyContribution::sample_count(stage.response_headers_ms),
+            first_sse_event_total_ms: StageLatencyContribution::total(stage.first_sse_event_ms),
+            first_sse_event_sample_count: StageLatencyContribution::sample_count(stage.first_sse_event_ms),
+            first_output_total_ms: StageLatencyContribution::total(stage.first_output_ms),
+            first_output_sample_count: StageLatencyContribution::sample_count(stage.first_output_ms),
+            sse_to_output_total_ms: StageLatencyContribution::total(stage.sse_to_output_ms),
+            sse_to_output_sample_count: StageLatencyContribution::sample_count(stage.sse_to_output_ms),
             created_at: record.created_at,
         })
     }
@@ -673,6 +721,10 @@ struct ProviderRow {
     upstream_total_cost: Option<Decimal>,
     total_latency_ms: Option<i64>,
     latency_sample_count: Option<i64>,
+    avg_response_headers_ms: Option<f64>,
+    avg_first_sse_event_ms: Option<f64>,
+    avg_first_output_ms: Option<f64>,
+    avg_sse_to_output_ms: Option<f64>,
 }
 
 #[cfg(test)]

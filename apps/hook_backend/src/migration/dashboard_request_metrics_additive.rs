@@ -45,6 +45,14 @@ const REQUEST_METRIC_TABLE_SQL: &str = "CREATE TABLE IF NOT EXISTS dashboard_req
  latency_sample_count BIGINT NOT NULL, \
  ttfb_total_ms BIGINT NOT NULL, \
  ttfb_sample_count BIGINT NOT NULL, \
+ response_headers_total_ms BIGINT NOT NULL DEFAULT 0, \
+ response_headers_sample_count BIGINT NOT NULL DEFAULT 0, \
+ first_sse_event_total_ms BIGINT NOT NULL DEFAULT 0, \
+ first_sse_event_sample_count BIGINT NOT NULL DEFAULT 0, \
+ first_output_total_ms BIGINT NOT NULL DEFAULT 0, \
+ first_output_sample_count BIGINT NOT NULL DEFAULT 0, \
+ sse_to_output_total_ms BIGINT NOT NULL DEFAULT 0, \
+ sse_to_output_sample_count BIGINT NOT NULL DEFAULT 0, \
  tps_latency_total_ms BIGINT NOT NULL, \
  tps_output_tokens BIGINT NOT NULL, \
  tps_sample_count BIGINT NOT NULL, \

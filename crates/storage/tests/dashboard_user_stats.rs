@@ -4,7 +4,10 @@ use rust_decimal::Decimal;
 use sea_orm::{DatabaseBackend, MockDatabase, Value};
 use storage::{
     Database,
-    dashboard::{DashboardStore, DashboardUserStatsLeaderboardQuery, DashboardUserStatsStoreWindow},
+    dashboard::{
+        DashboardStore, DashboardUserStatsBucket, DashboardUserStatsLeaderboardQuery, DashboardUserStatsStoreWindow, DashboardUserStatsTimeSeriesQuery,
+        DashboardUserUsageStatsQuery,
+    },
 };
 use types::dashboard::DashboardUserStatsMetric;
 
@@ -65,6 +68,27 @@ async fn assert_leaderboard_value_cast(metric: DashboardUserStatsMetric, order_c
     assert!(sql.contains(&format!("{order_column}::numeric AS value")), "{sql}");
 }
 
+#[tokio::test]
+async fn user_usage_summary_and_time_series_return_first_output_latency() {
+    let connection = MockDatabase::new(DatabaseBackend::Postgres)
+        .append_query_results([[usage_summary_row()]])
+        .append_query_results([vec![time_series_row()]])
+        .into_connection();
+    let store = DashboardStore::new(Database::new(connection.clone()));
+
+    let summary = store.user_usage_stats(usage_query()).await.unwrap();
+    let series = store.user_stats_time_series(series_query()).await.unwrap();
+
+    assert_eq!(summary.avg_first_output_ms, Some(350.0));
+    assert_eq!(series[0].avg_first_output_ms, Some(370.0));
+    let logs = connection.into_transaction_log();
+    let summary_sql = &logs[0].statements()[0].sql;
+    let series_sql = &logs[1].statements()[0].sql;
+    assert!(summary_sql.contains("first_output_total_ms"), "{summary_sql}");
+    assert!(summary_sql.contains("first_output_sample_count"), "{summary_sql}");
+    assert!(series_sql.contains("first_output_total_ms"), "{series_sql}");
+}
+
 fn query(metric: DashboardUserStatsMetric) -> DashboardUserStatsLeaderboardQuery {
     DashboardUserStatsLeaderboardQuery {
         window: DashboardUserStatsStoreWindow {
@@ -76,6 +100,30 @@ fn query(metric: DashboardUserStatsMetric) -> DashboardUserStatsLeaderboardQuery
         metric,
         limit: 10,
         offset: 0,
+    }
+}
+
+fn usage_query() -> DashboardUserUsageStatsQuery {
+    DashboardUserUsageStatsQuery {
+        window: window(),
+        user_id: Some("user-1".into()),
+    }
+}
+
+fn series_query() -> DashboardUserStatsTimeSeriesQuery {
+    DashboardUserStatsTimeSeriesQuery {
+        window: window(),
+        bucket: DashboardUserStatsBucket::Day,
+        user_id: Some("user-1".into()),
+    }
+}
+
+fn window() -> DashboardUserStatsStoreWindow {
+    DashboardUserStatsStoreWindow {
+        start_date: date(1),
+        end_date: date(2),
+        started_at: timestamp(1),
+        ended_at: timestamp(2),
     }
 }
 
@@ -92,6 +140,26 @@ fn leaderboard_row(value: Decimal) -> BTreeMap<&'static str, Value> {
         ("tokens", Value::from(4_096_i64)),
         ("cost", Value::from(Decimal::new(1234, 2))),
         ("value", Value::from(value)),
+    ])
+}
+
+fn usage_summary_row() -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([
+        ("total_requests", Value::from(2_i64)),
+        ("total_tokens", Value::from(4_096_i64)),
+        ("total_cost", Value::from(Decimal::new(1234, 2))),
+        ("failed_count", Value::from(1_i64)),
+        ("avg_first_output_ms", Value::from(350.0_f64)),
+    ])
+}
+
+fn time_series_row() -> BTreeMap<&'static str, Value> {
+    BTreeMap::from([
+        ("date", Value::from("2026-05-01")),
+        ("total_cost", Value::from(Decimal::new(1234, 2))),
+        ("total_requests", Value::from(2_i64)),
+        ("total_tokens", Value::from(4_096_i64)),
+        ("avg_first_output_ms", Value::from(370.0_f64)),
     ])
 }
 

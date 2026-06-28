@@ -19,6 +19,7 @@ import { Scrollbar } from 'src/components/scrollbar';
 import { TablePaginationCustom } from 'src/components/table';
 
 import {
+  formatMs,
   formatInteger,
   formatDashboardCost,
   formatDashboardTokens,
@@ -108,6 +109,7 @@ export function SummaryCard({
     total_tokens: number;
     total_cost: number;
     error_rate: number;
+    avg_first_output_ms?: number | null;
   };
 }) {
   const cards = summaryCards(t, locale, data);
@@ -202,6 +204,7 @@ function summaryCards(
     total_tokens: number;
     total_cost: number;
     error_rate: number;
+    avg_first_output_ms?: number | null;
   }
 ) {
   return [
@@ -220,6 +223,10 @@ function summaryCards(
     {
       label: t('dashboard.stats.userStats.summary.errorRate'),
       value: `${(data?.error_rate ?? 0).toFixed(1)}%`,
+    },
+    {
+      label: t('dashboard.stats.userStats.summary.avgFirstOutput'),
+      value: formatMs(data?.avg_first_output_ms),
     },
   ];
 }

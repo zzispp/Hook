@@ -4,7 +4,7 @@ use sea_orm::{ConnectionTrait, DbBackend, Statement, TransactionTrait};
 use crate::{StorageResult, provider::record::request_records};
 
 use super::{GRANULARITY_DAY, GRANULARITY_HOUR, STATUS_CANCELLED, STATUS_FAILED, STATUS_SUCCESS};
-use crate::dashboard::{scope::SqlParams, token_context};
+use crate::dashboard::{latency_stage::StageLatencyContribution, scope::SqlParams, token_context};
 
 pub async fn sync_user_usage_buckets(
     connection: &sea_orm::DatabaseConnection,
@@ -47,8 +47,9 @@ where
     let mut params = SqlParams::new();
     let sql = format!(
         "INSERT INTO dashboard_user_usage_buckets \
-        (id, bucket_granularity, bucket_started_at, bucket_ended_at, user_id, username, request_count, success_count, failed_count, total_tokens, total_cost, total_latency_ms, created_at, updated_at) \
-        VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
+        (id, bucket_granularity, bucket_started_at, bucket_ended_at, user_id, username, request_count, success_count, failed_count, total_tokens, total_cost, \
+        total_latency_ms, first_output_total_ms, first_output_sample_count, created_at, updated_at) \
+        VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
         ON CONFLICT (bucket_granularity, bucket_started_at, user_id) DO UPDATE SET \
         username = EXCLUDED.username, \
         request_count = dashboard_user_usage_buckets.request_count + EXCLUDED.request_count, \
@@ -57,6 +58,8 @@ where
         total_tokens = dashboard_user_usage_buckets.total_tokens + EXCLUDED.total_tokens, \
         total_cost = dashboard_user_usage_buckets.total_cost + EXCLUDED.total_cost, \
         total_latency_ms = dashboard_user_usage_buckets.total_latency_ms + EXCLUDED.total_latency_ms, \
+        first_output_total_ms = dashboard_user_usage_buckets.first_output_total_ms + EXCLUDED.first_output_total_ms, \
+        first_output_sample_count = dashboard_user_usage_buckets.first_output_sample_count + EXCLUDED.first_output_sample_count, \
         updated_at = EXCLUDED.updated_at",
         params.push(uuid::Uuid::now_v7().to_string()),
         params.push(granularity.to_owned()),
@@ -70,6 +73,8 @@ where
         params.push(contribution.total_tokens * multiplier),
         params.push(contribution.total_cost * Decimal::from(multiplier)),
         params.push(contribution.total_latency_ms * multiplier),
+        params.push(contribution.first_output_total_ms * multiplier),
+        params.push(contribution.first_output_sample_count * multiplier),
         params.push(time::OffsetDateTime::now_utc()),
         params.push(time::OffsetDateTime::now_utc())
     );
@@ -87,6 +92,7 @@ fn contribution(record: &request_records::Model) -> Option<BucketContribution> {
     if user_id.is_empty() {
         return None;
     }
+    let stage = StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms);
     Some(BucketContribution {
         user_id: user_id.to_owned(),
         username: record.username_snapshot.clone(),
@@ -95,6 +101,8 @@ fn contribution(record: &request_records::Model) -> Option<BucketContribution> {
         total_tokens: token_context::total_tokens(record),
         total_cost: record.total_cost.unwrap_or(Decimal::ZERO),
         total_latency_ms: record.total_latency_ms.unwrap_or_default(),
+        first_output_total_ms: StageLatencyContribution::total(stage.first_output_ms),
+        first_output_sample_count: StageLatencyContribution::sample_count(stage.first_output_ms),
         created_at: record.created_at,
     })
 }
@@ -133,6 +141,8 @@ struct BucketContribution {
     total_tokens: i64,
     total_cost: Decimal,
     total_latency_ms: i64,
+    first_output_total_ms: i64,
+    first_output_sample_count: i64,
     created_at: time::OffsetDateTime,
 }
 
