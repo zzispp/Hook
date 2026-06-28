@@ -15,9 +15,7 @@ pub(super) fn metric(record: &request_records::Model) -> MetricContribution {
     let terminal = is_terminal_status(&record.status);
     let latency = terminal.then_some(record.total_latency_ms).flatten();
     let ttfb = terminal.then_some(record.first_byte_time_ms).flatten();
-    let stage = terminal
-        .then(|| StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms))
-        .unwrap_or_default();
+    let stage = stage_latency(record, terminal);
     MetricContribution {
         source_type: SOURCE_REQUEST.into(),
         created_at: record.created_at,
@@ -75,9 +73,7 @@ pub(super) fn metric(record: &request_records::Model) -> MetricContribution {
 }
 
 pub(super) fn histogram(record: &request_records::Model, success: bool) -> HistogramContribution {
-    let stage = success
-        .then(|| StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms))
-        .unwrap_or_default();
+    let stage = stage_latency(record, success);
     HistogramContribution {
         source_type: SOURCE_REQUEST.into(),
         created_at: record.created_at,
@@ -94,4 +90,11 @@ pub(super) fn histogram(record: &request_records::Model, success: bool) -> Histo
         first_output_ms: stage.first_output_ms,
         sse_to_output_ms: stage.sse_to_output_ms,
     }
+}
+
+fn stage_latency(record: &request_records::Model, include: bool) -> StageLatencyContribution {
+    if include {
+        return StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms);
+    }
+    StageLatencyContribution::default()
 }

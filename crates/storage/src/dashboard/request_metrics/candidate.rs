@@ -20,9 +20,7 @@ pub(super) fn metric(record: &request_candidates::Model, success: bool) -> Metri
     let output_tokens = output_tokens(record);
     let latency = record.latency_ms.unwrap_or_default().max(0);
     let tps_sample = i64::from(success && record.latency_ms.is_some() && output_tokens > 0);
-    let stage = success
-        .then(|| StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms))
-        .unwrap_or_default();
+    let stage = stage_latency(record, success);
     MetricContribution {
         source_type: SOURCE_CANDIDATE.into(),
         created_at: record.created_at,
@@ -84,9 +82,7 @@ fn is_active(record: &request_candidates::Model) -> bool {
 }
 
 pub(super) fn histogram(record: &request_candidates::Model, success: bool) -> HistogramContribution {
-    let stage = success
-        .then(|| StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms))
-        .unwrap_or_default();
+    let stage = stage_latency(record, success);
     HistogramContribution {
         source_type: SOURCE_CANDIDATE.into(),
         created_at: record.created_at,
@@ -103,6 +99,13 @@ pub(super) fn histogram(record: &request_candidates::Model, success: bool) -> Hi
         first_output_ms: stage.first_output_ms,
         sse_to_output_ms: stage.sse_to_output_ms,
     }
+}
+
+fn stage_latency(record: &request_candidates::Model, include: bool) -> StageLatencyContribution {
+    if include {
+        return StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms);
+    }
+    StageLatencyContribution::default()
 }
 
 fn cache_creation_tokens(record: &request_candidates::Model) -> i64 {
