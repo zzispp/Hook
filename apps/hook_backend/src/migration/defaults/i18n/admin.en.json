@@ -570,7 +570,7 @@
         "upstreamCost": "Upstream cost",
         "profitRate": "Profit rate",
         "latency": "Avg response",
-        "ttfb": "TTFB",
+        "ttfb": "First byte",
         "models": "Models used"
       },
       "today": {
@@ -594,7 +594,7 @@
         "upstreamCost": "{{period}} upstream cost",
         "cacheHitRate": "{{period}} cache hit rate",
         "firstOutput": "{{period}} first output",
-        "firstOutputDetail": "SSE→output {{value}}",
+        "firstToken": "{{period}} first token",
         "cacheRead": "{{period}} cache read",
         "cacheCreate": "{{period}} cache create",
         "activeUsers": "{{period}} active users",
@@ -650,9 +650,7 @@
         "tokens": "Tokens",
         "avgLatency": "Avg response",
         "responseHeaders": "Response headers",
-        "firstSse": "First SSE",
-        "firstOutput": "First output",
-        "sseToOutput": "SSE→output",
+        "firstOutput": "First token",
         "cost": "Cost",
         "upstreamCost": "Upstream cost",
         "profitRate": "Profit rate"
@@ -680,7 +678,7 @@
           "totalTokens": "Total tokens",
           "totalCost": "Total cost",
           "errorRate": "Error rate",
-          "avgFirstOutput": "Avg first output",
+          "avgFirstOutput": "Avg first token",
           "title": "User summary"
         },
         "interval": "Interval"
@@ -1334,21 +1332,20 @@
     },
     "charts": {
       "requests": "Core request trend",
-      "latency": "Response latency and TTFB",
+      "latency": "Response headers / first byte / first token / total latency",
       "outputTpsTrend": "Output TPS trend",
       "avgTtfbTrend": "Average first-byte trend",
-      "firstOutputTrend": "First output trend",
+      "firstOutputTrend": "Average first-token trend",
       "responsePercentiles": "Response latency percentiles",
-      "ttfbPercentiles": "First-byte latency percentiles",
-      "firstOutputPercentiles": "First output percentiles",
-      "sseToOutputPercentiles": "SSE→output wait percentiles",
+      "ttfbPercentiles": "First-byte percentiles",
+      "firstOutputPercentiles": "First-token percentiles",
       "errorDistribution": "Error distribution",
       "errorTrend": "Error trend"
     },
     "metrics": {
       "qps": "QPS",
       "p95Latency": "P95 response latency",
-      "ttfb": "TTFB",
+      "ttfb": "P90 first byte",
       "tokensPerSecond": "Tokens/s"
     },
     "groups": {
@@ -1399,12 +1396,9 @@
       "tpsSamples": "{{value}} TPS samples",
       "avgTtfb": "Average first byte",
       "ttfbSamples": "{{value}} first-byte samples",
-      "avgFirstOutput": "Average first output",
-      "firstOutputSamples": "{{value}} first-output samples",
-      "sseToOutputWait": "SSE→output wait",
-      "sseToOutputSamples": "{{value}} wait samples",
+      "avgFirstOutput": "Average first token",
+      "firstOutputSamples": "{{value}} first-token samples",
       "responseHeaders": "Response headers",
-      "firstSse": "First SSE {{value}}",
       "avgLatency": "Average response",
       "latencySamples": "{{value}} response samples",
       "errorRate": "Error rate",
@@ -1423,9 +1417,7 @@
       "errorRate": "Error rate",
       "outputTps": "Output TPS",
       "responseHeaders": "Response headers",
-      "firstSse": "First SSE",
-      "firstOutput": "First output",
-      "sseToOutput": "SSE→output",
+      "firstOutput": "First token",
       "avgTtfb": "Average first byte",
       "avgLatency": "Average response",
       "p90P99Latency": "P90 / P99 response",
@@ -1438,7 +1430,7 @@
       "statusCode": "Status code",
       "errorType": "Error type",
       "errorMessage": "Error message",
-      "latencyTtfb": "Response / first byte"
+      "latencyTtfb": "Headers / first byte / first token / response"
     },
     "empty": {
       "noSeriesData": "No trend data exists for this range.",
@@ -1542,7 +1534,7 @@
       "weightTotal": "Current weight total: {{total}}. It must equal 1.000 before saving.",
       "names": {
         "balanced": "Balanced",
-        "first_byte": "First Byte",
+        "first_byte": "First Token",
         "high_tps": "High TPS",
         "cost_optimal": "Cost Optimal",
         "high_availability": "High Availability",
@@ -1552,7 +1544,7 @@
       },
       "descriptions": {
         "balanced": "Success, latency, cost, and headroom balanced.",
-        "first_byte": "Prioritizes p90 first-byte time for interactive streams.",
+        "first_byte": "Prioritizes p90 first-token time for interactive streams.",
         "high_tps": "Prioritizes output throughput and capacity headroom.",
         "cost_optimal": "Minimizes estimated upstream cost with a success floor.",
         "high_availability": "Prioritizes success rate and low error risk.",
@@ -1562,7 +1554,7 @@
       },
       "weightFields": {
         "success": "Success",
-        "ttfb": "First byte",
+        "ttfb": "First token",
         "latency": "Latency",
         "tps": "TPS",
         "cost": "Cost",

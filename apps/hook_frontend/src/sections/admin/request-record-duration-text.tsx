@@ -8,15 +8,14 @@ import Typography from '@mui/material/Typography';
 
 import { isLiveTiming, formatRequestTiming } from './request-record-timing';
 
-type DurationMetric = 'response_headers' | 'first_sse_event' | 'first_output' | 'total_latency';
+type DurationMetric = 'response_headers' | 'first_byte' | 'first_output' | 'total_latency';
 
 type DurationRecord = Readonly<{
   created_at: string;
   status: RequestRecordStatus;
   response_headers_time_ms?: number | null;
-  first_sse_event_time_ms?: number | null;
-  first_output_time_ms?: number | null;
   first_byte_time_ms?: number | null;
+  first_output_time_ms?: number | null;
   total_latency_ms?: number | null;
 }>;
 

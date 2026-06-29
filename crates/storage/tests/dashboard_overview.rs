@@ -148,9 +148,7 @@ fn summary_row() -> BTreeMap<&'static str, Value> {
         ("avg_latency_ms", Value::from(125.5_f64)),
         ("avg_ttfb_ms", Value::from(42.25_f64)),
         ("avg_response_headers_ms", Value::from(38.0_f64)),
-        ("avg_first_sse_event_ms", Value::from(88.0_f64)),
         ("avg_first_output_ms", Value::from(360.0_f64)),
-        ("avg_sse_to_output_ms", Value::from(272.0_f64)),
         ("model_count", Value::from(1_i64)),
         ("provider_count", Value::from(1_i64)),
         ("user_count", Value::from(1_i64)),
@@ -173,9 +171,7 @@ fn timeseries_row() -> BTreeMap<&'static str, Value> {
         ("avg_latency_ms", Value::from(130.0_f64)),
         ("avg_ttfb_ms", Value::from(40.0_f64)),
         ("avg_response_headers_ms", Value::from(36.0_f64)),
-        ("avg_first_sse_event_ms", Value::from(84.0_f64)),
         ("avg_first_output_ms", Value::from(365.0_f64)),
-        ("avg_sse_to_output_ms", Value::from(281.0_f64)),
     ])
 }
 

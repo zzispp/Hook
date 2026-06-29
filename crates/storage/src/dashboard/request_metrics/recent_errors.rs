@@ -22,12 +22,14 @@ where
     let mut params = SqlParams::new();
     let sql = format!(
         "INSERT INTO dashboard_recent_error_snapshots \
-        (request_id, created_at, provider_id, provider_name, model, status_code, error_type, error_message, error_category, latency_ms, ttfb_ms, updated_at) \
-        VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
+        (request_id, created_at, provider_id, provider_name, model, status_code, error_type, error_message, error_category, \
+        response_headers_ms, first_output_ms, latency_ms, ttfb_ms, updated_at) \
+        VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
         ON CONFLICT (request_id) DO UPDATE SET \
         created_at = EXCLUDED.created_at, provider_id = EXCLUDED.provider_id, provider_name = EXCLUDED.provider_name, model = EXCLUDED.model, \
         status_code = EXCLUDED.status_code, error_type = EXCLUDED.error_type, error_message = EXCLUDED.error_message, \
-        error_category = EXCLUDED.error_category, latency_ms = EXCLUDED.latency_ms, ttfb_ms = EXCLUDED.ttfb_ms, updated_at = EXCLUDED.updated_at",
+        error_category = EXCLUDED.error_category, response_headers_ms = EXCLUDED.response_headers_ms, first_output_ms = EXCLUDED.first_output_ms, \
+        latency_ms = EXCLUDED.latency_ms, ttfb_ms = EXCLUDED.ttfb_ms, updated_at = EXCLUDED.updated_at",
         params.push(record.request_id.clone()),
         params.push(record.created_at),
         params.push(record.provider_id.clone()),
@@ -37,6 +39,8 @@ where
         params.push(record.client_error_type.clone()),
         params.push(record.client_error_message.clone()),
         params.push(category),
+        params.push(record.response_headers_time_ms),
+        params.push(record.first_output_time_ms),
         params.push(record.total_latency_ms),
         params.push(record.first_byte_time_ms),
         params.push(now)

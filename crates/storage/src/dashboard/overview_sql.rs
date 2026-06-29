@@ -22,9 +22,7 @@ pub(super) fn summary_sql() -> &'static str {
         COALESCE(SUM(b.latency_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.latency_sample_count), 0), 0)::double precision AS avg_latency_ms, \
         COALESCE(SUM(b.ttfb_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.ttfb_sample_count), 0), 0)::double precision AS avg_ttfb_ms, \
         COALESCE(SUM(b.response_headers_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.response_headers_sample_count), 0), 0)::double precision AS avg_response_headers_ms, \
-        COALESCE(SUM(b.first_sse_event_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.first_sse_event_sample_count), 0), 0)::double precision AS avg_first_sse_event_ms, \
         COALESCE(SUM(b.first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms, \
-        COALESCE(SUM(b.sse_to_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.sse_to_output_sample_count), 0), 0)::double precision AS avg_sse_to_output_ms, \
         COUNT(DISTINCT b.global_model_id) FILTER (WHERE b.global_model_id IS NOT NULL AND b.request_count <> 0)::bigint AS model_count, \
         COUNT(DISTINCT b.provider_id) FILTER (WHERE b.provider_id IS NOT NULL AND b.request_count <> 0)::bigint AS provider_count, \
         COUNT(DISTINCT b.user_id) FILTER (WHERE b.user_id IS NOT NULL AND b.request_count <> 0)::bigint AS user_count, \
@@ -62,10 +60,9 @@ pub(super) fn breakdown_sql(id_expression: &str, name_expression: &str, where_sq
         COALESCE(SUM(b.total_cost), 0) AS total_cost, \
         COALESCE(SUM(b.upstream_total_cost), 0) AS upstream_total_cost, \
         COALESCE(SUM(b.latency_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.latency_sample_count), 0), 0)::double precision AS avg_latency_ms, \
+        COALESCE(SUM(b.ttfb_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.ttfb_sample_count), 0), 0)::double precision AS avg_ttfb_ms, \
         COALESCE(SUM(b.response_headers_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.response_headers_sample_count), 0), 0)::double precision AS avg_response_headers_ms, \
-        COALESCE(SUM(b.first_sse_event_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.first_sse_event_sample_count), 0), 0)::double precision AS avg_first_sse_event_ms, \
-        COALESCE(SUM(b.first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms, \
-        COALESCE(SUM(b.sse_to_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.sse_to_output_sample_count), 0), 0)::double precision AS avg_sse_to_output_ms \
+        COALESCE(SUM(b.first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms \
         FROM dashboard_request_metric_buckets b {where_sql} \
         GROUP BY 1, 2 \
         ORDER BY request_count DESC, total_tokens DESC, name ASC \
@@ -86,7 +83,5 @@ fn timeseries_columns() -> &'static str {
     COALESCE(SUM(b.latency_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.latency_sample_count), 0), 0)::double precision AS avg_latency_ms, \
     COALESCE(SUM(b.ttfb_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.ttfb_sample_count), 0), 0)::double precision AS avg_ttfb_ms, \
     COALESCE(SUM(b.response_headers_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.response_headers_sample_count), 0), 0)::double precision AS avg_response_headers_ms, \
-    COALESCE(SUM(b.first_sse_event_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.first_sse_event_sample_count), 0), 0)::double precision AS avg_first_sse_event_ms, \
-    COALESCE(SUM(b.first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms, \
-    COALESCE(SUM(b.sse_to_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.sse_to_output_sample_count), 0), 0)::double precision AS avg_sse_to_output_ms"
+    COALESCE(SUM(b.first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(b.first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms"
 }

@@ -26,7 +26,7 @@ const PROVIDER_COLORS = [
   '#0f766e',
 ];
 
-type TrendMetric = 'avg_output_tps' | 'avg_ttfb_ms' | 'avg_first_output_ms';
+type TrendMetric = 'avg_output_tps' | 'avg_response_headers_ms' | 'avg_ttfb_ms' | 'avg_first_output_ms';
 
 export function UpstreamTrendCharts({
   providers,
@@ -44,6 +44,15 @@ export function UpstreamTrendCharts({
           title={t('performanceMonitoring.charts.outputTpsTrend')}
           suffix=" tps"
           metric="avg_output_tps"
+          providers={providers}
+          timeline={timeline}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, md: 6 }}>
+        <TrendCard
+          title={t('performanceMonitoring.columns.responseHeaders')}
+          suffix="ms"
+          metric="avg_response_headers_ms"
           providers={providers}
           timeline={timeline}
         />

@@ -2,7 +2,7 @@ use types::provider::{RoutingProfileId, RoutingProfileUpsert, RoutingProfileWeig
 
 use crate::llm_proxy::LlmProxyError;
 
-use super::validate_profile_upsert;
+use super::{test_only_builtin_profile, validate_profile_upsert};
 
 #[test]
 fn rejects_zero_min_samples() {
@@ -174,6 +174,14 @@ fn rejects_invalid_exploration_success_floor() {
         },
         "exploration_min_success_score",
     );
+}
+
+#[test]
+fn builtin_first_byte_profile_uses_first_token_copy() {
+    let profile = test_only_builtin_profile(RoutingProfileId::FirstByte);
+
+    assert_eq!(profile.name, "First Token");
+    assert!(profile.description.contains("first-token"));
 }
 
 fn assert_invalid(id: RoutingProfileId, patch: RoutingProfileUpsert, expected: &str) {

@@ -32,7 +32,7 @@ export function RecentErrorsTable({ errors }: { errors: RecentPerformanceError[]
         </Typography>
       ) : (
         <TableContainer component={Scrollbar} sx={{ maxHeight: 420 }}>
-          <Table size="small" stickyHeader sx={{ minWidth: 1050 }}>
+          <Table size="small" stickyHeader sx={{ minWidth: 1260 }}>
             <TableHead>
               <TableRow>
                 <TableCell>{t('performanceMonitoring.columns.time')}</TableCell>
@@ -41,7 +41,10 @@ export function RecentErrorsTable({ errors }: { errors: RecentPerformanceError[]
                 <TableCell align="right">{t('performanceMonitoring.columns.statusCode')}</TableCell>
                 <TableCell>{t('performanceMonitoring.columns.errorType')}</TableCell>
                 <TableCell>{t('performanceMonitoring.columns.errorMessage')}</TableCell>
-                <TableCell align="right">{t('performanceMonitoring.columns.latencyTtfb')}</TableCell>
+                <TableCell align="right">{t('performanceMonitoring.columns.responseHeaders')}</TableCell>
+                <TableCell align="right">{t('requestRecords.firstChar')}</TableCell>
+                <TableCell align="right">{t('requestRecords.firstToken')}</TableCell>
+                <TableCell align="right">{t('requestRecords.totalLatency')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -88,9 +91,10 @@ function ErrorRow({ error }: { error: RecentPerformanceError }) {
           {error.error_message ?? '-'}
         </Typography>
       </TableCell>
-      <TableCell align="right">
-        {formatMs(error.latency_ms)} / {formatMs(error.ttfb_ms)}
-      </TableCell>
+      <TableCell align="right">{formatMs(error.response_headers_ms)}</TableCell>
+      <TableCell align="right">{formatMs(error.ttfb_ms)}</TableCell>
+      <TableCell align="right">{formatMs(error.first_output_ms)}</TableCell>
+      <TableCell align="right">{formatMs(error.latency_ms)}</TableCell>
     </TableRow>
   );
 }

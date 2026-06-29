@@ -133,6 +133,8 @@ fn recent_error_table_sql() -> &'static str {
      error_type VARCHAR(100) NULL, \
      error_message TEXT NULL, \
      error_category VARCHAR(100) NOT NULL, \
+     response_headers_ms BIGINT NULL, \
+     first_output_ms BIGINT NULL, \
      latency_ms BIGINT NULL, \
      ttfb_ms BIGINT NULL, \
      updated_at TIMESTAMPTZ NOT NULL)"
@@ -230,6 +232,8 @@ mod tests {
     fn recent_error_snapshots_are_keyed_by_request_id() {
         assert!(recent_error_table_sql().contains("request_id VARCHAR(64) PRIMARY KEY"));
         assert!(recent_error_table_sql().contains("error_category VARCHAR(100) NOT NULL"));
+        assert!(recent_error_table_sql().contains("response_headers_ms BIGINT NULL"));
+        assert!(recent_error_table_sql().contains("first_output_ms BIGINT NULL"));
     }
 
     #[test]

@@ -44,12 +44,21 @@ export function SnapshotLatencyChart({ series }: { series: PerformanceSnapshotPo
       <Chart
         type="line"
         series={[
-          { name: 'P50', data: series.map((point) => safeChartValue(point.metrics.core.p50_latency_ms)) },
-          { name: 'P90', data: series.map((point) => safeChartValue(point.metrics.core.p90_latency_ms)) },
-          { name: 'P99', data: series.map((point) => safeChartValue(point.metrics.core.p99_latency_ms)) },
           {
-            name: 'P90 TTFB',
+            name: t('requestRecords.responseHeaders'),
+            data: series.map((point) => safeChartValue(point.metrics.core.p90_response_headers_ms)),
+          },
+          {
+            name: t('requestRecords.firstChar'),
             data: series.map((point) => safeChartValue(point.metrics.core.p90_ttfb_ms)),
+          },
+          {
+            name: t('requestRecords.firstToken'),
+            data: series.map((point) => safeChartValue(point.metrics.core.p90_first_output_ms)),
+          },
+          {
+            name: t('requestRecords.totalLatency'),
+            data: series.map((point) => safeChartValue(point.metrics.core.p90_latency_ms)),
           },
         ]}
         options={options}

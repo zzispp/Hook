@@ -109,6 +109,9 @@ export function SummaryCard({
     total_tokens: number;
     total_cost: number;
     error_rate: number;
+    avg_total_latency_ms?: number | null;
+    avg_response_headers_ms?: number | null;
+    avg_first_byte_ms?: number | null;
     avg_first_output_ms?: number | null;
   };
 }) {
@@ -204,6 +207,9 @@ function summaryCards(
     total_tokens: number;
     total_cost: number;
     error_rate: number;
+    avg_total_latency_ms?: number | null;
+    avg_response_headers_ms?: number | null;
+    avg_first_byte_ms?: number | null;
     avg_first_output_ms?: number | null;
   }
 ) {
@@ -225,8 +231,20 @@ function summaryCards(
       value: `${(data?.error_rate ?? 0).toFixed(1)}%`,
     },
     {
+      label: t('requestRecords.responseHeaders'),
+      value: formatMs(data?.avg_response_headers_ms),
+    },
+    {
+      label: t('requestRecords.firstChar'),
+      value: formatMs(data?.avg_first_byte_ms),
+    },
+    {
       label: t('dashboard.stats.userStats.summary.avgFirstOutput'),
       value: formatMs(data?.avg_first_output_ms),
+    },
+    {
+      label: t('requestRecords.totalLatency'),
+      value: formatMs(data?.avg_total_latency_ms),
     },
   ];
 }

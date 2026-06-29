@@ -72,7 +72,7 @@ export function billingStatusLabel(status: string, t: (key: string) => string) {
 }
 
 export function formatDuration(value?: number | null) {
-  if (value === null || value === undefined) return 'N/A';
+  if (value === null || value === undefined) return '-';
   if (value < 1000) return `${value}ms`;
   return `${(value / 1000).toFixed(2)}s`;
 }

@@ -69,7 +69,7 @@ async fn assert_leaderboard_value_cast(metric: DashboardUserStatsMetric, order_c
 }
 
 #[tokio::test]
-async fn user_usage_summary_and_time_series_return_first_output_latency() {
+async fn user_usage_summary_and_time_series_return_four_timing_metrics() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[usage_summary_row()]])
         .append_query_results([vec![time_series_row()]])
@@ -79,13 +79,25 @@ async fn user_usage_summary_and_time_series_return_first_output_latency() {
     let summary = store.user_usage_stats(usage_query()).await.unwrap();
     let series = store.user_stats_time_series(series_query()).await.unwrap();
 
+    assert_eq!(summary.avg_total_latency_ms, Some(420.0));
+    assert_eq!(summary.avg_response_headers_ms, Some(55.0));
+    assert_eq!(summary.avg_first_byte_ms, Some(110.0));
     assert_eq!(summary.avg_first_output_ms, Some(350.0));
+    assert_eq!(series[0].avg_total_latency_ms, Some(440.0));
+    assert_eq!(series[0].avg_response_headers_ms, Some(58.0));
+    assert_eq!(series[0].avg_first_byte_ms, Some(118.0));
     assert_eq!(series[0].avg_first_output_ms, Some(370.0));
     let logs = connection.into_transaction_log();
     let summary_sql = &logs[0].statements()[0].sql;
     let series_sql = &logs[1].statements()[0].sql;
+    assert!(summary_sql.contains("total_latency_ms"), "{summary_sql}");
+    assert!(summary_sql.contains("response_headers_total_ms"), "{summary_sql}");
+    assert!(summary_sql.contains("first_byte_total_ms"), "{summary_sql}");
     assert!(summary_sql.contains("first_output_total_ms"), "{summary_sql}");
     assert!(summary_sql.contains("first_output_sample_count"), "{summary_sql}");
+    assert!(series_sql.contains("total_latency_ms"), "{series_sql}");
+    assert!(series_sql.contains("response_headers_total_ms"), "{series_sql}");
+    assert!(series_sql.contains("first_byte_total_ms"), "{series_sql}");
     assert!(series_sql.contains("first_output_total_ms"), "{series_sql}");
 }
 
@@ -149,6 +161,9 @@ fn usage_summary_row() -> BTreeMap<&'static str, Value> {
         ("total_tokens", Value::from(4_096_i64)),
         ("total_cost", Value::from(Decimal::new(1234, 2))),
         ("failed_count", Value::from(1_i64)),
+        ("avg_total_latency_ms", Value::from(420.0_f64)),
+        ("avg_response_headers_ms", Value::from(55.0_f64)),
+        ("avg_first_byte_ms", Value::from(110.0_f64)),
         ("avg_first_output_ms", Value::from(350.0_f64)),
     ])
 }
@@ -159,6 +174,9 @@ fn time_series_row() -> BTreeMap<&'static str, Value> {
         ("total_cost", Value::from(Decimal::new(1234, 2))),
         ("total_requests", Value::from(2_i64)),
         ("total_tokens", Value::from(4_096_i64)),
+        ("avg_total_latency_ms", Value::from(440.0_f64)),
+        ("avg_response_headers_ms", Value::from(58.0_f64)),
+        ("avg_first_byte_ms", Value::from(118.0_f64)),
         ("avg_first_output_ms", Value::from(370.0_f64)),
     ])
 }

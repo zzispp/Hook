@@ -42,7 +42,7 @@ export function PercentileChart({
   );
 }
 
-type PercentileMode = 'latency' | 'ttfb' | 'response_headers' | 'first_sse_event' | 'first_output' | 'sse_to_output';
+type PercentileMode = 'latency' | 'ttfb' | 'response_headers' | 'first_output';
 
 function percentileSeries(points: PerformancePercentilePoint[], mode: PercentileMode) {
   return [
