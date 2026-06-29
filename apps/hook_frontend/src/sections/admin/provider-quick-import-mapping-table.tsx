@@ -114,6 +114,13 @@ function MappingActions({
       </Button>
       <Button
         size="small"
+        color="inherit"
+        onClick={() => setMappings((current) => clearBlankMappings(current))}
+      >
+        {t('providers.quickImportClearBlankMappings')}
+      </Button>
+      <Button
+        size="small"
         variant="outlined"
         onClick={() => setMappings((current) => mergeMissingMappings(preview, token, tokenModelIds, current))}
       >
@@ -203,6 +210,12 @@ function mergeMissingMappings(
     tokenModelIds.filter((id) => !(id in current)).map((id) => [id, defaults[id] ?? ''])
   );
   return { ...current, ...additions };
+}
+
+function clearBlankMappings(current: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(current).filter(([, globalModelId]) => globalModelId.trim() !== '')
+  );
 }
 
 function removeMapping(upstreamModelId: string, setMappings: Dispatch<SetStateAction<Record<string, string>>>) {
