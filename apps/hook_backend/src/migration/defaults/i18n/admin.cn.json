@@ -1754,6 +1754,7 @@
     "quickImportCostMissing": "选中模型存在缺失默认成本，请先补齐全局模型成本或调整映射。",
     "quickImportCostRatios": "成本倍率",
     "quickImportEffectiveCostMultiplier": "最终成本倍率",
+    "quickImportClearBlankMappings": "清理空映射",
     "quickImportFetchModels": "获取模型",
     "quickImportLinkedToken": "已关联",
     "quickImportModelMappings": "模型映射",

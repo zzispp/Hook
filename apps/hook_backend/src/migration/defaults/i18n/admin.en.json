@@ -1754,6 +1754,7 @@
     "quickImportCostMissing": "Selected models are missing default costs. Add global model costs or adjust mappings.",
     "quickImportCostRatios": "Cost ratios",
     "quickImportEffectiveCostMultiplier": "Final cost multiplier",
+    "quickImportClearBlankMappings": "Clear blank mappings",
     "quickImportFetchModels": "Get models",
     "quickImportLinkedToken": "Linked",
     "quickImportModelMappings": "Model mappings",
