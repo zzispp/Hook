@@ -236,7 +236,7 @@ function TraceAttemptDetail({
         />
         <TraceInfo
           label={t('requestRecords.firstChar')}
-          value={formatAttemptTiming(attempt, 'first_sse_event')}
+          value={formatAttemptTiming(attempt, 'first_byte')}
         />
         <TraceInfo
           label={t('requestRecords.firstToken')}

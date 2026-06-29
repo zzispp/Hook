@@ -264,8 +264,8 @@ fn built_in_definition(id: RoutingProfileId) -> (&'static str, &'static str, Rou
             weights(0.28, 0.19, 0.17, 0.09, 0.15, 0.12, 0.0),
         ),
         RoutingProfileId::FirstByte => (
-            "First Byte",
-            "Prioritizes p90 first-byte time for interactive streams.",
+            "First Token",
+            "Prioritizes p90 first-token time for interactive streams.",
             weights(0.26, 0.36, 0.08, 0.04, 0.06, 0.20, 0.0),
         ),
         RoutingProfileId::HighTps => (

@@ -7,7 +7,7 @@ type TimingRecord = Pick<
   | 'created_at'
   | 'status'
   | 'response_headers_time_ms'
-  | 'first_sse_event_time_ms'
+  | 'first_byte_time_ms'
   | 'first_output_time_ms'
   | 'total_latency_ms'
 >;
@@ -15,12 +15,12 @@ type TimingRecord = Pick<
 type TimingAttempt = Pick<
   RequestCandidateDetail,
   | 'response_headers_time_ms'
-  | 'first_sse_event_time_ms'
+  | 'first_byte_time_ms'
   | 'first_output_time_ms'
   | 'latency_ms'
 >;
 
-export type RequestTimingMetric = 'response_headers' | 'first_sse_event' | 'first_output' | 'total_latency';
+export type RequestTimingMetric = 'response_headers' | 'first_byte' | 'first_output' | 'total_latency';
 
 export function formatRequestTiming(record: TimingRecord, metric: RequestTimingMetric, now?: number) {
   const live = now !== undefined && isLiveTiming(record, metric);
@@ -36,14 +36,14 @@ export function formatAttemptTiming(attempt: TimingAttempt, metric: RequestTimin
 
 export function requestTimingValue(record: TimingRecord, metric: RequestTimingMetric) {
   if (metric === 'response_headers') return record.response_headers_time_ms;
-  if (metric === 'first_sse_event') return record.first_sse_event_time_ms;
+  if (metric === 'first_byte') return record.first_byte_time_ms;
   if (metric === 'first_output') return record.first_output_time_ms;
   return record.total_latency_ms;
 }
 
 export function attemptTimingValue(attempt: TimingAttempt, metric: RequestTimingMetric) {
   if (metric === 'response_headers') return attempt.response_headers_time_ms;
-  if (metric === 'first_sse_event') return attempt.first_sse_event_time_ms;
+  if (metric === 'first_byte') return attempt.first_byte_time_ms;
   if (metric === 'first_output') return attempt.first_output_time_ms;
   return attempt.latency_ms;
 }

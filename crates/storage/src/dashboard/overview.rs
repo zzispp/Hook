@@ -137,9 +137,7 @@ pub(super) fn summary_response(row: SummaryRow, include_admin_costs: bool) -> Da
         avg_latency_ms: row.avg_latency_ms,
         avg_ttfb_ms: row.avg_ttfb_ms,
         avg_response_headers_ms: row.avg_response_headers_ms,
-        avg_first_sse_event_ms: row.avg_first_sse_event_ms,
         avg_first_output_ms: row.avg_first_output_ms,
-        avg_sse_to_output_ms: row.avg_sse_to_output_ms,
         model_count: row.model_count.unwrap_or_default(),
         provider_count: row.provider_count.unwrap_or_default(),
         user_count: row.user_count.unwrap_or_default(),
@@ -164,9 +162,7 @@ pub(super) fn timeseries_response(row: TimeseriesRow, include_admin_costs: bool)
         avg_latency_ms: row.avg_latency_ms,
         avg_ttfb_ms: row.avg_ttfb_ms,
         avg_response_headers_ms: row.avg_response_headers_ms,
-        avg_first_sse_event_ms: row.avg_first_sse_event_ms,
         avg_first_output_ms: row.avg_first_output_ms,
-        avg_sse_to_output_ms: row.avg_sse_to_output_ms,
         cache_hit_rate: cache_hit_rate(
             row.cache_read_input_tokens.unwrap_or_default(),
             row.prompt_tokens.unwrap_or_default(),
@@ -188,10 +184,9 @@ pub(super) fn breakdown_response(row: BreakdownRow, include_admin_costs: bool) -
         profit: metrics.profit,
         profit_rate: metrics.profit_rate,
         avg_latency_ms: row.avg_latency_ms,
+        avg_ttfb_ms: row.avg_ttfb_ms,
         avg_response_headers_ms: row.avg_response_headers_ms,
-        avg_first_sse_event_ms: row.avg_first_sse_event_ms,
         avg_first_output_ms: row.avg_first_output_ms,
-        avg_sse_to_output_ms: row.avg_sse_to_output_ms,
     }
 }
 
@@ -258,9 +253,7 @@ pub(super) struct SummaryRow {
     pub(super) avg_latency_ms: Option<f64>,
     pub(super) avg_ttfb_ms: Option<f64>,
     pub(super) avg_response_headers_ms: Option<f64>,
-    pub(super) avg_first_sse_event_ms: Option<f64>,
     pub(super) avg_first_output_ms: Option<f64>,
-    pub(super) avg_sse_to_output_ms: Option<f64>,
     pub(super) model_count: Option<i64>,
     pub(super) provider_count: Option<i64>,
     pub(super) user_count: Option<i64>,
@@ -283,9 +276,7 @@ pub(super) struct TimeseriesRow {
     pub(super) avg_latency_ms: Option<f64>,
     pub(super) avg_ttfb_ms: Option<f64>,
     pub(super) avg_response_headers_ms: Option<f64>,
-    pub(super) avg_first_sse_event_ms: Option<f64>,
     pub(super) avg_first_output_ms: Option<f64>,
-    pub(super) avg_sse_to_output_ms: Option<f64>,
 }
 
 #[derive(Debug, FromQueryResult)]
@@ -297,8 +288,7 @@ pub(super) struct BreakdownRow {
     pub(super) total_cost: Option<Decimal>,
     pub(super) upstream_total_cost: Option<Decimal>,
     pub(super) avg_latency_ms: Option<f64>,
+    pub(super) avg_ttfb_ms: Option<f64>,
     pub(super) avg_response_headers_ms: Option<f64>,
-    pub(super) avg_first_sse_event_ms: Option<f64>,
     pub(super) avg_first_output_ms: Option<f64>,
-    pub(super) avg_sse_to_output_ms: Option<f64>,
 }

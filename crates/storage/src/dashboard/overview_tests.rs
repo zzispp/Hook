@@ -22,9 +22,7 @@ fn summary_response_exposes_aether_dashboard_metrics() {
             avg_latency_ms: Some(200.0),
             avg_ttfb_ms: Some(75.0),
             avg_response_headers_ms: Some(40.0),
-            avg_first_sse_event_ms: Some(60.0),
             avg_first_output_ms: Some(140.0),
-            avg_sse_to_output_ms: Some(80.0),
             model_count: Some(4),
             provider_count: Some(3),
             user_count: Some(6),
@@ -68,9 +66,7 @@ fn summary_response_calculates_cache_hit_rate_and_profit() {
             avg_latency_ms: Some(120.0),
             avg_ttfb_ms: Some(45.0),
             avg_response_headers_ms: Some(20.0),
-            avg_first_sse_event_ms: Some(35.0),
             avg_first_output_ms: Some(90.0),
-            avg_sse_to_output_ms: Some(55.0),
             model_count: Some(2),
             provider_count: Some(1),
             user_count: Some(1),
@@ -84,7 +80,7 @@ fn summary_response_calculates_cache_hit_rate_and_profit() {
     assert_eq!(response.profit, Decimal::new(9, 2));
     assert_eq!(response.profit_rate, 0.75);
     assert_eq!(response.avg_ttfb_ms, Some(45.0));
-    assert_eq!(response.avg_sse_to_output_ms, Some(55.0));
+    assert_eq!(response.avg_response_headers_ms, Some(20.0));
 }
 
 #[test]
@@ -104,9 +100,7 @@ fn timeseries_response_preserves_ttfb_cache_hit_rate_and_profit() {
             avg_latency_ms: Some(250.0),
             avg_ttfb_ms: Some(80.0),
             avg_response_headers_ms: Some(30.0),
-            avg_first_sse_event_ms: Some(70.0),
             avg_first_output_ms: Some(180.0),
-            avg_sse_to_output_ms: Some(110.0),
         },
         true,
     );
@@ -134,9 +128,7 @@ fn timeseries_response_includes_cache_creation_in_hit_rate_denominator() {
             avg_latency_ms: Some(250.0),
             avg_ttfb_ms: Some(80.0),
             avg_response_headers_ms: None,
-            avg_first_sse_event_ms: None,
             avg_first_output_ms: None,
-            avg_sse_to_output_ms: None,
         },
         true,
     );
@@ -156,9 +148,8 @@ fn breakdown_response_preserves_average_latency_and_profit() {
             upstream_total_cost: Some(Decimal::new(9494, 2)),
             avg_latency_ms: Some(950.0),
             avg_response_headers_ms: Some(100.0),
-            avg_first_sse_event_ms: Some(175.0),
             avg_first_output_ms: Some(425.0),
-            avg_sse_to_output_ms: Some(250.0),
+            avg_ttfb_ms: Some(175.0),
         },
         true,
     );
@@ -189,9 +180,7 @@ fn summary_response_hides_admin_costs_when_requested() {
             avg_latency_ms: None,
             avg_ttfb_ms: None,
             avg_response_headers_ms: None,
-            avg_first_sse_event_ms: None,
             avg_first_output_ms: None,
-            avg_sse_to_output_ms: None,
             model_count: Some(1),
             provider_count: Some(1),
             user_count: Some(1),

@@ -5,6 +5,7 @@ mod announcement_priority_removal_additive;
 mod auth_layout_site_name_i18n_additive;
 mod baseline;
 mod dashboard_period_i18n_additive;
+mod dashboard_recent_error_timing_additive;
 mod dashboard_request_metrics_additive;
 mod dashboard_stage_latency_additive;
 mod default_seed_sync;

@@ -24,6 +24,14 @@ export type CoreRequestMetrics = {
   p90_ttfb_ms?: number | null;
   p95_ttfb_ms?: number | null;
   p99_ttfb_ms?: number | null;
+  p50_response_headers_ms?: number | null;
+  p90_response_headers_ms?: number | null;
+  p95_response_headers_ms?: number | null;
+  p99_response_headers_ms?: number | null;
+  p50_first_output_ms?: number | null;
+  p90_first_output_ms?: number | null;
+  p95_first_output_ms?: number | null;
+  p99_first_output_ms?: number | null;
   retry_count: number;
   circuit_breaker_count: number;
   stream_request_count: number;
@@ -127,15 +135,9 @@ export type PerformancePercentilePoint = {
   p50_response_headers_ms?: number | null;
   p90_response_headers_ms?: number | null;
   p99_response_headers_ms?: number | null;
-  p50_first_sse_event_ms?: number | null;
-  p90_first_sse_event_ms?: number | null;
-  p99_first_sse_event_ms?: number | null;
   p50_first_output_ms?: number | null;
   p90_first_output_ms?: number | null;
   p99_first_output_ms?: number | null;
-  p50_sse_to_output_ms?: number | null;
-  p90_sse_to_output_ms?: number | null;
-  p99_sse_to_output_ms?: number | null;
 };
 
 export type ErrorDistributionItem = {
@@ -161,28 +163,20 @@ export type UpstreamPerformanceSummary = {
   avg_ttfb_ms?: number | null;
   avg_latency_ms?: number | null;
   avg_response_headers_ms?: number | null;
-  avg_first_sse_event_ms?: number | null;
   avg_first_output_ms?: number | null;
-  avg_sse_to_output_ms?: number | null;
   p90_latency_ms?: number | null;
   p99_latency_ms?: number | null;
   p90_ttfb_ms?: number | null;
   p99_ttfb_ms?: number | null;
   p90_response_headers_ms?: number | null;
   p99_response_headers_ms?: number | null;
-  p90_first_sse_event_ms?: number | null;
-  p99_first_sse_event_ms?: number | null;
   p90_first_output_ms?: number | null;
   p99_first_output_ms?: number | null;
-  p90_sse_to_output_ms?: number | null;
-  p99_sse_to_output_ms?: number | null;
   tps_sample_count: number;
   latency_sample_count: number;
   ttfb_sample_count: number;
   response_headers_sample_count: number;
-  first_sse_event_sample_count: number;
   first_output_sample_count: number;
-  sse_to_output_sample_count: number;
   slow_request_count: number;
 };
 
@@ -206,9 +200,7 @@ export type UpstreamPerformanceTimelinePoint = {
   avg_ttfb_ms?: number | null;
   avg_latency_ms?: number | null;
   avg_response_headers_ms?: number | null;
-  avg_first_sse_event_ms?: number | null;
   avg_first_output_ms?: number | null;
-  avg_sse_to_output_ms?: number | null;
   slow_request_count: number;
 };
 
@@ -227,6 +219,8 @@ export type RecentPerformanceError = {
   status_code?: number | null;
   error_type?: string | null;
   error_message?: string | null;
+  response_headers_ms?: number | null;
+  first_output_ms?: number | null;
   latency_ms?: number | null;
   ttfb_ms?: number | null;
 };

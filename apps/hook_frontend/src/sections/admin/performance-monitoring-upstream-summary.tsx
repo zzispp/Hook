@@ -52,17 +52,10 @@ export function UpstreamSummaryCards({ summary }: { summary?: UpstreamPerformanc
       }),
     },
     {
-      label: t('performanceMonitoring.upstream.sseToOutputWait'),
-      value: formatMs(summary?.avg_sse_to_output_ms),
-      detail: t('performanceMonitoring.upstream.sseToOutputSamples', {
-        value: fNumber(summary?.sse_to_output_sample_count ?? 0),
-      }),
-    },
-    {
       label: t('performanceMonitoring.upstream.responseHeaders'),
       value: formatMs(summary?.avg_response_headers_ms),
-      detail: t('performanceMonitoring.upstream.firstSse', {
-        value: formatMs(summary?.avg_first_sse_event_ms),
+      detail: t('performanceMonitoring.upstream.responseHeadersSamples', {
+        value: fNumber(summary?.response_headers_sample_count ?? 0),
       }),
     },
     {

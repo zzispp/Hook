@@ -85,6 +85,14 @@ fn core_metrics(summary: &RequestSummaryRow, request_count: i64, error_count: i6
         p90_ttfb_ms: summary.p90_ttfb_ms,
         p95_ttfb_ms: summary.p95_ttfb_ms,
         p99_ttfb_ms: summary.p99_ttfb_ms,
+        p50_response_headers_ms: summary.p50_response_headers_ms,
+        p90_response_headers_ms: summary.p90_response_headers_ms,
+        p95_response_headers_ms: summary.p95_response_headers_ms,
+        p99_response_headers_ms: summary.p99_response_headers_ms,
+        p50_first_output_ms: summary.p50_first_output_ms,
+        p90_first_output_ms: summary.p90_first_output_ms,
+        p95_first_output_ms: summary.p95_first_output_ms,
+        p99_first_output_ms: summary.p99_first_output_ms,
         retry_count: summary.retry_count.unwrap_or_default(),
         circuit_breaker_count,
         stream_request_count: summary.stream_request_count.unwrap_or_default(),
@@ -141,7 +149,15 @@ fn summary_sql() -> &'static str {
         (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.50)) AS p50_ttfb_ms, \
         (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.90)) AS p90_ttfb_ms, \
         (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.95)) AS p95_ttfb_ms, \
-        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.99)) AS p99_ttfb_ms \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'ttfb' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.99)) AS p99_ttfb_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'response_headers' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.50)) AS p50_response_headers_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'response_headers' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.90)) AS p90_response_headers_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'response_headers' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.95)) AS p95_response_headers_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'response_headers' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.99)) AS p99_response_headers_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'first_output' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.50)) AS p50_first_output_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'first_output' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.90)) AS p90_first_output_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'first_output' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.95)) AS p95_first_output_ms, \
+        (SELECT MIN(h.le_ms) FROM histogram h JOIN totals t ON t.metric_kind = h.metric_kind WHERE h.metric_kind = 'first_output' AND h.cumulative_count >= CEIL(t.total_count::numeric * 0.99)) AS p99_first_output_ms \
     FROM metric"
 }
 
@@ -191,6 +207,14 @@ struct RequestSummaryRow {
     p90_ttfb_ms: Option<i64>,
     p95_ttfb_ms: Option<i64>,
     p99_ttfb_ms: Option<i64>,
+    p50_response_headers_ms: Option<i64>,
+    p90_response_headers_ms: Option<i64>,
+    p95_response_headers_ms: Option<i64>,
+    p99_response_headers_ms: Option<i64>,
+    p50_first_output_ms: Option<i64>,
+    p90_first_output_ms: Option<i64>,
+    p95_first_output_ms: Option<i64>,
+    p99_first_output_ms: Option<i64>,
     retry_count: Option<i64>,
     stream_request_count: Option<i64>,
     prompt_tokens: Option<i64>,
@@ -235,6 +259,8 @@ mod tests {
                 request_count: Some(2),
                 p90_latency_ms: Some(900),
                 p90_ttfb_ms: Some(120),
+                p90_response_headers_ms: Some(40),
+                p90_first_output_ms: Some(300),
                 ..Default::default()
             },
             3,
@@ -244,6 +270,8 @@ mod tests {
 
         assert_eq!(result.core.p90_latency_ms, Some(900));
         assert_eq!(result.core.p90_ttfb_ms, Some(120));
+        assert_eq!(result.core.p90_response_headers_ms, Some(40));
+        assert_eq!(result.core.p90_first_output_ms, Some(300));
         assert_eq!(result.core.circuit_breaker_count, 3);
     }
 }

@@ -18,7 +18,7 @@ pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     mark_additive_applied(manager).await
 }
 
-fn stage_latency_sql() -> [&'static str; 18] {
+fn stage_latency_sql() -> [&'static str; 25] {
     [
         "ALTER TABLE IF EXISTS dashboard_request_metric_buckets ADD COLUMN IF NOT EXISTS response_headers_total_ms BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_request_metric_buckets ADD COLUMN IF NOT EXISTS response_headers_sample_count BIGINT NOT NULL DEFAULT 0",
@@ -30,12 +30,19 @@ fn stage_latency_sql() -> [&'static str; 18] {
         "ALTER TABLE IF EXISTS dashboard_request_metric_buckets ADD COLUMN IF NOT EXISTS sse_to_output_sample_count BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS response_headers_total_ms BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS response_headers_sample_count BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS first_byte_total_ms BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS first_byte_sample_count BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS first_sse_event_total_ms BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS first_sse_event_sample_count BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS first_output_total_ms BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS first_output_sample_count BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS sse_to_output_total_ms BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS sse_to_output_sample_count BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE IF EXISTS dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS latency_sample_count BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE IF EXISTS dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS response_headers_total_ms BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE IF EXISTS dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS response_headers_sample_count BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE IF EXISTS dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS first_byte_total_ms BIGINT NOT NULL DEFAULT 0",
+        "ALTER TABLE IF EXISTS dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS first_byte_sample_count BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS first_output_total_ms BIGINT NOT NULL DEFAULT 0",
         "ALTER TABLE IF EXISTS dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS first_output_sample_count BIGINT NOT NULL DEFAULT 0",
     ]
@@ -97,7 +104,9 @@ mod tests {
         let sql = stage_latency_sql().join("\n");
 
         assert!(sql.contains("dashboard_request_metric_buckets ADD COLUMN IF NOT EXISTS first_output_total_ms"));
+        assert!(sql.contains("dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS first_byte_total_ms"));
         assert!(sql.contains("dashboard_cost_analysis_buckets ADD COLUMN IF NOT EXISTS sse_to_output_sample_count"));
+        assert!(sql.contains("dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS first_byte_total_ms"));
         assert!(sql.contains("dashboard_user_usage_buckets ADD COLUMN IF NOT EXISTS first_output_sample_count"));
     }
 }

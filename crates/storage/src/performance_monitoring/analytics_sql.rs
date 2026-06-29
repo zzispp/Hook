@@ -61,7 +61,7 @@ pub(super) fn error_trend_sql(granularity: SnapshotGranularity) -> String {
 }
 
 pub(super) fn recent_errors_sql() -> &'static str {
-    "SELECT created_at, request_id, provider_id, provider_name, model, status_code, error_type, error_message, latency_ms, ttfb_ms \
+    "SELECT created_at, request_id, provider_id, provider_name, model, status_code, error_type, error_message, response_headers_ms, first_output_ms, latency_ms, ttfb_ms \
     FROM dashboard_recent_error_snapshots \
     WHERE created_at >= $1 AND created_at < $2 \
     ORDER BY created_at DESC, request_id DESC LIMIT $3"
@@ -76,9 +76,7 @@ fn percentile_selects() -> Vec<String> {
         ("latency", "latency"),
         ("ttfb", "ttfb"),
         ("response_headers", "response_headers"),
-        ("first_sse_event", "first_sse_event"),
         ("first_output", "first_output"),
-        ("sse_to_output", "sse_to_output"),
     ]
     .into_iter()
     .flat_map(|(kind, suffix)| {

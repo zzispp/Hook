@@ -48,8 +48,9 @@ where
     let sql = format!(
         "INSERT INTO dashboard_user_usage_buckets \
         (id, bucket_granularity, bucket_started_at, bucket_ended_at, user_id, username, request_count, success_count, failed_count, total_tokens, total_cost, \
-        total_latency_ms, first_output_total_ms, first_output_sample_count, created_at, updated_at) \
-        VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
+        total_latency_ms, latency_sample_count, response_headers_total_ms, response_headers_sample_count, first_byte_total_ms, first_byte_sample_count, \
+        first_output_total_ms, first_output_sample_count, created_at, updated_at) \
+        VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
         ON CONFLICT (bucket_granularity, bucket_started_at, user_id) DO UPDATE SET \
         username = EXCLUDED.username, \
         request_count = dashboard_user_usage_buckets.request_count + EXCLUDED.request_count, \
@@ -58,6 +59,11 @@ where
         total_tokens = dashboard_user_usage_buckets.total_tokens + EXCLUDED.total_tokens, \
         total_cost = dashboard_user_usage_buckets.total_cost + EXCLUDED.total_cost, \
         total_latency_ms = dashboard_user_usage_buckets.total_latency_ms + EXCLUDED.total_latency_ms, \
+        latency_sample_count = dashboard_user_usage_buckets.latency_sample_count + EXCLUDED.latency_sample_count, \
+        response_headers_total_ms = dashboard_user_usage_buckets.response_headers_total_ms + EXCLUDED.response_headers_total_ms, \
+        response_headers_sample_count = dashboard_user_usage_buckets.response_headers_sample_count + EXCLUDED.response_headers_sample_count, \
+        first_byte_total_ms = dashboard_user_usage_buckets.first_byte_total_ms + EXCLUDED.first_byte_total_ms, \
+        first_byte_sample_count = dashboard_user_usage_buckets.first_byte_sample_count + EXCLUDED.first_byte_sample_count, \
         first_output_total_ms = dashboard_user_usage_buckets.first_output_total_ms + EXCLUDED.first_output_total_ms, \
         first_output_sample_count = dashboard_user_usage_buckets.first_output_sample_count + EXCLUDED.first_output_sample_count, \
         updated_at = EXCLUDED.updated_at",
@@ -73,6 +79,11 @@ where
         params.push(contribution.total_tokens * multiplier),
         params.push(contribution.total_cost * Decimal::from(multiplier)),
         params.push(contribution.total_latency_ms * multiplier),
+        params.push(contribution.latency_sample_count * multiplier),
+        params.push(contribution.response_headers_total_ms * multiplier),
+        params.push(contribution.response_headers_sample_count * multiplier),
+        params.push(contribution.first_byte_total_ms * multiplier),
+        params.push(contribution.first_byte_sample_count * multiplier),
         params.push(contribution.first_output_total_ms * multiplier),
         params.push(contribution.first_output_sample_count * multiplier),
         params.push(time::OffsetDateTime::now_utc()),
@@ -101,10 +112,19 @@ fn contribution(record: &request_records::Model) -> Option<BucketContribution> {
         total_tokens: token_context::total_tokens(record),
         total_cost: record.total_cost.unwrap_or(Decimal::ZERO),
         total_latency_ms: record.total_latency_ms.unwrap_or_default(),
+        latency_sample_count: i64::from(record.total_latency_ms.is_some_and(|value| value >= 0)),
+        response_headers_total_ms: StageLatencyContribution::total(stage.response_headers_ms),
+        response_headers_sample_count: StageLatencyContribution::sample_count(stage.response_headers_ms),
+        first_byte_total_ms: non_negative(record.first_byte_time_ms).unwrap_or_default(),
+        first_byte_sample_count: i64::from(non_negative(record.first_byte_time_ms).is_some()),
         first_output_total_ms: StageLatencyContribution::total(stage.first_output_ms),
         first_output_sample_count: StageLatencyContribution::sample_count(stage.first_output_ms),
         created_at: record.created_at,
     })
+}
+
+fn non_negative(value: Option<i64>) -> Option<i64> {
+    value.filter(|item| *item >= 0)
 }
 
 fn hour_bounds(value: time::OffsetDateTime) -> BucketBounds {
@@ -141,6 +161,11 @@ struct BucketContribution {
     total_tokens: i64,
     total_cost: Decimal,
     total_latency_ms: i64,
+    latency_sample_count: i64,
+    response_headers_total_ms: i64,
+    response_headers_sample_count: i64,
+    first_byte_total_ms: i64,
+    first_byte_sample_count: i64,
     first_output_total_ms: i64,
     first_output_sample_count: i64,
     created_at: time::OffsetDateTime,

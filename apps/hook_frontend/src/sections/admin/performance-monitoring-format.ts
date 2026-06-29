@@ -1,7 +1,9 @@
 import { fData, fNumber, fPercent, fTokenCount } from 'src/utils/format-number';
 
 export function formatMs(value?: number | null) {
-  return value === null || value === undefined ? '-' : `${fNumber(value)}ms`;
+  if (value === null || value === undefined) return '-';
+  if (value < 1000) return `${fNumber(Math.round(value))}ms`;
+  return `${(value / 1000).toFixed(2)}s`;
 }
 
 export function formatRate(value?: number | null) {

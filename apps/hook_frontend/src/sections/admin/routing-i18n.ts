@@ -95,7 +95,9 @@ function signedScore(value: number) {
 }
 
 function formatMs(value?: number | null) {
-  return value == null ? '-' : `${value.toFixed(0)}ms`;
+  if (value == null) return '-';
+  if (value < 1000) return `${Math.round(value)}ms`;
+  return `${(value / 1000).toFixed(2)}s`;
 }
 
 function formatNumber(value?: number | null, digits = 1) {

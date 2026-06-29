@@ -221,6 +221,8 @@ function detailText(
     `${t('dashboard.stats.columns.tokens')}: ${formatDashboardTokens(item.total_tokens)}`,
   ];
   if (showLatency) {
+    parts.push(`${t('requestRecords.responseHeaders')}: ${formatMs(item.avg_response_headers_ms)}`);
+    parts.push(`${t('requestRecords.firstChar')}: ${formatMs(item.avg_ttfb_ms)}`);
     parts.push(`${t('dashboard.stats.columns.avgLatency')}: ${formatMs(item.avg_latency_ms)}`);
     parts.push(`${t('dashboard.stats.columns.firstOutput')}: ${formatMs(item.avg_first_output_ms)}`);
   }

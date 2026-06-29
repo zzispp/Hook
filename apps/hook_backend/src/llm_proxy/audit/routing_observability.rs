@@ -68,8 +68,8 @@ fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, 
         schema_tool_call_failure_count: schema_tool_call_failure_count(input),
         latency_sum_ms: input.latency_ms.unwrap_or_default().max(0),
         latency_sample_count: sample_count(input.latency_ms),
-        ttfb_sum_ms: effective_first_byte_time_ms(input).unwrap_or_default().max(0),
-        ttfb_sample_count: sample_count(effective_first_byte_time_ms(input)),
+        ttfb_sum_ms: effective_first_token_time_ms(input).unwrap_or_default().max(0),
+        ttfb_sample_count: sample_count(effective_first_token_time_ms(input)),
         output_tokens,
         tps_latency_sum_ms: tps_latency(input, output_tokens),
         tps_sample_count: sample_count(input.latency_ms).min(output_tokens.signum()),
@@ -94,7 +94,7 @@ fn context_delta(input: &AttemptAuditInput, route: RouteIdentity, observed_at: t
         first_output_success_count: first_output_success_count(input),
         first_output_failure_count: first_output_failure_count(input),
         latency_ms: input.latency_ms.map(|value| value.max(0)),
-        ttfb_ms: effective_first_byte_time_ms(input).map(|value| value.max(0)),
+        ttfb_ms: effective_first_token_time_ms(input).map(|value| value.max(0)),
         output_tokens,
         tps_latency_ms: tps_latency(input, output_tokens),
         observed_at,
@@ -180,7 +180,7 @@ fn sample_count(value: Option<i64>) -> i64 {
     i64::from(value.is_some_and(|value| value >= 0))
 }
 
-fn effective_first_byte_time_ms(input: &AttemptAuditInput) -> Option<i64> {
+fn effective_first_token_time_ms(input: &AttemptAuditInput) -> Option<i64> {
     input.first_output_time_ms.or(input.first_byte_time_ms)
 }
 

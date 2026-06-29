@@ -38,6 +38,9 @@ pub(in crate::dashboard) async fn summary(store: &DashboardStore, query: Dashboa
         COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens, \
         COALESCE(SUM(total_cost), 0) AS total_cost, \
         COALESCE(SUM(failed_count), 0)::bigint AS failed_count, \
+        COALESCE(SUM(total_latency_ms), 0)::double precision / NULLIF(COALESCE(SUM(latency_sample_count), 0), 0)::double precision AS avg_total_latency_ms, \
+        COALESCE(SUM(response_headers_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(response_headers_sample_count), 0), 0)::double precision AS avg_response_headers_ms, \
+        COALESCE(SUM(first_byte_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_byte_sample_count), 0), 0)::double precision AS avg_first_byte_ms, \
         COALESCE(SUM(first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms \
         FROM dashboard_user_usage_buckets {where_sql}"
     );
@@ -59,6 +62,9 @@ pub(in crate::dashboard) async fn time_series(
         COALESCE(SUM(total_cost), 0) AS total_cost, \
         COALESCE(SUM(request_count), 0)::bigint AS total_requests, \
         COALESCE(SUM(total_tokens), 0)::bigint AS total_tokens, \
+        COALESCE(SUM(total_latency_ms), 0)::double precision / NULLIF(COALESCE(SUM(latency_sample_count), 0), 0)::double precision AS avg_total_latency_ms, \
+        COALESCE(SUM(response_headers_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(response_headers_sample_count), 0), 0)::double precision AS avg_response_headers_ms, \
+        COALESCE(SUM(first_byte_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_byte_sample_count), 0), 0)::double precision AS avg_first_byte_ms, \
         COALESCE(SUM(first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms \
         FROM dashboard_user_usage_buckets {where_sql} \
         GROUP BY date \
@@ -146,6 +152,9 @@ fn summary_response(row: SummaryRow) -> DashboardUserUsageStatsResponse {
         total_tokens: row.total_tokens.unwrap_or_default(),
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
         error_rate: error_rate(failed_count, total_requests),
+        avg_total_latency_ms: row.avg_total_latency_ms,
+        avg_response_headers_ms: row.avg_response_headers_ms,
+        avg_first_byte_ms: row.avg_first_byte_ms,
         avg_first_output_ms: row.avg_first_output_ms,
     }
 }
@@ -156,6 +165,9 @@ fn time_series_point(row: TimeSeriesRow) -> DashboardUserStatsTimeSeriesPoint {
         total_cost: row.total_cost.unwrap_or(Decimal::ZERO),
         total_requests: row.total_requests.unwrap_or_default(),
         total_tokens: row.total_tokens.unwrap_or_default(),
+        avg_total_latency_ms: row.avg_total_latency_ms,
+        avg_response_headers_ms: row.avg_response_headers_ms,
+        avg_first_byte_ms: row.avg_first_byte_ms,
         avg_first_output_ms: row.avg_first_output_ms,
     }
 }
@@ -219,6 +231,9 @@ struct SummaryRow {
     total_tokens: Option<i64>,
     total_cost: Option<Decimal>,
     failed_count: Option<i64>,
+    avg_total_latency_ms: Option<f64>,
+    avg_response_headers_ms: Option<f64>,
+    avg_first_byte_ms: Option<f64>,
     avg_first_output_ms: Option<f64>,
 }
 
@@ -228,5 +243,8 @@ struct TimeSeriesRow {
     total_cost: Option<Decimal>,
     total_requests: Option<i64>,
     total_tokens: Option<i64>,
+    avg_total_latency_ms: Option<f64>,
+    avg_response_headers_ms: Option<f64>,
+    avg_first_byte_ms: Option<f64>,
     avg_first_output_ms: Option<f64>,
 }

@@ -162,6 +162,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::dashboard_period_i18n_additive::apply(manager).await?;
     super::request_record_partitioning_additive::apply(manager).await?;
     super::dashboard_request_metrics_additive::apply(manager).await?;
+    super::dashboard_recent_error_timing_additive::apply(manager).await?;
     super::provider_key_group_member_priority_additive::apply(manager).await?;
     super::provider_origin_additive::apply(manager).await?;
     super::provider_quick_import_sync_additive::apply(manager).await?;
