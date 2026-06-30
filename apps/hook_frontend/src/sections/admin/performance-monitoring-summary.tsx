@@ -41,12 +41,12 @@ export function SummaryGrid({ snapshot }: { snapshot?: PerformanceSnapshotPoint 
         value={formatMs(core?.p90_response_headers_ms)}
       />
       <MetricCard
-        label={t('requestRecords.firstChar')}
-        value={formatMs(core?.p90_ttfb_ms)}
+        label={t('requestRecords.firstByte')}
+        value={formatMs(core?.p90_first_byte_ms)}
       />
       <MetricCard
         label={t('requestRecords.firstToken')}
-        value={formatMs(core?.p90_first_output_ms)}
+        value={formatMs(core?.p90_first_token_ms)}
       />
       <MetricCard
         label={t('performanceMonitoring.metrics.tokensPerSecond')}
@@ -80,8 +80,8 @@ export function PerformanceDetailPanels({
           [t('performanceMonitoring.rows.retryCircuitBreaker'), `${fNumber(core?.retry_count ?? 0)} / ${fNumber(core?.circuit_breaker_count ?? 0)}`],
           [t('performanceMonitoring.rows.streamRequests'), fNumber(core?.stream_request_count ?? 0)],
           [t('requestRecords.responseHeaders'), `${formatMs(core?.p50_response_headers_ms)} / ${formatMs(core?.p90_response_headers_ms)} / ${formatMs(core?.p99_response_headers_ms)}`],
-          [t('requestRecords.firstChar'), `${formatMs(core?.p50_ttfb_ms)} / ${formatMs(core?.p90_ttfb_ms)} / ${formatMs(core?.p99_ttfb_ms)}`],
-          [t('requestRecords.firstToken'), `${formatMs(core?.p50_first_output_ms)} / ${formatMs(core?.p90_first_output_ms)} / ${formatMs(core?.p99_first_output_ms)}`],
+          [t('requestRecords.firstByte'), `${formatMs(core?.p50_first_byte_ms)} / ${formatMs(core?.p90_first_byte_ms)} / ${formatMs(core?.p99_first_byte_ms)}`],
+          [t('requestRecords.firstToken'), `${formatMs(core?.p50_first_token_ms)} / ${formatMs(core?.p90_first_token_ms)} / ${formatMs(core?.p99_first_token_ms)}`],
         ]}
       />
       <DetailPanel

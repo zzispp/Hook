@@ -2,7 +2,7 @@ use types::provider::{RoutingMetricSnapshot, RoutingMetricWindow, RoutingProfile
 
 use super::{
     scoring::math::{clamp_score, exploration_score, higher_is_better, lower_is_better, priority_score, soft_degraded, stale, success_score},
-    scoring::{LATENCY_BAD_MS, LATENCY_GOOD_MS, RoutingEmaSnapshot, RoutingScoreCandidate, TPS_HIGH, TPS_LOW, TTFB_BAD_MS, TTFB_GOOD_MS},
+    scoring::{FIRST_TOKEN_BAD_MS, FIRST_TOKEN_GOOD_MS, LATENCY_BAD_MS, LATENCY_GOOD_MS, RoutingEmaSnapshot, RoutingScoreCandidate, TPS_HIGH, TPS_LOW},
 };
 
 pub(super) fn normal_adjustment_components(
@@ -63,8 +63,8 @@ pub(super) fn recent_regression_penalty(profile: &RoutingProfile, candidate: &Ro
     }
     let success_gap = (success_score(&candidate.metric) - success_score(recent)).max(0.0) / 100.0;
     let latency_gap = gap_ratio(recent.latency_avg_ms, candidate.metric.latency_avg_ms, LATENCY_BAD_MS);
-    let ttfb_gap = gap_ratio(recent.ttfb_avg_ms, candidate.metric.ttfb_avg_ms, TTFB_BAD_MS);
-    clamp_score((success_gap * 0.6 + latency_gap * 0.2 + ttfb_gap * 0.2) * profile.stale_metric_penalty)
+    let first_token_gap = gap_ratio(recent.first_token_avg_ms, candidate.metric.first_token_avg_ms, FIRST_TOKEN_BAD_MS);
+    clamp_score((success_gap * 0.6 + latency_gap * 0.2 + first_token_gap * 0.2) * profile.stale_metric_penalty)
 }
 
 pub(super) fn selected_reason(score: f64, components: &[ScoreComponent]) -> String {
@@ -171,8 +171,9 @@ fn ema_composite_score(weights: &RoutingProfileWeights, ema: RoutingEmaSnapshot)
     let mut score = WeightedScore::default();
     score.push(clamp_score(ema.success_rate * 100.0), weights.success);
     score.push_optional(
-        ema.ttfb_avg_ms.map(|value| lower_is_better(Some(value), TTFB_GOOD_MS, TTFB_BAD_MS)),
-        weights.ttfb,
+        ema.first_token_avg_ms
+            .map(|value| lower_is_better(Some(value), FIRST_TOKEN_GOOD_MS, FIRST_TOKEN_BAD_MS)),
+        weights.first_token,
     );
     score.push_optional(
         ema.latency_avg_ms.map(|value| lower_is_better(Some(value), LATENCY_GOOD_MS, LATENCY_BAD_MS)),
@@ -186,8 +187,10 @@ fn window_composite_score(weights: &RoutingProfileWeights, metric: &RoutingMetri
     let mut score = WeightedScore::default();
     score.push(success_score(metric), weights.success);
     score.push_optional(
-        metric.ttfb_avg_ms.map(|value| lower_is_better(Some(value), TTFB_GOOD_MS, TTFB_BAD_MS)),
-        weights.ttfb,
+        metric
+            .first_token_avg_ms
+            .map(|value| lower_is_better(Some(value), FIRST_TOKEN_GOOD_MS, FIRST_TOKEN_BAD_MS)),
+        weights.first_token,
     );
     score.push_optional(
         metric.latency_avg_ms.map(|value| lower_is_better(Some(value), LATENCY_GOOD_MS, LATENCY_BAD_MS)),

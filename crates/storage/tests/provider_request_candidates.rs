@@ -16,7 +16,7 @@ use types::provider::{RequestCandidateListRequest, RequestUpstreamCost};
 async fn request_candidate_storage_creates_success_record() {
     let record = request_candidate_record("record-1", "success");
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
-        .append_exec_results(exec_results(11))
+        .append_exec_results(exec_results(32))
         .append_query_results([[record.clone()]])
         .append_query_results([empty_sync_state_rows()])
         .append_query_results([[record.clone()]])
@@ -97,7 +97,7 @@ async fn request_candidate_storage_updates_existing_attempt() {
         }])
         .append_query_results([[request_candidate_record("record-1", "success")]])
         .append_query_results([[sync_state_row("record-1")]])
-        .append_exec_results(exec_results(18))
+        .append_exec_results(exec_results(32))
         .append_query_results([Vec::<request_records::Model>::new()])
         .append_query_results([[summary_record("success")]])
         .into_connection();
@@ -243,7 +243,7 @@ fn success_input() -> RequestCandidateRecordInput {
         latency_ms: Some(42),
         response_headers_time_ms: Some(10),
         first_sse_event_time_ms: Some(11),
-        first_output_time_ms: Some(12),
+        first_token_time_ms: Some(12),
         first_byte_time_ms: Some(12),
         error_type: None,
         error_message: None,
@@ -284,7 +284,7 @@ fn success_patch() -> RequestCandidateRecordPatch {
         latency_ms: Some(42),
         response_headers_time_ms: Some(10),
         first_sse_event_time_ms: Some(11),
-        first_output_time_ms: Some(12),
+        first_token_time_ms: Some(12),
         first_byte_time_ms: Some(12),
         error_type: None,
         error_message: None,
@@ -375,7 +375,7 @@ fn request_candidate_record(id: &str, status: &str) -> storage::provider::record
         latency_ms: Some(42),
         response_headers_time_ms: Some(10),
         first_sse_event_time_ms: Some(11),
-        first_output_time_ms: Some(12),
+        first_token_time_ms: Some(12),
         first_byte_time_ms: Some(12),
         error_type: failed_error_type(status),
         error_message: failed_error_message(status),
@@ -395,7 +395,7 @@ fn scheduled_candidate_record(id: &str) -> storage::provider::record::request_ca
     record.latency_ms = None;
     record.response_headers_time_ms = None;
     record.first_sse_event_time_ms = None;
-    record.first_output_time_ms = None;
+    record.first_token_time_ms = None;
     record.first_byte_time_ms = None;
     record
 }
@@ -519,7 +519,7 @@ fn summary_record(status: &str) -> request_records::Model {
         billing_snapshot: None,
         response_headers_time_ms: Some(10),
         first_sse_event_time_ms: Some(11),
-        first_output_time_ms: Some(12),
+        first_token_time_ms: Some(12),
         first_byte_time_ms: Some(12),
         total_latency_ms: Some(42),
         candidate_count: 1,

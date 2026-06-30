@@ -82,7 +82,7 @@ macro_rules! request_record {
             billing_multiplier: Some(Decimal::new(2, 0)),
             response_headers_time_ms: Some(10),
             first_sse_event_time_ms: Some(11),
-            first_output_time_ms: Some(12),
+            first_token_time_ms: Some(12),
             first_byte_time_ms: Some(12),
             total_latency_ms: Some(42),
             candidate_count: 1,

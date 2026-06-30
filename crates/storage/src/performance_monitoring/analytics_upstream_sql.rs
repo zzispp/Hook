@@ -12,16 +12,16 @@ pub(super) fn upstream_summary_sql(plan: &SnapshotQueryPlan, filters: &UpstreamF
     push_histogram_ctes(&mut query, filters, HistogramCteInput::empty());
     let slow_index = query.push(slow_threshold_ms);
     query.sql.push_str(&format!(
-        ") SELECT aggregated.*, {p90_latency}, {p99_latency}, {p90_ttfb}, {p99_ttfb}, {p90_response_headers}, {p99_response_headers}, \
-        {p90_first_output}, {p99_first_output}, {slow_count} FROM aggregated",
+        ") SELECT aggregated.*, {p90_latency}, {p99_latency}, {p90_first_byte}, {p99_first_byte}, {p90_response_headers}, {p99_response_headers}, \
+        {p90_first_token}, {p99_first_token}, {slow_count} FROM aggregated",
         p90_latency = percentile_expr("latency", "0.90", "p90_latency_ms"),
         p99_latency = percentile_expr("latency", "0.99", "p99_latency_ms"),
-        p90_ttfb = percentile_expr("ttfb", "0.90", "p90_ttfb_ms"),
-        p99_ttfb = percentile_expr("ttfb", "0.99", "p99_ttfb_ms"),
+        p90_first_byte = percentile_expr("first_byte", "0.90", "p90_first_byte_ms"),
+        p99_first_byte = percentile_expr("first_byte", "0.99", "p99_first_byte_ms"),
         p90_response_headers = percentile_expr("response_headers", "0.90", "p90_response_headers_ms"),
         p99_response_headers = percentile_expr("response_headers", "0.99", "p99_response_headers_ms"),
-        p90_first_output = percentile_expr("first_output", "0.90", "p90_first_output_ms"),
-        p99_first_output = percentile_expr("first_output", "0.99", "p99_first_output_ms"),
+        p90_first_token = percentile_expr("first_token", "0.90", "p90_first_token_ms"),
+        p99_first_token = percentile_expr("first_token", "0.99", "p99_first_token_ms"),
         slow_count = slow_count_expr(slow_index, "slow_request_count"),
     ));
     query.finish()
@@ -36,17 +36,17 @@ pub(super) fn upstream_providers_sql(plan: &SnapshotQueryPlan, filters: &Upstrea
     let slow_index = query.push(slow_threshold_ms);
     let limit_index = query.push(i64::try_from(limit).unwrap_or(MAX_ANALYTICS_LIMIT as i64));
     query.sql.push_str(&format!(
-        ") SELECT aggregated.*, {p90_latency}, {p99_latency}, {p90_ttfb}, {p99_ttfb}, {p90_response_headers}, {p99_response_headers}, \
-        {p90_first_output}, {p99_first_output}, {slow_count} \
+        ") SELECT aggregated.*, {p90_latency}, {p99_latency}, {p90_first_byte}, {p99_first_byte}, {p90_response_headers}, {p99_response_headers}, \
+        {p90_first_token}, {p99_first_token}, {slow_count} \
         FROM aggregated ORDER BY request_count DESC, provider_name ASC LIMIT ${limit_index}",
         p90_latency = provider_percentile_expr("latency", "0.90", "p90_latency_ms"),
         p99_latency = provider_percentile_expr("latency", "0.99", "p99_latency_ms"),
-        p90_ttfb = provider_percentile_expr("ttfb", "0.90", "p90_ttfb_ms"),
-        p99_ttfb = provider_percentile_expr("ttfb", "0.99", "p99_ttfb_ms"),
+        p90_first_byte = provider_percentile_expr("first_byte", "0.90", "p90_first_byte_ms"),
+        p99_first_byte = provider_percentile_expr("first_byte", "0.99", "p99_first_byte_ms"),
         p90_response_headers = provider_percentile_expr("response_headers", "0.90", "p90_response_headers_ms"),
         p99_response_headers = provider_percentile_expr("response_headers", "0.99", "p99_response_headers_ms"),
-        p90_first_output = provider_percentile_expr("first_output", "0.90", "p90_first_output_ms"),
-        p99_first_output = provider_percentile_expr("first_output", "0.99", "p99_first_output_ms"),
+        p90_first_token = provider_percentile_expr("first_token", "0.90", "p90_first_token_ms"),
+        p99_first_token = provider_percentile_expr("first_token", "0.99", "p99_first_token_ms"),
         slow_count = provider_slow_count_expr(slow_index, "slow_request_count"),
     ));
     query.finish()
@@ -71,16 +71,16 @@ fn upstream_aggregate_sql() -> String {
     format!(
         "SELECT COALESCE(SUM(request_count), 0)::bigint AS request_count, COALESCE(SUM(success_count), 0)::bigint AS success_count, \
         COALESCE(SUM(failed_count), 0)::bigint AS error_count, COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens, \
-        {} AS avg_output_tps, {} AS avg_ttfb_ms, {} AS avg_latency_ms, {} AS avg_response_headers_ms, \
-        {} AS avg_first_output_ms, COALESCE(SUM(tps_sample_count), 0)::bigint AS tps_sample_count, \
-        COALESCE(SUM(latency_sample_count), 0)::bigint AS latency_sample_count, COALESCE(SUM(ttfb_sample_count), 0)::bigint AS ttfb_sample_count, \
+        {} AS avg_output_tps, {} AS avg_first_byte_ms, {} AS avg_latency_ms, {} AS avg_response_headers_ms, \
+        {} AS avg_first_token_ms, COALESCE(SUM(tps_sample_count), 0)::bigint AS tps_sample_count, \
+        COALESCE(SUM(latency_sample_count), 0)::bigint AS latency_sample_count, COALESCE(SUM(first_byte_sample_count), 0)::bigint AS first_byte_sample_count, \
         COALESCE(SUM(response_headers_sample_count), 0)::bigint AS response_headers_sample_count, \
-        COALESCE(SUM(first_output_sample_count), 0)::bigint AS first_output_sample_count FROM filtered",
+        COALESCE(SUM(first_token_sample_count), 0)::bigint AS first_token_sample_count FROM filtered",
         tps_expr(),
-        avg_expr("ttfb_total_ms", "ttfb_sample_count"),
+        avg_expr("first_byte_total_ms", "first_byte_sample_count"),
         avg_expr("latency_total_ms", "latency_sample_count"),
         avg_expr("response_headers_total_ms", "response_headers_sample_count"),
-        avg_expr("first_output_total_ms", "first_output_sample_count")
+        avg_expr("first_token_total_ms", "first_token_sample_count")
     )
 }
 
@@ -89,17 +89,17 @@ fn upstream_provider_aggregate_sql() -> String {
         "SELECT COALESCE(provider_id, 'unknown') AS provider_id, COALESCE(MAX(provider_name), COALESCE(provider_id, 'unknown')) AS provider_name, \
         COALESCE(SUM(request_count), 0)::bigint AS request_count, COALESCE(SUM(success_count), 0)::bigint AS success_count, \
         COALESCE(SUM(failed_count), 0)::bigint AS error_count, COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens, \
-        {} AS avg_output_tps, {} AS avg_ttfb_ms, {} AS avg_latency_ms, {} AS avg_response_headers_ms, \
-        {} AS avg_first_output_ms, COALESCE(SUM(tps_sample_count), 0)::bigint AS tps_sample_count, \
-        COALESCE(SUM(latency_sample_count), 0)::bigint AS latency_sample_count, COALESCE(SUM(ttfb_sample_count), 0)::bigint AS ttfb_sample_count, \
+        {} AS avg_output_tps, {} AS avg_first_byte_ms, {} AS avg_latency_ms, {} AS avg_response_headers_ms, \
+        {} AS avg_first_token_ms, COALESCE(SUM(tps_sample_count), 0)::bigint AS tps_sample_count, \
+        COALESCE(SUM(latency_sample_count), 0)::bigint AS latency_sample_count, COALESCE(SUM(first_byte_sample_count), 0)::bigint AS first_byte_sample_count, \
         COALESCE(SUM(response_headers_sample_count), 0)::bigint AS response_headers_sample_count, \
-        COALESCE(SUM(first_output_sample_count), 0)::bigint AS first_output_sample_count \
+        COALESCE(SUM(first_token_sample_count), 0)::bigint AS first_token_sample_count \
         FROM filtered GROUP BY provider_id",
         tps_expr(),
-        avg_expr("ttfb_total_ms", "ttfb_sample_count"),
+        avg_expr("first_byte_total_ms", "first_byte_sample_count"),
         avg_expr("latency_total_ms", "latency_sample_count"),
         avg_expr("response_headers_total_ms", "response_headers_sample_count"),
-        avg_expr("first_output_total_ms", "first_output_sample_count")
+        avg_expr("first_token_total_ms", "first_token_sample_count")
     )
 }
 
@@ -108,14 +108,14 @@ fn upstream_timeline_aggregate_sql() -> String {
         "SELECT bucket_started_at, bucket_ended_at, COALESCE(provider_id, 'unknown') AS provider_id, COALESCE(MAX(provider_name), COALESCE(provider_id, 'unknown')) AS provider_name, \
         COALESCE(SUM(request_count), 0)::bigint AS request_count, COALESCE(SUM(success_count), 0)::bigint AS success_count, \
         COALESCE(SUM(failed_count), 0)::bigint AS error_count, COALESCE(SUM(output_tokens), 0)::bigint AS output_tokens, \
-        {} AS avg_output_tps, {} AS avg_ttfb_ms, {} AS avg_latency_ms, {} AS avg_response_headers_ms, \
-        {} AS avg_first_output_ms \
+        {} AS avg_output_tps, {} AS avg_first_byte_ms, {} AS avg_latency_ms, {} AS avg_response_headers_ms, \
+        {} AS avg_first_token_ms \
         FROM filtered GROUP BY bucket_started_at, bucket_ended_at, provider_id",
         tps_expr(),
-        avg_expr("ttfb_total_ms", "ttfb_sample_count"),
+        avg_expr("first_byte_total_ms", "first_byte_sample_count"),
         avg_expr("latency_total_ms", "latency_sample_count"),
         avg_expr("response_headers_total_ms", "response_headers_sample_count"),
-        avg_expr("first_output_total_ms", "first_output_sample_count")
+        avg_expr("first_token_total_ms", "first_token_sample_count")
     )
 }
 

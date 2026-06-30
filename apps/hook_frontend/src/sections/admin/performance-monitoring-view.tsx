@@ -136,16 +136,16 @@ function AnalyticsCharts({
       </Grid>
       <Grid size={{ xs: 12, lg: 6 }}>
         <PercentileChart
-          mode="ttfb"
+          mode="first_byte"
           points={percentiles}
-          title={t('performanceMonitoring.charts.ttfbPercentiles')}
+          title={t('performanceMonitoring.charts.firstBytePercentiles')}
         />
       </Grid>
       <Grid size={{ xs: 12, lg: 6 }}>
         <PercentileChart
-          mode="first_output"
+          mode="first_token"
           points={percentiles}
-          title={t('performanceMonitoring.charts.firstOutputPercentiles')}
+          title={t('performanceMonitoring.charts.firstTokenPercentiles')}
         />
       </Grid>
       <Grid size={{ xs: 12, lg: 6 }}>

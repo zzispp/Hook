@@ -22,7 +22,8 @@ import {
   DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
   DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS,
   DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS,
-  DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS,
+  DEFAULT_PROVIDER_STREAM_FIRST_TOKEN_TIMEOUT_SECONDS,
+  DEFAULT_PROVIDER_STREAM_RESPONSE_HEADERS_TIMEOUT_SECONDS,
 } from './provider-management-utils';
 
 type Props = {
@@ -278,6 +279,16 @@ function ProviderRequestConfigFields({
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
         <TextFieldRow
           type="number"
+          label={t('providers.streamResponseHeadersTimeoutSeconds')}
+          value={form.stream_response_headers_timeout_seconds}
+          placeholder={String(DEFAULT_PROVIDER_STREAM_RESPONSE_HEADERS_TIMEOUT_SECONDS)}
+          helperText={t('providers.defaultWhenBlank')}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, stream_response_headers_timeout_seconds: value }))
+          }
+        />
+        <TextFieldRow
+          type="number"
           label={t('providers.streamFirstByteTimeoutSeconds')}
           value={form.stream_first_byte_timeout_seconds}
           placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS)}
@@ -286,11 +297,11 @@ function ProviderRequestConfigFields({
         />
         <TextFieldRow
           type="number"
-          label={t('providers.streamFirstOutputTimeoutSeconds')}
-          value={form.stream_first_output_timeout_seconds}
-          placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS)}
+          label={t('providers.streamFirstTokenTimeoutSeconds')}
+          value={form.stream_first_token_timeout_seconds}
+          placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_TOKEN_TIMEOUT_SECONDS)}
           helperText={t('providers.defaultWhenBlank')}
-          onChange={(value) => setForm((current) => ({ ...current, stream_first_output_timeout_seconds: value }))}
+          onChange={(value) => setForm((current) => ({ ...current, stream_first_token_timeout_seconds: value }))}
         />
         <TextFieldRow
           type="number"

@@ -18,13 +18,13 @@ async fn provider_aggregation_returns_stage_latency_averages() {
 
     assert_eq!(providers[0].avg_response_headers_ms, Some(40.0));
     assert_eq!(providers[0].avg_first_byte_ms, Some(90.0));
-    assert_eq!(providers[0].avg_first_output_ms, Some(360.0));
+    assert_eq!(providers[0].avg_first_token_ms, Some(360.0));
     assert_eq!(providers[0].avg_response_time_ms, 300.0);
     let logs = connection.into_transaction_log();
     let sql = &logs[0].statements()[0].sql;
     assert!(sql.contains("response_headers_total_ms"), "{sql}");
     assert!(sql.contains("first_byte_total_ms"), "{sql}");
-    assert!(sql.contains("first_output_total_ms"), "{sql}");
+    assert!(sql.contains("first_token_total_ms"), "{sql}");
     assert!(sql.contains("total_latency_ms"), "{sql}");
 }
 
@@ -59,7 +59,7 @@ fn provider_row() -> BTreeMap<&'static str, Value> {
         ("latency_sample_count", Value::from(3_i64)),
         ("avg_response_headers_ms", Value::from(40.0_f64)),
         ("avg_first_byte_ms", Value::from(90.0_f64)),
-        ("avg_first_output_ms", Value::from(360.0_f64)),
+        ("avg_first_token_ms", Value::from(360.0_f64)),
     ])
 }
 

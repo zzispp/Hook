@@ -22,8 +22,8 @@ pub struct Model {
     pub response_headers_sample_count: i64,
     pub first_byte_total_ms: i64,
     pub first_byte_sample_count: i64,
-    pub first_output_total_ms: i64,
-    pub first_output_sample_count: i64,
+    pub first_token_total_ms: i64,
+    pub first_token_sample_count: i64,
     pub created_at: TimeDateTimeWithTimeZone,
     pub updated_at: TimeDateTimeWithTimeZone,
 }

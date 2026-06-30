@@ -58,10 +58,10 @@ where
 {
     let now = time::OffsetDateTime::now_utc();
     let latency = average_decimal(delta.latency_sum_ms, delta.latency_sample_count);
-    let ttfb = average_decimal(delta.ttfb_sum_ms, delta.ttfb_sample_count);
+    let first_token = average_decimal(delta.first_token_sum_ms, delta.first_token_sample_count);
     let output_tps = output_tps(&delta);
     let mut params = Vec::new();
-    let values = route_state_values(&delta, success_rate(&delta), latency, ttfb, output_tps, delta.request_count.max(0), now)
+    let values = route_state_values(&delta, success_rate(&delta), latency, first_token, output_tps, delta.request_count.max(0), now)
         .into_iter()
         .map(|value| push(&mut params, value))
         .collect::<Vec<_>>()
@@ -96,8 +96,8 @@ struct RoutingMetricRow {
     request_count: i64,
     success_count: i64,
     failure_count: i64,
-    first_output_success_count: i64,
-    first_output_failure_count: i64,
+    first_token_success_count: i64,
+    first_token_failure_count: i64,
     timeout_count: i64,
     rate_limited_count: i64,
     server_error_count: i64,
@@ -107,8 +107,8 @@ struct RoutingMetricRow {
     schema_tool_call_failure_count: i64,
     latency_sum_ms: i64,
     latency_sample_count: i64,
-    ttfb_sum_ms: i64,
-    ttfb_sample_count: i64,
+    first_token_sum_ms: i64,
+    first_token_sample_count: i64,
     output_tokens: i64,
     tps_latency_sum_ms: i64,
     upstream_total_cost: Decimal,
@@ -153,8 +153,8 @@ fn snapshot(row: &RoutingMetricRow, request_count: u64) -> RoutingMetricSnapshot
         request_count,
         success_count: u64_value(row.success_count),
         failure_count: u64_value(row.failure_count),
-        first_output_success_count: u64_value(row.first_output_success_count),
-        first_output_failure_count: u64_value(row.first_output_failure_count),
+        first_token_success_count: u64_value(row.first_token_success_count),
+        first_token_failure_count: u64_value(row.first_token_failure_count),
         timeout_count: u64_value(row.timeout_count),
         rate_limited_count: u64_value(row.rate_limited_count),
         server_error_count: u64_value(row.server_error_count),
@@ -163,7 +163,7 @@ fn snapshot(row: &RoutingMetricRow, request_count: u64) -> RoutingMetricSnapshot
         stream_abnormal_end_count: u64_value(row.stream_abnormal_end_count),
         schema_tool_call_failure_count: u64_value(row.schema_tool_call_failure_count),
         latency_avg_ms: average(row.latency_sum_ms, row.latency_sample_count),
-        ttfb_avg_ms: average(row.ttfb_sum_ms, row.ttfb_sample_count),
+        first_token_avg_ms: average(row.first_token_sum_ms, row.first_token_sample_count),
         output_tps: tps(row.output_tokens, row.tps_latency_sum_ms),
         upstream_total_cost: Some(row.upstream_total_cost),
         total_tokens: u64_value(row.total_tokens),

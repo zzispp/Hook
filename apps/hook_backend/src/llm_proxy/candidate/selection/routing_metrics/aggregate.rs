@@ -47,8 +47,8 @@ pub(super) struct AggregateMetricRecord {
     pub(super) last_seen_at: Option<time::OffsetDateTime>,
     latency_sum_ms: f64,
     latency_count: u64,
-    ttfb_sum_ms: f64,
-    ttfb_count: u64,
+    first_token_sum_ms: f64,
+    first_token_count: u64,
     tps_output_tokens: u64,
     tps_latency_sum_ms: f64,
 }
@@ -69,10 +69,10 @@ impl AggregateMetricRecord {
         self.snapshot.sample_count += record.snapshot.sample_count;
         self.snapshot.upstream_total_cost = decimal_sum(self.snapshot.upstream_total_cost, record.snapshot.upstream_total_cost);
         self.add_latency(record);
-        self.add_ttfb(record);
+        self.add_first_token(record);
         self.add_tps(record);
         self.snapshot.latency_avg_ms = average(self.latency_sum_ms, self.latency_count);
-        self.snapshot.ttfb_avg_ms = average(self.ttfb_sum_ms, self.ttfb_count);
+        self.snapshot.first_token_avg_ms = average(self.first_token_sum_ms, self.first_token_count);
         self.snapshot.output_tps = average_tps(self.tps_output_tokens, self.tps_latency_sum_ms);
         self.last_seen_at = max_time(self.last_seen_at, record.last_seen_at);
     }
@@ -84,10 +84,10 @@ impl AggregateMetricRecord {
         }
     }
 
-    fn add_ttfb(&mut self, record: &RoutingMetricRecord) {
-        if let Some(value) = record.snapshot.ttfb_avg_ms {
-            self.ttfb_sum_ms += value * record.snapshot.sample_count as f64;
-            self.ttfb_count += record.snapshot.sample_count;
+    fn add_first_token(&mut self, record: &RoutingMetricRecord) {
+        if let Some(value) = record.snapshot.first_token_avg_ms {
+            self.first_token_sum_ms += value * record.snapshot.sample_count as f64;
+            self.first_token_count += record.snapshot.sample_count;
         }
     }
 

@@ -297,9 +297,9 @@ pub struct DashboardSummary {
     pub profit: Decimal,
     pub profit_rate: f64,
     pub avg_latency_ms: Option<f64>,
-    pub avg_ttfb_ms: Option<f64>,
+    pub avg_first_byte_ms: Option<f64>,
     pub avg_response_headers_ms: Option<f64>,
-    pub avg_first_output_ms: Option<f64>,
+    pub avg_first_token_ms: Option<f64>,
     pub model_count: i64,
     pub provider_count: i64,
     pub user_count: i64,
@@ -322,9 +322,9 @@ pub struct DashboardTimeseriesPoint {
     pub profit: Decimal,
     pub profit_rate: f64,
     pub avg_latency_ms: Option<f64>,
-    pub avg_ttfb_ms: Option<f64>,
+    pub avg_first_byte_ms: Option<f64>,
     pub avg_response_headers_ms: Option<f64>,
-    pub avg_first_output_ms: Option<f64>,
+    pub avg_first_token_ms: Option<f64>,
     pub cache_hit_rate: f64,
 }
 
@@ -351,9 +351,9 @@ pub struct DashboardBreakdownItem {
     pub profit: Decimal,
     pub profit_rate: f64,
     pub avg_latency_ms: Option<f64>,
-    pub avg_ttfb_ms: Option<f64>,
+    pub avg_first_byte_ms: Option<f64>,
     pub avg_response_headers_ms: Option<f64>,
-    pub avg_first_output_ms: Option<f64>,
+    pub avg_first_token_ms: Option<f64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -524,7 +524,7 @@ pub struct DashboardUserUsageStatsResponse {
     pub avg_total_latency_ms: Option<f64>,
     pub avg_response_headers_ms: Option<f64>,
     pub avg_first_byte_ms: Option<f64>,
-    pub avg_first_output_ms: Option<f64>,
+    pub avg_first_token_ms: Option<f64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -537,7 +537,7 @@ pub struct DashboardUserStatsTimeSeriesPoint {
     pub avg_total_latency_ms: Option<f64>,
     pub avg_response_headers_ms: Option<f64>,
     pub avg_first_byte_ms: Option<f64>,
-    pub avg_first_output_ms: Option<f64>,
+    pub avg_first_token_ms: Option<f64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -597,7 +597,7 @@ pub struct DashboardProviderAggregationItem {
     pub avg_response_time_ms: f64,
     pub avg_response_headers_ms: Option<f64>,
     pub avg_first_byte_ms: Option<f64>,
-    pub avg_first_output_ms: Option<f64>,
+    pub avg_first_token_ms: Option<f64>,
     pub success_rate: f64,
     pub error_count: i64,
     pub cache_creation_tokens: i64,

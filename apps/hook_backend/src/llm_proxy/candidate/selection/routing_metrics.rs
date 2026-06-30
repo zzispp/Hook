@@ -168,7 +168,7 @@ impl RouteStateCatalog {
             .find(|record| record.profile_id == profile_id.as_str() && record.route == *route && route_state_fingerprint_matches(record, fingerprints))?;
         Some(RoutingEmaSnapshot {
             success_rate: record.ema_success_rate,
-            ttfb_avg_ms: record.ema_ttfb_ms,
+            first_token_avg_ms: record.ema_first_token_ms,
             latency_avg_ms: record.ema_latency_ms,
             output_tps: record.ema_output_tps,
             sample_count: record.sample_count,

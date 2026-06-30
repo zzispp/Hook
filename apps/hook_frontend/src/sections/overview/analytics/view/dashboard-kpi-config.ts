@@ -61,8 +61,8 @@ export const KPI_CARD_CONFIGS: KpiCardConfig[] = [
     label: (t, period) => t('dashboard.stats.period.firstToken', { period }),
     color: 'secondary',
     icon: 'solar:clock-circle-bold',
-    value: (summary) => formatMs(summary?.avg_first_output_ms),
-    series: (points) => points.map((point) => point.avg_first_output_ms ?? 0),
+    value: (summary) => formatMs(summary?.avg_first_token_ms),
+    series: (points) => points.map((point) => point.avg_first_token_ms ?? 0),
   },
   {
     label: (t, period) => t('dashboard.stats.period.apiKeys', { period }),

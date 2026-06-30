@@ -112,7 +112,7 @@ export function SummaryCard({
     avg_total_latency_ms?: number | null;
     avg_response_headers_ms?: number | null;
     avg_first_byte_ms?: number | null;
-    avg_first_output_ms?: number | null;
+    avg_first_token_ms?: number | null;
   };
 }) {
   const cards = summaryCards(t, locale, data);
@@ -210,7 +210,7 @@ function summaryCards(
     avg_total_latency_ms?: number | null;
     avg_response_headers_ms?: number | null;
     avg_first_byte_ms?: number | null;
-    avg_first_output_ms?: number | null;
+    avg_first_token_ms?: number | null;
   }
 ) {
   return [
@@ -235,12 +235,12 @@ function summaryCards(
       value: formatMs(data?.avg_response_headers_ms),
     },
     {
-      label: t('requestRecords.firstChar'),
+      label: t('requestRecords.firstByte'),
       value: formatMs(data?.avg_first_byte_ms),
     },
     {
-      label: t('dashboard.stats.userStats.summary.avgFirstOutput'),
-      value: formatMs(data?.avg_first_output_ms),
+      label: t('dashboard.stats.userStats.summary.avgFirstToken'),
+      value: formatMs(data?.avg_first_token_ms),
     },
     {
       label: t('requestRecords.totalLatency'),

@@ -142,7 +142,7 @@ impl RequestCandidateRecord {
             latency_ms: self.latency_ms,
             response_headers_time_ms: self.response_headers_time_ms,
             first_sse_event_time_ms: self.first_sse_event_time_ms,
-            first_output_time_ms: self.first_output_time_ms,
+            first_token_time_ms: self.first_token_time_ms,
             first_byte_time_ms: self.first_byte_time_ms,
             error_type: self.error_type,
             error_message: self.error_message,

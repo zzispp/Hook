@@ -6,9 +6,9 @@ use req::Response as UpstreamResponse;
 use super::{
     LlmProxyError, LlmProxyState, affinity,
     attempt_log::{
-        AttemptCancelGuard, AttemptCancelHandle, SkippedAttemptInput, StartedAttemptInput, record_attempt_error, record_candidate_skipped_attempt,
-        record_probe_slot_timeout, record_rate_limit_rejection, record_send_error, record_skipped_attempt, record_started_attempt,
-        record_stream_candidate_watchdog_timeout,
+        AttemptCancelGuard, AttemptCancelHandle, SendErrorInput, SkippedAttemptInput, StartedAttemptInput, record_attempt_error,
+        record_candidate_skipped_attempt, record_probe_slot_timeout, record_rate_limit_rejection, record_send_error, record_skipped_attempt,
+        record_started_attempt, record_stream_candidate_watchdog_timeout,
     },
     failure_classification::{FailureDecision, classify_status},
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
@@ -23,6 +23,8 @@ use crate::llm_proxy::{
 };
 
 const SKIP_REASON_CODEX_CHAT_HISTORY_UNAVAILABLE: &str = "codex_chat_history_unavailable";
+const RESPONSE_HEADERS_TIMEOUT_ERROR_TYPE: &str = "response_headers_timeout";
+const UPSTREAM_TIMEOUT_ERROR_TYPE: &str = "upstream_timeout";
 
 enum AttemptCandidateOutcome {
     Continue,
@@ -197,15 +199,25 @@ async fn attempt_once(
         .await;
     }
     let request_timeout = timeout::non_stream_total_timeout(candidate, prepared.is_stream);
-    let response_start_timeout = timeout::response_start_timeout(candidate, prepared.is_stream);
-    let response = match execute_upstream_request(&state.http, request, response_start_timeout).await {
+    let response_headers_timeout = timeout::upstream_response_headers_timeout(candidate, prepared.is_stream);
+    let response = match execute_upstream_request(&state.http, request, response_headers_timeout).await {
         Ok(response) => {
             attempt_cancel.mark_response_started();
             response
         }
         Err(error) => {
             attempt_cancel.disarm();
-            let outcome = record_send_error(state, &prepared.request_id, candidate, retry_index, started, &error, last_error).await?;
+            let outcome = record_send_error(SendErrorInput {
+                state,
+                request_id: &prepared.request_id,
+                candidate,
+                retry_index,
+                started,
+                timeout_error_type: timeout_error_type(prepared.is_stream),
+                error: &error,
+                last_error,
+            })
+            .await?;
             affinity::invalidate_matching(state, candidate).await?;
             return Ok(option_response_outcome(outcome));
         }
@@ -308,8 +320,8 @@ struct StreamAttemptTaskContext {
 
 async fn execute_stream_candidate_task(input: StreamAttemptTaskInput) -> Result<StreamAttemptTaskOutput, LlmProxyError> {
     let (context, request) = stream_task_parts(input);
-    let response_start_timeout = timeout::response_start_timeout(&context.candidate, true);
-    let response = match execute_upstream_request(&context.state.http, request, response_start_timeout).await {
+    let response_headers_timeout = timeout::upstream_response_headers_timeout(&context.candidate, true);
+    let response = match execute_upstream_request(&context.state.http, request, response_headers_timeout).await {
         Ok(response) => {
             context.attempt_cancel.mark_response_started();
             response
@@ -352,15 +364,16 @@ fn stream_task_parts(input: StreamAttemptTaskInput) -> (StreamAttemptTaskContext
 async fn stream_send_error_task_output(context: &StreamAttemptTaskContext, error: req::ClientError) -> Result<StreamAttemptTaskOutput, LlmProxyError> {
     context.attempt_cancel.disarm();
     let mut last_error = None;
-    let outcome = record_send_error(
-        &context.state,
-        &context.request_id,
-        &context.candidate,
-        context.retry_index,
-        context.started,
-        &error,
-        &mut last_error,
-    )
+    let outcome = record_send_error(SendErrorInput {
+        state: &context.state,
+        request_id: &context.request_id,
+        candidate: &context.candidate,
+        retry_index: context.retry_index,
+        started: context.started,
+        timeout_error_type: RESPONSE_HEADERS_TIMEOUT_ERROR_TYPE,
+        error: &error,
+        last_error: &mut last_error,
+    })
     .await?;
     affinity::invalidate_matching(&context.state, &context.candidate).await?;
     Ok(StreamAttemptTaskOutput {
@@ -429,11 +442,7 @@ async fn stream_success_task_output(context: StreamAttemptTaskContext, response:
 
 fn stream_pre_output_failure_task_output(failure: stream_transport::StreamPreOutputFailure) -> StreamAttemptTaskOutput {
     StreamAttemptTaskOutput {
-        outcome: if failure.advance_candidate {
-            AttemptOnceOutcome::NextCandidate
-        } else {
-            AttemptOnceOutcome::ContinueCandidate
-        },
+        outcome: AttemptOnceOutcome::NextCandidate,
         last_failure: Some(transport::upstream_failure(failure.status)),
         last_error: Some(LlmProxyError::Upstream(format!("{}: {}", failure.error_type, failure.message))),
     }
@@ -508,13 +517,20 @@ fn codex_history_skip_error(execution_state: &AttemptExecutionState) -> LlmProxy
 async fn execute_upstream_request(
     http: &req::ReqwestClient,
     request: req::Request,
-    response_start_timeout: Option<Duration>,
+    response_headers_timeout: Option<Duration>,
 ) -> Result<UpstreamResponse, req::ClientError> {
     let execute = http.execute(request);
-    match response_start_timeout {
+    match response_headers_timeout {
         Some(timeout) => tokio::time::timeout(timeout, execute).await.unwrap_or(Err(req::ClientError::Timeout)),
         None => execute.await,
     }
+}
+
+fn timeout_error_type(is_stream: bool) -> &'static str {
+    if is_stream {
+        return RESPONSE_HEADERS_TIMEOUT_ERROR_TYPE;
+    }
+    UPSTREAM_TIMEOUT_ERROR_TYPE
 }
 
 struct HandleUpstreamResponseInput<'a> {

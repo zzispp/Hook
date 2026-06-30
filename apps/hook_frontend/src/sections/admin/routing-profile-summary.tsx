@@ -25,7 +25,7 @@ type Props = {
 
 const WEIGHT_KEYS: Array<keyof RoutingProfileWeights> = [
   'success',
-  'ttfb',
+  'first_token',
   'latency',
   'tps',
   'cost',

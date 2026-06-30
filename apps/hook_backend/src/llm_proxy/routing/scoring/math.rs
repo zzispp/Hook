@@ -149,9 +149,9 @@ pub(super) fn decimal_f64(value: Decimal) -> Option<f64> {
 }
 
 fn effective_success_counts(metric: &RoutingMetricSnapshot) -> (u64, u64) {
-    let first_output_attempts = metric.first_output_success_count.saturating_add(metric.first_output_failure_count);
-    if first_output_attempts > 0 {
-        return (metric.first_output_success_count, first_output_attempts);
+    let first_token_attempts = metric.first_token_success_count.saturating_add(metric.first_token_failure_count);
+    if first_token_attempts > 0 {
+        return (metric.first_token_success_count, first_token_attempts);
     }
     (metric.success_count, metric.request_count)
 }

@@ -202,8 +202,8 @@ function CostSummary({ record }: { record: RequestRecord | null }) {
     [t('requestRecords.profit'), formatCost(profit(record))],
     [t('requestRecords.profitRate'), profitRate(record)],
     [t('requestRecords.responseHeaders'), record ? formatRequestTiming(record, 'response_headers') : '-'],
-    [t('requestRecords.firstChar'), record ? formatRequestTiming(record, 'first_byte') : '-'],
-    [t('requestRecords.firstToken'), record ? formatRequestTiming(record, 'first_output') : '-'],
+    [t('requestRecords.firstByte'), record ? formatRequestTiming(record, 'first_byte') : '-'],
+    [t('requestRecords.firstToken'), record ? formatRequestTiming(record, 'first_token') : '-'],
     [t('requestRecords.totalLatency'), formatDuration(record?.total_latency_ms)],
   ];
 

@@ -33,7 +33,7 @@ fn decision_candidates_without_metric_window_deserialize_with_default_window() {
         "rate_limited_count": 0,
         "server_error_count": 0,
         "latency_avg_ms": null,
-        "ttfb_avg_ms": null,
+        "first_token_avg_ms": null,
         "output_tps": null,
         "upstream_total_cost": null,
         "total_tokens": 0,
@@ -54,14 +54,14 @@ fn decision_candidates_without_metric_window_deserialize_with_default_window() {
 }
 
 #[test]
-fn legacy_routing_profile_payload_deserializes_new_tuning_defaults() {
+fn routing_profile_payload_deserializes_new_tuning_defaults() {
     let payload = r#"{
       "id": "balanced",
       "name": "Balanced",
-      "description": "legacy payload",
+        "description": "current payload",
       "weights": {
         "success": 0.28,
-        "ttfb": 0.19,
+        "first_token": 0.19,
         "latency": 0.17,
         "tps": 0.09,
         "cost": 0.15,
@@ -77,7 +77,7 @@ fn legacy_routing_profile_payload_deserializes_new_tuning_defaults() {
       "auto_tune_enabled": true
     }"#;
 
-    let profile: RoutingProfile = serde_json::from_str(payload).expect("legacy profile payload should deserialize");
+    let profile: RoutingProfile = serde_json::from_str(payload).expect("routing profile payload should deserialize");
 
     assert_eq!(profile.id, RoutingProfileId::Balanced);
     assert_eq!(profile.prior_sample_cap, default_prior_sample_cap());

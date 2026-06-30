@@ -81,7 +81,7 @@ pub struct Model {
     pub billing_snapshot: Option<String>,
     pub response_headers_time_ms: Option<i64>,
     pub first_sse_event_time_ms: Option<i64>,
-    pub first_output_time_ms: Option<i64>,
+    pub first_token_time_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub total_latency_ms: Option<i64>,
     pub candidate_count: i64,

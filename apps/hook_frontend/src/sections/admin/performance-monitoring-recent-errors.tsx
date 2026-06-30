@@ -42,7 +42,7 @@ export function RecentErrorsTable({ errors }: { errors: RecentPerformanceError[]
                 <TableCell>{t('performanceMonitoring.columns.errorType')}</TableCell>
                 <TableCell>{t('performanceMonitoring.columns.errorMessage')}</TableCell>
                 <TableCell align="right">{t('performanceMonitoring.columns.responseHeaders')}</TableCell>
-                <TableCell align="right">{t('requestRecords.firstChar')}</TableCell>
+                <TableCell align="right">{t('requestRecords.firstByte')}</TableCell>
                 <TableCell align="right">{t('requestRecords.firstToken')}</TableCell>
                 <TableCell align="right">{t('requestRecords.totalLatency')}</TableCell>
               </TableRow>
@@ -92,8 +92,8 @@ function ErrorRow({ error }: { error: RecentPerformanceError }) {
         </Typography>
       </TableCell>
       <TableCell align="right">{formatMs(error.response_headers_ms)}</TableCell>
-      <TableCell align="right">{formatMs(error.ttfb_ms)}</TableCell>
-      <TableCell align="right">{formatMs(error.first_output_ms)}</TableCell>
+      <TableCell align="right">{formatMs(error.first_byte_ms)}</TableCell>
+      <TableCell align="right">{formatMs(error.first_token_ms)}</TableCell>
       <TableCell align="right">{formatMs(error.latency_ms)}</TableCell>
     </TableRow>
   );

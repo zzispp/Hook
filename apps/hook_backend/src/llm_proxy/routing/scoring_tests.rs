@@ -34,14 +34,14 @@ fn recent_regression_degrades_fallback_metrics() {
     regressed.metric.request_count = 120;
     regressed.effective_sample_count = 120;
     regressed.metric.latency_avg_ms = Some(420.0);
-    regressed.metric.ttfb_avg_ms = Some(180.0);
+    regressed.metric.first_token_avg_ms = Some(180.0);
     regressed.recent_metric = Some(RoutingMetricSnapshot {
         request_count: 5,
         success_count: 2,
         failure_count: 3,
         sample_count: 5,
         latency_avg_ms: Some(2_400.0),
-        ttfb_avg_ms: Some(1_400.0),
+        first_token_avg_ms: Some(1_400.0),
         ..Default::default()
     });
 
@@ -69,7 +69,7 @@ fn ema_recent_penalizes_worse_recent_state_with_cap() {
     make_normal(&mut candidate, 40, 40);
     candidate.ema = Some(RoutingEmaSnapshot {
         success_rate: 0.20,
-        ttfb_avg_ms: Some(4_000.0),
+        first_token_avg_ms: Some(4_000.0),
         latency_avg_ms: Some(12_000.0),
         output_tps: Some(5.0),
         sample_count: 40,
@@ -89,11 +89,11 @@ fn ema_recent_rewards_better_recent_state_with_cap() {
     let mut candidate = candidate("key-ema-better", false);
     make_normal(&mut candidate, 30, 40);
     candidate.metric.latency_avg_ms = Some(6_000.0);
-    candidate.metric.ttfb_avg_ms = Some(2_000.0);
+    candidate.metric.first_token_avg_ms = Some(2_000.0);
     candidate.metric.output_tps = Some(8.0);
     candidate.ema = Some(RoutingEmaSnapshot {
         success_rate: 1.0,
-        ttfb_avg_ms: Some(150.0),
+        first_token_avg_ms: Some(150.0),
         latency_avg_ms: Some(300.0),
         output_tps: Some(120.0),
         sample_count: 40,
@@ -117,7 +117,7 @@ fn ema_recent_uses_profile_weight_and_cap() {
     make_normal(&mut candidate, 40, 40);
     candidate.ema = Some(RoutingEmaSnapshot {
         success_rate: 0.0,
-        ttfb_avg_ms: Some(4_000.0),
+        first_token_avg_ms: Some(4_000.0),
         latency_avg_ms: Some(12_000.0),
         output_tps: Some(1.0),
         sample_count: 40,
@@ -139,7 +139,7 @@ fn ema_recent_respects_profile_freshness_threshold() {
     make_normal(&mut candidate, 40, 40);
     candidate.ema = Some(RoutingEmaSnapshot {
         success_rate: 1.0,
-        ttfb_avg_ms: Some(150.0),
+        first_token_avg_ms: Some(150.0),
         latency_avg_ms: Some(300.0),
         output_tps: Some(120.0),
         sample_count: 40,
@@ -324,7 +324,7 @@ fn candidate(key_id: &str, is_cached: bool) -> RoutingScoreCandidate {
             success_count: 8,
             sample_count: 8,
             latency_avg_ms: Some(500.0),
-            ttfb_avg_ms: Some(200.0),
+            first_token_avg_ms: Some(200.0),
             output_tps: Some(40.0),
             ..Default::default()
         },
@@ -374,7 +374,7 @@ fn profile() -> RoutingProfile {
         description: "test".into(),
         weights: RoutingProfileWeights {
             success: 0.28,
-            ttfb: 0.19,
+            first_token: 0.19,
             latency: 0.17,
             tps: 0.09,
             cost: 0.15,

@@ -31,7 +31,7 @@ fn blend_weights_keeps_non_fixed_headroom_locked_and_priority_zero() {
 fn builtin_profiles_enable_auto_tune_by_default() {
     for id in [
         RoutingProfileId::Balanced,
-        RoutingProfileId::FirstByte,
+        RoutingProfileId::FirstToken,
         RoutingProfileId::HighTps,
         RoutingProfileId::CostOptimal,
         RoutingProfileId::HighAvailability,
@@ -85,10 +85,10 @@ fn metric(request_count: u64, quality_failures: u64) -> RoutingMetricRecord {
     }
 }
 
-fn weights(success: f64, ttfb: f64, latency: f64, tps: f64, cost: f64, headroom: f64, priority: f64) -> RoutingProfileWeights {
+fn weights(success: f64, first_token: f64, latency: f64, tps: f64, cost: f64, headroom: f64, priority: f64) -> RoutingProfileWeights {
     RoutingProfileWeights {
         success,
-        ttfb,
+        first_token,
         latency,
         tps,
         cost,
@@ -98,5 +98,5 @@ fn weights(success: f64, ttfb: f64, latency: f64, tps: f64, cost: f64, headroom:
 }
 
 fn sum(weights: &RoutingProfileWeights) -> f64 {
-    weights.success + weights.ttfb + weights.latency + weights.tps + weights.cost + weights.headroom + weights.priority
+    weights.success + weights.first_token + weights.latency + weights.tps + weights.cost + weights.headroom + weights.priority
 }

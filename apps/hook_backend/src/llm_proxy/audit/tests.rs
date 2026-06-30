@@ -125,11 +125,11 @@ fn skipped_request_has_void_billing_status() {
 }
 
 #[test]
-fn routing_ttfb_uses_first_output_only() {
+fn routing_first_token_uses_first_token_only() {
     let candidate = candidate();
     let input = audit_input(AttemptRecordInput {
         latency_ms: Some(320),
-        first_output_time_ms: Some(120),
+        first_token_time_ms: Some(120),
         first_byte_time_ms: Some(40),
         ..AttemptRecordInput::new(&candidate, 0, "success", true)
     });
@@ -141,17 +141,17 @@ fn routing_ttfb_uses_first_output_only() {
         time::OffsetDateTime::UNIX_EPOCH,
     );
 
-    assert_eq!(delta.ttfb_sum_ms, 120);
-    assert_eq!(delta.ttfb_sample_count, 1);
+    assert_eq!(delta.first_token_sum_ms, 120);
+    assert_eq!(delta.first_token_sample_count, 1);
     assert_eq!(delta.timing_metric_semantics_version, ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1);
 }
 
 #[test]
-fn routing_ttfb_does_not_fallback_to_first_byte() {
+fn routing_first_token_does_not_fallback_to_first_byte() {
     let candidate = candidate();
     let input = audit_input(AttemptRecordInput {
         latency_ms: Some(320),
-        first_output_time_ms: None,
+        first_token_time_ms: None,
         first_byte_time_ms: Some(40),
         ..AttemptRecordInput::new(&candidate, 0, "success", true)
     });
@@ -163,8 +163,8 @@ fn routing_ttfb_does_not_fallback_to_first_byte() {
         time::OffsetDateTime::UNIX_EPOCH,
     );
 
-    assert_eq!(delta.ttfb_sum_ms, 0);
-    assert_eq!(delta.ttfb_sample_count, 0);
+    assert_eq!(delta.first_token_sum_ms, 0);
+    assert_eq!(delta.first_token_sample_count, 0);
 }
 
 fn audit_input(input: AttemptRecordInput<'_>) -> AttemptAuditInput {
@@ -190,8 +190,9 @@ fn candidate() -> ProxyCandidate {
         billing_multiplier: Decimal::ONE,
         max_retries: 0,
         request_timeout_seconds: Some(300.0),
+        stream_response_headers_timeout_seconds: Some(12.0),
         stream_first_byte_timeout_seconds: Some(30.0),
-        stream_first_output_timeout_seconds: Some(45.0),
+        stream_first_token_timeout_seconds: Some(45.0),
         stream_idle_timeout_seconds: Some(30.0),
         cache_ttl_minutes: 5,
         key_rpm_limit: None,

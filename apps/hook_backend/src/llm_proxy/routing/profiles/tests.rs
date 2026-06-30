@@ -177,8 +177,8 @@ fn rejects_invalid_exploration_success_floor() {
 }
 
 #[test]
-fn builtin_first_byte_profile_uses_first_token_copy() {
-    let profile = test_only_builtin_profile(RoutingProfileId::FirstByte);
+fn builtin_first_token_profile_uses_first_token_copy() {
+    let profile = test_only_builtin_profile(RoutingProfileId::FirstToken);
 
     assert_eq!(profile.name, "First Token");
     assert!(profile.description.contains("first-token"));
@@ -192,10 +192,10 @@ fn assert_invalid(id: RoutingProfileId, patch: RoutingProfileUpsert, expected: &
     );
 }
 
-fn weights(success: f64, ttfb: f64, latency: f64, tps: f64, cost: f64, headroom: f64, priority: f64) -> RoutingProfileWeights {
+fn weights(success: f64, first_token: f64, latency: f64, tps: f64, cost: f64, headroom: f64, priority: f64) -> RoutingProfileWeights {
     RoutingProfileWeights {
         success,
-        ttfb,
+        first_token,
         latency,
         tps,
         cost,

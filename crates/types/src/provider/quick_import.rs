@@ -124,9 +124,11 @@ pub struct ProviderQuickImportProviderConfig {
     #[serde(default)]
     pub request_timeout_seconds: Option<f64>,
     #[serde(default)]
+    pub stream_response_headers_timeout_seconds: Option<f64>,
+    #[serde(default)]
     pub stream_first_byte_timeout_seconds: Option<f64>,
     #[serde(default)]
-    pub stream_first_output_timeout_seconds: Option<f64>,
+    pub stream_first_token_timeout_seconds: Option<f64>,
     #[serde(default)]
     pub stream_idle_timeout_seconds: Option<f64>,
     #[serde(default)]

@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use super::{
     LlmProxyError, LlmProxyState, affinity,
-    attempt_log::{StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
+    attempt_log::{SendErrorInput, StartedAttemptInput, record_attempt_error, record_rate_limit_rejection, record_send_error, record_started_attempt},
     image_attempt_response::{HandleResponseInput, ImageHandleResponseOutcome, handle_response},
     image_prepared::{PreparedImageRequest, UpstreamImageBody},
     image_stream_mode::candidate_image_stream_mode,
@@ -158,15 +158,16 @@ async fn execute_attempt_request(input: ExecuteAttemptInput<'_>) -> Result<Attem
         }
         Err(error) => {
             attempt_cancel.disarm();
-            let outcome = record_send_error(
-                input.state,
-                &input.prepared.request_id,
-                input.candidate,
-                input.retry_index,
+            let outcome = record_send_error(SendErrorInput {
+                state: input.state,
+                request_id: &input.prepared.request_id,
+                candidate: input.candidate,
+                retry_index: input.retry_index,
                 started,
-                &error,
-                input.last_error,
-            )
+                timeout_error_type: timeout_error_type(input.upstream_is_stream),
+                error: &error,
+                last_error: input.last_error,
+            })
             .await?;
             affinity::invalidate_matching(input.state, input.candidate).await?;
             return Ok(option_response_outcome(outcome));
@@ -240,13 +241,20 @@ fn build_upstream_request(
     }
 }
 
+fn timeout_error_type(is_stream: bool) -> &'static str {
+    if is_stream {
+        return "response_headers_timeout";
+    }
+    "upstream_timeout"
+}
+
 async fn execute_upstream_request(
     http: &req::ReqwestClient,
     request: req::Request,
     upstream_is_stream: bool,
     candidate: &ProxyCandidate,
 ) -> Result<req::Response, req::ClientError> {
-    let timeout = timeout::response_start_timeout(candidate, upstream_is_stream);
+    let timeout = timeout::upstream_response_headers_timeout(candidate, upstream_is_stream);
     let execute = http.execute(request);
     match timeout {
         Some(timeout) => tokio::time::timeout(timeout, execute).await.unwrap_or(Err(req::ClientError::Timeout)),

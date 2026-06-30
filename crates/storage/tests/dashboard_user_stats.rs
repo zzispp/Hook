@@ -82,23 +82,23 @@ async fn user_usage_summary_and_time_series_return_four_timing_metrics() {
     assert_eq!(summary.avg_total_latency_ms, Some(420.0));
     assert_eq!(summary.avg_response_headers_ms, Some(55.0));
     assert_eq!(summary.avg_first_byte_ms, Some(110.0));
-    assert_eq!(summary.avg_first_output_ms, Some(350.0));
+    assert_eq!(summary.avg_first_token_ms, Some(350.0));
     assert_eq!(series[0].avg_total_latency_ms, Some(440.0));
     assert_eq!(series[0].avg_response_headers_ms, Some(58.0));
     assert_eq!(series[0].avg_first_byte_ms, Some(118.0));
-    assert_eq!(series[0].avg_first_output_ms, Some(370.0));
+    assert_eq!(series[0].avg_first_token_ms, Some(370.0));
     let logs = connection.into_transaction_log();
     let summary_sql = &logs[0].statements()[0].sql;
     let series_sql = &logs[1].statements()[0].sql;
     assert!(summary_sql.contains("total_latency_ms"), "{summary_sql}");
     assert!(summary_sql.contains("response_headers_total_ms"), "{summary_sql}");
     assert!(summary_sql.contains("first_byte_total_ms"), "{summary_sql}");
-    assert!(summary_sql.contains("first_output_total_ms"), "{summary_sql}");
-    assert!(summary_sql.contains("first_output_sample_count"), "{summary_sql}");
+    assert!(summary_sql.contains("first_token_total_ms"), "{summary_sql}");
+    assert!(summary_sql.contains("first_token_sample_count"), "{summary_sql}");
     assert!(series_sql.contains("total_latency_ms"), "{series_sql}");
     assert!(series_sql.contains("response_headers_total_ms"), "{series_sql}");
     assert!(series_sql.contains("first_byte_total_ms"), "{series_sql}");
-    assert!(series_sql.contains("first_output_total_ms"), "{series_sql}");
+    assert!(series_sql.contains("first_token_total_ms"), "{series_sql}");
 }
 
 fn query(metric: DashboardUserStatsMetric) -> DashboardUserStatsLeaderboardQuery {
@@ -164,7 +164,7 @@ fn usage_summary_row() -> BTreeMap<&'static str, Value> {
         ("avg_total_latency_ms", Value::from(420.0_f64)),
         ("avg_response_headers_ms", Value::from(55.0_f64)),
         ("avg_first_byte_ms", Value::from(110.0_f64)),
-        ("avg_first_output_ms", Value::from(350.0_f64)),
+        ("avg_first_token_ms", Value::from(350.0_f64)),
     ])
 }
 
@@ -177,7 +177,7 @@ fn time_series_row() -> BTreeMap<&'static str, Value> {
         ("avg_total_latency_ms", Value::from(440.0_f64)),
         ("avg_response_headers_ms", Value::from(58.0_f64)),
         ("avg_first_byte_ms", Value::from(118.0_f64)),
-        ("avg_first_output_ms", Value::from(370.0_f64)),
+        ("avg_first_token_ms", Value::from(370.0_f64)),
     ])
 }
 

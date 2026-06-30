@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 
 use super::constants::{
-    HISTOGRAM_BOUNDS_MS, METRIC_FIRST_OUTPUT, METRIC_FIRST_SSE_EVENT, METRIC_LATENCY, METRIC_RESPONSE_HEADERS, METRIC_SSE_TO_OUTPUT, METRIC_TTFB,
+    HISTOGRAM_BOUNDS_MS, METRIC_FIRST_BYTE, METRIC_FIRST_SSE_EVENT, METRIC_FIRST_TOKEN, METRIC_LATENCY, METRIC_RESPONSE_HEADERS, METRIC_SSE_TO_OUTPUT,
 };
 
 pub(super) struct MetricContribution {
@@ -37,14 +37,14 @@ pub(super) struct MetricContribution {
     pub(super) cache_creation_cost: Decimal,
     pub(super) latency_total_ms: i64,
     pub(super) latency_sample_count: i64,
-    pub(super) ttfb_total_ms: i64,
-    pub(super) ttfb_sample_count: i64,
+    pub(super) first_byte_total_ms: i64,
+    pub(super) first_byte_sample_count: i64,
     pub(super) response_headers_total_ms: i64,
     pub(super) response_headers_sample_count: i64,
     pub(super) first_sse_event_total_ms: i64,
     pub(super) first_sse_event_sample_count: i64,
-    pub(super) first_output_total_ms: i64,
-    pub(super) first_output_sample_count: i64,
+    pub(super) first_token_total_ms: i64,
+    pub(super) first_token_sample_count: i64,
     pub(super) sse_to_output_total_ms: i64,
     pub(super) sse_to_output_sample_count: i64,
     pub(super) tps_latency_total_ms: i64,
@@ -69,10 +69,10 @@ pub(super) struct HistogramContribution {
     pub(super) is_stream: Option<bool>,
     pub(super) needs_conversion: Option<bool>,
     pub(super) latency_ms: Option<i64>,
-    pub(super) ttfb_ms: Option<i64>,
+    pub(super) first_byte_ms: Option<i64>,
     pub(super) response_headers_ms: Option<i64>,
     pub(super) first_sse_event_ms: Option<i64>,
-    pub(super) first_output_ms: Option<i64>,
+    pub(super) first_token_ms: Option<i64>,
     pub(super) sse_to_output_ms: Option<i64>,
 }
 
@@ -85,10 +85,10 @@ impl HistogramContribution {
     pub(super) fn samples(&self) -> Vec<HistogramSample> {
         let mut output = Vec::new();
         append_samples(&mut output, METRIC_LATENCY, self.latency_ms);
-        append_samples(&mut output, METRIC_TTFB, self.ttfb_ms);
+        append_samples(&mut output, METRIC_FIRST_BYTE, self.first_byte_ms);
         append_samples(&mut output, METRIC_RESPONSE_HEADERS, self.response_headers_ms);
         append_samples(&mut output, METRIC_FIRST_SSE_EVENT, self.first_sse_event_ms);
-        append_samples(&mut output, METRIC_FIRST_OUTPUT, self.first_output_ms);
+        append_samples(&mut output, METRIC_FIRST_TOKEN, self.first_token_ms);
         append_samples(&mut output, METRIC_SSE_TO_OUTPUT, self.sse_to_output_ms);
         output
     }

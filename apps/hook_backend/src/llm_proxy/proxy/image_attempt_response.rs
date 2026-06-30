@@ -168,7 +168,7 @@ async fn read_success_bytes(
         retry_index,
         started,
         response_headers_time_ms: Some(transport::elapsed_ms(started)),
-        first_output_time_ms: None,
+        first_token_time_ms: None,
         first_byte_time_ms: None,
         read_timeout,
         response,

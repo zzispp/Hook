@@ -43,7 +43,7 @@ fn select_statement(routes: &[RouteIdentity]) -> Option<Statement> {
 
 fn select_sql() -> &'static str {
     "SELECT profile_id, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version, \
-     ema_success_rate, ema_ttfb_ms, ema_latency_ms, ema_output_tps, sample_count, last_updated_at \
+     ema_success_rate, ema_first_token_ms, ema_latency_ms, ema_output_tps, sample_count, last_updated_at \
      FROM routing_route_states"
 }
 
@@ -87,7 +87,7 @@ struct RoutingRouteStateRow {
     price_config_fingerprint: Option<String>,
     timing_metric_semantics_version: String,
     ema_success_rate: Decimal,
-    ema_ttfb_ms: Option<Decimal>,
+    ema_first_token_ms: Option<Decimal>,
     ema_latency_ms: Option<Decimal>,
     ema_output_tps: Option<Decimal>,
     sample_count: i64,
@@ -102,7 +102,7 @@ impl From<RoutingRouteStateRow> for RoutingRouteStateRecord {
             route,
             timing_metric_semantics_version: row.timing_metric_semantics_version,
             ema_success_rate: decimal(row.ema_success_rate).unwrap_or_default(),
-            ema_ttfb_ms: row.ema_ttfb_ms.and_then(decimal),
+            ema_first_token_ms: row.ema_first_token_ms.and_then(decimal),
             ema_latency_ms: row.ema_latency_ms.and_then(decimal),
             ema_output_tps: row.ema_output_tps.and_then(decimal),
             sample_count: row.sample_count.max(0) as u64,

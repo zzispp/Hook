@@ -58,8 +58,8 @@ fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, 
         request_count: 1,
         success_count: success_count(input),
         failure_count: failure_count(input),
-        first_output_success_count: first_output_success_count(input),
-        first_output_failure_count: first_output_failure_count(input),
+        first_token_success_count: first_token_success_count(input),
+        first_token_failure_count: first_token_failure_count(input),
         timeout_count: timeout_count(input),
         rate_limited_count: rate_limited_count(input),
         server_error_count: server_error_count(input),
@@ -69,8 +69,8 @@ fn metric_delta(input: &AttemptAuditInput, upstream_cost: &RequestUpstreamCost, 
         schema_tool_call_failure_count: schema_tool_call_failure_count(input),
         latency_sum_ms: input.latency_ms.unwrap_or_default().max(0),
         latency_sample_count: sample_count(input.latency_ms),
-        ttfb_sum_ms: first_token_time_ms(input).unwrap_or_default().max(0),
-        ttfb_sample_count: sample_count(first_token_time_ms(input)),
+        first_token_sum_ms: first_token_time_ms(input).unwrap_or_default().max(0),
+        first_token_sample_count: sample_count(first_token_time_ms(input)),
         output_tokens,
         tps_latency_sum_ms: tps_latency(input, output_tokens),
         tps_sample_count: sample_count(input.latency_ms).min(output_tokens.signum()),
@@ -93,10 +93,10 @@ fn context_delta(input: &AttemptAuditInput, route: RouteIdentity, observed_at: t
         sample_count: 1,
         success_count: success_count(input),
         failure_count: failure_count(input),
-        first_output_success_count: first_output_success_count(input),
-        first_output_failure_count: first_output_failure_count(input),
+        first_token_success_count: first_token_success_count(input),
+        first_token_failure_count: first_token_failure_count(input),
         latency_ms: input.latency_ms.map(|value| value.max(0)),
-        ttfb_ms: first_token_time_ms(input).map(|value| value.max(0)),
+        first_token_ms: first_token_time_ms(input).map(|value| value.max(0)),
         output_tokens,
         tps_latency_ms: tps_latency(input, output_tokens),
         observed_at,
@@ -111,18 +111,18 @@ fn failure_count(input: &AttemptAuditInput) -> i64 {
     i64::from(input.status != "success")
 }
 
-fn first_output_success_count(input: &AttemptAuditInput) -> i64 {
+fn first_token_success_count(input: &AttemptAuditInput) -> i64 {
     if !input.candidate.trace.is_stream {
         return 0;
     }
-    i64::from(input.first_output_time_ms.is_some())
+    i64::from(input.first_token_time_ms.is_some())
 }
 
-fn first_output_failure_count(input: &AttemptAuditInput) -> i64 {
+fn first_token_failure_count(input: &AttemptAuditInput) -> i64 {
     if !input.candidate.trace.is_stream {
         return 0;
     }
-    i64::from(input.first_output_time_ms.is_none())
+    i64::from(input.first_token_time_ms.is_none())
 }
 
 fn timeout_count(input: &AttemptAuditInput) -> i64 {
@@ -153,7 +153,7 @@ fn stream_abnormal_end_count(input: &AttemptAuditInput) -> i64 {
     let abnormal_reason = matches!(&input.stream_end_reason, PatchField::Value(reason) if !normal_stream_end_reason(reason));
     let abnormal_error = matches!(
         input.error_type.as_deref(),
-        Some("upstream_incomplete_stream" | "upstream_eof_without_completion" | "stream_idle_timeout" | "first_output_timeout")
+        Some("upstream_incomplete_stream" | "upstream_eof_without_completion" | "stream_idle_timeout" | "first_token_timeout")
     );
     i64::from(input.candidate.trace.is_stream && (abnormal_reason || abnormal_error))
 }
@@ -183,7 +183,7 @@ fn sample_count(value: Option<i64>) -> i64 {
 }
 
 fn first_token_time_ms(input: &AttemptAuditInput) -> Option<i64> {
-    input.first_output_time_ms
+    input.first_token_time_ms
 }
 
 fn output_tokens(usage: Option<TokenUsage>) -> i64 {

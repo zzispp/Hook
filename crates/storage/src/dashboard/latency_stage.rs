@@ -2,20 +2,20 @@
 pub(super) struct StageLatencyContribution {
     pub(super) response_headers_ms: Option<i64>,
     pub(super) first_sse_event_ms: Option<i64>,
-    pub(super) first_output_ms: Option<i64>,
+    pub(super) first_token_ms: Option<i64>,
     pub(super) sse_to_output_ms: Option<i64>,
 }
 
 impl StageLatencyContribution {
-    pub(super) fn new(response_headers_ms: Option<i64>, first_sse_event_ms: Option<i64>, first_output_ms: Option<i64>) -> Self {
+    pub(super) fn new(response_headers_ms: Option<i64>, first_sse_event_ms: Option<i64>, first_token_ms: Option<i64>) -> Self {
         let response_headers_ms = non_negative(response_headers_ms);
         let first_sse_event_ms = non_negative(first_sse_event_ms);
-        let first_output_ms = non_negative(first_output_ms);
+        let first_token_ms = non_negative(first_token_ms);
         Self {
             response_headers_ms,
             first_sse_event_ms,
-            first_output_ms,
-            sse_to_output_ms: sse_to_output(first_sse_event_ms, first_output_ms),
+            first_token_ms,
+            sse_to_output_ms: sse_to_output(first_sse_event_ms, first_token_ms),
         }
     }
 
@@ -32,6 +32,6 @@ fn non_negative(value: Option<i64>) -> Option<i64> {
     value.filter(|item| *item >= 0)
 }
 
-fn sse_to_output(first_sse_event_ms: Option<i64>, first_output_ms: Option<i64>) -> Option<i64> {
-    first_output_ms?.checked_sub(first_sse_event_ms?).filter(|value| *value >= 0)
+fn sse_to_output(first_sse_event_ms: Option<i64>, first_token_ms: Option<i64>) -> Option<i64> {
+    first_token_ms?.checked_sub(first_sse_event_ms?).filter(|value| *value >= 0)
 }

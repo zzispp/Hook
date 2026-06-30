@@ -20,8 +20,9 @@ pub fn provider_active_model(id: String, input: ProviderRecordInput) -> Provider
         provider_origin: Set(input.provider_origin.as_str().to_owned()),
         max_retries: Set(input.max_retries),
         request_timeout_seconds: Set(input.request_timeout_seconds),
+        stream_response_headers_timeout_seconds: Set(input.stream_response_headers_timeout_seconds),
         stream_first_byte_timeout_seconds: Set(input.stream_first_byte_timeout_seconds),
-        stream_first_output_timeout_seconds: Set(input.stream_first_output_timeout_seconds),
+        stream_first_token_timeout_seconds: Set(input.stream_first_token_timeout_seconds),
         stream_idle_timeout_seconds: Set(input.stream_idle_timeout_seconds),
         priority: Set(input.priority),
         keep_priority_on_conversion: Set(input.keep_priority_on_conversion),
@@ -41,8 +42,12 @@ pub fn apply_provider_patch(active: &mut ProviderActiveModel, input: ProviderRec
     }
     apply_i32_patch(&mut active.max_retries, input.max_retries);
     apply_f64_patch(&mut active.request_timeout_seconds, input.request_timeout_seconds);
+    apply_f64_patch(
+        &mut active.stream_response_headers_timeout_seconds,
+        input.stream_response_headers_timeout_seconds,
+    );
     apply_f64_patch(&mut active.stream_first_byte_timeout_seconds, input.stream_first_byte_timeout_seconds);
-    apply_f64_patch(&mut active.stream_first_output_timeout_seconds, input.stream_first_output_timeout_seconds);
+    apply_f64_patch(&mut active.stream_first_token_timeout_seconds, input.stream_first_token_timeout_seconds);
     apply_f64_patch(&mut active.stream_idle_timeout_seconds, input.stream_idle_timeout_seconds);
     if let Some(priority) = input.priority {
         active.priority = Set(priority);

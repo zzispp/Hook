@@ -35,8 +35,9 @@ export type QuickImportFormState = {
   rechargeMultiplier: string;
   max_retries: string;
   request_timeout_seconds: string;
+  stream_response_headers_timeout_seconds: string;
   stream_first_byte_timeout_seconds: string;
-  stream_first_output_timeout_seconds: string;
+  stream_first_token_timeout_seconds: string;
   stream_idle_timeout_seconds: string;
   priority: string;
   keep_priority_on_conversion: boolean;
@@ -72,8 +73,10 @@ export const DEFAULT_QUICK_IMPORT_FORM: QuickImportFormState = {
   rechargeMultiplier: '1',
   max_retries: DEFAULT_PROVIDER_FORM.max_retries,
   request_timeout_seconds: DEFAULT_PROVIDER_FORM.request_timeout_seconds,
+  stream_response_headers_timeout_seconds:
+    DEFAULT_PROVIDER_FORM.stream_response_headers_timeout_seconds,
   stream_first_byte_timeout_seconds: DEFAULT_PROVIDER_FORM.stream_first_byte_timeout_seconds,
-  stream_first_output_timeout_seconds: DEFAULT_PROVIDER_FORM.stream_first_output_timeout_seconds,
+  stream_first_token_timeout_seconds: DEFAULT_PROVIDER_FORM.stream_first_token_timeout_seconds,
   stream_idle_timeout_seconds: DEFAULT_PROVIDER_FORM.stream_idle_timeout_seconds,
   priority: DEFAULT_PROVIDER_FORM.priority,
   keep_priority_on_conversion: DEFAULT_PROVIDER_FORM.keep_priority_on_conversion,
@@ -273,8 +276,9 @@ function providerConfigPayload(form: QuickImportFormState) {
     provider_type: DEFAULT_PROVIDER_FORM.provider_type,
     max_retries: form.max_retries,
     request_timeout_seconds: form.request_timeout_seconds,
+    stream_response_headers_timeout_seconds: form.stream_response_headers_timeout_seconds,
     stream_first_byte_timeout_seconds: form.stream_first_byte_timeout_seconds,
-    stream_first_output_timeout_seconds: form.stream_first_output_timeout_seconds,
+    stream_first_token_timeout_seconds: form.stream_first_token_timeout_seconds,
     stream_idle_timeout_seconds: form.stream_idle_timeout_seconds,
     priority: form.priority,
     keep_priority_on_conversion: form.keep_priority_on_conversion,
@@ -284,8 +288,9 @@ function providerConfigPayload(form: QuickImportFormState) {
   return {
     max_retries: payload.max_retries,
     request_timeout_seconds: payload.request_timeout_seconds,
+    stream_response_headers_timeout_seconds: payload.stream_response_headers_timeout_seconds,
     stream_first_byte_timeout_seconds: payload.stream_first_byte_timeout_seconds,
-    stream_first_output_timeout_seconds: payload.stream_first_output_timeout_seconds,
+    stream_first_token_timeout_seconds: payload.stream_first_token_timeout_seconds,
     stream_idle_timeout_seconds: payload.stream_idle_timeout_seconds,
     priority: payload.priority,
     keep_priority_on_conversion: payload.keep_priority_on_conversion,
