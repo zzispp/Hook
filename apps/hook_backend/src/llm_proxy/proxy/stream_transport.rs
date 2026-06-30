@@ -252,7 +252,7 @@ async fn record_stream_headers(
             status_code: Some(context.status.as_u16() as i32),
             response_headers_time_ms: Some(context.response_headers_time_ms),
             first_sse_event_time_ms,
-            first_token_time_ms: first_token_time_ms,
+            first_token_time_ms,
             first_byte_time_ms,
             provider_response_headers: PatchField::Value(upstream_headers),
             client_response_headers: transport::content_type_headers(content_type),

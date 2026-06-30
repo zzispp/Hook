@@ -6,8 +6,9 @@ use req::Response as UpstreamResponse;
 use super::{
     LlmProxyError, LlmProxyState, affinity,
     attempt_log::{
-        AttemptCancelGuard, AttemptCancelHandle, SkippedAttemptInput, StartedAttemptInput, record_attempt_error, record_candidate_skipped_attempt,
-        record_probe_slot_timeout, record_rate_limit_rejection, record_send_error, record_skipped_attempt, record_started_attempt,
+        AttemptCancelGuard, AttemptCancelHandle, SendErrorInput, SkippedAttemptInput, StartedAttemptInput, record_attempt_error,
+        record_candidate_skipped_attempt, record_probe_slot_timeout, record_rate_limit_rejection, record_send_error, record_skipped_attempt,
+        record_started_attempt,
         record_stream_candidate_watchdog_timeout,
     },
     failure_classification::{FailureDecision, classify_status},
@@ -207,16 +208,16 @@ async fn attempt_once(
         }
         Err(error) => {
             attempt_cancel.disarm();
-            let outcome = record_send_error(
+            let outcome = record_send_error(SendErrorInput {
                 state,
-                &prepared.request_id,
+                request_id: &prepared.request_id,
                 candidate,
                 retry_index,
                 started,
-                timeout_error_type(prepared.is_stream),
-                &error,
+                timeout_error_type: timeout_error_type(prepared.is_stream),
+                error: &error,
                 last_error,
-            )
+            })
             .await?;
             affinity::invalidate_matching(state, candidate).await?;
             return Ok(option_response_outcome(outcome));
@@ -364,16 +365,16 @@ fn stream_task_parts(input: StreamAttemptTaskInput) -> (StreamAttemptTaskContext
 async fn stream_send_error_task_output(context: &StreamAttemptTaskContext, error: req::ClientError) -> Result<StreamAttemptTaskOutput, LlmProxyError> {
     context.attempt_cancel.disarm();
     let mut last_error = None;
-    let outcome = record_send_error(
-        &context.state,
-        &context.request_id,
-        &context.candidate,
-        context.retry_index,
-        context.started,
-        RESPONSE_HEADERS_TIMEOUT_ERROR_TYPE,
-        &error,
-        &mut last_error,
-    )
+    let outcome = record_send_error(SendErrorInput {
+        state: &context.state,
+        request_id: &context.request_id,
+        candidate: &context.candidate,
+        retry_index: context.retry_index,
+        started: context.started,
+        timeout_error_type: RESPONSE_HEADERS_TIMEOUT_ERROR_TYPE,
+        error: &error,
+        last_error: &mut last_error,
+    })
     .await?;
     affinity::invalidate_matching(&context.state, &context.candidate).await?;
     Ok(StreamAttemptTaskOutput {

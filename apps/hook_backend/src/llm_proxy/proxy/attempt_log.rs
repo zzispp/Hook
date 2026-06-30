@@ -122,6 +122,17 @@ pub(super) struct SkippedAttemptInput<'a> {
     pub(super) error: &'a LlmProxyError,
 }
 
+pub(super) struct SendErrorInput<'a> {
+    pub(super) state: &'a LlmProxyState,
+    pub(super) request_id: &'a str,
+    pub(super) candidate: &'a ProxyCandidate,
+    pub(super) retry_index: i32,
+    pub(super) started: Instant,
+    pub(super) timeout_error_type: &'static str,
+    pub(super) error: &'a req::ClientError,
+    pub(super) last_error: &'a mut Option<LlmProxyError>,
+}
+
 pub(super) async fn record_attempt_error(
     state: &LlmProxyState,
     request_id: &str,
@@ -228,29 +239,20 @@ pub(super) async fn record_started_attempt(input: StartedAttemptInput<'_>) -> Re
     })
 }
 
-pub(super) async fn record_send_error(
-    state: &LlmProxyState,
-    request_id: &str,
-    candidate: &ProxyCandidate,
-    retry_index: i32,
-    started: Instant,
-    timeout_error_type: &'static str,
-    error: &req::ClientError,
-    last_error: &mut Option<LlmProxyError>,
-) -> Result<Option<Response>, LlmProxyError> {
-    let error_message = error.to_string();
+pub(super) async fn record_send_error(input: SendErrorInput<'_>) -> Result<Option<Response>, LlmProxyError> {
+    let error_message = input.error.to_string();
     record_attempt(
-        state,
-        request_id,
+        input.state,
+        input.request_id,
         AttemptRecordInput {
-            latency_ms: Some(elapsed_ms(started)),
-            error_type: Some(send_error_type(error, timeout_error_type)),
+            latency_ms: Some(elapsed_ms(input.started)),
+            error_type: Some(send_error_type(input.error, input.timeout_error_type)),
             error_message: Some(error_message.as_str()),
-            ..AttemptRecordInput::new(candidate, retry_index, "failed", true)
+            ..AttemptRecordInput::new(input.candidate, input.retry_index, "failed", true)
         },
     )
     .await?;
-    *last_error = Some(LlmProxyError::Upstream(error_message));
+    *input.last_error = Some(LlmProxyError::Upstream(error_message));
     Ok(None)
 }
 
