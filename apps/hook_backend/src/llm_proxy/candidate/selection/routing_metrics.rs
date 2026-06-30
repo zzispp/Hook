@@ -1,5 +1,8 @@
 use storage::provider::{RoutingMetricRecord, RoutingRouteStateRecord};
-use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource, RoutingProfileId};
+use types::provider::{
+    ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource,
+    RoutingProfileId,
+};
 
 use crate::llm_proxy::routing::{RoutingEmaSnapshot, RoutingMetricsSnapshot};
 
@@ -149,7 +152,12 @@ impl MetricCatalog {
 impl RouteStateCatalog {
     pub(super) fn from_snapshot(snapshot: &RoutingMetricsSnapshot) -> Self {
         Self {
-            records: snapshot.route_states.clone(),
+            records: snapshot
+                .route_states
+                .iter()
+                .filter(|record| record.timing_metric_semantics_version == ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1)
+                .cloned()
+                .collect(),
         }
     }
 
@@ -177,6 +185,10 @@ struct MetricCatalogEntry {
 
 impl MetricCatalogEntry {
     fn new(window: RoutingMetricWindow, records: Vec<RoutingMetricRecord>) -> Self {
+        let records = records
+            .into_iter()
+            .filter(|record| record.timing_metric_semantics_version == ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1)
+            .collect::<Vec<_>>();
         let aggregates = AggregateCatalog::from_records(&records);
         Self { window, records, aggregates }
     }

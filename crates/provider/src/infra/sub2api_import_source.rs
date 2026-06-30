@@ -81,7 +81,7 @@ impl UpstreamProviderImportSource for Sub2ApiImportSource {
             .collect::<ProviderResult<Vec<_>>>()?;
         let mut group_ratios = std::collections::BTreeMap::new();
         for group in groups {
-            group_ratios.insert(group.name.clone(), UpstreamGroupRatio::Fixed(group_decimal(&group, &user_group_rates)?));
+            group_ratios.insert(group.id.to_string(), UpstreamGroupRatio::Fixed(group_decimal(&group, &user_group_rates)?));
         }
         Ok(UpstreamSyncSnapshot {
             source_kind: ProviderQuickImportSourceKind::Sub2api,
@@ -259,6 +259,7 @@ impl Sub2ApiImportSource {
             masked_key: masked_key(&record.key),
             status,
             is_active,
+            group_id: record.group.as_ref().map(|item| item.id.to_string()),
             group,
             group_ratio,
             api_key: is_active.then_some(record.key),

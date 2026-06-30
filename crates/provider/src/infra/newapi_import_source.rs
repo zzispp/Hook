@@ -69,6 +69,7 @@ impl UpstreamProviderImportSource for NewApiImportSource {
                         masked_key: record.key,
                         status,
                         is_active,
+                        group_id: None,
                         group: record.group,
                     }
                 })
@@ -132,6 +133,7 @@ impl NewApiImportSource {
             masked_key: record.key,
             status,
             is_active,
+            group_id: None,
             group: record.group,
             group_ratio,
             api_key,

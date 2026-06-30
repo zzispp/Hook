@@ -155,6 +155,7 @@ pub(super) fn sync_token(record: Sub2ApiKeyRecord) -> ProviderResult<UpstreamSyn
         masked_key: masked_key(&record.key),
         is_active: status == ACTIVE_STATUS,
         status,
+        group_id: record.group.as_ref().map(|group| group.id.to_string()),
         group: record.group.as_ref().map(|group| group.name.clone()),
     })
 }

@@ -45,6 +45,7 @@ pub struct UpstreamImportToken {
     pub masked_key: String,
     pub status: String,
     pub is_active: bool,
+    pub group_id: Option<String>,
     pub group: Option<String>,
     pub group_ratio: Decimal,
     pub api_key: Option<String>,
@@ -77,6 +78,7 @@ pub struct UpstreamSyncToken {
     pub masked_key: String,
     pub status: String,
     pub is_active: bool,
+    pub group_id: Option<String>,
     pub group: Option<String>,
 }
 
@@ -110,6 +112,7 @@ pub struct ProviderQuickImportApiKeyCreate {
     pub upstream_token_id: String,
     pub upstream_token_name: String,
     pub upstream_masked_key: String,
+    pub upstream_group_id: Option<String>,
     pub upstream_group: Option<String>,
     pub upstream_group_ratio: Decimal,
     pub effective_cost_multiplier: Decimal,
@@ -195,6 +198,7 @@ pub struct ProviderQuickImportKeyReplacement {
     pub upstream_token_id: String,
     pub upstream_token_name: String,
     pub upstream_masked_key: String,
+    pub upstream_group_id: Option<String>,
     pub upstream_group: Option<String>,
     pub upstream_group_ratio: Decimal,
     pub effective_cost_multiplier: Decimal,
@@ -256,6 +260,7 @@ pub struct ProviderQuickImportSyncKey {
     pub local_key_name: String,
     pub upstream_token_id: String,
     pub upstream_token_name: String,
+    pub upstream_group_id: Option<String>,
     pub upstream_group: Option<String>,
     pub upstream_group_ratio: Decimal,
     pub effective_cost_multiplier: Decimal,
@@ -275,6 +280,7 @@ pub struct ProviderQuickImportSyncKeyModel {
 pub struct ProviderQuickImportSyncKeyPatch {
     pub key_id: String,
     pub statuses: Vec<ProviderQuickImportSyncStatus>,
+    pub upstream_group_id: Option<Option<String>>,
     pub upstream_group: Option<Option<String>>,
     pub upstream_group_ratio: Option<Decimal>,
     pub effective_cost_multiplier: Option<Decimal>,

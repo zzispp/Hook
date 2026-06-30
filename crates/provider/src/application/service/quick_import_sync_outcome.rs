@@ -16,7 +16,7 @@ use crate::application::{
 use super::{
     quick_import_sync_bindings::BindingInfo,
     quick_import_sync_candidates::candidate_model_ids,
-    quick_import_sync_group_ratio::{GroupRatioLookup, group_ratio},
+    quick_import_sync_group_ratio::{GroupRatioLookup, group_ratio, same_group},
     quick_import_sync_key_costs::costs_for_key,
     quick_import_sync_model_check::{ModelCheck, check_models},
     quick_import_sync_outcome_support::{persisted_multiplier, statuses_with_candidates},
@@ -32,6 +32,8 @@ pub(super) struct KeyOutcome {
     pub(super) candidate_model_ids: Vec<String>,
     pub(super) missing_upstream_model_ids: Vec<String>,
     pub(super) upstream_models_snapshot: Vec<ProviderQuickImportUpstreamModelSnapshot>,
+    group_change_synced: bool,
+    upstream_group_id: Option<Option<String>>,
     upstream_group: Option<Option<String>>,
     group_ratio_patch: Option<rust_decimal::Decimal>,
     effective_multiplier_patch: Option<rust_decimal::Decimal>,
@@ -47,11 +49,29 @@ struct OutcomeContext<'a, I> {
     bindings: &'a BTreeMap<String, BindingInfo>,
 }
 
+#[derive(Clone, Default)]
+struct GroupPatch {
+    upstream_group_id: Option<Option<String>>,
+    upstream_group: Option<Option<String>>,
+}
+
+struct CostOutcomeInput<'a> {
+    source: &'a ProviderQuickImportSyncSource,
+    globals: &'a BTreeMap<String, GlobalModelResponse>,
+    bindings: &'a BTreeMap<String, BindingInfo>,
+    key: &'a ProviderQuickImportSyncKey,
+    observed_group: Option<Option<String>>,
+    group_patch: GroupPatch,
+    group_ratio: rust_decimal::Decimal,
+    upstream_models: &'a [UpstreamImportModel],
+}
+
 impl KeyOutcome {
     pub(super) fn patch(&self, key_id: String) -> ProviderQuickImportSyncKeyPatch {
         ProviderQuickImportSyncKeyPatch {
             key_id,
             statuses: self.statuses.clone(),
+            upstream_group_id: self.upstream_group_id.clone(),
             upstream_group: self.upstream_group.clone(),
             upstream_group_ratio: self.group_ratio_patch,
             effective_cost_multiplier: self.effective_multiplier_patch,
@@ -60,7 +80,7 @@ impl KeyOutcome {
     }
 
     pub(super) fn synced_group(&self) -> Option<&Option<String>> {
-        self.upstream_group.as_ref()
+        self.group_change_synced.then_some(self.upstream_group.as_ref()).flatten()
     }
 
     pub(super) fn error_message(&self) -> Option<&str> {
@@ -109,10 +129,15 @@ where
             Vec::new(),
         );
     }
-    if token.group.as_deref() != key.upstream_group.as_deref() {
+    if !same_group(
+        key.upstream_group_id.as_deref(),
+        key.upstream_group.as_deref(),
+        token.group_id.as_deref(),
+        token.group.as_deref(),
+    ) {
         return group_changed_outcome(&context, key, token).await;
     }
-    let ratio = match group_ratio(snapshot, key.upstream_group.as_deref()) {
+    let ratio = match group_ratio(snapshot, token.group_id.as_deref(), token.group.as_deref()) {
         GroupRatioLookup::Fixed(value) => value,
         GroupRatioLookup::Missing => {
             return anomaly_outcome(
@@ -122,10 +147,20 @@ where
                 Vec::new(),
             );
         }
-        GroupRatioLookup::NonFixed(value) => return non_fixed_ratio_outcome(key.upstream_group.as_deref(), value),
+        GroupRatioLookup::NonFixed(value) => return non_fixed_ratio_outcome(token.group.as_deref(), value),
     };
+    let group_patch = group_patch(key, token);
     match check_models(importer, source_config, key).await {
-        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(source, globals, bindings, key, None, ratio, &upstream_models),
+        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(CostOutcomeInput {
+            source,
+            globals,
+            bindings,
+            key,
+            observed_group: None,
+            group_patch,
+            group_ratio: ratio,
+            upstream_models: &upstream_models,
+        }),
         Ok(ModelCheck::Removed {
             missing_upstream_model_ids,
             upstream_models,
@@ -150,7 +185,7 @@ where
     if context.source.sync_config.anomaly_actions.group_changed != ProviderQuickImportGroupChangedAction::Sync {
         return group_changed_status(context.source, token);
     }
-    let ratio = match group_ratio(context.snapshot, token.group.as_deref()) {
+    let ratio = match group_ratio(context.snapshot, token.group_id.as_deref(), token.group.as_deref()) {
         GroupRatioLookup::Fixed(value) => value,
         GroupRatioLookup::Missing => {
             return anomaly_outcome(
@@ -162,16 +197,18 @@ where
         }
         GroupRatioLookup::NonFixed(value) => return non_fixed_ratio_outcome(token.group.as_deref(), value),
     };
+    let group_patch = group_patch(key, token);
     match check_models(context.importer, context.source_config, key).await {
-        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(
-            context.source,
-            context.globals,
-            context.bindings,
+        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(CostOutcomeInput {
+            source: context.source,
+            globals: context.globals,
+            bindings: context.bindings,
             key,
-            Some(token.group.clone()),
-            ratio,
-            &upstream_models,
-        ),
+            observed_group: Some(token.group.clone()),
+            group_patch,
+            group_ratio: ratio,
+            upstream_models: &upstream_models,
+        }),
         Ok(ModelCheck::Removed {
             missing_upstream_model_ids,
             upstream_models,
@@ -196,27 +233,31 @@ fn group_changed_status(source: &ProviderQuickImportSyncSource, token: &Upstream
     outcome
 }
 
-fn cost_outcome(
-    source: &ProviderQuickImportSyncSource,
-    globals: &BTreeMap<String, GlobalModelResponse>,
-    bindings: &BTreeMap<String, BindingInfo>,
-    key: &ProviderQuickImportSyncKey,
-    upstream_group: Option<Option<String>>,
-    group_ratio: rust_decimal::Decimal,
-    upstream_models: &[UpstreamImportModel],
-) -> KeyOutcome {
+fn cost_outcome(input: CostOutcomeInput<'_>) -> KeyOutcome {
+    let CostOutcomeInput {
+        source,
+        globals,
+        bindings,
+        key,
+        observed_group,
+        group_patch,
+        group_ratio,
+        upstream_models,
+    } = input;
     let group_ratio = persisted_multiplier(group_ratio);
     let effective = persisted_multiplier(group_ratio / source.recharge_multiplier);
     let costs = match costs_for_key(globals, bindings, key, effective) {
         Ok(costs) => costs,
-        Err(error) => return cost_error(group_ratio, effective, upstream_group, error),
+        Err(error) => return cost_error(group_ratio, effective, observed_group, error),
     };
     let candidates = candidate_model_ids(globals, key, upstream_models);
+    let group_change_synced = observed_group.is_some();
     if source.sync_config.cost_sync_mode == ProviderQuickImportCostSyncMode::ReportOnly {
         return report_only_outcome(
             group_ratio,
             effective,
-            upstream_group,
+            observed_group,
+            group_patch,
             key.effective_cost_multiplier,
             candidates,
             models_snapshot(upstream_models),
@@ -227,13 +268,15 @@ fn cost_outcome(
         statuses,
         costs: Some(costs),
         disable_key: false,
-        observed_group: upstream_group.clone(),
+        observed_group,
         observed_group_ratio: Some(group_ratio),
         observed_effective_multiplier: Some(effective),
         candidate_model_ids: candidates,
         missing_upstream_model_ids: Vec::new(),
         upstream_models_snapshot: models_snapshot(upstream_models),
-        upstream_group,
+        group_change_synced,
+        upstream_group_id: group_patch.upstream_group_id,
+        upstream_group: group_patch.upstream_group,
         group_ratio_patch: Some(group_ratio),
         effective_multiplier_patch: Some(effective),
         error: None,
@@ -243,7 +286,8 @@ fn cost_outcome(
 fn report_only_outcome(
     group_ratio: rust_decimal::Decimal,
     effective: rust_decimal::Decimal,
-    upstream_group: Option<Option<String>>,
+    observed_group: Option<Option<String>>,
+    group_patch: GroupPatch,
     current: rust_decimal::Decimal,
     candidates: Vec<String>,
     upstream_models_snapshot: Vec<ProviderQuickImportUpstreamModelSnapshot>,
@@ -254,17 +298,20 @@ fn report_only_outcome(
         vec![ProviderQuickImportSyncStatus::CostPendingUpdate]
     };
     let statuses = statuses_with_candidates(base_statuses, &candidates);
+    let group_change_synced = observed_group.is_some();
     KeyOutcome {
         statuses,
         costs: None,
         disable_key: false,
-        observed_group: upstream_group.clone(),
+        observed_group,
         observed_group_ratio: Some(group_ratio),
         observed_effective_multiplier: Some(effective),
         candidate_model_ids: candidates,
         missing_upstream_model_ids: Vec::new(),
         upstream_models_snapshot,
-        upstream_group,
+        group_change_synced,
+        upstream_group_id: group_patch.upstream_group_id,
+        upstream_group: group_patch.upstream_group,
         group_ratio_patch: None,
         effective_multiplier_patch: None,
         error: None,
@@ -322,6 +369,8 @@ fn status_base(status: ProviderQuickImportSyncStatus) -> KeyOutcome {
         candidate_model_ids: Vec::new(),
         missing_upstream_model_ids: Vec::new(),
         upstream_models_snapshot: Vec::new(),
+        group_change_synced: false,
+        upstream_group_id: None,
         upstream_group: None,
         group_ratio_patch: None,
         effective_multiplier_patch: None,
@@ -341,4 +390,11 @@ fn models_snapshot(upstream_models: &[UpstreamImportModel]) -> Vec<ProviderQuick
 
 fn token_by_id<'a>(snapshot: &'a UpstreamSyncSnapshot, id: &str) -> Option<&'a UpstreamSyncToken> {
     snapshot.tokens.iter().find(|token| token.id == id)
+}
+
+fn group_patch(key: &ProviderQuickImportSyncKey, token: &UpstreamSyncToken) -> GroupPatch {
+    GroupPatch {
+        upstream_group_id: (key.upstream_group_id != token.group_id).then(|| token.group_id.clone()),
+        upstream_group: (key.upstream_group != token.group).then(|| token.group.clone()),
+    }
 }

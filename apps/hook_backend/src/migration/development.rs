@@ -169,6 +169,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::provider_quick_import_sync_schedule_additive::apply(manager).await?;
     super::provider_quick_import_source_credentials_additive::apply(manager).await?;
     super::provider_quick_import_sync_controls_additive::apply(manager).await?;
+    super::provider_quick_import_group_id_additive::apply(manager).await?;
     super::provider_image_stream_mode_additive::apply(manager).await?;
     super::provider_stream_first_output_timeout_additive::apply(manager).await?;
     super::provider_key_model_mappings_additive::apply(manager).await?;
@@ -182,6 +183,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::stream_tail_latency_additive::apply(manager).await?;
     super::dashboard_stage_latency_additive::apply(manager).await?;
     super::routing_profile_state_partition_additive::apply(manager).await?;
+    super::routing_metric_timing_semantics_additive::apply(manager).await?;
     super::routing_profile_overrides_additive::apply(manager).await?;
     super::system_settings_api_endpoints_additive::apply(manager).await?;
     super::provider_group_removal_destructive::apply(manager).await

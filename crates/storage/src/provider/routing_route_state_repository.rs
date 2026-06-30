@@ -1,6 +1,6 @@
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use sea_orm::{ConnectionTrait, DbBackend, FromQueryResult, Statement, Value};
-use types::provider::RouteIdentity;
+use types::provider::{ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, RouteIdentity};
 
 use crate::StorageResult;
 
@@ -21,7 +21,13 @@ pub(super) async fn list_route_states<C>(connection: &C) -> StorageResult<Vec<Ro
 where
     C: ConnectionTrait,
 {
-    let rows = RoutingRouteStateRow::find_by_statement(Statement::from_string(DbBackend::Postgres, select_sql().to_owned()))
+    let mut params = Vec::new();
+    let sql = format!(
+        "{} WHERE timing_metric_semantics_version = {}",
+        select_sql(),
+        push(&mut params, Value::from(ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1))
+    );
+    let rows = RoutingRouteStateRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params))
         .all(connection)
         .await?;
     Ok(rows.into_iter().map(RoutingRouteStateRecord::from).collect())
@@ -30,12 +36,13 @@ where
 fn select_statement(routes: &[RouteIdentity]) -> Option<Statement> {
     let mut params = Vec::new();
     let filter = route_filter_sql(routes, &mut params)?;
-    let sql = format!("{} WHERE {}", select_sql(), filter);
+    let timing = push(&mut params, Value::from(ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1));
+    let sql = format!("{} WHERE timing_metric_semantics_version = {timing} AND ({filter})", select_sql());
     Some(Statement::from_sql_and_values(DbBackend::Postgres, sql, params))
 }
 
 fn select_sql() -> &'static str {
-    "SELECT profile_id, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, \
+    "SELECT profile_id, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version, \
      ema_success_rate, ema_ttfb_ms, ema_latency_ms, ema_output_tps, sample_count, last_updated_at \
      FROM routing_route_states"
 }
@@ -78,6 +85,7 @@ struct RoutingRouteStateRow {
     is_stream: bool,
     route_config_fingerprint: Option<String>,
     price_config_fingerprint: Option<String>,
+    timing_metric_semantics_version: String,
     ema_success_rate: Decimal,
     ema_ttfb_ms: Option<Decimal>,
     ema_latency_ms: Option<Decimal>,
@@ -92,6 +100,7 @@ impl From<RoutingRouteStateRow> for RoutingRouteStateRecord {
         Self {
             profile_id: row.profile_id,
             route,
+            timing_metric_semantics_version: row.timing_metric_semantics_version,
             ema_success_rate: decimal(row.ema_success_rate).unwrap_or_default(),
             ema_ttfb_ms: row.ema_ttfb_ms.and_then(decimal),
             ema_latency_ms: row.ema_latency_ms.and_then(decimal),

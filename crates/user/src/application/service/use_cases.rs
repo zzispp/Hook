@@ -111,23 +111,28 @@ where
     }
 
     async fn oauth_callback(&self, provider: IdentityProvider, code: String, state: String) -> AppResult<OAuthSignInResult> {
-        let settings = self.auth_provider_config.oauth_provider_settings(provider).await?;
-        let redirect_uri = social_auth::oauth_redirect_uri(&settings, provider)?;
-        let profile = self.oauth_client.fetch_profile(provider, settings, &code, &redirect_uri).await?;
+        let provider_settings = self.auth_provider_config.oauth_provider_settings(provider).await?;
+        let redirect_uri = social_auth::oauth_redirect_uri(&provider_settings, provider)?;
+        let profile = self.oauth_client.fetch_profile(provider, provider_settings, &code, &redirect_uri).await?;
+        let registration = self.registration_policy.registration_settings().await?;
         reject_system_user_email(&self.system_users, &profile.email)?;
         let callback = social_auth::oauth_callback_with_creation(
-            &self.repository,
-            &self.auth_provider_config,
-            &self.auth_ticket_store,
-            provider,
-            &state,
-            &redirect_uri,
-            profile,
+            social_auth::OAuthCallbackWithCreationDeps {
+                repository: &self.repository,
+                config: &self.auth_provider_config,
+                registration: &registration,
+                tickets: &self.auth_ticket_store,
+            },
+            social_auth::OAuthCallbackWithCreationInput {
+                provider,
+                state: &state,
+                redirect_uri: &redirect_uri,
+                profile,
+            },
         )
         .await?;
         if let Some(user) = &callback.created_user {
-            let settings = self.registration_policy.registration_settings().await?;
-            grant_initial_balance(&self.initial_grants, user, settings.default_user_grant).await?;
+            grant_initial_balance(&self.initial_grants, user, registration.default_user_grant).await?;
         }
         Ok(callback.result)
     }

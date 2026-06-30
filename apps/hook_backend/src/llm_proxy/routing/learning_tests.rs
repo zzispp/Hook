@@ -1,5 +1,5 @@
 use storage::provider::RoutingMetricRecord;
-use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingProfileId, RoutingProfileWeights};
+use types::provider::{ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, RouteIdentity, RoutingMetricSnapshot, RoutingProfileId, RoutingProfileWeights};
 
 use super::learning::{blend_weights, quality_score};
 
@@ -71,6 +71,7 @@ fn metric(request_count: u64, quality_failures: u64) -> RoutingMetricRecord {
         provider_name: None,
         key_name: None,
         endpoint_name: None,
+        timing_metric_semantics_version: ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1.into(),
         route_config_fingerprint: Some("route-fingerprint".into()),
         price_config_fingerprint: Some("price-fingerprint".into()),
         snapshot: RoutingMetricSnapshot {

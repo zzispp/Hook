@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use storage::provider::{RoutingContextRouteStateRecord, RoutingMetricRecord, RoutingRouteStateRecord};
-use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource, RoutingMetricWindow, RoutingPriorSource, RoutingProfileId};
+use types::provider::{
+    ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, ROUTING_TIMING_SEMANTICS_LEGACY_FIRST_BYTE_V1, RouteIdentity, RoutingMetricSnapshot, RoutingMetricSource,
+    RoutingMetricWindow, RoutingPriorSource, RoutingProfileId,
+};
 
 use super::{ContextRouteStateCatalog, MetricCatalog, RouteFingerprints, RouteStateCatalog, RoutingMetricsSnapshot};
 
@@ -31,6 +34,25 @@ fn resolve_uses_prior_when_exact_route_fingerprint_mismatches() {
     assert_eq!(resolved.prior_source, RoutingPriorSource::ProviderModelFormat);
     assert_eq!(resolved.prior_sample_count, 25);
     assert_eq!(resolved.effective_sample_count, 20);
+}
+
+#[test]
+fn resolve_ignores_legacy_timing_semantics_in_prior_aggregation() {
+    let source = route("provider-a", "key-a", "endpoint-a", "openai:chat", true);
+    let target = route("provider-a", "key-b", "endpoint-b", "openai:chat", true);
+    let catalog = catalog(vec![record_with_semantics(
+        source,
+        30,
+        CURRENT_ROUTE_FINGERPRINT,
+        CURRENT_PRICE_FINGERPRINT,
+        ROUTING_TIMING_SEMANTICS_LEGACY_FIRST_BYTE_V1,
+    )]);
+
+    let resolved = catalog.resolve(&target, fingerprints(), 20, 20, RoutingMetricWindow::FiveMinutes);
+
+    assert_eq!(resolved.metric_source, RoutingMetricSource::Prior);
+    assert_eq!(resolved.prior_source, RoutingPriorSource::Neutral);
+    assert_eq!(resolved.prior_sample_count, 0);
 }
 
 #[test]
@@ -148,15 +170,38 @@ fn catalog(records: Vec<RoutingMetricRecord>) -> MetricCatalog {
 }
 
 fn record(route: RouteIdentity, sample_count: u64) -> RoutingMetricRecord {
-    record_with_fingerprints(route, sample_count, CURRENT_ROUTE_FINGERPRINT, CURRENT_PRICE_FINGERPRINT)
+    record_with_semantics(
+        route,
+        sample_count,
+        CURRENT_ROUTE_FINGERPRINT,
+        CURRENT_PRICE_FINGERPRINT,
+        ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1,
+    )
 }
 
 fn record_with_fingerprints(route: RouteIdentity, sample_count: u64, route_fingerprint: &str, price_fingerprint: &str) -> RoutingMetricRecord {
+    record_with_semantics(
+        route,
+        sample_count,
+        route_fingerprint,
+        price_fingerprint,
+        ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1,
+    )
+}
+
+fn record_with_semantics(
+    route: RouteIdentity,
+    sample_count: u64,
+    route_fingerprint: &str,
+    price_fingerprint: &str,
+    timing_metric_semantics_version: &str,
+) -> RoutingMetricRecord {
     RoutingMetricRecord {
         route,
         provider_name: None,
         key_name: None,
         endpoint_name: None,
+        timing_metric_semantics_version: timing_metric_semantics_version.into(),
         route_config_fingerprint: Some(route_fingerprint.into()),
         price_config_fingerprint: Some(price_fingerprint.into()),
         snapshot: RoutingMetricSnapshot {
@@ -176,6 +221,7 @@ fn route_state_record(profile_id: RoutingProfileId, route: RouteIdentity, succes
     RoutingRouteStateRecord {
         profile_id: profile_id.as_str().to_owned(),
         route,
+        timing_metric_semantics_version: ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1.into(),
         ema_success_rate: success_rate,
         ema_ttfb_ms: Some(100.0),
         ema_latency_ms: Some(300.0),
@@ -192,6 +238,7 @@ fn context_state_record(profile_id: RoutingProfileId, context_key: &str, route: 
         profile_id: profile_id.as_str().to_owned(),
         context_key: context_key.into(),
         route,
+        timing_metric_semantics_version: ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1.into(),
         sample_count,
         success_count: sample_count,
         failure_count: 0,

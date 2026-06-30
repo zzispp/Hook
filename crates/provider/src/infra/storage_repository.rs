@@ -490,6 +490,7 @@ fn sync_key(record: storage::provider::ProviderQuickImportSyncKeyRecord) -> Prov
         local_key_name: record.local_key_name,
         upstream_token_id: record.upstream_token_id,
         upstream_token_name: record.upstream_token_name,
+        upstream_group_id: record.upstream_group_id,
         upstream_group: record.upstream_group,
         upstream_group_ratio: record.upstream_group_ratio,
         effective_cost_multiplier: record.effective_cost_multiplier,
@@ -545,6 +546,7 @@ fn sync_key_patch(input: ProviderQuickImportSyncKeyPatch) -> storage::provider::
     storage::provider::ProviderQuickImportSyncKeyRecordPatch {
         key_id: input.key_id,
         statuses: input.statuses,
+        upstream_group_id: input.upstream_group_id,
         upstream_group: input.upstream_group,
         upstream_group_ratio: input.upstream_group_ratio,
         effective_cost_multiplier: input.effective_cost_multiplier,

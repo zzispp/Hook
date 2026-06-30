@@ -3,10 +3,11 @@ use rust_decimal::Decimal;
 use serde_json::json;
 use std::collections::BTreeMap;
 use types::model::TieredPricingConfig;
+use types::provider::{ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, RequestUpstreamCost};
 
 use super::{
-    AttemptAuditInput, AttemptRecordInput, billing_runtime::BillingAttempt, model_usage_record, request_billing_status, token_usage_record,
-    wallet_settlement_input,
+    AttemptAuditInput, AttemptRecordInput, billing_runtime::BillingAttempt, model_usage_record, request_billing_status, routing_observability,
+    token_usage_record, wallet_settlement_input,
 };
 use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
@@ -121,6 +122,49 @@ fn skipped_request_has_void_billing_status() {
     let input = audit_input(AttemptRecordInput::new(&candidate, 0, "skipped", true));
 
     assert_eq!(request_billing_status(&input, None), "void");
+}
+
+#[test]
+fn routing_ttfb_uses_first_output_only() {
+    let candidate = candidate();
+    let input = audit_input(AttemptRecordInput {
+        latency_ms: Some(320),
+        first_output_time_ms: Some(120),
+        first_byte_time_ms: Some(40),
+        ..AttemptRecordInput::new(&candidate, 0, "success", true)
+    });
+
+    let delta = routing_observability::test_only_metric_delta(
+        &input,
+        &RequestUpstreamCost::default(),
+        candidate.trace.route_identity(),
+        time::OffsetDateTime::UNIX_EPOCH,
+    );
+
+    assert_eq!(delta.ttfb_sum_ms, 120);
+    assert_eq!(delta.ttfb_sample_count, 1);
+    assert_eq!(delta.timing_metric_semantics_version, ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1);
+}
+
+#[test]
+fn routing_ttfb_does_not_fallback_to_first_byte() {
+    let candidate = candidate();
+    let input = audit_input(AttemptRecordInput {
+        latency_ms: Some(320),
+        first_output_time_ms: None,
+        first_byte_time_ms: Some(40),
+        ..AttemptRecordInput::new(&candidate, 0, "success", true)
+    });
+
+    let delta = routing_observability::test_only_metric_delta(
+        &input,
+        &RequestUpstreamCost::default(),
+        candidate.trace.route_identity(),
+        time::OffsetDateTime::UNIX_EPOCH,
+    );
+
+    assert_eq!(delta.ttfb_sum_ms, 0);
+    assert_eq!(delta.ttfb_sample_count, 0);
 }
 
 fn audit_input(input: AttemptRecordInput<'_>) -> AttemptAuditInput {

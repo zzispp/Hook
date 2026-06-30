@@ -7,7 +7,7 @@ use super::social_auth_test_support::{
     TestAuthProviderConfig, TestAuthTicketStore, TestEmailConfig, TestMailer, TestOAuthClient, TestPurposeEmailCodeStore, github_profile, state_from_url,
 };
 use crate::{
-    application::{AppResult, InitialGrantLedger, OAuthSignInResult, RegistrationPolicy, RegistrationSettings, UserService, UserUseCase},
+    application::{AppError, AppResult, InitialGrantLedger, OAuthSignInResult, RegistrationPolicy, RegistrationSettings, UserService, UserUseCase},
     test_support::{MemoryUserRepository, TestPasswordHasher},
 };
 
@@ -18,7 +18,7 @@ struct RecordingInitialGrantLedger {
 
 #[derive(Clone)]
 struct GrantRegistrationPolicy {
-    default_user_grant: Decimal,
+    settings: RegistrationSettings,
 }
 
 #[tokio::test]
@@ -42,17 +42,112 @@ async fn oauth_first_account_creation_grants_default_user_balance() {
     assert_eq!(ledger.grants(), vec![(user.id.0, amount)]);
 }
 
+#[tokio::test]
+async fn oauth_first_account_creation_uses_registration_default_group_code() {
+    let repository = MemoryUserRepository::default();
+    let service = service_with_settings(
+        repository,
+        RegistrationSettings {
+            allow_registration: true,
+            registration_email_verification_enabled: false,
+            default_user_grant: Decimal::ZERO,
+            default_user_group_code: "paid".into(),
+            email_suffix_mode: EmailSuffixMode::None,
+            email_suffixes: String::new(),
+        },
+        RecordingInitialGrantLedger::default(),
+        TestOAuthClient::with_profile(github_profile("new@example.com")),
+    );
+
+    let state = state_from_url(&service.oauth_start(IdentityProvider::Github, None).await.unwrap());
+    let result = service.oauth_callback(IdentityProvider::Github, "oauth-code".into(), state).await.unwrap();
+
+    let OAuthSignInResult::Authenticated(user) = result else {
+        panic!("expected authenticated OAuth result");
+    };
+    assert_eq!(user.group_codes, vec!["paid".to_string()]);
+}
+
+#[tokio::test]
+async fn oauth_first_account_creation_rejects_closed_registration() {
+    let repository = MemoryUserRepository::default();
+    let service = service_with_settings(
+        repository.clone(),
+        RegistrationSettings {
+            allow_registration: false,
+            registration_email_verification_enabled: false,
+            default_user_grant: Decimal::ZERO,
+            default_user_group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+            email_suffix_mode: EmailSuffixMode::None,
+            email_suffixes: String::new(),
+        },
+        RecordingInitialGrantLedger::default(),
+        TestOAuthClient::with_profile(github_profile("new@example.com")),
+    );
+
+    let state = state_from_url(&service.oauth_start(IdentityProvider::Github, None).await.unwrap());
+    let result = service.oauth_callback(IdentityProvider::Github, "oauth-code".into(), state).await;
+
+    assert_invalid_input(result, "registration is closed");
+    assert!(repository.created_records().is_empty());
+}
+
+#[tokio::test]
+async fn oauth_first_account_creation_rejects_email_outside_whitelist() {
+    let repository = MemoryUserRepository::default();
+    let service = service_with_settings(
+        repository.clone(),
+        RegistrationSettings {
+            allow_registration: true,
+            registration_email_verification_enabled: false,
+            default_user_grant: Decimal::ZERO,
+            default_user_group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+            email_suffix_mode: EmailSuffixMode::Whitelist,
+            email_suffixes: "company.com".into(),
+        },
+        RecordingInitialGrantLedger::default(),
+        TestOAuthClient::with_profile(github_profile("new@example.com")),
+    );
+
+    let state = state_from_url(&service.oauth_start(IdentityProvider::Github, None).await.unwrap());
+    let result = service.oauth_callback(IdentityProvider::Github, "oauth-code".into(), state).await;
+
+    assert_invalid_input(result, "email suffix is not allowed for new users");
+    assert!(repository.created_records().is_empty());
+}
+
 fn service_with_grant(
     repository: MemoryUserRepository,
     ledger: RecordingInitialGrantLedger,
     amount: Decimal,
     oauth_client: TestOAuthClient,
 ) -> impl UserUseCase {
+    service_with_settings(
+        repository,
+        RegistrationSettings {
+            allow_registration: true,
+            registration_email_verification_enabled: false,
+            default_user_grant: amount,
+            default_user_group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
+            email_suffix_mode: EmailSuffixMode::None,
+            email_suffixes: String::new(),
+        },
+        ledger,
+        oauth_client,
+    )
+}
+
+fn service_with_settings(
+    repository: MemoryUserRepository,
+    settings: RegistrationSettings,
+    ledger: RecordingInitialGrantLedger,
+    oauth_client: TestOAuthClient,
+) -> impl UserUseCase {
     UserService::with_system_user_and_registration(
         repository,
         TestPasswordHasher,
         super::NoSystemUserProvider,
-        GrantRegistrationPolicy { default_user_grant: amount },
+        GrantRegistrationPolicy { settings },
         ledger,
         super::NoUserWalletCatalog,
     )
@@ -63,6 +158,14 @@ fn service_with_grant(
         TestAuthTicketStore::default(),
         TestPurposeEmailCodeStore::default(),
     )
+}
+
+fn assert_invalid_input<T>(result: Result<T, AppError>, expected: &str) {
+    match result {
+        Err(AppError::InvalidInput(message)) => assert_eq!(message, expected),
+        Err(error) => panic!("expected invalid input error, got {error:?}"),
+        Ok(_) => panic!("expected invalid input error, got ok"),
+    }
 }
 
 impl RecordingInitialGrantLedger {
@@ -82,13 +185,6 @@ impl InitialGrantLedger for RecordingInitialGrantLedger {
 #[async_trait]
 impl RegistrationPolicy for GrantRegistrationPolicy {
     async fn registration_settings(&self) -> AppResult<RegistrationSettings> {
-        Ok(RegistrationSettings {
-            allow_registration: true,
-            registration_email_verification_enabled: false,
-            default_user_grant: self.default_user_grant,
-            default_user_group_code: constants::user_group::DEFAULT_USER_GROUP_CODE.into(),
-            email_suffix_mode: EmailSuffixMode::None,
-            email_suffixes: String::new(),
-        })
+        Ok(self.settings.clone())
     }
 }

@@ -5,7 +5,7 @@ use types::{
 
 use crate::application::{
     AppError, AppResult, AuthProviderConfig, AuthTicketStore, OAuthPendingBinding, OAuthProfile, OAuthProviderSettings, OAuthSignInResult, OAuthStateRecord,
-    UserRepository,
+    RegistrationSettings, UserRepository,
 };
 
 use super::helpers::{OAUTH_BINDING_TTL_SECONDS, OAUTH_STATE_TTL_SECONDS, TICKET_BYTES, new_provider_user, provider_identity, random_token};
@@ -13,6 +13,20 @@ use super::helpers::{OAUTH_BINDING_TTL_SECONDS, OAUTH_STATE_TTL_SECONDS, TICKET_
 pub(in crate::application::service) struct OAuthCallbackResult {
     pub result: OAuthSignInResult,
     pub created_user: Option<User>,
+}
+
+pub(in crate::application::service) struct OAuthCallbackWithCreationInput<'a> {
+    pub provider: IdentityProvider,
+    pub state: &'a str,
+    pub redirect_uri: &'a str,
+    pub profile: OAuthProfile,
+}
+
+pub(in crate::application::service) struct OAuthCallbackWithCreationDeps<'a, R, C, T> {
+    pub repository: &'a R,
+    pub config: &'a C,
+    pub registration: &'a RegistrationSettings,
+    pub tickets: &'a T,
 }
 
 pub(in crate::application::service) async fn oauth_start<C, T>(
@@ -81,19 +95,26 @@ pub(in crate::application::service) fn oauth_redirect_uri(settings: &OAuthProvid
 }
 
 pub(in crate::application::service) async fn oauth_callback_with_creation<R, C, T>(
-    repository: &R,
-    config: &C,
-    tickets: &T,
-    provider: IdentityProvider,
-    state: &str,
-    redirect_uri: &str,
-    profile: OAuthProfile,
+    deps: OAuthCallbackWithCreationDeps<'_, R, C, T>,
+    input: OAuthCallbackWithCreationInput<'_>,
 ) -> AppResult<OAuthCallbackResult>
 where
     R: UserRepository,
     C: AuthProviderConfig,
     T: AuthTicketStore,
 {
+    let OAuthCallbackWithCreationDeps {
+        repository,
+        config,
+        registration,
+        tickets,
+    } = deps;
+    let OAuthCallbackWithCreationInput {
+        provider,
+        state,
+        redirect_uri,
+        profile,
+    } = input;
     if !profile.email_verified {
         return Err(AppError::InvalidInput("verified provider email is required".into()));
     }
@@ -105,7 +126,7 @@ where
     if state.user_id.is_some() {
         return Err(AppError::Unauthorized);
     }
-    provider_profile_result(repository, tickets, state.provider, profile, state.aff_code).await
+    provider_profile_result(repository, tickets, registration, state.provider, profile, state.aff_code).await
 }
 
 pub(in crate::application::service) struct AccountOAuthCallbackInput<'a> {
@@ -172,6 +193,7 @@ where
 async fn provider_profile_result<R, T>(
     repository: &R,
     tickets: &T,
+    registration: &RegistrationSettings,
     provider: IdentityProvider,
     profile: OAuthProfile,
     aff_code: Option<String>,
@@ -193,7 +215,7 @@ where
         let result = oauth_binding_required(repository, tickets, user, provider, profile).await?;
         return Ok(OAuthCallbackResult { result, created_user: None });
     }
-    let user = create_provider_account(repository, &profile, aff_code).await?;
+    let user = create_provider_account(repository, registration, &profile, aff_code).await?;
     let identity = oauth_identity(provider, &profile, user.id.0.clone());
     repository.create_identity(identity).await?;
     repository.record_login(user.id.clone()).await?;
@@ -227,11 +249,13 @@ where
     })
 }
 
-async fn create_provider_account<R>(repository: &R, profile: &OAuthProfile, aff_code: Option<String>) -> AppResult<User>
+async fn create_provider_account<R>(repository: &R, registration: &RegistrationSettings, profile: &OAuthProfile, aff_code: Option<String>) -> AppResult<User>
 where
     R: UserRepository,
 {
-    let mut user = new_provider_user(&profile.email, constants::user_group::DEFAULT_USER_GROUP_CODE);
+    super::super::registration::reject_closed_registration(registration)?;
+    super::super::registration::reject_disallowed_registration_email(registration, &profile.email)?;
+    let mut user = new_provider_user(&profile.email, &registration.default_user_group_code);
     user.referrer_aff_code = aff_code;
     repository.create(super::super::provider_user_record(user, Some(profile.email_verified))).await
 }

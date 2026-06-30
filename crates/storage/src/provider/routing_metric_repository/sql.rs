@@ -1,5 +1,6 @@
 use rust_decimal::Decimal;
 use sea_orm::Value;
+use types::provider::ROUTING_TIMING_SEMANTICS_COLUMN;
 
 use crate::provider::routing_repository::RoutingMetricDelta;
 
@@ -7,7 +8,7 @@ const BUCKET_GRANULARITY: &str = "minute";
 
 pub(super) fn metric_upsert_sql() -> &'static str {
     "ON CONFLICT (bucket_granularity, bucket_started_at, provider_id, key_id, endpoint_id, global_model_id, client_api_format, \
-     provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint) \
+     provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version) \
      DO UPDATE SET provider_name = COALESCE(EXCLUDED.provider_name, routing_metric_buckets.provider_name), \
      key_name = COALESCE(EXCLUDED.key_name, routing_metric_buckets.key_name), endpoint_name = COALESCE(EXCLUDED.endpoint_name, routing_metric_buckets.endpoint_name), \
      request_count = routing_metric_buckets.request_count + EXCLUDED.request_count, success_count = routing_metric_buckets.success_count + EXCLUDED.success_count, \
@@ -30,7 +31,7 @@ pub(super) fn metric_upsert_sql() -> &'static str {
 pub(super) fn route_state_upsert_sql(current_weight_ref: &str, incoming_weight_ref: &str) -> String {
     format!(
         "ON CONFLICT (profile_id, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
-         route_config_fingerprint, price_config_fingerprint) \
+         route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version) \
          DO UPDATE SET ema_success_rate = (routing_route_states.ema_success_rate * {current_weight_ref} + EXCLUDED.ema_success_rate * {incoming_weight_ref}), \
          ema_latency_ms = COALESCE((routing_route_states.ema_latency_ms * {current_weight_ref} + EXCLUDED.ema_latency_ms * {incoming_weight_ref}), routing_route_states.ema_latency_ms, EXCLUDED.ema_latency_ms), \
          ema_ttfb_ms = COALESCE((routing_route_states.ema_ttfb_ms * {current_weight_ref} + EXCLUDED.ema_ttfb_ms * {incoming_weight_ref}), routing_route_states.ema_ttfb_ms, EXCLUDED.ema_ttfb_ms), \
@@ -41,7 +42,7 @@ pub(super) fn route_state_upsert_sql(current_weight_ref: &str, incoming_weight_r
 
 pub(super) fn metric_select_sql() -> &'static str {
     "SELECT provider_id, provider_name, key_id, key_name, endpoint_id, endpoint_name, global_model_id, client_api_format, provider_api_format, is_stream, \
-     route_config_fingerprint, price_config_fingerprint, \
+     route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version, \
      SUM(request_count)::BIGINT AS request_count, SUM(success_count)::BIGINT AS success_count, SUM(failure_count)::BIGINT AS failure_count, \
      SUM(first_output_success_count)::BIGINT AS first_output_success_count, SUM(first_output_failure_count)::BIGINT AS first_output_failure_count, \
      SUM(timeout_count)::BIGINT AS timeout_count, SUM(rate_limited_count)::BIGINT AS rate_limited_count, SUM(server_error_count)::BIGINT AS server_error_count, \
@@ -54,7 +55,7 @@ pub(super) fn metric_select_sql() -> &'static str {
 
 pub(super) fn metric_group_sql() -> &'static str {
     "GROUP BY provider_id, provider_name, key_id, key_name, endpoint_id, endpoint_name, global_model_id, client_api_format, provider_api_format, is_stream, \
-     route_config_fingerprint, price_config_fingerprint"
+     route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version"
 }
 
 pub(super) fn metric_values(delta: &RoutingMetricDelta, bounds: BucketBounds, now: time::OffsetDateTime) -> Vec<Value> {
@@ -96,6 +97,7 @@ pub(super) fn metric_values(delta: &RoutingMetricDelta, bounds: BucketBounds, no
         Value::from(delta.total_tokens),
         Value::from(delta.route_config_fingerprint.clone()),
         Value::from(delta.price_config_fingerprint.clone()),
+        Value::from(delta.timing_metric_semantics_version.clone()),
         Value::from(delta.observed_at),
         Value::from(now),
         Value::from(now),
@@ -122,6 +124,7 @@ pub(super) fn route_state_values(
         Value::from(delta.route.is_stream),
         Value::from(delta.route_config_fingerprint.clone()),
         Value::from(delta.price_config_fingerprint.clone()),
+        Value::from(delta.timing_metric_semantics_version.clone()),
         Value::from(success_rate),
         Value::from(ttfb),
         Value::from(latency),
@@ -133,7 +136,7 @@ pub(super) fn route_state_values(
     ]
 }
 
-pub(super) fn metric_columns() -> [&'static str; 40] {
+pub(super) fn metric_columns() -> [&'static str; 41] {
     [
         "id",
         "bucket_granularity",
@@ -172,13 +175,14 @@ pub(super) fn metric_columns() -> [&'static str; 40] {
         "total_tokens",
         "route_config_fingerprint",
         "price_config_fingerprint",
+        ROUTING_TIMING_SEMANTICS_COLUMN,
         "last_seen_at",
         "created_at",
         "updated_at",
     ]
 }
 
-pub(super) fn route_state_columns() -> [&'static str; 18] {
+pub(super) fn route_state_columns() -> [&'static str; 19] {
     [
         "profile_id",
         "provider_id",
@@ -190,6 +194,7 @@ pub(super) fn route_state_columns() -> [&'static str; 18] {
         "is_stream",
         "route_config_fingerprint",
         "price_config_fingerprint",
+        ROUTING_TIMING_SEMANTICS_COLUMN,
         "ema_success_rate",
         "ema_ttfb_ms",
         "ema_latency_ms",
@@ -254,7 +259,7 @@ mod tests {
     fn metric_upsert_conflict_includes_fingerprints() {
         let sql = metric_upsert_sql();
 
-        assert!(sql.contains("route_config_fingerprint, price_config_fingerprint)"));
+        assert!(sql.contains("route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version)"));
     }
 
     #[test]
@@ -262,7 +267,7 @@ mod tests {
         let sql = route_state_upsert_sql("$19", "$20");
 
         assert!(sql.contains("profile_id, provider_id"));
-        assert!(sql.contains("is_stream, route_config_fingerprint, price_config_fingerprint)"));
+        assert!(sql.contains("is_stream, route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version)"));
         assert!(sql.contains("ema_success_rate * $19 + EXCLUDED.ema_success_rate * $20"));
     }
 }

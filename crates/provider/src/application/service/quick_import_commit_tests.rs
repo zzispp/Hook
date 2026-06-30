@@ -443,6 +443,7 @@ fn token_with_id_and_models(id: &str, models: &[&str]) -> UpstreamImportToken {
         masked_key: "abcd****efgh".into(),
         status: "active".into(),
         is_active: true,
+        group_id: None,
         group: Some("plus".into()),
         group_ratio: Decimal::ONE,
         api_key: Some("sk-test".into()),

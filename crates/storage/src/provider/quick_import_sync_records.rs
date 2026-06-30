@@ -26,6 +26,7 @@ pub(super) fn sync_key_record(
         local_key_name,
         upstream_token_id: record.upstream_token_id,
         upstream_token_name: record.upstream_token_name,
+        upstream_group_id: record.upstream_group_id,
         upstream_group: record.upstream_group,
         upstream_group_ratio: record.upstream_group_ratio,
         effective_cost_multiplier: record.effective_cost_multiplier,

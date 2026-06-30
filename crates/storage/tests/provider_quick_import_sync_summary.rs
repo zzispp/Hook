@@ -153,6 +153,7 @@ fn key_records<const N: usize>(
         upstream_token_id: "upstream-token".into(),
         upstream_token_name: "Upstream token".into(),
         upstream_masked_key: "sk-***".into(),
+        upstream_group_id: None,
         upstream_group: Some("default".into()),
         upstream_group_ratio: rust_decimal::Decimal::ONE,
         effective_cost_multiplier: rust_decimal::Decimal::ONE,
