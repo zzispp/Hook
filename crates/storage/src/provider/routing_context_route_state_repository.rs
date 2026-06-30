@@ -1,6 +1,6 @@
 use rust_decimal::{Decimal, prelude::ToPrimitive};
 use sea_orm::{ConnectionTrait, DbBackend, FromQueryResult, Statement, Value};
-use types::provider::RouteIdentity;
+use types::provider::{ROUTING_TIMING_SEMANTICS_COLUMN, ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, RouteIdentity};
 
 use crate::StorageResult;
 
@@ -32,7 +32,14 @@ pub(super) async fn list_context_route_states<C>(connection: &C) -> StorageResul
 where
     C: ConnectionTrait,
 {
-    let rows = RoutingContextRouteStateRow::find_by_statement(Statement::from_string(DbBackend::Postgres, select_sql().to_owned()))
+    let mut params = Vec::new();
+    let sql = format!(
+        "{} WHERE {} = {}",
+        select_sql(),
+        ROUTING_TIMING_SEMANTICS_COLUMN,
+        push(&mut params, Value::from(ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1))
+    );
+    let rows = RoutingContextRouteStateRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params))
         .all(connection)
         .await?;
     Ok(rows.into_iter().map(RoutingContextRouteStateRecord::from).collect())
@@ -41,7 +48,7 @@ where
 fn context_state_upsert_sql(current_weight_ref: &str, incoming_weight_ref: &str) -> String {
     format!(
         "ON CONFLICT (profile_id, context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
-         route_config_fingerprint, price_config_fingerprint) \
+         route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version) \
          DO UPDATE SET sample_count = routing_context_route_states.sample_count + EXCLUDED.sample_count, \
          success_count = routing_context_route_states.success_count + EXCLUDED.success_count, \
          failure_count = routing_context_route_states.failure_count + EXCLUDED.failure_count, \
@@ -57,7 +64,7 @@ fn context_state_upsert_sql(current_weight_ref: &str, incoming_weight_ref: &str)
 
 fn select_sql() -> &'static str {
     "SELECT profile_id, context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
-     route_config_fingerprint, price_config_fingerprint, sample_count, success_count, failure_count, ema_success_rate, ema_ttfb_ms, ema_latency_ms, \
+     route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version, sample_count, success_count, failure_count, ema_success_rate, ema_ttfb_ms, ema_latency_ms, \
      ema_output_tps, last_updated_at \
      FROM routing_context_route_states"
 }
@@ -75,6 +82,7 @@ fn context_state_values(delta: &RoutingContextRouteStateDelta) -> Vec<Value> {
         Value::from(delta.route.is_stream),
         Value::from(delta.route_config_fingerprint.clone()),
         Value::from(delta.price_config_fingerprint.clone()),
+        Value::from(delta.timing_metric_semantics_version.clone()),
         Value::from(delta.sample_count),
         Value::from(delta.success_count),
         Value::from(delta.failure_count),
@@ -86,7 +94,7 @@ fn context_state_values(delta: &RoutingContextRouteStateDelta) -> Vec<Value> {
     ]
 }
 
-fn context_state_columns() -> [&'static str; 19] {
+fn context_state_columns() -> [&'static str; 20] {
     [
         "profile_id",
         "context_key",
@@ -99,6 +107,7 @@ fn context_state_columns() -> [&'static str; 19] {
         "is_stream",
         "route_config_fingerprint",
         "price_config_fingerprint",
+        ROUTING_TIMING_SEMANTICS_COLUMN,
         "sample_count",
         "success_count",
         "failure_count",
@@ -149,6 +158,7 @@ struct RoutingContextRouteStateRow {
     is_stream: bool,
     route_config_fingerprint: Option<String>,
     price_config_fingerprint: Option<String>,
+    timing_metric_semantics_version: String,
     sample_count: i64,
     success_count: i64,
     failure_count: i64,
@@ -166,6 +176,7 @@ impl From<RoutingContextRouteStateRow> for RoutingContextRouteStateRecord {
             profile_id: row.profile_id,
             context_key: row.context_key,
             route,
+            timing_metric_semantics_version: row.timing_metric_semantics_version,
             sample_count: row.sample_count.max(0) as u64,
             success_count: row.success_count.max(0) as u64,
             failure_count: row.failure_count.max(0) as u64,
@@ -210,7 +221,7 @@ mod tests {
         assert!(sql.contains("success_count = routing_context_route_states.success_count + EXCLUDED.success_count"));
         assert!(sql.contains("profile_id, context_key"));
         assert!(sql.contains("ema_success_rate = (routing_context_route_states.ema_success_rate * $20"));
-        assert!(sql.contains("route_config_fingerprint, price_config_fingerprint)"));
+        assert!(sql.contains("route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version)"));
     }
 
     #[test]

@@ -1595,14 +1595,14 @@
       "penalty": "Exclusion / Penalty"
     },
     "metrics": {
-      "summary": "{{window}} · success {{success}}%, first output {{firstOutput}}, scoring TTFB {{ttfb}}, avg latency {{latency}}, TPS {{tps}}, RPM {{rpm}}, samples {{samples}}",
-      "windowDetail": "state {{state}} · source {{source}} · success {{success}}% · first output {{firstOutput}} · scoring TTFB {{ttfb}} · avg latency {{latency}} · TPS {{tps}} · samples {{samples}}",
+      "summary": "{{window}} · success {{success}}%, first output {{firstOutput}}, scoring first token {{ttfb}}, avg latency {{latency}}, TPS {{tps}}, RPM {{rpm}}, samples {{samples}}",
+      "windowDetail": "state {{state}} · source {{source}} · success {{success}}% · first output {{firstOutput}} · scoring first token {{ttfb}} · avg latency {{latency}} · TPS {{tps}} · samples {{samples}}",
       "unlimited": "unlimited"
     },
     "scoreReason": "score {{score}}: {{components}}",
     "scoreComponents": {
       "success": "success rate",
-      "ttfb": "avg TTFB",
+      "ttfb": "avg first token",
       "latency": "avg latency",
       "tps": "output TPS",
       "cost": "configured cost",

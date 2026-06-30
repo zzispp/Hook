@@ -1595,14 +1595,14 @@
       "penalty": "排除 / 扣分"
     },
     "metrics": {
-      "summary": "{{window}} · 成功率 {{success}}%，首输出 {{firstOutput}}，评分 TTFB {{ttfb}}，平均延迟 {{latency}}，TPS {{tps}}，RPM {{rpm}}，样本 {{samples}}",
-      "windowDetail": "状态 {{state}} · 来源 {{source}} · 成功率 {{success}}% · 首输出 {{firstOutput}} · 评分 TTFB {{ttfb}} · 平均延迟 {{latency}} · TPS {{tps}} · 样本 {{samples}}",
+      "summary": "{{window}} · 成功率 {{success}}%，首输出 {{firstOutput}}，评分首 Token {{ttfb}}，平均延迟 {{latency}}，TPS {{tps}}，RPM {{rpm}}，样本 {{samples}}",
+      "windowDetail": "状态 {{state}} · 来源 {{source}} · 成功率 {{success}}% · 首输出 {{firstOutput}} · 评分首 Token {{ttfb}} · 平均延迟 {{latency}} · TPS {{tps}} · 样本 {{samples}}",
       "unlimited": "无限制"
     },
     "scoreReason": "分数 {{score}}：{{components}}",
     "scoreComponents": {
       "success": "成功率",
-      "ttfb": "平均 TTFB",
+      "ttfb": "平均首 Token",
       "latency": "平均延迟",
       "tps": "输出 TPS",
       "cost": "配置成本",

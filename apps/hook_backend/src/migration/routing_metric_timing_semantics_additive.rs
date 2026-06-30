@@ -1,32 +1,33 @@
+use ::types::provider::{ROUTING_TIMING_SEMANTICS_COLUMN, ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, ROUTING_TIMING_SEMANTICS_LEGACY_FIRST_BYTE_V1};
 use sea_orm_migration::{
     prelude::*,
     sea_orm::{ActiveValue, ColumnTrait, EntityTrait, QueryFilter, Schema, Statement},
     seaql_migrations,
 };
 use std::time::{SystemTime, UNIX_EPOCH};
-const ADDITIVE_VERSION: &str = "m20260617_000001_routing_profile_state_partition";
-const DEFAULT_PROFILE_ID: &str = "balanced";
+
+const ADDITIVE_VERSION: &str = "m20260630_000001_routing_metric_timing_semantics";
 const MIGRATION_TABLE: &str = "seaql_migrations";
 
 pub async fn apply(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     if additive_marker_exists(manager).await? {
         return Ok(());
     }
-    ensure_profile_columns(manager).await?;
-    ensure_profile_keys(manager).await?;
+    ensure_timing_semantics_columns(manager).await?;
+    ensure_timing_semantics_keys(manager).await?;
     recreate_indexes(manager).await?;
     mark_additive_applied(manager).await
 }
 
-async fn ensure_profile_columns(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    for sql in profile_column_sql() {
+async fn ensure_timing_semantics_columns(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    for sql in timing_semantics_column_sql() {
         execute_sql(manager, sql).await?;
     }
     Ok(())
 }
 
-async fn ensure_profile_keys(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
-    for sql in profile_key_sql() {
+async fn ensure_timing_semantics_keys(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
+    for sql in timing_semantics_key_sql() {
         execute_sql(manager, sql).await?;
     }
     Ok(())
@@ -39,24 +40,30 @@ async fn recreate_indexes(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     Ok(())
 }
 
-fn profile_column_sql() -> Vec<String> {
-    ["routing_route_states", "routing_context_route_states"]
+fn timing_semantics_column_sql() -> Vec<String> {
+    ["routing_metric_buckets", "routing_route_states", "routing_context_route_states"]
         .into_iter()
-        .flat_map(table_profile_column_sql)
+        .flat_map(table_timing_semantics_column_sql)
         .collect()
 }
 
-fn table_profile_column_sql(table: &str) -> [String; 4] {
+fn table_timing_semantics_column_sql(table: &str) -> [String; 4] {
     [
-        format!("ALTER TABLE IF EXISTS {table} ADD COLUMN IF NOT EXISTS profile_id VARCHAR(64) NULL"),
-        format!("UPDATE {table} SET profile_id = '{DEFAULT_PROFILE_ID}' WHERE profile_id IS NULL"),
-        format!("ALTER TABLE IF EXISTS {table} ALTER COLUMN profile_id SET DEFAULT '{DEFAULT_PROFILE_ID}'"),
-        format!("ALTER TABLE IF EXISTS {table} ALTER COLUMN profile_id SET NOT NULL"),
+        format!("ALTER TABLE IF EXISTS {table} ADD COLUMN IF NOT EXISTS {ROUTING_TIMING_SEMANTICS_COLUMN} VARCHAR(32) NULL"),
+        format!(
+            "UPDATE {table} SET {ROUTING_TIMING_SEMANTICS_COLUMN} = '{ROUTING_TIMING_SEMANTICS_LEGACY_FIRST_BYTE_V1}' WHERE {ROUTING_TIMING_SEMANTICS_COLUMN} IS NULL"
+        ),
+        format!("ALTER TABLE IF EXISTS {table} ALTER COLUMN {ROUTING_TIMING_SEMANTICS_COLUMN} SET DEFAULT '{ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1}'"),
+        format!("ALTER TABLE IF EXISTS {table} ALTER COLUMN {ROUTING_TIMING_SEMANTICS_COLUMN} SET NOT NULL"),
     ]
 }
 
-fn profile_key_sql() -> [&'static str; 4] {
+fn timing_semantics_key_sql() -> [&'static str; 6] {
     [
+        "DROP INDEX IF EXISTS index_routing_metric_buckets_unique",
+        "CREATE UNIQUE INDEX IF NOT EXISTS index_routing_metric_buckets_unique ON routing_metric_buckets \
+         (bucket_granularity, bucket_started_at, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
+         route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version)",
         "ALTER TABLE IF EXISTS routing_route_states DROP CONSTRAINT IF EXISTS routing_route_states_pkey",
         "ALTER TABLE IF EXISTS routing_route_states ADD CONSTRAINT routing_route_states_pkey PRIMARY KEY \
          (profile_id, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version)",
@@ -124,29 +131,32 @@ fn current_timestamp() -> Result<i64, DbErr> {
 
 #[cfg(test)]
 mod tests {
-    use super::{DEFAULT_PROFILE_ID, index_sql, profile_column_sql, profile_key_sql};
+    use ::types::provider::{ROUTING_TIMING_SEMANTICS_COLUMN, ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, ROUTING_TIMING_SEMANTICS_LEGACY_FIRST_BYTE_V1};
+
+    use super::{index_sql, timing_semantics_column_sql, timing_semantics_key_sql};
 
     #[test]
-    fn profile_columns_backfill_balanced_profile_id() {
-        let sql = profile_column_sql().join(" ");
+    fn timing_semantics_columns_backfill_legacy_and_default_to_first_token() {
+        let sql = timing_semantics_column_sql().join(" ");
 
-        assert!(sql.contains("ADD COLUMN IF NOT EXISTS profile_id VARCHAR(64) NULL"));
-        assert!(sql.contains(&format!("SET profile_id = '{DEFAULT_PROFILE_ID}'")));
-        assert!(sql.contains(&format!("SET DEFAULT '{DEFAULT_PROFILE_ID}'")));
-        assert!(sql.contains("ALTER COLUMN profile_id SET NOT NULL"));
+        assert!(sql.contains(&format!("ADD COLUMN IF NOT EXISTS {ROUTING_TIMING_SEMANTICS_COLUMN} VARCHAR(32) NULL")));
+        assert!(sql.contains(&format!(
+            "SET {ROUTING_TIMING_SEMANTICS_COLUMN} = '{ROUTING_TIMING_SEMANTICS_LEGACY_FIRST_BYTE_V1}'"
+        )));
+        assert!(sql.contains(&format!("SET DEFAULT '{ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1}'")));
+        assert!(sql.contains(&format!("ALTER COLUMN {ROUTING_TIMING_SEMANTICS_COLUMN} SET NOT NULL")));
     }
 
     #[test]
-    fn primary_keys_include_profile_id() {
-        let sql = profile_key_sql().join(" ");
+    fn timing_semantics_keys_extend_bucket_and_state_identity() {
+        let sql = timing_semantics_key_sql().join(" ");
 
-        assert!(sql.contains("(profile_id, provider_id, key_id"));
-        assert!(sql.contains("(profile_id, context_key, provider_id"));
-        assert!(sql.contains("timing_metric_semantics_version"));
+        assert!(sql.contains("timing_metric_semantics_version)"));
+        assert!(sql.contains("route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version)"));
     }
 
     #[test]
-    fn updated_indexes_lead_with_profile_id() {
+    fn timing_semantics_indexes_lead_with_profile_and_semantics() {
         let sql = index_sql().join(" ");
 
         assert!(sql.contains("routing_route_states (profile_id, timing_metric_semantics_version, last_updated_at DESC)"));

@@ -1,6 +1,6 @@
 use rust_decimal::Decimal;
 use sea_orm::{ConnectionTrait, DbBackend, FromQueryResult, Statement, Value};
-use types::provider::{RouteIdentity, RoutingMetricSnapshot, RoutingMetricWindow};
+use types::provider::{ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, RouteIdentity, RoutingMetricSnapshot, RoutingMetricWindow};
 
 use crate::StorageResult;
 
@@ -39,8 +39,9 @@ where
 {
     let since = time::OffsetDateTime::now_utc() - time::Duration::seconds(window.seconds());
     let mut params = Vec::new();
+    let timing_semantics = push(&mut params, Value::from(ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1));
     let sql = format!(
-        "{} WHERE bucket_started_at >= {} {}",
+        "{} WHERE timing_metric_semantics_version = {timing_semantics} AND bucket_started_at >= {} {}",
         metric_select_sql(),
         push(&mut params, Value::from(since)),
         metric_group_sql()
@@ -91,6 +92,7 @@ struct RoutingMetricRow {
     is_stream: bool,
     route_config_fingerprint: Option<String>,
     price_config_fingerprint: Option<String>,
+    timing_metric_semantics_version: String,
     request_count: i64,
     success_count: i64,
     failure_count: i64,
@@ -117,12 +119,14 @@ struct RoutingMetricRow {
 impl From<RoutingMetricRow> for RoutingMetricRecord {
     fn from(row: RoutingMetricRow) -> Self {
         let request_count = u64_value(row.request_count);
+        let snapshot = snapshot(&row, request_count);
         Self {
             route: row.route(),
             provider_name: row.provider_name.clone(),
             key_name: row.key_name.clone(),
             endpoint_name: row.endpoint_name.clone(),
-            snapshot: snapshot(&row, request_count),
+            timing_metric_semantics_version: row.timing_metric_semantics_version,
+            snapshot,
             route_config_fingerprint: row.route_config_fingerprint,
             price_config_fingerprint: row.price_config_fingerprint,
             last_seen_at: row.last_seen_at,

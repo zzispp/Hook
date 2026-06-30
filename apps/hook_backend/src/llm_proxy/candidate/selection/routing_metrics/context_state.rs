@@ -1,5 +1,5 @@
 use storage::provider::RoutingContextRouteStateRecord;
-use types::provider::{RouteIdentity, RoutingProfileId};
+use types::provider::{ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, RouteIdentity, RoutingProfileId};
 
 use crate::llm_proxy::routing::RoutingMetricsSnapshot;
 
@@ -17,7 +17,12 @@ pub(crate) struct ContextRouteSamples {
 
 impl ContextRouteStateCatalog {
     pub(crate) fn from_snapshot(snapshot: &RoutingMetricsSnapshot) -> Self {
-        let records = snapshot.context_route_states.clone();
+        let records = snapshot
+            .context_route_states
+            .iter()
+            .filter(|record| record.timing_metric_semantics_version == ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1)
+            .cloned()
+            .collect();
         Self { records }
     }
 

@@ -15,6 +15,7 @@ mod request_record;
 mod routing;
 mod routing_features;
 mod routing_metadata;
+mod routing_timing;
 mod time_range;
 
 pub use cooldown::{ProviderCooldown, ProviderCooldownListRequest, ProviderCooldownListResponse, ProviderCooldownPolicy, ProviderCooldownRule};
@@ -74,4 +75,5 @@ pub use routing::{
 };
 pub use routing_features::{RoutingRequestFeatures, RoutingRequestSizeBucket};
 pub use routing_metadata::{RoutingMetricSource, RoutingPriorSource};
+pub use routing_timing::{ROUTING_TIMING_SEMANTICS_COLUMN, ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1, ROUTING_TIMING_SEMANTICS_LEGACY_FIRST_BYTE_V1};
 pub use time_range::{parse_provider_key_time_range_minute, provider_key_minute_of_day, provider_key_time_range_contains};

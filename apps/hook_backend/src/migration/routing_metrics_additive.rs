@@ -73,6 +73,7 @@ fn metric_table_sql() -> &'static str {
      latency_sum_ms BIGINT NOT NULL, latency_sample_count BIGINT NOT NULL, ttfb_sum_ms BIGINT NOT NULL, ttfb_sample_count BIGINT NOT NULL, \
      output_tokens BIGINT NOT NULL, tps_latency_sum_ms BIGINT NOT NULL, tps_sample_count BIGINT NOT NULL, upstream_total_cost DECIMAL(20, 8) NOT NULL, \
      total_tokens BIGINT NOT NULL, route_config_fingerprint VARCHAR(64) NOT NULL DEFAULT 'legacy', price_config_fingerprint VARCHAR(64) NOT NULL DEFAULT 'legacy', \
+     timing_metric_semantics_version VARCHAR(32) NOT NULL DEFAULT 'first_token_v1', \
      last_seen_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL)"
 }
 
@@ -82,8 +83,8 @@ fn route_state_table_sql() -> &'static str {
      client_api_format VARCHAR(50) NOT NULL, provider_api_format VARCHAR(50) NOT NULL, is_stream BOOLEAN NOT NULL, \
      route_config_fingerprint VARCHAR(64) NOT NULL DEFAULT 'legacy', price_config_fingerprint VARCHAR(64) NOT NULL DEFAULT 'legacy', ema_success_rate DECIMAL(20, 8) NOT NULL, \
      ema_ttfb_ms DECIMAL(20, 8) NULL, ema_latency_ms DECIMAL(20, 8) NULL, ema_output_tps DECIMAL(20, 8) NULL, learned_rpm_limit INTEGER NULL, \
-     sample_count BIGINT NOT NULL, state VARCHAR(32) NOT NULL, last_updated_at TIMESTAMPTZ NOT NULL, \
-     PRIMARY KEY (provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint))"
+     sample_count BIGINT NOT NULL, state VARCHAR(32) NOT NULL, timing_metric_semantics_version VARCHAR(32) NOT NULL DEFAULT 'first_token_v1', last_updated_at TIMESTAMPTZ NOT NULL, \
+     PRIMARY KEY (provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version))"
 }
 
 fn context_route_state_table_sql() -> &'static str {
@@ -92,8 +93,8 @@ fn context_route_state_table_sql() -> &'static str {
      global_model_id VARCHAR(36) NOT NULL, client_api_format VARCHAR(50) NOT NULL, provider_api_format VARCHAR(50) NOT NULL, is_stream BOOLEAN NOT NULL, \
      route_config_fingerprint VARCHAR(64) NOT NULL DEFAULT 'legacy', price_config_fingerprint VARCHAR(64) NOT NULL DEFAULT 'legacy', sample_count BIGINT NOT NULL, success_count BIGINT NOT NULL, \
      failure_count BIGINT NOT NULL, ema_success_rate DECIMAL(20, 8) NOT NULL, ema_ttfb_ms DECIMAL(20, 8) NULL, ema_latency_ms DECIMAL(20, 8) NULL, \
-     ema_output_tps DECIMAL(20, 8) NULL, last_updated_at TIMESTAMPTZ NOT NULL, \
-     PRIMARY KEY (context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint))"
+     ema_output_tps DECIMAL(20, 8) NULL, timing_metric_semantics_version VARCHAR(32) NOT NULL DEFAULT 'first_token_v1', last_updated_at TIMESTAMPTZ NOT NULL, \
+     PRIMARY KEY (context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version))"
 }
 
 fn decision_sample_table_sql() -> &'static str {
@@ -122,10 +123,10 @@ fn index_sql() -> [&'static str; 8] {
         "DROP INDEX IF EXISTS index_routing_metric_buckets_unique",
         "CREATE UNIQUE INDEX IF NOT EXISTS index_routing_metric_buckets_unique ON routing_metric_buckets \
          (bucket_granularity, bucket_started_at, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
-         route_config_fingerprint, price_config_fingerprint)",
-        "CREATE INDEX IF NOT EXISTS index_routing_metric_buckets_by_window ON routing_metric_buckets (bucket_granularity, bucket_started_at)",
-        "CREATE INDEX IF NOT EXISTS index_routing_route_states_by_updated ON routing_route_states (last_updated_at DESC)",
-        "CREATE INDEX IF NOT EXISTS index_routing_context_route_states_by_updated ON routing_context_route_states (context_key, last_updated_at DESC)",
+         route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version)",
+        "CREATE INDEX IF NOT EXISTS index_routing_metric_buckets_by_window ON routing_metric_buckets (timing_metric_semantics_version, bucket_granularity, bucket_started_at)",
+        "CREATE INDEX IF NOT EXISTS index_routing_route_states_by_updated ON routing_route_states (timing_metric_semantics_version, last_updated_at DESC)",
+        "CREATE INDEX IF NOT EXISTS index_routing_context_route_states_by_updated ON routing_context_route_states (timing_metric_semantics_version, context_key, last_updated_at DESC)",
         "CREATE INDEX IF NOT EXISTS index_routing_decision_samples_created ON routing_decision_samples (created_at DESC)",
         "CREATE INDEX IF NOT EXISTS index_routing_profiles_updated ON routing_profiles (updated_at DESC)",
         "CREATE INDEX IF NOT EXISTS index_routing_profile_versions_created ON routing_profile_versions (profile_id, created_at DESC)",
