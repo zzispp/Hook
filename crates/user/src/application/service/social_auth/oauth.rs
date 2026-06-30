@@ -15,6 +15,20 @@ pub(in crate::application::service) struct OAuthCallbackResult {
     pub created_user: Option<User>,
 }
 
+pub(in crate::application::service) struct OAuthCallbackWithCreationInput<'a> {
+    pub provider: IdentityProvider,
+    pub state: &'a str,
+    pub redirect_uri: &'a str,
+    pub profile: OAuthProfile,
+}
+
+pub(in crate::application::service) struct OAuthCallbackWithCreationDeps<'a, R, C, T> {
+    pub repository: &'a R,
+    pub config: &'a C,
+    pub registration: &'a RegistrationSettings,
+    pub tickets: &'a T,
+}
+
 pub(in crate::application::service) async fn oauth_start<C, T>(
     config: &C,
     tickets: &T,
@@ -81,20 +95,26 @@ pub(in crate::application::service) fn oauth_redirect_uri(settings: &OAuthProvid
 }
 
 pub(in crate::application::service) async fn oauth_callback_with_creation<R, C, T>(
-    repository: &R,
-    config: &C,
-    registration: &RegistrationSettings,
-    tickets: &T,
-    provider: IdentityProvider,
-    state: &str,
-    redirect_uri: &str,
-    profile: OAuthProfile,
+    deps: OAuthCallbackWithCreationDeps<'_, R, C, T>,
+    input: OAuthCallbackWithCreationInput<'_>,
 ) -> AppResult<OAuthCallbackResult>
 where
     R: UserRepository,
     C: AuthProviderConfig,
     T: AuthTicketStore,
 {
+    let OAuthCallbackWithCreationDeps {
+        repository,
+        config,
+        registration,
+        tickets,
+    } = deps;
+    let OAuthCallbackWithCreationInput {
+        provider,
+        state,
+        redirect_uri,
+        profile,
+    } = input;
     if !profile.email_verified {
         return Err(AppError::InvalidInput("verified provider email is required".into()));
     }

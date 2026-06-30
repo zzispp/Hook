@@ -55,6 +55,17 @@ struct GroupPatch {
     upstream_group: Option<Option<String>>,
 }
 
+struct CostOutcomeInput<'a> {
+    source: &'a ProviderQuickImportSyncSource,
+    globals: &'a BTreeMap<String, GlobalModelResponse>,
+    bindings: &'a BTreeMap<String, BindingInfo>,
+    key: &'a ProviderQuickImportSyncKey,
+    observed_group: Option<Option<String>>,
+    group_patch: GroupPatch,
+    group_ratio: rust_decimal::Decimal,
+    upstream_models: &'a [UpstreamImportModel],
+}
+
 impl KeyOutcome {
     pub(super) fn patch(&self, key_id: String) -> ProviderQuickImportSyncKeyPatch {
         ProviderQuickImportSyncKeyPatch {
@@ -140,7 +151,16 @@ where
     };
     let group_patch = group_patch(key, token);
     match check_models(importer, source_config, key).await {
-        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(source, globals, bindings, key, None, group_patch, ratio, &upstream_models),
+        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(CostOutcomeInput {
+            source,
+            globals,
+            bindings,
+            key,
+            observed_group: None,
+            group_patch,
+            group_ratio: ratio,
+            upstream_models: &upstream_models,
+        }),
         Ok(ModelCheck::Removed {
             missing_upstream_model_ids,
             upstream_models,
@@ -179,16 +199,16 @@ where
     };
     let group_patch = group_patch(key, token);
     match check_models(context.importer, context.source_config, key).await {
-        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(
-            context.source,
-            context.globals,
-            context.bindings,
+        Ok(ModelCheck::Available { upstream_models }) => cost_outcome(CostOutcomeInput {
+            source: context.source,
+            globals: context.globals,
+            bindings: context.bindings,
             key,
-            Some(token.group.clone()),
+            observed_group: Some(token.group.clone()),
             group_patch,
-            ratio,
-            &upstream_models,
-        ),
+            group_ratio: ratio,
+            upstream_models: &upstream_models,
+        }),
         Ok(ModelCheck::Removed {
             missing_upstream_model_ids,
             upstream_models,
@@ -213,16 +233,17 @@ fn group_changed_status(source: &ProviderQuickImportSyncSource, token: &Upstream
     outcome
 }
 
-fn cost_outcome(
-    source: &ProviderQuickImportSyncSource,
-    globals: &BTreeMap<String, GlobalModelResponse>,
-    bindings: &BTreeMap<String, BindingInfo>,
-    key: &ProviderQuickImportSyncKey,
-    observed_group: Option<Option<String>>,
-    group_patch: GroupPatch,
-    group_ratio: rust_decimal::Decimal,
-    upstream_models: &[UpstreamImportModel],
-) -> KeyOutcome {
+fn cost_outcome(input: CostOutcomeInput<'_>) -> KeyOutcome {
+    let CostOutcomeInput {
+        source,
+        globals,
+        bindings,
+        key,
+        observed_group,
+        group_patch,
+        group_ratio,
+        upstream_models,
+    } = input;
     let group_ratio = persisted_multiplier(group_ratio);
     let effective = persisted_multiplier(group_ratio / source.recharge_multiplier);
     let costs = match costs_for_key(globals, bindings, key, effective) {

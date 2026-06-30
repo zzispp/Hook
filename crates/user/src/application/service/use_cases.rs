@@ -117,14 +117,18 @@ where
         let registration = self.registration_policy.registration_settings().await?;
         reject_system_user_email(&self.system_users, &profile.email)?;
         let callback = social_auth::oauth_callback_with_creation(
-            &self.repository,
-            &self.auth_provider_config,
-            &registration,
-            &self.auth_ticket_store,
-            provider,
-            &state,
-            &redirect_uri,
-            profile,
+            social_auth::OAuthCallbackWithCreationDeps {
+                repository: &self.repository,
+                config: &self.auth_provider_config,
+                registration: &registration,
+                tickets: &self.auth_ticket_store,
+            },
+            social_auth::OAuthCallbackWithCreationInput {
+                provider,
+                state: &state,
+                redirect_uri: &redirect_uri,
+                profile,
+            },
         )
         .await?;
         if let Some(user) = &callback.created_user {
