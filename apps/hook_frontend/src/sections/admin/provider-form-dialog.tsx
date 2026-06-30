@@ -15,7 +15,8 @@ import {
   DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
   DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS,
   DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS,
-  DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS,
+  DEFAULT_PROVIDER_STREAM_FIRST_TOKEN_TIMEOUT_SECONDS,
+  DEFAULT_PROVIDER_STREAM_RESPONSE_HEADERS_TIMEOUT_SECONDS,
 } from './provider-management-utils';
 
 type ProviderDialogState = ReturnType<typeof useProviderDialog>;
@@ -92,6 +93,16 @@ function ProviderRequestConfigFields({ dialog }: { dialog: ProviderDialogState }
       />
       <TextFieldRow
         type="number"
+        label={t('providers.streamResponseHeadersTimeoutSeconds')}
+        value={dialog.form.stream_response_headers_timeout_seconds}
+        placeholder={String(DEFAULT_PROVIDER_STREAM_RESPONSE_HEADERS_TIMEOUT_SECONDS)}
+        helperText={t('providers.defaultWhenBlank')}
+        onChange={(value) =>
+          dialog.setForm((form) => ({ ...form, stream_response_headers_timeout_seconds: value }))
+        }
+      />
+      <TextFieldRow
+        type="number"
         label={t('providers.streamFirstByteTimeoutSeconds')}
         value={dialog.form.stream_first_byte_timeout_seconds}
         placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS)}
@@ -102,12 +113,12 @@ function ProviderRequestConfigFields({ dialog }: { dialog: ProviderDialogState }
       />
       <TextFieldRow
         type="number"
-        label={t('providers.streamFirstOutputTimeoutSeconds')}
-        value={dialog.form.stream_first_output_timeout_seconds}
-        placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS)}
+        label={t('providers.streamFirstTokenTimeoutSeconds')}
+        value={dialog.form.stream_first_token_timeout_seconds}
+        placeholder={String(DEFAULT_PROVIDER_STREAM_FIRST_TOKEN_TIMEOUT_SECONDS)}
         helperText={t('providers.defaultWhenBlank')}
         onChange={(value) =>
-          dialog.setForm((form) => ({ ...form, stream_first_output_timeout_seconds: value }))
+          dialog.setForm((form) => ({ ...form, stream_first_token_timeout_seconds: value }))
         }
       />
       <TextFieldRow

@@ -85,7 +85,7 @@ pub async fn create_request_candidate(store: &ProviderStore, input: RequestCandi
         latency_ms: Set(input.latency_ms),
         response_headers_time_ms: Set(input.response_headers_time_ms),
         first_sse_event_time_ms: Set(input.first_sse_event_time_ms),
-        first_output_time_ms: Set(input.first_output_time_ms),
+        first_token_time_ms: Set(input.first_token_time_ms),
         first_byte_time_ms: Set(input.first_byte_time_ms),
         error_type: Set(input.error_type),
         error_message: Set(input.error_message),

@@ -49,7 +49,7 @@ where
         "INSERT INTO dashboard_user_usage_buckets \
         (id, bucket_granularity, bucket_started_at, bucket_ended_at, user_id, username, request_count, success_count, failed_count, total_tokens, total_cost, \
         total_latency_ms, latency_sample_count, response_headers_total_ms, response_headers_sample_count, first_byte_total_ms, first_byte_sample_count, \
-        first_output_total_ms, first_output_sample_count, created_at, updated_at) \
+        first_token_total_ms, first_token_sample_count, created_at, updated_at) \
         VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) \
         ON CONFLICT (bucket_granularity, bucket_started_at, user_id) DO UPDATE SET \
         username = EXCLUDED.username, \
@@ -64,8 +64,8 @@ where
         response_headers_sample_count = dashboard_user_usage_buckets.response_headers_sample_count + EXCLUDED.response_headers_sample_count, \
         first_byte_total_ms = dashboard_user_usage_buckets.first_byte_total_ms + EXCLUDED.first_byte_total_ms, \
         first_byte_sample_count = dashboard_user_usage_buckets.first_byte_sample_count + EXCLUDED.first_byte_sample_count, \
-        first_output_total_ms = dashboard_user_usage_buckets.first_output_total_ms + EXCLUDED.first_output_total_ms, \
-        first_output_sample_count = dashboard_user_usage_buckets.first_output_sample_count + EXCLUDED.first_output_sample_count, \
+        first_token_total_ms = dashboard_user_usage_buckets.first_token_total_ms + EXCLUDED.first_token_total_ms, \
+        first_token_sample_count = dashboard_user_usage_buckets.first_token_sample_count + EXCLUDED.first_token_sample_count, \
         updated_at = EXCLUDED.updated_at",
         params.push(uuid::Uuid::now_v7().to_string()),
         params.push(granularity.to_owned()),
@@ -84,8 +84,8 @@ where
         params.push(contribution.response_headers_sample_count * multiplier),
         params.push(contribution.first_byte_total_ms * multiplier),
         params.push(contribution.first_byte_sample_count * multiplier),
-        params.push(contribution.first_output_total_ms * multiplier),
-        params.push(contribution.first_output_sample_count * multiplier),
+        params.push(contribution.first_token_total_ms * multiplier),
+        params.push(contribution.first_token_sample_count * multiplier),
         params.push(time::OffsetDateTime::now_utc()),
         params.push(time::OffsetDateTime::now_utc())
     );
@@ -103,7 +103,7 @@ fn contribution(record: &request_records::Model) -> Option<BucketContribution> {
     if user_id.is_empty() {
         return None;
     }
-    let stage = StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms);
+    let stage = StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_token_time_ms);
     Some(BucketContribution {
         user_id: user_id.to_owned(),
         username: record.username_snapshot.clone(),
@@ -117,8 +117,8 @@ fn contribution(record: &request_records::Model) -> Option<BucketContribution> {
         response_headers_sample_count: StageLatencyContribution::sample_count(stage.response_headers_ms),
         first_byte_total_ms: non_negative(record.first_byte_time_ms).unwrap_or_default(),
         first_byte_sample_count: i64::from(non_negative(record.first_byte_time_ms).is_some()),
-        first_output_total_ms: StageLatencyContribution::total(stage.first_output_ms),
-        first_output_sample_count: StageLatencyContribution::sample_count(stage.first_output_ms),
+        first_token_total_ms: StageLatencyContribution::total(stage.first_token_ms),
+        first_token_sample_count: StageLatencyContribution::sample_count(stage.first_token_ms),
         created_at: record.created_at,
     })
 }
@@ -166,8 +166,8 @@ struct BucketContribution {
     response_headers_sample_count: i64,
     first_byte_total_ms: i64,
     first_byte_sample_count: i64,
-    first_output_total_ms: i64,
-    first_output_sample_count: i64,
+    first_token_total_ms: i64,
+    first_token_sample_count: i64,
     created_at: time::OffsetDateTime,
 }
 

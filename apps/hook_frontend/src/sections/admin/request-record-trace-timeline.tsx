@@ -235,12 +235,12 @@ function TraceAttemptDetail({
           value={formatAttemptTiming(attempt, 'response_headers')}
         />
         <TraceInfo
-          label={t('requestRecords.firstChar')}
+          label={t('requestRecords.firstByte')}
           value={formatAttemptTiming(attempt, 'first_byte')}
         />
         <TraceInfo
           label={t('requestRecords.firstToken')}
-          value={formatAttemptTiming(attempt, 'first_output')}
+          value={formatAttemptTiming(attempt, 'first_token')}
         />
         <TraceInfo
           label={t('requestRecords.totalLatency')}

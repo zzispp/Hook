@@ -26,9 +26,9 @@ export function UpstreamSummaryCards({ summary }: { summary?: UpstreamPerformanc
       detail: t('performanceMonitoring.upstream.p90Value', { value: formatMs(summary?.p90_latency_ms) }),
     },
     {
-      label: t('performanceMonitoring.upstream.p99Ttfb'),
-      value: formatMs(summary?.p99_ttfb_ms),
-      detail: t('performanceMonitoring.upstream.p90Value', { value: formatMs(summary?.p90_ttfb_ms) }),
+      label: t('performanceMonitoring.upstream.p99FirstByte'),
+      value: formatMs(summary?.p99_first_byte_ms),
+      detail: t('performanceMonitoring.upstream.p90Value', { value: formatMs(summary?.p90_first_byte_ms) }),
     },
     {
       label: t('performanceMonitoring.upstream.outputTps'),
@@ -38,17 +38,17 @@ export function UpstreamSummaryCards({ summary }: { summary?: UpstreamPerformanc
       }),
     },
     {
-      label: t('performanceMonitoring.upstream.avgTtfb'),
-      value: formatMs(summary?.avg_ttfb_ms),
-      detail: t('performanceMonitoring.upstream.ttfbSamples', {
-        value: fNumber(summary?.ttfb_sample_count ?? 0),
+      label: t('performanceMonitoring.upstream.avgFirstByte'),
+      value: formatMs(summary?.avg_first_byte_ms),
+      detail: t('performanceMonitoring.upstream.firstByteSamples', {
+        value: fNumber(summary?.first_byte_sample_count ?? 0),
       }),
     },
     {
-      label: t('performanceMonitoring.upstream.avgFirstOutput'),
-      value: formatMs(summary?.avg_first_output_ms),
-      detail: t('performanceMonitoring.upstream.firstOutputSamples', {
-        value: fNumber(summary?.first_output_sample_count ?? 0),
+      label: t('performanceMonitoring.upstream.avgFirstToken'),
+      value: formatMs(summary?.avg_first_token_ms),
+      detail: t('performanceMonitoring.upstream.firstTokenSamples', {
+        value: fNumber(summary?.first_token_sample_count ?? 0),
       }),
     },
     {

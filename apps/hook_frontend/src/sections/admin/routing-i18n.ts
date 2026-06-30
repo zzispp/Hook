@@ -41,8 +41,8 @@ export function routingMetricSummary(
   return t('routing.metrics.summary', {
     window,
     success: successRate(metrics),
-    firstOutput: firstOutputRate(metrics),
-    ttfb: formatMs(metrics.ttfb_avg_ms),
+    firstToken: firstTokenRate(metrics),
+    firstTokenScore: formatMs(metrics.first_token_avg_ms),
     latency: formatMs(metrics.latency_avg_ms),
     tps: formatNumber(metrics.output_tps, 1),
     rpm: `${metrics.rpm_used}/${metrics.rpm_limit ?? t('routing.metrics.unlimited')}`,
@@ -59,8 +59,8 @@ export function routingWindowDetail(
     state: t(`routing.states.${item.state}`),
     source: item.metric_window,
     success: successRate(metrics),
-    firstOutput: firstOutputRate(metrics),
-    ttfb: formatMs(metrics.ttfb_avg_ms),
+    firstToken: firstTokenRate(metrics),
+    firstTokenScore: formatMs(metrics.first_token_avg_ms),
     latency: formatMs(metrics.latency_avg_ms),
     tps: formatNumber(metrics.output_tps, 2),
     samples: metrics.sample_count,
@@ -82,12 +82,12 @@ function successRate(metrics: RoutingMetricSnapshot) {
   return ((metrics.success_count / metrics.request_count) * 100).toFixed(1);
 }
 
-function firstOutputRate(metrics: RoutingMetricSnapshot) {
-  const attempts = metrics.first_output_success_count + metrics.first_output_failure_count;
+function firstTokenRate(metrics: RoutingMetricSnapshot) {
+  const attempts = metrics.first_token_success_count + metrics.first_token_failure_count;
   if (!attempts) {
     return '-';
   }
-  return `${((metrics.first_output_success_count / attempts) * 100).toFixed(1)}% (${metrics.first_output_success_count}/${attempts})`;
+  return `${((metrics.first_token_success_count / attempts) * 100).toFixed(1)}% (${metrics.first_token_success_count}/${attempts})`;
 }
 
 function signedScore(value: number) {

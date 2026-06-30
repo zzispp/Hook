@@ -44,14 +44,14 @@ const METRIC_COLUMNS: &[&str] = &[
     "cache_creation_cost",
     "latency_total_ms",
     "latency_sample_count",
-    "ttfb_total_ms",
-    "ttfb_sample_count",
+    "first_byte_total_ms",
+    "first_byte_sample_count",
     "response_headers_total_ms",
     "response_headers_sample_count",
     "first_sse_event_total_ms",
     "first_sse_event_sample_count",
-    "first_output_total_ms",
-    "first_output_sample_count",
+    "first_token_total_ms",
+    "first_token_sample_count",
     "sse_to_output_total_ms",
     "sse_to_output_sample_count",
     "tps_latency_total_ms",
@@ -241,14 +241,14 @@ fn metric_latency_values(metric: &MetricContribution, multiplier: i64) -> Vec<Va
     vec![
         Value::from(metric.latency_total_ms * multiplier),
         Value::from(metric.latency_sample_count * multiplier),
-        Value::from(metric.ttfb_total_ms * multiplier),
-        Value::from(metric.ttfb_sample_count * multiplier),
+        Value::from(metric.first_byte_total_ms * multiplier),
+        Value::from(metric.first_byte_sample_count * multiplier),
         Value::from(metric.response_headers_total_ms * multiplier),
         Value::from(metric.response_headers_sample_count * multiplier),
         Value::from(metric.first_sse_event_total_ms * multiplier),
         Value::from(metric.first_sse_event_sample_count * multiplier),
-        Value::from(metric.first_output_total_ms * multiplier),
-        Value::from(metric.first_output_sample_count * multiplier),
+        Value::from(metric.first_token_total_ms * multiplier),
+        Value::from(metric.first_token_sample_count * multiplier),
         Value::from(metric.sse_to_output_total_ms * multiplier),
         Value::from(metric.sse_to_output_sample_count * multiplier),
         Value::from(metric.tps_latency_total_ms * multiplier),
@@ -319,14 +319,14 @@ fn metric_update_sql() -> &'static str {
     cache_creation_cost = dashboard_request_metric_buckets.cache_creation_cost + EXCLUDED.cache_creation_cost, \
     latency_total_ms = dashboard_request_metric_buckets.latency_total_ms + EXCLUDED.latency_total_ms, \
     latency_sample_count = dashboard_request_metric_buckets.latency_sample_count + EXCLUDED.latency_sample_count, \
-    ttfb_total_ms = dashboard_request_metric_buckets.ttfb_total_ms + EXCLUDED.ttfb_total_ms, \
-    ttfb_sample_count = dashboard_request_metric_buckets.ttfb_sample_count + EXCLUDED.ttfb_sample_count, \
+    first_byte_total_ms = dashboard_request_metric_buckets.first_byte_total_ms + EXCLUDED.first_byte_total_ms, \
+    first_byte_sample_count = dashboard_request_metric_buckets.first_byte_sample_count + EXCLUDED.first_byte_sample_count, \
     response_headers_total_ms = dashboard_request_metric_buckets.response_headers_total_ms + EXCLUDED.response_headers_total_ms, \
     response_headers_sample_count = dashboard_request_metric_buckets.response_headers_sample_count + EXCLUDED.response_headers_sample_count, \
     first_sse_event_total_ms = dashboard_request_metric_buckets.first_sse_event_total_ms + EXCLUDED.first_sse_event_total_ms, \
     first_sse_event_sample_count = dashboard_request_metric_buckets.first_sse_event_sample_count + EXCLUDED.first_sse_event_sample_count, \
-    first_output_total_ms = dashboard_request_metric_buckets.first_output_total_ms + EXCLUDED.first_output_total_ms, \
-    first_output_sample_count = dashboard_request_metric_buckets.first_output_sample_count + EXCLUDED.first_output_sample_count, \
+    first_token_total_ms = dashboard_request_metric_buckets.first_token_total_ms + EXCLUDED.first_token_total_ms, \
+    first_token_sample_count = dashboard_request_metric_buckets.first_token_sample_count + EXCLUDED.first_token_sample_count, \
     sse_to_output_total_ms = dashboard_request_metric_buckets.sse_to_output_total_ms + EXCLUDED.sse_to_output_total_ms, \
     sse_to_output_sample_count = dashboard_request_metric_buckets.sse_to_output_sample_count + EXCLUDED.sse_to_output_sample_count, \
     tps_latency_total_ms = dashboard_request_metric_buckets.tps_latency_total_ms + EXCLUDED.tps_latency_total_ms, \

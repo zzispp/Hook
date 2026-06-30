@@ -17,15 +17,15 @@ use super::scoring_support::{
 
 pub(super) const LATENCY_GOOD_MS: f64 = 800.0;
 pub(super) const LATENCY_BAD_MS: f64 = 12_000.0;
-pub(super) const TTFB_GOOD_MS: f64 = 250.0;
-pub(super) const TTFB_BAD_MS: f64 = 4_000.0;
+pub(super) const FIRST_TOKEN_GOOD_MS: f64 = 250.0;
+pub(super) const FIRST_TOKEN_BAD_MS: f64 = 4_000.0;
 pub(super) const TPS_LOW: f64 = 5.0;
 pub(super) const TPS_HIGH: f64 = 120.0;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct RoutingEmaSnapshot {
     pub(crate) success_rate: f64,
-    pub(crate) ttfb_avg_ms: Option<f64>,
+    pub(crate) first_token_avg_ms: Option<f64>,
     pub(crate) latency_avg_ms: Option<f64>,
     pub(crate) output_tps: Option<f64>,
     pub(crate) sample_count: u64,
@@ -178,11 +178,11 @@ fn normal_components(context: ScoreContext<'_>, candidate: &RoutingScoreCandidat
             weights.success,
         ),
         component(
-            "ttfb",
-            "avg TTFB",
-            candidate.metric.ttfb_avg_ms,
-            lower_is_better(candidate.metric.ttfb_avg_ms, TTFB_GOOD_MS, TTFB_BAD_MS),
-            weights.ttfb,
+            "first_token",
+            "avg first token",
+            candidate.metric.first_token_avg_ms,
+            lower_is_better(candidate.metric.first_token_avg_ms, FIRST_TOKEN_GOOD_MS, FIRST_TOKEN_BAD_MS),
+            weights.first_token,
         ),
         component(
             "latency",

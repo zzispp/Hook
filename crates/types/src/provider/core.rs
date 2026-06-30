@@ -35,8 +35,9 @@ pub struct Provider {
     pub quick_import_source: Option<ProviderQuickImportSourceSummary>,
     pub max_retries: Option<i32>,
     pub request_timeout_seconds: Option<f64>,
+    pub stream_response_headers_timeout_seconds: Option<f64>,
     pub stream_first_byte_timeout_seconds: Option<f64>,
-    pub stream_first_output_timeout_seconds: Option<f64>,
+    pub stream_first_token_timeout_seconds: Option<f64>,
     pub stream_idle_timeout_seconds: Option<f64>,
     pub priority: i32,
     pub keep_priority_on_conversion: bool,
@@ -107,9 +108,11 @@ pub struct ProviderCreate {
     #[serde(default)]
     pub request_timeout_seconds: Option<f64>,
     #[serde(default)]
+    pub stream_response_headers_timeout_seconds: Option<f64>,
+    #[serde(default)]
     pub stream_first_byte_timeout_seconds: Option<f64>,
     #[serde(default)]
-    pub stream_first_output_timeout_seconds: Option<f64>,
+    pub stream_first_token_timeout_seconds: Option<f64>,
     #[serde(default)]
     pub stream_idle_timeout_seconds: Option<f64>,
     #[serde(default)]
@@ -133,9 +136,11 @@ pub struct ProviderUpdate {
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub request_timeout_seconds: PatchField<f64>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
+    pub stream_response_headers_timeout_seconds: PatchField<f64>,
+    #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub stream_first_byte_timeout_seconds: PatchField<f64>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
-    pub stream_first_output_timeout_seconds: PatchField<f64>,
+    pub stream_first_token_timeout_seconds: PatchField<f64>,
     #[serde(default, deserialize_with = "deserialize_patch_value")]
     pub stream_idle_timeout_seconds: PatchField<f64>,
     #[serde(default)]
@@ -160,8 +165,9 @@ impl ProviderUpdate {
             && self.provider_type.is_none()
             && self.max_retries.is_missing()
             && self.request_timeout_seconds.is_missing()
+            && self.stream_response_headers_timeout_seconds.is_missing()
             && self.stream_first_byte_timeout_seconds.is_missing()
-            && self.stream_first_output_timeout_seconds.is_missing()
+            && self.stream_first_token_timeout_seconds.is_missing()
             && self.stream_idle_timeout_seconds.is_missing()
             && self.priority.is_none()
             && self.keep_priority_on_conversion.is_none()

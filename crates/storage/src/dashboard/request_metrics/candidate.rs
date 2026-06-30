@@ -54,14 +54,14 @@ pub(super) fn metric(record: &request_candidates::Model, success: bool) -> Metri
         cache_creation_cost: record.cache_creation_cost.unwrap_or(Decimal::ZERO),
         latency_total_ms: success.then_some(record.latency_ms).flatten().unwrap_or_default(),
         latency_sample_count: i64::from(success && record.latency_ms.is_some()),
-        ttfb_total_ms: success.then_some(record.first_byte_time_ms).flatten().unwrap_or_default(),
-        ttfb_sample_count: i64::from(success && record.first_byte_time_ms.is_some()),
+        first_byte_total_ms: success.then_some(record.first_byte_time_ms).flatten().unwrap_or_default(),
+        first_byte_sample_count: i64::from(success && record.first_byte_time_ms.is_some()),
         response_headers_total_ms: StageLatencyContribution::total(stage.response_headers_ms),
         response_headers_sample_count: StageLatencyContribution::sample_count(stage.response_headers_ms),
         first_sse_event_total_ms: StageLatencyContribution::total(stage.first_sse_event_ms),
         first_sse_event_sample_count: StageLatencyContribution::sample_count(stage.first_sse_event_ms),
-        first_output_total_ms: StageLatencyContribution::total(stage.first_output_ms),
-        first_output_sample_count: StageLatencyContribution::sample_count(stage.first_output_ms),
+        first_token_total_ms: StageLatencyContribution::total(stage.first_token_ms),
+        first_token_sample_count: StageLatencyContribution::sample_count(stage.first_token_ms),
         sse_to_output_total_ms: StageLatencyContribution::total(stage.sse_to_output_ms),
         sse_to_output_sample_count: StageLatencyContribution::sample_count(stage.sse_to_output_ms),
         tps_latency_total_ms: latency * tps_sample,
@@ -93,17 +93,17 @@ pub(super) fn histogram(record: &request_candidates::Model, success: bool) -> Hi
         is_stream: Some(record.is_stream),
         needs_conversion: Some(record.needs_conversion),
         latency_ms: success.then_some(record.latency_ms).flatten(),
-        ttfb_ms: success.then_some(record.first_byte_time_ms).flatten(),
+        first_byte_ms: success.then_some(record.first_byte_time_ms).flatten(),
         response_headers_ms: stage.response_headers_ms,
         first_sse_event_ms: stage.first_sse_event_ms,
-        first_output_ms: stage.first_output_ms,
+        first_token_ms: stage.first_token_ms,
         sse_to_output_ms: stage.sse_to_output_ms,
     }
 }
 
 fn stage_latency(record: &request_candidates::Model, include: bool) -> StageLatencyContribution {
     if include {
-        return StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms);
+        return StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_token_time_ms);
     }
     StageLatencyContribution::default()
 }

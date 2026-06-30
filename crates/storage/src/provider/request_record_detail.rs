@@ -69,7 +69,7 @@ pub(super) fn candidate_detail(candidate: RequestCandidateRecord) -> StorageResu
         latency_ms: candidate.latency_ms,
         response_headers_time_ms: candidate.response_headers_time_ms,
         first_sse_event_time_ms: candidate.first_sse_event_time_ms,
-        first_output_time_ms: candidate.first_output_time_ms,
+        first_token_time_ms: candidate.first_token_time_ms,
         first_byte_time_ms: candidate.first_byte_time_ms,
         error_type: candidate.error_type,
         error_message: candidate.error_message,

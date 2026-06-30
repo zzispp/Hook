@@ -1,10 +1,10 @@
 pub(super) const SOURCE_REQUEST: &str = "request";
 pub(super) const SOURCE_CANDIDATE: &str = "candidate";
 pub(super) const METRIC_LATENCY: &str = "latency";
-pub(super) const METRIC_TTFB: &str = "ttfb";
+pub(super) const METRIC_FIRST_BYTE: &str = "first_byte";
 pub(super) const METRIC_RESPONSE_HEADERS: &str = "response_headers";
 pub(super) const METRIC_FIRST_SSE_EVENT: &str = "first_sse_event";
-pub(super) const METRIC_FIRST_OUTPUT: &str = "first_output";
+pub(super) const METRIC_FIRST_TOKEN: &str = "first_token";
 pub(super) const METRIC_SSE_TO_OUTPUT: &str = "sse_to_output";
 pub(super) const STATUS_SUCCESS: &str = "success";
 pub(super) const STATUS_FAILED: &str = "failed";

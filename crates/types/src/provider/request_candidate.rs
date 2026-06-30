@@ -75,7 +75,7 @@ pub struct RequestCandidate {
     pub latency_ms: Option<i64>,
     pub response_headers_time_ms: Option<i64>,
     pub first_sse_event_time_ms: Option<i64>,
-    pub first_output_time_ms: Option<i64>,
+    pub first_token_time_ms: Option<i64>,
     pub first_byte_time_ms: Option<i64>,
     pub error_type: Option<String>,
     pub error_message: Option<String>,

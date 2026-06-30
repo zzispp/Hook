@@ -129,7 +129,7 @@ fn validate_finite_non_negative(name: &str, value: f64) -> Result<(), LlmProxyEr
 fn weight_values(weights: &RoutingProfileWeights) -> [(&'static str, f64); 7] {
     [
         ("success", weights.success),
-        ("ttfb", weights.ttfb),
+        ("first_token", weights.first_token),
         ("latency", weights.latency),
         ("tps", weights.tps),
         ("cost", weights.cost),
@@ -216,7 +216,7 @@ fn apply_patch(profile: &mut RoutingProfile, patch: RoutingProfileUpsert) {
 fn built_in_profiles() -> Vec<RoutingProfile> {
     [
         built_in_profile(RoutingProfileId::Balanced),
-        built_in_profile(RoutingProfileId::FirstByte),
+        built_in_profile(RoutingProfileId::FirstToken),
         built_in_profile(RoutingProfileId::HighTps),
         built_in_profile(RoutingProfileId::CostOptimal),
         built_in_profile(RoutingProfileId::HighAvailability),
@@ -263,7 +263,7 @@ fn built_in_definition(id: RoutingProfileId) -> (&'static str, &'static str, Rou
             "Success, latency, cost, and headroom balanced.",
             weights(0.28, 0.19, 0.17, 0.09, 0.15, 0.12, 0.0),
         ),
-        RoutingProfileId::FirstByte => (
+        RoutingProfileId::FirstToken => (
             "First Token",
             "Prioritizes p90 first-token time for interactive streams.",
             weights(0.26, 0.36, 0.08, 0.04, 0.06, 0.20, 0.0),
@@ -285,7 +285,7 @@ fn built_in_definition(id: RoutingProfileId) -> (&'static str, &'static str, Rou
         ),
         RoutingProfileId::CacheAffinityPlus => (
             "Cache Affinity Plus",
-            "Extends cache affinity with health and TTFB scoring.",
+            "Extends cache affinity with health and first-token scoring.",
             weights(0.28, 0.30, 0.12, 0.04, 0.10, 0.16, 0.0),
         ),
         RoutingProfileId::FixedPriorityPlus => (
@@ -301,10 +301,10 @@ fn built_in_definition(id: RoutingProfileId) -> (&'static str, &'static str, Rou
     }
 }
 
-fn weights(success: f64, ttfb: f64, latency: f64, tps: f64, cost: f64, headroom: f64, priority: f64) -> RoutingProfileWeights {
+fn weights(success: f64, first_token: f64, latency: f64, tps: f64, cost: f64, headroom: f64, priority: f64) -> RoutingProfileWeights {
     RoutingProfileWeights {
         success,
-        ttfb,
+        first_token,
         latency,
         tps,
         cost,

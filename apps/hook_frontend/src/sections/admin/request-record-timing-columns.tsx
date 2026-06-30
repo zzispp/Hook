@@ -17,14 +17,14 @@ const TIMING_CELL_Z_INDEX = 2;
 const TIMING_HEAD_CELL_Z_INDEX = 3;
 
 const COMPACT_TIMING_COLUMNS: readonly TimingColumn[] = [
-  { metric: 'first_output', labelKey: 'requestRecords.firstTokenShort', width: 112 },
+  { metric: 'first_token', labelKey: 'requestRecords.firstTokenShort', width: 112 },
   { metric: 'total_latency', labelKey: 'requestRecords.latencyShort', width: 120 },
 ];
 
 const EXPANDED_TIMING_COLUMNS: readonly TimingColumn[] = [
   { metric: 'response_headers', labelKey: 'requestRecords.responseHeadersShort', width: 112 },
-  { metric: 'first_byte', labelKey: 'requestRecords.firstCharShort', width: 112 },
-  { metric: 'first_output', labelKey: 'requestRecords.firstTokenShort', width: 112 },
+  { metric: 'first_byte', labelKey: 'requestRecords.firstByteShort', width: 112 },
+  { metric: 'first_token', labelKey: 'requestRecords.firstTokenShort', width: 112 },
   { metric: 'total_latency', labelKey: 'requestRecords.totalLatencyShort', width: 120 },
 ];
 

@@ -21,7 +21,7 @@ import { toast } from 'src/components/snackbar';
 
 const WEIGHT_FIELDS: Array<keyof RoutingProfileWeights> = [
   'success',
-  'ttfb',
+  'first_token',
   'latency',
   'tps',
   'cost',
@@ -234,7 +234,7 @@ export function RoutingProfileEditor({ profile, onSaved }: Props) {
 
 const emptyWeights: Record<keyof RoutingProfileWeights, string> = {
   success: '0',
-  ttfb: '0',
+  first_token: '0',
   latency: '0',
   tps: '0',
   cost: '0',
@@ -261,7 +261,7 @@ const emptyParams: Record<RoutingParamField, string> = {
 function toWeightForm(weights: RoutingProfileWeights): Record<keyof RoutingProfileWeights, string> {
   return {
     success: String(weights.success),
-    ttfb: String(weights.ttfb),
+    first_token: String(weights.first_token),
     latency: String(weights.latency),
     tps: String(weights.tps),
     cost: String(weights.cost),
@@ -273,7 +273,7 @@ function toWeightForm(weights: RoutingProfileWeights): Record<keyof RoutingProfi
 function fromWeightForm(weights: Record<keyof RoutingProfileWeights, string>): RoutingProfileWeights {
   return {
     success: parseNumber(weights.success),
-    ttfb: parseNumber(weights.ttfb),
+    first_token: parseNumber(weights.first_token),
     latency: parseNumber(weights.latency),
     tps: parseNumber(weights.tps),
     cost: parseNumber(weights.cost),

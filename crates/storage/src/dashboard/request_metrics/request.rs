@@ -14,7 +14,7 @@ use super::{
 pub(super) fn metric(record: &request_records::Model) -> MetricContribution {
     let terminal = is_terminal_status(&record.status);
     let latency = terminal.then_some(record.total_latency_ms).flatten();
-    let ttfb = terminal.then_some(record.first_byte_time_ms).flatten();
+    let first_byte = terminal.then_some(record.first_byte_time_ms).flatten();
     let stage = stage_latency(record, terminal);
     MetricContribution {
         source_type: SOURCE_REQUEST.into(),
@@ -49,14 +49,14 @@ pub(super) fn metric(record: &request_records::Model) -> MetricContribution {
         cache_creation_cost: record.cache_creation_cost.unwrap_or(Decimal::ZERO),
         latency_total_ms: latency.unwrap_or_default(),
         latency_sample_count: i64::from(latency.is_some()),
-        ttfb_total_ms: ttfb.unwrap_or_default(),
-        ttfb_sample_count: i64::from(ttfb.is_some()),
+        first_byte_total_ms: first_byte.unwrap_or_default(),
+        first_byte_sample_count: i64::from(first_byte.is_some()),
         response_headers_total_ms: StageLatencyContribution::total(stage.response_headers_ms),
         response_headers_sample_count: StageLatencyContribution::sample_count(stage.response_headers_ms),
         first_sse_event_total_ms: StageLatencyContribution::total(stage.first_sse_event_ms),
         first_sse_event_sample_count: StageLatencyContribution::sample_count(stage.first_sse_event_ms),
-        first_output_total_ms: StageLatencyContribution::total(stage.first_output_ms),
-        first_output_sample_count: StageLatencyContribution::sample_count(stage.first_output_ms),
+        first_token_total_ms: StageLatencyContribution::total(stage.first_token_ms),
+        first_token_sample_count: StageLatencyContribution::sample_count(stage.first_token_ms),
         sse_to_output_total_ms: StageLatencyContribution::total(stage.sse_to_output_ms),
         sse_to_output_sample_count: StageLatencyContribution::sample_count(stage.sse_to_output_ms),
         tps_latency_total_ms: 0,
@@ -84,17 +84,17 @@ pub(super) fn histogram(record: &request_records::Model, success: bool) -> Histo
         is_stream: Some(record.is_stream),
         needs_conversion: None,
         latency_ms: success.then_some(record.total_latency_ms).flatten(),
-        ttfb_ms: success.then_some(record.first_byte_time_ms).flatten(),
+        first_byte_ms: success.then_some(record.first_byte_time_ms).flatten(),
         response_headers_ms: stage.response_headers_ms,
         first_sse_event_ms: stage.first_sse_event_ms,
-        first_output_ms: stage.first_output_ms,
+        first_token_ms: stage.first_token_ms,
         sse_to_output_ms: stage.sse_to_output_ms,
     }
 }
 
 fn stage_latency(record: &request_records::Model, include: bool) -> StageLatencyContribution {
     if include {
-        return StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_output_time_ms);
+        return StageLatencyContribution::new(record.response_headers_time_ms, record.first_sse_event_time_ms, record.first_token_time_ms);
     }
     StageLatencyContribution::default()
 }

@@ -13,8 +13,8 @@ pub(super) fn metric_upsert_sql() -> &'static str {
      key_name = COALESCE(EXCLUDED.key_name, routing_metric_buckets.key_name), endpoint_name = COALESCE(EXCLUDED.endpoint_name, routing_metric_buckets.endpoint_name), \
      request_count = routing_metric_buckets.request_count + EXCLUDED.request_count, success_count = routing_metric_buckets.success_count + EXCLUDED.success_count, \
      failure_count = routing_metric_buckets.failure_count + EXCLUDED.failure_count, \
-     first_output_success_count = routing_metric_buckets.first_output_success_count + EXCLUDED.first_output_success_count, \
-     first_output_failure_count = routing_metric_buckets.first_output_failure_count + EXCLUDED.first_output_failure_count, \
+     first_token_success_count = routing_metric_buckets.first_token_success_count + EXCLUDED.first_token_success_count, \
+     first_token_failure_count = routing_metric_buckets.first_token_failure_count + EXCLUDED.first_token_failure_count, \
      timeout_count = routing_metric_buckets.timeout_count + EXCLUDED.timeout_count, \
      rate_limited_count = routing_metric_buckets.rate_limited_count + EXCLUDED.rate_limited_count, server_error_count = routing_metric_buckets.server_error_count + EXCLUDED.server_error_count, \
      format_conversion_failure_count = routing_metric_buckets.format_conversion_failure_count + EXCLUDED.format_conversion_failure_count, \
@@ -22,7 +22,7 @@ pub(super) fn metric_upsert_sql() -> &'static str {
      stream_abnormal_end_count = routing_metric_buckets.stream_abnormal_end_count + EXCLUDED.stream_abnormal_end_count, \
      schema_tool_call_failure_count = routing_metric_buckets.schema_tool_call_failure_count + EXCLUDED.schema_tool_call_failure_count, \
      latency_sum_ms = routing_metric_buckets.latency_sum_ms + EXCLUDED.latency_sum_ms, latency_sample_count = routing_metric_buckets.latency_sample_count + EXCLUDED.latency_sample_count, \
-     ttfb_sum_ms = routing_metric_buckets.ttfb_sum_ms + EXCLUDED.ttfb_sum_ms, ttfb_sample_count = routing_metric_buckets.ttfb_sample_count + EXCLUDED.ttfb_sample_count, \
+     first_token_sum_ms = routing_metric_buckets.first_token_sum_ms + EXCLUDED.first_token_sum_ms, first_token_sample_count = routing_metric_buckets.first_token_sample_count + EXCLUDED.first_token_sample_count, \
      output_tokens = routing_metric_buckets.output_tokens + EXCLUDED.output_tokens, tps_latency_sum_ms = routing_metric_buckets.tps_latency_sum_ms + EXCLUDED.tps_latency_sum_ms, \
      tps_sample_count = routing_metric_buckets.tps_sample_count + EXCLUDED.tps_sample_count, upstream_total_cost = routing_metric_buckets.upstream_total_cost + EXCLUDED.upstream_total_cost, \
      total_tokens = routing_metric_buckets.total_tokens + EXCLUDED.total_tokens, last_seen_at = EXCLUDED.last_seen_at, updated_at = EXCLUDED.updated_at"
@@ -34,7 +34,7 @@ pub(super) fn route_state_upsert_sql(current_weight_ref: &str, incoming_weight_r
          route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version) \
          DO UPDATE SET ema_success_rate = (routing_route_states.ema_success_rate * {current_weight_ref} + EXCLUDED.ema_success_rate * {incoming_weight_ref}), \
          ema_latency_ms = COALESCE((routing_route_states.ema_latency_ms * {current_weight_ref} + EXCLUDED.ema_latency_ms * {incoming_weight_ref}), routing_route_states.ema_latency_ms, EXCLUDED.ema_latency_ms), \
-         ema_ttfb_ms = COALESCE((routing_route_states.ema_ttfb_ms * {current_weight_ref} + EXCLUDED.ema_ttfb_ms * {incoming_weight_ref}), routing_route_states.ema_ttfb_ms, EXCLUDED.ema_ttfb_ms), \
+         ema_first_token_ms = COALESCE((routing_route_states.ema_first_token_ms * {current_weight_ref} + EXCLUDED.ema_first_token_ms * {incoming_weight_ref}), routing_route_states.ema_first_token_ms, EXCLUDED.ema_first_token_ms), \
          ema_output_tps = COALESCE((routing_route_states.ema_output_tps * {current_weight_ref} + EXCLUDED.ema_output_tps * {incoming_weight_ref}), routing_route_states.ema_output_tps, EXCLUDED.ema_output_tps), \
          sample_count = routing_route_states.sample_count + EXCLUDED.sample_count, state = EXCLUDED.state, last_updated_at = EXCLUDED.last_updated_at"
     )
@@ -44,12 +44,12 @@ pub(super) fn metric_select_sql() -> &'static str {
     "SELECT provider_id, provider_name, key_id, key_name, endpoint_id, endpoint_name, global_model_id, client_api_format, provider_api_format, is_stream, \
      route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version, \
      SUM(request_count)::BIGINT AS request_count, SUM(success_count)::BIGINT AS success_count, SUM(failure_count)::BIGINT AS failure_count, \
-     SUM(first_output_success_count)::BIGINT AS first_output_success_count, SUM(first_output_failure_count)::BIGINT AS first_output_failure_count, \
+     SUM(first_token_success_count)::BIGINT AS first_token_success_count, SUM(first_token_failure_count)::BIGINT AS first_token_failure_count, \
      SUM(timeout_count)::BIGINT AS timeout_count, SUM(rate_limited_count)::BIGINT AS rate_limited_count, SUM(server_error_count)::BIGINT AS server_error_count, \
      SUM(format_conversion_failure_count)::BIGINT AS format_conversion_failure_count, SUM(usage_missing_count)::BIGINT AS usage_missing_count, \
      SUM(stream_abnormal_end_count)::BIGINT AS stream_abnormal_end_count, SUM(schema_tool_call_failure_count)::BIGINT AS schema_tool_call_failure_count, \
-     SUM(latency_sum_ms)::BIGINT AS latency_sum_ms, SUM(latency_sample_count)::BIGINT AS latency_sample_count, SUM(ttfb_sum_ms)::BIGINT AS ttfb_sum_ms, \
-     SUM(ttfb_sample_count)::BIGINT AS ttfb_sample_count, SUM(output_tokens)::BIGINT AS output_tokens, SUM(tps_latency_sum_ms)::BIGINT AS tps_latency_sum_ms, \
+     SUM(latency_sum_ms)::BIGINT AS latency_sum_ms, SUM(latency_sample_count)::BIGINT AS latency_sample_count, SUM(first_token_sum_ms)::BIGINT AS first_token_sum_ms, \
+     SUM(first_token_sample_count)::BIGINT AS first_token_sample_count, SUM(output_tokens)::BIGINT AS output_tokens, SUM(tps_latency_sum_ms)::BIGINT AS tps_latency_sum_ms, \
      SUM(upstream_total_cost) AS upstream_total_cost, SUM(total_tokens)::BIGINT AS total_tokens, MAX(last_seen_at) AS last_seen_at FROM routing_metric_buckets"
 }
 
@@ -77,8 +77,8 @@ pub(super) fn metric_values(delta: &RoutingMetricDelta, bounds: BucketBounds, no
         Value::from(delta.request_count),
         Value::from(delta.success_count),
         Value::from(delta.failure_count),
-        Value::from(delta.first_output_success_count),
-        Value::from(delta.first_output_failure_count),
+        Value::from(delta.first_token_success_count),
+        Value::from(delta.first_token_failure_count),
         Value::from(delta.timeout_count),
         Value::from(delta.rate_limited_count),
         Value::from(delta.server_error_count),
@@ -88,8 +88,8 @@ pub(super) fn metric_values(delta: &RoutingMetricDelta, bounds: BucketBounds, no
         Value::from(delta.schema_tool_call_failure_count),
         Value::from(delta.latency_sum_ms),
         Value::from(delta.latency_sample_count),
-        Value::from(delta.ttfb_sum_ms),
-        Value::from(delta.ttfb_sample_count),
+        Value::from(delta.first_token_sum_ms),
+        Value::from(delta.first_token_sample_count),
         Value::from(delta.output_tokens),
         Value::from(delta.tps_latency_sum_ms),
         Value::from(delta.tps_sample_count),
@@ -108,7 +108,7 @@ pub(super) fn route_state_values(
     delta: &RoutingMetricDelta,
     success_rate: Decimal,
     latency: Option<Decimal>,
-    ttfb: Option<Decimal>,
+    first_token: Option<Decimal>,
     output_tps: Option<Decimal>,
     sample_count: i64,
     now: time::OffsetDateTime,
@@ -126,7 +126,7 @@ pub(super) fn route_state_values(
         Value::from(delta.price_config_fingerprint.clone()),
         Value::from(delta.timing_metric_semantics_version.clone()),
         Value::from(success_rate),
-        Value::from(ttfb),
+        Value::from(first_token),
         Value::from(latency),
         Value::from(output_tps),
         Value::from(Option::<i32>::None),
@@ -155,8 +155,8 @@ pub(super) fn metric_columns() -> [&'static str; 41] {
         "request_count",
         "success_count",
         "failure_count",
-        "first_output_success_count",
-        "first_output_failure_count",
+        "first_token_success_count",
+        "first_token_failure_count",
         "timeout_count",
         "rate_limited_count",
         "server_error_count",
@@ -166,8 +166,8 @@ pub(super) fn metric_columns() -> [&'static str; 41] {
         "schema_tool_call_failure_count",
         "latency_sum_ms",
         "latency_sample_count",
-        "ttfb_sum_ms",
-        "ttfb_sample_count",
+        "first_token_sum_ms",
+        "first_token_sample_count",
         "output_tokens",
         "tps_latency_sum_ms",
         "tps_sample_count",
@@ -196,7 +196,7 @@ pub(super) fn route_state_columns() -> [&'static str; 19] {
         "price_config_fingerprint",
         ROUTING_TIMING_SEMANTICS_COLUMN,
         "ema_success_rate",
-        "ema_ttfb_ms",
+        "ema_first_token_ms",
         "ema_latency_ms",
         "ema_output_tps",
         "learned_rpm_limit",
@@ -224,9 +224,9 @@ pub(super) fn average_decimal(sum: i64, count: i64) -> Option<Decimal> {
 }
 
 fn effective_success_counts(delta: &RoutingMetricDelta) -> (i64, i64) {
-    let first_output_attempts = delta.first_output_success_count + delta.first_output_failure_count;
-    if first_output_attempts > 0 {
-        return (delta.first_output_success_count, first_output_attempts);
+    let first_token_attempts = delta.first_token_success_count + delta.first_token_failure_count;
+    if first_token_attempts > 0 {
+        return (delta.first_token_success_count, first_token_attempts);
     }
     (delta.success_count, delta.request_count)
 }

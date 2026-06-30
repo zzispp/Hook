@@ -1,6 +1,6 @@
 export type RoutingProfileId =
   | 'balanced'
-  | 'first_byte'
+  | 'first_token'
   | 'high_tps'
   | 'cost_optimal'
   | 'high_availability'
@@ -50,7 +50,7 @@ export type RoutingRequestFeatures = {
 
 export type RoutingProfileWeights = {
   success: number;
-  ttfb: number;
+  first_token: number;
   latency: number;
   tps: number;
   cost: number;
@@ -128,8 +128,8 @@ export type RoutingMetricSnapshot = {
   request_count: number;
   success_count: number;
   failure_count: number;
-  first_output_success_count: number;
-  first_output_failure_count: number;
+  first_token_success_count: number;
+  first_token_failure_count: number;
   timeout_count: number;
   rate_limited_count: number;
   server_error_count: number;
@@ -138,7 +138,7 @@ export type RoutingMetricSnapshot = {
   stream_abnormal_end_count: number;
   schema_tool_call_failure_count: number;
   latency_avg_ms?: number | null;
-  ttfb_avg_ms?: number | null;
+  first_token_avg_ms?: number | null;
   output_tps?: number | null;
   upstream_total_cost?: number | null;
   total_tokens: number;

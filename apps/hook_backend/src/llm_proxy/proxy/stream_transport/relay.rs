@@ -45,7 +45,7 @@ pub(super) struct StreamRelay {
     first_sse_event_detector: FirstSseEventDetector,
     usage: Option<TokenUsage>,
     first_sse_event_time_ms: Option<i64>,
-    first_output_time_ms: Option<i64>,
+    first_token_time_ms: Option<i64>,
     first_byte_time_ms: Option<i64>,
     last_upstream_item_at: Instant,
     stream_idle_timeout: Option<Duration>,
@@ -88,7 +88,7 @@ impl StreamRelay {
             first_sse_event_detector: FirstSseEventDetector::new(),
             usage: None,
             first_sse_event_time_ms: None,
-            first_output_time_ms: None,
+            first_token_time_ms: None,
             first_byte_time_ms: None,
             last_upstream_item_at,
             stream_idle_timeout,
@@ -104,8 +104,8 @@ impl StreamRelay {
         }
     }
 
-    pub(super) async fn prefetch_until_first_event(&mut self) -> Result<(), LlmProxyError> {
-        while !self.has_first_sse_event() && !self.finished {
+    pub(super) async fn prefetch_until_first_byte(&mut self) -> Result<(), LlmProxyError> {
+        while !self.has_first_byte() && !self.finished {
             let Some(item) = futures_util::StreamExt::next(&mut self.upstream).await else {
                 self.finish_success().await?;
                 break;
@@ -115,8 +115,8 @@ impl StreamRelay {
         Ok(())
     }
 
-    pub(super) async fn prefetch_until_first_output(&mut self) -> Result<(), LlmProxyError> {
-        while !self.ready_to_commit() && !self.finished {
+    pub(super) async fn prefetch_until_first_token(&mut self) -> Result<(), LlmProxyError> {
+        while !self.has_first_token() && !self.finished {
             let Some(item) = futures_util::StreamExt::next(&mut self.upstream).await else {
                 self.finish_success().await?;
                 break;
@@ -141,10 +141,10 @@ impl StreamRelay {
         Ok(())
     }
 
-    pub(super) async fn record_first_output_timeout(&mut self) -> Result<(), LlmProxyError> {
+    pub(super) async fn record_first_token_timeout(&mut self) -> Result<(), LlmProxyError> {
         self.stream_status
-            .set_end_reason(StreamEndReason::Timeout, Some("stream first output timeout".into()));
-        self.record_failure("first_output_timeout", "stream first output timeout").await?;
+            .set_end_reason(StreamEndReason::Timeout, Some("stream first token timeout".into()));
+        self.record_failure("first_token_timeout", "stream first token timeout").await?;
         self.finished = true;
         Ok(())
     }
@@ -159,8 +159,8 @@ impl StreamRelay {
             upstream_headers,
             content_type,
             self.first_sse_event_time_ms,
-            self.first_output_time_ms,
-            self.compat_first_byte_time_ms(),
+            self.first_token_time_ms,
+            self.first_byte_time_ms,
         )
         .await
     }
@@ -191,7 +191,6 @@ impl StreamRelay {
             status: failure.status,
             error_type: failure.error_type,
             message: failure.message.clone(),
-            advance_candidate: matches!(failure.error_type, "first_byte_timeout"),
         })
     }
 
@@ -284,15 +283,12 @@ impl StreamRelay {
         self.record_failure(response_read_error_type(error), &error_message).await
     }
 
-    pub(super) fn has_first_sse_event(&self) -> bool {
-        self.first_sse_event_time_ms.is_some()
+    pub(super) fn has_first_byte(&self) -> bool {
+        self.first_byte_time_ms.is_some()
     }
 
-    pub(super) fn has_first_output(&self) -> bool {
+    pub(super) fn has_first_token(&self) -> bool {
         self.client_output_started
-    }
-    fn ready_to_commit(&self) -> bool {
-        self.client_output_started && !self.pending.is_empty()
     }
 }
 

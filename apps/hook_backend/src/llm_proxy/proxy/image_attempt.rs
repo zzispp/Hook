@@ -164,6 +164,7 @@ async fn execute_attempt_request(input: ExecuteAttemptInput<'_>) -> Result<Attem
                 input.candidate,
                 input.retry_index,
                 started,
+                timeout_error_type(input.upstream_is_stream),
                 &error,
                 input.last_error,
             )
@@ -240,13 +241,20 @@ fn build_upstream_request(
     }
 }
 
+fn timeout_error_type(is_stream: bool) -> &'static str {
+    if is_stream {
+        return "response_headers_timeout";
+    }
+    "upstream_timeout"
+}
+
 async fn execute_upstream_request(
     http: &req::ReqwestClient,
     request: req::Request,
     upstream_is_stream: bool,
     candidate: &ProxyCandidate,
 ) -> Result<req::Response, req::ClientError> {
-    let timeout = timeout::response_start_timeout(candidate, upstream_is_stream);
+    let timeout = timeout::upstream_response_headers_timeout(candidate, upstream_is_stream);
     let execute = http.execute(request);
     match timeout {
         Some(timeout) => tokio::time::timeout(timeout, execute).await.unwrap_or(Err(req::ClientError::Timeout)),

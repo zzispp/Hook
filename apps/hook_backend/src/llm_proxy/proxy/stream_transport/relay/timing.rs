@@ -27,10 +27,6 @@ pub(super) fn next_upstream_wait_timeout(last_upstream_item_at: Instant, idle_ti
     }
 }
 
-pub(super) fn compat_first_byte_time_ms(first_byte_time_ms: Option<i64>, first_output_time_ms: Option<i64>) -> Option<i64> {
-    first_byte_time_ms.or(first_output_time_ms)
-}
-
 impl StreamRelay {
     pub(super) async fn next_upstream_item(&mut self) -> NextUpstreamItem {
         let timeout = next_upstream_wait_timeout(self.last_upstream_item_at, self.stream_idle_timeout);
@@ -40,10 +36,6 @@ impl StreamRelay {
             Err(_) if timeout.idle_deadline => NextUpstreamItem::IdleTimeout,
             Err(_) => NextUpstreamItem::Keepalive(render_keepalive()),
         }
-    }
-
-    pub(super) fn compat_first_byte_time_ms(&self) -> Option<i64> {
-        compat_first_byte_time_ms(self.first_byte_time_ms, self.first_output_time_ms)
     }
 
     pub(super) fn record_first_sse_event(&mut self, bytes: &[u8]) {
@@ -68,7 +60,7 @@ impl StreamRelay {
 mod tests {
     use std::time::{Duration, Instant};
 
-    use super::{SSE_KEEPALIVE_INTERVAL_SECS, compat_first_byte_time_ms, next_upstream_wait_timeout};
+    use super::{SSE_KEEPALIVE_INTERVAL_SECS, next_upstream_wait_timeout};
 
     #[test]
     fn upstream_wait_uses_keepalive_when_idle_timeout_is_missing() {
@@ -92,15 +84,5 @@ mod tests {
 
         assert_eq!(timeout.wait, Duration::from_secs(SSE_KEEPALIVE_INTERVAL_SECS));
         assert!(!timeout.idle_deadline);
-    }
-
-    #[test]
-    fn compat_first_byte_prefers_independent_first_byte_over_first_output() {
-        assert_eq!(compat_first_byte_time_ms(Some(12), Some(48)), Some(12));
-    }
-
-    #[test]
-    fn compat_first_byte_falls_back_to_first_output_for_legacy_records() {
-        assert_eq!(compat_first_byte_time_ms(None, Some(48)), Some(48));
     }
 }

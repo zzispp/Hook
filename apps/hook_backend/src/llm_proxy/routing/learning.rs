@@ -13,8 +13,8 @@ const MIN_ROUTE_SAMPLES: u64 = 10;
 const WARMUP_SAMPLE_COUNT: u64 = 800;
 const LATENCY_GOOD_MS: f64 = 800.0;
 const LATENCY_BAD_MS: f64 = 12_000.0;
-const TTFB_GOOD_MS: f64 = 250.0;
-const TTFB_BAD_MS: f64 = 4_000.0;
+const FIRST_TOKEN_GOOD_MS: f64 = 250.0;
+const FIRST_TOKEN_BAD_MS: f64 = 4_000.0;
 const TPS_LOW: f64 = 5.0;
 const TPS_HIGH: f64 = 120.0;
 const QUALITY_PENALTY_WEIGHT: f64 = 0.20;
@@ -107,12 +107,12 @@ fn learn_weights(profile: &RoutingProfile, metrics: &[RoutingMetricRecord], curr
 fn reward(profile: &RoutingProfile, signals: SignalVector) -> f64 {
     let success_gain = signals.success;
     let failure_penalty = 1.0 - signals.success;
-    let ttfb_penalty = (1.0 - signals.ttfb) * profile.weights.ttfb;
+    let first_token_penalty = (1.0 - signals.first_token) * profile.weights.first_token;
     let latency_penalty = (1.0 - signals.latency) * profile.weights.latency;
     let cost_penalty = (1.0 - signals.cost) * profile.weights.cost;
     let quality_penalty = (1.0 - signals.quality) * QUALITY_PENALTY_WEIGHT;
     let tps_reward = signals.tps * profile.weights.tps;
-    (success_gain - failure_penalty - ttfb_penalty - latency_penalty - cost_penalty - quality_penalty + tps_reward).clamp(-1.0, 1.0)
+    (success_gain - failure_penalty - first_token_penalty - latency_penalty - cost_penalty - quality_penalty + tps_reward).clamp(-1.0, 1.0)
 }
 
 pub(super) fn blend_weights(admin: &RoutingProfileWeights, learned: &RoutingProfileWeights, strength: f64) -> RoutingProfileWeights {
@@ -140,7 +140,7 @@ fn format_timestamp(value: OffsetDateTime) -> String {
 #[derive(Clone, Copy)]
 struct SignalVector {
     success: f64,
-    ttfb: f64,
+    first_token: f64,
     latency: f64,
     tps: f64,
     cost: f64,
@@ -151,7 +151,7 @@ impl SignalVector {
     fn from_record(record: &RoutingMetricRecord, cost_range: CostRange, current_cost: Option<f64>) -> Self {
         Self {
             success: success_score(record),
-            ttfb: lower_is_better(record.snapshot.ttfb_avg_ms, TTFB_GOOD_MS, TTFB_BAD_MS),
+            first_token: lower_is_better(record.snapshot.first_token_avg_ms, FIRST_TOKEN_GOOD_MS, FIRST_TOKEN_BAD_MS),
             latency: lower_is_better(record.snapshot.latency_avg_ms, LATENCY_GOOD_MS, LATENCY_BAD_MS),
             tps: higher_is_better(record.snapshot.output_tps, TPS_LOW, TPS_HIGH),
             cost: cost_range.score(current_cost),
@@ -163,7 +163,7 @@ impl SignalVector {
 #[derive(Clone, Copy)]
 struct WeightVector {
     success: f64,
-    ttfb: f64,
+    first_token: f64,
     latency: f64,
     tps: f64,
     cost: f64,
@@ -175,7 +175,7 @@ impl WeightVector {
     fn from_weights(weights: &RoutingProfileWeights) -> Self {
         Self {
             success: weights.success,
-            ttfb: weights.ttfb,
+            first_token: weights.first_token,
             latency: weights.latency,
             tps: weights.tps,
             cost: weights.cost,
@@ -187,7 +187,7 @@ impl WeightVector {
     fn into_weights(self) -> RoutingProfileWeights {
         RoutingProfileWeights {
             success: self.success,
-            ttfb: self.ttfb,
+            first_token: self.first_token,
             latency: self.latency,
             tps: self.tps,
             cost: self.cost,
@@ -208,7 +208,7 @@ impl WeightVector {
         let scale = learnable_budget / learnable_sum;
         Self {
             success: candidate.success * scale,
-            ttfb: candidate.ttfb * scale,
+            first_token: candidate.first_token * scale,
             latency: candidate.latency * scale,
             tps: candidate.tps * scale,
             cost: candidate.cost * scale,
@@ -221,7 +221,7 @@ impl WeightVector {
         let keep = 1.0 - strength;
         Self {
             success: self.success * keep + other.success * strength,
-            ttfb: self.ttfb * keep + other.ttfb * strength,
+            first_token: self.first_token * keep + other.first_token * strength,
             latency: self.latency * keep + other.latency * strength,
             tps: self.tps * keep + other.tps * strength,
             cost: self.cost * keep + other.cost * strength,
@@ -233,7 +233,7 @@ impl WeightVector {
     fn update(self, signals: SignalVector, reward: f64) -> Self {
         Self {
             success: update_weight(self.success, signals.success, reward),
-            ttfb: update_weight(self.ttfb, signals.ttfb, reward),
+            first_token: update_weight(self.first_token, signals.first_token, reward),
             latency: update_weight(self.latency, signals.latency, reward),
             tps: update_weight(self.tps, signals.tps, reward),
             cost: update_weight(self.cost, signals.cost, reward),
@@ -243,7 +243,7 @@ impl WeightVector {
     }
 
     fn learnable_sum(self) -> f64 {
-        self.success + self.ttfb + self.latency + self.tps + self.cost
+        self.success + self.first_token + self.latency + self.tps + self.cost
     }
 }
 

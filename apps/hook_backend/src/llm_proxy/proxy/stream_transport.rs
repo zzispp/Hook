@@ -68,7 +68,6 @@ pub(super) struct StreamPreOutputFailure {
     pub(super) status: StatusCode,
     pub(super) error_type: &'static str,
     pub(super) message: String,
-    pub(super) advance_candidate: bool,
 }
 
 pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptCancelGuard) -> Result<StreamResponseOutcome, LlmProxyError> {
@@ -102,12 +101,12 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
             .map(StreamResponseOutcome::Response);
     }
 
-    let first_event_candidate = context.candidate.clone();
+    let prefetch_candidate = context.candidate.clone();
     let upstream = req::response_bytes_stream(response);
     attempt_cancel.disarm();
     record_stream_headers(&context, "pending", upstream_headers.clone(), content_type.as_ref(), None, None, None).await?;
     let mut relay = relay::StreamRelay::new(context, upstream, source_format, target_format);
-    match prefetch_until_ready(&mut relay, &first_event_candidate, started).await? {
+    match prefetch_until_ready(&mut relay, &prefetch_candidate, started).await? {
         PrefetchOutcome::Ready => {}
         PrefetchOutcome::FailureResponse(response) => return Ok(StreamResponseOutcome::Response(response)),
         PrefetchOutcome::PreOutputFailure(failure) => return Ok(StreamResponseOutcome::PreOutputFailure(failure)),
@@ -121,26 +120,26 @@ pub async fn stream_response(args: StreamResponseArgs, attempt_cancel: &AttemptC
 }
 
 async fn prefetch_until_ready(relay: &mut relay::StreamRelay, candidate: &ProxyCandidate, started: Instant) -> Result<PrefetchOutcome, LlmProxyError> {
-    let first_event_timeout = timeout::remaining_stream_first_byte_timeout(started, candidate);
-    if !prefetch_first_event(relay, first_event_timeout).await? {
+    let first_byte_timeout = timeout::remaining_stream_first_byte_timeout(started, candidate);
+    if !prefetch_first_byte(relay, first_byte_timeout).await? {
         relay.record_first_byte_timeout().await?;
         return prefetch_outcome(relay);
     }
 
-    if relay.has_first_output() || relay.prefetch_failure_response()?.is_some() || relay.pre_output_failure()?.is_some() {
+    if relay.has_first_token() || relay.prefetch_failure_response()?.is_some() || relay.pre_output_failure()?.is_some() {
         return prefetch_outcome(relay);
     }
 
-    let first_output_timeout = timeout::proxy_timeouts(candidate).stream_first_output;
-    if !prefetch_first_output(relay, first_output_timeout).await? {
-        relay.record_first_output_timeout().await?;
+    let first_token_timeout = timeout::remaining_stream_first_token_timeout(started, candidate);
+    if !prefetch_first_token(relay, first_token_timeout).await? {
+        relay.record_first_token_timeout().await?;
     }
     prefetch_outcome(relay)
 }
 
-async fn prefetch_first_event(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<bool, LlmProxyError> {
+async fn prefetch_first_byte(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<bool, LlmProxyError> {
     match timeout {
-        Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch_until_first_event()).await {
+        Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch_until_first_byte()).await {
             Ok(Ok(())) => Ok(true),
             Ok(Err(error)) => {
                 prefetch_error_outcome(relay, error)?;
@@ -148,7 +147,7 @@ async fn prefetch_first_event(relay: &mut relay::StreamRelay, timeout: Option<Du
             }
             Err(_) => Ok(false),
         },
-        None => match relay.prefetch_until_first_event().await {
+        None => match relay.prefetch_until_first_byte().await {
             Ok(()) => Ok(true),
             Err(error) => {
                 prefetch_error_outcome(relay, error)?;
@@ -158,9 +157,9 @@ async fn prefetch_first_event(relay: &mut relay::StreamRelay, timeout: Option<Du
     }
 }
 
-async fn prefetch_first_output(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<bool, LlmProxyError> {
+async fn prefetch_first_token(relay: &mut relay::StreamRelay, timeout: Option<Duration>) -> Result<bool, LlmProxyError> {
     match timeout {
-        Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch_until_first_output()).await {
+        Some(timeout) => match tokio::time::timeout(timeout, relay.prefetch_until_first_token()).await {
             Ok(Ok(())) => Ok(true),
             Ok(Err(error)) => {
                 prefetch_error_outcome(relay, error)?;
@@ -168,7 +167,7 @@ async fn prefetch_first_output(relay: &mut relay::StreamRelay, timeout: Option<D
             }
             Err(_) => Ok(false),
         },
-        None => match relay.prefetch_until_first_output().await {
+        None => match relay.prefetch_until_first_token().await {
             Ok(()) => Ok(true),
             Err(error) => {
                 prefetch_error_outcome(relay, error)?;
@@ -243,7 +242,7 @@ async fn record_stream_headers(
     upstream_headers: HeaderMap,
     content_type: Option<&HeaderValue>,
     first_sse_event_time_ms: Option<i64>,
-    first_output_time_ms: Option<i64>,
+    first_token_time_ms: Option<i64>,
     first_byte_time_ms: Option<i64>,
 ) -> Result<(), LlmProxyError> {
     record_attempt(
@@ -253,7 +252,7 @@ async fn record_stream_headers(
             status_code: Some(context.status.as_u16() as i32),
             response_headers_time_ms: Some(context.response_headers_time_ms),
             first_sse_event_time_ms,
-            first_output_time_ms,
+            first_token_time_ms: first_token_time_ms,
             first_byte_time_ms,
             provider_response_headers: PatchField::Value(upstream_headers),
             client_response_headers: transport::content_type_headers(content_type),

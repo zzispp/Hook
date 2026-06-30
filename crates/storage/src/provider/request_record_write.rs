@@ -128,7 +128,7 @@ fn request_record_active_model(input: RequestRecordRecordInput) -> StorageResult
         billing_snapshot: Set(json::encode_optional(&input.billing_snapshot)?),
         response_headers_time_ms: Set(None),
         first_sse_event_time_ms: Set(None),
-        first_output_time_ms: Set(None),
+        first_token_time_ms: Set(None),
         first_byte_time_ms: Set(None),
         total_latency_ms: Set(None),
         candidate_count: Set(input.candidate_count),
@@ -214,7 +214,7 @@ fn apply_request_record_patch(
     apply_json_patch(&mut active.billing_snapshot, input.billing_snapshot)?;
     apply_i64_patch(&mut active.response_headers_time_ms, input.response_headers_time_ms);
     apply_i64_patch(&mut active.first_sse_event_time_ms, input.first_sse_event_time_ms);
-    apply_i64_patch(&mut active.first_output_time_ms, input.first_output_time_ms);
+    apply_i64_patch(&mut active.first_token_time_ms, input.first_token_time_ms);
     apply_i64_patch(&mut active.first_byte_time_ms, input.first_byte_time_ms);
     apply_i64_patch(&mut active.total_latency_ms, input.total_latency_ms);
     apply_legacy_payload_patch(&mut active.client_response_headers, input.client_response_headers);

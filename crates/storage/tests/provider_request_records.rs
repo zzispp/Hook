@@ -52,7 +52,7 @@ async fn request_record_storage_lists_aggregated_records() {
     assert_eq!(success.created_at, "2026-05-11T11:02:17Z");
     assert_eq!(success.response_headers_time_ms, Some(90));
     assert_eq!(success.first_sse_event_time_ms, Some(100));
-    assert_eq!(success.first_output_time_ms, Some(110));
+    assert_eq!(success.first_token_time_ms, Some(110));
     assert_eq!(success.first_byte_time_ms, Some(110));
     assert_eq!(success.total_latency_ms, Some(570));
     assert_eq!(streaming.status, "streaming");
@@ -60,7 +60,7 @@ async fn request_record_storage_lists_aggregated_records() {
     assert!(streaming.is_stream);
     assert_eq!(streaming.response_headers_time_ms, Some(80));
     assert_eq!(streaming.first_sse_event_time_ms, Some(100));
-    assert_eq!(streaming.first_output_time_ms, Some(120));
+    assert_eq!(streaming.first_token_time_ms, Some(120));
     assert_eq!(streaming.first_byte_time_ms, Some(120));
     assert_eq!(streaming.total_latency_ms, None);
     assert!(!streaming.has_failover);
@@ -344,7 +344,7 @@ async fn request_record_storage_creates_main_record() {
 async fn request_record_storage_updates_main_record() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
-        .append_exec_results(exec_results(21))
+        .append_exec_results(exec_results(128))
         .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
         .append_query_results([[sync_state_row("req-success")]])
         .into_connection();
@@ -368,7 +368,7 @@ async fn request_record_storage_updates_main_record() {
 async fn request_record_storage_skips_snapshot_delta_without_sync_state() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
-        .append_exec_results(exec_results(21))
+        .append_exec_results(exec_results(128))
         .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
         .append_query_results([empty_sync_state_rows()])
         .into_connection();
@@ -392,7 +392,7 @@ async fn request_record_storage_skips_snapshot_delta_without_sync_state() {
 async fn request_record_storage_syncs_dashboard_tokens_with_cache_context() {
     let connection = MockDatabase::new(DatabaseBackend::Postgres)
         .append_query_results([[summary("req-success", "pending", false, false, false, 1, 2)]])
-        .append_exec_results(exec_results(21))
+        .append_exec_results(exec_results(128))
         .append_query_results([[summary("req-success", "success", false, true, true, 1, 2)]])
         .append_query_results([[sync_state_row("req-success")]])
         .into_connection();
@@ -518,7 +518,7 @@ fn routing_metric_json() -> serde_json::Value {
         "rate_limited_count": 0,
         "server_error_count": 0,
         "latency_avg_ms": 320.0,
-        "ttfb_avg_ms": 110.0,
+        "first_token_avg_ms": 110.0,
         "output_tps": 25.0,
         "upstream_total_cost": 0.001,
         "total_tokens": 80,
@@ -657,7 +657,7 @@ fn main_record_patch() -> RequestRecordRecordPatch {
         billing_snapshot: PatchField::Missing,
         response_headers_time_ms: PatchField::Value(90),
         first_sse_event_time_ms: PatchField::Value(100),
-        first_output_time_ms: PatchField::Value(110),
+        first_token_time_ms: PatchField::Value(110),
         first_byte_time_ms: PatchField::Value(110),
         total_latency_ms: PatchField::Value(570),
         client_response_headers: PatchField::Value(serde_json::json!({"content-type": "application/json"})),
@@ -745,7 +745,7 @@ fn summary(request_id: &str, status: &str, is_stream: bool, has_failover: bool, 
         billing_snapshot: None,
         response_headers_time_ms: response_headers_time_ms(status),
         first_sse_event_time_ms: first_sse_event_time_ms(status),
-        first_output_time_ms: first_output_time_ms(status),
+        first_token_time_ms: first_token_time_ms(status),
         first_byte_time_ms: first_byte_time_ms(status),
         total_latency_ms: (status == "success").then_some(570),
         candidate_count,
@@ -894,7 +894,7 @@ fn candidate(request_id: &str, id: &str, status: &str, candidate_index: i32, ret
         latency_ms: latency_ms(status),
         response_headers_time_ms: response_headers_time_ms(status),
         first_sse_event_time_ms: first_sse_event_time_ms(status),
-        first_output_time_ms: first_output_time_ms(status),
+        first_token_time_ms: first_token_time_ms(status),
         first_byte_time_ms: first_byte_time_ms(status),
         error_type: (status == "failed").then(|| "upstream_error".into()),
         error_message: (status == "failed").then(|| "rate limit".into()),
@@ -931,7 +931,7 @@ fn first_sse_event_time_ms(status: &str) -> Option<i64> {
     }
 }
 
-fn first_output_time_ms(status: &str) -> Option<i64> {
+fn first_token_time_ms(status: &str) -> Option<i64> {
     match status {
         "success" => Some(110),
         "streaming" => Some(120),
@@ -940,7 +940,7 @@ fn first_output_time_ms(status: &str) -> Option<i64> {
 }
 
 fn first_byte_time_ms(status: &str) -> Option<i64> {
-    first_output_time_ms(status)
+    first_token_time_ms(status)
 }
 
 fn request_headers(status: &str) -> Option<String> {

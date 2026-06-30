@@ -34,9 +34,9 @@ export type DashboardSummary = {
   profit: number;
   profit_rate: number;
   avg_latency_ms?: number | null;
-  avg_ttfb_ms?: number | null;
+  avg_first_byte_ms?: number | null;
   avg_response_headers_ms?: number | null;
-  avg_first_output_ms?: number | null;
+  avg_first_token_ms?: number | null;
   model_count: number;
   provider_count: number;
   user_count: number;
@@ -55,9 +55,9 @@ export type DashboardTimeseriesPoint = {
   profit: number;
   profit_rate: number;
   avg_latency_ms?: number | null;
-  avg_ttfb_ms?: number | null;
+  avg_first_byte_ms?: number | null;
   avg_response_headers_ms?: number | null;
-  avg_first_output_ms?: number | null;
+  avg_first_token_ms?: number | null;
   cache_hit_rate: number;
 };
 
@@ -71,9 +71,9 @@ export type DashboardBreakdownItem = {
   profit: number;
   profit_rate: number;
   avg_latency_ms?: number | null;
-  avg_ttfb_ms?: number | null;
+  avg_first_byte_ms?: number | null;
   avg_response_headers_ms?: number | null;
-  avg_first_output_ms?: number | null;
+  avg_first_token_ms?: number | null;
 };
 
 export type DashboardBreakdowns = {
@@ -226,7 +226,7 @@ export type DashboardUserUsageStatsResponse = {
   avg_total_latency_ms?: number | null;
   avg_response_headers_ms?: number | null;
   avg_first_byte_ms?: number | null;
-  avg_first_output_ms?: number | null;
+  avg_first_token_ms?: number | null;
 };
 
 export type DashboardUserStatsTimeSeriesPoint = {
@@ -237,7 +237,7 @@ export type DashboardUserStatsTimeSeriesPoint = {
   avg_total_latency_ms?: number | null;
   avg_response_headers_ms?: number | null;
   avg_first_byte_ms?: number | null;
-  avg_first_output_ms?: number | null;
+  avg_first_token_ms?: number | null;
 };
 
 export type DashboardCostForecastPoint = {
@@ -279,7 +279,7 @@ export type DashboardProviderAggregationItem = {
   avg_response_time_ms: number;
   avg_response_headers_ms?: number | null;
   avg_first_byte_ms?: number | null;
-  avg_first_output_ms?: number | null;
+  avg_first_token_ms?: number | null;
   success_rate: number;
   error_count: number;
   cache_creation_tokens: number;

@@ -305,7 +305,7 @@ function WeightLine({
 }) {
   return (
     <Typography variant="caption" color="text.secondary">
-      {`${label}: ${t('routing.profile.weightFields.success')} ${(weights.success * 100).toFixed(1)}%, ${t('routing.profile.weightFields.ttfb')} ${(weights.ttfb * 100).toFixed(1)}%, ${t('routing.profile.weightFields.latency')} ${(weights.latency * 100).toFixed(1)}%, ${t('routing.profile.weightFields.tps')} ${(weights.tps * 100).toFixed(1)}%, ${t('routing.profile.weightFields.cost')} ${(weights.cost * 100).toFixed(1)}%, ${t('routing.profile.weightFields.headroom')} ${(weights.headroom * 100).toFixed(1)}%, ${t('routing.profile.weightFields.priority')} ${(weights.priority * 100).toFixed(1)}%`}
+      {`${label}: ${t('routing.profile.weightFields.success')} ${(weights.success * 100).toFixed(1)}%, ${t('routing.profile.weightFields.first_token')} ${(weights.first_token * 100).toFixed(1)}%, ${t('routing.profile.weightFields.latency')} ${(weights.latency * 100).toFixed(1)}%, ${t('routing.profile.weightFields.tps')} ${(weights.tps * 100).toFixed(1)}%, ${t('routing.profile.weightFields.cost')} ${(weights.cost * 100).toFixed(1)}%, ${t('routing.profile.weightFields.headroom')} ${(weights.headroom * 100).toFixed(1)}%, ${t('routing.profile.weightFields.priority')} ${(weights.priority * 100).toFixed(1)}%`}
     </Typography>
   );
 }

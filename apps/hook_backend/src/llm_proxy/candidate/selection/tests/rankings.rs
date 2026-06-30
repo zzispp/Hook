@@ -47,8 +47,8 @@ fn routing_effective_profile_prefers_model_then_group_then_default() {
     snapshot.groups[0].routing_profile_id = Some(RoutingProfileId::HighAvailability);
     assert_eq!(effective_routing_profile_id(&snapshot.groups[0], &model), RoutingProfileId::HighAvailability);
 
-    model.routing_profile_id = Some(RoutingProfileId::FirstByte);
-    assert_eq!(effective_routing_profile_id(&snapshot.groups[0], &model), RoutingProfileId::FirstByte);
+    model.routing_profile_id = Some(RoutingProfileId::FirstToken);
+    assert_eq!(effective_routing_profile_id(&snapshot.groups[0], &model), RoutingProfileId::FirstToken);
 }
 
 #[test]

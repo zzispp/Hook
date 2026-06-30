@@ -28,7 +28,7 @@ pub(super) fn usage_record(record: RequestRecordSummaryRecord) -> UsageRecord {
         cost_currency: record.cost_currency.unwrap_or_else(|| DEFAULT_COST_CURRENCY.into()),
         response_headers_time_ms: record.response_headers_time_ms,
         first_sse_event_time_ms: record.first_sse_event_time_ms,
-        first_output_time_ms: record.first_output_time_ms,
+        first_token_time_ms: record.first_token_time_ms,
         first_byte_time_ms: record.first_byte_time_ms,
         total_latency_ms: record.total_latency_ms,
     }
@@ -100,7 +100,7 @@ pub(super) fn summary_record(record: RequestRecordSummaryRecord) -> StorageResul
         cost_currency: record.cost_currency.unwrap_or_else(|| DEFAULT_COST_CURRENCY.into()),
         response_headers_time_ms: record.response_headers_time_ms,
         first_sse_event_time_ms: record.first_sse_event_time_ms,
-        first_output_time_ms: record.first_output_time_ms,
+        first_token_time_ms: record.first_token_time_ms,
         first_byte_time_ms: record.first_byte_time_ms,
         total_latency_ms: record.total_latency_ms,
         candidate_count: record.candidate_count.try_into().unwrap_or(0),

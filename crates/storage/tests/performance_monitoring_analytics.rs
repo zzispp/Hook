@@ -19,34 +19,34 @@ async fn analytics_maps_errors_and_upstream_rows() {
 
     let response = store.analytics(request(), ts(3_600)).await.unwrap();
 
-    assert_eq!(response.percentiles[0].p90_ttfb_ms, Some(80));
+    assert_eq!(response.percentiles[0].p90_first_byte_ms, Some(80));
     assert_eq!(response.error_distribution[0].category, "rate_limit");
     assert_eq!(response.error_trend[0].total, 3);
     assert_eq!(response.error_trend[0].categories.len(), 2);
     assert_eq!(response.upstream_performance.summary.success_rate, 0.75);
     assert_eq!(response.upstream_performance.summary.error_rate, 0.25);
     assert_eq!(response.upstream_performance.summary.avg_output_tps, Some(25.5));
-    assert_eq!(response.upstream_performance.summary.avg_first_output_ms, Some(360.0));
-    assert_eq!(response.upstream_performance.summary.first_output_sample_count, 3);
+    assert_eq!(response.upstream_performance.summary.avg_first_token_ms, Some(360.0));
+    assert_eq!(response.upstream_performance.summary.first_token_sample_count, 3);
     assert_eq!(response.upstream_performance.summary.avg_response_headers_ms, Some(40.0));
-    assert_eq!(response.percentiles[0].p90_first_output_ms, Some(700));
-    assert_eq!(response.upstream_performance.providers[0].ttfb_sample_count, 3);
+    assert_eq!(response.percentiles[0].p90_first_token_ms, Some(700));
+    assert_eq!(response.upstream_performance.providers[0].first_byte_sample_count, 3);
     assert_eq!(response.upstream_performance.providers[0].avg_response_headers_ms, Some(40.0));
-    assert_eq!(response.upstream_performance.timeline[0].avg_ttfb_ms, Some(45.0));
-    assert_eq!(response.upstream_performance.timeline[0].avg_first_output_ms, Some(355.0));
+    assert_eq!(response.upstream_performance.timeline[0].avg_first_byte_ms, Some(45.0));
+    assert_eq!(response.upstream_performance.timeline[0].avg_first_token_ms, Some(355.0));
     assert_eq!(response.recent_errors[0].request_id, "req-2");
     assert_eq!(response.recent_errors[0].response_headers_ms, Some(40));
-    assert_eq!(response.recent_errors[0].first_output_ms, Some(360));
+    assert_eq!(response.recent_errors[0].first_token_ms, Some(360));
 
     let logs = connection.into_transaction_log();
     let sql_log = joined_sql(&logs);
     assert!(logs[0].statements()[0].sql.contains("dashboard_latency_histogram_buckets"));
-    assert!(logs[0].statements()[0].sql.contains("p99_ttfb_ms"));
-    assert!(logs[0].statements()[0].sql.contains("p99_first_output_ms"));
+    assert!(logs[0].statements()[0].sql.contains("p99_first_byte_ms"));
+    assert!(logs[0].statements()[0].sql.contains("p99_first_token_ms"));
     assert!(logs[1].statements()[0].sql.contains("dashboard_recent_error_snapshots"));
     assert!(logs[3].statements()[0].sql.contains("FROM dashboard_request_metric_buckets b"));
     assert!(logs[3].statements()[0].sql.contains("b.source_type = 'candidate'"));
-    assert!(logs[3].statements()[0].sql.contains("first_output_total_ms"));
+    assert!(logs[3].statements()[0].sql.contains("first_token_total_ms"));
     assert!(logs[5].statements()[0].sql.contains("dashboard_latency_histogram_buckets h"));
     assert!(sql_log.contains("dashboard_recent_error_snapshots"));
     assert!(!sql_log.contains("FROM request_records"));
@@ -94,15 +94,15 @@ fn percentile_row() -> BTreeMap<&'static str, Value> {
         ("p50_latency_ms", Value::from(100_i64)),
         ("p90_latency_ms", Value::from(300_i64)),
         ("p99_latency_ms", Value::from(900_i64)),
-        ("p50_ttfb_ms", Value::from(30_i64)),
-        ("p90_ttfb_ms", Value::from(80_i64)),
-        ("p99_ttfb_ms", Value::from(140_i64)),
+        ("p50_first_byte_ms", Value::from(30_i64)),
+        ("p90_first_byte_ms", Value::from(80_i64)),
+        ("p99_first_byte_ms", Value::from(140_i64)),
         ("p50_response_headers_ms", Value::from(20_i64)),
         ("p90_response_headers_ms", Value::from(50_i64)),
         ("p99_response_headers_ms", Value::from(90_i64)),
-        ("p50_first_output_ms", Value::from(240_i64)),
-        ("p90_first_output_ms", Value::from(700_i64)),
-        ("p99_first_output_ms", Value::from(1_100_i64)),
+        ("p50_first_token_ms", Value::from(240_i64)),
+        ("p90_first_token_ms", Value::from(700_i64)),
+        ("p99_first_token_ms", Value::from(1_100_i64)),
     ])
 }
 
@@ -124,11 +124,11 @@ fn upstream_summary_row() -> BTreeMap<&'static str, Value> {
     row.insert("success_count", Value::from(3_i64));
     row.insert("error_count", Value::from(1_i64));
     row.insert("avg_output_tps", Value::from(25.5_f64));
-    row.insert("ttfb_sample_count", Value::from(3_i64));
+    row.insert("first_byte_sample_count", Value::from(3_i64));
     row.insert("avg_response_headers_ms", Value::from(40.0_f64));
-    row.insert("avg_first_output_ms", Value::from(360.0_f64));
+    row.insert("avg_first_token_ms", Value::from(360.0_f64));
     row.insert("response_headers_sample_count", Value::from(3_i64));
-    row.insert("first_output_sample_count", Value::from(3_i64));
+    row.insert("first_token_sample_count", Value::from(3_i64));
     row
 }
 
@@ -139,23 +139,23 @@ fn empty_upstream_summary_row() -> BTreeMap<&'static str, Value> {
         ("error_count", Value::from(0_i64)),
         ("output_tokens", Value::from(0_i64)),
         ("avg_output_tps", Value::Double(None)),
-        ("avg_ttfb_ms", Value::Double(None)),
+        ("avg_first_byte_ms", Value::Double(None)),
         ("avg_latency_ms", Value::Double(None)),
         ("avg_response_headers_ms", Value::Double(None)),
-        ("avg_first_output_ms", Value::Double(None)),
+        ("avg_first_token_ms", Value::Double(None)),
         ("p90_latency_ms", Value::BigInt(None)),
         ("p99_latency_ms", Value::BigInt(None)),
-        ("p90_ttfb_ms", Value::BigInt(None)),
-        ("p99_ttfb_ms", Value::BigInt(None)),
+        ("p90_first_byte_ms", Value::BigInt(None)),
+        ("p99_first_byte_ms", Value::BigInt(None)),
         ("p90_response_headers_ms", Value::BigInt(None)),
         ("p99_response_headers_ms", Value::BigInt(None)),
-        ("p90_first_output_ms", Value::BigInt(None)),
-        ("p99_first_output_ms", Value::BigInt(None)),
+        ("p90_first_token_ms", Value::BigInt(None)),
+        ("p99_first_token_ms", Value::BigInt(None)),
         ("tps_sample_count", Value::from(0_i64)),
         ("latency_sample_count", Value::from(0_i64)),
-        ("ttfb_sample_count", Value::from(0_i64)),
+        ("first_byte_sample_count", Value::from(0_i64)),
         ("response_headers_sample_count", Value::from(0_i64)),
-        ("first_output_sample_count", Value::from(0_i64)),
+        ("first_token_sample_count", Value::from(0_i64)),
         ("slow_request_count", Value::from(0_i64)),
     ])
 }
@@ -178,10 +178,10 @@ fn upstream_timeline_row() -> BTreeMap<&'static str, Value> {
         ("error_count", Value::from(1_i64)),
         ("output_tokens", Value::from(240_i64)),
         ("avg_output_tps", Value::from(25.5_f64)),
-        ("avg_ttfb_ms", Value::from(45.0_f64)),
+        ("avg_first_byte_ms", Value::from(45.0_f64)),
         ("avg_latency_ms", Value::from(320.0_f64)),
         ("avg_response_headers_ms", Value::from(35.0_f64)),
-        ("avg_first_output_ms", Value::from(355.0_f64)),
+        ("avg_first_token_ms", Value::from(355.0_f64)),
         ("slow_request_count", Value::from(1_i64)),
     ])
 }
@@ -197,9 +197,9 @@ fn recent_error_row(request_id: &'static str) -> BTreeMap<&'static str, Value> {
         ("error_type", Value::from("rate_limit")),
         ("error_message", Value::from("limited")),
         ("response_headers_ms", Value::from(40_i64)),
-        ("first_output_ms", Value::from(360_i64)),
+        ("first_token_ms", Value::from(360_i64)),
         ("latency_ms", Value::from(800_i64)),
-        ("ttfb_ms", Value::from(120_i64)),
+        ("first_byte_ms", Value::from(120_i64)),
     ])
 }
 

@@ -7,16 +7,18 @@ const STREAM_CANDIDATE_WATCHDOG_SLACK: Duration = Duration::from_secs(1);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct ProxyTimeouts {
     pub(super) request: Option<Duration>,
+    pub(super) stream_response_headers: Option<Duration>,
     pub(super) stream_first_byte: Option<Duration>,
-    pub(super) stream_first_output: Option<Duration>,
+    pub(super) stream_first_token: Option<Duration>,
     pub(super) stream_idle: Option<Duration>,
 }
 
 pub(super) fn proxy_timeouts(candidate: &ProxyCandidate) -> ProxyTimeouts {
     ProxyTimeouts {
         request: candidate.request_timeout_seconds.and_then(timeout_duration),
+        stream_response_headers: candidate.stream_response_headers_timeout_seconds.and_then(timeout_duration),
         stream_first_byte: candidate.stream_first_byte_timeout_seconds.and_then(timeout_duration),
-        stream_first_output: candidate.stream_first_output_timeout_seconds.and_then(timeout_duration),
+        stream_first_token: candidate.stream_first_token_timeout_seconds.and_then(timeout_duration),
         stream_idle: candidate.stream_idle_timeout_seconds.and_then(timeout_duration),
     }
 }
@@ -28,9 +30,9 @@ pub(super) fn non_stream_total_timeout(candidate: &ProxyCandidate, is_stream: bo
     Some(proxy_timeouts(candidate).request.unwrap_or_else(req::default_timeout))
 }
 
-pub(super) fn response_start_timeout(candidate: &ProxyCandidate, is_stream: bool) -> Option<Duration> {
+pub(super) fn upstream_response_headers_timeout(candidate: &ProxyCandidate, is_stream: bool) -> Option<Duration> {
     if is_stream {
-        return proxy_timeouts(candidate).stream_first_byte;
+        return proxy_timeouts(candidate).stream_response_headers;
     }
     non_stream_total_timeout(candidate, false)
 }
@@ -45,6 +47,16 @@ pub(super) fn remaining_stream_first_byte_timeout_after(elapsed: Duration, candi
         .map(|timeout| remaining_timeout_after(elapsed, timeout))
 }
 
+pub(super) fn remaining_stream_first_token_timeout(started: Instant, candidate: &ProxyCandidate) -> Option<Duration> {
+    remaining_stream_first_token_timeout_after(started.elapsed(), candidate)
+}
+
+pub(super) fn remaining_stream_first_token_timeout_after(elapsed: Duration, candidate: &ProxyCandidate) -> Option<Duration> {
+    proxy_timeouts(candidate)
+        .stream_first_token
+        .map(|timeout| remaining_timeout_after(elapsed, timeout))
+}
+
 pub(super) fn remaining_timeout(started: Instant, total_timeout: Duration) -> Duration {
     remaining_timeout_after(started.elapsed(), total_timeout)
 }
@@ -55,12 +67,11 @@ pub(super) fn remaining_timeout_after(elapsed: Duration, total_timeout: Duration
 
 pub(super) fn stream_candidate_watchdog_timeout(candidate: &ProxyCandidate) -> Option<Duration> {
     let timeouts = proxy_timeouts(candidate);
-    match (timeouts.stream_first_byte, timeouts.stream_first_output) {
-        (Some(first_byte), Some(first_output)) => Some(first_byte.saturating_add(first_output).saturating_add(STREAM_CANDIDATE_WATCHDOG_SLACK)),
-        (Some(first_byte), None) => Some(first_byte.saturating_add(STREAM_CANDIDATE_WATCHDOG_SLACK)),
-        (None, Some(first_output)) => Some(first_output.saturating_add(STREAM_CANDIDATE_WATCHDOG_SLACK)),
-        (None, None) => None,
-    }
+    [timeouts.stream_response_headers, timeouts.stream_first_byte, timeouts.stream_first_token]
+        .into_iter()
+        .flatten()
+        .max()
+        .map(|timeout| timeout.saturating_add(STREAM_CANDIDATE_WATCHDOG_SLACK))
 }
 
 pub(super) fn timeout_duration(seconds: f64) -> Option<Duration> {
@@ -75,20 +86,21 @@ mod tests {
     use types::model::TieredPricingConfig;
 
     use super::{
-        non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout_after, remaining_timeout_after, response_start_timeout,
-        stream_candidate_watchdog_timeout,
+        non_stream_total_timeout, proxy_timeouts, remaining_stream_first_byte_timeout_after, remaining_stream_first_token_timeout_after,
+        remaining_timeout_after, stream_candidate_watchdog_timeout, upstream_response_headers_timeout,
     };
     use crate::llm_proxy::candidate::{CandidateRoute, CandidateTrace, ProxyCandidate};
 
     #[test]
-    fn stream_keeps_request_timeout_separate_from_first_byte_timeout() {
+    fn stream_keeps_request_timeout_separate_from_stream_stage_timeouts() {
         let candidate = candidate();
 
         let timeouts = proxy_timeouts(&candidate);
 
         assert_eq!(timeouts.request, Some(Duration::from_secs(300)));
+        assert_eq!(timeouts.stream_response_headers, Some(Duration::from_secs(12)));
         assert_eq!(timeouts.stream_first_byte, Some(Duration::from_secs(30)));
-        assert_eq!(timeouts.stream_first_output, Some(Duration::from_secs(45)));
+        assert_eq!(timeouts.stream_first_token, Some(Duration::from_secs(45)));
         assert_eq!(timeouts.stream_idle, Some(Duration::from_secs(30)));
     }
 
@@ -121,19 +133,19 @@ mod tests {
     }
 
     #[test]
-    fn stream_uses_first_byte_timeout_while_waiting_for_response_start() {
+    fn stream_uses_response_headers_timeout_while_waiting_for_response_start() {
         let candidate = candidate();
 
-        let timeout = response_start_timeout(&candidate, true);
+        let timeout = upstream_response_headers_timeout(&candidate, true);
 
-        assert_eq!(timeout, Some(Duration::from_secs(30)));
+        assert_eq!(timeout, Some(Duration::from_secs(12)));
     }
 
     #[test]
     fn non_stream_uses_request_timeout_while_waiting_for_response_start() {
         let candidate = candidate();
 
-        let timeout = response_start_timeout(&candidate, false);
+        let timeout = upstream_response_headers_timeout(&candidate, false);
 
         assert_eq!(timeout, Some(Duration::from_secs(300)));
     }
@@ -157,12 +169,21 @@ mod tests {
     }
 
     #[test]
-    fn stream_candidate_watchdog_adds_handoff_slack_to_total_pre_output_budget() {
+    fn stream_prefetch_first_token_timeout_uses_remaining_absolute_budget() {
+        let candidate = candidate();
+
+        let timeout = remaining_stream_first_token_timeout_after(Duration::from_secs(2), &candidate);
+
+        assert_eq!(timeout, Some(Duration::from_secs(43)));
+    }
+
+    #[test]
+    fn stream_candidate_watchdog_adds_handoff_slack_to_max_pre_output_budget() {
         let candidate = candidate();
 
         let timeout = stream_candidate_watchdog_timeout(&candidate);
 
-        assert_eq!(timeout, Some(Duration::from_secs(76)));
+        assert_eq!(timeout, Some(Duration::from_secs(46)));
     }
 
     #[test]
@@ -191,8 +212,9 @@ mod tests {
             billing_multiplier: Decimal::ONE,
             max_retries: 0,
             request_timeout_seconds: Some(300.0),
+            stream_response_headers_timeout_seconds: Some(12.0),
             stream_first_byte_timeout_seconds: Some(30.0),
-            stream_first_output_timeout_seconds: Some(45.0),
+            stream_first_token_timeout_seconds: Some(45.0),
             stream_idle_timeout_seconds: Some(30.0),
             cache_ttl_minutes: 5,
             key_rpm_limit: None,

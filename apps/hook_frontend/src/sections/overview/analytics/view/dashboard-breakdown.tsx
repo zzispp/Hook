@@ -222,9 +222,9 @@ function detailText(
   ];
   if (showLatency) {
     parts.push(`${t('requestRecords.responseHeaders')}: ${formatMs(item.avg_response_headers_ms)}`);
-    parts.push(`${t('requestRecords.firstChar')}: ${formatMs(item.avg_ttfb_ms)}`);
+    parts.push(`${t('requestRecords.firstByte')}: ${formatMs(item.avg_first_byte_ms)}`);
     parts.push(`${t('dashboard.stats.columns.avgLatency')}: ${formatMs(item.avg_latency_ms)}`);
-    parts.push(`${t('dashboard.stats.columns.firstOutput')}: ${formatMs(item.avg_first_output_ms)}`);
+    parts.push(`${t('dashboard.stats.columns.firstToken')}: ${formatMs(item.avg_first_token_ms)}`);
   }
   parts.push(`${t('dashboard.stats.columns.cost')}: ${formatDashboardCost(item.total_cost)}`);
   if (isAdmin) {

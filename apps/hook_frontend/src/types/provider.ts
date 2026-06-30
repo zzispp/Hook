@@ -48,8 +48,9 @@ export type Provider = {
   quick_import_source?: ProviderQuickImportSourceSummary | null;
   max_retries?: number | null;
   request_timeout_seconds?: number | null;
+  stream_response_headers_timeout_seconds?: number | null;
   stream_first_byte_timeout_seconds?: number | null;
-  stream_first_output_timeout_seconds?: number | null;
+  stream_first_token_timeout_seconds?: number | null;
   stream_idle_timeout_seconds?: number | null;
   priority: number;
   keep_priority_on_conversion: boolean;
@@ -101,8 +102,9 @@ export type ProviderCreate = {
   provider_type: ProviderType;
   max_retries?: number | null;
   request_timeout_seconds?: number | null;
+  stream_response_headers_timeout_seconds?: number | null;
   stream_first_byte_timeout_seconds?: number | null;
-  stream_first_output_timeout_seconds?: number | null;
+  stream_first_token_timeout_seconds?: number | null;
   stream_idle_timeout_seconds?: number | null;
   priority?: number;
   keep_priority_on_conversion?: boolean;

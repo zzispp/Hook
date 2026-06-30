@@ -27,7 +27,7 @@ pub(super) struct StreamCooldownFailure {
 pub(super) struct StreamTerminalObservability {
     pub(super) response_headers_time_ms: Option<i64>,
     pub(super) first_sse_event_time_ms: Option<i64>,
-    pub(super) first_output_time_ms: Option<i64>,
+    pub(super) first_token_time_ms: Option<i64>,
     pub(super) first_byte_time_ms: Option<i64>,
     pub(super) latency_ms: i64,
     pub(super) bodies: StreamResponseBodyPatches,
@@ -125,14 +125,14 @@ impl StreamClientFailure {
 
 fn failure_status_code(error_type: &str) -> i32 {
     match error_type {
-        "first_byte_timeout" | "first_output_timeout" | "stream_idle_timeout" | "upstream_timeout" => GATEWAY_TIMEOUT,
+        "first_byte_timeout" | "first_token_timeout" | "stream_idle_timeout" | "upstream_timeout" => GATEWAY_TIMEOUT,
         _ => BAD_GATEWAY,
     }
 }
 
 fn cooldown_failure(error_type: &'static str) -> Option<StreamCooldownFailure> {
     let status_code = match error_type {
-        "first_byte_timeout" | "first_output_timeout" | "stream_idle_timeout" | "upstream_timeout" => GATEWAY_TIMEOUT,
+        "first_byte_timeout" | "first_token_timeout" | "stream_idle_timeout" | "upstream_timeout" => GATEWAY_TIMEOUT,
         "upstream_response_read_error" => BAD_GATEWAY,
         _ => return None,
     };
@@ -160,7 +160,7 @@ mod tests {
     #[test]
     fn timeout_failures_use_gateway_timeout() {
         assert_eq!(failure_status_code("first_byte_timeout"), 504);
-        assert_eq!(failure_status_code("first_output_timeout"), 504);
+        assert_eq!(failure_status_code("first_token_timeout"), 504);
         assert_eq!(failure_status_code("stream_idle_timeout"), 504);
     }
 
@@ -175,10 +175,10 @@ mod tests {
                 },
             ),
             (
-                "first_output_timeout",
+                "first_token_timeout",
                 StreamCooldownFailure {
                     status_code: 504,
-                    error_type: "first_output_timeout",
+                    error_type: "first_token_timeout",
                 },
             ),
             (

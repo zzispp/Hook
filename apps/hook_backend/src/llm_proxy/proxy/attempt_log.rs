@@ -234,6 +234,7 @@ pub(super) async fn record_send_error(
     candidate: &ProxyCandidate,
     retry_index: i32,
     started: Instant,
+    timeout_error_type: &'static str,
     error: &req::ClientError,
     last_error: &mut Option<LlmProxyError>,
 ) -> Result<Option<Response>, LlmProxyError> {
@@ -243,7 +244,7 @@ pub(super) async fn record_send_error(
         request_id,
         AttemptRecordInput {
             latency_ms: Some(elapsed_ms(started)),
-            error_type: Some(send_error_type(error)),
+            error_type: Some(send_error_type(error, timeout_error_type)),
             error_message: Some(error_message.as_str()),
             ..AttemptRecordInput::new(candidate, retry_index, "failed", true)
         },
@@ -268,9 +269,9 @@ pub(super) async fn record_stream_candidate_watchdog_timeout(
     .await
 }
 
-fn send_error_type(error: &req::ClientError) -> &'static str {
+fn send_error_type(error: &req::ClientError, timeout_error_type: &'static str) -> &'static str {
     if matches!(error, req::ClientError::Timeout) {
-        return "upstream_timeout";
+        return timeout_error_type;
     }
     "upstream_send_error"
 }

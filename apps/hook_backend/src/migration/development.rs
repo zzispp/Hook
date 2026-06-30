@@ -130,7 +130,8 @@ pub async fn recreate(connection: &DatabaseConnection) -> Result<(), DbErr> {
     let manager = SchemaManager::new(connection);
     reset(&manager).await?;
     baseline::apply(&manager).await?;
-    mark_baseline_applied(&manager).await
+    mark_baseline_applied(&manager).await?;
+    apply_additives(&manager).await
 }
 
 pub async fn drop(connection: &DatabaseConnection) -> Result<(), DbErr> {
@@ -172,6 +173,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::provider_quick_import_group_id_additive::apply(manager).await?;
     super::provider_image_stream_mode_additive::apply(manager).await?;
     super::provider_stream_first_output_timeout_additive::apply(manager).await?;
+    super::provider_stream_timeout_semantics_destructive::apply(manager).await?;
     super::provider_key_model_mappings_additive::apply(manager).await?;
     super::recharge_order_paid_at_index_additive::apply(manager).await?;
     super::provider_key_capabilities_destructive::apply(manager).await?;
@@ -185,6 +187,9 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::routing_profile_state_partition_additive::apply(manager).await?;
     super::routing_metric_timing_semantics_additive::apply(manager).await?;
     super::routing_profile_overrides_additive::apply(manager).await?;
+    super::stream_timing_first_token_semantics_destructive::apply(manager).await?;
+    super::stream_timing_first_byte_semantics_destructive::apply(manager).await?;
+    super::stream_timing_i18n_semantics_destructive::apply(manager).await?;
     super::system_settings_api_endpoints_additive::apply(manager).await?;
     super::provider_group_removal_destructive::apply(manager).await
 }

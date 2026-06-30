@@ -33,8 +33,8 @@ export function UserTrendCard({
           series={[
             { name: t('dashboard.stats.userStats.totalCost'), data: costSeries(data) },
             { name: t('requestRecords.responseHeaders'), data: responseHeadersSeries(data) },
-            { name: t('requestRecords.firstChar'), data: firstByteSeries(data) },
-            { name: t('dashboard.stats.userStats.summary.avgFirstOutput'), data: firstOutputSeries(data) },
+            { name: t('requestRecords.firstByte'), data: firstByteSeries(data) },
+            { name: t('dashboard.stats.userStats.summary.avgFirstToken'), data: firstTokenSeries(data) },
             { name: t('requestRecords.totalLatency'), data: totalLatencySeries(data) },
           ]}
           options={options}
@@ -85,8 +85,8 @@ function costSeries(data?: DashboardUserStatsTimeSeriesPoint[]) {
   return data?.map((point) => point.total_cost) ?? [];
 }
 
-function firstOutputSeries(data?: DashboardUserStatsTimeSeriesPoint[]) {
-  return data?.map((point) => point.avg_first_output_ms ?? null) ?? [];
+function firstTokenSeries(data?: DashboardUserStatsTimeSeriesPoint[]) {
+  return data?.map((point) => point.avg_first_token_ms ?? null) ?? [];
 }
 
 function responseHeadersSeries(data?: DashboardUserStatsTimeSeriesPoint[]) {

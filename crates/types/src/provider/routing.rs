@@ -8,7 +8,7 @@ use super::{RoutingMetricSource, RoutingPriorSource, RoutingRequestFeatures};
 pub enum RoutingProfileId {
     #[default]
     Balanced,
-    FirstByte,
+    FirstToken,
     HighTps,
     CostOptimal,
     HighAvailability,
@@ -21,7 +21,7 @@ impl RoutingProfileId {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Balanced => "balanced",
-            Self::FirstByte => "first_byte",
+            Self::FirstToken => "first_token",
             Self::HighTps => "high_tps",
             Self::CostOptimal => "cost_optimal",
             Self::HighAvailability => "high_availability",
@@ -35,7 +35,7 @@ impl RoutingProfileId {
 impl From<&str> for RoutingProfileId {
     fn from(value: &str) -> Self {
         match value {
-            "first_byte" => Self::FirstByte,
+            "first_token" => Self::FirstToken,
             "high_tps" => Self::HighTps,
             "cost_optimal" => Self::CostOptimal,
             "high_availability" => Self::HighAvailability,
@@ -183,7 +183,7 @@ pub struct RouteIdentity {
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct RoutingProfileWeights {
     pub success: f64,
-    pub ttfb: f64,
+    pub first_token: f64,
     pub latency: f64,
     pub tps: f64,
     pub cost: f64,
@@ -301,9 +301,9 @@ pub struct RoutingMetricSnapshot {
     pub success_count: u64,
     pub failure_count: u64,
     #[serde(default)]
-    pub first_output_success_count: u64,
+    pub first_token_success_count: u64,
     #[serde(default)]
-    pub first_output_failure_count: u64,
+    pub first_token_failure_count: u64,
     pub timeout_count: u64,
     pub rate_limited_count: u64,
     pub server_error_count: u64,
@@ -316,7 +316,7 @@ pub struct RoutingMetricSnapshot {
     #[serde(default)]
     pub schema_tool_call_failure_count: u64,
     pub latency_avg_ms: Option<f64>,
-    pub ttfb_avg_ms: Option<f64>,
+    pub first_token_avg_ms: Option<f64>,
     pub output_tps: Option<f64>,
     #[serde(with = "rust_decimal::serde::float_option")]
     pub upstream_total_cost: Option<Decimal>,

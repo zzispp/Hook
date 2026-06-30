@@ -57,15 +57,14 @@ fn probe_slot_timeout_continues_candidate_route() {
 }
 
 #[test]
-fn stream_preoutput_failure_continues_candidate_with_last_failure() {
+fn stream_preoutput_failure_advances_to_next_candidate_with_last_failure() {
     let output = stream_pre_output_failure_task_output(StreamPreOutputFailure {
         status: StatusCode::BAD_GATEWAY,
         error_type: "upstream_stream_incomplete",
         message: "upstream stream ended without a terminal event".into(),
-        advance_candidate: false,
     });
 
-    assert!(matches!(output.outcome, AttemptOnceOutcome::ContinueCandidate));
+    assert!(matches!(output.outcome, AttemptOnceOutcome::NextCandidate));
     assert!(output.last_failure.is_some());
     assert_eq!(
         output.last_error.map(|error| error.to_string()),
@@ -79,7 +78,6 @@ fn stream_preoutput_first_byte_timeout_advances_to_next_candidate() {
         status: StatusCode::GATEWAY_TIMEOUT,
         error_type: "first_byte_timeout",
         message: "stream first byte timeout".into(),
-        advance_candidate: true,
     });
 
     assert!(matches!(output.outcome, AttemptOnceOutcome::NextCandidate));
@@ -91,19 +89,18 @@ fn stream_preoutput_first_byte_timeout_advances_to_next_candidate() {
 }
 
 #[test]
-fn stream_preoutput_first_output_timeout_keeps_current_candidate_retry_path() {
+fn stream_preoutput_first_token_timeout_advances_to_next_candidate() {
     let output = stream_pre_output_failure_task_output(StreamPreOutputFailure {
         status: StatusCode::GATEWAY_TIMEOUT,
-        error_type: "first_output_timeout",
-        message: "stream first output timeout".into(),
-        advance_candidate: false,
+        error_type: "first_token_timeout",
+        message: "stream first token timeout".into(),
     });
 
-    assert!(matches!(output.outcome, AttemptOnceOutcome::ContinueCandidate));
+    assert!(matches!(output.outcome, AttemptOnceOutcome::NextCandidate));
     assert!(output.last_failure.is_some());
     assert_eq!(
         output.last_error.map(|error| error.to_string()),
-        Some("first_output_timeout: stream first output timeout".into())
+        Some("first_token_timeout: stream first token timeout".into())
     );
 }
 
@@ -198,8 +195,9 @@ fn candidate(client_api_format: &str, provider_api_format: &str) -> ProxyCandida
         billing_multiplier: Decimal::ONE,
         max_retries: 0,
         request_timeout_seconds: None,
+        stream_response_headers_timeout_seconds: None,
         stream_first_byte_timeout_seconds: None,
-        stream_first_output_timeout_seconds: None,
+        stream_first_token_timeout_seconds: None,
         stream_idle_timeout_seconds: None,
         cache_ttl_minutes: 5,
         key_rpm_limit: None,

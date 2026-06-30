@@ -41,7 +41,7 @@ pub(in crate::dashboard) async fn summary(store: &DashboardStore, query: Dashboa
         COALESCE(SUM(total_latency_ms), 0)::double precision / NULLIF(COALESCE(SUM(latency_sample_count), 0), 0)::double precision AS avg_total_latency_ms, \
         COALESCE(SUM(response_headers_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(response_headers_sample_count), 0), 0)::double precision AS avg_response_headers_ms, \
         COALESCE(SUM(first_byte_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_byte_sample_count), 0), 0)::double precision AS avg_first_byte_ms, \
-        COALESCE(SUM(first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms \
+        COALESCE(SUM(first_token_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_token_sample_count), 0), 0)::double precision AS avg_first_token_ms \
         FROM dashboard_user_usage_buckets {where_sql}"
     );
     let row = SummaryRow::find_by_statement(Statement::from_sql_and_values(DbBackend::Postgres, sql, params.values))
@@ -65,7 +65,7 @@ pub(in crate::dashboard) async fn time_series(
         COALESCE(SUM(total_latency_ms), 0)::double precision / NULLIF(COALESCE(SUM(latency_sample_count), 0), 0)::double precision AS avg_total_latency_ms, \
         COALESCE(SUM(response_headers_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(response_headers_sample_count), 0), 0)::double precision AS avg_response_headers_ms, \
         COALESCE(SUM(first_byte_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_byte_sample_count), 0), 0)::double precision AS avg_first_byte_ms, \
-        COALESCE(SUM(first_output_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_output_sample_count), 0), 0)::double precision AS avg_first_output_ms \
+        COALESCE(SUM(first_token_total_ms), 0)::double precision / NULLIF(COALESCE(SUM(first_token_sample_count), 0), 0)::double precision AS avg_first_token_ms \
         FROM dashboard_user_usage_buckets {where_sql} \
         GROUP BY date \
         ORDER BY date ASC",
@@ -155,7 +155,7 @@ fn summary_response(row: SummaryRow) -> DashboardUserUsageStatsResponse {
         avg_total_latency_ms: row.avg_total_latency_ms,
         avg_response_headers_ms: row.avg_response_headers_ms,
         avg_first_byte_ms: row.avg_first_byte_ms,
-        avg_first_output_ms: row.avg_first_output_ms,
+        avg_first_token_ms: row.avg_first_token_ms,
     }
 }
 
@@ -168,7 +168,7 @@ fn time_series_point(row: TimeSeriesRow) -> DashboardUserStatsTimeSeriesPoint {
         avg_total_latency_ms: row.avg_total_latency_ms,
         avg_response_headers_ms: row.avg_response_headers_ms,
         avg_first_byte_ms: row.avg_first_byte_ms,
-        avg_first_output_ms: row.avg_first_output_ms,
+        avg_first_token_ms: row.avg_first_token_ms,
     }
 }
 
@@ -234,7 +234,7 @@ struct SummaryRow {
     avg_total_latency_ms: Option<f64>,
     avg_response_headers_ms: Option<f64>,
     avg_first_byte_ms: Option<f64>,
-    avg_first_output_ms: Option<f64>,
+    avg_first_token_ms: Option<f64>,
 }
 
 #[derive(Clone, Debug, FromQueryResult)]
@@ -246,5 +246,5 @@ struct TimeSeriesRow {
     avg_total_latency_ms: Option<f64>,
     avg_response_headers_ms: Option<f64>,
     avg_first_byte_ms: Option<f64>,
-    avg_first_output_ms: Option<f64>,
+    avg_first_token_ms: Option<f64>,
 }

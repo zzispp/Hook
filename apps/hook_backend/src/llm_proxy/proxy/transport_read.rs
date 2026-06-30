@@ -16,7 +16,7 @@ pub(super) struct ResponseBytesInput<'a> {
     pub(super) retry_index: i32,
     pub(super) started: Instant,
     pub(super) response_headers_time_ms: Option<i64>,
-    pub(super) first_output_time_ms: Option<i64>,
+    pub(super) first_token_time_ms: Option<i64>,
     pub(super) first_byte_time_ms: Option<i64>,
     pub(super) read_timeout: Option<Duration>,
     pub(super) response: req::Response,
@@ -29,7 +29,7 @@ struct ResponseReadErrorInput<'a> {
     retry_index: i32,
     started: Instant,
     response_headers_time_ms: Option<i64>,
-    first_output_time_ms: Option<i64>,
+    first_token_time_ms: Option<i64>,
     first_byte_time_ms: Option<i64>,
     error: &'a req::ClientError,
 }
@@ -45,7 +45,7 @@ pub(super) async fn response_bytes(input: ResponseBytesInput<'_>) -> Result<Vec<
                 retry_index: input.retry_index,
                 started: input.started,
                 response_headers_time_ms: input.response_headers_time_ms,
-                first_output_time_ms: input.first_output_time_ms,
+                first_token_time_ms: input.first_token_time_ms,
                 first_byte_time_ms: input.first_byte_time_ms,
                 error: &error,
             })
@@ -73,7 +73,7 @@ async fn record_response_read_error(input: ResponseReadErrorInput<'_>) -> Result
         AttemptRecordInput {
             latency_ms: Some(elapsed_ms(input.started)),
             response_headers_time_ms: input.response_headers_time_ms,
-            first_output_time_ms: input.first_output_time_ms,
+            first_token_time_ms: input.first_token_time_ms,
             first_byte_time_ms: input.first_byte_time_ms,
             error_type: Some(response_read_error_type(input.error)),
             error_message: Some(error_message.as_str()),

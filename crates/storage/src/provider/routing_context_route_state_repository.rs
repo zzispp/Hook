@@ -55,8 +55,8 @@ fn context_state_upsert_sql(current_weight_ref: &str, incoming_weight_ref: &str)
          ema_success_rate = (routing_context_route_states.ema_success_rate * {current_weight_ref} + EXCLUDED.ema_success_rate * {incoming_weight_ref}), \
          ema_latency_ms = COALESCE((routing_context_route_states.ema_latency_ms * {current_weight_ref} + EXCLUDED.ema_latency_ms * {incoming_weight_ref}), \
          routing_context_route_states.ema_latency_ms, EXCLUDED.ema_latency_ms), \
-         ema_ttfb_ms = COALESCE((routing_context_route_states.ema_ttfb_ms * {current_weight_ref} + EXCLUDED.ema_ttfb_ms * {incoming_weight_ref}), \
-         routing_context_route_states.ema_ttfb_ms, EXCLUDED.ema_ttfb_ms), \
+         ema_first_token_ms = COALESCE((routing_context_route_states.ema_first_token_ms * {current_weight_ref} + EXCLUDED.ema_first_token_ms * {incoming_weight_ref}), \
+         routing_context_route_states.ema_first_token_ms, EXCLUDED.ema_first_token_ms), \
          ema_output_tps = COALESCE((routing_context_route_states.ema_output_tps * {current_weight_ref} + EXCLUDED.ema_output_tps * {incoming_weight_ref}), \
          routing_context_route_states.ema_output_tps, EXCLUDED.ema_output_tps), last_updated_at = EXCLUDED.last_updated_at"
     )
@@ -64,7 +64,7 @@ fn context_state_upsert_sql(current_weight_ref: &str, incoming_weight_ref: &str)
 
 fn select_sql() -> &'static str {
     "SELECT profile_id, context_key, provider_id, key_id, endpoint_id, global_model_id, client_api_format, provider_api_format, is_stream, \
-     route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version, sample_count, success_count, failure_count, ema_success_rate, ema_ttfb_ms, ema_latency_ms, \
+     route_config_fingerprint, price_config_fingerprint, timing_metric_semantics_version, sample_count, success_count, failure_count, ema_success_rate, ema_first_token_ms, ema_latency_ms, \
      ema_output_tps, last_updated_at \
      FROM routing_context_route_states"
 }
@@ -87,7 +87,7 @@ fn context_state_values(delta: &RoutingContextRouteStateDelta) -> Vec<Value> {
         Value::from(delta.success_count),
         Value::from(delta.failure_count),
         Value::from(success_rate(delta)),
-        Value::from(delta.ttfb_ms.map(Decimal::from)),
+        Value::from(delta.first_token_ms.map(Decimal::from)),
         Value::from(delta.latency_ms.map(Decimal::from)),
         Value::from(output_tps(delta)),
         Value::from(delta.observed_at),
@@ -112,7 +112,7 @@ fn context_state_columns() -> [&'static str; 20] {
         "success_count",
         "failure_count",
         "ema_success_rate",
-        "ema_ttfb_ms",
+        "ema_first_token_ms",
         "ema_latency_ms",
         "ema_output_tps",
         "last_updated_at",
@@ -133,9 +133,9 @@ fn output_tps(delta: &RoutingContextRouteStateDelta) -> Option<Decimal> {
 }
 
 fn effective_success_counts(delta: &RoutingContextRouteStateDelta) -> (i64, i64) {
-    let first_output_attempts = delta.first_output_success_count + delta.first_output_failure_count;
-    if first_output_attempts > 0 {
-        return (delta.first_output_success_count, first_output_attempts);
+    let first_token_attempts = delta.first_token_success_count + delta.first_token_failure_count;
+    if first_token_attempts > 0 {
+        return (delta.first_token_success_count, first_token_attempts);
     }
     (delta.success_count, delta.sample_count)
 }
@@ -163,7 +163,7 @@ struct RoutingContextRouteStateRow {
     success_count: i64,
     failure_count: i64,
     ema_success_rate: Decimal,
-    ema_ttfb_ms: Option<Decimal>,
+    ema_first_token_ms: Option<Decimal>,
     ema_latency_ms: Option<Decimal>,
     ema_output_tps: Option<Decimal>,
     last_updated_at: time::OffsetDateTime,
@@ -181,7 +181,7 @@ impl From<RoutingContextRouteStateRow> for RoutingContextRouteStateRecord {
             success_count: row.success_count.max(0) as u64,
             failure_count: row.failure_count.max(0) as u64,
             ema_success_rate: decimal(row.ema_success_rate).unwrap_or_default(),
-            ema_ttfb_ms: row.ema_ttfb_ms.and_then(decimal),
+            ema_first_token_ms: row.ema_first_token_ms.and_then(decimal),
             ema_latency_ms: row.ema_latency_ms.and_then(decimal),
             ema_output_tps: row.ema_output_tps.and_then(decimal),
             route_config_fingerprint: row.route_config_fingerprint,

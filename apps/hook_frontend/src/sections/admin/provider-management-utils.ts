@@ -15,8 +15,9 @@ import type {
 export const PROVIDER_TYPE_OPTIONS: ProviderType[] = ['custom'];
 export const DEFAULT_PROVIDER_MAX_RETRIES = 2;
 export const DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS = 300;
+export const DEFAULT_PROVIDER_STREAM_RESPONSE_HEADERS_TIMEOUT_SECONDS = 12;
 export const DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS = 12;
-export const DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS = 45;
+export const DEFAULT_PROVIDER_STREAM_FIRST_TOKEN_TIMEOUT_SECONDS = 45;
 export const DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS = 300;
 
 export const API_FORMAT_OPTIONS = [
@@ -44,8 +45,9 @@ export type ProviderForm = {
   provider_type: ProviderType;
   max_retries: string;
   request_timeout_seconds: string;
+  stream_response_headers_timeout_seconds: string;
   stream_first_byte_timeout_seconds: string;
-  stream_first_output_timeout_seconds: string;
+  stream_first_token_timeout_seconds: string;
   stream_idle_timeout_seconds: string;
   priority: string;
   keep_priority_on_conversion: boolean;
@@ -76,8 +78,9 @@ export const DEFAULT_PROVIDER_FORM: ProviderForm = {
   provider_type: 'custom',
   max_retries: '',
   request_timeout_seconds: '',
+  stream_response_headers_timeout_seconds: '',
   stream_first_byte_timeout_seconds: '',
-  stream_first_output_timeout_seconds: '',
+  stream_first_token_timeout_seconds: '',
   stream_idle_timeout_seconds: '',
   priority: '100',
   keep_priority_on_conversion: false,
@@ -109,11 +112,14 @@ export function providerFormFromProvider(provider: Provider): ProviderForm {
     provider_type: provider.provider_type,
     max_retries: optionalNumberText(provider.max_retries),
     request_timeout_seconds: optionalNumberText(provider.request_timeout_seconds),
+    stream_response_headers_timeout_seconds: optionalNumberText(
+      provider.stream_response_headers_timeout_seconds
+    ),
     stream_first_byte_timeout_seconds: optionalNumberText(
       provider.stream_first_byte_timeout_seconds
     ),
-    stream_first_output_timeout_seconds: optionalNumberText(
-      provider.stream_first_output_timeout_seconds
+    stream_first_token_timeout_seconds: optionalNumberText(
+      provider.stream_first_token_timeout_seconds
     ),
     stream_idle_timeout_seconds: optionalNumberText(provider.stream_idle_timeout_seconds),
     priority: String(provider.priority),
@@ -138,12 +144,15 @@ function providerConfigPayload(form: ProviderForm): ProviderCreate {
     max_retries: optionalNumber(form.max_retries) ?? DEFAULT_PROVIDER_MAX_RETRIES,
     request_timeout_seconds:
       optionalNumber(form.request_timeout_seconds) ?? DEFAULT_PROVIDER_REQUEST_TIMEOUT_SECONDS,
+    stream_response_headers_timeout_seconds:
+      optionalNumber(form.stream_response_headers_timeout_seconds) ??
+      DEFAULT_PROVIDER_STREAM_RESPONSE_HEADERS_TIMEOUT_SECONDS,
     stream_first_byte_timeout_seconds:
       optionalNumber(form.stream_first_byte_timeout_seconds) ??
       DEFAULT_PROVIDER_STREAM_FIRST_BYTE_TIMEOUT_SECONDS,
-    stream_first_output_timeout_seconds:
-      optionalNumber(form.stream_first_output_timeout_seconds) ??
-      DEFAULT_PROVIDER_STREAM_FIRST_OUTPUT_TIMEOUT_SECONDS,
+    stream_first_token_timeout_seconds:
+      optionalNumber(form.stream_first_token_timeout_seconds) ??
+      DEFAULT_PROVIDER_STREAM_FIRST_TOKEN_TIMEOUT_SECONDS,
     stream_idle_timeout_seconds:
       optionalNumber(form.stream_idle_timeout_seconds) ?? DEFAULT_PROVIDER_STREAM_IDLE_TIMEOUT_SECONDS,
     priority: requiredNumber(form.priority),
