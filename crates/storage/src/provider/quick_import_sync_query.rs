@@ -208,6 +208,9 @@ async fn update_key(store: &ProviderStore, provider_id: &str, patch: ProviderQui
         .await?
         .ok_or(StorageError::NotFound)?;
     let mut active: provider_quick_import_keys::ActiveModel = record.into();
+    if let Some(value) = patch.upstream_group_id {
+        active.upstream_group_id = Set(value);
+    }
     if let Some(value) = patch.upstream_group {
         active.upstream_group = Set(value);
     }

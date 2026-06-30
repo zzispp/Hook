@@ -346,6 +346,7 @@ fn provider_quick_import_keys_table() -> TableCreateStatement {
         .col(string_len(ProviderQuickImportKeys::UpstreamTokenId, 100))
         .col(string_len(ProviderQuickImportKeys::UpstreamTokenName, 100))
         .col(string_len(ProviderQuickImportKeys::UpstreamMaskedKey, 200))
+        .col(string_len_null(ProviderQuickImportKeys::UpstreamGroupId, 100))
         .col(string_len_null(ProviderQuickImportKeys::UpstreamGroup, 100))
         .col(decimal_len(ProviderQuickImportKeys::UpstreamGroupRatio, 20, 8))
         .col(decimal_len(ProviderQuickImportKeys::EffectiveCostMultiplier, 20, 8))

@@ -130,6 +130,7 @@ fn snapshot() -> UpstreamSyncSnapshot {
             masked_key: "abcd****efgh".into(),
             status: "active".into(),
             is_active: true,
+            group_id: None,
             group: Some("plus".into()),
         }],
     }
@@ -143,6 +144,7 @@ fn key(model_mappings: Vec<(String, String)>) -> ProviderQuickImportSyncKey {
         local_key_name: "生产主 Key".into(),
         upstream_token_id: "1209".into(),
         upstream_token_name: "codex".into(),
+        upstream_group_id: None,
         upstream_group: Some("plus".into()),
         upstream_group_ratio: Decimal::ONE,
         effective_cost_multiplier: Decimal::ONE,

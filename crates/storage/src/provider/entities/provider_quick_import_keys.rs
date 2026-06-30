@@ -12,6 +12,7 @@ pub struct Model {
     pub upstream_token_id: String,
     pub upstream_token_name: String,
     pub upstream_masked_key: String,
+    pub upstream_group_id: Option<String>,
     pub upstream_group: Option<String>,
     pub upstream_group_ratio: Decimal,
     pub effective_cost_multiplier: Decimal,

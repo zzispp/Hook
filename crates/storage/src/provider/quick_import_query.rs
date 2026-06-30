@@ -155,6 +155,7 @@ async fn update_replacement_sync_key(tx: &DatabaseTransaction, input: &ProviderQ
     active.upstream_token_id = Set(input.upstream_token_id.clone());
     active.upstream_token_name = Set(input.upstream_token_name.clone());
     active.upstream_masked_key = Set(input.upstream_masked_key.clone());
+    active.upstream_group_id = Set(input.upstream_group_id.clone());
     active.upstream_group = Set(input.upstream_group.clone());
     active.upstream_group_ratio = Set(input.upstream_group_ratio);
     active.effective_cost_multiplier = Set(input.effective_cost_multiplier);
@@ -180,6 +181,7 @@ pub(super) struct SyncKeyInput {
     upstream_token_id: String,
     upstream_token_name: String,
     upstream_masked_key: String,
+    upstream_group_id: Option<String>,
     upstream_group: Option<String>,
     upstream_group_ratio: rust_decimal::Decimal,
     effective_cost_multiplier: rust_decimal::Decimal,
@@ -300,6 +302,7 @@ pub(super) fn sync_key_inputs(inputs: &[ProviderQuickImportApiKeyRecordInput]) -
             upstream_token_id: input.upstream_token_id.clone(),
             upstream_token_name: input.upstream_token_name.clone(),
             upstream_masked_key: input.upstream_masked_key.clone(),
+            upstream_group_id: input.upstream_group_id.clone(),
             upstream_group: input.upstream_group.clone(),
             upstream_group_ratio: input.upstream_group_ratio,
             effective_cost_multiplier: input.effective_cost_multiplier,
@@ -421,6 +424,7 @@ fn sync_key_active_model(
         upstream_token_id: Set(input.upstream_token_id.clone()),
         upstream_token_name: Set(input.upstream_token_name.clone()),
         upstream_masked_key: Set(input.upstream_masked_key.clone()),
+        upstream_group_id: Set(input.upstream_group_id.clone()),
         upstream_group: Set(input.upstream_group.clone()),
         upstream_group_ratio: Set(input.upstream_group_ratio),
         effective_cost_multiplier: Set(input.effective_cost_multiplier),

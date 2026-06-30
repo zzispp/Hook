@@ -198,6 +198,7 @@ pub(in crate::migration::baseline) enum ProviderQuickImportKeys {
     UpstreamTokenId,
     UpstreamTokenName,
     UpstreamMaskedKey,
+    UpstreamGroupId,
     UpstreamGroup,
     UpstreamGroupRatio,
     EffectiveCostMultiplier,

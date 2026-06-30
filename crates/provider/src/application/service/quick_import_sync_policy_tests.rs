@@ -112,6 +112,42 @@ async fn group_changed_sync_emits_group_synced_event() {
     assert!(!events.iter().any(|event| event.title.contains("同步异常")));
 }
 
+#[tokio::test]
+async fn sub2api_same_group_id_rename_is_not_treated_as_group_change() {
+    let outcome = key_outcome(
+        &TestImporter,
+        &sub2api_source(sync_config()),
+        &sub2api_source_config(),
+        &sub2api_renamed_snapshot(),
+        &globals(),
+        &bindings(),
+        &sub2api_key(),
+    )
+    .await;
+
+    let patch = outcome.patch("key-1".into());
+    assert_eq!(outcome.statuses, vec![ProviderQuickImportSyncStatus::Ok]);
+    assert_eq!(patch.upstream_group_id, None);
+    assert_eq!(patch.upstream_group, Some(Some("快速稳定分组2（倍率上限0.15）".into())));
+}
+
+#[tokio::test]
+async fn sub2api_backfills_group_id_when_name_is_unchanged() {
+    let outcome = key_outcome(
+        &TestImporter,
+        &sub2api_source(sync_config()),
+        &sub2api_source_config(),
+        &sub2api_same_name_snapshot(),
+        &globals(),
+        &bindings(),
+        &key(),
+    )
+    .await;
+
+    assert_eq!(outcome.statuses, vec![ProviderQuickImportSyncStatus::Ok]);
+    assert_eq!(outcome.patch("key-1".into()).upstream_group_id, Some(Some("2".into())));
+}
+
 async fn run_outcome(config: ProviderQuickImportSyncConfig, snapshot: UpstreamSyncSnapshot) -> super::quick_import_sync_outcome::KeyOutcome {
     key_outcome(
         &TestImporter,
@@ -189,6 +225,16 @@ fn source(sync_config: ProviderQuickImportSyncConfig) -> ProviderQuickImportSync
     }
 }
 
+fn sub2api_source(sync_config: ProviderQuickImportSyncConfig) -> ProviderQuickImportSyncSource {
+    ProviderQuickImportSyncSource {
+        source_kind: types::provider::ProviderQuickImportSourceKind::Sub2api,
+        base_url: "https://sub2api.example".into(),
+        encrypted_system_access_token: String::new(),
+        user_id: String::new(),
+        ..source(sync_config)
+    }
+}
+
 fn key() -> ProviderQuickImportSyncKey {
     ProviderQuickImportSyncKey {
         provider_id: "provider-1".into(),
@@ -197,6 +243,7 @@ fn key() -> ProviderQuickImportSyncKey {
         local_key_name: "生产主 Key".into(),
         upstream_token_id: "1209".into(),
         upstream_token_name: "codex".into(),
+        upstream_group_id: None,
         upstream_group: Some("plus".into()),
         upstream_group_ratio: Decimal::ONE,
         effective_cost_multiplier: Decimal::ONE,
@@ -218,6 +265,17 @@ fn source_config() -> ProviderQuickImportSourceConfig {
     })
 }
 
+fn sub2api_source_config() -> ProviderQuickImportSourceConfig {
+    ProviderQuickImportSourceConfig::Sub2api(types::provider::Sub2ApiQuickImportConfig::Token(
+        types::provider::Sub2ApiTokenQuickImportConfig {
+            base_url: "https://sub2api.example".into(),
+            auth_token: "auth-token".into(),
+            refresh_token: "refresh-token".into(),
+            token_expires_at: "2026-06-30T00:00:00Z".into(),
+        },
+    ))
+}
+
 fn snapshot(group: &str) -> UpstreamSyncSnapshot {
     UpstreamSyncSnapshot {
         source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
@@ -231,6 +289,7 @@ fn snapshot(group: &str) -> UpstreamSyncSnapshot {
             masked_key: "abcd****efgh".into(),
             status: "active".into(),
             is_active: true,
+            group_id: None,
             group: Some(group.into()),
         }],
     }
@@ -241,6 +300,46 @@ fn empty_snapshot() -> UpstreamSyncSnapshot {
         source_kind: types::provider::ProviderQuickImportSourceKind::Newapi,
         groups: BTreeMap::from([("plus".into(), UpstreamGroupRatio::Fixed(Decimal::new(2, 0)))]),
         tokens: vec![],
+    }
+}
+
+fn sub2api_renamed_snapshot() -> UpstreamSyncSnapshot {
+    UpstreamSyncSnapshot {
+        source_kind: types::provider::ProviderQuickImportSourceKind::Sub2api,
+        groups: BTreeMap::from([("2".into(), UpstreamGroupRatio::Fixed(Decimal::new(15, 2)))]),
+        tokens: vec![UpstreamSyncToken {
+            id: "1209".into(),
+            name: "codex".into(),
+            masked_key: "abcd****efgh".into(),
+            status: "active".into(),
+            is_active: true,
+            group_id: Some("2".into()),
+            group: Some("快速稳定分组2（倍率上限0.15）".into()),
+        }],
+    }
+}
+
+fn sub2api_key() -> ProviderQuickImportSyncKey {
+    ProviderQuickImportSyncKey {
+        upstream_group_id: Some("2".into()),
+        upstream_group: Some("快速稳定分组2".into()),
+        ..key()
+    }
+}
+
+fn sub2api_same_name_snapshot() -> UpstreamSyncSnapshot {
+    UpstreamSyncSnapshot {
+        source_kind: types::provider::ProviderQuickImportSourceKind::Sub2api,
+        groups: BTreeMap::from([("2".into(), UpstreamGroupRatio::Fixed(Decimal::new(15, 2)))]),
+        tokens: vec![UpstreamSyncToken {
+            id: "1209".into(),
+            name: "codex".into(),
+            masked_key: "abcd****efgh".into(),
+            status: "active".into(),
+            is_active: true,
+            group_id: Some("2".into()),
+            group: Some("plus".into()),
+        }],
     }
 }
 

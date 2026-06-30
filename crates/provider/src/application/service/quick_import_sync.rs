@@ -219,6 +219,7 @@ where
         patches.push(ProviderQuickImportSyncKeyPatch {
             key_id: key.key_id.clone(),
             statuses: vec![ProviderQuickImportSyncStatus::SourceFetchFailed],
+            upstream_group_id: None,
             upstream_group: None,
             upstream_group_ratio: None,
             effective_cost_multiplier: None,

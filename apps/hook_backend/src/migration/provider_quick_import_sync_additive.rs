@@ -120,6 +120,7 @@ const TABLE_SQL: &[&str] = &[
         upstream_token_id VARCHAR(100) NOT NULL,\
         upstream_token_name VARCHAR(100) NOT NULL,\
         upstream_masked_key VARCHAR(200) NOT NULL,\
+        upstream_group_id VARCHAR(100),\
         upstream_group VARCHAR(100),\
         upstream_group_ratio DECIMAL(20,8) NOT NULL,\
         effective_cost_multiplier DECIMAL(20,8) NOT NULL,\
