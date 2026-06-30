@@ -8,8 +8,7 @@ use super::{
     attempt_log::{
         AttemptCancelGuard, AttemptCancelHandle, SendErrorInput, SkippedAttemptInput, StartedAttemptInput, record_attempt_error,
         record_candidate_skipped_attempt, record_probe_slot_timeout, record_rate_limit_rejection, record_send_error, record_skipped_attempt,
-        record_started_attempt,
-        record_stream_candidate_watchdog_timeout,
+        record_started_attempt, record_stream_candidate_watchdog_timeout,
     },
     failure_classification::{FailureDecision, classify_status},
     outbound_request::{UpstreamRequestBody, UpstreamRequestInput, upstream_request},
