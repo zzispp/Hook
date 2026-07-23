@@ -6,8 +6,8 @@ use crate::StorageResult;
 
 use super::routing_repository::{RoutingMetricDelta, RoutingMetricRecord, normalized_ema_weights};
 use sql::{
-    average_decimal, metric_columns, metric_group_sql, metric_select_sql, metric_upsert_sql, metric_values, minute_bounds, output_tps, push,
-    route_state_columns, route_state_upsert_sql, route_state_values, success_rate,
+    BUCKET_GRANULARITY, average_decimal, metric_columns, metric_group_sql, metric_select_sql, metric_upsert_sql, metric_values, minute_bounds, output_tps,
+    push, route_state_columns, route_state_upsert_sql, route_state_values, success_rate,
 };
 
 mod sql;
@@ -41,7 +41,7 @@ where
     let mut params = Vec::new();
     let timing_semantics = push(&mut params, Value::from(ROUTING_TIMING_SEMANTICS_FIRST_TOKEN_V1));
     let sql = format!(
-        "{} WHERE timing_metric_semantics_version = {timing_semantics} AND bucket_started_at >= {} {}",
+        "{} WHERE timing_metric_semantics_version = {timing_semantics} AND bucket_granularity = '{BUCKET_GRANULARITY}' AND bucket_started_at >= {} {}",
         metric_select_sql(),
         push(&mut params, Value::from(since)),
         metric_group_sql()

@@ -4,7 +4,7 @@ use types::provider::ROUTING_TIMING_SEMANTICS_COLUMN;
 
 use crate::provider::routing_repository::RoutingMetricDelta;
 
-const BUCKET_GRANULARITY: &str = "minute";
+pub(super) const BUCKET_GRANULARITY: &str = "minute";
 
 pub(super) fn metric_upsert_sql() -> &'static str {
     "ON CONFLICT (bucket_granularity, bucket_started_at, provider_id, key_id, endpoint_id, global_model_id, client_api_format, \

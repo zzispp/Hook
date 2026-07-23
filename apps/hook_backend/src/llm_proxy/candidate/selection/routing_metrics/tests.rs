@@ -122,6 +122,7 @@ fn route_state_catalog_matches_profile_scoped_ema() {
         ],
         context_route_states: Vec::new(),
         refreshed_at: Some(time::OffsetDateTime::now_utc()),
+        ..Default::default()
     };
 
     let catalog = RouteStateCatalog::from_snapshot(&snapshot);
@@ -147,6 +148,7 @@ fn context_state_catalog_counts_only_matching_profile() {
             context_state_record(RoutingProfileId::HighAvailability, "ctx", route.clone(), 19),
         ],
         refreshed_at: Some(time::OffsetDateTime::now_utc()),
+        ..Default::default()
     };
 
     let catalog = ContextRouteStateCatalog::from_snapshot(&snapshot);
@@ -165,6 +167,7 @@ fn catalog(records: Vec<RoutingMetricRecord>) -> MetricCatalog {
         route_states: Vec::new(),
         context_route_states: Vec::new(),
         refreshed_at: Some(time::OffsetDateTime::now_utc()),
+        ..Default::default()
     };
     MetricCatalog::from_snapshot(&snapshot, vec![RoutingMetricWindow::FiveMinutes])
 }
