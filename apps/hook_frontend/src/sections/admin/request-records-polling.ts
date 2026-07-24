@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import type { RequestRecord } from 'src/types/provider';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 
 import { isRequestCancelled } from 'src/lib/axios';
 import { fetchActiveRequestRecords } from 'src/actions/request-records';
@@ -75,20 +75,28 @@ export function useActiveRequestPolling(
     () => (idsKey ? idsKey.split('\n') : EMPTY_REQUEST_IDS),
     [idsKey]
   );
+  const requestIdsRef = useRef(requestIds);
+  const hasActiveRequests = requestIds.length > 0;
 
   useEffect(() => {
-    if (!requestIds.length) return undefined;
+    requestIdsRef.current = requestIds;
+  }, [requestIds]);
+
+  useEffect(() => {
+    if (!hasActiveRequests) return undefined;
     let active = true;
     let controller: AbortController | null = null;
     const poll = async () => {
       if (controller) return;
+      const currentRequestIds = requestIdsRef.current;
+      if (!currentRequestIds.length) return;
       const nextController = new AbortController();
       controller = nextController;
       try {
-        const response = await fetchActiveRequestRecords(requestIds, nextController.signal);
+        const response = await fetchActiveRequestRecords(currentRequestIds, nextController.signal);
         if (!active || nextController.signal.aborted) return;
         updateItems((items) => mergedVisibleRecords(items, response.records, statusFilter));
-        if (shouldRefreshRecords(requestIds, response.records, statusFilter)) refresh();
+        if (shouldRefreshRecords(currentRequestIds, response.records, statusFilter)) refresh();
       } catch (error) {
         if (!isRequestCancelled(error)) {
           console.error('Failed to poll active request records:', error);
@@ -106,7 +114,7 @@ export function useActiveRequestPolling(
       window.clearInterval(timer);
       controller?.abort();
     };
-  }, [refresh, requestIds, statusFilter, updateItems]);
+  }, [hasActiveRequests, refresh, statusFilter, updateItems]);
 }
 
 function activeRecordIds(items: RequestRecord[]) {
