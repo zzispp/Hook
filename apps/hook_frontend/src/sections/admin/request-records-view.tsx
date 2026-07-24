@@ -48,13 +48,10 @@ function useRequestRecordsViewProps() {
   const { filters, handleFiltersChange } = useRequestRecordFilters(table.onResetPage);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [timingExpanded, setTimingExpanded] = useState(false);
+  const requestRecordFilters = useMemo(() => toRequestRecordQueryFilters(filters), [filters]);
   const models = useGlobalModels(0, 1000);
   const providers = useProviders(0, 1000);
-  const records = useRequestRecords(
-    table.page,
-    table.rowsPerPage,
-    toRequestRecordQueryFilters(filters)
-  );
+  const records = useRequestRecords(table.page, table.rowsPerPage, requestRecordFilters);
   const locale = currentLang.numberFormat.code;
   const pageVisible = usePageVisible();
   const pollingRequestIds = usePollingRequestIds(records.items, pageVisible);
