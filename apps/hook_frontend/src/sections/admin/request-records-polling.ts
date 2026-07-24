@@ -71,9 +71,13 @@ export function useActiveRequestPolling(
   refresh: () => void
 ) {
   const idsKey = ids.join('\n');
+  const requestIds = useMemo(
+    () => (idsKey ? idsKey.split('\n') : EMPTY_REQUEST_IDS),
+    [idsKey]
+  );
 
   useEffect(() => {
-    if (!ids.length) return undefined;
+    if (!requestIds.length) return undefined;
     let active = true;
     let controller: AbortController | null = null;
     const poll = async () => {
@@ -81,10 +85,10 @@ export function useActiveRequestPolling(
       const nextController = new AbortController();
       controller = nextController;
       try {
-        const response = await fetchActiveRequestRecords(ids, nextController.signal);
+        const response = await fetchActiveRequestRecords(requestIds, nextController.signal);
         if (!active || nextController.signal.aborted) return;
         updateItems((items) => mergedVisibleRecords(items, response.records, statusFilter));
-        if (shouldRefreshRecords(ids, response.records, statusFilter)) refresh();
+        if (shouldRefreshRecords(requestIds, response.records, statusFilter)) refresh();
       } catch (error) {
         if (!isRequestCancelled(error)) {
           console.error('Failed to poll active request records:', error);
@@ -102,7 +106,7 @@ export function useActiveRequestPolling(
       window.clearInterval(timer);
       controller?.abort();
     };
-  }, [ids, idsKey, refresh, statusFilter, updateItems]);
+  }, [refresh, requestIds, statusFilter, updateItems]);
 }
 
 function activeRecordIds(items: RequestRecord[]) {

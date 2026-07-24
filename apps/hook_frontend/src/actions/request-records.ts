@@ -25,6 +25,8 @@ export type RequestRecordFilters = {
   type?: string;
 };
 
+const REQUEST_RECORD_LIST_TIMEOUT_MS = 15_000;
+
 const listSwrOptions = {
   keepPreviousData: false,
   revalidateOnFocus: false,
@@ -45,7 +47,10 @@ export function useRequestRecords(
     () =>
       [
         endpoints.adminRequestRecords.list,
-        { params: { skip: page * pageSize, limit: pageSize, ...filters } },
+        {
+          params: { skip: page * pageSize, limit: pageSize, ...filters },
+          timeout: REQUEST_RECORD_LIST_TIMEOUT_MS,
+        },
       ] as const,
     [filters, page, pageSize]
   );
