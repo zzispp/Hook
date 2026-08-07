@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useCopyToClipboard } from 'minimal-shared/hooks';
 
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
+
+import { copyText } from 'src/utils/browser-compat';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -17,14 +18,12 @@ type Props = {
 
 export function ModelCopyButton({ value }: Props) {
   const { t } = useTranslate('admin');
-  const { copy } = useCopyToClipboard();
   const handleCopy = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
-      copy(value);
-      toast.success(t('models.modelIdCopied'));
+      void copyModelId(value, t);
     },
-    [copy, t, value]
+    [t, value]
   );
 
   return (
@@ -34,4 +33,13 @@ export function ModelCopyButton({ value }: Props) {
       </IconButton>
     </Tooltip>
   );
+}
+
+async function copyModelId(value: string, t: (key: string) => string) {
+  try {
+    await copyText(value);
+    toast.success(t('models.modelIdCopied'));
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('messages.copyFailed'));
+  }
 }

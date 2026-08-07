@@ -3,7 +3,6 @@
 import type { Theme, SxProps } from '@mui/material/styles';
 
 import { useState, useCallback } from 'react';
-import { useCopyToClipboard } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
@@ -12,6 +11,8 @@ import Button from '@mui/material/Button';
 import Collapse from '@mui/material/Collapse';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+
+import { copyText } from 'src/utils/browser-compat';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -63,14 +64,17 @@ export function ProviderQuickImportSub2apiTokenHelp({
   sx?: SxProps<Theme>;
 }) {
   const { t } = useTranslate('admin');
-  const { copy } = useCopyToClipboard();
   const [expanded, setExpanded] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
 
-  const handleCopyScript = useCallback(() => {
-    copy(TOKEN_SCRIPT);
-    toast.success(t('common.copied'));
-  }, [copy, t]);
+  const handleCopyScript = useCallback(async () => {
+    try {
+      await copyText(TOKEN_SCRIPT);
+      toast.success(t('common.copied'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.copyFailed'));
+    }
+  }, [t]);
 
   const handleApplyJson = useCallback(() => {
     try {
@@ -114,7 +118,7 @@ export function ProviderQuickImportSub2apiTokenHelp({
               color="inherit"
               disabled={disabled}
               startIcon={<Iconify width={16} icon="solar:copy-bold" />}
-              onClick={handleCopyScript}
+              onClick={() => void handleCopyScript()}
             >
               {t('providers.quickImportSub2apiTokenCopyScript')}
             </Button>

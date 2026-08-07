@@ -55,10 +55,4 @@ pub const MODEL_APIS: &[ApiDefinition] = &[
         path_pattern: "/api/models/catalog",
         name: "用户模型目录",
     },
-    ApiDefinition {
-        code: "models_external_read",
-        method: "GET",
-        path_pattern: "/api/admin/models/external",
-        name: "外部模型",
-    },
 ];

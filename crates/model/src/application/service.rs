@@ -4,30 +4,27 @@ use types::model::{
     GlobalModelResponse, GlobalModelUpdate, GlobalModelWithStats, ModelCatalogResponse,
 };
 
-use crate::application::{ExternalModelCatalog, ModelError, ModelRepository, ModelResult, ModelUseCase};
+use crate::application::{ModelError, ModelRepository, ModelResult, ModelUseCase};
 
 use super::validation::{sanitize_create, sanitize_update, validate_batch_delete, validate_create, validate_list_request, validate_update};
 
-pub struct ModelService<R, E> {
+pub struct ModelService<R> {
     repository: R,
-    external_catalog: E,
 }
 
-impl<R, E> ModelService<R, E>
+impl<R> ModelService<R>
 where
     R: ModelRepository,
-    E: ExternalModelCatalog,
 {
-    pub const fn new(repository: R, external_catalog: E) -> Self {
-        Self { repository, external_catalog }
+    pub const fn new(repository: R) -> Self {
+        Self { repository }
     }
 }
 
 #[async_trait]
-impl<R, E> ModelUseCase for ModelService<R, E>
+impl<R> ModelUseCase for ModelService<R>
 where
     R: ModelRepository,
-    E: ExternalModelCatalog,
 {
     async fn create_global_model(&self, input: GlobalModelCreate) -> ModelResult<GlobalModelResponse> {
         let input = sanitize_create(input);
@@ -79,10 +76,6 @@ where
 
     async fn catalog(&self) -> ModelResult<ModelCatalogResponse> {
         self.repository.catalog().await
-    }
-
-    async fn external_models(&self) -> ModelResult<serde_json::Value> {
-        self.external_catalog.models_dev().await
     }
 }
 

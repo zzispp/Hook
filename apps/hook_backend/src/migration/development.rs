@@ -191,6 +191,7 @@ async fn apply_additives(manager: &SchemaManager<'_>) -> Result<(), DbErr> {
     super::stream_timing_first_byte_semantics_destructive::apply(manager).await?;
     super::stream_timing_i18n_semantics_destructive::apply(manager).await?;
     super::system_settings_api_endpoints_additive::apply(manager).await?;
+    super::models_dev_api_removal_destructive::apply(manager).await?;
     super::provider_group_removal_destructive::apply(manager).await
 }
 

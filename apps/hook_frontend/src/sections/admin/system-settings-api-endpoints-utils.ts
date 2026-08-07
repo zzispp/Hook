@@ -3,6 +3,8 @@
 import type { ApiEndpoint } from 'src/types/system-setting';
 import type { SystemSettingsForm } from './system-settings-utils';
 
+import { createUuid } from 'src/utils/browser-compat';
+
 export type ApiEndpointSetForm = React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
 
 export function addApiEndpoint(setForm: ApiEndpointSetForm) {
@@ -47,7 +49,7 @@ export function moveApiEndpoint(
 
 function defaultApiEndpoint(): ApiEndpoint {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     name: '',
     url: '',
     description: '',

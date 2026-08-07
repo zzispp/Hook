@@ -184,7 +184,6 @@ export const endpoints = {
     globalBatchDelete: '/api/admin/models/global/batch-delete',
     globalProviders: (id: string) => `/api/admin/models/global/${id}/providers`,
     catalog: '/api/admin/models/catalog',
-    external: '/api/admin/models/external',
   },
   models: {
     catalog: '/api/models/catalog',

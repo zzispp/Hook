@@ -3,7 +3,6 @@
 import type { DisplayApiEndpoint } from './api-token-endpoints-utils';
 
 import { toast } from 'sonner';
-import { useCopyToClipboard } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -13,6 +12,8 @@ import Alert from '@mui/material/Alert';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+
+import { copyText } from 'src/utils/browser-compat';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -47,11 +48,14 @@ export function ApiTokenEndpointsPanel({ endpoints }: Props) {
 
 function EndpointRow({ endpoint }: { endpoint: DisplayApiEndpoint }) {
   const { t } = useTranslate('admin');
-  const { copy } = useCopyToClipboard();
 
-  function copyEndpoint() {
-    copy(endpoint.url);
-    toast.success(t('tokens.apiEndpoints.copied'));
+  async function copyEndpoint() {
+    try {
+      await copyText(endpoint.url);
+      toast.success(t('tokens.apiEndpoints.copied'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('messages.copyFailed'));
+    }
   }
 
   return (
@@ -74,12 +78,12 @@ function EndpointRow({ endpoint }: { endpoint: DisplayApiEndpoint }) {
             size="small"
             variant="soft"
             label={endpoint.url}
-            onClick={copyEndpoint}
+            onClick={() => void copyEndpoint()}
             sx={endpointUrlChipSx}
           />
         </Tooltip>
         <Tooltip title={t('tokens.apiEndpoints.copy')}>
-          <IconButton size="small" onClick={copyEndpoint}>
+          <IconButton size="small" onClick={() => void copyEndpoint()}>
             <Iconify icon="solar:copy-bold" width={16} />
           </IconButton>
         </Tooltip>

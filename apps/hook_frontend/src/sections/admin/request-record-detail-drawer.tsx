@@ -5,7 +5,6 @@ import type { RequestRecord } from 'src/types/provider';
 
 import { useMemo, useCallback } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
-import { useCopyToClipboard } from 'minimal-shared/hooks';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -14,6 +13,8 @@ import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+
+import { copyText } from 'src/utils/browser-compat';
 
 import { useTranslate } from 'src/locales/use-locales';
 import { useRequestRecordDetail } from 'src/actions/request-records';
@@ -156,14 +157,17 @@ function DrawerHeader({
 
 function HeaderMeta({ record, locale }: { record: RequestRecord; locale: string }) {
   const { t } = useTranslate('admin');
-  const { copy } = useCopyToClipboard();
   const handleCopy = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
-      copy(record.request_id);
-      toast.success(t('requestRecords.requestIdCopied'));
+      try {
+        await copyText(record.request_id);
+        toast.success(t('requestRecords.requestIdCopied'));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : t('messages.copyFailed'));
+      }
     },
-    [copy, record.request_id, t]
+    [record.request_id, t]
   );
   const items = [
     formatRequestDate(record.created_at, locale),

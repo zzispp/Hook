@@ -1,6 +1,8 @@
 import { FiCopy, FiCheck } from 'react-icons/fi';
 import { useRef, useState, useCallback } from 'react';
 
+import { copyText } from 'src/utils/browser-compat';
+
 import { useTranslate } from 'src/locales';
 
 type DeployMethod = 'docker-compose' | 'source-build';
@@ -32,11 +34,15 @@ const QuickStart = () => {
 
   const command = COMMANDS[method];
 
-  const copy = useCallback(() => {
-    navigator.clipboard.writeText(command);
-    setCopied(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setCopied(false), 2000);
+  const copy = useCallback(async () => {
+    try {
+      await copyText(command);
+      setCopied(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy the deployment command.', error);
+    }
   }, [command]);
 
   return (
@@ -74,7 +80,7 @@ const QuickStart = () => {
               </div>
               <button
                 className={`ln-qs-copy${copied ? ' ln-qs-copy--done' : ''}`}
-                onClick={copy}
+                onClick={() => void copy()}
                 aria-label={t('quickStart.copyCommand')}
               >
                 {copied ? <FiCheck size={14} /> : <FiCopy size={14} />}

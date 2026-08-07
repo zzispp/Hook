@@ -54,7 +54,7 @@ use i18n::{
 use model::{
     api::{ModelApiState, create_router as create_model_router},
     application::ModelService,
-    infra::{ModelsDevClient, StorageModelRepository},
+    infra::StorageModelRepository,
 };
 use model_status::{
     api::{ModelStatusApiState, create_router as create_model_status_router},
@@ -169,10 +169,10 @@ async fn build_app_state(settings: &Settings) -> BackendResult<AppState> {
     proxy_cache.restore_provider_cooldowns().await?;
     let routing_metrics = crate::llm_proxy::routing::RoutingMetricsCache::load(database.clone()).await?;
     routing_metrics.spawn_refresh_loop();
-    let models = Arc::new(ModelService::new(
-        CachedModelRepository::new(StorageModelRepository::new(database.clone()), proxy_cache.clone()),
-        ModelsDevClient::new(),
-    ));
+    let models = Arc::new(ModelService::new(CachedModelRepository::new(
+        StorageModelRepository::new(database.clone()),
+        proxy_cache.clone(),
+    )));
     let providers = Arc::new(ProviderService::new(
         CachedProviderRepository::new(StorageProviderRepository::new(database.clone()), proxy_cache.clone()),
         StorageGlobalModelCatalog::new(database.clone()),

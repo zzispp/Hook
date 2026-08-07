@@ -12,6 +12,8 @@ import Tooltip from '@mui/material/Tooltip';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { copyText } from 'src/utils/browser-compat';
+
 import { useTranslate } from 'src/locales/use-locales';
 
 import { toast } from 'src/components/snackbar';
@@ -239,7 +241,7 @@ function KeyGroupChips({ groupNames }: { groupNames: string[] }) {
 
 async function copyKeyName(name: string, t: (key: string) => string) {
   try {
-    await navigator.clipboard.writeText(name);
+    await copyText(name);
     toast.success(t('messages.apiKeyCopied'));
   } catch {
     toast.error(t('messages.copyFailed'));
