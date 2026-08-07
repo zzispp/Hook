@@ -4,6 +4,8 @@ import type { IconifyName } from 'src/components/iconify';
 import type { SystemSettingsForm } from './system-settings-utils';
 import type { ContactMethod, ContactMethodType } from 'src/types/system-setting';
 
+import { createUuid } from 'src/utils/browser-compat';
+
 export type ContactMethodSetForm = React.Dispatch<React.SetStateAction<SystemSettingsForm>>;
 
 export const CONTACT_TYPE_OPTIONS: ReadonlyArray<ContactMethodType> = [
@@ -85,7 +87,7 @@ export function handleQrCodeUpload(
 
 function defaultContactMethod(): ContactMethod {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     type: 'wechat',
     custom_type: '',
     icon: CONTACT_ICON_BY_TYPE.wechat,

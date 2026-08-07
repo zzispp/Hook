@@ -3,7 +3,6 @@ use axum::{
     extract::{Path, Query, State},
 };
 use rbac::api::CurrentUser;
-use serde_json::Value;
 use types::{
     model::{
         BatchDeleteGlobalModelsRequest, BatchDeleteGlobalModelsResponse, GlobalModelCreate, GlobalModelListRequest, GlobalModelListResponse,
@@ -75,10 +74,6 @@ pub async fn public_catalog(
             },
         )
         .await?))
-}
-
-pub async fn external_models(State(state): State<ModelApiState>) -> ApiResult<ApiJson<Value>> {
-    Ok(ok(state.models.external_models().await?))
 }
 
 fn ok<T>(data: T) -> ApiJson<T> {

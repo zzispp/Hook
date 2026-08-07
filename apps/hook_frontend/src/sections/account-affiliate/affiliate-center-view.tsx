@@ -14,6 +14,8 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
+import { copyText } from 'src/utils/browser-compat';
+
 import { useTranslate } from 'src/locales/use-locales';
 import { DashboardContent } from 'src/layouts/dashboard';
 import { useDashboardBreadcrumbs } from 'src/layouts/dashboard/use-dashboard-breadcrumbs';
@@ -247,8 +249,12 @@ function useFullAffiliateLink(summary?: AffiliateSummary) {
 }
 
 async function copyInviteLink(link: string, t: TFunction<'admin'>) {
-  await navigator.clipboard.writeText(link);
-  toast.success(t('affiliateCenter.messages.linkCopied'));
+  try {
+    await copyText(link);
+    toast.success(t('affiliateCenter.messages.linkCopied'));
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('messages.copyFailed'));
+  }
 }
 
 type PanelProps = {

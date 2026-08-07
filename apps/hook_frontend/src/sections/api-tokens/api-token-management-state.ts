@@ -4,7 +4,8 @@ import type { ApiToken } from 'src/types/api-token';
 import type { TokenForm, TokenScope, TokenFormErrors } from './api-token-management-types';
 
 import { useState, useCallback } from 'react';
-import { useCopyToClipboard } from 'minimal-shared/hooks';
+
+import { copyText } from 'src/utils/browser-compat';
 
 import {
   createApiToken,
@@ -154,17 +155,15 @@ export function useDeleteDialog(scope: TokenScope, t: (key: string) => string) {
 }
 
 export function useCopyToken(scope: TokenScope, t: (key: string) => string) {
-  const { copy } = useCopyToClipboard();
-
   return useCallback(async (token: ApiToken) => {
     try {
       const secret = scope === 'admin' ? await getAdminApiTokenSecret(token.id) : await getApiTokenSecret(token.id);
-      copy(secret.raw_token);
+      await copyText(secret.raw_token);
       toast.success(t('messages.apiKeyCopied'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('messages.copyFailed'));
     }
-  }, [copy, scope, t]);
+  }, [scope, t]);
 }
 
 export async function toggleToken(scope: TokenScope, token: ApiToken) {

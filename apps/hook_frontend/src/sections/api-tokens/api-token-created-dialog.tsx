@@ -1,7 +1,5 @@
 'use client';
 
-import { useCopyToClipboard } from 'minimal-shared/hooks';
-
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -9,6 +7,8 @@ import TextField from '@mui/material/TextField';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
+
+import { copyText } from 'src/utils/browser-compat';
 
 import { useTranslate } from 'src/locales/use-locales';
 
@@ -23,7 +23,6 @@ export function ApiTokenCreatedDialog({
   onClose: VoidFunction;
 }) {
   const { t } = useTranslate('admin');
-  const { copy } = useCopyToClipboard();
 
   return (
     <Dialog fullWidth maxWidth="sm" open={!!rawToken} onClose={onClose}>
@@ -34,7 +33,11 @@ export function ApiTokenCreatedDialog({
       </DialogContent>
       <DialogActions>
         <Button variant="outlined" onClick={onClose}>{t('common.close')}</Button>
-        <Button variant="contained" startIcon={<Iconify icon="solar:copy-bold" />} onClick={() => copyToken(copy, rawToken, t)}>
+        <Button
+          variant="contained"
+          startIcon={<Iconify icon="solar:copy-bold" />}
+          onClick={() => void copyToken(rawToken, t)}
+        >
           {t('actions.copyApiKey')}
         </Button>
       </DialogActions>
@@ -42,8 +45,12 @@ export function ApiTokenCreatedDialog({
   );
 }
 
-function copyToken(copy: (value: string) => void, rawToken: string | null, t: (key: string) => string) {
+async function copyToken(rawToken: string | null, t: (key: string) => string) {
   if (!rawToken) return;
-  copy(rawToken);
-  toast.success(t('messages.apiKeyCopied'));
+  try {
+    await copyText(rawToken);
+    toast.success(t('messages.apiKeyCopied'));
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : t('messages.copyFailed'));
+  }
 }

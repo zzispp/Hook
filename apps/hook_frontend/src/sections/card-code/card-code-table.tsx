@@ -14,6 +14,8 @@ import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { copyText } from 'src/utils/browser-compat';
+
 import { Label } from 'src/components/label';
 import { toast } from 'src/components/snackbar';
 import { Iconify } from 'src/components/iconify';
@@ -174,7 +176,7 @@ function tableHead(t: TFunction<'admin'>): TableHeadCellProps[] {
 
 async function copyCardCode(code: string, t: TFunction<'admin'>) {
   try {
-    await navigator.clipboard.writeText(code);
+    await copyText(code);
     toast.success(t('adminCardCodes.messages.codeCopied'));
   } catch {
     toast.error(t('messages.copyFailed'));

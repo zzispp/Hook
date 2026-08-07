@@ -12,6 +12,7 @@ import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 
+import { copyText } from 'src/utils/browser-compat';
 import { formatMoneyCompact } from 'src/utils/currency-format';
 
 import { useTranslate } from 'src/locales/use-locales';
@@ -170,7 +171,7 @@ function modelStatusTitle(
 
 async function copyModelId(modelId: string, t: (key: string) => string) {
   try {
-    await navigator.clipboard.writeText(modelId);
+    await copyText(modelId);
     toast.success(t('models.modelIdCopied'));
   } catch {
     toast.error(t('messages.copyFailed'));

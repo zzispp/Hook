@@ -16,6 +16,7 @@ import type {
 import { useMemo } from 'react';
 import useSWR, { mutate } from 'swr';
 
+import { fetchModelsDevData } from 'src/utils/models-dev';
 import {
   aetherCacheReadPrice,
   aetherCacheCreationPrice,
@@ -148,7 +149,7 @@ export function useUserModelCatalog() {
 }
 
 export async function getModelsDevData() {
-  return requestData<ModelsDevData>(axios.get(endpoints.adminModels.external));
+  return fetchModelsDevData();
 }
 
 export async function getModelsDevList(officialOnly = true) {

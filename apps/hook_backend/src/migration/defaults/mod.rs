@@ -269,7 +269,6 @@ pub const MENU_API_BINDINGS: &[MenuApiBindingDefinition] = &[
             "models_global_batch_delete",
             "models_global_providers",
             "models_catalog_read",
-            "models_external_read",
         ],
     },
     MenuApiBindingDefinition {

@@ -12,6 +12,7 @@ mod default_seed_sync;
 mod defaults;
 mod development_additive;
 mod global_model_user_usage_counts_additive;
+mod models_dev_api_removal_destructive;
 mod provider_group_removal_destructive;
 mod provider_image_stream_mode_additive;
 mod provider_key_capabilities_destructive;
