@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/zzispp/Hook/compare/v1.1.0...v1.1.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* support HTTP intranet browser APIs ([#97](https://github.com/zzispp/Hook/issues/97)) ([035959b](https://github.com/zzispp/Hook/commit/035959b573f2d5e249569cb44b55a2235fd8d7b5))
+
 ## [1.1.0](https://github.com/zzispp/Hook/compare/v1.0.2...v1.1.0) (2026-07-24)
 
 
